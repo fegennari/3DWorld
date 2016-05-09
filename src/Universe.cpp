@@ -638,6 +638,7 @@ bool has_sun_lighting(point const &pos) {
 int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
 				   uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s, shader_t *shader) // based on current star and current galaxy
 {
+	assert(!is_nan(pos));
 	assert(radius < CELL_SIZE);
 	float const expand(2.0);
 	s_object result;
@@ -651,6 +652,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 
 	if (result.galaxy >= 0) { // close to a galaxy
 		pos2 -= result.get_ucell().pos;
+		assert(!is_nan(pos));
 		colorRGBA color;
 
 		if (result.system >= 0) { // close to a solar system
@@ -1217,7 +1219,7 @@ bool ugalaxy::is_close_to(ugalaxy const &g, float overlap_amount) const {
 
 	vector3d const delta(pos - g.pos);
 	float const dist(delta.mag());
-	return (dist < ((overlap_amount/dist)*(get_radius_at(-delta) + g.get_radius_at(delta)) + SYSTEM_MIN_SPACING));
+	return (dist < TOLERANCE || dist < ((overlap_amount/dist)*(get_radius_at(-delta) + g.get_radius_at(delta)) + SYSTEM_MIN_SPACING));
 }
 
 
@@ -1281,6 +1283,7 @@ void ugalaxy::process(ucell const &cell) {
 	for (unsigned c = 0, cur = 0; c < clusters.size(); ++c) { // calculate actual center and radius values for each cluster
 		system_cluster &cl(clusters[c]);
 		unsigned const nsystems((unsigned)cl.systems.size());
+		assert(nsystems > 0);
 		cl.radius = 0.0;
 		cl.bounds = 0.0;
 		cl.center = all_zeros;
@@ -1443,7 +1446,7 @@ void ussystem::calc_color() { // delayed until the color is actually needed
 			if (&sols[s] == this)   continue; // skip ourselves
 			float const dist(p2p_dist_sq(pos, sols[s].sun.pos));
 			if (dist > max_dist_sq) continue; // too far away
-			float const weight(1.0/dist); // 1/r^2 falloff
+			float const weight(1.0/max(dist, TOLERANCE)); // 1/r^2 falloff
 			sum          += weight;
 			galaxy_color += sols[s].sun.get_ambient_color_val()*weight;
 		}
@@ -2385,7 +2388,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	point const &camera(get_player_pos());
 	vector3d const vcp(camera, pos_);
 	float const vcp_mag(vcp.mag()), dist(max(TOLERANCE, (vcp_mag - radius)));
-	if (dist > U_VIEW_DIST) return 0; // too far away
+	if (vcp_mag < TOLERANCE || dist > U_VIEW_DIST) return 0; // too close or too far away
 	bool const universe_mode(world_mode == WMODE_UNIVERSE);
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
 	if (size < 0.5 && !(display_mode & 0x01)) return 0; // too small
@@ -2709,7 +2712,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 		ugalaxy &galaxy((*cell.galaxies)[gc]);
 		float const distg(p2p_dist(pos, galaxy.pos));
 		if (distg > g_expand*(galaxy.radius + MAX_SYSTEM_EXTENT) + r_add) continue;
-		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/distg));
+		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/max(distg, TOLERANCE)));
 		if (distg > g_expand*(galaxy_radius + MAX_SYSTEM_EXTENT) + r_add) continue;
 
 		if (max_level == UTYPE_GALAXY || result.object == NULL) { // galaxy

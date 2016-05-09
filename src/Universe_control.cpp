@@ -350,7 +350,7 @@ void process_univ_objects() {
 					upos_point_type norm(obj_pos, asteroid.pos);
 					vector3d const &ascale(asteroid.get_scale());
 					double const dist(norm.mag());
-					norm /= dist; // normalize
+					if (dist > TOLERANCE) {norm /= dist;} else {norm = plus_z;} // normalize
 					double const a_radius(asteroid.radius*(norm*upos_point_type(ascale)).mag()), rsum(a_radius + radius);
 					
 					if (dist < rsum) {
@@ -875,7 +875,7 @@ bool uobj_solid::collision(upos_point_type const &p, float rad, vector3d const &
 	if (nmag > rsum) return 0;
 	double const vmag(v.mag());
 
-	if ((simple && nmag > TOLERANCE) || vmag < TOLERANCE || dot_product(v, norm) > -0.1*(nmag*vmag)) { // use for shallow coll angles
+	if (nmag > TOLERANCE && (simple || vmag < TOLERANCE || dot_product(v, norm) > -0.1*(nmag*vmag))) { // use for shallow coll angles
 		cpos = pos + norm*(rsum/nmag); // normalize, multiply, and add
 	}
 	else {

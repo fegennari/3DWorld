@@ -261,7 +261,8 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 			float const dist(p2p_dist(copos, new_pos));
 	
 			if (dist < rval) {
-				norm    = (new_pos - copos)/max(dist, TOLERANCE);
+				if (dist < 0.01*min(radius, obj_radius)) {norm = signed_rand_vector_norm();} // near zero, pick a direction
+				else {norm = (new_pos - copos)/max(dist, TOLERANCE);}
 				new_pos = copos + norm*rval;
 			}
 		}
@@ -525,7 +526,7 @@ vector3d free_obj::calc_angular_vel(point const &cpos, vector3d const &axis, flo
 
 	if (rate == 0.0) return zero_vector;
 	float const dist_sq(p2p_dist_sq(cpos, pos));
-	if (dist_sq > c_radius*c_radius) rate *= c_radius/sqrt(dist_sq); // normalize to max dist
+	if (dist_sq > c_radius*c_radius) {rate *= c_radius/sqrt(dist_sq);} // normalize to max dist
 	return cross_product((cpos - pos), axis)*TWO_PI*rate;
 }
 

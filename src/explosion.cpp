@@ -279,7 +279,7 @@ void draw_blasts(shader_t &s) {
 				// use distance_to_camera() for non-universe mode?
 				//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
 				s.set_cur_color(br.cur_color);
-				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
+				float const sscale(universe ? 0.4/max(sqrt(br.cur_size*distance_to_camera(br.pos)), TOLERANCE) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
 				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, ndiv, 1); // cube mapped sphere? too slow?
 				if (end_type) {glDisable(GL_CULL_FACE); end_sphere_draw();}
@@ -295,7 +295,7 @@ void draw_blasts(shader_t &s) {
 				global_translate(br.pos);
 				rotate_about(90.0*timescale, br.dir);
 				s.set_cur_color(br.cur_color);
-				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
+				float const sscale(universe ? 0.4/max(sqrt(br.cur_size*distance_to_camera(br.pos)), TOLERANCE) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
 				uniform_scale(br.cur_size);
 				draw_sphere_vbo_raw(ndiv, 1);

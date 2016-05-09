@@ -100,7 +100,7 @@ free_obj *line_intersect_free_objects(line_int_data &li_data, int obj_types, uns
 
 	float const dmag(li_data.dir.mag());
 	assert(dmag > 0.0);
-	li_data.end    = li_data.start + li_data.dir*(li_data.length/dmag);
+	li_data.end    = li_data.start + li_data.dir*(li_data.length/max(dmag, TOLERANCE));
 	free_obj *fobj = NULL;
 
 	if (obj_types & OBJ_TYPE_FREE) { // limit to only ships (possibly of one alignment) if we're not looking for projectiles
@@ -170,7 +170,7 @@ void apply_one_exp(query_data &qdata, unsigned ix) {
 	float const dmag(dist.mag()), damage(qdata.damage*ip.dscale*calc_damage_scale(dmag, rtot, qdata.radius));
 	if (damage <= 0.0) return;
 	vector3d velocity(dist);
-	if (dmag > TOLERANCE) velocity *= (0.00025/dmag);
+	if (dmag > TOLERANCE) {velocity *= (0.00025/dmag);}
 
 	// If a ship A fires a rocket R, the rocket strikes another ship B and R explodes, and the blast radius damages ship C, then how would we get the pointer to ship A out of this?
 	// If a ship A fires a rocket R, the rocket strikes another ship B and causes B to explode, and the blast radius damages ship C, then which ship (A or B) gets credit for damaging C?

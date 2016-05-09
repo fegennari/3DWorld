@@ -246,8 +246,8 @@ void u_ship::check_ref_objs() {
  // engine status (power) is equal to the number of functioning engines divided by the number of total engines
 float u_ship::get_engine_status() const {
 
-	if (specs().nengines == 0 || eflags == 0) return 1.0;
 	unsigned const num_engines(specs().nengines);
+	if (num_engines == 0 || eflags == 0) return 1.0;
 	float estatus(0.0);
 
 	for (unsigned i = 0; i < num_engines; ++i) {
@@ -577,7 +577,7 @@ uobject const *u_ship::get_obstacle(float oa_time, float max_dist, free_obj *&fo
 	float const vmag(velocity.mag());
 	if (vmag < max(TOLERANCE, 0.1f*get_max_speed())) return NULL;
 	float ldist(oa_time*min(2.5f, fticks)*vmag); // see if there is an obstacle directly ahead
-	if (max_dist > c_radius) ldist = min(ldist, max_dist);
+	if (max_dist > c_radius) {ldist = min(ldist, max_dist);}
 	return setup_int_query(velocity/vmag, (ldist + c_radius), fobj, tdist, sobjs_only, c_radius);
 }
 
@@ -598,7 +598,7 @@ bool u_ship::obstacle_avoid(vector3d &orient, float target_dist, bool sobjs_only
 	float tdist(0.0);
 	free_obj *fobj = NULL;
 	uobject const *obstacle(get_obstacle(OBS_AVOID_TIME, target_dist, fobj, tdist, sobjs_only)); // sort of incomplete
-	if (obstacle == NULL) obstacle = setup_int_query(orient, target_dist, fobj, tdist, sobjs_only, c_radius); // now see if there is an obstacle between us and our target
+	if (obstacle == NULL) {obstacle = setup_int_query(orient, target_dist, fobj, tdist, sobjs_only, c_radius);} // now see if there is an obstacle between us and our target
 	// really need to check if the trajectories of any close ships will cause a future intersection
 	// trajectory (cylinder-cylinder) intersections are difficult and slow though, and can't account for direction change
 	//if (obstacle == NULL) obstacle = get_closest_ship(pos, c_radius, target_dist, 0, 1, 0, 0); // dir_pref?
@@ -608,9 +608,9 @@ bool u_ship::obstacle_avoid(vector3d &orient, float target_dist, bool sobjs_only
 		
 		if (velocity != zero_vector) {
 			float const avoid_radius(min(0.95*tdist, (obstacle->get_bounding_radius() + 1.5*c_radius))); // make sure it works if close
-			float const angle(asinf(avoid_radius/tdist)); // -angle?
+			float const angle(asinf(CLIP_TO_01(avoid_radius/max(tdist, TOLERANCE)))); // -angle?
 			vector3d const v2obj(pos, obstacle->get_pos()), vrot(cross_product(v2obj, velocity).get_norm());
-			if (vrot != zero_vector) rotate_vector3d_norm(vrot, angle, orient); // more complex than this - what if orient != vnorm?
+			if (vrot != zero_vector) {rotate_vector3d_norm(vrot, angle, orient);} // more complex than this - what if orient != vnorm?
 		}
 		obs_orient   = orient;
 		has_obstacle = 1;
@@ -713,7 +713,7 @@ bool u_ship::check_return_to_parent() const {
 			dock_value += 1.5*w.ndamaged; // damaged weapon bonus
 		}
 		dock_value += 2.0*get_damage(); // recharge bonus
-		dock_value -= 0.25*p2p_dist(pos, parent->get_pos())/specs().max_speed;
+		if (specs().max_speed > 0.0) {dock_value -= 0.25*p2p_dist(pos, parent->get_pos())/specs().max_speed;}
 		if (dock_value > 1.0) return 1;
 	}
 	return 0;
@@ -721,7 +721,6 @@ bool u_ship::check_return_to_parent() const {
 
 
 bool sobj_manager::claim_object(free_obj *parent, bool homeworld) {
-
 	return check_dest_ownership(uobj_id, pos, parent, 0, homeworld);
 }
 
@@ -999,7 +998,7 @@ void u_ship::ai_action() {
 		acquire_target(min_dist); // slow
 	}
 	free_obj const *const acquired_target(target_obj);
-	if (local_dest) target_obj = NULL;
+	if (local_dest) {target_obj = NULL;}
 	bool const parent_is_player(parent && !player_autopilot && parent->is_player_ship());
 	bool const use_stray(parent && !parent_is_player && !parent->disabled() && parent->can_move());
 	float stray_dist(0.0);
@@ -1036,17 +1035,17 @@ void u_ship::ai_action() {
 		}
 		else if (can_move_ && (local_dest || fighters.empty()) && choose_destination()) {
 			// have a destination and not waiting for fighters
-			if (sc.roll_rate > 0.0 && !player_ship) thrust(MOVE_LEFT, 0.25, 0);
+			if (sc.roll_rate > 0.0 && !player_ship) {thrust(MOVE_LEFT, 0.25, 0);}
 			point dest(dest_mgr.get_pos());
 			vector3d orient(dest, pos);
 			float const dist(orient.mag()), min_dest_dist(c_radius + dest_mgr.get_radius());
 			bool const use_high_speed(dist > 5.0*min_dest_dist && specs().has_fast_speed);
-			orient /= dist;
+			if (dist < TOLERANCE) {orient = plus_z;} else {orient /= dist;} // arbitrarily choose +z to avoid a div-by-zero
 			
 			if (can_move_ && vmag > 0.1*get_max_speed()) { // no hope if travelling at high speed
 				obstacle_avoid(orient, min(dist, 4.0f*TICKS_PER_SECOND*fticks*vmag), use_high_speed); // 4.0s lookahead
 			}
-			if (max_turn > TOLERANCE) do_turn(orient);
+			if (max_turn > TOLERANCE) {do_turn(orient);}
 
 			if (dist < 1.5*min_dest_dist) {
 				thrust(MOVE_STOP, 1.0, 0); // full stop
@@ -1068,7 +1067,7 @@ void u_ship::ai_action() {
 
 				if (vmag > TOLERANCE) {
 					vector3d const vnorm(velocity/vmag);
-					if (p2p_dist(vnorm, dir) > 1.0E-6) do_turn(vnorm); // align ourselves with our velocity
+					if (p2p_dist(vnorm, dir) > 1.0E-6) {do_turn(vnorm);} // align ourselves with our velocity
 				}
 				if (parent != NULL || get_obstacle(0.75*OBS_AVOID_TIME, 0.0, fobj, tdist, use_high_speed) != NULL) {
 					thrust(MOVE_STOP, 1.0, 0); // hard stop to avoid a collision
@@ -1335,7 +1334,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		if (uw.is_beam) {
 			beam_weap_params const &bwp(uw.get_beam_params());
 			if (bwp.temp_src) {value += 5.0*TEMP_FACTOR*uw.damage*get_max_t();}
-			if (bwp.temp_src) {value *= 0.5*(1.0 + get_max_t()/target_obj->get_max_t());}
+			if (bwp.temp_src) {value *= 0.5*(1.0 + get_max_t()/max(target_obj->get_max_t(), TOLERANCE));}
 			
 			if (bwp.mind_control) { // prefers a mostly undamaged target
 				value += 40.0*(1.0 - target_obj->get_damage())*(target_obj->get_cost() +
@@ -1344,7 +1343,6 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		}
 		value *= 1.0 + 0.5*uw.no_coll; // can hit multiple targets and can't be destroyed easily
 		value *= sw.wcount;
-		//cout << "[" << i << "]: " << uw.name << ", value = " << value << endl;
 		if (value >= min_value) wchoices.push_back(make_pair(-value, good_weapons[i])); // want largest to smallest so negate w
 	}
 	if (wchoices.empty()) return; // probably won't get here
@@ -1467,7 +1465,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 		float const fire_r(0.9);
 		
 		for (unsigned i = 0; i < wspread; ++i) { // shouldn't generate self-collisions
-			float const theta(TWO_PI*((float)i)/((float)wspread));
+			float const theta(TWO_PI*((float)i)/(float)wspread);
 			offsets.push_back(vxx*(fire_r*sinf(theta))+ vxy*(fire_r*cosf(theta)));
 		}
 	}
@@ -2807,7 +2805,7 @@ void multipart_ship::apply_physics() {
 				float const rv(1.0 - 0.062*i), r1(0.7*rv*rv*rv + 0.25*rv + 0.05);
 				float const r2((i == 15) ? 0.0 : (0.92*r1 - 0.01));
 				point delta(i*fabs(val2)*cv3, i*fabs(val2)*sv3, (1.0 - 0.01*i*i*fabs(val2)));
-				delta *= 0.5/delta.mag();
+				delta *= 0.5/max(delta.mag(), TOLERANCE);
 				tpos[1] = tpos[0] + delta*1.25;
 				cobjs.add(new ship_cylinder(tpos[0], tpos[1], r1, r2, 0, 0.25)); // half damage
 				c_radius = max(c_radius, max((tpos[0].mag() + SQRT2*r1), (tpos[1].mag() + SQRT2*r2)));

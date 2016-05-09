@@ -169,7 +169,7 @@ void ship_torus::get_bounding_sphere(point &c, float &r) const {
 void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
 
 	assert(obj);
-	assert(ro > 0.0 && ri > 0.0);
+	assert(ro > 0.0 && ri > 0.0 && ndiv > 0);
 	int npts;
 	point pts_[4];
 	point spos_xf(spos);
@@ -521,7 +521,7 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 		invalid = 1;
 		return;
 	}
-	if (min(rad[0], rad[1])/max(rad[0], rad[1]) > 0.94) rad[0] = rad[1] = 0.5*(rad[0] + rad[1]);
+	if (min(rad[0], rad[1])/max(rad[0], rad[1]) > 0.94) {rad[0] = rad[1] = 0.5*(rad[0] + rad[1]);}
 }
 
 
