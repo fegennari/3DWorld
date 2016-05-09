@@ -711,7 +711,9 @@ bool sphere_intersect_uobject(point const &pos, float radius, bool include_aster
 bool get_closest_object(point const &pos, s_object &result, int obj_type, bool include_asteroids, bool get_destroyed=0) {
 
 	if (!universe.get_closest_object(result, pos, obj_type, include_asteroids, 1, 4.0, get_destroyed)) return 0;
-	return (result.type == obj_type && result.object != NULL && (get_destroyed || result.object->is_ok()));
+	if (result.type != obj_type)  return 0; // incorrect type
+	if (obj_type <= UTYPE_SYSTEM) return 1; // no object to check
+	return (result.object != NULL && (get_destroyed || result.object->is_ok()));
 }
 
 uobject const *get_closest_world_ptr(point const &pos, int type) {
@@ -1033,16 +1035,17 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
 							 vector3d const &axis_, point const &start_pos, float rad, float start_ang, float rate)
 	: u_ship(sclass_, all_zeros, align, (AI_ATT_ENEMY | (guardian ? AI_GUARDIAN : 0)), TARGET_CLOSEST, 0), GSO(rate == 0.0),
-	fixed_pos(start_pos != all_zeros), has_sobj(0),
-	last_build_time(time), orbit_r(rad), start_angle(start_ang), rot_rate(rate), axis(axis_), rel_pos(start_pos)
+	fixed_pos(start_pos != all_zeros), has_sobj(0), last_build_time(time), system_ix(world_path.system), planet_ix(world_path.planet),
+	moon_ix(world_path.moon), orbit_r(rad), start_angle(start_ang), rot_rate(rate), axis(axis_), rel_pos(start_pos)
 {
 	urev_body &world(world_path.get_world());
+	assert(world.type == UTYPE_PLANET || world.type == UTYPE_MOON);
+	assert(system_ix >= 0 && planet_ix >= 0);
+	if (world.type == UTYPE_MOON) {assert(moon_ix >= 0);}
 	sobj_liveable = world.liveable();
 	orbiting_type = world.type;
-	assert(orbiting_type == UTYPE_PLANET || orbiting_type == UTYPE_MOON);
 	assert(!can_move());
 	homeworld.set_object(&world);
-	world_name = world.getname();
 	flags |= OBJ_FLAGS_ORBT;
 
 	if (orbit_r == 0.0) {
@@ -1069,41 +1072,42 @@ void orbiting_ship::update_state() {
 
 	if (!is_ok()) return;
 	bool const exploding_now(explode_now());
-	has_sobj = 0;
+	if ((flags & OBJ_FLAGS_DIST) && !exploding_now && (time&31) != 0) return; // don't update this frame when far away
+	s_object result;
+	if (!get_closest_object(pos, result, UTYPE_GALAXY, 0)) return; // galaxy not found (player is in a different cell?)
+	ugalaxy &galaxy(result.get_galaxy());
+	if (galaxy.sols.empty()) return; // systems not generated for this galaxy
+	assert((unsigned)system_ix < galaxy.sols.size());
+	ussystem &system(galaxy.sols[system_ix]);
+	if (system.planets.empty()) return; // planets not generated for this system
+	assert((unsigned)planet_ix < system.planets.size());
+	uplanet &planet(system.planets[planet_ix]);
+	urev_body *world(nullptr);
 	
-	if (!(flags & OBJ_FLAGS_DIST) || exploding_now || (time&31) == 0) { // not too far away
-		s_object result;
-
-		if (get_closest_object(pos, result, UTYPE_SYSTEM, 0)) { // get the system first, since it doesn't move and should always be valid
-			urev_body *world(nullptr);
-			if      (orbiting_type == UTYPE_PLANET) {world = result.get_system().get_planet_by_name(world_name);}
-			else if (orbiting_type == UTYPE_MOON  ) {world = result.get_system().get_moon_by_name  (world_name);}
-			else {assert(0);}
-
-			if (world != nullptr) {
-				result.object = world;
-
-				if (!world->is_ok()) { // was destroyed
-					if (!is_exploding()) {destroy_ship(0.0);}
-					return;
-				}
-				if (homeworld.update_pos_if_close(world)) { // the object we are orbiting is still there
-					set_pos_from_sobj(world);
-					has_sobj = 1;
-				}
-				if (!ORBITAL_REGEN && exploding_now && world->get_owner() == (int)alignment) { // is this correct?
-					world->dec_orbiting_refs(result); // will die this frame
-				}
-				else if (!is_exploding() && !world->is_owned()) {
-					world->set_owner(result, alignment); // have to reset - world must have been regenerated
-				}
-				if (world->temp > get_temp()) {set_temp(FOBJ_TEMP_SCALE*world->temp, world->get_pos(), NULL);}
-			}
-			//else {cout << TXT(orbiting_type) << TXT(world) << TXT(world_name) << endl;}
-		}
-		//else {cout << "system not found" << endl;}
+	if (orbiting_type == UTYPE_PLANET) {world = &planet;}
+	else {
+		assert(orbiting_type == UTYPE_MOON);
+		if (planet.moons.empty()) return; // moons not generated for this planet
+		assert((unsigned)moon_ix < planet.moons.size());
+		world = &planet.moons[moon_ix];
 	}
-	if (!has_sobj) {velocity = zero_vector;} // stopped
+	result.object = world;
+	//velocity = zero_vector; // ???
+
+	if (!world->is_ok()) { // was destroyed
+		if (!is_exploding()) {destroy_ship(0.0);}
+		return;
+	}
+	if (homeworld.update_pos_if_close(world)) { // the object we are orbiting is still there
+		set_pos_from_sobj(world);
+	}
+	if (!ORBITAL_REGEN && exploding_now && world->get_owner() == (int)alignment) { // is this correct?
+		world->dec_orbiting_refs(result); // will die this frame
+	}
+	else if (!is_exploding() && !world->is_owned()) {
+		world->set_owner(result, alignment); // have to reset - world must have been regenerated
+	}
+	if (world->temp > get_temp()) {set_temp(FOBJ_TEMP_SCALE*world->temp, world->get_pos(), NULL);}
 }
 
 

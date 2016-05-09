@@ -1349,10 +1349,10 @@ class orbiting_ship : public u_ship { // planetary defense, defense sat, antimis
 private:
 	bool GSO, fixed_pos, has_sobj, sobj_liveable;
 	unsigned orbiting_type, last_build_time;
+	int system_ix, planet_ix, moon_ix;
 	float orbit_r, rot_rate, start_angle, angle;
 	vector3d axis;
 	point rel_pos;
-	string world_name;
 
 public:
 	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
