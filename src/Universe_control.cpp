@@ -739,7 +739,12 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 	}
 	else if (TEAM_ALIGNED(align) && TEAM_ALIGNED(owner)) { // owned by enemy team
 		owner_val = 2.0;
-		if (have_excess_credits(align)) {value += 0.5*GALAXY_MIN_SIZE;} // excess_credits case - more aggressively go after enemy colonies
+		if (have_excess_credits(align)) {value += 0.75*GALAXY_MIN_SIZE;} // excess_credits case - more aggressively go after enemy colonies
+		else {
+			float tot_resources(0.0);
+			for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {tot_resources += resource_counts[i];}
+			if (tot_resources > 100.0 && resource_counts[align] > 0.5*tot_resources) {value += 0.25*GALAXY_MIN_SIZE;} // dominant resources case - more aggressive
+		}
 	}
 	value += 1.0*liveable();
 	value += (0.1*resources + 0.5)*owner_val;
@@ -761,48 +766,45 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 	point const galaxy_query_pos(universe_origin);
 	s_object result;
 	float const g_expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
-	if (!universe.get_closest_object(result, galaxy_query_pos, UTYPE_GALAXY, 0, 1, 4.0, 0, g_expand) || result.type < UTYPE_GALAXY) return NULL; // choose closest galaxy
+	if (!universe.get_closest_object(result, galaxy_query_pos, UTYPE_GALAXY, 0, 1, 4.0, 0, g_expand) || result.type < UTYPE_GALAXY) return nullptr; // choose closest galaxy
 	ugalaxy const &galaxy(result.get_galaxy());
+	unsigned const nsytems(galaxy.sols.size());
+	if (nsytems == 0) return nullptr; // no systems generated (can this happen?)
 	uobject const *dest = NULL;
-	float const distval(2.5*galaxy.get_radius());
-	float max_svalue(0.0);
+	unsigned const nqueries(8), max_queries(nsytems/2);
+	float max_pvalue(0.0);
 
-	for (unsigned s = 0; s < galaxy.sols.size(); ++s) { // clusters don't help much here
-		ussystem const &system(galaxy.sols[s]);
-		if (system.planets.empty()) continue; // no planets to visit (could be that the planets aren't generated yet)
-		float const svalue(distval*rand_float() - p2p_dist(pos, system.get_pos()));
-		
-		if (max_svalue == 0.0 || svalue > max_svalue) {
-			float const sradius(system.get_radius());
-			float max_pvalue(0.0);
+	for (unsigned n = 0, ngood = 0; (ngood < nqueries && n < max_queries); ++n) {
+		unsigned const six(rand()%nsytems);
+		ussystem const &system(galaxy.sols[six]); // chose a random system
+		float const sradius(system.get_radius());
+		bool sol_good(0);
 
-			for (unsigned j = 0; j < system.planets.size(); ++j) {
-				uplanet const &planet(system.planets[j]);
-				bool const planet_acceptable(planet.colonizable() && planet.get_id() != exclude_id && planet.temp < tmax);
-				if (!planet_acceptable && planet.moons.empty()) continue;
-				float const pvalue(planet.get_land_value(align, pos, sradius));
+		for (auto p = system.planets.begin(); p != system.planets.end(); ++p) {
+			bool const planet_acceptable(p->colonizable() && p->get_id() != exclude_id && p->temp < tmax);
+			if (!planet_acceptable && p->moons.empty()) continue;
+			float const pvalue(p->get_land_value(align, pos, sradius));
+			sol_good |= planet_acceptable;
+			if (max_pvalue != 0.0 && pvalue < max_pvalue) continue; // not the best planet so far
 
-				if (max_pvalue == 0.0 || pvalue > max_pvalue) {
-					if (planet_acceptable && !line_intersect_sun(pos, planet.pos, system, 2.0)) {
-						max_pvalue = pvalue;
-						max_svalue = svalue;
-						dest       = &planet;
-					}
-					for (unsigned k = 0; k < planet.moons.size(); ++k) {
-						umoon const &moon(planet.moons[k]);
-						if (!moon.colonizable() || moon.get_id() == exclude_id && moon.temp < tmax) continue;
-						float const mvalue(moon.get_land_value(align, pos, sradius));
-
-						if ((max_pvalue == 0.0 || mvalue > max_pvalue) && !line_intersect_sun(pos, moon.pos, system, 2.0)) {
-							max_pvalue = mvalue;
-							max_svalue = svalue;
-							dest       = &moon;
-						}
-					}
-				}
+			if (planet_acceptable && !line_intersect_sun(pos, p->pos, system, 2.0)) {
+				max_pvalue = pvalue;
+				dest       = &(*p); // choose this planet as a candidate
 			}
-		}
-	}
+			for (auto m = p->moons.begin(); m != p->moons.end(); ++m) {
+				if (!m->colonizable() || m->get_id() == exclude_id && m->temp < tmax) continue;
+				float const mvalue(m->get_land_value(align, pos, sradius));
+				sol_good = 1;
+
+				if ((max_pvalue == 0.0 || mvalue > max_pvalue) && !line_intersect_sun(pos, m->pos, system, 2.0)) {
+					max_pvalue = mvalue;
+					dest       = &(*m); // choose this moon as a candidate
+				}
+			} // for m
+		} // for p
+		if (sol_good) {++ngood;}
+	} // for n
+	//if (dest) {cout << dest->get_name() << endl;}
 	if (!dest) {cout << "no dest" << endl;} // testing
 	return dest;
 }
