@@ -272,7 +272,10 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	}
 	// clobj0 will not be set - need to draw cells before there are any sobjs
 #ifdef _OPENMP
-	if (inited && !static_only && NUM_THREADS > 1 && !(display_mode & 0x40)) {
+	// disable multiple threads when the player is away from the starting galaxy center to avoid crashing when allocating/freeing galaxies, systems, and clusters
+	bool const near_init_galaxy(dist_less_than(get_player_pos2(), universe_origin, GALAXY_MIN_SIZE));
+
+	if (inited && !static_only && NUM_THREADS > 1 && !(display_mode & 0x40) && near_init_galaxy) {
 		// is this legal when a query object that tries to access a planet/moon/star through clobj as the uobject is being deleted?
 		#pragma omp parallel num_threads(2)
 		{
@@ -623,7 +626,7 @@ void destroy_player_ship(bool captured) {
 
 point get_universe_display_camera_pos() {
 
-	point const camera(player_ship().get_pos()), camera_scaled(camera/CELL_SIZE);
+	point const camera(get_player_pos2()), camera_scaled(camera/CELL_SIZE);
 	return point(uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z);
 }
 
