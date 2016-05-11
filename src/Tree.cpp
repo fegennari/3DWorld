@@ -1467,33 +1467,29 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 
 	// set the bounding sphere center
 	assert(!all_cylins.empty());
-	float bzmin(all_cylins.front().p1.z), bzmax(zmin);
+	branches_bcube.set_from_point(all_cylins.front().p1);
 
 	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
-		bzmin = min(bzmin, min(i->p1.z, i->p2.z));
-		bzmax = max(bzmax, max(i->p1.z, i->p2.z));
-		br_x  = max(br_x,  max(fabs(i->p1.x), fabs(i->p2.x)));
-		br_y  = max(br_y,  max(fabs(i->p1.y), fabs(i->p2.y)));
+		branches_bcube.union_with_pt(i->p2); // only need to check branch (and root) end points
 	}
+	br_x = max(branches_bcube.d[0][1], -branches_bcube.d[0][0]);
+	br_y = max(branches_bcube.d[1][1], -branches_bcube.d[1][0]);
+	float const bzmin(branches_bcube.d[2][0]), bzmax(branches_bcube.d[2][1]);
 	sphere_center_zoff = 0.5*(bzmin + bzmax);
 	br_z               = 0.5*(bzmax - bzmin);
 	sphere_radius      = 0.0;
-	float lr_z1(bzmax), lr_z2(bzmin);
 	point const center(get_center());
-	leaves_bcube.set_from_point(center);
-	branches_bcube.set_from_point(center);
+	leaves_bcube.set_from_point(leaves.empty() ? center : leaves.front().pts[0]);
 
 	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
-		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, center)); // only need to check branch end points
-		branches_bcube.union_with_pt(i->p2);
+		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, center)); // only need to check branch (and root) end points
 	}
 	for (vector<tree_leaf>::const_iterator i = leaves.begin(); i != leaves.end(); ++i) {
-		lr_x  = max(lr_x,  max(max(fabs(i->pts[0].x), fabs(i->pts[1].x)), max(fabs(i->pts[2].x), fabs(i->pts[3].x))));
-		lr_y  = max(lr_y,  max(max(fabs(i->pts[0].y), fabs(i->pts[1].y)), max(fabs(i->pts[2].y), fabs(i->pts[3].y))));
-		lr_z1 = min(lr_z1, min(min(i->pts[0].z, i->pts[1].z), min(i->pts[2].z, i->pts[3].z)));
-		lr_z2 = max(lr_z2, max(max(i->pts[0].z, i->pts[1].z), max(i->pts[2].z, i->pts[3].z)));
 		UNROLL_4X(leaves_bcube.union_with_pt(i->pts[i_]);)
 	}
+	lr_x  = max(leaves_bcube.d[0][1], -leaves_bcube.d[0][0]);
+	lr_y  = max(leaves_bcube.d[1][1], -leaves_bcube.d[1][0]);
+	float const lr_z1(leaves_bcube.d[2][0]), lr_z2(leaves_bcube.d[2][1]);
 	sphere_radius = sqrt(sphere_radius);
 	lr_z_cent     = 0.5*(lr_z1 + lr_z2);
 	lr_z          = 0.5*(lr_z2 - lr_z1);
