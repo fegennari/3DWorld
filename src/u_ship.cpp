@@ -960,14 +960,14 @@ void u_ship::ai_action() {
 	// too close to the sun or a hot object, or too much gravity from a black hole, move away at full speed
 	if (can_move_) {
 		vector3d orient(zero_vector);
+		bool const is_docking(target_obj == parent && is_fighter()); // any more conditionals?
 
-		if (is_burning()) {
-			if (get_over_temp_factor() > 0.0) { // actually taking damage
-				orient = pos - tcent; // fly directly away from star
-			}
-			else { // fly on a tangent
-				orthogonalize_dir(dir, (pos - tcent), orient, 0);
-			}
+		if (get_over_temp_factor() > 0.0) { // actually taking damage
+			orient = pos - tcent; // fly directly away from star
+		}
+		// Note: docking fighters are allowed to get hotter while attempting to dock with a parent, to handle cases where the parent has a higher temperature tolerance
+		else if ((temperature > 1.6*get_max_t()) || (is_burning() && !is_docking)) { // about to take damage, or high temperature and not docking
+			orthogonalize_dir(dir, (pos - tcent), orient, 0); // fly on a tangent
 		}
 		else if (near_b_hole && gvect.mag() > SHIP_GMAX) { // gravity too high
 			orient = -gvect; // fly directly away from black hole
