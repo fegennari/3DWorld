@@ -25,7 +25,7 @@ unsigned owner_counts[NUM_ALIGNMENT] = {0};
 float resource_counts[NUM_ALIGNMENT] = {0.0};
 
 
-extern bool claim_planet, water_is_lava;
+extern bool claim_planet, water_is_lava, no_shift_universe;
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
@@ -480,6 +480,8 @@ void reset_player_universe() {
 
 void check_shift_universe() {
 
+	static bool had_init_shift(0);
+	if (no_shift_universe && had_init_shift) return;
 	point camera(get_player_pos2());
 	vector3d move(zero_vector);
 	bool moved(0);
@@ -499,6 +501,7 @@ void check_shift_universe() {
 		}
 	}
 	if (moved) {shift_univ_objs(move, 1);} // advance all free objects by a cell
+	had_init_shift = 1;
 }
 
 

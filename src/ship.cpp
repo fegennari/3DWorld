@@ -648,7 +648,7 @@ void shift_univ_objs(point const &pos, bool shift_player_ship) {
 
 		if (shift_player_ship || !player) { // shift even if !is_ok()
 			uobjs[i]->move_by(pos);
-			if (!player || MOVE_PLAYER_RPOS) uobjs[i]->move_reset_by(pos);
+			if (!player || MOVE_PLAYER_RPOS) {uobjs[i]->move_reset_by(pos);}
 		}
 	}
 	player_death_pos += pos;

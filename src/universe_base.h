@@ -99,6 +99,8 @@ struct ellipsoid_t {
 };
 
 
+void offset_pos(point &pos);
+void offset_pos_inv(point &pos);
 void reset_player_universe();
 bool get_universe_sun_pos(point const &pos, point &spos);
 bool has_sun_lighting(point const &pos);

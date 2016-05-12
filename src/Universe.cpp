@@ -89,7 +89,8 @@ bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3
 
 
 point get_scaled_upt() {return point(CELL_SIZE*uxyz[0], CELL_SIZE*uxyz[1], CELL_SIZE*uxyz[2]);}
-void offset_pos(point &pos) {pos += get_scaled_upt();}
+void offset_pos    (point &pos) {pos += get_scaled_upt();}
+void offset_pos_inv(point &pos) {pos -= get_scaled_upt();}
 
 float temp_to_deg_c(float temp) {return (100.0*(temp - FREEZE_TEMP)/(BOIL_TEMP - FREEZE_TEMP));} // 10 => 0, 20 => 100
 float temp_to_deg_f(float temp) {return (1.8*temp_to_deg_c(temp) + 32.0);}

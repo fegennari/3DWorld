@@ -594,7 +594,6 @@ typedef map<s_object, modmap_val_t> modmap;
 
 inline uplanet const &get_planet(s_object const &so) {return so.get_planet();}
 
-
 bool import_default_modmap();
 bool import_modmap(string const &filename);
 bool export_modmap(string const &filename);
