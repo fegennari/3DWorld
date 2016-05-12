@@ -111,14 +111,12 @@ struct tree_branch { // size = 12
 
 struct tree_xform_t {
 
-	float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
 	float langle, sin_term, cos_term;
+	point re_matrix;
 
 	tree_xform_t() : langle(0.0), sin_term(0.0), cos_term(1.0) {}
 
-	void add_rotation(point &dest, point const &src, float mult) {
-		UNROLL_3X(dest[i_] = src[i_] + mult*re_matrix[i_];)
-	}
+	void add_rotation(point &dest, point const &src, float mult) {dest = src + mult*re_matrix;}
 	void setup_rotate(vector3d &rotate, float rotate_start, float temp_deg) {
 		float const angle(rotate_start/TO_DEG + temp_deg);
 		rotate.assign(cosf(angle), sinf(angle), 0.0);
@@ -126,13 +124,10 @@ struct tree_xform_t {
 	void rotate_around_axis(tree_cylin const &c) {
 		rotate_all(c.rotate, c.deg_rotate/TO_DEG, 0.0, 0.0, c.length);
 	}
-	void rotate_pts_around_axis(point const &p, point &rotation_v, float deg_rotate) {
+	void rotate_pts_around_axis(point const &p, point const &rotation_v, float deg_rotate) {
 		rotate_all(rotation_v, deg_rotate/TO_DEG, p.x, p.y, p.z);
 	}
 	void rotate_cylin(tree_cylin &c);
-	void rotate_it();
-	void rotate_itv2();
-	void turn_into_i(float *m);
 	void rotate_all(point const &rotate, float angle, float x, float y, float z);
 	void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start);
 };

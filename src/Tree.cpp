@@ -1310,32 +1310,7 @@ void tree_xform_t::rotate_cylin(tree_cylin &c) {
 
 	//rotate_around_axis(c);
 	rotate_all(c.rotate, c.deg_rotate/TO_DEG, 0.0, 0.0, c.length);
-	add_rotation(c.p2, c.p1, 1.0);
-}
-
-void tree_xform_t::rotate_it() {
-
-	re_matrix[0] = i_matrix[0]*tree_temp_matrix[0] + i_matrix[1]*tree_temp_matrix[1];
-	re_matrix[1] = i_matrix[3]*tree_temp_matrix[0] + i_matrix[4]*tree_temp_matrix[1];
-	re_matrix[2] = tree_temp_matrix[2];
-	tree_temp_matrix[0] = re_matrix[0];
-	tree_temp_matrix[1] = re_matrix[1];
-}
-
-void tree_xform_t::rotate_itv2() {
-
-	re_matrix[0] = tree_temp_matrix[0];
-	re_matrix[1] = i_matrix[4]*tree_temp_matrix[1] + i_matrix[5]*tree_temp_matrix[2];
-	re_matrix[2] = i_matrix[7]*tree_temp_matrix[1] + i_matrix[8]*tree_temp_matrix[2];
-	tree_temp_matrix[1] = re_matrix[1];
-	tree_temp_matrix[2] = re_matrix[2];
-}
-
-void tree_xform_t::turn_into_i(float *m) {
-
-	m[0] = 1.0; m[1] = 0.0; m[2] = 0.0;
-	m[3] = 0.0; m[4] = 1.0; m[5] = 0.0;
-	m[6] = 0.0; m[7] = 0.0; m[8] = 1.0;
+	c.p2 = c.p1 + re_matrix;
 }
 
 void tree_xform_t::rotate_all(point const &rotate, float angle, float x, float y, float z) {
@@ -1345,41 +1320,23 @@ void tree_xform_t::rotate_all(point const &rotate, float angle, float x, float y
 		sin_term = sin(angle);
 		langle   = angle;
 	}
-
-	//create the starting point
-	tree_temp_matrix[0] = x;
-	tree_temp_matrix[1] = y;
-	tree_temp_matrix[2] = z;
-
-	//rotate around z
-	turn_into_i(i_matrix);
-	i_matrix[0] = -rotate.x;
-	i_matrix[1] =  rotate.y;
-	i_matrix[3] = -rotate.y;
-	i_matrix[4] = -rotate.x;
-	rotate_it(); //do matrix multiplication
-
-	//rotate around x;
-	turn_into_i(i_matrix);
-	i_matrix[4] =  cos_term;
-	i_matrix[5] = -sin_term;
-	i_matrix[7] =  sin_term;
-	i_matrix[8] =  cos_term;
-	rotate_itv2(); //do matrix multiplication
-
-	//do_reverse, inverse rotate around z
-	turn_into_i(i_matrix);
-	i_matrix[0] =  rotate.x;
-	i_matrix[1] = -rotate.y;
-	i_matrix[3] =  rotate.y;
-	i_matrix[4] =  rotate.x;
-	rotate_it(); //do matrix multiplication
+	// rotate around z
+	re_matrix.x = -rotate.x*x + rotate.y*y;
+	re_matrix.y = -rotate.y*x - rotate.x*y;
+	// rotate around x
+	float const xv(re_matrix.x), yv(re_matrix.y);
+	re_matrix.y = cos_term*yv - sin_term*z;
+	re_matrix.z = sin_term*yv + cos_term*z;
+	// do_reverse, inverse rotate around z
+	float const yv2(re_matrix.y);
+	re_matrix.x = rotate.x*xv - rotate.y*yv2;
+	re_matrix.y = rotate.y*xv + rotate.x*yv2;
 }
 
 void tree_xform_t::gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 	float temp_deg(safe_acosf(lrotate.x));
-	if (lrotate.y < 0.0) temp_deg *= -1.0;
+	if (lrotate.y < 0.0) {temp_deg *= -1.0;}
 	setup_rotate(rotate, rotate_start, temp_deg);
 }
 
@@ -1446,6 +1403,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult,
 	float nl_scale, float bbo_scale, bool has_4th_branches_, cube_t const *clip_cube, bool create_bush)
 {
+	//RESET_TIME;
 	tree_type = tree_type_;
 	has_4th_branches = has_4th_branches_;
 	assert(tree_type < NUM_TREE_TYPES);
@@ -1494,6 +1452,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	lr_z_cent     = 0.5*(lr_z1 + lr_z2);
 	lr_z          = 0.5*(lr_z2 - lr_z1);
 	reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
+	//PRINT_TIME("Gen Tree");
 }
 
 
@@ -1672,13 +1631,10 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 
 inline float tree_builder_t::gen_bc_size(float branch_var) {
-
 	return (rand_gen((int)branch_var - 5, (int)branch_var + 5)/100.0)*(num_cylin_factor/ncib);
 }
 
-
 inline float tree_builder_t::gen_bc_size2(float branch_var) {
-
 	return rand_gen((int)branch_var - 5, (int)branch_var + 5)/100.0;
 }
 
@@ -1763,8 +1719,8 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 
 		//set rotate ------------
 		gen_cylin_rotate(cylin.rotate, lcylin.rotate, deg_added*rotate_factor);
-		add_rotation(lcylin.p2, lcylin.p1, 1.0);
-		if (j == (branch.num_cylins - 1)) rotate_cylin(cylin);
+		lcylin.p2 = lcylin.p1 + re_matrix;
+		if (j == (branch.num_cylins - 1)) {rotate_cylin(cylin);}
 		
 		if (branch_just_created) {
 			if (j == branch.num_cylins-1) {
@@ -1815,8 +1771,8 @@ void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool b
 		cylin.rotate.z    = lcylin.rotate.z;
 		cylin.deg_rotate += ((branch.cylin[0].deg_rotate < 0.0) ? deg_added : -deg_added);
 		cylin.deg_rotate *= branch_upwardness;
-		add_rotation(lcylin.p2, lcylin.p1, 1.0);
-		if (index == (branch.num_cylins - 1)) rotate_cylin(cylin);
+		lcylin.p2 = lcylin.p1 + re_matrix;
+		if (index == (branch.num_cylins - 1)) {rotate_cylin(cylin);}
 		
 		if (branch_just_created && cylin.deg_rotate < branch_min_angle) {
 			int const bnum(num_3_branches_created + num_34_branches[0]);
@@ -1859,8 +1815,8 @@ void tree_builder_t::create_3rd_order_branch(int i, int j, int cylin_num, int br
 		cylin.rotate = lcylin.rotate;
 		int const deg_added(generate_next_cylin(index, branch.num_cylins, branch_just_created, branch_deflected));
 		cylin.deg_rotate += ((branch.cylin[0].deg_rotate < 0.0) ? deg_added : -deg_added);
-		add_rotation(lcylin.p2, lcylin.p1, 1.0);
-		if (index == (branch.num_cylins - 1)) rotate_cylin(cylin);
+		lcylin.p2 = lcylin.p1 + re_matrix;
+		if (index == (branch.num_cylins - 1)) {rotate_cylin(cylin);}
 	}
 }
 
@@ -1933,8 +1889,8 @@ void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, f
 		gen_cylin_rotate(cylin.rotate, lcylin.rotate, deg_added*rotate_factor);
 		cylin.rotate.z = lcylin.rotate.z;
 		cylin.deg_rotate += ((branch.cylin[0].deg_rotate < 0.0) ? deg_added : -deg_added);
-		add_rotation(lcylin.p2, lcylin.p1, 1.0);
-		if (index == (branch.num_cylins - 1)) rotate_cylin(cylin);
+		lcylin.p2 = lcylin.p1 + re_matrix;
+		if (index == (branch.num_cylins - 1)) {rotate_cylin(cylin);}
 	}
 }
 
@@ -1973,7 +1929,7 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 			point lpts(leaf_points[p]*lsize);
 			lpts.x *= tree_types[tree_type].leaf_x_ar;
 			rotate_pts_around_axis(lpts, rotate, deg_rotate);
-			add_rotation(leaf.pts[p], start, 1.0);
+			leaf.pts[p] = start + re_matrix;
 		}
 		point const base_pt((leaf.pts[0] + leaf.pts[3])*0.5);
 		vector3d const xlate(cylin.r1*(base_pt - cylin.p1).get_norm());
@@ -1981,7 +1937,7 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 		point lpts(0.0, 1.0, 0.0); // normal starts off in y-direction
 		rotate_pts_around_axis(lpts, rotate, deg_rotate);
 		leaf.create_init_color(1);
-		leaf.norm.assign(re_matrix[0], re_matrix[1], re_matrix[2]);
+		leaf.norm = re_matrix;
 		leaf.norm.normalize(); // should already be normalized
 		leaves.push_back(leaf);
 	} // for l
