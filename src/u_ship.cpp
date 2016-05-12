@@ -1294,7 +1294,8 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 				xform_point_inv(wpos); // calculate more accurate distance based on actual weapon pos
 				tdist = p2p_dist(wpos, target_obj->get_pos());
 			}
-			if (tdist > (uw.is_beam ? 1.0 : 1.05)*range) continue; // out of range
+			if (!uw.is_beam) {tdist -= target_obj->get_radius();} // only need to hit the edge of the target
+			if (tdist > range) continue; // out of range
 		}
 		if (!weap_turret(sw.wclass) && bad_angle(d_angle, target_dist, sw.wclass)) { // target not aligned
 			default_next_weap = w; // if the only useable weapon is unaligned, then make this the next cur_weapon so that we can align ourselves next frame
