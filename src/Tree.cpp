@@ -1650,14 +1650,14 @@ void tree_builder_t::gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float
 	cylin.assign_params(level, branch_id, lcylin.r2, (rad_var_test ? lcylin.r1*gen_bc_size(rad_var) : 0.0),
 		((level == 4) ? branch_4_length*var : lcylin.length*gen_bc_size(var)), lcylin.deg_rotate);
 	rotate_around_axis(lcylin);
-	cylin.p1 = lcylin.p1 + BASE_LEN_SCALE*re_matrix;
+	cylin.p1 = lcylin.p1 + BRANCH_LEN_SCALE*re_matrix;
 }
 
 
 void tree_builder_t::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id) {
 
 	rotate_around_axis(src_cylin);
-	cylin.p1 = src_cylin.p1 + BASE_LEN_SCALE*re_matrix;
+	cylin.p1 = src_cylin.p1 + BRANCH_LEN_SCALE*re_matrix;
 	float const radius1(bstart*src_cylin.r2);
 	float deg_rotate(rand_gen(0, int(branch_max_angle)));
 	
@@ -1681,7 +1681,7 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 	tree_cylin &cylin(branch.cylin[0]);
 	branch.num_cylins = ncib;
 	rotate_around_axis(base.cylin[base_cylin_num]);
-	cylin.p1 = base.cylin[base_cylin_num].p1 + BASE_LEN_SCALE*re_matrix;
+	cylin.p1 = base.cylin[base_cylin_num].p1 + BRANCH_LEN_SCALE*re_matrix;
 	setup_rotate(cylin.rotate, rotate_start, 0.0);
 	float const radius1(base_radius*branch_1_start);
 	cylin.assign_params(1, branch_num, radius1, radius1*gen_bc_size(branch_1_rad_var),
@@ -1885,7 +1885,7 @@ void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, f
 	cylin.assign_params(4, branch_num, radius1, radius1*gen_bc_size2(branch_4_rad_var), branch_4_length,
 		src_cylin.deg_rotate + ((src_cylin.deg_rotate > 0.0) ? 1 : -1)*rand_gen(0,60));
 	rotate_around_axis(src_cylin);
-	cylin.p1 = src_cylin.p1 + BASE_LEN_SCALE*re_matrix;
+	cylin.p1 = src_cylin.p1 + BRANCH_LEN_SCALE*re_matrix;
 	if (branch.num_cylins < 2) {rotate_cylin(cylin);}
 	
 	for (index = 1; index < branch.num_cylins; index++) {
