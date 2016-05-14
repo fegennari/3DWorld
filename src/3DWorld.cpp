@@ -86,7 +86,7 @@ float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0), dodgeball_metalness(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0), cloud_height_offset(0.0);
-float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25), sm_tree_density(1.0);
+float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25), sm_tree_density(1.0), fog_dist_scale(1.0);
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(0.6), waypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), model3d_texture_anisotropy(1.0), dist_to_fire_sq(0.0);
 float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model_auto_tc_scale(0.0), model_triplanar_tc_scale(0.0), shadow_map_pcf_offset(0.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0};
@@ -321,7 +321,7 @@ void set_additive_blend_mode() {
 
 
 void reset_fog() {
-	setup_linear_fog(GRAY, ((world_mode == WMODE_INF_TERRAIN) ? get_inf_terrain_fog_dist() : 2.5*Z_SCENE_SIZE));
+	setup_linear_fog(GRAY, ((world_mode == WMODE_INF_TERRAIN) ? get_inf_terrain_fog_dist() : 2.5*Z_SCENE_SIZE*fog_dist_scale));
 }
 
 
@@ -1667,6 +1667,7 @@ int load_config(string const &config_file) {
 	kwmf.add("shadow_map_pcf_offset", shadow_map_pcf_offset);
 	kwmf.add("cloud_height_offset", cloud_height_offset);
 	kwmf.add("dodgeball_metalness", dodgeball_metalness);
+	kwmf.add("fog_dist_scale", fog_dist_scale);
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);
