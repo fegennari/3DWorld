@@ -1335,8 +1335,8 @@ void tree_xform_t::rotate_pts_around_axis(point const &p, point const &rotate, f
 void tree_xform_t::rotate_around_axis(tree_cylin const &c) {
 
 	set_sin_cos_terms(c.deg_rotate);
-	float const yv(sin_term*c.length);
-	re_matrix.assign(c.rotate.y*yv, c.rotate.x*yv, cos_term*c.length);
+	float const yv(-sin_term*c.length);
+	re_matrix.assign(-c.rotate.y*yv, c.rotate.x*yv, cos_term*c.length);
 }
 
 void tree_xform_t::gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
