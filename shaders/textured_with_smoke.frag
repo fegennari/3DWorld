@@ -108,15 +108,13 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 			add_dlights_bm_scaled(tex_val.rgb, dl_pos, norm_dir, vec3(1.0), 0.0, 1.0, 0.0); // normal points from vertex to eye, override bump mapping, color is applied later
 		}
 #endif // SMOKE_DLIGHTS
-#ifdef SMOKE_SHADOW_MAP
-#ifdef USE_SHADOW_MAP
+#if defined(SMOKE_SHADOW_MAP) && defined(USE_SHADOW_MAP)
 		if (enable_light0) {
 			const float smoke_albedo = 0.9;
 			tex_val.rgb  += smoke_albedo * get_shadow_map_weight_light0_no_bias(cur_epos) * fg_LightSource[0].diffuse.rgb;
 			cur_epos.rgb += epos_delta;
 		}
-#endif // USE_SHADOW_MAP
-#endif // SMOKE_SHADOW_MAP
+#endif // USE_SHADOW_MAP && SMOKE_SHADOW_MAP
 
 #ifdef SMOKE_NOISE
 		tex_val.a += smoke_noise_mag * max(0.0, gen_cloud_alpha_time((pos * vec3(1.0, 1.0, 0.7)), fog_time)); // stretch in z
