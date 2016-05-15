@@ -995,7 +995,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'S':
 		if (world_mode == WMODE_UNIVERSE) {toggle_player_ship_stop(); break;}
-		else if (world_mode == WMODE_GROUND) {use_smoke_for_fog = (use_smoke_for_fog+1) % 3;}
+		else if (world_mode == WMODE_GROUND) {use_smoke_for_fog = (use_smoke_for_fog+1) % 3;} // {normal smoke, smoke with noise, fog as smoke}
 		break;
 	case 'Z':
 		if (map_mode) {map_zoom *= MAP_ZOOM; break;}

@@ -46,7 +46,7 @@ extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, cube_map_reflect_tex_size;
-extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z;
+extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
@@ -395,7 +395,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float_array("smoke_bb", (use_smoke_for_fog ? &smoke_bb.d[0][0] : &cur_smoke_bb.d[0][0]), 6);
 		if (DYNAMIC_SMOKE_SHADOWS) {s.add_uniform_vector3d("sun_pos", get_sun_pos());}
 		s.add_uniform_color("smoke_color",     (use_smoke_for_fog ? colorRGB(cur_fog_color) : colorRGB(GRAY)));
-		s.add_uniform_float("smoke_const_add", ((use_smoke_for_fog == 1) ? 0.25 : 0.0));
+		s.add_uniform_float("smoke_const_add", ((use_smoke_for_fog == 1) ? CLIP_TO_01(0.25f/fog_dist_scale) : 0.0f));
 
 		if (use_smoke_noise()) {
 			set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise

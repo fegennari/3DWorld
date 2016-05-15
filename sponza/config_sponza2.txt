@@ -33,6 +33,7 @@ sun_rot 0.4
 cobj_z_bias 0.001
 indir_vert_offset 0.8
 model3d_alpha_thresh 0.95
+fog_dist_scale 2.0 # for volume fog
 tree_coll_level 4
 default_ground_tex -1
 mesh_seed 2

@@ -94,7 +94,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 	vec3 delta    = sd_ratio*dir/(nsteps*scene_scale);
 	float step_weight  = fract(nsteps);
 	float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
-#ifdef SMOKE_SHADOW_MAP
+#if defined(SMOKE_SHADOW_MAP) && defined(USE_SHADOW_MAP)
 	vec4 cur_epos   = fg_ModelViewMatrix * vec4(vpos_c, 1.0);
 	vec3 epos_delta = fg_NormalMatrix * (delta * scene_scale); // eye space pos/delta
 #endif
@@ -104,7 +104,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 		vec4 tex_val = texture(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
 #ifdef SMOKE_DLIGHTS
 		if (enable_dlights) { // dynamic lighting
-			vec3 dl_pos  = pos*scene_scale + scene_llc;
+			vec3 dl_pos = pos*scene_scale + scene_llc;
 			add_dlights_bm_scaled(tex_val.rgb, dl_pos, norm_dir, vec3(1.0), 0.0, 1.0, 0.0); // normal points from vertex to eye, override bump mapping, color is applied later
 		}
 #endif // SMOKE_DLIGHTS
