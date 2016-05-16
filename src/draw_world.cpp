@@ -386,7 +386,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
 	float step_delta_scale((use_smoke_for_fog || get_smoke_at_pos(get_camera_pos())) ? 1.0 : 2.0);
 	s.add_uniform_float("step_delta_shadow", step_delta_scale*HALF_DXY);
-	if (volume_lighting && is_light_enabled(0)) {step_delta_scale *= 0.2f;} // 5 steps per texel for sun light on smoke volume
+	if (volume_lighting && is_light_enabled(0)) {step_delta_scale *= 0.333f;} // 3 steps per texel for sun light on smoke volume
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
 	if (use_mvm) {upload_mvm_to_shader(s, "fg_ViewMatrix");}
 	
