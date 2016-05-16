@@ -98,7 +98,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 	vec4 cur_epos   = fg_ModelViewMatrix * vec4(vpos_c, 1.0);
 	vec3 epos_delta = fg_NormalMatrix * (delta * scene_scale); // eye space pos/delta
 	const float smoke_albedo = 0.9;
-	vec3 smoke_color= smoke_albedo * fg_LightSource[0].diffuse.rgb;
+	vec3 sl_color   = smoke_albedo * fg_LightSource[0].diffuse.rgb;
 #endif
 
 	// smoke volume iteration using 3D texture, pos to eye
@@ -112,7 +112,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 #endif // SMOKE_DLIGHTS
 #if defined(SMOKE_SHADOW_MAP) && defined(USE_SHADOW_MAP)
 		if (enable_light0) {
-			tex_val.rgb  += smoke_color * get_shadow_map_weight_light0_no_bias(cur_epos);
+			tex_val.rgb  += sl_color * get_shadow_map_weight_light0_no_bias(cur_epos);
 			cur_epos.rgb += epos_delta;
 		}
 #endif // USE_SHADOW_MAP && SMOKE_SHADOW_MAP
