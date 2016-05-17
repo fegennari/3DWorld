@@ -41,6 +41,7 @@ class cobj_vector_t : public vector<p_const_ship_coll_obj> {
 public:
 	void clear();
 	void add(ship_coll_obj const *const o);
+	void add_no_delete(ship_coll_obj const *const o);
 };
 
 

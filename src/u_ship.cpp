@@ -2783,8 +2783,7 @@ void multipart_ship::apply_physics() {
 
 	switch (sclass) { // have to special case this
 	case USC_ABOMIN:
-		{
-			if (!powered() && !cobjs.empty()) break;
+		if (cobjs.empty() || powered()) {
 			float const aspeed(0.004), aspeed2(0.002), aspeed3(2.8*aspeed2);
 			unsigned on_time(get_on_time()); // make more dynamic, controlled by ai_action
 			
@@ -2797,18 +2796,25 @@ void multipart_ship::apply_physics() {
 			float const val3(aspeed3*TWO_PI*(on_time%unsigned(1.0/aspeed3))), cv3(0.05*cosf(val3)), sv3(0.05*sinf(val3));
 			float const z_start(-2.5), dz(0.2*state_val);
 			c_radius = max((z_start + 1.0f - 2.0f*dz), specs().cr_scale);
-			cobjs.clear(); // could update or use a custom allocator (37us per abomination)
-			cobjs.add(new ship_sphere(point(0.0, 0.0, (z_start + dz)), (1.0 - dz), 0.5)); // main sphere, eye armor
-			cobjs.add(new ship_sphere(point(0.0, 0.0, z_start), 0.8, 5.0)); // white part of the eye, more damage
-			point tpos[2] = {point(0.0, 0.0, (z_start + 0.15)), all_zeros};
+			unsigned const num_tail_cylins = 16;
 
-			for (unsigned i = 0; i < 16; ++i) { // add tail cylinders
+			if (cobjs.empty()) { // allocate initial cobjs
+				coll_spheres.resize(2);
+				coll_cylinders.resize(num_tail_cylins);
+				for (unsigned i = 0; i < 2;               ++i) {cobjs.add_no_delete(&coll_spheres  [i]);}
+				for (unsigned i = 0; i < num_tail_cylins; ++i) {cobjs.add_no_delete(&coll_cylinders[i]);}
+			}
+			coll_spheres[0] = ship_sphere(point(0.0, 0.0, (z_start + dz)), (1.0 - dz), 0.5); // main sphere, eye armor
+			coll_spheres[1] = ship_sphere(point(0.0, 0.0, z_start), 0.8, 5.0); // white part of the eye, more damage
+			point tpos[2]   = {point(0.0, 0.0, (z_start + 0.15)), all_zeros};
+
+			for (unsigned i = 0; i < num_tail_cylins; ++i) { // add tail cylinders
 				float const rv(1.0 - 0.062*i), r1(0.7*rv*rv*rv + 0.25*rv + 0.05);
-				float const r2((i == 15) ? 0.0 : (0.92*r1 - 0.01));
+				float const r2((i+1 == num_tail_cylins) ? 0.0 : (0.92*r1 - 0.01));
 				point delta(i*fabs(val2)*cv3, i*fabs(val2)*sv3, (1.0 - 0.01*i*i*fabs(val2)));
-				delta *= 0.5/max(delta.mag(), TOLERANCE);
-				tpos[1] = tpos[0] + delta*1.25;
-				cobjs.add(new ship_cylinder(tpos[0], tpos[1], r1, r2, 0, 0.25)); // half damage
+				delta   *= 0.5/max(delta.mag(), TOLERANCE);
+				tpos[1]  = tpos[0] + delta*1.25;
+				coll_cylinders[i] = ship_cylinder(tpos[0], tpos[1], r1, r2, 0, 0.25); // half damage
 				c_radius = max(c_radius, max((tpos[0].mag() + SQRT2*r1), (tpos[1].mag() + SQRT2*r2)));
 				tpos[0] += delta;
 			}
@@ -2819,19 +2825,10 @@ void multipart_ship::apply_physics() {
 	case USC_REAPER:
 		if (cobjs.empty() || (powered() && !invalid_or_disabled())) {
 			point p_int(pos + dir*c_radius);
-
-			if (find_coll_enemy_proj(4.0*c_radius, p_int)) {
-				// nothing
-			}
-			else if (get_last_hit_dir() != zero_vector) {
-				p_int = pos + get_last_hit_dir()*c_radius;
-			}
-			else if (target_obj != NULL) {
-				p_int = pos + (target_obj->get_pos() - pos).get_norm()*c_radius;
-			}
-			else if (!cobjs.empty()) {
-				break;
-			}
+			if (find_coll_enemy_proj(4.0*c_radius, p_int)) {} // nothing
+			else if (get_last_hit_dir() != zero_vector) {p_int = pos + get_last_hit_dir()*c_radius;}
+			else if (target_obj != NULL) {p_int = pos + (target_obj->get_pos() - pos).get_norm()*c_radius;}
+			else if (!cobjs.empty()) {break;}
 			// setup blocking shield
 			xform_point(p_int);
 
@@ -2847,9 +2844,14 @@ void multipart_ship::apply_physics() {
 					rotate_vector3d(axis, ((angle < 0.0) ? -max_angle : max_angle), p_int);
 				}
 			}
-			cobjs.clear();
-			cobjs.add(new ship_sphere(all_zeros, 1.0, 1.0)); // main sphere
-			cobjs.add(new ship_cylinder(p_int*0.9, p_int*0.7, 0.0, 0.45, 1, 0.0)); // takes no damage
+			if (cobjs.empty()) { // allocate initial cobjs
+				coll_spheres.resize(1);
+				coll_cylinders.resize(1);
+				cobjs.add_no_delete(&coll_spheres  [0]);
+				cobjs.add_no_delete(&coll_cylinders[0]);
+			}
+			coll_spheres  [0] = ship_sphere(all_zeros, 1.0, 1.0); // main sphere
+			coll_cylinders[0] = ship_cylinder(p_int*0.9, p_int*0.7, 0.0, 0.45, 1, 0.0); // takes no damage
 			//weapons[1].weap_pts.resize(0);
 			//weapons[1].weap_pts.push_back(p_int*0.9); // lightning
 		}

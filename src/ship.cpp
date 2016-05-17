@@ -978,11 +978,15 @@ us_class const &get_sclass_obj(unsigned sclass) {
 	return sclasses[sclass];
 }
 
+struct null_deleter {
+    template<typename T> void operator()(T *) {};
+};
 
 // Note: must be here where all ship_coll_obj derived classes have complete types
 void cobj_vector_t::resize(size_t sz) {vector<p_const_ship_coll_obj>::resize(sz);}
 void cobj_vector_t::clear() {vector<p_const_ship_coll_obj>::clear();}
 void cobj_vector_t::add(ship_coll_obj const *const o) {push_back(p_const_ship_coll_obj(o));}
+void cobj_vector_t::add_no_delete(ship_coll_obj const *const o) {push_back(p_const_ship_coll_obj(o, null_deleter()));}
 
 
 float get_ship_cost(unsigned sclass, unsigned align, unsigned reserve_credits, float discount) {

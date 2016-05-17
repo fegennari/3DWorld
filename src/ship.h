@@ -1371,6 +1371,8 @@ class multipart_ship : public u_ship {
 
 	float state_val;
 	cobj_vector_t cobjs;
+	vector<ship_sphere> coll_spheres;
+	vector<ship_cylinder> coll_cylinders;
 
 public:
 	multipart_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient);
