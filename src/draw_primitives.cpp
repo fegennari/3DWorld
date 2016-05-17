@@ -354,24 +354,25 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, inst_pos[inst]);
 		}
 		if (draw_sides_ends != 0) { // Note: two_sided_lighting doesn't apply here
-			float const ndiv_inv(1.0/ndiv);
+			float const theta_mult(TWO_PI/ndiv);
 			float const r[2] = {radius1, radius2};
 
 			for (unsigned i = 0; i < 2; ++i) {
 				if (r[i] == 0.0 || (draw_sides_ends == 3+(!i))) continue;
 				vector3d const normal(i ? v12 : -v12);
-				cvb.cverts.push_back(vert_norm_tc(ce[i]+inst_pos[inst], normal, 0.5, 0.5));
+				cvb.cverts.resize(ndiv+2);
+				cvb.cverts[0].assign(ce[i]+inst_pos[inst], normal, 0.5, 0.5);
 
 				for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 					unsigned const ss(S%ndiv), s(i ? (ndiv - ss - 1) : ss);
-					float tc[2] = {0.0, 0.0};
+					float ts(0.0), tt(0.0);
 				
 					if (texture) { // inefficient, but uncommon
-						float const theta(TWO_PI*s*ndiv_inv);
-						tc[0] = 0.5*(1.0 + sinf(theta));
-						tc[1] = 0.5*(1.0 + cosf(theta));
+						float const theta(theta_mult*s);
+						ts = 0.5*(1.0 + sinf(theta));
+						tt = 0.5*(1.0 + cosf(theta));
 					}
-					cvb.cverts.push_back(vert_norm_tc(vpn.p[(s<<1)+i]+inst_pos[inst], normal, tc));
+					cvb.cverts[S+1].assign(vpn.p[(s<<1)+i]+inst_pos[inst], normal, ts, tt);
 				}
 				draw_and_clear_verts(cvb.cverts, GL_TRIANGLE_FAN); // triangle fans can't be buffered
 			}
