@@ -528,7 +528,7 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 void ushadow_sphere::draw(upos_point_type const &pos) const {
 
 	assert(!invalid);
-	draw_fast_cylinder((spos[0] - pos), (spos[1] - pos), rad[0], rad[1], nsides, 0, 1, 0, pmap);
+	draw_shadow_cylinder((spos[0] - pos), (spos[1] - pos), rad[0], rad[1], nsides, 1, pmap);
 }
 
 

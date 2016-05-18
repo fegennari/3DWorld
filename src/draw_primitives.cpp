@@ -294,7 +294,7 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 	verts.resize(2*(ndiv+1) + ixoff);
 	float const ndiv_inv(1.0/ndiv);
 
-	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) { // Note: always has tex coords
+	for (unsigned S = 0; S <= ndiv; ++S) { // Note: always has tex coords
 		unsigned const s(S%ndiv), vix(2*S + ixoff);
 		float const ts(1.0 - S*ndiv_inv);
 		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
@@ -313,6 +313,7 @@ class cylin_vertex_buffer_t {
 	bool buffering_enabled;
 public:
 	vector<vert_norm_tc> tverts, sverts, cverts; // public so they can be accessed from within draw_fast_cylinder()
+	vector<vert_wrap_t> verts;
 
 	cylin_vertex_buffer_t() : buffering_enabled(0) {}
 	void begin_buffering() {buffering_enabled = 1;}
@@ -355,10 +356,9 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		}
 		if (draw_sides_ends != 0) { // Note: two_sided_lighting doesn't apply here
 			float const theta_mult(TWO_PI/ndiv);
-			float const r[2] = {radius1, radius2};
 
 			for (unsigned i = 0; i < 2; ++i) {
-				if (r[i] == 0.0 || (draw_sides_ends == 3+(!i))) continue;
+				if ((i ? radius2 : radius1) == 0.0 || (draw_sides_ends == 3+(!i))) continue;
 				vector3d const normal(i ? v12 : -v12);
 				cvb.cverts.resize(ndiv+2);
 				cvb.cverts[0].assign(ce[i]+inst_pos[inst], normal, 0.5, 0.5);
@@ -379,6 +379,38 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		}
 	} // for inst
 	cvb.end_cylinder();
+}
+
+// no normals or tex coords
+void draw_shadow_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int draw_ends, float const *const perturb_map) {
+
+	assert(radius1 > 0.0 || radius2 > 0.0);
+	point const ce[2] = {p1, p2};
+	vector3d v12; // (ce[1] - ce[0]).get_norm()
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, perturb_map));
+	vector<vert_wrap_t> &verts(cylin_vertex_buffer.verts);
+	verts.resize(2*(ndiv+1));
+
+	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
+		unsigned const s(S%ndiv), vix(2*S);
+		verts[vix+0].v = vpn.p[(s<<1)+0];
+		verts[vix+1].v = vpn.p[(s<<1)+1];
+	}
+	draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+	if (!draw_ends) return;
+	float const theta_mult(TWO_PI/ndiv);
+
+	for (unsigned i = 0; i < 2; ++i) {
+		if ((i ? radius2 : radius1) == 0.0) continue;
+		verts.resize(ndiv+2);
+		verts[0].v = ce[i];
+
+		for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
+			unsigned const ss(S%ndiv), s(i ? (ndiv - ss - 1) : ss);
+			verts[S+1].v = vpn.p[(s<<1)+i];
+		}
+		draw_and_clear_verts(verts, GL_TRIANGLE_FAN); // triangle fans can't be buffered
+	}
 }
 
 
