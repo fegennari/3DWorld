@@ -49,11 +49,13 @@ void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &
 	vector3d const v1(center - spos_xf);
 	cylinder_quad_projection(pts_, *this, v1, npts);
 	upos_point_type pts[4]; // 3 or 4
-	for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
-	ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj).draw_geom(tpos);
+	for (int i = 0; i < npts; ++i) {pts[i] = pts_[i];}
+	ushadow_polygon const poly(pts, npts, tpos, cur_radius, spos, player, obj);
+	if (poly.invalid) return; // if polygon is invalid, ends should be invalid as well
+	poly.draw_geom(tpos);
 	
 	if (check_ends) {
-		point const pos((r1 == r2) ? 0.5*(p1 + p2) : ((r1 < r2) ? p2 : p1)); // center if equal, otherwise end with largest radius
+		point const pos((r1 == r2) ? center : ((r1 < r2) ? p2 : p1)); // center if equal, otherwise end with largest radius
 		ushadow_triangle_mesh(pos, max(r1, r2), (p2 - p1), ndiv, tpos, cur_radius, spos, obj).draw_geom(tpos);
 	}
 }
@@ -645,10 +647,14 @@ ushadow_triangle_mesh::ushadow_triangle_mesh(point const &circle_center, float c
 	vref[fabs(normal.x) > fabs(normal.y)] = 1.0;
 	point const cp1(cross_product(normal, vref).get_norm()), cp2(cross_product(normal, cp1).get_norm());
 	upos_point_type last(center);
+	float const css(TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
+	float sin_s(0.0), cos_s(1.0);
 
 	for (unsigned t = 0; t <= ndiv; ++t) {
-		float const angle(TWO_PI*((float)t/(float)ndiv)), d1(cosf(angle)), d2(sinf(angle));
-		upos_point_type const pos(center + circle_radius*(d1*cp1 + d2*cp2));
+		float const s(sin_s), c(cos_s);
+		upos_point_type const pos(center + circle_radius*(c*cp1 + s*cp2));
+		sin_s = s*cos_ds + c*sin_ds;
+		cos_s = c*cos_ds - s*sin_ds;
 
 		if (t > 0) { // last is not valid
 			upos_point_type pts[3] = {pos, last, center};
