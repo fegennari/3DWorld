@@ -64,8 +64,10 @@ vec4 get_ads_lighting(in vec3 normal, in vec3 light_dir, in vec4 epos, in float 
 vec4 add_light_comp_pos_scaled_light(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light, in float bump_map_normal_scale) {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
 	vec3 light_dir = normalize(light.position.xyz - epos.xyz);
-	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz, bump_map_normal_scale);
-	return get_ads_lighting(normal, light_dir, epos, ds_scale, a_scale, ad_color, light);
+	vec4 epos_bm = epos;
+	vec3 normal_bm = normal;
+	maybe_apply_bump_map_self_shadowed(normal_bm, light_dir, epos_bm.xyz, bump_map_normal_scale);
+	return get_ads_lighting(normal_bm, light_dir, epos_bm, ds_scale, a_scale, ad_color, light);
 }
 
 // general case, plus hard-coded functions for light0 and light1 to help the compiler optimize
