@@ -23,13 +23,11 @@ unsigned const EST_RAND_PARAM     = 128;
 float    const READ_MESH_H_SCALE  = 0.0008;
 bool     const AUTOSCALE_HEIGHT   = 1;
 bool     const DEF_GLACIATE       = 1;
-float    const GLACIATE_EXP       = 3.0;
+float    const DEF_GLACIATE_EXP   = 3.0;
 bool     const GEN_SCROLLING_MESH = 1;
 float    const S_GEN_ATTEN_DIST   = 128.0;
 
 int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
-
-#define DO_GLACIATE_EXP(val) ((val)*(val)*(val)) // GLACIATE_EXP = 3.0
 
 
 // Global Variables
@@ -54,7 +52,7 @@ extern bool combined_gu;
 extern int xoff, yoff, xoff2, yoff2, world_mode, rand_gen_index, mesh_rgen_index, mesh_scale_change, display_mode;
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode, invert_mh_image;
 extern double c_radius, c_phi, c_theta;
-extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
+extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, custom_glaciate_exp, MESH_HEIGHT, XY_SCENE_SIZE;
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
 extern point mesh_origin, surface_pos;
 extern char *mh_filename, *mesh_file;
@@ -348,12 +346,10 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 
 
 float do_glaciate_exp(float value) {
-	return DO_GLACIATE_EXP(value);
+	return ((custom_glaciate_exp == 0.0) ? value*value*value : pow(value, custom_glaciate_exp)); // DEF_GLACIATE_EXP = 3.0
 }
 
-float get_rel_wpz() {
-	return CLIP_TO_01(W_PLANE_Z + water_h_off_rel);
-}
+float get_rel_wpz() {return CLIP_TO_01(W_PLANE_Z + water_h_off_rel);}
 
 void apply_mesh_sine(float &zval, float x, float y) {
 	hmap_params_t const &h(hmap_params);
@@ -367,7 +363,7 @@ void apply_mesh_sine(float &zval, float x, float y) {
 void apply_glaciate_and_sine(float &zval, float xval, float yval) {
 	if (GLACIATE) {
 		float const relh((zval + zmax_est)*zmax_est2_inv);
-		zval = DO_GLACIATE_EXP(relh)*zmax_est2 - zmax_est;
+		zval = do_glaciate_exp(relh)*zmax_est2 - zmax_est;
 	}
 	if (hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, xval, yval);}
 }
@@ -377,7 +373,7 @@ void glaciate() {
 
 	ztop             = -LARGE_ZVAL;
 	zbottom          =  LARGE_ZVAL;
-	glaciate_exp     = GLACIATE_EXP;
+	glaciate_exp     = ((custom_glaciate_exp == 0.0) ? DEF_GLACIATE_EXP : custom_glaciate_exp);
 	glaciate_exp_inv = 1.0/glaciate_exp;
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -634,7 +630,7 @@ void set_zvals() {
 float get_water_z_height() {
 
 	float wpz(get_rel_wpz());
-	if (GLACIATE) wpz = DO_GLACIATE_EXP(wpz);
+	if (GLACIATE) {wpz = do_glaciate_exp(wpz);}
 	return wpz*zmax_est2 - zmax_est + water_h_off;
 }
 
