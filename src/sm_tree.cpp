@@ -236,7 +236,7 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 
 void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, bool sort_front_to_back, vector3d const &xlate, int xlate_loc) {
 
-	if (empty()) return;
+	if (empty() || num_pine_trees == 0) return;
 	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
 
 	if (instanced && !low_detail) { // sort_front_to_back not supported
@@ -294,6 +294,8 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 
 
 void small_tree_group::draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc, int scale_loc, vector3d const &xlate) const {
+
+	if (!draw_non_palm && num_palm_trees == 0) return; // no palm trees to draw
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		if (i->is_pine_tree()) continue;
@@ -434,9 +436,8 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	float relh(get_rel_height(zpos, -zmax_est, zmax_est));
 	if (rel_height_check(relh, 0.9)) return TREE_CLASS_NONE; // too high
 	if (rel_height_check(relh, 0.6)) return TREE_CLASS_PINE;
-	//if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
+	if (!pine_trees_only && zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
-	if (zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
 	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
 }
 
