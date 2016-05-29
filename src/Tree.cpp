@@ -2059,7 +2059,9 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 				float max_val(0.0);
 
 				for (unsigned tt = 0; tt < NUM_TREE_TYPES; ++tt) {
-					float const den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 0)); // no glaciate
+					float den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 0)); // no glaciate
+					float const jitter(extract_low_bits_01(den_val, 100.0)); // randomize to make the border more fuzzy
+					den_val += 0.8*jitter*jitter; // quadratic distribution
 					if (max_val == 0.0 || den_val > max_val) {max_val = den_val; ttype = tt;}
 				}
 			}
