@@ -44,7 +44,7 @@ extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_m
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks, cloud_height_offset;
-extern float ocean_wave_height, sm_tree_density, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset;
+extern float ocean_wave_height, sm_tree_density, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
 extern water_params_t water_params;
@@ -219,15 +219,15 @@ tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_ti
 }
 
 
-void tile_t::update_terrain_params() {
+void tile_t::update_terrain_params() { // setup biomes
 
 	float const dirt_mult(1.0), veg_mult(5.0);
 	float const xv1(get_xval(x1)), xv2(xv1 + (x2-x1)*deltax), yv1(get_yval(y1)), yv2(yv1 + (y2-y1)*deltay);
 
-	for (unsigned yp = 0; yp < 2; ++yp) {
+	for (unsigned yp = 0; yp < 2; ++yp) { // sample at 4 tile corners and interpolate across the tile
 		for (unsigned xp = 0; xp < 2; ++xp) {
 			terrain_params_t &param(params[yp][xp]);
-			float const xv(mesh_scale*(xp ? xv2 : xv1)), yv(mesh_scale*(yp ? yv2 : yv1));
+			float const xv(mesh_scale*(xp ? xv2 : xv1) + biome_x_offset), yv(mesh_scale*(yp ? yv2 : yv1));
 			//param.hoff   = eval_mesh_sin_terms(0.4*xv+123, 0.4*yv+456);
 			//param.hscale = min(2.0f, max(0.5f, 0.5f*fabs(eval_mesh_sin_terms(0.8*xv+789, 0.8*yv+111))));
 			float const veg_val(eval_mesh_sin_terms(veg_mult*xv, veg_mult*yv));

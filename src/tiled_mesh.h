@@ -173,7 +173,7 @@ private:
 
 	vector<grass_block_t> grass_blocks;
 
-	struct terrain_params_t {
+	struct terrain_params_t { // settings for different biomes
 		float hoff, hscale, veg, grass, dirt;
 		terrain_params_t() : hoff(0.0), hscale(1.0), veg(1.0), grass(1.0), dirt(0.0) {}
 	};
