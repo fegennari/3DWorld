@@ -64,6 +64,13 @@ inline int round_fp(double val) {return ((val > 0.0) ? int(val + 0.5) : int(val 
 
 template<typename T> T lerp(T const &a, T const &b, float val) {return (a*(1.0-val) + b*val);}
 
+inline float get_pos_fract(float v) {
+	float const abs_v(abs(v));
+	return abs_v - int(abs_v);
+}
+inline float extract_low_bits_01 (float v, float m) {return     get_pos_fract(m*v)      ;}
+inline float extract_low_bits_pm1(float v, float m) {return 2.0*get_pos_fract(m*v) - 1.0;}
+
 
 // ***************** RANDOM NUMBER GENERATION ********************
 

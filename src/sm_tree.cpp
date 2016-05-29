@@ -28,7 +28,7 @@ extern bool tree_indir_lighting, only_pine_palm_trees;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
-extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, CAMERA_RADIUS;
+extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, CAMERA_RADIUS, tree_type_rand_zone;
 
 
 struct sm_tree_type {
@@ -412,6 +412,17 @@ void small_tree_group::update_zmax(float &tzmax) const {
 }
 
 
+// use low bits of v to apply a random bias to v within the window [ref_pt +/- zone_width]
+float val_signed_rand_bias_zone(float v, float ref_pt, float zone_width) {
+	if (zone_width == 0.0) return v;
+	float const dist(abs(v - ref_pt)), range(zone_width - dist);
+	if (range <= 0.0) return v; // outside the zone, return the original value
+	return (v + range*extract_low_bits_pm1(dist, 100.0/zone_width));
+}
+bool rel_height_check(float v, float thresh) {
+	return (val_signed_rand_bias_zone(v, thresh, tree_type_rand_zone) > thresh);
+}
+
 int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 
 	if (zpos < water_plane_z) return TREE_CLASS_NONE;
@@ -420,15 +431,14 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 		assert(force_tree_class < NUM_TREE_CLASSES);
 		return force_tree_class;
 	}
-	float const relh(get_rel_height(zpos, -zmax_est, zmax_est));
-	if (relh > 0.9) return TREE_CLASS_NONE; // too high
-	if (relh > 0.6) return TREE_CLASS_PINE;
+	float relh(get_rel_height(zpos, -zmax_est, zmax_est));
+	if (rel_height_check(relh, 0.9)) return TREE_CLASS_NONE; // too high
+	if (rel_height_check(relh, 0.6)) return TREE_CLASS_PINE;
 	//if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
-	if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
+	if (zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
 	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
 }
-
 
 int get_tree_type_from_height(float zpos, rand_gen_t &rgen) {
 
