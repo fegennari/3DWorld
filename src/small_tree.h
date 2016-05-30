@@ -46,7 +46,7 @@ public:
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
 	bool are_leaves_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
-	void draw_trunks(bool shadow_only, vector3d const &xlate=zero_vector,
+	void draw_trunk(bool shadow_only, vector3d const &xlate=zero_vector,
 		vector<vert_wrap_t> *points=NULL, vector<vert_norm_tc> *cylin_verts=NULL) const;
 	void draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
