@@ -1455,6 +1455,15 @@ void timing_profiler_stats();
 #define PRINT_TIME2(str) {cout << str << " time = " << GET_DELTA_TIME << endl;}
 #endif
 
+class timer_t {
+	std::string name;
+	int timer1;
+public:
+	timer_t(char const *const name_) : name(name_), timer1(GET_TIME_MS()) {}
+	timer_t(std::string const &name_) : name(name_), timer1(GET_TIME_MS()) {}
+	~timer_t() {register_timing_value(name.c_str(), GET_DELTA_TIME);}
+};
+
 
 // world modes
 enum {WMODE_GROUND=0, WMODE_UNIVERSE, WMODE_INF_TERRAIN, NUM_WMODE};
