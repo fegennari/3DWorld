@@ -1016,10 +1016,16 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 }
 
 // non-const because of cached instance data within pine_trees
-void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xlate_loc) {
+void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail, int xlate_loc) {
 
 	bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
 	pine_trees.draw_pine_leaves(0, low_detail, draw_all, contains_camera(), xlate, xlate_loc);
+	
+	if (!low_detail && pine_trees.num_palm_trees > 0) { // draw palm trees (pine_trees is misnamed)
+		s.add_uniform_int("use_bent_quad_tcs", 1);
+		pine_trees.draw_non_pine_leaves(0, 1, 0, xlate_loc, -1, xlate);
+		s.add_uniform_int("use_bent_quad_tcs", 0);
+	}
 }
 
 // Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
@@ -1057,19 +1063,19 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 				if (enable_smap) {bind_and_setup_shadow_map(s);}
 				int const loc(s.get_uniform_loc("max_noise"));
 				s.set_uniform_float(loc, weight);
-				draw_tree_leaves_lod(xlate, 0, xlate_loc); // near leaves
+				draw_tree_leaves_lod(s, xlate, 0, xlate_loc); // near leaves
 				s.set_uniform_float(loc, 1.0);
 			}
 			if (draw_far_leaves) {
 				int const loc(s.get_uniform_loc("min_noise"));
 				s.set_uniform_float(loc, weight);
-				draw_tree_leaves_lod(xlate, 1, xlate_loc); // far leaves
+				draw_tree_leaves_lod(s, xlate, 1, xlate_loc); // far leaves
 				s.set_uniform_float(loc, 0.0);
 			}
 		}
 		else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
 			if (enable_smap) {bind_and_setup_shadow_map(s);}
-			draw_tree_leaves_lod(xlate, (weight == 0.0), xlate_loc);
+			draw_tree_leaves_lod(s, xlate, (weight == 0.0), xlate_loc);
 		}
 	}
 	fgPopMatrix();

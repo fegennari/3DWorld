@@ -1,3 +1,4 @@
+uniform int use_bent_quad_tcs = 0; 
 #ifdef ENABLE_INSTANCING
 in vec3 xlate;
 uniform float vertex_scale = 1.0;
@@ -6,7 +7,7 @@ uniform float vertex_scale = 1.0;
 out float world_space_zval;
 
 void main() {
-	set_tc0_from_vert_id();
+	if (use_bent_quad_tcs != 0) {set_bent_quad_tc0_from_vert_id();} else {set_tc0_from_vert_id();}
 	vec4 vertex = fg_Vertex;
 #ifdef ENABLE_INSTANCING
 	vertex.xyz *= vertex_scale;
