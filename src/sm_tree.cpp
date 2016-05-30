@@ -123,7 +123,10 @@ void small_tree_group::add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pt
 
 
 void small_tree_group::clear_vbos() {
+
 	for (unsigned i = 0; i < 2; ++i) {vbo_manager[i].clear_vbo();}
+	if (num_palm_trees == 0) return; // no palm tree vbos to clear
+	for (iterator i = begin(); i != end(); ++i) {i->clear_vbo();}
 }
 
 void small_tree_group::clear_vbo_manager(int which) {
@@ -436,7 +439,9 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	float relh(get_rel_height(zpos, -zmax_est, zmax_est));
 	if (rel_height_check(relh, 0.9)) return TREE_CLASS_NONE; // too high
 	if (rel_height_check(relh, 0.6)) return TREE_CLASS_PINE;
-	if (/*!pine_trees_only &&*/ zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
+	//bool const allow_palm_trees(!pine_trees_only);
+	bool const allow_palm_trees(tree_mode == 3);
+	if (allow_palm_trees && zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
 	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
 }
@@ -747,7 +752,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 }
 
 
-void small_tree::calc_palm_tree_points() {
+void small_tree::calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager) {
 
 	if (palm_verts != nullptr) return;
 	unsigned const num_fronds = 20;
@@ -776,6 +781,7 @@ void small_tree::calc_palm_tree_points() {
 		verts[vix++].assign(p14, n2, cw.c); // 4
 		verts[vix++].assign(p5,  n2, cw.c); // 5
 	}
+	// Note: vbo_manager is unused, but we could put the palm verts into it, though perf seems okay with individual VBOs
 }
 
 
@@ -787,7 +793,7 @@ float small_tree::get_pine_tree_radius() const {
 
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 
-	if (type == T_PALM) {calc_palm_tree_points(); return;} // palm tree
+	if (type == T_PALM) {calc_palm_tree_points(vbo_manager); return;} // palm tree
 	if (!is_pine_tree()) return; // only for pine trees
 	float const sz_scale(SQRT2*get_pine_tree_radius()), dz((type == T_PINE) ? 0.35*height : 0.0);
 
@@ -936,7 +942,10 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 
 	if (type == T_PALM) {
 		assert(palm_verts != nullptr);
-		draw_vect_quads(*palm_verts);
+		palm_vbo.create_and_upload(*palm_verts, 0, 1);
+		palm_vbo.pre_render();
+		draw_quad_verts_as_tris((vert_norm_comp_color *)nullptr, palm_verts->size());
+		palm_vbo.post_render();
 		return;
 	}
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*stt[type].ss*width*window_width);

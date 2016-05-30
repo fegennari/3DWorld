@@ -12,12 +12,13 @@
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 
 
-class small_tree { // size = 121 (124)
+class small_tree { // size = 128
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
 	int vbo_mgr_ix; // high detail
 	int inst_id; // for instancing
 	float height, width, r_angle, rx, ry;
+	mutable vbo_wrap_t palm_vbo; // created dynamically during drawing
 	point pos;
 	colorRGBA color, bark_color;
 	cylinder_3dw trunk_cylin;
@@ -33,11 +34,12 @@ public:
 	cylinder_3dw get_trunk_cylin() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
+	void clear_vbo() {palm_vbo.clear_vbo();}
 	bool check_sphere_coll(point &center, float radius) const;
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
-	void calc_palm_tree_points();
+	void calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_leaf_color() const {return color;}
