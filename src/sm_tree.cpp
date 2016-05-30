@@ -753,8 +753,8 @@ void small_tree::calc_palm_tree_points() {
 	unsigned const num_fronds = 20;
 	float const frond_l(0.3*height), frond_hw(0.2*width), frond_dz(-0.2*width);
 	vector3d const trunk_dir(get_rot_dir());
-	palm_verts.reset(new vector<vert_norm_color>(8*num_fronds));
-	vector<vert_norm_color> &verts(*palm_verts);
+	palm_verts.reset(new vector<vert_norm_comp_color>(8*num_fronds));
+	vector<vert_norm_comp_color> &verts(*palm_verts);
 	rand_gen_t rgen;
 	rgen.set_state(long(1000*color.R), long(1000*color.G)); // seed random number generator with the tree color, which is deterministic
 
@@ -767,14 +767,14 @@ void small_tree::calc_palm_tree_points() {
 		vector3d const n1(cross_product(p14-p0, p27-p14).get_norm()), n2(cross_product(p5-p14, p6-p5).get_norm());
 		float const brownness(0.5*rgen.rand_float() + 0.5*max(0.0f, -dir.z)); // fronds pointing down are browner
 		color_wrapper_ctor cw(color.modulate_with(BROWN*brownness + WHITE*(1.0-brownness))); // random per-frond color
-		verts[vix++].assign(p27, n1, cw); // 2
-		verts[vix++].assign(p3,  n1, cw); // 3
-		verts[vix++].assign(p0,  n1, cw); // 0
-		verts[vix++].assign(p14, n1, cw); // 1
-		verts[vix++].assign(p6,  n2, cw); // 6
-		verts[vix++].assign(p27, n2, cw); // 7
-		verts[vix++].assign(p14, n2, cw); // 4
-		verts[vix++].assign(p5,  n2, cw); // 5
+		verts[vix++].assign(p27, n1, cw.c); // 2
+		verts[vix++].assign(p3,  n1, cw.c); // 3
+		verts[vix++].assign(p0,  n1, cw.c); // 0
+		verts[vix++].assign(p14, n1, cw.c); // 1
+		verts[vix++].assign(p6,  n2, cw.c); // 6
+		verts[vix++].assign(p27, n2, cw.c); // 7
+		verts[vix++].assign(p14, n2, cw.c); // 4
+		verts[vix++].assign(p5,  n2, cw.c); // 5
 	}
 }
 
