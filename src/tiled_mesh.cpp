@@ -203,7 +203,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
-	is_distant(0), no_trees(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	is_distant(0), no_trees(0), just_cleared(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -980,7 +980,12 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 	update_pine_tree_state(0); // can free pine tree vbos
 	update_animals(); // if any were generated
 	float const dist(get_rel_dist_to_camera());
-	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid(&smap_manager);}
+	
+	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {
+		if (!just_cleared) {clear_vbo_tid(&smap_manager);} // avoid clearing every frame
+		just_cleared = 1;
+	}
+	else {just_cleared = 0;}
 	if (dist*TILE_RADIUS > SMAP_DEL_THRESH) {clear_shadow_map(&smap_manager);} // too far, delete old shadow maps
 	return (dist < DELETE_DIST_TILES && !mesh_height_invalid);
 }
