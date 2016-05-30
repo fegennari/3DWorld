@@ -436,7 +436,7 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	float relh(get_rel_height(zpos, -zmax_est, zmax_est));
 	if (rel_height_check(relh, 0.9)) return TREE_CLASS_NONE; // too high
 	if (rel_height_check(relh, 0.6)) return TREE_CLASS_PINE;
-	if (!pine_trees_only && zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
+	if (/*!pine_trees_only &&*/ zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
 	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
 }
@@ -563,7 +563,7 @@ void draw_small_trees(bool shadow_only) {
 		}
 		if (small_trees.num_palm_trees > 0) { // palm trees
 			if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
-			setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v, 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better)
+			setup_smoke_shaders(s, 0.75, 4, 0, 0, v, v, 0, 0, v, 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better); use bent quad texgen mode 4
 			setup_leaf_wind(s, wind_mag, 0);
 			small_trees.draw_non_pine_leaves(shadow_only, 1, 0);
 			s.end_shader();
@@ -753,8 +753,8 @@ void small_tree::calc_palm_tree_points() {
 	unsigned const num_fronds = 20;
 	float const frond_l(0.3*height), frond_hw(0.2*width), frond_dz(-0.2*width);
 	vector3d const trunk_dir(get_rot_dir());
-	palm_verts.reset(new vector<vert_norm_tc_color>(8*num_fronds));
-	vector<vert_norm_tc_color> &verts(*palm_verts);
+	palm_verts.reset(new vector<vert_norm_color>(8*num_fronds));
+	vector<vert_norm_color> &verts(*palm_verts);
 	rand_gen_t rgen;
 	rgen.set_state(long(1000*color.R), long(1000*color.G)); // seed random number generator with the tree color, which is deterministic
 
@@ -767,14 +767,14 @@ void small_tree::calc_palm_tree_points() {
 		vector3d const n1(cross_product(p14-p0, p27-p14).get_norm()), n2(cross_product(p5-p14, p6-p5).get_norm());
 		float const brownness(0.5*rgen.rand_float() + 0.5*max(0.0f, -dir.z)); // fronds pointing down are browner
 		color_wrapper_ctor cw(color.modulate_with(BROWN*brownness + WHITE*(1.0-brownness))); // random per-frond color
-		verts[vix++].assign(p27, n1, 0.5, 1.0, cw.c); // 2
-		verts[vix++].assign(p3,  n1, 0.0, 1.0, cw.c); // 3
-		verts[vix++].assign(p0,  n1, 0.0, 0.0, cw.c); // 0
-		verts[vix++].assign(p14, n1, 0.5, 0.0, cw.c); // 1
-		verts[vix++].assign(p6,  n2, 1.0, 1.0, cw.c); // 6
-		verts[vix++].assign(p27, n2, 0.5, 1.0, cw.c); // 7
-		verts[vix++].assign(p14, n2, 0.5, 0.0, cw.c); // 4
-		verts[vix++].assign(p5,  n2, 1.0, 0.0, cw.c); // 5
+		verts[vix++].assign(p27, n1, cw); // 2
+		verts[vix++].assign(p3,  n1, cw); // 3
+		verts[vix++].assign(p0,  n1, cw); // 0
+		verts[vix++].assign(p14, n1, cw); // 1
+		verts[vix++].assign(p6,  n2, cw); // 6
+		verts[vix++].assign(p27, n2, cw); // 7
+		verts[vix++].assign(p14, n2, cw); // 4
+		verts[vix++].assign(p5,  n2, cw); // 5
 	}
 }
 
@@ -936,7 +936,6 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 
 	if (type == T_PALM) {
 		assert(palm_verts != nullptr);
-		assert(xlate == zero_vector);
 		draw_vect_quads(*palm_verts);
 		return;
 	}
@@ -954,7 +953,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 		scale = width*vector3d(0.7, 0.7, 1.6);
 		break;
 	case T_BUSH: // bush
-		scale = vector3d((0.1*height+0.8*width), (0.1*height+0.8*width), width);
+		scale.assign((0.1*height+0.8*width), (0.1*height+0.8*width), width);
 		break;
 	}
 	int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));

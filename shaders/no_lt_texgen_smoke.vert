@@ -16,20 +16,13 @@ out vec3 eye_norm;
 //out float gl_ClipDistance[1];
 // tc comes from texture_gen.part.vert
 
-void main()
-{
-	if (use_texgen == 1) {
-		setup_texgen_st();
-	}
-	else if (use_texgen == 2) {
-		tc = vec2(dot(fg_Vertex, tex0_s), dot(fg_Vertex, tex0_t));
-	}
-	else if (use_texgen == 3) {
-		set_tc0_from_vert_id();
-	}
-	else {
-		tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
-	}
+void main() {
+	if      (use_texgen == 1) {setup_texgen_st();}
+	else if (use_texgen == 2) {tc = vec2(dot(fg_Vertex, tex0_s), dot(fg_Vertex, tex0_t));}
+	else if (use_texgen == 3) {set_tc0_from_vert_id();}
+	else if (use_texgen == 4) {set_bent_quad_tc0_from_vert_id();}
+	else                      {tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);}
+
 	fg_Color_vf = fg_Color;
 	vec4 vertex = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
 	add_leaf_wind(vertex);
