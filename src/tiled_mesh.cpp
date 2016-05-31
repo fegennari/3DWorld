@@ -343,7 +343,7 @@ void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, floa
 
 void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 
-	//RESET_TIME;
+	//timer_t timer("Create Zvals");
 	if (enable_terrain_env) {update_terrain_params();}
 	zvals.resize(zvsize*zvsize);
 	mzmin =  FAR_DISTANCE;
@@ -401,7 +401,6 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	radius = 0.5*sqrt((deltax*deltax + deltay*deltay)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	ptzmax = dtzmax = mzmin; // no trees yet
 	if (!can_have_trees()) {no_trees = 1;} // mark as no_trees so that trees don't pop when water is disabled later
-	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 }
 
@@ -410,7 +409,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 
 void tile_t::calc_mesh_ao_lighting() {
 
-	//RESET_TIME;
+	//timer_t timer("Calc Tile AO Lighting");
 	unsigned const NUM_DIRS  = 8; // Note: required to be 8 for adj tile calculation
 	unsigned const NUM_STEPS = 8;
 	unsigned const ray_len(NUM_STEPS*(NUM_STEPS+1)/2); // 36
@@ -489,7 +488,6 @@ void tile_t::calc_mesh_ao_lighting() {
 			} // for x
 		} // for y
 	}
-	//PRINT_TIME("AO Lighting");
 }
 
 
@@ -653,6 +651,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
 
 	if (is_distant) return; // not needed/used
+	//timer_t timer("Tree AO Shadows");
 	tree_map.resize(0);
 	tree_map.resize(stride*stride);
 	bool const no_adj_test(trmax < min(deltax, deltay));
@@ -667,17 +666,15 @@ void tile_t::check_shadow_map_and_normal_texture() {
 		upload_normal_texture(0); // created once, never updated (so never valid here)
 	}
 	if (shadow_tid && !shadows_invalid) return; // up-to-date
-	//RESET_TIME;
+	//timer_t timer("Shadow Map Texture Update");
 	bool const tid_is_valid(shadow_tid != 0);
 	if (!tid_is_valid) {setup_texture(shadow_tid, 0, 0, 0, 0, 0);}
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	assert(has_sun || has_moon);
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
-	//PRINT_TIME("Calc Shadows");
 	if (enable_tiled_mesh_ao && ao_lighting.empty()) {calc_mesh_ao_lighting();}
 	upload_shadow_map_texture(tid_is_valid);
 	shadows_invalid = 0;
-	//PRINT_TIME("Calc and Upload Shadows + AO");
 }
 
 
@@ -696,6 +693,7 @@ void create_or_update_texture(unsigned &tid, bool tid_is_valid, unsigned stride,
 
 void tile_t::upload_normal_texture(bool tid_is_valid) {
 
+	//timer_t timer("Create Normal Texture");
 	vector<unsigned char> normal_data(4*stride*stride, 0);
 	min_normal_z = 1.0;
 
@@ -712,6 +710,7 @@ void tile_t::upload_normal_texture(bool tid_is_valid) {
 
 void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 
+	//timer_t timer("Create Shadow Map Texture");
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	vector<unsigned char> shadow_data(4*stride*stride, 0);
 
@@ -767,6 +766,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 
 	if (!shadow_map_enabled()) return; // disabled
 
+	//timer_t timer("Create Tile Shadow Maps");
 	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH && smap_data.empty()) { // allocate new shadow maps
 		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
 			smap_data.push_back(smap_manager.new_smap_data(13+i, this, i));
@@ -811,8 +811,8 @@ void tile_t::ensure_height_tid() {
 
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
+	//timer_t timer("Create Tile Weights Texture");
 	assert(zvals.size() == zvsize*zvsize);
-	//RESET_TIME;
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
 
@@ -957,7 +957,6 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &weight_data.front());
 	}
 	recalc_tree_grass_weights = 0;
-	//PRINT_TIME("Texture Upload");
 
 	// determine average mesh color - doesn't work well due to discontinuities at the tile boundaries, would be better if adjacent tile was known
 	unsigned tot_weights[NTEX_DIRT] = {0};
@@ -996,6 +995,7 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 void tile_t::init_pine_tree_draw() {
 
 	if (!can_have_trees()) return; // no pine trees (yet)
+	//timer_t timer("Gen Pine Trees");
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
 	if (enable_instanced_pine_trees()) {pine_trees.instanced = 1;}
@@ -1009,6 +1009,7 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 	if (!pine_trees_enabled() || pine_trees.empty()) return;
 	float const weight(get_tree_far_weight());
 	float const weights[2] = {1.0-weight, weight}; // {high, low} detail
+	//timer_t timer("Update Pine Trees");
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (weights[d] > 0.0) { // needed
@@ -1038,6 +1039,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 	bool draw_far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
 	if (pine_trees.empty() || !can_have_trees()) return;
+	//timer_t timer("Draw Pine Trees");
 	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());
 	vector2d const camera_xlate(xlate.x-camera.x, xlate.y-camera.y);
@@ -1094,6 +1096,7 @@ void tile_t::gen_decid_trees_if_needed() {
 		max_unique_trees = 100;
 	}
 	if (decid_trees.was_generated() || !can_have_trees()) return; // already generated, or distant tile (no trees yet)
+	//timer_t timer("Gen Decid Trees");
 	assert(decid_trees.empty());
 	dtree_off.set_from_xyoff2();
 	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
@@ -1109,6 +1112,7 @@ void tile_t::set_mesh_ambient_color(shader_t &s) const {s.add_uniform_color("amb
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
 
 	if (decid_trees.empty() || !can_have_trees()) return;
+	//timer_t timer("Draw Decid Trees");
 	if (enable_smap  ) {bind_and_setup_shadow_map(s);}
 	if (draw_branches) {set_mesh_ambient_color(s);}
 	// Note: shadow_only mode doesn't help performance much
@@ -1124,6 +1128,7 @@ void tile_t::update_scenery() {
 	float const dist_scale(get_scenery_dist_scale(0)); // tree_dist_scale should correlate with mesh scale
 	if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 	if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
+	//timer_t timer("Gen Scenery");
 	scenery_off.set_from_xyoff2();
 	scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg(), 1);
 }
@@ -1132,6 +1137,7 @@ void tile_t::update_scenery() {
 void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_shadow_maps) {
 
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
+	//timer_t timer("Draw Scenery");
 	fgPushMatrix();
 	vector3d const xlate(scenery_off.get_xlate());
 	translate_to(xlate);
@@ -1160,6 +1166,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	float const grass_thresh(get_grass_thresh_pad());
 	point const camera(get_camera_pos());
 	if (get_min_dist_to_pt(camera) > grass_thresh) return 0; // too far away to draw
+	//timer_t timer("Draw Grass");
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	bind_texture_tu(weight_tid, 3);
 	unsigned const grass_block_dim(get_grass_block_dim());
@@ -1271,6 +1278,7 @@ bool tile_cloud_manager_t::any_visible(vector3d const &xlate) const {
 void tile_cloud_manager_t::draw(vpc_shader_t &s, vector3d const &xlate) { // not const (sorted is modified)
 
 	if (empty()) return;
+	//timer_t timer("Draw Clouds");
 	point const camera(get_camera_pos()); // Note: VFC done by the caller
 	sorted.clear();
 
@@ -1317,6 +1325,7 @@ template<typename A> void tile_t::propagate_animals_to_neighbor_tiles(animal_gro
 void tile_t::update_animals() {
 
 	if (!ENABLE_ANIMALS) return;
+	//timer_t timer("Update Animals");
 
 	// FIXME: animals are in global space, rather than camera local space like everything else;
 	// this means that there will be FP errors when the player is far from the origin - but since fish and birds are "distant" objects, that may be okay;
@@ -1454,6 +1463,7 @@ void tile_t::draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const 
 
 void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const {
 
+	//timer_t timer("Draw Tile Mesh");
 	fgPushMatrix();
 	vector3d const xlate(get_mesh_xlate());
 	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
@@ -1725,7 +1735,7 @@ void tile_draw_t::clear() {
 
 float tile_draw_t::update(float &min_camera_dist) { // view-independent updates; returns terrain zmin
 
-	//RESET_TIME;
+	//timer_t timer("TT Update");
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
 	to_draw.clear();
 	terrain_zmin = FAR_DISTANCE;
@@ -2000,6 +2010,7 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 
 void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
+	//timer_t timer("TT Pre-Draw");
 	vector<tile_t *> to_update, to_gen_trees;
 	assert((vbo == 0) == (ivbo == 0)); // either neither or both are valid
 	
@@ -2083,8 +2094,7 @@ unsigned in_mb(unsigned long long v) {return v/1024/1024;}
 
 void tile_draw_t::draw(bool reflection_pass) {
 
-	//cout << "zmin: " << zmin << ", zmax: " << zmax << ", wpz: " << water_plane_z << endl; // TESTING
-	//RESET_TIME;
+	//timer_t timer("TT Draw");
 	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);
 	to_draw.clear();
@@ -2166,7 +2176,6 @@ void tile_draw_t::draw(bool reflection_pass) {
 		if (shadow_map_enabled()) {draw_tiles(reflection_pass, 1);} // shadow map pass
 		draw_tiles(reflection_pass, 0); // non-shadow map pass
 	}
-	
 	if (DEBUG_TILES) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_pine_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size()
@@ -2186,6 +2195,7 @@ void tile_draw_t::end_lightning() const {lightning_strike.end_draw();} // in cas
 
 void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const {
 
+	//timer_t timer("TT Draw Tiles");
 	shader_t s;
 	setup_mesh_draw_shaders(s, reflection_pass, enable_shadow_map);
 	s.add_uniform_float("spec_scale", 1.0);
