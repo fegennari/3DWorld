@@ -15,5 +15,3 @@ Plants with low large leaves
 
 TT lower res distant shadow map for tiled terrain mode with smooth blend
 Counted normal averages normals using face area as weights
-Volumetric lights: http://www.alexandre-pestana.com/volumetric-lights/
-
