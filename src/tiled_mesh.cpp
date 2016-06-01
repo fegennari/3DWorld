@@ -1748,6 +1748,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	int const x2( tile_radius + toffx), y2( tile_radius + toffy);
 	unsigned const init_tiles((unsigned)tiles.size());
 	unsigned num_erased(0);
+	to_gen_zvals.clear();
 	min_camera_dist = FAR_DISTANCE;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
@@ -1766,10 +1767,17 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			tile_t tile(get_tile_size(), x, y);
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
-			new_tile->create_zvals(height_gen);
+			to_gen_zvals.push_back(new_tile);
 			tiles[txy].reset(new_tile);
 		}
 	}
+	// if there are fewer than 3 tiles to generate, use CPU simplex rather than GPU simplex to avoid stalling/flusing the graphics pipeline
+	// Note: runtimes are on the order of 0.45ms*num_tiles + 5.7ms for GPU simplex and 3.7ms for CPU simplex
+	int const prev_mesh_gen_mode(mesh_gen_mode);
+	if (mesh_gen_mode == 3 && to_gen_zvals.size() < 3) {mesh_gen_mode = 1;} // GPU simplex => CPU simplex
+	for (auto i = to_gen_zvals.begin(); i != to_gen_zvals.end(); ++i) {(*i)->create_zvals(height_gen);}
+	mesh_gen_mode = prev_mesh_gen_mode;
+
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin
 		if (i->second->get_rel_dist_to_camera() <= DRAW_DIST_TILES) {
 			terrain_zmin = min(terrain_zmin, i->second->get_zmin());

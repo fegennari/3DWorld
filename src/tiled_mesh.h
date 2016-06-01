@@ -369,7 +369,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	unsigned ivbo_ixs[NUM_LODS+1];
 	float terrain_zmin;
 	draw_vect_t to_draw;
-	vector<tile_t *> occluded_tiles;
+	vector<tile_t *> occluded_tiles, to_gen_zvals;
 	vector<vert_wrap_t> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
 	lightning_strike_t lightning_strike;
