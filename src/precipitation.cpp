@@ -68,7 +68,7 @@ public:
 		point const cpos(pos + (bot_pos - pos)*t);
 		if (!camera_pdu.point_visible_test(cpos)) return;
 		if (check_splash_dist(cpos)) {splashes->push_back(sphere_t(cpos, 1.0));}
-		if (in_water && (rgen.rand() & 1)) {add_splash(cpos, x, y, 0.5, 0.01, 0);} // 50% of the time
+		if (in_water && (rgen.rand() & 1)) {add_splash(cpos, x, y, 0.5, 0.01, 0, zero_vector, 0);} // 50% of the time; no droplets
 	}
 	bool is_bot_pos_valid(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
 		if (world_mode != WMODE_GROUND) return 1;

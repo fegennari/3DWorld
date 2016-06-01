@@ -856,16 +856,16 @@ void compute_ripples() {
 
 
 // Note: we could calculate xpos and ypox from pos, but in all callers xpos and ypos are already available
-void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound, vector3d const &vadd) {
+void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound, vector3d const &vadd, bool add_droplets) {
 
-	//energy *= 10.0;
-	if (DISABLE_WATER || !(display_mode & 0x04)) return;
-	if (temperature <= W_FREEZE_POINT) return;
+	//energy *= 10.0; // debugging
+	if (DISABLE_WATER || !(display_mode & 0x04) || temperature <= W_FREEZE_POINT) return;
+	if (point_outside_mesh(xpos, ypos) || is_mesh_disabled(xpos, ypos))           return; // no mesh, no splash
+	if (water_matrix[ypos][xpos] < (mesh_height[ypos][xpos] - 0.5*radius))        return; // water is too low
 	int in_wmatrix(0), wsi(0);
 	float water_mix(1.0);
 
-	if (!point_outside_mesh(xpos, ypos) && wminside[ypos][xpos] == 1 && !is_mesh_disabled(xpos, ypos)) {
-		if (water_matrix[ypos][xpos] < (mesh_height[ypos][xpos] - 0.5*radius)) return; // water is too low
+	if (wminside[ypos][xpos] == 1) {
 		float const mh_r(mesh_height[ypos][xpos] + radius);
 
 		if (h_collision_matrix[ypos][xpos] < mh_r && water_matrix[ypos][xpos] < (mh_r + MAX_SPLASH_DEPTH)) {
@@ -877,40 +877,38 @@ void add_splash(point const &pos, int xpos, int ypos, float energy, float radius
 	assert(energy >= 0.0);
 	energy = min(energy, 10000.0f);
 	float const splash_size(min(0.006f*(0.5f + water_mix)*sqrt((4.0f/XY_SCENE_SIZE)*energy), MAX_SPLASH_SIZE));
-	if (splash_size < TOLERANCE) assert(0); //return;
+	if (splash_size < TOLERANCE) return;
 	float const rad(min(4, (int)ceil(0.5*radius/(DX_VAL + DY_VAL)))), radsq(rad*rad);
 	int const droplet_id(coll_id[DROPLET]);
 
-	if (energy > 5.0 && droplet_id >= 0 && temperature > W_FREEZE_POINT) {
+	if (add_droplets && energy > 5.0 && droplet_id >= 0 && temperature > W_FREEZE_POINT && point_interior_to_mesh(xpos, ypos)) {
 		// splash size = 0.3 - rain, 2.0 - ball, 60.0 - rocket
 		float const sqrt_energy(sqrt(energy));
 		int ndrops(min(MAX_SPLASH_DROP, int((0.5 + 0.2*water_mix)*sqrt_energy)));
 
-		if (ndrops > 0 && point_interior_to_mesh(xpos, ypos)) {
-			if (water_matrix[ypos][xpos] >= z_min_matrix[ypos][xpos] && wminside[ypos][xpos]) {
-				if (in_wmatrix) {
-					valleys[wsi].mud_mix += 0.12*sqrt_energy/(valleys[wsi].w_volume + 1.0);
-					valleys[wsi].mud_mix  = min(1.0f, valleys[wsi].mud_mix);
-				}
-				if (wminside[ypos][xpos] == 1) { // dynamic water
-					ndrops = min(ndrops, int(0.25*valleys[watershed_matrix[ypos][xpos].wsi].w_volume));
-				}
-				if (ndrops > 0) {
-					//valleys[watershed_matrix[ypos][xpos].wsi].w_volume -= ndrops;
-					float const vz(5.0 + (0.2 + 0.1*water_mix)*sqrt_energy);
-					point const ppos(pos + vector3d(0.0, 0.0, 1.0*radius));
-					float const mud_mix(in_wmatrix ? valleys[wsi].mud_mix : 0.0), blood_mix(in_wmatrix ? valleys[wsi].blood_mix : 0.0);
-					add_water_particles(ppos, vadd+vector3d(0.0, 0.0, 1.5*vz), 0.25*vz, 1.0*radius, mud_mix, blood_mix, (20 + (rand()&7))*ndrops);
-					obj_group &objg(obj_groups[droplet_id]);
+		if (ndrops > 0 && water_matrix[ypos][xpos] >= z_min_matrix[ypos][xpos] && wminside[ypos][xpos]) {
+			if (in_wmatrix) {
+				valleys[wsi].mud_mix += 0.12*sqrt_energy/(valleys[wsi].w_volume + 1.0);
+				valleys[wsi].mud_mix  = min(1.0f, valleys[wsi].mud_mix);
+			}
+			if (wminside[ypos][xpos] == 1) { // dynamic water
+				ndrops = min(ndrops, int(0.25*valleys[watershed_matrix[ypos][xpos].wsi].w_volume));
+			}
+			if (ndrops > 0) {
+				//valleys[watershed_matrix[ypos][xpos].wsi].w_volume -= ndrops;
+				float const vz(5.0 + (0.2 + 0.1*water_mix)*sqrt_energy);
+				point const ppos(pos + vector3d(0.0, 0.0, 1.0*radius));
+				float const mud_mix(in_wmatrix ? valleys[wsi].mud_mix : 0.0), blood_mix(in_wmatrix ? valleys[wsi].blood_mix : 0.0);
+				add_water_particles(ppos, vadd+vector3d(0.0, 0.0, 1.5*vz), 0.25*vz, 1.0*radius, mud_mix, blood_mix, (20 + (rand()&7))*ndrops);
+				obj_group &objg(obj_groups[droplet_id]);
 					
-					for (int o = 0; o < ndrops; ++o) {
-						int const i(objg.choose_object());
-						objg.create_object_at(i, ppos);
-						objg.get_obj(i).velocity = vadd + gen_rand_vector(vz*rand_uniform(0.05, 0.1), 20.0, PI_TWO);
-						vadd_rand(objg.get_obj(i).pos, 1.0*radius, 1);
-					}
-					if (add_sound && energy > 10.0) {gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.05*sqrt_energy));}
+				for (int o = 0; o < ndrops; ++o) {
+					int const i(objg.choose_object());
+					objg.create_object_at(i, ppos);
+					objg.get_obj(i).velocity = vadd + gen_rand_vector(vz*rand_uniform(0.05, 0.1), 20.0, PI_TWO);
+					vadd_rand(objg.get_obj(i).pos, 1.0*radius, 1);
 				}
+				if (add_sound && energy > 10.0) {gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.05*sqrt_energy));}
 			}
 		}
 	}
