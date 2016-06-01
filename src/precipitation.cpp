@@ -117,7 +117,7 @@ class rain_manager_t : public precip_manager_t<2> {
 
 public:
 	void update() {
-		//RESET_TIME;
+		//timer_t timer("Rain Update"); // 0.75ms for default rain intensity
 		pre_update();
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
@@ -125,12 +125,11 @@ public:
 		if (animate2) {for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}}
 
 		//#pragma omp parallel for schedule(static,1) // not valid for splashes, and actually slower for light rain
-		for (int i = 0; i < (int)verts.size(); i += 2) { // iterate in pairs
+		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
 			check_pos(verts[i].v, verts[i+1].v, (begin_motion ? &splashes : nullptr));
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
 		}
-		//PRINT_TIME("Rain Update"); // 0.75ms for default rain intensity
 	}
 	void render() const { // partially transparent
 		if (empty()) return;
@@ -186,6 +185,7 @@ public:
 class snow_manager_t : public precip_manager_t<1> {
 public:
 	void update() {
+		//timer_t timer("Snow Update");
 		pre_update();
 		vector3d const v(get_velocity(-0.02));
 		float const vmult(0.1/verts.size());
