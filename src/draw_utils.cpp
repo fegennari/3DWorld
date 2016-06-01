@@ -344,14 +344,14 @@ template class point_sprite_drawer_t<sized_vert_t<vert_norm_color>>;
 
 void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, tex_range_t const &tr) {
 
-	float const t[4][2] = {{tr.x1,tr.y1}, {tr.x2,tr.y1}, {tr.x2,tr.y2}, {tr.x1,tr.y2}};
-	unsigned const v[6] = {0,2,1, 0,3,2}; // Note: reversed from quad_to_tris_ixs
 	color_wrapper cw;
-	cw.set_c4(c);
-
-	for (unsigned i = 0; i < 6; ++i) {
-		verts.push_back(vert_norm_tc_color(pts[v[i]], n, t[v[i]][0], t[v[i]][1], cw.c, 1));
-	}
+	cw.set_c4(c); // Note: reversed from quad_to_tris_ixs
+	verts.push_back(vert_norm_tc_color(pts[0], n, tr.x1,tr.y1, cw.c, 1));
+	verts.push_back(vert_norm_tc_color(pts[2], n, tr.x2,tr.y2, cw.c, 1));
+	verts.push_back(vert_norm_tc_color(pts[1], n, tr.x2,tr.y1, cw.c, 1));
+	verts.push_back(vert_norm_tc_color(pts[0], n, tr.x1,tr.y1, cw.c, 1));
+	verts.push_back(vert_norm_tc_color(pts[3], n, tr.x1,tr.y2, cw.c, 1));
+	verts.push_back(vert_norm_tc_color(pts[2], n, tr.x2,tr.y2, cw.c, 1));
 }
 
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
