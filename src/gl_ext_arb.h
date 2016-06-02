@@ -52,6 +52,7 @@ void bind_vao(unsigned vao);
 void delete_vao(unsigned vao);
 void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo=0, bool multisample=0, unsigned *layer=nullptr);
 void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo=0, bool multisample=0, unsigned *layer=nullptr);
+void bind_fbo(unsigned fbo_id);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample=0);

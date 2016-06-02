@@ -215,7 +215,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 	// Create a framebuffer object
 	check_gl_error(550);
 	glGenFramebuffers(1, &fbo_id);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+	bind_fbo(fbo_id);
 	
 	if (is_depth_fbo) { // Instruct openGL that we won't bind a color texture with the currently binded FBO
 		glDrawBuffer(GL_NONE);
@@ -239,7 +239,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
 	
 	// Switch back to window-system-provided framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	disable_fbo();
 }
 
 
@@ -247,12 +247,10 @@ void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 
 	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo, multisample, layer);}
 	assert(fbo_id > 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
+	bind_fbo(fbo_id); // rendering offscreen
 }
-
-void disable_fbo() {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
+void bind_fbo(unsigned fbo_id) {glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);}
+void disable_fbo() {glBindFramebuffer(GL_FRAMEBUFFER, 0);}
 
 void free_fbo(unsigned &fbo_id) {
 	if (fbo_id > 0) {glDeleteFramebuffers(1, &fbo_id);}

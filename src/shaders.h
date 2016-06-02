@@ -217,6 +217,7 @@ class compute_shader_t : public compute_shader_base_t {
 public:
 	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
 	  compute_shader_base_t(xsize_, ysize_), is_running(0), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
+	bool get_is_running() const {return is_running;}
 	void begin();
 	void end_shader();
 	void setup_matrices_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);

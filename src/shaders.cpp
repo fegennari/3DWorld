@@ -1156,6 +1156,7 @@ void compute_shader_t::setup_matrices_and_run(unsigned &tid, bool is_R32F, bool 
 		fgMatrixMode(FG_MODELVIEW);
 		fgPushIdentityMatrix();
 	}
+	assert(!is_running);
 	run(tid);
 	is_running = 1;
 
@@ -1200,6 +1201,7 @@ void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool 
 }
 void compute_shader_t::read_float_vals(vector<float> &vals, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
 
+	bind_fbo(fbo_id);
 	assert(is_running);
 	vals.resize(xsize*ysize);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
