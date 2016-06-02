@@ -282,7 +282,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	float rx(0.0), ry(0.0);
 	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
-	if (gen_mode == 0) {
+	if (gen_mode == MGEN_SINE) {
 		ngen.set_rand_seeds(rseed1, rseed2);
 		ngen.gen_sines(mag, freq); // create sine table
 		ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
@@ -290,7 +290,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	else {
 		gen_rx_ry(rx, ry);
 	}
-	if (gen_mode == 3) { // GPU simplex
+	if (gen_mode == MGEN_SIMPLEX_GPU) { // GPU simplex
 		unsigned tid(0);
 		compute_shader_comp_t cshader("noise_2d_3d.part*+gen_voxel_weights", nz, nx, ny, 16, 16, 1); // Note: {x,y,z} is reordered to {z,x,y}
 		cshader.begin();
@@ -312,7 +312,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 			for (unsigned z = 0; z < nz; ++z) {
 				float val(0.0);
 
-				if (gen_mode == 0) { // sines
+				if (gen_mode == MGEN_SINE) { // sines
 #if 1
 					val = ngen.get_val(x, y, z, xyz_vals);
 #else
@@ -329,7 +329,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 
 					for (int n = 0; n < max(1, ((int)MAX_FREQ_BINS - mesh_freq_filter)); ++n) {
 						glm::vec3 const nv(nfreq*v + glm::vec3(rx, ry, rx-ry));
-						val   += nmag*((gen_mode == 2) ? glm::perlin(nv) : glm::simplex(nv));
+						val   += nmag*((gen_mode == MGEN_PERLIN) ? glm::perlin(nv) : glm::simplex(nv));
 						nmag  *= gain;
 						nfreq *= lacunarity;
 					}

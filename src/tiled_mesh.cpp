@@ -1781,7 +1781,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	// Note: runtimes are on the order of 0.45ms*num_tiles + 5.7ms for GPU simplex and 3.7ms for CPU simplex
 	int const prev_mesh_gen_mode(mesh_gen_mode);
 	unsigned const num_to_gen(to_gen_zvals.size()), gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
-	if (mesh_gen_mode == 3 && gen_this_frame < 3) {mesh_gen_mode = 1;} // GPU simplex => CPU simplex
+	if (mesh_gen_mode == MGEN_SIMPLEX_GPU && gen_this_frame < 3) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
 	if (gen_this_frame < num_to_gen) {sort(to_gen_zvals.begin(), to_gen_zvals.end());} // sort by priority if not all generated
 	
 	for (unsigned i = 0; i < num_to_gen; ++i) {
@@ -2078,7 +2078,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {create_pine_tree_instances();}
 	//RESET_TIME;
 	// don't use parallel tree gen for a single tile, or when GPU heightmaps are enabled
-	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode != 3 && to_gen_trees.size() > 1)
+	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode != MGEN_SIMPLEX_GPU && to_gen_trees.size() > 1)
 	for (int i = 0; i < (int)to_gen_trees.size(); ++i) {to_gen_trees[i]->init_pine_tree_draw();}
 	//if (!to_gen_trees.empty()) {PRINT_TIME("Gen Trees2");}
 	

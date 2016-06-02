@@ -32,7 +32,7 @@ int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 
 // Global Variables
 float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
-int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(0), mesh_gen_shape(0), mesh_freq_filter(FREQ_FILTER);
+int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(MGEN_SINE), mesh_gen_shape(0), mesh_freq_filter(FREQ_FILTER);
 unsigned erosion_iters(0);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
@@ -200,7 +200,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 
 void apply_mesh_rand_seed(rand_gen_t &rgen) {
 	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
-	else if (mesh_gen_mode > 0) {rgen.set_state(mesh_rgen_index+1, 12345);}
+	else if (mesh_gen_mode != MGEN_SINE) {rgen.set_state(mesh_rgen_index+1, 12345);}
 }
 
 
@@ -601,7 +601,7 @@ void estimate_zminmax(bool using_eq) {
 			}
 		}
 		sort(height_histogram.begin(), height_histogram.end());
-		if (mesh_gen_mode > 0) {zmax_est *= 1.2;} // perlin/simplex
+		if (mesh_gen_mode != MGEN_SINE) {zmax_est *= 1.2;} // perlin/simplex
 	}
 	set_zmax_est(1.1*zmax_est);
 	set_zvals();
@@ -672,7 +672,7 @@ void compute_scale() {
 }
 
 float get_hmap_scale(int mode) {
-	return ((mode == 1 || mode == 3) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z; // simplex vs. perlin
+	return ((mode == MGEN_SIMPLEX || mode == MGEN_SIMPLEX_GPU) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z; // simplex vs. perlin
 }
 
 void postproc_noise_zval(float &zval) {
@@ -715,11 +715,11 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	assert(nx >= 0 && ny >= 0);
 	assert(start_eval_sin <= F_TABLE_SIZE);
 	cur_nx = nx; cur_ny = ny; mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
-	gen_mode  = (force_sine_mode ? 0 : mesh_gen_mode );
+	gen_mode  = (force_sine_mode ? MGEN_SINE : mesh_gen_mode );
 	gen_shape = (force_sine_mode ? 0 : mesh_gen_shape);
 	cached_vals.clear();
 
-	if (gen_mode == 3) { // GPU simplex noise - always cache values
+	if (gen_mode == MGEN_SIMPLEX_GPU) { // GPU simplex noise - always cache values
 		//RESET_TIME;
 		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
 		float rx, ry;
@@ -794,7 +794,7 @@ void mesh_xy_grid_cache_t::free_cshader() { // don't make any GPU calls - hard r
 // shape: 0=linear, 1=billowy, 2=ridged
 float get_noise_zval(float xval, float yval, int mode, int shape) {
 
-	assert(mode > 0); // mode 0 not supported by this function
+	assert(mode != MGEN_SINE); // mode 0 not supported by this function
 	float const xy_scale(0.0007*mesh_scale), xv(xy_scale*xval), yv(xy_scale*yval);
 	float zval(0.0), mag(1.0), freq(1.0);
 	unsigned const end_octave(NUM_FREQ_COMP - start_eval_sin/N_RAND_SIN2);
@@ -805,7 +805,7 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 	//#pragma omp parallel for schedule(static,1)
 	for (unsigned i = 0; i < end_octave; ++i) {
 		glm::vec2 const pos((freq*xv + rx), (freq*yv + ry));
-		float noise((mode == 1 || mode == 3) ? glm::simplex(pos) : glm::perlin(pos));
+		float noise((mode == MGEN_SIMPLEX || mode == MGEN_SIMPLEX_GPU) ? glm::simplex(pos) : glm::perlin(pos));
 		switch (shape) {
 		case 0: break; // linear - do nothing
 		case 1: noise = fabs(noise) - 0.40; break; // billowy
@@ -828,10 +828,10 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 	assert(x < cur_nx && y < cur_ny);
 	float zval(0.0);
 
-	if ((use_cache || gen_mode == 3) && !cached_vals.empty()) {
+	if ((use_cache || gen_mode == MGEN_SIMPLEX_GPU) && !cached_vals.empty()) {
 		zval += cached_vals[y*cur_nx + x];
 	}
-	else if (gen_mode > 0) { // perlin/simplex
+	else if (gen_mode != MGEN_SINE) { // perlin/simplex
 		float const xval((x*mdx + mx0)*DX_VAL_INV), yval((y*mdy + my0)*DY_VAL_INV);
 		zval += get_noise_zval(xval, yval, gen_mode, gen_shape);
 	}
@@ -865,7 +865,7 @@ float eval_mesh_sin_terms(float xv, float yv) {
 float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
 
 	float const xv(xy_scale*(xval - (MESH_X_SIZE >> 1))), yv(xy_scale*(yval - (MESH_Y_SIZE >> 1)));
-	if (mesh_gen_mode) {return get_noise_zval(xv, yv, mesh_gen_mode, mesh_gen_shape);}
+	if (mesh_gen_mode != MGEN_SINE) {return get_noise_zval(xv, yv, mesh_gen_mode, mesh_gen_shape);}
 	float val(eval_mesh_sin_terms(mesh_scale*xv, mesh_scale*yv)/mesh_scale_z);
 	apply_noise_shape_final(val, mesh_gen_shape);
 	return val;
