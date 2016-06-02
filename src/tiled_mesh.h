@@ -302,6 +302,7 @@ public:
 	float get_scenery_dist_scale(bool reflection_pass) const {return tree_scale*get_dist_to_camera_in_tiles(0)/get_scenery_thresh(reflection_pass);}
 	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/get_tree_scale_denom();}
 	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
+	float get_draw_priority() const;
 
 	// *** trees ***
 	template <typename T> void postproc_trees(T const &trees, float &tzmax) { // pine/decidious trees
@@ -369,7 +370,8 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	unsigned ivbo_ixs[NUM_LODS+1];
 	float terrain_zmin;
 	draw_vect_t to_draw;
-	vector<tile_t *> occluded_tiles, to_gen_zvals;
+	vector<tile_t *> occluded_tiles;
+	vector<pair<float, tile_t *>> to_gen_zvals;
 	vector<vert_wrap_t> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
 	lightning_strike_t lightning_strike;

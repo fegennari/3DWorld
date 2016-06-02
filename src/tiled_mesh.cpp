@@ -218,6 +218,10 @@ tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_ti
 	base_tsize = NORM_TEXELS;
 }
 
+float tile_t::get_draw_priority() const {
+	return (p2p_dist_xy(get_camera_pos(), get_center()) + (is_visible() ? 0.0 : FAR_CLIP)); // prioritize visible tiles
+}
+
 
 void tile_t::update_terrain_params() { // setup biomes
 
@@ -493,8 +497,8 @@ void tile_t::calc_mesh_ao_lighting() {
 
 void tile_t::calc_shadows_for_light(unsigned l) {
 
-	assert(!smask[l].empty());
 	if (is_distant) return; // Note: can be made to work, but won't work as-is
+	assert(!smask[l].empty());
 	tile_xy_pair const tp(get_tile_xy_pair());
 
 	// pull from adjacent tiles that already had their shadows calculated
@@ -1361,6 +1365,7 @@ void tile_t::update_animals() {
 
 void tile_t::pre_draw(mesh_xy_grid_cache_t &height_gen) {
 
+	assert(!zvals.empty());
 	if (tree_map.empty() && any_trees_enabled()) {apply_tree_ao_shadows();}
 	if (weight_tid == 0 || recalc_tree_grass_weights) {create_texture(height_gen);}
 	check_shadow_map_and_normal_texture();
@@ -1736,6 +1741,7 @@ void tile_draw_t::clear() {
 float tile_draw_t::update(float &min_camera_dist) { // view-independent updates; returns terrain zmin
 
 	//timer_t timer("TT Update");
+	unsigned const max_tile_gen_per_frame = 16;
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
 	to_draw.clear();
 	terrain_zmin = FAR_DISTANCE;
@@ -1748,12 +1754,11 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	int const x2( tile_radius + toffx), y2( tile_radius + toffy);
 	unsigned const init_tiles((unsigned)tiles.size());
 	unsigned num_erased(0);
-	to_gen_zvals.clear();
 	min_camera_dist = FAR_DISTANCE;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
-		if (!i->second->update_range(smap_manager)) {
+		if (!i->second->update_range(smap_manager)) { // delete this tile
 			i->second->clear();
 			tiles.erase(i++);
 			++num_erased;
@@ -1766,16 +1771,27 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (tiles.find(txy) != tiles.end()) continue; // already exists
 			tile_t tile(get_tile_size(), x, y);
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
+			//if (to_gen_zvals.size() >= max_tile_gen_per_frame) continue; // too many tiles generated this frame
 			tile_t *new_tile(new tile_t(tile));
-			to_gen_zvals.push_back(new_tile);
-			tiles[txy].reset(new_tile);
+			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
+			//tiles[txy].reset(new_tile);
 		}
 	}
 	// if there are fewer than 3 tiles to generate, use CPU simplex rather than GPU simplex to avoid stalling/flusing the graphics pipeline
 	// Note: runtimes are on the order of 0.45ms*num_tiles + 5.7ms for GPU simplex and 3.7ms for CPU simplex
 	int const prev_mesh_gen_mode(mesh_gen_mode);
-	if (mesh_gen_mode == 3 && to_gen_zvals.size() < 3) {mesh_gen_mode = 1;} // GPU simplex => CPU simplex
-	for (auto i = to_gen_zvals.begin(); i != to_gen_zvals.end(); ++i) {(*i)->create_zvals(height_gen);}
+	unsigned const num_to_gen(to_gen_zvals.size()), gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
+	if (mesh_gen_mode == 3 && gen_this_frame < 3) {mesh_gen_mode = 1;} // GPU simplex => CPU simplex
+	if (gen_this_frame < num_to_gen) {sort(to_gen_zvals.begin(), to_gen_zvals.end());} // sort by priority if not all generated
+	
+	for (unsigned i = 0; i < num_to_gen; ++i) {
+		tile_t *tile(to_gen_zvals[i].second);
+		if (i >= gen_this_frame) {delete tile; continue;} // delete these tiles - they will be created in a later frame
+		tile->create_zvals(height_gen); // generate these tiles
+		bool const did_ins(tiles.insert(make_pair(tile->get_tile_xy_pair(), tile)).second);
+		assert(did_ins);
+	}
+	to_gen_zvals.clear();
 	mesh_gen_mode = prev_mesh_gen_mode;
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin
@@ -1794,9 +1810,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 
 	// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
 	if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
-		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-			i->second->clear_shadows();
-		}
+		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadows();}
 		last_sun  = sun_pos;
 		last_moon = moon_pos;
 	}
@@ -2061,9 +2075,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		}
 		to_update.push_back(tile);
 	}
-	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {
-		create_pine_tree_instances();
-	}
+	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {create_pine_tree_instances();}
 	//RESET_TIME;
 	// don't use parallel tree gen for a single tile, or when GPU heightmaps are enabled
 	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode != 3 && to_gen_trees.size() > 1)
