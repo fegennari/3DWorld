@@ -206,19 +206,22 @@ public:
 // "fake" compute shader implemented as a fragment shader
 class compute_shader_t : public compute_shader_base_t {
 
+	bool is_running;
 	unsigned fbo_id, pbo;
 	string frag_shader_str;
 
 	void draw_geom() const;
+	void unset_fbo(bool keep_fbo_for_reuse);
+	void read_pixels(vector<float> &vals, bool is_first=1, bool is_last=1);
 
 public:
 	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
-	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
+	  compute_shader_base_t(xsize_, ysize_), is_running(0), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
 	void begin();
 	void end_shader();
-	void pre_run();
-	void post_run(bool keep_fbo_for_reuse);
+	void setup_matrices_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
 	void run(unsigned &tid);
+	void read_float_vals(vector<float> &vals, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 1);} // FS

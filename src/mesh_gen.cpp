@@ -720,34 +720,8 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	cached_vals.clear();
 
 	if (gen_mode == MGEN_SIMPLEX_GPU) { // GPU simplex noise - always cache values
-		//RESET_TIME;
-		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
-		float rx, ry;
-		gen_rx_ry(rx, ry);
-
-		if (cshader == nullptr) {
-			cshader = new grid_gen_shader_t("noise_2d_3d.part*+procedural_height_gen", cur_nx, cur_ny);
-			if (gen_shape == 1) {cshader->set_comp_prefix("#define BILLOWY");}
-			if (gen_shape == 2) {cshader->set_comp_prefix("#define RIDGED" );}
-			cshader->begin();
-		}
-		else {
-			assert(cshader->get_xsize() == cur_nx && cshader->get_ysize() == cur_ny); // can't reuse with different sizes
-			cshader->enable();
-		}
-		// returns heights in approximately [-1,1] range
-		cshader->add_uniform_float("x0", (x0 - 0.5*dx)*xscale);
-		cshader->add_uniform_float("y0", (y0 - 0.5*dy)*yscale);
-		cshader->add_uniform_float("dx", dx*nx*xscale);
-		cshader->add_uniform_float("dy", dy*ny*yscale);
-		cshader->add_uniform_float("rx", rx);
-		cshader->add_uniform_float("ry", ry);
-		cshader->add_uniform_float("zscale", /*zscale*/1.0);
-		cshader->gen_matrix_R32F(cached_vals, tid, 1, 1, 1); // reuse FBO
-		cshader->disable();
-		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
-		//PRINT_TIME("GPU Height");
-		return; // done
+		run_gpu_simplex();
+		return;
 	}
 	yterms_start = nx*F_TABLE_SIZE;
 	xyterms.resize((nx + ny)*F_TABLE_SIZE, 0.0);
@@ -779,6 +753,36 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 			}
 		}
 	}
+}
+
+void mesh_xy_grid_cache_t::run_gpu_simplex() {
+
+	//timer_t("GPU Mesh Gen");
+	float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
+	float rx, ry;
+	gen_rx_ry(rx, ry);
+
+	if (cshader == nullptr) {
+		cshader = new grid_gen_shader_t("noise_2d_3d.part*+procedural_height_gen", cur_nx, cur_ny);
+		if (gen_shape == 1) {cshader->set_comp_prefix("#define BILLOWY");}
+		if (gen_shape == 2) {cshader->set_comp_prefix("#define RIDGED" );}
+		cshader->begin();
+	}
+	else {
+		assert(cshader->get_xsize() == cur_nx && cshader->get_ysize() == cur_ny); // can't reuse with different sizes
+		cshader->enable();
+	}
+	// returns heights in approximately [-1,1] range
+	cshader->add_uniform_float("x0", (mx0 - 0.5*mdx)*xscale);
+	cshader->add_uniform_float("y0", (my0 - 0.5*mdy)*yscale);
+	cshader->add_uniform_float("dx", mdx*cur_nx*xscale);
+	cshader->add_uniform_float("dy", mdy*cur_ny*yscale);
+	cshader->add_uniform_float("rx", rx);
+	cshader->add_uniform_float("ry", ry);
+	cshader->add_uniform_float("zscale", /*zscale*/1.0);
+	cshader->gen_matrix_R32F(cached_vals, tid, 1, 1, 1); // reuse FBO
+	cshader->disable();
+	for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
 }
 
 void mesh_xy_grid_cache_t::clear_context() { // for GPU-mode cached state

@@ -1129,33 +1129,40 @@ void compute_shader_t::draw_geom() const {
 	draw_verts(verts, 4, GL_TRIANGLE_FAN); // one quad from [0,0] to [1,1] that exactly covers the viewport
 }
 
-
 void compute_shader_t::begin() {
 	set_vert_shader("vert_xform_vpos");
 	set_frag_shader(frag_shader_str);
 	begin_shader();
 }
-
 void compute_shader_t::end_shader() {
 	shader_t::end_shader();
 	free_fbo(fbo_id);
 }
 
-void compute_shader_t::pre_run() { // call once before run() calls
-	// setup matrices
-	glViewport(0, 0, xsize, ysize);
-	fgMatrixMode(FG_PROJECTION);
-	fgPushIdentityMatrix();
-	fgOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0); // [0,0] to [1,1]
-	fgMatrixMode(FG_MODELVIEW);
-	fgPushIdentityMatrix();
-}
-
-void compute_shader_t::post_run(bool keep_fbo_for_reuse) { // call once after run() calls
+void compute_shader_t::unset_fbo(bool keep_fbo_for_reuse) { // call once after run() calls
 	if (!keep_fbo_for_reuse) {free_fbo(fbo_id);}
 	disable_fbo();
-	restore_prev_mvm_pjm_state();
-	set_standard_viewport(); // restore state
+}
+
+void compute_shader_t::setup_matrices_and_run(unsigned &tid, bool is_R32F, bool is_first, bool is_last) {
+	
+	setup_target_texture(tid, is_R32F);
+	
+	if (is_first) {
+		glViewport(0, 0, xsize, ysize);
+		fgMatrixMode(FG_PROJECTION);
+		fgPushIdentityMatrix();
+		fgOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0); // [0,0] to [1,1]
+		fgMatrixMode(FG_MODELVIEW);
+		fgPushIdentityMatrix();
+	}
+	run(tid);
+	is_running = 1;
+
+	if (is_last) {
+		restore_prev_mvm_pjm_state();
+		set_standard_viewport(); // restore state
+	}
 }
 
 void compute_shader_t::run(unsigned &tid) { // call N times between pre_run() and post_run() calls
@@ -1169,9 +1176,8 @@ void compute_shader_t::run(unsigned &tid) { // call N times between pre_run() an
 
 // tid may or may not be setup prior to this call
 void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
-	setup_target_texture(tid, 0);
-	if (is_first) {pre_run();}
-	run(tid);
+	
+	setup_matrices_and_run(tid, 0, is_first, is_last);
 	vals.resize(xsize*ysize);
 	vector<unsigned char> data(4*vals.size());
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -1183,40 +1189,45 @@ void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool
 			vals[ix] = data[ix<<2]; // red component [0.0, 1.0)
 		}
 	}
-	if (is_last) {post_run(keep_fbo_for_reuse);}
+	is_running = 0;
+	if (is_last) {unset_fbo(keep_fbo_for_reuse);}
 }
 
 // tid may or may not be setup prior to this call
 void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
-	setup_target_texture(tid, 1);
-	if (is_first) {pre_run();}
-	run(tid);
+	setup_matrices_and_run(tid, 1, is_first, is_last);
+	read_float_vals(vals, is_first, is_last, keep_fbo_for_reuse);
+}
+void compute_shader_t::read_float_vals(vector<float> &vals, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
+
+	assert(is_running);
 	vals.resize(xsize*ysize);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	read_pixels(vals, is_first, is_last); // Note: slower on old cards, faster on new ones
+	//glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
+	is_running = 0;
+	if (is_last) {unset_fbo(keep_fbo_for_reuse);}
+}
 
-	if (1) { // Note: slower on old cards, faster on new ones
-		unsigned const pbo_size(xsize*ysize*sizeof(float));
+void compute_shader_t::read_pixels(vector<float> &vals, bool is_first, bool is_last) {
 
-		if (is_first) {
-			glGenBuffers(1, &pbo);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-			glBufferData(GL_PIXEL_PACK_BUFFER, pbo_size, NULL, GL_STREAM_READ);
-		}
-		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, nullptr);
-		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT);
-		memcpy((void *)&vals.front(), ptr, pbo_size);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	unsigned const pbo_size(xsize*ysize*sizeof(float));
 
-		if (is_last) {
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-			glDeleteBuffers(1, &pbo);
-			pbo = 0;
-		}
+	if (is_first) {
+		glGenBuffers(1, &pbo);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+		glBufferData(GL_PIXEL_PACK_BUFFER, pbo_size, NULL, GL_STREAM_READ);
 	}
-	else {
-		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
+	glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, nullptr);
+	void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT); // Note: blocks until data is ready
+	memcpy((void *)&vals.front(), ptr, pbo_size);
+	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+
+	if (is_last) {
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		glDeleteBuffers(1, &pbo);
+		pbo = 0;
 	}
-	if (is_last) {post_run(keep_fbo_for_reuse);}
 }
 
 

@@ -34,6 +34,8 @@ class mesh_xy_grid_cache_t {
 	typedef compute_shader_t grid_gen_shader_t;
 	grid_gen_shader_t *cshader;
 
+	void run_gpu_simplex();
+
 public:
 	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), yterms_start(0), tid(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), gen_mode(MGEN_SINE), gen_shape(0), cshader(nullptr) {}
 	~mesh_xy_grid_cache_t() {clear_context();}
