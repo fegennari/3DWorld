@@ -25,7 +25,7 @@ extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
 
 
-void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values);
+bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values, bool no_wait=0);
 bool using_hmap_with_detail();
 void set_temp_clear_color(colorRGBA const &clear_color);
 

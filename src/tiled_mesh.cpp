@@ -334,18 +334,16 @@ void tile_t::clear_vbo_tid(tile_shadow_map_manager *smap_manager) {
 }
 
 
-void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values) {
+bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values, bool no_wait=0) {
 
 	bool const add_detail(using_hmap_with_detail());
-
-	if (add_detail || !using_tiled_terrain_hmap_tex()) {
-		float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
-		height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values);
-	}
+	if (!add_detail && using_tiled_terrain_hmap_tex()) return 1; // nothing to do
+	float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
+	return height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values, 0, no_wait);
 }
 
 
-void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
+bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 
 	//timer_t timer("Create Zvals");
 	if (enable_terrain_env) {update_terrain_params();}
@@ -355,7 +353,8 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
 	unsigned const block_size(zvsize/4);
 	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail()); // add procedural detail to heightmap
-	setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize, 0); // cache_values=0
+	bool const results_ready(setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize, 0, no_wait)); // cache_values=0
+	if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
 
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)zvsize; ++y) {
@@ -406,6 +405,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	ptzmax = dtzmax = mzmin; // no trees yet
 	if (!can_have_trees()) {no_trees = 1;} // mark as no_trees so that trees don't pop when water is disabled later
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
+	return 1; // results are ready
 }
 
 
@@ -1688,16 +1688,10 @@ void lightning_strike_t::update() {
 	int const rnum(int(fticks*LIGHTNING_FREQ));
 
 	if (enabled()) {
-		if (time > int(fticks*LITNING_TIME2)) { // check for end time
-			clear();
-		}
-		else if (animate2) {
-			time += iticks;
-		}
+		if (time > int(fticks*LITNING_TIME2)) {clear();} // check for end time
+		else if (animate2) {time += iticks;}
 	}
-	else if (animate2 && (rnum <= 1 || (rand()%rnum) == 0)) {
-		gen();
-	}
+	else if (animate2 && (rnum <= 1 || (rand()%rnum) == 0)) {gen();}
 }
 
 void lightning_strike_t::draw() const {
@@ -1723,10 +1717,8 @@ void lightning_strike_t::end_draw() const {
 
 
 tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), terrain_zmin(0.0) {
-
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
-
 
 void tile_draw_t::clear() {
 
@@ -1737,11 +1729,15 @@ void tile_draw_t::clear() {
 	tree_trunk_pts.clear();
 }
 
+void tile_draw_t::insert_tile(tile_t *tile) {
+	bool const did_ins(tiles.insert(make_pair(tile->get_tile_xy_pair(), tile)).second);
+	assert(did_ins);
+}
 
 float tile_draw_t::update(float &min_camera_dist) { // view-independent updates; returns terrain zmin
 
 	//timer_t timer("TT Update");
-	unsigned const max_tile_gen_per_frame = 16;
+	unsigned const max_tile_gen_per_frame = 16; // higher = less overall gen time (more parallel), but longer wait for first render
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
 	to_draw.clear();
 	terrain_zmin = FAR_DISTANCE;
@@ -1757,13 +1753,19 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	min_camera_dist = FAR_DISTANCE;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
+	if (!to_gen_zvals.empty()) { // a tile was waiting on zval generation (async)
+		assert(to_gen_zvals.size() == 1); // must be a single tile, since there is a single height_gen object
+		tile_t *tile(to_gen_zvals.front().second);
+		tile->create_zvals(height_gen, 0); // wait for zvals to be generated
+		insert_tile(tile); // zvals have been generated
+		to_gen_zvals.clear();
+	}
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
 		if (!i->second->update_range(smap_manager)) { // delete this tile
 			i->second->clear();
 			tiles.erase(i++);
 			++num_erased;
-		}
-		else {++i;}
+		} else {++i;}
 	}
 	for (int y = y1; y <= y2; ++y ) { // create new tiles
 		for (int x = x1; x <= x2; ++x ) {
@@ -1771,29 +1773,38 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (tiles.find(txy) != tiles.end()) continue; // already exists
 			tile_t tile(get_tile_size(), x, y);
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
-			//if (to_gen_zvals.size() >= max_tile_gen_per_frame) continue; // too many tiles generated this frame
 			tile_t *new_tile(new tile_t(tile));
 			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
 			//tiles[txy].reset(new_tile);
 		}
 	}
-	// if there are fewer than 3 tiles to generate, use CPU simplex rather than GPU simplex to avoid stalling/flusing the graphics pipeline
-	// Note: runtimes are on the order of 0.45ms*num_tiles + 5.7ms for GPU simplex and 3.7ms for CPU simplex
-	int const prev_mesh_gen_mode(mesh_gen_mode);
+	//if (to_gen_zvals.size() < 4) {to_gen_zvals.clear();} // block until at least 4 tiles to generate (lower average gen time, but causes more slow frames/lag)
 	unsigned const num_to_gen(to_gen_zvals.size()), gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
-	if (mesh_gen_mode == MGEN_SIMPLEX_GPU && gen_this_frame < 3) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
-	if (gen_this_frame < num_to_gen) {sort(to_gen_zvals.begin(), to_gen_zvals.end());} // sort by priority if not all generated
-	
-	for (unsigned i = 0; i < num_to_gen; ++i) {
-		tile_t *tile(to_gen_zvals[i].second);
-		if (i >= gen_this_frame) {delete tile; continue;} // delete these tiles - they will be created in a later frame
-		tile->create_zvals(height_gen); // generate these tiles
-		bool const did_ins(tiles.insert(make_pair(tile->get_tile_xy_pair(), tile)).second);
-		assert(did_ins);
-	}
-	to_gen_zvals.clear();
-	mesh_gen_mode = prev_mesh_gen_mode;
 
+	if (0 && num_to_gen == 1) { // async generation mode for a single tile (5.4ms per tile - faster than waiting, but slower than CPU for a single tile)
+		tile_t *tile(to_gen_zvals.front().second);
+
+		if (tile->create_zvals(height_gen, 1)) { // no_wait=1
+			insert_tile(tile); // zvals have been generated
+			to_gen_zvals.clear();
+		} // else zvals are not ready, leave in to_gen_zvals and try again during the next update
+	}
+	else {
+		// if there are fewer than 3 tiles to generate, use CPU simplex rather than GPU simplex to avoid stalling/flusing the graphics pipeline
+		// Note: runtimes are on the order of 0.45ms*num_tiles + 5.7ms for GPU simplex and 3.7ms for CPU simplex
+		int const prev_mesh_gen_mode(mesh_gen_mode);
+		if (mesh_gen_mode == MGEN_SIMPLEX_GPU && gen_this_frame < 3) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
+		if (gen_this_frame < num_to_gen) {sort(to_gen_zvals.begin(), to_gen_zvals.end());} // sort by priority if not all generated
+	
+		for (unsigned i = 0; i < num_to_gen; ++i) {
+			tile_t *tile(to_gen_zvals[i].second);
+			if (i >= gen_this_frame) {delete tile; continue;} // delete these tiles - they will be created in a later frame
+			tile->create_zvals(height_gen, 0); // generate these tiles
+			insert_tile(tile);
+		}
+		to_gen_zvals.clear();
+		mesh_gen_mode = prev_mesh_gen_mode;
+	}
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin
 		if (i->second->get_rel_dist_to_camera() <= DRAW_DIST_TILES) {
 			terrain_zmin = min(terrain_zmin, i->second->get_zmin());

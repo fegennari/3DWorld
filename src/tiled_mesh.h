@@ -252,7 +252,7 @@ public:
 	void clear_shadow_map(tile_shadow_map_manager *smap_manager);
 	void clear_vbo_tid(tile_shadow_map_manager *smap_manager);
 	void invalidate_shadows() {shadows_invalid = 1;}
-	void create_zvals(mesh_xy_grid_cache_t &height_gen);
+	bool create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait);
 
 	vector3d get_norm_not_normalized(unsigned ix) const {
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy);
@@ -383,6 +383,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 		point cube_pts[4];
 		void calc_cube_top_points(cube_t const &bcube);
 	};
+	void insert_tile(tile_t *tile);
 
 public:
 	tile_draw_t();
