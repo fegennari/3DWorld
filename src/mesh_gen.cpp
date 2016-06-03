@@ -8,6 +8,7 @@
 #include "sinf.h"
 #include "heightmap.h"
 #include "shaders.h"
+#include "gl_ext_arb.h"
 #include <glm/gtc/noise.hpp>
 
 
@@ -709,8 +710,8 @@ void gen_rx_ry(float &rx, float &ry) {
 }
 
 
-void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
-	unsigned nx, unsigned ny, bool cache_values, bool force_sine_mode)
+bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
+	unsigned nx, unsigned ny, bool cache_values, bool force_sine_mode, bool no_wait)
 {
 	assert(nx >= 0 && ny >= 0);
 	assert(start_eval_sin <= F_TABLE_SIZE);
@@ -720,8 +721,11 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	cached_vals.clear();
 
 	if (gen_mode == MGEN_SIMPLEX_GPU) { // GPU simplex noise - always cache values
-		run_gpu_simplex();
-		return;
+		bool const is_running(cshader && cshader->get_is_running());
+		if (!is_running) {run_gpu_simplex();} // launch the job
+		if (no_wait && !is_running) return 0; // just started, results not yet available
+		cache_gpu_simplex_vals();
+		return 1; // results are available
 	}
 	yterms_start = nx*F_TABLE_SIZE;
 	xyterms.resize((nx + ny)*F_TABLE_SIZE, 0.0);
@@ -753,12 +757,13 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 			}
 		}
 	}
+	return 1; // results are available
 }
 
 void mesh_xy_grid_cache_t::run_gpu_simplex() {
 
 	//timer_t("GPU Mesh Gen");
-	float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
+	float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
 	float rx, ry;
 	gen_rx_ry(rx, ry);
 
@@ -780,8 +785,17 @@ void mesh_xy_grid_cache_t::run_gpu_simplex() {
 	cshader->add_uniform_float("rx", rx);
 	cshader->add_uniform_float("ry", ry);
 	cshader->add_uniform_float("zscale", /*zscale*/1.0);
-	cshader->gen_matrix_R32F(cached_vals, tid, 1, 1, 1); // reuse FBO
+	//cshader->gen_matrix_R32F(cached_vals, tid, 1, 1, 1); // reuse FBO
+	cshader->setup_matrices_and_run(tid, 1, 1, 1); // R32F
 	cshader->disable();
+	disable_fbo();
+}
+
+void mesh_xy_grid_cache_t::cache_gpu_simplex_vals() {
+
+	assert(cshader && cshader->get_is_running());
+	cshader->read_float_vals(cached_vals, 1, 1, 1); // reuse FBO
+	float const zscale(get_hmap_scale(gen_mode));
 	for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
 }
 
