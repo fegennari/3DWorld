@@ -368,6 +368,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 
 	tile_map tiles;
 	unsigned ivbo_ixs[NUM_LODS+1];
+	unsigned tiles_gen_prev_frame;
 	float terrain_zmin;
 	draw_vect_t to_draw;
 	vector<tile_t *> occluded_tiles;

@@ -1716,7 +1716,7 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), terrain_zmin(0.0) {
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), terrain_zmin(0.0), tiles_gen_prev_frame(0) {
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 
@@ -1779,7 +1779,11 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		}
 	}
 	//if (to_gen_zvals.size() < 4) {to_gen_zvals.clear();} // block until at least 4 tiles to generate (lower average gen time, but causes more slow frames/lag)
-	unsigned const num_to_gen(to_gen_zvals.size()), gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
+	unsigned const num_to_gen(to_gen_zvals.size());
+	unsigned gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
+	// to balance tile gen time across frames, generate a number of tiles equal to the average of this frame and the previous frame
+	if (gen_this_frame > 1 && gen_this_frame < max_tile_gen_per_frame) {gen_this_frame = min(gen_this_frame, (gen_this_frame + tiles_gen_prev_frame + 1)/2);} // round up
+	tiles_gen_prev_frame = num_to_gen;
 
 	if (0 && num_to_gen == 1) { // async generation mode for a single tile (5.4ms per tile - faster than waiting, but slower than CPU for a single tile)
 		tile_t *tile(to_gen_zvals.front().second);
@@ -1789,13 +1793,14 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			to_gen_zvals.clear();
 		} // else zvals are not ready, leave in to_gen_zvals and try again during the next update
 	}
-	else {
-		// if there are fewer than 3 tiles to generate, use CPU simplex rather than GPU simplex to avoid stalling/flusing the graphics pipeline
+	else if (num_to_gen > 0) {
+		// if there are fewer than 4 tiles to generate, use CPU simplex rather than GPU simplex to avoid stalling/flusing the graphics pipeline
 		// Note: runtimes are on the order of 0.45ms*num_tiles + 5.7ms for GPU simplex and 3.7ms for CPU simplex
 		int const prev_mesh_gen_mode(mesh_gen_mode);
-		if (mesh_gen_mode == MGEN_SIMPLEX_GPU && gen_this_frame < 3) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
+		if (mesh_gen_mode == MGEN_SIMPLEX_GPU && gen_this_frame < 4) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
 		if (gen_this_frame < num_to_gen) {sort(to_gen_zvals.begin(), to_gen_zvals.end());} // sort by priority if not all generated
-	
+		//ostringstream oss; oss << "Gen " << gen_this_frame << " tiles"; timer_t timer(oss.str());
+
 		for (unsigned i = 0; i < num_to_gen; ++i) {
 			tile_t *tile(to_gen_zvals[i].second);
 			if (i >= gen_this_frame) {delete tile; continue;} // delete these tiles - they will be created in a later frame
