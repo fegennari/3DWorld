@@ -2023,7 +2023,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 	float const min_tree_h(water_plane_z + 0.01*zmax_est), max_tree_h(1.8*zmax_est);
 	float const height_thresh(get_median_height(tree_density_thresh));
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
-	unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
+	unsigned const skip_val(max(1, int(1.0/tree_scale))); // similar to deterministic gen in scenery.cpp
 	shared_tree_data.ensure_init();
 	mesh_xy_grid_cache_t density_gen[NUM_TREE_TYPES+1];
 
