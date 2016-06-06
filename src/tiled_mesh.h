@@ -229,6 +229,11 @@ public:
 		float const xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay), dx((xv2 - xv1)/4), dy((yv2 - yv1)/4);
 		return cube_t((xv1 + x*dx), (xv1 + (x+1)*dx), (yv1 + y*dy), (yv1 + (y+1)*dy), sub_zmin[y][x], sub_zmax[y][x]);
 	}
+	cube_t get_sub_bcube(unsigned x, unsigned y) const {
+		cube_t bcube(get_mesh_sub_bcube(x, y));
+		bcube.d[2][1] += (get_tile_zmax() - mzmax); // approximate accounting for grass and tree height
+		return bcube;
+	}
 	cube_t get_water_bcube() const {
 		float const xv1(get_xval(wx1 + xoff - xoff2)), yv1(get_yval(wy1 + yoff - yoff2));
 		return cube_t(xv1, xv1+(wx2-wx1)*deltax, yv1, yv1+(wy2-wy1)*deltay, water_plane_z, water_plane_z); // zero area in z

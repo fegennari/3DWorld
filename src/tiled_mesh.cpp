@@ -2192,7 +2192,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 				}
 			} // for j
 			for (unsigned t = 0; t < 16; ++t) {
-				sub_tile_os.calc_cube_top_points(tile->get_mesh_sub_bcube((t>>2), (t&3)));
+				sub_tile_os.calc_cube_top_points(tile->get_sub_bcube((t>>2), (t&3)));
 				bool sub_tile_occluded(0);
 
 				for (vector<cube_t>::const_iterator s = test_cubes.begin(); s != test_cubes.end() && !sub_tile_occluded; ++s) {
