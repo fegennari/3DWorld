@@ -1398,7 +1398,11 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
 	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
 	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
-	smap_data.set_for_all_lights(s, mvm);
+	if (smap_data.empty()) { // disable shadow map lookup when shadow map textures are unavailable
+		s.add_uniform_float("sm_scale0", -1.0);
+		s.add_uniform_float("sm_scale1", -1.0);
+	}
+	else {smap_data.set_for_all_lights(s, mvm);}
 }
 void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
 	if (shadow_map_enabled()) {shader_shadow_map_setup(s);}

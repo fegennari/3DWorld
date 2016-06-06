@@ -25,10 +25,11 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in m
 #endif
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.z += -z_bias*shadow_coord.w;
+	// sm_scale==1.0 => use smap; sm_scale==0.0 => return 0.0; sm_scale==-1.0 => return 1.0
 #ifndef NO_SHADOW_PCF
-	return sm_scale*calc_shadow_pcf(sm_tex, shadow_coord);
+	return max(sm_scale, 0.0)*calc_shadow_pcf(sm_tex, shadow_coord) - min(sm_scale, 0.0);
 #else
-	return sm_scale*textureProj(sm_tex, shadow_coord);
+	return max(sm_scale, 0.0)*textureProj(sm_tex, shadow_coord) - min(sm_scale, 0.0);
 #endif
 	// for exponential shadow map, disable the call to set_shadow_tex_params() in C++ and change sampler2DShadow to sampler2D
 	//return sm_scale*exp(min(0.0, 500.0*(texture(sm_tex, shadow_coord.xy/shadow_coord.w).r - (shadow_coord.z/shadow_coord.w - z_bias))));
