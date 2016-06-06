@@ -2379,7 +2379,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 	if (shadow_pass   ) {s.set_prefix("#define NO_NOISE",    1);} // FS
 	if (enable_instanced_pine_trees()) {s.set_prefix("#define ENABLE_INSTANCING", 0);} // VS
-	bool const enable_smap(!shadow_pass && shadow_map_enabled()), enable_leaf_smap((display_mode & 0x0200) && enable_smap);
+	bool const enable_smap(!shadow_pass && shadow_map_enabled()), enable_leaf_smap(!(display_mode & 0x0200) && enable_smap);
 
 	if (enable_leaf_smap) { // per-pixel lighting/shadows
 		shared_shader_lighting_setup(s, 1); // FS
@@ -2485,7 +2485,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
 
 	{ // draw leaves
-		bool const leaf_shadow_maps((display_mode & 0x0200) && enable_shadow_maps);
+		bool const leaf_shadow_maps(!(display_mode & 0x0200) && enable_shadow_maps);
 		shader_t ls;
 		if (leaf_shadow_maps) {ls.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
 		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, 0, leaf_shadow_maps);
