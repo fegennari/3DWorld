@@ -425,8 +425,8 @@ float val_signed_rand_bias_zone(float v, float ref_pt, float zone_width) {
 	if (range <= 0.0) return v; // outside the zone, return the original value
 	return (v + range*extract_low_bits_pm1(dist, 100.0/zone_width));
 }
-bool rel_height_check(float v, float thresh) {
-	return (val_signed_rand_bias_zone(v, thresh, tree_type_rand_zone) > thresh);
+bool rel_height_check(float v, float thresh, float zw_scale=1.0) {
+	return (val_signed_rand_bias_zone(v, thresh, zw_scale*tree_type_rand_zone) > thresh);
 }
 
 int get_tree_class_from_height(float zpos, bool pine_trees_only) {
@@ -442,7 +442,7 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	if (rel_height_check(relh, 0.6)) return TREE_CLASS_PINE;
 	//bool const allow_palm_trees(!pine_trees_only);
 	bool const allow_palm_trees(tree_mode == 3);
-	if (allow_palm_trees && zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435)) return TREE_CLASS_PALM;
+	if (allow_palm_trees && zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435, 0.2)) return TREE_CLASS_PALM;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
 	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
 }
