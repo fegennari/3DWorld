@@ -20,7 +20,7 @@ class small_tree { // size = 128
 	float height, width, r_angle, rx, ry;
 	mutable vbo_wrap_t palm_vbo; // created dynamically during drawing
 	point pos;
-	colorRGBA color, bark_color;
+	colorRGBA leaf_color, bark_color;
 	cylinder_3dw trunk_cylin;
 	vector<int> coll_id;
 	std::shared_ptr<vector<vert_norm_comp_color>> palm_verts; // for palm trees only
@@ -42,7 +42,7 @@ public:
 	void calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
-	colorRGBA get_leaf_color() const {return color;}
+	colorRGBA get_leaf_color() const {return leaf_color;}
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
 	bool are_leaves_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;

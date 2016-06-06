@@ -35,10 +35,10 @@ struct sm_tree_type {
 
 	int leaf_tid, bark_tid;
 	float w2, ws, h, ss;
-	colorRGBA c;
+	colorRGBA bc; // trunk color
 
-	sm_tree_type(float w2_, float ws_, float h_, float ss_, colorRGBA const &c_, int ltid, int btid)
-		: leaf_tid(ltid), bark_tid(btid), w2(w2_), ws(ws_), h(h_), ss(ss_), c(c_) {}
+	sm_tree_type(float w2_, float ws_, float h_, float ss_, colorRGBA const &bc_, int ltid, int btid)
+		: leaf_tid(ltid), bark_tid(btid), w2(w2_), ws(ws_), h(h_), ss(ss_), bc(bc_) {}
 };
 
 sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
@@ -59,7 +59,7 @@ int get_bark_tex_for_tree_type(int type) {
 
 colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 	int const bark_tid(get_bark_tex_for_tree_type(type));
-	colorRGBA c(stt[type].c);
+	colorRGBA c(stt[type].bc);
 	if (modulate_with_texture && bark_tid >= 0) {return c.modulate_with(texture_color(bark_tid));}
 	return c;
 }
@@ -605,7 +605,7 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 {
 	height *= tree_height_scale;
 	clear_vbo_mgr_ix();
-	bark_color = stt[type].c;
+	bark_color = stt[type].bc;
 	if (!is_pine_tree()) {UNROLL_3X(bark_color[i_] = min(1.0, bark_color[i_]*(0.85 + 0.3f*rgen.randd()));)} // gen bark color for decid trees
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;}
 
@@ -613,32 +613,32 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 	case T_PINE: // pine tree
 		width  *= 1.1;
 		height *= 1.2;
-		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
+		leaf_color = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
 	case T_SH_PINE: // short pine tree
 		width  *= 1.2;
 		height *= 0.8;
-		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
+		leaf_color = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
 	case T_PALM: // palm tree
-		color   = colorgen(0.9, 1.0, 0.9, 1.0, 0.9, 1.0, rgen);
 		width  *= 1.4;
 		height *= 2.0;
+		leaf_color = colorgen(0.7, 0.8, 0.9, 1.0, 0.6, 0.7, rgen); // r1, r2, g1, g2, b1, b2
 		break;
 	case T_DECID: // decidious tree
-		color = colorgen(0.5, 0.8, 0.7, 1.0, 0.4, 0.7, rgen);
+		leaf_color = colorgen(0.5, 0.8, 0.7, 1.0, 0.4, 0.7, rgen);
 		break;
 	case T_TDECID: // tall decidious tree
-		color = colorgen(0.4, 0.7, 0.8, 1.0, 0.3, 0.5, rgen);
+		leaf_color = colorgen(0.4, 0.7, 0.8, 1.0, 0.3, 0.5, rgen);
 		break;
 	case T_BUSH: // bush
-		color  = colorgen(0.5, 0.8, 0.7, 1.0, 0.3, 0.5, rgen);
+		leaf_color = colorgen(0.5, 0.8, 0.7, 1.0, 0.3, 0.5, rgen);
 		pos.z += 0.3*height;
 		if (rgen.rand()%100 < 50) {pos.z -= height*rgen.rand_uniform(0.0, 0.2);}
 		break;
 	default: assert(0);
 	}
-	color.alpha = 1.0;
+	leaf_color.alpha = 1.0;
 	if (allow_rotation) {setup_rotation(rgen);}
 	trunk_cylin = get_trunk_cylin();
 }
@@ -678,7 +678,7 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 		cp.tid       = stt[type].leaf_tid;
 		cp_trunk.tid = stt[type].bark_tid;
 	}
-	cp.color       = color;
+	cp.color       = leaf_color;
 	cp_trunk.color = bark_color;
 	if (type != T_BUSH && type != T_SH_PINE) {coll_id.push_back(add_coll_cylinder(trunk_cylin, cp_trunk, -1, 1));}
 	vector3d const dirh(get_rot_dir()*height);
@@ -700,14 +700,17 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 		coll_id.push_back(add_coll_sphere(pos, 1.2*width, cp, -1, 1));
 		break;
 	case T_PALM: // palm tree
-		assert(palm_verts != nullptr && !palm_verts->empty());
-		for (unsigned i = 0; i < palm_verts->size(); i += 4) { // iterate over the quads
-			point pts[4];
-			for (unsigned p = 0; p < 4; ++p) {pts[p] = (*palm_verts)[i+p].v;}
-			cp.color = color.modulate_with((*palm_verts)[i].get_c4());
-			coll_id.push_back(add_coll_polygon(pts, 4, cp, 0.0, -1, 1));
+		{
+			colorRGBA const palm_tex_color(texture_color(PALM_FROND_TEX));
+			assert(palm_verts != nullptr && !palm_verts->empty());
+			for (unsigned i = 0; i < palm_verts->size(); i += 4) { // iterate over the quads
+				point pts[4];
+				for (unsigned p = 0; p < 4; ++p) {pts[p] = (*palm_verts)[i+p].v;}
+				cp.color = palm_tex_color.modulate_with((*palm_verts)[i].get_c4());
+				coll_id.push_back(add_coll_polygon(pts, 4, cp, 0.0, -1, 1));
+			}
+			break;
 		}
-		break;
 	default: assert(0);
 	}
 }
@@ -762,7 +765,7 @@ void small_tree::calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager) {
 	palm_verts.reset(new vector<vert_norm_comp_color>(8*num_fronds));
 	vector<vert_norm_comp_color> &verts(*palm_verts);
 	rand_gen_t rgen;
-	rgen.set_state(long(1000*color.R), long(1000*color.G)); // seed random number generator with the tree color, which is deterministic
+	rgen.set_state(long(1000*leaf_color.R), long(1000*leaf_color.G)); // seed random number generator with the tree color, which is deterministic
 
 	for (unsigned n = 0, vix = 0; n < num_fronds; ++n) {
 		vector3d const dir(rgen.signed_rand_vector_norm(1.0));
@@ -772,7 +775,7 @@ void small_tree::calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager) {
 		point const p0(pb-dx), p14(pa), p27(pa+dy), p3(pb-dx+dy), p5(pb+dx), p6(pb+dx+dy);
 		vector3d const n1(cross_product(p14-p0, p27-p14).get_norm()), n2(cross_product(p5-p14, p6-p5).get_norm());
 		float const brownness(0.5*rgen.rand_float() + 0.5*max(0.0f, -dir.z)); // fronds pointing down are browner
-		color_wrapper_ctor cw(color.modulate_with(BROWN*brownness + WHITE*(1.0-brownness))); // random per-frond color
+		color_wrapper_ctor cw(leaf_color.modulate_with(BROWN*brownness + WHITE*(1.0-brownness))); // random per-frond color
 		verts[vix++].assign(p27, n1, cw.c); // 2
 		verts[vix++].assign(p3,  n1, cw.c); // 3
 		verts[vix++].assign(p0,  n1, cw.c); // 0
@@ -817,11 +820,11 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		}
 		if (update_mode) {
 			assert(vbo_mgr_ix >= 0);
-			vbo_manager.update_range(points, npts, color, vbo_mgr_ix, vbo_mgr_ix+1);
+			vbo_manager.update_range(points, npts, leaf_color, vbo_mgr_ix, vbo_mgr_ix+1);
 		}
 		else { // we only get into this case when running in parallel
 			#pragma omp critical(pine_tree_vbo_update)
-			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, npts, color);
+			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, npts, leaf_color);
 		}
 	}
 	else { // low detail billboard
@@ -832,7 +835,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		vn.n.y    = zv2 - zv1;
 		vn.v.z    = zv1; // bottom
 		points[0] = vn;
-		vbo_manager.add_points(points, 1, color);
+		vbo_manager.add_points(points, 1, leaf_color);
 	}
 }
 
@@ -921,7 +924,7 @@ void small_tree::draw_trunk(bool shadow_only, vector3d const &xlate, vector<vert
 				draw_fast_cylinder(trunk_cylin.p1, pa, trunk_cylin.r1, trunk_cylin.r2, nsides, 1, 0, 0, nullptr, 2.0);
 
 				if (nsides >= 8) {
-					color.set_for_cur_shader(); // palm frond color
+					leaf_color.set_for_cur_shader(); // palm frond color
 					point const pb(0.98*trunk_cylin.p2 + 0.02*trunk_cylin.p1), pc(1.04*trunk_cylin.p2 - 0.04*trunk_cylin.p1);
 					draw_fast_cylinder(pa, pb, trunk_cylin.r2, 0.8*trunk_cylin.r2, nsides, 1);
 					draw_fast_cylinder(pb, pc, 0.8*trunk_cylin.r2, 0.0, nsides, 1);
@@ -977,7 +980,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 	assert(xlate_loc >= 0 && scale_loc >= 0);
 	shader_t::set_uniform_vector3d(xlate_loc, xl);
 	shader_t::set_uniform_vector3d(scale_loc, scale);
-	if (!shadow_only) {color.set_for_cur_shader();}
+	if (!shadow_only) {leaf_color.set_for_cur_shader();}
 	draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
 	if (r_angle != 0.0) {fgPopMatrix();}
 }
