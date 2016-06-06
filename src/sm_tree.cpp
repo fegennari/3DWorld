@@ -462,6 +462,27 @@ int get_tree_type_from_height(float zpos, rand_gen_t &rgen) {
 	return TREE_NONE; // never gets here
 }
 
+bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max) {
+
+	if (!(tree_mode&2)) return 0;
+	if (z_max < water_plane_z) return 0; // underwater
+	if (force_tree_class >= 0) {return (force_tree_class != TREE_CLASS_NONE);}
+	float relh1(get_rel_height(z_min, -zmax_est, zmax_est)), relh2(get_rel_height(z_max, -zmax_est, zmax_est));
+	if (relh1 - tree_type_rand_zone > 0.9) return 0; // too high
+	if (relh2 + tree_type_rand_zone > 0.6) return 1; // can have pine trees
+	if (tree_mode != 3) return 1; // no decid trees
+	return (z_min < 0.85*water_plane_z && relh1 - 0.2*tree_type_rand_zone < 0.435); // can have palm trees
+}
+
+bool can_have_decid_trees_in_zrange(float z_min, float z_max) {
+
+	if (!(tree_mode&1)) return 0;
+	if (z_max < water_plane_z) return 0; // underwater
+	float relh1(get_rel_height(z_min, -zmax_est, zmax_est));
+	if (relh1 - tree_type_rand_zone > 0.6) return 0; // must have pine trees, or too high
+	return 1; // not worth checking plam tree case, since the rand zone overlaps with the water plane
+}
+
 
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z) {
 

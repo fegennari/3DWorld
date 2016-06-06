@@ -196,6 +196,8 @@ public:
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()? - grass and trees should not be underwater
 	bool can_have_trees() const {return (!no_trees && !is_distant && !all_water());}
+	bool can_have_pine_palm_trees() const {return (can_have_trees() && can_have_pine_palm_trees_in_zrange(mzmin, mzmax));}
+	bool can_have_decid_trees    () const {return (can_have_trees() && can_have_decid_trees_in_zrange    (mzmin, mzmax));}
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	void invalidate_mesh_height() {mesh_height_invalid = 1;}

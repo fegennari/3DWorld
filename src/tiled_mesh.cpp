@@ -624,7 +624,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_he
 
 void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test) {
 
-	if (pine_trees_enabled() && can_have_trees()) {
+	if (pine_trees_enabled() && can_have_pine_palm_trees()) {
 		assert(pine_trees_generated());
 		point const pt_off(tile->ptree_off.subtract_from(mesh_off));
 
@@ -632,7 +632,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 			add_tree_ao_shadow((i->get_pos() + pt_off), 1.8*i->get_pine_tree_radius(), 0.5*i->get_height(), no_adj_test);
 		}
 	}
-	if (decid_trees_enabled() && can_have_trees()) {
+	if (decid_trees_enabled() && can_have_decid_trees()) {
 		assert(decid_trees.was_generated());
 		point const dt_off(tile->dtree_off.subtract_from(mesh_off));
 
@@ -998,7 +998,7 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 
 void tile_t::init_pine_tree_draw() {
 
-	if (!can_have_trees()) return; // no pine trees (yet)
+	if (!can_have_pine_palm_trees()) return; // no pine trees, or tile too distant
 	//timer_t timer("Gen Pine Trees");
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
@@ -1042,7 +1042,7 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_trunks, bool draw_near_leaves,
 	bool draw_far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
-	if (pine_trees.empty() || !can_have_trees()) return;
+	if (pine_trees.empty() || !can_have_pine_palm_trees()) return;
 	//timer_t timer("Draw Pine Trees");
 	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());
@@ -1099,7 +1099,7 @@ void tile_t::gen_decid_trees_if_needed() {
 		cout << "Warning: max_unique_trees needs to be set to something reasonable for tiled terrain mode trees to work efficiently. Setting to 100." << endl;
 		max_unique_trees = 100;
 	}
-	if (decid_trees.was_generated() || !can_have_trees()) return; // already generated, or distant tile (no trees yet)
+	if (decid_trees.was_generated() || !can_have_decid_trees()) return; // already generated, elevation too high, or distant tile (no trees yet)
 	//timer_t timer("Gen Decid Trees");
 	assert(decid_trees.empty());
 	dtree_off.set_from_xyoff2();
