@@ -2491,8 +2491,9 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	{ // draw leaves
 		bool const leaf_shadow_maps(!(display_mode & 0x0200) && enable_shadow_maps);
 		shader_t ls;
-		if (leaf_shadow_maps) {ls.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
-		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, 0, leaf_shadow_maps);
+		bool const use_fs_smap = 0; // too slow
+		if (leaf_shadow_maps) {ls.set_prefix("#define USE_SMAP_SCALE", (use_fs_smap ? 1 : 0));} // VS/FS
+		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, use_fs_smap, leaf_shadow_maps);
 		if (leaf_shadow_maps ) {setup_tile_shader_shadow_map(ls);}
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1
