@@ -262,25 +262,26 @@ zval_avg voxel_map::find_adj_z(voxel_t &v, zval_avg const &zv_old, float depth, 
 
 	coord_type best_dz(0);
 	zval_avg res;
+	voxel_t v2_s(v), v2_e(v);
+	v2_s.p[2] -= min(Z_CHECK_RANGE, (int)v2_s.p[2]);
+	v2_e.p[2] += Z_CHECK_RANGE+1; // one past the end
 
-	for (coord_type dz = -Z_CHECK_RANGE; dz <= Z_CHECK_RANGE; ++dz) { // check adjacent z values (at, above, below)
-		voxel_t v2(v);
-		v2.p[2] += dz;
-		const_iterator it(find(v2));
-		if (it == end()) continue; // zero entry
+	for (iterator it = lower_bound(v2_s); it != end() && it->first < v2_e;) { // Note: no increment of it
 		zval_avg const z2(it->second);
 		assert(z2.valid());
-		if (zv_old.valid() && fabs(z2.getz() - zv_old.getz()) > depth) continue; // delta z too large
-		
+		if (zv_old.valid() && fabs(z2.getz() - zv_old.getz()) > depth) {++it; continue;} // delta z too large
+		voxel_t const v2(it->first);
+
 		if (cur_x_map) {
-			erase(v2);
+			erase(it++);
 			(*cur_x_map)[v2] = z2;
-		}
-		if (!res.valid() || abs(dz) < abs(best_dz)) best_dz = dz;
+		} else {++it;}
+		coord_type const dz(v2.p[2] - v.p[2]);
+		if (!res.valid() || abs(dz) < abs(best_dz)) {best_dz = dz;}
 		res.c += z2.c;
 		res.z += z2.z;
 	}
-	if (res.valid()) v.p[2] += best_dz;
+	if (res.valid()) {v.p[2] += best_dz;}
 	return res;
 }
 
@@ -568,10 +569,10 @@ void create_snow_strips(voxel_map &vmap) {
 			last_x = v1.p[0];
 			last_x_map.clear();
 			cur_x_map.swap(last_x_map);
-			assert(x_strip_map.find(last_x) == x_strip_map.end()); // map should guarantee strictly increasing x
-			x_strip_map[last_x] = (unsigned)snow_strips.size();
+			bool const did_ins(x_strip_map.insert(make_pair(last_x, (unsigned)snow_strips.size())).second);
+			assert(did_ins); // map should guarantee strictly increasing x
 		}
-		vmap.erase(v1);
+		vmap.erase(vmap.begin());
 		cur_x_map[v1] = zv;
 		vs.resize(0);
 		--v1.p[1];
