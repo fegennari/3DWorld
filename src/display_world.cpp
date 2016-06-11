@@ -721,6 +721,7 @@ void display(void) {
 			iticks  = (int)ftick;
 			tticks += iticks;
 			carry   = ftick - (float)iticks;
+			ftick   = min(ftick, 20.0f);
 		}
 		fticks = max(TOLERANCE, 0.9f*fticks + 0.1f*(ftick - carry)); // slow averaging filter
 		assert(fticks >  0.0 && fticks < 1.0E12);
