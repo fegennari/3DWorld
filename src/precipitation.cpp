@@ -114,6 +114,7 @@ public:
 class rain_manager_t : public precip_manager_t<2> {
 
 	deque<sphere_t> splashes;
+	quad_batch_draw splash_qbd;
 
 public:
 	void update() {
@@ -131,7 +132,7 @@ public:
 			verts[i+1].v = verts[i].v + dir;
 		}
 	}
-	void render() const { // partially transparent
+	void render() { // partially transparent
 		if (empty()) return;
 		//RESET_TIME;
 		colorRGBA color;
@@ -165,13 +166,12 @@ public:
 			shader_t s;
 			setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
 			select_texture(FLARE2_TEX);
-			quad_batch_draw qbd;
 			
 			for (auto i = splashes.begin(); i != splashes.end(); ++i) { // normal always faces up;
 				float const sz(i->radius*size), alpha(0.75*(4.0 - i->radius)/3.0); // size increases with radius/time; alpha decreases with radius/time
-				qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(0.8, 0.9, 1.0, alpha), sz, sz, tex_range_t(), 0, &plus_z);
+				splash_qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(0.8, 0.9, 1.0, alpha), sz, sz, tex_range_t(), 0, &plus_z);
 			}
-			qbd.draw();
+			splash_qbd.draw_and_clear();
 			s.end_shader();
 			disable_blend();
 			reset_fill_mode();
