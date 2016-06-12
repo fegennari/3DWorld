@@ -51,6 +51,7 @@ class uasteroid_cont : public uobject_base, public vector<uasteroid> {
 protected:
 	vector<sphere_t> shadow_casters;
 	sphere_t sun_pos_radius;
+	pt_line_drawer pld; // for drawing
 
 	virtual void gen_asteroid_placements(bool is_ice) = 0;
 	void remove_asteroid(unsigned ix);
