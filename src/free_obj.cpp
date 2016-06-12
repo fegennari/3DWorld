@@ -203,12 +203,14 @@ void free_obj::add_gravity_swp(vector3d const &gravity, vector3d const &swp, flo
 void free_obj::apply_torque_force(point const &fpos, vector3d const &fdir, float fmag, float mass) {
 
 	assert(mass > 0.0);
-	if (fpos == pos) return;
-	float const dist(p2p_dist(fpos, pos)), fdir_mag(fdir.mag()), fm(mass*fdir_mag);
-	if (fm < TOLERANCE) return;
-	vector3d new_rot_axis(cross_product(fdir, vector3d(fpos, pos)));
+	point const center_of_mass(get_center_of_mass()); // Note: pos (object origin) is the center of mass
+	if (fpos == center_of_mass) return;
+	vector3d const torque_dir(fpos - center_of_mass);
+	float const dist(torque_dir.mag()), fdir_mag(fdir.mag()), fm(mass*fdir_mag);
+	if (dist < TOLERANCE || fm < TOLERANCE) return;
+	vector3d new_rot_axis(cross_product(fdir, torque_dir));
 	new_rot_axis *= ROT_FORCE_CONST*fmag/fm; // apply force (independent of radius)
-	if (dist > c_radius) new_rot_axis *= c_radius/dist; // difficult to do since we don't know the real point of intersection
+	if (dist > c_radius) {new_rot_axis *= c_radius/dist;} // difficult to do since we don't know the real point of intersection
 	rot_axis     *= rot_rate;       // apply magnitude to old rotation axis
 	rot_axis     += new_rot_axis;   // sum the forces (torques)
 	rot_rate      = rot_axis.mag(); // new rotation speed

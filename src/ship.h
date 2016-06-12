@@ -723,6 +723,7 @@ public:
 	vector3d const &get_velocity() const {return velocity;}
 	vector3d const &get_dir()      const {return dir;}
 	vector3d const &get_up()       const {return upv;}
+	point get_center_of_mass()     const {return pos;} // always at the object origin (Note: converts from 64-bit to 32-bit float)
 	float           get_c_radius() const {return c_radius;}
 	float    get_bounding_radius() const {return c_radius;}
 	float           get_temp()     const {return temperature;}
