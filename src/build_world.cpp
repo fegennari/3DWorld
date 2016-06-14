@@ -662,7 +662,7 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 	if (!fixed && !force) return;
 	for (unsigned j = 0; j < unsigned(npoints); ++j) {points[j] += vd;}
 	cube_t::translate(vd);
-	if (!no_texture_offset && cp.tscale != 0.0 && !(cp.flags & COBJ_WAS_CUBE)) {texture_offset -= vd;}
+	if (!no_texture_offset && cp.tscale != 0.0 && !was_a_cube()) {texture_offset -= vd;}
 	if (cgroup_id >= 0) {cobj_groups.invalidate_group(cgroup_id);} // force recompute of center of mass, etc.
 }
 

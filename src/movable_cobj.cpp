@@ -122,6 +122,7 @@ int poly_poly_int_test(coll_obj const &p1, coll_obj const &p2) {
 		if (p2.line_intersect(p1.points[i], p1.points[(i+1)%p1.npoints])) return 1;
 	}
 	if (p1.thickness <= MIN_POLY_THICK) return 0;
+	if (p1.was_a_cube() && p2.was_a_cube()) {} // special case for OBB/OBB? Can transform one into the other's coordinate system
 	// Note: this is inefficient since all edges belong to two faces and are checked twice, but probably doesn't matter
 	// maybe we should call gen_poly_planes() instead and check top/bot faces, but this will miss 4 of the edges parallel to the normal
 	static vector<tquad_t> side_pts;
@@ -468,7 +469,7 @@ point coll_obj::get_center_of_mass(bool ignore_group) const {
 		return t*points[1] + (1.0 - t)*points[0]; // correct for cylinder, approximate for capsule
 	}
 	else if (type == COLL_POLYGON) { // polygon centroid (approximate), should be correct for both thick and thin polygons
-		if (cp.flags & COBJ_WAS_CUBE) {return get_center_pt();} // optimization
+		if (was_a_cube()) {return get_center_pt();} // cube optimization
 		assert(npoints == 3 || npoints == 4);
 		point const ca(triangle_centroid(points[0], points[1], points[2]));
 		
@@ -857,7 +858,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 		if (c.is_movable()) { // both cobjs are movable - is this a stack?
 			// flat cobjs can always be stacked
 			if (c.type == COLL_CUBE || c.type == COLL_CYLINDER) {}
-			else if (c.type == COLL_POLYGON && (c.has_z_normal() /*|| (c.cp.flags & COBJ_WAS_CUBE)*/)) {}
+			else if (c.type == COLL_POLYGON && (c.has_z_normal() /*|| was_a_cube()*/)) {}
 			else if (dz < get_cobj_step_height()) {} // c_top - cobj_bot < step_height
 			else if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
 			// assume it's a stack and treat it like a moving platform
