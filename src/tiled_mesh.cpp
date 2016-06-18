@@ -13,6 +13,7 @@ bool const DEBUG_TILES        = 0;
 bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
 bool const ENABLE_ANIMALS     = 1;
+bool const USE_PARAMS_HSCALE  = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const NUM_FIRE_MODES = 4;
@@ -232,8 +233,11 @@ void tile_t::update_terrain_params() { // setup biomes
 		for (unsigned xp = 0; xp < 2; ++xp) {
 			terrain_params_t &param(params[yp][xp]);
 			float const xv(mesh_scale*(xp ? xv2 : xv1) + biome_x_offset), yv(mesh_scale*(yp ? yv2 : yv1));
-			//param.hoff   = eval_mesh_sin_terms(0.4*xv+123, 0.4*yv+456);
-			//param.hscale = min(2.0f, max(0.5f, 0.5f*fabs(eval_mesh_sin_terms(0.8*xv+789, 0.8*yv+111))));
+
+			if (USE_PARAMS_HSCALE) {
+				param.hoff   = eval_mesh_sin_terms(0.4*xv+123, 0.4*yv+456);
+				param.hscale = min(2.0f, max(0.5f, 0.5f*fabs(eval_mesh_sin_terms(0.8*xv+789, 0.8*yv+111))));
+			}
 			float const veg_val(eval_mesh_sin_terms(veg_mult*xv, veg_mult*yv));
 			param.veg    = CLIP_TO_01(5.000f*(veg_val + 1.5f));
 			param.grass  = CLIP_TO_01(100.0f*(veg_val + 3.0f)); // depends on hoff?
@@ -359,29 +363,33 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)zvsize; ++y) {
 		for (unsigned x = 0; x < zvsize; ++x) {
+			float &zval(zvals[y*zvsize + x]);
+
 			if (using_hmap) {
-				zvals[y*zvsize + x] = terrain_hmap_manager.get_clamped_height((x1 + x), (y1 + y));
-				if (add_detail) {zvals[y*zvsize + x] += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);} // less hard-coded - scale by delta between adjacent zvals?
+				zval = terrain_hmap_manager.get_clamped_height((x1 + x), (y1 + y));
+				if (add_detail) {zval += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);} // less hard-coded - scale by delta between adjacent zvals?
 			}
 			else {
-				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
-				float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
-				zvals[y*zvsize + x] = hoff + hscale*height_gen.eval_index(x, y, 1);
+				zval = height_gen.eval_index(x, y, 1);
+
+				if (USE_PARAMS_HSCALE) {
+					float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
+					zval = BILINEAR_INTERP(params, hoff, xv, yv) + BILINEAR_INTERP(params, hscale, xv, yv)*zval;
+				}
 			}
 		}
 	}
 	for (unsigned yy = 0; yy < 4; ++yy) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
-			sub_zmin[yy][xx] =  FAR_DISTANCE;
-			sub_zmax[yy][xx] = -FAR_DISTANCE;
 			unsigned const x_end((xx+1)*block_size), y_end((yy+1)*block_size); // last row/column is skipped because it's not rendered
 			assert(x_end < zvsize && y_end < zvsize);
+			float &szmin(sub_zmin[yy][xx]), &szmax(sub_zmax[yy][xx]);
+			szmin = FAR_DISTANCE; szmax = -FAR_DISTANCE;
 
 			for (unsigned y = yy*block_size; y <= y_end; ++y) {
 				for (unsigned x = xx*block_size; x <= x_end; ++x) {
 					float const z(zvals[y*zvsize + x]);
-					sub_zmin[yy][xx] = min(sub_zmin[yy][xx], z);
-					sub_zmax[yy][xx] = max(sub_zmax[yy][xx], z);
+					szmin = min(szmin, z); szmax = max(szmax, z);
 				}
 			}
 		}
@@ -447,17 +455,12 @@ void tile_t::calc_mesh_ao_lighting() {
 			for (int x = 0; x < (int)context_sz; ++x) {
 				int const xv(x - ray_len), yv(y - ray_len);
 				float &zv(czv[y*context_sz + x]);
-
-				if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {
-					zv = zvals[yv*zvsize + xv];
-				}
+				if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {zv = zvals[yv*zvsize + xv];}
 				else if (using_hmap) {
 					zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
 					if (add_detail) {zv += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);}
 				}
-				else {
-					zv = height_gen.eval_index(x, y, 1); // Note: not using hoff/hscale here since they are undefined outside the tile bounds
-				}
+				else {zv = height_gen.eval_index(x, y, 1);} // Note: not using hoff/hscale here since they are undefined outside the tile bounds
 			}
 		}
 
