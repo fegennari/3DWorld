@@ -796,7 +796,13 @@ void mesh_xy_grid_cache_t::cache_gpu_simplex_vals() {
 	assert(cshader && cshader->get_is_running());
 	cshader->read_float_vals(cached_vals, 1, 1, 1); // reuse FBO
 	float const zscale(get_hmap_scale(gen_mode));
-	for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
+
+	if (hmap_params.need_postproc()) {
+		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
+	}
+	else {
+		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {*i *= zscale;}
+	}
 }
 
 void mesh_xy_grid_cache_t::clear_context() { // for GPU-mode cached state
