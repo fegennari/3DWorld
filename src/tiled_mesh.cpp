@@ -851,7 +851,14 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
+		vector<float> rand_vals(tsize*tsize);
 
+		#pragma omp parallel for schedule(static,1) num_threads(2)
+		for (int y = 0; y < (int)tsize-DEBUG_TILE_BOUNDS; ++y) {
+			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
+				rand_vals[y*tsize + x] = noise_scale*height_gen.eval_index(x, y, 0, 50);
+			}
+		}
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
 			float const yv(float(y)*xy_mult);
 
@@ -859,7 +866,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const rand_offset(noise_scale*height_gen.eval_index(x, y, 0, 50));
+				float const rand_offset(rand_vals[y*tsize + x]);
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
 				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
