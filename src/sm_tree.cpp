@@ -850,8 +850,8 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	}
 	else { // low detail billboard
 		assert(!update_mode);
-		float const zv1(pos.z + dz - 0.1*sz_scale - 0.2*height), zv2(pos.z + dz + 1.8*sz_scale + 0.1*height);
-		vert_norm const vn(pos, vector3d(min(2.25*sz_scale/calc_tree_size(), 1.0), min((zv2 - zv1), 1.0f), zv1));
+		float const zv1(0.75*dz); // shift slightly down to account for sparse tree texture image
+		vert_norm const vn((pos + point(0.0, 0.0, zv1)), vector3d(2.0*sz_scale/calc_tree_size(), 0.9*(height - zv1), 0.0)); // 0.9x to prevent clipping above 1.0
 		vbo_manager.add_points(&vn, 1, leaf_color);
 	}
 }

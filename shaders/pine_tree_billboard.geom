@@ -26,7 +26,7 @@ void main() {
 	vec4 pos = vertex_vs[0];
 	vec3 dir = normalize(vec3(-(pos.y + xlate.y), (pos.x + xlate.x), 0.0)); // cross(z, pos-camera_pos)
 	vec3 dx  = radius_scale * xz_sz_vs[0].x * dir;
-	vec3 dz  = vec3(0.0, 0.0, xz_sz_vs[0].y); // for two top verts
+	vec3 dz  = vec3(0.0, 0.0, xz_sz_vs[0].y/0.9); // for two top verts
 	do_vertex(pos,  dx,    1.0, 1.0);
 	do_vertex(pos, -dx,    0.0, 1.0);
 	do_vertex(pos,  dx+dz, 1.0, 0.0);
