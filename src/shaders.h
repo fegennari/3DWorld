@@ -210,9 +210,10 @@ class compute_shader_t : public compute_shader_base_t {
 	unsigned fbo_id, pbo;
 	string frag_shader_str;
 
+	unsigned get_pbo_size() const {return xsize*ysize*sizeof(float);}
 	void draw_geom() const;
 	void unset_fbo(bool keep_fbo_for_reuse);
-	void read_pixels(vector<float> &vals, bool is_first=1, bool is_last=1);
+	void read_pixels(vector<float> &vals, bool is_last=1);
 
 public:
 	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
@@ -222,7 +223,8 @@ public:
 	void end_shader();
 	void setup_matrices_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
 	void run(unsigned &tid);
-	void read_float_vals(vector<float> &vals, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
+	void prep_for_read_pixels(bool is_first=1);
+	void read_float_vals(vector<float> &vals, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 1);} // FS

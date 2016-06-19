@@ -788,13 +788,14 @@ void mesh_xy_grid_cache_t::run_gpu_simplex() {
 	//cshader->gen_matrix_R32F(cached_vals, tid, 1, 1, 1); // reuse FBO
 	cshader->setup_matrices_and_run(tid, 1, 1, 1); // R32F
 	cshader->disable();
+	cshader->prep_for_read_pixels(1);
 	disable_fbo();
 }
 
 void mesh_xy_grid_cache_t::cache_gpu_simplex_vals() {
 
 	assert(cshader && cshader->get_is_running());
-	cshader->read_float_vals(cached_vals, 1, 1, 1); // reuse FBO
+	cshader->read_float_vals(cached_vals, 1, 1); // reuse FBO
 	float const zscale(get_hmap_scale(gen_mode));
 
 	if (hmap_params.need_postproc()) {

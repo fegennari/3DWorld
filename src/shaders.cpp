@@ -1197,36 +1197,44 @@ void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool
 // tid may or may not be setup prior to this call
 void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
 	setup_matrices_and_run(tid, 1, is_first, is_last);
-	read_float_vals(vals, is_first, is_last, keep_fbo_for_reuse);
+	prep_for_read_pixels(is_first);
+	read_float_vals(vals, is_last, keep_fbo_for_reuse);
 }
-void compute_shader_t::read_float_vals(vector<float> &vals, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
+void compute_shader_t::read_float_vals(vector<float> &vals, bool is_last, bool keep_fbo_for_reuse) {
 
 	bind_fbo(fbo_id);
 	assert(is_running);
 	vals.resize(xsize*ysize);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	read_pixels(vals, is_first, is_last); // Note: slower on old cards, faster on new ones
-	//glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
+	read_pixels(vals, is_last); // Note: slower on old cards, faster on new ones
+	//glReadBuffer(GL_COLOR_ATTACHMENT0); glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
 	is_running = 0;
 	if (is_last) {unset_fbo(keep_fbo_for_reuse);}
 }
 
-void compute_shader_t::read_pixels(vector<float> &vals, bool is_first, bool is_last) {
+void compute_shader_t::prep_for_read_pixels(bool is_first) {
 
-	unsigned const pbo_size(xsize*ysize*sizeof(float));
+	bind_fbo(fbo_id);
 
 	if (is_first) {
 		glGenBuffers(1, &pbo);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-		glBufferData(GL_PIXEL_PACK_BUFFER, pbo_size, NULL, GL_STREAM_READ);
+		bind_pbo(pbo);
+		glBufferData(GL_PIXEL_PACK_BUFFER, get_pbo_size(), NULL, GL_STREAM_READ);
 	}
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, nullptr);
-	void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT); // Note: blocks until data is ready
-	memcpy((void *)&vals.front(), ptr, pbo_size);
+	bind_pbo(0);
+	disable_fbo();
+}
+
+void compute_shader_t::read_pixels(vector<float> &vals, bool is_last) {
+
+	assert(pbo); bind_pbo(pbo);
+	void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, get_pbo_size(), GL_MAP_READ_BIT); // Note: blocks until data is ready
+	memcpy((void *)&vals.front(), ptr, get_pbo_size());
 	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 
 	if (is_last) {
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		bind_pbo(0);
 		glDeleteBuffers(1, &pbo);
 		pbo = 0;
 	}
