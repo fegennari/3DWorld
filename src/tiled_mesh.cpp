@@ -1741,10 +1741,17 @@ void tile_draw_t::insert_tile(tile_t *tile) {
 	assert(did_ins);
 }
 
+void tile_draw_t::free_compute_shader() {
+	for (auto i = height_gens.begin(); i != height_gens.end(); ++i) {i->clear_context();}
+}
+
 float tile_draw_t::update(float &min_camera_dist) { // view-independent updates; returns terrain zmin
 
 	//timer_t timer("TT Update");
 	unsigned const max_tile_gen_per_frame = 16; // higher = less overall gen time (more parallel), but longer wait for first render
+	unsigned const max_cpu_tiles          = 3; // 0 = GPU only
+	unsigned const max_defer_tiles        = 8; // 0 = disable
+	if (height_gens.empty()) {height_gens.resize(max(max_defer_tiles, 1U));}
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
 	to_draw.clear();
 	terrain_zmin = FAR_DISTANCE;
@@ -1760,11 +1767,15 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	min_camera_dist = FAR_DISTANCE;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
-	if (!to_gen_zvals.empty()) { // a tile was waiting on zval generation (async)
-		assert(to_gen_zvals.size() == 1); // must be a single tile, since there is a single height_gen object
-		tile_t *tile(to_gen_zvals.front().second);
-		tile->create_zvals(height_gen, 0); // wait for zvals to be generated
-		insert_tile(tile); // zvals have been generated
+	if (!to_gen_zvals.empty()) {
+		//ostringstream oss; oss << "Gen " << to_gen_zvals.size() << " tiles (wait)"; timer_t timer(oss.str());
+		assert(to_gen_zvals.size() <= height_gens.size());
+
+		for (unsigned i = 0; i < to_gen_zvals.size(); ++i) { // tile were waiting on zval generation (async)
+			tile_t *tile(to_gen_zvals[i].second);
+			tile->create_zvals(height_gens[i], 0); // wait for zvals to be generated
+			insert_tile(tile); // zvals have been generated
+		}
 		to_gen_zvals.clear();
 	}
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
@@ -1785,33 +1796,38 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			//tiles[txy].reset(new_tile);
 		}
 	}
-	//if (to_gen_zvals.size() < 4) {to_gen_zvals.clear();} // block until at least 4 tiles to generate (lower average gen time, but causes more slow frames/lag)
+	//if (to_gen_zvals.size() < max_cpu_tiles) {to_gen_zvals.clear();} // block until at least max_cpu_tiles tiles to generate (lower average gen time, but causes more slow frames/lag)
 	unsigned const num_to_gen(to_gen_zvals.size());
 	unsigned gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
+	bool const gpu_mode(mesh_gen_mode == MGEN_SIMPLEX_GPU);
 	// to balance tile gen time across frames, generate a number of tiles equal to the average of this frame and the previous frame
 	if (gen_this_frame > 1 && gen_this_frame < max_tile_gen_per_frame) {gen_this_frame = min(gen_this_frame, (gen_this_frame + tiles_gen_prev_frame + 1)/2);} // round up
 	tiles_gen_prev_frame = num_to_gen;
 
-	if (0 && num_to_gen == 1) { // async generation mode for a single tile (5.4ms per tile - faster than waiting, but slower than CPU for a single tile)
-		tile_t *tile(to_gen_zvals.front().second);
-
-		if (tile->create_zvals(height_gen, 1)) { // no_wait=1
-			insert_tile(tile); // zvals have been generated
-			to_gen_zvals.clear();
-		} // else zvals are not ready, leave in to_gen_zvals and try again during the next update
+	if (num_to_gen == 0) {
+		// do nothing
 	}
-	else if (num_to_gen > 0) {
+	else if (gpu_mode && num_to_gen <= max_defer_tiles) { // async generation mode - delay until next frame
+		unsigned tgz_pos(0);
+
+		for (unsigned i = 0; i < num_to_gen; ++i) {
+			tile_t *tile(to_gen_zvals[i].second);
+			if (tile->create_zvals(height_gens[i], 1)) {insert_tile(tile);} // no_wait=1; zvals have been generated, insert tile and remove from to_gen_zvals
+			else {to_gen_zvals[i] = to_gen_zvals[tgz_pos++];} // zvals are not ready, leave in to_gen_zvals and try again during the next update
+		}
+		to_gen_zvals.resize(tgz_pos);
+	}
+	else {
 		// if there are fewer than 4 tiles to generate, use CPU simplex rather than GPU simplex to avoid stalling/flusing the graphics pipeline
-		// Note: runtimes are on the order of 0.45ms*num_tiles + 5.7ms for GPU simplex and 3.7ms for CPU simplex
 		int const prev_mesh_gen_mode(mesh_gen_mode);
-		if (mesh_gen_mode == MGEN_SIMPLEX_GPU && gen_this_frame < 4) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
+		if (gpu_mode && gen_this_frame <= max_cpu_tiles) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
 		if (gen_this_frame < num_to_gen) {sort(to_gen_zvals.begin(), to_gen_zvals.end());} // sort by priority if not all generated
 		//ostringstream oss; oss << "Gen " << gen_this_frame << " tiles"; timer_t timer(oss.str());
 
 		for (unsigned i = 0; i < num_to_gen; ++i) {
 			tile_t *tile(to_gen_zvals[i].second);
 			if (i >= gen_this_frame) {delete tile; continue;} // delete these tiles - they will be created in a later frame
-			tile->create_zvals(height_gen, 0); // generate these tiles
+			tile->create_zvals(height_gens[0], 0); // generate these tiles
 			insert_tile(tile);
 		}
 		to_gen_zvals.clear();
@@ -2104,9 +2120,10 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode != MGEN_SIMPLEX_GPU && to_gen_trees.size() > 1)
 	for (int i = 0; i < (int)to_gen_trees.size(); ++i) {to_gen_trees[i]->init_pine_tree_draw();}
 	//if (!to_gen_trees.empty()) {PRINT_TIME("Gen Trees2");}
+	assert(!height_gens.empty());
 	
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
-		(*i)->pre_draw(height_gen);
+		(*i)->pre_draw(height_gens[0]);
 
 		if ((*i)->can_have_trees()) {
 			(*i)->update_pine_tree_state(1);
@@ -2703,7 +2720,7 @@ void tile_draw_t::clear_vbos_tids() {
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_vbo_tid(nullptr);}
 	smap_manager.clear_context();
-	height_gen.clear_context();
+	free_compute_shader();
 	clear_vbos();
 }
 

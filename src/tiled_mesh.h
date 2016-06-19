@@ -381,7 +381,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	vector<tile_t *> occluded_tiles;
 	vector<pair<float, tile_t *>> to_gen_zvals;
 	vector<vert_wrap_t> tree_trunk_pts;
-	mesh_xy_grid_cache_t height_gen;
+	vector<mesh_xy_grid_cache_t> height_gens;
 	lightning_strike_t lightning_strike;
 	tree_lod_render_t lod_renderer;
 	crack_ibuf_t crack_ibuf;
@@ -395,9 +395,9 @@ class tile_draw_t : public indexed_vbo_manager_t {
 
 public:
 	tile_draw_t();
-	~tile_draw_t() {/*clear();*/ height_gen.free_cshader();}
+	~tile_draw_t() {/*clear();*/}
 	void clear();
-	void free_compute_shader() {height_gen.clear_context();}
+	void free_compute_shader();
 	float update(float &min_camera_dist);
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id);
 	static void add_texture_colors(shader_t &s, unsigned start_tu_id);
