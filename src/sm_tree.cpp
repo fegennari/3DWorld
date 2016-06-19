@@ -851,12 +851,8 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	else { // low detail billboard
 		assert(!update_mode);
 		float const zv1(pos.z + dz - 0.1*sz_scale - 0.2*height), zv2(pos.z + dz + 1.8*sz_scale + 0.1*height);
-		vert_norm points[1];
-		vert_norm vn(pos, vector3d(2.25*sz_scale/calc_tree_size(), 0.0, 0.0)); // ranges from around 0.25 to 0.75
-		vn.n.y    = zv2 - zv1;
-		vn.v.z    = zv1; // bottom
-		points[0] = vn;
-		vbo_manager.add_points(points, 1, leaf_color);
+		vert_norm const vn(pos, vector3d(min(2.25*sz_scale/calc_tree_size(), 1.0), min((zv2 - zv1), 1.0f), zv1));
+		vbo_manager.add_points(&vn, 1, leaf_color);
 	}
 }
 

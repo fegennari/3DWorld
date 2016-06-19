@@ -415,7 +415,7 @@ public:
 	void end_lightning() const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);
-	static void set_pine_tree_shader(shader_t &s, string const &vs);
+	static void set_pine_tree_shader(shader_t &s, string const &vs, bool use_texgen=1);
 	static void set_pine_tree_shader_post(shader_t &s);
 	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc);
 	void draw_pine_trees(bool reflection_pass, bool shadow_pass=0);

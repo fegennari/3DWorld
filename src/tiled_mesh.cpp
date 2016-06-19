@@ -2355,10 +2355,10 @@ void tile_draw_t::draw_water(shader_t &s, float zval) const {
 	s.add_uniform_float("noise_tex_size", get_texture_size(DITHER_NOISE_TEX, 0));
 }
 
-/*static*/ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
+/*static*/ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs, bool use_texgen) {
 
 	shared_shader_lighting_setup(s, 0); // VS
-	s.set_vert_shader("ads_lighting.part*+texture_gen.part+" + vs);
+	s.set_vert_shader((use_texgen ? "ads_lighting.part*+texture_gen.part+" : "ads_lighting.part*+") + vs);
 	s.set_frag_shader("linear_fog.part+noise_dither.part+pine_tree");
 	set_pine_tree_shader_post(s);
 }
@@ -2387,7 +2387,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		enable_blend(); // for fog transparency
 		shader_t s;
 		s.set_geom_shader("pine_tree_billboard"); // point => 1 quad
-		set_pine_tree_shader(s, "pine_tree_billboard_gs"); // FIXME: doesn't need texture_gen.part
+		set_pine_tree_shader(s, "pine_tree_billboard_gs", 0); // doesn't need texture_gen.part
 		//set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
 		s.add_uniform_float("radius_scale", calc_tree_size());
 		s.add_uniform_float("ambient_scale", 1.5);
