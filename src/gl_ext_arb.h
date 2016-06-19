@@ -55,6 +55,7 @@ void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo=0, bool multis
 void bind_fbo(unsigned fbo_id);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
+void bind_pbo(unsigned pbo_id);
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample=0);
 void disable_and_free_render_buffer(unsigned &render_buffer);
 bool gen_mipmaps(unsigned dim=2);

@@ -257,6 +257,8 @@ void free_fbo(unsigned &fbo_id) {
 	fbo_id = 0;
 }
 
+void bind_pbo(unsigned pbo_id) {glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);}
+
 
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample) {
 
