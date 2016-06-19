@@ -390,22 +390,15 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 				for (unsigned x = xx*block_size; x <= x_end; ++x) {
 					float const z(zvals[y*zvsize + x]);
 					szmin = min(szmin, z); szmax = max(szmax, z);
+
+					if (z < wpz_max) { // can be underwater - update water bbox
+						wx1 = min(wx1, x1+int(x)); wy1 = min(wy1, y1+int(y));
+						wx2 = max(wx2, x1+int(x)); wy2 = max(wy2, y1+int(y));
+					}
 				}
 			}
-		}
-	}
-	for (vector<float>::const_iterator i = zvals.begin(); i != zvals.end(); ++i) {
-		mzmin = min(mzmin, *i);
-		mzmax = max(mzmax, *i);
-	}
-	if (mzmin < wpz_max) { // can have water
-		for (unsigned y = 0; y <= size; ++y) {
-			for (unsigned x = 0; x <= size; ++x) {
-				if (zvals[y*zvsize + x] < wpz_max) { // update water bbox
-					wx1 = min(wx1, x1+int(x)); wy1 = min(wy1, y1+int(y));
-					wx2 = max(wx2, x1+int(x)); wy2 = max(wy2, y1+int(y));
-				}
-			}
+			mzmin = min(mzmin, szmin);
+			mzmax = max(mzmax, szmax);
 		}
 	}
 	assert(mzmin <= mzmax);
