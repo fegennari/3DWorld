@@ -90,7 +90,7 @@ unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
 	float const ntrees_mult(vegetation*sm_tree_density*tree_scale*tree_scale);
-	return (ENABLE_INST_PINE && ntrees_mult > 20 && max_unique_trees > 0); // enable when there are lots of trees
+	return (ENABLE_INST_PINE && tree_mode == 2 && ntrees_mult > 20 && max_unique_trees > 0); // enable when there are lots of pine trees, but no palm trees
 }
 
 
@@ -1005,7 +1005,7 @@ void tile_t::init_pine_tree_draw() {
 	//timer_t timer("Gen Pine Trees");
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
-	if (enable_instanced_pine_trees()) {pine_trees.instanced = 1;}
+	if (enable_instanced_pine_trees()) {pine_trees.enable_instanced();}
 	pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, density);
 	pine_trees.calc_trunk_pts();
 	postproc_trees(pine_trees, ptzmax);
