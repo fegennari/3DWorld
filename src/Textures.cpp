@@ -1480,30 +1480,12 @@ void texture_t::update_texture_data(int x1, int y1, int x2, int y2) {
 		x1   = max((x1 - xadd), 0);
 		assert(((x2 - x1) & am) == 0);
 	}
-	int const offset(ncolors*(x1 + y1*width));
-	unsigned char const *data(get_data() + offset);
-	vector<unsigned char> copy;
-
-	if ((x1 > 0 || x2 < width) && (y2 - y1) > 1) { // copy data if more than one row
-		if ((x2 - x1) > width/2) { // just copy the entire strip
-			x1 = 0;
-			x2 = width;
-		}
-		else { // compact into a single contiguous block of memory
-			unsigned const cw(ncolors*(x2 - x1));
-			copy.resize(cw*(y2 - y1));
-			unsigned char *ptr(&copy.front());
-
-			for (int i = 0; i < (y2 - y1); ++i) {
-				memcpy((ptr + cw*i), (data + ncolors*i*width), cw*sizeof(unsigned char));
-			}
-			data = ptr;
-		}
-	}
 	check_init();
 	bind_gl();
-	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), calc_format(), GL_UNSIGNED_BYTE, data);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), calc_format(), GL_UNSIGNED_BYTE, (get_data() + ncolors*(x1 + y1*width)));
 	if (LANDSCAPE_MIPMAP) {gen_mipmaps(2);} // update mipmaps if needed (non-sparse)
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // reset to 0
 }
 
 
