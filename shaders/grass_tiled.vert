@@ -28,10 +28,10 @@ void main()
 	vec4 epos   = fg_ModelViewMatrix  * (vertex + vec4(xlate, 0, 0));
 	gl_Position = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
-	vec4 weights = texture(weight_tex, tc2);
+	vec4 weights    = texture(weight_tex, tc2);
 	float grass_weight = weights.b; // grass weight in weights {sand, dirt, grass, rock, [snow]}
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
-	float noise_weight = texture(noise_tex, 10.0*vec2(fg_Color.r, fg_Color.g)).r; // "hash" the color
+	float noise_weight = texture(noise_tex, 11.3*vec2((fg_Color.r + local_translate.x), (fg_Color.g + local_translate.y))).r; // "hash" the color + local translate
 	
 	// calculate lighting
 	vec3 shadow  = texture(shadow_tex, tc2).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
@@ -39,7 +39,7 @@ void main()
 	vec3 eye_norm = normalize(fg_NormalMatrix * (2.0*texture(normal_tex, tc2).xyz - vec3(1.0))); // eye space
 	vec4 ad_color = mix(gl_Color, vec4(1.0, 0.7, 0.4, 1.0), weights.r); // mix in yellow-brown grass color to match sand
 	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow
-	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale);
+	vec3 color    = (grass_weight < noise_weight) ? vec3(0.0) : do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale);
 	float alpha   = fg_Color.a * ascale * ((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
 	fg_Color_vf   = vec4(color, alpha);
 } 
