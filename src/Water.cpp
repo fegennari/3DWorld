@@ -912,7 +912,7 @@ void add_splash(point const &pos, int xpos, int ypos, float energy, float radius
 			}
 		}
 	}
-	int const irad((int)rad), x1(max((xpos - irad), 0)), y1(max((ypos - irad), 0));
+	int const irad(ceil(rad)), x1(max((xpos - irad), 0)), y1(max((ypos - irad), 0));
 	int const x2(min((xpos + irad), MESH_X_SIZE-1)), y2(min((ypos + irad), MESH_Y_SIZE-1));
 
 	for (int i = y1; i <= y2; i++) {
