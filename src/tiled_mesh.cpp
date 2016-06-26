@@ -799,13 +799,10 @@ void tile_t::ensure_height_tid() {
 
 	if (height_tid || is_distant) return; // already exists, or tile is distant and height_tid is unnecessary
 	assert(zvals.size() == zvsize*zvsize);
-	vector<float> data(stride*stride);
-
-	for (unsigned y = 0; y < stride; ++y) {
-		for (unsigned x = 0; x < stride; ++x) {data[y*stride+x] = zvals[y*zvsize+x];} // remove the last column
-	}
 	setup_texture(height_tid, 0, 0, 0, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, stride, stride, 0, GL_RED, GL_FLOAT, &data.front());
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, zvsize);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, stride, stride, 0, GL_RED, GL_FLOAT, &zvals.front());
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // reset to 0
 }
 
 
