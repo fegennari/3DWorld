@@ -59,7 +59,7 @@ unsigned star_cache_ix(0);
 int uxyz[3] = {0, 0, 0};
 unsigned char water_c[3] = {0}, ice_c[3] = {0};
 unsigned char const *const wic[2] = {water_c, ice_c};
-float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0);
+float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0), universe_ambient_scale(1.0);
 point univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
@@ -3186,7 +3186,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	colorRGBA uambient, udiffuse;
 	int const light(0);
 	point const lpos(make_pt_global(pos));
-	float const ambient_scale(a_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
+	float const ambient_scale(a_scale*universe_ambient_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
 
 	// set color
 	for (unsigned i = 0; i < 3; ++i) {
@@ -3215,7 +3215,7 @@ void set_universe_ambient_color(colorRGBA const &color, shader_t *shader) {
 	int const light(get_universe_ambient_light(1)); // always for universe mode
 	enable_light(light);
 	colorRGBA ambient(BLACK);
-	UNROLL_3X(ambient[i_] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i_]);)
+	UNROLL_3X(ambient[i_] = universe_ambient_scale*GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i_]);)
 	set_light_a_color(light, ambient, shader);
 	setup_gl_light_atten(light, 1.0, 0.0, 0.0, shader);
 }
