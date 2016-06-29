@@ -232,6 +232,7 @@ float get_tt_fog_bot();
 float get_tt_cloud_level();
 float get_inf_terrain_fog_dist();
 float get_tt_fog_based_far_clip(float min_camera_dist);
+float get_far_clip_ratio();
 
 // function prototypes - tiled mesh
 bool using_tiled_terrain_hmap_tex();
