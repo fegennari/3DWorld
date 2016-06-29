@@ -13,7 +13,7 @@ out vec2 tc_ES[], tc2_ES[];
 
 float get_tess_level(float d1, float d2) {
 	float dav = 0.5*(d1 + d2);
-	return max(1, min(48, 200.0/dav));
+	return max(1, min(56, 500.0/dav));
 }
 
 void main() {
