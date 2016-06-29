@@ -397,27 +397,24 @@ template <typename T> void get_sphere_mov_sphere_int_pt(pointT<T> const &p1, poi
 inline point get_camera_pos() {
 	return camera_pos;
 }
-
 inline float distance_to_camera(point const &pos) {
 	return p2p_dist(get_camera_pos(), pos);
 }
-
+inline float distance_to_camera_xy(point const &pos) {
+	return p2p_dist_xy(get_camera_pos(), pos);
+}
 inline float distance_to_camera_sq(point const &pos) {
 	return p2p_dist_sq(get_camera_pos(), pos);
 }
-
 inline point get_camera_all() {
 	return ((world_mode == WMODE_UNIVERSE) ? get_player_pos() : get_camera_pos());
 }
-
 inline vector3d get_vdir_all() {
 	return ((world_mode == WMODE_UNIVERSE) ? get_player_dir() : cview_dir);
 }
-
 inline vector3d get_upv_all() {
 	return ((world_mode == WMODE_UNIVERSE) ? get_player_up() : up_vector);
 }
-
 inline float get_zoom_scale() {
 	return (do_zoom ? SQRT_ZOOMF : 1.0);
 }
@@ -425,7 +422,6 @@ inline float get_zoom_scale() {
 inline bool sphere_in_camera_view(point const &pos, float radius, int max_level) {
 	return sphere_in_view(camera_pdu, pos, radius, max_level);
 }
-
 inline bool univ_sphere_vis(point const &pos, float radius) {
 	return player_pdu.sphere_visible_test(pos, radius);
 }

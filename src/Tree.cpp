@@ -817,9 +817,8 @@ void tree_data_t::draw_leaves_shadow_only(float size_scale) {
 
 float tree::calc_size_scale(point const &draw_pos) const {
 
-	float const dist_to_camera(distance_to_camera(draw_pos));
-	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return 0.0; // to far away to draw
-	return (do_zoom ? ZOOM_FACTOR : 1.0)*tdata().base_radius/(dist_to_camera*DIST_C_SCALE);
+	if (world_mode == WMODE_INF_TERRAIN && distance_to_camera_xy(draw_pos) > get_draw_tile_dist()) return 0.0; // to far away to draw
+	return (do_zoom ? ZOOM_FACTOR : 1.0)*tdata().base_radius/(distance_to_camera(draw_pos)*DIST_C_SCALE);
 }
 
 float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_4TH_SCALE : 1.0);}
