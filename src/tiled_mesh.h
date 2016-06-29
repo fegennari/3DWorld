@@ -34,7 +34,7 @@ float const BCUBE_ZTOLER      = 1.0E-6;
 
 
 extern int frame_counter;
-extern float grass_length, water_plane_z, tree_scale;
+extern float grass_length, water_plane_z, tree_scale, far_clip_ratio;
 
 
 class lightning_strike_t {
@@ -94,7 +94,7 @@ public:
 
 
 inline float get_tile_width        () {return (X_SCENE_SIZE + Y_SCENE_SIZE);}
-inline float get_scaled_tile_radius() {return TILE_RADIUS*get_tile_width();}
+inline float get_scaled_tile_radius() {return TILE_RADIUS*get_tile_width();} // *far_clip_ratio
 inline float get_tree_scale_denom  () {return max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
 
 
@@ -406,7 +406,7 @@ public:
 	void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const;
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix);
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set);
-	void pre_draw();
+	void pre_draw(bool reflection_pass);
 	void draw(bool reflection_pass);
 	void draw_tiles(bool reflection_pass, bool enable_shadow_map) const;
 	void draw_tiles_shadow_pass(point const &lpos, point const &recv_cent);

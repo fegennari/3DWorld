@@ -232,7 +232,6 @@ float get_tt_fog_bot();
 float get_tt_cloud_level();
 float get_inf_terrain_fog_dist();
 float get_tt_fog_based_far_clip(float min_camera_dist);
-float get_far_clip_ratio();
 
 // function prototypes - tiled mesh
 bool using_tiled_terrain_hmap_tex();
@@ -240,7 +239,7 @@ float get_tiled_terrain_height_tex(float xval, float yval);
 vector3d get_tiled_terrain_height_tex_norm(int x, int y);
 bool write_default_hmap_modmap();
 float update_tiled_terrain(float &min_camera_dist);
-void pre_draw_tiled_terrain();
+void pre_draw_tiled_terrain(bool reflection_pass);
 void draw_tiled_terrain(bool reflection_pass);
 void draw_tiled_terrain_lightning(bool reflection_pass);
 void end_tiled_terrain_lightning();

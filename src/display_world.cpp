@@ -37,7 +37,7 @@ float const FOG_COLOR_ATTEN    = 0.75;
 bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned enabled_lights(0); // 8 bit flags
-float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0);
+float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
 upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
 
@@ -1138,6 +1138,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (show_fog || underwater) {set_inf_terrain_fog(underwater, terrain_zmin);}
 	unsigned tt_reflection_tid(0);
 	if (draw_water && !underwater) {tt_reflection_tid = create_tt_reflection(terrain_zmin);}
+	far_clip_ratio = 1.0; // reset to default, may be overwritten below
 
 	if (combined_gu) {
 		draw_universe_bkg(0); // infinite universe as background
@@ -1154,6 +1155,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		do_look_at(); // clear depth buffer?
 		camera_pdu.near_ = near_clip; // override camera frustum near/far clip so that VFC will be correct
 		camera_pdu.far_  = far_clip;
+		far_clip_ratio   = far_clip/FAR_CLIP;
 	}
 	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
@@ -1162,7 +1164,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
-	pre_draw_tiled_terrain();
+	pre_draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.26");
 	draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");

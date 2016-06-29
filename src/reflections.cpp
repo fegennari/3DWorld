@@ -210,7 +210,7 @@ void create_tt_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_z_mirror(water_plane_z); // setup reflected camera frustum
 	pos_dir_up const refl_camera_pdu(camera_pdu);
-	pre_draw_tiled_terrain();
+	pre_draw_tiled_terrain(1);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(water_plane_z); // setup mirror transform
 	camera_pdu = refl_camera_pdu; // reset reflected PDU

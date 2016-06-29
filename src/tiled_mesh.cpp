@@ -80,9 +80,8 @@ bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool is_distance_mode     () {return ((display_mode & 0x10) != 0);}
 bool nonunif_fog_enabled  () {return (show_fog && is_distance_mode());}
 bool enable_ocean_waves   () {return ((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);}
-bool draw_distant_water   () {return (is_water_enabled() && is_distance_mode() && get_far_clip_ratio() > 1.1);}
+bool draw_distant_water   () {return (is_water_enabled() && is_distance_mode() && far_clip_ratio > 1.1);}
 bool use_water_plane_tess () {return (enable_ocean_waves() && cloud_model == 0 && !draw_distant_water());} // hack to use cloud_model (F10)
-float get_far_clip_ratio  () {return (camera_pdu.far_/FAR_CLIP);}
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
@@ -2067,7 +2066,7 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 }
 
 
-void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
+void tile_draw_t::pre_draw(bool reflection_pass) { // view-dependent updates/GPU uploads
 
 	//timer_t timer("TT Pre-Draw");
 	vector<tile_t *> to_update, to_gen_trees;
@@ -2803,7 +2802,7 @@ bool tile_smap_data_t::needs_update(point const &lpos) {
 
 tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get_tile_from_xy(tp);}
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
-void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
+void pre_draw_tiled_terrain(bool reflection_pass) {terrain_tile_draw.pre_draw(reflection_pass);}
 
 colorRGBA get_inf_terrain_mod_color() {
 
