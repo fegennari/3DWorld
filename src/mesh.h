@@ -30,7 +30,7 @@ class mesh_xy_grid_cache_t {
 	float mx0, my0, mdx, mdy;
 	int gen_mode, gen_shape;
 
-	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain due to non-power-of-two size
+	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain (size not a multiple of block_size=16 and lack of async results read)
 	typedef compute_shader_t grid_gen_shader_t;
 	grid_gen_shader_t *cshader;
 

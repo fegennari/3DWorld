@@ -191,14 +191,15 @@ public:
 
 
 class compute_shader_base_t : public shader_t {
-
 protected:
 	unsigned xsize, ysize;
+	bool is_running;
 
 	bool setup_target_texture(unsigned &tid, bool is_R32F) const;
 public:
 	compute_shader_base_t(unsigned xsize_, unsigned ysize_) :
-	  xsize(xsize_), ysize(ysize_) {assert(xsize > 0 && ysize > 0);}
+	  xsize(xsize_), ysize(ysize_), is_running(0) {assert(xsize > 0 && ysize > 0);}
+	bool get_is_running() const {return is_running;}
 	unsigned get_xsize() const {return xsize;}
 	unsigned get_ysize() const {return ysize;}
 };
@@ -206,7 +207,6 @@ public:
 // "fake" compute shader implemented as a fragment shader
 class compute_shader_t : public compute_shader_base_t {
 
-	bool is_running;
 	unsigned fbo_id, pbo;
 	string frag_shader_str;
 
@@ -217,8 +217,7 @@ class compute_shader_t : public compute_shader_base_t {
 
 public:
 	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
-	  compute_shader_base_t(xsize_, ysize_), is_running(0), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
-	bool get_is_running() const {return is_running;}
+	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
 	void begin();
 	void end_shader();
 	void setup_matrices_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
@@ -237,7 +236,7 @@ class compute_shader_comp_t : public compute_shader_base_t {
 	string comp_shader_str;
 
 public:
-	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1, unsigned bsx=16, unsigned bsy=16, unsigned bsz=1) :
+	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1, unsigned bsx=2, unsigned bsy=2, unsigned bsz=1) :
 	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), block_sz_x(bsx), block_sz_y(bsy), block_sz_z(bsz), comp_shader_str(cstr) {
 		  assert(zsize > 0 && block_sz_x > 0 && block_sz_y > 0 && block_sz_z > 0);
 	  }
