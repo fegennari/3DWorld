@@ -1336,7 +1336,7 @@ void tile_t::update_animals() {
 	// using camera space is more difficult due to all of update code interacting with the rest of the scene, which is in global space;
 	// also, animals can move between tiles, which complicates the math (since adjacent tiles may create their animals in a different starting camera space)
 	if (!fish.was_generated()) {
-		unsigned const NUM_FISH_PER_TILE = 12;
+		unsigned const NUM_FISH_PER_TILE = 15;
 		cube_t range(get_mesh_bcube_global());
 		range.d[2][1] = water_plane_z; // z extends from lowest mesh point to water surface
 		fish.gen(NUM_FISH_PER_TILE, range); // Note: could use get_water_bcube() for tighter range
