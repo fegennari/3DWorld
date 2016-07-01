@@ -465,7 +465,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	
 	if (use_bmap) {
-		// FIXME: only looks correct with sun/moon lighting - dynamic and indirect lighting doesn't work with triplanar bump mapping for some reason, but it's too slow anyway
+		// FIXME: only looks correct with sun/moon lighting - dynamic and indirect lighting doesn't work with triplanar bump mapping for some reason
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
 		//s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
