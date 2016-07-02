@@ -5,7 +5,7 @@ uniform sampler2D tex0, tex1;
 //in vec2 tc; // comes from detail_normal_map.part.frag
 //in vec4 epos; // predeclared earlier for dynamic lighting to work
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
-in vec3 eye_norm;
+//in vec3 eye_norm; // declared earlier
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	return apply_bump_map(light_dir, eye_pos, eye_norm, 1.0);
