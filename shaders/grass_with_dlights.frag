@@ -13,7 +13,7 @@ void main()
 	vec3 color = vec3(0.0);
 	if (enable_light0 ) color += add_light_comp_pos_smap_light0(eye_norm, epos).rgb;
 	if (enable_light1 ) color += add_light_comp_pos_smap_light1(eye_norm, epos).rgb;
-	if (enable_dlights) add_dlights(color, dlpos, normal, gl_Color.rgb); // dynamic lighting
+	if (enable_dlights) add_dlights(color, dlpos, epos, normal, gl_Color.rgb); // dynamic lighting
 	vec4 fcolor = vec4(color, gl_Color.a);
 	vec4 texel  = vec4(1.0);
 #ifndef NO_GRASS_TEXTURE

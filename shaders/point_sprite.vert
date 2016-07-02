@@ -36,7 +36,7 @@ void main()
 	if (enable_light0) {color += add_light_comp_pos_smap_light0(normal, epos).rgb;}
 	if (enable_light1) {color += add_light_comp_pos_smap_light0(normal, epos).rgb;}
 	add_indir_lighting(color);
-	if (enable_dlights) {add_dlights(color.rgb, fg_Vertex.xyz, normalize(fg_Normal), vec3(1.0));} // dynamic lighting
+	if (enable_dlights) {add_dlights(color.rgb, fg_Vertex.xyz, epos, normalize(fg_Normal), vec3(1.0));} // dynamic lighting
 	fg_Color_vf = vec4(color, fg_Color.a);
 	//fg_Color_vf = apply_fog_epos(fg_Color_vf, epos);
 #else
