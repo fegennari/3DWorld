@@ -700,6 +700,7 @@ void draw_snow(bool shadow_only) {
 	bool const enable_dlights(!shadow_only && ENABLE_SNOW_DLIGHTS);
 	s.setup_enabled_lights(2, 2); // FS
 	s.set_prefix("#define BLEND_DIST_DETAIL_NMAP", 1); // FS
+	s.set_prefix("in vec3 eye_norm;", 1); // FS
 	set_dlights_booleans(s, enable_dlights, 1); // FS
 	s.check_for_fog_disabled();
 	setup_detail_normal_map_prefix(s, detail_normal_map);

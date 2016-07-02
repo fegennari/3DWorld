@@ -272,6 +272,7 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_wa
 	set_dlights_booleans(s, 1, 1); // FS
 	s.check_for_fog_disabled();
 	if (cloud_shadows) {s.set_prefix("#define ENABLE_CLOUD_SHADOWS", 1);} // FS
+	s.set_prefix("in vec3 eye_norm;", 1); // FS
 	setup_detail_normal_map_prefix(s, detail_normal_map);
 	s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("hemi_lighting",  0), 1); // FS (disabled)
