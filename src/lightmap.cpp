@@ -36,7 +36,7 @@ indir_dlight_group_manager_t indir_dlight_group_manager;
 
 extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
-extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, indir_light_exp, light_int_scale[];
+extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, CAMERA_RADIUS, indir_light_exp, light_int_scale[];
 extern colorRGB cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
@@ -951,17 +951,19 @@ colorRGBA gen_fire_color(float &cval, float &inten, float rate) {
 }
 
 
-void add_camera_candlelight() {
-
-	static float cval(0.5), inten(0.75);
-	add_dynamic_light(1.5*inten, get_camera_pos(), gen_fire_color(cval, inten));
+point get_camera_light_pos() {
+	return (get_camera_pos() + 0.1*CAMERA_RADIUS*cview_dir); // slightly in front of the camera to avoid zero length light_dir vector in dynamic lighting
 }
 
+void add_camera_candlelight() {
+	static float cval(0.5), inten(0.75);
+	add_dynamic_light(1.5*inten, get_camera_light_pos(), gen_fire_color(cval, inten));
+}
 
 void add_camera_flashlight() {
 
-	point const camera(get_camera_pos());
-	//add_dynamic_light(FLASHLIGHT_RAD, camera, SUN_C, cview_dir, FLASHLIGHT_BW);
+	point const lpos(get_camera_light_pos());
+	//add_dynamic_light(FLASHLIGHT_RAD, lpos, SUN_C, cview_dir, FLASHLIGHT_BW);
 	flashlight_on = 1;
 
 	if (0 && (display_mode & 0x10)) { // add one bounce of indirect lighting
@@ -979,7 +981,7 @@ void add_camera_flashlight() {
 			point cpos;
 			vector3d cnorm;
 			
-			if (check_coll_line_exact(camera, (camera + 0.5*FLASHLIGHT_RAD*dir), cpos, cnorm, cindex, 0.0, camera_coll_id, 1, 0, 0)) {
+			if (check_coll_line_exact(lpos, (lpos + 0.5*FLASHLIGHT_RAD*dir), cpos, cnorm, cindex, 0.0, camera_coll_id, 1, 0, 0)) {
 				cpos -= 0.0001*FLASHLIGHT_RAD*cnorm; // move behind the collision plane so as not to multiply light
 				assert(cindex >= 0);
 				colorRGBA const color(SUN_C.modulate_with(coll_objects[cindex].get_avg_color()));
@@ -1000,7 +1002,7 @@ void init_lights() {
 void sync_flashlight() {
 
 	assert(FLASHLIGHT_LIGHT_ID < light_sources_d.size());
-	light_sources_d[FLASHLIGHT_LIGHT_ID].set_dynamic_state(get_camera_pos(), cview_dir, flashlight_on);
+	light_sources_d[FLASHLIGHT_LIGHT_ID].set_dynamic_state(get_camera_light_pos(), cview_dir, flashlight_on);
 }
 
 
