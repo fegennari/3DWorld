@@ -484,7 +484,7 @@ bool cobj_bvh_tree::check_point_contained(point const &p, int &cindex) const {
 		}
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			coll_obj const &c(get_cobj(i));
-			if (obj_ok(c) && c.contains_point(p)) {cindex = cixs[i]; return 1;}
+			if (c.contains_point(p) && obj_ok(c)) {cindex = cixs[i]; return 1;}
 		}
 		++nix;
 	}
@@ -510,7 +510,7 @@ void cobj_bvh_tree::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> 
 			if ((int)cixs[i] == ignore_cobj) continue;
 			coll_obj const &c(get_cobj(i));
 			if (check_ccounter && c.counter == cobj_counter) continue;
-			if (!obj_ok(c) || !cube.intersects(c, toler))    continue;
+			if (!cube.intersects(c, toler) || !obj_ok(c))    continue;
 			if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(c, toler) != 1) continue;
 			cobjs.push_back(cixs[i]);
 		}
@@ -534,7 +534,7 @@ bool cobj_bvh_tree::is_cobj_contained(point const &viewer, point const *const pt
 			if ((int)cixs[i] == ignore_cobj) continue;
 			coll_obj const &c(get_cobj(i));
 				
-			if (obj_ok(c) && c.intersects_all_pts(viewer, pts, npts)) { // Note: already checks that c.is_occluder()
+			if (c.intersects_all_pts(viewer, pts, npts) && obj_ok(c)) { // Note: already checks that c.is_occluder()
 				cobj = cixs[i];
 				return 1;
 			}
