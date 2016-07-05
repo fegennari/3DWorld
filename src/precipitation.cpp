@@ -73,8 +73,10 @@ public:
 	bool is_bot_pos_valid(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
 		if (world_mode != WMODE_GROUND) return 1;
 		// check bottom of raindrop/snow below the mesh or top surface cobjs (even if just created)
+		if (pos.z > max(ztop, czmax))   return 1; // above mesh and cobjs, no collision possible
+		if (!is_over_mesh(pos))         return 1; // outside the simulation region, no collision possible
 		int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
-		if (point_outside_mesh(x, y)) return 1;
+		if (point_outside_mesh(x, y))   return 1;
 			
 		if (!DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
 			if (rgen.rand() & 1) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], splashes, x, y, 1);} // 50% of the time
@@ -118,7 +120,7 @@ class rain_manager_t : public precip_manager_t<2> {
 
 public:
 	void update() {
-		//timer_t timer("Rain Update"); // 0.75ms for default rain intensity
+		//timer_t timer("Rain Update"); // 0.64ms for default rain intensity
 		pre_update();
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
@@ -142,23 +144,23 @@ public:
 		enable_blend(); // split into point smooth and blend?
 		shader_t s;
 		s.begin_color_only_shader(color);
-		draw_verts(verts, GL_LINES);
+		draw_verts(verts, GL_LINES); // 0.08ms for default rain intensity
 		line_tquad_draw_t drawer;
 		point const camera(get_camera_pos());
 		float const width = 0.002;
 
-		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
+		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs (0.07ms for default rain intensity)
 			if (dist_less_than(verts[i].v, camera, 0.5) && (camera_pdu.point_visible_test(verts[i].v) || camera_pdu.point_visible_test(verts[i+1].v))) {
 				drawer.add_line_as_tris(verts[i].v, verts[i+1].v, width, width, color, color);
 			}
 		}
 		glDepthMask(GL_FALSE); // disable depth test
-		drawer.draw(); // draw nearby raindrops as triangles
+		drawer.draw(); // draw nearby raindrops as triangles (0.02ms for default rain intensity)
 		s.end_shader();
 		disable_blend();
 		//PRINT_TIME("Rain Draw"); // similar to update time
 
-		if (!splashes.empty()) {
+		if (!splashes.empty()) { // 0.08ms for default rain intensity
 			point const camera(get_camera_pos());
 			float const size = 0.004; // 2x-8x rain line diameter
 			ensure_filled_polygons();
@@ -175,7 +177,7 @@ public:
 			s.end_shader();
 			disable_blend();
 			reset_fill_mode();
-			//PRINT_TIME("Rain Draw + Splashes"); // 50% longer
+			//PRINT_TIME("Rain Draw + Splashes"); // 25-50% longer
 		}
 		glDepthMask(GL_TRUE);
 	}
