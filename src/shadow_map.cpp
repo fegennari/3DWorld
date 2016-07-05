@@ -282,18 +282,15 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
 	assert(is_arrayed());
-	char str[20] = {0};
 
 	if (!arr_tex_set) { // Note: assumes all lights use the same texture array
 		bind_smap_texture();
-		sprintf(str, "smap_tex_arr_dl");
 		arr_tex_set = 1;
-	}
-	if (str[0]) { // str was set to something
-		bool const tex_ret(s.add_uniform_int(str, tu_id));
-		if (!tex_ret) {cerr << "Error: unable to set shader uniform '" << str << "'." << endl;}
+		bool const tex_ret(s.add_uniform_int("smap_tex_arr_dl", tu_id));
+		if (!tex_ret) {cerr << "Error: unable to set shader uniform 'smap_tex_arr_dl'." << endl;}
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	}
+	char str[20] = {0};
 	sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id
 	bool const mat_ret(s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0));
 	assert(mat_ret);
