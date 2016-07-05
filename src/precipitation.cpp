@@ -22,7 +22,7 @@ protected:
 	typedef vert_wrap_t vert_type_t;
 	vector<vert_type_t> verts;
 	rand_gen_t rgen;
-	float prev_zmin, cur_zmin, prev_zmax, cur_zmax;
+	float prev_zmin, cur_zmin, prev_zmax, cur_zmax, precip_dist;
 
 public:
 	precip_manager_t() : prev_zmin(get_zmin()), cur_zmin(prev_zmin), prev_zmax(get_zmax()), cur_zmax(prev_zmax) {}
@@ -31,9 +31,8 @@ public:
 	size_t size() const {return verts.size();}
 	float get_zmin() const {return ((world_mode == WMODE_GROUND) ? zbottom : get_tiled_terrain_water_level());}
 	float get_zmax() const {return get_cloud_zmax();}
-	float get_precip_dist() const {return ((world_mode == WMODE_GROUND) ? XY_SCENE_SIZE : TT_PRECIP_DIST);}
 	size_t get_num_precip() {return 700*get_precip_rate();} // similar to precip max objects
-	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), get_precip_dist());}
+	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), precip_dist);}
 	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
 	
 	void pre_update() {
@@ -47,10 +46,10 @@ public:
 			prev_zmax = cur_zmax;
 		}
 		check_size();
+		precip_dist = ((world_mode == WMODE_GROUND) ? XY_SCENE_SIZE : TT_PRECIP_DIST);
 	}
 	point gen_pt(float zval) {
 		point const camera(get_camera_pos());
-		float const precip_dist(get_precip_dist());
 
 		while (1) {
 			vector3d const off(precip_dist*rgen.signed_rand_float(), precip_dist*rgen.signed_rand_float(), zval);
@@ -126,10 +125,11 @@ public:
 		vector3d vcur(v);
 		while (!splashes.empty() && splashes.front().radius > 4.0) {splashes.pop_front();} // remove old splashes from the front
 		if (animate2) {for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}}
+		deque<sphere_t> *sv(begin_motion ? &splashes : nullptr);
 
 		//#pragma omp parallel for schedule(static,1) // not valid for splashes, and actually slower for light rain
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
-			check_pos(verts[i].v, verts[i+1].v, (begin_motion ? &splashes : nullptr));
+			check_pos(verts[i].v, verts[i+1].v, sv);
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
 		}
