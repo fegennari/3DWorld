@@ -1184,11 +1184,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					return read_error(fp, "load model file command", coll_obj_file);
 				}
 				if (ivals[0] < 0 || ivals[0] > 6) {return read_error(fp, "load model file command group_cobjs_level", coll_obj_file);}
+				if (recalc_normals < 0 || recalc_normals > 2) {return read_error(fp, "recalc_normals must be between 0 and 2", coll_obj_file);}
 				bool const use_model3d(ivals[0] >= 3), no_cobjs(ivals[0] >= 4);
 				ppts.clear();
 				RESET_TIME;
 				
-				if (!read_model_file(fn, (no_cobjs ? nullptr : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
+				if (!read_model_file(fn, (no_cobjs ? nullptr : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness, use_model3d, recalc_normals, (write_file != 0), 1)) {
 					return read_error(fp, "model file data", coll_obj_file);
 				}
 				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_xy_spacing, xf.scale, has_layer, model3d_xform_t()));

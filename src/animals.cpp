@@ -30,7 +30,7 @@ class animal_model_loader_t : public model3ds {
 public:
 	animal_model_loader_t() : fish_id(0), bird_id(0) {}
 
-	unsigned load_model(string const &fn, bool recalc_normals=1, colorRGBA const &def_color=WHITE, int def_tid=-1) {
+	unsigned load_model(string const &fn, int recalc_normals=1, colorRGBA const &def_color=WHITE, int def_tid=-1) {
 		unsigned const id(size());
 
 		if (!load_model_file(fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, recalc_normals, 0, 1)) {
@@ -59,7 +59,7 @@ public:
 	}
 	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
 		if (fish_id == 0) { // fish model not yet loaded
-			bool const recalc_normals = 0; // okay for loading model3d
+			int const recalc_normals = 0; // okay for loading model3d
 			string const fish_model_fn( "model_data/fish/fishOBJ.model3d" ); // provide in config file?
 			fish_id = load_model(fish_model_fn, recalc_normals);
 		}

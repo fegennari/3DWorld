@@ -399,7 +399,7 @@ public:
 	}
 
 
-	bool read(geom_xform_t const &xf, bool recalc_normals, bool verbose) {
+	bool read(geom_xform_t const &xf, int recalc_normals, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		cout << "Reading object file " << filename << endl;
@@ -480,6 +480,14 @@ public:
 					if (normal != zero_vector) break; // got a good normal
 				}
 				if (recalc_normals) {
+					bool const face_weight_avg(recalc_normals == 2 && (npts == 3 || npts == 4)); // only works for quads and triangles
+					float face_area(0.0);
+
+					if (face_weight_avg) {
+						point face_pts[4];
+						for (unsigned i = 0; i < npts; ++i) {face_pts[i] = v[pb.pts[i+pix].vix];}
+						face_area = polygon_area(face_pts, npts);
+					}
 					for (unsigned i = pix; i < pix+npts; ++i) {
 						unsigned const vix(pb.pts[i].vix);
 						assert((unsigned)vix < vn.size());
@@ -487,15 +495,14 @@ public:
 						if (vn[vix].is_valid() && dot_product(normal, vn[vix].get_norm()) < 0.25) { // normals in disagreement
 							vn[vix] = zero_vector; // zero it out so that it becomes invalid later
 						}
-						else {
-							vn[vix].add_normal(normal);
-						}
+						else if (face_weight_avg) {vn[vix].add_normal(face_area*normal);} // face weighted average
+						else {vn[vix].add_normal(normal);} // unweighted average of normals
 					}
 				}
 			}
 			else if (strcmp(s, "v") == 0) { // vertex
 				v.push_back(point());
-				if (recalc_normals) vn.push_back(counted_normal()); // vertex normal
+				if (recalc_normals) {vn.push_back(counted_normal());} // vertex normal
 			
 				if (!read_point(v.back())) {
 					cerr << "Error reading vertex from object file " << filename << " near line " << approx_line << endl;
@@ -584,7 +591,7 @@ public:
 		model.load_all_used_tids(); // need to load the textures here to get the colors
 		PRINT_TIME("Model Texture Load");
 		size_t const num_blocks(pblocks.size());
-		model3d::proc_counted_normals(vn); // if recalc_normals
+		model3d::proc_counted_normals(vn, recalc_normals); // if recalc_normals
 
 		while (!pblocks.empty()) {
 			poly_data_block const &pd(pblocks.back());
@@ -661,12 +668,12 @@ bool write_model3d_file(string const &base_fn, model3d &cur_model) {
 }
 
 
-bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool use_vertex_normals, bool verbose);
+bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, int use_vertex_normals, bool verbose);
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
 
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, bool recalc_normals, bool write_file, bool verbose)
+	int reflective, float metalness, int recalc_normals, bool write_file, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	models.push_back(model3d(models.tmgr, def_tid, def_c, reflective, metalness));
@@ -692,7 +699,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 }
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, bool load_models, bool recalc_normals, bool write_file, bool verbose)
+	int reflective, float metalness, bool load_models, int recalc_normals, bool write_file, bool verbose)
 {
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");

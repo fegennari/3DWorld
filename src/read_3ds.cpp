@@ -298,7 +298,7 @@ public:
 
 class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 
-	bool use_vertex_normals;
+	int use_vertex_normals;
 	unsigned obj_id;
 
 	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {
@@ -400,11 +400,12 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				pts[n] = verts[n].v;
 			}
 			if (use_vertex_normals) {
-				vector3d const normal(get_poly_norm(pts));
+				vector3d normal(get_poly_norm(pts));
+				if (use_vertex_normals > 1) {normal *= polygon_area(pts, 3);} // weight normal by face area
 				UNROLL_3X(normals[i->ix[i_]].add_normal(normal);)
 			}
 		}
-		model3d::proc_counted_normals(normals); // if use_vertex_normals
+		model3d::proc_counted_normals(normals, use_vertex_normals); // if use_vertex_normals
 
 		// assign materials to faces
 		for (face_mat_map_t::const_iterator i = face_materials.begin(); i != face_materials.end(); ++i) {
@@ -436,7 +437,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 
 				for (unsigned j = 0; j < 3; ++j) {
 					unsigned const ix(ixs[j]);
-					vector3d const normal((!use_vertex_normals || (face_n != zero_vector && !normals[ix].is_valid())) ? face_n : normals[ix]);
+					vector3d const normal((use_vertex_normals == 0 || (face_n != zero_vector && !normals[ix].is_valid())) ? face_n : normals[ix]);
 					tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
 				}
 				model.add_polygon(tri, vmap, vmap_tan, i->first, obj_id);
@@ -540,7 +541,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 	}
 
 public:
-	file_reader_3ds_model(string const &fn, bool use_vertex_normals_, model3d &model_) :
+	file_reader_3ds_model(string const &fn, int use_vertex_normals_, model3d &model_) :
 	  file_reader_3ds(fn), model_from_file_t(fn, model_), use_vertex_normals(use_vertex_normals_), obj_id(0) {}
 
 	bool read(geom_xform_t const &xf, bool verbose) {
@@ -552,7 +553,7 @@ public:
 };
 
 
-bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool use_vertex_normals, bool verbose) {
+bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, int use_vertex_normals, bool verbose) {
 	file_reader_3ds_model reader(filename, use_vertex_normals, model);
 	return reader.read(xf, verbose);
 }

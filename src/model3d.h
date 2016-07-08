@@ -477,7 +477,7 @@ public:
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
-	static void proc_counted_normals(vector<counted_normal> &cn, float nmag_thresh=0.7);
+	static void proc_counted_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
 };
 
 
@@ -528,9 +528,9 @@ void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube(bool only_reflective=0);
 
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, bool recalc_normals, bool write_file, bool verbose);
+	int reflective, float metalness, int recalc_normals, bool write_file, bool verbose);
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, int reflective, float metalness, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
+	colorRGBA const &def_c, int reflective, float metalness, bool load_model_file, int recalc_normals, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_
