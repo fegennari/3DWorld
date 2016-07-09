@@ -638,22 +638,20 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 	if (line_line_dist(p1, p2, cp1, cp2) > max(ro1, ro2)) return 0;
 
 	if (ri1 == 0.0 && ri2 == 0.0 && (ro1 != ro2)) {
-		if (ro1 < ro2) {
-			return line_intersect_trunc_cone(p1, p2, cp1, cp2, ro1, ro2, check_ends, t, 0);
-		}
-		else {
-			return line_intersect_trunc_cone(p1, p2, cp2, cp1, ro2, ro1, check_ends, t, 1); // reverse the ends
-		}
+		if (ro1 < ro2) {return line_intersect_trunc_cone(p1, p2, cp1, cp2, ro1, ro2, check_ends, t, 0);}
+		else {return line_intersect_trunc_cone(p1, p2, cp2, cp1, ro2, ro1, check_ends, t, 1);} // reverse the ends
 	}
 	assert(ri1 == ri2 && ro1 == ro2);
 	assert(ro1 > 0.0 && ro2 > 0.0 && ri1 >= 0.0 && ri2 >= 0.0);
 	assert(ro1 >= ri1 && ro2 >= ri2);
 	//if (point_in_cylinder(cp1, cp2, p1, ro1, ro2) && !point_in_cylinder(cp1, cp2, p1, ri1, ri2)) return 3; // t = ???
-	point v1(p1, cp1), v2(p2, cp1), c2(cp2, cp1); // translate so that cp1 is at (0,0,0), swap if r1 > r2?
+	// translate so that cp1 is at (0,0,0), swap if r1 > r2?
+	vector3d v12[2] = {(p1 - cp1), (p2 - cp1)};
+	vector3d const c2(cp2 - cp1);
 	float const len(c2.mag());
 	vector3d const cv(c2/len); // normalize
-	rotate_vector3d_by_vr(cv, plus_z, v1); // rotate both points and cylinder so that the cylinder is oriented in +z
-	rotate_vector3d_by_vr(cv, plus_z, v2);
+	rotate_norm_vector3d_into_plus_z_multi(cv, v12, 2); // rotate both points and cylinder so that the cylinder is oriented in +z
+	vector3d const &v1(v12[0]), &v2(v12[1]);
 	float const dz(v2.z - v1.z);
 	float ta((0.0 - v1.z)/dz), tb((len - v1.z)/dz);
 	bool const swapped(tb < ta);
@@ -891,7 +889,7 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, vector3d
 	
 	if (calc_int) { // transform intersection point and normal back into global space
 		local_rotate(p_int, dir, plus_z, tc);
-		rotate_vector3d_by_vr(dir, plus_z, norm);
+		rotate_norm_vector3d_into_plus_z(dir, norm);
 	}
 	return 1;
 }
@@ -1219,6 +1217,24 @@ void rotate_vector3d_by_vr_multi(vector3d v1, vector3d v2, vector3d *vout, unsig
 		{tX*v.x + c,    tX*v.y + v.z,  tX*v.z    - v.y},
 		{tX*v.y - v.z,  tY*v.y + c,    tY*v.z    + v.x},
 		{tX*v.z + v.y,  tY*v.z - v.x,  t*v.z*v.z + c},
+	};
+	for (unsigned i = 0; i < num_vout; ++i) {
+		vector3d const vin(vout[i]);
+		matrix_mult(vin, vout[i], m);
+	}
+}
+
+// apply the same rotation to vout that is required to rotate v1 to +z
+void rotate_norm_vector3d_into_plus_z_multi(vector3d const &v1, vector3d *vout, unsigned num_vout, float rot_dir_sign) { // v1 rotated by vout = +z
+
+	vector3d const v(-rot_dir_sign*v1.y, rot_dir_sign*v1.x, 0.0);
+	double const c(v1.z);
+	if (abs(c + 1.0) < TOLERANCE) return; // v1 and v2 are parallel
+	double const t(1.0/(1.0+c)), tX(t*v.x), tY(t*v.y);
+	double const m[3][3] = {
+		{tX*v.x + c,  tX*v.y,     -v.y},
+		{tX*v.y,      tY*v.y + c,  v.x},
+		{v.y,        -v.x,         c},
 	};
 	for (unsigned i = 0; i < num_vout; ++i) {
 		vector3d const vin(vout[i]);

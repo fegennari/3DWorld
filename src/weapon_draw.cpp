@@ -209,7 +209,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 			point const pos1(pos + dir*(SQRT2*cradius) - dir2*cradius);
 			vector3d vr((left_handed ? 0.5 : -0.5), 0.5, 0.0);
 			rotate_vector3d(vector3d(0.0, 0.0, -1.0), atan2(dir.y, dir.x), vr);
-			rotate_vector3d_by_vr(plus_z, dir2, vr);
+			rotate_norm_vector3d_into_plus_z(dir2, vr, -1.0); // inverse rotate
 			rotate_vector3d(vr, get_bbbat_angle(fire_val)/TO_DEG, dir2);
 			assert(dir2.mag() > TOLERANCE);
 			point const pos2(pos1 + dir2*(16.0*radius));

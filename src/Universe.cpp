@@ -2270,13 +2270,13 @@ void rotated_obj::apply_gl_rotate() const {
 }
 
 void rotated_obj::rotate_vector(vector3d &v) const {
-	rotate_vector3d_by_vr(rot_axis, plus_z, v);
+	rotate_norm_vector3d_into_plus_z(rot_axis, v);
 	rotate_vector3d(plus_z, rot_ang/TO_DEG, v); // in radians
 }
 
 void rotated_obj::rotate_vector_inv(vector3d &v) const {
 	rotate_vector3d(plus_z, -rot_ang/TO_DEG, v); // in radians
-	rotate_vector3d_by_vr(plus_z, rot_axis, v);
+	rotate_norm_vector3d_into_plus_z(rot_axis, v, -1.0); // inverse rotate
 }
 
 

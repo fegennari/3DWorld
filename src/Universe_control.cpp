@@ -1130,7 +1130,7 @@ void orbiting_ship::set_pos_from_sobj(urev_body const *const sobj) {
 	}
 	else {
 		angle = (GSO ? (start_angle + sobj->rot_ang/TO_DEG) : (angle + fticks*rot_rate));
-		rotate_vector3d_by_vr(plus_z, axis, delta); // switch to local coordinate system
+		rotate_norm_vector3d_into_plus_z(axis, delta, -1.0); // switch to local coordinate system (inverse rotate)
 		rotate_vector3d_norm (axis, -angle, delta); // negate angle?
 	}
 	pos       = sobj->pos + delta*double(orbit_r);

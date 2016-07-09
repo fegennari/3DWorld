@@ -659,7 +659,7 @@ public:
 		point spos(bsphere.pos);
 		rotate_vector3d(plus_z, -TO_RADIANS*rot_degrees, spos); // rotation is backwards from GL
 		spos  = spos*size;
-		rotate_vector3d_by_vr(plus_z, rot_axis, spos);
+		rotate_norm_vector3d_into_plus_z(rot_axis, spos, -1.0); // inverse rotate
 		spos += center;
 		if (!univ_sphere_vis(spos, bradius))          return 0; // VFC
 		if (distance_to_camera(spos) - bradius > 1.0) return 0; // distance/size culling
@@ -801,7 +801,7 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 	max_asteroid_radius = 0.0;
 	resize((rand2() % max_num/2) + max_num/2); // 50% to 100% of max
 	vector3d vxy[2] = {plus_x, plus_y};
-	rotate_vector3d_by_vr_multi(plus_z, orbital_plane_normal, vxy, 2);
+	rotate_norm_vector3d_into_plus_z_multi(orbital_plane_normal, vxy, 2, -1.0); // inverse rotate
 	for (unsigned d = 0; d < 2; ++d) {vxy[d] *= scale[d];}
 
 	for (iterator i = begin(); i != end(); ++i) {
@@ -847,13 +847,13 @@ void uasteroid_belt_planet::init_rings(point const &pos) {
 void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 
 	pt -= pos;
-	rotate_vector3d_by_vr(orbital_plane_normal, plus_z, pt);
+	rotate_norm_vector3d_into_plus_z(orbital_plane_normal, pt);
 	UNROLL_3X(pt[i_] /= scale[i_];) // account for squished/elliptical torus in orbital plane
 }
 void uasteroid_belt::xform_from_local_torus_coord_space(point &pt) const { // unused
 
 	UNROLL_3X(pt[i_] *= scale[i_];) // account for squished/elliptical torus in orbital plane
-	rotate_vector3d_by_vr(plus_z, orbital_plane_normal, pt);
+	rotate_norm_vector3d_into_plus_z(orbital_plane_normal, pt); // inverse rotate
 	pt += pos;
 }
 

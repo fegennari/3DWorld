@@ -557,7 +557,6 @@ template<typename T> inline void rotate_vector3d(pointT<T> const &vrot, double a
 }
 
 template<typename T> inline void rotate_vector3d_norm(pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vout by angle (radians) about vrot
-
 	rotate_vector3d(vout, vrot, angle, vout);
 	vout.normalize();
 }
@@ -572,6 +571,10 @@ inline void rotate_into_plus_z(vector3d const &v) {
 
 inline void rotate_vector3d_by_vr(vector3d v1, vector3d v2, vector3d &vout) {
 	rotate_vector3d_by_vr_multi(v1, v2, &vout, 1);
+}
+
+inline void rotate_norm_vector3d_into_plus_z(vector3d const &v1, vector3d &vout, float rot_dir_sign=1.0) {
+	rotate_norm_vector3d_into_plus_z_multi(v1, &vout, 1, rot_dir_sign);
 }
 
 inline void rotate_to_dir(vector3d const &dir, float vadd, float vmult=1.0) {
