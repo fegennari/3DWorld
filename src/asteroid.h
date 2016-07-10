@@ -10,6 +10,18 @@
 unsigned const AF_GRID_SZ = 12;
 
 
+struct asteroid_belt_cloud : public volume_part_cloud {
+
+	point pos;
+	float radius;
+
+	void gen(rand_gen_t &rgen, point const &pos_, float def_radius);
+	static void pre_draw(vpc_shader_t &s);
+	static void post_draw(vpc_shader_t &s);
+	void draw(vpc_shader_t &s, point_d const &pos_) const;
+};
+
+
 class uasteroid : public uobject, public rotated_obj {
 
 	unsigned inst_id;
@@ -60,7 +72,7 @@ protected:
 public:
 	uasteroid_cont() : rseed(0) {}
 	void init(point const &pos, float radius);
-	void gen_asteroids(bool is_ice);
+	virtual void gen_asteroids(bool is_ice);
 	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set, bool is_ice=0);
 	void detatch_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
@@ -87,6 +99,7 @@ class uasteroid_belt : public uasteroid_cont {
 protected:
 	vector3d orbital_plane_normal, scale;
 	float max_asteroid_radius, inner_radius, outer_radius;
+	vector<asteroid_belt_cloud> clouds;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
 	void xform_from_local_torus_coord_space(point &pt) const;
@@ -95,6 +108,7 @@ protected:
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
 	  orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0), max_asteroid_radius(0.0), scale(scale_) {}
+	virtual void gen_asteroids(bool is_ice);
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
 	bool line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int=nullptr) const;
 	bool sphere_might_intersect(point const &sc, float sr) const;

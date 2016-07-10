@@ -32,7 +32,7 @@ colorRGBA const ICE_ROCK_COLOR(0.6, 1.2, 1.5);
 
 extern bool no_asteroid_dust;
 extern int animate2, display_mode, frame_counter, window_width, window_height;
-extern float fticks;
+extern float fticks, tfticks;
 extern colorRGBA sun_color;
 extern vector<us_weapon> us_weapons;
 extern usw_ray_group t_wrays;
@@ -717,6 +717,52 @@ bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shad
 }
 
 
+void asteroid_belt_cloud::gen(rand_gen_t &rgen, point const &pos_, float def_radius) {
+	pos    = pos_ + rgen.signed_rand_vector(def_radius);
+	radius = def_radius*rgen.rand_uniform(0.5, 1.0);
+	gen_pts(radius);
+}
+/*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s) {
+	shader_setup(s, 1, 0, -0.12, -0.3); // grayscale, not ridged, with custom alpha/dist bias
+	s.add_uniform_float("noise_scale", 20.0);
+	s.set_uniform_vector3d(s.rs_loc, vector3d(1.0, 1.0, 1.0));
+	s.set_cur_color(WHITE); // unnecessary?
+	enable_blend();
+	glDepthMask(GL_FALSE); // no depth writing
+}
+/*static*/ void asteroid_belt_cloud::post_draw(vpc_shader_t &s) {
+	glDepthMask(GL_TRUE);
+	disable_blend();
+	s.end_shader();
+}
+void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_) const {
+	point_d const afpos(pos_ + pos);
+	vector3d const view_dir(get_camera_pos() - afpos);
+	float const view_dist(view_dir.mag()), max_dist(60.0*radius);
+	if (view_dist >= max_dist) return; // too distant to draw
+	if (!camera_pdu.sphere_visible_test(afpos, radius)) return; // VFC
+	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.02*(1.0 - val*val));
+	s.set_uniform_color(s.c1i_loc, colorRGBA(LT_GRAY, alpha)); // inner color
+	s.set_uniform_color(s.c1o_loc, colorRGBA(LT_GRAY, alpha)); // outer color
+	s.set_uniform_float(s.rad_loc, radius);
+	s.set_uniform_float(s.off_loc, (pos.x + 4.0E-6*tfticks)); // used as a hash
+	s.set_uniform_vector3d(s.vd_loc, view_dir/view_dist); // local object space
+	fgPushMatrix();
+	global_translate(afpos);
+	draw_quads(1); // depth map is disabled in the caller
+	fgPopMatrix();
+}
+
+
+void uasteroid_belt::gen_asteroids(bool is_ice) {
+
+	uasteroid_cont::gen_asteroids(is_ice);
+	clouds.resize(size());
+	rand_gen_t rgen;
+	float const def_cloud_radius(0.01*radius);
+	for (unsigned i = 0; i < clouds.size(); ++i) {clouds[i].gen(rgen, operator[](i).pos, def_cloud_radius);}
+}
+
 void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
 
 	point_d const afpos(pos_ + pos);
@@ -761,6 +807,28 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		if (is_ice) {shader.clear_specular();} // reset specular
 		shader.end_shader();
 	}
+	if (0) { // draw fine dust as fog
+		shader.begin_color_only_shader(colorRGBA(0.5, 0.5, 0.5, 0.5));
+		select_texture(WHITE_TEX); // untextured
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+		fgPushMatrix();
+		global_translate(afpos);
+		rotate_into_plus_z(orbital_plane_normal);
+		scale_by(scale);
+		draw_torus(all_zeros, inner_radius, outer_radius, N_SPHERE_DIV, N_SPHERE_DIV);
+		fgPopMatrix();
+		glDisable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		shader.end_shader();
+	}
+	if ((display_mode & 0x0100) == 0) { // draw volumetric fog clouds
+		vpc_shader_t s;
+		asteroid_belt_cloud::pre_draw(s);
+		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
+		for (auto i = clouds.begin(); i != clouds.end(); ++i) {i->draw(s, pos_);}
+		asteroid_belt_cloud::post_draw(s);
+	}
 	disable_blend();
 }
 
@@ -786,10 +854,7 @@ void uasteroid_cont::gen_asteroids(bool is_ice) {
 void uasteroid_field::gen_asteroid_placements(bool is_ice) {
 
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
-
-	for (iterator i = begin(); i != end(); ++i) {
-		i->gen_spherical(pos, radius, AST_RADIUS_SCALE*radius);
-	}
+	for (iterator i = begin(); i != end(); ++i) {i->gen_spherical(pos, radius, AST_RADIUS_SCALE*radius);}
 }
 
 
