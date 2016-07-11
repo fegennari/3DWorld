@@ -530,6 +530,7 @@ class asteroid_model_gen_t {
 
 	typedef unique_ptr<uobj_asteroid> p_uobj_asteroid;
 	vector<p_uobj_asteroid> asteroids;
+	vector<asteroid_belt_cloud> cloud_models;
 	colorRGBA tex_color;
 
 public:
@@ -588,9 +589,28 @@ public:
 		}
 	}
 	void clear_contexts() {
-		for (vector<p_uobj_asteroid>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
-			(*i)->clear_context();
+		for (vector<p_uobj_asteroid>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {(*i)->clear_context();}
+	}
+
+	// cloud models
+	unsigned num_cloud_models() const {return cloud_models.size();}
+
+	void gen_cloud_models() {
+		if (!cloud_models.empty()) return; // already generated
+		unsigned const NUM_CLOUD_MODELS = 100;
+		cloud_models.resize(NUM_CLOUD_MODELS);
+		rand_gen_t rgen;
+		vector<volume_part_cloud::vert_type_t> all_cloud_verts;
+	
+		for (auto i = cloud_models.begin(); i != cloud_models.end(); ++i) { // create cloud models
+			i->gen(rgen, 1.0);
+			all_cloud_verts.insert(all_cloud_verts.end(), i->get_points().begin(), i->get_points().end());
 		}
+		// FIXME: put all_cloud_verts into a VBO
+	}
+	void draw_cloud_model(vpc_shader_t &s, unsigned ix, point const &pos, float radius) const {
+		assert(ix < cloud_models.size());
+		cloud_models[ix].draw(s, pos, radius);
 	}
 };
 
@@ -718,8 +738,9 @@ bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shad
 
 
 void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
-	pos    = rgen.signed_rand_vector(0.75*def_radius); // add some random jitter in position
-	radius = def_radius*rgen.rand_uniform(0.5, 1.0);
+	vbo_pos = 0; // will be set later
+	pos     = rgen.signed_rand_vector(0.75*def_radius); // add some random jitter in position
+	radius  = def_radius*rgen.rand_uniform(0.5, 1.0);
 	gen_pts(radius);
 }
 /*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s, float noise_scale) {
@@ -738,20 +759,21 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	disable_blend();
 	s.end_shader();
 }
-void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, bool planet_ab) const {
-	point_d const afpos(pos_ + pos);
+void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_cloud_radius) const {
+	point_d const afpos(pos_ + def_cloud_radius*pos);
 	vector3d const view_dir(get_camera_pos() - afpos);
-	float const view_dist(view_dir.mag()), max_dist(64.0*radius);
+	float const view_dist(view_dir.mag()), scaled_radius(def_cloud_radius*radius), max_dist(64.0*scaled_radius);
 	if (view_dist >= max_dist) return; // too distant to draw
 	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.02*(1.0 - val*val));
 	if (alpha < 1.0/255.0) return; // too transparent to draw
-	if (!camera_pdu.sphere_visible_test(afpos, radius)) return; // VFC
+	if (!camera_pdu.sphere_visible_test(afpos, scaled_radius)) return; // VFC
 	s.set_uniform_float(s.rad_loc, radius);
 	s.set_uniform_float(s.as_loc,  alpha);
-	s.set_uniform_float(s.off_loc, (pos.x + (planet_ab ? 0.1 : 1.0)*4.0E-6*tfticks)); // used as a hash
+	s.set_uniform_float(s.off_loc, (pos.x + 1.0E-4*tfticks)); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, view_dir/view_dist); // local object space
 	fgPushMatrix();
 	global_translate(afpos);
+	uniform_scale(def_cloud_radius);
 	draw_quads(1); // depth map is disabled in the caller
 	fgPopMatrix();
 }
@@ -762,16 +784,13 @@ void uasteroid_belt::gen_asteroids(bool is_ice) {
 	uasteroid_cont::gen_asteroids(is_ice);
 
 	// create clouds
-	unsigned const NUM_CLOUD_MODELS = 100;
-	cloud_models.resize(NUM_CLOUD_MODELS);
+	asteroid_model_gen.gen_cloud_models();
 	cloud_insts.resize(size());
 	rand_gen_t rgen;
-	float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
-	for (auto i = cloud_models.begin(); i != cloud_models.end(); ++i) {i->gen(rgen, def_cloud_radius);} // create cloud models
-	
+
 	for (unsigned i = 0; i < cloud_insts.size(); ++i) { // create cloud instances
 		cloud_insts[i].asteroid_id = i; // for now, there is a 1:1 mapping between asteroids and clouds
-		cloud_insts[i].cloud_id    = (rgen.rand() % cloud_models.size());
+		cloud_insts[i].cloud_id    = (rgen.rand() % asteroid_model_gen.num_cloud_models());
 	}
 }
 
@@ -835,15 +854,13 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		shader.end_shader();
 	}
 	if (/*draw_dust &&*/ world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
-		//assert(cloud_insts.size() == size()); // no longer required
-		bool const planet_ab(is_planet_ab());
+		float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
 		vpc_shader_t s;
-		asteroid_belt_cloud::pre_draw(s, (planet_ab ? 2000.0 : 20.0)*radius);
+		asteroid_belt_cloud::pre_draw(s, 0.18);
 		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
 		for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids
 			assert(i->asteroid_id < size());
-			assert(i->cloud_id < cloud_models.size());
-			cloud_models[i->cloud_id].draw(s, (pos_ + operator[](i->asteroid_id).pos), planet_ab);
+			asteroid_model_gen.draw_cloud_model(s, i->cloud_id, (pos_ + operator[](i->asteroid_id).pos), def_cloud_radius);
 		}
 		asteroid_belt_cloud::post_draw(s);
 	}

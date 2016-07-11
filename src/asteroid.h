@@ -14,11 +14,12 @@ struct asteroid_belt_cloud : public volume_part_cloud {
 
 	point pos;
 	float radius;
+	unsigned vbo_pos;
 
 	void gen(rand_gen_t &rgen, float def_radius);
 	static void pre_draw(vpc_shader_t &s, float noise_scale);
 	static void post_draw(vpc_shader_t &s);
-	void draw(vpc_shader_t &s, point_d const &pos_, bool planet_ab) const;
+	void draw(vpc_shader_t &s, point_d const &pos_, float def_cloud_radius) const;
 };
 
 
@@ -103,7 +104,6 @@ protected:
 	};
 	vector3d orbital_plane_normal, scale;
 	float max_asteroid_radius, inner_radius, outer_radius;
-	vector<asteroid_belt_cloud> cloud_models;
 	vector<cloud_inst> cloud_insts;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
