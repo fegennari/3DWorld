@@ -760,10 +760,19 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, bool planet
 void uasteroid_belt::gen_asteroids(bool is_ice) {
 
 	uasteroid_cont::gen_asteroids(is_ice);
-	clouds.resize(size());
+
+	// create clouds
+	unsigned const NUM_CLOUD_MODELS = 100;
+	cloud_models.resize(NUM_CLOUD_MODELS);
+	cloud_insts.resize(size());
 	rand_gen_t rgen;
 	float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
-	for (unsigned i = 0; i < clouds.size(); ++i) {clouds[i].gen(rgen, def_cloud_radius);}
+	for (auto i = cloud_models.begin(); i != cloud_models.end(); ++i) {i->gen(rgen, def_cloud_radius);} // create cloud models
+	
+	for (unsigned i = 0; i < cloud_insts.size(); ++i) { // create cloud instances
+		cloud_insts[i].asteroid_id = i; // for now, there is a 1:1 mapping between asteroids and clouds
+		cloud_insts[i].cloud_id    = (rgen.rand() % cloud_models.size());
+	}
 }
 
 void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
@@ -825,13 +834,17 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		glCullFace(GL_BACK);
 		shader.end_shader();
 	}
-	if (/*draw_dust &&*/ world_mode == WMODE_UNIVERSE && !clouds.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
-		assert(size() == clouds.size());
+	if (/*draw_dust &&*/ world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
+		//assert(cloud_insts.size() == size()); // no longer required
 		bool const planet_ab(is_planet_ab());
 		vpc_shader_t s;
 		asteroid_belt_cloud::pre_draw(s, (planet_ab ? 2000.0 : 20.0)*radius);
 		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
-		for (unsigned i = 0; i < size(); ++i) {clouds[i].draw(s, (pos_ + operator[](i).pos), planet_ab);} // clouds move with asteroids
+		for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids
+			assert(i->asteroid_id < size());
+			assert(i->cloud_id < cloud_models.size());
+			cloud_models[i->cloud_id].draw(s, (pos_ + operator[](i->asteroid_id).pos), planet_ab);
+		}
 		asteroid_belt_cloud::post_draw(s);
 	}
 	disable_blend();
@@ -1215,8 +1228,22 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 
 void uasteroid_cont::remove_asteroid(unsigned ix) {
 
+	assert(ix < size());
 	//std::swap(at(ix), back()); pop_back();
 	erase(begin()+ix); // probably okay if empty after this call
+}
+
+void uasteroid_belt::remove_asteroid(unsigned ix) {
+
+	uasteroid_cont::remove_asteroid(ix);
+	vector<cloud_inst>::iterator i(cloud_insts.begin()), o(i);
+
+	for (; i != cloud_insts.end(); ++i) {
+		if (i->asteroid_id == ix) continue; // remove this cloud -- simple, but not the greatest solution
+		if (i->asteroid_id > ix) {--i->asteroid_id;} // update ix
+		*o++ = *i;
+	}
+	cloud_insts.erase(o, cloud_insts.end());
 }
 
 

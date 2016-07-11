@@ -66,7 +66,7 @@ protected:
 	pt_line_drawer pld; // for drawing
 
 	virtual void gen_asteroid_placements(bool is_ice) = 0;
-	void remove_asteroid(unsigned ix);
+	virtual void remove_asteroid(unsigned ix);
 	void upload_shader_casters(shader_t &s) const;
 
 public:
@@ -97,9 +97,14 @@ public:
 class uasteroid_belt : public uasteroid_cont {
 
 protected:
+	struct cloud_inst {
+		unsigned asteroid_id, cloud_id;
+		cloud_inst(unsigned aid=0, unsigned cid=0) : asteroid_id(aid), cloud_id(cid) {}
+	};
 	vector3d orbital_plane_normal, scale;
 	float max_asteroid_radius, inner_radius, outer_radius;
-	vector<asteroid_belt_cloud> clouds;
+	vector<asteroid_belt_cloud> cloud_models;
+	vector<cloud_inst> cloud_insts;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
 	void xform_from_local_torus_coord_space(point &pt) const;
@@ -111,6 +116,7 @@ public:
 	virtual bool is_planet_ab() const {return 0;}
 	virtual void gen_asteroids(bool is_ice);
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
+	virtual void remove_asteroid(unsigned ix);
 	bool line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int=nullptr) const;
 	bool sphere_might_intersect(point const &sc, float sr) const;
 	float get_dist_to_boundary(point const &pt) const;
