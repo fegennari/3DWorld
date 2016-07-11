@@ -15,10 +15,10 @@ struct asteroid_belt_cloud : public volume_part_cloud {
 	point pos;
 	float radius;
 
-	void gen(rand_gen_t &rgen, point const &pos_, float def_radius);
-	static void pre_draw(vpc_shader_t &s);
+	void gen(rand_gen_t &rgen, float def_radius);
+	static void pre_draw(vpc_shader_t &s, float noise_scale);
 	static void post_draw(vpc_shader_t &s);
-	void draw(vpc_shader_t &s, point_d const &pos_) const;
+	void draw(vpc_shader_t &s, point_d const &pos_, bool planet_ab) const;
 };
 
 
@@ -108,6 +108,7 @@ protected:
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
 	  orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0), max_asteroid_radius(0.0), scale(scale_) {}
+	virtual bool is_planet_ab() const {return 0;}
 	virtual void gen_asteroids(bool is_ice);
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
 	bool line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int=nullptr) const;
@@ -146,6 +147,7 @@ class uasteroid_belt_planet : public uasteroid_belt {
 
 public:
 	uasteroid_belt_planet(vector3d const &opn, uplanet *planet_) : uasteroid_belt(opn, planet_->rscale), bwidth(0.0), planet(planet_) {}
+	virtual bool is_planet_ab() const {return 1;}
 	void init_rings(point const &pos);
 	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
 };

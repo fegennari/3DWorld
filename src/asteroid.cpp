@@ -717,14 +717,14 @@ bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shad
 }
 
 
-void asteroid_belt_cloud::gen(rand_gen_t &rgen, point const &pos_, float def_radius) {
-	pos    = pos_ + rgen.signed_rand_vector(def_radius);
+void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
+	pos    = rgen.signed_rand_vector(0.75*def_radius); // add some random jitter in position
 	radius = def_radius*rgen.rand_uniform(0.5, 1.0);
 	gen_pts(radius);
 }
-/*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s) {
+/*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s, float noise_scale) {
 	shader_setup(s, 1, 0, -0.12, -0.3); // grayscale, not ridged, with custom alpha/dist bias
-	s.add_uniform_float("noise_scale", 20.0);
+	s.add_uniform_float("noise_scale", noise_scale);
 	s.set_uniform_vector3d(s.rs_loc, vector3d(1.0, 1.0, 1.0));
 	s.set_uniform_color(s.c1i_loc, LT_GRAY); // inner color
 	s.set_uniform_color(s.c1o_loc, LT_GRAY); // outer color
@@ -738,16 +738,16 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, point const &pos_, float def_rad
 	disable_blend();
 	s.end_shader();
 }
-void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_) const {
+void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, bool planet_ab) const {
 	point_d const afpos(pos_ + pos);
 	vector3d const view_dir(get_camera_pos() - afpos);
-	float const view_dist(view_dir.mag()), max_dist(60.0*radius);
+	float const view_dist(view_dir.mag()), max_dist(64.0*radius);
 	if (view_dist >= max_dist) return; // too distant to draw
 	if (!camera_pdu.sphere_visible_test(afpos, radius)) return; // VFC
 	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.02*(1.0 - val*val));
 	s.set_uniform_float(s.rad_loc, radius);
 	s.set_uniform_float(s.as_loc,  alpha);
-	s.set_uniform_float(s.off_loc, (pos.x + 4.0E-6*tfticks)); // used as a hash
+	s.set_uniform_float(s.off_loc, (pos.x + (planet_ab ? 0.1 : 1.0)*4.0E-6*tfticks)); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, view_dir/view_dist); // local object space
 	fgPushMatrix();
 	global_translate(afpos);
@@ -761,8 +761,8 @@ void uasteroid_belt::gen_asteroids(bool is_ice) {
 	uasteroid_cont::gen_asteroids(is_ice);
 	clouds.resize(size());
 	rand_gen_t rgen;
-	float const def_cloud_radius(0.01*radius);
-	for (unsigned i = 0; i < clouds.size(); ++i) {clouds[i].gen(rgen, operator[](i).pos, def_cloud_radius);}
+	float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
+	for (unsigned i = 0; i < clouds.size(); ++i) {clouds[i].gen(rgen, def_cloud_radius);}
 }
 
 void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
@@ -824,11 +824,13 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		glCullFace(GL_BACK);
 		shader.end_shader();
 	}
-	if (draw_dust && world_mode == WMODE_UNIVERSE && !clouds.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
+	if (/*draw_dust &&*/ world_mode == WMODE_UNIVERSE && !clouds.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
+		assert(size() == clouds.size());
+		bool const planet_ab(is_planet_ab());
 		vpc_shader_t s;
-		asteroid_belt_cloud::pre_draw(s);
+		asteroid_belt_cloud::pre_draw(s, (planet_ab ? 2000.0 : 20.0)*radius);
 		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
-		for (auto i = clouds.begin(); i != clouds.end(); ++i) {i->draw(s, pos_);}
+		for (unsigned i = 0; i < size(); ++i) {clouds[i].draw(s, (pos_ + operator[](i).pos), planet_ab);} // clouds move with asteroids
 		asteroid_belt_cloud::post_draw(s);
 	}
 	disable_blend();
