@@ -743,8 +743,9 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, bool planet
 	vector3d const view_dir(get_camera_pos() - afpos);
 	float const view_dist(view_dir.mag()), max_dist(64.0*radius);
 	if (view_dist >= max_dist) return; // too distant to draw
-	if (!camera_pdu.sphere_visible_test(afpos, radius)) return; // VFC
 	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.02*(1.0 - val*val));
+	if (alpha < 1.0/255.0) return; // too transparent to draw
+	if (!camera_pdu.sphere_visible_test(afpos, radius)) return; // VFC
 	s.set_uniform_float(s.rad_loc, radius);
 	s.set_uniform_float(s.as_loc,  alpha);
 	s.set_uniform_float(s.off_loc, (pos.x + (planet_ab ? 0.1 : 1.0)*4.0E-6*tfticks)); // used as a hash
