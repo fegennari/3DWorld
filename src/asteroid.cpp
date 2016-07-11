@@ -726,11 +726,14 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, point const &pos_, float def_rad
 	shader_setup(s, 1, 0, -0.12, -0.3); // grayscale, not ridged, with custom alpha/dist bias
 	s.add_uniform_float("noise_scale", 20.0);
 	s.set_uniform_vector3d(s.rs_loc, vector3d(1.0, 1.0, 1.0));
+	s.set_uniform_color(s.c1i_loc, LT_GRAY); // inner color
+	s.set_uniform_color(s.c1o_loc, LT_GRAY); // outer color
 	s.set_cur_color(WHITE); // unnecessary?
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
 }
 /*static*/ void asteroid_belt_cloud::post_draw(vpc_shader_t &s) {
+	s.set_uniform_float(s.as_loc, 1.0); // restore default value
 	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.end_shader();
@@ -742,9 +745,8 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_) const {
 	if (view_dist >= max_dist) return; // too distant to draw
 	if (!camera_pdu.sphere_visible_test(afpos, radius)) return; // VFC
 	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.02*(1.0 - val*val));
-	s.set_uniform_color(s.c1i_loc, colorRGBA(LT_GRAY, alpha)); // inner color
-	s.set_uniform_color(s.c1o_loc, colorRGBA(LT_GRAY, alpha)); // outer color
 	s.set_uniform_float(s.rad_loc, radius);
+	s.set_uniform_float(s.as_loc,  alpha);
 	s.set_uniform_float(s.off_loc, (pos.x + 4.0E-6*tfticks)); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, view_dir/view_dist); // local object space
 	fgPushMatrix();
@@ -822,7 +824,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		glCullFace(GL_BACK);
 		shader.end_shader();
 	}
-	if ((display_mode & 0x0100) == 0) { // draw volumetric fog clouds
+	if (draw_dust && world_mode == WMODE_UNIVERSE && !clouds.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
 		vpc_shader_t s;
 		asteroid_belt_cloud::pre_draw(s);
 		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending

@@ -4,6 +4,7 @@ uniform vec4 color1i, color2i, color3i, color1o, color2o, color3o;
 uniform vec3 view_dir;
 uniform float radius = 1.0;
 uniform float offset = 0.0;
+uniform float alpha_scale= 1.0;
 uniform float alpha_bias = -0.4; // intended to be changed for grayscale mode
 uniform float dist_bias  = 0.0;
 uniform vec3 rscale      = vec3(1.0);
@@ -11,8 +12,8 @@ uniform vec4 color_mult  = vec4(1.0);
 in vec3 normal, vertex; // local object space
 
 // Note: the nebula center is always assumed to be at 0,0,0 in local object space
-void main()
-{
+void main() {
+
 	vec4 color = color1o;
 
 	if (!line_mode) {
@@ -45,6 +46,7 @@ void main()
 		}
 		color.a *= clamp((1.0 - dist), 0.0, 1.0); // attenuate near edges to create a spherical shape
 	}
+	color.a *= alpha_scale;
 	color.a *= clamp((1.5*abs(dot(normal, view_dir)) - 0.5), 0.0, 1.0); // attenuate billboards not facing the camera
 	if (color.a < 0.002) discard;
 	//color.a *= min(1.0, 10.0*length((fg_ModelViewMatrix * vec4(vertex, 1.0)).xyz)/radius); // atten when very close to a plane (based on calculated epos)

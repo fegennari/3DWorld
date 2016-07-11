@@ -491,6 +491,7 @@ void vpc_shader_t::cache_locs() {
 	rs_loc  = get_uniform_loc("rscale");
 	off_loc = get_uniform_loc("offset");
 	vd_loc  = get_uniform_loc("view_dir");
+	as_loc  = get_uniform_loc("alpha_scale");
 }
 
 
