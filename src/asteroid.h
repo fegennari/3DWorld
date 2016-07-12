@@ -79,6 +79,7 @@ public:
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
 	void begin_render(shader_t &shader, bool custom_lighting) {begin_render(shader, shadow_casters.size(), custom_lighting);}
+	bool is_shadowed(point const &cpos) const;
 
 	static void begin_render(shader_t &shader, unsigned num_shadow_casters, bool custom_lighting);
 	static void end_render(shader_t &shader);

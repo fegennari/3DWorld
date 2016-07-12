@@ -23,6 +23,7 @@ unsigned const AST_VOX_NUM_BLK  = 2; // ndiv=2x2
 unsigned const NUM_VOX_AST_LODS = 3;
 float    const AST_COLL_RAD     = 0.25; // limit collisions of large objects for accuracy (heightmap)
 float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader asteroids
+float    const AST_CLOUD_DIST_SCALE = 64.0;
 
 unsigned const DEFAULT_AST_TEX  = MOON_TEX; // ROCK_TEX or MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
@@ -776,7 +777,7 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_cloud_radius) const {
 	point_d const afpos(pos_ + def_cloud_radius*pos);
 	vector3d const view_dir(get_camera_pos() - afpos);
-	float const view_dist(view_dir.mag()), scaled_radius(def_cloud_radius*radius), max_dist(64.0*scaled_radius);
+	float const view_dist(view_dir.mag()), scaled_radius(def_cloud_radius*radius), max_dist(AST_CLOUD_DIST_SCALE*scaled_radius);
 	if (view_dist >= max_dist) return; // too distant to draw
 	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.02*(1.0 - val*val));
 	if (alpha < 1.0/255.0) return; // too transparent to draw
@@ -877,7 +878,11 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
 		for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids
 			assert(i->asteroid_id < size());
-			asteroid_model_gen.draw_cloud_model(s, i->cloud_id, (pos_ + operator[](i->asteroid_id).pos), def_cloud_radius);
+			point const cpos(pos_ + operator[](i->asteroid_id).pos);
+			if (!dist_less_than(cpos, get_camera_pos(), AST_CLOUD_DIST_SCALE*def_cloud_radius)) continue; // too distant to draw (rough test)
+			// clouds represent light reflected off dust particles; when in shadow, there is no reflected light, and the dust itself provides no significant occlusion
+			if (ENABLE_SHADOWS && has_sun && is_shadowed(cpos)) continue;
+			asteroid_model_gen.draw_cloud_model(s, i->cloud_id, cpos, def_cloud_radius);
 		}
 		asteroid_model_gen.cloud_post_draw();
 		asteroid_belt_cloud::post_draw(s);
@@ -893,7 +898,6 @@ void uasteroid_cont::init(point const &pos_, float radius_) {
 	rseed  = rand2();
 }
 
-
 void uasteroid_cont::gen_asteroids(bool is_ice) {
 
 	global_rand_gen.set_state(rseed, 123);
@@ -901,6 +905,14 @@ void uasteroid_cont::gen_asteroids(bool is_ice) {
 	clear();
 	gen_asteroid_placements(is_ice);
 	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time (probably irrelevant when instancing is enabled)
+}
+
+bool uasteroid_cont::is_shadowed(point const &cpos) const {
+
+	for (auto sc = shadow_casters.begin(); sc != shadow_casters.end(); ++sc) {
+		if (line_sphere_intersect(sun_pos_radius.pos, cpos, sc->pos, sc->radius)) return 1;
+	}
+	return 0;
 }
 
 
