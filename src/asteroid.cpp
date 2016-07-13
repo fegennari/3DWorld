@@ -778,8 +778,10 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_c
 	point_d const afpos(pos_ + def_cloud_radius*pos);
 	vector3d const view_dir(get_camera_pos() - afpos);
 	float const view_dist(view_dir.mag()), scaled_radius(def_cloud_radius*radius), max_dist(AST_CLOUD_DIST_SCALE*scaled_radius);
-	if (view_dist >= max_dist) return; // too distant to draw
-	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.025*(1.0 - val*val));
+	if (view_dist >= max_dist || view_dist <= scaled_radius) return; // too near or far to draw
+	float const dist_val(1.0 - (max_dist - view_dist)/max_dist);
+	float const atten(min((1.0f - dist_val*dist_val), sqrt((view_dist - scaled_radius)/scaled_radius))); // 2*R => 1.0; 1*R => 0.0
+	float const alpha(0.025*atten);
 	if (alpha < 1.0/255.0) return; // too transparent to draw
 	if (!camera_pdu.sphere_visible_test(afpos, scaled_radius)) return; // VFC
 	s.set_uniform_float(s.rad_loc, radius);
@@ -870,7 +872,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		glCullFace(GL_BACK);
 		shader.end_shader();
 	}
-	if (/*draw_dust &&*/ world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
+	if (world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
 		float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
 		vpc_shader_t s;
 		asteroid_belt_cloud::pre_draw(s, 0.24);
