@@ -495,12 +495,15 @@ void vpc_shader_t::cache_locs() {
 }
 
 
-/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged, float alpha_bias, float dist_bias) {
+/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged, float alpha_bias, float dist_bias, unsigned num_octaves) {
 
 	assert(noise_ncomp == 1 || noise_ncomp == 4);
+	assert(num_octaves >= 1 && num_octaves <= 9); // nonzero, single digit
 	bind_3d_texture(get_noise_tex_3d(32, noise_ncomp));
 	if (s.is_setup()) return; // nothing else to do
-	s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
+	char num_octaves_str[22] = "#define NUM_OCTAVES ?";
+	num_octaves_str[20] = char('0' + num_octaves);
+	s.set_prefix(num_octaves_str, 1); // FS
 	if (ridged) {s.set_prefix("#define RIDGED_NOISE", 1);} // FS
 	s.set_int_prefix("noise_ncomp", noise_ncomp, 1); // FS
 	s.set_prefix(make_shader_bool_prefix("line_mode", (draw_model == 1)), 1); // FS

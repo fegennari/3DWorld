@@ -759,7 +759,7 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	gen_pts(radius);
 }
 /*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s, float noise_scale) {
-	shader_setup(s, 1, 0, -0.12, -0.3); // grayscale, not ridged, with custom alpha/dist bias
+	shader_setup(s, 1, 0, -0.12, -0.3, 4); // grayscale, not ridged, with custom alpha/dist bias and 4 octaves
 	s.add_uniform_float("noise_scale", noise_scale);
 	s.set_uniform_vector3d(s.rs_loc, vector3d(1.0, 1.0, 1.0));
 	s.set_uniform_color(s.c1i_loc, LT_GRAY); // inner color
@@ -779,7 +779,7 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_c
 	vector3d const view_dir(get_camera_pos() - afpos);
 	float const view_dist(view_dir.mag()), scaled_radius(def_cloud_radius*radius), max_dist(AST_CLOUD_DIST_SCALE*scaled_radius);
 	if (view_dist >= max_dist) return; // too distant to draw
-	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.02*(1.0 - val*val));
+	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(0.025*(1.0 - val*val));
 	if (alpha < 1.0/255.0) return; // too transparent to draw
 	if (!camera_pdu.sphere_visible_test(afpos, scaled_radius)) return; // VFC
 	s.set_uniform_float(s.rad_loc, radius);
@@ -873,7 +873,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 	if (/*draw_dust &&*/ world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
 		float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
 		vpc_shader_t s;
-		asteroid_belt_cloud::pre_draw(s, 0.18);
+		asteroid_belt_cloud::pre_draw(s, 0.24);
 		asteroid_model_gen.cloud_pre_draw();
 		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
 		for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids
