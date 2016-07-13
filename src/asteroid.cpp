@@ -768,9 +768,11 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	s.set_cur_color(WHITE); // unnecessary?
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
+	set_multisample(0); // Note: doesn't seem to help
 }
 /*static*/ void asteroid_belt_cloud::post_draw(vpc_shader_t &s) {
 	s.set_uniform_float(s.as_loc, 1.0); // restore default value
+	set_multisample(1);
 	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.end_shader();

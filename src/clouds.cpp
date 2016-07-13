@@ -568,7 +568,9 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, vpc_shader
 	s.set_uniform_vector3d(s.vd_loc, (upos_point_type(camera) - pos_).get_norm()); // local object space
 	s.set_cur_color(mod_color[0]);
 	enable_blend();
+	set_multisample(0);
 	draw_quads();
+	set_multisample(1);
 	disable_blend();
 	s.disable();
 	fgPopMatrix();

@@ -2699,7 +2699,9 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 	s.set_cur_color(WHITE); // unnecessary?
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
+	set_multisample(0);
 	for (auto i = to_draw_clouds.begin(); i != to_draw_clouds.end(); ++i) {i->second->draw_tile_clouds(s, reflection_pass);}
+	set_multisample(1);
 	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.end_shader();
