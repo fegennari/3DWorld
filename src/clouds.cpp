@@ -434,17 +434,16 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 
 
 /*static*/ colorRGBA volume_part_cloud::gen_color(rand_gen_t &rgen) {
-
 	return colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
 }
 
+/*static*/ vector<volume_part_cloud::vert_type_t> volume_part_cloud::unscaled_points[2];
 
-/*static*/ vector<volume_part_cloud::vert_type_t> volume_part_cloud::unscaled_points;
-
-/*static*/ void volume_part_cloud::calc_unscaled_points() {
+/*static*/ void volume_part_cloud::calc_unscaled_points(bool simplified) {
 
 	unsigned ix(0);
-	unscaled_points.resize(4*13);
+	vector<vert_type_t> &pts(unscaled_points[simplified]);
+	pts.resize(4*(simplified ? 9 : 13));
 
 	for (int z = -1; z <= 1; ++z) {
 		for (int y = -1; y <= 1; ++y) {
@@ -452,28 +451,28 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 				if (x == 0 && y == 0 && z == 0) continue; // zero normal
 				int v(1); if (x) {v *= x;} if (y) {v *= y;} if (z) {v *= z;}
 				if (v < 0) continue; // skip mirrored normals
+				if (simplified && (x!=0) + (y!=0) + (z!=0) == 3) continue;
 				vector3d const normal(vector3d(x, y, z).get_norm());
 				vector3d vab[2];
 				get_ortho_vectors(normal, vab);
 
 				for (unsigned j = 0; j < 4; ++j) { // Note: quads will extend beyond radius, but will be rendered as alpha=0 outside radius
-					unscaled_points[ix+j].v = ((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1];
-					unscaled_points[ix+j].set_norm(normal);
+					pts[ix+j].v = ((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1];
+					pts[ix+j].set_norm(normal);
 				}
 				ix += 4;
 			}
 		}
 	}
-	assert(ix == unscaled_points.size());
+	assert(ix == pts.size());
 }
-
 
 // Note: the nebula shader generally requires the part cloud origin to be at (0,0,0), so we wouldn't want to add a pos here;
 // however, we allow it (but default it to (0,0,0)), since the part cloud could be drawn using a different shader
-void volume_part_cloud::gen_pts(vector3d const &size, point const &pos) {
+void volume_part_cloud::gen_pts(vector3d const &size, point const &pos, bool simplified) {
 
-	if (unscaled_points.empty()) {calc_unscaled_points();}
-	points = unscaled_points; // deep copy
+	if (unscaled_points[simplified].empty()) {calc_unscaled_points(simplified);}
+	points = unscaled_points[simplified]; // deep copy
 	for (unsigned i = 0; i < points.size(); ++i) {points[i].v *= size; points[i].v += pos;}
 }
 

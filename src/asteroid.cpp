@@ -17,6 +17,7 @@
 bool     const ENABLE_AF_INSTS  = 1; // more efficient on large asteroid fields, but less efficient when close/sparse (due to overhead), and normals are incorrect
 bool     const ENABLE_CRATERS   = 1;
 bool     const ENABLE_SHADOWS   = 1;
+bool     const SIMPL_AST_CLOUDS = 1; // faster but lower quality
 unsigned const ASTEROID_NDIV    = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ  = 64; // for voxel model
 unsigned const AST_VOX_NUM_BLK  = 2; // ndiv=2x2
@@ -756,7 +757,7 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	vbo_pos = 0; // will be set later
 	pos     = rgen.signed_rand_vector(0.75*def_radius); // add some random jitter in position
 	radius  = def_radius*rgen.rand_uniform(0.5, 1.0);
-	gen_pts(radius);
+	gen_pts(radius, all_zeros, SIMPL_AST_CLOUDS);
 }
 /*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s, float noise_scale) {
 	shader_setup(s, 1, 0, -0.12, -0.3, 4); // grayscale, not ridged, with custom alpha/dist bias and 4 octaves
@@ -781,7 +782,7 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_c
 	if (view_dist >= max_dist || view_dist <= scaled_radius) return; // too near or far to draw
 	float const dist_val(1.0 - (max_dist - view_dist)/max_dist);
 	float const atten(min((1.0f - dist_val*dist_val), sqrt((view_dist - scaled_radius)/scaled_radius))); // 2*R => 1.0; 1*R => 0.0
-	float const alpha(0.025*atten);
+	float const alpha((SIMPL_AST_CLOUDS ? 0.035 : 0.025)*atten);
 	if (alpha < 1.0/255.0) return; // too transparent to draw
 	if (!camera_pdu.sphere_visible_test(afpos, scaled_radius)) return; // VFC
 	s.set_uniform_float(s.rad_loc, radius);

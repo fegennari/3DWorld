@@ -1337,15 +1337,15 @@ public:
 	typedef vert_norm_comp vert_type_t;
 
 protected:
-	static vector<vert_type_t> unscaled_points;
+	static vector<vert_type_t> unscaled_points[2];
 	vector<vert_type_t> points;
 
 public:
 	static colorRGBA gen_color(rand_gen_t &rgen);
-	static void calc_unscaled_points();
+	static void calc_unscaled_points(bool simplified);
 	vector<vert_type_t> const &get_points() const {return points;}
-	void gen_pts(vector3d const &size, point const &pos=all_zeros);
-	void gen_pts(float radius, point const &pos=all_zeros) {gen_pts(vector3d(radius, radius, radius), pos);}
+	void gen_pts(vector3d const &size, point const &pos=all_zeros, bool simplified=0);
+	void gen_pts(float radius, point const &pos=all_zeros, bool simplified=0) {gen_pts(vector3d(radius, radius, radius), pos, simplified);}
 	static void shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged=1, float alpha_bias=-0.4, float dist_bias=0.0, unsigned num_octaves=5);
 	void draw_quads(bool depth_map_already_disabled=0) const;
 	bool enabled() const {return !points.empty();}
