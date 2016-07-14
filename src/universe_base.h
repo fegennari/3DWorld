@@ -105,7 +105,7 @@ void offset_pos_inv(point &pos);
 void reset_player_universe();
 bool get_universe_sun_pos(point const &pos, point &spos);
 bool has_sun_lighting(point const &pos);
-int  set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
+int  set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point *sun_pos, colorRGBA *sun_color,
 					uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s, shader_t *shader);
 uobject *line_intersect_universe(point const &start, vector3d const &dir, float length, float line_radius, float &dist);
 

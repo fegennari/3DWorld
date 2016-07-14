@@ -893,9 +893,8 @@ void draw_univ_objects() {
 	enable_blend(); // redundant?
 
 	if (!particle_pld.empty()) {
-		point sun_pos; // unused
 		uobject const *sobj(NULL); // unused
-		set_uobj_color(camera, 0.0, 0, 1, sun_pos, sobj, 2.0, 2.0, NULL); // increased ambient scale
+		set_uobj_color(camera, 0.0, 0, 1, nullptr, nullptr, sobj, 2.0, 2.0, NULL); // increased ambient scale
 		s.enable();
 		particle_pld.draw_and_clear();
 	}

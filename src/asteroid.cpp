@@ -744,11 +744,10 @@ void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_
 }
 
 
-bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shader) {
+bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shader, colorRGBA *sun_color=nullptr) {
 
-	point sun_pos; // unused
 	uobject const *sobj(NULL); // unused
-	int const ret(set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader));
+	int const ret(set_uobj_color(afpos, radius, 0, 1, nullptr, sun_color, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader));
 	return (ret >= 0);
 }
 
@@ -759,13 +758,13 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	radius  = def_radius*rgen.rand_uniform(0.5, 1.0);
 	gen_pts(radius, all_zeros, SIMPL_AST_CLOUDS);
 }
-/*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s, float noise_scale) {
+/*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s, colorRGBA const &color, float noise_scale) {
 	shader_setup(s, 1, 0, -0.12, -0.3, 4); // grayscale, not ridged, with custom alpha/dist bias and 4 octaves
 	s.add_uniform_float("noise_scale", noise_scale);
 	s.set_uniform_vector3d(s.rs_loc, vector3d(1.0, 1.0, 1.0));
-	s.set_uniform_color(s.c1i_loc, LT_GRAY); // inner color
-	s.set_uniform_color(s.c1o_loc, LT_GRAY); // outer color
-	s.set_cur_color(WHITE); // unnecessary?
+	s.set_uniform_color(s.c1i_loc, color); // inner color
+	s.set_uniform_color(s.c1o_loc, color); // outer color
+	s.set_cur_color(color); // unnecessary?
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
 	set_multisample(0); // Note: doesn't seem to help
@@ -819,7 +818,8 @@ void uasteroid_belt::gen_asteroids(bool is_ice) {
 void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
 
 	point_d const afpos(pos_ + pos);
-	bool const has_sun(set_af_color_from_system(afpos, radius, NULL));
+	colorRGBA sun_color(WHITE);
+	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, &sun_color));
 	int const tid(is_ice ? MARBLE_TEX : DEFAULT_AST_TEX);
 	colorRGBA const base_color(is_ice ? ICE_ROCK_COLOR*0.7 : WHITE);
 	enable_blend(); // disable multisample?
@@ -878,7 +878,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 	if (world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
 		float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
 		vpc_shader_t s;
-		asteroid_belt_cloud::pre_draw(s, 0.24);
+		asteroid_belt_cloud::pre_draw(s, sun_color*0.75, 0.24);
 		asteroid_model_gen.cloud_pre_draw();
 		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
 		for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids

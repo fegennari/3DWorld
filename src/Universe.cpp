@@ -636,7 +636,7 @@ bool has_sun_lighting(point const &pos) {
 
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
-int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
+int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point *sun_pos, colorRGBA *sun_color,
 				   uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s, shader_t *shader) // based on current star and current galaxy
 {
 	assert(!is_nan(pos));
@@ -687,9 +687,10 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 		return -1;
 	}
 	point const spos(result.get_ucell().rel_center + sun.pos);
-	sun_pos = sun.pos; // spos?
+	if (sun_pos) {*sun_pos = sun.pos;} // spos?
 	colorRGBA color(sun.get_light_color());
 	if (blend) {atten_color(color, pos2, sun.pos, (sol->radius + MAX_PLANET_EXTENT), expand);}
+	if (sun_color) {*sun_color = color;}
 	
 	if (sun.is_ok() && (sobj != NULL || is_shadowed(pos2, radius, 1, *sol, sobj))) { // check for planet/moon shadowing
 		++shadow_val;
