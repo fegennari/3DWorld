@@ -833,7 +833,9 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		shader.add_uniform_float("alpha_scale", 2.0);
 		shader.add_uniform_color("color", base_color.modulate_with(texture_color(tid)));
 		if (!has_sun) {clear_colors_and_disable_light(0, &shader);} // if there's no sun, make sure this shader knows it
+		set_multisample(0); // not faster, but looks better disabled
 		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale, density); // full/sparse
+		set_multisample(1); // reset
 		shader.end_shader();
 	}
 	if (AB_NUM_PARTS_S > 0 && !no_asteroid_dust) { // local small asteroid bits (spheres)
