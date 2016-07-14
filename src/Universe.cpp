@@ -633,6 +633,8 @@ bool has_sun_lighting(point const &pos) {
 	return (universe.get_close_system(pos, result, 2.0) != 0);
 }
 
+float get_univ_ambient_scale() {return universe_ambient_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA;}
+
 
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
@@ -690,7 +692,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	if (sun_pos) {*sun_pos = sun.pos;} // spos?
 	colorRGBA color(sun.get_light_color());
 	if (blend) {atten_color(color, pos2, sun.pos, (sol->radius + MAX_PLANET_EXTENT), expand);}
-	if (sun_color) {*sun_color = color;}
+	if (sun_color) {*sun_color = blend_color(WHITE, color, (WHITE_COMP_D + get_univ_ambient_scale()), 0);}
 	
 	if (sun.is_ok() && (sobj != NULL || is_shadowed(pos2, radius, 1, *sol, sobj))) { // check for planet/moon shadowing
 		++shadow_val;
@@ -3187,7 +3189,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	colorRGBA uambient, udiffuse;
 	int const light(0);
 	point const lpos(make_pt_global(pos));
-	float const ambient_scale(a_scale*universe_ambient_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
+	float const ambient_scale(a_scale*get_univ_ambient_scale());
 
 	// set color
 	for (unsigned i = 0; i < 3; ++i) {
