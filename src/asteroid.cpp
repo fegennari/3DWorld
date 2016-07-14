@@ -1266,8 +1266,10 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	s.add_uniform_color("color", (is_ice ? ICE_ROCK_COLOR : WHITE));
 	s.add_uniform_float("crater_scale", ((has_sun && !is_ice) ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
+	set_multisample(0); // disable AA for a big framerate increase (why?)
 	for (const_iterator i = begin(); i != end(); ++i) {i->draw(pos_, camera, s, pld);} // move in front of far clipping plane?
 	asteroid_model_gen.final_draw(loc, force_tid_to); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
+	set_multisample(1); // reset
 	if (is_ice) {s.clear_specular();} // reset specular
 
 	if (!pld.empty()) {
