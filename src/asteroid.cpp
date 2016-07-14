@@ -877,7 +877,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		glCullFace(GL_BACK);
 		shader.end_shader();
 	}
-	if (world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) == 0) { // draw volumetric fog clouds
+	if (world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) != 0) { // draw volumetric fog clouds
 		float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
 		vpc_shader_t s;
 		asteroid_belt_cloud::pre_draw(s, sun_color*0.75, 0.24);
