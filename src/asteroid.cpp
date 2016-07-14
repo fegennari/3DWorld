@@ -877,22 +877,25 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		glCullFace(GL_BACK);
 		shader.end_shader();
 	}
-	if (world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) != 0) { // draw volumetric fog clouds
+	if (world_mode == WMODE_UNIVERSE && !cloud_insts.empty() && (display_mode & 0x0100) != 0) { // draw volumetric fog/dust clouds
 		float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
-		vpc_shader_t s;
-		asteroid_belt_cloud::pre_draw(s, sun_color*0.75, 0.24);
-		asteroid_model_gen.cloud_pre_draw();
-		// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
-		for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids
-			assert(i->asteroid_id < size());
-			point const cpos(pos_ + operator[](i->asteroid_id).pos);
-			if (!dist_less_than(cpos, get_camera_pos(), AST_CLOUD_DIST_SCALE*def_cloud_radius)) continue; // too distant to draw (rough test)
-			// clouds represent light reflected off dust particles; when in shadow, there is no reflected light, and the dust itself provides no significant occlusion
-			if (ENABLE_SHADOWS && has_sun && is_shadowed(cpos)) continue;
-			asteroid_model_gen.draw_cloud_model(s, i->cloud_id, cpos, def_cloud_radius);
+		
+		if (get_dist_to_boundary(camera) < 1.25*AST_CLOUD_DIST_SCALE*def_cloud_radius) { // distance culling
+			vpc_shader_t s;
+			asteroid_belt_cloud::pre_draw(s, sun_color*0.75, 0.24);
+			asteroid_model_gen.cloud_pre_draw();
+			// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
+			for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids
+				assert(i->asteroid_id < size());
+				point const cpos(pos_ + operator[](i->asteroid_id).pos);
+				if (!dist_less_than(cpos, get_camera_pos(), AST_CLOUD_DIST_SCALE*def_cloud_radius)) continue; // too distant to draw (rough test)
+				// clouds represent light reflected off dust particles; when in shadow, there is no reflected light, and the dust itself provides no significant occlusion
+				if (ENABLE_SHADOWS && has_sun && is_shadowed(cpos)) continue;
+				asteroid_model_gen.draw_cloud_model(s, i->cloud_id, cpos, def_cloud_radius);
+			}
+			asteroid_model_gen.cloud_post_draw();
+			asteroid_belt_cloud::post_draw(s);
 		}
-		asteroid_model_gen.cloud_post_draw();
-		asteroid_belt_cloud::post_draw(s);
 	}
 	disable_blend();
 }
