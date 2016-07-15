@@ -53,5 +53,10 @@ void main() {
 	color.a *= ascale;
 	if (color.a < 0.002) discard;
 	//color.a *= min(1.0, 10.0*length((fg_ModelViewMatrix * vec4(vertex, 1.0)).xyz)/radius); // atten when very close to a plane (based on calculated epos)
+
+#ifdef ENABLE_LIGHTING
+	vec4 epos  = fg_ModelViewMatrix * vec4(vertex, 1.0);
+	color.rgb *= (fg_LightSource[0].diffuse.rgb + fg_LightSource[1].ambient.rgb) * calc_light_atten(epos, 0); // sun_diffuse + galaxy_ambient
+#endif // ENABLE_LIGHTING
 	fg_FragColor = color_mult * color;
 }

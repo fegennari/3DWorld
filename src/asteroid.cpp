@@ -759,7 +759,7 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	gen_pts(radius, all_zeros, SIMPL_AST_CLOUDS);
 }
 /*static*/ void asteroid_belt_cloud::pre_draw(vpc_shader_t &s, colorRGBA const &color, float noise_scale) {
-	shader_setup(s, 1, 0, -0.12, -0.3, 4); // grayscale, not ridged, with custom alpha/dist bias and 4 octaves
+	shader_setup(s, 1, 0, -0.12, -0.3, 4, 1); // grayscale, not ridged, with custom alpha/dist bias and 4 octaves and lighting
 	s.add_uniform_float("noise_scale", noise_scale);
 	s.set_uniform_vector3d(s.rs_loc, vector3d(1.0, 1.0, 1.0));
 	s.set_uniform_color(s.c1i_loc, color); // inner color
@@ -818,8 +818,7 @@ void uasteroid_belt::gen_asteroids(bool is_ice) {
 void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
 
 	point_d const afpos(pos_ + pos);
-	colorRGBA sun_color(WHITE);
-	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, &sun_color));
+	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, nullptr));
 	int const tid(is_ice ? MARBLE_TEX : DEFAULT_AST_TEX);
 	colorRGBA const base_color(is_ice ? ICE_ROCK_COLOR*0.7 : WHITE);
 	enable_blend(); // disable multisample?
@@ -882,7 +881,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		
 		if (get_dist_to_boundary(camera) < 1.25*AST_CLOUD_DIST_SCALE*def_cloud_radius) { // distance culling
 			vpc_shader_t s;
-			asteroid_belt_cloud::pre_draw(s, sun_color*0.75, 0.24);
+			asteroid_belt_cloud::pre_draw(s, WHITE, 0.24);
 			asteroid_model_gen.cloud_pre_draw();
 			// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
 			for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids

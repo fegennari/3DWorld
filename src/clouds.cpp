@@ -494,7 +494,7 @@ void vpc_shader_t::cache_locs() {
 }
 
 
-/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged, float alpha_bias, float dist_bias, unsigned num_octaves) {
+/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged, float alpha_bias, float dist_bias, unsigned num_octaves, bool enable_lighting) {
 
 	assert(noise_ncomp == 1 || noise_ncomp == 4);
 	assert(num_octaves >= 1 && num_octaves <= 9); // nonzero, single digit
@@ -504,10 +504,11 @@ void vpc_shader_t::cache_locs() {
 	num_octaves_str[20] = char('0' + num_octaves);
 	s.set_prefix(num_octaves_str, 1); // FS
 	if (ridged) {s.set_prefix("#define RIDGED_NOISE", 1);} // FS
+	if (enable_lighting) {s.set_prefix("#define ENABLE_LIGHTING", 1);} // FS
 	s.set_int_prefix("noise_ncomp", noise_ncomp, 1); // FS
 	s.set_prefix(make_shader_bool_prefix("line_mode", (draw_model == 1)), 1); // FS
 	s.set_vert_shader("nebula");
-	s.set_frag_shader("nebula");
+	s.set_frag_shader(enable_lighting ? "ads_lighting.part*+nebula" : "nebula");
 	s.begin_shader();
 	s.add_uniform_int("noise_tex", 0);
 	s.cache_locs();
