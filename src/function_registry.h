@@ -701,6 +701,7 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c=WHITE, vector3d const &d=plus_z, float bw=1.0, point *line_end_pos=nullptr, bool is_static_pos=0);
 colorRGBA gen_fire_color(float &cval, float &inten, float rate=1.0);
 void clear_dynamic_lights();
+point get_camera_light_pos();
 void add_camera_flashlight();
 void add_camera_candlelight();
 void add_dynamic_lights_ground();
