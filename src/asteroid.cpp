@@ -744,10 +744,10 @@ void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_
 }
 
 
-bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shader, colorRGBA *sun_color=nullptr) {
+bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shader, point *sun_pos=nullptr, colorRGBA *sun_color=nullptr) {
 
 	uobject const *sobj(NULL); // unused
-	int const ret(set_uobj_color(afpos, radius, 0, 1, nullptr, sun_color, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader));
+	int const ret(set_uobj_color(afpos, radius, 0, 1, sun_pos, sun_color, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader));
 	return (ret >= 0);
 }
 
