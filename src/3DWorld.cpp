@@ -160,10 +160,10 @@ void free_animal_context();
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 
 
-bool check_gl_error(unsigned loc_id) {
+bool get_gl_error(unsigned loc_id) {
 
 	bool had_error(0);
-#ifdef _DEBUG
+
 	while (1) {
 		int const error(glGetError());
 		if (!error) break;
@@ -172,6 +172,13 @@ bool check_gl_error(unsigned loc_id) {
 		if (error_str) {cout << error_str << "." << endl;} else {cout << "<NULL>." << endl;}
 		had_error = 1;
 	}
+	return had_error;
+}
+bool check_gl_error(unsigned loc_id) {
+
+	bool had_error(0);
+#ifdef _DEBUG
+	had_error = get_gl_error(loc_id);
 	assert(!had_error); // currently fatal
 #endif
 	return had_error;

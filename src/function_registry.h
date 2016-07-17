@@ -9,6 +9,7 @@
 
 
 // function prototypes - main (3DWorld.cpp, etc.)
+bool get_gl_error(unsigned loc_id=0);
 bool check_gl_error(unsigned loc_id);
 void enable_blend();
 void disable_blend();
