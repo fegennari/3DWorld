@@ -124,7 +124,7 @@ void main() {
 	
 #ifdef TESS_MODE
 	float subsurf_scatter = max(0.55*(1.0 - cos_view_angle)*wave_dz, 0.0);
-	green_scale += 0.2*pow(subsurf_scatter, 4.0);
+	green_scale += 0.2*pow(subsurf_scatter, 4.0)*(reflections ? 1.0 : 0.5);
 #endif
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
