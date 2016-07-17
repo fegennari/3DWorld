@@ -103,9 +103,13 @@ protected:
 		unsigned asteroid_id, cloud_id;
 		cloud_inst(unsigned aid=0, unsigned cid=0) : asteroid_id(aid), cloud_id(cid) {}
 	};
+	struct cloud_dist_cmp {
+		bool operator()(pair<float, cloud_inst> const &a, pair<float, cloud_inst> const &b) const {return (a.first < b.first);}
+	};
 	vector3d orbital_plane_normal, scale;
 	float max_asteroid_radius, inner_radius, outer_radius;
 	vector<cloud_inst> cloud_insts;
+	mutable vector<pair<float, cloud_inst>> clouds_to_draw;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
 	void xform_from_local_torus_coord_space(point &pt) const;

@@ -25,6 +25,7 @@ unsigned const NUM_VOX_AST_LODS = 3;
 float    const AST_COLL_RAD     = 0.25; // limit collisions of large objects for accuracy (heightmap)
 float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader asteroids
 float    const AST_CLOUD_DIST_SCALE = 64.0;
+float    const AST_CLOUD_POS_RAND   = 0.75;
 
 unsigned const DEFAULT_AST_TEX  = MOON_TEX; // ROCK_TEX or MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
@@ -754,7 +755,7 @@ bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shad
 
 void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	vbo_pos = 0; // will be set later
-	pos     = rgen.signed_rand_vector(0.75*def_radius); // add some random jitter in position
+	pos     = rgen.signed_rand_vector(AST_CLOUD_POS_RAND*def_radius); // add some random jitter in position
 	radius  = def_radius*rgen.rand_uniform(0.5, 1.0);
 	gen_pts(radius, all_zeros, SIMPL_AST_CLOUDS);
 }
@@ -785,7 +786,7 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_c
 	float const atten(min((1.0f - dist_val*dist_val), sqrt((view_dist - scaled_radius)/scaled_radius))); // 2*R => 1.0; 1*R => 0.0
 	float const alpha((SIMPL_AST_CLOUDS ? 0.035 : 0.025)*atten);
 	if (alpha < 1.0/255.0) return; // too transparent to draw
-	if (!camera_pdu.sphere_visible_test(afpos, scaled_radius)) return; // VFC
+	if (!player_pdu.sphere_visible_test(afpos, scaled_radius)) return; // VFC
 	s.set_uniform_float(s.rad_loc, radius);
 	s.set_uniform_float(s.as_loc,  alpha);
 	s.set_uniform_float(s.off_loc, (pos.x + 1.0E-4*tfticks)); // used as a hash
@@ -883,14 +884,24 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 			vpc_shader_t s;
 			asteroid_belt_cloud::pre_draw(s, WHITE, 0.24);
 			asteroid_model_gen.cloud_pre_draw();
-			// Note: not depth sorted, seems expensive and unnecessary; could use additive blending
+			clouds_to_draw.clear();
+			float const r(AST_CLOUD_DIST_SCALE*def_cloud_radius), rsq(r*r), vfc_rad((1.0 + AST_CLOUD_POS_RAND)*def_cloud_radius);
+
 			for (auto i = cloud_insts.begin(); i != cloud_insts.end(); ++i) { // clouds move with asteroids
 				assert(i->asteroid_id < size());
 				point const cpos(pos_ + operator[](i->asteroid_id).pos);
-				if (!dist_less_than(cpos, get_camera_pos(), AST_CLOUD_DIST_SCALE*def_cloud_radius)) continue; // too distant to draw (rough test)
+				float const dist_sq(p2p_dist_sq(cpos, get_camera_pos()));
+				if (dist_sq > rsq) continue; // too distant to draw (rough test)
+				if (!player_pdu.sphere_visible_test(cpos, vfc_rad)) continue; // approximate VFC
 				// clouds represent light reflected off dust particles; when in shadow, there is no reflected light, and the dust itself provides no significant occlusion
 				if (ENABLE_SHADOWS && has_sun && is_shadowed(cpos)) continue;
-				asteroid_model_gen.draw_cloud_model(s, i->cloud_id, cpos, def_cloud_radius);
+				clouds_to_draw.push_back(make_pair(-dist_sq, *i));
+			}
+			sort(clouds_to_draw.begin(), clouds_to_draw.end(), cloud_dist_cmp()); // back-to-front sort; doesn't seem to really be needed, but also adds minimal time overhead
+
+			for (auto i = clouds_to_draw.begin(); i != clouds_to_draw.end(); ++i) {
+				point const cpos(pos_ + operator[](i->second.asteroid_id).pos);
+				asteroid_model_gen.draw_cloud_model(s, i->second.cloud_id, cpos, def_cloud_radius);
 			}
 			asteroid_model_gen.cloud_post_draw();
 			asteroid_belt_cloud::post_draw(s);
