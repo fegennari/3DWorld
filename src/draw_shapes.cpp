@@ -130,14 +130,15 @@ void coll_obj::setup_cube_face_texgen(texgen_params_t &tp, unsigned tdim0, unsig
 		unsigned const tdim(e ? tdim1 : tdim0);
 		bool const s_or_t(cp.swap_txy() ^ (e != 0));
 		float *tg(tp.st[s_or_t]);
+		float const t_off(e ? cp.tdy : cp.tdx);
 
 		if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
 			tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
-			tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim];
+			tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim] + t_off;
 		}
 		else {
 			tg[tdim] = tscale[e];
-			tg[3]    = texture_offset[tdim]*tscale[e];
+			tg[3]    = texture_offset[tdim]*tscale[e] + t_off;
 		}
 	}
 }

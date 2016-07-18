@@ -5,16 +5,15 @@
 # add basement door
 K 0.59 2.65 -0.28  0.06 0.0 0.9 1 1 # player manual toggle trigger
 K 0.59 2.85 -0.28  0.06 0.0 0.9 1 1 # player manual toggle trigger
-y 100.0 Y 0.1 0.0
+y 100.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B 0.59 0.60  2.64 2.66  -0.29 -0.27 # inside  button
 B 0.59 0.60  2.84 2.86  -0.29 -0.27 # outside button
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
 Q 1 0.5 0.5 0.1 0.1 0.4 0.0   0.6 2.76 -0.08  -1 0 0  0 # platform
 
-X normal_maps/bcube_tactical_NRM.jpg 0 1 # normal map (swap binorm sign)
-l 0.6 1.0 1.0 1.0 1.0 60 1 # borg cube
-y 0 # force texture to fit to the cube
+y 5.0 Y 0.38 -0.3
+l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 B 0.599 1.0  2.72 2.78  -0.4  -0.12
 X none # disable normal map
 Q 0
@@ -51,7 +50,7 @@ S -6.55 3.5 -0.105  0.03
 S -6.55 4.0 -0.105  0.03
 a 0 # non-destroyable
 K -6.3 2.59 -0.29  0.06 0.0 60.0 1 1 # player manual toggle trigger, off after 60s
-y 100.0 Y 0.1 0.0
+y 100.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B -6.31 -6.29  2.59 2.60  -0.30 -0.28
 L 0.0 0.7  -6.55 3.0 -0.175  0.6 0.6 1.0 1.0  0 0 -1 # samples face down
@@ -106,7 +105,7 @@ indir_dlight_group none
 
 # crusher platform
 K -6.3 -0.849 -0.29  0.06 0.0 0.0 1 1 # player manual toggle trigger
-y 100.0 Y 0.1 0.0
+y 100.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B -6.31 -6.29  -0.85 -0.849  -0.30 -0.28
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
