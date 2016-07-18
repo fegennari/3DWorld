@@ -42,6 +42,7 @@ coll_obj_group fixed_cobjs;
 vector<portal> portals;
 vector<teleporter> teleporters;
 vector<obj_draw_group> obj_draw_groups;
+vector<sphere_t> cur_frame_explosions;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc, reflect_dodgeballs;
@@ -209,6 +210,14 @@ void dwobject::update_precip_type() {
 }
 
 
+template<typename T> void check_all_activate(T &triggers, int start_i, int end_i) {
+
+	for (auto i = cur_frame_explosions.begin(); i != cur_frame_explosions.end(); ++i) {
+		triggers.check_activate(i->pos, /*i->radius*/0.0, NO_SOURCE); // use a radius of 0
+	}
+	for (int i = start_i; i < end_i; ++i) {triggers.check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
+}
+
 void process_platforms_falling_moving_and_light_triggers() {
 
 	if (!animate2) return; // no updates
@@ -216,7 +225,7 @@ void process_platforms_falling_moving_and_light_triggers() {
 	int const end_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
 
 	if (!coll_objects.platform_ids.empty()) { // update platforms
-		for (int i = start_i; i < end_i; ++i) {platforms.check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
+		check_all_activate(platforms, start_i, end_i);
 		platforms.advance_timestep();
 	}
 	proc_moving_cobjs(); // Note: depends on platforms and uses+modified the cobj BVHs
@@ -224,7 +233,7 @@ void process_platforms_falling_moving_and_light_triggers() {
 	build_static_moving_cobj_tree();
 
 	for (auto l = light_sources_d.begin(); l != light_sources_d.end(); ++l) { // update scene lights
-		for (int i = start_i; i < end_i; ++i) {l->check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
+		for (int i = start_i; i < end_i; ++i) {check_all_activate(*l, start_i, end_i);}
 		l->advance_timestep();
 	}
 }
@@ -275,6 +284,7 @@ void process_groups() {
 	++scounter;
 	camera_follow = 0;
 	build_cobj_tree(1, 0); // could also do after group processing
+	cur_frame_explosions.clear();
 	
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
@@ -517,11 +527,12 @@ void process_groups() {
 				}
 				else if ((otype.flags & EXPL_ON_COLL) || (obj.status == 0 && (otype.flags & OBJ_EXPLODES))) {
 					obj.status = 0;
-					if (otype.flags & EXPL_ON_COLL) collision_detect_large_sphere(pos, radius, flags);
+					if (otype.flags & EXPL_ON_COLL) {collision_detect_large_sphere(pos, radius, flags);}
 					blast_radius(pos, type, j, obj.source, 0);
 					gen_smoke(pos);
 					gen_fire(pos, ((type == PLASMA) ? obj.init_dir.x : rand_uniform(0.4, 1.0)), obj.source);
 					if (type == LANDMINE) {gen_landmine_scorch(obj.pos);}
+					if (type != PLASMA) {cur_frame_explosions.push_back(sphere_t(pos, radius));} // exploding cobjs only
 				}
 			}
 			if (type == LANDMINE && obj.status == 1 && !(obj.flags & (STATIC_COBJ_COLL | PLATFORM_COLL))) obj.time = 0; // don't start time until it lands

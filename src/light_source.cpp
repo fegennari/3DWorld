@@ -315,7 +315,7 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 	float const auto_on_time(triggers.get_auto_on_time());
 	unsigned trigger_mode(0); // 0 = not triggered, 1 bit = proximity, 2 bit = action, 4 bit = auto on
 	if (auto_on_time > 0.0 && inactive_time > TICKS_PER_SECOND*auto_on_time) {inactive_time = 0.0; trigger_mode = 4;} // turn on, reset inactive_time
-	trigger_mode |= triggers.register_player_pos(p, radius, activator, 1);
+	trigger_mode |= triggers.register_activator_pos(p, radius, activator, 1);
 	if (trigger_mode == 0) return 0; // not yet triggered
 	float const auto_off_time(triggers.get_auto_off_time());
 	bool const is_off(active_time == 0.0);

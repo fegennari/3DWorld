@@ -17,12 +17,15 @@ extern coll_obj_group coll_objects;
 extern vector<light_source_trig> light_sources_d;
 
 
-unsigned trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
+// Note: activator can be player (CAMERA_ID), smileys (0-N), lights (0-N), or large object collisions (NO_SOURCE)
+unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int activator, bool clicks) {
 
 	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
-	if ((player_only || requires_action) && activator != CAMERA_ID) return 0; // not activated by player
+	if (player_only && activator != CAMERA_ID) return 0; // not activated by player
+	bool const is_explosion_action(activator == NO_SOURCE);
 
-	if (requires_action) {
+	if (requires_action && !is_explosion_action) { // requires explicit player action
+		if (activator != CAMERA_ID) return 0; // not activated by player
 		if (!user_action_key) return 0; // check action key
 		if (!use_act_region && !camera_pdu.point_visible_test(act_pos)) return 0; // player not looking at the activation pos
 	}
@@ -40,9 +43,9 @@ void trigger_t::write_to_cobj_file(std::ostream &out) const {
 }
 
 
-unsigned multi_trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
+unsigned multi_trigger_t::register_activator_pos(point const &p, float act_radius, int activator, bool clicks) {
 	unsigned ret(0);
-	for (iterator i = begin(); i != end(); ++i) {ret |= i->register_player_pos(p, act_radius, activator, clicks);}
+	for (iterator i = begin(); i != end(); ++i) {ret |= i->register_activator_pos(p, act_radius, activator, clicks);}
 	return ret;
 }
 
@@ -106,7 +109,7 @@ void platform::activate() {
 bool platform::check_activate(point const &p, float radius, int activator) {
 
 	if (cont || (state != ST_NOACT && !is_stopped) || empty()) return 1; // continuous, already activated, or no cobjs/lights
-	if (!triggers.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
+	if (!triggers.register_activator_pos(p, radius, activator, 1)) return 0; // not yet triggered
 	if (is_stopped) {is_stopped = 0;} else {activate();}
 	return 1;
 }
