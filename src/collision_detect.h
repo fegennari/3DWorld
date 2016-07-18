@@ -442,7 +442,9 @@ class platform { // animated (player controlled) scene object
 	// state variables
 	enum {ST_NOACT=0, ST_WAIT, ST_FWD, ST_CHDIR, ST_REV};
 	int state; // 0 = not activated, 1 = activated but waiting, 2 = forward, 3 = waiting to go back, 4 = back
+	bool is_stopped; // waiting for trigger re-activate
 	float ns_time; // time to next state in ticks (can be negative if frame time is larger than a delay/travel time)
+	float active_time; // total active time since triggered
 	point pos; // current position - dist is calculated from this point (delta = pos-origin)
 	vector3d delta; // last change in position
 

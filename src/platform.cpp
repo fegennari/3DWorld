@@ -85,7 +85,8 @@ platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, 
 void platform::reset() {
 
 	state   = ST_NOACT;
-	ns_time = 0.0;
+	is_stopped = 0;
+	ns_time = active_time = 0.0;
 	pos     = origin;
 }
 
@@ -96,15 +97,17 @@ void platform::activate() {
 	assert(pos == origin);
 	assert(ns_time == 0.0);
 	state   = ST_WAIT; // activated
+	is_stopped = 0;
 	ns_time = sdelay;
+	active_time = 0.0;
 }
 
 
 bool platform::check_activate(point const &p, float radius, int activator) {
 
-	if (cont || state != ST_NOACT || empty()) return 1; // continuous, already activated, or no cobjs/lights
+	if (cont || (state != ST_NOACT && !is_stopped) || empty()) return 1; // continuous, already activated, or no cobjs/lights
 	if (!triggers.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
-	activate();
+	if (is_stopped) {is_stopped = 0;} else {activate();}
 	return 1;
 }
 
@@ -124,13 +127,19 @@ void platform::move_platform(float dist_traveled) {
 
 void platform::advance_timestep() {
 
-	if (fticks == 0.0 || empty()) return; // no progress or no cobjs/lights
+	if (fticks == 0.0 || empty() || is_stopped) return; // no progress, no cobjs/lights, or stopped and waiting for trigger re-activate
 	
 	if (state == ST_NOACT) { // not activated
 		assert(pos == origin);
 		assert(ns_time == 0.0);
 		if (!cont) return;
 		activate();
+	}
+	float const auto_off_time(triggers.get_auto_off_time());
+
+	if (auto_off_time > 0.0) { // automatically turns off after a fixed period of time
+		if (active_time > TICKS_PER_SECOND*auto_off_time) {active_time = 0.0; is_stopped = 1; return;} // reached auto off time, stop
+		active_time += fticks;
 	}
 	ns_time -= fticks;
 	point const last_pos(pos);
