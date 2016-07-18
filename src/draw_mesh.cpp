@@ -750,7 +750,7 @@ void set_water_plane_uniforms(shader_t &s) {
 float get_tess_wave_height() {return 0.02/mesh_scale_z;}
 
 
-// textures used: 0=reflection, 1=normal map, 2=mesh height map, 3=raindrops, 4=ocean normal map, 5=foam, 6=shadow map, 7=raindrops
+// textures used: 1=normal map, 2=mesh height map, 3=raindrops, 4=ocean normal map, 5=foam, 6=shadow map, 7=raindrops, 8=reflection, 13-14=tile shadow maps
 void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth,
 	bool depth_only, colorRGBA const &color, colorRGBA const &rcolor, bool use_tess)
 {
@@ -781,7 +781,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+tiled_shadow_map.part*+water_ripples.part+water_plane");
 	s.begin_shader();
 	setup_tt_fog_post(s);
-	s.add_uniform_int  ("reflection_tex",   0);
+	s.add_uniform_int  ("reflection_tex",   8);
 	s.add_uniform_color("water_color",      color);
 	s.add_uniform_color("reflect_color",    rcolor);
 	s.add_uniform_int  ("height_tex",       2);
@@ -853,7 +853,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 	}
 	enable_blend();
 	colorRGBA rcolor;
-	set_active_texture(0);
+	set_active_texture(8); // reflection texture tu_id=8
 
 	if (reflection_tid) {
 		bind_2d_texture(reflection_tid);
@@ -864,6 +864,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		rcolor = cur_fog_color;
 		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 	}
+	set_active_texture(0); // reset
 	bool const add_waves(enable_ocean_waves());
 	bool const camera_underwater(get_camera_pos().z < zval);
 	bool const rain_mode(add_waves && !water_is_lava && is_rain_enabled() /*&& !camera_underwater*/);
