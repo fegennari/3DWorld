@@ -109,6 +109,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0) {
 	s.add_uniform_float("intensity", intensity);
 	s.add_uniform_int("frame_buffer_tex", 0);
 	s.add_uniform_float("time", time); // may not be used
+	set_xy_step(s); // may not be used
 	draw_white_quad_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
@@ -144,6 +145,7 @@ void add_2d_blur() {
 		s.set_frag_shader("screen_space_blur_1d");
 		s.begin_shader();
 		s.add_uniform_int("frame_buffer_tex", 0);
+		set_xy_step(s);
 		s.add_uniform_int("dim_val", (dim ? 1 : 0));
 		draw_white_quad_and_end_shader(s);
 		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
@@ -161,6 +163,7 @@ void add_bloom() {
 		s.set_frag_shader("postproc_bloom");
 		s.begin_shader();
 		s.add_uniform_int("frame_buffer_tex", 0);
+		set_xy_step(s);
 		s.add_uniform_int("dim_val", (dim ? 1 : 0));
 		draw_white_quad_and_end_shader(s);
 		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass

@@ -1,4 +1,5 @@
 uniform sampler2D frame_buffer_tex;
+uniform vec2 xy_step;
 uniform int dim_val = 0;
 
 const int BLUR_RADIUS = 4;
@@ -11,7 +12,8 @@ void main() {
 
 	for (int v = -BLUR_RADIUS; v <= BLUR_RADIUS; ++v) {
 		float weight = exp(-abs(v)); // Gaussian
-		color       += weight*textureOffset(frame_buffer_tex, tc, ivec2(v*(1 - dim_val), v*dim_val)).rgb;
+		vec2 pos     = tc + vec2(v*(1.0 - dim_val), v*dim_val)*xy_step;
+		color       += weight*texture(frame_buffer_tex, pos).rgb;
 		tot_w       += weight;
 	}
 	color /= tot_w;

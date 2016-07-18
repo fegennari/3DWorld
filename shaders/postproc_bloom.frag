@@ -1,4 +1,5 @@
 uniform sampler2D frame_buffer_tex;
+uniform vec2 xy_step;
 uniform int dim_val = 0;
 
 const int BLOOM_RADIUS = 8;
@@ -15,7 +16,8 @@ void main() {
 
 	for (int v = -BLOOM_RADIUS; v <= BLOOM_RADIUS; ++v) {
 		float weight = exp(-falloff*abs(v)); // Gaussian - Note: could use a lookup table, but doesn't make much difference
-		vec3 color   = textureOffset(frame_buffer_tex, tc, ivec2(v*(1 - dim_val), v*dim_val)).rgb;
+		vec2 pos     = tc + vec2(v*(1.0 - dim_val), v*dim_val)*xy_step;
+		vec3 color   = weight*texture(frame_buffer_tex, pos).rgb;
 		if (v == 0) {base_color = color;}
 		//float val    = mult*(color.b - min_val); // blue, for sky
 		float val    = mult*(max(max(color.r, color.g), color.b) - min_val); // max across all colors
