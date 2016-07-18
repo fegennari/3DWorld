@@ -438,6 +438,7 @@ class platform { // animated (player controlled) scene object
 	float const ext_dist, act_dist; // distance traveled, activation distance
 	point origin; // initial position (moved by shifting)
 	vector3d const dir; // direction of motion (travels to dir*dist)
+	int sound_id; // -1 = none
 
 	// state variables
 	enum {ST_NOACT=0, ST_WAIT, ST_FWD, ST_CHDIR, ST_REV};
@@ -449,9 +450,10 @@ class platform { // animated (player controlled) scene object
 	vector3d delta; // last change in position
 
 	multi_trigger_t triggers;
-
-	void move_platform(float dist_traveled);
+	
 	bool empty() const {return (cobjs.empty() && lights.empty());}
+	void move_platform(float dist_traveled);
+	void check_play_sound() const;
 
 public:
 	// other data
@@ -459,7 +461,7 @@ public:
 	vector<unsigned> lights; // dynamic light source(s) bound to this platform
 	
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
-		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0, bool ir=0);
+		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0, bool ir=0, int sid=-1);
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	vector3d get_delta()       const {return (pos - origin);}

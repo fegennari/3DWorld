@@ -75,15 +75,15 @@ void multi_trigger_t::write_end_triggers_cobj_file(std::ostream &out) const {
 }
 
 
-platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir)
-				   : cont(c), is_rot(ir), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros)
+platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, int sid)
+				   : cont(c), is_rot(ir), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad),
+				   origin(o), dir(dir_.get_norm()), delta(all_zeros), sound_id(sid)
 {
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
 	if (act_dist > 0.0) {triggers.push_back(trigger_t(origin, act_dist));}
 	reset();
 }
-
 
 void platform::reset() {
 
@@ -92,7 +92,6 @@ void platform::reset() {
 	ns_time = active_time = 0.0;
 	pos     = origin;
 }
-
 
 void platform::activate() {
 
@@ -105,28 +104,27 @@ void platform::activate() {
 	active_time = 0.0;
 }
 
-
 bool platform::check_activate(point const &p, float radius, int activator) {
 
 	if (cont || (state != ST_NOACT && !is_stopped) || empty()) return 1; // continuous, already activated, or no cobjs/lights
 	if (!triggers.register_activator_pos(p, radius, activator, 1)) return 0; // not yet triggered
-	if (is_stopped) {is_stopped = 0;} else {activate();}
+	if (is_stopped) {is_stopped = 0; check_play_sound();} else {activate();}
 	return 1;
 }
 
-
 void platform::next_frame() {
-	
 	cobjs.clear(); // lights is constant
 	delta = all_zeros;
 }
-
 
 void platform::move_platform(float dist_traveled) {
 	if (is_rot) {assert(0);} // FIXME: WRITE - difficult because rotations may change cobj type (such as cube -> extruded polygon)
 	else {pos += dir*dist_traveled;}
 }
 
+void platform::check_play_sound() const {
+	if (sound_id >= 0) {gen_sound(sound_id, pos, 1.0);}
+}
 
 void platform::advance_timestep() {
 
@@ -152,6 +150,7 @@ void platform::advance_timestep() {
 			case ST_WAIT: // activated, waiting to start moving forward
 				assert(pos == origin);
 				state = ST_FWD; // wait has ended, start moving forward (fallthrough)
+				check_play_sound();
 			case ST_FWD: // moving forward
 				{
 					float dist_traveled(-fspeed*ns_time), cur_dist(p2p_dist(pos, origin)); // dist is pos
@@ -171,6 +170,7 @@ void platform::advance_timestep() {
 			case ST_CHDIR: // waiting to change direction
 				if (rdelay < 0.0) return; // no reverse phase - stay in this state forever
 				state = ST_REV; // time is up, reverse (fallthrough)
+				check_play_sound();
 			case ST_REV: // moving in reverse
 				{
 					float dist_traveled(rspeed*ns_time), cur_dist(p2p_dist(pos, origin)); // dist is neg
@@ -211,7 +211,6 @@ void platform::advance_timestep() {
 	} // pos != last_pos
 }
 
-
 vector3d platform::get_velocity() const { // Note: linear velocity, or angular velocity if is_rot==1
 
 	if      (state == ST_FWD) {return dir* fspeed;}
@@ -219,13 +218,10 @@ vector3d platform::get_velocity() const { // Note: linear velocity, or angular v
 	return zero_vector;
 }
 
-
 void platform::add_cobj(unsigned cobj) {
-	
 	assert(cobj < coll_objects.size());
 	cobjs.push_back(cobj);
 }
-
 
 void platform::shift_by(vector3d const &val) {
 	
@@ -234,30 +230,26 @@ void platform::shift_by(vector3d const &val) {
 	triggers.shift_by(val);
 }
 
-
 bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers) {
 
 	assert(fp);
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
 	point origin;
 	vector3d dir; // or rot_axis
-	int cont(0), is_rotation(0);
-	
+	int cont(0), is_rotation(0), sound_id(0);
 	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
-		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont) != 13)
-	{
-		return 0;
-	}
+		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont) != 13) {return 0;}
 	if (cont != 0 && cont != 1) return 0; // not a bool
 	fscanf(fp, "%i", &is_rotation); // try to read is_rotation - if fails, leave at 0
 	if (is_rotation != 0 && is_rotation != 1) return 0; // not a bool
+	// FIXME: read sound as ID or filename
 	sdelay *= TICKS_PER_SECOND;
 	rdelay *= TICKS_PER_SECOND;
 	fspeed /= TICKS_PER_SECOND;
 	rspeed /= TICKS_PER_SECOND;
 	xf.xform_pos(origin);
 	xf.xform_pos_rm(dir);
-	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0)));
+	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), sound_id));
 	if (!triggers.empty()) {back().add_triggers(triggers);} // if a custom trigger is used, reset any built-in trigger
 	return 1;
 }
@@ -281,7 +273,6 @@ void platform_cont::shift_by(vector3d const &val) {
 	for (auto i = begin(); i != end(); ++i) {i->shift_by(val);}
 }
 
-
 void platform_cont::add_current_cobjs() {
 	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
 		get_cobj_platform(coll_objects.get_cobj(*i)).add_cobj(*i);
@@ -296,7 +287,6 @@ void platform_cont::advance_timestep() {
 }
 
 bool platform_cont::any_active() const {
-
 	for (auto i = begin(); i != end(); ++i) {if (i->is_moving()) return 1;}
 	return 0;
 }
