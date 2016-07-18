@@ -12,9 +12,11 @@ B 0.59 0.60  2.84 2.86  -0.29 -0.27 # outside button
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
 Q 1 0.5 0.5 0.1 0.1 0.4 0.0   0.6 2.76 -0.08  -1 0 0  0 # platform
 
-y 5.0 Y 0.38 -0.3
+y 5.0
+Y 0.38 -0.3
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 B 0.599 1.0  2.72 2.78  -0.4  -0.12
+Y 0 0
 X none # disable normal map
 Q 0
 K # disable trigger
