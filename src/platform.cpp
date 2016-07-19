@@ -230,26 +230,28 @@ void platform::shift_by(vector3d const &val) {
 	triggers.shift_by(val);
 }
 
+void platform_cont::read_sound_filename(string const &name) {cur_sound_id = read_sound_file(name);}
+
 bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers) {
 
 	assert(fp);
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
 	point origin;
 	vector3d dir; // or rot_axis
-	int cont(0), is_rotation(0), sound_id(0);
+	int cont(0), is_rotation(0);
 	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
 		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont) != 13) {return 0;}
 	if (cont != 0 && cont != 1) return 0; // not a bool
 	fscanf(fp, "%i", &is_rotation); // try to read is_rotation - if fails, leave at 0
 	if (is_rotation != 0 && is_rotation != 1) return 0; // not a bool
-	// FIXME: read sound as ID or filename
 	sdelay *= TICKS_PER_SECOND;
 	rdelay *= TICKS_PER_SECOND;
 	fspeed /= TICKS_PER_SECOND;
 	rspeed /= TICKS_PER_SECOND;
 	xf.xform_pos(origin);
 	xf.xform_pos_rm(dir);
-	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), sound_id));
+	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), cur_sound_id));
+	cur_sound_id = -1; // reset to null after use
 	if (!triggers.empty()) {back().add_triggers(triggers);} // if a custom trigger is used, reset any built-in trigger
 	return 1;
 }

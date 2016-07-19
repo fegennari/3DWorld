@@ -16,10 +16,6 @@ using namespace std;
 unsigned const NUM_CHANNELS = 8;
 string const sounds_path("sounds/");
 
-buffer_manager_t sounds;
-source_manager_t sources, looping_sources;
-vector<delayed_sound_t> delayed_sounds;
-
 extern bool disable_sound;
 extern int frame_counter, iticks;
 extern float CAMERA_RADIUS;
@@ -28,87 +24,139 @@ float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1, 0.1};
 float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0, 1.0};
 
 
-// supported: au, wav
-// not supported: mp3, aif
-void setup_sounds() {
+class sound_manager_t {
 
-	cout << endl << "Loading Sounds"; cout.flush();
-	// loop sounds
-	sounds.add_file_buffer("burning.wav"    ); // SOUND_BURNING
-	sounds.add_file_buffer("rain1.wav"      ); // SOUND_RAIN1
-	sounds.add_file_buffer("wind1.wav"      ); // SOUND_WIND1
-	sounds.add_file_buffer("underwater.wav" ); // SOUND_UNDERWATER
-	// regular sounds
-	sounds.add_file_buffer("explosion1.au"  ); // SOUND_EXPLODE
-	sounds.add_file_buffer("gunshot.wav"    ); // SOUND_GUNSHOT
-	sounds.add_file_buffer("shotgun.wav"    ); // SOUND_SHOTGUN
-	sounds.add_file_buffer("fireball.wav"   ); // SOUND_FIREBALL
-	sounds.add_file_buffer("drown.wav"      ); // SOUND_DROWN
-	sounds.add_file_buffer("scream1.wav"    ); // SOUND_SCREAM1
-	sounds.add_file_buffer("scream2.wav"    ); // SOUND_SCREAM2
-	sounds.add_file_buffer("glass_break.wav"); // SOUND_GLASS
-	sounds.add_file_buffer("drill.wav"      ); // SOUND_DRILL
-	sounds.add_file_buffer("rocket.au"      ); // SOUND_ROCKET
-	sounds.add_file_buffer("item.wav"       ); // SOUND_ITEM
-	sounds.add_file_buffer("powerup.wav"    ); // SOUND_POWERUP
-	sounds.add_file_buffer("alert.wav"      ); // SOUND_ALERT
-	sounds.add_file_buffer("squish.wav"     ); // SOUND_SQUISH
-	sounds.add_file_buffer("squish2.wav"    ); // SOUND_SQUISH2
-	sounds.add_file_buffer("splat1.wav"     ); // SOUND_SPLAT1
-	sounds.add_file_buffer("splash1.wav"    ); // SOUND_SPLASH1
-	sounds.add_file_buffer("splash2.wav"    ); // SOUND_SPLASH2
-	sounds.add_file_buffer("water.wav"      ); // SOUND_WATER
-	sounds.add_file_buffer("thunder.wav"    ); // SOUND_THUNDER
-	sounds.add_file_buffer("thunder2.wav"   ); // SOUND_THUNDER2
-	sounds.add_file_buffer("boing.wav"      ); // SOUND_BOING
-	sounds.add_file_buffer("swing.wav"      ); // SOUND_SWING
-	sounds.add_file_buffer("hiss.wav"       ); // SOUND_HISS
-	sounds.add_file_buffer("doh.wav"        ); // SOUND_DOH
-	sounds.add_file_buffer("hurt.wav"       ); // SOUND_HURT
-	sounds.add_file_buffer("death.wav"      ); // SOUND_DEATH
-	sounds.add_file_buffer("agony.au"       ); // SOUND_AGONY
-	sounds.add_file_buffer("scared.wav"     ); // SOUND_SCARED
-	sounds.add_file_buffer("gasp.wav"       ); // SOUND_GASP
-	sounds.add_file_buffer("scream3.wav"    ); // SOUND_SCREAM3
-	sounds.add_file_buffer("squeal.wav"     ); // SOUND_SQUEAL
-	sounds.add_file_buffer("ricochet.wav"   ); // SOUND_RICOCHET
-	sounds.add_file_buffer("rockfall.wav"   ); // SOUND_ROCK_FALL // bricksfall.wav
-	sounds.add_file_buffer("spray.wav"      ); // SOUND_SPRAY
-	sounds.add_file_buffer("click.wav"      ); // SOUND_CLICK
-	sounds.add_file_buffer("shell_casing.wav");// SOUND_SHELLC
-	sounds.add_file_buffer("short_drop.wav" ); // SOUND_SH_DROP (unused)
-	sounds.add_file_buffer("water_drop.wav" ); // SOUND_WATER_DROP (unused, cartoony)
-	sounds.add_file_buffer("sliding.wav"    ); // SOUND_SLIDING
-	sounds.add_file_buffer("obj_fall.wav"   ); // SOUND_OBJ_FALL
-	sounds.add_file_buffer("wood_crack.wav" ); // SOUND_WOOD_CRACK
-	sounds.add_file_buffer("footstep.wav"   ); // SOUND_FOOTSTEP
-	sounds.add_file_buffer("snow_step.wav"  ); // SOUND_SNOW_STEP
-	cout << endl;
+	buffer_manager_t sounds;
+	source_manager_t sources, looping_sources;
+	vector<delayed_sound_t> delayed_sounds;
+	map<string, unsigned> name_to_id_map;
+	int last_frame;
 
-	// create sources
-	sources.create_channels(NUM_CHANNELS);
-	looping_sources.create_channels(NUM_LOOP_SOUNDS);
+public:
+	sound_manager_t() : last_frame(0) {}
+	openal_source &get_least_loud_source() {return sources.get_least_loud_source();}
+	openal_buffer &get_buffer(unsigned id) {return sounds.get_buffer(id);}
+	void add_delayed_sound(sound_params_t const &params, unsigned id, int delay_time) {delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));}
 
-	for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) { // looping_source i is bound to sounds buffer i
-		openal_source &source(looping_sources.get_source(i));
-		source.setup(sounds.get_buffer(i), all_zeros, loop_sound_gains[i], loop_sound_pitches[i], 1, 1);
+	unsigned add_new_sound(string const &fn) {
+		unsigned const ix(sounds.add_file_buffer(fn));
+		bool const did_ins(name_to_id_map.insert(make_pair(fn, ix)).second);
+		assert(did_ins); // all sound filenames must be unique
+		return ix;
 	}
-}
-
-void set_sound_loop_state(unsigned id, bool play, float volume) { // volume=0.0 => use previous value
-
-	if (disable_sound) return;
-	assert(id < NUM_LOOP_SOUNDS);
-	bool const playing(looping_sources.is_playing(id));
-	if (play && volume > 0.0) {looping_sources.get_source(id).set_gain(CLIP_TO_01(volume)*loop_sound_gains[id]);}
-
-	if (play && !playing) { // start
-		looping_sources.play_source(id);
+	unsigned find_or_add_sound(string const &fn) {
+		auto it(name_to_id_map.find(fn));
+		if (it != name_to_id_map.end()) return it->second; // found
+		return add_new_sound(fn);
 	}
-	else if (!play && playing) { // stop
-		looping_sources.stop_source(id);
+
+	// supported: au, wav
+	// not supported: mp3, aif
+	void setup_sounds() {
+
+		cout << endl << "Loading Sounds"; cout.flush();
+		// loop sounds
+		add_new_sound("burning.wav"    ); // SOUND_BURNING
+		add_new_sound("rain1.wav"      ); // SOUND_RAIN1
+		add_new_sound("wind1.wav"      ); // SOUND_WIND1
+		add_new_sound("underwater.wav" ); // SOUND_UNDERWATER
+		// regular sounds
+		add_new_sound("explosion1.au"  ); // SOUND_EXPLODE
+		add_new_sound("gunshot.wav"    ); // SOUND_GUNSHOT
+		add_new_sound("shotgun.wav"    ); // SOUND_SHOTGUN
+		add_new_sound("fireball.wav"   ); // SOUND_FIREBALL
+		add_new_sound("drown.wav"      ); // SOUND_DROWN
+		add_new_sound("scream1.wav"    ); // SOUND_SCREAM1
+		add_new_sound("scream2.wav"    ); // SOUND_SCREAM2
+		add_new_sound("glass_break.wav"); // SOUND_GLASS
+		add_new_sound("drill.wav"      ); // SOUND_DRILL
+		add_new_sound("rocket.au"      ); // SOUND_ROCKET
+		add_new_sound("item.wav"       ); // SOUND_ITEM
+		add_new_sound("powerup.wav"    ); // SOUND_POWERUP
+		add_new_sound("alert.wav"      ); // SOUND_ALERT
+		add_new_sound("squish.wav"     ); // SOUND_SQUISH
+		add_new_sound("squish2.wav"    ); // SOUND_SQUISH2
+		add_new_sound("splat1.wav"     ); // SOUND_SPLAT1
+		add_new_sound("splash1.wav"    ); // SOUND_SPLASH1
+		add_new_sound("splash2.wav"    ); // SOUND_SPLASH2
+		add_new_sound("water.wav"      ); // SOUND_WATER
+		add_new_sound("thunder.wav"    ); // SOUND_THUNDER
+		add_new_sound("thunder2.wav"   ); // SOUND_THUNDER2
+		add_new_sound("boing.wav"      ); // SOUND_BOING
+		add_new_sound("swing.wav"      ); // SOUND_SWING
+		add_new_sound("hiss.wav"       ); // SOUND_HISS
+		add_new_sound("doh.wav"        ); // SOUND_DOH
+		add_new_sound("hurt.wav"       ); // SOUND_HURT
+		add_new_sound("death.wav"      ); // SOUND_DEATH
+		add_new_sound("agony.au"       ); // SOUND_AGONY
+		add_new_sound("scared.wav"     ); // SOUND_SCARED
+		add_new_sound("gasp.wav"       ); // SOUND_GASP
+		add_new_sound("scream3.wav"    ); // SOUND_SCREAM3
+		add_new_sound("squeal.wav"     ); // SOUND_SQUEAL
+		add_new_sound("ricochet.wav"   ); // SOUND_RICOCHET
+		add_new_sound("rockfall.wav"   ); // SOUND_ROCK_FALL // bricksfall.wav
+		add_new_sound("spray.wav"      ); // SOUND_SPRAY
+		add_new_sound("click.wav"      ); // SOUND_CLICK
+		add_new_sound("shell_casing.wav");// SOUND_SHELLC
+		add_new_sound("short_drop.wav" ); // SOUND_SH_DROP (unused)
+		add_new_sound("water_drop.wav" ); // SOUND_WATER_DROP (unused, cartoony)
+		add_new_sound("sliding.wav"    ); // SOUND_SLIDING
+		add_new_sound("obj_fall.wav"   ); // SOUND_OBJ_FALL
+		add_new_sound("wood_crack.wav" ); // SOUND_WOOD_CRACK
+		add_new_sound("footstep.wav"   ); // SOUND_FOOTSTEP
+		add_new_sound("snow_step.wav"  ); // SOUND_SNOW_STEP
+		cout << endl;
+
+		// create sources
+		sources.create_channels(NUM_CHANNELS);
+		looping_sources.create_channels(NUM_LOOP_SOUNDS);
+
+		for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) { // looping_source i is bound to sounds buffer i
+			openal_source &source(looping_sources.get_source(i));
+			source.setup(sounds.get_buffer(i), all_zeros, loop_sound_gains[i], loop_sound_pitches[i], 1, 1);
+		}
 	}
-}
+
+	void set_loop_state(unsigned id, bool play, float volume) { // volume=0.0 => use previous value
+
+		if (disable_sound) return;
+		assert(id < NUM_LOOP_SOUNDS);
+		bool const playing(looping_sources.is_playing(id));
+		if (play && volume > 0.0) {looping_sources.get_source(id).set_gain(CLIP_TO_01(volume)*loop_sound_gains[id]);}
+		if      ( play && !playing) {looping_sources.play_source(id);} // start
+		else if (!play &&  playing) {looping_sources.stop_source(id);} // stop
+	}
+
+	bool check_for_duplicate(int id) {
+
+		if (frame_counter != last_frame) { // start new frame
+			sources.used_this_frame.clear();
+			last_frame = frame_counter;
+		}
+		if (sources.used_this_frame.find(id) != sources.used_this_frame.end()) return 1; // duplicate sound this frame
+		sources.used_this_frame.insert(id);
+		return 0;
+	}
+
+	void proc_delayed() {
+
+		for (unsigned i = 0; i < delayed_sounds.size(); ++i) {
+			delayed_sound_t &ds(delayed_sounds[i]);
+			ds.time -= iticks;
+			if (ds.time > 0) continue; // continue to delay
+			gen_sound(ds.id, ds.pos, ds.gain, ds.pitch, ds.rel_to_listener);
+			swap(delayed_sounds[i], delayed_sounds.back());
+			delayed_sounds.pop_back();
+			--i; // wraparound ok
+		}
+	}
+};
+
+sound_manager_t sound_manager;
+
+unsigned get_sound_id_for_file(string const &fn) {return sound_manager.find_or_add_sound(fn);}
+
+void set_sound_loop_state(unsigned id, bool play, float volume) {sound_manager.set_loop_state(id, play, volume);}
 
 void alut_sleep(float seconds) {alutSleep(seconds);}
 
@@ -357,27 +405,20 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	openal_source &source(sources.get_inactive_source());
 	if (!close && source.is_playing()) return; // already playing - don't stop it
 #else
-	openal_source &source(sources.get_least_loud_source());
+	openal_source &source(sound_manager.get_least_loud_source());
 	float const loudness(gain/max(SMALL_NUMBER, dist));
 	if (loudness < max(0.01f, source.get_loudness())) return; // too soft
 #endif
-	static int last_frame(0);
-
-	if (frame_counter != last_frame) { // start new frame
-		sources.used_this_frame.clear();
-		last_frame = frame_counter;
-	}
-	if (sources.used_this_frame.find(id) != sources.used_this_frame.end()) return; // duplicate sound this frame
-	sources.used_this_frame.insert(id);
+	if (sound_manager.check_for_duplicate(id)) return; // duplicate sound this frame
 
 	if (!close) {
 		int cindex;
 		bool const line_of_sight(!check_coll_line(pos, listener, cindex, -1, 1, 0));
 		if (!line_of_sight) gain *= 0.25; // attenuate by 4x if there is no line of sight between source and listener
 	}
-	if (source.is_active()) source.stop(); // stop if already playing
+	if (source.is_active()) {source.stop();} // stop if already playing
 	set_openal_listener_as_player();
-	source.setup(sounds.get_buffer(id), pos, gain, pitch, 0, rel_to_listener, vel); // not looping
+	source.setup(sound_manager.get_buffer(id), pos, gain, pitch, 0, rel_to_listener, vel); // not looping
 	source.play();
 	//PRINT_TIME("Play Sound");
 }
@@ -392,12 +433,10 @@ void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, f
 	}
 	else {
 		assert(delay > 0.0);
-		int const delay_time(int(delay*TICKS_PER_SECOND + 0.5)); // round to the nearest tick
 		sound_params_t params(pos, gain, pitch, rel_to_listener);
-		delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));
+		sound_manager.add_delayed_sound(params, id, round_fp(delay*TICKS_PER_SECOND)); // round to the nearest tick
 	}
 }
-
 
 void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain, float pitch) {
 
@@ -406,19 +445,7 @@ void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain, fl
 	gen_delayed_sound(((dist < CAMERA_RADIUS) ? 0.0 : dist/SPEED_OF_SOUND), id, pos, gain, pitch);
 }
 
-
-void proc_delayed_sounds() {
-
-	for (unsigned i = 0; i < delayed_sounds.size(); ++i) {
-		delayed_sound_t &ds(delayed_sounds[i]);
-		ds.time -= iticks;
-		if (ds.time > 0) continue; // continue to delay
-		gen_sound(ds.id, ds.pos, ds.gain, ds.pitch, ds.rel_to_listener);
-		swap(delayed_sounds[i], delayed_sounds.back());
-		delayed_sounds.pop_back();
-		--i; // wraparound ok
-	}
-}
+void proc_delayed_sounds() {sound_manager.proc_delayed();}
 
 
 void play_thunder(point const &pos, float gain, float delay) {
@@ -439,15 +466,21 @@ void init_openal(int &argc, char** argv) {
 		exit(1);
 	}
 	alGetError(); // ignore any previous errors
-	setup_sounds();
+	sound_manager.setup_sounds();
 	//cout << "Supported OpenAL types: " << alutGetMIMETypes(ALUT_LOADER_BUFFER) << endl;
 	//openal_hello_world();
 }
 
 
 void exit_openal() {
-
 	if (!alutExit()) check_and_print_alut_error();
 }
+
+
+int read_sound_file(string const &name) {
+	if (name == "none" || name == "null") return -1; // no sound
+	return get_sound_id_for_file(name);
+}
+
 
 

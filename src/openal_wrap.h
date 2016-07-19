@@ -141,6 +141,7 @@ public:
 
 
 void alut_sleep(float seconds);
+unsigned get_sound_id_for_file(std::string const &fn);
 void set_sound_loop_state(unsigned id, bool play, float volume=0.0);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
@@ -151,5 +152,5 @@ void proc_delayed_sounds();
 void play_thunder(point const &pos, float gain, float delay);
 void play_switch_weapon_sound();
 void init_openal(int &argc, char** argv);
-
+int read_sound_file(std::string const &name);
 

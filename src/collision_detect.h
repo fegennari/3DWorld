@@ -488,7 +488,11 @@ public:
 
 struct platform_cont : public deque<platform> {
 
+	int cur_sound_id;
+
+	platform_cont() : cur_sound_id(-1) {}
 	bool add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers);
+	void read_sound_filename(std::string const &name);
 	void check_activate(point const &p, float radius, int activator);
 	void shift_by(vector3d const &val);
 	void add_current_cobjs();
