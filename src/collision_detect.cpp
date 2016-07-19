@@ -192,7 +192,6 @@ void reserve_coll_objects(unsigned size) {
 	cobj_manager.reserve_cobjs(size);
 }
 
-
 bool swap_and_set_as_coll_objects(coll_obj_group &new_cobjs) {
 	return cobj_manager.swap_and_set_as_coll_objects(new_cobjs);
 }
@@ -212,21 +211,11 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 	int x1, x2, y1, y2;
 	coll_obj const &cobj(coll_objects[index]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
-	float ds[3][2];
-	vector3d delta(zero_vector);
-
-	// we adjust the size of the cube to account for all possible platform locations
-	// if delta is not aligned with x/y/z axes then the boundary will be an over approximation, which is inefficient but ok
-	if (cobj.platform_id >= 0) {delta = platforms.get_cobj_platform(cobj).get_range();}
-
-	for (unsigned j = 0; j < 3; ++j) {
-		ds[j][0] = cobj.d[j][0] + min(delta[j], 0.0f);
-		ds[j][1] = cobj.d[j][1] + max(delta[j], 0.0f);
-	}
-	get_params(x1, y1, x2, y2, ds);
+	cube_t const bcube(cobj.get_platform_max_bcube()); // adjust the size of the cube to account for all possible platform locations
+	get_params(x1, y1, x2, y2, bcube.d);
 
 	for (int i = y1; i <= y2; ++i) {
-		for (int j = x1; j <= x2; ++j) {add_coll_point(i, j, index, ds[2][0], ds[2][1], 1, is_dynamic, dhcm);}
+		for (int j = x1; j <= x2; ++j) {add_coll_point(i, j, index, bcube.d[2][0], bcube.d[2][1], 1, is_dynamic, dhcm);}
 	}
 }
 

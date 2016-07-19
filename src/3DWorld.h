@@ -363,6 +363,7 @@ struct cube_t { // size = 24
 		UNROLL_3X(d[i_][0] = min(p1[i_], p2[i_]); d[i_][1] = max(p1[i_], p2[i_]);)
 	}
 	cube_t(point const *const pts, unsigned npts) {set_from_points(pts, npts);}
+	void set_to_zeros() {set_from_point(all_zeros);}
 	void copy_from(cube_t const &c) {
 		UNROLL_3X(d[i_][0] = c.d[i_][0];)
 		UNROLL_3X(d[i_][1] = c.d[i_][1];)

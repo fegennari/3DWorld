@@ -379,6 +379,7 @@ bool cobj_bvh_tree::create_cixs() {
 
 void cobj_bvh_tree::calc_node_bbox(tree_node &n) const {
 
+	// Note: can call get_cobj(i).get_platform_max_bcube() to include entire platform range instead of rebuilding the BVH when platforms move
 	assert(n.start < n.end);
 	n.copy_from(get_cobj(n.start));
 	for (unsigned i = n.start+1; i < n.end; ++i) {n.union_with_cube(get_cobj(i));} // bbox union

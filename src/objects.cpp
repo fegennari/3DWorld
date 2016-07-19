@@ -159,6 +159,28 @@ float coll_obj::calc_min_dim() const {
 }
 
 
+// Note: these two functions are intended to be called on coll cubes that are part of platforms,
+// but are okay to call on other shapes to get their bounding cube extents; they return the original bounding cube for non-platforms;
+// if delta is not aligned with x/y/z axes then the boundary will be an over approximation, which is inefficient but ok
+cube_t coll_obj::get_platform_max_bcube() const {
+
+	cube_t bcube(*this);
+	if (platform_id >= 0) {bcube.union_with_cube(*this + platforms.get_cobj_platform(*this).get_range());}
+	return bcube;
+}
+
+cube_t coll_obj::get_platform_min_bcube() const {
+
+	cube_t bcube(*this);
+
+	if (platform_id >= 0) {
+		cube_t const xlated_bcube(*this + platforms.get_cobj_platform(*this).get_range());
+		if (!xlated_bcube.intersects(bcube)) {bcube.set_to_zeros();} else {bcube.intersect_with_cube(xlated_bcube);}
+	}
+	return bcube;
+}
+
+
 bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int dir) const {
 
 	assert(d1 >= 0 && d1 <= 3 && d2 >= 0 && d2 <= 3 && d1 != d2 && (dir == 0 || dir == 1));
