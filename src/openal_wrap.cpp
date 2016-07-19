@@ -30,6 +30,7 @@ class sound_manager_t {
 	source_manager_t sources, looping_sources;
 	vector<delayed_sound_t> delayed_sounds;
 	map<string, unsigned> name_to_id_map;
+	vector<string> sound_names;
 	int last_frame;
 
 public:
@@ -37,11 +38,14 @@ public:
 	openal_source &get_least_loud_source() {return sources.get_least_loud_source();}
 	openal_buffer &get_buffer(unsigned id) {return sounds.get_buffer(id);}
 	void add_delayed_sound(sound_params_t const &params, unsigned id, int delay_time) {delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));}
+	string const &get_name(unsigned id) const {assert(id < sound_names.size()); return sound_names[id];}
 
 	unsigned add_new_sound(string const &fn) {
 		unsigned const ix(sounds.add_file_buffer(fn));
 		bool const did_ins(name_to_id_map.insert(make_pair(fn, ix)).second);
 		assert(did_ins); // all sound filenames must be unique
+		assert(ix == sound_names.size());
+		sound_names.push_back(fn);
 		return ix;
 	}
 	unsigned find_or_add_sound(string const &fn) {
@@ -155,7 +159,7 @@ public:
 sound_manager_t sound_manager;
 
 unsigned get_sound_id_for_file(string const &fn) {return sound_manager.find_or_add_sound(fn);}
-
+string const &get_sound_name(unsigned id) {return sound_manager.get_name(id);}
 void set_sound_loop_state(unsigned id, bool play, float volume) {sound_manager.set_loop_state(id, play, volume);}
 
 void alut_sleep(float seconds) {alutSleep(seconds);}
