@@ -512,6 +512,7 @@ K -2.72 5.0  1.94  0.06 0.0 0.0 1 1 # player manual toggle trigger
 #a 1 # destroyable
 l 0.7 0.58 0.42 0.3 1.0 49 1 # carpet
 y 7.5
+#sound_file elevator.wav
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
 Q 1 0.4 0.4 1.0 3.0 2.2 0.2   -3.0 5.2 -0.39  0 0 1  0 # platform
 B -3.35 -2.65  5.05 5.65  -0.41 -0.39 # elevator platform
