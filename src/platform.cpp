@@ -75,9 +75,9 @@ void multi_trigger_t::write_end_triggers_cobj_file(std::ostream &out) const {
 }
 
 
-platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, int sid)
-				   : cont(c), is_rot(ir), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad),
-				   origin(o), dir(dir_.get_norm()), delta(all_zeros), sound_id(sid)
+platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, bool ul, int sid)
+				   : cont(c), is_rot(ir), update_light(ul), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd),
+				   ext_dist(dst), act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros), sound_id(sid)
 {
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
@@ -238,19 +238,18 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
 	point origin;
 	vector3d dir; // or rot_axis
-	int cont(0), is_rotation(0);
-	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
-		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont) != 13) {return 0;}
-	if (cont != 0 && cont != 1) return 0; // not a bool
-	fscanf(fp, "%i", &is_rotation); // try to read is_rotation - if fails, leave at 0
-	if (is_rotation != 0 && is_rotation != 1) return 0; // not a bool
+	int cont(0), is_rotation(0), update_light(0);
+	// Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0]]]
+	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i%i%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
+		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont, &is_rotation, &update_light) < 13)  {return 0;}
+	if ((cont != 0 && cont != 1) || (is_rotation != 0 && is_rotation != 1) || (update_light != 0 && update_light != 1)) return 0; // not a bool
 	sdelay *= TICKS_PER_SECOND;
 	rdelay *= TICKS_PER_SECOND;
 	fspeed /= TICKS_PER_SECOND;
 	rspeed /= TICKS_PER_SECOND;
 	xf.xform_pos(origin);
 	xf.xform_pos_rm(dir);
-	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), cur_sound_id));
+	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), (update_light != 0), cur_sound_id));
 	cur_sound_id = -1; // reset to null after use
 	if (!triggers.empty()) {back().add_triggers(triggers);} // if a custom trigger is used, reset any built-in trigger
 	return 1;
@@ -260,9 +259,9 @@ void platform::write_to_cobj_file(std::ostream &out) const {
 
 	triggers.write_to_cobj_file(out);
 	if (sound_id >= 0) {out << "sound_file " << get_sound_name(sound_id) << endl;}
-	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
+	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0 [update_light=0]]]
 	out << "Q 1 " << fspeed*TICKS_PER_SECOND << " " << rspeed*TICKS_PER_SECOND << " " << sdelay/TICKS_PER_SECOND << " " << rdelay/TICKS_PER_SECOND << " " << ext_dist << " " << act_dist
-		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << endl; // always enabled
+		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << endl; // always enabled
 	for (auto i = lights.begin(); i != lights.end(); ++i) {} // FIXME
 	triggers.write_end_triggers_cobj_file(out);
 }

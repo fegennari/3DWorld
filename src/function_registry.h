@@ -367,6 +367,8 @@ void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_no
 void proc_moving_cobjs();
 
 // function prototypes - objects
+void pre_rt_bvh_build_hook();
+void post_rt_bvh_build_hook();
 void free_cobj_draw_group_vbos();
 
 // function prototypes - coll_cell_search

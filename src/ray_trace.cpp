@@ -51,6 +51,7 @@ void increment_printed_number(unsigned num) {
 
 bool is_ltype_dynamic(int ltype) {return (ltype >= LIGHTING_DYNAMIC);}
 int clamp_ltype_range(int ltype) {return (is_ltype_dynamic(ltype) ? LIGHTING_DYNAMIC : ltype);}
+bool enable_platform_lights(int ltype) {return (ltype == LIGHTING_SKY);} // sky lighting only for now
 
 light_volume_local &get_local_light_volume(int ltype) {
 
@@ -234,7 +235,17 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		assert(cindex >= 0);
 		coll_obj const &cobj(coll_objects[cindex]);
 
-		if (cobj.platform_id >= 0 || cobj.is_movable()) {
+		if (enable_platform_lights(ltype) && cobj.is_update_light_platform()) {
+			// FIXME: this can be handled by two approaches:
+			// 1. Maintain 2^N where N=sizeof(update light platforms) light volumes and split the ray between the two cases (transmit vs. reflect);
+			//    + Simpler, can be precomputed
+			//    - Not scalable beyond 2-3 platforms, longer preproc times, large file sizes
+			// 2. Record ray hit positions on this cobj (and maybe precomputed bounce points as well), and store them in a separate file
+			//    for use in later processing and lighting updates when the platform moves;
+			//    + Can use smooth/correct interpolation as platform moves, scalable to many platforms, low overhead for static scene
+			//    - Slows frame rate when platforms move, complex, floating-point accuracy issues (need deterministic random numbers)
+		}
+		else if (cobj.platform_id >= 0 || cobj.is_movable()) {
 			// this cobj isn't static, so maybe shouldn't be included - do we skip it in the line intersection check?
 			// maybe it's okay to keep this cobj, since it represents the intial object states, and will be correct if it's never moved
 		}
@@ -771,7 +782,9 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	else {
 		if (c_ltype != LIGHTING_LOCAL && !dynamic) {cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;}
 		all_models.build_cobj_trees(1);
+		if (enable_platform_lights(ltype)) {pre_rt_bvh_build_hook();}
 		launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype);
+		if (enable_platform_lights(ltype)) {post_rt_bvh_build_hook();}
 	}
 	if (!dynamic && write_light_files[c_ltype]) {lmap_manager.write_data_to_file(lighting_file[c_ltype], c_ltype);}
 }

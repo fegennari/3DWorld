@@ -141,8 +141,6 @@ public:
 	void calc_volume();
 	void calc_bcube();
 	float calc_min_dim() const;
-	cube_t get_platform_max_bcube() const;
-	cube_t get_platform_min_bcube() const;
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
 	void set_npoints();
 	void set_from_pts(point const *const pts, unsigned npts);
@@ -166,7 +164,6 @@ public:
 	void move_cobj(vector3d const &vd, bool update_colls=1);
 	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
 	void rotate_about(point const &pt, vector3d const &axis, float angle, bool do_re_add=1);
-	void add_to_platform() const;
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;
 	bool operator<(const coll_obj &cobj) const {return (volume < cobj.volume);} // sort by size
 	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status && platform_id == c.platform_id && group_id == c.group_id && cp == c.cp);}
@@ -236,7 +233,16 @@ public:
 	vector3d get_cobj_resting_normal() const;
 	bool is_point_supported(point const &pos) const;
 
-	// drawing code
+	// platform functions
+	void add_to_platform() const;
+	bool is_update_light_platform() const;
+	cube_t get_extended_platform_bcube() const;
+	cube_t get_platform_max_bcube() const;
+	cube_t get_platform_min_bcube() const;
+	void expand_to_platform_max_bounds();
+	void unexpand_from_platform_max_bounds();
+
+	// drawing functions
 	void setup_cube_face_texgen(texgen_params_t &tp, unsigned tdim0, unsigned tdim1, float const tscale[2]) const;
 	void draw_coll_cube(int tid, cobj_draw_buffer &cdb) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const;
@@ -435,6 +441,7 @@ class platform { // animated (player controlled) scene object
 	// constants
 	bool const cont; // continuous - always in motion
 	bool const is_rot; // motion is rotation rather than translation
+	bool const update_light; // indirect lighting should be updated when moving
 	float const fspeed, rspeed; // velocity of forward/reverse motion in units per tick (can be negative)
 	float const sdelay, rdelay; // start delay / reverse delay in ticks
 	float const ext_dist, act_dist; // distance traveled, activation distance
@@ -463,9 +470,10 @@ public:
 	vector<unsigned> lights; // dynamic light source(s) bound to this platform
 	
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
-		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0, bool ir=0, int sid=-1);
+		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0, bool ir=0, bool ul=0, int sid=-1);
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
+	bool get_update_light()    const {return update_light;}
 	vector3d get_delta()       const {return (pos - origin);}
 	vector3d get_range()       const {return dir*ext_dist;}
 	vector3d get_last_delta()  const {return delta;}

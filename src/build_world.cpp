@@ -826,7 +826,9 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 	}
 	bool const verbose(!scrolling);
 	if (verbose) {cobj_stats();}
+	pre_rt_bvh_build_hook(); // required for light ray tracing so that BVH nodes are properly expanded
 	build_cobj_tree(0, verbose);
+	post_rt_bvh_build_hook(); // required for light ray tracing (unexpand cobjs but leave BVH nodes expanded)
 	check_contained_cube_sides();
 	flag_cobjs_indoors_outdoors();
 }

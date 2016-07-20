@@ -159,26 +159,50 @@ float coll_obj::calc_min_dim() const {
 }
 
 
-// Note: these two functions are intended to be called on coll cubes that are part of platforms,
+// Note: these functions are intended to be called on coll cubes that are part of platforms,
 // but are okay to call on other shapes to get their bounding cube extents; they return the original bounding cube for non-platforms;
 // if delta is not aligned with x/y/z axes then the boundary will be an over approximation, which is inefficient but ok
-cube_t coll_obj::get_platform_max_bcube() const {
+bool coll_obj::is_update_light_platform() const {
+	return (platform_id >= 0 && platforms.get_cobj_platform(*this).get_update_light());
+}
 
+cube_t coll_obj::get_extended_platform_bcube() const {return (*this + platforms.get_cobj_platform(*this).get_range());}
+
+cube_t coll_obj::get_platform_max_bcube() const {
 	cube_t bcube(*this);
-	if (platform_id >= 0) {bcube.union_with_cube(*this + platforms.get_cobj_platform(*this).get_range());}
+	if (platform_id >= 0) {bcube.union_with_cube(get_extended_platform_bcube());}
 	return bcube;
 }
 
 cube_t coll_obj::get_platform_min_bcube() const {
-
 	cube_t bcube(*this);
 
 	if (platform_id >= 0) {
-		cube_t const xlated_bcube(*this + platforms.get_cobj_platform(*this).get_range());
-		if (!xlated_bcube.intersects(bcube)) {bcube.set_to_zeros();} else {bcube.intersect_with_cube(xlated_bcube);}
+		if (!intersects(get_extended_platform_bcube())) {bcube.set_to_zeros();}
+		else {bcube.intersect_with_cube(get_extended_platform_bcube());}
 	}
 	return bcube;
 }
+
+void coll_obj::expand_to_platform_max_bounds() {
+	if (platform_id >= 0 && type == COLL_CUBE) {union_with_cube(get_extended_platform_bcube());} // only platform cubes
+}
+
+void coll_obj::unexpand_from_platform_max_bounds() {
+	if (platform_id < 0 || type != COLL_CUBE) return; // only platform cubes
+	vector3d const platform_range(platforms.get_cobj_platform(*this).get_range());
+	for (unsigned i = 0; i < 3; ++i) {d[i][platform_range[i] > 0.0] -= platform_range[i];} // undo the above transform
+}
+
+void expand_or_unexpand_update_light_platform_cobjs(bool unexpand) {
+	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
+		coll_obj &cobj(coll_objects.get_cobj(*i));
+		if (!cobj.is_update_light_platform()) continue;
+		if (unexpand) {cobj.unexpand_from_platform_max_bounds();} else {cobj.expand_to_platform_max_bounds();}
+	}
+}
+void pre_rt_bvh_build_hook () {expand_or_unexpand_update_light_platform_cobjs(0);}
+void post_rt_bvh_build_hook() {expand_or_unexpand_update_light_platform_cobjs(1);}
 
 
 bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int dir) const {

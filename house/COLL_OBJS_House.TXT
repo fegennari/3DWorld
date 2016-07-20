@@ -710,7 +710,7 @@ l 0.9 1.0 1.0 1.0 1.0 47 1 # pink brick
 a 0 # Not Destroyable
 e 1
 #e 0 # testing
-# enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
+# enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0]]]
 #Q 1 0.2 0.4 1.0 2.0 0.5 1.0   -1.05 -3.5 0.045  0 0 1  2 1 # platform (testing) - up and down
 #Q 1 0.2 0.4 1.0 2.0 0.5 10.0   -1.05 -3.5 0.045  1 1 0  2 1 # platform (testing) - sideways
 B -1.7 -0.4 -5.0 -2.0 -0.1 0.045
