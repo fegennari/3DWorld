@@ -39,6 +39,86 @@ extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 extern model3ds all_models;
 
 
+struct face_ray_accum_t {
+
+	colorRGBA color; // +weight
+	cube_t bcube;
+	unsigned num_rays;
+
+	face_ray_accum_t() : color(0,0,0,0), bcube(all_zeros, all_zeros), num_rays(0) {}
+
+	void add_ray(point const &pos, colorRGBA const &c, float weight) {
+		if (num_rays == 0) {bcube.set_from_point(pos);} else {bcube.union_with_pt(pos);}
+		color += c * weight;
+		++num_rays;
+	}
+	void add(face_ray_accum_t const &v) {
+		if (v.num_rays == 0) return; // nothing to add
+		if (num_rays == 0) {bcube = v.bcube;} else {bcube.union_with_cube(v.bcube);}
+		color += v.color;
+		num_rays += v.num_rays;
+	}
+};
+
+struct cobj_ray_accum_t {
+
+	face_ray_accum_t vals[6]; // one per cube face
+
+	unsigned get_count() const {
+		unsigned n(0);
+		for (unsigned i = 0; i < 6; ++i) {n += vals[i].num_rays;}
+		return n;
+	}
+	void merge(cobj_ray_accum_t const &v) {
+		for (unsigned i = 0; i < 6; ++i) {vals[i].add(v.vals[i]);}
+	}
+};
+
+struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
+
+	void add_ray(unsigned id, point const &pos, colorRGBA const &color, float weight, unsigned face) {
+		assert(face < 6);
+		operator[](id).vals[face].add_ray(pos, color, weight);
+	}
+	void merge(cobj_ray_accum_map_t const &m) { // merge maps across threads
+		for (const_iterator i = m.begin(); i != m.end(); ++i) {operator[](i->first).merge(i->second);}
+	}
+	bool read(FILE *fp) {
+		unsigned sz(0);
+		if (fread(&sz, sizeof(unsigned), 1, fp) != 1) return 0; // read number of entries
+		for (unsigned i = 0; i < sz; ++i) {
+			pair<unsigned, cobj_ray_accum_t> val;
+			if (fread(&val.first,  sizeof(unsigned),         1, fp) != 1) return 0; // read ID
+			if (fread(&val.second, sizeof(face_ray_accum_t), 6, fp) != 6) return 0; // read 6 values
+			bool const did_ins(insert(val).second);
+			assert(did_ins); // no duplicate ids
+		}
+		return 1;
+	}
+	bool write(FILE *fp) const {
+		unsigned const sz(size());
+		if (fwrite(&sz, sizeof(unsigned), 1, fp) != 1) return 0; // write number of entries
+		for (const_iterator i = begin(); i != end(); ++i) {
+			if (fwrite(&i->first,  sizeof(unsigned),         1, fp) != 1) return 0; // write ID
+			if (fwrite(&i->second, sizeof(face_ray_accum_t), 6, fp) != 6) return 0; // write 6 values
+		}
+		return 1;
+	}
+	bool open_and_read(string const &filename) {
+		FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
+		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for reading" << endl; return 0;}
+		if (!read(fp)) {cerr << "failed to read file '" << filename << "'" << endl; return 0;}
+		return 1;
+	}
+	bool open_and_write(string const &filename) const {
+		FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
+		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for writing" << endl; return 0;}
+		if (!write(fp)) {cerr << "failed to write file '" << filename << "'" << endl; return 0;}
+		return 1;
+	}
+};
+
+
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
 float get_step_size()    {return 0.3*(DX_VAL + DY_VAL + DZ_VAL);}
 
@@ -102,7 +182,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, point p1, point const &p2, float wei
 
 
 void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, float weight0, colorRGBA color,
-					float line_length, int ignore_cobj, int ltype, unsigned depth, rand_gen_t &rgen)
+					float line_length, int ignore_cobj, int ltype, unsigned depth, rand_gen_t &rgen, cobj_ray_accum_map_t *accum_map)
 {
 	if (depth > MAX_RAY_BOUNCES) return;
 	//assert(!is_nan(p1) && !is_nan(p2));
@@ -235,7 +315,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		assert(cindex >= 0);
 		coll_obj const &cobj(coll_objects[cindex]);
 
-		if (enable_platform_lights(ltype) && cobj.is_update_light_platform()) {
+		if (accum_map && enable_platform_lights(ltype) && cobj.is_update_light_platform()) {
 			// FIXME: this can be handled by two approaches:
 			// 1. Maintain 2^N where N=sizeof(update light platforms) light volumes and split the ray between the two cases (transmit vs. reflect);
 			//    + Simpler, can be precomputed
@@ -244,6 +324,14 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 			//    for use in later processing and lighting updates when the platform moves;
 			//    + Can use smooth/correct interpolation as platform moves, scalable to many platforms, low overhead for static scene
 			//    - Slows frame rate when platforms move, complex, floating-point accuracy issues (need deterministic random numbers)
+			assert(cobj.type == COLL_CUBE); // FIXME: not yet supported
+			assert(!cobj.is_semi_trans()); // FIXME: not yet supported
+			//unsigned const face(cobj.closest_face(cpos)); // (dim<<1) + dir
+			unsigned const dim(get_max_dim(cnorm)); // cube intersection dim
+			bool const dir(cnorm[dim] > 0); // cube intersection dir
+			unsigned const face((dim<<1) + dir);
+			accum_map->add_ray(cindex, cpos, color, weight, face); // use pre-reflection color and weight
+			return; // terminate the ray here - will be continued from the hit surface in a later dynamic pass
 		}
 		else if (cobj.platform_id >= 0 || cobj.is_movable()) {
 			// this cobj isn't static, so maybe shouldn't be included - do we skip it in the line intersection check?
@@ -296,7 +384,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				if (!no_transmit) {cast_light_ray(lmgr, p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1, rgen);} // transmitted
+				if (!no_transmit) {cast_light_ray(lmgr, p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1, rgen, accum_map);} // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}
@@ -325,7 +413,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 			//assert(dot_product(v_new, cnorm) >= 0.0); // too strong - may fail due to FP rounding
 		}
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
-		cast_light_ray(lmgr, cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1, rgen);
+		cast_light_ray(lmgr, cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1, rgen, accum_map);
 	}
 }
 
@@ -335,6 +423,7 @@ struct rt_data {
 	int rseed, ltype;
 	bool is_thread, verbose, randomized, is_running;
 	lmap_manager_t *lmgr;
+	cobj_ray_accum_map_t accum_map;
 
 	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0, int lt=0)
 		: ix(i), num(n), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {}
@@ -362,9 +451,7 @@ public:
 	bool is_active() const {return (!threads.empty());}
 
 	bool any_threads_running() const {
-		for (vector<T>::const_iterator i = data.begin(); i != data.end(); ++i) {
-			if (i->is_running) return 1;
-		}
+		for (vector<T>::const_iterator i = data.begin(); i != data.end(); ++i) {if (i->is_running) return 1;}
 		return 0;
 	}
 
@@ -387,11 +474,7 @@ public:
 
 		for (unsigned t = 0; t < threads.size(); ++t) {
 			int const rc(pthread_create(&threads[t], &attr, func, (void *)(&data[t]))); 
-		
-			if (rc) {
-				cout << "Error: Return code from pthread_create() is " << rc << endl;
-				assert(0);
-			}
+			if (rc) {cout << "Error: Return code from pthread_create() is " << rc << endl; assert(0);}
 		}
 		pthread_attr_destroy(&attr);
 	}
@@ -399,14 +482,10 @@ public:
 	void join() {
 		for (unsigned t = 0; t < threads.size(); ++t) {
 			int const rc(pthread_join(threads[t], NULL));
-		
-			if (rc) {
-				cout << "Error: return code from pthread_join() is " << rc << endl;
-				assert(0);
-			}
+			if (rc) {cout << "Error: return code from pthread_join() is " << rc << endl; assert(0);}
 		}
-		clear();
 	}
+	void join_and_clear() {join(); clear();}
 };
 
 thread_manager_t<rt_data> thread_manager;
@@ -420,7 +499,7 @@ void kill_current_raytrace_threads() {
 	if (thread_manager.is_active()) { // can't have two running at once, so kill the existing one
 		// use pthread_cancel(thread); ?
 		kill_raytrace = 1;
-		thread_manager.join();
+		thread_manager.join_and_clear();
 		assert(!thread_manager.is_active());
 		kill_raytrace = 0;
 	}
@@ -441,7 +520,7 @@ void check_for_lighting_finished() { // to be called about once per frame
 
 	if (!thread_manager.is_active()) return; // inactive
 	if (thread_manager.any_threads_running()) return; // still running
-	thread_manager.join(); // clear() or join()?
+	thread_manager.join_and_clear(); // clear() or join_and_clear()?
 	update_lmap_from_temp_copy();
 }
 
@@ -469,7 +548,26 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		return;
 	}
 	thread_manager.run(start_func);
-	if (blocking) thread_manager.join();
+	
+	if (blocking) {
+		thread_manager.join();
+		cobj_ray_accum_map_t merged_accum_map;
+		for (auto i = data.begin(); i != data.end(); ++i) {merged_accum_map.merge(i->accum_map);}
+
+		if (!merged_accum_map.empty()) {
+			for (auto i = merged_accum_map.begin(); i != merged_accum_map.end(); ++i) {
+				cout << "cobj: " << i->first << ", count: " << i->second.get_count() << endl;
+				for (unsigned n = 0; n < 6; ++n) {
+					face_ray_accum_t const &val(i->second.vals[n]);
+					cout << "dim: " << (n>>1) << ", dir: " << (n&1) << ", num_rays: " << val.num_rays << endl;
+					cout << "color: " << val.color.str() << endl;
+					cout << "bcube: " << val.bcube.str() << endl;
+				}
+			}
+			// FIXME: do other stuff here
+		}
+		thread_manager.clear();
+	}
 	// if non-blocking, threads are finished when lmap_manager.was_updated is not set to true during the current frame
 }
 
@@ -485,16 +583,16 @@ bool cube_light_src_vect::ray_intersects_any(point const &start_pt, point const 
 
 
 void trace_one_global_ray(lmap_manager_t *lmgr, point const &pos, point const &pt, colorRGBA const &color, float ray_wt,
-	int ltype, bool is_scene_cube, rand_gen_t &rgen, float line_length)
+	int ltype, bool is_scene_cube, rand_gen_t &rgen, cobj_ray_accum_map_t *accum_map, float line_length)
 {
 	point const end_pt(pt + (pt - pos).get_norm()*line_length);
 	if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) return; // don't double count
-	cast_light_ray(lmgr, pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen);
+	cast_light_ray(lmgr, pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen, accum_map);
 }
 
 
 void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point const &pos, colorRGBA const &color, float ray_wt,
-	unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose, bool randomized, rand_gen_t &rgen)
+	unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose, bool randomized, rand_gen_t &rgen, cobj_ray_accum_map_t *accum_map)
 {
 	float const line_length(2.0*get_scene_radius());
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
@@ -524,7 +622,7 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 				if (verbose && ((s%1000) == 0)) increment_printed_number(s/1000);
 				pt[d0] = rgen.rand_uniform(bnds.d[d0][0], bnds.d[d0][1]);
 				pt[d1] = rgen.rand_uniform(bnds.d[d1][0], bnds.d[d1][1]);
-				trace_one_global_ray(lmgr, pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
+				trace_one_global_ray(lmgr, pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, accum_map, line_length);
 			}
 		}
 		else {
@@ -542,7 +640,7 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 					if (kill_raytrace) break;
 					if (verbose && ((num%1000) == 0)) increment_printed_number(num/1000);
 					pt[d1] = bnds.d[d1][0] + (s1 + rgen.rand_uniform(0.0, 1.0))*len1/n1;
-					trace_one_global_ray(lmgr, pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
+					trace_one_global_ray(lmgr, pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, accum_map, line_length);
 				}
 			}
 		}
@@ -565,14 +663,14 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 		float const ray_wt(RAY_WEIGHT*weight*color.alpha/GLOBAL_RAYS);
 		assert(ray_wt > 0.0);
 		cube_t const bnds(get_scene_bounds());
-		trace_ray_block_global_cube(data->lmgr, bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose, data->randomized, rgen);
+		trace_ray_block_global_cube(data->lmgr, bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose, data->randomized, rgen, &data->accum_map);
 	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
 		float const cube_weight(RAY_WEIGHT*weight*i->intensity/i->num_rays);
-		trace_ray_block_global_cube(data->lmgr, i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, data->randomized, rgen);
+		trace_ray_block_global_cube(data->lmgr, i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, data->randomized, rgen, &data->accum_map);
 		cube_start_rays += num_rays;
 	}
 	if (data->verbose) {
@@ -636,7 +734,7 @@ void *trace_ray_block_sky(void *ptr) {
 				if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
 				point const end_pt(pt + dirs[r]*line_length);
 				if (sky_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
-				cast_light_ray(data->lmgr, pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 0, rgen);
+				cast_light_ray(data->lmgr, pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 0, rgen, &data->accum_map);
 				++start_rays;
 			}
 		}
@@ -657,7 +755,7 @@ void *trace_ray_block_sky(void *ptr) {
 			vector3d dir(signed_rand_vector_spherical().get_norm()); // need high quality distribution
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
-			cast_light_ray(data->lmgr, pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen);
+			cast_light_ray(data->lmgr, pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen, &data->accum_map);
 		}
 		if (data->verbose) cout << endl;
 	}
@@ -712,7 +810,7 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 			if (line_light) {start_pt += n*delta;} // fixed spacing along the length of the line
 		}
 		point const end_pt(start_pt + dir*line_length);
-		cast_light_ray(lmgr, start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, ltype, 0, rgen);
+		cast_light_ray(lmgr, start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, ltype, 0, rgen, nullptr);
 	}
 }
 
