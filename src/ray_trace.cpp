@@ -20,8 +20,8 @@ bool keep_beams(0); // debugging mode
 bool kill_raytrace(0);
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), DYNAMIC_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
-unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1}; // sky, global, local, dynamic
-unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1}; // sky, global, local, dynamic
+unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1, 1}; // sky, global, local, dynamic, cobj_accum
+unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, global, local, dynamic, cobj_accum
 
 extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
@@ -74,6 +74,8 @@ struct cobj_ray_accum_t {
 	}
 };
 
+unsigned const magic_val = 0xbeefdead;
+
 struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 
 	void add_ray(unsigned id, point const &pos, colorRGBA const &color, float weight, unsigned face) {
@@ -84,7 +86,9 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		for (const_iterator i = m.begin(); i != m.end(); ++i) {operator[](i->first).merge(i->second);}
 	}
 	bool read(FILE *fp) {
-		unsigned sz(0);
+		unsigned sz(0), magic(0);
+		if (fread(&magic, sizeof(unsigned), 1, fp) != 1) return 0; // read number of entries
+		if (magic != magic_val) {cerr << "Incorrect cobj ray accumulation file type" << endl; return 0;}
 		if (fread(&sz, sizeof(unsigned), 1, fp) != 1) return 0; // read number of entries
 		for (unsigned i = 0; i < sz; ++i) {
 			pair<unsigned, cobj_ray_accum_t> val;
@@ -96,6 +100,7 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		return 1;
 	}
 	bool write(FILE *fp) const {
+		if (fwrite(&magic_val, sizeof(unsigned), 1, fp) != 1) return 0; // write magic value
 		unsigned const sz(size());
 		if (fwrite(&sz, sizeof(unsigned), 1, fp) != 1) return 0; // write number of entries
 		for (const_iterator i = begin(); i != end(); ++i) {
@@ -115,6 +120,17 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for writing" << endl; return 0;}
 		if (!write(fp)) {cerr << "failed to write file '" << filename << "'" << endl; return 0;}
 		return 1;
+	}
+	void stats() const {
+		for (auto i = begin(); i != end(); ++i) {
+			cout << "cobj: " << i->first << ", count: " << i->second.get_count() << endl;
+			for (unsigned n = 0; n < 6; ++n) {
+				face_ray_accum_t const &val(i->second.vals[n]);
+				cout << "dim: " << (n>>1) << ", dir: " << (n&1) << ", num_rays: " << val.num_rays << endl;
+				cout << "color: " << val.color.str() << endl;
+				cout << "bcube: " << val.bcube.str() << endl;
+			}
+		}
 	}
 };
 
@@ -428,11 +444,12 @@ struct rt_data {
 	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0, int lt=0)
 		: ix(i), num(n), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {}
 
-	void pre_run() {
+	void pre_run(rand_gen_t &rgen) {
 		assert(lmgr);
 		assert(num > 0);
 		assert(!is_running);
 		is_running = 1;
+		rgen.set_state(rseed, 1);
 	}
 	void post_run() {
 		assert(is_running); // can this fail due to race conditions? too strong? remove?
@@ -544,26 +561,17 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 	}
 	if (single_thread && blocking) { // pthreads disabled
 		start_func((void *)(&data[0]));
-		thread_manager.clear();
-		return;
 	}
-	thread_manager.run(start_func);
-	
+	else {
+		thread_manager.run(start_func);
+		if (blocking) {thread_manager.join();}
+	}
 	if (blocking) {
-		thread_manager.join();
 		cobj_ray_accum_map_t merged_accum_map;
 		for (auto i = data.begin(); i != data.end(); ++i) {merged_accum_map.merge(i->accum_map);}
 
 		if (!merged_accum_map.empty()) {
-			for (auto i = merged_accum_map.begin(); i != merged_accum_map.end(); ++i) {
-				cout << "cobj: " << i->first << ", count: " << i->second.get_count() << endl;
-				for (unsigned n = 0; n < 6; ++n) {
-					face_ray_accum_t const &val(i->second.vals[n]);
-					cout << "dim: " << (n>>1) << ", dir: " << (n&1) << ", num_rays: " << val.num_rays << endl;
-					cout << "color: " << val.color.str() << endl;
-					cout << "bcube: " << val.bcube.str() << endl;
-				}
-			}
+			merged_accum_map.stats();
 			// FIXME: do other stuff here
 		}
 		thread_manager.clear();
@@ -619,7 +627,7 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 		if (randomized) {
 			for (unsigned s = 0; s < num_rays; ++s) {
 				if (kill_raytrace) break;
-				if (verbose && ((s%1000) == 0)) increment_printed_number(s/1000);
+				if (verbose && ((s%1000) == 0)) {increment_printed_number(s/1000);}
 				pt[d0] = rgen.rand_uniform(bnds.d[d0][0], bnds.d[d0][1]);
 				pt[d1] = rgen.rand_uniform(bnds.d[d1][0], bnds.d[d1][1]);
 				trace_one_global_ray(lmgr, pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, accum_map, line_length);
@@ -654,9 +662,8 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
 	assert(ptr);
 	rt_data *data(static_cast<rt_data *>(ptr));
-	data->pre_run();
 	rand_gen_t rgen;
-	rgen.set_state(data->rseed, 1);
+	data->pre_run(rgen);
 	unsigned long long cube_start_rays(0);
 
 	if (GLOBAL_RAYS > 0) {
@@ -697,9 +704,8 @@ void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
 	rt_data *data(static_cast<rt_data *>(ptr));
-	data->pre_run();
 	rand_gen_t rgen;
-	rgen.set_state(data->rseed, 1);
+	data->pre_run(rgen);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
 	unsigned long long start_rays(0), cube_start_rays(0);
 
@@ -715,11 +721,11 @@ void *trace_ray_block_sky(void *ptr) {
 			} while (pts[p].z < zbottom); // force above zbottom
 		}
 		sort(pts.begin(), pts.end());
-		if (data->verbose) cout << "Sky light source progress (of " << block_npts << "): 0";
+		if (data->verbose) {cout << "Sky light source progress (of " << block_npts << "): 0";}
 
 		for (unsigned p = 0; p < block_npts; ++p) {
 			if (kill_raytrace) break;
-			if (data->verbose) increment_printed_number(p);
+			if (data->verbose) {increment_printed_number(p);}
 			point const &pt(pts[p]);
 
 			for (unsigned r = 0; r < NRAYS; ++r) {
@@ -738,21 +744,21 @@ void *trace_ray_block_sky(void *ptr) {
 				++start_rays;
 			}
 		}
-		if (data->verbose) cout << endl;
+		if (data->verbose) {cout << endl;}
 	}
 	for (cube_light_src_vect::const_iterator i = sky_cube_lights.begin(); i != sky_cube_lights.end(); ++i) {
 		if (kill_raytrace) break;
 		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		unsigned const num_rays(i->num_rays/data->num);
 		float const cube_weight(RAY_WEIGHT*i->intensity/i->num_rays);
-		if (data->verbose) cout << "Cube volume light source " << (i - sky_cube_lights.begin()) << " of " << sky_cube_lights.size() << ", progress (of " << 1+num_rays/1000 << "): 0";
+		if (data->verbose) {cout << "Cube volume light source " << (i - sky_cube_lights.begin()) << " of " << sky_cube_lights.size() << ", progress (of " << 1+num_rays/1000 << "): 0";}
 		cube_start_rays += num_rays;
 
 		for (unsigned p = 0; p < num_rays; ++p) {
 			if (kill_raytrace) break;
 			if (data->verbose && ((p%1000) == 0)) increment_printed_number(p/1000);
 			point const pt(rgen.gen_rand_cube_point(i->bounds));
-			vector3d dir(signed_rand_vector_spherical().get_norm()); // need high quality distribution
+			vector3d dir(rgen.signed_rand_vector_spherical().get_norm()); // need high quality distribution
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
 			cast_light_ray(data->lmgr, pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen, &data->accum_map);
@@ -762,6 +768,47 @@ void *trace_ray_block_sky(void *ptr) {
 	if (data->verbose) {
 		cout << "start rays: " << start_rays << ", cube start rays: " << cube_start_rays << ", total rays: " << tot_rays
 			 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
+	}
+	data->post_run();
+	return 0;
+}
+
+
+void *trace_ray_block_cobj_accum(void *ptr) {
+
+	assert(ptr);
+	rt_data *data(static_cast<rt_data *>(ptr));
+	rand_gen_t rgen;
+	data->pre_run(rgen);
+	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
+
+	for (auto i = data->accum_map.begin(); i != data->accum_map.end(); ++i) {
+		coll_obj const &cobj(coll_objects.get_cobj(i->first));
+		assert(cobj.is_update_light_platform()); // ID must match between creation and usage of accum map
+		//vector3d const prev_frame_xlate(); // FIXME: lighting update is a delta from the previous frame
+
+		for (unsigned n = 0; n < 6; ++n) {
+			unsigned const dim(n>>1), dir(n&1);
+			vector3d normal(zero_vector);
+			normal[dim] = (dir ? 1.0 : -1.0); // cube face normal
+			float const thickness(cobj.d[dim][1] - cobj.d[dim][0]);
+			face_ray_accum_t const &val(i->second.vals[n]);
+			unsigned const num_rays(val.num_rays/data->num + (data->ix < (val.num_rays % data->num)));
+			float const weight(1.0/val.num_rays); // weight per ray
+
+			for (unsigned r = 0; r < num_rays; ++r) {
+				if (kill_raytrace) break; // not needed?
+				point const pt(rgen.gen_rand_cube_point(val.bcube));
+				vector3d ray_dir(rgen.signed_rand_vector_spherical().get_norm()); // need high quality distribution
+				if ((ray_dir[dim] > 0.0) == dir) {ray_dir[dim] = -ray_dir[dim];} // face toward the cobj
+				point start_pt(pt - thickness*ray_dir), clip_pt(pt + thickness*ray_dir);
+				bool const intersects(do_line_clip(start_pt, clip_pt, cobj.d)); // check cobj in current position
+				if (intersects) continue; // ray is blocked, discard
+				//clip_pt += 0.01*thickness*dir; // move past the cobj so that it doesn't intersect
+				point const end_pt(pt + line_length*ray_dir);
+				cast_light_ray(data->lmgr, clip_pt, end_pt, weight, weight, val.color, line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
+			}
+		}
 	}
 	data->post_run();
 	return 0;
@@ -820,9 +867,8 @@ void *trace_ray_block_local(void *ptr) {
 	assert(ptr);
 	if (LOCAL_RAYS == 0) return 0; // nothing to do
 	rt_data *data(static_cast<rt_data *>(ptr));
-	data->pre_run();
 	rand_gen_t rgen;
-	rgen.set_state(data->rseed, 1);
+	data->pre_run(rgen);
 	float const line_length(2.0*get_scene_radius());
 	unsigned const num_rays(max(1U, LOCAL_RAYS/data->num));
 	
@@ -848,9 +894,8 @@ void *trace_ray_block_dynamic(void *ptr) {
 	light_volume_local const &lvol(get_local_light_volume(data->ltype));
 	vector<unsigned> const &dlight_ixs(indir_dlight_group_manager.get_dlight_ixs_for_tag_ix(lvol.get_tag_ix()));
 	assert(!dlight_ixs.empty());
-	data->pre_run();
 	rand_gen_t rgen;
-	rgen.set_state(data->rseed, 1);
+	data->pre_run(rgen);
 	float const max_line_length(2.0*get_scene_radius());
 	unsigned const num_rays(max(1U, DYNAMIC_RAYS/data->num));
 	
@@ -867,7 +912,7 @@ void *trace_ray_block_dynamic(void *ptr) {
 
 
 typedef void *(*ray_trace_func)(void *);
-ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_dynamic};
+ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_dynamic, trace_ray_block_cobj_accum};
 
 
 void compute_ray_trace_lighting(unsigned ltype) {

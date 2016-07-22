@@ -755,7 +755,7 @@ void build_lightmap(bool verbose) {
 	if (nbins > 0) {
 		if (verbose) PRINT_TIME(" Lighting Setup + XYZ Passes");
 		// Note: sky and global lighting use the same data structure for reading/writing, so they should have the same filename if used together
-		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local", " Dynamic"};
+		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local", " Dynamic", " Cobj Accum"};
 
 		for (unsigned ltype = 0; ltype < NUM_LIGHTING_TYPES; ++ltype) {
 			if (raytrace_lights[ltype]) {

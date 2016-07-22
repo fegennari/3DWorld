@@ -90,7 +90,7 @@ float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperatu
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(0.6), waypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), model3d_texture_anisotropy(1.0), dist_to_fire_sq(0.0);
 float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model_auto_tc_scale(0.0), model_triplanar_tc_scale(0.0), shadow_map_pcf_offset(0.0);
 float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0);
-float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0};
+float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text, cobjs_out_fn;
