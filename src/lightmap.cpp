@@ -243,8 +243,11 @@ inline bool is_inside_lmap(int x, int y, int z) {return (z >= 0 && z < MESH_SIZE
 bool lmap_manager_t::is_valid_cell(int x, int y, int z) const {return (is_inside_lmap(x, y, z) && vlmap[y][x] != NULL);}
 
 
+lmcell *lmap_manager_t::get_lmcell_no_shift(point const &p) {
+	int const x(get_xpos(p.x)), y(get_ypos(p.y)), z(get_zpos(p.z));
+	return (is_valid_cell(x, y, z) ? &vlmap[y][x][z] : NULL);
+}
 lmcell *lmap_manager_t::get_lmcell(point const &p) {
-
 	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
 	return (is_valid_cell(x, y, z) ? &vlmap[y][x][z] : NULL);
 }
@@ -687,7 +690,7 @@ void build_lightmap(bool verbose) {
 	if (verbose) {cout << "Lightmap zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;}
 	assert(zstep > 0.0);
 	bool raytrace_lights[NUM_LIGHTING_TYPES] = {0};
-	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
+	for (unsigned i = 0; i < NUM_LIGHTING_TYPES; ++i) {raytrace_lights[i] = (read_light_files[i] || write_light_files[i]);}
 	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL] || create_voxel_landscape);
 	lmcell init_lmcell;
 
@@ -755,7 +758,7 @@ void build_lightmap(bool verbose) {
 	if (nbins > 0) {
 		if (verbose) PRINT_TIME(" Lighting Setup + XYZ Passes");
 		// Note: sky and global lighting use the same data structure for reading/writing, so they should have the same filename if used together
-		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local", " Dynamic", " Cobj Accum"};
+		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local", " Cobj Accum", " Dynamic"};
 
 		for (unsigned ltype = 0; ltype < NUM_LIGHTING_TYPES; ++ltype) {
 			if (raytrace_lights[ltype]) {

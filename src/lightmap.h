@@ -101,6 +101,7 @@ public:
 	bool is_valid_cell(int x, int y, int z) const;
 	lmcell *get_column(int x, int y) {return vlmap[y][x];} // Note: no bounds checking
 	lmcell &get_lmcell(int x, int y, int z) {return get_column(x, y)[z];} // Note: no bounds checking
+	lmcell *get_lmcell_no_shift(point const &p);
 	lmcell *get_lmcell(point const &p);
 	template<typename T> void alloc(unsigned nbins, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell);
 	void init_from(lmap_manager_t const &src);

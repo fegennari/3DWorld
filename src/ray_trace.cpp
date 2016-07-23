@@ -20,8 +20,8 @@ bool keep_beams(0); // debugging mode
 bool kill_raytrace(0);
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), DYNAMIC_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
-unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1, 1}; // sky, global, local, dynamic, cobj_accum
-unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, global, local, dynamic, cobj_accum
+unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1, 1}; // sky, global, local, cobj_accum, dynamic
+unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, global, local, cobj_accum, dynamic
 
 extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
@@ -113,12 +113,14 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
 		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for reading" << endl; return 0;}
 		if (!read(fp)) {cerr << "failed to read file '" << filename << "'" << endl; return 0;}
+		cout << "Read cobj accum lighting file " << filename << endl;
 		return 1;
 	}
 	bool open_and_write(string const &filename) const {
 		FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
 		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for writing" << endl; return 0;}
 		if (!write(fp)) {cerr << "failed to write file '" << filename << "'" << endl; return 0;}
+		cout << "Wrote cobj accum lighting file " << filename << endl;
 		return 1;
 	}
 	void stats() const {
@@ -133,6 +135,8 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		}
 	}
 };
+
+cobj_ray_accum_map_t merged_accum_map;
 
 
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
@@ -181,7 +185,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, point p1, point const &p2, float wei
 		assert(lmgr != nullptr && lmgr->is_allocated());
 
 		for (unsigned s = 0; s < nsteps+first_pt; ++s) {
-			lmcell *lmc(lmgr->get_lmcell(p1));
+			lmcell *lmc(lmgr->get_lmcell(p1)); // FIXME: get_lmcell_no_shift()?
 		
 			if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
 				float *color(lmc->get_offset(ltype));
@@ -567,7 +571,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		if (blocking) {thread_manager.join();}
 	}
 	if (blocking) {
-		cobj_ray_accum_map_t merged_accum_map;
+		merged_accum_map.clear();
 		for (auto i = data.begin(); i != data.end(); ++i) {merged_accum_map.merge(i->accum_map);}
 
 		if (!merged_accum_map.empty()) {
@@ -782,7 +786,8 @@ void *trace_ray_block_cobj_accum(void *ptr) {
 	data->pre_run(rgen);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
 
-	for (auto i = data->accum_map.begin(); i != data->accum_map.end(); ++i) {
+	//for (auto i = data->accum_map.begin(); i != data->accum_map.end(); ++i) {
+	for (auto i = merged_accum_map.begin(); i != merged_accum_map.end(); ++i) {
 		coll_obj const &cobj(coll_objects.get_cobj(i->first));
 		assert(cobj.is_update_light_platform()); // ID must match between creation and usage of accum map
 		//vector3d const prev_frame_xlate(); // FIXME: lighting update is a delta from the previous frame
@@ -912,7 +917,7 @@ void *trace_ray_block_dynamic(void *ptr) {
 
 
 typedef void *(*ray_trace_func)(void *);
-ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_dynamic, trace_ray_block_cobj_accum};
+ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_cobj_accum, trace_ray_block_dynamic};
 
 
 void compute_ray_trace_lighting(unsigned ltype) {
@@ -920,8 +925,12 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	bool const dynamic(is_ltype_dynamic(ltype));
 	unsigned const c_ltype(clamp_ltype_range(ltype));
 	assert(c_ltype < NUM_LIGHTING_TYPES);
+	const char *fn(lighting_file[c_ltype]);
 
-	if (!dynamic && read_light_files[c_ltype]) {lmap_manager.read_data_from_file(lighting_file[c_ltype], c_ltype);}
+	if (!dynamic && read_light_files[c_ltype]) {
+		if (c_ltype == LIGHTING_COBJ_ACCUM) {merged_accum_map.open_and_read(fn);}
+		else {lmap_manager.read_data_from_file(fn, c_ltype);}
+	}
 	else {
 		if (c_ltype != LIGHTING_LOCAL && !dynamic) {cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;}
 		all_models.build_cobj_trees(1);
@@ -929,7 +938,10 @@ void compute_ray_trace_lighting(unsigned ltype) {
 		launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype);
 		if (enable_platform_lights(ltype)) {post_rt_bvh_build_hook();}
 	}
-	if (!dynamic && write_light_files[c_ltype]) {lmap_manager.write_data_to_file(lighting_file[c_ltype], c_ltype);}
+	if (!dynamic && write_light_files[c_ltype]) {
+		if (c_ltype == LIGHTING_COBJ_ACCUM) {merged_accum_map.open_and_write(fn);}
+		else {lmap_manager.write_data_to_file(fn, c_ltype);}
+	}
 }
 
 

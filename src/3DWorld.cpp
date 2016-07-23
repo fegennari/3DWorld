@@ -1922,6 +1922,9 @@ int load_config(string const &config_file) {
 		else if (str == "lighting_file_local") {
 			read_write_lighting_setup(fp, LIGHTING_LOCAL, error); // <filename> <write_mode> <scale>
 		}
+		else if (str == "lighting_file_cobj") {
+			read_write_lighting_setup(fp, LIGHTING_COBJ_ACCUM, error); // <filename> <write_mode> <scale>
+		}
 		else if (str == "num_light_rays") { // GLOBAL_RAYS and DYNAMIC_RAYS are optional
 			if (fscanf(fp, "%u%u%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS, &GLOBAL_RAYS, &DYNAMIC_RAYS) < 3) cfg_err("num_light_rays command", error);
 		}
