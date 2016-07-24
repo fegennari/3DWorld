@@ -69,6 +69,15 @@ struct cobj_ray_accum_t {
 		for (unsigned i = 0; i < 6; ++i) {n += vals[i].num_rays;}
 		return n;
 	}
+	cube_t get_bcube() const {
+		cube_t bcube(all_zeros, all_zeros);
+		bool is_first(0);
+		for (unsigned i = 0; i < 6; ++i) {
+			if (vals[i].num_rays == 0) continue;
+			if (is_first) {bcube = vals[i].bcube; is_first = 0;} else {bcube.union_with_cube(vals[i].bcube);}
+		}
+		return bcube;
+	}
 	void merge(cobj_ray_accum_t const &v) {
 		for (unsigned i = 0; i < 6; ++i) {vals[i].add(v.vals[i]);}
 	}
@@ -86,6 +95,7 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		for (const_iterator i = m.begin(); i != m.end(); ++i) {operator[](i->first).merge(i->second);}
 	}
 	bool read(FILE *fp) {
+		clear();
 		unsigned sz(0), magic(0);
 		if (fread(&magic, sizeof(unsigned), 1, fp) != 1) return 0; // read number of entries
 		if (magic != magic_val) {cerr << "Incorrect cobj ray accumulation file type" << endl; return 0;}
@@ -109,21 +119,22 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		}
 		return 1;
 	}
-	bool open_and_read(string const &filename) {
+	void open_and_read(string const &filename, bool show_stats=0) {
 		FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
-		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for reading" << endl; return 0;}
-		if (!read(fp)) {cerr << "failed to read file '" << filename << "'" << endl; return 0;}
+		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for reading" << endl; exit(1);}
+		if (!read(fp)) {cerr << "failed to read file '" << filename << "'" << endl; exit(1);}
 		cout << "Read cobj accum lighting file " << filename << endl;
-		return 1;
+		if (show_stats) {stats();}
 	}
-	bool open_and_write(string const &filename) const {
+	void open_and_write(string const &filename, bool show_stats=0) const {
 		FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
-		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for writing" << endl; return 0;}
-		if (!write(fp)) {cerr << "failed to write file '" << filename << "'" << endl; return 0;}
+		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for writing" << endl; exit(1);}
+		if (!write(fp)) {cerr << "failed to write file '" << filename << "'" << endl; exit(1);}
 		cout << "Wrote cobj accum lighting file " << filename << endl;
-		return 1;
+		if (show_stats) {stats();}
 	}
 	void stats() const {
+		cout << "cobj lighting stats:" << endl;
 		for (auto i = begin(); i != end(); ++i) {
 			cout << "cobj: " << i->first << ", count: " << i->second.get_count() << endl;
 			for (unsigned n = 0; n < 6; ++n) {
@@ -185,7 +196,8 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, point p1, point const &p2, float wei
 		assert(lmgr != nullptr && lmgr->is_allocated());
 
 		for (unsigned s = 0; s < nsteps+first_pt; ++s) {
-			lmcell *lmc(lmgr->get_lmcell(p1)); // FIXME: get_lmcell_no_shift()?
+			lmcell *lmc(lmgr->get_lmcell(p1));
+			//lmcell *lmc(lmgr->get_lmcell_no_shift(p1));
 		
 			if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
 				float *color(lmc->get_offset(ltype));
@@ -571,12 +583,10 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		if (blocking) {thread_manager.join();}
 	}
 	if (blocking) {
-		merged_accum_map.clear();
-		for (auto i = data.begin(); i != data.end(); ++i) {merged_accum_map.merge(i->accum_map);}
-
-		if (!merged_accum_map.empty()) {
-			merged_accum_map.stats();
-			// FIXME: do other stuff here
+		if (enable_platform_lights(ltype)) {
+			merged_accum_map.clear();
+			for (auto i = data.begin(); i != data.end(); ++i) {merged_accum_map.merge(i->accum_map);}
+			if (!merged_accum_map.empty()) {merged_accum_map.stats();}
 		}
 		thread_manager.clear();
 	}
@@ -778,6 +788,24 @@ void *trace_ray_block_sky(void *ptr) {
 }
 
 
+bool is_correct_accum_cobj(coll_obj const &cobj, cube_t const bcube) {
+	return (cobj.is_update_light_platform() && bcube.intersects(cobj));
+}
+coll_obj &find_accum_cobj(unsigned id, cobj_ray_accum_t const &arc) {
+
+	cube_t const bcube(arc.get_bcube());
+	coll_obj &cobj(coll_objects.get_cobj(id));
+	if (is_correct_accum_cobj(cobj, bcube)) return cobj;
+
+	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
+		coll_obj &cobj(coll_objects.get_cobj(*i));
+		if (is_correct_accum_cobj(cobj, bcube)) return cobj;
+	}
+	cerr << "Error: Failed to find platform cobj with ID " << id << endl;
+	assert(0);
+	return cobj; // never gets here
+}
+
 void *trace_ray_block_cobj_accum(void *ptr) {
 
 	assert(ptr);
@@ -786,32 +814,39 @@ void *trace_ray_block_cobj_accum(void *ptr) {
 	data->pre_run(rgen);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
 
-	//for (auto i = data->accum_map.begin(); i != data->accum_map.end(); ++i) {
 	for (auto i = merged_accum_map.begin(); i != merged_accum_map.end(); ++i) {
-		coll_obj const &cobj(coll_objects.get_cobj(i->first));
-		assert(cobj.is_update_light_platform()); // ID must match between creation and usage of accum map
+		coll_obj &cobj(find_accum_cobj(i->first, i->second));
+		cobj.unexpand_from_platform_max_bounds(); // unexpand if it was expanded
 		//vector3d const prev_frame_xlate(); // FIXME: lighting update is a delta from the previous frame
 
 		for (unsigned n = 0; n < 6; ++n) {
+			face_ray_accum_t const &val(i->second.vals[n]);
+			if (val.num_rays == 0) continue;
 			unsigned const dim(n>>1), dir(n&1);
 			vector3d normal(zero_vector);
 			normal[dim] = (dir ? 1.0 : -1.0); // cube face normal
 			float const thickness(cobj.d[dim][1] - cobj.d[dim][0]);
-			face_ray_accum_t const &val(i->second.vals[n]);
+			colorRGBA color(val.color);
+			float const max_comp(max(color.R, max(color.G, color.B)));
+			color  *= 1.0/max_comp;
+			color.A = 1.0;
 			unsigned const num_rays(val.num_rays/data->num + (data->ix < (val.num_rays % data->num)));
-			float const weight(1.0/val.num_rays); // weight per ray
+			float const weight(max_comp/val.num_rays); // weight per ray
+			//cout << TXT(dim) << TXT(dir) << TXT(max_comp) << TXT(num_rays) << TXT(weight) << ", color: " << color.str() << endl;
 
 			for (unsigned r = 0; r < num_rays; ++r) {
 				if (kill_raytrace) break; // not needed?
 				point const pt(rgen.gen_rand_cube_point(val.bcube));
 				vector3d ray_dir(rgen.signed_rand_vector_spherical().get_norm()); // need high quality distribution
+				ray_dir += -normal; ray_dir.normalize(); // average with inverse cube normal to make more directional
 				if ((ray_dir[dim] > 0.0) == dir) {ray_dir[dim] = -ray_dir[dim];} // face toward the cobj
+				//vector3d const ray_dir((rgen.gen_rand_cube_point(val.bcube) - pt).get_norm()); // make sure it intersects the accumulation cube
 				point start_pt(pt - thickness*ray_dir), clip_pt(pt + thickness*ray_dir);
 				bool const intersects(do_line_clip(start_pt, clip_pt, cobj.d)); // check cobj in current position
 				if (intersects) continue; // ray is blocked, discard
 				//clip_pt += 0.01*thickness*dir; // move past the cobj so that it doesn't intersect
 				point const end_pt(pt + line_length*ray_dir);
-				cast_light_ray(data->lmgr, clip_pt, end_pt, weight, weight, val.color, line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
+				cast_light_ray(data->lmgr, clip_pt, end_pt, weight, weight, color, line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
 			}
 		}
 	}
@@ -928,7 +963,10 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	const char *fn(lighting_file[c_ltype]);
 
 	if (!dynamic && read_light_files[c_ltype]) {
-		if (c_ltype == LIGHTING_COBJ_ACCUM) {merged_accum_map.open_and_read(fn);}
+		if (c_ltype == LIGHTING_COBJ_ACCUM) {
+			merged_accum_map.open_and_read(fn, 1);
+			launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype); // FIXME: temporary debugging
+		}
 		else {lmap_manager.read_data_from_file(fn, c_ltype);}
 	}
 	else {
@@ -939,7 +977,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 		if (enable_platform_lights(ltype)) {post_rt_bvh_build_hook();}
 	}
 	if (!dynamic && write_light_files[c_ltype]) {
-		if (c_ltype == LIGHTING_COBJ_ACCUM) {merged_accum_map.open_and_write(fn);}
+		if (c_ltype == LIGHTING_COBJ_ACCUM) {merged_accum_map.open_and_write(fn, 0);}
 		else {lmap_manager.write_data_to_file(fn, c_ltype);}
 	}
 }

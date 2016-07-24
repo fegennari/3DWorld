@@ -185,13 +185,16 @@ cube_t coll_obj::get_platform_min_bcube() const {
 }
 
 void coll_obj::expand_to_platform_max_bounds() {
-	if (platform_id >= 0 && type == COLL_CUBE) {union_with_cube(get_extended_platform_bcube());} // only platform cubes
+	if (platform_id < 0 || type != COLL_CUBE || (cp.flags & COBJ_EXPANDED_PLATFORM)) return; // only unexpanded platform cubes
+	union_with_cube(get_extended_platform_bcube());
+	cp.flags |= COBJ_EXPANDED_PLATFORM;
 }
 
 void coll_obj::unexpand_from_platform_max_bounds() {
-	if (platform_id < 0 || type != COLL_CUBE) return; // only platform cubes
+	if (platform_id < 0 || type != COLL_CUBE || !(cp.flags & COBJ_EXPANDED_PLATFORM)) return; // only expanded platform cubes
 	vector3d const platform_range(platforms.get_cobj_platform(*this).get_range());
 	for (unsigned i = 0; i < 3; ++i) {d[i][platform_range[i] > 0.0] -= platform_range[i];} // undo the above transform
+	cp.flags &= ~COBJ_EXPANDED_PLATFORM;
 }
 
 void expand_or_unexpand_update_light_platform_cobjs(bool unexpand) {

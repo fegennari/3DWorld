@@ -64,14 +64,16 @@ public:
 };
 
 
+unsigned const lmcell_ltype_off[NUM_LIGHTING_TYPES] = {0, 4, 8, 0}; // sky, global, local, sky cobj accum, dynamic
+
 struct lmcell { // size = 52
 
 	float sc[3], sv, gc[3], gv, lc[3], smoke; // *c[3]: RGB sky, global, local colors
 	unsigned char pflow[3]; // flow: x, y, z
 	
 	lmcell() : sv(0.0), gv(0.0), smoke(0.0) {UNROLL_3X(sc[i_] = gc[i_] = lc[i_] = 0.0; pflow[i_] = 255;)}
-	float       *get_offset(int ltype)       {return (sc + 4*ltype);}
-	float const *get_offset(int ltype) const {return (sc + 4*ltype);}
+	float       *get_offset(int ltype)       {return (sc + lmcell_ltype_off[ltype]);}
+	float const *get_offset(int ltype) const {return (sc + lmcell_ltype_off[ltype]);}
 	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4);}
 	void get_final_color(colorRGB &color, float max_indir, float indir_scale=1.0, float extra_ambient=0.0) const;
 	void set_outside_colors();

@@ -78,6 +78,7 @@ unsigned const COBJ_MOVABLE     = 0x08;
 unsigned const COBJ_WAS_CUBE    = 0x10;
 unsigned const COBJ_IS_INDOORS  = 0x20;
 unsigned const COBJ_REFLECTIVE  = 0x40;
+unsigned const COBJ_EXPANDED_PLATFORM = 0x80;
 
 struct cobj_params : public obj_layer { // size = 88
 
