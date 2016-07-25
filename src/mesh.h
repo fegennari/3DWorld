@@ -140,6 +140,8 @@ inline int get_zpos2(float z)   {return int((z + Z_SCENE_SIZE)/DZ_VAL + 0.5);}
 
 inline int get_xpos_clamp(float xval) {return max(0, min(MESH_X_SIZE-1, get_xpos(xval)));}
 inline int get_ypos_clamp(float yval) {return max(0, min(MESH_Y_SIZE-1, get_ypos(yval)));}
+inline int get_xpos_round_down(float xval) {return int((xval + X_SCENE_SIZE)*DX_VAL_INV);}
+inline int get_ypos_round_down(float yval) {return int((yval + Y_SCENE_SIZE)*DY_VAL_INV);}
 
 
 inline float get_dim_val(int val, unsigned dim) {

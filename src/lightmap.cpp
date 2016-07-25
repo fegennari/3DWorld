@@ -14,7 +14,6 @@ int      const END_LIGHT     = 8; // one past the end
 unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
 
 float const DZ_VAL_SCALE     = 2.0;
-float const SHIFT_VAL        = 0.5; // hack to fix some offset problem
 float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
 float const FLASHLIGHT_BW    = 0.02;
@@ -23,7 +22,7 @@ float const FLASHLIGHT_RAD   = 4.0;
 
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0), flashlight_on(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0);
-float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
+float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 cube_t dlight_bcube(all_zeros_cube);
 dls_cell **ldynamic = NULL;
@@ -243,12 +242,12 @@ inline bool is_inside_lmap(int x, int y, int z) {return (z >= 0 && z < MESH_SIZE
 bool lmap_manager_t::is_valid_cell(int x, int y, int z) const {return (is_inside_lmap(x, y, z) && vlmap[y][x] != NULL);}
 
 
-lmcell *lmap_manager_t::get_lmcell_no_shift(point const &p) {
-	int const x(get_xpos(p.x)), y(get_ypos(p.y)), z(get_zpos(p.z));
+lmcell *lmap_manager_t::get_lmcell_round_down(point const &p) { // round down
+	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
 	return (is_valid_cell(x, y, z) ? &vlmap[y][x][z] : NULL);
 }
-lmcell *lmap_manager_t::get_lmcell(point const &p) {
-	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
+lmcell *lmap_manager_t::get_lmcell(point const &p) { // round to center
+	int const x(get_xpos(p.x)), y(get_ypos(p.y)), z(get_zpos(p.z));
 	return (is_valid_cell(x, y, z) ? &vlmap[y][x][z] : NULL);
 }
 
@@ -325,7 +324,7 @@ void lmcell::mix_lighting_with(lmcell const &lmc, float val) {
 
 
 int light_grid_base::check_lmap_get_grid_index(point const &p) const {
-	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
+	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
 	if (!lmap_manager.is_valid_cell(x, y, z)) return -1; // the global lightmap doesn't have this cell
 	return get_ix(x, y, z);
 }
@@ -1112,7 +1111,7 @@ void add_dynamic_lights_ground() {
 	dlight_add_thresh *= 0.99;
 	bool first(1);
 	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
-	point const dlight_shift(-SHIFT_DX, -SHIFT_DY, 0.0);
+	point const dlight_shift(-0.5*DX_VAL, -0.5*DY_VAL, 0.0);
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		light_source &ls(dl_sources[i]);
@@ -1170,7 +1169,7 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 	if (!lm_alloc) return;
 	assert(lmap_manager.is_allocated());
 	colorRGB cscale(cur_ambient);
-	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
+	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
 	
 	if (!point_outside_mesh(x, y) && p.z > czmin0) { // inside the mesh range and above the lowest cobj
 		float val(get_voxel_terrain_ao_lighting_val(p));

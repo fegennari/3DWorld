@@ -196,8 +196,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, point p1, point const &p2, float wei
 		assert(lmgr != nullptr && lmgr->is_allocated());
 
 		for (unsigned s = 0; s < nsteps+first_pt; ++s) {
-			lmcell *lmc(lmgr->get_lmcell(p1));
-			//lmcell *lmc(lmgr->get_lmcell_no_shift(p1));
+			lmcell *lmc(lmgr->get_lmcell_round_down(p1));
 		
 			if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
 				float *color(lmc->get_offset(ltype));
