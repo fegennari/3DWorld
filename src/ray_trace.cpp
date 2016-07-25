@@ -853,41 +853,6 @@ void *trace_ray_block_cobj_accum(void *ptr) {
 			assert(r->weight > 0.0);
 			cast_light_ray(data->lmgr, r->pos, r->get_p2(line_length), r->weight, r->weight, r->get_color(), line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
 		}
-		if (!i->second.rays.empty()) continue; // used individual rays, no area light needed
-		unsigned const min_target_rays = 8000;
-		unsigned const tot_side_rays(i->second.get_count()), nrays_mult(max(1U, min_target_rays/tot_side_rays)); // should both be > 0
-
-		for (unsigned n = 0; n < 6; ++n) {
-			face_ray_accum_t const &val(i->second.vals[n]);
-			if (val.num_rays == 0) continue;
-			unsigned const dim(n>>1), dir(n&1);
-			vector3d normal(zero_vector);
-			normal[dim] = (dir ? 1.0 : -1.0); // cube face normal
-			float const thickness(cobj.d[dim][1] - cobj.d[dim][0]);
-			colorRGBA color(val.color);
-			float const max_comp(color.get_max_component());
-			color  *= 1.0/max_comp;
-			color.A = 1.0;
-			unsigned const tot_num_rays(nrays_mult*val.num_rays); // at least 8K rays
-			unsigned const num_rays(tot_num_rays/data->num + (data->ix < (tot_num_rays % data->num)));
-			float const weight(max_comp/tot_num_rays); // weight per ray
-
-			for (unsigned r = 0; r < num_rays; ++r) {
-				if (kill_raytrace) break; // not needed?
-				point const pt(rgen.gen_rand_cube_point(val.bcube));
-				vector3d ray_dir(rgen.signed_rand_vector_spherical().get_norm()); // need high quality distribution
-				ray_dir[dim] = -2.5*normal[dim]; ray_dir.normalize(); // combine with inverse cube normal to make more directional
-#if 0
-				point p0(pt - thickness*ray_dir), start_pt(pt + thickness*ray_dir);
-				bool const intersects(do_line_clip(p0, start_pt, cobj.d)); // check cobj in current position
-				if (intersects) continue; // ray is blocked, discard
-#else
-				point const start_pt(pt - thickness*ray_dir);
-#endif
-				point const end_pt(pt + line_length*ray_dir);
-				cast_light_ray(data->lmgr, start_pt, end_pt, weight, weight, color, line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
-			}
-		}
 	}
 	data->post_run();
 	return 0;
