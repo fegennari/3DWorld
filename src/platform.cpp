@@ -18,7 +18,7 @@ extern vector<light_source_trig> light_sources_d;
 
 
 // Note: activator can be player (CAMERA_ID), smileys (0-N), lights (0-N), or large object collisions (NO_SOURCE)
-unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int activator, bool clicks) {
+unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int activator, bool clicks) const {
 
 	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
 	if (player_only && activator != CAMERA_ID) return 0; // not activated by player
