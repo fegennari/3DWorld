@@ -640,6 +640,7 @@ struct colorRGB { // size = 12
 	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B; return oss.str();}
 	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B; return oss.str();}
 	float get_luminance() const {return (R + G + B)/3.0;}
+	float get_max_component() const {return max(R, max(G, B));}
 };
 
 
@@ -735,8 +736,9 @@ struct vert_norm { // size = 24
 
 struct norm_comp { // size = 4
 	char n[3];
-	norm_comp() {}
-	norm_comp(vector3d const &n_) {set_norm(n_);}
+	char pad; // unused padding
+	norm_comp() : pad(0) {}
+	norm_comp(vector3d const &n_) : pad(0) {set_norm(n_);}
 	void set_norm(norm_comp const &n_) {UNROLL_3X(n[i_] = n_.n[i_];)}
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = char(max(-128, min(127, int(127.0*n_[i_]))));)}
 	vector3d get_norm() const {return vector3d(n[0]/127.0, n[1]/127.0, n[2]/127.0);}

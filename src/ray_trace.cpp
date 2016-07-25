@@ -60,10 +60,34 @@ struct face_ray_accum_t {
 	}
 };
 
+struct rt_ray_t { // size = 24 (40 if uncompressed)
+	point pos;
+	norm_comp dir;
+	color_wrapper color;
+	float weight;
+
+	rt_ray_t() : weight(0.0) {}
+	rt_ray_t(point const &p1, point const &p2, colorRGB color_, float weight_) : pos(p1), weight(weight_) {
+		dir.set_norm((p2 - p1).get_norm());
+		float const max_comp(color_.get_max_component());
+		color_ *= 1.0/max_comp;
+		weight *= max_comp;
+		color.set_c4(color_);
+	}
+	point get_p2(float length) const {return pos + length*dir.get_norm();}
+	colorRGBA get_color() const {return color.get_c4();}
+};
+
 struct cobj_ray_accum_t {
 
 	face_ray_accum_t vals[6]; // one per cube face
+	vector<rt_ray_t> rays;
 
+	void add_ray(point const &p1, point const &p2, colorRGB const &color, float weight, unsigned face) {
+		assert(face < 6);
+		vals[face].add_ray(p1, color, weight);
+		rays.push_back(rt_ray_t(p1, p2, color, weight));
+	}
 	unsigned get_count() const {
 		unsigned n(0);
 		for (unsigned i = 0; i < 6; ++i) {n += vals[i].num_rays;}
@@ -80,6 +104,7 @@ struct cobj_ray_accum_t {
 	}
 	void merge(cobj_ray_accum_t const &v) {
 		for (unsigned i = 0; i < 6; ++i) {vals[i].add(v.vals[i]);}
+		rays.insert(rays.end(), v.rays.begin(), v.rays.end());
 	}
 };
 
@@ -87,9 +112,8 @@ unsigned const magic_val = 0xbeefdead;
 
 struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 
-	void add_ray(unsigned id, point const &pos, colorRGBA const &color, float weight, unsigned face) {
-		assert(face < 6);
-		operator[](id).vals[face].add_ray(pos, color, weight);
+	void add_ray(unsigned id, point const &p1, point const &p2, colorRGB const &color, float weight, unsigned face) {
+		operator[](id).add_ray(p1, p2, color, weight, face);
 	}
 	void merge(cobj_ray_accum_map_t const &m) { // merge maps across threads
 		for (const_iterator i = m.begin(); i != m.end(); ++i) {operator[](i->first).merge(i->second);}
@@ -104,6 +128,10 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 			pair<unsigned, cobj_ray_accum_t> val;
 			if (fread(&val.first,  sizeof(unsigned),         1, fp) != 1) return 0; // read ID
 			if (fread(&val.second, sizeof(face_ray_accum_t), 6, fp) != 6) return 0; // read 6 values
+			unsigned nrays(0);
+			if (fread(&nrays, sizeof(unsigned), 1, fp) != 1) return 0; // read number of rays
+			val.second.rays.resize(nrays);
+			if (fread(&val.second.rays.front(), sizeof(rt_ray_t), nrays, fp) != nrays) return 0; // read ray data
 			bool const did_ins(insert(val).second);
 			assert(did_ins); // no duplicate ids
 		}
@@ -116,27 +144,34 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		for (const_iterator i = begin(); i != end(); ++i) {
 			if (fwrite(&i->first,  sizeof(unsigned),         1, fp) != 1) return 0; // write ID
 			if (fwrite(&i->second, sizeof(face_ray_accum_t), 6, fp) != 6) return 0; // write 6 values
+			unsigned const nrays(i->second.rays.size());
+			if (fwrite(&nrays, sizeof(unsigned), 1, fp) != 1) return 0; // write number of rays
+			if (fwrite(&i->second.rays.front(), sizeof(rt_ray_t), nrays, fp) != nrays) return 0; // write ray data
 		}
 		return 1;
 	}
 	void open_and_read(string const &filename, bool show_stats=0) {
 		FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
 		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for reading" << endl; exit(1);}
-		if (!read(fp)) {cerr << "failed to read file '" << filename << "'" << endl; exit(1);}
+		bool const success(read(fp));
+		fclose(fp);
+		if (!success) {cerr << "failed to read file '" << filename << "'" << endl; exit(1);}
 		cout << "Read cobj accum lighting file " << filename << endl;
 		if (show_stats) {stats();}
 	}
 	void open_and_write(string const &filename, bool show_stats=0) const {
 		FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
 		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for writing" << endl; exit(1);}
-		if (!write(fp)) {cerr << "failed to write file '" << filename << "'" << endl; exit(1);}
+		bool const success(write(fp));
+		fclose(fp);
+		if (!success) {cerr << "failed to write file '" << filename << "'" << endl; exit(1);}
 		cout << "Wrote cobj accum lighting file " << filename << endl;
 		if (show_stats) {stats();}
 	}
 	void stats() const {
 		cout << "cobj lighting stats:" << endl;
 		for (auto i = begin(); i != end(); ++i) {
-			cout << "cobj: " << i->first << ", count: " << i->second.get_count() << endl;
+			cout << "cobj: " << i->first << ", count: " << i->second.get_count() << ", rays stored: " << i->second.rays.size() << endl;
 			for (unsigned n = 0; n < 6; ++n) {
 				face_ray_accum_t const &val(i->second.vals[n]);
 				cout << "dim: " << (n>>1) << ", dir: " << (n&1) << ", num_rays: " << val.num_rays << endl;
@@ -282,7 +317,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		}
 	}
 	point p_end(p2);
-	if ( coll) p2 = cpos;
+	if ( coll) {p2 = cpos;}
 	if (keep_beams && p1 != p2) {beams.push_back(beam3d(!coll, 1, p1, p2, color, 0.1*weight));} // testing
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
@@ -347,21 +382,13 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		coll_obj const &cobj(coll_objects[cindex]);
 
 		if (accum_map && enable_platform_lights(ltype) && cobj.is_update_light_platform()) {
-			// FIXME: this can be handled by two approaches:
-			// 1. Maintain 2^N where N=sizeof(update light platforms) light volumes and split the ray between the two cases (transmit vs. reflect);
-			//    + Simpler, can be precomputed
-			//    - Not scalable beyond 2-3 platforms, longer preproc times, large file sizes
-			// 2. Record ray hit positions on this cobj (and maybe precomputed bounce points as well), and store them in a separate file
-			//    for use in later processing and lighting updates when the platform moves;
-			//    + Can use smooth/correct interpolation as platform moves, scalable to many platforms, low overhead for static scene
-			//    - Slows frame rate when platforms move, complex, floating-point accuracy issues (need deterministic random numbers)
 			assert(cobj.type == COLL_CUBE); // FIXME: not yet supported
 			assert(!cobj.is_semi_trans()); // FIXME: not yet supported
 			//unsigned const face(cobj.closest_face(cpos)); // (dim<<1) + dir
 			unsigned const dim(get_max_dim(cnorm)); // cube intersection dim
 			bool const dir(cnorm[dim] > 0); // cube intersection dir
 			unsigned const face((dim<<1) + dir);
-			accum_map->add_ray(cindex, cpos, color, weight, face); // use pre-reflection color and weight
+			accum_map->add_ray(cindex, cpos, p_end, color, weight, face); // use pre-reflection color and weight
 			return; // terminate the ray here - will be continued from the hit surface in a later dynamic pass
 		}
 		else if (cobj.platform_id >= 0 || cobj.is_movable()) {
@@ -560,6 +587,7 @@ void check_for_lighting_finished() { // to be called about once per frame
 // see https://computing.llnl.gov/tutorials/pthreads/
 void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized, int ltype) {
 
+	timer_t t("Launch Threaded Job");
 	kill_current_raytrace_threads();
 	assert(num_threads > 0 && num_threads < 100);
 	assert(!keep_beams || num_threads == 1); // could use a pthread_mutex_t instead to make this legal
@@ -788,11 +816,12 @@ void *trace_ray_block_sky(void *ptr) {
 
 
 bool is_correct_accum_cobj(coll_obj const &cobj, cube_t const bcube) {
-	return (cobj.is_update_light_platform() && bcube.intersects(cobj));
+	return (cobj.is_update_light_platform() && bcube.intersects(cobj.get_platform_max_bcube()));
 }
 coll_obj &find_accum_cobj(unsigned id, cobj_ray_accum_t const &arc) {
 
-	cube_t const bcube(arc.get_bcube());
+	cube_t bcube(arc.get_bcube());
+	bcube.expand_by(1.0E-6); // expand slightly to turn adjacency into intersection
 	coll_obj &cobj(coll_objects.get_cobj(id));
 	if (is_correct_accum_cobj(cobj, bcube)) return cobj;
 
@@ -818,6 +847,16 @@ void *trace_ray_block_cobj_accum(void *ptr) {
 		cobj.unexpand_from_platform_max_bounds(); // unexpand if it was expanded
 		//vector3d const prev_frame_xlate(); // FIXME: lighting update is a delta from the previous frame
 
+		// round robin distribute rays across threads
+		for (auto r = (i->second.rays.begin() + data->ix); r < i->second.rays.end(); r += data->num) {
+			if (kill_raytrace) break; // not needed?
+			assert(r->weight > 0.0);
+			cast_light_ray(data->lmgr, r->pos, r->get_p2(line_length), r->weight, r->weight, r->get_color(), line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
+		}
+		if (!i->second.rays.empty()) continue; // used individual rays, no area light needed
+		unsigned const min_target_rays = 8000;
+		unsigned const tot_side_rays(i->second.get_count()), nrays_mult(max(1U, min_target_rays/tot_side_rays)); // should both be > 0
+
 		for (unsigned n = 0; n < 6; ++n) {
 			face_ray_accum_t const &val(i->second.vals[n]);
 			if (val.num_rays == 0) continue;
@@ -826,26 +865,27 @@ void *trace_ray_block_cobj_accum(void *ptr) {
 			normal[dim] = (dir ? 1.0 : -1.0); // cube face normal
 			float const thickness(cobj.d[dim][1] - cobj.d[dim][0]);
 			colorRGBA color(val.color);
-			float const max_comp(max(color.R, max(color.G, color.B)));
+			float const max_comp(color.get_max_component());
 			color  *= 1.0/max_comp;
 			color.A = 1.0;
-			unsigned const num_rays(val.num_rays/data->num + (data->ix < (val.num_rays % data->num)));
-			float const weight(max_comp/val.num_rays); // weight per ray
-			//cout << TXT(dim) << TXT(dir) << TXT(max_comp) << TXT(num_rays) << TXT(weight) << ", color: " << color.str() << endl;
+			unsigned const tot_num_rays(nrays_mult*val.num_rays); // at least 8K rays
+			unsigned const num_rays(tot_num_rays/data->num + (data->ix < (tot_num_rays % data->num)));
+			float const weight(max_comp/tot_num_rays); // weight per ray
 
 			for (unsigned r = 0; r < num_rays; ++r) {
 				if (kill_raytrace) break; // not needed?
 				point const pt(rgen.gen_rand_cube_point(val.bcube));
 				vector3d ray_dir(rgen.signed_rand_vector_spherical().get_norm()); // need high quality distribution
-				ray_dir += -normal; ray_dir.normalize(); // average with inverse cube normal to make more directional
-				if ((ray_dir[dim] > 0.0) == dir) {ray_dir[dim] = -ray_dir[dim];} // face toward the cobj
-				//vector3d const ray_dir((rgen.gen_rand_cube_point(val.bcube) - pt).get_norm()); // make sure it intersects the accumulation cube
-				point start_pt(pt - thickness*ray_dir), clip_pt(pt + thickness*ray_dir);
-				bool const intersects(do_line_clip(start_pt, clip_pt, cobj.d)); // check cobj in current position
+				ray_dir[dim] = -2.5*normal[dim]; ray_dir.normalize(); // combine with inverse cube normal to make more directional
+#if 0
+				point p0(pt - thickness*ray_dir), start_pt(pt + thickness*ray_dir);
+				bool const intersects(do_line_clip(p0, start_pt, cobj.d)); // check cobj in current position
 				if (intersects) continue; // ray is blocked, discard
-				//clip_pt += 0.01*thickness*dir; // move past the cobj so that it doesn't intersect
+#else
+				point const start_pt(pt - thickness*ray_dir);
+#endif
 				point const end_pt(pt + line_length*ray_dir);
-				cast_light_ray(data->lmgr, clip_pt, end_pt, weight, weight, color, line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
+				cast_light_ray(data->lmgr, start_pt, end_pt, weight, weight, color, line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
 			}
 		}
 	}
