@@ -233,7 +233,7 @@ void process_platforms_falling_moving_and_light_triggers() {
 	build_static_moving_cobj_tree();
 
 	for (auto l = light_sources_d.begin(); l != light_sources_d.end(); ++l) { // update scene lights
-		for (int i = start_i; i < end_i; ++i) {check_all_activate(*l, start_i, end_i);}
+		check_all_activate(*l, start_i, end_i);
 		l->advance_timestep();
 	}
 }
