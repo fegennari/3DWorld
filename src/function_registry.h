@@ -761,6 +761,7 @@ void free_shadow_map_textures();
 float get_scene_radius();
 void kill_current_raytrace_threads();
 void check_update_global_lighting(unsigned lights);
+void check_all_platform_cobj_lighting_update();
 
 // function prototypes - voxels
 void gen_voxel_landscape();

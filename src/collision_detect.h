@@ -236,6 +236,7 @@ public:
 
 	// platform functions
 	void add_to_platform() const;
+	bool is_expanded_platform() const {return ((cp.flags & COBJ_EXPANDED_PLATFORM) != 0);}
 	bool is_update_light_platform() const;
 	cube_t get_extended_platform_bcube() const;
 	cube_t get_platform_max_bcube() const;

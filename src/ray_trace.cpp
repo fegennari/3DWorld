@@ -9,6 +9,7 @@
 
 
 bool const COLOR_FROM_COBJ_TEX = 0; // 0 = fast/average color, 1 = true color
+bool const STORE_COBJ_ACCUM_LIGHTING_AS_BLOCKED = 1;
 float const RAY_WEIGHT    = 4.0E5;
 float const WEIGHT_THRESH = 0.01;
 float const DIFFUSE_REFL  = 0.9; // 90%  diffuse  reflectivity
@@ -31,6 +32,7 @@ extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources_a;
 extern vector<light_source_trig> light_sources_d;
 extern coll_obj_group coll_objects;
+extern platform_cont platforms;
 extern vector<beam3d> beams;
 extern lmap_manager_t lmap_manager;
 extern llv_vect local_light_volumes;
@@ -174,6 +176,7 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 			cout << "cobj: " << i->first << ", count: " << i->second.get_count() << ", rays stored: " << i->second.rays.size() << endl;
 			for (unsigned n = 0; n < 6; ++n) {
 				face_ray_accum_t const &val(i->second.vals[n]);
+				if (val.num_rays == 0) continue; // no rays for this face
 				cout << "dim: " << (n>>1) << ", dir: " << (n&1) << ", num_rays: " << val.num_rays << endl;
 				cout << "color: " << val.color.str() << endl;
 				cout << "bcube: " << val.bcube.str() << endl;
@@ -213,7 +216,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, point p1, point const &p2, float wei
 	bool const dynamic(is_ltype_dynamic(ltype));
 	if (first_pt && dynamic) return; // since dynamic lights already have a direct lighting component, we skip the first ray here to avoid double counting it
 	if (first_pt && ltype == LIGHTING_GLOBAL) {weight *= first_ray_weight;} // lower weight - handled by direct illumination
-	if (weight < TOLERANCE)  return;
+	if (fabs(weight) < TOLERANCE)  return;
 	colorRGBA const cw(color*weight);
 	unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)/get_step_size())); // round up (dist can be 0)
 	vector3d const step((p2 - p1)/nsteps); // at least two points
@@ -382,9 +385,9 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		coll_obj const &cobj(coll_objects[cindex]);
 
 		if (accum_map && enable_platform_lights(ltype) && cobj.is_update_light_platform()) {
-			assert(cobj.type == COLL_CUBE); // FIXME: not yet supported
-			assert(!cobj.is_semi_trans()); // FIXME: not yet supported
-			//unsigned const face(cobj.closest_face(cpos)); // (dim<<1) + dir
+			assert(cobj.type == COLL_CUBE); // not yet supported
+			assert(!cobj.is_semi_trans()); // not yet supported
+			//if (fabs(weight) < 2.0*WEIGHT_THRESH*weight0) return; // FIXME: higher thresh - regen lighting file
 			unsigned const dim(get_max_dim(cnorm)); // cube intersection dim
 			bool const dir(cnorm[dim] > 0); // cube intersection dir
 			unsigned const face((dim<<1) + dir);
@@ -411,7 +414,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 			}
 			float tweight((1.0 - rweight)*weight); // refracted weight
 			
-			if (tweight > WEIGHT_THRESH*weight0) {
+			if (fabs(tweight) > WEIGHT_THRESH*weight0) {
 				bool no_transmit(0);
 
 				if (cobj.cp.refract_ix != 1.0) { // refracted
@@ -431,7 +434,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 								p2    = p_int;
 								p_end = p2 + v_refract2*line_length;
 								tweight    *= cobj.get_light_transmit(enter_pt, p_int); // can we use p2p_dist(enter_pt, p_int) directly?
-								no_transmit = !(tweight > WEIGHT_THRESH*weight0);
+								no_transmit = !(fabs(tweight) > WEIGHT_THRESH*weight0);
 							}
 							else {
 								no_transmit = 1; // total internal reflection (could process an internal reflection)
@@ -448,8 +451,8 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		}
 		weight *= (DIFFUSE_REFL*(1.0 - specular) + SPEC_REFL*specular);
 	}
-	//if (rgen.rand_float() < weight/last_weight) return; weight = last_weight; // end the ray (Russian roulette)
-	if (weight < WEIGHT_THRESH*weight0) return;
+	//if (rgen.rand_float() < fabs(weight)/last_weight) return; weight = last_weight; // end the ray (Russian roulette)
+	if (fabs(weight) < WEIGHT_THRESH*weight0) return;
 
 	// create reflected ray and make recursive call(s)
 	unsigned const num_splits(((depth == 0) ? INIT_RAY_SPLITS : NUM_RAY_SPLITS)[clamp_ltype_range(ltype)]);
@@ -477,14 +480,14 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 
 
 struct rt_data {
-	unsigned ix, num;
+	unsigned ix, num, job_id;
 	int rseed, ltype;
 	bool is_thread, verbose, randomized, is_running;
 	lmap_manager_t *lmgr;
 	cobj_ray_accum_map_t accum_map;
 
-	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0, int lt=0)
-		: ix(i), num(n), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {}
+	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0, int lt=0, unsigned jid=0)
+		: ix(i), num(n), job_id(jid), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {}
 
 	void pre_run(rand_gen_t &rgen) {
 		assert(lmgr);
@@ -550,7 +553,7 @@ public:
 thread_manager_t<rt_data> thread_manager;
 lmap_manager_t thread_temp_lmap;
 
-bool indir_lighting_updated() {return (lmap_manager.was_updated || thread_temp_lmap.was_updated);}
+bool indir_lighting_updated() {return (global_lighting_update && (lmap_manager.was_updated || thread_temp_lmap.was_updated));} // only for global updates
 
 
 void kill_current_raytrace_threads() {
@@ -585,9 +588,8 @@ void check_for_lighting_finished() { // to be called about once per frame
 
 
 // see https://computing.llnl.gov/tutorials/pthreads/
-void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized, int ltype) {
+void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized, int ltype, unsigned job_id=0) {
 
-	timer_t t("Launch Threaded Job");
 	kill_current_raytrace_threads();
 	assert(num_threads > 0 && num_threads < 100);
 	assert(!keep_beams || num_threads == 1); // could use a pthread_mutex_t instead to make this legal
@@ -599,7 +601,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?
-		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0), randomized, ltype);
+		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0), randomized, ltype, job_id);
 		data[t].lmgr = (use_temp_lmap ? &thread_temp_lmap : &lmap_manager);
 	}
 	if (single_thread && blocking) { // pthreads disabled
@@ -741,6 +743,8 @@ void *trace_ray_block_global(void *ptr) {
 }
 
 
+float get_sky_light_ray_weight() {return RAY_WEIGHT/(((float)NPTS)*NRAYS);}
+
 void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
@@ -751,7 +755,7 @@ void *trace_ray_block_sky(void *ptr) {
 	unsigned long long start_rays(0), cube_start_rays(0);
 
 	if (NPTS > 0 && NRAYS > 0) {
-		float const ray_wt(RAY_WEIGHT/(((float)NPTS)*NRAYS));
+		float const ray_wt(get_sky_light_ray_weight());
 		unsigned const block_npts(max(1U, NPTS/data->num));
 		vector<point> pts(block_npts);
 		vector<vector3d> dirs(NRAYS);
@@ -840,19 +844,48 @@ void *trace_ray_block_cobj_accum(void *ptr) {
 	rt_data *data(static_cast<rt_data *>(ptr));
 	rand_gen_t rgen;
 	data->pre_run(rgen);
-	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
+	float const line_length(2.0*get_scene_radius()), ray_wt(get_sky_light_ray_weight()); // Note: weight assumes not using cube sky lights
 
 	for (auto i = merged_accum_map.begin(); i != merged_accum_map.end(); ++i) {
 		coll_obj &cobj(find_accum_cobj(i->first, i->second));
 		cobj.unexpand_from_platform_max_bounds(); // unexpand if it was expanded
-		//vector3d const prev_frame_xlate(); // FIXME: lighting update is a delta from the previous frame
 
 		// round robin distribute rays across threads
 		for (auto r = (i->second.rays.begin() + data->ix); r < i->second.rays.end(); r += data->num) {
 			if (kill_raytrace) break; // not needed?
 			assert(r->weight > 0.0);
-			cast_light_ray(data->lmgr, r->pos, r->get_p2(line_length), r->weight, r->weight, r->get_color(), line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
+			cast_light_ray(data->lmgr, r->pos, r->get_p2(line_length), r->weight, (ray_wt ? ray_wt : r->weight), r->get_color(), line_length, -1, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
 		}
+	}
+	data->post_run();
+	return 0;
+}
+
+void *trace_ray_block_cobj_accum_single_update(void *ptr) {
+
+	assert(ptr);
+	rt_data *data(static_cast<rt_data *>(ptr));
+	rand_gen_t rgen;
+	data->pre_run(rgen);
+	unsigned const cid(data->job_id);
+	coll_obj &cobj(coll_objects.get_cobj(cid));
+	assert(cobj.is_update_light_platform());
+	vector3d const platform_delta(platforms.get_cobj_platform(cobj).get_last_delta());
+	if (platform_delta == zero_vector) return 0; // platform hasn't moved - why are we here?
+	cube_t const prev_bcube(cobj - platform_delta); // previous frame's position of cobj
+	float const line_length(2.0*get_scene_radius()), ray_wt(get_sky_light_ray_weight()); // Note: weight assumes not using cube sky lights
+	auto it(merged_accum_map.find(cid));
+	assert(it != merged_accum_map.end());
+
+	// round robin distribute rays across threads
+	for (auto r = (it->second.rays.begin() + data->ix); r < it->second.rays.end(); r += data->num) {
+		assert(r->weight > 0.0);
+		point const end_pt(r->get_p2(line_length));
+		bool const cur_hit(check_line_clip(r->pos, end_pt, cobj.d)), prev_hit(check_line_clip(r->pos, end_pt, prev_bcube.d));
+		if (cur_hit == prev_hit) continue; // no change in hit status
+		float const weight(r->weight*(cur_hit ? -1.0 : 1.0)); // if ray is newly blocked, subtract its contribution by negating its weight
+		// Note: cobj is ignored here because it can't be in both the prev and cur position at the same time, and temporarily moving it isn't thread safe
+		cast_light_ray(data->lmgr, r->pos, end_pt, weight, (ray_wt ? ray_wt : r->weight), r->get_color(), line_length, cid, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr);
 	}
 	data->post_run();
 	return 0;
@@ -969,7 +1002,11 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	if (!dynamic && read_light_files[c_ltype]) {
 		if (c_ltype == LIGHTING_COBJ_ACCUM) {
 			merged_accum_map.open_and_read(fn, 1);
-			launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype); // FIXME: temporary debugging
+
+			if (STORE_COBJ_ACCUM_LIGHTING_AS_BLOCKED) {
+				timer_t t("Cobj Accum Lighting");
+				launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype); // update fully blocked lighting with currently blocked portion
+			}
 		}
 		else {lmap_manager.read_data_from_file(fn, c_ltype);}
 	}
@@ -987,18 +1024,37 @@ void compute_ray_trace_lighting(unsigned ltype) {
 }
 
 
+bool pre_lighting_update() {
+	if (!lmap_manager.is_allocated()) return 0; // too early
+	tot_rays = num_hits = cells_touched = 0;
+	all_models.build_cobj_trees(0);
+	return 1;
+}
+
 void check_update_global_lighting(unsigned lights) {
 
 	if (!global_lighting_update || !(read_light_files[LIGHTING_GLOBAL] || write_light_files[LIGHTING_GLOBAL])) return;
 	if (!(lights & (SUN_SHADOW | MOON_SHADOW))) return;
 	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return; // nothing to do
-	if (!lmap_manager.is_allocated()) return; // too early
+	if (!pre_lighting_update()) return;
 	// Note: we could check if the sun/moon is visible, but it might have been visible previously and now is not,
 	//       and in that case we still need to update lighting
-	tot_rays = num_hits = cells_touched = 0;
 	lmap_manager.clear_lighting_values(LIGHTING_GLOBAL);
-	all_models.build_cobj_trees(0);
 	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 0, 0, lighting_update_offline, 0, LIGHTING_GLOBAL); // reserve a thread for rendering
+}
+
+void check_all_platform_cobj_lighting_update() {
+
+	if (merged_accum_map.empty()) return; // updates not enabled
+	if (!pre_lighting_update())   return;
+
+	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
+		coll_obj &cobj(coll_objects.get_cobj(*i));
+		if (platforms.get_cobj_platform(cobj).get_last_delta() == zero_vector) continue; // not moving
+		if (!cobj.is_update_light_platform()) continue; // no updates
+		launch_threaded_job(NUM_THREADS, trace_ray_block_cobj_accum_single_update, 0, 1, 0, 0, LIGHTING_COBJ_ACCUM, *i); // blocking, on all threads, using cobj_id as job_id
+	}
+	// FIXME: track updated bounding cube (or at least y bounds) for partial frame lighting update when lmap_manager.was_updated=1
 }
 
 

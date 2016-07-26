@@ -231,6 +231,7 @@ void process_platforms_falling_moving_and_light_triggers() {
 	proc_moving_cobjs(); // Note: depends on platforms and uses+modified the cobj BVHs
 	check_falling_cobjs();
 	build_static_moving_cobj_tree();
+	check_all_platform_cobj_lighting_update(); // after platform update and BVH rebuild
 
 	for (auto l = light_sources_d.begin(); l != light_sources_d.end(); ++l) { // update scene lights
 		check_all_activate(*l, start_i, end_i);

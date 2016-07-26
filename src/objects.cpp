@@ -169,6 +169,7 @@ bool coll_obj::is_update_light_platform() const {
 cube_t coll_obj::get_extended_platform_bcube() const {return (*this + platforms.get_cobj_platform(*this).get_range());}
 
 cube_t coll_obj::get_platform_max_bcube() const {
+	if (is_expanded_platform()) return *this; // already expanded to max bcube
 	cube_t bcube(*this);
 	if (platform_id >= 0) {bcube.union_with_cube(get_extended_platform_bcube());}
 	return bcube;
@@ -185,13 +186,13 @@ cube_t coll_obj::get_platform_min_bcube() const {
 }
 
 void coll_obj::expand_to_platform_max_bounds() {
-	if (platform_id < 0 || type != COLL_CUBE || (cp.flags & COBJ_EXPANDED_PLATFORM)) return; // only unexpanded platform cubes
+	if (platform_id < 0 || type != COLL_CUBE || is_expanded_platform()) return; // only unexpanded platform cubes
 	union_with_cube(get_extended_platform_bcube());
 	cp.flags |= COBJ_EXPANDED_PLATFORM;
 }
 
 void coll_obj::unexpand_from_platform_max_bounds() {
-	if (platform_id < 0 || type != COLL_CUBE || !(cp.flags & COBJ_EXPANDED_PLATFORM)) return; // only expanded platform cubes
+	if (platform_id < 0 || type != COLL_CUBE || !is_expanded_platform()) return; // only expanded platform cubes
 	vector3d const platform_range(platforms.get_cobj_platform(*this).get_range());
 	for (unsigned i = 0; i < 3; ++i) {d[i][platform_range[i] > 0.0] -= platform_range[i];} // undo the above transform
 	cp.flags &= ~COBJ_EXPANDED_PLATFORM;
@@ -204,6 +205,7 @@ void expand_or_unexpand_update_light_platform_cobjs(bool unexpand) {
 		if (unexpand) {cobj.unexpand_from_platform_max_bounds();} else {cobj.expand_to_platform_max_bounds();}
 	}
 }
+
 void pre_rt_bvh_build_hook () {expand_or_unexpand_update_light_platform_cobjs(0);}
 void post_rt_bvh_build_hook() {expand_or_unexpand_update_light_platform_cobjs(1);}
 
