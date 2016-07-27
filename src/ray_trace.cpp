@@ -263,7 +263,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	int cindex(-1), xpos(0), ypos(0);
 	point cpos(p2);
 	vector3d cnorm;
-	float t, zval;
+	float t(0.0), zval(0.0);
 	bool snow_coll(0), ice_coll(0), water_coll(0), mesh_coll(0);
 	vector3d const dir((p2 - p1).get_norm());
 	bool coll(check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, ignore_cobj, 1, 0, 1, 1, (p1 == orig_p1))); // fast=1, exclude voxels, maybe skip init colls
@@ -387,7 +387,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		if (accum_map && enable_platform_lights(ltype) && cobj.is_update_light_platform()) {
 			assert(cobj.type == COLL_CUBE); // not yet supported
 			assert(!cobj.is_semi_trans()); // not yet supported
-			//if (fabs(weight) < 2.0*WEIGHT_THRESH*weight0) return; // FIXME: higher thresh - regen lighting file
+			if (STORE_COBJ_ACCUM_LIGHTING_AS_BLOCKED && fabs(weight) < 2.5*WEIGHT_THRESH*weight0) return; // higher thresh for cobj rays
 			unsigned const dim(get_max_dim(cnorm)); // cube intersection dim
 			bool const dir(cnorm[dim] > 0); // cube intersection dir
 			unsigned const face((dim<<1) + dir);
@@ -480,14 +480,14 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 
 
 struct rt_data {
-	unsigned ix, num, job_id;
+	unsigned ix, num, job_id, checksum;
 	int rseed, ltype;
 	bool is_thread, verbose, randomized, is_running;
 	lmap_manager_t *lmgr;
 	cobj_ray_accum_map_t accum_map;
 
 	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0, int lt=0, unsigned jid=0)
-		: ix(i), num(n), job_id(jid), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {}
+		: ix(i), num(n), job_id(jid), checksum(0), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {}
 
 	void pre_run(rand_gen_t &rgen) {
 		assert(lmgr);
@@ -545,6 +545,7 @@ public:
 		for (unsigned t = 0; t < threads.size(); ++t) {
 			int const rc(pthread_join(threads[t], NULL));
 			if (rc) {cout << "Error: return code from pthread_join() is " << rc << endl; assert(0);}
+			//cout << "checksum[" << t << "]: " << data[t].checksum << endl;
 		}
 	}
 	void join_and_clear() {join(); clear();}
@@ -814,6 +815,7 @@ void *trace_ray_block_sky(void *ptr) {
 		cout << "start rays: " << start_rays << ", cube start rays: " << cube_start_rays << ", total rays: " << tot_rays
 			 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
+	data->checksum = rgen.rand();
 	data->post_run();
 	return 0;
 }

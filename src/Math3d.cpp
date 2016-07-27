@@ -532,7 +532,7 @@ int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1
 	assert(r2 > 0.0 && r2 > r1);
 	point V(cp1);
 	vector3d dir(cp2, cp1);
-	if (r1 > 0.0) V -= dir*(r1/(r2 - r1)); // extend to the cone's apex
+	if (r1 > 0.0) {V -= dir*(r1/(r2 - r1));} // extend to the cone's apex
 	vector3d A(cp2, V), D(p2 - p1), d(p1, V);
 	float const g(cosf(atan2f(r2, A.mag())));
 	A.normalize();
@@ -577,7 +577,7 @@ int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1
 		point const cp[2] = {cp1, cp2};
 
 		for (unsigned i = 0; i < 2; ++i) {
-			float ti;
+			float ti(0.0);
 
 			if (r[i] > 0.0 && circle_test_comp(p1, cp[i], D, A, r[i]*r[i], ti)) {
 				if (ti >= 0.0 && ti <= 1.0 && (!t_set || ti < t)) {
