@@ -95,13 +95,14 @@ struct cobj_ray_accum_t {
 		for (unsigned i = 0; i < 6; ++i) {n += vals[i].num_rays;}
 		return n;
 	}
-	cube_t get_bcube() const {
+	cube_t get_bcube(bool const expand=0) const {
 		cube_t bcube(all_zeros, all_zeros);
 		bool is_first(0);
 		for (unsigned i = 0; i < 6; ++i) {
 			if (vals[i].num_rays == 0) continue;
 			if (is_first) {bcube = vals[i].bcube; is_first = 0;} else {bcube.union_with_cube(vals[i].bcube);}
 		}
+		if (expand) {bcube.expand_by(1.0E-6);} // expand slightly to turn adjacency into intersection
 		return bcube;
 	}
 	void merge(cobj_ray_accum_t const &v) {
@@ -826,8 +827,7 @@ bool is_correct_accum_cobj(coll_obj const &cobj, cube_t const bcube) {
 }
 coll_obj &find_accum_cobj(unsigned id, cobj_ray_accum_t const &arc) {
 
-	cube_t bcube(arc.get_bcube());
-	bcube.expand_by(1.0E-6); // expand slightly to turn adjacency into intersection
+	cube_t bcube(arc.get_bcube(1));
 	coll_obj &cobj(coll_objects.get_cobj(id));
 	if (is_correct_accum_cobj(cobj, bcube)) return cobj;
 
@@ -877,8 +877,13 @@ void *trace_ray_block_cobj_accum_single_update(void *ptr) {
 	cube_t const prev_bcube(cobj - platform_delta); // previous frame's position of cobj
 	float const line_length(2.0*get_scene_radius()), ray_wt(get_sky_light_ray_weight()); // Note: weight assumes not using cube sky lights
 	auto it(merged_accum_map.find(cid));
-	assert(it != merged_accum_map.end());
-
+	
+	if (it == merged_accum_map.end()) { // not the correct cobj, search for correct accum map entry
+		for (auto i = merged_accum_map.begin(); i != merged_accum_map.end(); ++i) {
+			if (is_correct_accum_cobj(cobj, i->second.get_bcube(1))) {it = i; break;}
+		}
+		assert(it != merged_accum_map.end());
+	}
 	// round robin distribute rays across threads
 	for (auto r = (it->second.rays.begin() + data->ix); r < it->second.rays.end(); r += data->num) {
 		assert(r->weight > 0.0);
