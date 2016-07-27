@@ -5,10 +5,14 @@
 # add basement door
 K 0.59 2.65 -0.28  0.06 0.0 1.7 0 1 # manual toggle trigger
 K 0.59 2.85 -0.28  0.06 0.0 1.7 0 1 # manual toggle trigger
+K 0.15 2.60 -0.28  0.06 0.0 1.7 0 1 # manual toggle trigger
+K 0.15 2.90 -0.28  0.06 0.0 1.7 0 1 # manual toggle trigger
 y 100.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
-B 0.59 0.60  2.64 2.66  -0.29 -0.27 # inside  button
-B 0.59 0.60  2.84 2.86  -0.29 -0.27 # outside button
+B 0.59 0.60  2.64 2.66  -0.29 -0.27 # inside  button 1
+B 0.59 0.60  2.84 2.86  -0.29 -0.27 # outside button 1
+B 0.14 0.16  2.59 2.60  -0.29 -0.27 # inside  button 2
+B 0.14 0.16  2.90 2.91  -0.29 -0.27 # outside button 2
 sound_file machine.wav
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0]]]
 Q 1 0.25 0.25 0.1 0.1 0.4 0.0   0.6 2.76 -0.08  -1 0 0  0 0 1 # platform with update_light=1
