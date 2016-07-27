@@ -245,7 +245,7 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 	lmcell default_lmc;
 	default_lmc.set_outside_colors();
 	default_lmc.get_final_color(const_indir_color, 1.0);
-	bool const no_parallel(lmap_manager.was_updated || !update_lighting); // if running with multiple threads, don't use openmp
+	bool const no_parallel((lmap_manager.was_updated && !lmap_manager.do_accum_update) || !update_lighting); // if running with multiple threads, don't use openmp
 	vector<unsigned> llvol_ixs;
 	
 	for (unsigned i = 0; i < local_light_volumes.size(); ++i) { // sparse active optimization
@@ -298,7 +298,7 @@ bool upload_smoke_indir_texture() {
 	for (auto i = local_light_volumes.begin(); i != local_light_volumes.end(); ++i) { // check to see if any local light volumes have changed
 		if ((*i)->needs_update()) {(*i)->mark_updated(); lighting_changed = 1;}
 	}
-	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed));
+	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed) || lmap_manager.do_accum_update);
 	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);
 	if (!full_update && !could_have_smoke && !lmap_manager.was_updated && !lighting_changed) return 0; // return 1?
 	if (full_update ) {last_cur_ambient  = cur_ambient; last_cur_diffuse = cur_diffuse;}
@@ -311,6 +311,7 @@ bool upload_smoke_indir_texture() {
 	update_smoke_indir_tex_range(0, MESH_X_SIZE, y_start, y_end, full_update);
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) {lmap_manager.was_updated = 0;} // only stop updating after we wrap around to the beginning again
+	lmap_manager.do_accum_update = 0; // update has been done
 	have_indir_smoke_tex = 1;
 	//PRINT_TIME("Smoke + Indir Upload");
 	return 1;

@@ -91,9 +91,9 @@ class lmap_manager_t {
 	void operator=(lmap_manager_t const &); // forbidden
 
 public:
-	bool was_updated;
+	bool was_updated, do_accum_update;
 
-	lmap_manager_t() : lm_zsize(0), vlmap(NULL), was_updated(0) {}
+	lmap_manager_t() : lm_zsize(0), vlmap(NULL), was_updated(0), do_accum_update(0) {}
 	void clear_cells() {vldata_alloc.clear();} // vlmap matrix headers are not cleared
 	bool is_allocated() const {return (vlmap != NULL && !vldata_alloc.empty());}
 	size_t size() const {return vldata_alloc.size();}

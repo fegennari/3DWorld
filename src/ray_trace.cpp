@@ -1054,14 +1054,19 @@ void check_all_platform_cobj_lighting_update() {
 
 	if (merged_accum_map.empty()) return; // updates not enabled
 	if (!pre_lighting_update())   return;
+	bool was_updated(0);
 
 	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
 		coll_obj &cobj(coll_objects.get_cobj(*i));
 		if (platforms.get_cobj_platform(cobj).get_last_delta() == zero_vector) continue; // not moving
 		if (!cobj.is_update_light_platform()) continue; // no updates
 		launch_threaded_job(NUM_THREADS, trace_ray_block_cobj_accum_single_update, 0, 1, 0, 0, LIGHTING_COBJ_ACCUM, *i); // blocking, on all threads, using cobj_id as job_id
+		was_updated = 1;
 	}
-	// FIXME: track updated bounding cube (or at least y bounds) for partial frame lighting update when lmap_manager.was_updated=1
+	if (was_updated && lmap_manager.was_updated) {
+		// FIXME: track updated bounding cube (or at least y bounds) for partial frame lighting update when lmap_manager.was_updated=1
+		lmap_manager.do_accum_update = 1; // schedule full update
+	}
 }
 
 
