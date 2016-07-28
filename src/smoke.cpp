@@ -190,8 +190,9 @@ float get_smoke_at_pos(point const &pos) {
 void reset_smoke_tex_data() {smoke_tex_data.clear();}
 
 
-void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol_ixs, lmcell const &default_lmc, unsigned x_start, unsigned x_end, unsigned y, bool update_lighting) {
-
+void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol_ixs, lmcell const &default_lmc,
+	unsigned x_start, unsigned x_end, unsigned z_start, unsigned z_end, unsigned y, bool update_lighting)
+{
 	unsigned const zsize(MESH_SIZE[2]), ncomp(4);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	colorRGB default_color;
@@ -208,7 +209,7 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 		for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {
 			if (local_light_volumes[*i]->check_xy_bounds(x, y)) {proc_llvols = 1; break;}
 		}
-		for (unsigned z = 0; z < zsize; ++z) {
+		for (unsigned z = z_start; z < z_end; ++z) {
 			unsigned const off2(ncomp*(off + z));
 			float const smoke_val((vlm == NULL) ? 0.0 : CLIP_TO_01(smoke_scale*vlm[z].smoke));
 			data[off2+3] = (unsigned char)(255*smoke_val); // alpha: smoke
@@ -237,15 +238,17 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 }
 
 
-void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, bool update_lighting) {
+void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, unsigned z_start, unsigned z_end, bool update_lighting) {
 
-	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 	if (smoke_tex_data.empty()) return; // not allocated
+	if (z_end == 0) {z_end = MESH_SIZE[2];}
+	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
+	assert(z_start < z_end && z_end <= (unsigned)MESH_SIZE[2]);
 	unsigned const ncomp(4);
 	lmcell default_lmc;
 	default_lmc.set_outside_colors();
 	default_lmc.get_final_color(const_indir_color, 1.0);
-	bool const no_parallel((lmap_manager.was_updated && !lmap_manager.do_accum_update) || !update_lighting); // if running with multiple threads, don't use openmp
+	bool const no_parallel(lmap_manager.was_updated || !update_lighting); // if running with multiple threads, don't use openmp
 	vector<unsigned> llvol_ixs;
 	
 	for (unsigned i = 0; i < local_light_volumes.size(); ++i) { // sparse active optimization
@@ -253,7 +256,7 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 	}
 	#pragma omp parallel for schedule(static,1) if (!no_parallel)
 	for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-		update_smoke_row(smoke_tex_data, llvol_ixs, default_lmc, x_start, x_end, y, update_lighting);
+		update_smoke_row(smoke_tex_data, llvol_ixs, default_lmc, x_start, x_end, z_start, z_end, y, update_lighting);
 	}
 	if (smoke_tid == 0) { // create texture
 		static bool was_printed(0);
@@ -298,7 +301,7 @@ bool upload_smoke_indir_texture() {
 	for (auto i = local_light_volumes.begin(); i != local_light_volumes.end(); ++i) { // check to see if any local light volumes have changed
 		if ((*i)->needs_update()) {(*i)->mark_updated(); lighting_changed = 1;}
 	}
-	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed) || lmap_manager.do_accum_update);
+	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed));
 	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);
 	if (!full_update && !could_have_smoke && !lmap_manager.was_updated && !lighting_changed) return 0; // return 1?
 	if (full_update ) {last_cur_ambient  = cur_ambient; last_cur_diffuse = cur_diffuse;}
@@ -308,10 +311,9 @@ bool upload_smoke_indir_texture() {
 	unsigned const block_size(MESH_Y_SIZE/skipval);
 	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
-	update_smoke_indir_tex_range(0, MESH_X_SIZE, y_start, y_end, full_update);
+	update_smoke_indir_tex_range(0, MESH_X_SIZE, y_start, y_end, 0, MESH_SIZE[2], full_update);
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) {lmap_manager.was_updated = 0;} // only stop updating after we wrap around to the beginning again
-	lmap_manager.do_accum_update = 0; // update has been done
 	have_indir_smoke_tex = 1;
 	//PRINT_TIME("Smoke + Indir Upload");
 	return 1;

@@ -1414,7 +1414,7 @@ void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 
 void update_ao_texture(block_group_t const &group) {
 	assert(group.area() > 0);
-	update_smoke_indir_tex_range(group.v[0][0], group.v[0][1], group.v[1][0], group.v[1][1], 1);
+	update_smoke_indir_tex_range(group.v[0][0], group.v[0][1], group.v[1][0], group.v[1][1]);
 }
 
 

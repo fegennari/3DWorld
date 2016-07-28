@@ -238,7 +238,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 		grass_mesh_height_change(i->first, i->second);
 	}
 	if (!grass_update.empty()) {flower_mesh_height_change(xpos, ypos, rad);}
-	if (mode == 0) {update_smoke_indir_tex_range(x1, x2+1, y1, y2+1, 1);} // update lmap lighting for crater
+	if (mode == 0) {update_smoke_indir_tex_range(x1, x2+1, y1, y2+1);} // update lmap lighting for crater
 	// update waypoints?
 	mesh_invalidated = 1;
 	//PRINT_TIME("Mesh Height Update");
