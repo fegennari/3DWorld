@@ -1957,7 +1957,7 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf,
 
 cube_t get_polygons_bcube(vector<coll_tquad> const &ppts) {
 
-	cube_t bcube(all_zeros, all_zeros);
+	cube_t bcube(all_zeros);
 
 	for (auto i = ppts.begin(); i != ppts.end(); ++i) { // rasterize ppts to cubes in {x,y,z}
 		if (i == ppts.begin()) {bcube = i->get_bcube();} else {bcube.union_with_cube(i->get_bcube());}
