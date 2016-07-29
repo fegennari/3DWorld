@@ -9,7 +9,6 @@
 
 
 bool const COLOR_FROM_COBJ_TEX = 0; // 0 = fast/average color, 1 = true color
-bool const STORE_COBJ_ACCUM_LIGHTING_AS_BLOCKED = 1;
 float const RAY_WEIGHT    = 4.0E5;
 float const WEIGHT_THRESH = 0.01;
 float const DIFFUSE_REFL  = 0.9; // 90%  diffuse  reflectivity
@@ -24,7 +23,7 @@ unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1, 1}; // sky, global, local, cobj_accum, dynamic
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, global, local, cobj_accum, dynamic
 
-extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline;
+extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline, store_cobj_accum_lighting_as_blocked;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
 extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
 extern char *lighting_file[];
@@ -392,7 +391,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		if (accum_map && enable_platform_lights(ltype) && cobj.is_update_light_platform()) {
 			assert(cobj.type == COLL_CUBE); // not yet supported
 			assert(!cobj.is_semi_trans()); // not yet supported
-			if (STORE_COBJ_ACCUM_LIGHTING_AS_BLOCKED && fabs(weight) < 2.5*WEIGHT_THRESH*weight0) return; // higher thresh for cobj rays
+			if (store_cobj_accum_lighting_as_blocked && fabs(weight) < 2.5*WEIGHT_THRESH*weight0) return; // higher thresh for cobj rays
 			unsigned const dim(get_max_dim(cnorm)); // cube intersection dim
 			bool const dir(cnorm[dim] > 0); // cube intersection dir
 			unsigned const face((dim<<1) + dir);
@@ -1022,7 +1021,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 		if (c_ltype == LIGHTING_COBJ_ACCUM) {
 			merged_accum_map.open_and_read(fn, 1);
 
-			if (STORE_COBJ_ACCUM_LIGHTING_AS_BLOCKED) {
+			if (store_cobj_accum_lighting_as_blocked) {
 				timer_t t("Cobj Accum Lighting");
 				launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype); // update fully blocked lighting with currently blocked portion
 			}
