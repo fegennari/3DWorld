@@ -492,7 +492,7 @@ struct rt_data {
 	cobj_ray_accum_map_t accum_map;
 
 	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0, int lt=0, unsigned jid=0)
-		: ix(i), num(n), job_id(jid), checksum(0), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {}
+		: ix(i), num(n), job_id(jid), checksum(0), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {update_bcube.set_to_zeros();}
 
 	void pre_run(rand_gen_t &rgen) {
 		assert(lmgr);
@@ -1080,7 +1080,7 @@ void check_all_platform_cobj_lighting_update() {
 		int const x1(max(get_xpos_round_down(lm_bc.d[0][0]), 0)), x2(min(get_ypos_round_down(lm_bc.d[0][1])+1, MESH_X_SIZE));
 		int const y1(max(get_xpos_round_down(lm_bc.d[1][0]), 0)), y2(min(get_ypos_round_down(lm_bc.d[1][1])+1, MESH_Y_SIZE));
 		int const z1(max(get_zpos(lm_bc.d[2][0]), 0)), z2(min(get_zpos(lm_bc.d[2][1])+1, MESH_SIZE[2]));
-		update_smoke_indir_tex_range(x1, x2, y1, y2, z1, z2);
+		if (x1 < x2 && y1 < y2 && z1 < z2) {update_smoke_indir_tex_range(x1, x2, y1, y2, z1, z2);}
 		lm_bc.set_to_zeros(); // clear
 	}
 	lmap_manager.was_updated = prev_was_updated; // restore previous value
