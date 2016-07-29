@@ -225,7 +225,6 @@ public:
 	void write_to_cobj_file(std::ostream &out, coll_obj &prev) const;
 	
 	// inexact primitive intersections
-	int cube_intersects(cube_t const &cube) const;
 	int sphere_intersects(point const &pos, float radius) const;
 	int sphere_intersects(sphere_t const &sphere) const {return sphere_intersects(sphere.pos, sphere.radius);}
 	int contains_point(point const &pos) const;

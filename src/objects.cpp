@@ -796,29 +796,23 @@ int coll_obj::contains_point(point const &pos) const {
 	
 	if (!contains_pt(pos)) return 0; // test bounding cube
 	switch (type) {
-	case COLL_CUBE:     return 1; // if bcube contains the point, we're done
-	case COLL_SPHERE:   return dist_less_than   (pos, points[0], radius);
-	case COLL_CYLINDER: return dist_xy_less_than(pos, points[0], radius); // z has been checked above
-	case COLL_POLYGON:  if (is_thin_poly()) return 0; // thin polygons are effectively 2D and can't contain a point (not a volume)
+	case COLL_CUBE:         return 1; // if bcube contains the point, we're done
+	case COLL_SPHERE:       return dist_less_than   (pos, points[0], radius);
+	case COLL_CYLINDER:     return dist_xy_less_than(pos, points[0], radius); // z has been checked above
+	case COLL_CYLINDER_ROT: return sphere_intersect_cylinder(pos, 0.0, points[0], points[1], radius, radius2); // use a zero radius sphere
+	case COLL_POLYGON:
+		if (is_thin_poly()) return 0; // thin polygons are effectively 2D and can't contain a point (not a volume)
+		return sphere_ext_poly_intersect(points, npoints, norm, pos, 0.0, thickness, 0.0); // use a zero radius sphere
 	}
-	return sphere_intersects(pos, 0.0); // slow solution for rotated cylinders and extruded polygons
+	//return sphere_intersects(pos, 0.0);
+	return 0; // never gets here
 }
 
-
-coll_obj test_cobj; // reused to aviod slow constructor calls
-
-// Note: these two intersection functions are inexact: they return 0 for no intersection, 1 for intersection, and 2 for maybe intersection
-int coll_obj::cube_intersects(cube_t const &cube) const { // Note: unused
-
-	if (!cube.intersects(*this, 0.0)) return 0; // optimization
-	test_cobj.type = COLL_CUBE;
-	test_cobj.copy_from(cube);
-	return intersects_cobj(test_cobj); // Note: no toler
-}
-
+// Note: inexact: returns 0 for no intersection, 1 for intersection, and 2 for maybe intersection
 int coll_obj::sphere_intersects(point const &pos, float radius) const {
 
 	if (!sphere_cube_intersect(pos, radius, *this)) return 0; // optimization
+	coll_obj test_cobj;
 	test_cobj.type      = COLL_SPHERE;
 	test_cobj.radius    = radius;
 	test_cobj.points[0] = pos;
