@@ -219,14 +219,13 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 	if (fabs(weight) < TOLERANCE) return;
 	colorRGBA const cw(color*weight);
 	unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)/get_step_size())); // round up (dist can be 0)
-	unsigned const nsteps_iter(nsteps + first_pt);
 	vector3d const step((p2 - p1)/nsteps); // at least two points
 	if (!first_pt) {p1 += step;} // move past the first step so we don't double count
 
 	if (dynamic) { // it's a local lighting volume
 		light_volume_local &lvol(get_local_light_volume(ltype));
 
-		for (unsigned s = 0; s < nsteps_iter; ++s) {
+		for (unsigned s = 0; s < nsteps; ++s) {
 			lvol.add_color(p1, cw);
 			p1 += step;
 		}
@@ -234,7 +233,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 	else { // use the lmgr
 		assert(lmgr != nullptr && lmgr->is_allocated());
 
-		for (unsigned s = 0; s < nsteps_iter; ++s) {
+		for (unsigned s = 0; s < nsteps; ++s) {
 			lmcell *lmc(lmgr->get_lmcell_round_down(p1));
 		
 			if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
