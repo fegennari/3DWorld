@@ -265,9 +265,13 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 		smoke_tid = create_3d_texture(MESH_SIZE[2], MESH_X_SIZE, MESH_Y_SIZE, ncomp, smoke_tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);
 	}
 	else { // update region/sync texture
-		unsigned const off(ncomp*y_start*MESH_X_SIZE*MESH_SIZE[2]);
+		unsigned const off(ncomp*(z_start + (x_start + y_start*MESH_X_SIZE)*MESH_SIZE[2]));
 		assert(off < smoke_tex_data.size());
-		update_3d_texture(smoke_tid, 0, 0, y_start, MESH_SIZE[2], MESH_X_SIZE, (y_end - y_start), ncomp, &smoke_tex_data[off]);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH,   MESH_SIZE[2]);
+		glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, MESH_X_SIZE);
+		update_3d_texture(smoke_tid, z_start, x_start, y_start, (z_end - z_start), (x_end - x_start), (y_end - y_start), ncomp, &smoke_tex_data[off]); // stored as {z, x, y}
+		glPixelStorei(GL_UNPACK_ROW_LENGTH,   0); // reset to 0
+		glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0); // reset to 0
 	}
 }
 
