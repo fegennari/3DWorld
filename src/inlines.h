@@ -298,6 +298,17 @@ inline bool sphere_intersect_cylinder(point const &sc, float sr, point const &cp
 	return sphere_intersect_cylinder_ipt(sc, sr, cp1, cp2, r1, r2, 1, p_int, norm, 0);
 }
 
+inline bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro) {
+	point p_int(all_zeros); // unused
+	vector3d norm(zero_vector); // unused
+	return sphere_torus_intersect(sc, sr, tc, ri, ro, p_int, norm, 0);
+}
+inline bool sphere_torus_intersect(point const &sc, float sr, point const &tc, vector3d const &dir, float ri, float ro) {
+	point p_int(all_zeros); // unused
+	vector3d norm(zero_vector); // unused
+	return sphere_torus_intersect(sc, sr, tc, dir,ri, ro, p_int, norm, 0);
+}
+
 // p2 = line starting point, p1 = circle center, v1 = line direction, norm = plane normal, and r2sq = square of the circle radius
 inline bool circle_test_comp(point const &p2, point const &p1, vector3d const &v1, vector3d norm, float r2sq, float &t) {
 

@@ -800,12 +800,12 @@ int coll_obj::contains_point(point const &pos) const {
 	case COLL_SPHERE:       return dist_less_than   (pos, points[0], radius);
 	case COLL_CYLINDER:     return dist_xy_less_than(pos, points[0], radius); // z has been checked above
 	case COLL_CYLINDER_ROT: return sphere_intersect_cylinder(pos, 0.0, points[0], points[1], radius, radius2); // use a zero radius sphere
+	case COLL_TORUS:        return sphere_torus_intersect(pos, 0.0, points[0], radius2, radius);
 	case COLL_POLYGON:
 		if (is_thin_poly()) return 0; // thin polygons are effectively 2D and can't contain a point (not a volume)
 		return sphere_ext_poly_intersect(points, npoints, norm, pos, 0.0, thickness, 0.0); // use a zero radius sphere
 	}
-	//return sphere_intersects(pos, 0.0);
-	return 0; // never gets here
+	return sphere_intersects(pos, 0.0); // capsule
 }
 
 // Note: inexact: returns 0 for no intersection, 1 for intersection, and 2 for maybe intersection

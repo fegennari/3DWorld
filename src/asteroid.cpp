@@ -1034,9 +1034,7 @@ bool uasteroid_belt::sphere_might_intersect(point const &sc, float sr) const {
 	if (!dist_less_than(sc, pos, (radius + sr))) return 0;
 	point pt(sc);
 	xform_to_local_torus_coord_space(pt);
-	point p_int; // unused
-	vector3d norm; // unused
-	return sphere_torus_intersect(pt, sr, all_zeros, inner_radius, outer_radius, p_int, norm, 0);
+	return sphere_torus_intersect(pt, sr, all_zeros, inner_radius, outer_radius);
 }
 
 

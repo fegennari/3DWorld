@@ -931,11 +931,8 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 		case COLL_CYLINDER_ROT:
 			coll = sphere_int_cylinder_sides(pval, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2);
 			break;
-		case COLL_TORUS: {
-				point p_int(all_zeros); // unused
-				vector3d norm(zero_vector); // unused
-				coll = sphere_torus_intersect(pval, radius, cobj.points[0], norm, cobj.radius2, cobj.radius, p_int, norm, 0);
-			}
+		case COLL_TORUS:
+			coll = sphere_torus_intersect(pval, radius, cobj.points[0], cobj.norm, cobj.radius2, cobj.radius);
 			break;
 		case COLL_CAPSULE:
 			coll = (dist_less_than(pval, cobj.points[0], (cobj.radius + radius)) || dist_less_than(pval, cobj.points[1], (cobj.radius2 + radius)));
