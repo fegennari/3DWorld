@@ -225,8 +225,8 @@ public:
 	void write_to_cobj_file(std::ostream &out, coll_obj &prev) const;
 	
 	// inexact primitive intersections
-	int sphere_intersects(point const &pos, float radius) const;
-	int sphere_intersects(sphere_t const &sphere) const {return sphere_intersects(sphere.pos, sphere.radius);}
+	bool sphere_intersects(point const &sc, float sr) const;
+	bool sphere_intersects(sphere_t const &sphere) const {return sphere_intersects(sphere.pos, sphere.radius);}
 	int contains_point(point const &pos) const;
 
 	vector3d get_cobj_supporting_normal(point const &support_pos, bool bot_surf=0) const;

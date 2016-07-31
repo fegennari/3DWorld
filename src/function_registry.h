@@ -453,6 +453,7 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last,
 						   point &p_int, vector3d &norm, unsigned &cdir, bool check_int, bool skip_z=0);
 bool coll_sphere_cylin_int(point const &sc, float sr, coll_obj const &c);
+bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, point const &cp2, float cr);
 bool approx_poly_cylin_int(point const *const pts, unsigned npts, cylinder_3dw const &cylin);
 bool do_line_clip(point &v1, point &v2, float const d[3][2]);
 bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax);

@@ -792,6 +792,11 @@ bool coll_obj::check_poly_billboard_alpha(point const &p1, point const &p2, floa
 	return (!has_poly_billboard_alpha() || !is_billboard_texture_transparent(points, (p1 + (p2 - p1)*t), cp.tid));
 }
 
+bool sphere_int_capsule(point const &sc, float sr, point const &cp1, point const &cp2, float cr1, float cr2) {
+	if (dist_less_than(sc, cp1, (cr1+sr)) || dist_less_than(sc, cp2, (cr2+sr))) return 1;
+	return sphere_intersect_cylinder(sc, sr, cp1, cp2, cr1, cr2);
+}
+
 int coll_obj::contains_point(point const &pos) const {
 	
 	if (!contains_pt(pos)) return 0; // test bounding cube
@@ -800,24 +805,29 @@ int coll_obj::contains_point(point const &pos) const {
 	case COLL_SPHERE:       return dist_less_than   (pos, points[0], radius);
 	case COLL_CYLINDER:     return dist_xy_less_than(pos, points[0], radius); // z has been checked above
 	case COLL_CYLINDER_ROT: return sphere_intersect_cylinder(pos, 0.0, points[0], points[1], radius, radius2); // use a zero radius sphere
-	case COLL_TORUS:        return sphere_torus_intersect(pos, 0.0, points[0], radius2, radius);
+	case COLL_TORUS:        return sphere_torus_intersect(pos, 0.0, points[0], radius2, radius); // use a zero radius sphere
+	case COLL_CAPSULE:      return sphere_int_capsule(pos, 0.0, points[0], points[1], radius, radius2); // use a zero radius sphere
 	case COLL_POLYGON:
 		if (is_thin_poly()) return 0; // thin polygons are effectively 2D and can't contain a point (not a volume)
 		return sphere_ext_poly_intersect(points, npoints, norm, pos, 0.0, thickness, 0.0); // use a zero radius sphere
 	}
-	return sphere_intersects(pos, 0.0); // capsule
+	return 0; // never gets here
 }
 
-// Note: inexact: returns 0 for no intersection, 1 for intersection, and 2 for maybe intersection
-int coll_obj::sphere_intersects(point const &pos, float radius) const {
+// Note: simplified version of coll_obj::intersects_cobj()
+bool coll_obj::sphere_intersects(point const &sc, float sr) const {
 
-	if (!sphere_cube_intersect(pos, radius, *this)) return 0; // optimization
-	coll_obj test_cobj;
-	test_cobj.type      = COLL_SPHERE;
-	test_cobj.radius    = radius;
-	test_cobj.points[0] = pos;
-	test_cobj.set_from_sphere(pos, radius); // set the bounding cube
-	return intersects_cobj(test_cobj); // Note: no toler
+	if (!sphere_cube_intersect(sc, sr, *this)) return 0; // optimization
+	switch (type) {
+	case COLL_CUBE:         return 1; // if bcube intersects the sphere, we're done
+	case COLL_SPHERE:       return dist_less_than(sc, points[0], (radius+sr));
+	case COLL_CYLINDER:     if (sphere_def_coll_vert_cylin(sc, sr, points[0], points[1], radius)) return 1; // fallthrough
+	case COLL_CYLINDER_ROT: return sphere_intersect_cylinder(sc, sr, points[0], points[1], radius, radius2);
+	case COLL_CAPSULE:      return sphere_int_capsule(sc, sr, points[0], points[1], radius, radius2);
+	case COLL_TORUS:        return sphere_torus_intersect(sc, sr, points[0], radius2, radius);
+	case COLL_POLYGON:      return sphere_ext_poly_intersect(points, npoints, norm, sc, sr, thickness, 0.0);
+	}
+	return 0; // never gets here
 }
 
 
