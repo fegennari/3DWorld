@@ -153,7 +153,7 @@ int torus_cylinder_int(coll_obj const &t, coll_obj const &c) {
 		return (dist_xy_less_than(c.points[0], t.points[0], (t.radius+t.radius2+c.radius)) && !dist_xy_less_than(c.points[0], t.points[0], (t.radius-t.radius2-c.radius)));
 	}
 	//return cylin_cylin_int(t.get_bounding_cylinder(), c);
-	return 2; // FIXME_TORUS: unclear how to accurately handle this case
+	return 2; // FIXME: unclear how to accurately handle this case
 }
 
 
@@ -270,7 +270,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		} // end switch
 	case COLL_TORUS:
 		assert(c.type == COLL_TORUS);
-		return 2; // FIXME_TORUS: unclear how to accurately handle this case
+		return 2; // FIXME: unclear how to accurately handle this case (torus vs. torus)
 	default: assert(0);
 	} // end switch
 	return 0;

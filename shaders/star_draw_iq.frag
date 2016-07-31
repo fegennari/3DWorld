@@ -5,6 +5,7 @@
 
 uniform sampler2D texture, freq_tex;
 uniform float time;
+uniform float aspect = 1.0;
 
 in vec2 tc;
 
@@ -39,7 +40,6 @@ void main(void)
 	
 	vec3 orange			= vec3( 0.8, 0.65, 0.3 );
 	vec3 orangeRed		= vec3( 0.8, 0.35, 0.1 );
-	float aspect	= 1.0; // FIXME
 	//vec2 uv			= gl_FragCoord.xy / iResolution.xy;
 	vec2 uv         = tc;
 	vec2 p 			= -0.5 + uv;

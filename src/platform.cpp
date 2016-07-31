@@ -118,7 +118,7 @@ void platform::next_frame() {
 }
 
 void platform::move_platform(float dist_traveled) {
-	if (is_rot) {assert(0);} // FIXME: WRITE - difficult because rotations may change cobj type (such as cube -> extruded polygon)
+	if (is_rot) {assert(0);} // FIXME: WRITE - difficult because rotations may change cobj type (such as cube -> extruded polygon) - only valid for polygons and rotated cylinders?
 	else {pos += dir*dist_traveled;}
 }
 
@@ -262,7 +262,7 @@ void platform::write_to_cobj_file(std::ostream &out) const {
 	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0 [update_light=0]]]
 	out << "Q 1 " << fspeed*TICKS_PER_SECOND << " " << rspeed*TICKS_PER_SECOND << " " << sdelay/TICKS_PER_SECOND << " " << rdelay/TICKS_PER_SECOND << " " << ext_dist << " " << act_dist
 		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << endl; // always enabled
-	for (auto i = lights.begin(); i != lights.end(); ++i) {} // FIXME
+	for (auto i = lights.begin(); i != lights.end(); ++i) {} // FIXME: see 'V' command
 	triggers.write_end_triggers_cobj_file(out);
 }
 

@@ -317,7 +317,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 				assert(volume >= -TOLERANCE); // usually > 0.0
 				int const cgid(cobj.cgroup_id);
 
-				// Note/FIXME: all cobjs in this group should have the same destroy thresh if any are shatterable or explodeable
+				// Note: all cobjs in this group should have the same destroy thresh if any are shatterable or explodeable
 				if (cgid >= 0 && full_destroy && cgroups_added.insert(cgid).second) { // newly inserted nonzero group
 					set<unsigned> const &group(cobj_groups.get_set(cgid));
 

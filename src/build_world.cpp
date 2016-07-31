@@ -1383,7 +1383,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-			// FIXME: should region option use first {x,y,z} as the region LLC and only specify the region URC?
 		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
 				trigger_t trigger;

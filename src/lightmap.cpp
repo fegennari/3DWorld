@@ -173,7 +173,7 @@ void r_profile::clear_within(float const c[2]) {
 
 void light_dir_grid::alloc() {
 	data.clear();
-	data.resize(XY_MULT_SIZE*MESH_Z_SIZE); // FIXME: should this be sparse like the lmap?
+	data.resize(XY_MULT_SIZE*MESH_Z_SIZE); // dense; making this sparse likely won't help much since it can already be a sub-cube of the light volume
 }
 
 void light_dir_grid::add_intensity(point const &p, vector3d const &dir, float val) { // Note: dir should be normalized

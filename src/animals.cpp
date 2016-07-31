@@ -153,7 +153,7 @@ bool fish_t::update(rand_gen_t &rgen) {
 		pos = orig_pos;
 		if (chased) {velocity = zero_vector;} // stop
 		else {gen_dir_vel(rgen, FISH_SPEED);} // pick a new direction randomly
-		// FIXME: swim up?
+		// or swim up?
 	}
 	return 1;
 }
