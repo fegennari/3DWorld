@@ -409,6 +409,19 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 	return 1; // results are ready
 }
 
+float tile_t::get_zval_at(float x, float y, bool in_global_space) const {
+
+	assert(!zvals.empty());
+	cube_t bcube(in_global_space ? get_mesh_bcube_global() : get_mesh_bcube());
+	float const xx((x - bcube.d[0][0])/(bcube.d[0][1] - bcube.d[0][0])), yy((y - bcube.d[1][0])/(bcube.d[1][1] - bcube.d[1][0]));
+	float const xp((x2 - x1)*CLIP_TO_01(xx)), yp((y2 - y1)*CLIP_TO_01(yy));
+	int const x0((int)xp), y0((int)yp);
+	float const xpi(xp - (float)x0), ypi(yp - (float)y0); // always positive
+	assert(x0 >= 0 && y0 >= 0 && x0+1 < (int)zvsize && y0+1 < (int)zvsize); //return zvals[y*zvsize + x];
+	unsigned const ix(y0*zvsize + x0);
+	return (1.0 - xpi)*((1.0 - ypi)*zvals[ix] + ypi*zvals[ix + zvsize]) + xpi*((1.0 - ypi)*zvals[ix + 1] + ypi*zvals[ix + zvsize + 1]);
+}
+
 
 // *** shadows + AO lighting ***
 
@@ -1342,7 +1355,7 @@ void tile_t::update_animals() {
 		fish.gen(NUM_FISH_PER_TILE, range); // Note: could use get_water_bcube() for tighter range
 	}
 	else {
-		fish.update();
+		fish.update(this);
 		propagate_animals_to_neighbor_tiles(fish);
 	}
 	if (!birds.was_generated()) {
@@ -1354,7 +1367,7 @@ void tile_t::update_animals() {
 		birds.gen(NUM_BIRDS_PER_TILE, range);
 	}
 	else {
-		birds.update();
+		birds.update(this);
 		propagate_animals_to_neighbor_tiles(birds);
 	}
 }

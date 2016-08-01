@@ -260,6 +260,7 @@ public:
 	void clear_vbo_tid(tile_shadow_map_manager *smap_manager);
 	void invalidate_shadows() {shadows_invalid = 1;}
 	bool create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait);
+	float get_zval_at(float x, float y, bool in_global_space) const;
 
 	vector3d get_norm_not_normalized(unsigned ix) const {
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy);

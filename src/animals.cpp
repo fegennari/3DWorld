@@ -6,6 +6,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "model3d.h"
+#include "tiled_mesh.h"
 
 float const FISH_RADIUS = 0.05;
 float const BIRD_RADIUS = 0.1;
@@ -80,8 +81,9 @@ void animal_t::gen_dir_vel(rand_gen_t &rgen, float speed) {
 	velocity = (speed*rgen.rand_uniform(0.6, 1.0))*dir;
 }
 
-// FIXME: slow in cases where a noise function is evaluated - can we use the tile zvals instead?
-float fish_t::get_mesh_zval_at_pos() const {
+float fish_t::get_mesh_zval_at_pos(tile_t const *const tile) const {
+	// use tile to interpolate z-value if present; faster, but should return a similar value to interpolate_mesh_zval()
+	if (tile) {return tile->get_zval_at(pos.x, pos.y, 1);} // in global space
 	return interpolate_mesh_zval((pos.x - DX_VAL*xoff2), (pos.y - DY_VAL*yoff2), 0.0, 1, 1); // in local camera space
 }
 
@@ -91,7 +93,7 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range) {
 	enabled = 0;
 	if (water_is_lava || temperature <= W_FREEZE_POINT || temperature >= WATER_MAX_TEMP) return 0; // too hot/cold for fish
 	pos = rgen.gen_rand_cube_point(range);
-	float const mesh_height(get_mesh_zval_at_pos()), depth(water_plane_z - mesh_height);
+	float const mesh_height(get_mesh_zval_at_pos(nullptr)), depth(water_plane_z - mesh_height);
 	if (depth < 0.1) return 0; // no water
 	radius  = FISH_RADIUS*rgen.rand_uniform(0.4, 1.0);
 	float const fzmin(mesh_height + 1.6*get_half_height()), fzmax(water_plane_z - ocean_wave_height - get_tess_wave_height() - 2.0*get_half_height());
@@ -120,12 +122,12 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range) {
 }
 
 
-bool fish_t::update(rand_gen_t &rgen) {
+bool fish_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
 	if (!enabled || !animate2) return 0;
 	point const camera(get_camera_pos()), pos_(get_draw_pos());
 	if (!dist_less_than(pos_, camera, 200.0*radius)) return 1; // to far away to simulate (optimization)
-	if (pos.z - 1.1*get_half_height() < get_mesh_zval_at_pos()) {enabled = 0; return 0;}
+	if (pos.z - 1.1*get_half_height() < get_mesh_zval_at_pos(tile)) {enabled = 0; return 0;}
 	bool const chased(dist_less_than(pos_, camera, 15.0*radius));
 
 	if (chased) { // scared by the player, swim away
@@ -149,7 +151,7 @@ bool fish_t::update(rand_gen_t &rgen) {
 	point const orig_pos(pos);
 	pos += velocity*fticks; // try to move
 	
-	if (pos.z - 1.5*get_half_height() < get_mesh_zval_at_pos()) { // water is too shallow
+	if (pos.z - 1.5*get_half_height() < get_mesh_zval_at_pos(tile)) { // water is too shallow
 		pos = orig_pos;
 		if (chased) {velocity = zero_vector;} // stop
 		else {gen_dir_vel(rgen, FISH_SPEED);} // pick a new direction randomly
@@ -158,7 +160,7 @@ bool fish_t::update(rand_gen_t &rgen) {
 	return 1;
 }
 
-bool bird_t::update(rand_gen_t &rgen) {
+bool bird_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile is unused
 
 	if (!enabled || !animate2) return 0;
 
@@ -273,14 +275,14 @@ template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &ran
 	bcube = range; // initial value (approx)
 }
 
-template<typename A> void animal_group_t<A>::update() {
+template<typename A> void animal_group_t<A>::update(tile_t const *const tile) {
 
 	if (!animate2) return;
 	bool bcube_set(0);
 	bcube.set_from_point(all_zeros);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->update(rgen);
+		i->update(rgen, tile);
 		if (!i->is_enabled()) continue;
 		if (!bcube_set) {bcube.set_from_sphere(*i); bcube_set = 1;}
 		else {bcube.union_with_sphere(*i);}
