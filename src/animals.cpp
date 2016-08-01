@@ -210,10 +210,12 @@ void bird_t::draw(shader_t &s) const {
 
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 1.0)) return;
+	// Note: birds use distance-based transparency rather than fog, because they may be against the blue sky above rather than the distant gray fog on the horizon;
+	// also, fog is modeled to be lower to the ground, and doesn't affect things like the sky, clouds, and sun
 	float const dist(p2p_dist(pos_, get_camera_pos()));
 	float const alpha(CLIP_TO_01(2000.0f*radius/dist - 2.0f)); // 1.0 under half clip distance, after that linear falloff to zero
 	if (alpha < 0.01) return;
-	s.set_cur_color(colorRGBA(color, alpha)); // FIXME: fog
+	s.set_cur_color(colorRGBA(color, alpha));
 	int const ndiv(get_ndiv(pos_));
 	bind_draw_sphere_vbo(0, 0); // no textures or normals
 	fgPushMatrix();
