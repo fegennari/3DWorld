@@ -1352,7 +1352,7 @@ void tile_t::update_animals() {
 		unsigned const NUM_FISH_PER_TILE = 15;
 		cube_t range(get_mesh_bcube_global());
 		range.d[2][1] = water_plane_z; // z extends from lowest mesh point to water surface
-		fish.gen(NUM_FISH_PER_TILE, range); // Note: could use get_water_bcube() for tighter range
+		fish.gen(NUM_FISH_PER_TILE, range, this); // Note: could use get_water_bcube() for tighter range
 	}
 	else {
 		fish.update(this);
@@ -1364,7 +1364,7 @@ void tile_t::update_animals() {
 		float const z_range(zmax - zmin);
 		range.d[2][0] = zmax;
 		range.d[2][1] = zmax + 0.50*z_range; // Note: may be in the clouds
-		birds.gen(NUM_BIRDS_PER_TILE, range);
+		birds.gen(NUM_BIRDS_PER_TILE, range, this);
 	}
 	else {
 		birds.update(this);

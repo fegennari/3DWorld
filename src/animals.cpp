@@ -87,13 +87,13 @@ float fish_t::get_mesh_zval_at_pos(tile_t const *const tile) const {
 	return interpolate_mesh_zval((pos.x - DX_VAL*xoff2), (pos.y - DY_VAL*yoff2), 0.0, 1, 1); // in local camera space
 }
 
-bool fish_t::gen(rand_gen_t &rgen, cube_t const &range) {
+bool fish_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) {
 
 	assert(range.is_strictly_normalized());
 	enabled = 0;
 	if (water_is_lava || temperature <= W_FREEZE_POINT || temperature >= WATER_MAX_TEMP) return 0; // too hot/cold for fish
 	pos = rgen.gen_rand_cube_point(range);
-	float const mesh_height(get_mesh_zval_at_pos(nullptr)), depth(water_plane_z - mesh_height);
+	float const mesh_height(get_mesh_zval_at_pos(tile)), depth(water_plane_z - mesh_height);
 	if (depth < 0.1) return 0; // no water
 	radius  = FISH_RADIUS*rgen.rand_uniform(0.4, 1.0);
 	float const fzmin(mesh_height + 1.6*get_half_height()), fzmax(water_plane_z - ocean_wave_height - get_tess_wave_height() - 2.0*get_half_height());
@@ -106,7 +106,7 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range) {
 	return 1;
 }
 
-bool bird_t::gen(rand_gen_t &rgen, cube_t const &range) {
+bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
 
 	assert(range.is_strictly_normalized());
 	enabled = 0;
@@ -261,7 +261,7 @@ void bird_t::draw(shader_t &s) const {
 }
 
 
-template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &range) { // Note: okay if nonempty
+template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &range, tile_t const *const tile) { // Note: okay if nonempty
 
 	generated = 1;
 	if (!range.is_strictly_normalized()) return; // if the range is empty or denormalized in z, mark as generated but skip
@@ -270,7 +270,7 @@ template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &ran
 
 	for (unsigned n = 0; n < num; ++n) {
 		A animal;
-		if (animal.gen(rgen, range)) {push_back(animal);} // only add if generation was successful
+		if (animal.gen(rgen, range, tile)) {push_back(animal);} // only add if generation was successful
 	}
 	bcube = range; // initial value (approx)
 }

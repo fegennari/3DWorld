@@ -46,7 +46,7 @@ class fish_t : public animal_t {
 	float get_half_height() const {return 0.4*radius;} // approximate
 
 public:
-	bool gen(rand_gen_t &rgen, cube_t const &range);
+	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s) const;
 };
@@ -56,7 +56,7 @@ class bird_t : public animal_t {
 	float time;
 
 public:
-	bool gen(rand_gen_t &rgen, cube_t const &range);
+	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s) const;
 };
@@ -76,7 +76,7 @@ template<typename A> class animal_group_t : public vector<A>, public animal_grou
 	cube_t bcube;
 
 public:
-	void gen(unsigned num, cube_t const &range);
+	void gen(unsigned num, cube_t const &range, tile_t const *const tile);
 	void update(tile_t const *const tile);
 	void remove(unsigned ix);
 	void remove_disabled();
