@@ -130,6 +130,12 @@ void main() {
 	green_scale += (1.0 - cos_view_angle);
 	color = mix(color, vec4(0.0, 1.0, 0.5, color.a), min(1.0, water_green_comp*green_scale));
 
+#ifdef USE_SHALLOW_WATER_MUD // unset/unused
+	float mud_amt = 1.0 - clamp(0.25*depth, 0.0, 1.0);
+	color         = mix(color, vec4(0.15, 0.1, 0.05, 1.0), mud_amt); // shallow water is muddy
+	foam_amt      = mix(foam_amt, 0.0, mud_amt); // should set later in the flow
+#endif
+
 	if (reflections) { // calculate reflections
 		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
 		//float reflect_w  = reflect_scale*get_approx_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
