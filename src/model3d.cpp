@@ -36,6 +36,7 @@ model3ds all_models;
 bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (display_mode & 0x20) == 0);} // enabled by default
 bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
+bool enable_reflection_dynamic_updates();
 
 
 // ************ texture_manager ************
@@ -1562,7 +1563,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 void model3d::ensure_reflection_cube_map() {
 
 	if (reflective != 2) return; // no cube map reflections
-	bool const dynamic_update(begin_motion != 0); // FIXME: do something better
+	bool const dynamic_update(enable_reflection_dynamic_updates());
 	if (model_refl_tid && !dynamic_update) return; // reflection texture is valid and scene is static
 	cube_t const bcube_xf(get_single_transformed_bcube());
 	if (model_refl_tid && !camera_pdu.cube_visible(bcube_xf)) return; // reflection texture is valid and model is not in view

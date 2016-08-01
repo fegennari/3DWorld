@@ -21,6 +21,7 @@ extern bool combined_gu, show_lightning;
 extern int display_mode, window_width, window_height, begin_motion, camera_coll_id;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern coll_obj_group coll_objects;
+extern vector<shadow_sphere> shadow_objs;
 
 
 void setup_sun_moon_light_pos();
@@ -359,10 +360,16 @@ void reflective_cobjs_t::free_textures() {
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {free_texture(i->second.tid);}
 }
 
+bool enable_reflection_dynamic_updates() {
+	// unclear how well this works, and if it even makes sense, considering the player casts shadows and reclections and is always visible in any reflective surface that is visible to the camera
+	if (begin_motion == 0) return 0; // no dynamic objects enabled
+	return (!shadow_objs.empty()); // check if there are any dynamic objects casting a shadow
+}
+
 void reflective_cobjs_t::create_textures() {
 
 	if (!enable_all_reflections()) return;
-	bool const dynamic_update(begin_motion != 0); // FIXME: do something better
+	bool const dynamic_update(enable_reflection_dynamic_updates());
 	vector<unsigned> to_remove;
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
