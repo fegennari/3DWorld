@@ -44,7 +44,7 @@ void main() {
 #else
 	float depth  = water_plane_z - mesh_z;
 #endif
-	if (depth <= 0.0) discard;
+	if (depth <= -0.03) discard; // small bias to fix holes resulting from texture lookup errors
 #endif // USE_WATER_DEPTH
 
 #ifdef WRITE_DEPTH_ONLY
