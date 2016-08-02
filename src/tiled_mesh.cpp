@@ -1937,13 +1937,15 @@ void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighti
 	if (cloud_shadows) {s.set_prefix("#define APPLY_CLOUD_SHADOWS", lighting_shader);}
 }
 
+float get_cloud_coverage(float cloud_cover_factor) {return (is_cloudy ? 1.0 : (cloud_cover + cloud_cover_factor*(1.0 - cloud_cover)));}
+
 void setup_cloud_plane_uniforms(shader_t &s, float cloud_cover_factor=0.535, bool match_cloud_layer=0) {
 
 	float cloud_zmax;
 	if (match_cloud_layer) {cloud_zmax = get_cloud_zmax();} // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
 	else {cloud_zmax = 0.5*(zmin + zmax) + max(zmax, CLOUD_CEILING);} // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
 	set_cloud_uniforms(s, 9);
-	s.add_uniform_float("cloud_scale",   (is_cloudy ? 1.0 : (cloud_cover + cloud_cover_factor*(1.0 - cloud_cover))));
+	s.add_uniform_float("cloud_scale",   get_cloud_coverage(cloud_cover_factor));
 	s.add_uniform_float("cloud_alpha",   (is_cloudy ? 0.8 : 0.75)*atmosphere);
 	s.add_uniform_float("cloud_plane_z", cloud_zmax);
 }
@@ -2510,13 +2512,22 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 }
 
 
+colorRGBA get_leaf_color_scale() {
+	float const lcscale(0.8*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(0.5)) : 1.0)); // cloud scale is nominally 0.75
+	return colorRGBA(lcscale, lcscale, lcscale, 1.0);
+}
+colorRGBA get_branch_color_scale() {
+	float const bcscale(1.0*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(0.0)) : 1.0));
+	return colorRGBA(bcscale, bcscale, bcscale, 1.0);
+}
+
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
-	float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
 	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 	lod_renderer.resize_zero();
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
+	colorRGBA const leaf_color_scale(get_leaf_color_scale()), branch_color_scale(get_branch_color_scale());
 
 	{ // draw leaves
 		bool const leaf_shadow_maps(!(display_mode & 0x0200) && enable_shadow_maps);
@@ -2527,7 +2538,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		if (leaf_shadow_maps ) {setup_tile_shader_shadow_map(ls);}
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1
-		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+		ls.add_uniform_color("color_scale", leaf_color_scale);
 		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass, shadow_pass, leaf_shadow_maps);
 		ls.add_uniform_color("color_scale", WHITE);
 		tree_cont_t::post_leaf_draw(ls);
@@ -2537,7 +2548,9 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		tree_branch_shader_setup(bs, enable_shadow_maps, 1); // enable_opacity=1
 		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
+		bs.add_uniform_color("color_scale", branch_color_scale);
 		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
+		bs.add_uniform_color("color_scale", WHITE);
 		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 		bs.end_shader();
 	}
@@ -2550,7 +2563,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		lrs.set_geom_shader("tree_billboard"); // point => 1 quad
 		lrs.set_frag_shader("linear_fog.part+ads_lighting.part*+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
 		billboard_tree_shader_setup(lrs);
-		lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+		lrs.add_uniform_color("color_scale", leaf_color_scale);
 		lrs.set_specular(0.1, 10.0);
 		lod_renderer.render_billboards(lrs, 0);
 		lrs.clear_specular();
@@ -2562,7 +2575,8 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		brs.set_vert_shader("tree_billboard_gs");
 		brs.set_geom_shader("tree_billboard"); // point => 1 quad
 		brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
-		billboard_tree_shader_setup(brs); // cscale=1.0 ?
+		billboard_tree_shader_setup(brs);
+		brs.add_uniform_color("color_scale", branch_color_scale);
 		brs.add_uniform_vector3d("ref_dir", plus_y);
 		lod_renderer.render_billboards(brs, 1);
 		brs.end_shader();
@@ -2591,7 +2605,9 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 	if (enable_shadow_maps) {s.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
 	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps);
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
+	s.add_uniform_color("color_scale", get_leaf_color_scale());
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);}
+	s.add_uniform_color("color_scale", WHITE);
 	s.end_shader();
 }
 

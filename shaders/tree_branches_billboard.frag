@@ -1,5 +1,6 @@
 uniform sampler2D color_map, normal_map;
 uniform vec3 ref_dir         = vec3(0,1,0);
+uniform vec4 color_scale     = vec4(1.0);
 uniform vec2 normal_tc_off   = vec2(0,0);
 uniform vec2 normal_tc_scale = vec2(1,1);
 uniform vec3 camera_pos;
@@ -29,5 +30,5 @@ void main()
 	if (enable_light0) color += add_light_comp0(normal).rgb;
 	if (enable_light1) color += add_light_comp1(normal).rgb;
 	if (enable_light2) color += add_light_comp (normal, 2).rgb * calc_light_atten(eye_space_pos, 2);
-	fg_FragColor = apply_fog_epos(vec4(clamp(color, 0.0, 1.0)*texel.rgb, 1.0), eye_space_pos);
+	fg_FragColor = apply_fog_epos(vec4(clamp(color*color_scale.rgb, 0.0, 1.0)*texel.rgb, 1.0), eye_space_pos);
 }
