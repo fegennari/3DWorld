@@ -2383,6 +2383,11 @@ void tile_draw_t::draw_water(shader_t &s, float zval) const {
 	check_gl_error(302);
 }
 
+colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
+	float const lcscale(mag*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(cloud_cover_factor)) : 1.0)); // cloud scale is nominally 0.75 with cloud_cover_factor=0.5
+	return colorRGBA(lcscale, lcscale, lcscale, 1.0);
+}
+
 
 void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc) {
 
@@ -2512,22 +2517,13 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 }
 
 
-colorRGBA get_leaf_color_scale() {
-	float const lcscale(0.8*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(0.5)) : 1.0)); // cloud scale is nominally 0.75
-	return colorRGBA(lcscale, lcscale, lcscale, 1.0);
-}
-colorRGBA get_branch_color_scale() {
-	float const bcscale(1.0*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(0.0)) : 1.0));
-	return colorRGBA(bcscale, bcscale, bcscale, 1.0);
-}
-
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 	lod_renderer.resize_zero();
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
-	colorRGBA const leaf_color_scale(get_leaf_color_scale()), branch_color_scale(get_branch_color_scale());
+	colorRGBA const leaf_color_scale(get_color_scale(0.8, 0.5)), branch_color_scale(get_color_scale());
 
 	{ // draw leaves
 		bool const leaf_shadow_maps(!(display_mode & 0x0200) && enable_shadow_maps);
@@ -2605,7 +2601,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 	if (enable_shadow_maps) {s.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
 	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps);
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
-	s.add_uniform_color("color_scale", get_leaf_color_scale());
+	s.add_uniform_color("color_scale", get_color_scale(1.0, 0.5));
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);}
 	s.add_uniform_color("color_scale", WHITE);
 	s.end_shader();
