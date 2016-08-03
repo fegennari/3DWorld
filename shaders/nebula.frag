@@ -60,7 +60,12 @@ void main() {
 
 #ifdef ENABLE_LIGHTING
 	vec4 epos  = fg_ModelViewMatrix * vec4(vertex, 1.0);
+#ifdef USE_CLOUD_MODE
+	float dp   = dot(normalize(epos.xyz - fg_LightSource[0].position.xyz).xyz, normalize(epos.xyz));
+	color.rgb *= 1.0 + 0.2*dp + 0.7*pow(max(-dp, 0.0), 30.0);
+#else // !USE_CLOUD_MODE
 	color.rgb *= (fg_LightSource[0].diffuse.rgb + fg_LightSource[1].ambient.rgb) * calc_light_atten(epos, 0); // sun_diffuse + galaxy_ambient
+#endif // USE_CLOUD_MODE
 #endif // ENABLE_LIGHTING
 	fg_FragColor = color_mult * color;
 }
