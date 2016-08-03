@@ -2355,20 +2355,22 @@ void tile_draw_t::draw_water(shader_t &s, float zval) const {
 }
 
 
-/*static*/ void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
+colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
+	float const lcscale(mag*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(cloud_cover_factor)) : 1.0)); // cloud scale is nominally 0.75 with cloud_cover_factor=0.5
+	return colorRGBA(lcscale, lcscale, lcscale, 1.0);
+}
 
+
+/*static*/ void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
 	select_multitex(DITHER_NOISE_TEX, tu_id, 1);
 	s.add_uniform_int("noise_tex", tu_id);
 }
-
 /*static*/ void tile_draw_t::set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {
-
 	set_noise_tex(s, tu_id);
 	s.add_uniform_float("noise_tex_size", get_texture_size(DITHER_NOISE_TEX, 0));
 }
 
 /*static*/ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs, bool use_texgen) {
-
 	shared_shader_lighting_setup(s, 0); // VS
 	s.set_vert_shader((use_texgen ? "ads_lighting.part*+texture_gen.part+" : "ads_lighting.part*+") + vs);
 	s.set_frag_shader("linear_fog.part+noise_dither.part+pine_tree");
@@ -2379,13 +2381,9 @@ void tile_draw_t::draw_water(shader_t &s, float zval) const {
 	setup_tt_fog_post(s);
 	s.add_uniform_int("branch_tex", 0);
 	s.add_uniform_float("min_alpha", 0.5);
+	s.add_uniform_color("color_scale", get_color_scale());
 	set_tree_dither_noise_tex(s, 1); // TU=1
 	check_gl_error(302);
-}
-
-colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
-	float const lcscale(mag*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(cloud_cover_factor)) : 1.0)); // cloud scale is nominally 0.75 with cloud_cover_factor=0.5
-	return colorRGBA(lcscale, lcscale, lcscale, 1.0);
 }
 
 
@@ -2513,6 +2511,7 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 	s.add_uniform_int("tex0", 0);
 	//s.add_uniform_int("shadow_tex", 6);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
+	s.add_uniform_color("color_scale", get_color_scale());
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 }
 
@@ -2523,7 +2522,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 	lod_renderer.resize_zero();
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
-	colorRGBA const leaf_color_scale(get_color_scale(0.8, 0.5)), branch_color_scale(get_color_scale());
+	colorRGBA const leaf_color_scale(get_color_scale(0.8, 0.5));
 
 	{ // draw leaves
 		bool const leaf_shadow_maps(!(display_mode & 0x0200) && enable_shadow_maps);
@@ -2544,9 +2543,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		tree_branch_shader_setup(bs, enable_shadow_maps, 1); // enable_opacity=1
 		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
-		bs.add_uniform_color("color_scale", branch_color_scale);
 		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
-		bs.add_uniform_color("color_scale", WHITE);
 		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 		bs.end_shader();
 	}
@@ -2572,7 +2569,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		brs.set_geom_shader("tree_billboard"); // point => 1 quad
 		brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
 		billboard_tree_shader_setup(brs);
-		brs.add_uniform_color("color_scale", branch_color_scale);
+		brs.add_uniform_color("color_scale", get_color_scale());
 		brs.add_uniform_vector3d("ref_dir", plus_y);
 		lod_renderer.render_billboards(brs, 1);
 		brs.end_shader();
