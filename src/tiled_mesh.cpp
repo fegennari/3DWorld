@@ -2716,7 +2716,7 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 	if (to_draw_clouds.empty()) return;
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
 	vpc_shader_t s; // see draw_scenery()
-	tile_cloud_t::shader_setup(s, 1, 0, -0.12, -0.3); // grayscale, not ridged, with custom alpha/dist bias
+	tile_cloud_t::shader_setup(s, 1, 0, -0.12, -0.3, 5, 0, 1); // grayscale, not ridged, with custom alpha/dist bias and cloud_mode
 	s.add_uniform_float("noise_scale", 0.02);
 	s.set_cur_color(WHITE); // unnecessary?
 	enable_blend();
