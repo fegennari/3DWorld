@@ -130,8 +130,8 @@ struct string_to_color_map_t : public map<string, colorRGBA> {
 		return it->second;
 	}
 	bool read_color(ifstream &in, colorRGBA &color) const {
-		if ((in >> color.R) != 0) { // color assumed to be floating-point RGBA
-			return ((in >> color.G >> color.B >> color.A) != 0); // read the rest: GBA
+		if (in >> color.R) { // color assumed to be floating-point RGBA
+			return bool(in >> color.G >> color.B >> color.A); // read the rest: GBA
 		}
 		in.clear(); // clear error bits
 		string str;
@@ -170,7 +170,7 @@ class ship_defs_file_reader {
 	bool read_ship_type(unsigned &type);
 	bool read_weap_type(unsigned &type);
 	bool parse_command(unsigned cmd);
-	bool read_pt(point &pt) {return (cfg >> pt.x >> pt.y >> pt.z) != 0;}
+	bool read_pt(point &pt) {return bool(cfg >> pt.x >> pt.y >> pt.z);}
 	void setup_keywords();
 
 public:
@@ -988,7 +988,7 @@ bool beam_weap_params::read(ifstream &in, string_to_color_map_t const &string_to
 	for (unsigned i = 0; i < 2; ++i) {
 		if (!string_to_color.read_color(in, beamc[i])) return 0;
 	}
-	return ((in >> bw_escale >> energy_drain >> temp_src >> paralyze >> mind_control >> multi_segment) != 0);
+	return bool(in >> bw_escale >> energy_drain >> temp_src >> paralyze >> mind_control >> multi_segment);
 }
 
 

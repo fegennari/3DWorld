@@ -122,7 +122,7 @@ wpt_ix_t waypoint_vector::add(waypoint_t const &w) {
 		operator[](ix) = w;
 	}
 	else {
-		ix = (unsigned)waypoints.size();
+		ix = (wpt_ix_t)waypoints.size();
 		push_back(w);
 	}
 	operator[](ix).disabled = 0;

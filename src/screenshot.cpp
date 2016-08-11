@@ -11,6 +11,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 #include "gl_includes.h"
 
 using namespace std;
@@ -35,7 +36,7 @@ FILE *open_screenshot_file(char *file_path, string const &extension, unsigned &i
 		fp = fopen(basename.c_str(), "wb");
 	}
 	if (fp == NULL) {
-		printf("Error writing screenshot '%s'.\n", basename);
+		printf("Error writing screenshot '%s'.\n", basename.c_str());
 		return NULL;
 	}
 	return fp;

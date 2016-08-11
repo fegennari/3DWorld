@@ -271,7 +271,7 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 			
 		if (fabs(norm[d3]) > 0.01 && thickness <= MIN_POLY_THICK) { // doesn't work on thick or vertical polygons
 			float const dval(-dot_product(norm, points[0]));
-			float const cent[2] = {0.5*(bb[0][0] + bb[0][1]), 0.5*(bb[1][0] + bb[1][1])};
+			float const cent[2] = {0.5f*float(bb[0][0] + bb[0][1]), 0.5f*float(bb[1][0] + bb[1][1])};
 			val = -(cent[0]*norm[d1] + cent[1]*norm[d2] + dval)/norm[d3] + (dir ? 1.0 : -1.0)*0.5*fabs(norm[d3]*thickness);
 		}
 		return (val >= d[d3][0] && val <= d[d3][1]);

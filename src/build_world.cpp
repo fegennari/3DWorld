@@ -1605,7 +1605,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				for (unsigned i = 0; i < 2; ++i) dirs[i].normalize();
 
 				for (unsigned i = six; i < eix; ++i) {
-					float const val[2] = {(i - 0.5), (i + 0.5)};
+					float const val[2] = {(float(i) - 0.5f), (float(i) + 0.5f)};
 					vector3d deltas[2];
 
 					for (unsigned j = 0; j < 2; ++j) {

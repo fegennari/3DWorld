@@ -6,6 +6,7 @@
 #include "lightmap.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include <functional>
 
 
 unsigned const NUM_RAND_LTS  = 0;

@@ -1059,7 +1059,7 @@ void universe_t::init() {
 	for (unsigned i = 0; i < U_BLOCKS; ++i) { // z
 		for (unsigned j = 0; j < U_BLOCKS; ++j) { // y
 			for (unsigned k = 0; k < U_BLOCKS; ++k) { // x
-				int const ii[3] = {k, j, i};
+				int const ii[3] = {(int)k, (int)j, (int)i};
 				cells[i][j][k].gen_cell(ii);
 			}
 		}
@@ -1082,7 +1082,7 @@ void universe_t::shift_cells(int dx, int dy, int dz) {
 				bool const xout(k2 < 0 || k2 >= int(U_BLOCKS));
 
 				if (xout || yout || zout) { // allocate new cell
-					int const ii[3]     = {k, j, i};
+					int const ii[3]     = {(int)k, (int)j, (int)i};
 					temp.cells[i][j][k].gen = 0;
 					temp.cells[i][j][k].gen_cell(ii);
 				}
@@ -1505,7 +1505,7 @@ void ussystem::process() {
 		float const dmax(planets[i].orbit + planets[i].radius + MOON_TO_PLANET_MAX_SPACING + MOON_MAX_SIZE);
 		radius = max(radius, dmax); // too bad we can't use p.mosize
 	}
-	sun.num_satellites = planets.size();
+	sun.num_satellites = (unsigned short)planets.size();
 	assert(asteroid_belt == nullptr);
 
 	if (planets.size() > 1 && !(rand2() & 1)) {
@@ -1656,7 +1656,7 @@ void uplanet::process() {
 		assert(T_sq > 0.0);
 		rot_rate = ROT_RATE_CONST/(10.0*TICKS_PER_SECOND*sqrt(T_sq));
 	}
-	num_satellites = moons.size();
+	num_satellites = (unsigned short)moons.size();
 	gen = 1;
 }
 

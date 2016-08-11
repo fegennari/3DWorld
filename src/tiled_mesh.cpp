@@ -1025,7 +1025,7 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 
 	if (!pine_trees_enabled() || pine_trees.empty()) return;
 	float const weight(get_tree_far_weight());
-	float const weights[2] = {1.0-weight, weight}; // {high, low} detail
+	float const weights[2] = {1.0f-weight, weight}; // {high, low} detail
 	//timer_t timer("Update Pine Trees");
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -1442,7 +1442,7 @@ void crack_ibuf_t::gen_offsets(vector<unsigned> &indices, unsigned size) {
 			for (unsigned cur_lod = 0; cur_lod < NUM_LODS; ++cur_lod) {
 				for (unsigned adj_lod = 0; adj_lod < NUM_LODS; ++adj_lod) {
 					ix_sz_pair &ixsz(offsets[get_index(dim, dir, cur_lod, adj_lod)]);
-					ixsz.ix = indices.size();
+					ixsz.ix = (unsigned short)indices.size();
 					unsigned const step(1 << cur_lod), stride(size+1);
 
 					for (unsigned lod = adj_lod; lod > cur_lod; --lod) { // for all levels of high=>low LOD transitions
@@ -1460,7 +1460,7 @@ void crack_ibuf_t::gen_offsets(vector<unsigned> &indices, unsigned size) {
 							} // for n
 						} // for xy
 					} // for lod
-					ixsz.sz = indices.size() - ixsz.ix; // often 0
+					ixsz.sz = (unsigned short)indices.size() - ixsz.ix; // often 0
 				} // for adj_lod
 			} // for cur_lod
 		} // for dir

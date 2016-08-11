@@ -3,6 +3,7 @@
 // 10/26/15
 #include "3DWorld.h"
 #include "openal_wrap.h" // for alut_sleep()
+#define HAVE_STRUCT_TIMESPEC // required for pthread.h include
 #include <pthread.h>
 #include <list>
 

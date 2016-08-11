@@ -22,6 +22,7 @@
 #include <string>
 #include <sstream>
 #include <iterator>
+#include <memory>
 using std::vector;
 using std::deque;
 using std::set;

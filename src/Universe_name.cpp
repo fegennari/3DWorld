@@ -24,8 +24,6 @@ string const c_ending = c_com + c_com + c_com + c_com + c_str + c_end;
 
 vector<string> n_start[2], n_middle[2], n_ending[2];
 
-int rand2();
-
 
 
 void parse_str_list(string const &str, vector<string> &vs) { // str must end with a space
@@ -60,17 +58,19 @@ void parse_str_tables() {
 }
 
 
+extern rand_gen_t global_rand_gen;
+
 void named_obj::gen_name(s_object const &sobj) {
 
 	parse_str_tables();
-	bool at_end(0), vc((rand2() % 100) < 90); // 0 = vowel, 1 = consonant
+	bool at_end(0), vc((global_rand_gen.rand() % 100) < 90); // 0 = vowel, 1 = consonant
 	name = "";
 
 	for (unsigned i = 0; !at_end; ++i, vc ^= 1) {
-		at_end = (i >= 5 || name.size() >= 8 || (i > 1 && (rand2() % 100) < int((vc ? 10 : 5) + 16*i)));
+		at_end = (i >= 5 || name.size() >= 8 || (i > 1 && (global_rand_gen.rand() % 100) < int((vc ? 10 : 5) + 16*i)));
 		vector<string> const &str((i == 0) ? n_start[vc] : (at_end ? n_ending[vc] : n_middle[vc]));
 		assert(!str.empty());
-		name += str[rand2() % str.size()];
+		name += str[global_rand_gen.rand() % str.size()];
 	}
 	assert(!name.empty());
 	name[0] += ('A' - 'a'); // make uppercase

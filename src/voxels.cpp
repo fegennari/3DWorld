@@ -175,7 +175,7 @@ template<typename V> void voxel_grid<V>::get_bcube_ix_bounds(cube_t const &bcube
 	get_xyz(bcube.get_llc(), llc);
 	get_xyz(bcube.get_urc(), urc);
 	UNROLL_3X(assert(llc[i_] <= urc[i_]);)
-	int const num[3] = {nx, ny, nz};
+	int const num[3] = {(int)nx, (int)ny, (int)nz};
 	UNROLL_3X(llc[i_] = max(0, llc[i_]);)
 	UNROLL_3X(urc[i_] = min(num[i_]-1, urc[i_]);)
 }
@@ -713,8 +713,8 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool postproc_brush
 
 void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask) {
 
-	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
-	int const step[3] = {nz, nx*nz, 1};
+	unsigned const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
+	unsigned const step[3] = {nz, nx*nz, 1};
 
 	while (!work.empty()) {
 		unsigned const cur(work.back());
@@ -722,13 +722,13 @@ void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsi
 		assert(cur < outside.size());
 		assert(outside[cur] & bit_mask);
 		unsigned const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
-		int const pos[3] = {x, y, z};
+		unsigned const pos[3] = {x, y, z};
 
 		for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				if (dir) {if (pos[dim] + 1 >= max_range[dim]) continue;}
-				else     {if (pos[dim] - 1 <  min_range[dim]) continue;}
-				unsigned const ix(cur + (dir ? step[dim] : -step[dim]));
+				else     {if (pos[dim] < min_range[dim] + 1 ) continue;}
+				unsigned const ix(dir ? cur+step[dim] : cur-step[dim]);
 				//assert(ix < outside.size());
 						
 				if (outside[ix] == fill_val) {
@@ -1187,7 +1187,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	unsigned const ystep(use_mesh ? max(1U, ny/MESH_Y_SIZE ) : 1U);
 	unsigned const zstep(use_mesh ? max(1U, nz/MESH_SIZE[2]) : 1U);
 	unsigned const x_end(min(nx, (xbix+1)*xblocks)), y_end(min(ny, (ybix+1)*yblocks));
-	int const voxel_sz[3] = {nx, ny, nz};
+	unsigned const voxel_sz[3] = {nx, ny, nz};
 	
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int yi = ybix*yblocks; yi < (int)y_end; yi += ystep) {
@@ -1208,11 +1208,11 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 				if (z+1 == nz || !(outside.get(x, y, z+1) & end_ray_flags)) { // above mesh
 					for (vector<step_dir_t>::const_iterator i = ao_dirs.begin(); i != ao_dirs.end(); ++i) {
 						float cur_val(1.0);
-						int cur[3] = {x, y, z};
+						unsigned cur[3] = {x, y, z};
 						// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
 						unsigned max_steps(i->nsteps);
 						UNROLL_3X(if (i->dir[i_] > 0) cur[i_] += 1;);
-						UNROLL_3X(if (i->dir[i_]) max_steps = min(max_steps, (unsigned)max(0, ((i->dir[i_] < 0) ? cur[i_] : voxel_sz[i_]-cur[i_]-1))););
+						UNROLL_3X(if (i->dir[i_]) max_steps = min(max_steps, (unsigned)max(0, ((i->dir[i_] < 0) ? (int)cur[i_] : (int)voxel_sz[i_]-(int)cur[i_]-1))););
 						int ix(outside.get_ix(cur[0], cur[1], cur[2]));
 
 						for (unsigned s = 0; s < max_steps; ++s) { // take steps in this direction

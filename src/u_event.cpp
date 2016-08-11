@@ -5,6 +5,7 @@
 #include "globals.h"
 #include "u_event.h"
 #include <iostream>
+#include <algorithm>
 
 using std::vector;
 using std::cout;

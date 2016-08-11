@@ -1,6 +1,7 @@
 // 3D World - Ray Tracing Code
 // by Frank Gennari
 // 2/14/10
+#define HAVE_STRUCT_TIMESPEC // required for pthread.h include
 #include <pthread.h>
 #include "3DWorld.h"
 #include "lightmap.h"
