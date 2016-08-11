@@ -1346,11 +1346,19 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				int use_smap(0); // 0=none, 1=spotlight, 2=point light/cube map
 
 				// direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]
-				if (fscanf(fp, "%f%f%f%f%f%i%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0], &use_smap) >= 3) {
+				long const fpos(ftell(fp));
+				int const num_read(fscanf(fp, "%f%f%f", &dir.x, &dir.y, &dir.z));
+
+				if (num_read == 0) {fseek(fp, fpos, SEEK_SET);}
+				else if (num_read == 3) {
+					if (line_num == 71) { cout << "ret1: " << (char)getc(fp) << endl; }
+					fscanf(fp, "%f%f%i%i", &beamwidth, &r_inner, &ivals[0], &use_smap);
 					if (use_smap < 0 || use_smap > 2) {return read_error(fp, "light source use_smap (must be 0, 1, or 2)", coll_obj_file);}
 					if (ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
 					else {xf.xform_pos_rm(dir);} // spotlight (or hemispherical light ray culling if beamwidth == 1.0)
 				}
+				else {return read_error(fp, "light source direction or end point position", coll_obj_file);}
+
 				for (unsigned d = 0; d < 2; ++d) { // {ambient, diffuse}
 					if (fvals[d] == 0.0) continue;
 					vector<light_source> lss;
@@ -1501,7 +1509,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (read_cube(fp, xf, cobj) != 6) {return read_error(fp, "collision cube", coll_obj_file);}
 				if (cobj.is_zero_area()) {return read_error(fp, "collision cube: zero area cube", coll_obj_file);}
 				float corner_radius(0.0);
-				fscanf(fp, "%f", &corner_radius); // okay if fails
+				long const fpos(ftell(fp));
+				if (fscanf(fp, "%f", &corner_radius) == 0) {fseek(fp, fpos, SEEK_SET);} // okay if fails
 				check_layer(has_layer);
 				cobj.radius2 = corner_radius*xf.scale;
 				cobj.counter = (remove_t_junctions ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
@@ -1797,7 +1806,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		default:
-			cerr << "Error: unrecognized symbol in collision object file line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
+			cerr << "Error: unrecognized symbol in collision object file " << coll_obj_file << " line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
 			fclose(fp);
 			exit(1);
 			return 0;
