@@ -12,6 +12,7 @@
 #include "model3d.h"
 #include "subdiv.h"
 #include "player_state.h"
+#include "file_utils.h"
 #include <fstream>
 
 
@@ -969,7 +970,7 @@ void create_xyz_groups(int *group_ids, bool use_vbo) {
 void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geom_xform_t const &xf) {
 
 	pos.z = 0.0;
-	bool const interpolate(fscanf(fp, "%f", &pos.z) != 1);
+	bool const interpolate(!read_float(fp, pos.z));
 	xf.xform_pos(pos); // better not try to rotate z when interpolating
 	if (interpolate) pos.z = interpolate_mesh_zval(pos.x, pos.y, interp_rad, 0, 0) + radius;
 }
@@ -1071,7 +1072,7 @@ unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c) {
 	point pt[2];
 
 	for (unsigned d = 0; d < 6; ++d) {
-		if (fscanf(fp, "%f", &pt[d&1][d>>1]) != 1) return d;
+		if (!read_float(fp, pt[d&1][d>>1])) return d;
 	}
 	for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(pt[i]);}
 	c = cube_t(pt[0], pt[1]);
@@ -1130,31 +1131,31 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "movable") {letter = 'd';}
 				else if (keyword == "end") {letter = 'q';}
 				else if (keyword == "density") {
-					if (fscanf(fp, "%f", &cobj.cp.density) != 1) {return read_error(fp, "density", coll_obj_file);}
+					if (!read_float(fp, cobj.cp.density)) {return read_error(fp, "density", coll_obj_file);}
 				}
 				else if (keyword == "tj") {
-					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "remove t junctions", coll_obj_file);}
+					if (!read_int(fp, ivals[0])) {return read_error(fp, "remove t junctions", coll_obj_file);}
 					remove_t_junctions = (ivals[0] != 0);
 				}
 				else if (keyword == "reflective") {
-					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "reflective", coll_obj_file);}
+					if (!read_int(fp, ivals[0])) {return read_error(fp, "reflective", coll_obj_file);}
 					reflective = ((ivals[0] != 0) ? 1 : 0);
 					cobj.set_reflective_flag(reflective == 2); // only for cube maps
 				}
 				else if (keyword == "cube_map_ref") {
-					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "cube_map_ref", coll_obj_file);}
+					if (!read_int(fp, ivals[0])) {return read_error(fp, "cube_map_ref", coll_obj_file);}
 					reflective = ((ivals[0] != 0) ? 2 : 0);
 					cobj.set_reflective_flag(reflective == 2); // only for cube maps
 				}
 				else if (keyword == "metalness") {
-					if (fscanf(fp, "%f", &cobj.cp.metalness) != 1) {return read_error(fp, "metalness", coll_obj_file);}
+					if (!read_float(fp, cobj.cp.metalness)) {return read_error(fp, "metalness", coll_obj_file);}
 				}
 				else if (keyword == "start_cobj_group") {cobj.cgroup_id = cobj_groups.new_group();}
 				else if (keyword == "end_cobj_group") {cobj.cgroup_id = -1;}
 				else if (keyword == "start_draw_group") {cobj.dgroup_id = cdraw_groups.new_group();}
 				else if (keyword == "end_draw_group") {cobj.dgroup_id = -1;}
 				else if (keyword == "destroy_prob") {
-					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy_prob", coll_obj_file);}
+					if (!read_int(fp, ivals[0])) {return read_error(fp, "destroy_prob", coll_obj_file);}
 					cobj.cp.destroy_prob = (unsigned char)max(0, min(255, ivals[0])); // 0 = default
 				}
 				else if (keyword == "sound_file") {
@@ -1235,7 +1236,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "platform", coll_obj_file);}
+			if (!read_int(fp, ivals[0])) {return read_error(fp, "platform", coll_obj_file);}
 			assert(ivals[0] == 0 || ivals[0] == 1); // boolean
 			
 			if (ivals[0] == 0) { // disable platforms
@@ -1258,14 +1259,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
 			if (fscanf(fp, "%f%f%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0]) != 4) {return read_error(fp, "tree", coll_obj_file);}
 			assert(fvals[0] > 0.0);
-			use_z = (fscanf(fp, "%f", &pos.z) == 1);
+			use_z = read_float(fp, pos.z);
 			
 			if (num_trees > 0) {
 				cout << "Must set ntrees to zero in order to add trees through collision objects file." << endl;
 			}
 			else {
 				bool local_tree_4th_branches(tree_4th_branches);
-				if (fscanf(fp, "%i", &ivals[1])) {local_tree_4th_branches = (ivals[1] != 0);}
+				if (read_int(fp, ivals[1])) {local_tree_4th_branches = (ivals[1] != 0);}
 				xf.xform_pos(pos);
 				t_trees.push_back(tree(enable_leaf_wind));
 				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, local_tree_4th_branches);
@@ -1303,7 +1304,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'F': // place small tree: xpos ypos height width type [zpos], type: T_PINE = 0, T_DECID = 1, T_TDECID = 2, T_BUSH = 3, T_PALM = 4, T_SH_PINE = 5
 			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5) {return read_error(fp, "small tree", coll_obj_file);}
 			assert(fvals[0] > 0.0 && fvals[1] > 0.0);
-			use_z = (fscanf(fp, "%f", &pos.z) == 1);
+			use_z = read_float(fp, pos.z);
 			xf.xform_pos(pos);
 
 			if (add_small_tree(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z)) {
@@ -1317,7 +1318,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'G': // place plant: xpos ypos height radius type [zpos], type: PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4
 			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5) {return read_error(fp, "plant", coll_obj_file);}
 			assert(fvals[0] > 0.0 && fvals[1] > 0.0);
-			use_z = (fscanf(fp, "%f", &pos.z) == 1);
+			use_z = read_float(fp, pos.z);
 			xf.xform_pos(pos);
 			add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
 			break;
@@ -1351,7 +1352,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 				if (num_read == 0) {fseek(fp, fpos, SEEK_SET);}
 				else if (num_read == 3) {
-					if (line_num == 71) { cout << "ret1: " << (char)getc(fp) << endl; }
 					fscanf(fp, "%f%f%i%i", &beamwidth, &r_inner, &ivals[0], &use_smap);
 					if (use_smap < 0 || use_smap > 2) {return read_error(fp, "light source use_smap (must be 0, 1, or 2)", coll_obj_file);}
 					if (ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
@@ -1411,7 +1411,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'V': // bind prev light source to cobj at location <x y z>
-			if (fscanf(fp, "%f%f%f", &pos.x, &pos.y, &pos.z) != 3) {return read_error(fp, "light source", coll_obj_file);}
+			if (!read_vector(fp, pos)) {return read_error(fp, "light source", coll_obj_file);}
 			if (prev_light_ix_start == 0 || prev_light_ix_start == light_sources_d.size()) {return read_error(fp, "light source <no previous dynamic light source to bind to>", coll_obj_file);}
 			assert(prev_light_ix_start > FLASHLIGHT_LIGHT_ID);
 			xf.xform_pos(pos);
@@ -1479,7 +1479,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'w': // water spring/source: xpos ypos rate [zpos] [vx vy vz diff]
 			if (fscanf(fp, "%f%f%f", &pos.x, &pos.y, &fvals[0]) != 3) {return read_error(fp, "water source", coll_obj_file);}
 			fvals[1] = 0.1;
-			use_z    = (fscanf(fp, "%f", &pos.z) == 1);
+			use_z    = read_float(fp, pos.z);
 			use_vel  = (fscanf(fp, "%f%f%f%f", &vel.x, &vel.y, &vel.z, &fvals[1]) == 4);
 			if (use_vel) xf.xform_pos_rms(vel); // scale?
 			xf.xform_pos(pos);
@@ -1498,7 +1498,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'e': // set shape edges to skip when drawing (cube and cylinder)
-			if (fscanf(fp, "%i", &ivals[0]) != 1 || ivals[0] < 0 || ivals[0] > 255) {
+			if (!read_int(fp, ivals[0]) || ivals[0] < 0 || ivals[0] > 255) {
 				return read_error(fp, "shape edge skip draw", coll_obj_file);
 			}
 			cobj.cp.surfs = (unsigned char)ivals[0]; // all six sides (cube) or top/bottom (cylinder)
@@ -1510,7 +1510,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (cobj.is_zero_area()) {return read_error(fp, "collision cube: zero area cube", coll_obj_file);}
 				float corner_radius(0.0);
 				long const fpos(ftell(fp));
-				if (fscanf(fp, "%f", &corner_radius) == 0) {fseek(fp, fpos, SEEK_SET);} // okay if fails
+				if (!read_float(fp, corner_radius)) {fseek(fp, fpos, SEEK_SET);} // okay if fails
 				check_layer(has_layer);
 				cobj.radius2 = corner_radius*xf.scale;
 				cobj.counter = (remove_t_junctions ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
@@ -1561,7 +1561,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'P': // polygon: npts (x y z)* thickness
-			if (fscanf(fp, "%u", &npoints) != 1) {return read_error(fp, "collision polygon npoints", coll_obj_file);}
+			if (!read_uint(fp, npoints)) {return read_error(fp, "collision polygon npoints", coll_obj_file);}
 
 			if (npoints < 3) {
 				cout << "Error: Collision polygon must have at least 3 points: " << npoints << "." << endl;
@@ -1572,14 +1572,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			poly.resize(npoints);
 
 			for (unsigned i = 0; i < npoints; ++i) {
-				if (fscanf(fp, "%f%f%f", &poly[i].v.x, &poly[i].v.y, &poly[i].v.z) != 3) {
+				if (!read_vector(fp, poly[i].v)) {
 					cout << "Error reading collision polygon point " << i << " from file '" << coll_obj_file << "'." << endl;
 					fclose(fp);
 					return 0;
 				}
 				xf.xform_pos(poly[i].v);
 			}
-			if (fscanf(fp, "%f", &cobj.thickness) != 1) {return read_error(fp, "collision polygon", coll_obj_file);}
+			if (!read_float(fp, cobj.thickness)) {return read_error(fp, "collision polygon", coll_obj_file);}
 			check_layer(has_layer);
 			cobj.thickness *= xf.scale;
 			ppts.resize(0);
@@ -1591,15 +1591,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				point pt[2];
 				float ro, ri;
+				unsigned six(0), eix(npoints);
 
-				if (fscanf(fp, "%f%f%f%f%f%f%f%f%u", &pt[0].x, &pt[0].y, &pt[0].z, &pt[1].x, &pt[1].y, &pt[1].z, &ro, &ri, &npoints) != 9) {
+				if (fscanf(fp, "%f%f%f%f%f%f%f%f%u%u%u", &pt[0].x, &pt[0].y, &pt[0].z, &pt[1].x, &pt[1].y, &pt[1].z, &ro, &ri, &npoints, &six, &eix) < 9) {
 					return read_error(fp, "hollow cylinder", coll_obj_file);
 				}
-				if (npoints < 3 || ro <= 0.0 || ri < 0.0 || ro < ri || pt[0] == pt[1]) {
-					return read_error(fp, "hollow cylinder values", coll_obj_file);
-				}
-				unsigned six(0), eix(npoints);
-				fscanf(fp, "%u%u", &six, &eix); // optional
+				if (npoints < 3 || ro <= 0.0 || ri < 0.0 || ro < ri || pt[0] == pt[1]) {return read_error(fp, "hollow cylinder values", coll_obj_file);}
 				if (six >= eix || eix > npoints) {return read_error(fp, "hollow cylinder start/end indices", coll_obj_file);}
 				check_layer(has_layer);
 				for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(pt[i]);}
@@ -1635,10 +1632,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				portal p;
 				for (unsigned i = 0; i < 4; ++i) {
-					if (fscanf(fp, "%f%f%f", &p.pts[i].x, &p.pts[i].y, &p.pts[i].z) != 3) {return read_error(fp, "portal", coll_obj_file);}
+					if (!read_vector(fp, p.pts[i])) {return read_error(fp, "portal", coll_obj_file);}
 					xf.xform_pos(p.pts[i]);
 				}
-				fscanf(fp, "%f%f%f", &p.normal.x, &p.normal.y, &p.normal.z); // optional/can fail
+				read_vector(fp, p.normal); // optional/can fail
 				portals.push_back(p);
 			}
 			break;
@@ -1660,7 +1657,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			if (cobj.type == COLL_NULL) {return read_error(fp, "step delta must appear after shape definition", coll_obj_file);}
 			if (fscanf(fp, "%f%f%f%u", &pos.x, &pos.y, &pos.z, &npoints) != 4) {return read_error(fp, "step delta", coll_obj_file);}
 			vel = zero_vector; // size delta
-			fscanf(fp, "%f%f%f", &vel.x, &vel.y, &vel.z);
+			read_vector(fp, vel); // optional
 			if (pos == all_zeros && vel == zero_vector) {return read_error(fp, "step delta must have nonzero delta", coll_obj_file);}
 			xf.xform_pos_rms(pos); // no translate
 			xf.xform_pos_rms(vel); // no translate
@@ -1693,10 +1690,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			if (!read_texture(str, line_num, cobj.cp.tid, 0)) {fclose(fp); return 0;}
 			has_layer    = 1;
-			cobj.cp.draw = (fscanf(fp, "%i", &ivals[0]) ? (ivals[0] != 0) : 1); // optional
-			if (!fscanf(fp, "%f", &cobj.cp.refract_ix )) {cobj.cp.refract_ix  = 1.0;} // optional
-			if (!fscanf(fp, "%f", &cobj.cp.light_atten)) {cobj.cp.light_atten = 0.0;} // optional
-			if (!fscanf(fp, "%i", &ivals[0])) {ivals[0] = 0;} // optional
+			cobj.cp.draw = (read_int(fp, ivals[0]) ? (ivals[0] != 0) : 1); // optional
+			if (!read_float(fp, cobj.cp.refract_ix )) {cobj.cp.refract_ix  = 1.0;} // optional
+			if (!read_float(fp, cobj.cp.light_atten)) {cobj.cp.light_atten = 0.0;} // optional
+			if (!read_int(fp, ivals[0])) {ivals[0] = 0;} // optional
 			cobj.cp.is_emissive = (ivals[0] != 0);
 			break;
 
@@ -1718,10 +1715,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'X': // normal map texture id/name [invert_y=0 [swap_binorm_sign=0]]
-			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "normal map texture", coll_obj_file);}
 			{
 				int invert_y(0), swap_bns(0);
-				fscanf(fp, "%i%i", &invert_y, &swap_bns); // optional
+				if (fscanf(fp, "%255s%i%i", str, &invert_y, &swap_bns) < 1) {return read_error(fp, "normal map texture", coll_obj_file);}
 				cobj.cp.set_swap_tcs_flag(SWAP_TCS_NM_BS, (swap_bns != 0));
 				if (!read_texture(str, line_num, cobj.cp.normal_map, 1, (invert_y != 0))) {fclose(fp); return 0;}
 			}
@@ -1742,20 +1738,20 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 't': // relative translate
-			if (fscanf(fp, "%f%f%f", &tv0.x, &tv0.y, &tv0.z) != 3) {return read_error(fp, "translate", coll_obj_file);}
+			if (!read_vector(fp, tv0)) {return read_error(fp, "translate", coll_obj_file);}
 			xf.tv += tv0;
 			break;
 		case 'T': // absolute translate
-			if (fscanf(fp, "%f%f%f", &xf.tv.x, &xf.tv.y, &xf.tv.z) != 3) {return read_error(fp, "translate", coll_obj_file);}
+			if (!read_vector(fp, xf.tv)) {return read_error(fp, "translate", coll_obj_file);}
 			break;
 
 		case 'm': // scale/magnitude
-			if (fscanf(fp, "%f", &xf.scale) != 1) {return read_error(fp, "scale", coll_obj_file);}
+			if (!read_float(fp, xf.scale)) {return read_error(fp, "scale", coll_obj_file);}
 			assert(xf.scale > 0.0);
 			break;
 
 		case 'M': // mirror <dim>, dim = [0,1,2] => [x,y,z]
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "mirror", coll_obj_file);}
+			if (!read_int(fp, ivals[0])) {return read_error(fp, "mirror", coll_obj_file);}
 			if (ivals[0] < 0 || ivals[0] > 2) {return read_error(fp, "mirror: dim must be in [0,2]", coll_obj_file);}
 			xf.mirror[ivals[0]] ^= 1;
 			break;
@@ -1771,31 +1767,30 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'y': // texture scale
-			if (fscanf(fp, "%f", &cobj.cp.tscale) != 1) {return read_error(fp, "texture scale", coll_obj_file);} // okay if tscale=0 for cubes
+			if (!read_float(fp, cobj.cp.tscale)) {return read_error(fp, "texture scale", coll_obj_file);} // okay if tscale=0 for cubes
 			break;
 
 		case 'Y': // texture translate (cubes, polygons, cylinder ends only), swap xy (cubes/polygons only): <tdx> <tdy> [<swap_xy>]
-			if (fscanf(fp, "%f%f", &cobj.cp.tdx, &cobj.cp.tdy) != 2) {return read_error(fp, "texture translate", coll_obj_file);}
 			ivals[0] = 0;
-			fscanf(fp, "%i", &ivals[0]); // optional
+			if (fscanf(fp, "%f%f%i", &cobj.cp.tdx, &cobj.cp.tdy, &ivals[0]) < 2) {return read_error(fp, "texture translate", coll_obj_file);}
 			cobj.cp.set_swap_tcs_flag(SWAP_TCS_XY, (ivals[0] != 0));
 			break;
 
 		case 'n': // toggle negative shape
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "negative shape", coll_obj_file);}
+			if (!read_int(fp, ivals[0])) {return read_error(fp, "negative shape", coll_obj_file);}
 			set_bit_flag_to(cobj.status, COLL_NEGATIVE, (ivals[0] != 0));
 			break;
 		case 'a': // set destroyability
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy shape", coll_obj_file);}
+			if (!read_int(fp, ivals[0])) {return read_error(fp, "destroy shape", coll_obj_file);}
 			cobj.destroy = (EXPLODE_EVERYTHING ? EXPLODEABLE : (char)ivals[0]);
 			break;
 		case 'd': // toggle movable
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "movable", coll_obj_file);}
+			if (!read_int(fp, ivals[0])) {return read_error(fp, "movable", coll_obj_file);}
 			set_bit_flag_to(cobj.cp.flags, COBJ_MOVABLE, (ivals[0] != 0));
 			break;
 
 		case 'v': // set voxel mode
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "set voxel mode", coll_obj_file);}
+			if (!read_int(fp, ivals[0])) {return read_error(fp, "set voxel mode", coll_obj_file);}
 			cobj.cp.cobj_type = (ivals[0] ? COBJ_TYPE_VOX_TERRAIN : COBJ_TYPE_STD);
 			break;
 

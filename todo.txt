@@ -18,5 +18,4 @@ TT lower res distant shadow map for tiled terrain mode with smooth blend
 Better TT clouds
 Store dlights in screen space
 Universe random number gen
-MSVC No space padding
 
