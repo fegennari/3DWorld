@@ -10,6 +10,7 @@ unlimited_weapons 0
 disable_sound 0
 use_core_context 0
 universe_ambient_scale 0.5 # smaller is more physically correct, but makes ships and planets difficult to see from the unlit side
+rgen_seed 21 # 1 is also good
 include config_resolution.txt
 ship_def_file universe/ship_defs_fight.txt
 font_texture_atlas_fn textures/atlas/text_atlas.png

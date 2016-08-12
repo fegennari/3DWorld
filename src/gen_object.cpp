@@ -28,7 +28,7 @@ float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
 
-extern int begin_motion, animate2, show_fog;
+extern int begin_motion, animate2, show_fog, rgen_seed;
 extern float zmax, ztop, water_plane_z, FAR_CLIP;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -367,10 +367,12 @@ void add_explosion_particles(point const &pos, vector3d const &vadd, float vmag,
 void gen_gauss_rand_arr() {
 
 	float const RG_NORM(sqrt(3.0/N_RAND_GAUSS)), mconst(2.0E-4*RG_NORM), aconst(((float)N_RAND_GAUSS)*RG_NORM);
+	rand_gen_t rgen;
+	rgen.set_state(rgen_seed, 123);
 
 	for (int i = 0; i < N_RAND_DIST+2; ++i) {
 		float val(0.0);
-		for (int j = 0; j < N_RAND_GAUSS; ++j) {val += rand()%10000;}
+		for (int j = 0; j < N_RAND_GAUSS; ++j) {val += rgen.rand()%10000;}
 		gauss_rand_arr[i] = mconst*val - aconst;
 	}
 }

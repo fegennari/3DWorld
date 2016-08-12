@@ -68,7 +68,7 @@ bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only
 bool store_cobj_accum_lighting_as_blocked(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
-int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
+int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
 int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0), recreated(1), cloud_model(0), force_tree_class(-1);
 int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0), preproc_cube_cobjs(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0), use_smoke_for_fog(0);
@@ -1596,6 +1596,7 @@ int load_config(string const &config_file) {
 	kwmi.add("glaciate", GLACIATE);
 	kwmi.add("dynamic_mesh_scroll", dynamic_mesh_scroll);
 	kwmi.add("mesh_seed", mesh_seed);
+	kwmi.add("rgen_seed", rgen_seed);
 	kwmi.add("universe_only", universe_only);
 	kwmi.add("disable_universe", disable_universe);
 	kwmi.add("disable_inf_terrain", disable_inf_terrain);
@@ -2002,10 +2003,10 @@ int main(int argc, char** argv) {
 	else if (srand_param != 0) {rs = srand_param;}
 	add_uevent_srand(rs);
 	create_sin_table();
-	gen_gauss_rand_arr();
 	set_scene_constants();
 	load_texture_names(); // needs to be before config file load
 	load_top_level_config(defaults_file);
+	gen_gauss_rand_arr(); // after reading seed from config file
 	cout << "Loading."; cout.flush();
 	
     // Initialize GLUT
