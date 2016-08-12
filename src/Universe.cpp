@@ -1564,8 +1564,7 @@ void uplanet::create(bool phase) {
 	}
 	else if (temp > NO_AIR_TEMP) { // very hot
 		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
-		atmos     = (gas_giant ? 1.0 : sinf(100.0*density)); // FIXME: hack to generate a random number without changing the rgen seed
-		//atmos     = (gas_giant ? 1.0 : rand_uniform2(-2.0, 1.0));
+		atmos     = (gas_giant ? 1.0 : rand_uniform2(-1.0, 1.0));
 		water     = 0.0;
 		lava      = (gas_giant ? 0.0 : max(0.0f, rand_uniform2(-0.4, 0.4)));
 		comment   = " (Very Hot)";
@@ -1694,7 +1693,7 @@ void uplanet::gen_prings() {
 
 	unsigned const nr((rand2()%10)+1);
 	float const sr(4.0/nr);
-	float lastr(rand_uniform2(radius, 1.1*radius));
+	float lastr(rand_uniform2(1.1*radius, 1.2*radius));
 	vector<upring> rings(nr);
 
 	for (unsigned i = 0; i < nr; ++i) {
