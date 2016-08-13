@@ -576,8 +576,8 @@ void set_current_system_light(s_object const &clobj, point const &pspos, float a
 bool is_shadowed(point const &pos, float radius, bool expand, ussystem const &sol, uobject const *&sobj) {
 
 	float const exp(expand ? radius : 0.0);
-	vector3d const dir(sol.sun.pos, pos);
-	point const pos2(pos + dir*(1.1*radius)); // extend beyond the object radius so that we don't get a collision with it
+	vector3d const dir((sol.sun.pos - pos).get_norm());
+	point const pos2(pos + dir*(1.1*(radius + exp))); // extend beyond the object radius so that we don't get a collision with it
 	point const spos(sol.sun.pos - dir*(1.1*sol.sun.radius));
 
 	for (unsigned k = 0; k < sol.planets.size(); ++k) {
