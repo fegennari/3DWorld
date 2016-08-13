@@ -1569,9 +1569,9 @@ void uplanet::create(bool phase) {
 		water     = 0.0;
 		lava      = (gas_giant ? 0.0 : max(0.0f, rand_uniform2(-0.4, 0.4)));
 		comment   = " (Very Hot)";
-		if      (gas_giant)  {comment += " Gas Giant";}
-		else if (lava > 0.1) {comment += " Volcanic Planet";}
-		else                 {comment += " Rocky Planet";}
+		if      (gas_giant)   {comment += " Gas Giant";}
+		else if (lava > 0.05) {comment += " Volcanic Planet";}
+		else                  {comment += " Rocky Planet";}
 	}
 	else if (temp > BOIL_TEMP) { // hot (rare)
 		atmos   = rand_uniform2(-0.9, 0.5);
