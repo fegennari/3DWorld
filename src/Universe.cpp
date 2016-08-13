@@ -639,7 +639,7 @@ float get_univ_ambient_scale() {return universe_ambient_scale*GLOBAL_AMBIENT*ATT
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
 int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point *sun_pos, colorRGBA *sun_color,
-				   uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s, shader_t *shader) // based on current star and current galaxy
+				   uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s, shader_t *shader, bool no_shadow_check) // based on current star and current galaxy
 {
 	assert(!is_nan(pos));
 	assert(radius < CELL_SIZE);
@@ -694,7 +694,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	if (blend) {atten_color(color, pos2, sun.pos, (sol->radius + MAX_PLANET_EXTENT), expand);}
 	if (sun_color) {*sun_color = blend_color(WHITE, color, (WHITE_COMP_D + get_univ_ambient_scale()), 0);}
 	
-	if (sun.is_ok() && (sobj != NULL || is_shadowed(pos2, radius, 1, *sol, sobj))) { // check for planet/moon shadowing
+	if (!no_shadow_check && sun.is_ok() && (sobj != NULL || is_shadowed(pos2, radius, 1, *sol, sobj))) { // check for planet/moon shadowing
 		++shadow_val;
 		assert(sobj != NULL);
 		float const sr(sobj->get_radius());
@@ -1559,6 +1559,7 @@ void uplanet::create(bool phase) {
 		water     = (gas_giant ? 0.2 : 1.0)*min(1.0f, rand_uniform2(0.0, 1.2)); // ice // rand_uniform2(0.0, MAX_WATER)
 		comment   = " (Cold)";
 		if      (gas_giant)    {comment += " Gas Giant";}
+		else if (atmos > 0.5 && water > 0.25 && temp > MIN_PLANT_TEMP) {comment += " Terran Planet";}
 		else if (water > 0.75) {comment += " Ice Planet";}
 		else                   {comment += " Rocky Planet";}
 	}
@@ -2628,7 +2629,7 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	global_translate(pos_);
 	apply_gl_rotate();
 	uniform_scale(1.01*cloud_radius);
-	draw_sphere_vbo_raw(max(4, min(N_SPHERE_DIV, int(4.0*size_))), 1);
+	draw_sphere_vbo_raw(max(4, min(N_SPHERE_DIV, int(6.0*size_))), 1);
 	fgPopMatrix();
 	usg.disable_atmospheric_shader();
 }

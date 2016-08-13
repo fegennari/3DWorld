@@ -747,8 +747,9 @@ void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_
 
 bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shader, point *sun_pos=nullptr, colorRGBA *sun_color=nullptr) {
 
+	// set_af_color_from_system=1 - entire asteroid belt can't be shadowed (required for planets)
 	uobject const *sobj(NULL); // unused
-	int const ret(set_uobj_color(afpos, radius, 0, 1, sun_pos, sun_color, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader));
+	int const ret(set_uobj_color(afpos, radius, 0, 1, sun_pos, sun_color, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader, 1));
 	return (ret >= 0);
 }
 
@@ -819,7 +820,7 @@ void uasteroid_belt::gen_asteroids(bool is_ice) {
 void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
 
 	point_d const afpos(pos_ + pos);
-	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, nullptr));
+	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, nullptr, nullptr));
 	int const tid(is_ice ? MARBLE_TEX : DEFAULT_AST_TEX);
 	colorRGBA const base_color(is_ice ? ICE_ROCK_COLOR*0.7 : WHITE);
 	enable_blend(); // disable multisample?
