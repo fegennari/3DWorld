@@ -284,6 +284,7 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	T mag()       const {return sqrt(mag_sq());}
 	T xy_mag_sq() const {return (x*x + y*y);}
 	T xy_mag()    const {return sqrt(xy_mag_sq());}
+	T get_min_val()   const {return min(x, min(y, z));}
 	T get_max_val()   const {return max(x, max(y, z));}
 	bool is_nonzero() const {return (x != 0.0 || y != 0.0 || z != 0.0);}
 

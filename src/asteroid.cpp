@@ -852,7 +852,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		shader.add_uniform_color("color", base_color);
 		select_texture(tid);
 		if (is_ice) {shader.set_specular(1.2, 50.0);} // very specular
-		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
+		if (ENABLE_SHADOWS && has_sun) {upload_shadow_casters(shader);}
 		if (!has_sun) {clear_colors_and_disable_light(0, &shader);} // if there's no sun, make sure this shader knows it
 		set_point_sprite_mode(1);
 
@@ -1021,23 +1021,27 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, floa
 	point pt[2] = {p1, p2};
 	for (unsigned d = 0; d < 2; ++d) {xform_to_local_torus_coord_space(pt[d]);}
 	float t(0.0);
-	// FIXME: line_radius is incorrect in the z-dimension, should scale by <scale> to compensate for torus elliptical scaling
-	float const ri(min((inner_radius + line_radius), outer_radius));
+	// line_radius is incorrect in the z-dimension, need to compensate for torus elliptical scaling
+	float const ri(min((inner_radius + line_radius*get_line_sphere_int_radius_scale()), outer_radius));
 	if (!line_torus_intersect_rescale(pt[0], pt[1], all_zeros, plus_z, ri, outer_radius, t)) {return 0;}
 	if (p_int) {*p_int = p1 + t*(p2 - p1);} // t is independent of [affine] coordinate space, so we don't need to transform p_int
 	return 1;
 }
 
-
 bool uasteroid_belt::sphere_might_intersect(point const &sc, float sr) const {
 
 	if (empty()) return 0;
-	if (!dist_less_than(sc, pos, (radius + sr))) return 0;
+	if (!dist_less_than(sc, pos, (radius + sr))) return 0; // outside the torus
+	float const dmin(outer_radius - inner_radius - sr);
+	if (dmin > 0.0 && dist_less_than(sc, pos, dmin)) return 0; // inside the torus
 	point pt(sc);
 	xform_to_local_torus_coord_space(pt);
-	return sphere_torus_intersect(pt, sr, all_zeros, inner_radius, outer_radius);
+	return sphere_torus_intersect(pt, sr*get_line_sphere_int_radius_scale(), all_zeros, inner_radius, outer_radius);
 }
 
+float uasteroid_belt::get_line_sphere_int_radius_scale() const {
+	return 1.0/scale.get_min_val(); // conservative expand to account for elliptical scaling of asteroid belt
+}
 
 float uasteroid_belt::get_dist_to_boundary(point const &pt) const {
 
@@ -1238,7 +1242,7 @@ void uasteroid_cont::end_render(shader_t &shader) {
 }
 
 
-void uasteroid_cont::upload_shader_casters(shader_t &s) const {
+void uasteroid_cont::upload_shadow_casters(shader_t &s) const {
 
 	if (!shadow_casters.empty()) {
 		int const sc_loc(s.get_uniform_loc("shadow_casters"));
@@ -1253,7 +1257,7 @@ void uasteroid_cont::upload_shader_casters(shader_t &s) const {
 	}
 	s.add_uniform_int("num_shadow_casters", shadow_casters.size());
 	s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
-	s.add_uniform_float("sun_radius", sun_pos_radius.radius);
+	s.add_uniform_float("sun_radius", 0.5*sun_pos_radius.radius); // half the radius to artificially increase shadow sharpness
 	upload_mvm_to_shader(s, "fg_ViewMatrix");
 }
 
@@ -1271,7 +1275,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	// Note: this block and associated variables could be moved to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later
 	if (ENABLE_SHADOWS) { // setup shadow casters
 		if (!has_sun) {shadow_casters.clear();} // optional, may never get here/not make a difference
-		upload_shader_casters(s);
+		upload_shadow_casters(s);
 	}
 	int const force_tid_to(is_ice ? MARBLE_TEX : -1); // Note: currently only applies to instanced drawing
 	if (is_ice) {s.set_specular(1.2, 50.0);} // very specular

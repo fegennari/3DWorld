@@ -68,7 +68,7 @@ protected:
 
 	virtual void gen_asteroid_placements(bool is_ice) = 0;
 	virtual void remove_asteroid(unsigned ix);
-	void upload_shader_casters(shader_t &s) const;
+	void upload_shadow_casters(shader_t &s) const;
 
 public:
 	uasteroid_cont() : rseed(0) {}
@@ -124,6 +124,7 @@ public:
 	virtual void remove_asteroid(unsigned ix);
 	bool line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int=nullptr) const;
 	bool sphere_might_intersect(point const &sc, float sr) const;
+	float get_line_sphere_int_radius_scale() const;
 	float get_dist_to_boundary(point const &pt) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
 	void draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density=1.0) const;
