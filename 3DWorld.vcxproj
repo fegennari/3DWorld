@@ -740,13 +740,13 @@
     <ClInclude Include="src\tree_leaf.h" />
     <ClInclude Include="src\trigger.h" />
     <ClInclude Include="src\triListOpt.h" />
+    <ClInclude Include="src\universe_base.h" />
     <ClInclude Include="src\u_event.h" />
     <ClInclude Include="src\explosion.h" />
     <ClInclude Include="src\obj_sort.h" />
     <ClInclude Include="src\ship.h" />
     <ClInclude Include="src\ship_util.h" />
     <ClInclude Include="src\universe.h" />
-    <ClInclude Include="src\Universe_base.h" />
     <ClInclude Include="src\upsurface.h" />
     <ClInclude Include="src\vertex_opt.h" />
     <ClInclude Include="src\voxels.h" />

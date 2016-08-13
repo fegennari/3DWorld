@@ -32,6 +32,7 @@ void main()
 	vec3 pos       = world_space_pos - ldir*(dp + 0.5*dist); // midpoint of ray in atmosphere
 	float density  = get_density_at(pos)*dist/atmos_radius;
 	float alpha    = ascale*clamp(4.0*density, 0.0, 1.0);
+	if (alpha < 0.005) discard;
 	float lt_atten = 1.0;
 
 	if (sun_radius > 0.0 && ss_radius > 0.0) {
