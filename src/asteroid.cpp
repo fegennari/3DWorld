@@ -1257,7 +1257,7 @@ void uasteroid_cont::upload_shadow_casters(shader_t &s) const {
 	}
 	s.add_uniform_int("num_shadow_casters", shadow_casters.size());
 	s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
-	s.add_uniform_float("sun_radius", 0.5*sun_pos_radius.radius); // half the radius to artificially increase shadow sharpness
+	s.add_uniform_float("sun_radius", sun_pos_radius.radius);
 	upload_mvm_to_shader(s, "fg_ViewMatrix");
 }
 
