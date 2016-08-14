@@ -802,9 +802,9 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_c
 }
 
 
-void uasteroid_belt::gen_asteroids(bool is_ice) {
+void uasteroid_belt::gen_asteroids() {
 
-	uasteroid_cont::gen_asteroids(is_ice);
+	uasteroid_cont::gen_asteroids();
 
 	// create clouds
 	asteroid_model_gen.gen_cloud_models();
@@ -817,10 +817,11 @@ void uasteroid_belt::gen_asteroids(bool is_ice) {
 	}
 }
 
-void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
+void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool draw_dust, float density) const {
 
 	point_d const afpos(pos_ + pos);
 	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, nullptr, nullptr));
+	bool const is_ice(get_is_ice());
 	int const tid(is_ice ? MARBLE_TEX : DEFAULT_AST_TEX);
 	colorRGBA const base_color(is_ice ? ICE_ROCK_COLOR*0.7 : WHITE);
 	enable_blend(); // disable multisample?
@@ -920,12 +921,12 @@ void uasteroid_cont::init(point const &pos_, float radius_) {
 	rseed  = rand2();
 }
 
-void uasteroid_cont::gen_asteroids(bool is_ice) {
+void uasteroid_cont::gen_asteroids() {
 
 	global_rand_gen.set_state(rseed, 123);
 	ensure_asteroid_models();
 	clear();
-	gen_asteroid_placements(is_ice);
+	gen_asteroid_placements();
 	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time (probably irrelevant when instancing is enabled)
 }
 
@@ -962,14 +963,14 @@ float uasteroid_cont::calc_shadow_atten(point const &cpos) const {
 }
 
 
-void uasteroid_field::gen_asteroid_placements(bool is_ice) {
+void uasteroid_field::gen_asteroid_placements() {
 
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 	for (iterator i = begin(); i != end(); ++i) {i->gen_spherical(pos, radius, AST_RADIUS_SCALE*radius);}
 }
 
 
-void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius, bool is_ice) {
+void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius) {
 
 	float rmax(0.0), plane_dmax(0.0);
 	inner_radius = 0.0;
@@ -979,6 +980,7 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 	vector3d vxy[2] = {plus_x, plus_y};
 	rotate_norm_vector3d_into_plus_z_multi(orbital_plane_normal, vxy, 2, -1.0); // inverse rotate
 	for (unsigned d = 0; d < 2; ++d) {vxy[d] *= scale[d];}
+	bool const is_ice(get_is_ice());
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->gen_belt(pos, orbital_plane_normal, vxy, outer_radius, belt_width, belt_thickness, max_ast_radius, inner_radius, plane_dmax);
@@ -991,22 +993,22 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 }
 
 
-void uasteroid_belt_system::gen_asteroid_placements(bool is_ice) { // radius is the asteroid belt distance from the sun
+void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
 
 	//RESET_TIME;
 	float const belt_width(AB_WIDTH_TO_RADIUS*rand_uniform2(0.9, 1.1)*radius);
 	float const belt_thickness(AB_THICK_TO_WIDTH*rand_uniform2(0.9, 1.1)*belt_width);
-	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius, is_ice); // circular orbit, animated
+	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius); // circular orbit, animated
 	//PRINT_TIME("Asteroid Belt"); // 4ms
 }
 
 
-void uasteroid_belt_planet::gen_asteroid_placements(bool is_ice) { // radius is the asteroid belt distance from the planet
+void uasteroid_belt_planet::gen_asteroid_placements() { // radius is the asteroid belt distance from the planet
 
 	assert(planet);
 	pos = planet->get_pos(); // update to current planet pos (necessary if physics is paused)
 	float const belt_thickness(rand_uniform2(0.08, 0.10)*bwidth);
-	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius, is_ice); // elliptical orbit, static
+	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius); // elliptical orbit, static
 }
 
 
@@ -1287,12 +1289,12 @@ void uasteroid_cont::upload_shadow_casters(shader_t &s) const {
 }
 
 
-void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set, bool is_ice) {
+void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set) {
 
 	point_d const afpos(pos + pos_);
 	if (!univ_sphere_vis(afpos, radius)) return;
 	if (sphere_size_less_than(afpos, camera, AST_RADIUS_SCALE*radius, 1.0)) return; // asteroids are too small/far away
-	if (empty()) {gen_asteroids(is_ice);}
+	if (empty()) {gen_asteroids();}
 
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
 	bool const has_sun(sun_light_already_set || set_af_color_from_system(afpos, radius, &s));
@@ -1302,6 +1304,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 		if (!has_sun) {shadow_casters.clear();} // optional, may never get here/not make a difference
 		upload_shadow_casters(s);
 	}
+	bool const is_ice(get_is_ice());
 	int const force_tid_to(is_ice ? MARBLE_TEX : -1); // Note: currently only applies to instanced drawing
 	if (is_ice) {s.set_specular(1.2, 50.0);} // very specular
 	s.add_uniform_color("color", (is_ice ? ICE_ROCK_COLOR : WHITE));

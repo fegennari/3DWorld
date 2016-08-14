@@ -882,8 +882,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					}
 					usg.atmos_to_draw.resize(0);
 					usg.rings_to_draw.resize(0);
-					std::shared_ptr<uasteroid_belt_planet> planet_asteroid_belt;
-					bool is_ice_belt(0);
+					vector<std::shared_ptr<uasteroid_belt_planet>> planet_asteroid_belts;
 
 					for (unsigned k = 0; k < sol.planets.size(); ++k) {
 						bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
@@ -967,11 +966,9 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (!gen_only && planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 							float const ring_scale(sizep*planet.get_ring_rscale());
 
-							if (planet.asteroid_belt != nullptr && sel_p && ring_scale > 10.0) {
-								planet.asteroid_belt->apply_physics(pos, camera);
-								assert(!planet_asteroid_belt);
-								planet_asteroid_belt = planet.asteroid_belt;
-								is_ice_belt          = planet.has_ice_debris();
+							if (planet.asteroid_belt != nullptr && ring_scale > 10.0) { // can get here for multiple planets
+								if (ring_scale > 20.0) {planet.asteroid_belt->apply_physics(pos, camera);}
+								planet_asteroid_belts.push_back(planet.asteroid_belt);
 							}
 							if (!planet.ring_data.empty() && ring_scale > 2.5) {
 								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars, sel_p));
@@ -988,10 +985,10 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						planet_plds[1].draw_and_clear();
 						usg.disable_point_sprite_shader();
 					}
-					if (planet_asteroid_belt != nullptr) { // we normally only get here once per frame, so the overhead is acceptable
+					for (auto pab = planet_asteroid_belts.begin(); pab != planet_asteroid_belts.end(); ++pab) {
 						shader_t asteroid_belt_shader;
-						planet_asteroid_belt->begin_render(asteroid_belt_shader, 0);
-						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1, is_ice_belt);
+						(*pab)->begin_render(asteroid_belt_shader, 0); // we normally only get here once per frame, so the overhead is acceptable
+						(*pab)->draw(pos, camera, asteroid_belt_shader, 1);
 						uasteroid_field::end_render(asteroid_belt_shader);
 					}
 					enable_blend();
@@ -1019,8 +1016,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					} // pass
 					disable_blend();
 
-					if (planet_asteroid_belt != nullptr) { // changes lighting, draw last
-						planet_asteroid_belt->draw_detail(pos, camera, is_ice_belt, 0, 0.1); // low density, no dust
+					for (auto pab = planet_asteroid_belts.begin(); pab != planet_asteroid_belts.end(); ++pab) { // changes lighting, draw last
+						(*pab)->draw_detail(pos, camera, 0, 0.1); // low density, no dust
 					}
 				} // sol_draw_pass
 				if (draw_asteroid_belt) { // changes lighting, draw last

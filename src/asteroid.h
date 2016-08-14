@@ -66,15 +66,16 @@ protected:
 	sphere_t sun_pos_radius;
 	pt_line_drawer pld; // for drawing
 
-	virtual void gen_asteroid_placements(bool is_ice) = 0;
+	virtual void gen_asteroid_placements() = 0;
 	virtual void remove_asteroid(unsigned ix);
 	void upload_shadow_casters(shader_t &s) const;
 
 public:
 	uasteroid_cont() : rseed(0) {}
 	void init(point const &pos, float radius);
-	virtual void gen_asteroids(bool is_ice);
-	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set, bool is_ice=0);
+	virtual bool get_is_ice() const {return 0;}
+	virtual void gen_asteroids();
+	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set);
 	void detatch_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
@@ -92,7 +93,7 @@ class uasteroid_field : public uasteroid_cont {
 
 public:
 	void apply_physics(point_d const &pos_, point const &camera);
-	virtual void gen_asteroid_placements(bool is_ice);
+	virtual void gen_asteroid_placements();
 };
 
 
@@ -113,13 +114,13 @@ protected:
 
 	void xform_to_local_torus_coord_space(point &pt) const;
 	void xform_from_local_torus_coord_space(point &pt) const;
-	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius, bool is_ice);
+	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius);
 
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
 	  orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0), max_asteroid_radius(0.0), scale(scale_) {}
 	virtual bool is_planet_ab() const {return 0;}
-	virtual void gen_asteroids(bool is_ice);
+	virtual void gen_asteroids();
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
 	virtual void remove_asteroid(unsigned ix);
 	bool line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int=nullptr) const;
@@ -127,7 +128,7 @@ public:
 	float get_line_sphere_int_radius_scale() const;
 	float get_dist_to_boundary(point const &pt) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
-	void draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density=1.0) const;
+	void draw_detail(point_d const &pos_, point const &camera, bool draw_dust, float density=1.0) const;
 };
 
 
@@ -136,7 +137,7 @@ class uasteroid_belt_system : public uasteroid_belt {
 	ussystem *system;
 	vector<sphere_t> colliders;
 
-	virtual void gen_asteroid_placements(bool is_ice);
+	virtual void gen_asteroid_placements();
 	bool is_potential_collider(uobject const &uobj) const;
 	bool might_cast_shadow(uobject const &uobj) const;
 	void calc_colliders();
@@ -154,12 +155,13 @@ class uasteroid_belt_planet : public uasteroid_belt {
 	float bwidth;
 	uplanet *planet;
 
-	virtual void gen_asteroid_placements(bool is_ice);
+	virtual void gen_asteroid_placements();
 	void calc_shadowers();
 
 public:
 	uasteroid_belt_planet(vector3d const &opn, uplanet *planet_) : uasteroid_belt(opn, planet_->rscale), bwidth(0.0), planet(planet_) {}
 	virtual bool is_planet_ab() const {return 1;}
+	virtual bool get_is_ice  () const {return planet->has_ice_debris();}
 	void init_rings(point const &pos);
 	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
 };
