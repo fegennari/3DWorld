@@ -625,9 +625,9 @@ public:
 		asteroid_belt_cloud::vert_type_t::unset_attrs();
 		cloud_vbo.post_render();
 	}
-	void draw_cloud_model(vpc_shader_t &s, unsigned ix, point const &pos, float radius) const {
+	void draw_cloud_model(vpc_shader_t &s, unsigned ix, point const &pos, float radius, float shadow_atten) const {
 		assert(ix < cloud_models.size());
-		cloud_models[ix].draw(s, pos, radius);
+		cloud_models[ix].draw(s, pos, radius, shadow_atten);
 	}
 };
 
@@ -778,14 +778,14 @@ void asteroid_belt_cloud::gen(rand_gen_t &rgen, float def_radius) {
 	disable_blend();
 	s.end_shader();
 }
-void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_cloud_radius) const {
+void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_cloud_radius, float shadow_atten) const {
 	point_d const afpos(pos_ + def_cloud_radius*pos);
 	vector3d const view_dir(get_camera_pos() - afpos);
 	float const view_dist(view_dir.mag()), scaled_radius(def_cloud_radius*radius), max_dist(AST_CLOUD_DIST_SCALE*scaled_radius);
 	if (view_dist >= max_dist || view_dist <= scaled_radius) return; // too near or far to draw
 	float const dist_val(1.0 - (max_dist - view_dist)/max_dist);
 	float const atten(min((1.0f - dist_val*dist_val), sqrt((view_dist - scaled_radius)/scaled_radius))); // 2*R => 1.0; 1*R => 0.0
-	float const alpha((SIMPL_AST_CLOUDS ? 0.035 : 0.025)*atten);
+	float const alpha((SIMPL_AST_CLOUDS ? 0.035 : 0.025)*atten*shadow_atten);
 	if (alpha < 1.0/255.0) return; // too transparent to draw
 	if (!player_pdu.sphere_visible_test(afpos, scaled_radius)) return; // VFC
 	s.set_uniform_float(s.rad_loc, radius);
@@ -894,15 +894,16 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 				float const dist_sq(p2p_dist_sq(cpos, get_camera_pos()));
 				if (dist_sq > rsq) continue; // too distant to draw (rough test)
 				if (!player_pdu.sphere_visible_test(cpos, vfc_rad)) continue; // approximate VFC
-				// clouds represent light reflected off dust particles; when in shadow, there is no reflected light, and the dust itself provides no significant occlusion
-				if (ENABLE_SHADOWS && has_sun && is_shadowed(cpos)) continue;
 				clouds_to_draw.push_back(make_pair(-dist_sq, *i));
 			}
 			sort(clouds_to_draw.begin(), clouds_to_draw.end(), cloud_dist_cmp()); // back-to-front sort; doesn't seem to really be needed, but also adds minimal time overhead
 
 			for (auto i = clouds_to_draw.begin(); i != clouds_to_draw.end(); ++i) {
 				point const cpos(pos_ + operator[](i->second.asteroid_id).pos);
-				asteroid_model_gen.draw_cloud_model(s, i->second.cloud_id, cpos, def_cloud_radius);
+				// clouds represent light reflected off dust particles; when in shadow, there is no reflected light, and the dust itself provides no significant occlusion
+				float shadow_atten((ENABLE_SHADOWS && has_sun) ? calc_shadow_atten(cpos) : 1.0);
+				if (shadow_atten == 0.0) continue; // fully shadowed
+				asteroid_model_gen.draw_cloud_model(s, i->second.cloud_id, cpos, def_cloud_radius, shadow_atten);
 			}
 			asteroid_model_gen.cloud_post_draw();
 			asteroid_belt_cloud::post_draw(s);
@@ -928,12 +929,36 @@ void uasteroid_cont::gen_asteroids(bool is_ice) {
 	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time (probably irrelevant when instancing is enabled)
 }
 
-bool uasteroid_cont::is_shadowed(point const &cpos) const {
+// Note: same as sphere_shadow.part shader, but we do this per-cloud on the CPU rather than per-pixel as a likely optimization
+float calc_sphere_shadow_atten(point const &pos, point const &lpos, float lradius, point const &spos, float sradius) {
+
+	float atten(1.0);
+	float const ldist_sq(p2p_dist_sq(lpos, pos));
+
+	if (ldist_sq > p2p_dist_sq(lpos, spos)) { // behind the shadowing object
+		float const d(pt_line_dist(spos, lpos, pos));
+		float const r(sradius);
+		float const R(lradius*p2p_dist(spos, pos)/sqrt(ldist_sq));
+
+		if (d < abs(R - r)) { // fully overlapped
+			atten *= 1.0 - PI*min(r,R)*min(r,R)/(PI*R*R);
+		}
+		else if (d < (r + R)) { // partially overlapped
+			float shadowed_area = r*r*acos((d*d+r*r-R*R)/(2.0*d*r)) + R*R*acos((d*d+R*R-r*r)/(2.0*d*R)) - 0.5*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R));
+			atten *= 1.0 - CLIP_TO_01(shadowed_area/float(PI*R*R)); // shadowed_area/total_area
+		}
+	}
+	return atten;
+}
+
+float uasteroid_cont::calc_shadow_atten(point const &cpos) const {
+
+	float atten(1.0);
 
 	for (auto sc = shadow_casters.begin(); sc != shadow_casters.end(); ++sc) {
-		if (line_sphere_intersect(sun_pos_radius.pos, cpos, sc->pos, sc->radius)) return 1;
+		atten *= calc_sphere_shadow_atten(cpos, sun_pos_radius.pos, sun_pos_radius.radius, sc->pos, sc->radius);
 	}
-	return 0;
+	return atten;
 }
 
 

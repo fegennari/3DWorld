@@ -19,7 +19,7 @@ struct asteroid_belt_cloud : public volume_part_cloud {
 	void gen(rand_gen_t &rgen, float def_radius);
 	static void pre_draw(vpc_shader_t &s, colorRGBA const &color, float noise_scale);
 	static void post_draw(vpc_shader_t &s);
-	void draw(vpc_shader_t &s, point_d const &pos_, float def_cloud_radius) const;
+	void draw(vpc_shader_t &s, point_d const &pos_, float def_cloud_radius, float shadow_atten) const;
 };
 
 
@@ -79,7 +79,7 @@ public:
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
 	void begin_render(shader_t &shader, bool custom_lighting) {begin_render(shader, shadow_casters.size(), custom_lighting);}
-	bool is_shadowed(point const &cpos) const;
+	float calc_shadow_atten(point const &cpos) const;
 
 	static void begin_render(shader_t &shader, unsigned num_shadow_casters, bool custom_lighting);
 	static void end_render(shader_t &shader);
