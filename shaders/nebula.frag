@@ -56,7 +56,7 @@ void main() {
 	} // end !line_mode
 	color.a *= min(ascale, 1.0);
 	if (color.a < 0.002) discard;
-	//color.a *= min(1.0, 10.0*length((fg_ModelViewMatrix * vec4(vertex, 1.0)).xyz)/radius); // atten when very close to a plane (based on calculated epos)
+	//color.a *= min(1.0, 10.0*length(epos.xyz)/radius); // atten when very close to a plane (based on calculated epos)
 
 #ifdef ENABLE_LIGHTING
 	vec4 epos  = fg_ModelViewMatrix * vec4(vertex, 1.0);
