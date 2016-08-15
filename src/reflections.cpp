@@ -357,7 +357,7 @@ void reflective_cobjs_t::mark_faces_invalid() {
 }
 
 void reflective_cobjs_t::free_textures() {
-	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {free_texture(i->second.tid);}
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {free_texture(i->second.tid); i->second.faces_valid = 0;}
 }
 
 bool enable_reflection_dynamic_updates() {
