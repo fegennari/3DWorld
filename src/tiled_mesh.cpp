@@ -1270,7 +1270,7 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 	if (generated) return; // already generated
 	generated = 1;
 	rand_gen_t rgen;
-	rgen.set_state(x1, y1);
+	rgen.set_state(x1+123, y1+321);
 	unsigned const num(max(0.0f, rgen.rand_gaussian(0.5, 4.0)));
 	resize(num);
 	if (num == 0) return;
