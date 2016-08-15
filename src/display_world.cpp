@@ -762,6 +762,7 @@ void display(void) {
 	check_gl_error(2);
 	update_sound_loops();
 	set_multisample(1);
+	glEnable(GL_DEPTH_TEST); // Note: seems to be required to make reflections work after first un-maximize (why?)
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} else {glDisable(GL_DEPTH_CLAMP);}
 	bind_vao(0); // set to default VAO
 #ifdef USE_GPU_TIMER
