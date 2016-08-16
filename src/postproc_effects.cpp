@@ -44,7 +44,9 @@ void draw_ortho_screen_space_quad() {
 
 	enable_blend();
 	glDisable(GL_DEPTH_TEST);
-	draw_tquad(1.0, 1.0, 0.0);
+	//draw_tquad(1.0, 1.0, 0.0);
+	vert_tc_t const verts[3] = {vert_tc_t(point(-1,-1,0), 0,0), vert_tc_t(point(3,-1,0), 2,0), vert_tc_t(point(-1,3,0), 0,2)};
+	draw_verts(verts, 3, GL_TRIANGLES); // supposedly a single triangle has better cache performance
 	glEnable(GL_DEPTH_TEST);
 	disable_blend();
 
