@@ -63,11 +63,11 @@ vec3 add_light0(in vec3 n, in float normal_sign, in vec4 base_color) {
 		float sd_ratio= max(1.0, nsteps/100.0);
 		vec3 delta    = normalize(dir)*sd_ratio*step_delta_shadow/scene_scale;
 		float step_weight  = fract(nsteps);
-		float smoke_sscale = SMOKE_SCALE*step_delta_shadow/half_dxy;
+		float smoke_sscale = SMOKE_SCALE*sd_ratio*step_delta_shadow/half_dxy;
 	
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
-			float smoke = smoke_sscale*texture(smoke_and_indir_tex, pos.zxy).a*step_weight*sd_ratio;
+			float smoke = smoke_sscale*texture(smoke_and_indir_tex, pos.zxy).a*step_weight;
 			nscale     *= (1.0 - smoke);
 			pos        += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight = 1.0;
@@ -299,18 +299,20 @@ void main()
 	vec3 ref_dir    = rel_pos + cube_map_near_clip*reflect(-view_dir, ws_normal); // position offset within cube (approx.)
 	//vec3 ref_dir    = -view_dir; // invisible effect
 	vec3 t_color    = color.rgb; // transmitted color
+	
 	if (alpha < 1.0) {
 		vec3 refract_dir = refract(-view_dir, ws_normal, 1.0/ref_ix); // refraction
-		t_color = mix(texture(reflection_tex, refract_dir).rgb, t_color, alpha);
+		t_color = mix(texture(reflection_tex, refract_dir).rgb, t_color, alpha); // not multiplied by specular color
 		alpha   = 1.0;
 	}
 	if (cube_map_reflect_mipmap_level >= 1.0) { // Note: no anisotropic filtering
 		float level = max(cube_map_reflect_mipmap_level, textureQueryLod(reflection_tex, ref_dir).y);
-		color.rgb = mix(t_color, textureLod(reflection_tex, ref_dir, level).rgb*specular_color.rgb, reflect_w);
+		color.rgb = textureLod(reflection_tex, ref_dir, level).rgb;
 	}
-	else { // auto mipmaps + anisotropic filtering
-		color.rgb = mix(t_color, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
+	else { // auto mipmaps + anisotropic filtering with no blur
+		color.rgb = texture(reflection_tex, ref_dir).rgb;
 	}
+	color.rgb = mix(t_color, color.rgb*specular_color.rgb, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK
