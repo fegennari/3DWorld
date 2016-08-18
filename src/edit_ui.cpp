@@ -386,12 +386,13 @@ public:
 
 float def_atmosphere(1.0), def_vegetation(1.0);
 
-extern int temp_change;
+extern int temp_change, def_cube_map_reflect_mipmap_level;
 extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP;
 extern vector3d wind;
 
-enum {PW_GRAVITY=0, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, NUM_PW_CONT};
-string const phys_weather_names[NUM_PW_CONT] = {"Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation", "Wind X", "Wind Y", "Sun Angle", "Moon Angle", "Physics Timestep", "Weapon Velocity"};
+enum {PW_GRAVITY=0, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, CM_MIP_BIAS, NUM_PW_CONT};
+string const phys_weather_names[NUM_PW_CONT] = {"Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation",
+												"Wind X", "Wind Y", "Sun Angle", "Moon Angle", "Physics Timestep", "Weapon Velocity", "Cube Map Mipmap Bias"};
 
 class phys_weather_kbd_menu_t : public keyboard_menu_t {
 
@@ -455,6 +456,10 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 			value << ball_velocity;
 			spos = ball_velocity/40.0; // 0.0 to 40.0
 			break;
+		case CM_MIP_BIAS:
+			value << def_cube_map_reflect_mipmap_level;
+			spos = (def_cube_map_reflect_mipmap_level + 10)/20.0; // -10 to 10
+			break;
 		default:
 			assert(0);
 		}
@@ -477,8 +482,7 @@ public:
 			temp_change  = 1;
 			//regen_mesh   = 1; // regen texture
 			break;
-		case PW_WATER:
-			{
+		case PW_WATER: {
 				float const water_level(max(-1.0f, min(1.0f, (get_rel_wpz() + 0.05f*delta)))); // -1.0 to 1.0 in steps of 0.05
 				change_water_level(water_level); // 0.0 to 1.0
 			}
@@ -518,6 +522,9 @@ public:
 			break;
 		case PW_WVEL:
 			ball_velocity = max(0.0f, (ball_velocity + 2.0f*delta)); // >= 0.0 in steps of 2.0
+			break;
+		case CM_MIP_BIAS:
+			def_cube_map_reflect_mipmap_level = max(-10, min(10, def_cube_map_reflect_mipmap_level+delta)); // -10 to 10 in steps of 1
 			break;
 		default:
 			assert(0);

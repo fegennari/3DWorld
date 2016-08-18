@@ -20,6 +20,7 @@ uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, refle
 uniform float reflect_plane_ztop, reflect_plane_zbot;
 uniform float winding_normal_sign = 1.0;
 uniform float cube_map_reflect_mipmap_level = 0;
+uniform int cube_map_texture_size = 0;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -151,6 +152,39 @@ float get_puddle_val(in float wetness) {
 float get_reflect_weight(in vec3 view_dir, in vec3 ws_normal, in float reflectivity2, in float refract_ix) {
 	return reflectivity2 * mix(get_fresnel_reflection(view_dir, ws_normal, 1.0, refract_ix), 1.0, metalness);
 }
+
+#ifdef ENABLE_CUBE_MAP_REFLECT
+vec3 cube_map_reflect_texture_filter(in vec3 ref_dir, in int mip_bias, in int filt_sz) {
+
+	float level = max(mip_bias, textureQueryLod(reflection_tex, ref_dir).y);
+	vec3 rdir   = normalize(ref_dir);
+	vec3 d0     = vec3(0);
+
+	if (abs(rdir.x) < abs(rdir.y)) {
+		if (abs(rdir.x) < abs(rdir.z)) {d0.x = 1;} else {d0.z = 1;}
+	}
+	else {
+		if (abs(rdir.y) < abs(rdir.z)) {d0.y = 1;} else {d0.z = 1;}
+	}
+	float exp_scale = 1.0/filt_sz;
+	float texel_sz  = pow(2.0, mip_bias)/cube_map_texture_size; // size of one texel for current mip level
+	vec3 d1         = texel_sz*normalize(cross(d0, rdir));
+	vec3 d2         = texel_sz*normalize(cross(d1, rdir));
+	float tot_w     = 0.0;
+	vec3 color      = vec3(0.0);
+
+	for (int y = -filt_sz; y <= filt_sz; ++y) {
+		vec3 dir = (rdir - filt_sz*d1 + y*d2);
+		for (int x = -filt_sz; x <= filt_sz; ++x) {
+			float weight = exp(-exp_scale*sqrt(x*x + y*y)); // Gaussian
+			color       += weight*textureLod(reflection_tex, dir, level).rgb; // no anisotropic filtering
+			tot_w       += weight;
+			dir         += d1;
+		}
+	}
+	return color/tot_w;
+}
+#endif // ENABLE_CUBE_MAP_REFLECT
 
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
@@ -305,9 +339,24 @@ void main()
 		t_color = mix(texture(reflection_tex, refract_dir).rgb, t_color, alpha); // not multiplied by specular color
 		alpha   = 1.0;
 	}
-	if (cube_map_reflect_mipmap_level >= 1.0) { // Note: no anisotropic filtering
-		float level = max(cube_map_reflect_mipmap_level, textureQueryLod(reflection_tex, ref_dir).y);
-		color.rgb = textureLod(reflection_tex, ref_dir, level).rgb;
+	int blur_val = int(cube_map_reflect_mipmap_level + 0.5); // ranges from 1.0 (no blur) to around 256 (max blur)
+
+	if (blur_val > 0) { // add some blur
+		int mip_bias = 0;
+		int filt_sz  = 1;
+
+		// split blur logarithmically across mip bias and filter kernel size, to a max filter size of 7 (15x15)
+		// this provides the best quality vs. performance trade-off (mip bias is free but blocky and has seams; filter is smooth but expensive)
+		while (blur_val > 0) {
+			// Note: fliter_sz from 1=>2 is really a 1x1 to 3x3 transition, by we still use 2x to account for the Gaussian weights vs. box filter used for mipmaps
+			if (filt_sz  < 8) {--blur_val; filt_sz *= 2;}
+			if (blur_val > 0) {--blur_val; ++mip_bias;}
+		}
+		--filt_sz; // filt_sz of 0 is a 1x1 box
+		if      (filt_sz == 1) {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 1);}
+		else if (filt_sz == 3) {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 3);}
+		else if (filt_sz == 5) {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 5);}
+		else                   {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 7);}
 	}
 	else { // auto mipmaps + anisotropic filtering with no blur
 		color.rgb = texture(reflection_tex, ref_dir).rgb;

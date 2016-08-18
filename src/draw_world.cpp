@@ -29,6 +29,7 @@ struct sky_pos_orient {
 };
 
 
+int def_cube_map_reflect_mipmap_level(-8);
 unsigned depth_tid(0), frame_buffer_RGB_tid(0);
 float sun_radius(0.0), moon_radius(0.0), earth_radius(0.0), brightness(1.0);
 colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
@@ -558,8 +559,9 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			s.add_uniform_float("metalness", c.cp.metalness);
 			unsigned const tsize(reflective_cobjs.get_tsize_for_cid(*i));
 			// physically correct, but no anisotropic texture filtering, artifact at cube map seams, etc. - so we use 0.0 (auto mipmap level/perfect mirror) instead
-			//float const level(log2(tsize*SQRT3) - 0.5*log2(c.cp.shine + 1.0));
-			float const level(0.0);
+			float const shininess(c.cp.shine*c.cp.shine); // hack to adjust to the 3DWorld model/shininess ranges
+			float const level(log2(tsize*SQRT3) - 0.5*log2(shininess + 1.0) + def_cube_map_reflect_mipmap_level);
+			//cout << TXT(tsize) << TXT(c.cp.shine) << TXT(level) << endl;
 			s.add_uniform_float("cube_map_reflect_mipmap_level", level);
 			setup_shader_cube_map_params(s, c, tid, tsize);
 		}
