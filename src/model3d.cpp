@@ -1530,7 +1530,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 			if (reflection_pass == 2 && bcube_xf.get_cube_center() == camera_pdu.pos) return; // skip self reflections
 		}
 		else if (reflect_mode == 2 && model_refl_tid) { // using the reflection texture
-			setup_shader_cube_map_params(shader, bcube_xf, model_refl_tid); // Note: xlate should be all zeros
+			setup_shader_cube_map_params(shader, bcube_xf, model_refl_tid, model_refl_tsize); // Note: xlate should be all zeros
 #if 0 // TESTING
 			select_texture(WHITE_TEX);
 			set_def_spec_map();
@@ -1574,7 +1574,7 @@ void model3d::ensure_reflection_cube_map() {
 		point const test_pt(bcube_xf.get_cube_center());
 		indoors = ::check_coll_line(point(test_pt.x, test_pt.y, bcube_xf.d[2][1]+SMALL_NUMBER), point(test_pt.x, test_pt.y, czmax), cindex, -1, 1, 0, 1, 0);
 	}
-	create_cube_map_reflection(model_refl_tid, -1, bcube_xf, (model_refl_tid != 0), (indoors == 1));
+	create_cube_map_reflection(model_refl_tid, model_refl_tsize, -1, bcube_xf, (model_refl_tid != 0), (indoors == 1));
 }
 
 cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {

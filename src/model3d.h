@@ -388,7 +388,7 @@ class model3d {
 	base_mat_t unbound_mat;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bcube;
-	unsigned model_refl_tid;
+	unsigned model_refl_tid, model_refl_tsize;
 	int reflective; // reflective: 0=none, 1=planar, 2=cube map
 	int indoors; // 0=no/outdoors, 1=yes/indoors, 2=unknown
 	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps;
@@ -419,8 +419,8 @@ public:
 	texture_manager &tmgr; // stores all textures
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0)
-		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), reflective(reflective_), indoors(2),
-		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), tmgr(tmgr_) {}
+		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), model_refl_tsize(0), reflective(reflective_),
+		indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 

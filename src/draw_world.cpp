@@ -45,7 +45,7 @@ extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_dept
 extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
-extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, cube_map_reflect_tex_size;
+extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
@@ -556,11 +556,12 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			if (tid == 0) {continue;} // reflection texture not setup - maybe this draw pass is creating the reflection texture for this cobj, so skip it
 			cdb.flush(); // all tids are unique, must flush every time
 			s.add_uniform_float("metalness", c.cp.metalness);
+			unsigned const tsize(reflective_cobjs.get_tsize_for_cid(*i));
 			// physically correct, but no anisotropic texture filtering, artifact at cube map seams, etc. - so we use 0.0 (auto mipmap level/perfect mirror) instead
-			//float const level(log2(cube_map_reflect_tex_size*SQRT3) - 0.5*log2(c.cp.shine + 1.0));
+			//float const level(log2(tsize*SQRT3) - 0.5*log2(c.cp.shine + 1.0));
 			float const level(0.0);
 			s.add_uniform_float("cube_map_reflect_mipmap_level", level);
-			setup_shader_cube_map_params(s, c, tid);
+			setup_shader_cube_map_params(s, c, tid, tsize);
 		}
 		if (use_normal_map) {
 			float const bbs(c.cp.negate_nm_bns() ? -1.0 : 1.0);

@@ -12,7 +12,7 @@ unsigned const MAX_CUBE_MAP_TEX_SZ  = 768;
 float const CUBE_MAP_ANISO          = 4.0;
 
 bool enable_clip_plane_z(0);
-unsigned reflection_tid(0), cube_map_reflect_tex_size(MAX_CUBE_MAP_TEX_SZ);
+unsigned reflection_tid(0);
 float clip_plane_z(0.0);
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
@@ -280,23 +280,22 @@ unsigned create_gm_z_reflection() {
 	return reflection_tid;
 }
 
-unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
+unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
 
 	unsigned const max_tex_size(min(window_width, window_height));
 	assert(max_tex_size > 0);
-	unsigned tex_size(1);
-	while (2*tex_size <= max_tex_size) {tex_size *= 2;} // find the max power of 2 <= max_tex_size
-	tex_size = min(tex_size, MAX_CUBE_MAP_TEX_SZ); // clamp to 768 to limit runtime and memory usage
-	cube_map_reflect_tex_size = tex_size;
-	setup_cube_map_reflection_texture(tid, tex_size);
-	unsigned const faces_drawn(create_reflection_cube_map(tid, tex_size, cobj_id, center, near_plane, FAR_CLIP, only_front_facing, is_indoors, skip_mask));
+	tsize = 1;
+	while (2*tsize <= max_tex_size) {tsize *= 2;} // find the max power of 2 <= max_tex_size
+	tsize = min(tsize, MAX_CUBE_MAP_TEX_SZ); // clamp to 768 to limit runtime and memory usage
+	setup_cube_map_reflection_texture(tid, tsize);
+	unsigned const faces_drawn(create_reflection_cube_map(tid, tsize, cobj_id, center, near_plane, FAR_CLIP, only_front_facing, is_indoors, skip_mask));
 	check_gl_error(998);
 	return faces_drawn;
 }
 
-unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
+unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
 	// slightly more than the cube half width in max dim
-	return create_cube_map_reflection(tid, cobj_id, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing, is_indoors, skip_mask);
+	return create_cube_map_reflection(tid, tsize, cobj_id, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing, is_indoors, skip_mask);
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {
@@ -310,11 +309,12 @@ unsigned create_tt_reflection(float terrain_zmin) {
 }
 
 
-void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid) {
+void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid, unsigned tsize) {
 
 	assert(tid > 0);
 	shader.add_uniform_vector3d("cube_map_center", bcube.get_cube_center()); // world space
 	shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube.max_len());
+	shader.add_uniform_int("cube_map_texture_size", tsize);
 	bind_texture_tu(tid, 14, 1); // tu_id=14, is_cube_map=1
 }
 
@@ -385,16 +385,20 @@ void reflective_cobjs_t::create_textures() {
 		bool const bfc(tid && !cobj_moved && !no_update_needed && !cobj.is_semi_trans()); // semi transparent objects need back face refraction + reflection
 		unsigned skip_mask(0); // {z1, z2, y1, y2, x1, x2}
 		//if (cobj.type == COLL_CUBE) {skip_mask = cobj.cp.surfs;} // incorrect - requires cube sides for the image border to capture perspective
-		i->second.faces_valid = create_cube_map_reflection(tid, i->first, bcube, bfc, cobj.is_indoors(), skip_mask);
+		i->second.faces_valid = create_cube_map_reflection(tid, i->second.tsize, i->first, bcube, bfc, cobj.is_indoors(), skip_mask);
 		i->second.bcube       = bcube;
 	}
 	for (auto i = to_remove.begin(); i != to_remove.end(); ++i) {remove_cobj(*i);}
 }
 
 unsigned reflective_cobjs_t::get_tid_for_cid(unsigned cid) const {
-
 	auto i(cobjs.find(cid));
 	assert(i != cobjs.end()); // too strong?
-	return ((i == cobjs.end()) ? -1 : i->second.tid);
+	return ((i == cobjs.end()) ? 0 : i->second.tid);
+}
+unsigned reflective_cobjs_t::get_tsize_for_cid(unsigned cid) const {
+	auto i(cobjs.find(cid));
+	assert(i != cobjs.end()); // too strong?
+	return ((i == cobjs.end()) ? 0 : i->second.tsize);
 }
 
