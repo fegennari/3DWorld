@@ -29,7 +29,7 @@ struct sky_pos_orient {
 };
 
 
-int def_cube_map_reflect_mipmap_level(-8);
+int def_cube_map_reflect_mipmap_level(-4);
 unsigned depth_tid(0), frame_buffer_RGB_tid(0);
 float sun_radius(0.0), moon_radius(0.0), earth_radius(0.0), brightness(1.0);
 colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
