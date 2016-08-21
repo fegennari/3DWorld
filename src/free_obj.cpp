@@ -1050,10 +1050,10 @@ void us_projectile::ai_action() {
 		
 		if (target_obj == NULL || (!target_obj->is_decoy() && time > (tup_time + SEEK_CTIME)) || target_dist > max_dist) { // execute seeking code
 			float seek_dist(max_dist);
-			if (target_obj != NULL) seek_dist = min(seek_dist, 0.7f*target_dist); // hysteresis to keep current target
+			if (target_obj != NULL) {seek_dist = min(seek_dist, 0.7f*target_dist);} // hysteresis to keep current target
 			tup_time   = time;
 			target_obj = get_closest_ship(pos, 0.0, seek_dist, 1, 0, 0, 1);
-			if (target_obj != NULL) missile_lock = 1;
+			if (target_obj != NULL) {missile_lock = 1;}
 			bool const decoy(target_obj != NULL && target_obj->is_decoy()); // Note: Decoy will only work if fighting enemy teams
 
 			if (ptarg != NULL && ptarg != target_obj && !decoy) {
@@ -1073,9 +1073,12 @@ void us_projectile::ai_action() {
 			float const smag_sq(seek_dir.mag_sq());
 
 			if (smag_sq > TOLERANCE && smag_sq < max_dist*max_dist) {
-				float const smag(sqrt(smag_sq)), vmag(velocity.mag()), ss(smag/max_dist);
-				velocity += seek_dir*(0.025*(1.0 - ss) + 0.1*(1.0 - ss*ss) + 0.4*(1.0 - ss*ss*ss));
-				velocity.set_max_mag(max(specs().speed, vmag)); // normalize to original velocity
+				float const turn_radius_factor = 0.4; // for all projectiles
+				float const smag(sqrt(smag_sq)), vmag(velocity.mag()), ss(max(smag/max_dist, 0.1f));
+				float const seek_amt(turn_radius_factor*(0.0625*(1.0 - ss) + 0.25*(1.0 - ss*ss) + (1.0 - ss*ss*ss)));
+				float const vmax(vmag*(1.0 - seek_amt) + specs().speed*seek_amt);
+				velocity += seek_dir*(fticks*seek_amt*vmag/smag); // apply as an acceleration normalized to velocity mag
+				velocity.set_max_mag(vmax); // normalize to original velocity combined with seek amount times speed spec
 			}
 			dir = velocity.get_norm(); // force dir to align with velocity when seeking
 			invalidate_rotv();
