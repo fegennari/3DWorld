@@ -283,9 +283,9 @@ public:
 		mesh_to_grass_map.clear();
 	}
 
-	bool ao_lighting_too_low(point const &pos) {
+	bool ao_lighting_too_low(point const &pos, rand_gen_pregen_t &rgen_) {
 		float const keep_prob(5.0*(get_voxel_terrain_ao_lighting_val(pos) - 0.8));
-		return (keep_prob < 0.0 || (keep_prob < 1.0 && rgen.randd() > keep_prob)); // too dark
+		return (keep_prob < 0.0 || (keep_prob < 1.0 && rgen_.randd() > keep_prob)); // too dark
 	}
 
 	void gen_grass() {
@@ -360,8 +360,8 @@ public:
 							float const r1(rgen_.randd()), r2(rgen_.randd()), sqrt_r1(sqrt(r1));
 							unsigned const ptix((cobj.npoints == 4 && n < num_blades/2) ? 3 : 1); // handle both triangles and quads
 							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[ptix] + (sqrt_r1*r2)*cobj.points[2]);
-							if (!test_cube.contains_pt(pos)) continue; // bbox test
-							if (ao_lighting_too_low(pos))    continue; // too dark
+							if (!test_cube.contains_pt(pos))     continue; // bbox test
+							if (ao_lighting_too_low(pos, rgen_)) continue; // too dark
 							add_grass_blade_int(pos, 0.8, 0, grass_, rgen_); // use cobj.norm instead of mesh normal?
 							++num_voxel_blades;
 							has_voxel_grass = 1;
@@ -414,7 +414,7 @@ public:
 
 					if (create_voxel_landscape) {
 						if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
-						if (ao_lighting_too_low(pos))        continue; // too dark
+						if (ao_lighting_too_low(pos, rgen_)) continue; // too dark
 					}
 					add_grass_blade_int(pos, 0.8, 1, grass_, rgen_);
 				} // for n
