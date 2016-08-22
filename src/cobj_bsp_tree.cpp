@@ -263,7 +263,7 @@ void cobj_tree_tquads_t::add_cobjs(coll_obj_group const &cobjs, bool verbose) {
 	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 		if (i->status != COLL_STATIC) continue;
 		assert(i->type == COLL_POLYGON && i->thickness <= MIN_POLY_THICK);
-		objects.push_back(coll_tquad(*i));
+		objects.emplace_back(*i);
 	}
 	build_tree_top(verbose);
 	PRINT_TIME(" Cobj Tree Triangles Create (from Cobjs)");
@@ -275,7 +275,7 @@ void cobj_tree_tquads_t::add_polygons(vector<polygon_t> const &polygons, bool ve
 	RESET_TIME;
 	clear();
 	objects.reserve(polygons.size());
-	for (vector<polygon_t>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {objects.push_back(coll_tquad(*i));}
+	for (vector<polygon_t>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {objects.emplace_back(*i);}
 	build_tree_top(verbose);
 	PRINT_TIME(" Cobj Tree Triangles Create (from Polygons)");
 }
