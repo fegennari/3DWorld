@@ -231,7 +231,7 @@ public:
 };
 
 
-class voxel_map : public map<voxel_t, zval_avg> { // hash_map or Google sparse_hashmap?
+class voxel_map : public map<voxel_t, zval_avg> { // must be a sorted map
 public:
 	zval_avg find_adj_z(voxel_t &v, zval_avg const &zv_old, float depth, voxel_map *cur_x_map=NULL);
 	bool read(char const *const fn);
