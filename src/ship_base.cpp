@@ -73,8 +73,8 @@ void u_ship_base::check_ref_objs(u_ship *cur_ship) {
 
 	assert(cur_ship);
 
-	for (set<u_ship *>::iterator i = fighters.begin(); i != fighters.end(); ) {
-		set<u_ship *>::iterator cur(i++);
+	for (auto i = fighters.begin(); i != fighters.end(); ) {
+		auto cur(i++);
 		u_ship *fighter(*cur);
 		assert(fighter != NULL);
 
@@ -90,7 +90,7 @@ void u_ship_base::check_ref_objs(u_ship *cur_ship) {
 		}
 	}
 	if (VERIFY_REFS) {
-		for (set<u_ship *>::const_iterator i = fighters.begin(); i != fighters.end(); ++i) {
+		for (auto i = fighters.begin(); i != fighters.end(); ++i) {
 			assert(*i && !(*i)->invalid() && !(*i)->to_be_removed());
 			(*i)->verify_status();
 		}
@@ -128,7 +128,7 @@ bool u_ship_base::build_fighter(unsigned fsclass) {
 	if (weapons[j].ammo != 0)                    return 0; // only when ammo == 0?
 	unsigned tot_owned(weapons[j].ammo + weapons[j].nregen);
 
-	for (set<u_ship *>::const_iterator i = fighters.begin(); i != fighters.end(); ++i) {
+	for (auto i = fighters.begin(); i != fighters.end(); ++i) {
 		if (!(*i)->invalid() && (*i)->get_sclass() == fsclass) ++tot_owned;
 	}
 	if (tot_owned >= weapons[w].init_ammo) return 0;
@@ -289,7 +289,7 @@ void u_ship_base::accept_fighters_from(u_ship *ship, u_ship *cur_ship) { // recu
 	assert(ship != NULL && cur_ship != NULL && ship != cur_ship);
 	if (cur_ship->invalid() || ship->get_parent() != cur_ship) return;
 	
-	for (set<u_ship *>::const_iterator i = ship->fighters.begin(); i != ship->fighters.end(); ++i) {
+	for (auto i = ship->fighters.begin(); i != ship->fighters.end(); ++i) {
 		u_ship *fighter(*i);
 		assert(fighter != NULL);
 

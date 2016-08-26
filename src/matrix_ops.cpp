@@ -234,7 +234,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	}
 
 	// fourth pass to update grass, after cobjs/shadows have been updated
-	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {
+	for (auto i = grass_update.begin(); i != grass_update.end(); ++i) {
 		grass_mesh_height_change(i->first, i->second);
 	}
 	if (!grass_update.empty()) {flower_mesh_height_change(xpos, ypos, rad);}

@@ -675,7 +675,7 @@ bool u_ship::can_return_to_parent() const {
 	if (size_scale > 4.0 || (size_scale > 1.0 && get_mass() > 0.1*parent->get_mass())) return 0; // too large to return to parent
 
 	// don't dock until fighters that can return have returned, otherwise they will be assigned to our parent
-	for (set<u_ship *>::const_iterator i = fighters.begin(); i != fighters.end(); ++i) { // works for boarding shuttles as well
+	for (auto i = fighters.begin(); i != fighters.end(); ++i) { // works for boarding shuttles as well
 		if (has_space_for_fighter((*i)->sclass)) return 0; // must wait for this fighter to return
 	}
 	if (!parent->get_ship_base()->has_space_for_fighter(sclass)) return 0; // check if parent has space in its fighter bay
@@ -819,7 +819,7 @@ u_ship const *u_ship::try_fighter_pickup() const {
 	u_ship const *cur_targ(NULL);
 	float fdist_sq(0.0);
 
-	for (set<u_ship *>::const_iterator i = fighters.begin(); i != fighters.end(); ++i) {
+	for (auto i = fighters.begin(); i != fighters.end(); ++i) {
 		u_ship const *const f(*i);
 		assert(f);
 		if (f->invalid_or_disabled()) continue; // disabled ships can't dock anyway, so wait until they become un-disabled
@@ -915,7 +915,7 @@ float u_ship::get_fast_target_dist(free_obj const *const target) const {
 
 bool u_ship::has_slow_fighters() const {
 
-	for (set<u_ship *>::const_iterator i = fighters.begin(); i != fighters.end(); ++i) {
+	for (auto i = fighters.begin(); i != fighters.end(); ++i) {
 		if (!(*i)->invalid() && (*i)->get_parent() == this && !(*i)->specs().has_fast_speed) return 1;
 	}
 	return 0;
@@ -1931,7 +1931,7 @@ void u_ship::reset_target() {
 	
 	if (invalid_priv()) return;
 
-	for (set<u_ship *>::const_iterator i = fighters.begin(); i != fighters.end(); ++i) {
+	for (auto i = fighters.begin(); i != fighters.end(); ++i) {
 		if ((*i)->get_parent() == this && (*i)->get_target() == target_obj) (*i)->reset_target();
 	}
 	target_set = 0;
@@ -2066,8 +2066,8 @@ bool u_ship::capture_ship(u_ship *ship, bool add_as_fighter) { // this captures 
 	}
 	target_obj = NULL; // no longer targeting this ship
 	
-	for (set<u_ship *>::iterator i = ship->fighters.begin(); i != ship->fighters.end(); ) {
-		set<u_ship *>::iterator cur(i++);
+	for (auto i = ship->fighters.begin(); i != ship->fighters.end(); ) {
+		auto cur(i++);
 		u_ship *fighter(*cur);
 		assert(fighter != NULL && fighter != ship && fighter != this && fighter != parent);
 
@@ -2167,7 +2167,7 @@ void u_ship::get_fighter_target(u_ship const *ship) { // recursive
 		if (target_valid(ship->target_obj)) target_obj = ship->target_obj;
 		return;
 	}
-	for (set<u_ship *>::const_iterator i = ship->fighters.begin(); i != ship->fighters.end() && target_obj == NULL; ++i) {
+	for (auto i = ship->fighters.begin(); i != ship->fighters.end() && target_obj == NULL; ++i) {
 		assert(*i != NULL); // see if a fighter of yours has a target
 		if (!(*i)->invalid() && (*i)->get_parent() == this) get_fighter_target(*i);
 	}
@@ -2919,7 +2919,7 @@ void orbiting_ship::ai_action() {
 				else {
 					copy(btypes.begin(), btypes.end(), inserter(unique_sc, unique_sc.begin()));
 				}
-				for (set<unsigned>::const_iterator it = unique_sc.begin(); it != unique_sc.end(); ++it) {
+				for (auto it = unique_sc.begin(); it != unique_sc.end(); ++it) {
 					scs.push_back(make_pair(-int(sclasses[*it].cost), *it));
 				}
 				sort(scs.begin(), scs.end());

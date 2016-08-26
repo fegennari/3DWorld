@@ -279,7 +279,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		set<unsigned> next_cobjs;
 
 		// determine affected cobjs
-		for (set<unsigned>::const_iterator k = unique_cobjs.begin(); k != unique_cobjs.end(); ++k) {
+		for (auto k = unique_cobjs.begin(); k != unique_cobjs.end(); ++k) {
 			unsigned const i(*k);
 			coll_obj &cobj(cobjs.get_cobj(i));
 			assert(cobj.status == COLL_STATIC);
@@ -373,12 +373,12 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		}
 #if 0
 		// additional optional error check that no cobj is both anchored and unanchored - can fail for polygons due to inexact intersection test
-		for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
+		for (auto i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 			assert(anchored[1].find(*i) == anchored[1].end());
 		}
 #endif
 		if (REMOVE_UNANCHORED) {
-			for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
+			for (auto i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 				coll_obj &cobj(coll_objects.get_cobj(*i));
 				if (cobj.is_movable()) {moving_cobjs.insert(*i); continue;} // move/fall instead of destroy
 				if (cobj.destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)

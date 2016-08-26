@@ -382,7 +382,7 @@ public:
 		set<string> mat_lib_fns;
 		model.get_all_mat_lib_fns(mat_lib_fns);
 		
-		for (set<string>::const_iterator i = mat_lib_fns.begin(); i != mat_lib_fns.end(); ++i) {
+		for (auto i = mat_lib_fns.begin(); i != mat_lib_fns.end(); ++i) {
 			if (!load_mat_lib(*i)) {
 				cerr << "Error reading material library file " << *i << endl;
 				//return 0;

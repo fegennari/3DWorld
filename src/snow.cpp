@@ -387,7 +387,7 @@ public:
 private:
 	unsigned add(point const &v, vector3d const &n, unsigned map_ix) { // can't be called after finalize()
 		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
-		map<point, unsigned>::const_iterator it(vmap[map_ix].find(v));
+		auto it(vmap[map_ix].find(v));
 		unsigned ix(0);
 
 		if (it != vmap[map_ix].end()) { // existing vertex
@@ -734,7 +734,7 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, 
 	if (!has_snow || snow_strips.empty()) return 0;
 	voxel_t const v(p);
 	int const xval(v.p[0]), yval(v.p[1]);
-	map<int, unsigned>::const_iterator it(x_strip_map.find(xval));
+	auto it(x_strip_map.find(xval));
 	if (it == x_strip_map.end()) return 0; // x-value not found
 	assert(it->second < snow_strips.size());
 	assert(snow_strips[it->second].xval == xval);

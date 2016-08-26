@@ -1043,7 +1043,7 @@ void coll_obj_group::subdiv_cubes() {
 		if (REMOVE_T_JUNCTIONS == 1 && (*this)[i].counter != OBJ_CNT_REM_TJ) continue;
 		id_map[(*this)[i].id].push_back(i);
 	}
-	for (map<int, vector<unsigned> >::const_iterator i = id_map.begin(); i != id_map.end(); ++i) {
+	for (auto i = id_map.begin(); i != id_map.end(); ++i) {
 		vector<unsigned> const &v(i->second);
 		if (v.size() == 1) continue; // nothing to do
 		set   <double> splits[3]; // x, y, z

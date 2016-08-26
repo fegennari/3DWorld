@@ -1443,7 +1443,7 @@ void draw_cracks_and_decals() {
 		blood_tqd.clear();
 		crack_qbd.draw_and_clear();
 	}
-	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
+	for (auto i = batches.begin(); i != batches.end(); ++i) {
 		int const tid(i->first >> 1);
 		bool const is_black(i->first & 1);
 

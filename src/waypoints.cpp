@@ -59,7 +59,7 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 		}
 		if (wp == last_wp) return 0; // too recent (lasts used)
 	}
-	map<unsigned, int>::iterator it(used.find(wp));
+	auto it(used.find(wp));
 	if (it == used.end()) return 1; // new waypoint
 	if ((frame_counter - it->second) < WP_RESET_FRAMES) return 0; // too recent
 	used.erase(it); // lazy update - remove the waypoint when found to be expired

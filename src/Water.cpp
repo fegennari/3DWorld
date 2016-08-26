@@ -1532,7 +1532,7 @@ void calc_water_flow() {
 		valleys[i].create(i);
 			
 		if (scrolling) { // attempt to restore zval state
-			map<pair<int, int>, valley>::const_iterator it(pool_zvals.find(make_pair(valleys[i].x, valleys[i].y)));
+			auto it(pool_zvals.find(make_pair(valleys[i].x, valleys[i].y)));
 			
 			if (it != pool_zvals.end()) { // not quite right - lacks spill/merge dependencies and other per-frame state, pool might be cut off by the mesh
 				valleys[i].copy_state_from(it->second);

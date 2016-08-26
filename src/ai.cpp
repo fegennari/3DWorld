@@ -362,7 +362,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 		if (s != smiley_id && sstates[s].last_waypoint == (int)i) {++other_smiley_targets;}
 	}
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
-	map<unsigned, count_t>::const_iterator it(blocked_waypts.find(i));
+	auto it(blocked_waypts.find(i));
 	if (it != blocked_waypts.end())     {dmult *= (1.0 + (1 << it->second.c));} // exponential increase in cost for blocked waypoints
 	if (!waypts_used.is_valid(i))       {dmult *= 100.0;}
 	if (waypoints[i].next_wpts.empty()) {dmult *= 10.0;} // increase the cost of waypoints disconnected from the rest of the waypoint graph

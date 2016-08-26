@@ -572,7 +572,7 @@ public:
 	}
 	bool load_shader_file(string const &fname, string &data) {
 		if (fname.empty()) return 0;
-		map<string, string>::const_iterator i(loaded_files.find(fname));
+		auto i(loaded_files.find(fname));
 	
 		if (i != loaded_files.end()) {
 			data += i->second;
@@ -607,7 +607,7 @@ public:
 
 	bool clear_shader_file(string const &fname) {
 		assert(!fname.empty());
-		map<string, string>::iterator i(loaded_files.find(fname));
+		auto i(loaded_files.find(fname));
 		if (i == loaded_files.end()) return 0; // not found - error?
 		loaded_files.erase(i);
 		return 1;
