@@ -8,6 +8,7 @@
 #include "gl_ext_arb.h"
 #include "draw_utils.h"
 #include "shaders.h"
+#include <unordered_map>
 
 
 bool const TRAIL_FOLLOWS_VEL    = 0;
@@ -71,7 +72,7 @@ class engine_trail_drawer_t {
 		}
 	};
 
-	map<unsigned, trail_t> trail_map;
+	std::unordered_map<unsigned, trail_t> trail_map;
 	
 public:
 	void add_trail_pt(free_obj const *const fobj, int eix, point const &pos, float radius, colorRGBA const &color, float alpha_scale=1.0) {
