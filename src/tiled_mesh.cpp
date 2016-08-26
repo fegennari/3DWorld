@@ -1557,10 +1557,10 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 			}
 			float const ztop(water_plane_z - (dist_water ? 0.1 : 0.0));
 			float const x1(bcube.d[0][dim ? 0 : dir]), x2(bcube.d[0][dim ? 1 : dir]), y1(bcube.d[1][dim ? dir : 0]), y2(bcube.d[1][dim ? dir : 1]);
-			wverts.push_back(vert_wrap_t(point(x1, y1, mzmin)));
-			wverts.push_back(vert_wrap_t(point(x2, y2, mzmin)));
-			wverts.push_back(vert_wrap_t(point(x2, y2, ztop)));
-			wverts.push_back(vert_wrap_t(point(x1, y1, ztop)));
+			wverts.emplace_back(point(x1, y1, mzmin));
+			wverts.emplace_back(point(x2, y2, mzmin));
+			wverts.emplace_back(point(x2, y2, ztop));
+			wverts.emplace_back(point(x1, y1, ztop));
 		}
 	}
 	if (!wverts.empty()) {

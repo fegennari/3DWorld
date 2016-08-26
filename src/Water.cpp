@@ -619,7 +619,7 @@ void draw_water(bool no_update) {
 
 					for (unsigned p = 0; p < 3; ++p) { // Note: if last_draw==1, degenerate triangles are generated
 						point const pt(get_xval(xin[p]), get_yval(yin[p]), (water_matrix[yin[p]][xin[p]] - SMALL_NUMBER));
-						verts.push_back(vert_norm_color(pt, wat_vert_normals[yin[p]][xin[p]], prev_color));
+						verts.emplace_back(pt, wat_vert_normals[yin[p]][xin[p]], prev_color);
 					}
 				}
 				if (last_draw || nin == 3) {wsd.end_strip();}
@@ -1174,7 +1174,7 @@ int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, i
 
 	if (x1 == x2 && y1 == y2) { // end at a point
 		colorRGBA const color(verts.empty() ? (water_is_lava ? LAVA_COLOR : WATER_C) : verts.back().get_c4()); // assert that verts is nonempty?
-		for (unsigned i = 0; i < 2; ++i) {verts.push_back(vert_norm_color(point(xa, ya, z1), norm, color));}
+		for (unsigned i = 0; i < 2; ++i) {verts.emplace_back(point(xa, ya, z1), norm, color);}
 		return 0;
 	}
 	float const xb(get_xval(x2)), yb(get_yval(y2));
@@ -1225,7 +1225,7 @@ int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, i
 	for (unsigned i = 0; i < 2; ++i) {
 		float const xv(xa + ((y1 == y2) ? 0.0 : ((i ^ (y1 > y2)) ?  width : -width)));
 		float const yv(ya + ((x1 == x2) ? 0.0 : ((i ^ (x1 > x2)) ? -width :  width)));
-		verts.push_back(vert_norm_color(point(xv, yv, z1), norm, color));
+		verts.emplace_back(point(xv, yv, z1), norm, color);
 	}
 	return 1;
 }

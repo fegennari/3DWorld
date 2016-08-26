@@ -861,8 +861,8 @@ void draw_waypoints() {
 				bidir = (*k == wix);
 			}
 			if (!bidir || *j < wix) {
-				verts.push_back(vert_color(i->pos, (bidir ? YELLOW : WHITE)));
-				verts.push_back(vert_color(w.pos,  (bidir ? YELLOW : ORANGE)));
+				verts.emplace_back(i->pos, (bidir ? YELLOW : WHITE));
+				verts.emplace_back(w.pos,  (bidir ? YELLOW : ORANGE));
 			}
 		}
 	}

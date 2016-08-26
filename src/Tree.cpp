@@ -198,7 +198,7 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 			draw_and_clear_verts(pts, GL_POINTS);
 			(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture()).bind_texture();
 		}
-		pts.push_back(vert_tc_color(i->pos, (render_branches ? i->td->br_x : i->td->lr_x), (render_branches ? i->td->br_z : i->td->lr_z), i->cw.c));
+		pts.emplace_back(i->pos, (render_branches ? i->td->br_x : i->td->lr_x), (render_branches ? i->td->br_z : i->td->lr_z), i->cw.c);
 	} // for i
 	assert(!pts.empty());
 	draw_and_clear_verts(pts, GL_POINTS);

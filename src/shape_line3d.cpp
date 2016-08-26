@@ -211,7 +211,7 @@ void shape3d::get_triangle_verts(vector<vert_norm_tc> &verts) const {
 			assert(index < points.size());
 			point const p(points[index]);
 			int const d1[3] = {1,0,0}, d2[3] = {2,2,1};
-			verts.push_back(vert_norm_tc((p*scale + pos), faces[i].norm, tex_scale*p[d1[max_dim]], tex_scale*p[d2[max_dim]]));
+			verts.emplace_back((p*scale + pos), faces[i].norm, tex_scale*p[d1[max_dim]], tex_scale*p[d2[max_dim]]);
 		}
 	}
 }

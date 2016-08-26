@@ -111,7 +111,7 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 
 			for (unsigned i = 0; i < 6; ++i) {
 				unsigned const ix(quad_to_tris_ixs[i]);
-				verts.push_back(vert_tc_t((cursor + column_dir*dx[ix] + line_dir*dy[ix]), t[ix][0], t[ix][1]));
+				verts.emplace_back((cursor + column_dir*dx[ix] + line_dir*dy[ix]), t[ix][0], t[ix][1]);
 			}
 			cursor += column_dir*(char_width + char_sz*char_spacing);
 		}

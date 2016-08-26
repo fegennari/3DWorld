@@ -150,9 +150,9 @@ void add_rotated_triangle(point const &pos, vector3d const &o, float radius, flo
 
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
-	verts.push_back(vert_norm_color((pos + 1.5*radius*p1), normal, color));
-	verts.push_back(vert_norm_color((pos - 1.5*radius*p1), normal, color));
-	verts.push_back(vert_norm_color((pos + 3.0*radius*p2), normal, color));
+	verts.emplace_back((pos + 1.5*radius*p1), normal, color);
+	verts.emplace_back((pos - 1.5*radius*p1), normal, color);
+	verts.emplace_back((pos + 3.0*radius*p2), normal, color);
 }
 
 
@@ -161,15 +161,15 @@ void add_rotated_textured_triangle(point const &pos, vector3d const &o, float ra
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
 	float const ts(123.456*radius), tt(654.321*radius); // pseudo-random
-	verts.push_back(vert_norm_tc_color((pos + 1.5*radius*p1), normal, ts, tt, color));
-	verts.push_back(vert_norm_tc_color((pos - 1.5*radius*p1), normal, ts+2*tscale*radius, tt, color));
-	verts.push_back(vert_norm_tc_color((pos + 3.0*radius*p2), normal, ts, tt+2*tscale*radius, color));
+	verts.emplace_back((pos + 1.5*radius*p1), normal, ts, tt, color);
+	verts.emplace_back((pos - 1.5*radius*p1), normal, ts+2*tscale*radius, tt, color);
+	verts.emplace_back((pos + 3.0*radius*p2), normal, ts, tt+2*tscale*radius, color);
 }
 
 
 void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<vert_norm_color> &verts, colorRGBA const &color) {
 
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(vert_norm_color(points[quad_to_tris_ixs[i]], normal, color));} // 1-2 triangles
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.emplace_back(points[quad_to_tris_ixs[i]], normal, color);} // 1-2 triangles
 }
 
 void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], point const *points,

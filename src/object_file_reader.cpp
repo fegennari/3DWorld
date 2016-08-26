@@ -150,7 +150,7 @@ public:
 				while (read_int(ix)) { // read vertex index
 					normalize_index(ix, (unsigned)v.size());
 					// only fill in the vertex (norm and tc will be unused)
-					if (ppts) {poly.push_back(vert_norm_tc(v[ix], zero_vector, 0.0, 0.0));}
+					if (ppts) {poly.emplace_back(v[ix], zero_vector, 0.0, 0.0);}
 					int const c(get_next_char());
 
 					if (c == '/') {

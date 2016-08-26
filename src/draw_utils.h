@@ -33,11 +33,11 @@ public:
 		lines.swap(vector<vert_norm_color>());
 	}
 	void add_pt(point const &v, vector3d const &n, colorRGBA const &c) {
-		points.push_back(vert_norm_color(v, n, c));
+		points.emplace_back(v, n, c);
 	}
 	void add_line(point const &v1, vector3d const &n1, colorRGBA const &c1, point const &v2, vector3d const &n2, colorRGBA const &c2) {
-		lines.push_back(vert_norm_color(v1, n1, c1));
-		lines.push_back(vert_norm_color(v2, n2, c2));
+		lines.emplace_back(v1, n1, c1);
+		lines.emplace_back(v2, n2, c2);
 	}
 	void add_textured_pt(point const &v, colorRGBA c, int tid);
 	void add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid);
@@ -57,11 +57,11 @@ public:
 	pt_line_drawer_no_lighting_t() {vbo[0] = vbo[1] = 0;}
 	void clear() {points.resize(0); lines.resize(0); free_vbo();}
 	void add_pt(point const &v, colorRGBA const &c) {
-		points.push_back(vert_color(v, c));
+		points.emplace_back(v, c);
 	}
 	void add_line(point const &v1, colorRGBA const &c1, point const &v2, colorRGBA const &c2) {
-		lines.push_back(vert_color(v1, c1));
-		lines.push_back(vert_color(v2, c2));
+		lines.emplace_back(v1, c1);
+		lines.emplace_back(v2, c2);
 	}
 	void draw() const;
 	void draw_vbo();

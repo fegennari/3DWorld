@@ -346,12 +346,12 @@ void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vecto
 
 	color_wrapper cw;
 	cw.set_c4(c); // Note: reversed from quad_to_tris_ixs
-	verts.push_back(vert_norm_tc_color(pts[0], n, tr.x1,tr.y1, cw.c, 1));
-	verts.push_back(vert_norm_tc_color(pts[2], n, tr.x2,tr.y2, cw.c, 1));
-	verts.push_back(vert_norm_tc_color(pts[1], n, tr.x2,tr.y1, cw.c, 1));
-	verts.push_back(vert_norm_tc_color(pts[0], n, tr.x1,tr.y1, cw.c, 1));
-	verts.push_back(vert_norm_tc_color(pts[3], n, tr.x1,tr.y2, cw.c, 1));
-	verts.push_back(vert_norm_tc_color(pts[2], n, tr.x2,tr.y2, cw.c, 1));
+	verts.emplace_back(pts[0], n, tr.x1,tr.y1, cw.c, true);
+	verts.emplace_back(pts[2], n, tr.x2,tr.y2, cw.c, true);
+	verts.emplace_back(pts[1], n, tr.x2,tr.y1, cw.c, true);
+	verts.emplace_back(pts[0], n, tr.x1,tr.y1, cw.c, true);
+	verts.emplace_back(pts[3], n, tr.x1,tr.y2, cw.c, true);
+	verts.emplace_back(pts[2], n, tr.x2,tr.y2, cw.c, true);
 }
 
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
@@ -367,9 +367,9 @@ void quad_batch_draw::add_quad_dirs_single_tri(point const &pos, vector3d const 
 	// add a single triangle with an inscribed square, using tex coords outside the [0,1] range
 	color_wrapper cw;
 	cw.set_c4(c);
-	verts.push_back(vert_norm_tc_color(pos-2*dx-dy, n, -0.5, 0.0, cw.c, 1));
-	verts.push_back(vert_norm_tc_color(pos+2*dx-dy, n,  1.5, 0.0, cw.c, 1));
-	verts.push_back(vert_norm_tc_color(pos+3*dy,    n,  0.0, 2.0, cw.c, 1));
+	verts.emplace_back(pos-2*dx-dy, n, -0.5, 0.0, cw.c, true);
+	verts.emplace_back(pos+2*dx-dy, n,  1.5, 0.0, cw.c, true);
+	verts.emplace_back(pos+3*dy,    n,  0.0, 2.0, cw.c, true);
 }
 
 void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir,
@@ -389,8 +389,7 @@ void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate,
 
 		for (unsigned i = 0; i < 18; ++i) {
 			float const tcx(p[v[i]][0]), tcy(p[v[i]][1]);
-			point const p(xlate + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0));
-			verts.push_back(vert_norm_tc_color(p, normal, tcx, tcy, cw.c, 1));
+			verts.emplace_back(point(xlate + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0)), normal, tcx, tcy, cw.c, true);
 		}
 	}
 	else { // draw as quad (2 triangles)
@@ -653,7 +652,7 @@ void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest,
 	assert(p != NULL && npts > 0);
 	color_wrapper cw;
 	cw.set_c4(color);
-	for (unsigned i = 0; i < npts; ++i) {dest.push_back(vert_type_t(p[i], cw));}
+	for (unsigned i = 0; i < npts; ++i) {dest.emplace_back(p[i], cw);}
 }
 
 template<>

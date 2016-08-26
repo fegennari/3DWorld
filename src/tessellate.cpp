@@ -43,7 +43,7 @@ void fgCALLBACK do_combine(GLdouble c[3], vert_norm_tc *vertex_data[4], GLfloat 
 		tc[0] += vertex_data[i]->t[0] * weight[i];
 		tc[1] += vertex_data[i]->t[1] * weight[i];
 	}
-	added_pts.push_back(vert_norm_tc(point(c[0], c[1], c[2]), norm, tc));
+	added_pts.emplace_back(point(c[0], c[1], c[2]), norm, tc);
 	*out = &added_pts.back();
 }
 

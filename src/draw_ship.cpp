@@ -202,7 +202,7 @@ void ship_triangle_list::finalize() {
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		vector3d const normal(i->get_normal());
-		UNROLL_3X(verts.push_back(vert_norm(i->pts[i_], normal));)
+		UNROLL_3X(verts.emplace_back(i->pts[i_], normal);)
 	}
 }
 

@@ -227,9 +227,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 
 		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				for (unsigned k = 0; k < 2; ++k) {
-					data.push_back(vert_norm_comp(get_mesh_xyz_pos(j, i+k), vertex_normals[i+k][j]));
-				}
+				for (unsigned k = 0; k < 2; ++k) {data.emplace_back(get_mesh_xyz_pos(j, i+k), vertex_normals[i+k][j]);}
 			}
 		}
 		mesh_data.create_and_upload(data, 0, 1); // and setup pointers
@@ -541,7 +539,7 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 
 
 void add_vertex(vector<vert_norm_tc> &verts, vector3d const &n, float x, float y, float z, bool in_y, float tscale=1.0) { // xz or zy
-	verts.push_back(vert_norm_tc(point(x, y, z), n, tscale*(in_y ? z : x), tscale*(in_y ? y : z)));
+	verts.emplace_back(point(x, y, z), n, tscale*(in_y ? z : x), tscale*(in_y ? y : z));
 }
 
 void draw_sides_and_bottom(bool shadow_pass) {
@@ -645,7 +643,7 @@ void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_ed
 	}
 	vector3d normal(zero_vector);
 	normal[in_y] = (neg_edge ? -1.0 : 1.0);
-	qbd.verts.push_back(vert_norm_tc_color(point(x, y, z), normal, tex_scale*(in_y ? z : x), tex_scale*(in_y ? y : z), c));
+	qbd.verts.emplace_back(point(x, y, z), normal, tex_scale*(in_y ? z : x), tex_scale*(in_y ? y : z), c);
 }
 
 

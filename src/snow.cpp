@@ -398,7 +398,7 @@ private:
 		else {
 			ix = (unsigned)data.size();
 			vmap[map_ix][v] = ix;
-			data.push_back(vert_norm(v, n));
+			data.emplace_back(v, n);
 		}
 		indices.push_back(ix);
 		return ix;

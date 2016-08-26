@@ -1216,7 +1216,7 @@ void obj_draw_group::add_draw_polygon(point const *const points, vector3d const 
 	//normal = get_norm_camera_orient(normal, points[0]);
 		
 	for (unsigned i = 0; i < ((npoints == 3) ? 3U : 6U); ++i) { // triangle or quad (2 tris)
-		verts.push_back(vert_norm(points[quad_to_tris_ixs[i]], normal));
+		verts.emplace_back(points[quad_to_tris_ixs[i]], normal);
 	}
 	if (use_vbo) {end_cix = cix+1;}
 }

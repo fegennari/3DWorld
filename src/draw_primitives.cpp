@@ -236,12 +236,12 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 	float const inner_tscale(r_inner/r_outer);
 	float sin_s(0.0), cos_s(1.0);
 	static vector<vert_norm_tc> verts;
-	if (!disk) {verts.push_back(vert_norm_tc(pos, n, 0.5, 0.5));}
+	if (!disk) {verts.emplace_back(pos, n, 0.5, 0.5);}
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s);
-		if (disk) {verts.push_back(vert_norm_tc((pos + point(r_inner*s, r_inner*c, 0.0)), n, 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c))));}
-		verts.push_back(vert_norm_tc((pos + point(r_outer*s, r_outer*c, 0.0)), n, 0.5*(1.0 + s), (0.5*(1.0 + c))));
+		if (disk) {verts.emplace_back((pos + point(r_inner*s, r_inner*c, 0.0)), n, 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c)));}
+		verts.emplace_back((pos + point(r_outer*s, r_outer*c, 0.0)), n, 0.5*(1.0 + s), (0.5*(1.0 + c)));
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
 	}
@@ -467,8 +467,8 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				}
 				for (unsigned i = 0; i < 4; ++i) {
 					if (pt_shift) {pts[i] += pt_shift[ix];}
-					if (texture) {vntc.push_back(vertex_type_t(pts[i], normals[i], tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv)));}
-					else {vn.push_back(vert_norm(pts[i], normals[i]));}
+					if (texture) {vntc.emplace_back(pts[i], normals[i], tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv));}
+					else {vn.emplace_back(pts[i], normals[i]);}
 				}
 			} // for t
 		}
@@ -476,8 +476,8 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 			if (s != s0) { // add degenerate triangles to preserve the triangle strip (only slightly faster than using multiple triangle strips)
 				for (unsigned d = 0; d < 2; ++d) {
 					unsigned const T(d ? t0 : t1);
-					if (texture) {vntc.push_back(vertex_type_t(points[s][T], norms[s][T], 0.0, 0.0));}
-					else {vn.push_back(vert_norm(points[s][T], norms[s][T]));}
+					if (texture) {vntc.emplace_back(points[s][T], norms[s][T], 0.0, 0.0);}
+					else {vn.emplace_back(points[s][T], norms[s][T]);}
 				}
 			}
 			for (unsigned t = t0; t <= t1; ++t) {
@@ -496,8 +496,8 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				if (!draw) {continue;}
 
 				for (unsigned i = 0; i < 2; ++i) {
-					if (texture) {vntc.push_back(vertex_type_t(pts[i], normals[i], tscale*(1.0f - (i ? snt : s)*ndiv_inv), tscale*(1.0f - t*ndiv_inv)));}
-					else {vn.push_back(vert_norm(pts[i], normals[i]));}
+					if (texture) {vntc.emplace_back(pts[i], normals[i], tscale*(1.0f - (i ? snt : s)*ndiv_inv), tscale*(1.0f - t*ndiv_inv));}
+					else {vn.emplace_back(pts[i], normals[i]);}
 				}
 			} // for t
 		}
@@ -536,7 +536,7 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 					for (unsigned k = 0; k < 2; ++k) {
 						vector3d const n(pt2.get_norm());
 						point const pos(center + n*radius);
-						if (texture) {tverts.push_back(vert_norm_tc(pos, n, (s+k)*tstep, t*tstep));} else {verts.push_back(vert_norm(pos, n));}
+						if (texture) {tverts.emplace_back(pos, n, (s+k)*tstep, t*tstep);} else {verts.emplace_back(pos, n);}
 						pt2[d1] += vstep;
 					}
 				} // for t
@@ -562,7 +562,7 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const { // use
 			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][t+1], norms [s][t+1]};
 
 			for (unsigned i = 0; i < 4; ++i) {
-				quad_pts.push_back(vert_norm_tc(pts[i], normals[i], (1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), (1.0f - ((i>>1) ? t+1 : t)*ndiv_inv)));
+				quad_pts.emplace_back(pts[i], normals[i], (1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), (1.0f - ((i>>1) ? t+1 : t)*ndiv_inv));
 			}
 		}
 	}
@@ -599,12 +599,12 @@ void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned
 		unsigned const sn((s+skip)%ndiv), snt(min((s+skip), ndiv));
 
 		if (s != s0) { // add degenerate triangle to preserve the triangle strip
-			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vertex_type_t(points[s][d ? t0 : t1], norms[s][d ? t0 : t1], 0, 0));}
+			for (unsigned d = 0; d < 2; ++d) {verts.emplace_back(points[s][d ? t0 : t1], norms[s][d ? t0 : t1], 0, 0);}
 		}
 		for (unsigned t = t0; t <= t1; t += skip) {
 			t = min(t, ndiv);
-			verts.push_back(vertex_type_t(points[s ][t], norms[s ][t], (1.0f - s  *ndiv_inv), (1.0f - t*ndiv_inv)));
-			verts.push_back(vertex_type_t(points[sn][t], norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv)));
+			verts.emplace_back(points[s ][t], norms[s ][t], (1.0f - s  *ndiv_inv), (1.0f - t*ndiv_inv));
+			verts.emplace_back(points[sn][t], norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv));
 		}
 	} // for s
 }
@@ -618,7 +618,7 @@ void sd_sphere_d::get_triangle_vertex_list(vector<vertex_type_t> &verts) const {
 		unsigned const six(s%ndiv);
 
 		for (unsigned t = 0; t <= ndiv; ++t) {
-			verts.push_back(vertex_type_t(points[six][t], norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv)));
+			verts.emplace_back(points[six][t], norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));
 		}
 	}
 	assert(verts.size() < (1ULL << 8*sizeof(index_type_t)));
@@ -656,7 +656,7 @@ void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
 				                      triangle(points[s][t], points[sn][t+1], points[s ][t+1])};
 			for (unsigned d = 0; d < 2; ++d) {
 				vector3d const normal(tris[d].get_normal()); // face normal
-				UNROLL_3X(verts.push_back(vertex_type_t(tris[d].pts[i_], normal, (1.0f - sixs[d][i_]*ndiv_inv), (1.0f - tixs[d][i_]*ndiv_inv))););
+				UNROLL_3X(verts.emplace_back(tris[d].pts[i_], normal, (1.0f - sixs[d][i_]*ndiv_inv), (1.0f - tixs[d][i_]*ndiv_inv)););
 			}
 		}
 	}
@@ -904,9 +904,9 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	if (npts == 3) { // single triangle
 		assert(!prev && !next);
 		if (make_global) {for (unsigned i = 0; i < 3; ++i) {pts[i] = make_pt_global(pts[i]);}}
-		verts.push_back(vert_tc_color(pts[0], 0.0, 0.5, color1));
-		verts.push_back(vert_tc_color(pts[1], ((w1 == 0.0) ? 1.0 : 0.0), 0.5, ((w1 == 0.0) ? color2 : color1)));
-		verts.push_back(vert_tc_color(pts[2], 1.0, 0.5, color2));
+		verts.emplace_back(pts[0], 0.0, 0.5, color1);
+		verts.emplace_back(pts[1], ((w1 == 0.0) ? 1.0 : 0.0), 0.5, ((w1 == 0.0) ? color2 : color1));
+		verts.emplace_back(pts[2], 1.0, 0.5, color2);
 		return;
 	}
 	if (prev && *prev != p1) {
@@ -922,15 +922,15 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	pts[4] = p2;
 	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
 	color_wrapper cw1, cw2; cw1.set_c4(color1); cw2.set_c4(color2);
-	verts.push_back(vert_tc_color(pts[2], 0.0, 0.5, cw2.c));
-	verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
-	verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
+	verts.emplace_back(pts[2], 0.0, 0.5, cw2.c);
+	verts.emplace_back(pts[1], 0.0, 0.5, cw1.c);
+	verts.emplace_back(pts[4], 0.5, 0.5, cw2.c);
 	verts.push_back(verts.back()); // duplicate
-	verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
-	verts.push_back(vert_tc_color(pts[0], 1.0, 0.5, cw1.c));
+	verts.emplace_back(pts[1], 0.0, 0.5, cw1.c);
+	verts.emplace_back(pts[0], 1.0, 0.5, cw1.c);
 	verts.push_back(verts.back()); // duplicate
-	verts.push_back(vert_tc_color(pts[3], 1.0, 0.5, cw2.c));
-	verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
+	verts.emplace_back(pts[3], 1.0, 0.5, cw2.c);
+	verts.emplace_back(pts[4], 0.5, 0.5, cw2.c);
 }
 
 

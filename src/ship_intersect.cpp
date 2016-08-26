@@ -691,17 +691,13 @@ void ushadow_triangle_mesh::draw(upos_point_type const &pos) const {
 
 	for (tri_vect_t::const_iterator t = tris.begin(); t != tris.end(); ++t) {
 		for (unsigned i = 0; i < 2; ++i) { // ends (cull faces?)
-			for (unsigned j = 0; j < 3; ++j) {
-				verts.push_back(vert_wrap_t(t->p[i][i ? j : (2-j)] - pos));
-			}
+			for (unsigned j = 0; j < 3; ++j) {verts.emplace_back(t->p[i][i ? j : (2-j)] - pos);}
 		}
 		for (unsigned j = 0; j < 2; ++j) {
-			for (unsigned k = 0; k < 2; ++k) {
-				verts.push_back(vert_wrap_t(t->p[j][(k^j)%3] - pos));
-			}
+			for (unsigned k = 0; k < 2; ++k) {verts.emplace_back(t->p[j][(k^j)%3] - pos);}
 		}
-		verts.push_back(vert_wrap_t(t->p[0][0] - pos)); // need to draw as triangles (0 and 2)
-		verts.push_back(vert_wrap_t(t->p[1][1] - pos));
+		verts.emplace_back(t->p[0][0] - pos); // need to draw as triangles (0 and 2)
+		verts.emplace_back(t->p[1][1] - pos);
 	}
 	draw_verts(verts, GL_TRIANGLES);
 }

@@ -49,10 +49,10 @@ public:
 	void resize_zero() {leaf_vect.resize(0); branch_vect.resize(0);}
 
 	void add_leaves(tree_data_t const *td, point const &pos, float opacity) {
-		leaf_vect.push_back(entry_t(td, pos, colorRGBA(1, 1, 1, opacity)));
+		leaf_vect.emplace_back(td, pos, colorRGBA(1, 1, 1, opacity));
 	}
 	void add_branches(tree_data_t const *td, point const &pos, float opacity, colorRGBA const &bcolor) {
-		branch_vect.push_back(entry_t(td, pos, colorRGBA(bcolor, opacity)));
+		branch_vect.emplace_back(td, pos, colorRGBA(bcolor, opacity));
 	}
 	void finalize();
 	void render_billboards(shader_t &s, bool render_branches) const;

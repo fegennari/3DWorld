@@ -551,7 +551,7 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 				
 			if (*vix < 0) {
 				*vix = tri_verts.size(); // next available vix
-				tri_verts.push_back(vertex_type_t(tri.pts[v], zero_vector));
+				tri_verts.emplace_back(tri.pts[v], zero_vector);
 			}
 			assert(*vix < (int)tri_verts.size());
 			tri_verts[*vix].n += normal; // average the triangle normals to get the vertex normal
