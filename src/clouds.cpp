@@ -576,7 +576,10 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, vpc_shader
 	s.set_cur_color(mod_color[0]);
 	enable_blend();
 	set_multisample(0);
+	bool const additive_blend(noise_exp > 3.0);
+	if (additive_blend) {set_additive_blend_mode();}
 	draw_quads();
+	if (additive_blend) {set_std_blend_mode();}
 	set_multisample(1);
 	disable_blend();
 	s.disable();
