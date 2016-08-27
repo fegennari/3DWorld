@@ -7,6 +7,7 @@ uniform float offset = 0.0;
 uniform float alpha_scale= 1.0;
 uniform float alpha_bias = -0.4; // intended to be changed for grayscale mode
 uniform float dist_bias  = 0.0;
+uniform float noise_exp  = 2.0;
 uniform vec3 rscale      = vec3(1.0);
 uniform vec4 color_mult  = vec4(1.0);
 
@@ -38,7 +39,7 @@ void main() {
 #ifdef RIDGED_NOISE
 			v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
 			v = 1.0 - abs(v); // ridged noise
-			v = v*v;
+			v = pow(v, vec4(noise_exp));
 #endif
 			val  += v/freq;
 			freq *= 2.0;
@@ -53,6 +54,9 @@ void main() {
 			color = mix(color, mix(color2i, color2o, dist), abs(val.r - val.g));
 			color = mix(color, mix(color3i, color3o, dist), abs(val.r - val.b));
 		}
+#ifdef IRREGULAR_SHAPE
+		color.a *= 4.0*pow(texture(noise_tex, noise_scale*(0.43*pos + vec3(1.3, 2.4, 3.7))).r, 2.0);
+#endif
 	} // end !line_mode
 	color.a *= min(ascale, 1.0);
 	if (color.a < 0.002) discard;

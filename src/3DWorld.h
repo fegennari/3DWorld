@@ -1359,7 +1359,8 @@ public:
 	vector<vert_type_t> const &get_points() const {return points;}
 	void gen_pts(vector3d const &size, point const &pos=all_zeros, bool simplified=0);
 	void gen_pts(float radius, point const &pos=all_zeros, bool simplified=0) {gen_pts(vector3d(radius, radius, radius), pos, simplified);}
-	static void shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged=1, float alpha_bias=-0.4, float dist_bias=0.0, unsigned num_octaves=5, bool enable_lighting=0, bool use_cloud_mode=0);
+	static void shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged=1, float alpha_bias=-0.4, float dist_bias=0.0,
+		unsigned num_octaves=5, bool enable_lighting=0, bool use_cloud_mode=0, bool irregular_shape=0);
 	void draw_quads(bool depth_map_already_disabled=0) const;
 	bool enabled() const {return !points.empty();}
 	void clear() {points.clear();}

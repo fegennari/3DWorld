@@ -491,11 +491,12 @@ void vpc_shader_t::cache_locs() {
 	off_loc = get_uniform_loc("offset");
 	vd_loc  = get_uniform_loc("view_dir");
 	as_loc  = get_uniform_loc("alpha_scale");
+	nexp_loc= get_uniform_loc("noise_exp");
 }
 
 
 /*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged, float alpha_bias,
-	float dist_bias, unsigned num_octaves, bool enable_lighting, bool use_cloud_mode)
+	float dist_bias, unsigned num_octaves, bool enable_lighting, bool use_cloud_mode, bool irregular_shape)
 {
 	assert(noise_ncomp == 1 || noise_ncomp == 4);
 	assert(num_octaves >= 1 && num_octaves <= 9); // nonzero, single digit
@@ -507,6 +508,7 @@ void vpc_shader_t::cache_locs() {
 	if (ridged)          {s.set_prefix("#define RIDGED_NOISE",    1);} // FS
 	if (enable_lighting) {s.set_prefix("#define ENABLE_LIGHTING", 1);} // FS
 	if (use_cloud_mode)  {s.set_prefix("#define USE_CLOUD_MODE",  1);} // FS
+	if (irregular_shape) {s.set_prefix("#define IRREGULAR_SHAPE", 1);} // FS
 	s.set_int_prefix("noise_ncomp", noise_ncomp, 1); // FS
 	s.set_prefix(make_shader_bool_prefix("line_mode", (draw_model == 1)), 1); // FS
 	s.set_vert_shader("nebula");
@@ -536,6 +538,7 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 	rgen.set_state(rand2(), rand2());
 	radius = rgen.rand_uniform(0.1, 0.15)*range;
 	UNROLL_3X(color[i_] = gen_color(rgen);)
+	noise_exp = 2.0 + rgen.rand_float() + rgen.rand_float(); // 2.0 - 4.0
 	gen_pts(radius);
 }
 
@@ -557,7 +560,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, vpc_shader
 		mod_color[d] = color[d];
 		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.3*dist_scale);
 	}
-	shader_setup(s, 4); // RGBA noise
+	shader_setup(s, 4, 1, -0.4, 0.0, 5, 0, 0, 1); // RGBA ridged noise with irregular shape
 	s.enable();
 	s.set_uniform_float(s.ns_loc, 0.01);
 	s.set_uniform_color(s.c1i_loc, mod_color[0]);
@@ -567,6 +570,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, vpc_shader
 	s.set_uniform_color(s.c3i_loc, mod_color[2]);
 	s.set_uniform_color(s.c3o_loc, mod_color[2]);
 	s.set_uniform_float(s.rad_loc, radius);
+	s.set_uniform_float(s.nexp_loc, noise_exp);
 	s.set_uniform_float(s.off_loc, pos.x); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, (upos_point_type(camera) - pos_).get_norm()); // local object space
 	s.set_cur_color(mod_color[0]);

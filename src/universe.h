@@ -393,8 +393,10 @@ public:
 class unebula : public uobject_base, public volume_part_cloud {
 
 	colorRGBA color[3];
+	float noise_exp;
 
 public:
+	unebula() : noise_exp(2.0) {}
 	void gen(float range, ellipsoid_t const &bounds);
 	void draw(point_d pos_, point const &camera, float max_dist, vpc_shader_t &s) const;
 	void free_uobj() {points.clear();}
