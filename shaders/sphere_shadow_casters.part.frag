@@ -2,6 +2,7 @@
 uniform vec3 sun_pos;
 uniform float sun_radius;
 uniform vec4 shadow_casters[8];
+uniform int num_shadow_casters = 0;
 #endif
 
 float calc_shadow_atten(in vec3 world_space_pos)

@@ -1,5 +1,5 @@
-uniform vec3 planet_pos, sun_pos, camera_pos;
-uniform float planet_radius, ring_ri, ring_ro, sun_radius, bf_draw_sign;
+uniform vec3 planet_pos, camera_pos;
+uniform float planet_radius, ring_ri, ring_ro, bf_draw_sign;
 uniform float alpha_scale = 1.0;
 uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
@@ -17,7 +17,7 @@ vec3 add_light_rings(in vec3 n, in vec4 epos, in vec3 world_space_pos) {
 	vec3 ambient1  = color * fg_LightSource[1].ambient.rgb; // ambient only
 	vec3 specular  = get_light_specular(n, light_dir, epos.xyz, fg_LightSource[0].specular.rgb);
 	float atten    = calc_light_atten0(epos);
-	if (sun_radius > 0.0) {atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, planet_pos, planet_radius);} // sun exists
+	if (sun_radius > 0.0) {atten *= calc_shadow_atten(world_space_pos);} // sun exists
 	return (ambient0 + ambient1 + (abs(dot(n, light_dir))*diffuse + specular)) * atten;
 }
 
