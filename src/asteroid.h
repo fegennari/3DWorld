@@ -58,17 +58,25 @@ public:
 };
 
 
-class uasteroid_cont : public uobject_base, public vector<uasteroid> {
-
-	int rseed;
+class shadowed_uobject {
 protected:
 	vector<sphere_t> shadow_casters;
 	sphere_t sun_pos_radius;
+
+public:
+	void calc_shadowers_for_planet(uplanet const &planet);
+	void upload_shadow_casters(shader_t &s) const;
+};
+
+
+class uasteroid_cont : public uobject_base, public shadowed_uobject, public vector<uasteroid> {
+
+	int rseed;
+protected:
 	pt_line_drawer pld; // for drawing
 
 	virtual void gen_asteroid_placements() = 0;
 	virtual void remove_asteroid(unsigned ix);
-	void upload_shadow_casters(shader_t &s) const;
 
 public:
 	uasteroid_cont() : rseed(0) {}

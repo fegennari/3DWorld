@@ -214,6 +214,7 @@ class universe_shader_t : public shader_t {
 
 	typedef map<const char *, int> name_loc_map; // key is a pointer? use a string?
 	name_loc_map name_to_loc;
+	shadowed_uobject shadowed_state;
 
 	int get_loc(char const *const name) {
 #if 1
@@ -336,10 +337,11 @@ public:
 		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir, bool c2a) {	
+	bool enable_ring(uplanet const &planet, point const &planet_pos, bool dir, bool c2a) {	
 		if (!is_setup()) {
 			set_vert_shader("planet_draw");
-			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+planet_rings");
+			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+planet_rings");
+			set_prefix("#define ENABLE_SHADOWS", 1); // FS
 			shared_setup("ring_tex");
 			add_uniform_int("noise_tex",     1);
 			add_uniform_int("particles_tex", 2);
@@ -349,16 +351,15 @@ public:
 		select_multitex(SPARSE_NOISE_TEX,     2, 1);
 		enable();
 		set_specular(0.5, 50.0);
+		shadowed_state.calc_shadowers_for_planet(planet);
+		shadowed_state.upload_shadow_casters(*this);
 		set_uniform_vector3d(get_loc("planet_pos"), planet_pos);
 		set_uniform_float(get_loc("planet_radius"), planet.radius);
 		set_uniform_float(get_loc("ring_ri"),       planet.ring_ri);
 		set_uniform_float(get_loc("ring_ro"),       planet.ring_ro);
-		set_uniform_vector3d(get_loc("sun_pos"),    sun_pos);
-		set_uniform_float(get_loc("sun_radius"),    sun_radius);
 		set_uniform_float(get_loc("bf_draw_sign"),  (dir ? -1.0 : 1.0));
 		set_uniform_float(get_loc("alpha_scale"),   (c2a ?  1.0 : 0.6));
 		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
-		upload_mvm_to_shader(*this, "fg_ViewMatrix");
 		return 1;
 	}
 	void disable_ring() {
@@ -411,9 +412,7 @@ public:
 	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius) {return star_shader.enable_star(colorA, colorB, radius);}
 	void disable_star_shader() {star_shader.disable_star();}
-	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir, bool c2a) {
-		return ring_shader.enable_ring(planet, planet_pos, sun_pos, sun_radius, dir, c2a);
-	}
+	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, bool dir, bool c2a) {return ring_shader.enable_ring(planet, planet_pos, dir, c2a);}
 	void disable_ring_shader() {ring_shader.disable_ring();}
 	void enable_atmospheric_shader(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
 		atmospheric_shader.enable_atmospheric(planet, planet_pos, svars);
@@ -1000,7 +999,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								if (use_c2a) {glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 								uplanet &planet(sol.planets[k->ix]);
 								planet.ensure_rings_texture();
-								planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1), use_c2a);
+								planet.draw_prings(usg, (pos + planet.pos), k->size, (pass == 1), use_c2a);
 								if (use_c2a) {glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 							}
 						}
@@ -2601,13 +2600,13 @@ void uplanet::ensure_rings_texture() {
 }
 
 
-void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir, bool c2a) const {
+void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, bool dir, bool c2a) const {
 
 	if (ring_data.empty()) return;
 	assert(ring_ri > 0.0 && ring_ri < ring_ro);
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
-	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir, c2a); // always WHITE
+	usg.enable_ring_shader(*this, make_pt_global(pos_), dir, c2a); // always WHITE
 	fgPushMatrix();
 	global_translate(pos_);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z

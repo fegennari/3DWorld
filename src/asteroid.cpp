@@ -730,6 +730,7 @@ float const AB_THICK_TO_WIDTH  = 0.22;
 float const AST_PARTICLE_SIZE  = 0.1;
 float const AST_BELT_ROT_RATE  = 0.2;
 unsigned const AB_NUM_PART_SEG = 50;
+unsigned const MAX_SHADOW_CASTERS = 8;
 
 
 // *** asteroid fields and belts ***
@@ -738,10 +739,9 @@ unsigned const AB_NUM_PART_SEG = 50;
 void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_casters) {
 
 	if (num_shadow_casters > 0) {
-		assert(num_shadow_casters <= 8);
+		assert(num_shadow_casters <= MAX_SHADOW_CASTERS);
 		for (unsigned d = 0; d < 2; ++d) {shader.set_prefix("#define ENABLE_SHADOWS", d);} // VS/FS
 	}
-	shader.set_int_prefix("num_shadow_casters", num_shadow_casters, 1); // FS
 }
 
 
@@ -1204,32 +1204,39 @@ bool uasteroid_belt_system::might_cast_shadow(uobject const &uobj) const {
 	return line_might_intersect(uobj.pos, system->sun.pos, projected_r);
 }
 
-
 void uasteroid_belt_system::calc_shadowers() {
 
 	shadow_casters.clear();
 	if (!ENABLE_SHADOWS || !system || !system->sun.is_ok()) return;
 
-	for (vector<uplanet>::const_iterator p = system->planets.begin(); p != system->planets.end(); ++p) {
+	for (auto p = system->planets.begin(); p != system->planets.end() && (shadow_casters.size() < MAX_SHADOW_CASTERS); ++p) {
 		if (might_cast_shadow(*p)) {shadow_casters.push_back(sphere_t(p->pos, p->radius));}
 
-		for (vector<umoon>::const_iterator m = p->moons.begin(); m != p->moons.end(); ++m) {
+		for (auto m = p->moons.begin(); m != p->moons.end() && (shadow_casters.size() < MAX_SHADOW_CASTERS); ++m) {
 			if (might_cast_shadow(*m)) {shadow_casters.push_back(sphere_t(m->pos, m->radius));}
 		}
 	}
-	if (shadow_casters.size() > 8) {shadow_casters.resize(8);} // max number
 	sun_pos_radius.pos    = system->sun.pos;
 	sun_pos_radius.radius = system->sun.radius;
 }
 
-
 void uasteroid_belt_planet::calc_shadowers() {
+	if (planet) {calc_shadowers_for_planet(*planet);}
+}
+
+void shadowed_uobject::calc_shadowers_for_planet(uplanet const &planet) {
 
 	shadow_casters.clear();
-	if (!ENABLE_SHADOWS || !planet || !planet->is_ok() || !planet->system || !planet->system->sun.is_ok()) return;
-	shadow_casters.push_back(sphere_t(planet->pos, planet->radius));
-	sun_pos_radius.pos    = planet->system->sun.pos;
-	sun_pos_radius.radius = planet->system->sun.radius;
+	if (!ENABLE_SHADOWS || !planet.is_ok() || !planet.system || !planet.system->sun.is_ok()) return;
+	sun_pos_radius.pos    = planet.system->sun.pos;
+	sun_pos_radius.radius = planet.system->sun.radius;
+	shadow_casters.push_back(sphere_t(planet.pos, planet.radius));
+
+	for (auto m = planet.moons.begin(); m != planet.moons.end() && (shadow_casters.size() < MAX_SHADOW_CASTERS); ++m) {
+		if (dist_less_than(m->pos, planet.pos, (planet.ring_ro*planet.rscale.get_max_val() + m->radius)) || p2p_dist_sq(m->pos, sun_pos_radius.pos) < p2p_dist_sq(planet.pos, sun_pos_radius.pos)) {
+			shadow_casters.push_back(sphere_t(m->pos, m->radius));
+		}
+	}
 }
 
 
@@ -1269,7 +1276,7 @@ void uasteroid_cont::end_render(shader_t &shader) {
 }
 
 
-void uasteroid_cont::upload_shadow_casters(shader_t &s) const {
+void shadowed_uobject::upload_shadow_casters(shader_t &s) const {
 
 	if (!shadow_casters.empty()) {
 		int const sc_loc(s.get_uniform_loc("shadow_casters"));
