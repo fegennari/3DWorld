@@ -59,7 +59,7 @@ unsigned star_cache_ix(0);
 int uxyz[3] = {0, 0, 0};
 unsigned char water_c[3] = {0}, ice_c[3] = {0};
 unsigned char const *const wic[2] = {water_c, ice_c};
-float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0), universe_ambient_scale(1.0);
+float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0), universe_ambient_scale(1.0), planet_update_rate(1.0);
 point univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
@@ -1829,8 +1829,9 @@ point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot
 
 	// what about fp errors when tfticks gets large?
 	float const ra1(rev_ang);
-	if ((animate2 || rot_ang == 0.0) && update_rot) rot_ang = rot_ang0 + double(tfticks)*double(rot_rate);
-	if ((animate2 || rev_ang == 0.0) && update_rev) rev_ang = rev_ang0 + double(tfticks)*double(rev_rate);
+	double const update_time(planet_update_rate*tfticks);
+	if ((animate2 || rot_ang == 0.0) && update_rot) {rot_ang = rot_ang0 + update_time*double(rot_rate);}
+	if ((animate2 || rev_ang == 0.0) && update_rev) {rev_ang = rev_ang0 + update_time*double(rev_rate);}
 	// compute absolute pos every update: stable over long time periods, but jittery due to fp error between frames
 	// compute relative pos every update: unstable over time, but very smooth movement between frames
 	point_d new_pos(v_orbit);
