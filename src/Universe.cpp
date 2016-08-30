@@ -757,7 +757,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 	point const &camera(get_player_pos());
 	vector3d const vcp(camera, rel_center);
 	float const vcp_mag(vcp.mag()), dist(vcp_mag - CELL_SPHERE_RAD);
-	bool const cache_stars(pass == 0 && !sel_cell && !gen_only && !get_draw_as_line(dist, vcp, vcp_mag) && dist_less_than(camera, last_player_pos, STAR_MAX_SIZE) &&
+	bool const cache_stars(pass == 0 && !sel_cell && !gen_only && !get_draw_as_line(dist, vcp, vcp_mag) && dist_less_than(camera, last_player_pos, STAR_MIN_SIZE) &&
 		bkg_color == last_bkg_color && star_cache_ix == last_star_cache_ix);
 
 	if (cache_stars && cached_stars_valid) { // should be true in combined_gu mode
