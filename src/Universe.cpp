@@ -1502,8 +1502,11 @@ void ussystem::process() {
 	assert(asteroid_belt == nullptr);
 
 	if (planets.size() > 1 && !(rand2() & 1)) {
-		unsigned const inner_planet(rand2() % (planets.size()-1)); // between two planet orbits, so won't increase system radius
-		float const ab_radius(0.5*(planets[inner_planet].orbit + planets[inner_planet+1].orbit));
+		vector<float> orbits(planets.size());
+		for (unsigned i = 0; i < planets.size(); ++i) {orbits[i] = planets[i].orbit;}
+		sort(orbits.begin(), orbits.end()); // smallest to largest
+		unsigned const inner_planet(rand2() % (orbits.size()-1)); // between two planet orbits, so won't increase system radius
+		float const ab_radius(0.5*(orbits[inner_planet] + orbits[inner_planet+1])); // halfway between two planet orbits
 		asteroid_belt.reset(new uasteroid_belt_system(sun.rot_axis, this));
 		asteroid_belt->init(pos, ab_radius); // gen_asteroids() will be called when drawing
 	}
