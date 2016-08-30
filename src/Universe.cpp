@@ -925,11 +925,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								}
 							}
 							if (!gen_only && !skip_p && !skip_planet_draw) {
-								if (!planet.ring_data.empty() && planet.ring_tid > 0) { // setup ring texture so we can create ring shadows
-									set_active_texture(2);
-									bind_1d_texture(planet.ring_tid);
-									set_active_texture(0);
-								}
+								planet.bind_rings_texture(2);
 								planet.check_gen_texture(int(sizep));
 								planet.draw(ppos, usg, planet_plds, svars, 0, sel_s); // ignore return value?
 							}
@@ -956,6 +952,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								float const sizem(sscale_val*calc_sphere_size(mpos, camera, moon.radius));
 								if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
 								current.moon = l;
+								//planet.bind_rings_texture(2); // use the planet's rings texture for shadows
 								moon.check_gen_texture(int(sizem));
 								shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0);
 								moon.draw(mpos, usg, planet_plds, svars2, planet.is_ok(), sel_p);
@@ -2599,6 +2596,13 @@ void uplanet::ensure_rings_texture() {
 	if (mipmap) {gen_mipmaps(1);}
 }
 
+void uplanet::bind_rings_texture(unsigned tu_id) const { // setup ring texture so we can create ring shadows
+
+	if (ring_data.empty() || ring_tid == 0) return;
+	set_active_texture(2);
+	bind_1d_texture(ring_tid);
+	set_active_texture(0);
+}
 
 void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, bool dir, bool c2a) const {
 
