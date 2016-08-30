@@ -1157,8 +1157,10 @@ void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point con
 
 void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point const &camera) { // only needs to be called when visible
 
-	if (empty()) return;
-
+	if (empty()) {
+		if (planet) {pos = planet->pos;} // still need to update pos for VFC
+		return;
+	}
 	if (planet) { // move all asteroids along the planet's orbit
 		upos_point_type const delta_pos(planet->pos - pos);
 		pos = planet->pos;
