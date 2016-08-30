@@ -18,7 +18,10 @@ vec3 add_light_rings(in vec3 n, in vec4 epos, in vec3 world_space_pos) {
 	vec3 specular  = get_light_specular(n, light_dir, epos.xyz, fg_LightSource[0].specular.rgb);
 	float atten    = calc_light_atten0(epos);
 	if (sun_radius > 0.0) {atten *= calc_shadow_atten(world_space_pos);} // sun exists
-	return (ambient0 + ambient1 + (abs(dot(n, light_dir))*diffuse + specular)) * atten;
+	float n_dot_l = dot(n, light_dir);
+	if (dot(epos.xyz, n) > 0.0) {n_dot_l = -n_dot_l;} // camera is viewing the back side
+	if (n_dot_l < 0.0) {specular = vec3(0.0);} // back facing - no specular
+	return (ambient0 + ambient1 + (max(0.5, n_dot_l)*diffuse + specular)) * atten;
 }
 
 void main()
