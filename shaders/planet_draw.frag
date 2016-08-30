@@ -44,7 +44,7 @@ vec3 calc_cloud_coord(in vec3 cloud_vertex) {
 		float v0    = 1.0;
 		vec3 dir    = normalize(vertex); // world space normal
 
-		for (int i = 0; i < 30; ++i) { // slow when close to the planet
+		for (int i = 0; i < 40; ++i) { // slow when close to the planet
 			float dist = (0.5 + 0.25*rand_01(v0+3.0))*length(dir - normalize(rand_vec3(v0)));
 			v_adj     += max(0.0, (0.1 - dist))*sin(0.1/max(dist, 1.0));
 			v0        += 4.0;
@@ -70,7 +70,7 @@ void main()
 	//tc_adj      += 0.04*(noise - 0.5);
 	float v0     = 1.0; // using a variable here is slow
 
-	for (int i = 0; i < 50; ++i) { // Note: inefficient, but fast enough for a single gas giant render
+	for (int i = 0; i < 60; ++i) { // Note: inefficient, but fast enough for a single gas giant render
 		vec3 center = vec3(1.0, 1.0, 0.5)*rand_vec3(v0);
 #ifdef ANIMATE_STORMS // slow but neat
 		float angle = 50.0*time*rand_pm1(v0+2.5);
