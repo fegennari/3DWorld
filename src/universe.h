@@ -214,16 +214,16 @@ public:
 	int owner;
 	unsigned orbiting_refs, tid, tsize;
 	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale, wr_scale, snow_thresh, population;
-	vector3d rev_axis, v_orbit;
+	vector3d rev_axis, v_orbit, orbit_scale;
 	std::shared_ptr<upsurface> surface;
 	string comment;
 
 	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0),
-		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0) {}
+		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0), orbit_scale(all_ones) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
-		float radius0, float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap);
+		float radius0, float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap, vector3d const &oscale);
 	void gen_surface();
 	void check_gen_texture(unsigned size);
 	void create_rocky_texture(unsigned size);
@@ -287,7 +287,7 @@ public:
 	unsigned ring_tid;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), ring_tid(0) {}
+	uplanet() : urev_body(UTYPE_PLANET), mosize(0.0), ring_ri(0.0), ring_ro(0.0), rscale(all_ones), system(NULL), ring_tid(0) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -377,8 +377,9 @@ public:
 	std::shared_ptr<uasteroid_belt_system> asteroid_belt;
 	ugalaxy *galaxy;
 	colorRGBA galaxy_color;
+	vector3d orbit_scale;
 	
-	ussystem() : cluster_id(0), galaxy(NULL), galaxy_color(ALPHA0) {}
+	ussystem() : cluster_id(0), galaxy(NULL), galaxy_color(ALPHA0), orbit_scale(all_ones) {}
 	void create(point const &pos_);
 	void calc_color();
 	void process();

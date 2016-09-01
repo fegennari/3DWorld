@@ -954,7 +954,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								current.moon = l;
 								//planet.bind_rings_texture(2); // use the planet's rings texture for shadows
 								moon.check_gen_texture(int(sizem));
-								shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0);
+								shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, all_ones, 0.0, 0.0);
 								moon.draw(mpos, usg, planet_plds, svars2, planet.is_ok(), sel_p);
 							}
 							if (has_sun && planet.is_ok()) {clear_colors_and_disable_light(p_light);}
@@ -1489,7 +1489,7 @@ void ussystem::process() {
 		planets[i].system = this;
 
 		if (!planets[i].create_orbit(planets, i, pos, sun.rot_axis, sradius, PLANET_MAX_SIZE, PLANET_MIN_SIZE,
-			INTER_PLANET_MIN_SPACING, PLANET_TO_SUN_MAX_SPACING, PLANET_TO_SUN_MIN_SPACING, 0.0))
+			INTER_PLANET_MIN_SPACING, PLANET_TO_SUN_MAX_SPACING, PLANET_TO_SUN_MIN_SPACING, 0.0, orbit_scale))
 		{ // failed to place planet
 			planets.resize(i);
 			remove_excess_cap(planets);
@@ -1621,7 +1621,7 @@ void uplanet::process() {
 		moons[i].planet = this;
 
 		if (!moons[i].create_orbit(moons, i, pos, rot_axis, radius, MOON_MAX_SIZE, MOON_MIN_SIZE,
-			INTER_MOON_MIN_SPACING, MOON_TO_PLANET_MAX_SPACING, MOON_TO_PLANET_MIN_SPACING, MOON_TO_PLANET_MIN_GAP))
+			INTER_MOON_MIN_SPACING, MOON_TO_PLANET_MAX_SPACING, MOON_TO_PLANET_MIN_SPACING, MOON_TO_PLANET_MIN_GAP, rscale))
 		{ // failed to place moon
 			moons.resize(i);
 			remove_excess_cap(moons);
@@ -1828,7 +1828,7 @@ void urev_body::gen_rotrev() {
 
 
 // Note: Update is only done when the objects solar system is visible to the player
-point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot) {
+point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot) { // orbit is around p0
 
 	// what about fp errors when tfticks gets large?
 	float const ra1(rev_ang);
@@ -1839,7 +1839,15 @@ point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot
 	// compute relative pos every update: unstable over time, but very smooth movement between frames
 	point_d new_pos(v_orbit);
 	rotate_vector3d(vector3d_d(rev_axis), rev_ang/TO_DEG, new_pos); // more accurate (is this necessary?)
-	new_pos *= double(orbit);
+	double orbit_radius(orbit);
+
+	if (orbit_scale != all_ones) { // nonuniform/elliptical orbit scale (planet with rings)
+		vector3d vref(new_pos);
+		rotate_norm_vector3d_into_plus_z(rev_axis, vref); // Note: rev_axis is parent's rot_axis
+		UNROLL_3X(vref[i_] *= orbit_scale[i_];); // vref.z should be zero
+		orbit_radius *= vref.mag()/orbit_scale.xy_mag(); // normalize ellipse area
+	}
+	new_pos *= orbit_radius;
 	new_pos += p0;
 	pos      = new_pos;
 	if (update_rev && int(10*ra1) != int(10*rev_ang)) {calc_temperature();} // update every 0.1 degree
@@ -1849,11 +1857,12 @@ point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot
 
 template<typename T>
 bool urev_body::create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis, float radius0,
-							 float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap)
+							 float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap, vector3d const &oscale)
 {
-	radius   = (min(0.4f*radius0, max_size) - min_size)*((float)rand2d()) + min_size;
+	radius = (min(0.4f*radius0, max_size) - min_size)*((float)rand2d()) + min_size;
 	float const rad2(radius + rspacing), min_orbit(max((MIN_RAD_SPACE_FACTOR*(radius + radius0) + min_gap), minspacing));
-	rev_axis = raxis + signed_rand_vector2_norm()*ORBIT_PLANE_DELTA;
+	orbit_scale = oscale;
+	rev_axis    = raxis + signed_rand_vector2_norm()*ORBIT_PLANE_DELTA;
 	rev_axis.normalize();
 	vector3d const start_vector(signed_rand_vector2_norm()); // doesn't matter, any will do
 	cross_product(rev_axis, start_vector, v_orbit);

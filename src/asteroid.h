@@ -152,8 +152,7 @@ class uasteroid_belt_system : public uasteroid_belt {
 	void calc_shadowers();
 
 public:
-	uasteroid_belt_system(vector3d const &opn, ussystem *system_) :
-	  uasteroid_belt(opn, vector3d(1,1,1)), system(system_) {}
+	uasteroid_belt_system(vector3d const &opn, ussystem *system_) : uasteroid_belt(opn, system_->orbit_scale), system(system_) {}
 	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
 };
 
