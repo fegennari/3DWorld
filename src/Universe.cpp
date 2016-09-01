@@ -1732,7 +1732,7 @@ void uplanet::gen_prings() {
 			ring_data[j].add_c4(rcolor);
 		}
 	}
-	for (unsigned i = 0; i < 2; ++i) {rscale[i] = rand_uniform2(0.9, 2.2);} // x/y
+	for (unsigned i = 0; i < 2; ++i) {rscale[i] = rand_uniform2(1.0, 2.2);} // x/y
 	rscale.z = 1.0; // makes no difference
 	float max_rs(0.0);
 	UNROLL_3X(max_rs = max(max_rs, rscale[i_]);)
