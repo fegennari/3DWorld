@@ -747,6 +747,30 @@ void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 }
 
 
+void find_best_moon_shadower(uplanet const &planet, point_d const &targ_pos, float targ_radius, point_d const &pos_offset, point_d const &sun_pos, point &ss_pos, float &ss_radius) {
+
+	float max_overlap(0.0);
+	point const tpos(targ_pos + pos_offset);
+
+	// Note: if more than one moon shadows the planet/moon, it will be incorrect, but that case is very rare
+	for (unsigned l = 0; l < planet.moons.size(); ++l) {
+		umoon const &moon(planet.moons[l]);
+		if (moon.pos == targ_pos) continue; // skip self
+		point_d const mpos(moon.pos + pos_offset);
+
+		if (p2p_dist_sq(mpos, sun_pos) < p2p_dist_sq(targ_pos, sun_pos)) { // moon closer to sun than planet
+			float const overlap((targ_radius + moon.radius) - pt_line_dist(mpos, sun_pos, targ_pos));
+
+			if (overlap > max_overlap) {
+				max_overlap = overlap;
+				ss_pos      = make_pt_global(mpos);
+				ss_radius   = moon.radius;
+			}
+		}
+	}
+}
+
+
 // pass:
 //  0. Draw all except for the player's system
 //  If player's system is none (update: galaxy is none) then stop
@@ -906,23 +930,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 						if (planet_visible && planet.is_ok()) {
 							if (has_sun) { // determine if any moons shadow the planet
-								float max_overlap(0.0);
-
-								// Note: if more than one moon shadows the planet, it will be incorrect, but that case is very rare
-								for (unsigned l = 0; l < planet.moons.size(); ++l) {
-									umoon const &moon(planet.moons[l]);
-									point_d const mpos(pos + moon.pos);
-
-									if (p2p_dist_sq(mpos, spos) < p2p_dist_sq(ppos, spos)) { // moon closer to sun than planet
-										float const overlap((pradius + moon.radius) - pt_line_dist(mpos, spos, ppos));
-
-										if (overlap > max_overlap) {
-											max_overlap     = overlap;
-											svars.ss_pos    = make_pt_global(mpos);
-											svars.ss_radius = moon.radius;
-										}
-									}
-								}
+								find_best_moon_shadower(planet, planet.pos, planet.radius, pos, spos, svars.ss_pos, svars.ss_radius);
 							}
 							if (!gen_only && !skip_p && !skip_planet_draw) {
 								planet.bind_rings_texture(2);
@@ -954,7 +962,11 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								current.moon = l;
 								//planet.bind_rings_texture(2); // use the planet's rings texture for shadows
 								moon.check_gen_texture(int(sizem));
-								shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, all_ones, 0.0, 0.0);
+								shadow_vars_t svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, all_ones, 0.0, 0.0);
+
+								if (p2p_dist_sq(mpos, spos) < p2p_dist_sq(ppos, spos) + 0.5*p2p_dist(ppos, mpos)) { // moon closer to sun than planet + half orbit dist
+									find_best_moon_shadower(planet, moon.pos, moon.radius, pos, spos, svars2.ss_pos, svars2.ss_radius); // planet doesn't shadow moon, maybe moon does
+								}
 								moon.draw(mpos, usg, planet_plds, svars2, planet.is_ok(), sel_p);
 							}
 							if (has_sun && planet.is_ok()) {clear_colors_and_disable_light(p_light);}
