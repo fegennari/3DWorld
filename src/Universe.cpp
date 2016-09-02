@@ -1639,7 +1639,9 @@ void uplanet::process() {
 			remove_excess_cap(moons);
 			break;
 		}
-		mosize = max(mosize, (radius + moons[i].orbit + moons[i].radius));
+		float const mo(moons[i].orbit), xy_scale(rscale.xy_mag()), mo_scaled(mo/xy_scale);
+		if (mo_scaled < ring_ro) {moons[i].radius *= 0.5*(1.0 + max(0.0f, (mo_scaled - ring_ri)/(ring_ro - ring_ri)));} // smaller radius for moons within the planet's rings
+		mosize = max(mosize, (radius + mo + moons[i].radius)); // multiply orbit by xy_scale?
 	}
 	if (!moons.empty()) { // calculate rotation rate about rotation axis due to moons (Note: Stars can rotate as well.)
 		// rk_term = r/(2*PI*a*k);
