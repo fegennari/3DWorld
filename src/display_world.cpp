@@ -541,7 +541,7 @@ void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { /
 void draw_game_elements(int timer1, int reflection_pass=0) {
 
 	if (TIMETEST) PRINT_TIME("U");
-	if (reflection_pass == 0) {draw_camera_weapon(1);} // FIXME: this uses camera_pos and view_dir, which aren't correct for the reflection pass, so disable it
+	draw_camera_weapon(1, reflection_pass);
 	draw_projectile_effects(reflection_pass);
 	if (TIMETEST) PRINT_TIME("V");
 	draw_smoke_and_fires();
@@ -1075,11 +1075,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_puffy_clouds(0, 1);
 	
 	// draw the scene
-	if (0) { // unnecessary/wrong?
-		camera_pos = prev_camera_pos; // temporarily set the camera pos back so that this works
-		draw_camera_weapon(0);
-		camera_pos = pdu.pos;
-	}
+	draw_camera_weapon(0, reflection_pass);
 	update_shadow_matrices();
 	draw_coll_surfaces(0, reflection_pass);
 	

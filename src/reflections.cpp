@@ -14,6 +14,8 @@ float const CUBE_MAP_ANISO          = 4.0;
 bool enable_clip_plane_z(0);
 unsigned reflection_tid(0);
 float clip_plane_z(0.0);
+vector3d pre_ref_cview_dir(plus_z);
+point pre_ref_camera_pos(zero_vector);
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
 
@@ -132,8 +134,10 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	check_gl_error(530);
 	assert(tid);
+	pre_ref_cview_dir  = cview_dir;
+	pre_ref_camera_pos = camera_pdu.pos;
 	pos_dir_up const prev_camera_pdu(camera_pdu);
-	vector3d const prev_up_vector(up_vector), prev_cview_dir(cview_dir);
+	vector3d const prev_up_vector(up_vector);
 	glViewport(0, 0, tex_size, tex_size);
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
@@ -164,7 +168,7 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 	if (ENABLE_CUBE_MAP_MIPMAPS) {gen_mipmaps(6);}
 	camera_pdu = prev_camera_pdu;
 	up_vector  = prev_up_vector;
-	cview_dir  = prev_cview_dir;
+	cview_dir  = pre_ref_cview_dir;
 	fgMatrixMode(FG_PROJECTION);
 	fgPopMatrix();
 	fgMatrixMode(FG_MODELVIEW);
@@ -187,6 +191,8 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
 	enable_clip_plane_z = 1;
 	clip_plane_z        = zval + 1.0E-6; // hack to tell the shader setup code to use this z clip plane
+	pre_ref_cview_dir   = cview_dir;
+	pre_ref_camera_pos  = camera_pdu.pos;
 	pos_dir_up const old_camera_pdu(camera_pdu);
 	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
 	// FIXME: use x/y bcube bounds to clip reflected view frustum

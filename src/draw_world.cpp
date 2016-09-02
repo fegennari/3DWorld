@@ -172,12 +172,12 @@ void set_brass_material(shader_t &shader, float alpha) {
 }
 
 
-void draw_camera_weapon(bool want_has_trans) {
+void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 
-	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
+	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans)) return;
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1);
-	draw_weapon_in_hand(-1, s);
+	draw_weapon_in_hand(-1, s, reflection_pass);
 	s.end_shader();
 }
 

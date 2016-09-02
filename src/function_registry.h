@@ -97,7 +97,7 @@ void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA 
 void clear_colors_and_disable_light(int light, shader_t *shader=NULL);
 void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *shader=NULL);
 int get_light();
-void draw_camera_weapon(bool want_has_trans);
+void draw_camera_weapon(bool want_has_trans, int reflection_pass=0);
 void draw_solid_object_groups();
 void draw_transparent_object_groups();
 void draw_select_groups(int solid);
@@ -596,7 +596,7 @@ void update_weapon_cobjs();
 int select_dodgeball_texture(int shooter);
 sphere_t get_weapon_bsphere(int weapon);
 void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader);
-void draw_weapon_in_hand(int shooter, shader_t &shader);
+void draw_weapon_in_hand(int shooter, shader_t &shader, int reflection_pass=0);
 bool weap_has_transparent(int shooter);
 int get_shooter_coll_id(int shooter);
 void draw_scheduled_weapons(bool clear_after_draw);

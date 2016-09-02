@@ -15,6 +15,8 @@ extern bool keep_beams, have_indir_smoke_tex;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
 extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2;
 extern float fticks, tfticks;
+extern vector3d pre_ref_cview_dir;
+extern point pre_ref_camera_pos;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<spark_t> sparks;
@@ -674,7 +676,7 @@ int get_shooter_coll_id(int shooter) {
 }
 
 
-void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader) {
+void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int reflection_pass=0) {
 
 	assert(shooter == CAMERA_ID || shooter < num_smileys);
 	assert(sstates != NULL);
@@ -703,12 +705,13 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader) {
 		assert(shooter >= 0 && shooter < num_smileys);
 		if (sstate.powerup == PU_INVISIBILITY)         return;
 		if (sstate.weapon == W_BALL && game_mode == 2) return; // dodgeball already drawn
+		reflection_pass = 0; // irrelevant for smileys
 	}
 	int const cid(get_shooter_coll_id(shooter));
-	vector3d const dir(get_sstate_dir(shooter));
+	vector3d const dir(reflection_pass ? pre_ref_cview_dir : get_sstate_dir(shooter));
 	unsigned const delay(max(1u, weapons[wid].fire_delay));
 	float const fire_val((float)sstate.fire_frame/(float)delay);
-	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
+	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : (reflection_pass ? pre_ref_camera_pos : get_sstate_draw_pos(shooter)));
 	select_texture(WHITE_TEX); // always textured
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass, shader);
@@ -716,11 +719,12 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader) {
 }
 
 
-void draw_weapon_in_hand(int shooter, shader_t &shader) {
+void draw_weapon_in_hand(int shooter, shader_t &shader, int reflection_pass) {
 
 	if (!game_mode) return;
-	draw_weapon_in_hand_real(shooter, 0, shader);
-	scheduled_weapons.insert(shooter); // should not be duplicates, but just in case draw_scheduled_weapons() isn't called
+	draw_weapon_in_hand_real(shooter, 0, shader, reflection_pass);
+	if (reflection_pass) {draw_weapon_in_hand_real(shooter, 1, shader, reflection_pass);} // draw the other pass now
+	else {scheduled_weapons.insert(shooter);} // should not be duplicates, but just in case draw_scheduled_weapons() isn't called
 }
 
 
@@ -729,10 +733,7 @@ void draw_scheduled_weapons(bool clear_after_draw) {
 	if (scheduled_weapons.empty()) return;
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1); // keep_alpha=1; enable smoke?
-
-	for (auto i = scheduled_weapons.begin(); i != scheduled_weapons.end(); ++i) {
-		draw_weapon_in_hand_real(*i, 1, s);
-	}
+	for (auto i = scheduled_weapons.begin(); i != scheduled_weapons.end(); ++i) {draw_weapon_in_hand_real(*i, 1, s);}
 	s.end_shader();
 	if (clear_after_draw) {scheduled_weapons.clear();}
 }
