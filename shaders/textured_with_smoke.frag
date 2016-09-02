@@ -382,10 +382,20 @@ void main()
 		vec3 end_pos    = camera_pos + (vpos - camera_pos)*(min(fog_end, view_dist)/view_dist);
 		pt_pair cres    = clip_line(end_pos, camera_pos, scene_bb);
 		float scene_len = distance(cres.v2, cres.v1)/distance(end_pos, camera_pos);
-		float pixel_lum = get_luminance(indir_lookup(cres.v1, normal)); // camera pos
-		if (!underwater) {pixel_lum = mix(pixel_lum, get_luminance(indir_lookup(cres.v2, normal)), 0.75);} // FIXME: use multiple steps?
-		//pixel_lum = get_luminance(lit_color.rgb)/max(0.01, get_luminance(gl_Color.rgb));
-		fcolor.rgb *= mix(1.0, min(2.0*pixel_lum, 1.0), scene_len);
+		vec3 pixel_color;
+		if (underwater) {pixel_color = indir_lookup(cres.v1, normal);} // camera pos
+		else {
+			pixel_color = indir_lookup(cres.v2, normal); // target pos
+			const int num_steps = 4; // + starting step
+			vec3 delta = (cres.v1 - cres.v2)/num_steps;
+			vec3 pos = cres.v2;
+			for (int i = 0; i < num_steps; ++i) {
+				pos        += delta;
+				pixel_color = mix(pixel_color, indir_lookup(pos, normal), 0.25);
+			}
+		}
+		//pixel_color = lit_color.rgb/max(vec3(0.01), gl_Color.rgb);
+		fcolor.rgb *= mix(vec3(1.0), min(2.0*pixel_color, vec3(1.0)), scene_len);
 	}
 	// FIXME: more physically correct to clip the view ray by the distance traveled through the water,
 	// but not all shaders use this flow (leaves, plants, scenery, etc.)
