@@ -46,6 +46,7 @@ tree_coll_level 4
 mesh_seed 6
 destroy_thresh 1
 ground_effects_level 1
+detail_normal_map 1
 crater_size 0.1
 fog_dist_scale 1.0
 
