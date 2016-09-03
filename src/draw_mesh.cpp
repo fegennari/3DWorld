@@ -214,7 +214,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 	shader_t s;
 
 	if (!shadow_pass && shadow_map_enabled()) { // enable shadows and some other effects
-		setup_mesh_and_water_shader(s, 1, 0);
+		setup_mesh_and_water_shader(s, detail_normal_map, 0);
 		s.set_cur_color(color);
 	}
 	else {
@@ -509,7 +509,7 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 	if (!reflection_pass) {update_landscape_texture();}
 	if (SHOW_MESH_TIME) {PRINT_TIME("Landscape Texture");}
 
-	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
+	if (ground_effects_level == 0 || reflection_pass) { // simpler, more efficient mesh draw
 		draw_mesh_vbo(0);
 	}
 	else { // slower mesh draw with more features (surface damage, underwater lighting and effects)
