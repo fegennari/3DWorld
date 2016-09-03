@@ -215,6 +215,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 
 	if (!shadow_pass && shadow_map_enabled()) { // enable shadows and some other effects
 		setup_mesh_and_water_shader(s, 1, 0);
+		s.set_cur_color(color);
 	}
 	else {
 		s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
@@ -511,7 +512,7 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
 		draw_mesh_vbo(0);
 	}
-	else { // slower mesh draw with more features
+	else { // slower mesh draw with more features (surface damage, underwater lighting and effects)
 		draw_mesh_mvd(reflection_pass);
 	}
 	if (SHOW_MESH_TIME) {PRINT_TIME("Draw");}
