@@ -655,7 +655,7 @@ void cobj_draw_buffer::draw() const {
 bool check_cobj_vis_occlude(coll_obj const &c, int reflection_pass) {
 	if (!c.check_pdu_visible(camera_pdu)) return 0; // VFC
 	if (reflection_pass == 0) return !c.is_occluded_from_camera(); // not reflections
-	if (reflection_pass == 1) return 1; // no VFC for planar reflections
+	if (reflection_pass == 1) return 1; // no occlusion culling for planar reflections
 	if ((display_mode & 0x08) == 0 || !have_occluders()) return 1;
 	//if (c.is_occluded_from_camera()) return 0; // doesn't help
 	return !cube_cobj_occluded(get_camera_pos(), c);
@@ -745,7 +745,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	else { // draw transparent
 		if (is_smoke_in_use()) {
 			for (unsigned i = 0; i < portals.size(); ++i) {
-				if (!portals[i].is_visible()) continue;
+				if (!portals[i].is_visible(reflection_pass)) continue;
 				draw_last.push_back(make_pair(-distance_to_camera(portals[i].get_center_pt()), -(int)(i+1)));
 			}
 		}
@@ -823,12 +823,12 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 }
 
 
-bool portal::is_visible() const {
+bool portal::is_visible(int reflection_pass) const {
 
 	cube_t bcube(pts, 4);
 	if (normal != zero_vector && dot_product_ptv(normal, get_camera_pos(), bcube.get_cube_center()) < 0.0) return 0; // back facing
 	if (!camera_pdu.cube_visible(bcube)) return 0;
-	if ((display_mode & 0x08) && cobj_contained(get_camera_pos(), pts, 4, -1)) return 0;
+	if (reflection_pass != 1 && (display_mode & 0x08) && cobj_contained(get_camera_pos(), pts, 4, -1)) return 0; // no occlusion culling for planar reflections
 	return 1;
 }
 

@@ -1265,7 +1265,7 @@ struct portal {
 	static void post_draw(vector<vert_wrap_t> &verts);
 	void draw(vector<vert_wrap_t> &verts) const;
 	point get_center_pt() const {return (pts[0] + pts[1] + pts[2] + pts[3])*0.25;}
-	bool is_visible() const;
+	bool is_visible(int reflection_pass) const;
 };
 
 
