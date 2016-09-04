@@ -21,7 +21,7 @@ unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
-extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass;
+extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode, begin_motion;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
@@ -1574,8 +1574,7 @@ void model3d::ensure_reflection_cube_map() {
 		point const test_pt(bcube_xf.get_cube_center());
 		indoors = ::check_coll_line(point(test_pt.x, test_pt.y, bcube_xf.d[2][1]+SMALL_NUMBER), point(test_pt.x, test_pt.y, czmax), cindex, -1, 1, 0, 1, 0);
 	}
-	bool const force_update_all_sides = 0; // FIXME: make this a config file option?
-	create_cube_map_reflection(model_refl_tid, model_refl_tsize, -1, bcube_xf, (model_refl_tid != 0 && !force_update_all_sides), (indoors == 1));
+	create_cube_map_reflection(model_refl_tid, model_refl_tsize, -1, bcube_xf, (model_refl_tid != 0 && !all_model3d_ref_update), (indoors == 1));
 }
 
 cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {

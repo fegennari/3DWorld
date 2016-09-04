@@ -65,7 +65,7 @@ bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_buil
 bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0), volume_lighting(0);
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0);
 bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only_pine_palm_trees(0), enable_gamma_correct(0), use_z_prepass(0), reflect_dodgeballs(0);
-bool store_cobj_accum_lighting_as_blocked(0);
+bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
@@ -1588,6 +1588,7 @@ int load_config(string const &config_file) {
 	kwmb.add("enable_gamma_correction", enable_gamma_correct);
 	kwmb.add("use_z_prepass", use_z_prepass);
 	kwmb.add("reflect_dodgeballs", reflect_dodgeballs);
+	kwmb.add("all_model3d_ref_update", all_model3d_ref_update);
 	kwmb.add("store_cobj_accum_lighting_as_blocked", store_cobj_accum_lighting_as_blocked);
 
 	kw_to_val_map_t<int> kwmi(error);
