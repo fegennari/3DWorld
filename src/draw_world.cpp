@@ -652,6 +652,15 @@ void cobj_draw_buffer::draw() const {
 	draw_quad_verts_as_tris(tc_verts);
 }
 
+bool check_cobj_vis_occlude(coll_obj const &c, int reflection_pass) {
+	if (!c.check_pdu_visible(camera_pdu)) return 0; // VFC
+	if (reflection_pass == 0) return !c.is_occluded_from_camera(); // not reflections
+	if (reflection_pass == 1) return 1; // no VFC for planar reflections
+	if ((display_mode & 0x08) == 0 || !have_occluders()) return 1;
+	//if (c.is_occluded_from_camera()) return 0; // doesn't help
+	return !cube_cobj_occluded(get_camera_pos(), c);
+}
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 
@@ -664,8 +673,6 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const use_ref_plane(reflection_pass == 1 || (reflection_pass != 2 && reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
-	bool const disable_occ_cull(reflection_pass && (display_mode & 0x08) != 0); // disable occlusion culling
-	if (disable_occ_cull) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location in the reflection pass)
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0, 2, 0, reflection_pass);
 	int last_tid(-2), last_group_id(-1);
@@ -688,7 +695,8 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 		for (int i = 0; i < (int)to_draw.size(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(to_draw[i]));
 			assert(c.cp.draw);
-			if (c.no_draw() || (reflection_pass == 1 && c.d[2][1] < ref_plane_z) || (c.group_id < 0 && !c.is_cobj_visible())) {to_draw[i] = skip_val;} // mark as skip
+			if (c.no_draw() || (reflection_pass == 1 && c.d[2][1] < ref_plane_z) ||
+				(c.group_id < 0 && !check_cobj_vis_occlude(c, reflection_pass))) {to_draw[i] = skip_val;} // mark as skip
 		}
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
 			if (*i == skip_val) continue; // skipped
@@ -704,7 +712,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
 					unsigned const ix(*j + coll_objects.size()); // map to a range that doesn't overlap coll_objects
 					coll_obj const &cobj(cdraw_groups.get_cobj(*j));
-					if (cobj.no_draw() || !cobj.is_cobj_visible()) continue; // VFC/occlusion culling
+					if (cobj.no_draw() || !check_cobj_vis_occlude(cobj, reflection_pass)) continue; // VFC/occlusion culling
 
 					if (add_cobj_to_draw_list(ix, reflection_pass, use_ref_plane, draw_last, pb)) {
 						unsigned ix2(ix);
@@ -807,7 +815,6 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 		disable_blend();
 		glDepthMask(GL_TRUE); // re-enable depth writing
 	}
-	if (disable_occ_cull) {display_mode |= 0x08;}
 	clip_plane_z -= clip_plane_z_bias;
 	check_gl_error(570);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
