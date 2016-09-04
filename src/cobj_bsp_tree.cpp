@@ -545,7 +545,7 @@ bool cobj_bvh_tree::is_cobj_contained(point const &viewer, point const *const pt
 }
 
 
-void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc) const {
+void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc, bool do_expand) const {
 
 	assert(cobjs || cqc);
 	if (nodes.empty()) return;
@@ -563,9 +563,13 @@ void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2, in
 			
 			if (occluders_only) {
 				if (!c.is_big_occluder()) continue;
-				cube_t bcube(c);
-				bcube.expand_by(GET_OCC_EXPAND);
-				if (!nixm.get_line_clip_func(nixm.p1, nixm.dinv, bcube.d)) continue;
+				
+				if (do_expand) {
+					cube_t bcube(c);
+					bcube.expand_by(GET_OCC_EXPAND);
+					if (!nixm.get_line_clip_func(nixm.p1, nixm.dinv, bcube.d)) continue;
+				}
+				else if (!nixm.get_line_clip_func(nixm.p1, nixm.dinv, c.d)) continue;
 			}
 			if (cqc && !cqc->register_cobj(c)) return; // done
 			if (cobjs) {cobjs->push_back(cixs[i]);}
@@ -817,10 +821,10 @@ bool cobj_contained_tree(point const &viewer, point const *const pts, unsigned n
 
 // used in get_occluders() for occlusion culling
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj,
-	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude)
+	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude, bool do_expand)
 {
-	(occlude ? cobj_tree_occlude : get_tree(dynamic)) .get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc);
-	if (!dynamic && !occlude) {cobj_tree_static_moving.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc);}
+	(occlude ? cobj_tree_occlude : get_tree(dynamic)) .get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc, do_expand);
+	if (!dynamic && !occlude) {cobj_tree_static_moving.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc, do_expand);}
 }
 
 // used in vert_coll_detector for object collision detection

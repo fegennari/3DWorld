@@ -380,7 +380,7 @@ bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ign
 	bool skip_non_drawn=0, bool include_voxels=1, bool skip_init_colls=0, bool skip_movable=0);
 bool cobj_contained_tree(point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj);
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj,
-	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude);
+	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude, bool do_expand);
 void get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vert_coll_detector &vcd, bool dynamic);
 bool check_point_contained_tree(point const &p, int &cindex, bool dynamic);
 bool have_occluders();

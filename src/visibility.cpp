@@ -234,7 +234,7 @@ public:
 	}
 	bool get_is_occluded() {
 		point const center(cube.get_cube_center());
-		get_coll_line_cobjs_tree(center, viewer, -1, &cobjs, this, 0, 1);
+		get_coll_line_cobjs_tree(center, viewer, -1, &cobjs, this, 0, 1, 0); // not expanded
 		if (is_occluded) return 1;
 
 		for (unsigned y = 0; y < 2; ++y) {
