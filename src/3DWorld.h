@@ -400,8 +400,11 @@ struct cube_t { // size = 24
 	void union_with_pt(point const &pt) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]); d[i_][1] = max(d[i_][1], pt[i_]);)
 	}
-	void assig_or_union_with_pt(point const &pt) {
+	void assign_or_union_with_pt(point const &pt) {
 		if (is_zero_area()) {set_from_point(pt);} else {union_with_pt(pt);} // Note: won't work if pt == (0,0,0)
+	}
+	void assign_or_union_with_sphere(point const &pt, float radius) {
+		if (is_zero_area()) {set_from_sphere(pt, radius);} else {union_with_sphere(pt, radius);} // Note: won't work if pt == (0,0,0)
 	}
 	void union_with_sphere(point const &pt, float radius) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]-radius); d[i_][1] = max(d[i_][1], pt[i_]+radius);)

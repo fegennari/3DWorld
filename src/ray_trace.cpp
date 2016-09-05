@@ -246,7 +246,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 			p1 += step;
 		}
 		if (bcube) {
-			bcube->assig_or_union_with_pt(p1);
+			bcube->assign_or_union_with_pt(p1);
 			bcube->union_with_pt(p2);
 		}
 		lmgr->was_updated = 1;
