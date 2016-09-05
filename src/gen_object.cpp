@@ -293,8 +293,8 @@ void gen_particles(point const &pos, unsigned num, float lt_scale, bool fade) { 
 }
 
 
-int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
-	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment, float hotness)
+int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult, colorRGBA const &color,
+	int tid, float tscale, int source, bool tri_fragment, float hotness, vector3d const &orient)
 {
 	obj_group &objg(obj_groups[coll_id[FRAGMENT]]);
 	int const ix(objg.choose_object());
@@ -305,7 +305,7 @@ int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, fl
 	assert(obj.coll_id < 0);
 	obj.velocity    = (velocity + gen_rand_vector(rand_uniform(0.3, 0.7), 1.0, PI))*rand_uniform(10.0, 15.0);
 	obj.angle       = 360.0*rand_float();
-	obj.orientation = signed_rand_vector_norm();
+	obj.orientation = ((orient == zero_vector) ? signed_rand_vector_norm() : orient);
 	obj.vdeform.x   = size_mult*(0.5 + rand_float()); // size
 	obj.vdeform.y   = color.alpha;
 	obj.vdeform.z   = fabs(tscale);

@@ -124,6 +124,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 			}
 			if (is_underwater(fpos)) {velocity *= 0.1;} // make it slow when underwater
 			float const time_mult((hotness > 0.0) ? 0.0 : 0.5*rand_float());
+			//vector3d const &orient(tri_fragments ? cts[i].min_thick_dir : zero_vector);
 			gen_fragment(fpos, velocity, size_scale, time_mult, cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments, hotness);
 		}
 		if (shattered && tri_fragments && cts[i].maybe_is_glass()) {maybe_is_glass = 1;}

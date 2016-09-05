@@ -1141,6 +1141,9 @@ color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thicknes
 	if (cobj.type == COLL_SPHERE || cobj.type == COLL_CAPSULE || cobj.is_cylinder()) {max_frag_sz = 0.5*max(cobj.radius, cobj.radius2);}
 	else if (cobj.type == COLL_TORUS) {max_frag_sz = 0.5*cobj.radius2;} // use inner radius
 	else {max_frag_sz = second_largest_len();}
+	min_thick_dir = zero_vector;
+	if (/*cobj.is_thin_poly()*/cobj.type == COLL_POLYGON) {min_thick_dir = cobj.norm;}
+	else if (cobj.type == COLL_CUBE) {min_thick_dir[get_min_dim(cobj.get_size())] = 1.0;}
 }
 
 bool color_tid_vol::maybe_is_glass() const {
