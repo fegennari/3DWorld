@@ -67,6 +67,7 @@ public:
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
+	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, 1.3*radius);}
 };
 
 
@@ -108,6 +109,8 @@ public:
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
+	float get_bsphere_radius() const {return max(length, max(radius, radius2));}
+	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
 };
 
 
@@ -121,6 +124,8 @@ public:
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
+	float get_bsphere_radius() const {return max(height, max(radius, radius2));}
+	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
 };
 
 
@@ -156,6 +161,7 @@ public:
 	void draw_berries(shader_t &s, vector3d const &xlate) const;
 	void remove_cobjs();
 	void write_to_cobj_file(std::ostream &out) const;
+	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, (height + radius));}
 };
 
 
@@ -171,6 +177,7 @@ class scenery_group {
 	vbo_vnc_block_manager_t plant_vbo_manager;
 	vbo_vnt_block_manager_t rock_vbo_manager;
 	noise_texture_manager_t voxel_rock_ntg;
+	cube_t all_bcube;
 
 public:
 	bool generated;
@@ -182,6 +189,7 @@ public:
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void shift(vector3d const &vd);
+	void calc_bcube();
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);

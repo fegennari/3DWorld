@@ -573,7 +573,7 @@ void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d 
 
 	if (type < 0) return;
 	point const center((pos + pt2)*0.5 + xlate);
-	if (!check_visible(shadow_only, max(length, max(radius, radius2)), center)) return;
+	if (!check_visible(shadow_only, get_bsphere_radius(), center)) return;
 	if (reflection_pass && 0.5*(pos.z + pt2.z) < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(get_tree_trunk_color(type, 0), xlate));
 	float const dist(distance_to_camera(center));
@@ -635,7 +635,7 @@ void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3
 
 	if (type < 0) return;
 	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
-	if (!check_visible(shadow_only, max(height, max(radius, radius2)), center)) return;
+	if (!check_visible(shadow_only, get_bsphere_radius(), center)) return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(get_tree_trunk_color(type, 0), xlate));
 	float const dist(distance_to_camera(center));
@@ -890,6 +890,10 @@ template<typename T> void free_scenery_vector_cobjs(vector<T> &v) {
 	for (unsigned i = 0; i < v.size(); ++i) {v[i].remove_cobjs();}
 }
 
+template<typename T> void update_bcube(vector<T> &v, cube_t &bcube) {
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].add_bounds_to_bcube(bcube);}
+}
+
 template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2, bool &updated) {
 	
 	for (unsigned i = 0; i < v.size(); ++i) { // zval has change, remove and re-add cobjs
@@ -945,6 +949,7 @@ void scenery_group::add_cobjs() {
 	add_scenery_vector_cobjs(logs);
 	add_scenery_vector_cobjs(stumps);
 	add_scenery_vector_cobjs(plants);
+	calc_bcube(); // okay to put here, since add_cobjs() is always called
 }
 
 
@@ -970,6 +975,18 @@ void scenery_group::shift(vector3d const &vd) {
 	shift_scenery_vector(logs,          vd);
 	shift_scenery_vector(stumps,        vd);
 	shift_scenery_vector(plants,        vd);
+}
+
+void scenery_group::calc_bcube() {
+
+	all_bcube.set_to_zeros();
+	update_bcube(rock_shapes,   all_bcube);
+	update_bcube(surface_rocks, all_bcube);
+	update_bcube(voxel_rocks,   all_bcube);
+	update_bcube(rocks,         all_bcube);
+	update_bcube(logs,          all_bcube);
+	update_bcube(stumps,        all_bcube);
+	update_bcube(plants,        all_bcube);
 }
 
 // update region is inclusive: [x1,x2]x[y1,y2]
@@ -1027,31 +1044,35 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			
 			if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants
 				s_plant plant; // 35%
-				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {plants.push_back(plant);}
+				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {plants.push_back(plant); plant.add_bounds_to_bcube(all_bcube);}
 			}
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
 				rock_shapes.back().create(j, i, 1);
+				rock_shapes.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (val < 15) { // 7%
 				surface_rocks.push_back(surface_rock());
 				surface_rocks.back().create(j, i, 1, rock_vbo_manager, fixed_sz_rock_cache);
+				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (USE_VOXEL_ROCKS && val < 35) { // FIXME: too slow, and need special shaders for texturing
 				voxel_rocks.push_back(voxel_rock(&voxel_rock_ntg, num_voxel_rock_lod_levels));
 				voxel_rocks.back().create(j, i, 1);
+				voxel_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (val < 50) { // 24.5%
 				rocks.push_back(s_rock());
 				rocks.back().create(j, i, 1);
+				rocks.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (veg && val < 85) { // 24.5%
 				s_log log;
-				if (log.create(j, i, 1, min_log_z)) {logs.push_back(log);}
+				if (log.create(j, i, 1, min_log_z)) {logs.push_back(log); log.add_bounds_to_bcube(all_bcube);}
 			}
 			else if (veg) { // 10.5%
 				s_stump stump;
-				if (stump.create(j, i, 1, min_stump_z)) {stumps.push_back(stump);}
+				if (stump.create(j, i, 1, min_stump_z)) {stumps.push_back(stump); stump.add_bounds_to_bcube(all_bcube);}
 			}
 		}
 	}
@@ -1125,6 +1146,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 
 void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 
+	if (all_bcube.is_zero_area() || !camera_pdu.cube_visible(all_bcube)) return; // empty, or no scenery is visible
 	// draw stems, rocks, logs, and stumps
 	shader_t s;
 
