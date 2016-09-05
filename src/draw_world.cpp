@@ -652,13 +652,16 @@ void cobj_draw_buffer::draw() const {
 	draw_quad_verts_as_tris(tc_verts);
 }
 
-bool check_cobj_vis_occlude(coll_obj const &c, int reflection_pass) {
-	if (!c.check_pdu_visible(camera_pdu)) return 0; // VFC
-	if (reflection_pass == 0) return !c.is_occluded_from_camera(); // not reflections
+bool check_cobj_vis_occlude(coll_obj const &c, pos_dir_up const &pdu, int reflection_pass, float ref_plane_z) {
+	assert(c.cp.draw);
+	if (c.no_draw()) return 0;
+	if (reflection_pass == 1 && c.d[2][1] < ref_plane_z) return 0; // reflection plane z clip
+	if (c.group_id >= 0) return 1; // grouped cobjs can't be culled
+	if (!c.check_pdu_visible(pdu)) return 0; // VFC
+	if (reflection_pass == 0) return !c.is_occluded_from_viewer(pdu.pos); // not reflections
 	if (reflection_pass == 1) return 1; // no occlusion culling for planar reflections
 	if ((display_mode & 0x08) == 0 || !have_occluders()) return 1;
-	//if (c.is_occluded_from_camera()) return 0; // doesn't help
-	return !cube_cobj_occluded(get_camera_pos(), c);
+	return !cube_cobj_occluded(pdu.pos, c);
 }
 
 // should always have draw_solid enabled on the first call for each frame
@@ -688,18 +691,19 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	
 	if (!draw_trans) { // draw solid
 		draw_last.clear();
-		unsigned const skip_val = (1<<31);
-		vector<unsigned> to_draw(coll_objects.drawn_ids.begin(), coll_objects.drawn_ids.end());
+		vector<unsigned> &to_draw(coll_objects.get_cur_draw_stream());
+
+		if (reflection_pass != 2) { // create to_draw vector
+			coll_objects.set_cur_draw_stream_from_drawn_ids();
 
 #pragma omp parallel for schedule(static,64) num_threads(2)
-		for (int i = 0; i < (int)to_draw.size(); ++i) {
-			coll_obj const &c(coll_objects.get_cobj(to_draw[i]));
-			assert(c.cp.draw);
-			if (c.no_draw() || (reflection_pass == 1 && c.d[2][1] < ref_plane_z) ||
-				(c.group_id < 0 && !check_cobj_vis_occlude(c, reflection_pass))) {to_draw[i] = skip_val;} // mark as skip
+			for (int i = 0; i < (int)to_draw.size(); ++i) {
+				coll_obj const &c(coll_objects.get_cobj(to_draw[i]));
+				if (!check_cobj_vis_occlude(c, camera_pdu, reflection_pass, ref_plane_z)) {to_draw[i] = TO_DRAW_SKIP_VAL;} // mark as skip
+			}
 		}
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
-			if (*i == skip_val) continue; // skipped
+			if (*i == TO_DRAW_SKIP_VAL) continue; // skipped
 			unsigned cix(*i);
 			coll_obj const &c(coll_objects.get_cobj(cix));
 			assert(c.id == (int)cix); // should always be equal
@@ -712,7 +716,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
 					unsigned const ix(*j + coll_objects.size()); // map to a range that doesn't overlap coll_objects
 					coll_obj const &cobj(cdraw_groups.get_cobj(*j));
-					if (cobj.no_draw() || !check_cobj_vis_occlude(cobj, reflection_pass)) continue; // VFC/occlusion culling
+					if (!check_cobj_vis_occlude(cobj, camera_pdu, reflection_pass, ref_plane_z)) continue; // VFC/occlusion culling
 
 					if (add_cobj_to_draw_list(ix, reflection_pass, use_ref_plane, draw_last, pb)) {
 						unsigned ix2(ix);

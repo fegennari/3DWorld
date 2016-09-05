@@ -854,6 +854,12 @@ void coll_obj_group::remove_index_from_ids(int index) {
 	cobj.platform_id = cobj.cgroup_id = cobj.dgroup_id = -1;
 }
 
+void coll_obj_group::set_cur_draw_stream_from_drawn_ids() {
+	vector<unsigned> &to_draw(get_cur_draw_stream());
+	to_draw.clear();
+	to_draw.insert(to_draw.end(), drawn_ids.begin(), drawn_ids.end());
+}
+
 
 // only works for mesh collisions
 int collision_detect_large_sphere(point &pos, float radius, unsigned flags) {

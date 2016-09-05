@@ -306,14 +306,13 @@ void coll_obj::set_from_pts(point const *const pts, unsigned npts) {
 }
 
 
-bool coll_obj::is_occluded_from_camera() const {
+bool coll_obj::is_occluded_from_viewer(point const &viewer) const {
 
 	if (!(display_mode & 0x08) || occluders.empty()) return 0;
-	point const camera(get_camera_pos());
-	if (is_thin_poly()) {return is_occluded(occluders, points, npoints, camera);}
+	if (is_thin_poly()) {return is_occluded(occluders, points, npoints, viewer);}
 	point pts[8];
-	unsigned const ncorners(get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
-	return is_occluded(occluders, pts, ncorners, camera);
+	unsigned const ncorners(get_cube_corners(d, pts, viewer, 0)); // 8 corners allocated, but only 6 used
+	return is_occluded(occluders, pts, ncorners, viewer);
 }
 
 bool coll_obj::is_cobj_visible() const {

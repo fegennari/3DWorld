@@ -125,6 +125,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	bool z_top_test, float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
 void setup_object_render_data();
 void end_group(int &last_group_id);
+bool check_cobj_vis_occlude(coll_obj const &c, pos_dir_up const &pdu, int reflection_pass, float ref_plane_z);
 void draw_coll_surfaces(bool draw_trans, int reflection_pass);
 void draw_stars(float alpha);
 void draw_sun();

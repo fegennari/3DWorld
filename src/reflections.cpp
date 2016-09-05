@@ -127,6 +127,61 @@ void restore_matrices_and_clear() {
 }
 
 
+struct face_draw_params_t {
+
+	pos_dir_up pdu;
+	unsigned face_id;
+	vector<unsigned> &to_draw;
+
+	face_draw_params_t(pos_dir_up const &pdu_, unsigned face_id_) : pdu(pdu_), face_id(face_id_), to_draw(coll_objects.get_draw_stream(face_id)) {}
+
+	void draw_scene(unsigned tid, unsigned tex_size, int cobj_id, bool is_indoors) const {
+		cview_dir  = pdu.dir;
+		up_vector  = pdu.upv;
+		camera_pdu = pdu;
+		coll_objects.cur_draw_stream_id = face_id;
+		vector3d const eye(pdu.pos - 0.001*cview_dir);
+		fgLookAt(eye.x, eye.y, eye.z, pdu.pos.x, pdu.pos.y, pdu.pos.z, up_vector.x, up_vector.y, up_vector.z);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		setup_sun_moon_light_pos();
+		bool const inc_mesh(cview_dir != plus_z), inc_grass_water(inc_mesh && !is_indoors);
+		draw_scene_from_custom_frustum(camera_pdu, cobj_id, 2, inc_mesh, inc_grass_water, inc_grass_water); // reflection_pass=2 (cube map)
+		render_to_texture_cube_map(tid, tex_size, face_id); // render reflection to texture
+	}
+};
+
+bool check_occlusion(pos_dir_up const &pdu, cube_t const &cube) {
+	return ((display_mode & 0x08) != 0 && have_occluders() && cube_cobj_occluded(pdu.pos, cube));
+}
+void create_cobj_draw_streams(vector<face_draw_params_t> const &faces) { // reflection_pass==2
+
+	//timer_t t("create_draw_streams");
+	if (faces.empty()) return;
+	coll_objects.cur_draw_stream_id = faces.front().face_id; // first face
+	coll_objects.set_cur_draw_stream_from_drawn_ids();
+	vector<unsigned> &to_draw(coll_objects.get_cur_draw_stream());
+	for (auto i = faces.begin()+1; i != faces.end(); ++i) {i->to_draw = to_draw;} // deep copy list of all drawable cobjs
+
+#pragma omp parallel for schedule(static,64) num_threads(3)
+	for (int i = 0; i < (int)to_draw.size(); ++i) {
+		coll_obj const &c(coll_objects.get_cobj(to_draw[i]));
+		assert(c.cp.draw);
+		bool skip_all(c.no_draw());
+		if (!skip_all && c.group_id >= 0) continue; // grouped cobjs can't be culled
+		unsigned is_occluded(faces.size() == 6 ? check_occlusion(faces.front().pdu, c) : 2); // 2 = unknown; precompute if all 6 sides updated because one will be visible
+
+		for (auto f = faces.begin(); f != faces.end(); ++f) {
+			bool skip(0);
+			if (skip_all || !c.check_pdu_visible(f->pdu)) {skip = 1;} // VFC
+			else { // if we get this far and haven't determined visibility, do occlusion culling and cache the results
+				if (is_occluded == 2) {is_occluded = check_occlusion(faces.front().pdu, c);}
+				skip = skip_all = (is_occluded != 0);
+			}
+			if (skip) {f->to_draw[i] = TO_DRAW_SKIP_VAL;} // mark as skipped
+		}
+	}
+}
+
 unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id, point const &center,
 	float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask)
 {
@@ -144,27 +199,24 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 	perspective_fovy = 90.0;
 	set_perspective_near_far(near_plane, far_plane, 1.0); // AR = 1.0
 	unsigned faces_drawn(0);
+	vector<face_draw_params_t> faces;
 
 	for (unsigned dim = 0; dim < 3; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			unsigned const dir_mask(EFLAGS[dim][dir]);
+			unsigned const dir_mask(EFLAGS[dim][dir]), face_id(2*dim + !dir);
 			if ((skip_mask & dir_mask) != 0) {faces_drawn |= dir_mask; continue;} // mark it as drawn but skip it
-			cview_dir = zero_vector;
-			up_vector = -plus_y;
-			cview_dir[dim] = (dir ? 1.0 : -1.0);
-			if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 			if (only_front_facing && ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir)) continue; // back facing
-			camera_pdu = pos_dir_up(center, cview_dir, up_vector, 0.5*perspective_fovy*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
-			vector3d const eye(center - 0.001*cview_dir);
-			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			setup_sun_moon_light_pos();
-			bool const inc_mesh(cview_dir != plus_z), inc_grass_water(inc_mesh && !is_indoors);
-			draw_scene_from_custom_frustum(camera_pdu, cobj_id, 2, inc_mesh, inc_grass_water, inc_grass_water); // reflection_pass=2 (cube map)
-			render_to_texture_cube_map(tid, tex_size, (2*dim + !dir)); // render reflection to texture
+			vector3d view_dir(zero_vector), upv(-plus_y);
+			view_dir[dim] = (dir ? 1.0 : -1.0);
+			if (dim == 1) {upv = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
+			float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
+			faces.push_back(face_draw_params_t(pos_dir_up(center, view_dir, upv, angle, near_plane, far_plane, 1.0, 1), face_id));
 			faces_drawn |= dir_mask;
 		} // for dir
 	} // for dim
+	create_cobj_draw_streams(faces);
+	for (int i = 0; i < (int)faces.size(); ++i) {faces[i].draw_scene(tid, tex_size, cobj_id, is_indoors);}
+	coll_objects.cur_draw_stream_id = 0; // restore to default value
 	if (ENABLE_CUBE_MAP_MIPMAPS) {gen_mipmaps(6);}
 	camera_pdu = prev_camera_pdu;
 	up_vector  = prev_up_vector;

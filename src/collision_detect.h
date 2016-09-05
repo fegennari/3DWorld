@@ -20,7 +20,8 @@ enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
 // collision object destroyability
 enum {NON_DEST=0, DESTROYABLE, SHATTERABLE, SHATTER_TO_PORTAL, EXPLODEABLE};
 
-unsigned const OBJ_CNT_REM_TJ = 1;
+unsigned const OBJ_CNT_REM_TJ   = 1;
+unsigned const TO_DRAW_SKIP_VAL = (1<<31);
 
 struct geom_xform_t;
 
@@ -215,7 +216,8 @@ public:
 	bool intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const; // coll_cell_search.cpp
 	void convert_cube_to_ext_polygon();
 	colorRGBA get_color_at_point(point const &pos, vector3d const &normal, bool fast) const;
-	bool is_occluded_from_camera() const;
+	bool is_occluded_from_viewer(point const &viewer) const;
+	bool is_occluded_from_camera() const {return is_occluded_from_viewer(get_camera_pos());}
 	void register_coll(unsigned char coll_time, unsigned char coll_type_);
 	void create_portal() const; // destroy_cobj.cpp
 	void add_connect_waypoint(); // waypoints.cpp
@@ -300,8 +302,10 @@ class coll_obj_group : public vector<coll_obj> {
 public:
 	bool has_lt_atten, has_voxel_cobjs;
 	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
+	vector<vector<unsigned>> to_draw_streams;
+	unsigned cur_draw_stream_id;
 
-	coll_obj_group() : has_lt_atten(0), has_voxel_cobjs(0) {}
+	coll_obj_group() : has_lt_atten(0), has_voxel_cobjs(0), cur_draw_stream_id(0) {to_draw_streams.resize(6);}
 	void clear_ids();
 	void clear();
 	void finalize();
@@ -314,6 +318,9 @@ public:
 	void sort_cobjs_for_rendering();
 	void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
 	void remove_index_from_ids(int index);
+	vector<unsigned> &get_draw_stream(unsigned stream_id) {assert(stream_id < to_draw_streams.size()); return to_draw_streams[stream_id];}
+	vector<unsigned> &get_cur_draw_stream() {return get_draw_stream(cur_draw_stream_id);}
+	void set_cur_draw_stream_from_drawn_ids();
 	
 	coll_obj &get_cobj(int index) {
 		assert(index >= 0 && index < (int)size());
