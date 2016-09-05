@@ -7,6 +7,7 @@
 #include "lightmap.h"
 #include "mesh.h"
 #include "model3d.h"
+#include <atomic>
 
 
 bool const COLOR_FROM_COBJ_TEX = 0; // 0 = fast/average color, 1 = true color
@@ -20,7 +21,7 @@ float const ICE_ALBEDO    = 0.8;
 bool keep_beams(0); // debugging mode
 bool kill_raytrace(0);
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), DYNAMIC_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
-unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
+std::atomic<unsigned long long> tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1, 1}; // sky, global, local, cobj_accum, dynamic
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, global, local, cobj_accum, dynamic
 
