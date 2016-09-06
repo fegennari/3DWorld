@@ -47,6 +47,7 @@ colorRGBA sample_cview_cobj_color() {
 
 
 void show_cur_spraypaint_mode() {
+	if (!spraypaint_mode) {print_text_onscreen("Flashlight", YELLOW, 1.0, TICKS_PER_SECOND, 1); return;}
 	string const str(paint_color_names[paint_color_ix] + " Spray Paint");
 	print_text_onscreen(str, get_cur_paint_color(), 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
@@ -132,4 +133,5 @@ void spray_paint(bool mode) {
 	}
 	gen_sound(SOUND_SPRAY, (pos + CAMERA_RADIUS*cview_dir), 0.2, 1.0);
 }
+
 
