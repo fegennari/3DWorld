@@ -833,6 +833,7 @@ void start_video_capture(std::string const &fn);
 void end_video_capture();
 void toggle_video_capture();
 void video_capture_end_frame();
+bool is_video_recording();
 
 // function prototypes - reflections
 bool enable_all_reflections();

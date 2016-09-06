@@ -251,7 +251,7 @@ void draw_frame_rate(float framerate) {
 		log_location(camera);
 		show_framerate = 0;
 	}
-	if (display_framerate) {
+	if (display_framerate && !is_video_recording()) {
 		static int fr_counter(0);
 		static float fr2(0.0), last_tfticks(0.0);
 		if (tfticks > last_tfticks + 0.1*TICKS_PER_SECOND) {fr2 = framerate; last_tfticks = tfticks;} // update every 100ms
@@ -977,7 +977,7 @@ void display(void) {
 		else if (spraypaint_mode) {
 			draw_spraypaint_crosshair();
 		}
-		if (display_framerate && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1))) {
+		if (display_framerate && !is_video_recording() && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1))) {
 			draw_compass_and_alt();
 		}
 		if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
@@ -1041,7 +1041,7 @@ void display_universe() { // infinite universe
 	if (TIMETEST) PRINT_TIME("Draw Blasts");
 	final_draw(framerate);
 	show_crosshair(WHITE, do_zoom);
-	if (display_framerate) {draw_universe_stats();}
+	if (display_framerate && !is_video_recording()) {draw_universe_stats();}
 	camera_surf_collide = last_csc;
 	check_gl_error(33);
 }

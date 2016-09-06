@@ -245,9 +245,11 @@ void quit_3dworld() {
 }
 
 
+void set_vsync() {wglSwapIntervalEXT((vsync_enabled || is_video_recording()) ? 1 : 0);}
+
 void init_window() {
 
-	wglSwapIntervalEXT(vsync_enabled ? 1 : 0);
+	set_vsync();
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	glutDisplayFunc(display);
     glutReshapeFunc(resize);
@@ -920,7 +922,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'o': // toggle vsync
 		vsync_enabled ^= 1;
-		wglSwapIntervalEXT(vsync_enabled ? 1 : 0);
+		set_vsync();
 		break;
 	case 'u': // toggle timing profiler
 		toggle_timing_profiler();
@@ -1090,6 +1092,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 	case 'P': // start/stop video recording
 		toggle_video_capture();
+		set_vsync();
 		break;
 
 	// rotate sun/moon

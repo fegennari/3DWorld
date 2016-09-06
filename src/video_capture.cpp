@@ -175,6 +175,7 @@ public:
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		//PRINT_TIME("Frame");
 	}
+	bool is_video_recording() const {return is_recording;}
 	~video_capture_t() {wait_for_write_complete();} // wait for write to complete; don't try to free the pbo
 };
 
@@ -188,4 +189,5 @@ void start_video_capture(string const &fn) {video_capture.start(fn);}
 void end_video_capture() {video_capture.end();}
 void toggle_video_capture() {video_capture.toggle_start_stop();}
 void video_capture_end_frame() {video_capture.end_frame();}
+bool is_video_recording() {return video_capture.is_video_recording();}
 
