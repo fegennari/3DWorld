@@ -103,7 +103,7 @@ struct small_tree_group : public vector<small_tree> {
 	void finalize(bool low_detail);
 	void finalize_upload_and_clear_pts(bool low_detail);
 	void add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pts) const;
-	void draw(bool shadow_only);
+	void draw(bool shadow_only, int reflection_pass);
 	void clear_vbos();
 	void clear_vbo_manager(int which=3);
 	void clear_vbo_manager_and_ids(int which=3);

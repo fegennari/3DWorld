@@ -386,7 +386,7 @@ int add_small_tree(point const &pos, float height, float width, int tree_type, b
 void add_small_tree_coll_objs();
 void remove_small_tree_cobjs();
 void gen_small_trees();
-void draw_small_trees(bool shadow_only);
+void draw_small_trees(bool shadow_only, int reflection_pass);
 void shift_small_trees(vector3d const &vd);
 
 

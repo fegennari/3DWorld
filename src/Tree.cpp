@@ -442,7 +442,7 @@ void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 
 void draw_trees(bool shadow_only, bool reflection_pass) {
 
-	if (tree_mode & 2) {draw_small_trees(shadow_only);} // small trees
+	if (tree_mode & 2) {draw_small_trees(shadow_only, reflection_pass);} // small trees
 
 	if (tree_mode & 1) { // trees
 		if (shadow_only) {t_trees.draw(1, reflection_pass);}

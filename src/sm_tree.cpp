@@ -550,14 +550,14 @@ bool update_small_tree_zvals(int x1, int y1, int x2, int y2) {
 }
 
 
-void draw_small_trees(bool shadow_only) {small_trees.draw(shadow_only);}
+void draw_small_trees(bool shadow_only, int reflection_pass) {small_trees.draw(shadow_only, reflection_pass);}
 
-void small_tree_group::draw(bool shadow_only) {
+void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 
 	//RESET_TIME;
 	if (empty() || !(tree_mode & 2)) return;
 	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube)) return;
-	if (!shadow_only && size() < 100) {sort_by_dist_to_camera();} // not in shadow pass, since trees usually don't overlap in z
+	if (!shadow_only && !reflection_pass && size() < 100) {sort_by_dist_to_camera();} // not in shadow pass, since trees usually don't overlap in z
 	shader_t s;
 	bool const all_pine(num_pine_trees == size());
 	bool const v(!shadow_only), use_bump_map(USE_BUMP_MAP && !shadow_only && all_pine); // bump maps only work with pine tree trunks
