@@ -302,6 +302,7 @@ public:
 	void draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc);
 	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc, int tex0_loc);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
+	void add_bounds_to_bcube(cube_t &bcube) const;
 	void clear_context();
 	int delete_tree();
 	int get_type()            const {return type;}
@@ -337,6 +338,7 @@ class tree_cont_t : public vector<tree> {
 
 	tree_data_manager_t &shared_tree_data;
 	vector<pair<float, unsigned>> sorted;
+	cube_t all_bcube;
 	bool generated;
 
 public:
@@ -355,6 +357,7 @@ public:
 	void gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_);
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
+	void calc_bcube();
 	void clear_context();
 	void clear() {delete_all(); vector<tree>::clear();}
 	unsigned get_gpu_mem() const;

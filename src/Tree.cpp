@@ -420,6 +420,7 @@ void tree_cont_t::post_leaf_draw(shader_t &shader) {
 void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 
 	if (empty()) return;
+	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube)) return;
 	tree_lod_render_t lod_renderer(0); // disabled
 
 	// draw leaves, then branches: much faster for distant trees, slightly slower for near trees
@@ -756,11 +757,13 @@ unsigned tree_data_t::get_gpu_mem() const {
 
 
 bool tree::is_visible_to_camera(vector3d const &xlate) const {
-
 	int const level((get_camera_pos().z > max(ztop, czmax)) ? 0 : 2); // test cobjs and mesh unless camera is in the air
 	return sphere_in_camera_view((sphere_center() + xlate), 1.1*tdata().sphere_radius, level);
 }
-
+void tree::add_bounds_to_bcube(cube_t &bcube) const {
+	bcube.assign_or_union_with_cube(tdata().branches_bcube + tree_center);
+	bcube.union_with_cube(tdata().leaves_bcube + tree_center);
+}
 
 void tree_data_t::check_render_textures() {
 
@@ -2210,6 +2213,12 @@ void tree_cont_t::shift_by(vector3d const &vd) {
 
 void tree_cont_t::add_cobjs() {
 	for (iterator i = begin(); i != end(); ++i) {i->add_tree_collision_objects();}
+	calc_bcube();
+}
+
+void tree_cont_t::calc_bcube() {
+	all_bcube.set_to_zeros();
+	for (iterator i = begin(); i != end(); ++i) {i->add_bounds_to_bcube(all_bcube);}
 }
 
 void tree_cont_t::clear_context() {

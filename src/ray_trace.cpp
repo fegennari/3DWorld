@@ -627,7 +627,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		}
 		if (ltype == LIGHTING_COBJ_ACCUM) {
 			for (auto i = data.begin(); i != data.end(); ++i) {
-				lmap_manager.update_bcube.assig_or_union_with_cube(i->update_bcube); // merge update bounding cubes
+				lmap_manager.update_bcube.assign_or_union_with_cube(i->update_bcube); // merge update bounding cubes
 			}
 		}
 		thread_manager.clear();

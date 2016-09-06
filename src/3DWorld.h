@@ -413,7 +413,7 @@ struct cube_t { // size = 24
 	void union_with_cube(cube_t const &c) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], c.d[i_][0]); d[i_][1] = max(d[i_][1], c.d[i_][1]);)
 	}
-	void assig_or_union_with_cube(cube_t const &c) {
+	void assign_or_union_with_cube(cube_t const &c) {
 		if (c.is_zero_area()) return;
 		if (is_zero_area()) {copy_from(c);} else {union_with_cube(c);}
 	}
