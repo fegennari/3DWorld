@@ -1,0 +1,53 @@
+shadows 0
+destroy_thresh 0
+hardness 0.8
+alpha 1.0
+metalness 1.0
+specular_mag 1.0
+specular_exp 128.0
+diffuse_color 0.0 0.0 0.0
+specular_color 1.0 1.0 1.0
+emissive_color 0.0 0.0 0.0
+add_material Mirror
+
+specular_color 0.9 0.6 0.1
+add_material Gold
+
+specular_color 0.8 0.4 0.25
+add_material Copper
+
+specular_color 0.85 0.85 0.25
+add_material Brass
+
+specular_exp 4.0
+add_material Rough_Metal
+specular_exp 128.0
+
+specular_color 1.0 1.0 1.0
+metalness 0.0
+hardness 0.9
+add_material Black_Marble
+
+diffuse_color 1.0 1.0 1.0
+add_material White_Marble
+
+alpha 0.1
+add_material Glass
+alpha 1.0
+
+hardness 0.5
+diffuse_color 0.0 0.0 0.0
+specular_color 0.0 0.0 0.0
+specular_mag 0.0
+emissive_color 1.0 0.0 0.0
+shadows 1
+add_material Red_Light
+
+emissive_color 0.0 1.0 0.0
+add_material Green_Light
+
+emissive_color 0.0 0.0 1.0
+add_material Blue_Light
+
+emissive_color 1.0 1.0 0.0
+add_material Yellow_Light
