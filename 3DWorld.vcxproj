@@ -568,6 +568,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <ClCompile Include="src\snow.cpp" />
+    <ClCompile Include="src\sphere_materials.cpp" />
     <ClCompile Include="src\spillover.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
@@ -987,6 +988,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="mapx\coll_objs_mapx.txt" />
+    <Text Include="sphere_materials.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

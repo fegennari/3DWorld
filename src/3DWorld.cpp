@@ -1157,7 +1157,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x0100; break;
 	case '0': // toggle universe stencil shadows / toggle spraypaint mode / toggle particles / toggle TT tree leaf shadows
 		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;}
-		else if (world_mode == WMODE_GROUND) {toggle_spraypaint_mode();}
+		else if (world_mode == WMODE_GROUND) {
+			if (begin_motion) {toggle_sphere_mode();} else {toggle_spraypaint_mode();}
+		}
 		else {display_mode ^= 0x0200;}
 		break;
 
@@ -1548,10 +1550,11 @@ bool bmp_file_to_binary_array(char const *const fn, unsigned char **&data) {
 // should use a hashtable here
 int load_config(string const &config_file) {
 
-	int gms_set(0), error(0);
-	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
 	FILE *fp;
 	if (!open_file(fp, config_file.c_str(), "input configuration file")) return 0;
+	int gms_set(0), error(0);
+	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
+	string sphere_materials_fn;
 
 	kw_to_val_map_t<bool> kwmb(error);
 	kwmb.add("gen_tree_roots", gen_tree_roots);
@@ -1877,6 +1880,9 @@ int load_config(string const &config_file) {
 		else if (str == "font_texture_atlas_fn") {
 			if (!read_string(fp, font_texture_atlas_fn)) cfg_err("font_texture_atlas_fn command", error);
 		}
+		else if (str == "sphere_materials_fn") {
+			if (!read_string(fp, sphere_materials_fn)) cfg_err("sphere_materials_fn command", error);
+		}
 		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);
 			alloc_if_req(mesh_file, dmesh_file);
@@ -1991,6 +1997,7 @@ int load_config(string const &config_file) {
 	if (!bmp_file_to_binary_array(md_fname, mesh_draw    )) {error = 1;}
 	if (!bmp_file_to_binary_array(we_fname, water_enabled)) {error = 1;}
 	if (!bmp_file_to_binary_array(fw_fname, flower_weight)) {error = 1;}
+	if (!error && !sphere_materials_fn.empty()) {error = !read_sphere_materials_file(sphere_materials_fn);}
 	if (error) exit(1);
 	return 1;
 }
