@@ -34,6 +34,7 @@ public:
 	cylinder_3dw get_trunk_cylin() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
+	void add_bounds_to_bcube(cube_t &bcube) const;
 	void clear_vbo() {palm_vbo.clear_vbo();}
 	bool check_sphere_coll(point &center, float radius) const;
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
@@ -59,6 +60,7 @@ public:
 	unsigned get_inst_id() const {assert(inst_id >= 0); return inst_id;}
 	float get_pine_tree_radius() const;
 	float get_zmax() const;
+	float get_trunk_bsphere_radius() const {return (trunk_cylin.r1 + 0.5*trunk_cylin.get_length());}
 	void write_to_cobj_file(std::ostream &out) const;
 
 	struct comp_by_type_dist {
@@ -81,6 +83,7 @@ struct small_tree_group : public vector<small_tree> {
 	unsigned num_pine_trees, num_palm_trees;
 	float max_pt_radius;
 	point last_cpos;
+	cube_t all_bcube;
 
 	struct pine_tree_inst_t {
 		unsigned id;
@@ -91,7 +94,7 @@ struct small_tree_group : public vector<small_tree> {
 	};
 	vector<pine_tree_inst_t> insts;
 	
-	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), max_pt_radius(0.0), last_cpos(all_zeros) {}
+	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), max_pt_radius(0.0), last_cpos(all_zeros) {all_bcube.set_to_zeros();}
 	void enable_instanced() {instanced |= (num_pine_trees == size());} // only if all are pine trees
 	void sort_by_type() {stable_sort(begin(), end());}
 	void sort_by_dist_to_camera();
@@ -100,6 +103,7 @@ struct small_tree_group : public vector<small_tree> {
 	void finalize(bool low_detail);
 	void finalize_upload_and_clear_pts(bool low_detail);
 	void add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pts) const;
+	void draw(bool shadow_only);
 	void clear_vbos();
 	void clear_vbo_manager(int which=3);
 	void clear_vbo_manager_and_ids(int which=3);
@@ -108,6 +112,7 @@ struct small_tree_group : public vector<small_tree> {
 	void add_cobjs_range(iterator b, iterator e);
 	void add_cobjs() {add_cobjs_range(begin(), end());}
 	void remove_cobjs();
+	void calc_bcube();
 	bool check_sphere_coll(point &center, float radius) const;
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void translate_by(vector3d const &vd);

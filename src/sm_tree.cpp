@@ -173,6 +173,12 @@ void small_tree_group::remove_cobjs() {
 }
 
 
+void small_tree_group::calc_bcube() {
+	all_bcube.set_to_zeros();
+	for (iterator i = begin(); i != end(); ++i) {i->add_bounds_to_bcube(all_bcube);}
+}
+
+
 bool small_tree_group::check_sphere_coll(point &center, float radius) const {
 
 	bool coll(0);
@@ -514,6 +520,7 @@ void gen_small_trees() {
 	small_trees.finalize(0);
 	//PRINT_TIME("Gen");
 	small_trees.add_cobjs();
+	small_trees.calc_bcube();
 	//PRINT_TIME("Cobj");
 	cout << "small trees: " << small_trees.size() << endl;
 }
@@ -543,13 +550,16 @@ bool update_small_tree_zvals(int x1, int y1, int x2, int y2) {
 }
 
 
-void draw_small_trees(bool shadow_only) {
+void draw_small_trees(bool shadow_only) {small_trees.draw(shadow_only);}
+
+void small_tree_group::draw(bool shadow_only) {
 
 	//RESET_TIME;
-	if (small_trees.empty() || !(tree_mode & 2)) return;
-	if (!shadow_only && small_trees.size() < 100) {small_trees.sort_by_dist_to_camera();} // not in shadow pass, since trees usually don't overlap in z
+	if (empty() || !(tree_mode & 2)) return;
+	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube)) return;
+	if (!shadow_only && size() < 100) {sort_by_dist_to_camera();} // not in shadow pass, since trees usually don't overlap in z
 	shader_t s;
-	bool const all_pine(small_trees.num_pine_trees == small_trees.size());
+	bool const all_pine(num_pine_trees == size());
 	bool const v(!shadow_only), use_bump_map(USE_BUMP_MAP && !shadow_only && all_pine); // bump maps only work with pine tree trunks
 
 	// draw trunks
@@ -561,38 +571,38 @@ void draw_small_trees(bool shadow_only) {
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
 	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
-	small_trees.draw_trunks(shadow_only);
+	draw_trunks(shadow_only);
 	if (!shadow_only) {s.add_uniform_float("tex_scale_t", 1.0);}
 	s.end_shader();
 
 	// draw leaves
 	float const wind_mag(get_plant_leaf_wind_mag(shadow_only));
 
-	if (small_trees.num_pine_trees > 0) { // pine trees
-		small_trees.vbo_manager[0].upload();
+	if (num_pine_trees > 0) { // pine trees
+		vbo_manager[0].upload();
 		if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 		s.set_prefix("#define NO_SPECULAR", 1); // FS - disable rain effect
 		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, texgen, is_outside=1
 		setup_leaf_wind(s, wind_mag, 0);
-		small_trees.draw_pine_leaves(shadow_only);
+		draw_pine_leaves(shadow_only);
 		s.end_shader();
 	}
 	if (!all_pine) { // non-pine trees
-		if (small_trees.num_pine_trees + small_trees.num_palm_trees < small_trees.size()) { // deciduous trees
+		if (num_pine_trees + num_palm_trees < size()) { // deciduous trees
 			s.begin_simple_textured_shader(0.75, !shadow_only); // with lighting, unless shadow_only
 			bind_draw_sphere_vbo(1, 1); // texture, even in shadow pass, to handle alpha masking of some tree types
 			int const xlate_loc(s.get_uniform_loc("xlate")), scale_loc(s.get_uniform_loc("scale"));
-			small_trees.draw_non_pine_leaves(shadow_only, 0, 1, xlate_loc, scale_loc);
+			draw_non_pine_leaves(shadow_only, 0, 1, xlate_loc, scale_loc);
 			s.set_uniform_vector3d(xlate_loc, zero_vector);
 			s.set_uniform_vector3d(scale_loc, vector3d(1,1,1));
 			bind_vbo(0);
 			s.end_shader();
 		}
-		if (small_trees.num_palm_trees > 0) { // palm trees
+		if (num_palm_trees > 0) { // palm trees
 			if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 			setup_smoke_shaders(s, 0.75, 4, 0, 0, v, v, 0, 0, v, 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better); use bent quad texgen mode 4
 			setup_leaf_wind(s, wind_mag, 0);
-			small_trees.draw_non_pine_leaves(shadow_only, 1, 0);
+			draw_non_pine_leaves(shadow_only, 1, 0);
 			s.end_shader();
 		}
 	}
@@ -738,10 +748,12 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 
 
 void small_tree::remove_cobjs() {
+	for (unsigned j = 0; j < coll_id.size(); ++j) {remove_reset_coll_obj(coll_id[j]);}
+}
 
-	for (unsigned j = 0; j < coll_id.size(); ++j) {
-		remove_reset_coll_obj(coll_id[j]);
-	}
+
+void small_tree::add_bounds_to_bcube(cube_t &bcube) const {
+	bcube.assign_or_union_with_sphere(trunk_cylin.get_center(), max(1.5*width, 0.5*height)); // approximate/conservative
 }
 
 
@@ -905,7 +917,7 @@ void small_tree::draw_trunk(bool shadow_only, vector3d const &xlate, vector<vert
 		if (!is_over_mesh(pos + xlate + height*get_rot_dir())) return;
 	}
 	else {
-		if (!camera_pdu.sphere_visible_test((trunk_cylin.get_center() + xlate), (trunk_cylin.r1 + 0.5*trunk_cylin.get_length()))) return;
+		if (!camera_pdu.sphere_visible_test((trunk_cylin.get_center() + xlate), get_trunk_bsphere_radius())) return;
 	}
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size_scale(zoom_f*stt[type].ss*width*window_width);
 	float const dist(distance_to_camera(pos + xlate));

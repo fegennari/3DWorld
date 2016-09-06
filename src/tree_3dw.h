@@ -342,7 +342,7 @@ class tree_cont_t : public vector<tree> {
 	bool generated;
 
 public:
-	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds), generated(0) {}
+	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds), generated(0) {all_bcube.set_to_zeros();}
 	bool was_generated() const {return generated;}
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;

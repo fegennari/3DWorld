@@ -182,7 +182,7 @@ class scenery_group {
 public:
 	bool generated;
 
-	scenery_group() : generated(0) {}
+	scenery_group() : generated(0) {all_bcube.set_to_zeros();}
 	void clear_vbos();
 	void clear();
 	void free_cobjs();
