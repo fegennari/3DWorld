@@ -1623,7 +1623,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	if (is_player && do_zoom) {firing_error *= ZOOM_FERR_MULT;} // higher accuracy when zooming in
 	if (rapid_fire) {firing_error *= 20.0;} // rockets
 	dir.normalize();
-	point pos(fpos + dir*(0.1*radius));
 	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
 	int const ignore_cobj(get_shooter_coll_id(shooter));
@@ -1657,7 +1656,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
 		if ((wmode&1) == 1) { // shrapnel cannon/chaingun
-			create_shrapnel(pos, dir, firing_error, w.nshots, shooter, weapon_id);
+			create_shrapnel((fpos + dir*(0.1*radius)), dir, firing_error, w.nshots, shooter, weapon_id);
 		}
 		else { // normal 12-gauge/M16
 			if (underwater) firing_error += UWATER_FERR_ADD;
@@ -1755,14 +1754,14 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	obj_group &objg(obj_groups[cid]);
 	assert(objg.max_objs > 0);
 	float const rdist(0.75 + ((weapon_id == W_PLASMA) ? 0.5*(plasma_size - 1.0) : 0.0)); // change?
-	float const radius2(radius + object_types[type].radius);
+	float const radius_sum(radius + object_types[type].radius);
 	assert(w.nshots <= objg.max_objs);
 	bool const dodgeball(game_mode == 2 && weapon_id == W_BALL && !UNLIMITED_WEAPONS);
 	if (dodgeball) assert(w.nshots <= balls.size());
 
 	for (unsigned shot = 0; shot < w.nshots; ++shot) {
 		int const chosen(dodgeball ? balls.back() : objg.choose_object());
-		if (dodgeball) balls.pop_back();
+		if (dodgeball) {balls.pop_back();}
 		chosen_obj = chosen;
 		assert(chosen >= 0); // make sure there is an object available
 		vector3d dir2(dir);
@@ -1773,10 +1772,9 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		}
 		objg.create_object_at(chosen, fpos);
 		dwobject &obj(objg.get_obj(chosen));
-		obj.pos      += dir2*(rdist*radius2);
+		obj.pos      += dir2*(rdist*radius_sum);
 		obj.velocity  = dir2*vel;
-		obj.init_dir  = dir2;
-		obj.init_dir.negate();
+		obj.init_dir  = -dir2;
 		obj.time      = -1;
 		obj.source    = shooter;
 		obj.direction = rapid_fire;
@@ -1785,11 +1783,11 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		switch (weapon_id) {
 		case W_PLASMA:
 			obj.init_dir.x  = float(pow(double(plasma_size), 0.75)); // psize
-			obj.pos.z      += 0.2*radius2;
+			obj.pos.z      += 0.2*radius_sum;
 			plasma_size     = 1.0;
 			break;
 		case W_BALL:
-			obj.pos.z += 0.2*radius2;
+			obj.pos.z += 0.2*radius_sum;
 			break;
 		case W_STAR5:
 			obj.init_dir += gen_rand_vector(0.1, 1.0, PI);
