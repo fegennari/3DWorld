@@ -800,7 +800,7 @@ void spray_paint(bool mode);
 bool read_sphere_materials_file(std::string const &fn);
 void toggle_sphere_mode();
 void change_sphere_material(int val);
-void throw_sphere(bool mode);
+bool throw_sphere(bool mode);
 
 // function prototypes - edit_ui
 void next_selected_menu_ix();

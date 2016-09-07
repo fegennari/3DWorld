@@ -52,7 +52,7 @@ extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, dodgeball_metalness;
 extern point cpos2, orig_camera, orig_cdir;
-extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, num_dynam_parts, init_item_counts[];
+extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, num_dynam_parts, max_num_mat_spheres, init_item_counts[];
 extern obj_type object_types[];
 extern string cobjs_out_fn;
 extern coll_obj_group coll_objects;
@@ -129,7 +129,7 @@ void create_object_groups() {
 	coll_id[PARTICLE] = create_group(PARTICLE, 800,   0, 0, 0, 1, 0);
 	coll_id[SAWBLADE] = create_group(SAWBLADE, 50,    0, 0, 0, 1, 0);
 	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 1, 0); // Note: create plasma group last since it uses a special shader during drawing
-	coll_id[MAT_SPHERE]= create_group(MAT_SPHERE, num_dodgeballs, 0, 0, 0, 1, 0);
+	coll_id[MAT_SPHERE]= create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 1, 0);
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
 }
 

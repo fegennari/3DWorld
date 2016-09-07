@@ -1,3 +1,5 @@
+max_num_spheres 20
+
 shadows 0
 destroy_thresh 0
 hardness 0.8

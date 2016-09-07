@@ -9,8 +9,10 @@
 
 using namespace std;
 
+unsigned const MAX_SPHERE_MATERIALS = 255;
+
 bool spheres_mode(0);
-unsigned sphere_material_ix(0);
+unsigned sphere_material_ix(0), max_num_mat_spheres(1);
 
 extern int frame_counter;
 extern float tfticks, CAMERA_RADIUS, ball_velocity;
@@ -52,11 +54,17 @@ public:
 		if (!in.good()) {cerr << "Error: Failed to open sphere materials file '" << fn << "'" << endl; return 0;}
 		string key;
 		sphere_mat_t cur_mat;
+		//sphere_materials.clear();
 
 		while (in >> key) {
 			if (0) {}
 			else if (key == "add_material") {
 				if (!read_mat_value(cur_mat.name, "material name")) return 0;
+
+				if (sphere_materials.size() >= MAX_SPHERE_MATERIALS) {
+					cerr << "Error: Too many materials in sphere materials file '" << fn << "': max is " << MAX_SPHERE_MATERIALS << " but saw " << sphere_materials.size() << endl;
+					return 0;
+				}
 				sphere_materials.push_back(cur_mat);
 			}
 			else if (key == "shadows") {if (!read_mat_value(cur_mat.shadows, "shadows")) return 0;}
@@ -70,6 +78,7 @@ public:
 			else if (key == "diffuse_color") {if (!read_mat_value(cur_mat.diff_c, "diffuse_color")) return 0;}
 			else if (key == "specular_color") {if (!read_mat_value(cur_mat.spec_c, "specular_color")) return 0;}
 			else if (key == "emissive_color") {if (!read_mat_value(cur_mat.emiss_c, "emissive_color")) return 0;}
+			else if (key == "max_num_spheres") {if (!read_mat_value(max_num_mat_spheres, "max_num_spheres")) return 0;}
 			else {cerr << "Error: Unrecognized keyword in sphere materials file '" << fn << "': " << key << endl; return 0;}
 		}
 		return 1;
@@ -104,19 +113,21 @@ void change_sphere_material(int val) {
 	play_switch_weapon_sound();
 }
 
-void throw_sphere(bool mode) {
+bool throw_sphere(bool mode) {
 
 	static double prev_fticks(0.0);
-	if ((double)tfticks - prev_fticks < 20.0) return; // 20 ticks = 0.5s fire delay
+	if ((double)tfticks - prev_fticks < 20.0) return 0; // 20 ticks = 0.5s fire delay
 	prev_fticks = tfticks;
 
-	point const fpos(get_camera_pos());
-	gen_sound(SOUND_SWING, fpos, 0.7, 1.0);
+	if (max_num_mat_spheres == 0) return 0;
 	int const type(MAT_SPHERE), cid(coll_id[type]);
-	assert(cid >= 0 && cid < NUM_TOT_OBJS);
+	if (cid < 0) return 0;
+	assert(cid < NUM_TOT_OBJS);
 	obj_group &objg(obj_groups[cid]);
 	float const radius_sum(CAMERA_RADIUS + object_types[type].radius);
 	int const chosen(objg.choose_object());
+	point const fpos(get_camera_pos());
+	gen_sound(SOUND_SWING, fpos, 0.7, 1.0);
 	objg.create_object_at(chosen, (fpos + cview_dir*radius_sum + plus_z*(0.2*radius_sum)));
 	dwobject &obj(objg.get_obj(chosen));
 	obj.velocity  = cview_dir*(1.0 + ball_velocity*2.0);
@@ -124,8 +135,9 @@ void throw_sphere(bool mode) {
 	obj.time      = -1;
 	obj.source    = CAMERA_ID;
 
-	assert(sphere_material_ix < 256); // since it's packed into an unsigned char
+	assert(sphere_material_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
 	assert(sphere_material_ix < sphere_materials.size());
-	//sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
 	obj.direction = (unsigned char)sphere_material_ix;
+	//sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
+	return 1;
 }
