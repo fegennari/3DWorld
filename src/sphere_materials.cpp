@@ -2,10 +2,9 @@
 // by Frank Gennari
 // 9/5/16
 
-//#include "collision_detect.h"
+#include "physics_objects.h"
 #include "gameplay.h"
 #include "openal_wrap.h"
-//#include "shaders.h"
 #include <fstream>
 
 using namespace std;
@@ -13,14 +12,21 @@ using namespace std;
 bool spheres_mode(0);
 unsigned sphere_material_ix(0);
 
+extern int frame_counter;
+extern float tfticks, CAMERA_RADIUS, ball_velocity;
+extern int coll_id[];
+extern obj_group obj_groups[];
+extern obj_type object_types[];
+
+
 struct sphere_mat_t {
 	bool shadows;
 	int destroy_thresh;
-	float alpha, metal, spec_mag, shine, hardness;
+	float alpha, metal, spec_mag, shine, hardness, density;
 	colorRGB diff_c, spec_c, emiss_c;
 	string name;
 
-	sphere_mat_t() : shadows(0), destroy_thresh(0), alpha(1.0), metal(1.0), spec_mag(0.0), shine(1.0), hardness(0.8), diff_c(WHITE), spec_c(WHITE), emiss_c(BLACK) {}
+	sphere_mat_t() : shadows(0), destroy_thresh(0), alpha(1.0), metal(1.0), spec_mag(0.0), shine(1.0), hardness(0.8), density(1.0), diff_c(WHITE), spec_c(WHITE), emiss_c(BLACK) {}
 };
 
 vector<sphere_mat_t> sphere_materials;
@@ -60,6 +66,7 @@ public:
 			else if (key == "specular_mag") {if (!read_mat_value(cur_mat.spec_mag, "specular_mag")) return 0;}
 			else if (key == "specular_exp") {if (!read_mat_value(cur_mat.shine, "specular_exp")) return 0;}
 			else if (key == "hardness") {if (!read_mat_value(cur_mat.hardness, "hardness")) return 0;}
+			else if (key == "density") {if (!read_mat_value(cur_mat.density, "density")) return 0;}
 			else if (key == "diffuse_color") {if (!read_mat_value(cur_mat.diff_c, "diffuse_color")) return 0;}
 			else if (key == "specular_color") {if (!read_mat_value(cur_mat.spec_c, "specular_color")) return 0;}
 			else if (key == "emissive_color") {if (!read_mat_value(cur_mat.emiss_c, "emissive_color")) return 0;}
@@ -99,8 +106,26 @@ void change_sphere_material(int val) {
 
 void throw_sphere(bool mode) {
 
+	static double prev_fticks(0.0);
+	if ((double)tfticks - prev_fticks < 20.0) return; // 20 ticks = 0.5s fire delay
+	prev_fticks = tfticks;
+
+	point const fpos(get_camera_pos());
+	gen_sound(SOUND_SWING, fpos, 0.7, 1.0);
+	int const type(MAT_SPHERE), cid(coll_id[type]);
+	assert(cid >= 0 && cid < NUM_TOT_OBJS);
+	obj_group &objg(obj_groups[cid]);
+	float const radius_sum(CAMERA_RADIUS + object_types[type].radius);
+	int const chosen(objg.choose_object());
+	objg.create_object_at(chosen, (fpos + cview_dir*radius_sum + plus_z*(0.2*radius_sum)));
+	dwobject &obj(objg.get_obj(chosen));
+	obj.velocity  = cview_dir*(1.0 + ball_velocity*2.0);
+	obj.init_dir  = -cview_dir;
+	obj.time      = -1;
+	obj.source    = CAMERA_ID;
+
+	assert(sphere_material_ix < 256); // since it's packed into an unsigned char
 	assert(sphere_material_ix < sphere_materials.size());
-	sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
-	point const pos(get_camera_pos());
-	// FIXME: WRITE
+	//sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
+	obj.direction = (unsigned char)sphere_material_ix;
 }

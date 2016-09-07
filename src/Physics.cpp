@@ -92,7 +92,6 @@ void init_objects() {
 		object_types[i].density         = 1.0;
 		object_types[i].gravity         = 1.0;
 		object_types[i].elasticity      = 0.0;
-		object_types[i].damage          = 0.0;
 		object_types[i].deform          = 0.0;
 		object_types[i].def_recover     = 0.0;
 	}
@@ -481,6 +480,17 @@ void init_objects() {
 	object_types[SAWBLADE].health          = 500.0;
 	object_types[SAWBLADE].color           = WHITE;
 	object_types[SAWBLADE].flags           = SPECULAR | SELECTABLE | BLEND; // OBJ_IS_FLAT?
+
+	object_types[MAT_SPHERE].air_factor      = 0.05;
+	object_types[MAT_SPHERE].friction_factor = 0.02;
+	object_types[MAT_SPHERE].gravity         = 1.0;
+	object_types[MAT_SPHERE].radius          = 0.05;
+	object_types[MAT_SPHERE].lifetime        = 10000;
+	object_types[MAT_SPHERE].density         = 1.0;
+	object_types[MAT_SPHERE].elasticity      = 0.9;
+	object_types[MAT_SPHERE].health          = 10000.0;
+	object_types[MAT_SPHERE].color           = WHITE;
+	object_types[MAT_SPHERE].flags           = SPECULAR | SEMI_TRANSPARENT | BLEND | NO_WATER_DAMAGE;
 
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;

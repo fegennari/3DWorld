@@ -1,6 +1,7 @@
 shadows 0
 destroy_thresh 0
 hardness 0.8
+density 2.0
 alpha 1.0
 metalness 1.0
 specular_mag 1.0
@@ -26,6 +27,7 @@ specular_exp 128.0
 specular_color 1.0 1.0 1.0
 metalness 0.0
 hardness 0.9
+density 4.0
 add_material Black_Marble
 
 diffuse_color 1.0 1.0 1.0
@@ -36,6 +38,7 @@ add_material Glass
 alpha 1.0
 
 hardness 0.5
+density 1.5
 diffuse_color 0.0 0.0 0.0
 specular_color 0.0 0.0 0.0
 specular_mag 0.0

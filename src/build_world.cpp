@@ -129,6 +129,7 @@ void create_object_groups() {
 	coll_id[PARTICLE] = create_group(PARTICLE, 800,   0, 0, 0, 1, 0);
 	coll_id[SAWBLADE] = create_group(SAWBLADE, 50,    0, 0, 0, 1, 0);
 	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 1, 0); // Note: create plasma group last since it uses a special shader during drawing
+	coll_id[MAT_SPHERE]= create_group(MAT_SPHERE, num_dodgeballs, 0, 0, 0, 1, 0);
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
 }
 
