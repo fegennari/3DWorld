@@ -1393,19 +1393,20 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	bool is_moving(0);
 	obj_type const &otype(object_types[type]);
 	float const friction(otype.friction_factor);
+	bool const is_coll_func_pass(do_coll_funcs && enable_cfs && iter == 0);
 
 	// collision with the top of a cube attached to a platform (on first iteration only)
 	if (cobj.platform_id >= 0) {
 		platform const &pf(platforms.get_cobj_platform(cobj));
 		is_moving = (lcoll == 2 || friction >= STICK_THRESHOLD);
 
-		if (animate2 && do_coll_funcs && enable_cfs && iter == 0) {
+		if (animate2 && is_coll_func_pass) {
 			if (is_moving) {obj.pos += pf.get_last_delta();} // move with the platform (clip v if large -z?)
 			// the coll_top part isn't really right - we want to check for collsion with another object above
 			else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
 				if (player) {
 					int const ix((type == CAMERA) ? CAMERA_ID : obj_index);
-					smiley_collision(ix, NO_SOURCE, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
+					smiley_collision(ix, NO_SOURCE, -plus_z, pos, 2000.0, CRUSHED); // lots of damage
 				} // other objects?
 			}
 		}
@@ -1414,7 +1415,11 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		//if (type == BALL && platform_moving) obj.init_dir = obj.pos;
 		if (platform_moving) obj.flags |= PLATFORM_COLL;
 	}
-	if (animate2 && !player && obj.health <= 0.1) obj.disable();
+	if (player && is_coll_func_pass && cobj.cp.damage != 0.0) {
+		int const ix((type == CAMERA) ? CAMERA_ID : obj_index);
+		smiley_collision(ix, NO_SOURCE, norm, pos, fticks*cobj.cp.damage, COLLISION); // damage can be positive or negative
+	}
+	if (animate2 && !player && obj.health <= 0.1) {obj.disable();}
 	vector3d v_old(zero_vector), v0(obj.velocity);
 	bool const static_top_coll(lcoll == 2 && cobj.truly_static());
 
@@ -1875,7 +1880,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		} // end switch
 
 		if (coll) {
-			if (cobj.platform_id >= 0) {zt -= 1.0E-6;} // subtract a small value so that camera still collides with cobj
+			if (cobj.platform_id >= 0) {zt -= 1.0E-6;} // subtract a small value so that camera/smiley still collides with cobj
 
 			if (zt < zb) {
 				cout << "type = " << int(cobj.type) << ", zb = " << zb << ", zt = " << zt << ", pos.z = " << pos.z << endl;
@@ -1913,6 +1918,9 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 						pos.z = zb - radius;
 					}
 				}
+			}
+			if (is_player && !test_only && cobj.cp.damage != 0.0) {
+				smiley_collision(id, NO_SOURCE, plus_z, pos, fticks*cobj.cp.damage, COLLISION); // damage can be positive or negative
 			}
 			any_coll = 1;
 		} // if coll

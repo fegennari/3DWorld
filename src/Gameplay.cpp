@@ -155,20 +155,18 @@ void blood_on_camera(unsigned num_spots) {
 
 int compute_damage(float &energy, int type, int obj_index, int source, int target) {
 
+	if (type == COLLISION && energy < 0.0) return 1; // negative damage/heal
 	energy = max(energy, 0.0f);
 
-	if (type >= 0 && type < NUM_TOT_OBJS && (type != BALL || obj_groups[coll_id[type]].get_obj(obj_index).status == 1 ||
-		obj_groups[coll_id[type]].get_obj(obj_index).status == 2))
-	{
+	if (type >= 0 && type < NUM_TOT_OBJS && (type != BALL || obj_groups[coll_id[type]].get_obj(obj_index).status == 1 || obj_groups[coll_id[type]].get_obj(obj_index).status == 2))	{
 		energy += object_types[type].damage;
 	}
-	if (type == SHIELD) sstates[target].shields = min(MAX_SHIELDS, (100.0f + sstates[target].shields));
-	if (type == HEALTH || type == SHIELD || type == POWERUP) return 1;
+	if (type == SHIELD) {sstates[target].shields = min(MAX_SHIELDS, (100.0f + sstates[target].shields));}
+	if (type == HEALTH || type == SHIELD || type == POWERUP || type == COLLISION) return 1;
 
 	if (source == target && energy > 0.0) { // hit yourself
 		if (self_damage == 0.0) return 0;
-		if (type == BALL) energy = 0.0;
-		else energy *= self_damage;
+		if (type == BALL) {energy = 0.0;} else {energy *= self_damage;}
 	}
 	if (energy == 0.0) return 1;
 	blood_spilled = 1;
@@ -183,7 +181,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 		if (obj.flags & TYPE_FLAG) {obj.init_dir = 0.8*obj.init_dir + 0.2*vector3d(1.0, 0.0, 0.0);} // triangle fragment - make red/bloody
 	}
 	if (sstates[target].powerup == PU_SHIELD) {
-		if (source == target && (type != LANDMINE && type != FELL && type != DROWNED && type != CRUSHED)) return 0;
+		if (source == target && (type != LANDMINE && type != FELL && type != DROWNED && type != CRUSHED && type != COLLISION)) return 0;
 		energy *= sstates[target].get_shield_scale();
 	}
 	if (type != FELL && type != DROWNED) energy *= sstates[source].get_damage_scale();
@@ -215,9 +213,7 @@ bool self_coll_invalid(int type, int obj_index) {
 	{
 		return 1;
 	}
-	if (type == LANDMINE && obj_groups[coll_id[type]].get_obj(obj_index).time < (int)SMILEY_LM_ACT_TIME) {
-		return 1;
-	}
+	if (type == LANDMINE && obj_groups[coll_id[type]].get_obj(obj_index).time < (int)SMILEY_LM_ACT_TIME) return 1;
 	return 0;
 }
 
@@ -499,14 +495,13 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	float const last_health(camera_health);
 	camera_health -= HEALTH_PER_DAMAGE*energy;
 	camera_health = min(camera_health, ((sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : max(last_h, MAX_HEALTH)));
-	bool const is_blood(energy > 0.0 && !is_area_damage(type));
+	bool const is_blood(energy > 0.0 && !is_area_damage(type) && (type != COLLISION || (rand()&31) == 0));
 	player_coll(type, obj_index);
 	point const camera(get_camera_pos());
 	vector3d const coll_dir(get_norm_rand(vector3d(position, camera)));
 	bool const burned(is_burned(type, br_source)), alive(camera_health >= 0.0);
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
-	if (is_blood) create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity,
-		coll_dir, blood_v, damage_type, camera_health, burned);
+	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned);}
 
 	if (alive) {
 		if (is_blood && cam_filter_color == RED) {
@@ -625,12 +620,9 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	case POWERUP:
 		sstate.powerup      = wa_id;
 		sstate.powerup_time = POWERUP_TIME;
-		print_text_onscreen((sstates[index].name + " has " + powerup_names[wa_id]),
-			get_smiley_team_color(index), 0.8, 2*MESSAGE_TIME, 0);
-
+		print_text_onscreen((sstates[index].name + " has " + powerup_names[wa_id]), get_smiley_team_color(index), 0.8, 2*MESSAGE_TIME, 0);
 	case HEALTH:
 		obj_groups[cid].get_td()->get_mesh(index).mult_by(0.4);
-
 	case SHIELD:
 		energy = 0.0;
 		break;
@@ -663,7 +655,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		break;
 
 	case BALL:
-		if (energy < 10.0) sstate.pickup_ball(obj_index);
+		if (energy < 10.0) {sstate.pickup_ball(obj_index);}
 		break;
 	case LANDMINE:
 		damage_type = 1;
@@ -672,7 +664,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		energy = get_shrapnel_damage(energy, obj_index);
 		break;
 	case BLAST_RADIUS:
-		if (br_source == LANDMINE) damage_type = 1;
+		if (br_source == LANDMINE) {damage_type = 1;}
 		break;
 	}
 	if (!compute_damage(energy, type, obj_index, source, index)) return 1;
@@ -2377,7 +2369,7 @@ int get_damage_source(int type, int index, int questioner) {
 
 	assert(questioner >= CAMERA_ID);
 	if (index == NO_SOURCE) return questioner; // hurt/killed by nature, call it a suicide
-	if (type == DROWNED || type == FELL) return questioner;
+	if (type == DROWNED || type == FELL || type == CRUSHED || type == COLLISION) return questioner; // self damage
 	assert(index >= CAMERA_ID);
 	if (type == SMILEY || type == BURNED || type == FIRE) return index;
 	if (type == CAMERA) return -1;

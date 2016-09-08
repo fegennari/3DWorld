@@ -44,17 +44,17 @@ struct base_mat_t { // size = 36
 unsigned char const SWAP_TCS_XY    = 0x01; // swap texture x and y
 unsigned char const SWAP_TCS_NM_BS = 0x02; // swap normal map bitangent sign
 
-struct obj_layer : public base_mat_t { // size = 80
+struct obj_layer : public base_mat_t { // size = 84
 
 	bool draw, is_emissive;
 	unsigned char swap_tcs, cobj_type;
-	float elastic, tscale, tdx, tdy, refract_ix, light_atten, density, metalness; // Note: elastic is misnamed - it's really hardness
+	float elastic, tscale, tdx, tdy, refract_ix, light_atten, density, metalness, damage; // Note: elastic is misnamed - it's really hardness
 	int normal_map;
 	collision_func coll_func;
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1, float ts=1.0, float spec=0.0, float shi=0.0)
 		: base_mat_t(ti, c, colorRGB(spec, spec, spec), shi), draw(d), is_emissive(0), swap_tcs(0), cobj_type(COBJ_TYPE_STD),
-		elastic(e), tscale(ts), tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), density(1.0), metalness(0.0), normal_map(-1), coll_func(cf) {}
+		elastic(e), tscale(ts), tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), density(1.0), metalness(0.0), damage(0.0), normal_map(-1), coll_func(cf) {}
 
 	// assumes obj_layer contained classes are POD with no padding
 	bool operator==(obj_layer const &layer) const {return (memcmp(this, &layer, sizeof(obj_layer)) == 0);}
@@ -120,7 +120,7 @@ class coll_obj_group;
 class csg_cube;
 
 
-class coll_obj : public cube_t { // size = 248
+class coll_obj : public cube_t { // size = 252
 
 public:
 	char type, destroy, status;

@@ -185,7 +185,9 @@ e 0
 
 l 0.75 1.0 0.7 0.3 1.0 -1 1 1.0 0.0 1 # emissive orange
 movable 1
+damage -10.0 # heals
 B -3.1 -3.0  -1.1 -1.0  0.014 0.114
+damage 0.0
 movable 0
 
 # x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]

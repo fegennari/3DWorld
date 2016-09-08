@@ -1151,6 +1151,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "metalness") {
 					if (!read_float(fp, cobj.cp.metalness)) {return read_error(fp, "metalness", coll_obj_file);}
 				}
+				else if (keyword == "damage") {
+					if (!read_float(fp, cobj.cp.damage)) {return read_error(fp, "damage", coll_obj_file);}
+				}
 				else if (keyword == "start_cobj_group") {cobj.cgroup_id = cobj_groups.new_group();}
 				else if (keyword == "end_cobj_group") {cobj.cgroup_id = -1;}
 				else if (keyword == "start_draw_group") {cobj.dgroup_id = cdraw_groups.new_group();}
@@ -1884,6 +1887,7 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 	if (cp.tscale  != prev.cp.tscale ) {out << "y " << cp.tscale << endl;}
 	if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "Y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
 	if (cp.metalness != prev.cp.metalness) {out << "metalness " << cp.metalness << endl;}
+	if (cp.damage != prev.cp.damage) {out << "damage " << cp.damage << endl;}
 
 	if (cp.normal_map != prev.cp.normal_map) {
 		out << "X " << texture_str(cp.normal_map);
