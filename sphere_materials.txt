@@ -1,16 +1,19 @@
 max_num_spheres 20
 
+light 0
 shadows 0
+emissive 0
+reflective 1
 destroy_thresh 0
 hardness 0.8
 density 2.0
+refract_ix 1.0
 alpha 1.0
 metalness 1.0
 specular_mag 1.0
 specular_exp 128.0
 diffuse_color 0.0 0.0 0.0
 specular_color 1.0 1.0 1.0
-emissive_color 0.0 0.0 0.0
 add_material Mirror
 
 specular_color 0.9 0.6 0.1
@@ -36,23 +39,27 @@ diffuse_color 1.0 1.0 1.0
 add_material White_Marble
 
 alpha 0.1
+refract_ix 1.33
 add_material Glass
+refract_ix 1.0
 alpha 1.0
 
+reflective 0
 hardness 0.5
 density 1.5
-diffuse_color 0.0 0.0 0.0
 specular_color 0.0 0.0 0.0
 specular_mag 0.0
-emissive_color 1.0 0.0 0.0
+diffuse_color 1.0 0.0 0.0
+emissive 1
+light 1
 shadows 1
 add_material Red_Light
 
-emissive_color 0.0 1.0 0.0
+diffuse_color 0.0 1.0 0.0
 add_material Green_Light
 
-emissive_color 0.0 0.0 1.0
+diffuse_color 0.0 0.0 1.0
 add_material Blue_Light
 
-emissive_color 1.0 1.0 0.0
+diffuse_color 1.0 1.0 0.0
 add_material Yellow_Light

@@ -19,16 +19,19 @@ extern float tfticks, CAMERA_RADIUS, ball_velocity;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
+extern coll_obj_group coll_objects;
+extern reflective_cobjs_t reflective_cobjs;
 
 
 struct sphere_mat_t {
-	bool shadows;
+	bool light, shadows, emissive, reflective;
 	int destroy_thresh;
-	float alpha, metal, spec_mag, shine, hardness, density;
-	colorRGB diff_c, spec_c, emiss_c;
+	float alpha, metal, spec_mag, shine, hardness, density, refract_ix;
+	colorRGB diff_c, spec_c;
 	string name;
 
-	sphere_mat_t() : shadows(0), destroy_thresh(0), alpha(1.0), metal(1.0), spec_mag(0.0), shine(1.0), hardness(0.8), density(1.0), diff_c(WHITE), spec_c(WHITE), emiss_c(BLACK) {}
+	sphere_mat_t() : light(0), shadows(0), emissive(0), reflective(0), destroy_thresh(0), alpha(1.0), metal(1.0), spec_mag(0.0), shine(1.0),
+		hardness(0.8), density(1.0), refract_ix(1.0), diff_c(WHITE), spec_c(WHITE) {}
 };
 
 vector<sphere_mat_t> sphere_materials;
@@ -67,7 +70,10 @@ public:
 				}
 				sphere_materials.push_back(cur_mat);
 			}
+			else if (key == "light") {if (!read_mat_value(cur_mat.light, "light")) return 0;}
 			else if (key == "shadows") {if (!read_mat_value(cur_mat.shadows, "shadows")) return 0;}
+			else if (key == "emissive") {if (!read_mat_value(cur_mat.emissive, "emissive")) return 0;}
+			else if (key == "reflective") {if (!read_mat_value(cur_mat.reflective, "reflective")) return 0;}
 			else if (key == "destroy_thresh") {if (!read_mat_value(cur_mat.destroy_thresh, "destroy_thresh")) return 0;}
 			else if (key == "alpha") {if (!read_mat_value(cur_mat.alpha, "alpha")) return 0;}
 			else if (key == "metalness") {if (!read_mat_value(cur_mat.metal, "metalness")) return 0;}
@@ -75,9 +81,9 @@ public:
 			else if (key == "specular_exp") {if (!read_mat_value(cur_mat.shine, "specular_exp")) return 0;}
 			else if (key == "hardness") {if (!read_mat_value(cur_mat.hardness, "hardness")) return 0;}
 			else if (key == "density") {if (!read_mat_value(cur_mat.density, "density")) return 0;}
+			else if (key == "refract_ix") {if (!read_mat_value(cur_mat.refract_ix, "refract_ix")) return 0;}
 			else if (key == "diffuse_color") {if (!read_mat_value(cur_mat.diff_c, "diffuse_color")) return 0;}
 			else if (key == "specular_color") {if (!read_mat_value(cur_mat.spec_c, "specular_color")) return 0;}
-			else if (key == "emissive_color") {if (!read_mat_value(cur_mat.emiss_c, "emissive_color")) return 0;}
 			else if (key == "max_num_spheres") {if (!read_mat_value(max_num_mat_spheres, "max_num_spheres")) return 0;}
 			else {cerr << "Error: Unrecognized keyword in sphere materials file '" << fn << "': " << key << endl; return 0;}
 		}
@@ -138,6 +144,35 @@ bool throw_sphere(bool mode) {
 	assert(sphere_material_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
 	assert(sphere_material_ix < sphere_materials.size());
 	obj.direction = (unsigned char)sphere_material_ix;
-	//sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
+	return 1;
+}
+
+bool setup_cobj_material_for_mat_sphere(dwobject const &obj, unsigned obj_id) {
+
+	if (obj.coll_id < 0) return 0; // error?
+	unsigned const sphere_material_ix(obj.direction);
+	assert(sphere_material_ix < sphere_materials.size());
+	sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
+
+	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
+	cobj.cp.draw        = 1; // obj is not drawn
+	cobj.cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness
+	cobj.cp.metalness   = mat.metal;
+	cobj.cp.is_emissive = mat.emissive;
+	cobj.cp.color       = colorRGBA(mat.diff_c, mat.alpha);
+	cobj.cp.spec_color  = mat.spec_c * mat.spec_mag;
+	cobj.cp.shine       = mat.shine;
+	cobj.cp.refract_ix  = mat.refract_ix;
+	cobj.cp.density     = mat.density;
+	cobj.destroy        = mat.destroy_thresh;
+	cobj.cp.tscale      = 0.0;
+	cobj.cp.tid         = -1;
+	cobj.cp.cf_index    = obj_id;
+	// FIXME: light/shadows
+
+	if (mat.reflective && enable_all_reflections()) {
+		cobj.set_reflective_flag(1);
+		reflective_cobjs.add_cobj(cobj.id);
+	}
 	return 1;
 }
