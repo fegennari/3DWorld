@@ -329,6 +329,7 @@ void process_groups() {
 		case WA_PACK:  coll_func = pack_collision;      break;
 		case S_BALL:   coll_func = sball_collision;     break;
 		case BALL:     coll_func = dodgeball_collision; break;
+		case MAT_SPHERE:coll_func = mat_sphere_collision; break;
 		case SKULL:    coll_func = skull_collision;     break;
 		case SAWBLADE: coll_func = sawblade_collision;  break;
 		}

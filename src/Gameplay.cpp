@@ -938,6 +938,11 @@ bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, BALL);
 }
 
+bool mat_sphere_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+	pushable_collision(index, position, 15000.0, type, MAT_SPHERE);
+	return 1;
+}
+
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	pushable_collision(index, position, 2000.0, type, SKULL);
 	return 1;
