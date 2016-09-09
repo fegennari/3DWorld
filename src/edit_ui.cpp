@@ -6,6 +6,7 @@
 #include "function_registry.h"
 #include "heightmap.h" // for hmap_brush_t
 #include "voxels.h" // for voxel_brush_params_t
+#include "sphere_materials.h" // for sphere_mat_t
 
 using namespace std;
 
@@ -535,6 +536,11 @@ public:
 		}
 	}
 };
+
+
+// ************ Sphere Materials ************
+
+extern bool spheres_mode;
 
 
 // ************ Top-Level UI Hooks ************

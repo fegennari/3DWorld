@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 9/5/16
 
+#include "sphere_materials.h"
 #include "physics_objects.h"
 #include "gameplay.h"
 #include "openal_wrap.h"
@@ -22,17 +23,6 @@ extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
 
-
-struct sphere_mat_t {
-	bool light, shadows, emissive, reflective;
-	int destroy_thresh;
-	float alpha, metal, spec_mag, shine, hardness, density, refract_ix, light_radius;
-	colorRGB diff_c, spec_c;
-	string name;
-
-	sphere_mat_t() : light(0), shadows(0), emissive(0), reflective(0), destroy_thresh(0), alpha(1.0), metal(1.0),
-		spec_mag(0.0), shine(1.0), hardness(0.8), density(1.0), refract_ix(1.0), light_radius(0.0), diff_c(WHITE), spec_c(WHITE) {}
-};
 
 vector<sphere_mat_t> sphere_materials;
 
@@ -125,6 +115,11 @@ void change_sphere_material(int val) {
 	sphere_material_ix = (sphere_material_ix + sphere_materials.size() + val) % sphere_materials.size();
 	show_cur_sphere_mode();
 	play_switch_weapon_sound();
+}
+
+sphere_mat_t &get_cur_sphere_mat() {
+	assert(sphere_material_ix < sphere_materials.size());
+	return sphere_materials[sphere_material_ix];
 }
 
 bool throw_sphere(bool mode) {
