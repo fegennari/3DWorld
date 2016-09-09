@@ -801,7 +801,7 @@ bool read_sphere_materials_file(std::string const &fn);
 void toggle_sphere_mode();
 void change_sphere_material(int val);
 bool throw_sphere(bool mode);
-bool setup_cobj_material_for_mat_sphere(dwobject const &obj, unsigned obj_id);
+void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in);
 
 // function prototypes - edit_ui
 void next_selected_menu_ix();

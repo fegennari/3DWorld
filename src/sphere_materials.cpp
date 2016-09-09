@@ -26,12 +26,12 @@ extern reflective_cobjs_t reflective_cobjs;
 struct sphere_mat_t {
 	bool light, shadows, emissive, reflective;
 	int destroy_thresh;
-	float alpha, metal, spec_mag, shine, hardness, density, refract_ix;
+	float alpha, metal, spec_mag, shine, hardness, density, refract_ix, light_radius;
 	colorRGB diff_c, spec_c;
 	string name;
 
-	sphere_mat_t() : light(0), shadows(0), emissive(0), reflective(0), destroy_thresh(0), alpha(1.0), metal(1.0), spec_mag(0.0), shine(1.0),
-		hardness(0.8), density(1.0), refract_ix(1.0), diff_c(WHITE), spec_c(WHITE) {}
+	sphere_mat_t() : light(0), shadows(0), emissive(0), reflective(0), destroy_thresh(0), alpha(1.0), metal(1.0),
+		spec_mag(0.0), shine(1.0), hardness(0.8), density(1.0), refract_ix(1.0), light_radius(0.0), diff_c(WHITE), spec_c(WHITE) {}
 };
 
 vector<sphere_mat_t> sphere_materials;
@@ -82,6 +82,7 @@ public:
 			else if (key == "hardness") {if (!read_mat_value(cur_mat.hardness, "hardness")) return 0;}
 			else if (key == "density") {if (!read_mat_value(cur_mat.density, "density")) return 0;}
 			else if (key == "refract_ix") {if (!read_mat_value(cur_mat.refract_ix, "refract_ix")) return 0;}
+			else if (key == "light_radius") {if (!read_mat_value(cur_mat.light_radius, "light_radius")) return 0;}
 			else if (key == "diffuse_color") {if (!read_mat_value(cur_mat.diff_c, "diffuse_color")) return 0;}
 			else if (key == "specular_color") {if (!read_mat_value(cur_mat.spec_c, "specular_color")) return 0;}
 			else if (key == "max_num_spheres") {if (!read_mat_value(max_num_mat_spheres, "max_num_spheres")) return 0;}
@@ -133,7 +134,7 @@ bool throw_sphere(bool mode) {
 	float const radius_sum(CAMERA_RADIUS + object_types[type].radius);
 	int const chosen(objg.choose_object());
 	point const fpos(get_camera_pos());
-	gen_sound(SOUND_SWING, fpos, 0.7, 1.0);
+	gen_sound(SOUND_SWING, fpos, 0.5, 1.0);
 	objg.create_object_at(chosen, (fpos + cview_dir*radius_sum + plus_z*(0.2*radius_sum)));
 	dwobject &obj(objg.get_obj(chosen));
 	obj.velocity  = cview_dir*(1.0 + ball_velocity*2.0);
@@ -147,32 +148,32 @@ bool throw_sphere(bool mode) {
 	return 1;
 }
 
-bool setup_cobj_material_for_mat_sphere(dwobject const &obj, unsigned obj_id) {
+void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 
-	if (obj.coll_id < 0) return 0; // error?
 	unsigned const sphere_material_ix(obj.direction);
 	assert(sphere_material_ix < sphere_materials.size());
 	sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
-
+	bool const reflective(mat.reflective && enable_all_reflections());
+	float const obj_radius(object_types[obj.type].radius); // Note: must match object radius for collision detection to work correctly
+	float const light_radius((mat.light_radius == 0.0) ? 20.0*obj_radius : mat.light_radius); // use default radius if material radius is zero
+	cobj_params cp(cp_in); // deep copy
+	cp.draw        = 1; // obj is not drawn
+	cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness
+	cp.metalness   = mat.metal;
+	cp.is_emissive = mat.emissive;
+	cp.color       = colorRGBA(mat.diff_c, mat.alpha);
+	cp.spec_color  = mat.spec_c * mat.spec_mag;
+	cp.shine       = mat.shine;
+	cp.refract_ix  = mat.refract_ix;
+	cp.density     = mat.density;
+	cp.tscale      = 0.0;
+	cp.tid         = -1;
+	obj.coll_id    = add_coll_sphere(obj.pos, obj_radius, cp, -1, 0, reflective);
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
-	cobj.cp.draw        = 1; // obj is not drawn
-	cobj.cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness
-	cobj.cp.metalness   = mat.metal;
-	cobj.cp.is_emissive = mat.emissive;
-	cobj.cp.color       = colorRGBA(mat.diff_c, mat.alpha);
-	cobj.cp.spec_color  = mat.spec_c * mat.spec_mag;
-	cobj.cp.shine       = mat.shine;
-	cobj.cp.refract_ix  = mat.refract_ix;
-	cobj.cp.density     = mat.density;
-	cobj.destroy        = mat.destroy_thresh;
-	cobj.cp.tscale      = 0.0;
-	cobj.cp.tid         = -1;
-	cobj.cp.cf_index    = obj_id;
-	// FIXME: light/shadows
-
-	if (mat.reflective && enable_all_reflections()) {
-		cobj.set_reflective_flag(1);
-		reflective_cobjs.add_cobj(cobj.id);
+	cobj.destroy   = mat.destroy_thresh;
+	
+	if (mat.light) {
+		add_dynamic_light(light_radius, obj.pos, mat.diff_c);
+		if (mat.shadows) {} // FIXME
 	}
-	return 1;
 }

@@ -493,8 +493,8 @@ void process_groups() {
 					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid())) {
 						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
-						obj.coll_id = add_coll_sphere(pos, radius, cp, -1, 0, reflective);
-						if (type == MAT_SPHERE) {setup_cobj_material_for_mat_sphere(obj, j);}
+						if (type == MAT_SPHERE) {add_cobj_for_mat_sphere(obj, cp);}
+						else {obj.coll_id = add_coll_sphere(pos, radius, cp, -1, 0, reflective);}
 					}
 				}
 				if (obj_flags & CAMERA_VIEW) {

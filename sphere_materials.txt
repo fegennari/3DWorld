@@ -25,7 +25,8 @@ add_material Copper
 specular_color 0.85 0.85 0.25
 add_material Brass
 
-specular_exp 4.0
+specular_exp 2.0
+specular_color 1.0 1.0 1.0
 add_material Rough_Metal
 specular_exp 128.0
 
@@ -45,6 +46,7 @@ refract_ix 1.0
 alpha 1.0
 
 reflective 0
+light_radius 1.0
 hardness 0.5
 density 1.5
 specular_color 0.0 0.0 0.0
