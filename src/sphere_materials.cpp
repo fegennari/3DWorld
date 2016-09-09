@@ -49,6 +49,13 @@ class material_file_parser_t {
 		cerr << "Error reading " << name << " from sphere materials file '" << fn << "'" << endl;
 		return 0;
 	}
+	void read_to_newline() {
+		while (1) {
+			int const c(in.get());
+			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
+		}
+		return;
+	}
 public:
 	material_file_parser_t(string const &fn_) : fn(fn_) {}
 
@@ -60,7 +67,7 @@ public:
 		//sphere_materials.clear();
 
 		while (in >> key) {
-			if (0) {}
+			if (key[0] == '#') {read_to_newline();} // comment
 			else if (key == "add_material") {
 				if (!read_mat_value(cur_mat.name, "material name")) return 0;
 
