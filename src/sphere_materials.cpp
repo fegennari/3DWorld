@@ -13,7 +13,7 @@ using namespace std;
 unsigned const MAX_SPHERE_MATERIALS = 255;
 
 bool spheres_mode(0);
-unsigned sphere_material_ix(0), max_num_mat_spheres(1);
+unsigned max_num_mat_spheres(1);
 
 extern int frame_counter;
 extern float tfticks, CAMERA_RADIUS, ball_velocity;
@@ -24,7 +24,17 @@ extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
 
 
-vector<sphere_mat_t> sphere_materials;
+struct sphere_mat_vect : public vector<sphere_mat_t> {
+	unsigned mat_ix;
+	sphere_mat_vect() : mat_ix(0) {}
+	unsigned get_ix() const {assert(mat_ix < size()); return mat_ix;}
+	sphere_mat_t       &get_cur_mat()       {assert(mat_ix < size()); return operator[](mat_ix);}
+	sphere_mat_t const &get_cur_mat() const {assert(mat_ix < size()); return operator[](mat_ix);}
+	sphere_mat_t const &get_mat(unsigned ix) const {assert(ix < size()); return operator[](ix);}
+	void update_ix(int val) {mat_ix = (mat_ix + size() + val) % size();}
+};
+
+sphere_mat_vect sphere_materials;
 
 class material_file_parser_t {
 
@@ -94,11 +104,12 @@ bool read_sphere_materials_file(string const &fn) {
 	return material_file_parser_t(fn).read();
 }
 
+sphere_mat_t &get_cur_sphere_mat() {return sphere_materials.get_cur_mat();}
+
 void show_cur_sphere_mode() {
 
 	if (!spheres_mode) {print_text_onscreen("Flashlight", YELLOW, 1.0, TICKS_PER_SECOND, 1); return;}
-	assert(sphere_material_ix < sphere_materials.size());
-	string const &str(sphere_materials[sphere_material_ix].name);
+	string const &str(get_cur_sphere_mat().name);
 	print_text_onscreen(str, YELLOW, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
@@ -109,17 +120,13 @@ void toggle_sphere_mode() {
 	show_cur_sphere_mode();
 }
 
-void change_sphere_material(int val) {
+void change_sphere_material(int val, bool quiet) {
 
 	if (world_mode != WMODE_GROUND) return;
-	sphere_material_ix = (sphere_material_ix + sphere_materials.size() + val) % sphere_materials.size();
+	sphere_materials.update_ix(val);
+	if (quiet) return;
 	show_cur_sphere_mode();
 	play_switch_weapon_sound();
-}
-
-sphere_mat_t &get_cur_sphere_mat() {
-	assert(sphere_material_ix < sphere_materials.size());
-	return sphere_materials[sphere_material_ix];
 }
 
 bool throw_sphere(bool mode) {
@@ -144,17 +151,15 @@ bool throw_sphere(bool mode) {
 	obj.time      = -1;
 	obj.source    = CAMERA_ID;
 
-	assert(sphere_material_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
-	assert(sphere_material_ix < sphere_materials.size());
-	obj.direction = (unsigned char)sphere_material_ix;
+	unsigned const mat_ix(sphere_materials.get_ix());
+	assert(mat_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
+	obj.direction = (unsigned char)mat_ix;
 	return 1;
 }
 
 void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 
-	unsigned const sphere_material_ix(obj.direction);
-	assert(sphere_material_ix < sphere_materials.size());
-	sphere_mat_t const &mat(sphere_materials[sphere_material_ix]);
+	sphere_mat_t const &mat(sphere_materials.get_mat(obj.direction));
 	bool const reflective(mat.reflective && enable_all_reflections());
 	float const obj_radius(object_types[obj.type].radius); // Note: must match object radius for collision detection to work correctly
 	float const light_radius((mat.light_radius == 0.0) ? 20.0*obj_radius : mat.light_radius); // use default radius if material radius is zero

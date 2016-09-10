@@ -542,6 +542,53 @@ public:
 
 extern bool spheres_mode;
 
+enum {SM_MAT=0, SM_ALPHA, NUM_SM_CONT};
+string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Alpha"};
+
+class sphere_mat_kbd_menu_t : public keyboard_menu_t {
+
+	virtual void draw_one_control(unsigned control_ix) const {
+		assert(control_ix < NUM_SM_CONT);
+		ostringstream value;
+		value.precision(2);
+		value << fixed; // fixed precision in units of 0.01
+		float spos(0.0);
+		sphere_mat_t const &mat(get_cur_sphere_mat());
+
+		switch (control_ix) {
+		case SM_MAT:
+			value << mat.name; // spos stays at 0
+			break;
+		case SM_ALPHA:
+			//value << alpha;
+			//spos = alpha; // 0.0 to 1.0
+			break;
+		default:
+			assert(0);
+		}
+		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos);
+	}
+
+public:
+	sphere_mat_kbd_menu_t() : keyboard_menu_t(NUM_SM_CONT, "Sphere Materials") {}
+	virtual bool is_enabled() const {return (show_scores && spheres_mode);}
+
+	virtual void change_value(int delta) {
+		sphere_mat_t &mat(get_cur_sphere_mat());
+
+		switch (cur_control) {
+		case SM_MAT:
+			change_sphere_material(delta, 1);
+			break;
+		case SM_ALPHA:
+			//alpha = CLIP_TO_01(alpha + delta); // 0.0 to 1.0
+			break;
+		default:
+			assert(0);
+		} // end switch
+	}
+};
+
 
 // ************ Top-Level UI Hooks ************
 
@@ -551,9 +598,10 @@ voxel_edit_kbd_menu_t voxel_edit_menu(voxel_brush_params);
 leaf_color_kbd_menu_t leaf_color_menu;
 water_color_kbd_menu_t water_color_menu;
 phys_weather_kbd_menu_t phys_weather_kbd_menu;
+sphere_mat_kbd_menu_t sphere_mat_kbd_menu;
 
 
-keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &leaf_color_menu, &water_color_menu, &phys_weather_kbd_menu};
+keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &sphere_mat_kbd_menu, &leaf_color_menu, &water_color_menu, &phys_weather_kbd_menu};
 unsigned const NUM_KBD_MENUS = sizeof(kbd_menus)/sizeof(kbd_menus[0]);
 
 
@@ -605,13 +653,11 @@ bool ui_intercept_keyboard(unsigned char key, bool is_special) {
 
 // if is_up_down=0, button and state and invalid
 bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down) {
-
 	return 0; // do nothing (for now)
 }
 
 
 void draw_enabled_ui_menus() {
-
 	keyboard_menu_t const *const kbd_menu(get_enabled_menu());
 	if (kbd_menu) {kbd_menu->draw_controls();}
 }
