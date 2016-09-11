@@ -77,7 +77,6 @@ public:
 				}
 				sphere_materials.push_back(cur_mat);
 			}
-			else if (key == "light") {if (!read_mat_value(cur_mat.light, "light")) return 0;}
 			else if (key == "shadows") {if (!read_mat_value(cur_mat.shadows, "shadows")) return 0;}
 			else if (key == "emissive") {if (!read_mat_value(cur_mat.emissive, "emissive")) return 0;}
 			else if (key == "reflective") {if (!read_mat_value(cur_mat.reflective, "reflective")) return 0;}
@@ -89,6 +88,7 @@ public:
 			else if (key == "hardness") {if (!read_mat_value(cur_mat.hardness, "hardness")) return 0;}
 			else if (key == "density") {if (!read_mat_value(cur_mat.density, "density")) return 0;}
 			else if (key == "refract_ix") {if (!read_mat_value(cur_mat.refract_ix, "refract_ix")) return 0;}
+			else if (key == "light_atten") {if (!read_mat_value(cur_mat.light_atten, "light_atten")) return 0;}
 			else if (key == "light_radius") {if (!read_mat_value(cur_mat.light_radius, "light_radius")) return 0;}
 			else if (key == "diffuse_color") {if (!read_mat_value(cur_mat.diff_c, "diffuse_color")) return 0;}
 			else if (key == "specular_color") {if (!read_mat_value(cur_mat.spec_c, "specular_color")) return 0;}
@@ -162,7 +162,6 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	sphere_mat_t const &mat(sphere_materials.get_mat(obj.direction));
 	bool const reflective(mat.reflective && enable_all_reflections());
 	float const obj_radius(object_types[obj.type].radius); // Note: must match object radius for collision detection to work correctly
-	float const light_radius((mat.light_radius == 0.0) ? 20.0*obj_radius : mat.light_radius); // use default radius if material radius is zero
 	cobj_params cp(cp_in); // deep copy
 	cp.draw        = 1; // obj is not drawn
 	cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness
@@ -172,6 +171,7 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	cp.spec_color  = mat.spec_c * mat.spec_mag;
 	cp.shine       = mat.shine;
 	cp.refract_ix  = mat.refract_ix;
+	cp.light_atten = mat.light_atten;
 	cp.density     = mat.density;
 	cp.tscale      = 0.0;
 	cp.tid         = -1;
@@ -179,8 +179,8 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
 	cobj.destroy   = mat.destroy_thresh;
 	
-	if (mat.light) {
-		add_dynamic_light(light_radius, obj.pos, mat.diff_c);
+	if (mat.light_radius > 0.0) {
+		add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c);
 		if (mat.shadows) {} // FIXME
 	}
 }

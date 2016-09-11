@@ -19,7 +19,8 @@ protected:
 	string title;
 	unsigned num_controls, cur_control;
 
-	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos) const {
+	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos, bool reversed=0, float scale=1.0) const {
+		if (reversed) {control_ix = num_controls - control_ix - 1;}
 		//assert(slider_pos >= 0.0 && slider_pos <= 1.0);
 		slider_pos = CLIP_TO_01(slider_pos);
 		assert(control_ix < num_controls);
@@ -31,7 +32,7 @@ protected:
 		oss << "+";
 		for (unsigned n = pos+1; n < ndiv; ++n) {oss << "-";}
 		oss << "  " << name << ": " << cur_value;
-		draw_text((selected ? ORANGE : YELLOW), -0.01, 0.01-0.0014*(num_controls - control_ix), -0.02, oss.str().c_str(), MENU_TEXT_SIZE);
+		draw_text((selected ? ORANGE : YELLOW), -0.01, (0.01/scale - 0.0014*(num_controls - control_ix)*scale), -0.02/scale, oss.str().c_str(), MENU_TEXT_SIZE);
 	}
 	virtual void draw_one_control(unsigned control_ix) const = 0;
 
@@ -542,8 +543,10 @@ public:
 
 extern bool spheres_mode;
 
-enum {SM_MAT=0, SM_ALPHA, NUM_SM_CONT};
-string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Alpha"};
+enum {SM_MAT_NAME=0, SM_EMISS, SM_REFLECT, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
+	SM_LIGHT_ATTEN, SM_LIGHT_RADIUS, SM_DIFF_R, SM_DIFF_G, SM_DIFF_B, SM_SPEC_R, SM_SPEC_G, SM_SPEC_B, NUM_SM_CONT};
+string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Emissive ", "Reflective", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag",
+  "Shininess  ", "Refract Ix  ", "Light Atten ", "Light Radius", "Diffuse Red ", "Diffuse Green", "Diffuse Blue ", "Specular Red ", "Specular Green", "Specular Blue "};
 
 class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 
@@ -556,35 +559,56 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		sphere_mat_t const &mat(get_cur_sphere_mat());
 
 		switch (control_ix) {
-		case SM_MAT:
-			value << mat.name; // spos stays at 0
-			break;
-		case SM_ALPHA:
-			//value << alpha;
-			//spos = alpha; // 0.0 to 1.0
-			break;
-		default:
-			assert(0);
+		case SM_MAT_NAME:     value << mat.name; break; // spos stays at 0
+		case SM_EMISS:        value << mat.emissive;     spos = mat.emissive;         break; // 0/1
+		case SM_REFLECT:      value << mat.reflective;   spos = mat.reflective;       break; // 0/1
+		case SM_HARDNESS:     value << mat.hardness;     spos = mat.hardness;         break; // 0.05 to 1.0
+		case SM_DENSITY:      value << mat.density;      spos = mat.density/4.0;      break; // 0.1 to 4.0
+		case SM_METAL:        value << mat.metal;        spos = mat.metal;            break; // 0.0 to 1.0
+		case SM_ALPHA:        value << mat.alpha;        spos = mat.alpha;            break; // 0.05 to 1.0
+		case SM_SPEC_MAG:     value << mat.spec_mag;     spos = mat.spec_mag;         break; // 0.0 to 1.0
+		case SM_SHINE:        value << int(mat.shine);   spos = log2(mat.shine)/10.0; break; // 1.0 to 1024.0 (log2 0 to 10)
+		case SM_REFRACT_IX:   value << mat.refract_ix;   spos = (mat.refract_ix-1.0)/2.0; break; // 1.0 to 3.0
+		case SM_LIGHT_ATTEN:  value << mat.light_atten;  spos = mat.light_atten/20.0; break; // 0.0 to 20.0
+		case SM_LIGHT_RADIUS: value << mat.light_radius; spos = mat.light_radius/2.0; break; // 0.0 to 2.5
+		case SM_DIFF_R:       value << mat.diff_c.R;     spos = mat.diff_c.R;         break; // 0.0 to 1.0
+		case SM_DIFF_G:       value << mat.diff_c.G;     spos = mat.diff_c.G;         break; // 0.0 to 1.0
+		case SM_DIFF_B:       value << mat.diff_c.B;     spos = mat.diff_c.B;         break; // 0.0 to 1.0
+		case SM_SPEC_R:       value << mat.spec_c.R;     spos = mat.spec_c.R;         break; // 0.0 to 1.0
+		case SM_SPEC_G:       value << mat.spec_c.G;     spos = mat.spec_c.G;         break; // 0.0 to 1.0
+		case SM_SPEC_B:       value << mat.spec_c.B;     spos = mat.spec_c.B;         break; // 0.0 to 1.0
+		default: assert(0);
 		}
-		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos);
+		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.8); // draw in reverse order at 80% scale
 	}
 
 public:
-	sphere_mat_kbd_menu_t() : keyboard_menu_t(NUM_SM_CONT, "Sphere Materials") {}
+	sphere_mat_kbd_menu_t() : keyboard_menu_t(NUM_SM_CONT, "Sphere Materials") {cur_control = num_controls-1;} // start at material name
 	virtual bool is_enabled() const {return (show_scores && spheres_mode);}
 
 	virtual void change_value(int delta) {
 		sphere_mat_t &mat(get_cur_sphere_mat());
 
-		switch (cur_control) {
-		case SM_MAT:
-			change_sphere_material(delta, 1);
-			break;
-		case SM_ALPHA:
-			//alpha = CLIP_TO_01(alpha + delta); // 0.0 to 1.0
-			break;
-		default:
-			assert(0);
+		switch (num_controls - cur_control - 1) { // reverse order
+		case SM_MAT_NAME:     change_sphere_material(delta, 1);         break;
+		case SM_EMISS:        mat.emissive     = ((delta < 0) ? 0 : 1); break; // 0/1
+		case SM_REFLECT:      mat.reflective   = ((delta < 0) ? 0 : 1); break; // 0/1
+		case SM_HARDNESS:     mat.hardness     = max(0.05f, min(1.0f, (mat.hardness + 0.05f*delta)));   break; // 0.05 to 1.0 in steps of 0.05
+		case SM_DENSITY:      mat.density      = max(0.1f,  min(4.0f, (mat.density  + 0.1f* delta)));   break; // 0.1 to 4.0 in steps of 0.1
+		case SM_METAL:        mat.metal        = CLIP_TO_01(mat.metal    + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05
+		case SM_ALPHA:        mat.alpha        = max(0.05f, min(1.0f, (mat.alpha    + 0.05f*delta)));   break; // 0.05 to 1.0 in steps of 0.05
+		case SM_SPEC_MAG:     mat.spec_mag     = CLIP_TO_01(mat.spec_mag + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05
+		case SM_SHINE:        mat.shine        = pow(2.0, max(0, min(10, int(log2(mat.shine)+delta)))); break; // 1.0 to 1024.0 (log2 0 to 10 in steps of 1)
+		case SM_REFRACT_IX:   mat.refract_ix   = max(1.0f, min(3.0f, (mat.refract_ix   + 0.1f*delta))); break; // 1.0 to 3.0 in steps of 0.1
+		case SM_LIGHT_ATTEN:  mat.light_atten  = max(0.0f, min(20.0f,(mat.light_atten  + 1.0f*delta))); break; // 0.0 to 20.0 in steps of 1.0
+		case SM_LIGHT_RADIUS: mat.light_radius = max(0.0f, min(2.5f, (mat.light_radius + 0.1f*delta))); break; // 0.0 to 2.5 in steps of 0.1
+		case SM_DIFF_R:       mat.diff_c.R     = CLIP_TO_01(mat.diff_c.R + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
+		case SM_DIFF_G:       mat.diff_c.G     = CLIP_TO_01(mat.diff_c.G + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
+		case SM_DIFF_B:       mat.diff_c.B     = CLIP_TO_01(mat.diff_c.B + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
+		case SM_SPEC_R:       mat.spec_c.R     = CLIP_TO_01(mat.spec_c.R + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
+		case SM_SPEC_G:       mat.spec_c.G     = CLIP_TO_01(mat.spec_c.G + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
+		case SM_SPEC_B:       mat.spec_c.B     = CLIP_TO_01(mat.spec_c.B + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
+		default: assert(0);
 		} // end switch
 	}
 };
