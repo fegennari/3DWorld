@@ -1,14 +1,15 @@
 max_num_spheres 20
 
 # set some basic values, mostly equal to the defaults
-light 0
 shadows 0
 emissive 0
 reflective 1
 destroy_thresh 0
+light_radius 0.0
 hardness 0.8
 density 2.0 # ignored?
 refract_ix 1.0
+light_atten 0.0
 alpha 1.0
 metalness 1.0
 specular_mag 1.0
@@ -35,6 +36,7 @@ specular_color 1.0 1.0 1.0
 metalness 0.0
 hardness 0.9
 density 4.0
+refract_ix 1.5
 add_material Black_Marble
 
 diffuse_color 1.0 1.0 1.0
@@ -47,14 +49,13 @@ refract_ix 1.0
 alpha 1.0
 
 reflective 0
-light_radius 1.0 # defaults to 1.0
+light_radius 1.0 # enable lights
 hardness 0.5
 density 1.5
 specular_color 0.0 0.0 0.0
 specular_mag 0.0
 diffuse_color 1.0 0.0 0.0
 emissive 1
-light 1
 shadows 1
 add_material Red_Light
 
