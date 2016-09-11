@@ -435,8 +435,13 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	else { // group changed
 		end_group(last_group_id);
 	}
+	float const prev_refract_ix(cdb.get_last_layer().refract_ix);
 	cdb.on_new_obj_layer(cp); // may flush/draw
-	if (!in_group || start_group) {shader.set_material(cp);} // should be the same across groups
+
+	if (!in_group || start_group) { // should be the same across groups
+		shader.set_material(cp);
+		if (cp.refract_ix != prev_refract_ix) {shader.add_uniform_float("refract_ix", cp.refract_ix);}
+	}
 	if (cp.is_emissive) {assert(!in_group); cdb.flush(); shader.add_uniform_float("emissive_scale", 1.0);} // Note: slow (causes flush)
 
 	if (tid != last_tid) {

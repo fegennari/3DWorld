@@ -530,7 +530,7 @@ coll_obj const &get_draw_cobj(unsigned index) {
 	return coll_objects.get_cobj(index);
 }
 
-void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
+void setup_cobj_shader(shader_t &s, int has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
@@ -672,7 +672,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
+	int const has_lt_atten(draw_trans ? coll_objects.has_lt_atten : 0);
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const use_ref_plane(reflection_pass == 1 || (reflection_pass != 2 && reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);

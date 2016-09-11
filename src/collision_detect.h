@@ -113,6 +113,7 @@ public:
 	void clear() {tri_verts.clear(); quad_verts.clear(); tc_verts.clear(); is_wet = 2;}
 	void draw() const;
 	void flush() {draw(); clear();}
+	obj_layer const &get_last_layer() const {return last_layer;}
 };
 
 

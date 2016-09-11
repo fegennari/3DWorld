@@ -117,7 +117,8 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 
 bool cobj_draw_buffer::on_new_obj_layer(obj_layer const &l) {
 
-	bool const is_new_layer(l.color != last_layer.color || l.tid != last_layer.tid || l.spec_color != last_layer.spec_color || l.shine != last_layer.shine || l.is_emissive != last_layer.is_emissive);
+	bool const is_new_layer(l.color != last_layer.color || l.tid != last_layer.tid || l.spec_color != last_layer.spec_color || l.shine != last_layer.shine ||
+		l.is_emissive != last_layer.is_emissive || l.light_atten != last_layer.light_atten || l.refract_ix != last_layer.refract_ix || l.metalness != last_layer.metalness);
 	if (is_new_layer) {flush();}
 	last_layer = l;
 	return is_new_layer;
