@@ -623,11 +623,6 @@ bool add_cobj_to_draw_list(unsigned cix, int reflection_pass, bool use_ref_plane
 		pb.reflect_cobjs[use_normal_map].push_back(cix);
 		return 0;
 	}
-	if (use_tex_coords) { // uncommon case (typically movable objects); semi-transparent is okay
-		assert(c.group_id < 0);
-		pb.tex_coord_cobjs[use_normal_map].push_back(cix);
-		return 0;
-	}
 	if (c.is_semi_trans()) { // slow when polygons are grouped
 		float dist(distance_to_camera(c.get_center_pt()));
 		if (c.type == COLL_SPHERE) {dist -= c.radius;} // distance to surface closest to the camera
@@ -635,6 +630,11 @@ bool add_cobj_to_draw_list(unsigned cix, int reflection_pass, bool use_ref_plane
 			dist -= min(0.5*(c.radius + c.radius2), 0.5*p2p_dist(c.points[0], c.points[1]));
 		}
 		draw_last.push_back(make_pair(-dist, cix)); // negative distance
+		return 0;
+	}
+	if (use_tex_coords) { // uncommon case (typically movable objects); semi-transparent is okay
+		assert(c.group_id < 0);
+		pb.tex_coord_cobjs[use_normal_map].push_back(cix);
 		return 0;
 	}
 	if (use_normal_map) { // common case
