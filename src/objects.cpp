@@ -533,7 +533,9 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		bool const use_tcs(cp.tscale == 0.0);
 		if (!use_tcs) {setup_cobj_sc_texgen(plus_z, shader);} // use texgen
 		//draw_cube_mapped_sphere(points[0], radius, ndiv/2, use_tcs);
+		if (cp.light_atten > 0.0) {glEnable (GL_CULL_FACE);}
 		draw_subdiv_sphere(points[0], radius, ndiv, use_tcs, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
+		if (cp.light_atten > 0.0) {glDisable(GL_CULL_FACE);}
 		break;
 	}
 	case COLL_POLYGON:
