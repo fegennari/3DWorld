@@ -324,7 +324,7 @@ void main()
 #ifdef USE_SPEC_MAP
 	spec_scale     *= get_spec_color();
 #endif
-	float ref_ix    = ((refract_ix == 1.0) ? 1.5 : refract_ix); // glass
+	float ref_ix    = refract_ix;
 	vec3 view_dir   = normalize(camera_pos - vpos);
 	float reflected = get_reflect_weight(view_dir, ws_normal, reflectivity2, ref_ix);
 	vec3 reflect_w  = reflected*spec_scale;

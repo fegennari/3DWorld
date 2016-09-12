@@ -43,7 +43,7 @@ diffuse_color 1.0 1.0 1.0
 add_material White_Marble
 
 alpha 0.1
-refract_ix 1.33
+refract_ix 1.52
 add_material Glass
 refract_ix 1.0
 alpha 1.0
