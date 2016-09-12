@@ -118,7 +118,7 @@ float setup_underwater_fog(shader_t &s, int shader_type);
 unsigned get_sky_zval_texture();
 void invalidate_snow_coverage();
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
-	int has_lt_atten=0, bool use_smap=0, int use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, float burn_tex_scale=0.0,
+	bool has_lt_atten=0, bool use_smap=0, int use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, float burn_tex_scale=0.0,
 	float triplanar_texture_scale=0.0, bool use_depth_trans=0, int enable_reflect=0, int is_outside=0, bool enable_rain_snow=1);
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap);
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_bmap, bool use_noise_tex,

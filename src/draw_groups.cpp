@@ -222,7 +222,7 @@ void setup_draw_groups_shader(shader_t &s, int solid) {
 
 	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
 	bool const force_tsl = 1;
-	int const lt_atten(solid ? 0 : 2); // sphere light atten
+	bool const lt_atten(solid ? 0 : 1); // sphere light atten
 	float const burn_tex_scale = 0.5;
 	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, lt_atten, 1, 0, 0, 1, force_tsl, burn_tex_scale);
 	if (cobj_z_bias < 0.002)     {s.add_uniform_float("z_bias", 0.002);} // reset larger

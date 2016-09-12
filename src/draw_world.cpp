@@ -283,13 +283,12 @@ bool is_smoke_in_use() {return (smoke_exists || use_smoke_for_fog);}
 
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
-	bool smoke_enabled, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
+	bool smoke_enabled, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
 	s.set_int_prefix("use_texgen", use_texgen, 0); // VS
 	s.set_prefix(make_shader_bool_prefix("keep_alpha",          keep_alpha),      1); // FS
 	s.set_prefix(make_shader_bool_prefix("direct_lighting",     direct_lighting), 1); // FS
-	s.set_prefix(make_shader_bool_prefix("do_cube_lt_atten",    ((has_lt_atten & 1) != 0)), 1); // FS
-	s.set_prefix(make_shader_bool_prefix("do_sphere_lt_atten",  ((has_lt_atten & 2) != 0)), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("do_lt_atten",         has_lt_atten),    1); // FS
 	s.set_prefix(make_shader_bool_prefix("two_sided_lighting",  use_tsl), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix",   use_mvm), 0); // VS
 	s.set_prefix(make_shader_bool_prefix("enable_clip_plane_z", enable_clip_plane_z), 1); // FS
@@ -348,7 +347,7 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 // is_outside: 0 = inside, 1 = outside, 2 = use snow coverage mask
 // enable_reflect: 0 = none, 1 = planar, 2 = cube map
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
-	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
+	bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
 	bool use_depth_trans, int enable_reflect, int is_outside, bool enable_rain_snow)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
@@ -530,8 +529,7 @@ coll_obj const &get_draw_cobj(unsigned index) {
 	return coll_objects.get_cobj(index);
 }
 
-void setup_cobj_shader(shader_t &s, int has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
-	// Note: pass in 3 when has_lt_atten to enable sphere atten
+void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
@@ -672,7 +670,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	int const has_lt_atten(draw_trans ? coll_objects.has_lt_atten : 0);
+	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const use_ref_plane(reflection_pass == 1 || (reflection_pass != 2 && reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);

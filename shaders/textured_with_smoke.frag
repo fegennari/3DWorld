@@ -215,22 +215,22 @@ void main()
 #endif
 	float alpha = gl_Color.a;
 
-	if (do_cube_lt_atten || do_sphere_lt_atten) { // && light_atten > 0.0
+	if (do_lt_atten && light_atten != 0.0) {
 		vec3 v_inc = normalize(camera_pos - vpos);
 		float dist = 0.0;
 
-		if (do_cube_lt_atten) { // account for light attenuating/reflecting semi-transparent materials
+		if (light_atten > 0.0) { // cube case; account for light attenuating/reflecting semi-transparent materials
 			vec3 far_pt = vpos - 100.0*v_inc; // move it far away
 			pt_pair res = clip_line(vpos, far_pt, cube_bb);
-			dist        = length(res.v1 - res.v2);
+			dist        = light_atten*length(res.v1 - res.v2);
 		}
-		if (do_sphere_lt_atten) { // alpha is calculated from distance between sphere intersection points
+		else { // sphere case; alpha is calculated from distance between sphere intersection points
 			float wpdist = distance(vpos, sphere_center);
 			float dp     = dot(v_inc, (vpos - sphere_center));
 			float adsq   = dp*dp - wpdist*wpdist + sphere_radius*sphere_radius;
-			dist         = sqrt(max(adsq, 0.0)); // should always intersect
+			dist         = -light_atten*sqrt(max(adsq, 0.0)); // should always intersect; note that light_atten is negative
 		}
-		alpha += (1.0 - alpha)*(1.0 - exp(-light_atten*dist));
+		alpha += (1.0 - alpha)*(1.0 - exp(-dist));
 
 		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
 			float reflect_w = get_fresnel_reflection(v_inc, normalize(normal), 1.0, refract_ix);

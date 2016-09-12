@@ -842,6 +842,7 @@ void lt_atten_manager_t::next_sphere(float light_atten, float refract_ix, point 
 	if (light_atten > 0.0) {
 		shader.set_uniform_vector3d(ulocs[3], pos);
 		shader.set_uniform_float(ulocs[4], radius);
+		light_atten = -light_atten; // use special negative value for light_atten to select sphere case in the shader
 	}
 	next_object(light_atten, refract_ix);
 }

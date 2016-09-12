@@ -834,9 +834,9 @@ void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float
 	cobj.falling     = 0;
 	cobj.setup_internal_state();
 	if (cparams.flags & COBJ_DYNAMIC) {dynamic_ids.must_insert(index);}
-	if (cparams.draw      ) {drawn_ids.must_insert   (index);}
-	if (platform_id >= 0  ) {platform_ids.must_insert(index);}
-	if ((type == COLL_CUBE) && cparams.light_atten != 0.0) {has_lt_atten = 1;}
+	if (cparams.draw    ) {drawn_ids.must_insert   (index);}
+	if (platform_id >= 0) {platform_ids.must_insert(index);}
+	if ((type == COLL_CUBE || type == COLL_SPHERE) && cparams.light_atten != 0.0) {has_lt_atten = 1;}
 	if (cparams.cobj_type == COBJ_TYPE_VOX_TERRAIN) {has_voxel_cobjs = 1;}
 }
 
