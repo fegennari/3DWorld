@@ -6,6 +6,7 @@
 #include "physics_objects.h"
 #include "gameplay.h"
 #include "openal_wrap.h"
+#include "lightmap.h"
 #include <fstream>
 
 using namespace std;
@@ -22,16 +23,77 @@ extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
+extern vector<light_source_trig> light_sources_d;
 
 
-struct sphere_mat_vect : public vector<sphere_mat_t> {
+struct cube_map_lix_t {
+	int ixs[6]; // one per cube face, -1 is disabled
+	cube_map_lix_t() {for (unsigned i = 0; i < 6; ++i) {ixs[i] = -1;}}
+};
+
+class sphere_mat_vect : public vector<sphere_mat_t> {
+
 	unsigned mat_ix;
+	typedef map<unsigned, cube_map_lix_t> obj_to_light_map_t;
+	obj_to_light_map_t obj_to_light_map;
+	vector<unsigned> light_free_list;
+
+public:
 	sphere_mat_vect() : mat_ix(0) {}
 	unsigned get_ix() const {assert(mat_ix < size()); return mat_ix;}
 	sphere_mat_t       &get_cur_mat()       {assert(mat_ix < size()); return operator[](mat_ix);}
 	sphere_mat_t const &get_cur_mat() const {assert(mat_ix < size()); return operator[](mat_ix);}
 	sphere_mat_t const &get_mat(unsigned ix) const {assert(ix < size()); return operator[](ix);}
 	void update_ix(int val) {mat_ix = (mat_ix + size() + val) % size();}
+
+	void remove_light(int light_id) {
+		if (light_id < 0) return; // disabled
+		assert((unsigned)light_id < light_sources_d.size());
+		light_sources_d[light_id].disable();
+		light_free_list.push_back(light_id);
+	}
+	void remove_lights(cube_map_lix_t const &lix) {
+		for (unsigned i = 0; i < 6; ++i) {remove_light(lix.ixs[i]);}
+	}
+	void remove_obj_light(unsigned obj_id) {
+		obj_to_light_map_t::iterator it(obj_to_light_map.find(obj_id));
+		if (it == obj_to_light_map.end()) return; // not found
+		remove_lights(it->second);
+		obj_to_light_map.erase(it);
+	}
+	unsigned alloc_light() {
+		if (!light_free_list.empty()) {
+			unsigned const light_id(light_free_list.back());
+			light_free_list.pop_back();
+			return light_id;
+		}
+		else {
+			unsigned const light_id(light_sources_d.size());
+			light_sources_d.push_back(light_source_trig());
+			return light_id;
+		}
+	}
+	cube_map_lix_t add_obj(unsigned obj_id, bool add_light) {
+		remove_obj_light(obj_id);
+		cube_map_lix_t ret;
+		if (add_light) {
+			for (unsigned i = 0; i < 6; ++i) {ret.ixs[i] = alloc_light();}
+			obj_to_light_map[obj_id] = ret;
+		}
+		return ret;
+	}
+	void sync_light_pos(unsigned obj_id, point const &obj_pos) const {
+		obj_to_light_map_t::const_iterator it(obj_to_light_map.find(obj_id));
+		if (it == obj_to_light_map.end()) return; // not found
+		cube_map_lix_t const &lix(it->second);
+
+		for (unsigned i = 0; i < 6; ++i) {
+			unsigned const ix(lix.ixs[i]);
+			assert(ix < light_sources_d.size());
+			point const old_pos(light_sources_d[ix].get_pos());
+			light_sources_d[ix].shift_by(obj_pos - old_pos);
+		}
+	}
 };
 
 sphere_mat_vect sphere_materials;
@@ -154,6 +216,27 @@ bool throw_sphere(bool mode) {
 	unsigned const mat_ix(sphere_materials.get_ix());
 	assert(mat_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
 	obj.direction = (unsigned char)mat_ix;
+	sphere_mat_t const &mat(sphere_materials.get_mat(mat_ix));
+	bool const has_shadows(mat.light_radius > 0.0 && mat.shadows);
+	cube_map_lix_t lix(sphere_materials.add_obj(chosen, has_shadows));
+
+	if (has_shadows) {
+		int platform_id(-1); // unused
+		float const beamwidth = 0.4; // 0.3 to 0.5 are okay
+
+		for (unsigned ldim = 0; ldim < 3; ++ldim) { // setup 6 light sources, one per cube face
+			vector3d dir(zero_vector);
+
+			for (unsigned ldir = 0; ldir < 2; ++ldir) {
+				dir[ldim] = (ldir ? 1.0 : -1.0);
+				unsigned const ix(lix.ixs[2*ldim + ldir]);
+				assert(ix < light_sources_d.size());
+				light_source_trig &ls(light_sources_d[ix]);
+				ls = light_source_trig(light_source(mat.light_radius, obj.pos, obj.pos, mat.diff_c, 0, dir, beamwidth, 0.0, 1), 1, platform_id, 0);
+				//ls.bind_to_pos(obj.pos, 1); // dynamic binding
+			} // for ldir
+		} // for ldim
+	}
 	return 1;
 }
 
@@ -178,9 +261,10 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	obj.coll_id    = add_coll_sphere(obj.pos, obj_radius, cp, -1, 0, reflective);
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
 	cobj.destroy   = mat.destroy_thresh;
-	
-	if (mat.light_radius > 0.0) {
-		add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c);
-		if (mat.shadows) {} // FIXME
-	}
+	if (mat.light_radius > 0.0 && !mat.shadows) {add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c);} // regular point light
+	sphere_materials.sync_light_pos(cp.cf_index, obj.pos);
+}
+
+void remove_mat_sphere(unsigned id) {
+	sphere_materials.remove_obj_light(id);
 }

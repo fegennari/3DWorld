@@ -19,11 +19,12 @@ extern coll_obj_group coll_objects;
 
 bool bind_point_t::is_valid() { // used with placed dlights
 
-	if (!bound) return 1; // if no binding point, always valid
-	if (!valid) return 0; // already determined to be invalid
+	if (disabled) return 0;
+	if (!bound  ) return 1; // if no binding point, always valid
+	if (!valid  ) return 0; // already determined to be invalid
 
 	if (bind_cobj < 0) { // cobj not yet found
-		if (!check_point_contained_tree(bind_pos, bind_cobj, 0)) {valid = 0; return 0;}
+		if (!check_point_contained_tree(bind_pos, bind_cobj, dynamic_cobj)) {valid = 0; return 0;}
 		bind_pos = get_updated_bind_pos(); // update bind_pos to point to center of cobj, if movable
 		return 1;
 	}

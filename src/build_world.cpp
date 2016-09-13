@@ -300,7 +300,7 @@ void process_groups() {
 
 		if (!objg.temperature_ok()) {
 			if (temp_change) {
-				if (type == SMILEY) free_dodgeballs(0, 1);
+				if (type == SMILEY) {free_dodgeballs(0, 1);}
 				objg.remove_reset_cobjs();
 				objg.init_group();
 			}
@@ -310,7 +310,7 @@ void process_groups() {
 
 		if (!begin_motion) {
 			objg.remove_reset_cobjs();
-			if (flags & (JUST_INIT | WAS_ADVANCED)) objg.init_group();
+			if (flags & (JUST_INIT | WAS_ADVANCED)) {objg.init_group();}
 			continue;
 		}
 		float const radius(otype.radius);
@@ -349,11 +349,12 @@ void process_groups() {
 		for (size_t jj = 0; jj < max_objs; ++jj) {
 			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%objg.max_objects() : jj)); // handle smiley permutation
 			dwobject &obj(objg.get_obj(j));
-			if (large_radius && obj.coll_id >= 0) remove_reset_coll_obj(obj.coll_id);
+			if (large_radius && obj.coll_id >= 0) {remove_reset_coll_obj(obj.coll_id);}
 			if (obj.status == OBJ_STAT_RES) continue; // ignore
 			point &pos(obj.pos);
 
 			if (obj.status == 0) {
+				if (type == MAT_SPHERE) {remove_mat_sphere(j);}
 				if (gen_count >= app_rate || !(flags & WAS_ADVANCED))      continue;
 				if (type == BALL && (game_mode != 2 || UNLIMITED_WEAPONS)) continue; // not in dodgeball mode
 				++gen_count;
@@ -391,7 +392,7 @@ void process_groups() {
 				}
 				if (type == SNOW) {obj.angle = rand_uniform(0.7, 1.3);} // used as radius
 			}
-			if (precip) obj.update_precip_type();
+			if (precip) {obj.update_precip_type();}
 			unsigned char const obj_flags(obj.flags);
 			int const orig_status(obj.status);
 			obj.flags &= ~PLATFORM_COLL;
@@ -463,7 +464,7 @@ void process_groups() {
 								tstep    = time;
 							}
 						}
-						if (spf == 1) obj.advance_object(!recreated, 0, j);
+						if (spf == 1) {obj.advance_object(!recreated, 0, j);}
 						obj.verify_data();
 						
 						if (!obj.disabled() && cindex >= 0 && !large_radius && spf < LG_STEPS_PER_FRAME) { // test collision with this cobj
@@ -471,7 +472,7 @@ void process_groups() {
 						}
 					} // not plasma
 				} // obj.time < 0
-				else obj.time = 0;
+				else {obj.time = 0;}
 			} // not smiley
 			if (!obj.disabled()) {
 				update_deformation(obj);

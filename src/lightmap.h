@@ -242,14 +242,15 @@ public:
 class bind_point_t {
 
 protected:
-	bool bound, valid;
+	bool bound, valid, disabled, dynamic_cobj;
 	int bind_cobj;
 	point bind_pos;
 
 public:
-	bind_point_t() : bound(0), valid(1), bind_cobj(-1) {}
-	bind_point_t(point const &pos) : bound(1), valid(1), bind_cobj(-1), bind_pos(pos) {}
-	void bind_to_pos(point const &pos) {bind_pos = pos; bound = 1;}
+	bind_point_t() : bound(0), valid(1), disabled(0), dynamic_cobj(0), bind_cobj(-1) {}
+	bind_point_t(point const &pos, bool dynamic_=0) : bound(1), valid(1), disabled(0), dynamic_cobj(dynamic_), bind_cobj(-1), bind_pos(pos) {}
+	void disable() {disabled = 1;}
+	void bind_to_pos(point const &pos, bool dynamic_=0) {bind_pos = pos; bound = 1; dynamic_cobj = dynamic_;}
 	bool is_valid();
 	point get_updated_bind_pos() const;
 	void shift_by(vector3d const &vd) {bind_pos += vd;} // invalidate bind_cobj?

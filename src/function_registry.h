@@ -803,6 +803,7 @@ void toggle_sphere_mode();
 void change_sphere_material(int val, bool quiet);
 bool throw_sphere(bool mode);
 void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in);
+void remove_mat_sphere(unsigned id);
 
 // function prototypes - edit_ui
 void next_selected_menu_ix();

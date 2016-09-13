@@ -955,9 +955,9 @@ void obj_group::remove_reset_cobjs() {
 	if (!large_radius()) return;
 
 	for (unsigned j = 0; j < max_objects(); ++j) {
-		if (objects[j].status != 0 && objects[j].coll_id >= 0) { // is status check correct?
-			remove_reset_coll_obj(objects[j].coll_id);
-		}
+		if (objects[j].status == 0) continue; // is status check correct?
+		if (objects[j].coll_id >= 0) {remove_reset_coll_obj(objects[j].coll_id);}
+		if (type == MAT_SPHERE) {remove_mat_sphere(j);}
 	}
 }
 
