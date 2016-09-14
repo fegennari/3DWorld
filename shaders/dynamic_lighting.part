@@ -155,7 +155,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 #endif
 			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
 			smap_index = smap_index & 127; // mask off 7 LSB bits / strip off is_cube_face flag bit
-			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
+			if (smap_index > 0) {intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);}
 		}
 #endif // HAS_DLIGHT_SMAP
 

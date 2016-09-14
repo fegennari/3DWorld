@@ -226,7 +226,7 @@ public:
 	bool is_neg_light()   const {return (color.R < 0.0 || color.G < 0.0 || color.B < 0.0);}
 	bool is_enabled()     const {return enabled;}
 	bool is_user_placed() const {return user_placed;}
-	bool smap_enabled()   const {return (smap_index != 0);}
+	bool smap_enabled()   const {return (smap_index != 0 || is_cube_face);}
 	void set_enabled(bool enabled_) {enabled = enabled_;}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void pack_to_floatv(float *data) const;
