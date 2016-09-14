@@ -46,9 +46,9 @@ point bind_point_t::get_updated_bind_pos() const {
 
 
 // radius == 0.0 is really radius == infinity (no attenuation)
-light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf) :
+light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc) :
 	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
-	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_index(0)
+	r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_index(0)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	assert(r_inner <= radius);
@@ -415,15 +415,18 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj) const {
 	int cindex(-1);
 	float t(0.0);
 	vector3d cnorm; // unused
-	float near_clip(0.001*radius); // min value
+	float nclip(0.001*radius); // min value
 
-	// if light is inside a light fixture, move the near clip plane so that the light fixture cobj is outside the view frustum
-	if (check_point_contained_tree(pos, cindex, dynamic_cobj)) {
+	if (near_clip > 0.0) {
+		nclip = max(nclip, near_clip);
+	}
+	else if (check_point_contained_tree(pos, cindex, dynamic_cobj)) {
+		// if light is inside a light fixture, move the near clip plane so that the light fixture cobj is outside the view frustum
 		assert(cindex >= 0);
 		point const start_pos(pos + dir*radius);
-		if (coll_objects[cindex].line_int_exact(start_pos, pos, t, cnorm)) {near_clip += (1.0 - t)*radius;}
+		if (coll_objects[cindex].line_int_exact(start_pos, pos, t, cnorm)) {nclip += (1.0 - t)*radius;}
 	}
-	return pos_dir_up(pos, dir, up_dir, angle, near_clip, max(radius, near_clip+0.01f*radius), 1.0, 1); // force near_clip < far_clip
+	return pos_dir_up(pos, dir, up_dir, angle, nclip, max(radius, nclip+0.01f*radius), 1.0, 1); // force near_clip < far_clip
 }
 
 bool light_source_trig::is_shadow_map_enabled() const {

@@ -202,7 +202,7 @@ bool throw_sphere(bool mode) {
 	if (cid < 0) return 0;
 	assert(cid < NUM_TOT_OBJS);
 	obj_group &objg(obj_groups[cid]);
-	float const radius_sum(CAMERA_RADIUS + object_types[type].radius);
+	float const radius(object_types[type].radius), radius_sum(CAMERA_RADIUS + radius);
 	int const chosen(objg.choose_object());
 	point const fpos(get_camera_pos());
 	gen_sound(SOUND_SWING, fpos, 0.5, 1.0);
@@ -223,6 +223,7 @@ bool throw_sphere(bool mode) {
 	if (has_shadows) {
 		int platform_id(-1); // unused
 		float const beamwidth = 0.4; // 0.3 to 0.5 are okay
+		float const near_clip(radius);
 
 		for (unsigned ldim = 0; ldim < 3; ++ldim) { // setup 6 light sources, one per cube face
 			vector3d dir(zero_vector);
@@ -232,13 +233,20 @@ bool throw_sphere(bool mode) {
 				unsigned const ix(lix.ixs[2*ldim + ldir]);
 				assert(ix < light_sources_d.size());
 				light_source_trig &ls(light_sources_d[ix]);
-				ls = light_source_trig(light_source(mat.light_radius, obj.pos, obj.pos, mat.diff_c, 0, dir, beamwidth, 0.0, 1), 1, platform_id, 0);
+				ls = light_source_trig(light_source(mat.light_radius, obj.pos, obj.pos, mat.diff_c, 0, dir, beamwidth, 0.0, 1, near_clip), 1, platform_id, 0);
 				//ls.bind_to_pos(obj.pos, 1); // dynamic binding
 			} // for ldir
 		} // for ldim
 	}
 	return 1;
 }
+
+bool is_mat_sphere_a_light(dwobject const &obj) {
+	sphere_mat_t const &mat(sphere_materials.get_mat(obj.direction));
+	return (mat.light_radius > 0.0);
+}
+
+void sync_mat_sphere_lpos(unsigned id, point const &pos) {sphere_materials.sync_light_pos(id, pos);}
 
 void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 
@@ -262,7 +270,7 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
 	cobj.destroy   = mat.destroy_thresh;
 	if (mat.light_radius > 0.0 && !mat.shadows) {add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c);} // regular point light
-	sphere_materials.sync_light_pos(cp.cf_index, obj.pos);
+	sync_mat_sphere_lpos(cp.cf_index, obj.pos);
 }
 
 void remove_mat_sphere(unsigned id) {

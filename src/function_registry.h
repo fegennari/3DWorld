@@ -802,6 +802,8 @@ bool read_sphere_materials_file(std::string const &fn);
 void toggle_sphere_mode();
 void change_sphere_material(int val, bool quiet);
 bool throw_sphere(bool mode);
+bool is_mat_sphere_a_light(dwobject const &obj);
+void sync_mat_sphere_lpos(unsigned id, point const &pos);
 void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in);
 void remove_mat_sphere(unsigned id);
 
