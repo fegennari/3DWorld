@@ -881,7 +881,7 @@ bool default_obj_coll(int index, int obj_index, vector3d const &velocity, point 
 		if (cobj_type == S_BALL) return 1;
 		energy = get_coll_energy(zero_vector, obj.velocity, object_types[obj.type].mass);
 		valid_coll = smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, cobj_type);
-		if (valid_coll) obj.disable(); // return?
+		if (valid_coll) {obj.disable();} // return?
 	}
 	obj.elastic_collision(position, energy, type); // partially elastic collision
 	return valid_coll;
@@ -939,8 +939,8 @@ bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 }
 
 bool mat_sphere_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-	pushable_collision(index, position, 15000.0, type, MAT_SPHERE);
-	return 1;
+	if (pushable_collision(index, position, 15000.0, type, MAT_SPHERE)) return 1;
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, MAT_SPHERE);
 }
 
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
@@ -973,7 +973,6 @@ bool pack_collision(int index, int obj_index, vector3d const &velocity, point co
 }
 
 bool sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	if (!default_obj_coll(index, obj_index, velocity, position, energy, type, S_BALL)) return 0;
 	pushable_collision(index, position, 20.0, type, S_BALL);
 	return 1;
