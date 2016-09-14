@@ -273,6 +273,7 @@ public:
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_enabled() {return (bind_point_t::is_valid() && light_source::is_enabled());}
+	void disable() {release_smap(); bind_point_t::disable();}
 	bool has_bound_platform() const {return (platform_id >= 0);}
 	void shift_by(vector3d const &vd);
 	bool is_shadow_map_enabled() const;

@@ -273,6 +273,5 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	sync_mat_sphere_lpos(cp.cf_index, obj.pos);
 }
 
-void remove_mat_sphere(unsigned id) {
-	sphere_materials.remove_obj_light(id);
-}
+void remove_mat_sphere(unsigned id) {sphere_materials.remove_obj_light(id);}
+
