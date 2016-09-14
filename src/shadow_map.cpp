@@ -17,7 +17,7 @@ bool voxel_shadows_updated(0);
 unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0);
 pos_dir_up orig_camera_pdu;
 
-extern bool snow_shadows, enable_depth_clamp;
+extern bool snow_shadows, enable_depth_clamp, flashlight_on;
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation, shadow_map_pcf_offset;
@@ -197,7 +197,7 @@ public:
 		}
 		for (auto i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
-			if (is_camera && i->is_player) continue; // skip the camera shadow for flashlight
+			if (is_camera && flashlight_on && i->is_player)  continue; // skip the camera shadow for flashlight
 			if (i->pos == pdu.pos) continue; // this sphere must be casting the light
 			//if (i->contains_point(pdu.pos)) continue; too strong
 
