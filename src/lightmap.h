@@ -217,7 +217,7 @@ public:
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
 	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0) const;
 	cylinder_3dw calc_bounding_cylin(float sqrt_thresh=0.0) const;
-	pos_dir_up calc_pdu() const;
+	pos_dir_up calc_pdu(bool dynamic_cobj) const;
 	bool is_visible()     const;
 	bool is_directional() const {return (bwidth < 1.0);}
 	bool is_very_directional() const {return ((bwidth + LT_DIR_FALLOFF) < 0.5);}

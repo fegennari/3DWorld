@@ -36,7 +36,7 @@ bool bind_point_t::is_valid() { // used with placed dlights
 point bind_point_t::get_updated_bind_pos() const {
 	// if bound to a movable cobj, return the cobj center so that this object moves with the cobj
 	// Note: movable cobjs can only be created during scene loading, so we don't need to worry about the cobj slot being reused after the original cobj is destroyed
-	if (!bound || !valid || bind_cobj < 0) return bind_pos; // no change
+	if (!bound || !valid || disabled || bind_cobj < 0) return bind_pos; // no change
 	coll_obj const &cobj(coll_objects.get_cobj(bind_cobj));
 	return (cobj.is_movable() ? cobj.get_center_pt() : bind_pos);
 }
@@ -291,7 +291,7 @@ void light_source_trig::advance_timestep() {
 		point const new_bind_pos(get_updated_bind_pos());
 		if (new_bind_pos != bind_pos) {shift_by(new_bind_pos - bind_pos); dynamic = 1;} // if the light moves, flag it as dynamic
 	}
-	if (!bind_point_t::valid) {release_smap();} // free shadow map if invalid as an optimization
+	if (!bind_point_t::valid || bind_point_t::disabled) {release_smap();} // free shadow map if invalid as an optimization
 	if (!triggers.is_active()) return; // trigger not active
 	enabled = (active_time > 0.0); // light on by default
 	
@@ -404,7 +404,7 @@ void light_source::setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) c
 	if (smap_index > 0) {local_smap_manager.get(smap_index).set_smap_shader_for_light(s, arr_tex_set);}
 }
 
-pos_dir_up light_source::calc_pdu() const {
+pos_dir_up light_source::calc_pdu(bool dynamic_cobj) const {
 
 	float const cos_theta(1.0 - min(0.16f, (bwidth + LT_DIR_FALLOFF))), angle(2.0*acosf(cos_theta));
 	int const dim(get_min_dim(dir));
@@ -418,7 +418,7 @@ pos_dir_up light_source::calc_pdu() const {
 	float near_clip(0.001*radius); // min value
 
 	// if light is inside a light fixture, move the near clip plane so that the light fixture cobj is outside the view frustum
-	if (check_point_contained_tree(pos, cindex, 0)) {
+	if (check_point_contained_tree(pos, cindex, dynamic_cobj)) {
 		assert(cindex >= 0);
 		point const start_pos(pos + dir*radius);
 		if (coll_objects[cindex].line_int_exact(start_pos, pos, t, cnorm)) {near_clip += (1.0 - t)*radius;}
@@ -432,7 +432,7 @@ bool light_source_trig::is_shadow_map_enabled() const {
 	if (is_line_light())    return 0; // line lights don't support shadow maps
 	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
 	//if (!is_enabled())      return 0; // disabled or destroyed
-	if (is_directional()) {} // directional vs. hemisphere: use 2D shadow map for both
+	if (is_directional() && !is_cube_face) {} // directional vs. hemisphere: use 2D shadow map for both
 	return 1;
 }
 
@@ -446,7 +446,7 @@ bool light_source_trig::check_shadow_map() {
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
-	smap.pdu = calc_pdu(); // Note: could cache this in the light source for static lights
+	smap.pdu = calc_pdu(dynamic_cobj); // Note: could cache this in the light source for static lights
 #if 0 // draw light/shadow frustum for debugging
 	shader_t shader;
 	shader.begin_color_only_shader(RED);
