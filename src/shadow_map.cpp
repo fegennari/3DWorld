@@ -594,7 +594,6 @@ void create_shadow_map() {
 	if (scene_smap_vbo_invalid == 2) {free_smap_vbo();} // force rebuild of VBO
 
 	// render shadow maps to textures
-	add_coll_shadow_objs();
 	ensure_smap_data();
 	create_shadow_map_inner(0); // no_update=0
 	scene_smap_vbo_invalid = 0; // needs to be after dlights update
