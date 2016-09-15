@@ -973,6 +973,8 @@
     <ResourceCompile Include="Script1.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="coll_objs_puzzle.txt" />
+    <Text Include="config_puzzle.txt" />
     <Text Include="mapx\coll_objs_mapx.txt" />
     <Text Include="sphere_materials.txt" />
   </ItemGroup>

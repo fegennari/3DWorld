@@ -1,0 +1,45 @@
+ntrees 0
+nsmileys 0
+verbose 0
+rand_seed 0
+load_coll_objs 1
+glaciate 0
+disable_universe 1
+disable_inf_terrain 1
+disable_water 1
+disable_scenery 1
+read_landscape 0
+read_heightmap 0
+start_maximized 1
+enable_depth_clamp 1
+enable_dlight_shadows 1
+enable_gamma_correction 0
+use_core_context 0
+toggle_mesh_enabled # disable mesh draw by default
+
+gravity 1.0
+mesh_height 0.1
+mesh_scale 1.0
+camera_height 0.0
+player_start 0.0 -3.5 0.25
+sun_rot 0.7
+destroy_thresh 0
+
+num_items 0 0 0 0 0
+left_handed 0
+self_damage 1.0
+player_damage 1.0
+player_speed 1.0
+speed_mult 1.0
+player_name Deathtool
+num_dodgeballs 0
+unlimited_weapons 0
+
+mesh_size  128 128 64
+scene_size 4.0 4.0 4.0
+shadow_map_sz 4096
+
+include config_resolution.txt
+coll_obj_file coll_objs_puzzle.txt
+
+
