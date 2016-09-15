@@ -7,7 +7,7 @@ const float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, 
 const float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
 
 #ifdef HAS_DLIGHT_SMAP
-const int MAX_DLIGHT_SMAPS = 16;
+const int MAX_DLIGHT_SMAPS = 64; // must agree with the value used in shadow_map.h (Note: up to 128 is okay)
 uniform sampler2DArrayShadow smap_tex_arr_dl;
 uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
 
