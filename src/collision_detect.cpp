@@ -1918,9 +1918,9 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 						pos.z = zb - radius;
 					}
 				}
-			}
-			if (is_player && !test_only && cobj.cp.damage != 0.0) {
-				smiley_collision(id, NO_SOURCE, plus_z, pos, fticks*cobj.cp.damage, COLLISION); // damage can be positive or negative
+				if (is_player && !test_only && cobj.cp.damage != 0.0) {
+					smiley_collision(id, NO_SOURCE, plus_z, pos, fticks*cobj.cp.damage, COLLISION); // damage can be positive or negative
+				}
 			}
 			any_coll = 1;
 		} // if coll
