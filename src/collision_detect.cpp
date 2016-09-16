@@ -28,7 +28,7 @@ cobj_draw_groups cdraw_groups;
 extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
-extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
+extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height;
 extern double camera_zh;
 extern dwobject def_objects[];
 extern obj_type object_types[];
@@ -1778,7 +1778,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		float const jump_val((float(jump_time)/TICKS_PER_SECOND - (JUMP_COOL - JUMP_TIME))/JUMP_TIME); // jt == JC => 1.0; jt == JC-JT => 0.0
 
 		if (jump_val > 0.0) { // in the first half of the jump (acceleration)
-			pos.z  += JUMP_ACCEL*fticks*radius*jump_val*jump_val; // quadratic falloff
+			pos.z  += JUMP_ACCEL*fticks*radius*jump_val*jump_val*jump_height; // quadratic falloff
 			jumping = 1;
 		}
 		jump_time = max(0, jump_time-iticks);
