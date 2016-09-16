@@ -58,7 +58,7 @@ extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_ed
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, czmax, fticks, crater_depth, crater_radius;
-extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
+extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq, tfticks;
 extern double camera_zh, c_phi;
 extern point surface_pos, camera_last_pos;
 extern int coll_id[];
@@ -1457,6 +1457,8 @@ void player_state::switch_weapon(int val, int verbose) {
 }
 
 
+int player_state::get_prev_fire_time_in_ticks() const {return int(get_fspeed_scale()*(tfticks - ticks_since_fired));}
+
 void player_state::gamemode_fire_weapon() { // camera/player fire
 
 	static int fire_frame(0);
@@ -1522,7 +1524,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		}
 	}
 	//if (frame_counter == fire_frame) return;
-	int const dtime(int(get_fspeed_scale()*(frame_counter - timer)*fticks));
+	int const dtime(get_prev_fire_time_in_ticks());
 
 	if ((game_mode == 2 && weapon == W_BBBAT) || (!UNLIMITED_WEAPONS && no_ammo() &&
 		(weapon == W_LASER || dtime >= int(weapons[weapon].fire_delay))))
@@ -1595,8 +1597,8 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	int weapon_id(weapon);
 	if (weapon == W_GRENADE && (wmode&1)) {weapon_id = W_CGRENADE;}
 	if (weapon == W_BLADE   && (wmode&1)) {weapon_id = W_SAWBLADE;}
-	if (weapon_id == W_M16 && (wmode&1) == 1) ++rot_counter;
-	int const dtime(int(get_fspeed_scale()*(frame_counter - timer)*fticks));
+	if (weapon_id == W_M16  && (wmode&1) == 1) {++rot_counter;}
+	int const dtime(get_prev_fire_time_in_ticks());
 	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1)), is_player(shooter == CAMERA_ID);
 	weapon_t const &w(weapons[weapon_id]);
 	int fire_delay((int)w.fire_delay);
@@ -1612,7 +1614,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		if (!vsync_enabled && is_player && weapon_id == W_M16) {add_dynamic_light(1.0, fpos, YELLOW);}
 		return 0;
 	}
-	timer = frame_counter;
+	ticks_since_fired = tfticks;
 	bool const underwater(is_underwater(fpos));
 	float firing_error(w.firing_error);
 	if (underwater) {firing_error *= UWATER_FERR_MUL;}

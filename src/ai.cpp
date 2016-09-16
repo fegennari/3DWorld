@@ -1450,7 +1450,7 @@ void player_state::init(bool w_start) {
 		}
 		wmode     = 0;
 	}
-	timer         = 0;
+	ticks_since_fired = tfticks;
 	init_frame    = frame_counter;
 	fire_frame    = 0;
 	was_hit       = 0;
