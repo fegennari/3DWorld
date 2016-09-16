@@ -654,7 +654,7 @@ void cobj_draw_buffer::draw() const {
 bool check_cobj_vis_occlude(coll_obj const &c, pos_dir_up const &pdu, int reflection_pass, float ref_plane_z) {
 	assert(c.cp.draw);
 	if (c.no_draw()) return 0;
-	if (reflection_pass == 1 && c.d[2][1] < ref_plane_z) return 0; // reflection plane z clip
+	if (reflection_pass == 1 && c.d[2][1] <= ref_plane_z) return 0; // reflection plane z clip
 	if (c.group_id >= 0) return 1; // grouped cobjs can't be culled
 	if (!c.check_pdu_visible(pdu)) return 0; // VFC
 	if (reflection_pass == 0) return !c.is_occluded_from_viewer(pdu.pos); // not reflections
