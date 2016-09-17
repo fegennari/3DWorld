@@ -24,7 +24,7 @@ typedef set<unsigned char>::iterator keyset_it;
 
 
 int const INIT_DMODE       = 0x010F;
-int const P_MOTION_DEF     = 0;
+bool const MOUSE_LOOK_DEF  = 0;
 int const STARTING_INIT_X  = 0; // setting to 1 seems safer but less efficient
 int const MIN_TIME_MS      = 100;
 
@@ -65,7 +65,7 @@ bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_buil
 bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0), volume_lighting(0);
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0);
 bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only_pine_palm_trees(0), enable_gamma_correct(0), use_z_prepass(0), reflect_dodgeballs(0);
-bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_motion(0);
+bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_motion(0), enable_mouse_look(MOUSE_LOOK_DEF);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
@@ -79,7 +79,7 @@ int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0);
 int num_trees(0), num_smileys(1), gmww(1920), gmwh(1080), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
-int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF), dynamic_mesh_scroll(0);
+int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0);
 int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100);
@@ -355,7 +355,7 @@ void reset_camera_pos() {
 	c_phi         = DEF_CPHI;
 	camera_y      = DEF_CAMY;
 	if (world_mode == WMODE_UNIVERSE) camera_origin.z = zcenter;
-	if (passive_motion) m_button = GLUT_LEFT_BUTTON;
+	if (enable_mouse_look) {m_button = GLUT_LEFT_BUTTON;}
 }
 
 
@@ -580,7 +580,7 @@ void resize(int x, int y) {
 // x and y are the location of the mouse (in window-relative coordinates)
 void mouseButton(int button, int state, int x, int y) {
 
-	bool const fire_button((button == GLUT_RIGHT_BUTTON || (passive_motion && button == GLUT_LEFT_BUTTON)));
+	bool const fire_button((button == GLUT_RIGHT_BUTTON || (enable_mouse_look && button == GLUT_LEFT_BUTTON)));
 	add_uevent_mbutton(button, state, x, y);
 	if (ui_intercept_mouse(button, state, x, y, 1)) return; // already handled
 	ctrl_key_pressed = is_ctrl_key_pressed();
@@ -623,7 +623,7 @@ void mouseMotion(int x, int y) {
 	add_uevent_mmotion(x, y);
 	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
 	int dx(x - last_mouse_x), dy(y - last_mouse_y);
-	if (camera_mode == 1 && passive_motion && !map_mode) {button = GLUT_LEFT_BUTTON;}
+	if (camera_mode == 1 && enable_mouse_look && !map_mode) {button = GLUT_LEFT_BUTTON;}
 
 	switch (button) {
 	case GLUT_LEFT_BUTTON: // h: longitude, v: latitude
@@ -680,7 +680,7 @@ void mouseMotion(int x, int y) {
 	last_mouse_x = x;
 	last_mouse_y = y;
 
-	if (passive_motion) { // wrap the pointer when it goes off screen
+	if (enable_mouse_look) { // wrap the pointer when it goes off screen
 		if (x == 0) {
 			glutWarpPointer(window_width-2, y);
 			last_mouse_x = window_width-2;
@@ -703,8 +703,7 @@ void mouseMotion(int x, int y) {
 
 
 void mousePassiveMotion(int x, int y) {
-
-	if (passive_motion) {mouseMotion(x, y);}
+	if (enable_mouse_look) {mouseMotion(x, y);}
 }
 
 
@@ -794,7 +793,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		run_forward = !run_forward;
 		break;
 	case 'V': // change mouse mode
-		passive_motion = !passive_motion;
+		enable_mouse_look = !enable_mouse_look;
 		break;
 
 	case 'C': // recreate mesh / add red ships
@@ -1114,7 +1113,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case ' ': // fire/jump/respawn key
-		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide && passive_motion) { // jump
+		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide && enable_mouse_look) { // jump
 			if (!spectate && sstates != nullptr) {sstates[CAMERA_ID].jump(get_camera_pos());}
 		}
 		else if (world_mode == WMODE_GROUND && game_mode && camera_mode == 0 && !spectate && sstates != nullptr && sstates[CAMERA_ID].deaths > 0 && !(sstates[CAMERA_ID].wmode&1)) { // respawn
@@ -1598,6 +1597,7 @@ int load_config(string const &config_file) {
 	kwmb.add("store_cobj_accum_lighting_as_blocked", store_cobj_accum_lighting_as_blocked);
 	kwmb.add("begin_motion", begin_motion);
 	kwmb.add("water_is_lava", water_is_lava);
+	kwmb.add("enable_mouse_look", enable_mouse_look);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
