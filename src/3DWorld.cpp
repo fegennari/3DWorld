@@ -112,7 +112,7 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branches, model_calc_tan_vect;
+extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branches, model_calc_tan_vect, water_is_lava;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters, scene_smap_vbo_invalid;
@@ -1597,6 +1597,7 @@ int load_config(string const &config_file) {
 	kwmb.add("all_model3d_ref_update", all_model3d_ref_update);
 	kwmb.add("store_cobj_accum_lighting_as_blocked", store_cobj_accum_lighting_as_blocked);
 	kwmb.add("begin_motion", begin_motion);
+	kwmb.add("water_is_lava", water_is_lava);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
