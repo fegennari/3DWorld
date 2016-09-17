@@ -20,7 +20,8 @@ dynamic_particle_system d_part_sys;
 dpart_params_t dp_params;
 
 
-extern int window_width, iticks, begin_motion, animate2, display_mode, frame_counter;
+extern bool begin_motion;
+extern int window_width, iticks, animate2, display_mode, frame_counter;
 extern float zbottom, ztop, fticks, base_gravity, TIMESTEP, XY_SCENE_SIZE;
 extern obj_type object_types[];
 

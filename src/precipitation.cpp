@@ -10,7 +10,8 @@
 
 float const TT_PRECIP_DIST = 20.0;
 
-extern int animate2, begin_motion, display_mode, camera_coll_id, precip_mode, DISABLE_WATER;
+extern bool begin_motion;
+extern int animate2, display_mode, camera_coll_id, precip_mode, DISABLE_WATER;
 extern float temperature, fticks, zmin, water_plane_z, brightness, XY_SCENE_SIZE;
 extern vector3d wind;
 extern int coll_id[];

@@ -51,8 +51,8 @@ vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode, spheres_mode, smoke_visible;
-extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
+extern bool vsync_enabled, spraypaint_mode, spheres_mode, smoke_visible, begin_motion;
+extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;

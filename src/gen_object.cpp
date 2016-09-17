@@ -28,7 +28,8 @@ float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
 
-extern int begin_motion, animate2, show_fog, rgen_seed;
+extern bool begin_motion;
+extern int animate2, show_fog, rgen_seed;
 extern float zmax, ztop, water_plane_z, FAR_CLIP;
 extern int coll_id[];
 extern obj_group obj_groups[];

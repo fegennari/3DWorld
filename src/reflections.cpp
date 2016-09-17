@@ -19,8 +19,8 @@ point pre_ref_camera_pos(zero_vector);
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
 
-extern bool combined_gu, show_lightning;
-extern int display_mode, window_width, window_height, begin_motion, camera_coll_id;
+extern bool combined_gu, show_lightning, begin_motion;
+extern int display_mode, window_width, window_height, camera_coll_id;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern coll_obj_group coll_objects;
 extern vector<shadow_sphere> shadow_objs;

@@ -16,8 +16,8 @@ bool const MAP_VIEW_SHADOWS  = 1;
 int map_drag_x(0), map_drag_y(0);
 float map_x(0.0), map_y(0.0), map_zoom(0.0);
 
-extern bool water_is_lava;
-extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, begin_motion, read_landscape, read_heightmap, do_read_mesh;
+extern bool water_is_lava, begin_motion;
+extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex;
 extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature;
 extern int coll_id[];

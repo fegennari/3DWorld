@@ -37,8 +37,8 @@ vector3d const dir0(1.0, 0.0, 0.0);
 vector3d const upv0(0.0, 1.0, 0.0);
 
 
-extern bool univ_stencil_shadows;
-extern int iticks, begin_motion, display_mode;
+extern bool univ_stencil_shadows, begin_motion;
+extern int iticks, display_mode;
 extern float fticks;
 extern point player_death_pos;
 extern pos_dir_up player_pdu;

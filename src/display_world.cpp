@@ -43,9 +43,9 @@ colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUN
 
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
-extern bool user_action_key, flashlight_on, enable_clip_plane_z;
+extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
-extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, begin_motion;
+extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z;

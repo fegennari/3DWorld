@@ -25,8 +25,8 @@ quad_batch_draw puddle_qbd;
 pt_line_drawer obj_pld, snow_pld;
 
 
-extern bool underwater, smoke_exists, reflect_dodgeballs;
-extern int display_mode, num_groups, teams, begin_motion, UNLIMITED_WEAPONS;
+extern bool underwater, smoke_exists, reflect_dodgeballs, begin_motion;
+extern int display_mode, num_groups, teams, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
 extern float fticks, TIMESTEP, base_gravity, brightness, indir_vert_offset, cobj_z_bias, camera_health;
 extern point star_pts[];

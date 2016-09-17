@@ -139,8 +139,7 @@ class u_ship;
 class ship_weapon;
 
 
-extern bool player_enemy;
-extern int begin_motion; // required for efficiency
+extern bool player_enemy, begin_motion; // required for efficiency
 extern u_ship *player_ship_ptr;
 
 

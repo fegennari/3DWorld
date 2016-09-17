@@ -36,6 +36,7 @@ player_name Deathtool
 num_dodgeballs 0
 unlimited_weapons 0
 init_game_mode 1
+begin_motion 1
 
 mesh_size  128 128 64
 scene_size 4.0 4.0 4.0

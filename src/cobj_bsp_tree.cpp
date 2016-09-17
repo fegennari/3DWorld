@@ -11,8 +11,8 @@ float const POLY_TOLER       = 1.0E-6;
 float const OVERLAP_AMT      = 0.02;
 
 
-extern bool mt_cobj_tree_build;
-extern int display_mode, frame_counter, cobj_counter, begin_motion;
+extern bool mt_cobj_tree_build, begin_motion;
+extern int display_mode, frame_counter, cobj_counter;
 extern coll_obj_group coll_objects;
 extern vector<unsigned> falling_cobjs;
 extern set<unsigned> moving_cobjs;

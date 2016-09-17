@@ -11,7 +11,8 @@
 float const TOLER_ = 1.0E-6;
 
 
-extern int begin_motion, num_groups, camera_coll_id, spectate, display_mode, camera_mode, camera_view;
+extern bool begin_motion;
+extern int num_groups, camera_coll_id, spectate, display_mode, camera_mode, camera_view;
 extern float zmin, NEAR_CLIP;
 extern double camera_zh;
 extern vector_point_norm cylinder_vpn;

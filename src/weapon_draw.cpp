@@ -11,8 +11,8 @@
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool keep_beams, have_indir_smoke_tex;
-extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
+extern bool keep_beams, have_indir_smoke_tex, begin_motion;
+extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
 extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2;
 extern float fticks, tfticks;
 extern vector3d pre_ref_cview_dir;

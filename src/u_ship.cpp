@@ -52,8 +52,8 @@ float const FAST_TARG_DIST     = 1.0; // fast speed if target dist > this value
 float const SHIP_GMAX          = 10.0*MAX_SOBJ_GRAVITY;
 
 
-extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any, ctrl_key_pressed;
-extern int frame_counter, iticks, begin_motion, onscreen_display, display_mode, animate2;
+extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any, ctrl_key_pressed, begin_motion;
+extern int frame_counter, iticks, onscreen_display, display_mode, animate2;
 extern float fticks, urm_proj, global_regen, hyperspeed_mult, player_turn_rate, rand_spawn_ship_dmax;
 extern unsigned alloced_fobjs[], team_credits[], init_credits[], ind_ships_used[];
 extern exp_type_params et_params[];
