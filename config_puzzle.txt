@@ -20,7 +20,8 @@ toggle_mesh_enabled # disable mesh draw by default
 gravity 1.0
 mesh_height 0.1
 mesh_scale 1.0
-camera_height 0.0
+camera_height 0.02
+jump_height 1.2
 player_start 0.0 -3.5 1.25
 sun_rot 0.7
 destroy_thresh 0
