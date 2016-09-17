@@ -30,7 +30,7 @@ vector<od_data> oddatav; // used as a temporary
 extern bool has_wpt_goal, use_waypoint_app_spots;
 extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
-extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id;
+extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
 extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity, NEAR_CLIP, FAR_CLIP;
 extern double camera_zh;
 extern point orig_camera, orig_cdir;
@@ -1442,8 +1442,8 @@ void player_state::init(bool w_start) {
 			p_weapons[W_UNARMED] = 2;
 			p_weapons[W_BBBAT]   = 2;
 			p_weapons[W_SBALL]   = 1;
-			p_ammo[W_SBALL]      = weapons[W_SBALL].def_ammo;
-			weapon               = W_SBALL;
+			p_ammo[W_SBALL]      = ((init_num_balls < 0) ? weapons[W_SBALL].def_ammo : init_num_balls);
+			weapon               = ((p_ammo[W_SBALL] > 0) ? W_SBALL : W_UNARMED);
 		}
 		else {
 			weapon = W_UNARMED;
