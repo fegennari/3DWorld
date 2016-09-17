@@ -2068,6 +2068,11 @@ int main(int argc, char** argv) {
 		gen_snow_coverage();
 		create_object_groups();
 		init_game_state();
+
+		if (game_mode) {
+			gamemode_rand_appear();
+			camera_mode = 1; // on the ground
+		}
 		get_landscape_texture_color(0, 0); // hack to force creation of the cached_ls_colors vector in the master thread (before build_lightmap())
 		build_lightmap(1);
 	}
