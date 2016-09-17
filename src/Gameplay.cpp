@@ -2368,6 +2368,7 @@ void init_game_state() {
 		if (team_starts[i].y1 > team_starts[i].y2) swap(team_starts[i].y1, team_starts[i].y2);
 		teaminfo[team_starts[i].index].bb = team_starts[i];
 	}
+	if (game_mode != 0) {change_game_mode();} // handle init_game_mode
 }
 
 
@@ -2574,10 +2575,8 @@ void change_game_mode() {
 
 	int types[] = {HEALTH, SHIELD, POWERUP, WEAPON, AMMO};
 	unsigned const ntypes(UNLIMITED_WEAPONS ? 3 : 5);
-
-	for (unsigned i = 0; i < ntypes; ++i) {
-		obj_groups[coll_id[types[i]]].set_enable(game_mode == 1);
-	}
+	game_mode = game_mode % 3; // 0/1/2
+	for (unsigned i = 0; i < ntypes; ++i) {obj_groups[coll_id[types[i]]].set_enable(game_mode == 1);}
 	obj_groups[coll_id[BALL]].set_enable(game_mode == 2);
 
 	if (game_mode == 2) {
@@ -2594,12 +2593,8 @@ void change_game_mode() {
 		assert(coll_id[BALL] >= 0 && coll_id[BALL] < NUM_TOT_OBJS);
 		obj_groups[coll_id[BALL]].free_objects();
 	}
-	if (game_mode) {
-		init_game_mode();
-	}
-	else {
-		free_dodgeballs(1, 1);
-	}
+	if (game_mode) {init_game_mode();}
+	else {free_dodgeballs(1, 1);}
 }
 
 

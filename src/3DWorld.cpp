@@ -1295,7 +1295,7 @@ void keyboard2(int key, int x, int y) {
 
 	case GLUT_KEY_F2: // switch game mode
 		if (world_mode == WMODE_UNIVERSE) break;
-		game_mode = (game_mode + 1)%3;
+		++game_mode;
 		change_game_mode();
 		break;
 
@@ -1628,6 +1628,7 @@ int load_config(string const &config_file) {
 	kwmi.add("mesh_freq_filter", mesh_freq_filter);
 	kwmi.add("preproc_cube_cobjs", preproc_cube_cobjs);
 	kwmi.add("show_waypoints", show_waypoints);
+	kwmi.add("init_game_mode", game_mode);
 
 	kw_to_val_map_t<unsigned> kwmu(error);
 	kwmu.add("grass_density", grass_density);
