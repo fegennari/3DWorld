@@ -1880,12 +1880,11 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		} // end switch
 
 		if (coll) {
-			if (cobj.platform_id >= 0) {zt -= 1.0E-6;} // subtract a small value so that camera/smiley still collides with cobj
-
 			if (zt < zb) {
 				cout << "type = " << int(cobj.type) << ", zb = " << zb << ", zt = " << zt << ", pos.z = " << pos.z << endl;
 				assert(0);
 			}
+			if (cobj.platform_id >= 0) {zt = max(zb, zt-1.0E-6f);} // subtract a small value so that camera/smiley still collides with cobj
 			if (zt <= z1) {zmu = max(zmu, zt);}
 			
 			if (any_coll) {
