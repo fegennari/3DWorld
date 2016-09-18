@@ -1144,7 +1144,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x04;   break;
 	case '4': // toggle occlusion culling / tiled terrain/voxel/mesh detail normal maps
 		display_mode ^= 0x08;   break;
-	case '5': // walk on snow/ship shadows/reflection plane
+	case '5': // walk on snow/ship shadows/reflections
 		display_mode ^= 0x10;   break;
 	case '6': // toggle water reflections, bump maps, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
@@ -1840,9 +1840,8 @@ int load_config(string const &config_file) {
 				cfg_err("floating_light_range command", error);
 			}
 		}
-		else if (str == "toggle_mesh_enabled") {
-			display_mode ^= 0x01;
-		}
+		else if (str == "toggle_mesh_enabled") {display_mode ^= 0x01;}
+		else if (str == "toggle_reflections" ) {display_mode ^= 0x10;}
 		else if (str == "player_name") {
 			if (!read_str(fp, player_name)) cfg_err("player name", error);
 		}
