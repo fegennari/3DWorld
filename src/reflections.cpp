@@ -429,25 +429,36 @@ void reflective_cobjs_t::create_textures() {
 	if (!enable_all_reflections()) return;
 	bool const dynamic_update(enable_reflection_dynamic_updates());
 	vector<unsigned> to_remove;
+	point const camera(get_camera_pos());
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		unsigned &tid(i->second.tid);
 		coll_obj const &cobj(coll_objects.get_cobj(i->first));
 		if (cobj.disabled() || !cobj.is_reflective()) {to_remove.push_back(i->first); continue;} // no longer reflective - mark for removal
 		cube_t const &bcube(cobj);
-		bool const cobj_moved(i->second.bcube != bcube);
-		bool const no_update_needed(tid && !dynamic_update && !cobj_moved);
+		bool const cobj_moved(i->second.bcube != bcube), no_update_needed(tid && !dynamic_update && !cobj_moved);
 		if (no_update_needed && i->second.faces_valid == EF_ALL) continue; // reflection texture is valid, cobj has not moved, and scene has not changed
 		if (tid && !cobj.is_cobj_visible())                      continue; // reflection texture is valid but cobj is not visible (approximate)
+
+		if (cobj.type == COLL_CUBE) {
+			int const sides((int)cobj.cp.surfs);
+			bool visible(0);
+
+			for (unsigned fi = 0; fi < 6; ++fi) { // Note: assumes the camera isn't inside the cube
+				unsigned const dim(fi>>1), dir(fi&1);
+				if (!(sides & EFLAGS[dim][dir]) && ((camera[dim] < cobj.d[dim][dir]) ^ dir)) {visible = 1; break;} // side is visible
+			}
+			if (!visible) continue;
+			//skip_mask = cobj.cp.surfs; // incorrect - requires cube sides for the image border to capture perspective
+		}
 		// enable back face culling when texture is created or the cobj has moved, or on the final frame following a transition from dynamic updates (in case a new face comes into view)
 		// also, semi transparent objects need back face refraction + reflection
 		// also, curved objects (sphere, cylinder, torus, capsule) can reflect in back facing directions and need to have all faces updated
 		bool const bfc(tid && !cobj_moved && !no_update_needed && !cobj.is_semi_trans() && cobj.has_hard_edges());
 		unsigned skip_mask(0); // {z1, z2, y1, y2, x1, x2}
-		//if (cobj.type == COLL_CUBE) {skip_mask = cobj.cp.surfs;} // incorrect - requires cube sides for the image border to capture perspective
 		i->second.faces_valid = create_cube_map_reflection(tid, i->second.tsize, i->first, bcube, bfc, cobj.is_indoors(), skip_mask);
 		i->second.bcube       = bcube;
-	}
+	} // for i
 	for (auto i = to_remove.begin(); i != to_remove.end(); ++i) {remove_cobj(*i);}
 }
 

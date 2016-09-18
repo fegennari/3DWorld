@@ -162,7 +162,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 	bool inside(!back_face_cull);
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
 
-	if (!inside) { // check if in the camera's view volume intersects the cube - if so we must render all faces
+	if (!inside) { // check if the camera's view volume intersects the cube - if so we must render all faces
 		float const dist(NEAR_CLIP + CAMERA_RADIUS);
 		inside = 1;
 
