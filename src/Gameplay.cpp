@@ -2447,7 +2447,6 @@ void player_fall(int id) { // smileys and the player (camera)
 
 
 void update_camera_velocity(vector3d const &v) {
-
 	if (sstates == NULL) return; // assert(0)?
 	sstates[CAMERA_ID].velocity = v/(TIMESTEP*fticks);
 }
@@ -2466,7 +2465,7 @@ void init_game_mode() {
 		sstates[i].killer = NO_SOURCE; // no one
 		if (game_mode == 1) {init_sstate(i, 1);} // ???
 	}
-	gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);
+	if (frame_counter > 0) {gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);} // not on first frame
 }
 
 
