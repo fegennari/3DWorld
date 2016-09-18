@@ -1524,7 +1524,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cobj.add_to_vector(fixed_cobjs, COLL_CUBE);
 				cobj.radius2 = 0.0; // reset
 				cobj.counter = 0; // reset
-				if (cobj.platform_id >= 0 && platforms[cobj.platform_id].is_rotation()) {return read_error(fp, "collision cube: cannot use a rotation platform", coll_obj_file);}
 			}
 			break;
 
