@@ -454,9 +454,9 @@ class platform { // animated (player controlled) scene object
 	bool const update_light; // indirect lighting should be updated when moving
 	float const fspeed, rspeed; // velocity of forward/reverse motion in units per tick (can be negative)
 	float const sdelay, rdelay; // start delay / reverse delay in ticks
-	float const ext_dist, act_dist; // distance traveled, activation distance
-	point origin; // initial position (moved by shifting)
-	vector3d const dir; // direction of motion (travels to dir*dist)
+	float const ext_dist, act_dist; // distance traveled | rotation angle, activation distance
+	point origin; // initial position (moved by shifting) / activation center | rotation origin
+	vector3d const dir; // direction of motion (travels to dir*dist) | rotation axis
 	int sound_id; // -1 = none
 
 	// state variables

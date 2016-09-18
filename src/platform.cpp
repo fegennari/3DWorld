@@ -117,9 +117,13 @@ void platform::next_frame() {
 	delta = all_zeros;
 }
 
-void platform::move_platform(float dist_traveled) {
-	if (is_rot) {assert(0);} // FIXME: WRITE - difficult because rotations may change cobj type (such as cube -> extruded polygon) - only valid for polygons and rotated cylinders?
-	else {pos += dir*dist_traveled;}
+void platform::move_platform(float dist_traveled) { // linear distance or rotation angle
+	
+	if (!is_rot) {pos += dir*dist_traveled; return;} // translate
+
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) { // handle rotation
+		coll_objects.get_cobj(*i).rotate_about(origin, dir, dist_traveled, 1);
+	}
 }
 
 void platform::check_play_sound() const {
