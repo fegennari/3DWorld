@@ -80,7 +80,7 @@ platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, 
 				   ext_dist(dst), act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros), sound_id(sid)
 {
 	assert(dir_ != all_zeros);
-	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
+	assert(fspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
 	if (act_dist > 0.0) {triggers.push_back(trigger_t(origin, act_dist));}
 	reset();
 }
@@ -173,6 +173,7 @@ void platform::advance_timestep() {
 				check_play_sound();
 			case ST_REV: // moving in reverse
 				{
+					if (rspeed == 0.0) {ns_time = 0.0; break;} // wait in this state forever
 					float dist_traveled(rspeed*ns_time), cur_dist(p2p_dist(pos, origin)); // dist is neg
 					assert(dist_traveled < 0.0);
 					
