@@ -24,6 +24,7 @@ mesh_scale 1.0
 camera_height 0.02
 jump_height 1.2
 player_start 0.0 -3.5 1.25 # unused
+enable_init_shields 0
 sun_rot 0.7
 destroy_thresh 0
 
@@ -36,6 +37,7 @@ speed_mult 1.0
 player_name Deathtool
 num_dodgeballs 0
 unlimited_weapons 0
+init_num_balls 0
 init_game_mode 1
 begin_motion 1
 water_is_lava 0

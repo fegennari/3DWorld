@@ -27,7 +27,7 @@ vector<point> app_spots;
 vector<od_data> oddatav; // used as a temporary
 
 
-extern bool has_wpt_goal, use_waypoint_app_spots;
+extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields;
 extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
@@ -1472,7 +1472,7 @@ void player_state::init(bool w_start) {
 	velocity      = zero_vector;
 	kill_time     = 100*TICKS_PER_SECOND;
 
-	if (game_mode == 1) {
+	if (game_mode == 1 && enable_init_shields) {
 		shields       = INIT_SHIELDS;
 		powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : PU_NONE);
 		powerup_time  = INIT_PU_SH_TIME;
