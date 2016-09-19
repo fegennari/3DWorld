@@ -159,6 +159,35 @@ float coll_obj::calc_min_dim() const {
 }
 
 
+float coll_obj::get_min_dist_to_pt(point const &pt) const {
+
+	switch (type) {
+	case COLL_CUBE:
+		return p2p_dist(pt, cube_t::closest_pt(pt));
+	case COLL_SPHERE:
+		return max(0.0f, (p2p_dist(pt, points[0]) - radius));
+	case COLL_POLYGON: {
+		point const center(get_center(points, npoints));
+		vector3d delta(norm*(0.5*thickness));
+		if (dot_product_ptv(delta, pt, center) < 0.0) {delta = -delta;} // choose the side closest to pt
+		float dmin_sq(p2p_dist_sq(pt, (center + delta))); // check center point
+		for (int i = 0; i < npoints; ++i) {dmin_sq = min(dmin_sq, p2p_dist_sq(pt, (points[i] + delta)));} // check each corner
+		return sqrt(dmin_sq); // slightly approximate
+	}
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT:
+	case COLL_CAPSULE:
+		return max(0.0f, (p2p_dist(pt, get_closest_pt_on_line(pt, points[0], points[1]) - 0.5*(radius + radius2)))); // approximate
+	case COLL_TORUS: {
+		float const dp(fabs(dot_product_ptv(norm, pt, points[0])));
+		return max(0.0f, (p2p_dist(pt, points[0]) - radius2 - (1.0f - dp)*radius)); // approximate (ri when parallel to axis and ri+ro when perpendicular to axis)
+	}
+	default: assert(0);
+	}
+	return 0.0; // never gets here
+}
+
+
 // Note: these functions are intended to be called on coll cubes that are part of platforms,
 // but are okay to call on other shapes to get their bounding cube extents; they return the original bounding cube for non-platforms;
 // if delta is not aligned with x/y/z axes then the boundary will be an over approximation, which is inefficient but ok

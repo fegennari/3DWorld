@@ -144,6 +144,7 @@ public:
 	void calc_volume();
 	void calc_bcube();
 	float calc_min_dim() const;
+	float get_min_dist_to_pt(point const &pt) const;
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
 	void set_npoints();
 	void set_from_pts(point const *const pts, unsigned npts);
