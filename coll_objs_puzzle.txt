@@ -236,11 +236,12 @@ a 0
 
 # spinning fan
 r 0.5 40.0 # set specularity
-l 0.8 1.0 1.0 1.0 1.0 -1 1 # Note: rotated polygon textures don't work
-y 16.0
+l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1 # Note: rotated polygon textures don't work
+y 0.0
 # platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
 Q 1  2.5 2.5 0.1 0.1  5.0 0.0  -0.2 2.1 1.9  0 0 1  1 1 # rotating platform
-P 4  -0.2 2.1 1.9  -0.2 2.1 2.0  -0.2 1.9 2.0  -0.2 1.9 1.9  0.01
+#P 4  -0.2 2.1 1.9  -0.2 2.1 2.0  -0.2 1.9 2.0  -0.2 1.9 1.9  0.01
+B -0.21 -0.19  1.9 2.1  1.9 2.0
 
 # spinning thing
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
