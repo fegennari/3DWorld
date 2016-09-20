@@ -154,6 +154,10 @@ public:
 			--i; // wraparound ok
 		}
 	}
+
+	bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0) const {
+		return sources.check_for_active_sound(pos, radius, min_gain);
+	}
 };
 
 sound_manager_t sound_manager;
@@ -161,6 +165,7 @@ sound_manager_t sound_manager;
 unsigned get_sound_id_for_file(string const &fn) {return sound_manager.find_or_add_sound(fn);}
 string const &get_sound_name(unsigned id) {return sound_manager.get_name(id);}
 void set_sound_loop_state(unsigned id, bool play, float volume) {sound_manager.set_loop_state(id, play, volume);}
+bool check_for_active_sound(point const &pos, float radius, float min_gain) {return sound_manager.check_for_active_sound(pos, radius, min_gain);}
 
 void alut_sleep(float seconds) {alutSleep(seconds);}
 
@@ -319,6 +324,13 @@ bool openal_source::is_playing() const {
 	return (state == AL_PLAYING);
 }
 
+bool openal_source::check_for_active_sound(point const &pos, float radius, float min_gain) const {
+	if (!is_valid()) return 0;
+	if (params.gain < min_gain) return 0;
+	if (!dist_less_than(params.pos, pos, radius)) return 0;
+	return is_playing(); // do this test last to avoid the library call
+}
+
 
 // source_manager_t
 
@@ -368,11 +380,16 @@ openal_source &source_manager_t::get_inactive_source() {
 }
 
 void source_manager_t::clear() {
-	for (unsigned i = 0; i < sources.size(); ++i) {
-		sources[i].free_source();
-	}
+	for (unsigned i = 0; i < sources.size(); ++i) {sources[i].free_source();}
 	sources.clear();
 	next_source = 0;
+}
+
+bool source_manager_t::check_for_active_sound(point const &pos, float radius, float min_gain) const {
+	for (unsigned i = 0; i < sources.size(); ++i) {
+		if (sources[i].check_for_active_sound(pos, radius, min_gain)) return 1;
+	}
+	return 0;
 }
 
 

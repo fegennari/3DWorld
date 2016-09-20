@@ -113,6 +113,7 @@ public:
 	void stop()   const;
 	void pause()  const;
 	void rewind() const;
+	bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0) const;
 };
 
 
@@ -138,6 +139,7 @@ public:
 	void stop_source  (unsigned id) const {get_source(id).stop  ();}
 	void pause_source (unsigned id) const {get_source(id).pause ();}
 	void rewind_source(unsigned id) const {get_source(id).rewind();}
+	bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0) const;
 };
 
 
@@ -145,6 +147,7 @@ void alut_sleep(float seconds);
 unsigned get_sound_id_for_file(std::string const &fn);
 std::string const &get_sound_name(unsigned id);
 void set_sound_loop_state(unsigned id, bool play, float volume=0.0);
+bool check_for_active_sound(point const &pos, float radius, float min_gain);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
 void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
