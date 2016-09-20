@@ -466,7 +466,8 @@ class platform { // animated (player controlled) scene object
 	bool is_stopped; // waiting for trigger re-activate
 	float ns_time; // time to next state in ticks (can be negative if frame time is larger than a delay/travel time)
 	float active_time; // total active time since triggered
-	point pos; // current position - dist is calculated from this point (delta = pos-origin)
+	float cur_angle; // current angle, for rotating platforms
+	point pos; // current position for translating platforms - dist is calculated from this point (delta = pos-origin)
 	vector3d delta; // last change in position
 
 	multi_trigger_t triggers;
@@ -474,6 +475,7 @@ class platform { // animated (player controlled) scene object
 	bool empty() const {return (cobjs.empty() && lights.empty());}
 	void move_platform(float dist_traveled);
 	void check_play_sound() const;
+	float get_dist_traveled() const {return (is_rot ? fabs(cur_angle) : p2p_dist(pos, origin));}
 
 public:
 	// other data

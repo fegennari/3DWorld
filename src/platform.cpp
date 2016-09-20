@@ -87,16 +87,17 @@ platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, 
 
 void platform::reset() {
 
-	state   = ST_NOACT;
+	state      = ST_NOACT;
 	is_stopped = 0;
-	ns_time = active_time = 0.0;
-	pos     = origin;
+	ns_time    = active_time = 0.0;
+	pos        = origin;
+	cur_angle  = 0.0;
 }
 
 void platform::activate() {
 
 	assert(state == ST_NOACT);
-	assert(pos == origin);
+	assert(pos == origin && cur_angle == 0.0);
 	assert(ns_time == 0.0);
 	state   = ST_WAIT; // activated
 	is_stopped = 0;
@@ -119,7 +120,8 @@ void platform::next_frame() {
 
 void platform::move_platform(float dist_traveled) { // linear distance or rotation angle
 	
-	if (!is_rot) {pos += dir*dist_traveled; return;} // translate
+	if (is_rot) {cur_angle += dist_traveled;} // rotate
+	else        {pos       += dir*dist_traveled; return;} // translate
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) { // handle rotation
 		coll_objects.get_cobj(*i).rotate_about(origin, dir, dist_traveled, 1);
@@ -135,7 +137,7 @@ void platform::advance_timestep() {
 	if (fticks == 0.0 || empty() || is_stopped) return; // no progress, no cobjs/lights, or stopped and waiting for trigger re-activate
 	
 	if (state == ST_NOACT) { // not activated
-		assert(pos == origin);
+		assert(pos == origin && cur_angle == 0.0);
 		assert(ns_time == 0.0);
 		if (!cont) return;
 		activate();
@@ -152,12 +154,12 @@ void platform::advance_timestep() {
 	while (ns_time < 0.0) { // guaranteed to terminate as long as the assertions in the constructor are met
 		switch (state) {
 			case ST_WAIT: // activated, waiting to start moving forward
-				assert(pos == origin);
+				assert(pos == origin && cur_angle == 0.0);
 				state = ST_FWD; // wait has ended, start moving forward (fallthrough)
 				check_play_sound();
 			case ST_FWD: // moving forward
 				{
-					float dist_traveled(-fspeed*ns_time), cur_dist(p2p_dist(pos, origin)); // dist is pos
+					float dist_traveled(-fspeed*ns_time), cur_dist(get_dist_traveled()); // dist is pos
 					assert(dist_traveled > 0.0);
 					
 					if (dist_traveled + cur_dist > ext_dist) { // traveled past the end
@@ -177,8 +179,13 @@ void platform::advance_timestep() {
 				check_play_sound();
 			case ST_REV: // moving in reverse
 				{
-					if (rspeed == 0.0) {ns_time = 0.0; break;} // wait in this state forever
-					float dist_traveled(rspeed*ns_time), cur_dist(p2p_dist(pos, origin)); // dist is neg
+					if (rspeed == 0.0) { // no reverse state
+						if (cont && is_rot) {cur_angle = 0.0; state = ST_FWD;} // back to forward state - intinite loop
+						else {} // wait in this state forever
+						ns_time = 0.0;
+						break;
+					}
+					float dist_traveled(rspeed*ns_time), cur_dist(get_dist_traveled()); // dist is neg
 					assert(dist_traveled < 0.0);
 					
 					if (dist_traveled + cur_dist < 0.0) { // traveled past the start
