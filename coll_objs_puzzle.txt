@@ -123,14 +123,14 @@ damage 0.0
 # platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 y 8.0
-Q 1  2.0 0.25 0.0 0.2  0.2 0.0   0 0 0  0 0 -1  1 # platform
+Q 1  2.0 0.25 0.0 0.2  0.2 0.0   1.75 -2.0 1.75  0 0 -1  1 # platform
 B  1.7 1.8  -2.05 -1.95  1.5 2.0
 sound_file machine.wav
-Q 1  2.0 0.20 0.1 0.0  0.2 0.0   0 0 0  0 0 -1  1 # platform
+Q 1  2.0 0.20 0.1 0.0  0.2 0.0   2.45 -2.0 1.75  0 0 -1  1 # platform
 B  2.4 2.5  -2.05 -1.95  1.5 2.0
-Q 1  1.4 0.50 0.0 0.3  0.3 0.0   0 0 0  0 1 0  1 # platform
+Q 1  1.4 0.50 0.0 0.3  0.3 0.0   2.03 -2.45 1.35  0 1 0  1 # platform
 B  2.0 2.06 -2.7 -2.2  1.3 1.4
-Q 1  0.4 0.3  0.0 0.0  0.2 0.0   0 0 0  0 -1 0  1 # platform
+Q 1  0.4 0.3  0.0 0.0  0.2 0.0   2.25 -1.625 1.31  0 -1 0  1 # platform
 B  2.2 2.3  -1.3 -1.95 1.3 1.32
 Q 0
 
@@ -239,18 +239,19 @@ r 0.5 40.0 # set specularity
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1 # Note: rotated polygon textures don't work
 y 0.0
 # platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
-Q 1  2.5 2.5 0.1 0.1  5.0 0.0  -0.2 2.1 1.9  0 0 1  1 1 # rotating platform
+Q 1  2.5 2.5 0.0 0.0  1000.0 1.0  -0.2 2.1 1.9  0 0 1  0 1 # rotating platform
 #P 4  -0.2 2.1 1.9  -0.2 2.1 2.0  -0.2 1.9 2.0  -0.2 1.9 1.9  0.01
 B -0.21 -0.19  1.9 2.1  1.9 2.0
+Q 0
 
 # spinning thing
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 y 0.0
-Q 1  0.5 0.5 0.0 0.0  0.2 0.0   -1.25 2.075 1.875  0 1 0  1 1 # rotation platform
+Q 1  0.5 0.0 0.0 0.0  1.0 0.5   -1.25 2.075 1.875  0 1 0  1 1 # rotation platform
 B -1.40 -1.10   1.90  2.25  1.85 1.9
-Q 1  0.5 0.5 1.0 0.0  0.2 0.0   -1.55 2.075 1.875  0 1 0  1 1 # rotation platform
+Q 1  0.5 0.0 1.0 0.0  1.0 0.5   -1.55 2.075 1.875  0 1 0  1 1 # rotation platform
 B -1.70 -1.40   1.90  2.25  1.85 1.9
-Q 1  0.5 0.5 2.0 0.0  0.2 0.0   -1.85 2.075 1.875  0 1 0  1 1 # rotation platform
+Q 1  0.5 0.0 2.0 0.0  1.0 0.5   -1.85 2.075 1.875  0 1 0  1 1 # rotation platform
 B -2.00 -1.70   1.90  2.25  1.85 1.9
 Q 0
 
