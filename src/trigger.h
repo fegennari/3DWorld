@@ -36,5 +36,29 @@ struct multi_trigger_t : public vector<trigger_t> {
 };
 
 
+enum {SENSOR_ALWAYS_OFF=0, SENSOR_ALWAYS_ON, SENSOR_LIGHT, SENSOR_SOUND, SENSOR_HEAT, SENSOR_METAL, SENSOR_WATER, SENSOR_PRESSURE, NUM_SENSOR_TYPES};
+
+struct geom_xform_t;
+
+struct sensor_t {
+	point pos;
+	float radius; // only used by some sensor types (sound, metal, pressure)
+	float thresh; // only used by some sensor types (light?, sound?, heat)
+	int type;
+
+	sensor_t() : pos(all_zeros), radius(0.0), thresh(0.0), type(SENSOR_ALWAYS_OFF) {}
+	sensor_t(point const &pos_, int type_, float radius_=0.0, float thresh_=0.0) : pos(pos_), radius(radius_), thresh(thresh_), type(type_) {
+		assert(type >= SENSOR_ALWAYS_OFF && type < NUM_SENSOR_TYPES);
+	}
+	bool check_active() const;
+	bool read_from_file(FILE *fp, geom_xform_t const &xf);
+	void write_to_cobj_file(std::ostream &out) const;
+};
+
+struct multi_sensor_t : public vector<sensor_t> {
+	// WRITE
+};
+
+
 #endif // _TRIGGER_H_
 

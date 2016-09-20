@@ -241,6 +241,24 @@ void process_platforms_falling_moving_and_light_triggers() {
 	}
 }
 
+struct proximity_ret_t {
+	point pos;
+	float radius;
+	bool ret;
+
+	proximity_ret_t(point const &pos_, float radius_=0.0) : pos(pos_), radius(radius_), ret(0) {}
+	void check_activate(point const &p, float r, int ix) {ret |= dist_less_than(pos, p, (radius + r));}
+};
+
+bool check_player_proximity(point const &pos, float radius) {
+	
+	int const start_i((camera_mode == 1) ? CAMERA_ID : 0);
+	int const end_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
+	proximity_ret_t pr(pos, radius);
+	check_all_activate(pr, start_i, end_i);
+	return pr.ret;
+}
+
 
 void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigned obj_index, int &cindex) {
 
@@ -1107,6 +1125,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
 	multi_trigger_t triggers;
+	sensor_t cur_sensor;
 	
 	while (!end) { // available: hou
 		assert(fp != NULL);
@@ -1168,6 +1187,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "sound_file") {
 					if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "sound_file", coll_obj_file, line_num);}
 					platforms.read_sound_filename(str);
+				}
+				else if (keyword == "sensor") {
+					if (!cur_sensor.read_from_file(fp, xf)) {return read_error(fp, "sensor", coll_obj_file);}
+					// FIXME: use sensor
 				}
 				else {
 					ostringstream oss;

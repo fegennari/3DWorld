@@ -70,6 +70,7 @@ bool is_ground_wet();
 bool is_ground_snowy();
 void shift_all_objs(vector3d const &vd);
 void process_platforms_falling_moving_and_light_triggers();
+bool check_player_proximity(point const &pos, float radius=0.0);
 void set_global_state();
 void process_groups();
 void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only);
@@ -386,7 +387,7 @@ void get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, ver
 bool check_point_contained_tree(point const &p, int &cindex, bool dynamic);
 bool have_occluders();
 void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler,
-	bool dynamic, bool check_ccounter, int id_for_cobj_int);
+	bool dynamic, bool check_ccounter, int id_for_cobj_int=-1);
 bool check_coll_line(point const &pos1, point const &pos2, int &cindex, int c_obj, int skip_dynamic, int test_alpha,
 	bool include_voxels=1, bool skip_init_colls=0, bool skip_movable=0);
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex, float splash_val=0.0,
@@ -718,8 +719,10 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 bool upload_smoke_indir_texture();
 void upload_dlights_textures(cube_t const &bounds);
 void setup_dlight_textures(shader_t &s, bool enable_dlights_smap=1);
+bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 void get_indir_light(colorRGBA &a, point const &p);
+bool is_any_dlight_visible(point const &p);
 
 // function prototypes - tessellate
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt, bool split_quads);

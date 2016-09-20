@@ -264,6 +264,7 @@ class light_source_trig : public light_source, public bind_point_t {
 	unsigned indir_dlight_ix;
 	float active_time, inactive_time;
 	multi_trigger_t triggers;
+	sensor_t sensor;
 
 public:
 	light_source_trig() : use_smap(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0) {}

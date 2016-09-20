@@ -12,12 +12,15 @@ platform_cont platforms;
 
 extern bool user_action_key;
 extern int animate2;
-extern float fticks, CAMERA_RADIUS;
+extern float fticks, CAMERA_RADIUS, temperature;
 extern coll_obj_group coll_objects;
+extern set<unsigned> moving_cobjs;
 extern vector<light_source_trig> light_sources_d;
 
 
-// Note: activator can be player (CAMERA_ID), smileys (0-N), lights (0-N), or large object collisions (NO_SOURCE)
+// ***** triggers *****
+
+// Note: activator can be player (CAMERA_ID), smileys (0-N), lights (0-N), or explosions (NO_SOURCE)
 unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int activator, bool clicks) const {
 
 	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
@@ -74,6 +77,84 @@ void multi_trigger_t::write_end_triggers_cobj_file(std::ostream &out) const {
 	if (!empty()) {out << "trigger" << endl;} // empty/end trigger
 }
 
+
+// ***** sensors *****
+
+bool check_for_light(point const &pos, float thresh) {
+	if (is_visible_to_any_dir_light(pos, 0.0, -1)) return 1; // check sun and moon
+	if (thresh > 1.0) return 0; // only sun/moon
+	return is_any_dlight_visible(pos); // Note: thresh is unused
+}
+
+bool check_for_heat(point const &pos, float thresh) {
+	if (temperature > thresh) return 1;
+	return 0; // WRITE
+}
+
+bool check_for_metal(point const &pos, float radius) {
+
+	cube_t bcube;
+	bcube.set_from_sphere(pos, radius);
+	vector<unsigned> cobjs;
+
+	for (unsigned dynamic = 0; dynamic < 2; ++dynamic) { // check both dynamic (material spheres) and static (movable) cobjs
+		cobjs.clear();
+		get_intersecting_cobjs_tree(bcube, cobjs, -1, 0.0, (dynamic != 0), 0);
+
+		for (vector<unsigned>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+			coll_obj const &cobj(coll_objects.get_cobj(*i));
+			if (cobj.cp.metalness == 0.0) continue;
+			if (!cobj.may_be_dynamic())   continue; // assume fully static cobjs don't count, otherwise the result will always be the same
+			if (cobj.sphere_intersects(pos, radius)) return 1; // most expensive test last
+		}
+	}
+	return 0;
+}
+
+bool check_for_pressure(point const &pos, float radius) {
+
+	if (check_player_proximity(pos, radius)) return 1; // player/smiley interaction
+	
+	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end(); ++i) {
+		coll_obj const &cobj(coll_objects.get_cobj(*i));
+		if (cobj.sphere_intersects(pos, radius)) return 1; // movable cobj interaction
+	}
+	// FIXME: what about dynamic objects (balls, material spheres, etc.)?
+	return 0;
+}
+
+bool sensor_t::check_active() const {
+
+	switch (type) {
+	case SENSOR_ALWAYS_OFF: return 0;
+	case SENSOR_ALWAYS_ON:  return 1;
+	case SENSOR_LIGHT:      return check_for_light(pos, thresh);
+	case SENSOR_SOUND:      return check_for_active_sound(pos, radius, thresh);
+	case SENSOR_HEAT:       return check_for_heat(pos, thresh);
+	case SENSOR_METAL:      return check_for_metal(pos, radius);
+	case SENSOR_WATER:      return is_underwater(pos);
+	case SENSOR_PRESSURE:   return check_for_pressure(pos, radius);
+	default: assert(0);
+	}
+	return 0;
+}
+
+bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
+	// sensor pos.x pos.y pos.z type [radius [thresh]]
+	if (fscanf(fp, "%f%f%f%i%f%f", &pos.x, &pos.y, &pos.z, &type, &radius, &thresh) < 4)  {return 0;}
+	if (type < SENSOR_ALWAYS_OFF || type >= NUM_SENSOR_TYPES) return 0; // invalid type
+	xf.xform_pos(pos);
+	radius *= xf.scale;
+	return 1;
+}
+
+void sensor_t::write_to_cobj_file(std::ostream &out) const {
+	if (type == SENSOR_ALWAYS_OFF) return; // nothing to write
+	out << "sensor " << pos.raw_str() << " " << type << " " << radius << " " << thresh << endl;
+}
+
+
+// ***** platforms *****
 
 platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, bool ul, int sid)
 				   : cont(c), is_rot(ir), update_light(ul), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd),
@@ -139,7 +220,7 @@ void platform::advance_timestep() {
 	if (state == ST_NOACT) { // not activated
 		assert(pos == origin && cur_angle == 0.0);
 		assert(ns_time == 0.0);
-		if (!cont) return;
+		if (!cont && !sensor.check_active()) return;
 		activate();
 	}
 	float const auto_off_time(triggers.get_auto_off_time());

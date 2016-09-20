@@ -1152,18 +1152,20 @@ void add_dynamic_lights_ground() {
 }
 
 
+bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj) {
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		if (is_visible_to_light_cobj(pos, l, radius, cobj, 1)) return 1;
+	}
+	return 0;
+}
+
 bool is_in_darkness(point const &pos, float radius, int cobj) { // used for AI
 
 	colorRGBA c(WHITE);
 	get_indir_light(c, pos); // this is faster so do it first
 	if ((c.R + c.G + c.B) > DARKNESS_THRESH) return 0;
-
-	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (is_visible_to_light_cobj(pos, l, radius, cobj, 1)) return 0;
-	}
-	return 1;
+	return !is_visible_to_any_dir_light(pos, radius, cobj);
 }
-
 
 void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds and is_in_darkness() test
 
@@ -1201,5 +1203,31 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 		}
 	}
 	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_]);)
+}
+
+bool is_any_dlight_visible(point const &p) {
+	
+	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
+	if (point_outside_mesh(x, y)) return 0; // outside the mesh range
+	if (dl_sources.empty() || !dlight_bcube.contains_pt(p)) return 0;
+	dls_cell const &ldv(ldynamic[y][x]);
+
+	if (ldv.check_z(p[2])) {
+		unsigned const lsz((unsigned)ldv.size());
+
+		for (unsigned l = 0; l < lsz; ++l) {
+			unsigned const ls_ix(ldv.get(l));
+			assert(ls_ix < dl_sources.size());
+			light_source const &lsrc(dl_sources[ls_ix]);
+			point lpos;
+			float const color_scale(lsrc.get_intensity_at(p, lpos));
+			if (color_scale < CTHRESH) continue;
+			if (lsrc.is_directional() && color_scale*lsrc.get_dir_intensity(lpos - p) < CTHRESH) continue;
+			int index(-1); // unused
+			if (lsrc.smap_enabled() && !coll_pt_vis_test(p, lpos, 0.0, index, -1, 0, 3)) continue; // no cobj, skip_dynamic=0, use shadow alpha
+			return 1; // found
+		} // for l
+	}
+	return 0;
 }
 

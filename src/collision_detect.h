@@ -471,6 +471,7 @@ class platform { // animated (player controlled) scene object
 	vector3d delta; // last change in position
 
 	multi_trigger_t triggers;
+	sensor_t sensor;
 	
 	bool empty() const {return (cobjs.empty() && lights.empty());}
 	void move_platform(float dist_traveled);
