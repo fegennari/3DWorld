@@ -26,3 +26,5 @@ mapx/config_mapx.txt
 #config_samples.txt
 #config_minecraft.txt
 #config_museum.txt
+#config_puzzle.txt
+
