@@ -1190,7 +1190,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "sensor") {
 					if (!cur_sensor.read_from_file(fp, xf)) {return read_error(fp, "sensor", coll_obj_file);}
-					// FIXME: use sensor
 				}
 				else {
 					ostringstream oss;
@@ -1274,7 +1273,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			else {
 				cobj.platform_id = (short)platforms.size();
-				if (!platforms.add_from_file(fp, xf, triggers)) {return read_error(fp, "platform", coll_obj_file);}
+				if (!platforms.add_from_file(fp, xf, triggers, cur_sensor)) {return read_error(fp, "platform", coll_obj_file);}
 				assert(cobj.platform_id < (int)platforms.size());
 			}
 			break;
@@ -1412,7 +1411,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 						if (d) { // diffuse
 							if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
 							indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
-							light_sources_d.push_back(light_source_trig(*ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix));
+							light_sources_d.push_back(light_source_trig(*ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix, cur_sensor));
 							light_sources_d.back().add_triggers(triggers);
 						}
 						else {light_sources_a.push_back(*ls);} // ambient
@@ -1887,6 +1886,7 @@ void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const 
 	if (bound) {out << "bind_light " << bind_pos.raw_str() << endl;} // 'V'/"bind_light": // bind prev light source to cobj at location <x y z>
 	triggers.write_end_triggers_cobj_file(out);
 	out << endl; // separate with a blank line
+	sensor.write_to_cobj_file(out); // only if enabled?
 }
 
 void indir_dlight_group_manager_t::write_entry_to_cobj_file(unsigned tag_ix, ostream &out) const {

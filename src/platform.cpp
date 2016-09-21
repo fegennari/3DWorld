@@ -150,11 +150,28 @@ bool sensor_t::check_active_int() const {
 	return 0;
 }
 
+//SENSOR_ALWAYS_OFF=0, SENSOR_ALWAYS_ON, SENSOR_LIGHT, SENSOR_SOUND, SENSOR_HEAT, SENSOR_METAL, SENSOR_WATER, SENSOR_PRESSURE, SENSOR_SMOKE, NUM_SENSOR_TYPES
+string const sensor_type_names[NUM_SENSOR_TYPES] = {"off", "on", "light", "sound", "heat", "metal", "water", "pressure", "smoke"};
+
 bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
 	// sensor pos.x pos.y pos.z type [invert [radius [thresh]]]
 	int inv(0);
-	if (fscanf(fp, "%f%f%f%i%i%f%f", &pos.x, &pos.y, &pos.z, &type, &inv, &radius, &thresh) < 4) return 0;
-	if (type < SENSOR_ALWAYS_OFF || type >= NUM_SENSOR_TYPES) return 0; // invalid type
+	char str[MAX_CHARS];
+	if (fscanf(fp, "%f%f%f%255s%i%f%f", &pos.x, &pos.y, &pos.z, str, &inv, &radius, &thresh) < 4) return 0;
+	int const ix(atoi(str));
+	if (ix > 0) {type = ix;} // a number was specified
+	else {
+		string const type_str(str);
+		if (type_str == "0") {type = ix;} // a number was specified
+		else {
+			type = -1;
+			for (unsigned i = 0; i < NUM_SENSOR_TYPES; ++i) {
+				if (type_str == sensor_type_names[i]) {type = i; break;}
+			}
+			if (type < 0) {cerr << "Error: Unknown sensor type: '" << type_str << "'" << endl; return 0;}
+		}
+	}
+	if (type < SENSOR_ALWAYS_OFF || type >= NUM_SENSOR_TYPES) {cerr << "Error: Invalid sensor type: " << type << endl; return 0;}
 	invert = (inv != 0);
 	xf.xform_pos(pos);
 	radius *= xf.scale;
@@ -169,9 +186,9 @@ void sensor_t::write_to_cobj_file(std::ostream &out) const {
 
 // ***** platforms *****
 
-platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, bool ul, int sid)
-				   : cont(c), is_rot(ir), update_light(ul), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd),
-				   ext_dist(dst), act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros), sound_id(sid)
+platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, bool ul, int sid, sensor_t const &cur_sensor)
+				   : cont(c), is_rot(ir), update_light(ul), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad),
+	origin(o), dir(dir_.get_norm()), sound_id(sid), delta(all_zeros), sensor(cur_sensor)
 {
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
@@ -338,7 +355,7 @@ void platform::shift_by(vector3d const &val) {
 
 void platform_cont::read_sound_filename(string const &name) {cur_sound_id = read_sound_file(name);}
 
-bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers) {
+bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers, sensor_t const &cur_sensor) {
 
 	assert(fp);
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
@@ -355,7 +372,7 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 	rspeed /= TICKS_PER_SECOND;
 	xf.xform_pos(origin);
 	xf.xform_pos_rm(dir);
-	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), (update_light != 0), cur_sound_id));
+	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), (update_light != 0), cur_sound_id, cur_sensor));
 	cur_sound_id = -1; // reset to null after use
 	if (!triggers.empty()) {back().add_triggers(triggers);} // if a custom trigger is used, reset any built-in trigger
 	return 1;
@@ -370,6 +387,7 @@ void platform::write_to_cobj_file(std::ostream &out) const {
 		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << endl; // always enabled
 	for (auto i = lights.begin(); i != lights.end(); ++i) {} // FIXME: see 'V' command
 	triggers.write_end_triggers_cobj_file(out);
+	sensor.write_to_cobj_file(out); // only if enabled?
 }
 
 

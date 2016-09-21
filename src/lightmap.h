@@ -268,8 +268,9 @@ class light_source_trig : public light_source, public bind_point_t {
 
 public:
 	light_source_trig() : use_smap(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0) {}
-	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0)
-		: light_source(ls), use_smap(smap), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0) {user_placed = 1; dynamic = (platform_id >= 0);}
+	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t())
+		: light_source(ls), use_smap(smap), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0), sensor(cur_sensor)
+	{user_placed = 1; dynamic = (platform_id >= 0);}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();

@@ -483,8 +483,8 @@ public:
 	vector<unsigned> cobjs;  // collision object(s) bound to this platform
 	vector<unsigned> lights; // dynamic light source(s) bound to this platform
 	
-	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
-		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0, bool ir=0, bool ul=0, int sid=-1);
+	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0, point const &o=all_zeros,
+		vector3d const &dir_=plus_z, bool c=0, bool ir=0, bool ul=0, int sid=-1, sensor_t const &cur_sensor=sensor_t());
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	bool get_update_light()    const {return update_light;}
@@ -513,7 +513,7 @@ struct platform_cont : public deque<platform> {
 	int cur_sound_id;
 
 	platform_cont() : cur_sound_id(-1) {}
-	bool add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers);
+	bool add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers, sensor_t const &cur_sensor);
 	void read_sound_filename(std::string const &name);
 	void check_activate(point const &p, float radius, int activator);
 	void shift_by(vector3d const &val);

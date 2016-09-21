@@ -54,6 +54,7 @@ public:
 	sensor_t(point const &pos_, int type_, bool invert_=0, float radius_=0.0, float thresh_=0.0) : pos(pos_), radius(radius_), thresh(thresh_), type(type_), invert(invert_) {
 		assert(type >= SENSOR_ALWAYS_OFF && type < NUM_SENSOR_TYPES);
 	}
+	bool enabled() const {return (type != SENSOR_ALWAYS_OFF);}
 	bool check_active() const {return (check_active_int() ^ invert);}
 	bool read_from_file(FILE *fp, geom_xform_t const &xf);
 	void write_to_cobj_file(std::ostream &out) const;
