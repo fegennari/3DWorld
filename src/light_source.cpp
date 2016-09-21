@@ -292,8 +292,9 @@ void light_source_trig::advance_timestep() {
 		if (new_bind_pos != bind_pos) {shift_by(new_bind_pos - bind_pos); dynamic = 1;} // if the light moves, flag it as dynamic
 	}
 	if (!bind_point_t::valid || bind_point_t::disabled) {release_smap();} // free shadow map if invalid as an optimization
-	if (!triggers.is_active() && !sensor.check_active()) return; // trigger not active
+	if (!triggers.is_active() && !sensor.enabled()) return; // triggers and sensors not active
 	enabled = (active_time > 0.0); // light on by default
+	if (/*triggers.empty() &&*/ sensor.enabled()) {enabled = sensor.check_active();} // FIXME: what happens when both triggers and sensor are enabled?
 	
 	if (enabled) {
 		if (triggers.get_auto_off_time() > 0.0) {active_time = max(0.0f, (active_time - fticks));} // decrease active time in auto off mode

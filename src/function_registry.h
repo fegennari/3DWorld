@@ -719,7 +719,7 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 bool upload_smoke_indir_texture();
 void upload_dlights_textures(cube_t const &bounds);
 void setup_dlight_textures(shader_t &s, bool enable_dlights_smap=1);
-bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj);
+bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj, int skip_dynamic);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 void get_indir_light(colorRGBA &a, point const &p);
 bool is_any_dlight_visible(point const &p);

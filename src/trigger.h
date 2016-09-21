@@ -36,7 +36,7 @@ struct multi_trigger_t : public vector<trigger_t> {
 };
 
 
-enum {SENSOR_ALWAYS_OFF=0, SENSOR_ALWAYS_ON, SENSOR_LIGHT, SENSOR_SOUND, SENSOR_HEAT, SENSOR_METAL, SENSOR_WATER, SENSOR_PRESSURE, SENSOR_SMOKE, NUM_SENSOR_TYPES};
+enum {SENSOR_DISABLED=0, SENSOR_ALWAYS_OFF, SENSOR_ALWAYS_ON, SENSOR_LIGHT, SENSOR_SOUND, SENSOR_HEAT, SENSOR_METAL, SENSOR_WATER, SENSOR_PRESSURE, SENSOR_SMOKE, NUM_SENSOR_TYPES};
 
 struct geom_xform_t;
 
@@ -50,11 +50,11 @@ class sensor_t {
 	bool check_active_int() const;
 
 public:
-	sensor_t() : pos(all_zeros), radius(0.0), thresh(0.0), type(SENSOR_ALWAYS_OFF), invert(0) {}
+	sensor_t() : pos(all_zeros), radius(0.0), thresh(0.0), type(SENSOR_DISABLED), invert(0) {}
 	sensor_t(point const &pos_, int type_, bool invert_=0, float radius_=0.0, float thresh_=0.0) : pos(pos_), radius(radius_), thresh(thresh_), type(type_), invert(invert_) {
-		assert(type >= SENSOR_ALWAYS_OFF && type < NUM_SENSOR_TYPES);
+		assert(type >= SENSOR_DISABLED && type < NUM_SENSOR_TYPES);
 	}
-	bool enabled() const {return (type != SENSOR_ALWAYS_OFF);}
+	bool enabled() const {return (type != SENSOR_DISABLED);}
 	bool check_active() const {return (check_active_int() ^ invert);}
 	bool read_from_file(FILE *fp, geom_xform_t const &xf);
 	void write_to_cobj_file(std::ostream &out) const;

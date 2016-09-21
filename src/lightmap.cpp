@@ -1152,9 +1152,9 @@ void add_dynamic_lights_ground() {
 }
 
 
-bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj) {
+bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj, int skip_dynamic) {
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (is_visible_to_light_cobj(pos, l, radius, cobj, 1)) return 1;
+		if (is_visible_to_light_cobj(pos, l, radius, cobj, skip_dynamic)) return 1;
 	}
 	return 0;
 }
@@ -1164,7 +1164,7 @@ bool is_in_darkness(point const &pos, float radius, int cobj) { // used for AI
 	colorRGBA c(WHITE);
 	get_indir_light(c, pos); // this is faster so do it first
 	if ((c.R + c.G + c.B) > DARKNESS_THRESH) return 0;
-	return !is_visible_to_any_dir_light(pos, radius, cobj);
+	return !is_visible_to_any_dir_light(pos, radius, cobj, 1); // skip_dynamic=1
 }
 
 void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds and is_in_darkness() test

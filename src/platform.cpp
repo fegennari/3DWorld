@@ -83,7 +83,7 @@ void multi_trigger_t::write_end_triggers_cobj_file(std::ostream &out) const {
 // ***** sensors *****
 
 bool check_for_light(point const &pos, float thresh) {
-	if (is_visible_to_any_dir_light(pos, 0.0, -1)) return 1; // check sun and moon
+	if (is_visible_to_any_dir_light(pos, 0.0, -1, 0)) return 1; // check sun and moon; skip_dynamic=0
 	if (thresh > 1.0) return 0; // only sun/moon
 	return is_any_dlight_visible(pos); // Note: thresh is unused
 }
@@ -136,6 +136,7 @@ bool check_for_pressure(point const &pos, float radius) {
 bool sensor_t::check_active_int() const {
 
 	switch (type) {
+	case SENSOR_DISABLED:   assert(0); // shouldn't get here
 	case SENSOR_ALWAYS_OFF: return 0;
 	case SENSOR_ALWAYS_ON:  return 1;
 	case SENSOR_LIGHT:      return check_for_light(pos, thresh);
@@ -150,14 +151,14 @@ bool sensor_t::check_active_int() const {
 	return 0;
 }
 
-//SENSOR_ALWAYS_OFF=0, SENSOR_ALWAYS_ON, SENSOR_LIGHT, SENSOR_SOUND, SENSOR_HEAT, SENSOR_METAL, SENSOR_WATER, SENSOR_PRESSURE, SENSOR_SMOKE, NUM_SENSOR_TYPES
-string const sensor_type_names[NUM_SENSOR_TYPES] = {"off", "on", "light", "sound", "heat", "metal", "water", "pressure", "smoke"};
+//SENSOR_DISABLED=0, SENSOR_ALWAYS_OFF, SENSOR_ALWAYS_ON, SENSOR_LIGHT, SENSOR_SOUND, SENSOR_HEAT, SENSOR_METAL, SENSOR_WATER, SENSOR_PRESSURE, SENSOR_SMOKE, NUM_SENSOR_TYPES
+string const sensor_type_names[NUM_SENSOR_TYPES] = {"disabled", "off", "on", "light", "sound", "heat", "metal", "water", "pressure", "smoke"};
 
 bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
-	// sensor pos.x pos.y pos.z type [invert [radius [thresh]]]
+	// sensor type [pos.x pos.y pos.z [invert [radius [thresh]]]]
 	int inv(0);
 	char str[MAX_CHARS];
-	if (fscanf(fp, "%f%f%f%255s%i%f%f", &pos.x, &pos.y, &pos.z, str, &inv, &radius, &thresh) < 4) return 0;
+	if (fscanf(fp, "%255s", str) < 1) return 0;
 	int const ix(atoi(str));
 	if (ix > 0) {type = ix;} // a number was specified
 	else {
@@ -171,7 +172,8 @@ bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
 			if (type < 0) {cerr << "Error: Unknown sensor type: '" << type_str << "'" << endl; return 0;}
 		}
 	}
-	if (type < SENSOR_ALWAYS_OFF || type >= NUM_SENSOR_TYPES) {cerr << "Error: Invalid sensor type: " << type << endl; return 0;}
+	if (type < SENSOR_DISABLED || type >= NUM_SENSOR_TYPES) {cerr << "Error: Invalid sensor type: " << type << endl; return 0;}
+	if (type >= SENSOR_LIGHT && fscanf(fp, "%f%f%f%i%f%f", &pos.x, &pos.y, &pos.z, &inv, &radius, &thresh) < 3) return 0;
 	invert = (inv != 0);
 	xf.xform_pos(pos);
 	radius *= xf.scale;
@@ -179,8 +181,10 @@ bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
 }
 
 void sensor_t::write_to_cobj_file(std::ostream &out) const {
-	if (type == SENSOR_ALWAYS_OFF) return; // nothing to write
-	out << "sensor " << pos.raw_str() << " " << type << " " << invert << " " << radius << " " << thresh << endl;
+	if (type == SENSOR_DISABLED) return; // nothing to write - FIXME: cache state
+	out << "sensor " << type;
+	if (type >= SENSOR_LIGHT) {out << " " << pos.raw_str() << " " << invert << " " << radius << " " << thresh;}
+	out << endl;
 }
 
 
@@ -250,7 +254,7 @@ void platform::advance_timestep() {
 	if (state == ST_NOACT) { // not activated
 		assert(pos == origin && cur_angle == 0.0);
 		assert(ns_time == 0.0);
-		if (!cont && !sensor.check_active()) return;
+		if (!cont && (!sensor.enabled() || !sensor.check_active())) return;
 		activate();
 	}
 	float const auto_off_time(triggers.get_auto_off_time());
