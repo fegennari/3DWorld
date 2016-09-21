@@ -16,6 +16,8 @@ extern float fticks, CAMERA_RADIUS, temperature;
 extern coll_obj_group coll_objects;
 extern set<unsigned> moving_cobjs;
 extern vector<light_source_trig> light_sources_d;
+extern vector<sphere_t> cur_frame_explosions;
+extern obj_vector_t<fire> fires;
 
 
 // ***** triggers *****
@@ -87,7 +89,15 @@ bool check_for_light(point const &pos, float thresh) {
 }
 
 bool check_for_heat(point const &pos, float thresh) {
+
 	if (temperature > thresh) return 1;
+
+	for (auto i = cur_frame_explosions.begin(); i != cur_frame_explosions.end(); ++i) { // check explosions
+		if (dist_less_than(pos, i->pos, i->radius)) return 1; // "infinitely" hot
+	}
+	for (auto i = fires.begin(); i != fires.end(); ++i) { // check fires
+		if (dist_less_than(pos, i->pos, i->radius)) return 1; // "infinitely" hot
+	}
 	return 0; // WRITE
 }
 
@@ -123,7 +133,7 @@ bool check_for_pressure(point const &pos, float radius) {
 	return 0;
 }
 
-bool sensor_t::check_active() const {
+bool sensor_t::check_active_int() const {
 
 	switch (type) {
 	case SENSOR_ALWAYS_OFF: return 0;
@@ -134,15 +144,18 @@ bool sensor_t::check_active() const {
 	case SENSOR_METAL:      return check_for_metal(pos, radius);
 	case SENSOR_WATER:      return is_underwater(pos);
 	case SENSOR_PRESSURE:   return check_for_pressure(pos, radius);
+	case SENSOR_SMOKE:      return (get_smoke_at_pos(pos) > thresh);
 	default: assert(0);
 	}
 	return 0;
 }
 
 bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
-	// sensor pos.x pos.y pos.z type [radius [thresh]]
-	if (fscanf(fp, "%f%f%f%i%f%f", &pos.x, &pos.y, &pos.z, &type, &radius, &thresh) < 4)  {return 0;}
+	// sensor pos.x pos.y pos.z type [invert [radius [thresh]]]
+	int inv(0);
+	if (fscanf(fp, "%f%f%f%i%i%f%f", &pos.x, &pos.y, &pos.z, &type, &inv, &radius, &thresh) < 4) return 0;
 	if (type < SENSOR_ALWAYS_OFF || type >= NUM_SENSOR_TYPES) return 0; // invalid type
+	invert = (inv != 0);
 	xf.xform_pos(pos);
 	radius *= xf.scale;
 	return 1;
@@ -150,7 +163,7 @@ bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
 
 void sensor_t::write_to_cobj_file(std::ostream &out) const {
 	if (type == SENSOR_ALWAYS_OFF) return; // nothing to write
-	out << "sensor " << pos.raw_str() << " " << type << " " << radius << " " << thresh << endl;
+	out << "sensor " << pos.raw_str() << " " << type << " " << invert << " " << radius << " " << thresh << endl;
 }
 
 
