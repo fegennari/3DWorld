@@ -1,5 +1,6 @@
 # exploding tank
 l 0.87 0.45 0.4 0.4 1.0 49 1 # gray metal - rust?, specular? use plaster texture
+metalness 1.0
 a 4 # explodeable
 start_cobj_group # make sure it all explodes together
 destroy_prob 1 # always explodes
@@ -14,5 +15,6 @@ l 0.87 1.0 1.0 1.0 1.0 39 1 # Mr. Yuck
 e 3
 C 0.0 0.0 0.5  0.0 0.0 0.7  0.105 0.105
 e 0
+metalness 0.0
 end_cobj_group
 destroy_prob 0 # back to default
