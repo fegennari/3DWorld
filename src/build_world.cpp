@@ -51,6 +51,7 @@ extern int camera_view, camera_mode, camera_reset, animate2, recreated, temp_cha
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, dodgeball_metalness;
+extern double camera_zh;
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, num_dynam_parts, max_num_mat_spheres, init_item_counts[];
 extern obj_type object_types[];
@@ -212,19 +213,26 @@ void dwobject::update_precip_type() {
 }
 
 
-template<typename T> void check_all_activate(T &triggers, int start_i, int end_i) {
+template<typename T> void check_all_activate(T &triggers, int start_i, int end_i, bool use_bottom=0) {
 
 	for (auto i = cur_frame_explosions.begin(); i != cur_frame_explosions.end(); ++i) {
 		triggers.check_activate(i->pos, /*i->radius*/0.0, NO_SOURCE); // use a radius of 0
 	}
-	for (int i = start_i; i < end_i; ++i) {triggers.check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
+	for (int i = start_i; i < end_i; ++i) {
+		point pos(get_sstate_pos(i));
+		if (use_bottom && i == CAMERA_ID) {pos.z -= camera_zh;} // bottom of camera sphere
+		triggers.check_activate(pos, CAMERA_RADIUS, i);
+	}
+}
+
+unsigned get_num_enabled_smileys() {
+	return ((begin_motion && obj_groups[coll_id[SMILEY]].is_enabled()) ? num_smileys : 0);
 }
 
 void process_platforms_falling_moving_and_light_triggers() {
 
 	if (!animate2) return; // no updates
-	int const start_i((camera_mode == 1) ? CAMERA_ID : 0);
-	int const end_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
+	int const start_i((camera_mode == 1) ? CAMERA_ID : 0), end_i(get_num_enabled_smileys());
 
 	if (!coll_objects.platform_ids.empty()) { // update platforms
 		check_all_activate(platforms, start_i, end_i);
@@ -250,12 +258,11 @@ struct proximity_ret_t {
 	void check_activate(point const &p, float r, int ix) {ret |= dist_less_than(pos, p, (radius + r));}
 };
 
-bool check_player_proximity(point const &pos, float radius) {
+bool check_player_proximity(point const &pos, float radius, bool use_bottom) {
 	
-	int const start_i((camera_mode == 1) ? CAMERA_ID : 0);
-	int const end_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
+	int const start_i((camera_mode == 1) ? CAMERA_ID : 0), end_i(get_num_enabled_smileys());
 	proximity_ret_t pr(pos, radius);
-	check_all_activate(pr, start_i, end_i);
+	check_all_activate(pr, start_i, end_i, use_bottom);
 	return pr.ret;
 }
 

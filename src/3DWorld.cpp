@@ -1037,7 +1037,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		}
 		free_dodgeballs(0, 1);
 		obj_groups[coll_id[SMILEY]].toggle_enable();
-		if (obj_groups[coll_id[SMILEY]].enabled) init_smileys();
+		if (obj_groups[coll_id[SMILEY]].enabled) {init_smileys();}
 		break;
 	case 'B': // precipitation / add neutral ships
 		if (world_mode == WMODE_UNIVERSE) {
