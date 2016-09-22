@@ -21,6 +21,7 @@ bool spraypaint_mode(0);
 unsigned paint_color_ix(0);
 colorRGBA custom_color(WHITE);
 
+extern bool spheres_mode;
 extern int display_mode, camera_coll_id;
 extern float CAMERA_RADIUS, FAR_CLIP;
 extern coll_obj_group coll_objects;
@@ -57,6 +58,7 @@ void toggle_spraypaint_mode() {
 
 	if (world_mode != WMODE_GROUND) return;
 	spraypaint_mode ^= 1;
+	if (spraypaint_mode) {spheres_mode = 0;}
 	show_cur_spraypaint_mode();
 }
 

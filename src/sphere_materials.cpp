@@ -16,6 +16,7 @@ unsigned const MAX_SPHERE_MATERIALS = 255;
 bool spheres_mode(0);
 unsigned max_num_mat_spheres(1);
 
+extern bool spraypaint_mode;
 extern int frame_counter;
 extern float tfticks, CAMERA_RADIUS, ball_velocity;
 extern int coll_id[];
@@ -179,6 +180,7 @@ void toggle_sphere_mode() {
 
 	if (world_mode != WMODE_GROUND) return;
 	if (sphere_materials.empty()) {spheres_mode = 0;} else {spheres_mode ^= 1;}
+	if (spheres_mode) {spraypaint_mode = 0;}
 	show_cur_sphere_mode();
 }
 
