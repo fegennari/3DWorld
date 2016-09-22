@@ -500,6 +500,7 @@ public:
 	void reset();
 	void activate();
 	bool check_activate(point const &p, float radius, int activator);
+	bool is_sensor_active() const {return (sensor.enabled() && sensor.check_active());}
 	void advance_timestep();
 	bool is_moving  () const {return (state == ST_FWD || state == ST_REV);}
 	bool is_active  () const {return (state != ST_NOACT);}

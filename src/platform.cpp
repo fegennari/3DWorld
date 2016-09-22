@@ -88,15 +88,15 @@ bool check_for_light(point const &pos, float thresh) {
 	return is_any_dlight_visible(pos); // Note: thresh is unused
 }
 
-bool check_for_heat(point const &pos, float thresh) {
+bool check_for_heat(point const &pos, float radius, float thresh) {
 
 	if (temperature > thresh) return 1;
 
-	for (auto i = cur_frame_explosions.begin(); i != cur_frame_explosions.end(); ++i) { // check explosions
-		if (dist_less_than(pos, i->pos, i->radius)) return 1; // "infinitely" hot
+	for (auto i = cur_frame_explosions.begin(); i != cur_frame_explosions.end(); ++i) { // check explosions (one frame)
+		if (dist_less_than(pos, i->pos, (radius + i->radius))) return 1; // "infinitely" hot
 	}
 	for (auto i = fires.begin(); i != fires.end(); ++i) { // check fires
-		if (dist_less_than(pos, i->pos, i->radius)) return 1; // "infinitely" hot
+		if (i->enabled() && dist_less_than(pos, i->pos, (radius + i->radius))) return 1; // "infinitely" hot
 	}
 	return 0; // WRITE
 }
@@ -123,13 +123,13 @@ bool check_for_metal(point const &pos, float radius) {
 
 bool check_for_pressure(point const &pos, float radius) {
 
-	if (check_player_proximity(pos, radius)) return 1; // player/smiley interaction
+	if (check_player_proximity(pos, radius, 1)) return 1; // player/smiley interaction (using player bottom sphere)
 	
 	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end(); ++i) {
 		coll_obj const &cobj(coll_objects.get_cobj(*i));
 		if (cobj.sphere_intersects(pos, radius)) return 1; // movable cobj interaction
 	}
-	// FIXME: what about dynamic objects (balls, material spheres, etc.)?
+	// what about dynamic objects (balls, material spheres, etc.)?
 	return 0;
 }
 
@@ -141,7 +141,7 @@ bool sensor_t::check_active_int() const {
 	case SENSOR_ALWAYS_ON:  return 1;
 	case SENSOR_LIGHT:      return check_for_light(pos, thresh);
 	case SENSOR_SOUND:      return check_for_active_sound(pos, radius, thresh);
-	case SENSOR_HEAT:       return check_for_heat(pos, thresh);
+	case SENSOR_HEAT:       return check_for_heat(pos, radius, thresh);
 	case SENSOR_METAL:      return check_for_metal(pos, radius);
 	case SENSOR_WATER:      return is_underwater(pos);
 	case SENSOR_PRESSURE:   return check_for_pressure(pos, radius);
@@ -249,12 +249,14 @@ void platform::check_play_sound() const {
 
 void platform::advance_timestep() {
 
-	if (fticks == 0.0 || empty() || is_stopped) return; // no progress, no cobjs/lights, or stopped and waiting for trigger re-activate
+	if (fticks == 0.0 || empty()) return; // no progress, no cobjs/lights
+	if (is_stopped && !is_sensor_active()) return; // stopped and waiting for trigger re-activate
+	is_stopped = 0;
 	
 	if (state == ST_NOACT) { // not activated
 		assert(pos == origin && cur_angle == 0.0);
 		assert(ns_time == 0.0);
-		if (!cont && (!sensor.enabled() || !sensor.check_active())) return;
+		if (!cont && !is_sensor_active()) return;
 		activate();
 	}
 	float const auto_off_time(triggers.get_auto_off_time());
