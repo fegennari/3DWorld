@@ -61,10 +61,11 @@ struct basic_physics_obj { // size = 20
 	void init_gen_rand(point const &p, float rxy, float rz);
 	point const &get_pos() const {return pos;}
 	int get_replace_age() const {return time;}
+	bool enabled() const {return (status != 0);}
 
 	bool operator<(basic_physics_obj const &o) const {
-		if (status == 0 && o.status != 0) return 0;
-		if (status != 0 && o.status == 0) return 1;
+		if (!enabled() &&  o.enabled()) return 0;
+		if ( enabled() && !o.enabled()) return 1;
 		return (o.time < time);
 	}
 };
@@ -288,7 +289,7 @@ public:
 		for (unsigned i = 0; i < sz; ++i) {
 			unsigned ix(i + start);
 			if (ix >= sz) ix -= sz;
-			if (v[ix].status == 0) {cur_avail = ix; break;}
+			if (!v[ix].enabled()) {cur_avail = ix; break;}
 			if (v[ix].get_replace_age() > v[cur_avail].get_replace_age()) {cur_avail = ix;} // replace oldest element
 		}
 		unsigned const chosen(cur_avail);
@@ -309,7 +310,7 @@ public:
 		for (unsigned i = 0; i < sz; ++i) {
 			unsigned ix(i + start);
 			if (ix >= sz) ix -= sz;
-			if (v[ix].status != 0) continue; // used element
+			if (v[ix].enabled()) continue; // used element
 			ixs.push_back(ix);
 			
 			if (ixs.size() == num) {
@@ -323,7 +324,7 @@ public:
 		time_ixs.reserve(sz);
 
 		for (unsigned i = 0; i < sz; ++i) {
-			if (v[i].status != 0) {time_ixs.push_back(int_uint_pair(v[i].get_replace_age(), i));}
+			if (v[i].enabled()) {time_ixs.push_back(int_uint_pair(v[i].get_replace_age(), i));}
 		}
 		assert(num_rem <= time_ixs.size());
 		sort(time_ixs.begin(), time_ixs.end()); // sort largest to smallest by time

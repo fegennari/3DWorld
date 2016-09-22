@@ -257,7 +257,7 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 
 	if (!allow_close) { // check if there are any existing fires near this location and if so, skip this one
 		for (unsigned i = 0; i < fires.size(); ++i) {
-			if (fires[i].status != 0 && dist_less_than(pos, fires[i].pos, 2.0*fires[i].radius)) {
+			if (fires[i].enabled() && dist_less_than(pos, fires[i].pos, 2.0*fires[i].radius)) {
 				fires[i].radius = max(fires[i].radius, size*rand_uniform(0.02, 0.05)); // make it larger
 				return 0;
 			}

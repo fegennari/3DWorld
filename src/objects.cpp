@@ -956,15 +956,12 @@ void obj_group::preproc_this_frame() {
 		unsigned saw_id(0);
 		
 		for (unsigned j = 0; j < nobjs; ++j) {
-			if (objects[j].status != 0) saw_id = j+1;
+			if (objects[j].enabled()) {saw_id = j+1;}
 		}
 		sort(objects.begin(), (objects.begin() + saw_id));
 		
 		for (unsigned j = 0; j < nobjs; ++j) {
-			if (objects[j].status == 0) {
-				end_id = j;
-				break;
-			}
+			if (!objects[j].enabled()) {end_id = j; break;}
 		}
 	}
 	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {

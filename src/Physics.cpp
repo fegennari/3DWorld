@@ -1367,7 +1367,7 @@ void particle_cloud::apply_physics(unsigned i) {
 	}
 	if (damage_type == GASSED) { // check for gas ignition near fire
 		for (unsigned i = 0; i < fires.size(); ++i) {
-			if (fires[i].status != 0 && dist_less_than(fires[i].pos, pos, radius)) {
+			if (fires[i].enabled() && dist_less_than(fires[i].pos, pos, radius)) {
 				create_explosion(pos, source, 0, 10*damage*rscale, 4*radius, BLAST_RADIUS, 0);
 				status = 0;
 				return;
