@@ -210,6 +210,7 @@ public:
 	colorRGBA const &get_color() const {return color;}
 	float get_radius()           const {return radius;}
 	float get_r_inner()          const {return r_inner;} // > 0.0 for sphere light
+	float get_near_clip()        const {return near_clip;}
 	point const &get_pos()       const {return pos;}
 	point const &get_pos2()      const {return pos2;}
 	float get_intensity_at(point const &p, point &updated_lpos) const;

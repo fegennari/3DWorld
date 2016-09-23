@@ -157,8 +157,8 @@ K # disable trigger
 
 # light, sound, heat, metal, water, pressure, smoke
 # sensor type [pos.x pos.y pos.z [invert [radius [thresh]]]]
-#sensor light 1.2 1.0 -0.10 # dlight sensor
-#sensor light 0.2 1.0 -0.10 # dlight feedback sensor
+#sensor light 1.2 1.0 -0.13 # dlight sensor
+#sensor light 0.2 1.0 -0.13 # dlight feedback sensor
 #sensor light 1.0 6.0 -0.40 1 # not sunlight sensor
 #sensor sound 1.2 1.0 -0.10 0 0.25
 #sensor heat  1.0 4.0 -0.40 0 0.1 100.0
