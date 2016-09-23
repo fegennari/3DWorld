@@ -13,6 +13,7 @@
 #include "subdiv.h"
 #include "player_state.h"
 #include "file_utils.h"
+#include "openal_wrap.h"
 #include <fstream>
 
 
@@ -1195,6 +1196,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "sound_file", coll_obj_file, line_num);}
 					platforms.read_sound_filename(str);
 				}
+				else if (keyword == "place_sound") {
+					if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "place_sound", coll_obj_file, line_num);}
+					sound_params_t params;
+					if (!params.read_from_file(fp)) {return read_error(fp, "place_sound params", coll_obj_file, line_num);}
+					xf.xform_pos(params.pos);
+					add_placed_sound(str, params, cur_sensor);
+				}
 				else if (keyword == "sensor") {
 					if (!cur_sensor.read_from_file(fp, xf)) {return read_error(fp, "sensor", coll_obj_file);}
 				}
@@ -1963,6 +1971,7 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 
 bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { // call on fixed_cobjs
 
+	// FIXME: what about placed sounds?
 	ofstream out(fn);
 	if (!out.good()) {cerr << "Error opening coll object file '" << fn << "' for output" << endl; return 0;}
 	

@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 9/1/11
 #include "3DWorld.h"
+#include "trigger.h"
 
 #pragma once
 
@@ -33,6 +34,8 @@ struct sound_params_t {
 	sound_params_t(point const &P=all_zeros, float g=1.0, float p=1.0, bool r=0)
 		: pos(P), gain(g), pitch(p), rel_to_listener(r) {}
 	float get_loudness() const;
+	bool read_from_file(FILE *fp);
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 
@@ -75,13 +78,13 @@ public:
 	size_t add_buffer(bool alloc) {
 		size_t const ix(buffers.size());
 		buffers.push_back(openal_buffer());
-		if (alloc) buffers.back().alloc();
+		if (alloc) {buffers.back().alloc();}
 		return ix;
 	}
 	unsigned add_file_buffer(std::string const &fn);
 
 	void clear() {
-		for (unsigned i = 0; i < buffers.size(); ++i) buffers[i].free_buffer();
+		for (unsigned i = 0; i < buffers.size(); ++i) {buffers[i].free_buffer();}
 		buffers.clear();
 	}
 };
@@ -143,17 +146,32 @@ public:
 };
 
 
+struct placed_sound_t {
+
+	int sound_id;
+	sound_params_t params;
+	sensor_t sensor;
+	//multi_trigger_t triggers;
+
+	placed_sound_t() : sound_id(-1) {}
+	placed_sound_t(unsigned id, sound_params_t const &params_, sensor_t const &sensor_=sensor_t()) : sound_id(id), params(params_), sensor(sensor_) {}
+	bool enabled() const {return (sound_id >= 0);}
+	void next_frame();
+};
+
+
 void alut_sleep(float seconds);
 unsigned get_sound_id_for_file(std::string const &fn);
 std::string const &get_sound_name(unsigned id);
 void set_sound_loop_state(unsigned id, bool play, float volume=0.0);
-bool check_for_active_sound(point const &pos, float radius, float min_gain);
+bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0);
+void add_placed_sound(std::string const &fn, sound_params_t const &params, sensor_t const &sensor=sensor_t());
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
 void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
 void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0); // no vel
 void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0);
-void proc_delayed_sounds();
+void proc_delayed_and_placed_sounds();
 void play_thunder(point const &pos, float gain, float delay);
 void play_switch_weapon_sound();
 void init_openal(int &argc, char** argv);

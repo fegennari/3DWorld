@@ -29,6 +29,7 @@ class sound_manager_t {
 	buffer_manager_t sounds;
 	source_manager_t sources, looping_sources;
 	vector<delayed_sound_t> delayed_sounds;
+	vector<placed_sound_t> placed_sounds;
 	map<string, unsigned> name_to_id_map;
 	vector<string> sound_names;
 	int last_frame;
@@ -52,6 +53,9 @@ public:
 		auto it(name_to_id_map.find(fn));
 		if (it != name_to_id_map.end()) return it->second; // found
 		return add_new_sound(fn);
+	}
+	void add_placed_sound(string const &fn, sound_params_t const &params, sensor_t const &sensor) {
+		placed_sounds.push_back(placed_sound_t(find_or_add_sound(fn), params, sensor));
 	}
 
 	// supported: au, wav
@@ -154,6 +158,9 @@ public:
 			--i; // wraparound ok
 		}
 	}
+	void proc_placed() {
+		for (auto i = placed_sounds.begin(); i != placed_sounds.end(); ++i) {i->next_frame();}
+	}
 
 	bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0) const {
 		return sources.check_for_active_sound(pos, radius, min_gain);
@@ -166,6 +173,7 @@ unsigned get_sound_id_for_file(string const &fn) {return sound_manager.find_or_a
 string const &get_sound_name(unsigned id) {return sound_manager.get_name(id);}
 void set_sound_loop_state(unsigned id, bool play, float volume) {sound_manager.set_loop_state(id, play, volume);}
 bool check_for_active_sound(point const &pos, float radius, float min_gain) {return sound_manager.check_for_active_sound(pos, radius, min_gain);}
+void add_placed_sound(string const &fn, sound_params_t const &params, sensor_t const &sensor) {sound_manager.add_placed_sound(fn, params, sensor);}
 
 void alut_sleep(float seconds) {alutSleep(seconds);}
 
@@ -186,6 +194,13 @@ bool check_and_print_alut_error() { // returns 1 on error
 
 float sound_params_t::get_loudness() const {
 	return gain/max(SMALL_NUMBER, distance_to_camera(pos));
+}
+bool sound_params_t::read_from_file(FILE *fp) {
+	gain = 1.0; pitch = 1.0;
+	return (fscanf(fp, "%f%f%f%f%f", &pos.x, &pos.y, &pos.z, &gain, &pitch) >= 3); // pos.x pos.y pos.z [gain [pitch]]
+}
+void sound_params_t::write_to_cobj_file(std::ostream &out) const {
+	out << pos.raw_str() << " " << gain << " " << pitch << endl;
 }
 
 
@@ -295,7 +310,7 @@ void openal_source::set_gain(float gain) {
 void openal_source::set_buffer_ix(unsigned buffer_ix) {alSourcei(source, AL_BUFFER, buffer_ix);}
 
 void openal_source::play_if_not_playing() const {if (!is_playing()) alSourcePlay(source);}
-void openal_source::play()   const {alSourcePlay(source);}
+void openal_source::play()   const {alSourcePlay  (source);}
 void openal_source::stop()   const {alSourceStop  (source);}
 void openal_source::pause()  const {alSourcePause (source);}
 void openal_source::rewind() const {alSourceRewind(source);}
@@ -393,6 +408,15 @@ bool source_manager_t::check_for_active_sound(point const &pos, float radius, fl
 }
 
 
+void placed_sound_t::next_frame() {
+
+	if (disable_sound || !enabled()) return;
+	if (check_for_active_sound(params.pos, 0.1*CAMERA_RADIUS)) return; // assume this sound is already playing (not a perfect check, but it's easy)
+	if (sensor.enabled() && !sensor.check_active()) return;
+	gen_sound(sound_id, params.pos, params.gain, params.pitch, params.rel_to_listener); // no velocity
+}
+
+
 // listner code
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient) {
 
@@ -466,7 +490,10 @@ void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain, fl
 	gen_delayed_sound(((dist < CAMERA_RADIUS) ? 0.0 : dist/SPEED_OF_SOUND), id, pos, gain, pitch);
 }
 
-void proc_delayed_sounds() {sound_manager.proc_delayed();}
+void proc_delayed_and_placed_sounds() {
+	sound_manager.proc_delayed();
+	sound_manager.proc_placed();
+}
 
 
 void play_thunder(point const &pos, float gain, float delay) {
