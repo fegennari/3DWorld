@@ -544,9 +544,9 @@ public:
 extern bool spheres_mode;
 
 enum {SM_MAT_NAME=0, SM_EMISS, SM_REFLECT, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
-	SM_LIGHT_ATTEN, SM_LIGHT_RADIUS, SM_DIFF_R, SM_DIFF_G, SM_DIFF_B, SM_SPEC_R, SM_SPEC_G, SM_SPEC_B, NUM_SM_CONT};
+	SM_LIGHT_ATTEN, SM_LIGHT_RADIUS, SM_LIGHT_SHADOW, SM_DIFF_R, SM_DIFF_G, SM_DIFF_B, SM_SPEC_R, SM_SPEC_G, SM_SPEC_B, NUM_SM_CONT};
 string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Emissive ", "Reflective", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag",
-  "Shininess  ", "Refract Ix  ", "Light Atten ", "Light Radius", "Diffuse Red ", "Diffuse Green", "Diffuse Blue ", "Specular Red ", "Specular Green", "Specular Blue "};
+  "Shininess  ", "Refract Ix  ", "Light Atten ", "Light Radius", "Light Shadow", "Diffuse Red ", "Diffuse Green", "Diffuse Blue ", "Specular Red ", "Specular Green", "Specular Blue "};
 
 class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 
@@ -571,6 +571,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_REFRACT_IX:   value << mat.refract_ix;   spos = (mat.refract_ix-1.0)/2.0; break; // 1.0 to 3.0
 		case SM_LIGHT_ATTEN:  value << mat.light_atten;  spos = mat.light_atten/25.0; break; // 0.0 to 25.0
 		case SM_LIGHT_RADIUS: value << mat.light_radius; spos = mat.light_radius/2.0; break; // 0.0 to 2.5
+		case SM_LIGHT_SHADOW: value << mat.shadows;      spos = mat.shadows;          break; // 0/1
 		case SM_DIFF_R:       value << mat.diff_c.R;     spos = mat.diff_c.R;         break; // 0.0 to 1.0
 		case SM_DIFF_G:       value << mat.diff_c.G;     spos = mat.diff_c.G;         break; // 0.0 to 1.0
 		case SM_DIFF_B:       value << mat.diff_c.B;     spos = mat.diff_c.B;         break; // 0.0 to 1.0
@@ -602,6 +603,7 @@ public:
 		case SM_REFRACT_IX:   mat.refract_ix   = max(1.0f, min(3.0f, (mat.refract_ix   + 0.1f*delta))); break; // 1.0 to 3.0 in steps of 0.1
 		case SM_LIGHT_ATTEN:  mat.light_atten  = max(0.0f, min(25.0f,(mat.light_atten  + 1.0f*delta))); break; // 0.0 to 25.0 in steps of 1.0
 		case SM_LIGHT_RADIUS: mat.light_radius = max(0.0f, min(2.5f, (mat.light_radius + 0.1f*delta))); break; // 0.0 to 2.5 in steps of 0.1
+		case SM_LIGHT_SHADOW: mat.shadows      = ((delta < 0) ? 0 : 1); break; // 0/1
 		case SM_DIFF_R:       mat.diff_c.R     = CLIP_TO_01(mat.diff_c.R + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
 		case SM_DIFF_G:       mat.diff_c.G     = CLIP_TO_01(mat.diff_c.G + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
 		case SM_DIFF_B:       mat.diff_c.B     = CLIP_TO_01(mat.diff_c.B + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
