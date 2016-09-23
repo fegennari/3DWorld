@@ -19,6 +19,8 @@ unsigned max_num_mat_spheres(1);
 extern bool spraypaint_mode;
 extern int frame_counter;
 extern float tfticks, CAMERA_RADIUS, ball_velocity;
+extern point sun_pos;
+extern colorRGBA sun_color;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -271,7 +273,16 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	obj.coll_id    = add_coll_sphere(obj.pos, obj_radius, cp, -1, 0, reflective);
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
 	cobj.destroy   = mat.destroy_thresh;
-	if (mat.light_radius > 0.0 && !mat.shadows) {add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c);} // regular point light
+	
+	if (mat.light_radius > 0.0 && !mat.shadows) {
+		add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c); // regular point light
+	}
+	else if (mat.alpha < 0.5 && mat.metal == 0.0 && mat.refract_ix > 1.0) { // glass
+		if (is_visible_to_light_cobj(obj.pos, LIGHT_SUN, 0.0, -1, 0)) {
+			vector3d const dir((obj.pos - sun_pos).get_norm());
+			add_dynamic_light(1.0, obj.pos, sun_color, dir, 0.02); // spotlight to simulate specular focusing; would look better with smoother falloff
+		}
+	}
 	sync_mat_sphere_lpos(cp.cf_index, obj.pos);
 }
 
