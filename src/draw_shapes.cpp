@@ -480,7 +480,7 @@ void add_coll_shadow_objs() {
 			for (unsigned j = 0; j < objg.end_id; ++j) {
 				dwobject const &obj(objg.get_obj(j));
 				if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
-				//if (objg.type == MAT_SPHERE && is_mat_sphere_a_light(obj)) continue; // light source drawn as a cobj (what about glass?)
+				if (objg.type == MAT_SPHERE && !is_mat_sphere_a_shadower(obj)) continue; // transparent material (glass)
 				add_shadow_obj(obj.pos, radius, obj.coll_id);
 			}
 		}

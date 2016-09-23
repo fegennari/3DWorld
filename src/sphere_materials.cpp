@@ -245,9 +245,11 @@ bool throw_sphere(bool mode) {
 	return 1;
 }
 
-bool is_mat_sphere_a_light(dwobject const &obj) {
+bool is_mat_sphere_a_shadower(dwobject const &obj) {
 	sphere_mat_t const &mat(sphere_materials.get_mat(obj.direction));
-	return (mat.light_radius > 0.0);
+	//if (mat.light_radius > 0.0) return 0;
+	if (mat.alpha < MIN_SHADOW_ALPHA && mat.metal == 0.0) return 0; // transparent glass
+	return 1;
 }
 
 void sync_mat_sphere_lpos(unsigned id, point const &pos) {sphere_materials.sync_light_pos(id, pos);}
