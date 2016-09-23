@@ -198,3 +198,12 @@ L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0  0 0 0 1.0  0.0 0 2 # point light 
 bind_light -3.05 -1.05 0.064 # bind light to cube position
 K # disable trigger
 
+
+# smoke alarm
+l 0.6  0.9 0.8 0.7 1.0  -1 1 # white plastic
+C 1.5 3.8 0.435  1.5 3.8 0.45  0.04 0.04
+sensor smoke 1.5 3.8 0.435 0 0.0 0.1
+place_sound smokealarm.wav 1.5 3.8 0.435 1.0 1.0
+sensor disabled
+
+
