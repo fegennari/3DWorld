@@ -7,6 +7,7 @@
 #include "gameplay.h"
 #include "openal_wrap.h"
 #include "lightmap.h"
+#include "file_utils.h"
 #include <fstream>
 
 using namespace std;
@@ -27,6 +28,9 @@ extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
 extern vector<light_source_trig> light_sources_d;
+
+
+bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map, bool invert_y=0);
 
 
 struct cube_map_lix_t {
@@ -127,7 +131,7 @@ public:
 	bool read() {
 		in.open(fn);
 		if (!in.good()) {cerr << "Error: Failed to open sphere materials file '" << fn << "'" << endl; return 0;}
-		string key;
+		string key, str;
 		sphere_mat_t cur_mat;
 		//sphere_materials.clear();
 
@@ -158,6 +162,14 @@ public:
 			else if (key == "diffuse_color") {if (!read_mat_value(cur_mat.diff_c, "diffuse_color")) return 0;}
 			else if (key == "specular_color") {if (!read_mat_value(cur_mat.spec_c, "specular_color")) return 0;}
 			else if (key == "max_num_spheres") {if (!read_mat_value(max_num_mat_spheres, "max_num_spheres")) return 0;}
+			else if (key == "texture") {
+				if (!read_mat_value(str, "texture")) return 0;
+				if (!read_texture(str.c_str(), 0, cur_mat.tid, 0, 0)) return 0;
+			}
+			else if (key == "normal_map") {
+				if (!read_mat_value(str, "normal_map")) return 0;
+				if (!read_texture(str.c_str(), 0, cur_mat.nm_tid, 1, 0)) return 0;
+			}
 			else {cerr << "Error: Unrecognized keyword in sphere materials file '" << fn << "': " << key << endl; return 0;}
 		}
 		return 1;
@@ -271,7 +283,8 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	cp.light_atten = mat.light_atten;
 	cp.density     = mat.density;
 	cp.tscale      = 0.0;
-	cp.tid         = -1;
+	cp.tid         = mat.tid;
+	cp.normal_map  = mat.nm_tid;
 	obj.coll_id    = add_coll_sphere(obj.pos, obj_radius, cp, -1, 0, reflective);
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
 	cobj.destroy   = mat.destroy_thresh;

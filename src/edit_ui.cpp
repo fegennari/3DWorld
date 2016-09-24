@@ -542,10 +542,11 @@ public:
 // ************ Sphere Materials ************
 
 extern bool spheres_mode;
+extern vector<texture_t> textures;
 
-enum {SM_MAT_NAME=0, SM_EMISS, SM_REFLECT, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
+enum {SM_MAT_NAME=0, SM_TEXTURE, SM_EMISS, SM_REFLECT, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
 	SM_LIGHT_ATTEN, SM_LIGHT_RADIUS, SM_LIGHT_SHADOW, SM_DIFF_R, SM_DIFF_G, SM_DIFF_B, SM_SPEC_R, SM_SPEC_G, SM_SPEC_B, NUM_SM_CONT};
-string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Emissive ", "Reflective", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag",
+string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Texture", "Emissive ", "Reflective", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag",
   "Shininess  ", "Refract Ix  ", "Light Atten ", "Light Radius", "Light Shadow", "Diffuse Red ", "Diffuse Green", "Diffuse Blue ", "Specular Red ", "Specular Green", "Specular Blue "};
 
 class sphere_mat_kbd_menu_t : public keyboard_menu_t {
@@ -560,6 +561,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 
 		switch (control_ix) {
 		case SM_MAT_NAME:     value << mat.name; break; // spos stays at 0
+		case SM_TEXTURE:      value << mat.tid << " " << ((mat.tid < 0) ? "None" : textures[mat.tid].name); break; // spos stays at 0
 		case SM_EMISS:        value << mat.emissive;     spos = mat.emissive;         break; // 0/1
 		case SM_REFLECT:      value << mat.reflective;   spos = mat.reflective;       break; // 0/1
 		case SM_HARDNESS:     value << mat.hardness;     spos = mat.hardness;         break; // 0.05 to 1.0
@@ -582,6 +584,15 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		}
 		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.8); // draw in reverse order at 80% scale
 	}
+	static void change_texture(int &tid, int &nm_tid, int delta) {
+		do {
+			tid += delta;
+			if (tid == -1) return; // first texture => no texture
+			if (tid >= (int)textures.size()) {tid = -1; return;} // last texture => no texture
+			if (tid < 0) {tid = textures.size()-1;} // no texture => last texture
+		} while (textures[tid].normal_map || textures[tid].type > 0); // skip normal maps and generated textures
+		nm_tid = textures[tid].bump_tid; // usually unset/-1
+	}
 
 public:
 	sphere_mat_kbd_menu_t() : keyboard_menu_t(NUM_SM_CONT, "Sphere Materials") {cur_control = num_controls-1;} // start at material name
@@ -591,9 +602,10 @@ public:
 		sphere_mat_t &mat(get_cur_sphere_mat());
 
 		switch (num_controls - cur_control - 1) { // reverse order
-		case SM_MAT_NAME:     change_sphere_material(delta, 1);         break;
-		case SM_EMISS:        mat.emissive     = ((delta < 0) ? 0 : 1); break; // 0/1
-		case SM_REFLECT:      mat.reflective   = ((delta < 0) ? 0 : 1); break; // 0/1
+		case SM_MAT_NAME:     change_sphere_material(delta, 1);           break;
+		case SM_TEXTURE:      change_texture(mat.tid, mat.nm_tid, delta); break; // reset normal map because it won't go with the texture when changed
+		case SM_EMISS:        mat.emissive     = ((delta < 0) ? 0 : 1);   break; // 0/1
+		case SM_REFLECT:      mat.reflective   = ((delta < 0) ? 0 : 1);   break; // 0/1
 		case SM_HARDNESS:     mat.hardness     = max(0.05f, min(1.0f, (mat.hardness + 0.05f*delta)));   break; // 0.05 to 1.0 in steps of 0.05
 		case SM_DENSITY:      mat.density      = max(0.1f,  min(4.0f, (mat.density  + 0.1f* delta)));   break; // 0.1 to 4.0 in steps of 0.1
 		case SM_METAL:        mat.metal        = CLIP_TO_01(mat.metal    + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05

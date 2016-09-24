@@ -3,19 +3,31 @@ max_num_spheres 20
 # set some basic values, mostly equal to the defaults
 shadows 0
 emissive 0
-reflective 1
+reflective 0
 destroy_thresh 0
 light_radius 0.0
 hardness 0.8
-density 2.0 # ignored?
+density 2.0
 refract_ix 1.0
 light_atten 0.0
 alpha 1.0
+metalness 0.0
+specular_mag 0.2
+specular_exp 32.0
+diffuse_color 1.0 1.0 1.0
+specular_color 1.0 1.0 1.0
+
+texture bricks_tan.png
+normal_map normal_maps/bricks_tan_norm.png
+add_material Bricks
+texture none
+normal_map none
+
+reflective 1
 metalness 1.0
 specular_mag 1.0
 specular_exp 128.0
 diffuse_color 0.0 0.0 0.0
-specular_color 1.0 1.0 1.0
 add_material Mirror
 
 specular_color 0.9 0.6 0.1
