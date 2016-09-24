@@ -1412,8 +1412,8 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		}
 		// reset last pos (init_dir) if object is only moving on a platform
 		bool const platform_moving(pf.is_moving());
-		//if (type == BALL && platform_moving) obj.init_dir = obj.pos;
-		if (platform_moving) obj.flags |= PLATFORM_COLL;
+		//if (type == BALL && platform_moving) {obj.init_dir = obj.pos;}
+		if (platform_moving) {obj.flags |= PLATFORM_COLL;}
 	}
 	if (player && is_coll_func_pass && cobj.cp.damage != 0.0) {
 		int const ix((type == CAMERA) ? CAMERA_ID : obj_index);

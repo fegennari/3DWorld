@@ -1163,7 +1163,7 @@ void dwobject::elastic_collision(point const &obj_pos, float energy, int obj_typ
 	//float const elastic(object_types[otype].elasticity*object_types[obj_type].elasticity);
 	float const elastic(object_types[type].elasticity), vdir_mag(vdir.mag());
 	float const vmag(sqrt(2.0*elastic*energy/object_types[type].mass)); // E = 0.5*M*dV^2 => dV = sqrt(2*E/M)
-	if (vdir_mag > TOLERANCE) velocity += vdir*(vmag/vdir_mag);
+	if (vdir_mag > TOLERANCE) {velocity += vdir*(vmag/vdir_mag);}
 	status = 1; // re-animate
 	flags &= ~ALL_COLL_STOPPED;
 }

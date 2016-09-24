@@ -695,7 +695,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		sstate.drop_weapon(coll_dir, vector3d(sstate.target_pos, obj_pos), obj_pos, index, energy, type);
 		blood_v  *= 0.5;
 		coll_dir *= -4.0;
-		if (type == FELL) gen_sound(SOUND_SQUISH, obj_pos, 0.2);
+		if (type == FELL) {gen_sound(SOUND_SQUISH, obj_pos, 0.2);}
 	}
 	if (!burned && !is_area_damage(type)) {
 		unsigned const blood_amt(create_blood(index+1, (alive ? 30 : 1), obj_pos, radius,
@@ -749,8 +749,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		case SUFFOCATED: str += " Suffocated";           break;
 		case CRUSHED:    str += " was Crushed to Death"; break;
 		case GASSED:     str += " was Gassed to Death";  break;
-		default:         str += " suicided with " +
-							 get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + obj_type_names[type];
+		default:         str += " suicided with " + get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + obj_type_names[type];
 		}
 		print_text_onscreen(str, CYAN, 1.0, MESSAGE_TIME/2, 0);
 		ssource.register_suicide();
@@ -770,13 +769,13 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 			//if (free_for_all)
 			ssource.register_kill();
 		}
-		if (!same_team(index, source)) update_kill_health(obj_groups[coll_id[SMILEY]].get_obj(source).health);
+		if (!same_team(index, source)) {update_kill_health(obj_groups[coll_id[SMILEY]].get_obj(source).health);}
 	}
 	sstate.drop_pack(obj_pos);
 	remove_reset_coll_obj(obji.coll_id);
 	sstate.register_death(source);
 	obji.status   = 0;
-	if (game_mode != 2) gen_smoke(position);
+	if (game_mode != 2) {gen_smoke(position);}
 	return 1;
 }
 
@@ -881,7 +880,7 @@ bool default_obj_coll(int index, int obj_index, vector3d const &velocity, point 
 		if (cobj_type == S_BALL) return 1;
 		energy = get_coll_energy(zero_vector, obj.velocity, object_types[obj.type].mass);
 		valid_coll = smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, cobj_type);
-		if (valid_coll) {obj.disable();} // return?
+		if (valid_coll && cobj_type != MAT_SPHERE) {obj.disable();} // return?
 	}
 	obj.elastic_collision(position, energy, type); // partially elastic collision
 	return valid_coll;
@@ -917,7 +916,7 @@ bool pushable_collision(int index, point const &position, float force, int type,
 
 		if (obj.status != 1 && obj.status != 2) { // only if on ground or stopped
 			// Note: an object resting on a destroyable static object will still have status 1 and will not be pushable
-			if (obj.status == 4) obj.flags |= WAS_PUSHED;
+			if (obj.status == 4) {obj.flags |= WAS_PUSHED;}
 			obj.elastic_collision(position, force, type); // add some extra energy so that we can push the skull
 			return 1;
 		}
