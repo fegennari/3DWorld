@@ -214,7 +214,7 @@ class lt_atten_manager_t {
 	float last_light_atten, last_refract_ix;
 
 public:
-	lt_atten_manager_t(shader_t &shader_) : shader(shader_), last_light_atten(-1.0), last_refract_ix(0.0) // set to invalid values to start
+	lt_atten_manager_t(shader_t &shader_) : shader(shader_), last_light_atten(-2.0), last_refract_ix(0.0) // set to invalid values to start
 	{for (unsigned i = 0; i < 5; ++i) {ulocs[i] = -1;}}
 	void enable();
 	void next_object(float light_atten, float refract_ix);
