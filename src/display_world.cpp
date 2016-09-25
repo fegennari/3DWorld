@@ -223,7 +223,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		if (TIMETEST) PRINT_TIME("S");
 		draw_cracks_and_decals();
 		if (TIMETEST) PRINT_TIME("S2");
-		draw_transparent_object_groups();
+		draw_transparent_object_groups(reflection_pass);
 		check_gl_error(25);
 	}
 }
@@ -1047,11 +1047,6 @@ void display_universe() { // infinite universe
 }
 
 
-void draw_transparent(bool above_water) {
-	if (above_water) {draw_transparent_object_groups();} else {draw_bubbles();}
-}
-
-
 // Note: assumes the camera is not underwater
 void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int reflection_pass, bool inc_mesh, bool inc_grass, bool inc_water) {
 
@@ -1083,7 +1078,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	if (inc_mesh && (display_mode & 0x01)) {display_mesh(0, 1);} // draw mesh
 	if (inc_grass) {draw_grass();}
 	draw_scenery();
-	draw_solid_object_groups();
+	draw_solid_object_groups(reflection_pass);
 	draw_stuff(1, 0, reflection_pass);
 	if (inc_water && (display_mode & 0x04)) {draw_water(1);} // if we can exclude the mesh we can probably exclude the water as well
 	draw_stuff(0, 0, reflection_pass);

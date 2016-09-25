@@ -205,23 +205,22 @@ void add_thick_triangle(point const &pos, vector3d const &o, float radius, float
 }
 
 
-void draw_solid_object_groups() {
+void draw_solid_object_groups(int reflection_pass) {
 
 	draw_waypoints();
-	draw_select_groups(1);
+	draw_select_groups(1, reflection_pass);
 	if (display_mode & 0x0200) {d_part_sys.draw();}
 }
 
-
-void draw_transparent_object_groups() {
-	draw_select_groups(0);
+void draw_transparent_object_groups(int reflection_pass) {
+	draw_select_groups(0, reflection_pass);
 }
 
 
-void setup_draw_groups_shader(shader_t &s, int solid) {
+void setup_draw_groups_shader(shader_t &s, int solid, int reflection_pass=0) {
 
 	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
-	bool const force_tsl = 1;
+	bool const force_tsl = (reflection_pass != 1); // two-sided lighting is required for some cobjs, but wrong for all cobjs when the reflection plane is enabled
 	bool const lt_atten(solid ? 0 : 1); // sphere light atten
 	float const burn_tex_scale = 0.5;
 	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, lt_atten, 1, 0, 0, 1, force_tsl, burn_tex_scale);
@@ -238,11 +237,11 @@ void draw_player_model(point const &pos, vector3d const &dir, int time) {
 }
 
 
-void draw_select_groups(int solid) {
+void draw_select_groups(int solid, int reflection_pass) {
 
 	if (!begin_motion) return;
 	shader_t s;
-	setup_draw_groups_shader(s, solid);
+	setup_draw_groups_shader(s, solid, reflection_pass);
 	lt_atten_manager_t lt_atten_manager(s);
 	if (!solid) {lt_atten_manager.enable();}
 	select_no_texture();
