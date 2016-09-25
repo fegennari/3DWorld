@@ -1850,14 +1850,15 @@ void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp,
 
 	int const dmin(get_min_dim(cube)), dim1((dmin+1)%3), dim2((dmin+2)%3); // min cube dim
 	point const center(cube.get_cube_center());
-	float const val(center[dmin]);
+	float const val(center[dmin]), thickness(cube.min_len()), thresh(0.001*thickness);
 	point points[3]; // triangle
 	points[0][dim1] = pos[dim1]; points[0][dim2] = pos[dim2];
 
 	while (1) {
 		bool const dir(rand()&1);
 		int const edim(dir ? dim2 : dim1), sdim(dir ? dim1 : dim2);
-		points[1][edim] = points[2][edim] = (((pos[edim] - cube.d[edim][0]) < (cube.d[edim][1] - pos[edim])) ? cube.d[edim][0] : cube.d[edim][1]);
+		bool const side((pos[edim] - cube.d[edim][0]) < (cube.d[edim][1] - pos[edim]));
+		points[1][edim] = points[2][edim] = (side ? cube.d[edim][0]-thresh : cube.d[edim][1]+thresh); // add thresh to avoid z-fighting by burying edge in cobj
 
 		for (unsigned d = 0; d < 2; ++d) {
 			points[1+d][sdim] = rand_uniform(cube.d[sdim][d], pos[sdim]); // random pos between cube corner and perpendicular to center pos
@@ -1866,7 +1867,7 @@ void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp,
 		if (base > 0.75*height && height > 0.5*base) break; // keep if not a high aspect ratio triangle
 	}
 	UNROLL_3X(points[i_][dmin] = val;)
-	int const cindex(add_coll_polygon(points, 3, cp, cube.min_len())); // should reuse index slot and not invalidate cobj
+	int const cindex(add_coll_polygon(points, 3, cp, thickness)); // should reuse index slot and not invalidate cobj
 	coll_objects[cindex].destroy = SHATTERABLE;
 	coll_objects[cindex].set_reflective_flag(0); // not supported yet
 }
