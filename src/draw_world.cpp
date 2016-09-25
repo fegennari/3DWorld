@@ -1194,7 +1194,8 @@ bool decal_obj::draw(quad_batch_draw &qbd) const {
 	rotate_vector3d(orient, rot_angle, upv);
 	// move slightly away from the object to blend properly with cracks
 	point const viewer(cur_pos + (back_facing ? -orient : orient));
-	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), viewer, upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
+	float const off_scale(max(0.05f, min(1.0f, p2p_dist_sq(cur_pos, get_camera_pos())))); // limit offset distance when the camera is close to reduce the chance of seeing gaps
+	qbd.add_billboard((cur_pos + DECAL_OFFSET*off_scale*orient), viewer, upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
 	return 1;
 }
 
