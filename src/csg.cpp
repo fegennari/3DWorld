@@ -1127,13 +1127,15 @@ void coll_obj_group::sort_cobjs_for_rendering() {
 }
 
 
+void modify_alpha_for_cube_light_atten(float &alpha, float light_atten, float thickness) {
+	if (light_atten > 0.0) {alpha += (1.0 - alpha)*(1.0 - exp(-light_atten*thickness));}
+}
+
 color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thickness_, bool ua)
 	: cid(cobj.id), tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua), is_2d(cobj.is_thin_poly()),
 	volume(volume_), thickness(thickness_), tscale(cobj.cp.tscale), color(cobj.cp.color)
 {
-	if (cobj.type == COLL_CUBE && cobj.cp.light_atten > 0.0) {
-		color.alpha += (1.0 - color.alpha)*(1.0 - exp(-cobj.cp.light_atten*thickness));
-	}
+	if (cobj.type == COLL_CUBE) {modify_alpha_for_cube_light_atten(color.alpha, cobj.cp.light_atten, thickness);}
 	if (tscale == 0.0) { // calculate tscale from object size (assuming a cube)
 		tscale = 3.0/(fabs(cobj.d[0][1] - cobj.d[0][0]) + fabs(cobj.d[1][1] - cobj.d[1][0]) + fabs(cobj.d[2][1] - cobj.d[2][0]));
 	}

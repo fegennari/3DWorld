@@ -1846,6 +1846,8 @@ void add_laser_beam_segment(point const &start_pos, point coll_pos, vector3d con
 }
 
 
+void modify_alpha_for_cube_light_atten(float &alpha, float light_atten, float thickness);
+
 void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp, point const &pos) {
 
 	int const dmin(get_min_dim(cube)), dim1((dmin+1)%3), dim2((dmin+2)%3); // min cube dim
@@ -1868,8 +1870,11 @@ void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp,
 	}
 	UNROLL_3X(points[i_][dmin] = val;)
 	int const cindex(add_coll_polygon(points, 3, cp, thickness)); // should reuse index slot and not invalidate cobj
-	coll_objects[cindex].destroy = SHATTERABLE;
-	coll_objects[cindex].set_reflective_flag(0); // not supported yet
+	coll_obj &cobj(coll_objects.get_cobj(cindex));
+	cobj.destroy = SHATTERABLE;
+	cobj.set_reflective_flag(0); // not supported yet
+	cobj.cp.light_atten = 0.0; // optional - unused for polygons
+	modify_alpha_for_cube_light_atten(cobj.cp.color.alpha, cp.light_atten, thickness);
 }
 
 
