@@ -1198,6 +1198,7 @@ public:
 	void create_custom_mipmaps();
 	unsigned char const *get_mipmap_data(unsigned level) const;
 	void set_to_color(colorRGBA const &c);
+	void maybe_assign_normal_map_tid(int nm_tid) {if (nm_tid >= 0 && bump_tid < 0) {bump_tid = nm_tid;}}
 	void alloc();
 	void bind_gl() const;
 	void free_mm_data();

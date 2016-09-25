@@ -28,6 +28,7 @@ extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
 extern vector<light_source_trig> light_sources_d;
+extern vector<texture_t> textures;
 
 
 bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map, bool invert_y=0);
@@ -143,6 +144,10 @@ public:
 				if (sphere_materials.size() >= MAX_SPHERE_MATERIALS) {
 					cerr << "Error: Too many materials in sphere materials file '" << fn << "': max is " << MAX_SPHERE_MATERIALS << " but saw " << sphere_materials.size() << endl;
 					return 0;
+				}
+				if (cur_mat.tid >= 0 && cur_mat.nm_tid >= 0) { // bind normal map to texture do that material editor can track their relationship
+					assert(cur_mat.tid < (int)textures.size() && cur_mat.nm_tid < (int)textures.size());
+					textures[cur_mat.tid].maybe_assign_normal_map_tid(cur_mat.nm_tid);
 				}
 				sphere_materials.push_back(cur_mat);
 			}

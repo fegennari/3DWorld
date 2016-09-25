@@ -587,11 +587,11 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 	static void change_texture(int &tid, int &nm_tid, int delta) {
 		do {
 			tid += delta;
-			if (tid == -1) return; // first texture => no texture
-			if (tid >= (int)textures.size()) {tid = -1; return;} // last texture => no texture
+			if (tid == -1) break; // first texture => no texture
+			if (tid >= (int)textures.size()) {tid = -1; break;} // last texture => no texture
 			if (tid < 0) {tid = textures.size()-1;} // no texture => last texture
 		} while (textures[tid].normal_map || textures[tid].type > 0); // skip normal maps and generated textures
-		nm_tid = textures[tid].bump_tid; // usually unset/-1
+		nm_tid = ((tid < 0) ? -1 : textures[tid].bump_tid); // usually unset/-1
 	}
 
 public:

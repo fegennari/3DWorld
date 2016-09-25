@@ -896,6 +896,10 @@ void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 		bool const is_parent(cdraw_groups.set_parent_or_add_cobj(*this));
 		if (!is_parent) return; // a child draw cobj, don't add it to cobjs
 	}
+	if (cp.tid >= 0 && cp.normal_map >= 0) {
+		assert(cp.tid < (int)textures.size() && cp.normal_map < (int)textures.size());
+		textures[cp.tid].maybe_assign_normal_map_tid(cp.normal_map);
+	}
 	cobjs.push_back(*this);
 }
 
