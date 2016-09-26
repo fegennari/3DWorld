@@ -196,6 +196,10 @@ bool swap_and_set_as_coll_objects(coll_obj_group &new_cobjs) {
 	return cobj_manager.swap_and_set_as_coll_objects(new_cobjs);
 }
 
+void add_reflective_cobj(unsigned index) {
+	coll_objects[index].set_reflective_flag(1);
+	reflective_cobjs.add_cobj(index);
+}
 
 inline void get_params(int &x1, int &y1, int &x2, int &y2, const float d[3][2]) {
 
@@ -425,6 +429,7 @@ void add_coll_sphere_to_matrix(int index, int dhcm) {
 	}
 }
 
+
 // doesn't work for ellipses when X != Y
 int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id, int dhcm, bool reflective) {
 
@@ -433,11 +438,7 @@ int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, i
 	coll_objects[index].points[0] = pt;
 	coll_objects.set_coll_obj_props(index, COLL_SPHERE, radius, radius, platform_id, cparams);
 	add_coll_sphere_to_matrix(index, dhcm);
-
-	if (reflective) {
-		coll_objects[index].set_reflective_flag(1);
-		reflective_cobjs.add_cobj(index);
-	}
+	if (reflective) {add_reflective_cobj(index);}
 	return index;
 }
 

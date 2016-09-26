@@ -14,6 +14,7 @@ struct sphere_mat_t {
 
 	sphere_mat_t() : shadows(0), emissive(0), reflective(0), destroy_thresh(0), tid(-1), nm_tid(-1), alpha(1.0), metal(1.0), spec_mag(0.0), shine(1.0),
 		hardness(0.8), density(1.0), light_atten(0.0), refract_ix(1.0), light_radius(0.0), diff_c(WHITE), spec_c(WHITE) {}
+	std::string get_name() const;
 };
 
 sphere_mat_t &get_cur_sphere_mat();

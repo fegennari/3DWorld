@@ -652,6 +652,7 @@ float dwobject::get_true_radius() const {
 	case DIRT:     return radius*orientation.x;
 	case ROCK:     return radius*orientation.x;
 	case PLASMA:   return radius*init_dir.x;
+	case MAT_SPHERE: return radius; // FIXME: custom per-material?
 	}
 	return radius;
 }

@@ -541,7 +541,7 @@ public:
 
 // ************ Sphere Materials ************
 
-extern bool spheres_mode;
+extern unsigned spheres_mode;
 extern vector<texture_t> textures;
 
 enum {SM_MAT_NAME=0, SM_TEXTURE, SM_EMISS, SM_REFLECT, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
@@ -560,7 +560,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		sphere_mat_t const &mat(get_cur_sphere_mat());
 
 		switch (control_ix) {
-		case SM_MAT_NAME:     value << mat.name; break; // spos stays at 0
+		case SM_MAT_NAME:     value << mat.get_name(); break; // spos stays at 0
 		case SM_TEXTURE:      value << mat.tid << " " << ((mat.tid < 0) ? "None" : textures[mat.tid].name); break; // spos stays at 0
 		case SM_EMISS:        value << mat.emissive;     spos = mat.emissive;         break; // 0/1
 		case SM_REFLECT:      value << mat.reflective;   spos = mat.reflective;       break; // 0/1
@@ -596,7 +596,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 
 public:
 	sphere_mat_kbd_menu_t() : keyboard_menu_t(NUM_SM_CONT, "Sphere Materials") {cur_control = num_controls-1;} // start at material name
-	virtual bool is_enabled() const {return (show_scores && spheres_mode);}
+	virtual bool is_enabled() const {return (show_scores && spheres_mode != 0);}
 
 	virtual void change_value(int delta) {
 		sphere_mat_t &mat(get_cur_sphere_mat());

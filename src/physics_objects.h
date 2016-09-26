@@ -477,7 +477,7 @@ public:
 
 // object flag bits
 #define XY_STOPPED       0x01
-//      0x02
+#define IS_CUBE_FLAG     0x02
 #define Z_STOPPED        0x04
 #define FLOATING         0x08
 #define UNDERWATER       0x10

@@ -51,12 +51,12 @@ vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode, spheres_mode, smoke_visible, begin_motion;
+extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
-extern unsigned create_voxel_landscape;
+extern unsigned create_voxel_landscape, spheres_mode;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, czmax, fticks, crater_depth, crater_radius;
 extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq, tfticks;
 extern double camera_zh, c_phi;
@@ -1434,7 +1434,7 @@ void switch_player_weapon(int val) {
 	else if (world_mode == WMODE_INF_TERRAIN) {change_inf_terrain_fire_mode(val);}
 	else if (world_mode == WMODE_GROUND && create_voxel_landscape) {change_voxel_editing_mode(val);}
 	else if (spraypaint_mode) {change_spraypaint_color(val);}
-	else if (spheres_mode) {change_sphere_material(val, 0);}
+	else if (spheres_mode   ) {change_sphere_material (val, 0);}
 }
 
 
@@ -1466,8 +1466,8 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 
 	if (!game_mode) { // flashlight/candlelight/spraypaint mode only
 		if (voxel_editing) {modify_voxels();}
-		else if (spraypaint_mode) {spray_paint((wmode & 1) != 0);}
-		else if (spheres_mode) {throw_sphere((wmode & 1) != 0);}
+		else if (spraypaint_mode) {spray_paint ((wmode & 1) != 0);}
+		else if (spheres_mode   ) {throw_sphere((wmode & 1) != 0);}
 		else if (wmode & 1) {add_camera_candlelight();}
 		else {add_camera_flashlight();}
 		return;

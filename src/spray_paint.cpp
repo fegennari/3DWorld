@@ -21,7 +21,7 @@ bool spraypaint_mode(0);
 unsigned paint_color_ix(0);
 colorRGBA custom_color(WHITE);
 
-extern bool spheres_mode;
+extern unsigned spheres_mode;
 extern int display_mode, camera_coll_id;
 extern float CAMERA_RADIUS, FAR_CLIP;
 extern coll_obj_group coll_objects;

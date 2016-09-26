@@ -14,7 +14,7 @@ using namespace std;
 
 unsigned const MAX_SPHERE_MATERIALS = 255;
 
-bool spheres_mode(0);
+unsigned spheres_mode(0); // 0=none, 1=spheres, 2=cubes
 unsigned max_num_mat_spheres(1);
 
 extern bool spraypaint_mode;
@@ -190,15 +190,15 @@ sphere_mat_t &get_cur_sphere_mat() {return sphere_materials.get_cur_mat();}
 
 void show_cur_sphere_mode() {
 
-	if (!spheres_mode) {print_text_onscreen("Flashlight", YELLOW, 1.0, TICKS_PER_SECOND, 1); return;}
-	string const &str(get_cur_sphere_mat().name);
+	if (spheres_mode == 0) {print_text_onscreen("Flashlight", YELLOW, 1.0, TICKS_PER_SECOND, 1); return;}
+	string const &str(get_cur_sphere_mat().get_name());
 	print_text_onscreen(str, YELLOW, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
 void toggle_sphere_mode() {
 
 	if (world_mode != WMODE_GROUND) return;
-	if (sphere_materials.empty()) {spheres_mode = 0;} else {spheres_mode ^= 1;}
+	if (sphere_materials.empty()) {spheres_mode = 0;} else {spheres_mode = (spheres_mode+1)%3;}
 	if (spheres_mode) {spraypaint_mode = 0;}
 	show_cur_sphere_mode();
 }
@@ -211,6 +211,9 @@ void change_sphere_material(int val, bool quiet) {
 	show_cur_sphere_mode();
 	play_switch_weapon_sound();
 }
+
+
+string sphere_mat_t::get_name() const {return name + ((spheres_mode == 2) ? " (Cube)" : " (Sphere)");}
 
 bool throw_sphere(bool mode) {
 
@@ -233,6 +236,7 @@ bool throw_sphere(bool mode) {
 	obj.init_dir  = -cview_dir;
 	obj.time      = -1;
 	obj.source    = CAMERA_ID;
+	if (spheres_mode == 2) {obj.flags |= IS_CUBE_FLAG;}
 
 	unsigned const mat_ix(sphere_materials.get_ix());
 	assert(mat_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
@@ -290,9 +294,18 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	cp.tscale      = 0.0;
 	cp.tid         = mat.tid;
 	cp.normal_map  = mat.nm_tid;
-	obj.coll_id    = add_coll_sphere(obj.pos, obj_radius, cp, -1, 0, reflective);
+
+	if (obj.flags & IS_CUBE_FLAG) { // cube
+		cube_t cube;
+		cube.set_from_sphere(obj.pos, obj_radius);
+		obj.coll_id = add_coll_cube(cube, cp, -1, 0);
+		if (reflective) {add_reflective_cobj(obj.coll_id);}
+	}
+	else { // sphere
+		obj.coll_id = add_coll_sphere(obj.pos, obj_radius, cp, -1, 0, reflective);
+	}
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
-	cobj.destroy   = mat.destroy_thresh;
+	cobj.destroy = mat.destroy_thresh;
 	
 	if (mat.light_radius > 0.0 && !mat.shadows) {
 		add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c); // regular point light
