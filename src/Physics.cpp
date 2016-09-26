@@ -487,7 +487,7 @@ void init_objects() {
 	object_types[MAT_SPHERE].gravity         = 1.0;
 	object_types[MAT_SPHERE].radius          = 0.05;
 	object_types[MAT_SPHERE].lifetime        = 10000;
-	object_types[MAT_SPHERE].density         = 1.0;
+	object_types[MAT_SPHERE].density         = 2.0;
 	object_types[MAT_SPHERE].elasticity      = 0.9;
 	object_types[MAT_SPHERE].health          = 10000.0;
 	object_types[MAT_SPHERE].color           = WHITE;
@@ -737,7 +737,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		}
 		if (!(flags & Z_STOPPED)) {
 			double gscale((type == PLASMA && init_dir.x != 0.0) ? 1.0/sqrt(init_dir.x) : 1.0);
-			if ((flags & IN_WATER) && otype.density > WATER_DENSITY) gscale *= (otype.density - WATER_DENSITY)/otype.density;
+			if ((flags & IN_WATER) && otype.density > WATER_DENSITY) {gscale *= (otype.density - WATER_DENSITY)/otype.density;}
 
 			if (enable_fsource) {
 				double const grav_well(min(1.0f, 0.1f*v_flow.mag()));
@@ -771,16 +771,15 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 				}
 				pos[d] += tstep*velocity[d]; // move object
 			}
-			if (flags & FLOATING) float_downstream(pos, radius);
+			if (flags & FLOATING) {float_downstream(pos, radius);}
 		}
 		assert(!is_nan(tstep));
 		pos.z += tstep*velocity.z;
 		verify_data();
 
 		// check collisions
-		float const r2((otype.flags & COLL_DESTROYS) ? 0.25*radius : radius);
 		float dz;
-		int val(get_obj_zval(pos, dz, r2)); // 0 = out of simulation region, 1 = airborne, 2 = on ground
+		int val(get_obj_zval(pos, dz, ((otype.flags & COLL_DESTROYS) ? 0.25*radius : radius))); // 0 = out of simulation region, 1 = airborne, 2 = on ground
 
 		if (val == 2 && dz > radius && !is_over_mesh(old_pos) && old_pos.z < pos.z) { // hit side of simulation region
 			status = 0;
@@ -795,7 +794,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		bool const last_stat_coll((flags & STATIC_COBJ_COLL) != 0);
 		int const coll(check_vert_collision(obj_index, 1, iter, &cnorm));
 		if (disabled()) return;
-		if (!coll) flags &= ~Z_STOPPED; // fix for landmine no longer stuck to cobj
+		if (!coll) {flags &= ~Z_STOPPED;} // fix for landmine no longer stuck to cobj
 		
 		if (wcoll) {
 			if (!frozen) status = 1;
@@ -844,6 +843,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (otype.flags & COLL_DESTROYS) {assert(type != SMILEY); status = 0; return;}
 		if (flags & STATIC_COBJ_COLL) return; // stuck on vertical collision surface
 		if (check_water_collision(velocity.z) && (frozen || otype.density < WATER_DENSITY)) return;
+		if (flags & IS_CUBE_FLAG) return;
 		if (otype.flags & (OBJ_IS_FLAT | OBJ_IS_CYLIN)) set_orient_for_coll(NULL);
 		point const old_pos(pos);
 		int const val(surface_advance()); // move along ground
@@ -948,7 +948,7 @@ int dwobject::surface_advance() {
 	if (dzn > TOLERANCE && dzn > friction) {
 		float vel((SURF_ADV_STEP/XY_SCENE_SIZE)*dzn*(1.0 - 0.5*friction)/DEF_TIMESTEP);
 		assert(density > 0.0);
-		if ((flags & IN_WATER) && density >= WATER_DENSITY) vel *= (density - WATER_DENSITY)/density;
+		if ((flags & IN_WATER) && density >= WATER_DENSITY) {vel *= (density - WATER_DENSITY)/density;}
 
 		if (vel > TOLERANCE) {
 			mesh_vel.x = vel*DX_VAL*snorm.x/dzn;
@@ -1161,9 +1161,10 @@ void dwobject::elastic_collision(point const &obj_pos, float energy, int obj_typ
 	if (disabled() || (object_types[type].flags & COLL_DESTROYS)) return; // self-propelled
 	if (temperature <= W_FREEZE_POINT && (flags & IN_WATER))      return; // stuck in ice
 	vector3d const vdir(pos, obj_pos);
+	float const elastic_factor((flags & IS_CUBE_FLAG) ? 0.25 : 1.0);
 	//float const elastic(object_types[otype].elasticity*object_types[obj_type].elasticity);
 	float const elastic(object_types[type].elasticity), vdir_mag(vdir.mag());
-	float const vmag(sqrt(2.0*elastic*energy/object_types[type].mass)); // E = 0.5*M*dV^2 => dV = sqrt(2*E/M)
+	float const vmag(sqrt(2.0*elastic_factor*elastic*energy/object_types[type].mass)); // E = 0.5*M*dV^2 => dV = sqrt(2*E/M)
 	if (vdir_mag > TOLERANCE) {velocity += vdir*(vmag/vdir_mag);}
 	status = 1; // re-animate
 	flags &= ~ALL_COLL_STOPPED;

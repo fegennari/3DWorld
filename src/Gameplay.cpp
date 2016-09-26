@@ -917,7 +917,17 @@ bool pushable_collision(int index, point const &position, float force, int type,
 		if (obj.status != 1 && obj.status != 2) { // only if on ground or stopped
 			// Note: an object resting on a destroyable static object will still have status 1 and will not be pushable
 			if (obj.status == 4) {obj.flags |= WAS_PUSHED;}
-			obj.elastic_collision(position, force, type); // add some extra energy so that we can push the skull
+			point pos(position);
+
+			if (obj.flags & IS_CUBE_FLAG) {
+				vector3d const dir(pos - obj.pos);
+				int const dim(get_max_dim(dir));
+				if (dim == 2) return 0; // don't push in z
+				pos = obj.pos;
+				pos[dim] += dir.get_norm()[dim]*dir.mag(); // make push dir on cube side using ortho vector
+				force *= PI/6.0; // less force for larger object volume (cube vs. sphere)
+			}
+			obj.elastic_collision(pos, force, type); // add some extra energy so that we can push the object
 			return 1;
 		}
 	}
@@ -938,7 +948,7 @@ bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 }
 
 bool mat_sphere_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-	if (pushable_collision(index, position, 15000.0, type, MAT_SPHERE)) return 1;
+	if (pushable_collision(index, position, 25000.0, type, MAT_SPHERE)) return 1;
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, MAT_SPHERE);
 }
 
