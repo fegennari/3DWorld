@@ -657,6 +657,16 @@ float dwobject::get_true_radius() const {
 	return radius;
 }
 
+float dwobject::get_true_density() const {
+	return ((type == MAT_SPHERE) ? get_mat_sphere_density(*this) : object_types[type].density);
+}
+
+float dwobject::get_true_mass() const {
+	float mass(object_types[type].mass);
+	if (type != MAT_SPHERE) return mass;
+	return mass*get_mat_sphere_density(*this)/object_types[type].density; // recalculate mass based on density ratio
+}
+
 
 // 0 = out of range/expired, 1 = airborne, 2 = collision, 3 = moving on ground, 4 = motionless
 void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj_index) { // returns collision status
@@ -737,7 +747,8 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		}
 		if (!(flags & Z_STOPPED)) {
 			double gscale((type == PLASMA && init_dir.x != 0.0) ? 1.0/sqrt(init_dir.x) : 1.0);
-			if ((flags & IN_WATER) && otype.density > WATER_DENSITY) {gscale *= (otype.density - WATER_DENSITY)/otype.density;}
+			float const density(get_true_density());
+			if ((flags & IN_WATER) && density > WATER_DENSITY) {gscale *= (density - WATER_DENSITY)/density;}
 
 			if (enable_fsource) {
 				double const grav_well(min(1.0f, 0.1f*v_flow.mag()));
@@ -842,7 +853,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		}
 		if (otype.flags & COLL_DESTROYS) {assert(type != SMILEY); status = 0; return;}
 		if (flags & STATIC_COBJ_COLL) return; // stuck on vertical collision surface
-		if (check_water_collision(velocity.z) && (frozen || otype.density < WATER_DENSITY)) return;
+		if (check_water_collision(velocity.z) && (frozen || get_true_density() < WATER_DENSITY)) return;
 		if (flags & IS_CUBE_FLAG) return;
 		if (otype.flags & (OBJ_IS_FLAT | OBJ_IS_CYLIN)) set_orient_for_coll(NULL);
 		point const old_pos(pos);
@@ -922,7 +933,7 @@ int dwobject::surface_advance() {
 	}
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y)), val(0);
 	if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
-	float const mesh_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)), radius(otype.radius), density(otype.density);
+	float const mesh_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)), radius(otype.radius), density(get_true_density());
 
 	if (pos.z < (mesh_height - RECOVER_DEPTH*radius)) { // below surface
 		if (pos.z < (mesh_height - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
@@ -1031,7 +1042,7 @@ int dwobject::check_water_collision(float vz_old) {
 		else {
 			flags  |= IN_WATER;
 			if (!no_water_damage) health -= fticks*WATER_FRAME_DAM;
-			float const density(otype.density), v_tot_sq(velocity.mag_sq());
+			float const density(get_true_density()), v_tot_sq(velocity.mag_sq());
 			float const ground_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + radius);
 
 			if (v_tot_sq < BOUNCE_CUTOFF || (flags & Z_STOPPED)) {
@@ -1040,7 +1051,7 @@ int dwobject::check_water_collision(float vz_old) {
 
 					if ((zpos - pos.z) > 2.0*radius) { // under the surface
 						velocity.z  = vz_old;
-						velocity.z -= ((otype.density - WATER_DENSITY)/otype.density)*base_gravity*GRAVITY*tstep;
+						velocity.z -= ((density - WATER_DENSITY)/density)*base_gravity*GRAVITY*tstep;
 						flags      |= Z_STOPPED;
 						if ((pos.z - radius) > water_height) splash = 1;
 					}
@@ -1100,7 +1111,7 @@ int dwobject::check_water_collision(float vz_old) {
 			}
 		}
 		if (splash) { // hit the pool of water
-			float energy(get_coll_energy(old_v, (exp_on_coll ? zero_vector : velocity), otype.mass));
+			float energy(get_coll_energy(old_v, (exp_on_coll ? zero_vector : velocity), get_true_mass()));
 
 			if (energy > 0.0) {
 				draw_splash(pos.x, pos.y, water_height, SPLASH_BASE_SZ*sqrt(energy));
@@ -1164,7 +1175,7 @@ void dwobject::elastic_collision(point const &obj_pos, float energy, int obj_typ
 	float const elastic_factor((flags & IS_CUBE_FLAG) ? 0.25 : 1.0);
 	//float const elastic(object_types[otype].elasticity*object_types[obj_type].elasticity);
 	float const elastic(object_types[type].elasticity), vdir_mag(vdir.mag());
-	float const vmag(sqrt(2.0*elastic_factor*elastic*energy/object_types[type].mass)); // E = 0.5*M*dV^2 => dV = sqrt(2*E/M)
+	float const vmag(sqrt(2.0*elastic_factor*elastic*energy/get_true_mass())); // E = 0.5*M*dV^2 => dV = sqrt(2*E/M)
 	if (vdir_mag > TOLERANCE) {velocity += vdir*(vmag/vdir_mag);}
 	status = 1; // re-animate
 	flags &= ~ALL_COLL_STOPPED;

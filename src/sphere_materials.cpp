@@ -273,6 +273,8 @@ bool is_mat_sphere_a_shadower(dwobject const &obj) {
 	return 1;
 }
 
+float get_mat_sphere_density(dwobject const &obj) {return sphere_materials.get_mat(obj.direction).density;}
+
 void sync_mat_sphere_lpos(unsigned id, point const &pos) {sphere_materials.sync_light_pos(id, pos);}
 
 void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
