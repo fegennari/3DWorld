@@ -948,7 +948,7 @@ bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 }
 
 bool mat_sphere_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-	if (pushable_collision(index, position, 25000.0, type, MAT_SPHERE)) return 1;
+	if (pushable_collision(index, position, 30000.0, type, MAT_SPHERE)) return 1;
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, MAT_SPHERE);
 }
 

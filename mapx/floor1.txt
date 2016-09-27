@@ -94,12 +94,16 @@ a 0 # non-destroyable
 
 #z 1.5 1.4 0.4  0.0 0.0 1.0  0.08 0.04
 r 1.0 60.0  0.8 0.4 0.25 # copper
+density 8.79
 #S 1.4 1.7 0.2  0.05
 r 1.0 60.0  0.85 0.85 0.25 # brass
+density 8.48
 #S 1.4 1.9 0.2  0.05
 r 1.0 60.0  0.9 0.6 0.1 # gold
+density 19.29
 #S 1.4 2.1 0.2  0.05
 metalness 0.0 # dielectric
+density 2.7
 r 1.0 60.0  1.0 1.0 1.0
 l 0.8 1.0 1.0 1.0 1.0 -1 1
 #S 1.6 1.5 0.2  0.05
@@ -114,6 +118,7 @@ r 0.0 1.0 # reset specularity
 
 l 0.82 0.6 0.5 0.4 1.0 9 1 # snow texture (marble)
 r 0.8 60.0 # set specularity
+density 2.7
 e 0
 y 7.0
 B 1.15 1.85  1.72 1.88  0.14 0.15
@@ -122,6 +127,7 @@ B 1.77 1.93  1.80 2.33  0.14 0.15
 C 1.15 1.80 0.1401  1.15 1.80 0.15  0.08 0.08
 C 1.85 1.80 0.1401  1.85 1.80 0.15  0.08 0.08
 r 0.0 1.0 # reset specularity
+density 1.0
 
 # chair at front desk
 m 0.036
