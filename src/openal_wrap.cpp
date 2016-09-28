@@ -57,6 +57,12 @@ public:
 	void add_placed_sound(string const &fn, sound_params_t const &params, sensor_t const &sensor) {
 		placed_sounds.push_back(placed_sound_t(find_or_add_sound(fn), params, sensor));
 	}
+	void write_placed_sounds_to_cobj_file(ostream &out) const {
+		for (auto i = placed_sounds.begin(); i != placed_sounds.end(); ++i) {
+			out << "place_sound " << get_name(i->sound_id) << " ";
+			i->params.write_to_cobj_file(out); // includes endl
+		}
+	}
 
 	// supported: au, wav
 	// not supported: mp3, aif
@@ -174,6 +180,7 @@ string const &get_sound_name(unsigned id) {return sound_manager.get_name(id);}
 void set_sound_loop_state(unsigned id, bool play, float volume) {sound_manager.set_loop_state(id, play, volume);}
 bool check_for_active_sound(point const &pos, float radius, float min_gain) {return sound_manager.check_for_active_sound(pos, radius, min_gain);}
 void add_placed_sound(string const &fn, sound_params_t const &params, sensor_t const &sensor) {sound_manager.add_placed_sound(fn, params, sensor);}
+void write_placed_sounds_to_cobj_file(ostream &out) {sound_manager.write_placed_sounds_to_cobj_file(out);}
 
 void alut_sleep(float seconds) {alutSleep(seconds);}
 

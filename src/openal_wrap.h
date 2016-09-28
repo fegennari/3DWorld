@@ -166,6 +166,7 @@ std::string const &get_sound_name(unsigned id);
 void set_sound_loop_state(unsigned id, bool play, float volume=0.0);
 bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0);
 void add_placed_sound(std::string const &fn, sound_params_t const &params, sensor_t const &sensor=sensor_t());
+void write_placed_sounds_to_cobj_file(std::ostream &out);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
 void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector);

@@ -1975,7 +1975,6 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 
 bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { // call on fixed_cobjs
 
-	// FIXME: what about placed sounds?
 	ofstream out(fn);
 	if (!out.good()) {cerr << "Error opening coll object file '" << fn << "' for output" << endl; return 0;}
 	
@@ -2043,6 +2042,8 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	write_small_trees_to_cobj_file(out);
 	out << endl;
 	write_plants_to_cobj_file(out);
+	out << endl;
+	write_placed_sounds_to_cobj_file(out);
 	out << endl << "end" << endl;
 	return 1;
 }
