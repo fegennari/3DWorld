@@ -695,12 +695,11 @@ void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
 	for (int g = 0; g < num_groups; ++g) {
 		obj_group &objg(obj_groups[g]);
 		if (!objg.enabled || !objg.large_radius()) continue;
-		float const robj(object_types[objg.type].radius);
 		
 		for (unsigned i = 0; i < objg.end_id; ++i) {
 			dwobject &obj(objg.get_obj(i));
 			if (obj.status != 4) continue; // not stopped
-			if (!cobj.sphere_intersects(obj.pos, robj)) continue;
+			if (!cobj.sphere_intersects(obj.pos, obj.get_true_radius())) continue;
 			obj.flags |= WAS_PUSHED;
 			obj.flags &= ~ALL_COLL_STOPPED;
 			obj.status = 1;

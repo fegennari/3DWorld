@@ -155,6 +155,7 @@ public:
 			else if (key == "emissive") {if (!read_mat_value(cur_mat.emissive, "emissive")) return 0;}
 			else if (key == "reflective") {if (!read_mat_value(cur_mat.reflective, "reflective")) return 0;}
 			else if (key == "destroy_thresh") {if (!read_mat_value(cur_mat.destroy_thresh, "destroy_thresh")) return 0;}
+			else if (key == "radius_scale") {if (!read_mat_value(cur_mat.radius_scale, "radius_scale")) return 0;}
 			else if (key == "alpha") {if (!read_mat_value(cur_mat.alpha, "alpha")) return 0;}
 			else if (key == "metalness") {if (!read_mat_value(cur_mat.metal, "metalness")) return 0;}
 			else if (key == "specular_mag") {if (!read_mat_value(cur_mat.spec_mag, "specular_mag")) return 0;}
@@ -226,7 +227,9 @@ bool throw_sphere(bool mode) {
 	if (cid < 0) return 0;
 	assert(cid < NUM_TOT_OBJS);
 	obj_group &objg(obj_groups[cid]);
-	float const radius(object_types[type].radius), radius_sum(CAMERA_RADIUS + radius);
+	unsigned const mat_ix(sphere_materials.get_ix());
+	sphere_mat_t const &mat(sphere_materials.get_mat(mat_ix));
+	float const radius(object_types[type].radius*mat.radius_scale), radius_sum(CAMERA_RADIUS + radius);
 	int const chosen(objg.choose_object());
 	point const fpos(get_camera_pos());
 	gen_sound(SOUND_SWING, fpos, 0.5, 1.0);
@@ -237,11 +240,8 @@ bool throw_sphere(bool mode) {
 	obj.time      = -1;
 	obj.source    = CAMERA_ID;
 	if (spheres_mode == 2) {obj.flags |= IS_CUBE_FLAG;}
-
-	unsigned const mat_ix(sphere_materials.get_ix());
 	assert(mat_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
 	obj.direction = (unsigned char)mat_ix;
-	sphere_mat_t const &mat(sphere_materials.get_mat(mat_ix));
 	bool const has_shadows(mat.light_radius > 0.0 && mat.shadows);
 	cube_map_lix_t lix(sphere_materials.add_obj(chosen, has_shadows));
 
@@ -274,6 +274,7 @@ bool is_mat_sphere_a_shadower(dwobject const &obj) {
 }
 
 float get_mat_sphere_density(dwobject const &obj) {return sphere_materials.get_mat(obj.direction).density;}
+float get_mat_sphere_rscale (dwobject const &obj) {return sphere_materials.get_mat(obj.direction).radius_scale;}
 
 void sync_mat_sphere_lpos(unsigned id, point const &pos) {sphere_materials.sync_light_pos(id, pos);}
 
@@ -281,7 +282,7 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 
 	sphere_mat_t const &mat(sphere_materials.get_mat(obj.direction));
 	bool const reflective(mat.reflective && enable_all_reflections());
-	float const obj_radius(object_types[obj.type].radius); // Note: must match object radius for collision detection to work correctly
+	float const obj_radius(object_types[obj.type].radius*mat.radius_scale); // Note: must match object radius for collision detection to work correctly
 	cobj_params cp(cp_in); // deep copy
 	cp.draw        = 1; // obj is not drawn
 	cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness

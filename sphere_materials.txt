@@ -5,6 +5,7 @@ shadows 0
 emissive 0
 reflective 0
 destroy_thresh 0
+radius_scale 1.0
 light_radius 0.0
 hardness 0.8
 refract_ix 1.0

@@ -544,9 +544,9 @@ public:
 extern unsigned spheres_mode;
 extern vector<texture_t> textures;
 
-enum {SM_MAT_NAME=0, SM_TEXTURE, SM_EMISS, SM_REFLECT, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
+enum {SM_MAT_NAME=0, SM_TEXTURE, SM_EMISS, SM_REFLECT, SM_RSCALE, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
 	SM_LIGHT_ATTEN, SM_LIGHT_RADIUS, SM_LIGHT_SHADOW, SM_DIFF_R, SM_DIFF_G, SM_DIFF_B, SM_SPEC_R, SM_SPEC_G, SM_SPEC_B, NUM_SM_CONT};
-string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Texture", "Emissive ", "Reflective", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag",
+string const sphere_mode_names[NUM_SM_CONT] = {"Material Name", "Texture", "Emissive ", "Reflective", "Radius Scale", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag",
   "Shininess  ", "Refract Ix  ", "Light Atten ", "Light Radius", "Light Shadow", "Diffuse Red ", "Diffuse Green", "Diffuse Blue ", "Specular Red ", "Specular Green", "Specular Blue "};
 
 class sphere_mat_kbd_menu_t : public keyboard_menu_t {
@@ -564,6 +564,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_TEXTURE:      value << mat.tid << " " << ((mat.tid < 0) ? "None" : textures[mat.tid].name); break; // spos stays at 0
 		case SM_EMISS:        value << mat.emissive;     spos = mat.emissive;         break; // 0/1
 		case SM_REFLECT:      value << mat.reflective;   spos = mat.reflective;       break; // 0/1
+		case SM_RSCALE:       value << mat.radius_scale; spos = (mat.radius_scale-0.5)/1.5; break; // 0.5 to 2.0
 		case SM_HARDNESS:     value << mat.hardness;     spos = mat.hardness;         break; // 0.05 to 1.0
 		case SM_DENSITY:      value << mat.density;      spos = mat.density/4.0;      break; // 0.1 to 4.0
 		case SM_METAL:        value << mat.metal;        spos = mat.metal;            break; // 0.0 to 1.0
@@ -606,6 +607,7 @@ public:
 		case SM_TEXTURE:      change_texture(mat.tid, mat.nm_tid, delta); break; // reset normal map because it won't go with the texture when changed
 		case SM_EMISS:        mat.emissive     = ((delta < 0) ? 0 : 1);   break; // 0/1
 		case SM_REFLECT:      mat.reflective   = ((delta < 0) ? 0 : 1);   break; // 0/1
+		case SM_RSCALE:       mat.radius_scale = max(0.5f, min(2.0f, (mat.radius_scale + 0.1f*delta))); break; // 0.5 to 2.0 in steps of 0.1
 		case SM_HARDNESS:     mat.hardness     = max(0.05f, min(1.0f, (mat.hardness + 0.05f*delta)));   break; // 0.05 to 1.0 in steps of 0.05
 		case SM_DENSITY:      mat.density      = max(0.1f,  min(4.0f, (mat.density  + 0.1f* delta)));   break; // 0.1 to 4.0 in steps of 0.1
 		case SM_METAL:        mat.metal        = CLIP_TO_01(mat.metal    + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05

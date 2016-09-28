@@ -475,13 +475,12 @@ void add_coll_shadow_objs() {
 			obj_group const &objg(obj_groups[i]);
 			if (!objg.enabled || !objg.large_radius())                      continue;
 			if (object_types[objg.type].color.alpha < 0.5*MIN_SHADOW_ALPHA) continue; // too low? nothing fails this yet
-			float const radius(object_types[objg.type].radius);
 				
 			for (unsigned j = 0; j < objg.end_id; ++j) {
 				dwobject const &obj(objg.get_obj(j));
 				if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
 				if (objg.type == MAT_SPHERE && !is_mat_sphere_a_shadower(obj)) continue; // transparent material (glass)
-				add_shadow_obj(obj.pos, radius, obj.coll_id);
+				add_shadow_obj(obj.pos, obj.get_true_radius(), obj.coll_id);
 			}
 		}
 	}

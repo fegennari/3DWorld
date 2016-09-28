@@ -632,13 +632,7 @@ void dwobject::do_coll_damage() {
 
 	if (type == LANDMINE) return;
 	assert(type != SMILEY);
-	
-	if (health <= COLL_DAMAGE) {
-		disable();
-	}
-	else {
-		health -= COLL_DAMAGE;
-	}
+	if (health <= COLL_DAMAGE) {disable();} else {health -= COLL_DAMAGE;}
 }
 
 
@@ -647,12 +641,12 @@ float dwobject::get_true_radius() const {
 	float const radius(object_types[type].radius);
 	
 	switch (type) {
-	case FRAGMENT: return radius*vdeform.x;
-	case SAND:     return radius*orientation.x;
-	case DIRT:     return radius*orientation.x;
-	case ROCK:     return radius*orientation.x;
-	case PLASMA:   return radius*init_dir.x;
-	case MAT_SPHERE: return radius; // FIXME: custom per-material?
+	case FRAGMENT:   return radius*vdeform.x;
+	case SAND:       return radius*orientation.x;
+	case DIRT:       return radius*orientation.x;
+	case ROCK:       return radius*orientation.x;
+	case PLASMA:     return radius*init_dir.x;
+	case MAT_SPHERE: return radius*get_mat_sphere_rscale(*this);
 	}
 	return radius;
 }
@@ -905,7 +899,7 @@ int get_obj_zval(point &pt, float &dz, float z_offset) { // 0 = out of bounds/er
 
 int dwobject::object_still_stopped(int obj_index) {
 
-	float const zval(pos.z - object_types[type].radius);
+	float const zval(pos.z - get_true_radius());
 	float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 
 	if ((zval - SMALL_NUMBER) <= mh) {
@@ -1160,7 +1154,7 @@ void dwobject::surf_collide_obj() const {
 		if (flags & TYPE_FLAG) break; // charred, not blood
 	case BLOOD:
 		if (snow_height(pos)) { // in the snow
-			add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, ((type == BLOOD) ? 4.0 : 2.2)*object_types[type].radius);
+			add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, ((type == BLOOD) ? 4.0 : 2.2)*get_true_radius());
 		}
 		break;
 	}
