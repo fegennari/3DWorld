@@ -314,6 +314,7 @@ void set_coll_rmax(float rmax);
 void change_timestep(float mult_factor);
 vector3d get_local_wind(int xpos, int ypos, float zval, bool no_use_mesh=0);
 vector3d get_local_wind(point const &pt, bool no_use_mesh=0);
+void reanimate_group(unsigned gix, bool remove_if_coll);
 void reanimate_objects();
 void seed_water_on_mesh(float amount);
 void accumulate_object(point const &pos, int type, float amount);

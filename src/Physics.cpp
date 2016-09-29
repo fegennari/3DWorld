@@ -1176,29 +1176,34 @@ void dwobject::elastic_collision(point const &obj_pos, float energy, int obj_typ
 }
 
 
-void reanimate_objects() {
+void reanimate_group(unsigned gix, bool remove_if_coll) {
 
-	for (int i = 0; i < num_groups; ++i) {
-		obj_group &objg(obj_groups[i]);
-		if (!objg.enabled) continue;
-		if (objg.type == SMILEY) continue; // doesn't apply to smileys, since they move independently from the physics system
+	assert(gix < (unsigned)num_groups);
+	obj_group &objg(obj_groups[gix]);
+	if (!objg.enabled) return;
+	if (objg.type == SMILEY) return; // doesn't apply to smileys, since they move independently from the physics system
 
-		for (unsigned j = 0; j < objg.end_id; ++j) {
-			dwobject &obj(objg.get_obj(j));
-			if (obj.disabled()) continue;
+	for (unsigned j = 0; j < objg.end_id; ++j) {
+		dwobject &obj(objg.get_obj(j));
+		if (obj.disabled()) continue;
+
+		if (remove_if_coll) {
 			int const xpos(get_xpos(obj.pos.x)), ypos(get_ypos(obj.pos.y));
-			int cindex; // unused
+			int cindex(-1);
 			float const radius(object_types[obj.type].radius);
 
-			if (!(point_outside_mesh(xpos, ypos)) && !check_legal_move(xpos, ypos, obj.pos.z, radius, cindex)) {
-				obj.status = 0; // within collision object
-			}
-			else {
-				obj.flags = 0; // no longer stopped in x and y
-				if (obj.status == 2 || obj.status == 4) obj.status = 1; // stationary => moving in air
+			if (!point_outside_mesh(xpos, ypos) && !check_legal_move(xpos, ypos, obj.pos.z, radius, cindex) && cindex != obj.coll_id) {
+				obj.status = 0; // within collision object, remove
+				continue;
 			}
 		}
+		obj.flags &= ~(ALL_COLL_STOPPED | OBJ_COLLIDED | PLATFORM_COLL | WAS_PUSHED); // no longer stopped in x and y
+		if (obj.status == 2 || obj.status == 4) {obj.status = 1;} // stationary => moving in air
 	}
+}
+
+void reanimate_objects() {
+	for (int i = 0; i < num_groups; ++i) {reanimate_group(i, 1);}
 }
 
 
@@ -1370,7 +1375,7 @@ void particle_cloud::apply_physics(unsigned i) {
 		colorRGBA color(base_color);
 		color.G *= rscale;
 		add_dynamic_light(3*radius, pos, color);
-		if (coll && radius >= MAX_PART_CLOUD_RAD && (rand()&7) == 0) gen_fire(pos, 1.0, source); // will be destoyed next frame
+		if (coll && radius >= MAX_PART_CLOUD_RAD && (rand()&7) == 0) {gen_fire(pos, 1.0, source);} // will be destoyed next frame
 	}
 	if (damage_type == GASSED) { // check for gas ignition near fire
 		for (unsigned i = 0; i < fires.size(); ++i) {

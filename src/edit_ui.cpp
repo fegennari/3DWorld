@@ -542,6 +542,7 @@ public:
 // ************ Sphere Materials ************
 
 extern unsigned spheres_mode;
+extern int coll_id[];
 extern vector<texture_t> textures;
 
 enum {SM_MAT_NAME=0, SM_TEXTURE, SM_EMISS, SM_REFLECT, SM_RSCALE, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
@@ -601,8 +602,9 @@ public:
 
 	virtual void change_value(int delta) {
 		sphere_mat_t &mat(get_cur_sphere_mat());
+		unsigned const ix(num_controls - cur_control - 1);
 
-		switch (num_controls - cur_control - 1) { // reverse order
+		switch (ix) { // reverse order
 		case SM_MAT_NAME:     change_sphere_material(delta, 1);           break;
 		case SM_TEXTURE:      change_texture(mat.tid, mat.nm_tid, delta); break; // reset normal map because it won't go with the texture when changed
 		case SM_EMISS:        mat.emissive     = ((delta < 0) ? 0 : 1);   break; // 0/1
@@ -626,6 +628,10 @@ public:
 		case SM_SPEC_B:       mat.spec_c.B     = CLIP_TO_01(mat.spec_c.B + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
 		default: assert(0);
 		} // end switch
+		if (ix == SM_RSCALE || ix == SM_HARDNESS || ix == SM_DENSITY) {
+			int const gix(coll_id[MAT_SPHERE]);
+			if (gix >= 0) {reanimate_group(gix, 0);}
+		}
 	}
 };
 
