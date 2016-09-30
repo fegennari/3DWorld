@@ -565,7 +565,8 @@ struct shared_vertex_t {
 template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_t &args, unsigned npts) const {
 
 	if (args.lod_level > 1 && !indices.empty()) {
-		indexed_vntc_vect_t<T> simplified_this(*this); // FIXME: inefficient to copy everything
+		indexed_vntc_vect_t<T> simplified_this;
+		simplified_this.insert(simplified_this.begin(), begin(), end()); // copy only vertex data; indices will be filled in below, and other fields are unused
 		simplify(simplified_this.indices, 1.0/args.lod_level);
 		get_polygon_args_t args2(args);
 		args2.lod_level = 0;
