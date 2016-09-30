@@ -469,7 +469,7 @@ unsigned indir_dlight_group_manager_t::get_ix_for_name(std::string const &name, 
 
 	unsigned const tag_ix(tag_ix_map::get_ix_for_name(name));
 	if (tag_ix >= groups.size()) {groups.resize(tag_ix+1);}
-	else if (groups[tag_ix].scale != scale) {} // FIXME: check if already set to a different value?
+	else if (groups[tag_ix].scale != scale) {cout << "Warning: dlight name '" << name << "' was set to two different scales of " << groups[tag_ix].scale << " and " << scale << endl;}
 	groups[tag_ix].scale = scale;
 	if (name.find_last_of('.') != string::npos) {groups[tag_ix].filename = name;} // if it has a file extension (.), assume it's a filename
 	return tag_ix;
