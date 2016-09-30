@@ -2117,6 +2117,8 @@ void regen_trees(bool keep_old) {
 	if (!scrolling) {PRINT_TIME(" Gen Trees");}
 }
 
+int get_closest_tree_bark_tid(point const &pos) {return t_trees.get_closest_tree_bark_tid(pos);}
+
 
 void tree::write_to_cobj_file(std::ostream &out) const {
 
@@ -2201,6 +2203,17 @@ float tree_cont_t::get_rmax() const {
 	float rmax(0.0);
 	for (const_iterator i = begin(); i != end(); ++i) {rmax = max(rmax, i->get_radius());}
 	return rmax;
+}
+
+int tree_cont_t::get_closest_tree_bark_tid(point const &pos) const {
+	unsigned closest_type(0);
+	float min_dist_sq(0.0);
+	for (const_iterator i = begin(); i != end(); ++i) {
+		float const dist_sq(p2p_dist_sq(pos, i->get_center()));
+		if (min_dist_sq == 0.0 || dist_sq < min_dist_sq) {min_dist_sq = dist_sq; closest_type = i->get_type();}
+	}
+	assert(closest_type < NUM_TREE_TYPES);
+	return tree_types[closest_type].bark_tex;
 }
 
 void tree_cont_t::update_zmax(float &tzmax) const {

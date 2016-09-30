@@ -90,6 +90,8 @@ public:
 
 class wood_scenery_obj : public scenery_obj {
 protected:
+	mutable int closest_bark_tid;
+	wood_scenery_obj() : closest_bark_tid(-1) {}
 	void calc_type();
 	int get_tid() const;
 };

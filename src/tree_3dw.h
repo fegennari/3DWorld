@@ -362,6 +362,7 @@ public:
 	void clear() {delete_all(); vector<tree>::clear();}
 	unsigned get_gpu_mem() const;
 	float get_rmax() const;
+	int get_closest_tree_bark_tid(point const &pos) const;
 	void update_zmax(float &tzmax) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);

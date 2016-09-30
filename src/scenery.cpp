@@ -518,6 +518,8 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 
 void wood_scenery_obj::calc_type() {type = (char)get_tree_type_from_height(pos.z, global_rand_gen);}
 
+int get_closest_tree_bark_tid(point const &pos);
+
 int wood_scenery_obj::get_tid() const {
 
 	if (tree_mode == 0 || // no trees enabled: any solution is acceptable, so use the simplest one
@@ -527,7 +529,8 @@ int wood_scenery_obj::get_tid() const {
 		return get_bark_tex_for_tree_type(type);
 	}
 	// else large trees only, or large (non-pine) trees at this height
-	return BARK1_TEX; // FIXME: placeholder
+	if (closest_bark_tid < 0) {closest_bark_tid = get_closest_tree_bark_tid(pos);}
+	return closest_bark_tid;
 }
 
 
