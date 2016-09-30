@@ -469,7 +469,8 @@ unsigned indir_dlight_group_manager_t::get_ix_for_name(std::string const &name, 
 
 	unsigned const tag_ix(tag_ix_map::get_ix_for_name(name));
 	if (tag_ix >= groups.size()) {groups.resize(tag_ix+1);}
-	groups[tag_ix].scale = scale; // FIXME: check if already set to a different value?
+	else if (groups[tag_ix].scale != scale) {} // FIXME: check if already set to a different value?
+	groups[tag_ix].scale = scale;
 	if (name.find_last_of('.') != string::npos) {groups[tag_ix].filename = name;} // if it has a file extension (.), assume it's a filename
 	return tag_ix;
 }
@@ -493,11 +494,13 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 			assert(light_sources_d[*l].get_indir_dlight_ix() == i);
 			num_enabled += light_sources_d[*l].is_enabled();
 		}
+		// scale by the ratio of enabled to disabled lights, which is approximate but as close as we can get with a single volume for this group of lights;
+		// if more precision/control is required, the group can be split into multiple lighting volumes at the cost of increased runtime/memory/storage
 		float const scale(g.scale*light_int_scale[LIGHTING_DYNAMIC]*(float(num_enabled)/g.dlight_ixs.size()));
 
 		if (g.llvol_ix >= 0) { // already valid - check enabled state
 			assert((unsigned)g.llvol_ix < local_light_volumes.size());
-			local_light_volumes[g.llvol_ix]->set_scale(scale); // FIXME: what if some but not all lights are enabled?
+			local_light_volumes[g.llvol_ix]->set_scale(scale);
 		}
 		else if (num_enabled > 0) { // not valid but needed - create
 			g.llvol_ix = local_light_volumes.size();
