@@ -714,7 +714,7 @@ bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, po
 	float const t_clamped(CLIP_TO_01(t));
 	rad = (r1 + t_clamped*(r2 - r1)); // radius of cylinder at closest point to sphere
 
-	if (cp1.z == cp2.z) {
+	if (cp1.x == cp2.x && cp1.y == cp2.y) { // special case of a vertical cylinder
 		float const closest_z(cp1.z + t_clamped*(cp2.z - cp1.z)), sphere_dist(fabs(closest_z - sc.z));
 		if (sphere_dist < sr) {rad += sqrt(sr*sr - sphere_dist*sphere_dist);}
 	}
