@@ -58,6 +58,7 @@ public:
 	bool check_active() const {return (check_active_int() ^ invert);}
 	bool read_from_file(FILE *fp, geom_xform_t const &xf);
 	void write_to_cobj_file(std::ostream &out) const;
+	void write_end_sensor_to_cobj_file(std::ostream &out) const;
 };
 
 struct multi_sensor_t : public vector<sensor_t> {

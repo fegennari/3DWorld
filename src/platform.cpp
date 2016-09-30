@@ -181,10 +181,14 @@ bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
 }
 
 void sensor_t::write_to_cobj_file(std::ostream &out) const {
-	if (type == SENSOR_DISABLED) return; // nothing to write - FIXME: cache state
+	if (type == SENSOR_DISABLED) return; // nothing to write
 	out << "sensor " << type;
 	if (type >= SENSOR_LIGHT) {out << " " << pos.raw_str() << " " << invert << " " << radius << " " << thresh;}
 	out << endl;
+}
+void sensor_t::write_end_sensor_to_cobj_file(std::ostream &out) const {
+	if (type == SENSOR_DISABLED) return; // nothing to write
+	out << "sensor disabled" << endl;
 }
 
 
@@ -387,13 +391,14 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 void platform::write_to_cobj_file(std::ostream &out) const {
 
 	triggers.write_to_cobj_file(out);
+	sensor.write_to_cobj_file(out);
 	if (sound_id >= 0) {out << "sound_file " << get_sound_name(sound_id) << endl;}
 	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0 [update_light=0]]]
 	out << "Q 1 " << fspeed*TICKS_PER_SECOND << " " << rspeed*TICKS_PER_SECOND << " " << sdelay/TICKS_PER_SECOND << " " << rdelay/TICKS_PER_SECOND << " " << ext_dist << " " << act_dist
 		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << endl; // always enabled
 	for (auto i = lights.begin(); i != lights.end(); ++i) {} // FIXME: see 'V' command
+	sensor.write_end_sensor_to_cobj_file(out);
 	triggers.write_end_triggers_cobj_file(out);
-	sensor.write_to_cobj_file(out); // only if enabled?
 }
 
 

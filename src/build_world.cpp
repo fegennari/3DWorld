@@ -1899,13 +1899,14 @@ void light_source::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 
 	triggers.write_to_cobj_file(out);
+	sensor.write_to_cobj_file(out);
 	indir_dlight_group_manager.write_entry_to_cobj_file(indir_dlight_ix, out);
 	light_source::write_to_cobj_file(out, is_diffuse);
 	out << " " << (use_smap != 0) << endl;
 	if (bound) {out << "bind_light " << bind_pos.raw_str() << endl;} // 'V'/"bind_light": // bind prev light source to cobj at location <x y z>
+	sensor.write_end_sensor_to_cobj_file(out);
 	triggers.write_end_triggers_cobj_file(out);
 	out << endl; // separate with a blank line
-	sensor.write_to_cobj_file(out); // only if enabled?
 }
 
 void indir_dlight_group_manager_t::write_entry_to_cobj_file(unsigned tag_ix, ostream &out) const {
