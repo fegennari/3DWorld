@@ -941,7 +941,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
 			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (FIXME: not implemented in the shader; unclear how to interpret map_ns in object files)
 		}
-		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_ix", ni);} // FIXME: set index of refraction
+		bool const set_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0);
+		if (set_ref_ix) {shader.add_uniform_float("refract_ix", ni);} // set index of refraction - may not actually be used
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend();}
 		float const min_alpha(min(0.99*alpha, ((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
@@ -957,7 +958,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		shader.clear_color_e();
 		if (ns > 0.0) {shader.clear_specular();}
 		if (need_blend) {disable_blend();}
-		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_ix", 1.0);}
+		if (set_ref_ix) {shader.add_uniform_float("refract_ix", 1.0);}
 	}
 }
 
