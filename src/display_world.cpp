@@ -1059,10 +1059,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	if (disable_occ_cull) {display_mode &= ~0x08;}
 
 	// draw background
-	if (combined_gu) { // FIXME: universe alignment is wrong, and occlusion is wrong (due to differing depth ranges)
-		//draw_universe_bkg(reflection_pass, 1); // infinite universe as background with no asteroid dust
-	}
-	else {
+	if (!combined_gu) { // Note: universe not drawn here (must be drawn by caller before setting up matrices)
 		draw_sun_moon_stars(1);
 		draw_earth();
 	}
