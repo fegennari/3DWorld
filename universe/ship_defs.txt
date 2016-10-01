@@ -2,8 +2,8 @@
 # Frank Gennari 8/2/06
 
 $SPAWN_DIST   0.2
-$START_POS    -0.0788 0.3068 -0.8928  # MSVS 2015 rgen_seed 1 or 21
-#$START_POS    -0.0796 0.3075 -0.8893  # new computer
+#$START_POS    -0.0788 0.3068 -0.8928  # MSVS 2015 rgen_seed 21
+$START_POS    -0.0796 0.3075 -0.8893  # new computer
 #$START_POS    -0.029 0.183 -0.767 # two overlapping asteroid fields
 #$START_POS    -0.089 0.236 -0.828 # nebula test
 #$START_POS    -0.1152 0.3028 -0.9075  # after some random number generator changes
