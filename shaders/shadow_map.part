@@ -7,9 +7,23 @@ uniform mat4 smap_matrix0, smap_matrix1;
 
 float calc_shadow_pcf(in sampler2DShadow sm_tex, in vec4 shadow_coord) {
 	float ret = 0.0;
+#if 1
+	const float poisson_table[18] = {
+		0.007862935f, 0.1915329f,
+		-0.2005593f, 0.7925976f,
+		-0.6711889f, 0.5317522f,
+		-0.2714615f, -0.562771f,
+		-0.4523138f, -0.04493545f,
+		0.3200973f, -0.4987137f,
+		0.7931406f, 0.4579287f,
+		0.3831475f, 0.8574728f,
+		0.6333998f, -0.05667673f};
+		for (int i = 0; i < 9; ++i) {ret += textureProj(sm_tex, shadow_coord+vec4(2.0*pcf_offset*poisson_table[2*i], 2.0*pcf_offset*poisson_table[2*i+1], 0, 0));}
+#else
 	for (int x = -1; x <= 1; ++x) {
 		for (int y = -1; y <= 1; ++y) {ret += textureProj(sm_tex, shadow_coord+vec4(pcf_offset*x, pcf_offset*y, 0, 0));}
 	}
+#endif
 	return ret/9.0; // 9-tap PCF
 }
 
