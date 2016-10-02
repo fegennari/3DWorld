@@ -21,8 +21,28 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.xyz /= shadow_coord.w;
 	shadow_coord.z   += -0.1*z_bias; // lower z-bias for local shadow maps
+#if 1
+	const float poisson_table[18] = {
+		0.007862935f, 0.1915329f,
+		-0.2005593f, 0.7925976f,
+		-0.6711889f, 0.5317522f,
+		-0.2714615f, -0.562771f,
+		-0.4523138f, -0.04493545f,
+		0.3200973f, -0.4987137f,
+		0.7931406f, 0.4579287f,
+		0.3831475f, 0.8574728f,
+		0.6333998f, -0.05667673f};
+		float ret = 0.0;
+		const float pcf_offset = 0.001;
+		for (int i = 0; i < 9; ++i) {
+			vec2 xy = shadow_coord.xy + vec2(pcf_offset*poisson_table[2*i], pcf_offset*poisson_table[2*i+1])/shadow_coord.w;
+			ret += texture(sm_tex, vec4(xy, layer, shadow_coord.z));
+		}
+		return mix(ret/9.0, 1.0, SHADOW_LEAKAGE); // 9-tap PCF; allow a small amount of transmitted light to simulate indirect lighting
+#else
 	shadow_coord.w    = layer;
 	return mix(texture(sm_tex, shadow_coord.xywz), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
+#endif
 }
 #endif // HAS_DLIGHT_SMAP
 
