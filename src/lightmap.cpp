@@ -944,6 +944,7 @@ void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");
 	set_active_texture(0);
 	if (enable_dlights_smap && shadow_map_enabled()) {setup_dlight_shadow_maps(s);}
+	s.add_uniform_float("LT_DIR_FALLOFF", LT_DIR_FALLOFF);
 }
 
 

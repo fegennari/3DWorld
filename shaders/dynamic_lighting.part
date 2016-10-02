@@ -3,8 +3,9 @@ uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
-const float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
-const float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
+const   float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
+const   float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
+uniform float LT_DIR_FALLOFF    = 0.005;
 
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 64; // must agree with the value used in shadow_map.h (Note: up to 128 is okay)
@@ -24,8 +25,6 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 	return mix(texture(sm_tex, shadow_coord.xywz), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
 }
 #endif // HAS_DLIGHT_SMAP
-
-const float LT_DIR_FALLOFF = 0.005;
 
 float get_dir_light_scale(in vec3 light_dir, in vec3 dir, in float bwidth) {
 	float dp      = dot(light_dir, dir); // map dir [0,1] to [-1,1]
