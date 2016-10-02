@@ -1,5 +1,6 @@
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
+TT lower res distant shadow map for tiled terrain mode with smooth blend
 
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
@@ -13,8 +14,5 @@ Gameplay in tiled terrain mode
 Plants with low large leaves
   - Can use palm frond texture
 
-TT lower res distant shadow map for tiled terrain mode with smooth blend
-
-Better TT clouds
 Store dlights in screen space
-
+Better window glass fragments
