@@ -2206,13 +2206,15 @@ float tree_cont_t::get_rmax() const {
 }
 
 int tree_cont_t::get_closest_tree_bark_tid(point const &pos) const {
-	unsigned closest_type(0);
+	int closest_type(TREE_MAPLE); // default value for the no-trees-found case
 	float min_dist_sq(0.0);
 	for (const_iterator i = begin(); i != end(); ++i) {
+		int const type(i->get_type());
+		if (type < 0) continue; // tree type not set
 		float const dist_sq(p2p_dist_sq(pos, i->get_center()));
-		if (min_dist_sq == 0.0 || dist_sq < min_dist_sq) {min_dist_sq = dist_sq; closest_type = i->get_type();}
+		if (min_dist_sq == 0.0 || dist_sq < min_dist_sq) {min_dist_sq = dist_sq; closest_type = type;}
 	}
-	assert(closest_type < NUM_TREE_TYPES);
+	assert(closest_type >= 0 && closest_type < NUM_TREE_TYPES);
 	return tree_types[closest_type].bark_tex;
 }
 
