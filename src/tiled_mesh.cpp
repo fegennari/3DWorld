@@ -40,7 +40,7 @@ string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
-extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp;
+extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
@@ -1981,7 +1981,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	bool const water_caustics(has_water && !(display_mode & 0x80) && water_params.alpha < 1.5);
 	bool const use_normal_map(!reflection_pass); // enabled by default
 	bool const rain_mode((precip_mode > 0) && temperature > W_FREEZE_POINT);
-	bool const triplanar_tex = 1; // slower, looks somewhat better on steep terrain
+	bool const triplanar_tex = tt_triplanar_tex; // slower, looks somewhat better on steep terrain
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",            1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",       1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",       1);} // FS
