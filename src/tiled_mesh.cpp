@@ -1981,7 +1981,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	bool const water_caustics(has_water && !(display_mode & 0x80) && water_params.alpha < 1.5);
 	bool const use_normal_map(!reflection_pass); // enabled by default
 	bool const rain_mode((precip_mode > 0) && temperature > W_FREEZE_POINT);
-	bool const triplanar_tex = 0; // slower, looks somewhat better on steep terrain
+	bool const triplanar_tex = 1; // slower, looks somewhat better on steep terrain
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",            1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",       1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",       1);} // FS
