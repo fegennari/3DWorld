@@ -14,7 +14,7 @@ using namespace std;
 
 unsigned const MAX_SPHERE_MATERIALS = 255;
 
-unsigned spheres_mode(0); // 0=none, 1=spheres, 2=cubes
+unsigned spheres_mode(0); // 0=none, 1=dynamic spheres, 2=dynamic cubes, 3=static spheres, 4=static cubes
 unsigned max_num_mat_spheres(1);
 
 extern bool spraypaint_mode;
@@ -29,6 +29,7 @@ extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
 extern vector<light_source_trig> light_sources_d;
 extern vector<texture_t> textures;
+extern set<unsigned> moving_cobjs;
 
 
 bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map, bool invert_y=0);
@@ -199,7 +200,7 @@ void show_cur_sphere_mode() {
 void toggle_sphere_mode() {
 
 	if (world_mode != WMODE_GROUND) return;
-	if (sphere_materials.empty()) {spheres_mode = 0;} else {spheres_mode = (spheres_mode+1)%3;}
+	if (sphere_materials.empty()) {spheres_mode = 0;} else {spheres_mode = (spheres_mode+1)%5;}
 	if (spheres_mode) {spraypaint_mode = 0;}
 	show_cur_sphere_mode();
 }
@@ -214,7 +215,47 @@ void change_sphere_material(int val, bool quiet) {
 }
 
 
-string sphere_mat_t::get_name() const {return name + ((spheres_mode == 2) ? " (Cube)" : " (Sphere)");}
+string const mode_strs[5] = {"None", "Dynamic Sphere", "Dynamic Cube", "Static Sphere", "Static Cube"};
+
+string sphere_mat_t::get_name() const {return name + " (" + mode_strs[spheres_mode] + ")";}
+
+
+void set_cobj_params_from_material(cobj_params &cp, sphere_mat_t const &mat) {
+
+	cp.draw        = 1; // obj is not drawn
+	cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness
+	cp.metalness   = mat.metal;
+	cp.is_emissive = mat.emissive;
+	cp.color       = colorRGBA(mat.diff_c, mat.alpha);
+	cp.spec_color  = mat.spec_c * mat.spec_mag;
+	cp.shine       = mat.shine;
+	cp.refract_ix  = mat.refract_ix;
+	cp.light_atten = mat.light_atten;
+	cp.density     = mat.density;
+	cp.tscale      = 0.0;
+	cp.tid         = mat.tid;
+	cp.normal_map  = mat.nm_tid;
+}
+
+int add_cobj_with_material(cobj_params const &cp, sphere_mat_t const &mat, point const &pos, float base_radius, bool is_cube, bool is_static) {
+
+	bool const reflective(mat.reflective && (is_static || enable_all_reflections()));
+	float const obj_radius(base_radius*mat.radius_scale);
+	int coll_id(-1);
+
+	if (is_cube) { // cube
+		cube_t cube;
+		cube.set_from_sphere(pos, obj_radius);
+		coll_id = add_coll_cube(cube, cp, -1, 0);
+		if (reflective) {add_reflective_cobj(coll_id);}
+	}
+	else { // sphere
+		coll_id = add_coll_sphere(pos, obj_radius, cp, -1, 0, reflective);
+	}
+	coll_objects.get_cobj(coll_id).destroy = mat.destroy_thresh;
+	return coll_id;
+}
+
 
 bool throw_sphere(bool mode) {
 
@@ -225,40 +266,67 @@ bool throw_sphere(bool mode) {
 	if (max_num_mat_spheres == 0) return 0;
 	int const type(MAT_SPHERE), cid(coll_id[type]);
 	if (cid < 0) return 0;
-	assert(cid < NUM_TOT_OBJS);
-	obj_group &objg(obj_groups[cid]);
 	unsigned const mat_ix(sphere_materials.get_ix());
 	sphere_mat_t const &mat(sphere_materials.get_mat(mat_ix));
-	float const radius(object_types[type].radius*mat.radius_scale), radius_sum(CAMERA_RADIUS + radius);
-	int const chosen(objg.choose_object());
-	point const fpos(get_camera_pos());
+	float const base_radius(object_types[type].radius), radius(base_radius*mat.radius_scale), radius_sum(CAMERA_RADIUS + radius), near_clip(radius);
+	float const cube_map_beamwidth = 0.4; // 0.3 to 0.5 are okay
+	bool const is_cube(spheres_mode == 2 || spheres_mode == 4);
+	bool const has_shadows(mat.light_radius > 0.0 && mat.shadows);
+	point const fpos(get_camera_pos() + cview_dir*radius_sum*(is_cube ? SQRT2 : 1.0) + plus_z*(0.2*radius_sum));
 	gen_sound(SOUND_SWING, fpos, 0.5, 1.0);
-	objg.create_object_at(chosen, (fpos + cview_dir*radius_sum + plus_z*(0.2*radius_sum)));
+
+	if (spheres_mode == 3 || spheres_mode == 4) { // static objects
+		cobj_params cp(0.0, BLACK, 1, 0);
+		cp.flags |= COBJ_MOVABLE;
+		set_cobj_params_from_material(cp, mat);
+		int const coll_id(add_cobj_with_material(cp, mat, fpos, base_radius, is_cube, 1));
+		coll_objects.get_cobj(coll_id).fixed = 1; // make it static
+		moving_cobjs.insert(coll_id); // let it fall
+		build_cobj_tree(0, 0);
+		assert(coll_id >= 0);
+		vector<light_source> lss;
+
+		if (has_shadows) { // special case for shadowed point light with cube map
+			for (unsigned ldim = 0; ldim < 3; ++ldim) {
+				vector3d dir(zero_vector);
+				for (unsigned ldir = 0; ldir < 2; ++ldir) {
+					dir[ldim] = (ldir ? 1.0 : -1.0);
+					lss.push_back(light_source(mat.light_radius, fpos, fpos, mat.diff_c, 0, dir, cube_map_beamwidth, 0.0, 1, near_clip)); // add lights for each cube face
+				}
+			}
+		}
+		else if (mat.light_radius > 0.0) {
+			lss.push_back(light_source(mat.light_radius, fpos, fpos, mat.diff_c, 0));
+		}
+		for (auto ls = lss.begin(); ls != lss.end(); ++ls) {
+			light_sources_d.push_back(light_source_trig(*ls, has_shadows, -1, 0));
+			light_sources_d.back().bind_to_pos(fpos, 0, coll_id);
+		}
+		return 1;
+	}
+	assert(cid < NUM_TOT_OBJS);
+	obj_group &objg(obj_groups[cid]);
+	int const chosen(objg.choose_object());
+	objg.create_object_at(chosen, fpos);
 	dwobject &obj(objg.get_obj(chosen));
-	obj.velocity  = cview_dir*(1.0 + ball_velocity*2.0);
-	obj.init_dir  = -cview_dir;
-	obj.time      = -1;
-	obj.source    = CAMERA_ID;
-	if (spheres_mode == 2) {obj.flags |= IS_CUBE_FLAG;}
+	obj.velocity = cview_dir*(1.0 + ball_velocity*2.0);
+	obj.init_dir = -cview_dir;
+	obj.time     = -1;
+	obj.source   = CAMERA_ID;
+	if (is_cube) {obj.flags |= IS_CUBE_FLAG;}
 	assert(mat_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
 	obj.direction = (unsigned char)mat_ix;
-	bool const has_shadows(mat.light_radius > 0.0 && mat.shadows);
 	cube_map_lix_t lix(sphere_materials.add_obj(chosen, has_shadows));
 
 	if (has_shadows) {
-		int platform_id(-1); // unused
-		float const beamwidth = 0.4; // 0.3 to 0.5 are okay
-		float const near_clip(radius);
-
 		for (unsigned ldim = 0; ldim < 3; ++ldim) { // setup 6 light sources, one per cube face
 			vector3d dir(zero_vector);
-
 			for (unsigned ldir = 0; ldir < 2; ++ldir) {
 				dir[ldim] = (ldir ? 1.0 : -1.0);
 				unsigned const ix(lix.ixs[2*ldim + ldir]);
 				assert(ix < light_sources_d.size());
 				light_source_trig &ls(light_sources_d[ix]);
-				ls = light_source_trig(light_source(mat.light_radius, obj.pos, obj.pos, mat.diff_c, 0, dir, beamwidth, 0.0, 1, near_clip), 1, platform_id, 0);
+				ls = light_source_trig(light_source(mat.light_radius, obj.pos, obj.pos, mat.diff_c, 0, dir, cube_map_beamwidth, 0.0, 1, near_clip), 1, -1, 0);
 				//ls.bind_to_pos(obj.pos, 1); // dynamic binding
 			} // for ldir
 		} // for ldim
@@ -275,48 +343,25 @@ bool is_mat_sphere_a_shadower(dwobject const &obj) {
 
 float get_mat_sphere_density(dwobject const &obj) {return sphere_materials.get_mat(obj.direction).density;}
 float get_mat_sphere_rscale (dwobject const &obj) {return sphere_materials.get_mat(obj.direction).radius_scale;}
-
 void sync_mat_sphere_lpos(unsigned id, point const &pos) {sphere_materials.sync_light_pos(id, pos);}
 
 void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 
 	sphere_mat_t const &mat(sphere_materials.get_mat(obj.direction));
-	bool const reflective(mat.reflective && enable_all_reflections());
-	float const obj_radius(object_types[obj.type].radius*mat.radius_scale); // Note: must match object radius for collision detection to work correctly
+	float const base_radius(object_types[obj.type].radius); // Note: must match object radius for collision detection to work correctly
+	bool const is_cube((obj.flags & IS_CUBE_FLAG) != 0);
 	cobj_params cp(cp_in); // deep copy
-	cp.draw        = 1; // obj is not drawn
-	cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness
-	cp.metalness   = mat.metal;
-	cp.is_emissive = mat.emissive;
-	cp.color       = colorRGBA(mat.diff_c, mat.alpha);
-	cp.spec_color  = mat.spec_c * mat.spec_mag;
-	cp.shine       = mat.shine;
-	cp.refract_ix  = mat.refract_ix;
-	cp.light_atten = mat.light_atten;
-	cp.density     = mat.density;
-	cp.tscale      = 0.0;
-	cp.tid         = mat.tid;
-	cp.normal_map  = mat.nm_tid;
-
-	if (obj.flags & IS_CUBE_FLAG) { // cube
-		cube_t cube;
-		cube.set_from_sphere(obj.pos, obj_radius);
-		obj.coll_id = add_coll_cube(cube, cp, -1, 0);
-		if (reflective) {add_reflective_cobj(obj.coll_id);}
-	}
-	else { // sphere
-		obj.coll_id = add_coll_sphere(obj.pos, obj_radius, cp, -1, 0, reflective);
-	}
+	set_cobj_params_from_material(cp, mat);
+	obj.coll_id = add_cobj_with_material(cp, mat, obj.pos, base_radius, is_cube, 0);
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
-	cobj.destroy = mat.destroy_thresh;
 	
 	if (mat.light_radius > 0.0 && !mat.shadows) {
 		add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c); // regular point light
 	}
-	else if (mat.alpha < 0.5 && mat.metal == 0.0 && mat.refract_ix > 1.0) { // glass
+	else if (mat.alpha < 0.5 && mat.metal == 0.0 && mat.refract_ix > 1.0 && !is_cube) { // glass
 		if (is_visible_to_light_cobj(obj.pos, LIGHT_SUN, 0.0, -1, 0)) {
 			vector3d const dir((obj.pos - sun_pos).get_norm());
-			add_dynamic_light(0.3+obj_radius, obj.pos, sun_color, dir, 0.03); // spotlight to simulate specular focusing; would look better with smoother falloff
+			add_dynamic_light(0.3+cobj.radius, obj.pos, sun_color, dir, 0.03); // spotlight to simulate specular focusing; would look better with smoother falloff
 		}
 	}
 	sync_mat_sphere_lpos(cp.cf_index, obj.pos);

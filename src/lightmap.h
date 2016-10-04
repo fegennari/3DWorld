@@ -251,7 +251,7 @@ public:
 	bind_point_t() : bound(0), valid(1), disabled(0), dynamic_cobj(0), bind_cobj(-1) {}
 	bind_point_t(point const &pos, bool dynamic_=0) : bound(1), valid(1), disabled(0), dynamic_cobj(dynamic_), bind_cobj(-1), bind_pos(pos) {}
 	void disable() {disabled = 1;}
-	void bind_to_pos(point const &pos, bool dynamic_=0) {bind_pos = pos; bound = 1; dynamic_cobj = dynamic_;}
+	void bind_to_pos(point const &pos, bool dynamic_=0, int bind_cobj_=-1) {bind_pos = pos; bound = 1; dynamic_cobj = dynamic_; bind_cobj = bind_cobj_;}
 	bool is_valid();
 	point get_updated_bind_pos() const;
 	void shift_by(vector3d const &vd) {bind_pos += vd;} // invalidate bind_cobj?
@@ -271,7 +271,7 @@ public:
 	light_source_trig() : use_smap(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0) {}
 	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t())
 		: light_source(ls), use_smap(smap), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0), sensor(cur_sensor)
-	{user_placed = 1; dynamic = (platform_id >= 0);}
+	{user_placed = 1; dynamic = (platform_id >= 0); if (is_cube_face) {assert(use_smap);}}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
