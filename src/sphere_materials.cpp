@@ -282,10 +282,11 @@ bool throw_sphere(bool mode) {
 		cp.flags |= COBJ_MOVABLE;
 		set_cobj_params_from_material(cp, mat);
 		int const coll_id(add_cobj_with_material(cp, mat, fpos, base_radius, is_cube, 1));
-		coll_objects.get_cobj(coll_id).fixed = 1; // make it static
-		moving_cobjs.insert(coll_id); // let it fall
-		build_cobj_tree(0, 0);
 		assert(coll_id >= 0);
+		coll_obj &cobj(coll_objects.get_cobj(coll_id));
+		cobj.fixed     = 1; // make it static
+		cobj.last_coll = 8; // mark as moving/collided to prevent the physics system from putting this cobj to sleep
+		moving_cobjs.insert(coll_id); // let it fall
 		vector<light_source> lss;
 
 		if (has_shadows) { // special case for shadowed point light with cube map

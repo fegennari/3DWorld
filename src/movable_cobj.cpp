@@ -12,7 +12,7 @@
 set<unsigned> moving_cobjs;
 
 extern unsigned scene_smap_vbo_invalid;
-extern int num_groups;
+extern int num_groups, frame_counter;
 extern float base_gravity, tstep, temperature;
 extern double camera_zh;
 extern coll_obj_group coll_objects;
@@ -687,7 +687,7 @@ bool intersects_any_cobj(coll_obj const &cobj, vector<unsigned> const &cobjs, fl
 void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
+	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(cobj, cobjs, -1, 0.0, 1, 0, -1); // duplicates are okay
 	if (cobjs.empty()) return;
 
@@ -1034,7 +1034,7 @@ int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point 
 	bcube += delta; // move to new pos
 	bcube.union_with_cube(cobj); // union of original and new pos
 	bcube.expand_by(-tolerance); // shrink slightly to avoid false collisions (in prticular with extruded polygons)
-	vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
+	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
 	remove_cobjs_with_same_cgroup(cobj, cobjs);
 	vector3d const start_delta(delta);
@@ -1220,9 +1220,15 @@ void proc_moving_cobjs() {
 	set<unsigned> seen;
 
 	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
-		if (coll_objects.get_cobj(*i).status != COLL_STATIC) {moving_cobjs.erase(i++);} // remove if destroyed
-		else {by_z1.push_back(make_pair(coll_objects.get_cobj(*i).d[2][0], *i)); ++i;} // otherwise try to drop it
+		coll_obj &cobj(coll_objects.get_cobj(*i));
+		if (cobj.status != COLL_STATIC) {moving_cobjs.erase(i++); continue;} // remove if destroyed
+		bool const do_update(cobj.last_coll || ((*i+frame_counter)&3) == 0); // check for cobj updates if it moved within the last few frames or every 4th frame
+		//cout << int(cobj.last_coll) << ":" << do_update << " ";
+		if (do_update) {by_z1.push_back(make_pair(cobj.d[2][0], *i));} // not sleeping, try to drop it
+		if (cobj.last_coll) {--cobj.last_coll;}
+		++i;
 	}
+	//cout << endl;
 	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
 	
 	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {
