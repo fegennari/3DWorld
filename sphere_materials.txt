@@ -1,4 +1,5 @@
 max_num_spheres 20
+fire_delay 0.5
 
 # set some basic values, mostly equal to the defaults
 shadows 0

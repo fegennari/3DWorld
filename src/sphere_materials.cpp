@@ -16,6 +16,7 @@ unsigned const MAX_SPHERE_MATERIALS = 255;
 
 unsigned spheres_mode(0); // 0=none, 1=dynamic spheres, 2=dynamic cubes, 3=static spheres, 4=static cubes
 unsigned max_num_mat_spheres(1);
+float sphere_mat_fire_delay(0.5); // in seconds
 
 extern bool spraypaint_mode;
 extern int frame_counter;
@@ -152,6 +153,7 @@ public:
 				}
 				sphere_materials.push_back(cur_mat);
 			}
+			else if (key == "fire_delay") {if (!read_mat_value(sphere_mat_fire_delay, "fire_delay")) return 0;}
 			else if (key == "shadows") {if (!read_mat_value(cur_mat.shadows, "shadows")) return 0;}
 			else if (key == "emissive") {if (!read_mat_value(cur_mat.emissive, "emissive")) return 0;}
 			else if (key == "reflective") {if (!read_mat_value(cur_mat.reflective, "reflective")) return 0;}
@@ -260,7 +262,7 @@ int add_cobj_with_material(cobj_params const &cp, sphere_mat_t const &mat, point
 bool throw_sphere(bool mode) {
 
 	static double prev_fticks(0.0);
-	if ((double)tfticks - prev_fticks < 20.0) return 0; // 20 ticks = 0.5s fire delay
+	if (((double)tfticks - prev_fticks) < sphere_mat_fire_delay*TICKS_PER_SECOND) return 0; // 20 ticks = 0.5s fire delay
 	prev_fticks = tfticks;
 
 	if (max_num_mat_spheres == 0) return 0;
