@@ -687,7 +687,7 @@ bool intersects_any_cobj(coll_obj const &cobj, vector<unsigned> const &cobjs, fl
 void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	vector<unsigned> cobjs;
+	vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
 	get_intersecting_cobjs_tree(cobj, cobjs, -1, 0.0, 1, 0, -1); // duplicates are okay
 	if (cobjs.empty()) return;
 
@@ -752,7 +752,7 @@ void check_cobj_alignment(unsigned index) {
 	//assert(bs_radius < 4.0); // sanity check
 	cube_t context_bcube(center_of_mass, center_of_mass);
 	context_bcube.expand_by(bs_radius);
-	vector<unsigned> cobjs;
+	vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
 	get_intersecting_cobjs_tree(context_bcube, cobjs, index, -tolerance, 0, 0, -1); // include adjacencies
 	auto in(cobjs.begin()), out(in);
 
@@ -840,7 +840,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 	cube_t bcube(cobj); // start at the current cobj xy
 	//bcube.d[2][1]  = cobj.d[2][0]; // top = cobj bottom (Note: more efficient, but doesn't work correctly for elevators)
 	bcube.d[2][0] -= test_dz; // bottom (height = test_dz)
-	vector<unsigned> cobjs;
+	vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
 	remove_cobjs_with_same_cgroup(cobj, cobjs);
 
@@ -1034,7 +1034,7 @@ int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point 
 	bcube += delta; // move to new pos
 	bcube.union_with_cube(cobj); // union of original and new pos
 	bcube.expand_by(-tolerance); // shrink slightly to avoid false collisions (in prticular with extruded polygons)
-	vector<unsigned> cobjs;
+	vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
 	remove_cobjs_with_same_cgroup(cobj, cobjs);
 	vector3d const start_delta(delta);

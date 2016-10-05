@@ -1276,7 +1276,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		float const search_radius(0.25*bradius);
 		cube_t bcube(pos, pos);
 		bcube.expand_by(search_radius);
-		vector<unsigned> cobjs;
+		vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
 		get_intersecting_cobjs_tree(bcube, cobjs, -1, 0.0, 0, 0, -1); // get candidates
 		// not entirely correct, since this ignores non-intersecting cobjs (bcube intersects but sphere does not)
 		unsigned const max_parts(cobjs.empty() ? 0 : unsigned(10000*size/cobjs.size()));

@@ -306,6 +306,7 @@ public:
 	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
 	vector<vector<unsigned>> to_draw_streams;
 	unsigned cur_draw_stream_id;
+	vector<unsigned> temp_cobjs; // temporary to avoid repeated memory allocation
 
 	coll_obj_group() : has_lt_atten(0), has_voxel_cobjs(0), cur_draw_stream_id(0) {to_draw_streams.resize(6);}
 	void clear_ids();
@@ -323,6 +324,7 @@ public:
 	vector<unsigned> &get_draw_stream(unsigned stream_id) {assert(stream_id < to_draw_streams.size()); return to_draw_streams[stream_id];}
 	vector<unsigned> &get_cur_draw_stream() {return get_draw_stream(cur_draw_stream_id);}
 	void set_cur_draw_stream_from_drawn_ids();
+	vector<unsigned> &get_temp_cobjs() {temp_cobjs.clear(); return temp_cobjs;}
 	
 	coll_obj &get_cobj(int index) {
 		assert(index >= 0 && index < (int)size());
