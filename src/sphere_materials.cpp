@@ -306,7 +306,7 @@ bool throw_sphere(bool mode) {
 			light_sources_d.push_back(light_source_trig(*ls, has_shadows, -1, 0));
 			light_sources_d.back().bind_to_pos(fpos, 0, coll_id);
 		}
-		if (display_framerate) {
+		if (display_framerate && !is_video_recording()) {
 			ostringstream oss;
 			oss << num_objs_thrown;
 			print_debug_text(oss.str());
