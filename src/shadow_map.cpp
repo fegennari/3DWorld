@@ -214,6 +214,11 @@ public:
 		render_dynamic();
 		shader.end_shader();
 	}
+
+	void register_movable_cobj(unsigned cid) {
+		coll_obj const &c(coll_objects.get_cobj(cid));
+		if (!c.no_shadow_map() && c.is_movable()) {movable_cids.push_back(cid);}
+	}
 };
 
 smap_vertex_cache_t smap_vertex_cache;
@@ -221,6 +226,7 @@ smap_vertex_cache_t smap_vertex_cache;
 
 bool shadow_map_enabled() {return (shadow_map_sz > 0);}
 void free_smap_vbo() {smap_vertex_cache.free();}
+void register_movable_cobj_shadow(unsigned cid) {smap_vertex_cache.register_movable_cobj(cid);}
 
 
 xform_matrix get_texture_matrix(xform_matrix const &camera_mv_matrix) {

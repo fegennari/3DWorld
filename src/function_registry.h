@@ -758,6 +758,7 @@ void check_falling_cobjs();
 // function prototypes - shadow_map
 cube_t get_scene_bounds();
 bool shadow_map_enabled();
+void register_movable_cobj_shadow(unsigned cid);
 int get_def_smap_ndiv(float radius);
 void set_smap_shader_for_all_lights(shader_t &s, float z_bias=DEF_Z_BIAS);
 pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds);

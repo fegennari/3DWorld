@@ -288,6 +288,7 @@ bool throw_sphere(bool mode) {
 		cobj.fixed     = 1; // make it static
 		cobj.last_coll = 8; // mark as moving/collided to prevent the physics system from putting this cobj to sleep
 		moving_cobjs.insert(coll_id); // let it fall
+		register_movable_cobj_shadow(coll_id);
 		vector<light_source> lss;
 
 		if (has_shadows) { // special case for shadowed point light with cube map
