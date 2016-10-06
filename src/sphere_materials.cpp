@@ -14,12 +14,12 @@ using namespace std;
 
 unsigned const MAX_SPHERE_MATERIALS = 255;
 
-unsigned spheres_mode(0); // 0=none, 1=dynamic spheres, 2=dynamic cubes, 3=static spheres, 4=static cubes
+unsigned spheres_mode(0), num_objs_thrown(0); // 0=none, 1=dynamic spheres, 2=dynamic cubes, 3=static spheres, 4=static cubes
 unsigned max_num_mat_spheres(1);
 float sphere_mat_fire_delay(0.5); // in seconds
 
 extern bool spraypaint_mode;
-extern int frame_counter;
+extern int frame_counter, display_framerate;
 extern float tfticks, CAMERA_RADIUS, ball_velocity;
 extern point sun_pos;
 extern colorRGBA sun_color;
@@ -275,6 +275,7 @@ bool throw_sphere(bool mode) {
 	bool const is_cube(spheres_mode == 2 || spheres_mode == 4);
 	bool const has_shadows(mat.light_radius > 0.0 && mat.shadows);
 	point const fpos(get_camera_pos() + cview_dir*radius_sum*(is_cube ? SQRT2 : 1.0) + plus_z*(0.2*radius_sum));
+	++num_objs_thrown;
 	gen_sound(SOUND_SWING, fpos, 0.5, 1.0);
 
 	if (spheres_mode == 3 || spheres_mode == 4) { // static objects
@@ -304,6 +305,11 @@ bool throw_sphere(bool mode) {
 		for (auto ls = lss.begin(); ls != lss.end(); ++ls) {
 			light_sources_d.push_back(light_source_trig(*ls, has_shadows, -1, 0));
 			light_sources_d.back().bind_to_pos(fpos, 0, coll_id);
+		}
+		if (display_framerate) {
+			ostringstream oss;
+			oss << num_objs_thrown;
+			print_debug_text(oss.str());
 		}
 		return 1;
 	}

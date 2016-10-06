@@ -587,7 +587,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_SPEC_B:       value << mat.spec_c.B;     spos = mat.spec_c.B;         break; // 0.0 to 1.0
 		default: assert(0);
 		}
-		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.8); // draw in reverse order at 80% scale
+		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.75); // draw in reverse order at 80% scale
 	}
 	static void change_texture(int &tid, int &nm_tid, int delta) {
 		do {
