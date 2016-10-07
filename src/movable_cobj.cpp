@@ -848,6 +848,12 @@ vector3d get_cobj_drop_delta(unsigned index) {
 	// also, if the cobj is currently intersecting another movable cobj, try to resolve the intersection so that stacking works by moving the cobj up
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(*i));
+
+		if (cobj.type == COLL_SPHERE && c.type == COLL_SPHERE) { // sphere-sphere case
+			float const sep_dist(p2p_dist(cobj.points[0], c.points[0]) - cobj.radius - c.radius);
+			if (sep_dist >= 0.0) continue; // no intersection
+			return -sep_dist*(cobj.points[0] - c.points[0]).get_norm();
+		}
 		float const dz(c.d[2][1] - cobj.d[2][0]);
 		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 
