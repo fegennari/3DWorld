@@ -546,11 +546,12 @@ extern float sphere_mat_fire_delay;
 extern int coll_id[];
 extern vector<texture_t> textures;
 
-enum {SM_MAT_NAME=0, SM_TEXTURE, SM_FDELAY, SM_EMISS, SM_REFLECT, SM_RSCALE, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE, SM_REFRACT_IX,
-	SM_LIGHT_ATTEN, SM_LIGHT_RADIUS, SM_LIGHT_SHADOW, SM_DIFF_R, SM_DIFF_G, SM_DIFF_B, SM_SPEC_R, SM_SPEC_G, SM_SPEC_B, NUM_SM_CONT};
+enum {SM_MAT_NAME=0, SM_TEXTURE, SM_FDELAY, SM_EMISS, SM_REFLECT, SM_DESTROY, SM_RSCALE, SM_HARDNESS, SM_DENSITY, SM_METAL, SM_ALPHA, SM_SPEC_MAG, SM_SHINE,
+	SM_REFRACT_IX, SM_LIGHT_ATTEN, SM_LIGHT_RADIUS, SM_LIGHT_SHADOW, SM_DIFF_R, SM_DIFF_G, SM_DIFF_B, SM_SPEC_R, SM_SPEC_G, SM_SPEC_B, NUM_SM_CONT};
 string const sphere_mode_names[NUM_SM_CONT] =
-{"Material Name", "Texture", "Fire Delay", "Emissive ", "Reflective", "Radius Scale", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag", "Shininess  ",
+{"Material Name", "Texture", "Fire Delay", "Emissive ", "Reflective", "Destroyable", "Radius Scale", "Hardness ", "Density   ", "Metalness ", "Alpha    ", "Specular Mag", "Shininess  ",
 "Refract Ix  ", "Light Atten ", "Light Radius", "Light Shadow", "Diffuse Red ", "Diffuse Green", "Diffuse Blue ", "Specular Red ", "Specular Green", "Specular Blue "};
+string const destroy_tags[3] = {"Indestructible", "Shatters", "Explodes"};
 
 class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 
@@ -568,6 +569,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_FDELAY:       value << sphere_mat_fire_delay; spos = sphere_mat_fire_delay; break; // 0.0 to 1.0 seconds
 		case SM_EMISS:        value << mat.emissive;     spos = mat.emissive;         break; // 0/1
 		case SM_REFLECT:      value << mat.reflective;   spos = mat.reflective;       break; // 0/1
+		case SM_DESTROY:      value << destroy_tags[mat.destroyable]; spos = mat.destroyable/2; break; // 0/1
 		case SM_RSCALE:       value << mat.radius_scale; spos = (mat.radius_scale-0.2)/1.8; break; // 0.2 to 2.0
 		case SM_HARDNESS:     value << mat.hardness;     spos = mat.hardness;         break; // 0.05 to 1.0
 		case SM_DENSITY:      value << mat.density;      spos = mat.density/4.0;      break; // 0.1 to 4.0
@@ -601,7 +603,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 
 public:
 	sphere_mat_kbd_menu_t() : keyboard_menu_t(NUM_SM_CONT, "Sphere Materials") {cur_control = num_controls-1;} // start at material name
-	virtual bool is_enabled() const {return (show_scores && spheres_mode != 0);}
+	virtual bool is_enabled() const {return (show_scores && spheres_mode != 0 && !game_mode);}
 
 	virtual void change_value(int delta) {
 		sphere_mat_t &mat(get_cur_sphere_mat());
@@ -613,6 +615,7 @@ public:
 		case SM_FDELAY:       sphere_mat_fire_delay = CLIP_TO_01(sphere_mat_fire_delay + 0.05f*delta);  break; // 0.0 to 1.0 in steps of 0.05
 		case SM_EMISS:        mat.emissive     = ((delta < 0) ? 0 : 1);   break; // 0/1
 		case SM_REFLECT:      mat.reflective   = ((delta < 0) ? 0 : 1);   break; // 0/1
+		case SM_DESTROY:      mat.destroyable  = min(2, max(0, mat.destroyable+delta)); break; // 0-2
 		case SM_RSCALE:       mat.radius_scale = max(0.2f, min(2.0f, (mat.radius_scale + 0.1f*delta))); break; // 0.2 to 2.0 in steps of 0.1
 		case SM_HARDNESS:     mat.hardness     = max(0.05f, min(1.0f, (mat.hardness + 0.05f*delta)));   break; // 0.05 to 1.0 in steps of 0.05
 		case SM_DENSITY:      mat.density      = max(0.1f,  min(4.0f, (mat.density  + 0.1f* delta)));   break; // 0.1 to 4.0 in steps of 0.1
@@ -689,13 +692,14 @@ bool ui_intercept_keyboard(unsigned char key, bool is_special) {
 	if (!is_special) return 0; // only using special keys right now
 	keyboard_menu_t *const kbd_menu(get_enabled_menu());
 	if (kbd_menu == NULL) return 0; // no keyboard menu enabled
-	int const change_mag(is_shift_key_pressed() ? 10 : 1); // move 10x if shift is set
+	bool const shift_pressed(is_shift_key_pressed());
+	int const lr_mag(shift_pressed ? 10 : 1), ud_mag(shift_pressed ? 5 : 1); // move 10x/5x if shift is set
 	
 	switch (key) {
-	case GLUT_KEY_UP:    kbd_menu->next_control(); return 1;
-	case GLUT_KEY_DOWN:  kbd_menu->prev_control(); return 1;
-	case GLUT_KEY_LEFT:  kbd_menu->change_value(-1*change_mag); return 1;
-	case GLUT_KEY_RIGHT: kbd_menu->change_value( 1*change_mag); return 1;
+	case GLUT_KEY_UP:    for (int i = 0; i < ud_mag; ++i) {kbd_menu->next_control();} return 1;
+	case GLUT_KEY_DOWN:  for (int i = 0; i < ud_mag; ++i) {kbd_menu->prev_control();} return 1;
+	case GLUT_KEY_LEFT:  kbd_menu->change_value(-1*lr_mag); return 1;
+	case GLUT_KEY_RIGHT: kbd_menu->change_value( 1*lr_mag); return 1;
 	}
 	return 0;
 }

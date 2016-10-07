@@ -157,7 +157,7 @@ public:
 			else if (key == "shadows") {if (!read_mat_value(cur_mat.shadows, "shadows")) return 0;}
 			else if (key == "emissive") {if (!read_mat_value(cur_mat.emissive, "emissive")) return 0;}
 			else if (key == "reflective") {if (!read_mat_value(cur_mat.reflective, "reflective")) return 0;}
-			else if (key == "destroy_thresh") {if (!read_mat_value(cur_mat.destroy_thresh, "destroy_thresh")) return 0;}
+			else if (key == "destroyable") {if (!read_mat_value(cur_mat.destroyable, "destroyable")) return 0;} // only {0=none, 1=shatterable, 2=explodeable}
 			else if (key == "radius_scale") {if (!read_mat_value(cur_mat.radius_scale, "radius_scale")) return 0;}
 			else if (key == "alpha") {if (!read_mat_value(cur_mat.alpha, "alpha")) return 0;}
 			else if (key == "metalness") {if (!read_mat_value(cur_mat.metal, "metalness")) return 0;}
@@ -254,7 +254,7 @@ int add_cobj_with_material(cobj_params const &cp, sphere_mat_t const &mat, point
 	else { // sphere
 		coll_id = add_coll_sphere(pos, obj_radius, cp, -1, 0, reflective);
 	}
-	coll_objects.get_cobj(coll_id).destroy = mat.destroy_thresh;
+	if (is_static) {coll_objects.get_cobj(coll_id).destroy = 2*min(2, max(0, mat.destroyable));} // only {0=none, 1=shatterable, 2=explodeable}
 	return coll_id;
 }
 

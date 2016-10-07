@@ -5,7 +5,7 @@ fire_delay 0.5
 shadows 0
 emissive 0
 reflective 0
-destroy_thresh 0
+destroyable 0
 radius_scale 1.0
 light_radius 0.0
 hardness 0.8
