@@ -1932,9 +1932,26 @@ void indir_dlight_group_manager_t::write_entry_to_cobj_file(unsigned tag_ix, ost
 
 void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 
-	if (type == COLL_NULL || !fixed) return; // unused/non-fixed cobj
-	if (is_near_zero_area() || min_len() < 1.0E-5) return; // near zero area (use lower tolerance due to limited file write precision)
+	if (!fixed)   return; // unused/non-fixed cobj
 	if (!cp.draw) return; // don't write out non-drawn collision hulls as they're generally not useful by themselves
+	if (dgroup_id >= 0) {out << "start_draw_group" << endl;}
+	write_to_cobj_file_int(out, prev);
+
+	if (dgroup_id >= 0) {
+		vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(dgroup_id, *this));
+
+		for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
+			unsigned const ix(*j + coll_objects.size()); // map to a range that doesn't overlap coll_objects
+			cdraw_groups.get_cobj(*j).write_to_cobj_file_int(out, prev);
+		}
+		out << "end_draw_group" << endl;
+	}
+}
+
+void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
+
+	if (type == COLL_NULL) return; // unused cobj
+	if (is_near_zero_area() || min_len() < 1.0E-5) return; // near zero area (use lower tolerance due to limited file write precision)
 	bool const diff2(cp.draw != prev.cp.draw || cp.refract_ix != prev.cp.refract_ix || cp.light_atten != prev.cp.light_atten || cp.is_emissive != prev.cp.is_emissive);
 
 	if (diff2 || cp.elastic != prev.cp.elastic || cp.color != prev.cp.color || cp.tid != prev.cp.tid) { // material parameters changed

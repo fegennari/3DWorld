@@ -227,6 +227,7 @@ public:
 	void check_indoors_outdoors();
 	void set_reflective_flag(bool val) {set_bit_flag_to(cp.flags, COBJ_REFLECTIVE, val);}
 	void write_to_cobj_file(std::ostream &out, coll_obj &prev) const;
+	void write_to_cobj_file_int(std::ostream &out, coll_obj &prev) const;
 	
 	// inexact primitive intersections
 	bool sphere_intersects(point const &sc, float sr) const;
