@@ -82,6 +82,8 @@ smoke_bounds -8.0   8.0   -0.95 6.5   -0.7 -0.3
 
 state_file mapx/state.txt
 coll_obj_file mapx/coll_objs_mapx.txt
+#coll_obj_file mapx/coll_objs_cubes.txt
+#coll_obj_file mapx/coll_objs_spheres.txt
 ship_def_file universe/ship_defs.txt
 mesh_file mapx/mesh128.txt 1.0 0.0 1 5.0
 mesh_draw_bmp mapx/mesh_draw128.bmp
