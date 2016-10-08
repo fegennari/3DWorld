@@ -115,7 +115,8 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branches, model_calc_tan_vect, water_is_lava;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters, scene_smap_vbo_invalid;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
+extern unsigned erosion_iters, scene_smap_vbo_invalid, spheres_mode;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale, flower_density, universe_ambient_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale, planet_update_rate;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT, map_x, map_y;
@@ -1060,20 +1061,13 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'H': // save mesh state/modmap
-		if (world_mode == WMODE_UNIVERSE) {
-			export_modmap("output.modmap");
-		}
+		if (world_mode == WMODE_UNIVERSE) {export_modmap("output.modmap");}
 		else if (world_mode == WMODE_GROUND) {
-			if (voxel_editing) {
-				write_voxel_brushes();
-			}
-			else {
-				save_state(state_file);
-			}
+			if (voxel_editing) {write_voxel_brushes();}
+			else if (spheres_mode) {write_def_coll_objects_file();}
+			else {save_state(state_file);}
 		}
-		else if (world_mode == WMODE_INF_TERRAIN) {
-			write_default_hmap_modmap();
-		}
+		else if (world_mode == WMODE_INF_TERRAIN) {write_default_hmap_modmap();}
 		break;
 	case 'J': // load mesh state
 		if (world_mode == WMODE_GROUND) {load_state(state_file);}
@@ -1929,7 +1923,7 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "reflect_plane_z") {
 			cube_t cube;
-			if (!read_cube(fp, geom_xform_t(), cube)) cfg_err("reflect_plane_z command", error);
+			if (read_cube(fp, geom_xform_t(), cube) != 6) cfg_err("reflect_plane_z command", error);
 			reflect_planes.add(cube);
 		}
 		// lighting

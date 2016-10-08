@@ -74,6 +74,7 @@ bool check_player_proximity(point const &pos, float radius=0.0, bool use_bottom=
 void set_global_state();
 void process_groups();
 void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only);
+void write_def_coll_objects_file();
 void init_models();
 void free_models();
 
