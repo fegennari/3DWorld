@@ -19,12 +19,15 @@ class sphere_point_norm { // size = 12
 
 protected:
 	unsigned ndiv;
+	bool is_full;
+	float radius;
+	point center;
 	point **points;
 	vector3d **norms;
 
 public:
 	friend class sd_sphere_d;
-	sphere_point_norm() : ndiv(0), points(NULL), norms(NULL) {}
+	sphere_point_norm() : ndiv(0), is_full(0), radius(0.0), points(NULL), norms(NULL) {}
 	void alloc(unsigned ndiv_);
 	void set_pointer_stride(unsigned ndiv_);
 	void free_data();

@@ -113,14 +113,30 @@ void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg,
 void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, float s_end, float t_beg, float t_end) {
 
 	assert(ndiv >= 3 && ndiv <= 512); // sanity check
+	bool const is_full(s_beg == 0.0 && s_end == 1.0 && t_beg == 0.0 && t_end == 1.0);
 
-	if (cur_spn.points == NULL || ndiv > cur_spn.ndiv) { // allocate all memory
-		if (cur_spn.points != NULL) cur_spn.free_data(); // already allocated at least once
+	if (!perturb_map && !surf && cur_spn.points != nullptr && is_full && cur_spn.is_full && ndiv == cur_spn.ndiv && radius == cur_spn.radius) {
+		// in this case, the only thing that differs is pos, so we can reuse the normals and simply translate the points
+		vector3d const xlate(pos - cur_spn.center);
+
+		for (unsigned s = 0; s < ndiv; ++s) {
+			for (unsigned t = 0; t <= ndiv; ++t) {cur_spn.points[s][t] += xlate;}
+		}
+		cur_spn.center = pos;
+		points = cur_spn.points;
+		norms  = cur_spn.norms;
+		return;
+	}
+	if (cur_spn.points == nullptr || ndiv > cur_spn.ndiv) { // allocate all memory
+		if (cur_spn.points != nullptr) {cur_spn.free_data();} // already allocated at least once
 		cur_spn.alloc(ndiv);
 	}
 	else {
 		cur_spn.set_pointer_stride(ndiv);
 	}
+	cur_spn.center  = pos;
+	cur_spn.radius  = radius;
+	cur_spn.is_full = is_full;
 	float const cs_scale(PI/(float)ndiv), cs_scale2(2.0*cs_scale), sin_dt(sin(cs_scale)), cos_dt(cos(cs_scale));
 	unsigned s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
 	if (s1 == ndiv) s0 = 0; // make wraparound correct
@@ -481,23 +497,29 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				}
 			}
 			for (unsigned t = t0; t <= t1; ++t) {
-				point    const pts[2]     = {points[s][t], points[sn][t]};
-				vector3d const normals[2] = {norms [s][t], norms [sn][t]};
-				bool draw(disable_bfc);
+				if (!disable_bfc) {
+					bool draw(0);
 
-				for (unsigned d = 0; d < 2 && !draw; ++d) {
-					float const dp(dot_product_ptv(normals[d], vfrom, pts[d]));
-					if (dp >= 0.0) {draw = 1;}
-					else if (perturb_map != NULL) { // sort of a hack, not always correct but good enough in most cases
-						float const dist_sq(p2p_dist_sq(pos, pts[d]));
-						if (dist_sq > toler && (dist_sq > dmax_sq || dp > -0.3*p2p_dist(vfrom, pts[d]))) {draw = 1;}
+					for (unsigned d = 0; d < 2 && !draw; ++d) {
+						point    const &pt(d ? points[sn][t] : points[s][t]);
+						vector3d const &n (d ? norms [sn][t] : norms [s][t]);
+						float const dp(dot_product_ptv(n, vfrom, pt));
+						if (dp >= 0.0) {draw = 1;}
+						else if (perturb_map != NULL) { // sort of a hack, not always correct but good enough in most cases
+							float const dist_sq(p2p_dist_sq(pos, pt));
+							if (dist_sq > toler && (dist_sq > dmax_sq || dp > -0.3*p2p_dist(vfrom, pt))) {draw = 1;}
+						}
 					}
+					if (!draw) {continue;}
 				}
-				if (!draw) {continue;}
-
-				for (unsigned i = 0; i < 2; ++i) {
-					if (texture) {vntc.emplace_back(pts[i], normals[i], tscale*(1.0f - (i ? snt : s)*ndiv_inv), tscale*(1.0f - t*ndiv_inv));}
-					else {vn.emplace_back(pts[i], normals[i]);}
+				if (!texture) {
+					vn.emplace_back(points[s ][t], norms[s ][t]);
+					vn.emplace_back(points[sn][t], norms[sn][t]);
+				}
+				else {
+					float const ts(tscale*(1.0f - t*ndiv_inv));
+					vntc.emplace_back(points[s ][t], norms[s ][t], tscale*(1.0f - s  *ndiv_inv), ts);
+					vntc.emplace_back(points[sn][t], norms[sn][t], tscale*(1.0f - snt*ndiv_inv), ts);
 				}
 			} // for t
 		}
