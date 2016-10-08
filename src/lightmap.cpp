@@ -36,7 +36,7 @@ indir_dlight_group_manager_t indir_dlight_group_manager;
 
 extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
-extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, CAMERA_RADIUS, indir_light_exp, light_int_scale[];
+extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, CAMERA_RADIUS, indir_light_exp, light_int_scale[], force_czmin, force_czmax;
 extern colorRGB cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
@@ -624,6 +624,8 @@ float calc_czspan() {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
 void build_lightmap(bool verbose) {
 
 	if (lm_alloc) return; // what about recreating the lightmap if the scene has changed?
+	if (force_czmin != 0.0) {czmin = force_czmin;}
+	if (force_czmax != 0.0) {czmax = force_czmax;}
 
 	// prevent the z range from being empty/denormalized when there are no cobjs
 	if (use_dense_voxels) {
