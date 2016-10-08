@@ -34,20 +34,20 @@ extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetat
 struct sm_tree_type {
 
 	int leaf_tid, bark_tid;
-	float w2, ws, h, ss;
+	float w2, ws, h, ss, width_scale, height_scale;
 	colorRGBA bc; // trunk color
 
-	sm_tree_type(float w2_, float ws_, float h_, float ss_, colorRGBA const &bc_, int ltid, int btid)
-		: leaf_tid(ltid), bark_tid(btid), w2(w2_), ws(ws_), h(h_), ss(ss_), bc(bc_) {}
+	sm_tree_type(float w2_, float ws_, float h_, float ss_, float wscale, float hscale, colorRGBA const &bc_, int ltid, int btid)
+		: leaf_tid(ltid), bark_tid(btid), w2(w2_), ws(ws_), h(h_), ss(ss_), width_scale(wscale), height_scale(hscale), bc(bc_) {}
 };
 
-sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
-	sm_tree_type(0.00, 0.14, 0.35, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_PINE
-	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
-	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
-	sm_tree_type(0.00, 0.15, 0.00, 0.8, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
-	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_FROND_TEX,PALM_BARK_TEX), // T_PALM
-	sm_tree_type(0.00, 0.08, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
+sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, wscale, hscale, c, tid
+	sm_tree_type(0.00, 0.14, 0.35, 0.4, 1.0, 1.2, PTREE_C, PINE_TEX,      BARK2_TEX), // T_PINE
+	sm_tree_type(0.13, 0.15, 0.75, 0.8, 1.0, 1.0, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
+	sm_tree_type(0.13, 0.15, 0.75, 0.7, 1.0, 1.0, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
+	sm_tree_type(0.00, 0.15, 0.00, 0.8, 1.0, 1.0, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
+	sm_tree_type(0.03, 0.15, 1.00, 0.6, 1.4, 2.0, TREE_C,  PALM_FROND_TEX,PALM_BARK_TEX), // T_PALM
+	sm_tree_type(0.00, 0.08, 0.00, 0.4, 1.2, 0.8, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
 
 bool is_pine_tree_type(int type) {return (type == T_PINE || type == T_SH_PINE);}
@@ -639,21 +639,17 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 	bark_color = stt[type].bc;
 	if (!is_pine_tree()) {UNROLL_3X(bark_color[i_] = min(1.0, bark_color[i_]*(0.85 + 0.3f*rgen.randd()));)} // gen bark color for decid trees
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;}
+	width  *= stt[type].width_scale;
+	height *= stt[type].height_scale;
 
 	switch (type) {
 	case T_PINE: // pine tree
-		width  *= 1.1;
-		height *= 1.2;
 		leaf_color = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
 	case T_SH_PINE: // short pine tree
-		width  *= 1.2;
-		height *= 0.8;
 		leaf_color = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
 	case T_PALM: // palm tree
-		width  *= 1.4;
-		height *= 2.0;
 		leaf_color = colorgen(0.7, 0.8, 0.9, 1.0, 0.6, 0.7, rgen); // r1, r2, g1, g2, b1, b2
 		break;
 	case T_DECID: // decidious tree
@@ -1018,7 +1014,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 void small_tree::write_to_cobj_file(std::ostream &out) const {
 	// 'F': // place small tree: xpos ypos height width type [zpos], type: T_PINE = 0, T_DECID = 1, T_TDECID = 2, T_BUSH = 3, T_PALM = 4, T_SH_PINE = 5
 	//add_small_tree(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z)
-	out << "F " << pos.x << " " << pos.y << " " << height << " " << width << " " << int(type) << " " << pos.z << endl;
+	out << "F " << pos.x << " " << pos.y << " " << height/stt[type].height_scale << " " << width/stt[type].width_scale << " " << int(type) << " " << pos.z << endl;
 }
 void write_small_trees_to_cobj_file(std::ostream &out) {
 	for (auto i = small_trees.begin(); i != small_trees.end(); ++i) {i->write_to_cobj_file(out);}
