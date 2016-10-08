@@ -1101,13 +1101,26 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, int group
 }
 
 
+bool read_float_reset_pos_on_fail(FILE *fp, float &v) {
+	long const fpos(ftell(fp));
+	if (read_float(fp, v)) return 1;
+	fseek(fp, fpos, SEEK_SET);
+	return 0;
+}
+bool read_int_reset_pos_on_fail(FILE *fp, int &v) {
+	long const fpos(ftell(fp));
+	if (read_int(fp, v)) return 1;
+	fseek(fp, fpos, SEEK_SET);
+	return 0;
+}
+
 // returns the number of values read
 unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c) {
 
 	point pt[2];
 
 	for (unsigned d = 0; d < 6; ++d) {
-		if (!read_float(fp, pt[d&1][d>>1])) return d;
+		if (!read_float_reset_pos_on_fail(fp, pt[d&1][d>>1])) return d;
 	}
 	for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(pt[i]);}
 	c = cube_t(pt[0], pt[1]);
@@ -1443,9 +1456,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
 				trigger_t trigger;
+				long const fpos(ftell(fp));
 				int const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i", &trigger.act_pos.x, &trigger.act_pos.y, &trigger.act_pos.z,
 					&trigger.act_dist, &trigger.auto_on_time, &trigger.auto_off_time, &ivals[0], &ivals[1]));
-				if (num_read <= 0) {triggers.clear(); break;} // bare K, just reset params and disable the trigger, or EOF
+				if (num_read == 0) {fseek(fp, fpos, SEEK_SET); triggers.clear(); break;} // bare K, just reset params and disable the trigger, or EOF
 				if (num_read != 8) {return read_error(fp, "light source trigger", coll_obj_file, line_num);}
 				xf.xform_pos(trigger.act_pos);
 				trigger.act_dist       *= xf.scale;
@@ -1485,7 +1499,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'U': // indir dlight group: name [scale]
 			fvals[0] = 1.0; // default scale
-			if (fscanf(fp, "%255s%f", str, &fvals[0]) < 1) {return read_error(fp, "indir dlight group name", coll_obj_file);}
+			if (fscanf(fp, "%255s", str) == 0) {return read_error(fp, "indir dlight group name", coll_obj_file);}
+			read_float_reset_pos_on_fail(fp, fvals[0]); // okay if fails
 			indir_dlight_ix = indir_dlight_group_manager.get_ix_for_name(str, fvals[0]);
 			break;
 
@@ -1558,8 +1573,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (read_cube(fp, xf, cobj) != 6) {return read_error(fp, "collision cube", coll_obj_file);}
 				if (cobj.is_zero_area()) {return read_error(fp, "collision cube: zero area cube", coll_obj_file);}
 				float corner_radius(0.0);
-				long const fpos(ftell(fp));
-				if (!read_float(fp, corner_radius)) {fseek(fp, fpos, SEEK_SET);} // okay if fails
+				read_float_reset_pos_on_fail(fp, corner_radius); // okay if fails
 				check_layer(has_layer);
 				cobj.radius2 = corner_radius*xf.scale;
 				cobj.counter = (remove_t_junctions ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
@@ -1979,6 +1993,7 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 
 	ofstream out(fn);
 	if (!out.good()) {cerr << "Error opening coll object file '" << fn << "' for output" << endl; return 0;}
+	cout << "Writing cobj output file " << fn << endl;
 	
 	// add normal drawn cobjs
 	coll_obj prev_cobj; // starts as default cobj
@@ -2050,13 +2065,16 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	return 1;
 }
 
+void write_def_coll_objects_file() {
+	write_coll_objects_file(coll_objects, "coll_objects_out.txt");
+}
+
 
 void init_models() {
 
 	build_hmv_shape();
 	gen_star_points();
 }
-
 
 void free_models() {
 	delete_hmv_shape();
