@@ -865,9 +865,13 @@ vector3d get_cobj_drop_delta(unsigned index) {
 			else if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
 			// assume it's a stack and treat it like a moving platform
 		}
-		else {
-			if (c.platform_id < 0) continue; // not a platform
-			if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
+		else { // handle the platform or static collision case
+			if (c.platform_id < 0) { // not a platform
+				if (c.type != COLL_CUBE) continue; // only non-platform cubes and handled here
+				cube_t bot_bcube(cobj); bot_bcube.d[2][1] = bot_bcube.d[2][0]; // shrink to zero height
+				if (!c.contains_cube(bot_bcube)) continue; // handle only cases where the botto of the cobj is completely embedded in a cube
+			}
+			else if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
 		}
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
 		return vector3d(0.0, 0.0, dz); // or test other cobjs?
