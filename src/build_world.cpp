@@ -1968,7 +1968,10 @@ void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 
 	if (cp.normal_map != prev.cp.normal_map) {
 		out << "X " << texture_str(cp.normal_map);
-		if (cp.normal_map >= 0) {out << " " << (textures[textures.size()].invert_y != 0) << " " << cp.negate_nm_bns();}
+		if (cp.normal_map >= 0) {
+			assert(cp.normal_map < textures.size());
+			out << " " << (textures[cp.normal_map].invert_y != 0) << " " << cp.negate_nm_bns();
+		}
 		out << endl;
 	}
 	if (cp.surfs != prev.cp.surfs) {out << "e " << (unsigned)cp.surfs << endl;}
