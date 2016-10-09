@@ -1913,11 +1913,13 @@ void light_source::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 }
 void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 
+	// Note: cube map lights should write out all 6 faces here because the beamwidth has been set to 0.4 (not 1.0)
 	triggers.write_to_cobj_file(out);
 	sensor.write_to_cobj_file(out);
 	indir_dlight_group_manager.write_entry_to_cobj_file(indir_dlight_ix, out);
 	light_source::write_to_cobj_file(out, is_diffuse);
-	out << " " << (use_smap != 0) << endl;
+	if (use_smap) {out << " " << (is_cube_face ? 2 : 1);}
+	out << endl;
 	if (bound) {out << "bind_light " << bind_pos.raw_str() << endl;} // 'V'/"bind_light": // bind prev light source to cobj at location <x y z>
 	sensor.write_end_sensor_to_cobj_file(out);
 	triggers.write_end_triggers_cobj_file(out);
@@ -1969,7 +1971,7 @@ void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 	if (cp.normal_map != prev.cp.normal_map) {
 		out << "X " << texture_str(cp.normal_map);
 		if (cp.normal_map >= 0) {
-			assert(cp.normal_map < textures.size());
+			assert((unsigned)cp.normal_map < textures.size());
 			out << " " << (textures[cp.normal_map].invert_y != 0) << " " << cp.negate_nm_bns();
 		}
 		out << endl;
