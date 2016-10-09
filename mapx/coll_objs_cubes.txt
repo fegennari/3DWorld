@@ -9826,6 +9826,8 @@ F 1 -9 1 0.25 4 -0.456364
 
 G 0.2 -0.2 0.6 0.006 0 -0.24
 
+sensor 9 1.5 3.8 0.145 0 0 0.1
 place_sound smokealarm.wav 1.5 3.8 0.145 1 1
+sensor disabled
 
 end

@@ -157,6 +157,7 @@ struct placed_sound_t {
 	placed_sound_t(unsigned id, sound_params_t const &params_, sensor_t const &sensor_=sensor_t()) : sound_id(id), params(params_), sensor(sensor_) {}
 	bool enabled() const {return (sound_id >= 0);}
 	void next_frame();
+	void write_to_cobj_file(std::ostream &out, std::string const &name) const;
 };
 
 

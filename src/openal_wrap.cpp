@@ -24,6 +24,15 @@ float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1, 0.1};
 float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0, 1.0};
 
 
+void placed_sound_t::write_to_cobj_file(ostream &out, string const &name) const {
+
+	sensor.write_to_cobj_file(out);
+	out << "place_sound " << name << " ";
+	params.write_to_cobj_file(out); // includes endl
+	sensor.write_end_sensor_to_cobj_file(out);
+}
+
+
 class sound_manager_t {
 
 	buffer_manager_t sounds;
@@ -58,10 +67,7 @@ public:
 		placed_sounds.push_back(placed_sound_t(find_or_add_sound(fn), params, sensor));
 	}
 	void write_placed_sounds_to_cobj_file(ostream &out) const {
-		for (auto i = placed_sounds.begin(); i != placed_sounds.end(); ++i) {
-			out << "place_sound " << get_name(i->sound_id) << " ";
-			i->params.write_to_cobj_file(out); // includes endl
-		}
+		for (auto i = placed_sounds.begin(); i != placed_sounds.end(); ++i) {i->write_to_cobj_file(out, get_name(i->sound_id));}
 	}
 
 	// supported: au, wav
