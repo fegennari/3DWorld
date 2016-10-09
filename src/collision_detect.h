@@ -239,7 +239,6 @@ public:
 	bool is_point_supported(point const &pos) const;
 
 	// platform functions
-	void add_to_platform() const;
 	bool is_expanded_platform() const {return ((cp.flags & COBJ_EXPANDED_PLATFORM) != 0);}
 	bool is_update_light_platform() const;
 	cube_t get_extended_platform_bcube() const;
@@ -502,7 +501,8 @@ public:
 	void clear_last_delta() {delta = all_zeros;}
 	void add_cobj(unsigned cobj);
 	void add_light(unsigned light) {lights.push_back(light);}
-	void next_frame();
+	void next_frame() {delta = all_zeros;}
+	void clear_cobjs() {cobjs.clear();}
 	void shift_by(vector3d const &val);
 	void reset();
 	void activate();

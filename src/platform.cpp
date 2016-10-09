@@ -232,11 +232,6 @@ bool platform::check_activate(point const &p, float radius, int activator) {
 	return 1;
 }
 
-void platform::next_frame() {
-	cobjs.clear(); // lights is constant
-	delta = all_zeros;
-}
-
 void platform::move_platform(float dist_traveled) { // linear distance or rotation angle
 	
 	if (is_rot) {cur_angle += dist_traveled;} // rotate
@@ -411,14 +406,15 @@ void platform_cont::shift_by(vector3d const &val) {
 }
 
 void platform_cont::add_current_cobjs() {
+	for (auto i = begin(); i != end(); ++i) {i->clear_cobjs();}
+
 	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
 		get_cobj_platform(coll_objects.get_cobj(*i)).add_cobj(*i);
 	}
 }
 
 void platform_cont::advance_timestep() {
-
-	for (auto i = begin(); i != end(); ++i) {i->next_frame();} // cache this?
+	for (auto i = begin(); i != end(); ++i) {i->next_frame();}
 	add_current_cobjs();
 	for (auto i = begin(); i != end(); ++i) {i->advance_timestep();}
 }
@@ -439,10 +435,5 @@ bool platform_cont::any_moving_platforms_in_view(pos_dir_up const &pdu) const { 
 		}
 	}
 	return 0;
-}
-
-
-void coll_obj::add_to_platform() const {
-	if (platform_id >= 0) {platforms.get_cobj_platform(*this).add_cobj(id);}
 }
 
