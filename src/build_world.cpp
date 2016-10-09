@@ -2018,9 +2018,17 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 
 	for (auto c = cobjs.begin(); c != cobjs.end(); ++c) {
 		if (c->platform_id >= 0) continue; // platforms are written out below
+		if (c->cgroup_id   >= 0) continue; // grouped cobjs are written out below
 		c->write_to_cobj_file(out, prev_cobj);
 	}
 	out << endl;
+
+	// add cobj groups
+	for (auto g = cobj_groups.begin(); g != cobj_groups.end(); ++g) {
+		out << "start_cobj_group" << endl;
+		for (auto c = g->begin(); c != g->end(); ++c) {cobjs.get_cobj(*c).write_to_cobj_file(out, prev_cobj);}
+		out << "end_cobj_group" << endl << endl;
+	}
 	
 	// add platforms
 	platforms.add_current_cobjs(); // to ensure cobjs are valid for each platform

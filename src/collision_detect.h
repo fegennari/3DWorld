@@ -331,6 +331,10 @@ public:
 		assert(index >= 0 && index < (int)size());
 		return operator[](index);
 	}
+	coll_obj const &get_cobj(int index) const {
+		assert(index >= 0 && index < (int)size());
+		return operator[](index);
+	}
 };
 
 
