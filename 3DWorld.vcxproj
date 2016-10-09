@@ -960,7 +960,9 @@
   <ItemGroup>
     <Text Include="coll_objs_puzzle.txt" />
     <Text Include="config_puzzle.txt" />
+    <Text Include="mapx\coll_objs_cubes.txt" />
     <Text Include="mapx\coll_objs_mapx.txt" />
+    <Text Include="mapx\coll_objs_spheres.txt" />
     <Text Include="sphere_materials.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
