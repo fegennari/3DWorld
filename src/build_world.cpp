@@ -1964,7 +1964,7 @@ void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 	if (cp.tscale  != prev.cp.tscale ) {out << "y " << cp.tscale << endl;}
 	if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "Y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
 	if (cp.metalness != prev.cp.metalness) {out << "metalness " << cp.metalness << endl;}
-	if (cp.damage != prev.cp.damage) {out << "damage " << cp.damage << endl;}
+	if (cp.damage != 0.0) {out << "damage " << cp.damage << endl;}
 
 	if (cp.normal_map != prev.cp.normal_map) {
 		out << "X " << texture_str(cp.normal_map);
@@ -2003,6 +2003,7 @@ void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 	default: assert(0);
 	}
 	if (is_reflective()) {out << "cube_map_ref 0" << endl;} // disable reflections
+	if (cp.damage != 0.0) {out << "damage " << 0.0 << endl;} // disable damage
 	prev = *this; // update previous cobj
 }
 

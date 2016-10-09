@@ -1896,6 +1896,10 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				zceil  = zt;
 				zfloor = zb;
 			}
+			// add some tolerance to count the equal (standing on) case as colliding
+			if ((z2 + 0.01*radius) > zb && (z1 - 0.01*radius) < zt && is_player && !test_only && cobj.cp.damage != 0.0 && cobj.sphere_intersects(pos, 1.01*radius)) {
+				smiley_collision(id, NO_SOURCE, plus_z, pos, fticks*cobj.cp.damage, COLLISION); // damage can be positive or negative
+			}
 			if (z2 > zb && z1 < zt) { // overlap: top of object above bottom of surface and bottom of object below top of surface
 				if ((zt - z1) <= step) { // step up onto surface
 					pos.z = max(pos.z, zt + radius);
@@ -1917,9 +1921,6 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 					else { // fall down below zb - can recover
 						pos.z = zb - radius;
 					}
-				}
-				if (is_player && !test_only && cobj.cp.damage != 0.0 && cobj.sphere_intersects(pos, radius)) {
-					smiley_collision(id, NO_SOURCE, plus_z, pos, fticks*cobj.cp.damage, COLLISION); // damage can be positive or negative
 				}
 			}
 			any_coll = 1;
