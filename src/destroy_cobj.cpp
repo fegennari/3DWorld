@@ -23,7 +23,6 @@ extern coll_obj_group coll_objects;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
 extern cobj_groups_t cobj_groups;
-extern set<unsigned> moving_cobjs;
 
 
 unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int destroy_thresh);
@@ -245,7 +244,7 @@ void add_to_falling_cobjs(set<unsigned> const &ids) {
 
 	for (set<unsigned>::const_iterator i = ids.begin(); i != ids.end(); ++i) {
 		coll_obj &cobj(coll_objects.get_cobj(*i));
-		if (cobj.is_movable()) {moving_cobjs.insert(*i); continue;} // move instead of fall
+		if (cobj.is_movable()) {register_moving_cobj(*i); continue;} // move instead of fall
 		cobj.falling = 1;
 		falling_cobjs.push_back(*i);
 	}
@@ -381,7 +380,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		if (REMOVE_UNANCHORED) {
 			for (auto i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 				coll_obj &cobj(coll_objects.get_cobj(*i));
-				if (cobj.is_movable()) {moving_cobjs.insert(*i); continue;} // move/fall instead of destroy
+				if (cobj.is_movable()) {register_moving_cobj(*i); continue;} // move/fall instead of destroy
 				if (cobj.destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
 				cts.push_back(color_tid_vol(cobj, cobj.volume, cobj.calc_min_dim(), 1));
 				cobj.clear_internal_data();

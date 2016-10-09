@@ -684,10 +684,28 @@ bool intersects_any_cobj(coll_obj const &cobj, vector<unsigned> const &cobjs, fl
 	return 0;
 }
 
-void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
+void register_moving_cobj(unsigned index) {
+	coll_objects.get_cobj(index).last_coll = 8; // mark as moving/collided to prevent the physics system from immediately putting this cobj to sleep
+	moving_cobjs.insert(index);
+}
+
+void check_moving_cobj_int_with_dynamic_objs(unsigned index, vector3d const &delta) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	vector<unsigned> cobjs;
+
+	// wake up adjacent/nearby moving cobjs in case they need to move
+	cube_t bcube(cobj);
+	bcube.union_with_cube(bcube - delta); // expand to cover entire range of movement
+	bcube.d[2][1] += 0.1*(cobj.d[2][1] - cobj.d[2][0]); // increase height by 10% to include cobjs resting on this cobj
+	get_intersecting_cobjs_tree(bcube, cobjs, index, 0.0, 0, 0, -1);
+
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+		if (coll_objects.get_cobj(*i).is_movable()) {register_moving_cobj(*i);} // wake this cobj up - may already be there
+	}
+
+	// check for collisions with dynamic objects from groups
+	cobjs.clear();
 	get_intersecting_cobjs_tree(cobj, cobjs, -1, 0.0, 1, 0, -1); // duplicates are okay
 	if (cobjs.empty()) return;
 
@@ -988,7 +1006,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 void shift_cobj_up_down(coll_obj &cobj, unsigned index, vector3d const &delta) {
 	cobj.shift_by(delta); // move cobj down
 	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
-	check_moving_cobj_int_with_dynamic_objs(index);
+	check_moving_cobj_int_with_dynamic_objs(index, delta);
 }
 
 void try_drop_movable_cobj(unsigned index, set<unsigned> &seen) {
@@ -1140,8 +1158,8 @@ void move_cobj_and_update_state(unsigned index, vector3d const &cobj_delta) {
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	cobj.move_cobj(cobj_delta, 1); // move the cobj instead of the player and re-add to coll structure
 	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
-	moving_cobjs.insert(index); // may already be there
-	check_moving_cobj_int_with_dynamic_objs(index);
+	register_moving_cobj(index); // may already be there
+	check_moving_cobj_int_with_dynamic_objs(index, cobj_delta);
 }
 
 bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from) {
@@ -1232,13 +1250,11 @@ void proc_moving_cobjs() {
 	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
 		coll_obj &cobj(coll_objects.get_cobj(*i));
 		if (cobj.status != COLL_STATIC) {moving_cobjs.erase(i++); continue;} // remove if destroyed
-		bool const do_update(cobj.last_coll || ((*i+frame_counter)&3) == 0); // check for cobj updates if it moved within the last few frames or every 4th frame
-		//cout << int(cobj.last_coll) << ":" << do_update << " ";
+		bool const do_update(cobj.last_coll || ((*i+frame_counter)&7) == 0); // check for cobj updates if it moved within the last few frames or every 8th frame
 		if (do_update) {by_z1.push_back(make_pair(cobj.d[2][0], *i));} // not sleeping, try to drop it
 		if (cobj.last_coll) {--cobj.last_coll;}
 		++i;
 	}
-	//cout << endl;
 	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
 	
 	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {

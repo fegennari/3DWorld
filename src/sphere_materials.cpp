@@ -30,7 +30,6 @@ extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
 extern vector<light_source_trig> light_sources_d;
 extern vector<texture_t> textures;
-extern set<unsigned> moving_cobjs;
 
 
 bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map, bool invert_y=0);
@@ -285,9 +284,8 @@ bool throw_sphere(bool mode) {
 		int const coll_id(add_cobj_with_material(cp, mat, fpos, base_radius, is_cube, 1));
 		assert(coll_id >= 0);
 		coll_obj &cobj(coll_objects.get_cobj(coll_id));
-		cobj.fixed     = 1; // make it static
-		cobj.last_coll = 8; // mark as moving/collided to prevent the physics system from putting this cobj to sleep
-		moving_cobjs.insert(coll_id); // let it fall
+		cobj.fixed = 1; // make it static
+		register_moving_cobj(coll_id); // let it fall
 		register_movable_cobj_shadow(coll_id);
 		vector<light_source> lss;
 
