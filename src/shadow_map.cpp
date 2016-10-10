@@ -179,7 +179,7 @@ public:
 		int const shader_loc(shader.get_uniform_loc("xlate_scale"));
 		assert(shader_loc >= 0);
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
-		bool const is_camera(dist_less_than(pdu.pos, get_camera_light_pos(), 0.25*CAMERA_RADIUS));
+		bool const is_camera(dist_less_than(pdu.pos, camera_pos, 0.25*CAMERA_RADIUS));
 
 		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
