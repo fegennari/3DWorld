@@ -89,10 +89,12 @@ struct cobj_params : public obj_layer { // size = 88
 
 	cobj_params() : cf_index(-1), surfs(0), flags(0), destroy_prob(0) {}
 	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf=NULL, int ci=0, int ti=-1, float ts=1.0, int s=0,
-		float spec=0.0, float shi=0.0, bool nc=0) : obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s), flags(0), destroy_prob(0) {
-			if (id) {flags |= COBJ_DYNAMIC;}
-			if (nc) {flags |= COBJ_NO_COLL;}
-		}
+		float spec=0.0, float shi=0.0, bool nc=0) : obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s), flags(0), destroy_prob(0)
+	{
+		if (id) {flags |= COBJ_DYNAMIC;}
+		if (nc) {flags |= COBJ_NO_COLL;}
+	}
+	void write_to_cobj_file(std::ostream &out, cobj_params &prev) const;
 };
 
 

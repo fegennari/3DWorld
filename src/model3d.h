@@ -91,9 +91,11 @@ struct rotation_t {
 struct model3d_xform_t : public geom_xform_t, public rotation_t { // should be packed, can read/write as POD
 
 	base_mat_t material;
+	int group_cobjs_level;
+	float voxel_spacing;
 
-	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_) {}
-	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf) {}
+	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), group_cobjs_level(0.0), voxel_spacing(0.0) {}
+	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), group_cobjs_level(0.0), voxel_spacing(0.0) {}
 	cube_t get_xformed_cube(cube_t const &cube) const;
 	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
 	void apply_to_tquad(coll_tquad &tquad) const;
@@ -383,6 +385,10 @@ class voxel_manager; // forward declaration
 
 class model3d {
 
+	// read/write options
+	string filename;
+	int recalc_normals, group_cobjs_level;
+
 	// geometry
 	geometry_t<vert_norm_tc> unbound_geom;
 	base_mat_t unbound_mat;
@@ -418,9 +424,10 @@ class model3d {
 public:
 	texture_manager &tmgr; // stores all textures
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0)
-		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), model_refl_tsize(0), reflective(reflective_),
-		indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), tmgr(tmgr_) {}
+	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
+		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
+		bcube(all_zeros_cube), model_refl_tid(0), model_refl_tsize(0), reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0),
+		needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -437,7 +444,7 @@ public:
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0, unsigned lod_level=0) const;
-	void get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float spacing) const;
+	void get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
@@ -478,6 +485,7 @@ public:
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
 	static void proc_counted_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 
@@ -493,6 +501,7 @@ struct model3ds : public deque<model3d> {
 	cube_t get_bcube(bool only_reflective) const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 
@@ -522,15 +531,16 @@ void free_model_context();
 void render_models(bool shadow_pass, int reflection_pass, vector3d const &xlate=zero_vector);
 void ensure_model_reflection_cube_maps();
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
-void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing);
-void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float voxel_xy_spacing);
+void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
+void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube(bool only_reflective=0);
+void write_models_to_cobj_file(std::ostream &out);
 
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, int recalc_normals, bool write_file, bool verbose);
-bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, int reflective, float metalness, bool load_model_file, int recalc_normals, bool write_file, bool verbose);
+	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
+bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
+	int reflective, float metalness, bool load_model_file, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_

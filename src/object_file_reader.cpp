@@ -673,10 +673,10 @@ bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xf
 
 
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, int recalc_normals, bool write_file, bool verbose)
+	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
-	models.push_back(model3d(models.tmgr, def_tid, def_c, reflective, metalness));
+	models.push_back(model3d(filename, models.tmgr, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level));
 	model3d &cur_model(models.back());
 
 	if (ext == "3ds") {
@@ -699,13 +699,13 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 }
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, bool load_models, int recalc_normals, bool write_file, bool verbose)
+	int reflective, float metalness, bool load_models, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
 {
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
-		if (!load_model_file(filename, all_models, xf, def_tid, def_c, reflective, metalness, recalc_normals, write_file, verbose)) return 0;
+		if (!load_model_file(filename, all_models, xf, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level, write_file, verbose)) return 0;
 		if (ppts) {get_cur_model_polygons(*ppts);}
 		return 1;
 	}

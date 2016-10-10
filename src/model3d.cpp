@@ -37,6 +37,7 @@ bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (
 bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
+string texture_str(int tid);
 
 
 // ************ texture_manager ************
@@ -1187,9 +1188,10 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 
 
 // Note: ignores model transforms, which is why xf is passed in
-void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float spacing) const {
+void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const {
 
 	RESET_TIME;
+	float const spacing(xf.voxel_spacing);
 	assert(spacing > 0.0);
 
 	// calculate scene voxel bounds
@@ -1771,6 +1773,24 @@ void model3d::proc_counted_normals(vector<counted_normal> &cn, int recalc_normal
 }
 
 
+void model3d::write_to_cobj_file(ostream &out) const {
+
+	// 'O' <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
+	out << "metalness " << metalness << endl;
+	out << "cube_map_ref " << (reflective == 2) << endl;
+	out << "l " << 0.5 << " " << unbound_mat.color.raw_str() << " " << texture_str(unbound_mat.tid) << endl; // Note: elastic is hard-coded as 0.5
+	out << "r 1.0 " << unbound_mat.shine << " " << unbound_mat.spec_color.raw_str() << endl;
+	out << "O " << filename << " " << group_cobjs_level << " " << recalc_normals << " " << 0 << endl; // write_file=0
+
+	for (auto i = transforms.begin(); i != transforms.end(); ++i) {
+		out << "l " << 0.5 << " " << i->material.color.raw_str() << " " << texture_str(i->material.tid) << endl; // Note: elastic is hard-coded as 0.5
+		out << "r 1.0 " << i->material.shine << " " << i->material.spec_color.raw_str() << endl;
+		out << "Z " << i->group_cobjs_level << " " << i->tv.x << " " << i->tv.y << " " << i->tv.z << " " << i->scale << " "
+			<< i->axis.x << " " << i->axis.y << " " << i->axis.z << " " << i->angle << " " << i->voxel_spacing << endl;
+	}
+}
+
+
 // ************ model3ds ************
 
 void model3ds::clear() {
@@ -1912,6 +1932,11 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 }
 
 
+void model3ds::write_to_cobj_file(ostream &out) const {
+	for (const_iterator m = begin(); m != end(); ++m) {m->write_to_cobj_file(out);}
+}
+
+
 void model3d_stats_t::print() const {
 	
 	cout << "verts: " << verts << ", quads: " << quads << ", tris: " << tris << ", blocks: " << blocks << ", mats: " << mats;
@@ -1968,8 +1993,9 @@ cube_t get_polygons_bcube(vector<coll_tquad> const &ppts) {
 	return bcube;
 }
 
-void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing) {
+void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) {
 
+	float const grid_spacing(xf.voxel_spacing);
 	assert(grid_spacing > 0.0);
 	vector<coll_tquad> ppts;
 	get_cur_model_polygons(ppts, xf);
@@ -2024,10 +2050,10 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 
 //void get_cur_model_edges_as_spheres(vector<sphere_t> &spheres, model3d_xform_t const &xf, float grid_spacing) {}
 
-void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float voxel_xy_spacing) { // Note: only xf.scale is used
+void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) { // Note: only xf.scale is used
 	RESET_TIME;
 	model3d &cur_model(get_cur_model("extract cubes from"));
-	cur_model.get_cubes(cubes, xf, voxel_xy_spacing);
+	cur_model.get_cubes(cubes, xf);
 	//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
 	PRINT_TIME("Create Model3d Cubes");
 }
@@ -2037,5 +2063,7 @@ void add_transform_for_cur_model(model3d_xform_t const &xf) {
 }
 
 cube_t get_all_models_bcube(bool only_reflective) {return all_models.get_bcube(only_reflective);}
+
+void write_models_to_cobj_file(ostream &out) {all_models.write_to_cobj_file(out);}
 
 

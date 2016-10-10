@@ -1060,25 +1060,25 @@ void add_model_polygons_to_cobjs(vector<coll_tquad> const &ppts, coll_obj &cobj,
 }
 
 // returns error string
-string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, int group_cobjs_level, float voxel_spacing, float scale, bool has_layer, model3d_xform_t const &model_xf) {
+string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float scale, bool has_layer, model3d_xform_t &model_xf) {
 
 	// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from polygons (voxels), 6=cubes from edges
-	bool const group_cobjs(group_cobjs_level >= 1);
-	bool const use_vbo    (group_cobjs_level == 2);
-	bool const use_model3d(group_cobjs_level >= 3);
-	bool const no_cobjs   (group_cobjs_level >= 4);
-	bool const use_cubes  (group_cobjs_level >= 5);
-	bool const cube_edges (group_cobjs_level >= 6);
+	bool const group_cobjs(model_xf.group_cobjs_level >= 1);
+	bool const use_vbo    (model_xf.group_cobjs_level == 2);
+	bool const use_model3d(model_xf.group_cobjs_level >= 3);
+	bool const no_cobjs   (model_xf.group_cobjs_level >= 4);
+	bool const use_cubes  (model_xf.group_cobjs_level >= 5);
+	bool const cube_edges (model_xf.group_cobjs_level >= 6);
 	
 	if (!no_cobjs) { // add cobjs for collision detection
 		add_model_polygons_to_cobjs(ppts, cobj, group_cobjs, use_vbo, (use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD), has_layer, scale);
 	}
 	else if (use_cubes) {
-		voxel_spacing *= scale;
-		if (voxel_spacing <= 0.0) {return "model file voxel_spacing (scaled)";}
+		model_xf.voxel_spacing *= scale;
+		if (model_xf.voxel_spacing <= 0.0) {return "model file voxel_spacing (scaled)";}
 		vector<cube_t> cubes;
-		if (cube_edges) {get_cur_model_edges_as_cubes(cubes, model_xf, voxel_spacing);}
-		else {get_cur_model_as_cubes(cubes, model_xf, voxel_spacing);}
+		if (cube_edges) {get_cur_model_edges_as_cubes(cubes, model_xf);}
+		else {get_cur_model_as_cubes(cubes, model_xf);}
 		check_layer(has_layer);
 		coll_obj cur_cube(cobj); // color and tid left as-is for now
 		cur_cube.cp.draw      = 0;
@@ -1257,23 +1257,25 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'O': // load *.obj | *.3ds | *.model3d file: <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
 			{
+				model3d_xform_t model_xf;
 				string const fn(read_filename(fp, line_num));
 				int recalc_normals(0), write_file(0);
-				float voxel_xy_spacing(0.0);
 
-				if (fn.empty() || fscanf(fp, "%i%i%i%f", &ivals[0], &recalc_normals, &write_file, &voxel_xy_spacing) < 3) {
+				if (fn.empty() || fscanf(fp, "%i%i%i%f", &model_xf.group_cobjs_level, &recalc_normals, &write_file, &model_xf.voxel_spacing) < 3) {
 					return read_error(fp, "load model file command", coll_obj_file);
 				}
-				if (ivals[0] < 0 || ivals[0] > 6) {return read_error(fp, "load model file command group_cobjs_level", coll_obj_file);}
+				if (model_xf.group_cobjs_level < 0 || model_xf.group_cobjs_level > 6) {return read_error(fp, "load model file command group_cobjs_level", coll_obj_file);}
 				if (recalc_normals < 0 || recalc_normals > 2) {return read_error(fp, "recalc_normals must be between 0 and 2", coll_obj_file);}
-				bool const use_model3d(ivals[0] >= 3), no_cobjs(ivals[0] >= 4);
+				bool const use_model3d(model_xf.group_cobjs_level >= 3), no_cobjs(model_xf.group_cobjs_level >= 4);
 				ppts.clear();
 				RESET_TIME;
 				
-				if (!read_model_file(fn, (no_cobjs ? nullptr : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness, use_model3d, recalc_normals, (write_file != 0), 1)) {
+				if (!read_model_file(fn, (no_cobjs ? nullptr : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness,
+					use_model3d, recalc_normals, model_xf.group_cobjs_level, (write_file != 0), 1))
+				{
 					return read_error(fp, "model file data", coll_obj_file);
 				}
-				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_xy_spacing, xf.scale, has_layer, model3d_xform_t()));
+				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf));
 				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
 				PRINT_TIME("Model File Load/Process");
 				break;
@@ -1282,17 +1284,16 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'Z': // add model3d transform: group_cobjs_level tx ty tz [scale [rx ry rz angle [<voxel_spacing>]]]
 			{
 				model3d_xform_t model_xf;
-				float voxel_spacing(0.0);
-				int const num_args(fscanf(fp, "%i%f%f%f%f%f%f%f%f%f", &ivals[0], &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
-					&model_xf.axis.x, &model_xf.axis.y, &model_xf.axis.z, &model_xf.angle, &voxel_spacing));
+				int const num_args(fscanf(fp, "%i%f%f%f%f%f%f%f%f%f", &model_xf.group_cobjs_level, &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
+					&model_xf.axis.x, &model_xf.axis.y, &model_xf.axis.z, &model_xf.angle, &model_xf.voxel_spacing));
 				if (num_args != 4 && num_args != 5 && num_args != 9 && num_args != 10) {return read_error(fp, "model3d transform", coll_obj_file);}
-				if (ivals[0] < 0 || ivals[0] > 6) {return read_error(fp, "add model transform command group_cobjs_level", coll_obj_file);}
+				if (model_xf.group_cobjs_level < 0 || model_xf.group_cobjs_level > 6) {return read_error(fp, "add model transform command group_cobjs_level", coll_obj_file);}
 				if (model_xf.scale == 0.0) {return read_error(fp, "model3d transform scale", coll_obj_file);} // what about negative scales?
 				model_xf.material = cobj.cp; // copy base material from cobj
 				add_transform_for_cur_model(model_xf);
-				bool const no_cobjs(ivals[0] >= 4);
+				bool const no_cobjs(model_xf.group_cobjs_level >= 4);
 				if (!no_cobjs) {get_cur_model_polygons(ppts, model_xf);} // add cobjs for collision detection
-				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_spacing, xf.scale, has_layer, model_xf));
+				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf));
 				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
 			}
 			break;
@@ -1950,33 +1951,38 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 	}
 }
 
+void cobj_params::write_to_cobj_file(ostream &out, cobj_params &prev) const {
+
+	bool const diff2(draw != prev.draw || refract_ix != prev.refract_ix || light_atten != prev.light_atten || is_emissive != prev.is_emissive);
+
+	if (diff2 || elastic != prev.elastic || color != prev.color || tid != prev.tid) { // material parameters changed
+		out << "l " << elastic << " " << color.raw_str() << " " << texture_str(tid);
+		if (diff2) {out << " " << draw << " " << refract_ix << " " << light_atten << " " << is_emissive;} // uncommon optional values
+		out << endl;
+	}
+	if (shine != prev.shine || spec_color != prev.spec_color) {out << "r 1.0 " << shine << " " << spec_color.raw_str() << endl;}
+	if (density != prev.density) {out << "density " << density << endl;}
+	if (tscale  != prev.tscale ) {out << "y " << tscale << endl;}
+	if (tdx != prev.tdx || tdy != prev.tdy || swap_txy() != prev.swap_txy()) {out << "Y " << tdx << " " << tdy << " " << swap_txy() << endl;}
+	if (metalness != prev.metalness) {out << "metalness " << metalness << endl;}
+	if (damage != 0.0) {out << "damage " << damage << endl;}
+
+	if (normal_map != prev.normal_map) {
+		out << "X " << texture_str(normal_map);
+		if (normal_map >= 0) {
+			assert((unsigned)normal_map < textures.size());
+			out << " " << (textures[normal_map].invert_y != 0) << " " << negate_nm_bns();
+		}
+		out << endl;
+	}
+	if (surfs != prev.surfs) {out << "e " << (unsigned)surfs << endl;}
+}
+
 void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 
 	if (type == COLL_NULL) return; // unused cobj
 	if (is_near_zero_area() || min_len() < 1.0E-5) return; // near zero area (use lower tolerance due to limited file write precision)
-	bool const diff2(cp.draw != prev.cp.draw || cp.refract_ix != prev.cp.refract_ix || cp.light_atten != prev.cp.light_atten || cp.is_emissive != prev.cp.is_emissive);
-
-	if (diff2 || cp.elastic != prev.cp.elastic || cp.color != prev.cp.color || cp.tid != prev.cp.tid) { // material parameters changed
-		out << "l " << cp.elastic << " " << cp.color.raw_str() << " " << texture_str(cp.tid);
-		if (diff2) {out << " " << cp.draw << " " << cp.refract_ix << " " << cp.light_atten << " " << cp.is_emissive;} // uncommon optional values
-		out << endl;
-	}
-	if (cp.shine != prev.cp.shine || cp.spec_color != prev.cp.spec_color) {out << "r 1.0 " << cp.shine << " " << cp.spec_color.raw_str() << endl;}
-	if (cp.density != prev.cp.density) {out << "density " << cp.density << endl;}
-	if (cp.tscale  != prev.cp.tscale ) {out << "y " << cp.tscale << endl;}
-	if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "Y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
-	if (cp.metalness != prev.cp.metalness) {out << "metalness " << cp.metalness << endl;}
-	if (cp.damage != 0.0) {out << "damage " << cp.damage << endl;}
-
-	if (cp.normal_map != prev.cp.normal_map) {
-		out << "X " << texture_str(cp.normal_map);
-		if (cp.normal_map >= 0) {
-			assert((unsigned)cp.normal_map < textures.size());
-			out << " " << (textures[cp.normal_map].invert_y != 0) << " " << cp.negate_nm_bns();
-		}
-		out << endl;
-	}
-	if (cp.surfs != prev.cp.surfs) {out << "e " << (unsigned)cp.surfs << endl;}
+	cp.write_to_cobj_file(out, prev.cp);
 	if (is_movable() != prev.is_movable()) {out << "movable " << is_movable() << endl;} // or 'd'
 	if (destroy != prev.destroy) {out << "a " << (unsigned)destroy << endl;}
 	if (is_reflective()) {out << "cube_map_ref 1" << endl;} // cube map reflections only
@@ -2092,6 +2098,8 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	write_plants_to_cobj_file(out);
 	out << endl;
 	write_placed_sounds_to_cobj_file(out);
+	out << endl;
+	write_models_to_cobj_file(out);
 	out << endl << "end" << endl;
 	return 1;
 }
