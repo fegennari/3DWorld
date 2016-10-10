@@ -86,6 +86,7 @@ vec3 get_dominant_dir(in vec3 v) {
 }
 
 #ifdef USE_BUMP_MAP_DL
+uniform mat4 fg_ViewMatrix;
 vec3 get_bump_map_normal();
 mat3 get_tbn(in float bscale, in vec3 n);
 vec3 apply_bump_map_for_tbn(inout vec3 light_dir, inout vec3 eye_pos, in mat3 TBN);
@@ -150,7 +151,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 		vec3 eye_dir   = normalize(camera_pos - dlpos); // world space
 
 #ifdef USE_BUMP_MAP_DL // convert from world to eye to tangent space
-		vec3 lpos_eye  = (fg_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // eye space
+		vec3 lpos_eye  = ((use_fg_ViewMatrix ? fg_ViewMatrix : fg_ModelViewMatrix) * vec4(lpos_r.xyz, 1.0)).xyz; // eye space
 		float nscale   = bump_map_normal_sign*clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing (in world space)
 		light_dir      = normalize(lpos_eye - epos.xyz); // eye space
 		eye_dir        = fg_NormalMatrix * eye_dir; // convert world space into eye space

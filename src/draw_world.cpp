@@ -291,8 +291,9 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	s.set_prefix(make_shader_bool_prefix("do_lt_atten",         has_lt_atten),    1); // FS
 	s.set_prefix(make_shader_bool_prefix("two_sided_lighting",  use_tsl), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix",   use_mvm), 0); // VS
+	s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix",   use_mvm), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("enable_clip_plane_z", enable_clip_plane_z), 1); // FS
-	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP",   1);} // FS
+	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP", 1);} // FS
 	if (use_smap && shadow_map_enabled()) {s.set_prefix("#define USE_SHADOW_MAP", 1);} // FS
 	
 	if (smoke_enabled) {
@@ -469,6 +470,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL",    1); // FS
+		s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix", 0), 1); // FS - disabled
 	}
 	s.set_prefix(make_shader_bool_prefix("use_noise_tex", use_noise_tex), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("z_top_test",    z_top_test),    1); // FS

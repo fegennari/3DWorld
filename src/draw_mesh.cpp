@@ -250,6 +250,7 @@ void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
 		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
+		s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix", 0), 1); // FS - disabled
 	}
 }
 
