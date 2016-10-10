@@ -563,7 +563,9 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		if (!use_tcs) {setup_cobj_sc_texgen(plus_z, shader);} // use texgen
 		//draw_cube_mapped_sphere(points[0], radius, ndiv/2, use_tcs);
 		if (cp.light_atten > 0.0) {glEnable (GL_CULL_FACE);}
-		draw_subdiv_sphere(points[0], radius, ndiv, use_tcs, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
+		// if using textures (and using MVM in the shader), draw_sphere_vbo() is faster and can be used
+		if (use_tcs) {draw_sphere_vbo(points[0], radius, ndiv, use_tcs);}
+		else {draw_subdiv_sphere(points[0], radius, ndiv, use_tcs, 1);}
 		if (cp.light_atten > 0.0) {glDisable(GL_CULL_FACE);}
 		break;
 	}
