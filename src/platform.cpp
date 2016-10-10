@@ -11,7 +11,7 @@
 platform_cont platforms;
 
 extern bool user_action_key;
-extern int animate2;
+extern int animate2, display_mode;
 extern float fticks, CAMERA_RADIUS, temperature;
 extern coll_obj_group coll_objects;
 extern set<unsigned> moving_cobjs;
@@ -85,6 +85,7 @@ void multi_trigger_t::write_end_triggers_cobj_file(std::ostream &out) const {
 bool check_for_light(point const &pos, float thresh) {
 	if (is_visible_to_any_dir_light(pos, 0.0, -1, 0)) return 1; // check sun and moon; skip_dynamic=0
 	if (thresh > 1.0) return 0; // only sun/moon
+	if (display_mode & 0x0200) return 0; // skip checking of dynamic lights when dynamic spheres are enabled, since they uselessly trigger light sensors
 	return is_any_dlight_visible(pos); // Note: thresh is unused
 }
 
