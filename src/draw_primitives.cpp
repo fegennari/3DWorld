@@ -496,6 +496,8 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 					else {vn.emplace_back(points[s][T], norms[s][T]);}
 				}
 			}
+			float const tc1(tscale*(1.0f - s  *ndiv_inv)), tc2(tscale*(1.0f - snt*ndiv_inv));
+
 			for (unsigned t = t0; t <= t1; ++t) {
 				if (!disable_bfc) {
 					bool draw(0);
@@ -518,8 +520,8 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				}
 				else {
 					float const ts(tscale*(1.0f - t*ndiv_inv));
-					vntc.emplace_back(points[s ][t], norms[s ][t], tscale*(1.0f - s  *ndiv_inv), ts);
-					vntc.emplace_back(points[sn][t], norms[sn][t], tscale*(1.0f - snt*ndiv_inv), ts);
+					vntc.emplace_back(points[s ][t], norms[s ][t], tc1, ts);
+					vntc.emplace_back(points[sn][t], norms[sn][t], tc2, ts);
 				}
 			} // for t
 		}
