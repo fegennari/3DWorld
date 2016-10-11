@@ -1,4 +1,4 @@
-uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, normal_tex, shadow_tex, caustic_tex;
+uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, nm_tex2, nm_tex3, nm_tex4, nm_tex5, nm_tex6, normal_tex, shadow_tex, caustic_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
 uniform float wave_time, wave_amplitude; // water_plane_z comes from water_fog.part
@@ -34,14 +34,25 @@ vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos,
 	return vec4(spec, spec, spec, 1.0) * pow(clamp(dot(normal, half_vect), 0.0001, 1.0), shininess);
 }
 
-vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {
+vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale, vec4 weights, float weights4) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 light_dir  = normalize(fg_LightSource[i].position.xyz);
 	vec3 epos_final = epos.xyz;
 #ifdef USE_NORMAL_MAP
 	//bump_scale *= pow(texture(detail_tex, 11.0*tc + fract(vec2(0.0, 0.002*wave_time))).r, 3.0); // moving specular when rainy?
 	ds_scale *= clamp(5.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
-	normal    = apply_bump_map(light_dir, epos_final, normal, bump_scale);
+
+	bump_map_setup(light_dir, epos_final, normal);
+	vec2 nm_tc = detail_normal_tex_scale*tc;
+	normal     = vec3(0.0);
+	if (weights.r > 0) {normal += weights.r*texture(nm_tex2, nm_tc).rgb;} // sand
+	if (weights.g > 0) {normal += weights.g*texture(nm_tex3, nm_tc).rgb;} // dirt
+	if (weights.b > 0) {normal += weights.b*vec3(0.5,0.5,1);} // grass (no normal map)
+	if (weights.a > 0) {normal += weights.a*texture(nm_tex5, nm_tc).rgb;} // rock
+	if (weights4  > 0) {normal += weights4 *texture(nm_tex6, nm_tc).rgb;} // snow
+	normal = normalize(mix(vec3(0,0,1), (2.0*normal - 1.0), bump_scale));
+	//normal = apply_bump_map(light_dir, epos_final, normal, bump_scale);
+
 #if 0 // toksvig antialiasing
 	float nmag = min(1.0, length(2.0*texture(detail_normal_tex, detail_normal_tex_scale*tc).rgb - 1.0));
 	float ft   = nmag/(nmag + shininess*(1.0 - nmag));
@@ -152,14 +163,14 @@ void main() {
 		float shininess = 80.0*spec_offset + 20.0*weights.b + 40.0*weights4;
 		float dscale    = diffuse_scale;
 		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale));}
-		color += add_light_comp(normal, epos, 0, dscale, ambient_scale, spec, shininess, bump_scale);
+		color += add_light_comp(normal, epos, 0, dscale, ambient_scale, spec, shininess, bump_scale, weights, weights4);
 	}
 	if (enable_light1) { // moon
 		float dscale    = diffuse_scale;
 		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, normal), smap_scale));}
-		color += add_light_comp(normal, epos, 1, dscale, ambient_scale, 0.0, 1.0, bump_scale);
+		color += add_light_comp(normal, epos, 1, dscale, ambient_scale, 0.0, 1.0, bump_scale, weights, weights4);
 	}
-	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
+	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale, weights, weights4) * calc_light_atten(epos, 2);} // lightning
 	//color = vec4(pow(color.rgb, vec3(0.45)), color.a); // gamma correction
 
 	vec4 mesh_color = vec4((texel0.rgb * texel1.rgb * color.rgb), color.a);

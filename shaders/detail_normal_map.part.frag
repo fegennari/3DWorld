@@ -18,10 +18,13 @@ mat3 get_tbn(in float bscale, in vec3 n) {
 	vec3 tan = normalize(cross(fg_ModelViewMatrix[0].xyz, n));
 	return transpose(mat3(bscale*cross(n, tan), -tan, normalize(n))); // world space {X, -Y, Z} for normal in +Z
 }
-vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 n, in float bump_scale) {
+void bump_map_setup(inout vec3 light_dir, inout vec3 eye_pos, in vec3 n) {
 	mat3 TBN  = get_tbn(1.0, n);
 	light_dir = normalize(TBN * light_dir);
 	eye_pos   = TBN * eye_pos;
+}
+vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 n, in float bump_scale) {
+	bump_map_setup(light_dir, eye_pos, n);
 	return get_bump_map_normal_dnm(bump_scale, eye_pos);
 }
 vec3 apply_bump_map_for_tbn(inout vec3 light_dir, inout vec3 eye_pos, in mat3 TBN) {

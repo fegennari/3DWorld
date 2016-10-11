@@ -37,7 +37,7 @@ texture_t def_textures[NUM_PREDEF_TEXTURES] = { // 4 colors without wrap sometim
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generate (not loaded from file), 10: DDS
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL, 4 = custom alpha OpenGL using average texture color for transparent pixels
-// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
+// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 //texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
 texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png", 0, 1, LS_TEX_ANISO), // mipmap for small trees?
 //texture_t(0, 5, 0,    0,    1, 3, 2, "grass_new.jpg", 0, 1, LS_TEX_ANISO), // 1024x1024; has texture seams, not as bright as other grass
@@ -166,7 +166,10 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_birch.jpg", 0, 0), // 512x512, n
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark6.jpg", 0, 0), // 894x894, no compress
 texture_t(0, 6, 0,    0,    1, 4, 1, "ripple_map.png", 0, 0), // 256x256, mipmaps?, no compress?
 texture_t(0, 6, 0,    0,    1, 4, 1, "starburst.png",  0, 0), // disable compression - causes artifacts
-// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks1.jpg", 0, 0, 2.0, 1.0, 1), // sand_normal = snow, rocks1 = rock, rocks2 = sand, rocks3 = dirt
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks2.jpg", 0, 0, 2.0, 1.0, 1),
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks3.jpg", 0, 0, 2.0, 1.0, 1),
+// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 };
 
 vector<texture_t> textures;

@@ -1872,6 +1872,7 @@ float tile_draw_t::get_actual_zmin() const {return min(zmin, terrain_zmin);}
 
 float const mesh_tex_cscale[NTEX_DIRT] = {1.0, 1.0, TT_GRASS_COLOR_SCALE, 0.5, 1.0}; // darker grass and rock
 float const mesh_tex_scale [NTEX_DIRT] = {1.0, 1.0, 1.0, 1.0, 1.0};
+int const normal_tids_dirt [NTEX_DIRT] = {ROCK2_NORMAL_TEX, ROCK3_NORMAL_TEX, BLACK_TEX, ROCK1_NORMAL_TEX, ROCK_NORMAL_TEX};
 
 colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 	assert(id < NTEX_DIRT);
@@ -1885,15 +1886,18 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 	for (int i = 0; i < NTEX_DIRT; ++i) {
 		int const tid(lttex_dirt[i].id);
 		float const tscale(mesh_tex_scale[i]*float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
-		unsigned const tu_id(start_tu_id + i);
+		unsigned const tu_id(start_tu_id + i), nm_tu_id(i + 16); // tu_id 16-20 for normal maps
 		select_multitex(tid, tu_id);
-		std::ostringstream oss1, oss2, oss3;
+		select_multitex(normal_tids_dirt[i], nm_tu_id);
+		std::ostringstream oss1, oss2, oss3, oss4;
 		oss1 << "tex" << tu_id;
 		oss2 << "ts"  << tu_id;
 		oss3 << "cs"  << tu_id;
+		oss4 << "nm_tex" << tu_id;
 		s.add_uniform_int(  oss1.str().c_str(), tu_id);
 		s.add_uniform_float(oss2.str().c_str(), tscale);
 		s.add_uniform_float(oss3.str().c_str(), mesh_tex_cscale[i]);
+		s.add_uniform_int(  oss4.str().c_str(), nm_tu_id);
 	}
 	s.add_uniform_color("snow_cscale", colorRGB(1.0, 1.0, 1.2)); // increased blue
 }
@@ -1972,7 +1976,7 @@ void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type) 
 }
 
 
-// uses texture units 0-11 and 15 (12 if using hmap texture, 13-14 if using shadow maps)
+// uses texture units 0-11 and 15 (12 if using hmap texture, 13-14 if using shadow maps) + 16-20 for normal maps
 // Note: could be static, except uses get_actual_zmin()
 void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const {
 
