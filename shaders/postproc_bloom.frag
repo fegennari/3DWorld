@@ -9,8 +9,8 @@ in vec2 tc;
 void main() {
 	vec3 base_color  = vec3(0.0);
 	vec3 bloom_color = vec3(0.0);
-	float falloff    = 0.5;
-	float min_val    = 0.75;
+	float falloff    = 0.002;
+	float min_val    = 0.8;
 	float tot_w      = 0.0;
 	float mult       = 1.0/(1.0 - min_val);
 
