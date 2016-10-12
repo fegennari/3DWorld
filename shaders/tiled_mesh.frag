@@ -48,7 +48,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	if (weights.r > 0) {normal += weights.r*texture(nm_tex2, nm_tc).rgb;} // sand
 	if (weights.g > 0) {normal += weights.g*texture(nm_tex3, nm_tc).rgb;} // dirt
 	if (weights.b > 0) {normal += weights.b*vec3(0.5,0.5,1);} // grass (no normal map)
-	if (weights.a > 0) {normal += weights.a*texture(nm_tex5, nm_tc).rgb;} // rock
+	if (weights.a > 0) {normal += weights.a*texture(nm_tex5, 0.25*nm_tc).rgb;} // rock
 	if (weights4  > 0) {normal += weights4 *texture(nm_tex6, nm_tc).rgb;} // snow
 	normal = normalize(mix(vec3(0,0,1), (2.0*normal - 1.0), bump_scale));
 	//normal = apply_bump_map(light_dir, epos_final, normal, bump_scale);
@@ -148,7 +148,7 @@ void main() {
 	vec4 epos   = fg_ModelViewMatrix * vertex;
 	float vdist = length(epos.xyz);
 	float bump_scale = 1.0 - weights.b; // bumps on everything but grass
-	bump_scale *= clamp((2.5 - 0.1*vdist), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
+	bump_scale *= clamp((2.5 - 0.06*vdist), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
 	float smap_scale = 0.0;
 	
 	if (use_shadow_map) {
