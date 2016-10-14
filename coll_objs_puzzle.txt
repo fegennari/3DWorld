@@ -122,6 +122,8 @@ damage 0.0
 # pushers and crushers
 # platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
+r 1.0 100.0 # set specularity
+metalness 1.0
 y 8.0
 Q 1  2.0 0.25 0.0 0.2  0.2 0.0   1.75 -2.0 1.75  0 0 -1  1 # platform
 B  1.7 1.8  -2.05 -1.95  1.5 2.0
@@ -132,11 +134,14 @@ Q 1  1.4 0.50 0.0 0.3  0.3 0.0   2.03 -2.45 1.35  0 1 0  1 # platform
 B  2.0 2.06 -2.7 -2.2  1.3 1.4
 Q 1  0.4 0.3  0.0 0.0  0.2 0.0   2.25 -1.625 1.31  0 -1 0  1 # platform
 B  2.2 2.3  -1.3 -1.95 1.3 1.32
+metalness 0.0
+r 0.5 100.0 # set specularity
 Q 0
 
-# magic walkway
+# magic golden walkway
 l 0.85 1.0 1.0 0.0 1.0 bricks_tan.png 1
 X normal_maps/bricks_tan_norm.png
+r 0.5 100.0 # set specularity
 y 4.0
 sound_file metal_door.wav
 Q 1  4.0 4.0 0.1 4.0  1.15 0.1   2.8 -1.85 1.30  0 0 1  0 # platform (0.15 => 1.3)
@@ -173,10 +178,11 @@ Q 0
 X none
 
 # drop zone
-# B  2.60 2.95   0.15  0.50  1.45 1.5 # magic walkway
+# B  2.60 2.95   0.15  0.50  1.45 1.5 # magic golden walkway
 # B  2.60 2.95   1.90  2.25  1.45 1.5 # drop zone
 X normal_maps/shiphull_NRM.jpg
 y 1.0
+
 l 0.6 1.0 0.0 0.0 1.0 shiphull.jpg 1 # red - fall
 # platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
 sound_file click.wav
@@ -185,6 +191,12 @@ B 2.6 2.7  0.5 0.6  1.47 1.5
 sound_file click.wav
 Q 1  8.0 1.0 0.0 2.0  1.55 0.05   2.75 0.75 1.5  0 0 -1  0 # platform
 B 2.7 2.8  0.7 0.8  1.47 1.5
+sound_file click.wav
+Q 1  8.0 1.0 0.0 2.0  1.55 0.05   2.65 0.95 1.5  0 0 -1  0 # platform
+B 2.6 2.7  0.9 1.0  1.47 1.5
+sound_file click.wav
+Q 1  8.0 1.0 0.0 2.0  1.55 0.05   2.85 1.05 1.5  0 0 -1  0 # platform
+B 2.8 2.9  1.0 1.1  1.47 1.5
 Q 0
 
 l 0.6 0.0 1.0 0.0 1.0 shiphull.jpg 1 # green - stable
@@ -192,6 +204,7 @@ B 2.7 2.8  0.5 0.6  1.47 1.5
 B 2.6 2.7  0.6 0.7  1.47 1.5
 B 2.8 2.9  0.6 0.7  1.47 1.5
 B 2.8 2.9  0.9 1.0  1.47 1.5
+B 2.6 2.9  1.1 1.2  1.47 1.5
 
 Q 1  0.05 0.05 0.1 0.1  0.15 0.0   0 0 0  1 0 0  1 # platform
 B 2.6 2.75  0.8 0.9  1.47 1.5
@@ -204,19 +217,50 @@ B 2.8 2.9  0.5 0.6  1.47 1.5
 sound_file click.wav
 Q 1  8.0 1.0 1.0 2.0  1.55 0.05   2.65 0.75 1.5  0 0 -1  0 # platform
 B 2.6 2.7  0.7 0.8  1.47 1.5
+sound_file click.wav
+Q 1  8.0 1.0 1.0 2.0  1.55 0.05   2.75 0.95 1.5  0 0 -1  0 # platform
+B 2.7 2.8  0.9 1.0  1.47 1.5
+sound_file click.wav
+Q 1  8.0 1.0 1.0 2.0  1.55 0.05   2.65 1.05 1.5  0 0 -1  0 # platform
+B 2.6 2.7  1.0 1.1  1.47 1.5
 Q 0
 X none
 
 l 0.1 1.0 1.0 1.0 1.0 lava.jpg 1 # lava - damage
 y 4.0
+r 0.0 1.0 # reset specularity
 damage 100.0
 B 2.7 2.8  0.6 0.7  1.47 1.5
 B 2.8 2.9  0.7 0.8  1.47 1.5
+B 2.7 2.8  1.0 1.1  1.47 1.5
 damage 0.0
+
+# the box pit
+l 0.7 1.0 1.0 1.0 1.0 stucco.jpg 1
+X normal_maps/stucco_NRM.jpg
+r 0.8 60.0 # set specularity
+B 2.6 2.9  1.32 1.92  1.20 1.22
+r 0.5 100.0 # reset specularity
+
+l 0.9 1.0 1.0 1.0 1.0 bricks_tan.png 1
+r 0.0 1.0 # reset specularity
+X normal_maps/bricks_tan_norm.png
+B 2.6  2.9   1.25 1.32  1.20 1.24 # low walls
+B 2.6  2.9   1.92 2.0   1.20 1.24
+B 2.53 2.6   1.25 2.0   1.20 1.24
+B 2.9  2.97  1.25 2.0   1.20 1.24
+
+l 0.9 1.0 1.0 1.0 1.0 brickwork.jpg 1
+X normal_maps/brickwork_normal.jpg
+movable 1
+B 2.63 2.71  1.325 1.41  1.22 1.32
+movable 0
+X none
 
 # ramp
 l 0.6 1.0 1.0 1.0 1.0 fence.jpg 1 # wood
 X normal_maps/fence_NRM.jpg
+r 0.25 20.0 # set specularity
 # B  2.60 2.95   1.90  2.25  1.45 1.5
 # B  0.75 1.05   1.90  2.25  1.85 1.9
 P 4  2.60 1.90 1.5  2.60 2.25 1.5  1.05 2.25 1.9  1.05 1.90 1.9  0.02
@@ -224,6 +268,7 @@ X none
 
 # glass floor
 l 0.7  0.8 0.8 0.8 0.15 -1 1 1.55 20.0 # semi-transparent glass
+r 1.0 100.0 # set specularity
 a 2 # shatterable
 #cube_map_ref 1
 metalness 0.0 # glass
@@ -238,13 +283,14 @@ a 0
 r 0.5 40.0 # set specularity
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1 # Note: rotated polygon textures don't work
 y 0.0
+metalness 1.0
 # platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
 Q 1  2.5 2.5 0.0 0.0  1000.0 1.0  -0.2 2.1 1.9  0 0 1  0 1 # rotating platform
 #P 4  -0.2 2.1 1.9  -0.2 2.1 2.0  -0.2 1.9 2.0  -0.2 1.9 1.9  0.01
 B -0.21 -0.19  1.9 2.1  1.9 2.0
 Q 0
 
-# spinning thing
+# 3 spinning things
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 y 0.0
 Q 1  0.5 0.0 0.0 0.0  1.0 0.5   -1.25 2.075 1.875  0 1 0  1 1 # rotation platform
@@ -254,5 +300,6 @@ B -1.70 -1.40   1.90  2.25  1.85 1.9
 Q 1  0.5 0.0 2.0 0.0  1.0 0.5   -1.85 2.075 1.875  0 1 0  1 1 # rotation platform
 B -2.00 -1.70   1.90  2.25  1.85 1.9
 Q 0
+metalness 0.0
 
 
