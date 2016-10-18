@@ -795,7 +795,7 @@ void check_cobj_alignment(unsigned index) {
 
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
-			if (is_point_supported(c, center_of_mass)) {supported = 1; break;}
+			if (c.is_point_supported(center_of_mass)) {supported = 1; break;}
 			// fill in support_pts, which generally requires determining intersection points, which is not implemented for all cobjs;
 			// this works for cubes, but as soon as the cube rotates it's no longer axis aligned
 			cobj.get_contact_points(c, support_pts, 1, support_toler);
