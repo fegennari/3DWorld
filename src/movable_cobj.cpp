@@ -864,13 +864,17 @@ vector3d get_cobj_drop_delta(unsigned index) {
 
 	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
 	// also, if the cobj is currently intersecting another movable cobj, try to resolve the intersection so that stacking works by moving the cobj up
+	vector3d delta_max(zero_vector);
+
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-		coll_obj const &c(coll_objects.get_cobj(*i));
+		coll_obj const &c(coll_objects.get_cobj(*i)); // Note: handles case where c is below cobj
 
 		if (cobj.type == COLL_SPHERE && c.type == COLL_SPHERE) { // sphere-sphere case
-			float const sep_dist(p2p_dist(cobj.points[0], c.points[0]) - cobj.radius - c.radius);
+			vector3d const delta(cobj.points[0] - c.points[0]);
+			float const sep_dist(delta.mag() - cobj.radius - c.radius);
 			if (sep_dist >= 0.0) continue; // no intersection
-			return -sep_dist*(cobj.points[0] - c.points[0]).get_norm();
+			if (sep_dist*sep_dist > delta_max.mag_sq()) {delta_max = -sep_dist*delta.get_norm();} // larger - use new delta value
+			continue;
 		}
 		float const dz(c.d[2][1] - cobj.d[2][0]);
 		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
@@ -892,8 +896,9 @@ vector3d get_cobj_drop_delta(unsigned index) {
 			else if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
 		}
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
-		return vector3d(0.0, 0.0, dz); // or test other cobjs?
+		if (dz*dz > delta_max.mag_sq()) {delta_max = vector3d(0.0, 0.0, dz);} // larger - use new delta value
 	} // for i
+	if (delta_max != zero_vector) {return delta_max;}
 	
 	// check other cobjs and the mesh to see if this cobj can be dropped
 	vector3d delta(0.0, 0.0, -test_dz);
