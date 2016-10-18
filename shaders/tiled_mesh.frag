@@ -34,22 +34,36 @@ vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos,
 	return vec4(spec, spec, spec, 1.0) * pow(clamp(dot(normal, half_vect), 0.0001, 1.0), shininess);
 }
 
-vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale, vec4 weights, float weights4) {
+vec3 get_raw_nm_normal(in vec4 weights, in float weights4, in float tscale) {
+	vec2 nm_tc = tscale*detail_normal_tex_scale*tc;
+	//if (length(epos.xyz) < 1.0) {nm_tc *= 4.0;}
+	vec3 normal = vec3(0.0);
+	if (weights.r > 0) {normal += weights.r*texture(nm_tex2, nm_tc).rgb;} // sand
+	if (weights.g > 0) {normal += weights.g*texture(nm_tex3, nm_tc).rgb;} // dirt
+	if (weights.b > 0) {normal += weights.b*vec3(0.5,0.5,1);} // grass (no normal map)
+	if (weights.a > 0) {normal += weights.a*texture(nm_tex5, 0.25*nm_tc).rgb;} // rock
+	if (weights4  > 0) {normal += weights4 *texture(nm_tex6, nm_tc).rgb;} // snow
+	return normal;
+}
+
+vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale, in vec4 weights, in float weights4) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 light_dir  = normalize(fg_LightSource[i].position.xyz);
 	vec3 epos_final = epos.xyz;
 #ifdef USE_NORMAL_MAP
 	//bump_scale *= pow(texture(detail_tex, 11.0*tc + fract(vec2(0.0, 0.002*wave_time))).r, 3.0); // moving specular when rainy?
 	ds_scale *= clamp(5.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
-
 	bump_map_setup(light_dir, epos_final, normal);
-	vec2 nm_tc = detail_normal_tex_scale*tc;
-	normal     = vec3(0.0);
-	if (weights.r > 0) {normal += weights.r*texture(nm_tex2, nm_tc).rgb;} // sand
-	if (weights.g > 0) {normal += weights.g*texture(nm_tex3, nm_tc).rgb;} // dirt
-	if (weights.b > 0) {normal += weights.b*vec3(0.5,0.5,1);} // grass (no normal map)
-	if (weights.a > 0) {normal += weights.a*texture(nm_tex5, 0.25*nm_tc).rgb;} // rock
-	if (weights4  > 0) {normal += weights4 *texture(nm_tex6, nm_tc).rgb;} // snow
+
+#if 0 // Note: has artifacts and looks worse
+	float dist = length(epos.xyz);
+	if      (dist < 10.0) {normal = get_raw_nm_normal(weights, weights4, 1.0);}
+	else if (dist > 20.0) {normal = get_raw_nm_normal(weights, weights4, 0.25);}
+	else                  {normal = mix(get_raw_nm_normal(weights, weights4, 1.0), get_raw_nm_normal(weights, weights4, 0.25), 0.1*(dist - 10.0));}
+#else
+	normal = get_raw_nm_normal(weights, weights4, 1.0);
+#endif
+
 	normal = normalize(mix(vec3(0,0,1), (2.0*normal - 1.0), bump_scale));
 	//normal = apply_bump_map(light_dir, epos_final, normal, bump_scale);
 
