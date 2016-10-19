@@ -75,6 +75,17 @@ int cylin_cube_int_aa_via_circle_rect(coll_obj const &cube, cylinder_3dw const &
 		if ( circle_rect_intersect(cylin.p1, min(cylin.r1, cylin.r2), cube, d)) return 1;
 		if (!circle_rect_intersect(cylin.p1, max(cylin.r1, cylin.r2), cube, d)) return 0; // no intersection
 	}
+	if (cylin.p1.x == cylin.p2.x && cylin.p1.y == cylin.p2.y && cylin.r1 != cylin.r2) { // vertical truncated cone
+		point const closest_cp(cube.closest_pt(cylin.p1));
+		float const cline_dist((closest_cp - cylin.p1).xy_mag()); // min cube xy distance to cylinder center line
+		float const z1(max(cube.d[2][0], min(cylin.p1.z, cylin.p2.z))); // bottom of shared range
+		float const z2(min(cube.d[2][1], max(cylin.p1.z, cylin.p2.z))); // top    of shared range
+		if (z2 <= z1) return 0; // no z-intersection (should be handled earlier?)
+		float const rz_val((cylin.r2 - cylin.r1)/(cylin.p2.z - cylin.p1.z));
+		float const rz1(cylin.r1 + rz_val*(z1 - cylin.p1.z)); // radius at bottom of shared range
+		float const rz2(cylin.r1 + rz_val*(z2 - cylin.p1.z)); // radius at bottom of shared range
+		return (cline_dist < max(rz1, rz2)); // min cube xy distance to cylinder center line is less than max radius of shared range 
+	}
 	return 2; // FIXME: finish
 }
 int cylin_cube_int_aa_via_circle_rect(coll_obj const &cube, coll_obj const &cylin) {
@@ -865,6 +876,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
 	// also, if the cobj is currently intersecting another movable cobj, try to resolve the intersection so that stacking works by moving the cobj up
 	vector3d delta_max(zero_vector);
+	point const center_of_mass(cobj.get_center_of_mass());
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(*i)); // Note: handles case where c is below cobj
@@ -896,6 +908,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 			else if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
 		}
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
+		//if (!c.is_point_supported(center_of_mass)) continue; // center of mass is not supported - doesn't really work, doesn't agree with code below
 		if (dz*dz > delta_max.mag_sq()) {delta_max = vector3d(0.0, 0.0, dz);} // larger - use new delta value
 	} // for i
 	if (delta_max != zero_vector) {return delta_max;}
@@ -910,7 +923,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 		if (cobjs.size() != 1) return zero_vector; // can only handle a single supporting cobj
 		if (!is_rolling_cobj(cobj)) return zero_vector; // not rolling
 		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
-		if (c.is_point_supported(cobj.get_center_of_mass())) return zero_vector; // center of mass is resting stably, it's stuck
+		if (c.is_point_supported(center_of_mass)) return zero_vector; // center of mass is resting stably, it's stuck
 		vector3d move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for polygon
 		
 		if (c.type == COLL_CUBE) { // chose +/- x|y for cubes
