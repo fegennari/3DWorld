@@ -21,7 +21,7 @@ vector<unsigned> available;
 vector<explosion> explosions;
 
 extern int iticks, game_mode, display_mode, animate2;
-extern float tfticks;
+extern double tfticks;
 
 void calc_lit_uobjects();
 

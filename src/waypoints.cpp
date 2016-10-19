@@ -23,7 +23,8 @@ waypoint_vector waypoints;
 
 extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups, display_mode;
-extern float temperature, zmin, tfticks, water_plane_z, waypoint_sz_thresh, CAMERA_RADIUS;
+extern float temperature, zmin, water_plane_z, waypoint_sz_thresh, CAMERA_RADIUS;
+extern double tfticks;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];

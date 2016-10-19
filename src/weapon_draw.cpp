@@ -14,7 +14,8 @@ set<int> scheduled_weapons;
 extern bool keep_beams, have_indir_smoke_tex, begin_motion;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
 extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2;
-extern float fticks, tfticks;
+extern float fticks;
+extern double tfticks;
 extern vector3d pre_ref_cview_dir;
 extern point pre_ref_camera_pos;
 extern obj_type object_types[];
@@ -885,7 +886,7 @@ void draw_teleporters() {
 void teleporter::draw(vpc_shader_t &s) const {
 
 	float const ACTIVATE_DELAY = 1.0; // in seconds
-	float const use_scale(CLIP_TO_01(ACTIVATE_DELAY - (tfticks - last_used_tfticks)/TICKS_PER_SECOND));
+	float const use_scale(CLIP_TO_01(ACTIVATE_DELAY - float(tfticks - last_used_tfticks)/TICKS_PER_SECOND));
 	float const draw_radius(get_draw_radius()), light_radius(8.0*draw_radius), use_light_radius(2.0*use_scale*light_radius);
 	colorRGBA const c1(blend_color(YELLOW,  RED,    use_scale, 0));
 	colorRGBA const c2(blend_color(WHITE,   YELLOW, use_scale, 0));

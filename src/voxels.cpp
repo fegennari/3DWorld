@@ -31,7 +31,8 @@ bool voxel_ppb_enable_falling(0);
 
 extern bool group_back_face_cull, voxel_shadows_updated;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing, mesh_gen_mode, mesh_freq_filter;
-extern float tfticks, FAR_CLIP;
+extern float FAR_CLIP;
+extern double tfticks;
 extern coll_obj_group coll_objects;
 
 
@@ -2254,7 +2255,7 @@ void modify_voxels() {
 
 	// add a marker for where voxels will be modified before a fire/key press?
 	if (!coll_objects.has_voxel_cobjs) return; // no voxels to modify
-	static float last_tfticks(0.0);
+	static double last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= voxel_brush_params.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const pos(get_camera_pos());

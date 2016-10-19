@@ -412,6 +412,7 @@
     </ClCompile>
     <ClCompile Include="src\dynamic_particle.cpp" />
     <ClCompile Include="src\edit_ui.cpp" />
+    <ClCompile Include="src\explosion.cpp" />
     <ClCompile Include="src\Gameplay.cpp" />
     <ClCompile Include="src\gen_object.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
@@ -621,7 +622,6 @@
     </ClCompile>
     <ClCompile Include="src\quartic.cpp" />
     <ClCompile Include="src\draw_ship.cpp" />
-    <ClCompile Include="src\Explosion.cpp" />
     <ClCompile Include="src\free_obj.cpp" />
     <ClCompile Include="src\modmap.cpp" />
     <ClCompile Include="src\ship.cpp" />

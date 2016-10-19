@@ -70,7 +70,8 @@ vector<uobject const *> show_info_uobjs;
 extern bool enable_multisample, using_tess_shader;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks, frame_counter;
 extern unsigned enabled_lights;
-extern float fticks, tfticks;
+extern float fticks;
+extern double tfticks;
 extern colorRGBA bkg_color, sunlight_color;
 extern exp_type_params et_params[];
 
@@ -1844,9 +1845,8 @@ void urev_body::gen_rotrev() {
 // Note: Update is only done when the objects solar system is visible to the player
 point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot) { // orbit is around p0
 
-	// what about fp errors when tfticks gets large?
 	float const ra1(rev_ang);
-	double const update_time(planet_update_rate*tfticks);
+	double const update_time(planet_update_rate*tfticks); // Note: use a double to minimize FP errors
 	if ((animate2 || rot_ang == 0.0) && update_rot) {rot_ang = rot_ang0 + update_time*double(rot_rate);}
 	if ((animate2 || rev_ang == 0.0) && update_rev) {rev_ang = rev_ang0 + update_time*double(rev_rate);}
 	// compute absolute pos every update: stable over long time periods, but jittery due to fp error between frames

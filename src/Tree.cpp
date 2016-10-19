@@ -63,7 +63,8 @@ extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lig
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
-extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tfticks;
+extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
+extern double tfticks;
 extern vector3d wind;
 extern lightning l_strike;
 extern coll_obj_group coll_objects;

@@ -37,7 +37,8 @@ float const FOG_COLOR_ATTEN    = 0.75;
 bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned enabled_lights(0); // 8 bit flags
-float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
+float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
+double tfticks(0.0);
 upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
 
@@ -253,7 +254,8 @@ void draw_frame_rate(float framerate) {
 	}
 	if (display_framerate && !is_video_recording()) {
 		static int fr_counter(0);
-		static float fr2(0.0), last_tfticks(0.0);
+		static float fr2(0.0);
+		static double last_tfticks(0.0);
 		if (tfticks > last_tfticks + 0.1*TICKS_PER_SECOND) {fr2 = framerate; last_tfticks = tfticks;} // update every 100ms
 		draw_framerate(fr2);
 		++fr_counter;
@@ -705,9 +707,9 @@ void display(void) {
 		time0  = timer1;
 	}
 	else if (animate && !DETERMINISTIC_TIME) {
-		float ftick(0.0);
+		double ftick(0.0);
 		static float carry(0.0);
-		float const time_delta((TICKS_PER_SECOND*(timer1 - time0))/1000.0);
+		double const time_delta((TICKS_PER_SECOND*(timer1 - time0))/1000.0);
 
 		if (reset_timing) {
 			iticks  = 0;
@@ -721,10 +723,10 @@ void display(void) {
 			ftick   = (time_delta - tticks);
 			iticks  = (int)ftick;
 			tticks += iticks;
-			carry   = ftick - (float)iticks;
-			ftick   = min(ftick, 20.0f);
+			carry   = ftick - (double)iticks;
+			ftick   = min(ftick, 20.0);
 		}
-		fticks = max(TOLERANCE, 0.9f*fticks + 0.1f*(ftick - carry)); // slow averaging filter
+		fticks = max(TOLERANCE, float(0.9*fticks + 0.1*(ftick - carry))); // slow averaging filter
 		assert(fticks >  0.0 && fticks < 1.0E12);
 		assert(iticks >= 0   && iticks < 1000000000);
 	}

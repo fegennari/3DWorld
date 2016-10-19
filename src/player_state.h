@@ -58,7 +58,7 @@ struct waypoint_t {
 	int came_from, item_group, item_ix, coll_id, connected_to;
 	float g_score, h_score, f_score;
 	point pos;
-	float last_smiley_time;
+	double last_smiley_time;
 	waypt_adj_vect next_wpts, prev_wpts;
 
 	waypoint_t(point const &p=all_zeros, int cid=-1, bool up=0, bool i=0, bool g=0, bool t=0);
@@ -170,7 +170,8 @@ struct player_state { // size = big
 	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time, jump_time;
 	int target_type, stopped_time, last_waypoint;
 	unsigned tid, fall_counter, chunk_index;
-	float shields, plasma_size, zvel, dpos, last_dz, last_zvel, last_wpt_dist, ticks_since_fired;
+	float shields, plasma_size, zvel, dpos, last_dz, last_zvel, last_wpt_dist;
+	double ticks_since_fired;
 	point target_pos, objective_pos, cb_pos;
 	vector3d hit_dir, velocity;
 	string name;
@@ -252,7 +253,7 @@ struct player_state { // size = big
 struct teleporter : public sphere_t, public volume_part_cloud {
 
 	point dest;
-	float last_used_tfticks;
+	double last_used_tfticks;
 
 	teleporter() : last_used_tfticks(0.0) {}
 	float get_draw_radius  () const {return 1.5*radius;}

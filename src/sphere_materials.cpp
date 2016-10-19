@@ -20,7 +20,8 @@ float sphere_mat_fire_delay(0.5); // in seconds
 
 extern bool spraypaint_mode;
 extern int frame_counter, display_framerate;
-extern float tfticks, CAMERA_RADIUS, ball_velocity;
+extern float CAMERA_RADIUS, ball_velocity;
+extern double tfticks;
 extern point sun_pos;
 extern colorRGBA sun_color;
 extern int coll_id[];
@@ -261,7 +262,7 @@ int add_cobj_with_material(cobj_params const &cp, sphere_mat_t const &mat, point
 bool throw_sphere(bool mode) {
 
 	static double prev_fticks(0.0);
-	if (((double)tfticks - prev_fticks) < sphere_mat_fire_delay*TICKS_PER_SECOND) return 0; // 20 ticks = 0.5s fire delay
+	if ((tfticks - prev_fticks) < sphere_mat_fire_delay*TICKS_PER_SECOND) return 0; // 20 ticks = 0.5s fire delay
 	prev_fticks = tfticks;
 
 	if (max_num_mat_spheres == 0) return 0;

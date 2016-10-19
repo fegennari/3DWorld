@@ -35,7 +35,8 @@ colorRGBA const ICE_ROCK_COLOR(0.6, 1.2, 1.5);
 
 extern bool no_asteroid_dust;
 extern int animate2, display_mode, frame_counter, window_width, window_height;
-extern float fticks, tfticks;
+extern float fticks;
+extern double tfticks;
 extern colorRGBA sun_color;
 extern vector<us_weapon> us_weapons;
 extern usw_ray_group t_wrays;
