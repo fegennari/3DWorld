@@ -98,7 +98,9 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 				return check_poly_billboard_alpha(p1, p2, t);
 			}
 			break;
-		default: assert(0);
+		default:
+			cout << "Invalid cobj type: " << type << endl;
+			assert(0);
 	}
 	return 0;
 }
