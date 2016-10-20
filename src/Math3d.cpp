@@ -865,8 +865,8 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri
 	float const dxy_sq(t2s.x*t2s.x + t2s.y*t2s.y);
 	if (dxy_sq < TOLERANCE)    return 0; // TOLERANCE in here to avoid later divide-by-zero
 	if (dxy_sq > r2s_sq)       return 0; // too far away in the x-y plane
-	float const r1s_sq((-sr + ro - ri)*(-sr + ro - ri));
-	if (dxy_sq < r1s_sq)       return 0; // too close to the center in the x-y plane
+	float const r1s(-sr + ro - ri), r1s_sq(r1s*r1s);
+	if (r1s > 0.0 && dxy_sq < r1s_sq) return 0; // too close to the center in the x-y plane (in the torus hole)
 	float const dxy(sqrt(dxy_sq)), drxy(fabs(dxy - ro));
 	float const rcs_sq((sr + ri)*(sr + ri)), dist_sq(drxy*drxy + t2s.z*t2s.z);
 	if (dist_sq > rcs_sq)      return 0; // no intersection
