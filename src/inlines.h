@@ -91,6 +91,7 @@ inline void set_rand2_state(long rs1, long rs2)    {global_rand_gen.set_state(rs
 inline vector3d signed_rand_vector2(float scale=1.0)           {return global_rand_gen.signed_rand_vector(scale);}
 inline vector3d signed_rand_vector2_norm(float scale=1.0)      {return global_rand_gen.signed_rand_vector_norm(scale);}
 inline vector3d signed_rand_vector2_spherical(float scale=1.0) {return global_rand_gen.signed_rand_vector_spherical(scale);}
+inline vector3d signed_rand_vector2_spherical_noloop(float scale=1.0) {return global_rand_gen.signed_rand_vector_spherical_noloop(scale);}
 
 inline float rand_float()        {return 0.0001*(rand()%10000);} // uniform 0 to 1 (only 16-bit random numbers)
 inline float signed_rand_float() {return 2.0*rand_float() - 1.0;}
