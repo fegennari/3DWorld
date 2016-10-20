@@ -548,7 +548,8 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			}
 		}
 		else if (type == COLL_TORUS) {
-			draw_rot_torus(points[0], norm, radius2, radius, ndiv, 3*ndiv/2, cp.tscale, cp.tscale);
+			float const tscale((cp.tscale == 0.0) ? 1.0 : cp.tscale); // always textured, use tscale of 1.0 if not set
+			draw_rot_torus(points[0], norm, radius2, radius, ndiv, 3*ndiv/2, tscale, tscale);
 		}
 		else { // cylinder
 			bool const draw_ends(!(cp.surfs & 1));
