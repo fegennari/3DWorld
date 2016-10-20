@@ -883,8 +883,9 @@ vector3d get_cobj_drop_delta(unsigned index) {
 
 		if (cobj.type == COLL_SPHERE && c.type == COLL_SPHERE) { // sphere-sphere case
 			vector3d const delta(cobj.points[0] - c.points[0]);
-			float const sep_dist(delta.mag() - cobj.radius - c.radius);
+			float sep_dist(delta.mag() - cobj.radius - c.radius);
 			if (sep_dist >= 0.0) continue; // no intersection
+			sep_dist *= 1.001; // increase slightly to prevent intersections due to FP error
 			if (sep_dist*sep_dist > delta_max.mag_sq()) {delta_max = -sep_dist*delta.get_norm();} // larger - use new delta value
 			continue;
 		}
