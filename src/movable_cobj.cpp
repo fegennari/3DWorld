@@ -304,6 +304,15 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			copy_torus_bounding_cylin(c,     cylin2);
 			// torus_cylinder_int()?
 			if (!cylin_cylin_int(cylin1, cylin2)) return 0; // definitely no intersection
+			
+			if (norm.x == 0.0 && norm.y == 0.0 && c.norm.x == 0.0 && c.norm.y == 0.0) { // both are vertical
+				float const cdist_xy(p2p_dist_xy(points[0], c.points[0]) - radius - c.radius); // distance between circles through torus centers in XY plane
+
+				if (cdist_xy > 0.0) {
+					float const dz(points[0].z - c.points[0].z), cdist(sqrt(cdist_xy*cdist_xy + dz*dz)); // distance between circles through torus centers
+					if (cdist > (radius2 + c.radius2)) return 0; // no intersection
+				}
+			}
 			return 2; // FIXME: unclear how to accurately handle this case (torus vs. torus)
 		}
 	default: assert(0);
