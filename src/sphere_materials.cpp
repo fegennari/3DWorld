@@ -312,7 +312,7 @@ bool throw_sphere(bool mode) {
 		if (display_framerate && !is_video_recording()) {
 			ostringstream oss;
 			oss << num_objs_thrown;
-			print_debug_text(oss.str());
+			print_debug_text(oss.str(), -100); // low priority
 		}
 		return 1;
 	}
