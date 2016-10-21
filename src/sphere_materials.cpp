@@ -249,11 +249,14 @@ int add_cobj_with_material(cobj_params const &cp, sphere_mat_t const &mat, point
 		cube_t cube;
 		cube.set_from_sphere(pos, obj_radius);
 		coll_id = add_coll_cube(cube, cp, -1, 0);
-		if (reflective) {add_reflective_cobj(coll_id);}
 	}
 	else { // sphere
-		coll_id = add_coll_sphere(pos, obj_radius, cp, -1, 0, reflective);
+		coll_id = add_coll_sphere(pos, obj_radius, cp, -1, 0);
+		//coll_id = add_coll_torus(pos, /*signed_rand_vector_norm()*/plus_z, obj_radius, 0.4*obj_radius, cp, -1, 0);
+		//coll_id = add_coll_cylinder(pos, (pos + signed_rand_vector(obj_radius*rand_uniform(0.5, 2.0))), obj_radius, obj_radius*rand_uniform(0.5, 1.0), cp, -1, 0);
+		//coll_id = add_coll_cylinder(pos, (pos + vector3d(0.0, 0.0, 2.0*obj_radius)), obj_radius, obj_radius, cp, -1, 0);
 	}
+	if (reflective) {add_reflective_cobj(coll_id);}
 	if (is_static) {coll_objects.get_cobj(coll_id).destroy = 2*min(2, max(0, mat.destroyable));} // only {0=none, 1=shatterable, 2=explodeable}
 	return coll_id;
 }
