@@ -190,6 +190,13 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 	if (c.type < type) {return c.intersects_cobj(*this, toler);} // swap arguments
 	float const r1(radius-toler), r2(radius2-toler), cr1(c.radius-toler), cr2(c.radius2-toler);
 
+	if (c.type == COLL_TORUS && c.norm.x == 0.0 && c.norm.y == 0.0) { // check cobj inside torus center case
+		point sc;
+		float sr;
+		bounding_sphere(sc, sr);
+		if (!sphere_torus_intersect(sc, sr, c.points[0], c.radius2, c.radius)) return 0;
+	}
+
 	// c.type >= type
 	switch (type) {
 	case COLL_CUBE:
@@ -238,7 +245,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CYLINDER_ROT: return coll_sphere_cylin_int(points[0], r1, c);
 		case COLL_TORUS: {
 				if (!sphere_cube_intersect(points[0], radius, c)) return 0; // test bcube
-				if (c.norm.x == 0.0 && c.norm.y == 0.0) {return sphere_torus_intersect(points[0], radius, c.points[0], c.radius2, c.radius);}
+				if (c.norm.x == 0.0 && c.norm.y == 0.0) {return sphere_torus_intersect(points[0], radius, c.points[0], c.radius2, c.radius);} // Note: duplicate check made above
 				coll_obj cylin;
 				copy_torus_bounding_cylin(c, cylin);
 				if (!coll_sphere_cylin_int(points[0], r1, cylin)) return 0;
