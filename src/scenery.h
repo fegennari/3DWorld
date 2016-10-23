@@ -131,7 +131,12 @@ public:
 };
 
 
-class s_plant : public scenery_obj { // size = 56
+struct plant_base : public scenery_obj { // size = 28
+	int create(int x, int y, int use_xy, float minz);
+};
+
+
+class s_plant : public plant_base { // size = 56
 
 	bool no_leaves;
 	int coll_id2, vbo_mgr_ix;
@@ -167,6 +172,21 @@ public:
 };
 
 
+class leafy_plant : public plant_base {
+
+public:
+	leafy_plant() {}
+	int create(int x, int y, int use_xy, float minz);
+	void add_cobjs();
+	//bool check_sphere_coll(point &center, float sphere_radius) const;
+	//bool update_zvals(int x1, int y1, int x2, int y2);
+	//bool is_shadowed() const;
+	void draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate) const;
+	//void remove_cobjs();
+	//void add_bounds_to_bcube(cube_t &bcube) const;
+};
+
+
 class scenery_group {
 
 	vector<rock_shape3d> rock_shapes;
@@ -176,6 +196,7 @@ class scenery_group {
 	vector<s_log>        logs;
 	vector<s_stump>      stumps;
 	vector<s_plant>      plants;
+	vector<leafy_plant>  leafy_plants;
 	vbo_vnc_block_manager_t plant_vbo_manager;
 	vbo_vnt_block_manager_t rock_vbo_manager;
 	noise_texture_manager_t voxel_rock_ntg;

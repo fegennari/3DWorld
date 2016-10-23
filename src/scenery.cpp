@@ -656,23 +656,28 @@ void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3
 }
 
 
-int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager) {
+// returns 0 for no plants, 1 for land plants, and 2 for water plants
+int plant_base::create(int x, int y, int use_xy, float minz) {
 
-	vbo_mgr_ix = -1;
 	gen_spos(x, y, use_xy);
 
 	if (pos.z < minz) {
 		if (pos.z + (0.4/tree_scale + 0.025) > get_min_water_plane_z()) return 0; // max plant height above min water plane zval
 		if (NUM_WATER_PLANT_TYPES == 0) return 0; // no water plant types
-		type = NUM_LAND_PLANT_TYPES + (rand2() % NUM_WATER_PLANT_TYPES);
+		return 2; // water plant
 	}
-	else if (get_rel_height(pos.z, -zmax_est, zmax_est) > 0.62) {
-		return 0; // altitude too high for plants
-	}
-	else {
-		if (NUM_LAND_PLANT_TYPES == 0) return 0; // no land plant types
-		type = rand2() % NUM_LAND_PLANT_TYPES;
-	}
+	if (get_rel_height(pos.z, -zmax_est, zmax_est) > 0.62) return 0; // altitude too high for plants
+	if (NUM_LAND_PLANT_TYPES == 0) return 0; // no land plant types
+	return 1; // land plant
+}
+
+int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager) {
+
+	vbo_mgr_ix = -1;
+	int const ret(plant_base::create(x, y, use_xy, minz));
+	if (ret == 0) return 0;
+	if (ret == 2) {type = NUM_LAND_PLANT_TYPES + (rand2() % NUM_WATER_PLANT_TYPES);} // water plant
+	else          {type = rand2() % NUM_LAND_PLANT_TYPES;} // land plant
 	radius = rand_uniform2(0.0025, 0.0045)/tree_scale;
 	height = rand_uniform2(0.2, 0.4)/tree_scale + 0.025;
 	gen_points(vbo_manager);
@@ -866,6 +871,41 @@ void s_plant::remove_cobjs() {
 }
 
 
+int leafy_plant::create(int x, int y, int use_xy, float minz) {
+	
+	int const ret(plant_base::create(x, y, use_xy, minz));
+	if (ret == 0) return 0;
+	if (ret == 2) return 0; // for now, there are no leafy water plants
+	type   = (ret == 2); // 0=land, 1=water
+	radius = rand_uniform2(0.06, 0.12)/tree_scale;
+	return 1;
+}
+
+void leafy_plant::add_cobjs() {
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, nullptr, 0, -1));
+}
+
+void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
+	
+	if (!is_visible(shadow_only, radius, xlate))  return;
+	if (reflection_pass && pos.z < water_plane_z) return;
+	float const dist(distance_to_camera(pos+xlate));
+	// FIXME: draw as a point case
+	//(shadow_only ? WHITE : get_atten_color(WHITE, xlate)).set_for_cur_shader();
+	WHITE.set_for_cur_shader(); // no underwater case yet
+	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
+	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
+	select_texture(LEAF_TEX);
+	fgPushMatrix();
+	translate_to(pos);
+	//rotate_about(angle, dir);
+	//scale_by(size*get_size_scale(dist, scale_val)*scale);
+	uniform_scale(radius);
+	draw_sphere_vbo_raw(ndiv, 1);
+	fgPopMatrix();
+}
+
+
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
 
@@ -929,6 +969,7 @@ void scenery_group::clear() {
 	logs.clear();
 	stumps.clear();
 	plants.clear();
+	leafy_plants.clear();
 	generated = 0;
 }
 
@@ -941,6 +982,7 @@ void scenery_group::free_cobjs() {
 	free_scenery_vector_cobjs(logs);
 	free_scenery_vector_cobjs(stumps);
 	free_scenery_vector_cobjs(plants);
+	free_scenery_vector_cobjs(leafy_plants);
 }
 
 void scenery_group::add_cobjs() {
@@ -952,6 +994,7 @@ void scenery_group::add_cobjs() {
 	add_scenery_vector_cobjs(logs);
 	add_scenery_vector_cobjs(stumps);
 	add_scenery_vector_cobjs(plants);
+	add_scenery_vector_cobjs(leafy_plants);
 	calc_bcube(); // okay to put here, since add_cobjs() is always called
 }
 
@@ -966,6 +1009,7 @@ bool scenery_group::check_sphere_coll(point &center, float radius) const {
 	coll |= check_scenery_vector_sphere_coll(logs,          center, radius);
 	coll |= check_scenery_vector_sphere_coll(stumps,        center, radius);
 	coll |= check_scenery_vector_sphere_coll(plants,        center, radius);
+	coll |= check_scenery_vector_sphere_coll(leafy_plants,  center, radius);
 	return coll;
 }
 
@@ -978,6 +1022,7 @@ void scenery_group::shift(vector3d const &vd) {
 	shift_scenery_vector(logs,          vd);
 	shift_scenery_vector(stumps,        vd);
 	shift_scenery_vector(plants,        vd);
+	shift_scenery_vector(leafy_plants,  vd);
 }
 
 void scenery_group::calc_bcube() {
@@ -990,6 +1035,7 @@ void scenery_group::calc_bcube() {
 	update_bcube(logs,          all_bcube);
 	update_bcube(stumps,        all_bcube);
 	update_bcube(plants,        all_bcube);
+	update_bcube(leafy_plants,  all_bcube);
 }
 
 // update region is inclusive: [x1,x2]x[y1,y2]
@@ -1002,6 +1048,7 @@ bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficien
 	update_scenery_zvals_vector(rocks,       x1, y1, x2, y2, updated);
 	update_scenery_zvals_vector(logs,        x1, y1, x2, y2, updated);
 	update_scenery_zvals_vector(stumps,      x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(leafy_plants,x1, y1, x2, y2, updated);
 
 	for (unsigned i = 0; i < plants.size(); ++i) { // zval has change, remove and re-add cobjs
 		updated |= plants[i].update_zvals(x1, y1, x2, y2, plant_vbo_manager); // different signature (takes plant_vbo_manager)
@@ -1045,9 +1092,15 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			rand2_mix();
 			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation_);
 			
-			if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants
-				s_plant plant; // 35%
-				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {plants.push_back(plant); plant.add_bounds_to_bcube(all_bcube);}
+			if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
+				if (rand2()&1) {
+					leafy_plant plant;
+					if (plant.create(j, i, 1, min_plant_z)) {leafy_plants.push_back(plant);}
+				}
+				else {
+					s_plant plant; // 35%
+					if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {plants.push_back(plant); plant.add_bounds_to_bcube(all_bcube);}
+				}
 			}
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
@@ -1096,16 +1149,19 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass) {
 
-	if (plants.empty()) return;
 	s.set_specular(0.25, 20.0); // a small amount of specular
-	plant_vbo_manager.upload();
-	plant_vbo_manager.begin_render();
-	s_plant::shader_state_t state;
 
-	for (unsigned i = 0; i < plants.size(); ++i) {
-		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate, state);
+	if (!plants.empty()) {
+		plant_vbo_manager.upload();
+		plant_vbo_manager.begin_render();
+		s_plant::shader_state_t state;
+
+		for (unsigned i = 0; i < plants.size(); ++i) {
+			plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate, state);
+		}
+		plant_vbo_manager.end_render();
 	}
-	plant_vbo_manager.end_render();
+	for (unsigned i = 0; i < leafy_plants.size(); ++i) {leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate);}
 	s.clear_specular();
 }
 
@@ -1163,7 +1219,7 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	draw_opaque_objects(s, shadow_only, xlate, 1);
 	s.end_shader();
 
-	if (!plants.empty()) { // draw leaves
+	if (!(plants.empty() && leafy_plants.empty())) { // draw leaves
 		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, ENABLE_PLANT_SHADOWS);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
@@ -1222,7 +1278,7 @@ void s_plant::write_to_cobj_file(std::ostream &out) const {
 	//add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
 	out << "G " << pos.x << " " << pos.y << " " << height << " " << radius << " " << type << " " << pos.z << endl;
 }
-void scenery_group::write_plants_to_cobj_file(ostream &out) const {
+void scenery_group::write_plants_to_cobj_file(ostream &out) const { // Note: only plants are written because only plants can be placed in the cobj file
 	for (auto i = plants.begin(); i != plants.end(); ++i) {i->write_to_cobj_file(out);}
 }
 void write_plants_to_cobj_file(ostream &out) {all_scenery.write_plants_to_cobj_file(out);}
