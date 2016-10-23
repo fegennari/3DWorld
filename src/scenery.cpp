@@ -1096,6 +1096,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass) {
 
+	if (plants.empty()) return;
 	s.set_specular(0.25, 20.0); // a small amount of specular
 	plant_vbo_manager.upload();
 	plant_vbo_manager.begin_render();
@@ -1137,7 +1138,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_stem(sscale, shadow_only, reflection_pass, xlate);
 	}
-	if (!shadow_only) { // no berry shadows
+	if (!shadow_only && !plants.empty()) { // no berry shadows
 		select_texture(WHITE_TEX); // berries are untextured
 		s.set_specular(0.9, 80.0);
 		for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_berries(s, xlate);}
