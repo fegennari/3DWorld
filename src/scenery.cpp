@@ -1161,7 +1161,11 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		}
 		plant_vbo_manager.end_render();
 	}
-	for (unsigned i = 0; i < leafy_plants.size(); ++i) {leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate);}
+	if (!leafy_plants.empty()) {
+		s.add_uniform_float("tex_coord_weight", 1.0); // using tex coords, not texgen from vert ID
+		for (unsigned i = 0; i < leafy_plants.size(); ++i) {leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate);}
+		s.add_uniform_float("tex_coord_weight", 0.0); // reset
+	}
 	s.clear_specular();
 }
 
@@ -1220,7 +1224,7 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	s.end_shader();
 
 	if (!(plants.empty() && leafy_plants.empty())) { // draw leaves
-		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, ENABLE_PLANT_SHADOWS);
+		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, ENABLE_PLANT_SHADOWS, 1);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
 	}

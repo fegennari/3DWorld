@@ -2601,7 +2601,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
 	// draw leaves
 	if (enable_shadow_maps) {s.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
-	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps);
+	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps, 1);
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 	s.add_uniform_color("color_scale", get_color_scale(1.0, 0.5));
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);}
