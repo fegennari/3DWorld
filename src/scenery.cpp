@@ -890,19 +890,31 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	float const dist(distance_to_camera(pos+xlate));
-	// FIXME: draw as a point case
-	//(shadow_only ? WHITE : get_atten_color(WHITE, xlate)).set_for_cur_shader();
-	WHITE.set_for_cur_shader(); // no underwater case yet
+	(shadow_only ? WHITE : get_atten_color(WHITE, xlate)).set_for_cur_shader(); // no underwater case yet
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	select_texture(LEAF_TEX);
-	fgPushMatrix();
-	translate_to(pos);
-	//rotate_about(angle, dir);
-	//scale_by(size*get_size_scale(dist, scale_val)*scale);
-	uniform_scale(radius);
-	draw_sphere_vbo_raw(ndiv, 1);
-	fgPopMatrix();
+
+	rand_gen_t rgen;
+	rgen.set_state(long(1000*pos.x), coll_id);
+	unsigned const num(rgen.rand_uniform_uint(4, 8));
+	float const delta_angle(TWO_PI/num);
+
+	for (unsigned i = 0; i < num; ++i) { // for each leaf
+		float const angle(delta_angle*(i + 0.5*rgen.rand_float()));
+		float const rscale(rgen.rand_uniform(0.5, 1.0));
+		float const dxy(rgen.rand_uniform(0.7, 1.3));
+		float const dz (rgen.rand_uniform(-0.2, 0.4));
+		point const delta(1.2*rscale*radius*point(-dxy*cos(angle), -dxy*sin(angle), dz));
+		fgPushMatrix();
+		translate_to(pos + delta);
+		rotate_about(135.0, plus_y);
+		rotate_about(TO_DEG*angle, vector3d(-1, 0, -1));
+		//scale_by(1.0, 1.0, 0.5);
+		uniform_scale(1.0*rscale*radius);
+		draw_sphere_vbo_raw(ndiv, 1);
+		fgPopMatrix();
+	}
 }
 
 
@@ -1162,7 +1174,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		plant_vbo_manager.end_render();
 	}
 	if (!leafy_plants.empty()) {
-		s.add_uniform_float("tex_coord_weight", 1.0); // using tex coords, not texgen from vert ID
+		s.add_uniform_float("tex_coord_weight", 2.0); // using tex coords, not texgen from vert ID
 		for (unsigned i = 0; i < leafy_plants.size(); ++i) {leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate);}
 		s.add_uniform_float("tex_coord_weight", 0.0); // reset
 	}

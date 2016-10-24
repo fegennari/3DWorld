@@ -29,8 +29,9 @@ void set_bent_quad_tc0_from_vert_id() {
 }
 
 void set_tc0_blend_from_tc_vert_id() {
-	set_tc0_from_vert_id();
 #ifdef ENABLE_TEX_COORD_WEIGHT
-	tc = mix(tc, fg_TexCoord, tex_coord_weight);
+	if (tex_coord_weight == 0.0) {set_tc0_from_vert_id();} else {tc = tex_coord_weight*fg_TexCoord;}
+#else
+	set_tc0_from_vert_id();
 #endif
 }
