@@ -875,9 +875,20 @@ int leafy_plant::create(int x, int y, int use_xy, float minz) {
 	
 	int const ret(plant_base::create(x, y, use_xy, minz));
 	if (ret == 0) return 0;
-	if (ret == 2) return 0; // for now, there are no leafy water plants
-	type   = (ret == 2); // 0=land, 1=water
+	if (ret == 2) return 0; // for now, there are no leafy underwater plants
+	type   = rand2() % 8;
 	radius = rand_uniform2(0.06, 0.12)/tree_scale;
+	rand_gen_t rgen;
+	rgen.set_state(rand2(), 123);
+	leaves.resize(rgen.rand_uniform_uint(4, 8));
+	float const delta_angle(TWO_PI/leaves.size());
+
+	for (auto i = leaves.begin(); i != leaves.end(); ++i) { // for each leaf
+		float const dxy(rgen.rand_uniform(0.7, 1.3)), dz(rgen.rand_uniform(-0.1, 0.4));
+		i->angle  = delta_angle*((i - leaves.begin()) + 0.5*rgen.rand_float());
+		i->rscale = rgen.rand_uniform(0.5, 1.0);
+		i->delta  = (1.2*i->rscale*radius)*point(-dxy*cos(i->angle), -dxy*sin(i->angle), dz);
+	}
 	return 1;
 }
 
@@ -893,25 +904,15 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	(shadow_only ? WHITE : get_atten_color(WHITE, xlate)).set_for_cur_shader(); // no underwater case yet
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
-	select_texture(LEAF_TEX);
+	unsigned const tids[8] = {LEAF_TEX, LEAF_TEX, LEAF_TEX, LEAF_TEX, PLANT3_TEX, LEAF2_TEX, LEAF3_TEX, PAPAYA_TEX};
+	select_texture(tids[type]);
 
-	rand_gen_t rgen;
-	rgen.set_state(long(1000*pos.x), coll_id);
-	unsigned const num(rgen.rand_uniform_uint(4, 8));
-	float const delta_angle(TWO_PI/num);
-
-	for (unsigned i = 0; i < num; ++i) { // for each leaf
-		float const angle(delta_angle*(i + 0.5*rgen.rand_float()));
-		float const rscale(rgen.rand_uniform(0.5, 1.0));
-		float const dxy(rgen.rand_uniform(0.7, 1.3));
-		float const dz (rgen.rand_uniform(-0.2, 0.4));
-		point const delta(1.2*rscale*radius*point(-dxy*cos(angle), -dxy*sin(angle), dz));
+	for (auto i = leaves.begin(); i != leaves.end(); ++i) {
 		fgPushMatrix();
-		translate_to(pos + delta);
+		translate_to(pos + i->delta);
+		scale_by(vector3d(1.0, 1.0, 0.75)*(i->rscale*radius));
 		rotate_about(135.0, plus_y);
-		rotate_about(TO_DEG*angle, vector3d(-1, 0, -1));
-		//scale_by(1.0, 1.0, 0.5);
-		uniform_scale(1.0*rscale*radius);
+		rotate_about(TO_DEG*i->angle, vector3d(-1, 0, -1));
 		draw_sphere_vbo_raw(ndiv, 1);
 		fgPopMatrix();
 	}
@@ -1100,19 +1101,17 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			global_rand_gen.rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
 			global_rand_gen.rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
 			int const val(rand2_seed_mix()%smod);
-			if (val > 100) continue;
+			if (val >= 150) continue;
 			rand2_mix();
 			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation_);
 			
-			if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
-				if (rand2()&1) {
-					leafy_plant plant;
-					if (plant.create(j, i, 1, min_plant_z)) {leafy_plants.push_back(plant);}
-				}
-				else {
-					s_plant plant; // 35%
-					if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {plants.push_back(plant); plant.add_bounds_to_bcube(all_bcube);}
-				}
+			if (val >= 100) { // +50% leafy plants
+				leafy_plant plant;
+				if (veg && plant.create(j, i, 1, min_plant_z)) {leafy_plants.push_back(plant);}
+			}
+			else if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
+				s_plant plant; // 35%
+				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {plants.push_back(plant); plant.add_bounds_to_bcube(all_bcube);}
 			}
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());

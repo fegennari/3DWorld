@@ -174,6 +174,13 @@ public:
 
 class leafy_plant : public plant_base {
 
+	struct plant_leaf {
+		float angle, rscale;
+		vector3d delta;
+		plant_leaf() : angle(0.0), rscale(1.0), delta(zero_vector) {}
+	};
+	vector<plant_leaf> leaves;
+
 public:
 	leafy_plant() {}
 	int create(int x, int y, int use_xy, float minz);
