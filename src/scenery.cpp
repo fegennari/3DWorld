@@ -875,8 +875,14 @@ int leafy_plant::create(int x, int y, int use_xy, float minz) {
 	
 	int const ret(plant_base::create(x, y, use_xy, minz));
 	if (ret == 0) return 0;
-	if (ret == 2) return 0; // for now, there are no leafy underwater plants
-	type   = rand2() % 8;
+	if (ret == 2) {type = 0;} // underwater
+	else {
+		float const relh(get_rel_height(pos.z, -zmax_est, zmax_est));
+		if      (relh < 0.44) {type = 1;} // dirt/sand
+		else if (relh < 0.60) {type = 2;} // grass
+		else if (relh < 0.75) {type = 3;} // rock
+		else return 0; // snow
+	}
 	radius = rand_uniform2(0.06, 0.12)/tree_scale;
 	rand_gen_t rgen;
 	rgen.set_state(rand2(), 123);
@@ -904,7 +910,7 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	(shadow_only ? WHITE : get_atten_color(WHITE, xlate)).set_for_cur_shader(); // no underwater case yet
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
-	unsigned const tids[8] = {LEAF_TEX, LEAF_TEX, LEAF_TEX, LEAF_TEX, PLANT3_TEX, LEAF2_TEX, LEAF3_TEX, PAPAYA_TEX};
+	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
 	select_texture(tids[type]);
 
 	for (auto i = leaves.begin(); i != leaves.end(); ++i) {

@@ -11,8 +11,5 @@ Gameplay in tiled terrain mode
   - Pickup items
   - Projectile and object collision detection
 
-Plants with low large leaves
-  - Can use palm frond texture
-
 Store dlights in screen space
 Better window glass fragments
