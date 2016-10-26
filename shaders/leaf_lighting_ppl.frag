@@ -15,8 +15,8 @@ void main() {
 #ifdef ENABLE_OPACITY
 	check_noise_and_maybe_discard((1.0 - opacity), 1.0); // inverted value
 #endif
-	vec3 ws_normal2 = ((dot(normal, epos.xyz) > 0.0) ? -1.0 : 1.0)*normalize(ws_normal);
-	vec3 color      = get_tree_leaf_lighting(epos, normal, ws_pos, ws_normal2);
+	float nscale = ((dot(normal, epos.xyz) > 0.0) ? -1.0 : 1.0);
+	vec3 color   = get_tree_leaf_lighting(epos, normal, ws_pos, nscale*normalize(ws_normal));
 	fg_FragColor = texel*vec4(min(2.0*gl_Color.rgb, clamp(color*color_scale.rgb, 0.0, 1.0)), 1.0); // limit lightning color
 #ifndef NO_FOG
 	fg_FragColor = apply_fog(fg_FragColor);

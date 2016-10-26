@@ -18,7 +18,6 @@ void main() {
 	epos      = fg_ModelViewMatrix * fg_Vertex;
 	ws_normal = normalize(fg_Normal);
 	normal    = normalize(fg_NormalMatrix * ws_normal * normal_scale); // eye space
-	if (dot(normal, epos.xyz) > 0.0) {normal = -normal;} // facing away from the eye, so reverse (could use faceforward())
 
 	if (underwater) {
 		vec3 eye        = fg_ModelViewMatrixInverse[3].xyz;
