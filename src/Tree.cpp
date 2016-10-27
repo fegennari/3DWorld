@@ -334,7 +334,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 
 float get_plant_leaf_wind_mag(bool shadow_only) {
 	//if (shadow_only) return 0.0; // faster, but looks odd
-	return ((has_snow || !animate2) ? 0.0 : 0.001*min(2.0f, wind.mag())/tree_scale);
+	return ((has_snow || !animate2) ? 0.0 : 0.002*min(2.0f, wind.mag())/tree_scale);
 }
 
 void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {

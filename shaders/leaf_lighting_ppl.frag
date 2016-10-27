@@ -10,6 +10,7 @@ in vec3 ws_pos;
 in vec3 ws_normal;
 
 void main() {
+	//if (tc.s <= 0.0 || tc.s >= 1.0 || tc.y <= 0.0 || tc.y >= 1.0) discard; // drop leafy plant edge texels
 	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard;
 #ifdef ENABLE_OPACITY
