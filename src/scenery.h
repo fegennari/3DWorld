@@ -174,11 +174,7 @@ public:
 
 class leafy_plant : public plant_base {
 
-	struct plant_leaf {
-		float angle, rscale;
-		vector3d delta;
-		plant_leaf() : angle(0.0), rscale(1.0), delta(zero_vector) {}
-	};
+	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 public:

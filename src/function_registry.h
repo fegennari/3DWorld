@@ -827,6 +827,7 @@ bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down);
 void draw_enabled_ui_menus();
 
 // function prototypes - transform_obj
+struct xform_matrix;
 void fgMatrixMode(int val);
 void fgPushMatrix();
 void fgPopMatrix();
@@ -840,6 +841,7 @@ void fgRotateRadians(float angle, float x, float y, float z);
 void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip);
 void fgOrtho(float left, float right, float bottom, float top, float zNear, float zFar);
 void fgLookAt(float eyex, float eyey, float eyez, float centerx, float centery, float centerz, float upx, float upy, float upz);
+void fgMultMatrix(xform_matrix const &m);
 void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
 void update_deformation(dwobject &obj);
 

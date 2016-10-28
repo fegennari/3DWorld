@@ -6,6 +6,8 @@
 #include "mesh.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 
 bool     const USE_VOXEL_ROCKS = 0;
@@ -891,9 +893,13 @@ int leafy_plant::create(int x, int y, int use_xy, float minz) {
 
 	for (auto i = leaves.begin(); i != leaves.end(); ++i) { // for each leaf
 		float const dxy(rgen.rand_uniform(0.7, 1.3)), dz(rgen.rand_uniform(-0.1, 0.4));
-		i->angle  = delta_angle*((i - leaves.begin()) + 0.5*rgen.rand_float());
-		i->rscale = rgen.rand_uniform(0.5, 1.0);
-		i->delta  = (1.2*i->rscale*radius)*point(-dxy*cos(i->angle), -dxy*sin(i->angle), dz);
+		float const angle(delta_angle*((i - leaves.begin()) + 0.5*rgen.rand_float()));
+		float const rscale(rgen.rand_uniform(0.5, 1.0));
+		vector3d const delta((1.2*rscale*radius)*point(-dxy*cos(angle), -dxy*sin(angle), dz));
+		i->m = glm::translate(i->m, vec3_from_vector3d(pos + delta));
+		i->m = glm::scale(i->m, vec3_from_vector3d(vector3d(1.0, 1.0, 0.75)*(rscale*radius)));
+		i->m = glm::rotate(i->m, TO_RADIANS*135.0f, glm::vec3(0, 1, 0));
+		i->m = glm::rotate(i->m, angle, glm::vec3(-1, 0, -1));
 	}
 	return 1;
 }
@@ -904,6 +910,7 @@ void leafy_plant::add_cobjs() {
 
 void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
 	
+	//if (display_mode & 0x10) return; // TESTING
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	float const dist(distance_to_camera(pos+xlate));
@@ -916,10 +923,7 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 
 	for (auto i = leaves.begin(); i != leaves.end(); ++i) {
 		fgPushMatrix();
-		translate_to(pos + i->delta);
-		scale_by(vector3d(1.0, 1.0, 0.75)*(i->rscale*radius));
-		rotate_about(135.0, plus_y);
-		rotate_about(TO_DEG*i->angle, vector3d(-1, 0, -1));
+		fgMultMatrix(i->m);
 		draw_sphere_vbo_pre_bound(ndiv, 1);
 		fgPopMatrix();
 	}
