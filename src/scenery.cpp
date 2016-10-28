@@ -1166,7 +1166,9 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass) {
 
+	if (plants.empty() && leafy_plants.empty()) return; // nothing to draw
 	s.set_specular(0.25, 20.0); // a small amount of specular
+	s.add_uniform_float("wind_zscale", 2.0);
 
 	if (!plants.empty()) {
 		plant_vbo_manager.upload();
