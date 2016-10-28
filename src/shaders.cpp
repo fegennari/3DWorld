@@ -1001,7 +1001,7 @@ void shader_t::upload_pjm() { // projection matrix
 void shader_t::upload_mvm() { // and everything that depends on the mvm
 
 	if (mvm_loc < 0 && mvmi_loc < 0 && mvpm_loc < 0 && nm_loc < 0) return; // nothing to update
-	xform_matrix const mvm(fgGetMVM());
+	xform_matrix const &mvm(fgGetMVM());
 	if (mvm_loc >= 0) {set_uniform_matrix_4x4(mvm_loc, mvm.get_ptr(), 0);} // modelview matrix
 
 	if (mvmi_loc >= 0) { // inverse modelview matrix

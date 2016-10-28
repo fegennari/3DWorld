@@ -106,8 +106,8 @@ void fgMultMatrix(xform_matrix const &m) {
 	assign_cur_matrix(get_matrix_stack().top() * m);
 }
 
-xform_matrix fgGetMVM() {return mvm_stack.top();}
-xform_matrix fgGetPJM() {return pjm_stack.top();}
+xform_matrix const &fgGetMVM() {return mvm_stack.top();}
+xform_matrix const &fgGetPJM() {return pjm_stack.top();}
 
 
 // *** mesh2d ***
