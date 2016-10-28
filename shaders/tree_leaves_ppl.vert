@@ -11,13 +11,16 @@ void main() {
 	set_tc0_blend_from_tc_vert_id();
 	vec4 vpos   = fg_Vertex;
 	add_leaf_wind(vpos);
-	gl_Position = fg_ModelViewProjectionMatrix * vpos;
+	gl_Position = fg_ProjectionMatrix * (fg_ModelViewMatrix * vpos); // Note: faster than using fg_ModelViewProjectionMatrix (avoids CPU mult+upload)
 	fg_Color_vf = fg_Color;
 
 	ws_pos    = fg_Vertex.xyz + world_space_offset;
 	epos      = fg_ModelViewMatrix * fg_Vertex;
 	ws_normal = normalize(fg_Normal);
-	normal    = normalize(fg_NormalMatrix * ws_normal * normal_scale); // eye space
+	// Note: leafy plants have their matrices uploaded once per leaf, and it's faster to compute the normal matrix from the MVM in the shader/GPU rather than on the CPU
+	//mat3 normal_matrix = fg_NormalMatrix;
+	mat3 normal_matrix = inverse(transpose(mat3(fg_ModelViewMatrix)));
+	normal    = normalize(normal_matrix * ws_normal * normal_scale); // eye space
 
 	if (underwater) {
 		vec3 eye        = fg_ModelViewMatrixInverse[3].xyz;
