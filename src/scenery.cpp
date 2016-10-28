@@ -912,6 +912,7 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
 	select_texture(tids[type]);
+	begin_sphere_draw(1); // textured=1
 
 	for (auto i = leaves.begin(); i != leaves.end(); ++i) {
 		fgPushMatrix();
@@ -919,9 +920,10 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 		scale_by(vector3d(1.0, 1.0, 0.75)*(i->rscale*radius));
 		rotate_about(135.0, plus_y);
 		rotate_about(TO_DEG*i->angle, vector3d(-1, 0, -1));
-		draw_sphere_vbo_raw(ndiv, 1);
+		draw_sphere_vbo_pre_bound(ndiv, 1);
 		fgPopMatrix();
 	}
+	end_sphere_draw();
 }
 
 
