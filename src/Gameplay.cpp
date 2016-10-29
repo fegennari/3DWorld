@@ -408,7 +408,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	}
 	if (camera_health < 0.0) return 1; // already dead
 	int const source(get_damage_source(type, obj_index, CAMERA_ID));
-	assert(source >= CAMERA_ID);
+	assert(source >= CAMERA_ID && source < num_smileys);
 	if (source == CAMERA_ID && self_coll_invalid(type, obj_index)) return 0; // hit yourself
 	int damage_type(0);
 	player_state &sstate(sstates[CAMERA_ID]);
@@ -610,7 +610,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	if (obj_groups[cid].get_obj(index).disabled() || obj_groups[cid].get_obj(index).health < 0.0) return 1;
 	if (!damage_done(type, obj_index)) return 1;
 	int const source(get_damage_source(type, obj_index, index));
-	assert(source >= CAMERA_ID);
+	assert(source >= CAMERA_ID && source < num_smileys);
 	if (source == index && self_coll_invalid(type, obj_index)) return 0; // hit itself
 	player_coll(type, obj_index);
 	int const wa_id(proc_coll_types(type, obj_index, energy));
@@ -2394,7 +2394,7 @@ int get_damage_source(int type, int index, int questioner) {
 
 	assert(questioner >= CAMERA_ID);
 	if (index == NO_SOURCE) return questioner; // hurt/killed by nature, call it a suicide
-	if (type == DROWNED || type == FELL || type == CRUSHED || type == COLLISION) return questioner; // self damage
+	if (type == DROWNED || type == FELL || type == CRUSHED || type == COLLISION || type == MAT_SPHERE) return questioner; // self damage
 	assert(index >= CAMERA_ID);
 	if (type == SMILEY || type == BURNED || type == FIRE) return index;
 	if (type == CAMERA) return -1;

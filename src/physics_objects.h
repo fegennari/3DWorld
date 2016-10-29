@@ -411,8 +411,8 @@ public:
 	void free_objects();
 	void shift(vector3d const &vd);
 	p_transform_data get_td() {assert(td); return td;}
-	dwobject       &get_obj(unsigned i)       {assert(enabled && i < objects.size()); return objects[i];}
-	dwobject const &get_obj(unsigned i) const {assert(enabled && i < objects.size()); return objects[i];}
+	dwobject       &get_obj(unsigned i)       {assert(enabled); assert(i < objects.size()); return objects[i];}
+	dwobject const &get_obj(unsigned i) const {assert(enabled); assert(i < objects.size()); return objects[i];}
 	bool obj_within_dist(unsigned i, point const &pos, float dist) const;
 	bool temperature_ok() const;
 	bool obj_has_shadow(unsigned obj_id) const;
