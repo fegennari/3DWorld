@@ -1428,7 +1428,7 @@ void fire::apply_physics(unsigned i) {
 				dwobject obj(FIRE, pos, zero_vector, 1, 10000.0); // make a FIRE object for collision detection
 				obj.source = source;
 
-				if (!obj.check_vert_collision(i, 1, 0)) {
+				if (!obj.check_vert_collision(source, 1, 0)) { // Note: source is passed in as obj_index, and represents the player/smiley responisble for the fire
 					pos.z -= radius;
 					status = 1; // re-animate
 				}
