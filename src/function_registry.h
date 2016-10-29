@@ -193,7 +193,7 @@ void draw_shadow_cylinder(point const &p1, point const &p2, float radius1, float
 void draw_cylindrical_section(float length, float r_inner, float r_outer, int ndiv, bool texture=0, float tex_scale_len=1.0, float z_offset=0.0);
 void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, bool texture=0);
 void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv);
-void add_sphere_quads(vector<vert_norm_tc> &verts, point const &pos, float radius, int ndiv);
+void add_sphere_quads(vector<vert_norm_tc> &verts, point const &pos, float radius, int ndiv, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
 						int texture, bool disable_bfc, unsigned char const *const render_map=NULL, float const *const exp_map=NULL,
 						point const *const pt_shift=NULL, float expand=0.0, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);

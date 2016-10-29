@@ -57,7 +57,7 @@ public:
 	void draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, unsigned char const *const render_map=NULL,
 		float const *const exp_map=NULL, point const *const pt_shift=NULL, float expand=0.0,
 		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
-	void get_quad_points(vector<vert_norm_tc> &quad_pts) const;
+	void get_quad_points(vector<vert_norm_tc> &quad_pts, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_triangles(vector<vert_wrap_t> &verts) const;
 	void get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip=1, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_triangle_vertex_list(vector<vertex_type_t> &verts) const;
