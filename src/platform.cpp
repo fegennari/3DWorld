@@ -11,7 +11,7 @@
 platform_cont platforms;
 
 extern bool user_action_key;
-extern int animate2, display_mode;
+extern int display_mode;
 extern float fticks, CAMERA_RADIUS, temperature;
 extern coll_obj_group coll_objects;
 extern set<unsigned> moving_cobjs;

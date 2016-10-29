@@ -1165,6 +1165,7 @@ void dwobject::elastic_collision(point const &obj_pos, float energy, int obj_typ
 
 	if (disabled() || (object_types[type].flags & COLL_DESTROYS)) return; // self-propelled
 	if (temperature <= W_FREEZE_POINT && (flags & IN_WATER))      return; // stuck in ice
+	assert(energy < 1.0E12);
 	vector3d const vdir(pos, obj_pos);
 	float const elastic_factor((flags & IS_CUBE_FLAG) ? 0.25 : 1.0);
 	//float const elastic(object_types[otype].elasticity*object_types[obj_type].elasticity);

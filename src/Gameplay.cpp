@@ -911,6 +911,8 @@ bool landmine_collision(int index, int obj_index, vector3d const &velocity, poin
 
 bool pushable_collision(int index, point const &position, float force, int type, int obj_type) { // Note: return value is *not* valid_coll
 
+	if (!animate2) return 1; // pushed, but no effect
+
 	if (type == CAMERA || type == SMILEY) {
 		dwobject &obj(obj_groups[coll_id[obj_type]].get_obj(index));
 
@@ -921,6 +923,7 @@ bool pushable_collision(int index, point const &position, float force, int type,
 
 			if (obj.flags & IS_CUBE_FLAG) {
 				vector3d const dir(pos - obj.pos);
+				if (dir == zero_vector) return 0; // no movement
 				int const dim(get_max_dim(dir));
 				if (dim == 2) return 0; // don't push in z
 				pos = obj.pos;
