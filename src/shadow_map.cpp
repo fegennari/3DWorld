@@ -185,6 +185,7 @@ public:
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (c.no_shadow_map() || !c.is_movable()) continue; // should we remove it from the list in this case?
 			if (!c.check_pdu_visible(pdu)) continue;
+			if (dist_less_than(c.get_center_pt(), pdu.pos, pdu.near_) && c.contains_point(pdu.pos)) continue; // this cobj must be casting the light
 			
 			if (c.dgroup_id >= 0) {
 				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));

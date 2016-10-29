@@ -273,7 +273,7 @@ bool throw_sphere(bool mode) {
 	if (cid < 0) return 0;
 	unsigned const mat_ix(sphere_materials.get_ix());
 	sphere_mat_t const &mat(sphere_materials.get_mat(mat_ix));
-	float const base_radius(object_types[type].radius), radius(base_radius*mat.radius_scale), radius_sum(CAMERA_RADIUS + radius), near_clip(radius);
+	float const base_radius(object_types[type].radius), radius(base_radius*mat.radius_scale), radius_sum(CAMERA_RADIUS + radius), near_clip(1.01*radius);
 	float const cube_map_beamwidth = 0.4; // 0.3 to 0.5 are okay
 	bool const is_cube(spheres_mode == 2 || spheres_mode == 4);
 	bool const has_shadows(mat.light_radius > 0.0 && mat.shadows);
