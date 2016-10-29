@@ -771,6 +771,13 @@ void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float ra
 	sd.get_triangles(verts);
 }
 
+void add_sphere_quads(vector<vert_norm_tc> &verts, point const &pos, float radius, int ndiv) {
+
+	sd_sphere_d sd(pos, radius, ndiv);
+	sd.gen_points_norms_static();
+	sd.get_quad_points(verts);
+}
+
 
 // non-collision object version
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,

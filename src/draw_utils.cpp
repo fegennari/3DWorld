@@ -665,6 +665,8 @@ template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, unsigned num_instances) const {
 
 	assert(six < eix && eix < offsets.size());
+	assert(offsets[six] <= offsets[eix]);
+	assert(vbo_valid());
 	unsigned const count(offsets[eix] - offsets[six]);
 	check_mvm_update();
 
