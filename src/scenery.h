@@ -150,6 +150,9 @@ public:
 		int color_scale_loc, normal_scale_loc, wind_scale_loc;
 		float wind_scale;
 		shader_state_t() : color_scale_loc(-1), normal_scale_loc(-1), wind_scale_loc(-1), wind_scale(1.0) {}
+		void set_color_scale(shader_t &s, colorRGBA const &color);
+		void set_normal_scale(shader_t &s, float normal_scale);
+		void set_wind_scale(shader_t &s, float wscale);
 	};
 
 	s_plant() : no_leaves(0), coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
@@ -174,19 +177,18 @@ public:
 
 class leafy_plant : public plant_base {
 
+	int vbo_mgr_ix;
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 public:
-	leafy_plant() {}
+	leafy_plant() : vbo_mgr_ix(-1) {}
 	int create(int x, int y, int use_xy, float minz);
+	unsigned num_leaves() const {return leaves.size();}
+	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
 	void add_cobjs();
-	//bool check_sphere_coll(point &center, float sphere_radius) const;
-	//bool update_zvals(int x1, int y1, int x2, int y2);
-	//bool is_shadowed() const;
-	void draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate) const;
-	//void remove_cobjs();
-	//void add_bounds_to_bcube(cube_t &bcube) const;
+	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager);
+	void draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, vbo_vnt_block_manager_t &vbo_manager) const;
 };
 
 
@@ -202,6 +204,7 @@ class scenery_group {
 	vector<leafy_plant>  leafy_plants;
 	vbo_vnc_block_manager_t plant_vbo_manager;
 	vbo_vnt_block_manager_t rock_vbo_manager;
+	vbo_vnt_block_manager_t leafy_vbo_manager;
 	noise_texture_manager_t voxel_rock_ntg;
 	cube_t all_bcube;
 
@@ -224,7 +227,7 @@ public:
 	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	void draw(bool shadow_only, vector3d const &xlate=zero_vector);
 	void write_plants_to_cobj_file(std::ostream &out) const;
-	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
+	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };
 
 

@@ -8,6 +8,7 @@
 #include "gl_ext_arb.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 
 
 bool     const USE_VOXEL_ROCKS = 0;
@@ -432,8 +433,6 @@ bool surface_rock::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_ma
 
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
-	remove_cobjs();
-	add_cobjs();
 	return 1;
 }
 
@@ -778,8 +777,6 @@ bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager
 		//disable_leaves(); // remove the leaves (simpler and more efficient)
 		update_points_vbo(vbo_manager); // regenerate leaf points and re-upload VBO sub-data (slower)
 	}
-	remove_cobjs();
-	add_cobjs();
 	return 1;
 }
 
@@ -817,6 +814,21 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	}
 }
 
+void s_plant::shader_state_t::set_color_scale(shader_t &s, colorRGBA const &color) {
+	s.ensure_uniform_loc(color_scale_loc, "color_scale");
+	s.set_uniform_color(color_scale_loc, color);
+}
+void s_plant::shader_state_t::set_normal_scale(shader_t &s, float normal_scale) {
+	s.ensure_uniform_loc(normal_scale_loc, "normal_scale");
+	s.set_uniform_float(normal_scale_loc, normal_scale);
+}
+void s_plant::shader_state_t::set_wind_scale(shader_t &s, float wscale) {
+	if (wscale == wind_scale) return;
+	s.ensure_uniform_loc(wind_scale_loc, "wind_scale");
+	s.set_uniform_float(wind_scale_loc, wscale);
+	wind_scale = wscale;
+}
+
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
 	if (no_leaves) return;
@@ -827,24 +839,14 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
 	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
 	
-	if (is_water_plant && !shadow_only) {
-		s.ensure_uniform_loc(state.color_scale_loc, "color_scale");
-		s.set_uniform_color(state.color_scale_loc, get_atten_color(WHITE, xlate));
-	}
-	if (shadowed) {
-		s.ensure_uniform_loc(state.normal_scale_loc, "normal_scale");
-		s.set_uniform_float(state.normal_scale_loc, 0.0);
-	}
-	if (wind_scale != state.wind_scale) {
-		s.ensure_uniform_loc(state.wind_scale_loc, "wind_scale");
-		s.set_uniform_float(state.wind_scale_loc, wind_scale);
-		state.wind_scale = wind_scale;
-	}
+	if (is_water_plant && !shadow_only) {state.set_color_scale(s, get_atten_color(WHITE, xlate));}
+	if (shadowed) {state.set_normal_scale(s, 0.0);}
+	state.set_wind_scale(s, wind_scale);
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-	if (is_water_plant && !shadow_only) {s.set_uniform_color(state.color_scale_loc, WHITE);}
-	if (shadowed) {s.set_uniform_float(state.normal_scale_loc, 1.0);}
+	if (is_water_plant && !shadow_only) {state.set_color_scale(s, WHITE);}
+	if (shadowed) {state.set_normal_scale(s, 1.0);}
 }
 
 void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
@@ -875,6 +877,7 @@ void s_plant::remove_cobjs() {
 
 int leafy_plant::create(int x, int y, int use_xy, float minz) {
 	
+	vbo_mgr_ix = -1;
 	int const ret(plant_base::create(x, y, use_xy, minz));
 	if (ret == 0) return 0;
 	if (ret == 2) {type = 0;} // underwater
@@ -904,11 +907,35 @@ int leafy_plant::create(int x, int y, int use_xy, float minz) {
 	return 1;
 }
 
+void leafy_plant::gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts) {
+
+	vector<vert_norm_tc> &verts(vbo_manager.get_pts_vector_for_adding());
+
+	for (auto i = leaves.begin(); i != leaves.end(); ++i) { // for each leaf
+		glm::mat3 const nm(glm::inverseTranspose(glm::mat3(i->m)));
+
+		for (auto v = sphere_verts.begin(); v != sphere_verts.end(); ++v) {
+			vert_norm_tc vert(*v);
+			i->m.apply_to_vector3d(vert.v);
+			vert.n = vector3d_from_vec3(nm * vec3_from_vector3d(vert.n));
+			verts.push_back(vert);
+		}
+	}
+	vbo_mgr_ix = vbo_manager.get_offset_for_last_points_added();
+}
+
 void leafy_plant::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, nullptr, 0, -1));
 }
 
-void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
+bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
+	
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
+	//if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
+	return 1;
+}
+
+void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, vbo_vnt_block_manager_t &vbo_manager) const {
 	
 	//if (display_mode & 0x10) return; // TESTING
 	if (!is_visible(shadow_only, radius, xlate))  return;
@@ -919,6 +946,12 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
 	select_texture(tids[type]);
+
+	if (vbo_mgr_ix >= 0) {
+		assert(vbo_mgr_ix >= 0);
+		vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+		return;
+	}
 	begin_sphere_draw(1); // textured=1
 
 	for (auto i = leaves.begin(); i != leaves.end(); ++i) {
@@ -972,6 +1005,16 @@ template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int 
 		}
 	}
 }
+template<typename T, typename ARG> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2, bool &updated, ARG &arg) {
+
+	for (unsigned i = 0; i < v.size(); ++i) { // zval has change, remove and re-add cobjs
+		if (v[i].update_zvals(x1, y1, x2, y2, arg)) {
+			v[i].remove_cobjs();
+			v[i].add_cobjs();
+			updated = 1;
+		}
+	}
+}
 
 
 void scenery_group::clear_vbos() {
@@ -980,6 +1023,7 @@ void scenery_group::clear_vbos() {
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {voxel_rocks[i].free_context();}
 	plant_vbo_manager.clear_vbo();
 	rock_vbo_manager.clear_vbo();
+	leafy_vbo_manager.clear_vbo();
 }
 
 void scenery_group::clear() {
@@ -1068,19 +1112,14 @@ bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficien
 
 	assert(x1 <= x2 && y1 <= y2);
 	bool updated(0);
-	update_scenery_zvals_vector(rock_shapes, x1, y1, x2, y2, updated);
-	update_scenery_zvals_vector(voxel_rocks, x1, y1, x2, y2, updated);
-	update_scenery_zvals_vector(rocks,       x1, y1, x2, y2, updated);
-	update_scenery_zvals_vector(logs,        x1, y1, x2, y2, updated);
-	update_scenery_zvals_vector(stumps,      x1, y1, x2, y2, updated);
-	update_scenery_zvals_vector(leafy_plants,x1, y1, x2, y2, updated);
-
-	for (unsigned i = 0; i < plants.size(); ++i) { // zval has change, remove and re-add cobjs
-		updated |= plants[i].update_zvals(x1, y1, x2, y2, plant_vbo_manager); // different signature (takes plant_vbo_manager)
-	}
-	for (unsigned i = 0; i < surface_rocks.size(); ++i) { // zval has change, remove and re-add cobjs
-		updated |= surface_rocks[i].update_zvals(x1, y1, x2, y2, rock_vbo_manager); // different signature (takes rock_vbo_manager)
-	}
+	update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(voxel_rocks,   x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(rocks,         x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(logs,          x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(stumps,        x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(plants,        x1, y1, x2, y2, updated, plant_vbo_manager);
+	update_scenery_zvals_vector(leafy_plants,  x1, y1, x2, y2, updated, leafy_vbo_manager);
+	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2, updated, rock_vbo_manager);
 	return updated;
 }
 
@@ -1153,18 +1192,23 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				s_stump stump;
 				if (stump.create(j, i, 1, min_stump_z)) {stumps.push_back(stump); stump.add_bounds_to_bcube(all_bcube);}
 			}
-		}
+		} // for j
+	} // for i
+	if (!leafy_plants.empty()) {
+		vector<vert_norm_tc> sphere_verts;
+		add_sphere_quads(sphere_verts, all_zeros, 1.0, 16,  0.5, 1.0, 0.125, 1.0);
+		unsigned num_leaves(0);
+		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {num_leaves += i->num_leaves();}
+		leafy_vbo_manager.reserve_pts(num_leaves*sphere_verts.size());
+		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {i->gen_points(leafy_vbo_manager, sphere_verts);}
 	}
 	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
 	sort(plants.begin(), plants.end()); // sort by type
 
 	if (!voxel_rocks.empty()) {
 		RESET_TIME;
-
 		#pragma omp parallel for schedule(dynamic,1)
-		for (int i = 0; i < (int)voxel_rocks.size(); ++i) {
-			voxel_rocks[i].build_model();
-		}
+		for (int i = 0; i < (int)voxel_rocks.size(); ++i) {voxel_rocks[i].build_model();}
 		PRINT_TIME("Gen Voxel Rocks");
 	}
 	//PRINT_TIME("Gen Scenery");
@@ -1185,10 +1229,14 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 			plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate, state);
 		}
 		plant_vbo_manager.end_render();
+		state.set_wind_scale(s, 1.0);
 	}
 	if (!leafy_plants.empty()) {
 		s.add_uniform_float("tex_coord_weight", 2.0); // using tex coords, not texgen from vert ID
-		for (unsigned i = 0; i < leafy_plants.size(); ++i) {leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate);}
+		leafy_vbo_manager.upload();
+		leafy_vbo_manager.begin_render();
+		for (unsigned i = 0; i < leafy_plants.size(); ++i) {leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate, leafy_vbo_manager);}
+		leafy_vbo_manager.end_render();
 		s.add_uniform_float("tex_coord_weight", 0.0); // reset
 	}
 	s.clear_specular();
