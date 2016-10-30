@@ -1130,6 +1130,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);
+	unsigned num_lp_leaves(0);
 	generated = 1;
 
 	for (int i = y1; i < y2; ++i) {
@@ -1143,7 +1144,10 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			
 			if (val >= 100) { // +50% leafy plants
 				leafy_plant plant;
-				if (veg && plant.create(j, i, 1, min_plant_z)) {leafy_plants.push_back(plant);}
+				if (veg && plant.create(j, i, 1, min_plant_z)) {
+					leafy_plants.push_back(plant);
+					num_lp_leaves += plant.num_leaves();
+				}
 			}
 			else if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
 				s_plant plant; // 35%
@@ -1180,11 +1184,11 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 		} // for j
 	} // for i
 	if (!leafy_plants.empty()) {
+		bool const use_tri_strip = 1;
 		vector<vert_norm_tc> sphere_verts;
-		add_sphere_quads(sphere_verts, all_zeros, 1.0, 16,  0.5, 1.0, 0.125, 1.0);
-		unsigned num_leaves(0);
-		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {num_leaves += i->num_leaves();}
-		leafy_vbo_manager.reserve_pts(num_leaves*sphere_verts.size());
+		add_sphere_quads(sphere_verts, all_zeros, 1.0, 16, use_tri_strip,  0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
+		if (use_tri_strip) {leafy_vbo_manager.set_prim_type(GL_TRIANGLE_STRIP);}
+		leafy_vbo_manager.reserve_pts(num_lp_leaves*sphere_verts.size());
 		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {i->gen_points(leafy_vbo_manager, sphere_verts);}
 	}
 	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
