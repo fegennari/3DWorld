@@ -654,11 +654,13 @@ void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest,
 	cw.set_c4(color);
 	for (unsigned i = 0; i < npts; ++i) {dest.emplace_back(p[i], cw);}
 }
-
-template<>
-void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &dest, vert_norm_tc const *const p, unsigned npts, colorRGBA const &color) { // color is ignored
+template<> void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &dest, vert_norm_tc const *const p, unsigned npts, colorRGBA const &color) {
 	assert(p != NULL && npts > 0);
-	copy(p, p+npts, back_inserter(dest));
+	copy(p, p+npts, back_inserter(dest)); // color is ignored
+}
+template<> void vbo_block_manager_t<vert_norm_comp_tc>::add_points_int(vector<vert_norm_comp_tc> &dest, vert_norm_comp_tc const *const p, unsigned npts, colorRGBA const &color) {
+	assert(p != NULL && npts > 0);
+	copy(p, p+npts, back_inserter(dest)); // color is ignored
 }
 
 template< typename vert_type_t >
@@ -723,6 +725,7 @@ template class vbo_block_manager_t<vert_color>;
 template class vbo_block_manager_t<vert_norm_comp_color>;
 template class vbo_block_manager_t<vert_norm_tc_color>;
 template class vbo_block_manager_t<vert_norm_tc>;
+template class vbo_block_manager_t<vert_norm_comp_tc>;
 
 
 class quad_ix_buffer_t {

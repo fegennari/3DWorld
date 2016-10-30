@@ -797,9 +797,10 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 
 struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	float t[2];
+	typedef vert_norm_comp_tc non_color_class;
 	vert_norm_comp_tc() {}
 	vert_norm_comp_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
-	vert_norm_comp_tc(point const &v_, vector3d const &n_, float tc[2]) : vert_norm_comp(v_, n_) {t[0] = tc[0]; t[1] = tc[1];}
+	vert_norm_comp_tc(point const &v_, vector3d const &n_, float const tc[2] ) : vert_norm_comp(v_, n_) {t[0] = tc[0]; t[1] = tc[1];}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 

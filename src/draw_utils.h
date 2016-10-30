@@ -205,6 +205,7 @@ typedef vbo_block_manager_t<vert_color> vbo_vc_block_manager_t;
 typedef vbo_block_manager_t<vert_norm_comp_color> vbo_vnc_block_manager_t;
 typedef vbo_block_manager_t<vert_norm_tc_color  > vbo_vntc_block_manager_t;
 typedef vbo_block_manager_t<vert_norm_tc        > vbo_vnt_block_manager_t;
+typedef vbo_block_manager_t<vert_norm_comp_tc   > vbo_vnct_block_manager_t;
 
 
 class lt_atten_manager_t {
