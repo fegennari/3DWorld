@@ -1024,6 +1024,9 @@ void scenery_group::clear() {
 	stumps.clear();
 	plants.clear();
 	leafy_plants.clear();
+	plant_vbo_manager.clear();
+	rock_vbo_manager.clear();
+	leafy_vbo_manager.clear();
 	generated = 0;
 }
 
