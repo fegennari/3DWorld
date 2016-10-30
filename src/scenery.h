@@ -178,11 +178,12 @@ public:
 class leafy_plant : public plant_base {
 
 	int vbo_mgr_ix;
+	float delta_z;
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 public:
-	leafy_plant() : vbo_mgr_ix(-1) {}
+	leafy_plant() : vbo_mgr_ix(-1), delta_z(0.0) {}
 	int create(int x, int y, int use_xy, float minz);
 	unsigned num_leaves() const {return leaves.size();}
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);

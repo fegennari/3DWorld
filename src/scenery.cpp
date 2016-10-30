@@ -930,6 +930,7 @@ bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_man
 	
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	//if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
+	delta_z += dz;
 	return 1;
 }
 
@@ -945,7 +946,9 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
 	select_texture(tids[type]);
 	assert(vbo_mgr_ix >= 0);
+	if (delta_z != 0.0) {fgPushMatrix(); fgTranslate(0, 0, delta_z);} // not the cleanest or most efficient solution, but much simpler than updating the VBO data
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	if (delta_z != 0.0) {fgPopMatrix();}
 }
 
 
