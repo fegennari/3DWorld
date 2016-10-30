@@ -17,10 +17,7 @@ void main() {
 	ws_pos    = fg_Vertex.xyz + world_space_offset;
 	epos      = fg_ModelViewMatrix * fg_Vertex;
 	ws_normal = normalize(fg_Normal);
-	// Note: leafy plants have their matrices uploaded once per leaf, and it's faster to compute the normal matrix from the MVM in the shader/GPU rather than on the CPU
-	//mat3 normal_matrix = fg_NormalMatrix;
-	mat3 normal_matrix = inverse(transpose(mat3(fg_ModelViewMatrix)));
-	normal    = normalize(normal_matrix * ws_normal * normal_scale); // eye space
+	normal    = normalize(fg_NormalMatrix * ws_normal * normal_scale); // eye space
 
 	if (underwater) {
 		vec3 eye        = fg_ModelViewMatrixInverse[3].xyz;

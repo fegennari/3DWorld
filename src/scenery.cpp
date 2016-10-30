@@ -915,10 +915,8 @@ void leafy_plant::gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_n
 		glm::mat3 const nm(glm::inverseTranspose(glm::mat3(i->m)));
 
 		for (auto v = sphere_verts.begin(); v != sphere_verts.end(); ++v) {
-			vert_norm_tc vert(*v);
-			i->m.apply_to_vector3d(vert.v);
-			vert.n = vector3d_from_vec3(nm * vec3_from_vector3d(vert.n));
-			verts.push_back(vert);
+			verts.emplace_back(v->v, vector3d_from_vec3(nm * vec3_from_vector3d(v->n)), v->t); // Note: n is normalized in the shader
+			i->m.apply_to_vector3d(verts.back().v);
 		}
 	}
 	vbo_mgr_ix = vbo_manager.get_offset_for_last_points_added();
@@ -946,21 +944,8 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
 	select_texture(tids[type]);
-
-	if (vbo_mgr_ix >= 0) {
-		assert(vbo_mgr_ix >= 0);
-		vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-		return;
-	}
-	begin_sphere_draw(1); // textured=1
-
-	for (auto i = leaves.begin(); i != leaves.end(); ++i) {
-		fgPushMatrix();
-		fgMultMatrix(i->m);
-		draw_sphere_vbo_pre_bound(ndiv, 1);
-		fgPopMatrix();
-	}
-	end_sphere_draw();
+	assert(vbo_mgr_ix >= 0);
+	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 }
 
 
@@ -1219,19 +1204,19 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 	if (plants.empty() && leafy_plants.empty()) return; // nothing to draw
 	s.set_specular(0.25, 20.0); // a small amount of specular
 	s.add_uniform_float("wind_zscale", 2.0);
+	s_plant::shader_state_t state;
 
 	if (!plants.empty()) {
 		plant_vbo_manager.upload();
 		plant_vbo_manager.begin_render();
-		s_plant::shader_state_t state;
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate, state);
 		}
 		plant_vbo_manager.end_render();
-		state.set_wind_scale(s, 1.0);
 	}
 	if (!leafy_plants.empty()) {
+		state.set_wind_scale(s, 0.25); // less wind
 		s.add_uniform_float("tex_coord_weight", 2.0); // using tex coords, not texgen from vert ID
 		leafy_vbo_manager.upload();
 		leafy_vbo_manager.begin_render();
