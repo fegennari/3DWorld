@@ -573,18 +573,30 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 
 
 // used for scenery, not using vertex_type_t here
-void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts, bool use_tri_strip, float s_beg, float s_end, float t_beg, float t_end) const {
+void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts, vector<unsigned> *indices, bool use_tri_strip, float s_beg, float s_end, float t_beg, float t_end) const {
 
 	assert(ndiv > 0);
 	float const ndiv_inv(1.0/float(ndiv));
 	bool const is_full(s_beg == 0.0 && s_end == 1.0 && t_beg == 0.0 && t_end == 1.0);
-	if (is_full && !use_tri_strip && quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}
-	unsigned s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
+	if (is_full && !use_tri_strip && indices == nullptr && quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}
+	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end)), stride(t1 - t0 + 1);
 	
 	for (unsigned s = s0; s < s1; ++s) {
 		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
 
-		if (use_tri_strip) {
+		if (use_tri_strip && indices != nullptr) { // indexed triangle strip mode
+			// add degenerate triangle to preserve the triangle strip, even for the first strip in case another sphere is merged into the same vert stream (leafy plants)
+			indices->push_back(quad_pts.size());
+			indices->push_back(quad_pts.size()+stride-1);
+
+			for (unsigned t = t0; t <= t1; ++t) {
+				unsigned const ix(quad_pts.size());
+				quad_pts.emplace_back(points[s][t], norms[s][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));
+				indices->push_back(ix);
+				indices->push_back(ix+stride); // +s
+			}
+		}
+		else if (use_tri_strip) { // triangle strip mode
 			// add degenerate triangle to preserve the triangle strip, even for the first strip in case another sphere is merged into the same vert stream (leafy plants)
 			for (unsigned d = 0; d < 2; ++d) {quad_pts.emplace_back(points[s][d ? t0 : t1], norms[s][d ? t0 : t1], 0, 0);}
 
@@ -593,7 +605,18 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts, bool use_tri_s
 				quad_pts.emplace_back(points[sn][t], norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv));
 			}
 		}
-		else {
+		else if (indices != nullptr) { // indexed quads/triangles mode
+			for (unsigned t = t0; t <= t1; ++t) {
+				unsigned const ix(quad_pts.size());
+				quad_pts.emplace_back(points[s][t], norms[s][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));
+				if (t == t1) break; // no indices added for last t value
+				indices->push_back(ix);
+				indices->push_back(ix+stride); // +s
+				indices->push_back(ix+stride+1); // +s +t
+				indices->push_back(ix+1); // +t
+			} // for t
+		}
+		else { // quads mode
 			for (unsigned t = t0; t < t1; ++t) {
 				point          pts[4]     = {points[s][t], points[sn][t], points[sn][t+1], points[s][t+1]};
 				vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][t+1], norms [s][t+1]};
@@ -785,11 +808,12 @@ void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float ra
 	sd.get_triangles(verts);
 }
 
-void add_sphere_quads(vector<vert_norm_tc> &verts, point const &pos, float radius, int ndiv, bool use_tri_strip, float s_beg, float s_end, float t_beg, float t_end) {
-
+void add_sphere_quads(vector<vert_norm_tc> &verts, vector<unsigned> *indices, point const &pos, float radius, int ndiv,
+	bool use_tri_strip, float s_beg, float s_end, float t_beg, float t_end)
+{
 	sd_sphere_d sd(pos, radius, ndiv);
 	sd.gen_points_norms_static(s_beg, s_end, t_beg, t_end);
-	sd.get_quad_points(verts, use_tri_strip, s_beg, s_end, t_beg, t_end);
+	sd.get_quad_points(verts, indices, use_tri_strip, s_beg, s_end, t_beg, t_end);
 }
 
 

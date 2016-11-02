@@ -1192,7 +1192,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	if (!leafy_plants.empty()) {
 		bool const use_tri_strip = 1;
 		vector<vert_norm_tc> sphere_verts;
-		add_sphere_quads(sphere_verts, all_zeros, 1.0, 16, use_tri_strip,  0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
+		add_sphere_quads(sphere_verts, nullptr, all_zeros, 1.0, 16, use_tri_strip,  0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
 		if (use_tri_strip) {leafy_vbo_manager.set_prim_type(GL_TRIANGLE_STRIP);}
 		leafy_vbo_manager.reserve_pts(num_lp_leaves*sphere_verts.size());
 		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {i->gen_points(leafy_vbo_manager, sphere_verts);}
