@@ -883,7 +883,7 @@ int leafy_plant::create(int x, int y, int use_xy, float minz) {
 	if (ret == 2) {type = 0;} // underwater
 	else {
 		float const relh(get_rel_height(pos.z, -zmax_est, zmax_est));
-		if      (relh < 0.44) {type = 1;} // dirt/sand
+		if      (relh < 0.46) {type = 1;} // dirt/sand
 		else if (relh < 0.60) {type = 2;} // grass
 		else if (relh < 0.75) {type = 3;} // rock
 		else return 0; // snow
