@@ -27,9 +27,6 @@ float const TREE_LOD_THRESH   = 6.0;
 float const GEOMORPH_THRESH   = 6.0;
 float const SCENERY_THRESH_REF= 2.0;
 float const SCENERY_THRESH    = 5.0;
-float const GRASS_THRESH      = 1.6;
-float const SMAP_NEW_THRESH   = 1.2;
-float const SMAP_DEL_THRESH   = 1.3;
 float const BCUBE_ZTOLER      = 1.0E-6;
 
 

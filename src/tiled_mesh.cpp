@@ -24,6 +24,9 @@ float const CLEAR_DIST_TILES  = 1.6;
 float const DELETE_DIST_TILES = 1.8;
 float const GRASS_LOD_SCALE   = 15.0; // smaller = more grass detail
 float const GRASS_DIST_SLOPE  = 0.25;
+float const GRASS_THRESH      = 1.6;
+float const SMAP_NEW_THRESH   = 1.2;
+float const SMAP_DEL_THRESH   = 1.3;
 float const SMAP_FADE_THRESH  = 1.5;
 float const OCCLUDER_DIST     = 0.2;
 float const FLOWER_REL_DIST   = 0.9; // flower view distance relative to grass view distance
@@ -46,6 +49,7 @@ extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_ef
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset;
 extern float ocean_wave_height, sm_tree_density, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
+extern float smap_thresh_scale;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
@@ -86,7 +90,7 @@ bool use_water_plane_tess () {return (enable_ocean_waves() && cloud_model == 0 &
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
-float get_smap_atten_val  () {return SMAP_FADE_THRESH*get_tile_width();}
+float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile_width();}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
@@ -781,7 +785,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 	if (!shadow_map_enabled()) return; // disabled
 
 	//timer_t timer("Create Tile Shadow Maps");
-	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH && smap_data.empty()) { // allocate new shadow maps
+	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH*smap_thresh_scale && smap_data.empty()) { // allocate new shadow maps
 		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
 			smap_data.push_back(smap_manager.new_smap_data(13+i, this, i));
 		}
@@ -1003,7 +1007,7 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 		just_cleared = 1;
 	}
 	else {just_cleared = 0;}
-	if (dist*TILE_RADIUS > SMAP_DEL_THRESH) {clear_shadow_map(&smap_manager);} // too far, delete old shadow maps
+	if (dist*TILE_RADIUS > SMAP_DEL_THRESH*smap_thresh_scale) {clear_shadow_map(&smap_manager);} // too far, delete old shadow maps
 	return (dist < DELETE_DIST_TILES && !mesh_height_invalid);
 }
 
