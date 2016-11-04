@@ -70,7 +70,7 @@ texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 0, 8.0), // compression 
 texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
 texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
-texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/oak_leaf.png", 1, 1, 4.0), // 208x350
+texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/oak_leaf.png", 1, 1, 4.0), // 208x348
 texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/cherry_leaf.png", 1, 1, 4.0), // 576x1220
 texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/birch_leaf.png", 1, 1, 4.0), // 838x1372
 texture_t(0, 5, 0,    0,    0, 4, 3, "plant1.jpg", 1), // 256x256
