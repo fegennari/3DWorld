@@ -798,6 +798,11 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 	smap_data.create_if_needed(bcube);
 }
 
+bool tile_t::shadow_maps_allocated() const {
+	for (unsigned i = 0; i < smap_data.size(); ++i) {if (smap_data[i].is_allocated()) return 1;}
+	return 0;
+}
+
 void tile_t::clear_shadow_map(tile_shadow_map_manager *smap_manager) {
 	
 	if (smap_data.empty()) return;
@@ -1395,6 +1400,7 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
 	unsigned lod_level((reflection_pass && min_normal_z > 0.1) ? min(NUM_LODS-1, 1U) : 0);
 	float dist(get_dist_to_camera_in_tiles(0));
+	if (shadow_maps_allocated()) {dist /= 2;} // decrease distance for higher LOD when shadow maps are in use to avoid shadow artifacts on low res mesh
 	
 	if (min_normal_z > 0.0) { // normals have been calculated, adjust detail based on max slope
 		if (min_normal_z > 0.9) { // flat, lower detail

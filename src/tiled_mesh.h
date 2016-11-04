@@ -289,6 +289,7 @@ public:
 	void upload_normal_texture(bool tid_is_valid);
 	void upload_shadow_map_texture(bool tid_is_valid);
 	void setup_shadow_maps(tile_shadow_map_manager &smap_manager);
+	bool shadow_maps_allocated() const;
 	bool using_shadow_maps() const {return !smap_data.empty();}
 
 	// *** mesh creation ***
