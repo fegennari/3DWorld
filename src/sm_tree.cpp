@@ -829,9 +829,9 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 
 	if (!low_detail) { // high detail
 		rand_gen_t rgen;
-		rgen.set_state(long(10000*height), long(10000*width));
+		rgen.set_state(long(10000*height), long(10000*leaf_color.B));
 		unsigned const npts(4*N_PT_LEVELS*N_PT_RINGS);
-		float const rd(0.45), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
+		float const rd(0.45), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*(height0 + leaf_color.B))%360)*TO_RADIANS);
 		float level_dz(height0/(N_PT_LEVELS + 1.2)), rd_scale(1.0), height_off(1.8*level_dz);
 		point const center(pos + point(0.0, 0.0, dz));
 		vert_norm points[npts];
