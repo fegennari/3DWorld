@@ -831,6 +831,8 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	float const sz_scale(SQRT2*get_pine_tree_radius()), dz((type == T_PINE) ? 0.35*height : 0.0);
 
 	if (!low_detail) { // high detail
+		rand_gen_t rgen;
+		rgen.set_state(long(10000*height), long(10000*width));
 		unsigned const npts(4*N_PT_LEVELS*N_PT_RINGS);
 		float const rd(0.45), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 		float level_dz(height0/(N_PT_LEVELS + 1.2)), rd_scale(1.0), height_off(1.8*level_dz);
@@ -843,8 +845,9 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 			height_off += level_dz;
 
 			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
-				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
-				add_rotated_quad_pts(points, ix, theta, z, center, sz, sz, sz, rd_scale*rd*sz); // bounds are (sz, sz, rd*sz+z)
+				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0 + 0.5*rgen.signed_rand_float());
+				float const zz(z + 0.4*sz*rgen.signed_rand_float());
+				add_rotated_quad_pts(points, ix, theta, zz, center, sz, sz, sz, rd_scale*rd*sz); // bounds are (sz, sz, rd*sz+z)
 			}
 		}
 		if (update_mode) {
@@ -933,7 +936,7 @@ void small_tree::draw_trunk(bool shadow_only, vector3d const &xlate, vector<vert
 	else { // draw as cylinder
 		int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 
-		if (cylin_verts && is_pine_tree()) {
+		if (cylin_verts && is_pine_tree()) { // flatten the tip (truncated cone)?
 			assert(trunk_cylin.r2 == 0.0); // cone
 			point const ce[2] = {trunk_cylin.p1, trunk_cylin.p2};
 			vector3d v12;
