@@ -93,11 +93,8 @@ void small_tree_group::finalize(bool low_detail) {
 	assert(!is_uploaded(low_detail));
 	vbo_manager[low_detail].clear();
 	vbo_manager[low_detail].reserve_pts((low_detail ? num_pine_trees : 4*N_PT_LEVELS*N_PT_RINGS));
-
-	#pragma omp parallel for schedule(static,1) if (!low_detail)
-	for (int i = 0; i < (int)size(); ++i) {
-		operator[](i).calc_points(vbo_manager[low_detail], low_detail);
-	}
+	#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
+	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_manager[low_detail], low_detail);}
 }
 
 
