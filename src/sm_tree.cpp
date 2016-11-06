@@ -97,7 +97,7 @@ void small_tree_group::finalize(bool low_detail) {
 	vbo_mgr.clear();
 	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : PINE_TREE_NPTS));
 	if (!low_detail) {vbo_mgr.reserve_offsets(num_pine_trees);}
-	#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
+	#pragma omp parallel for schedule(static,1) num_threads(2) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_mgr, low_detail);}
 }
 
@@ -837,7 +837,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		float const rd(0.45), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*(height0 + leaf_color.B))%360)*TO_RADIANS);
 		float level_dz(height0/(N_PT_LEVELS + 1.2)), rd_scale(1.0), height_off(1.8*level_dz);
 		point const center(pos + point(0.0, 0.0, dz));
-		vert_norm points[PINE_TREE_NPTS];
+		vert_norm_comp points[PINE_TREE_NPTS];
 
 		for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
 			level_dz *= 0.9; rd_scale *= 1.2; // higher slope, closer spacing near the top levels
@@ -862,7 +862,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	else { // low detail billboard
 		assert(!update_mode);
 		float const zv1(0.75*dz); // shift slightly down to account for sparse tree texture image
-		vert_norm const vn((pos + point(0.0, 0.0, zv1)), vector3d(2.0*sz_scale/calc_tree_size(), 0.9*(height - zv1), 0.0)); // 0.9x to prevent clipping above 1.0
+		vert_norm_comp const vn((pos + point(0.0, 0.0, zv1)), vector3d(2.0*sz_scale/calc_tree_size(), 0.9*(height - zv1), 0.0)); // 0.9x to prevent clipping above 1.0
 		vbo_manager.add_points(&vn, 1, leaf_color);
 	}
 }

@@ -143,7 +143,7 @@ class s_plant : public plant_base { // size = 56
 	float height;
 	vector<vert_wrap_t> berries;
 
-	void create_leaf_points(vector<vert_norm> &points) const;
+	void create_leaf_points(vector<vert_norm_comp> &points) const;
 
 public:
 	struct shader_state_t {

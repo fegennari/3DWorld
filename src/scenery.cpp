@@ -711,7 +711,7 @@ bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // u
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
-void s_plant::create_leaf_points(vector<vert_norm> &points) const {
+void s_plant::create_leaf_points(vector<vert_norm_comp> &points) const {
 	
 	// Note: could scale leaves for different plant types differently in x vs. y to allow for non-square textures (tighter bounds = lower fillrate)
 	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
@@ -736,7 +736,7 @@ void s_plant::create_leaf_points(vector<vert_norm> &points) const {
 void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 
 	if (vbo_mgr_ix >= 0) return; // already generated
-	vector<vert_norm> &pts(vbo_manager.temp_points);
+	vector<vert_norm_comp> &pts(vbo_manager.temp_points);
 	create_leaf_points(pts);
 	assert(!pts.empty());
 	vbo_mgr_ix = vbo_manager.add_points_with_offset(pts, pltype[type].leafc);

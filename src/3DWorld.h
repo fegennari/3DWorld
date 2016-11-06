@@ -920,7 +920,7 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 
 
 struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // size = 20
-	typedef vert_norm non_color_class; // non-compressed type
+	typedef vert_norm_comp non_color_class; // non-compressed type
 	vert_norm_comp_color() {}
 	vert_norm_comp_color(vert_norm const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}
 	vert_norm_comp_color(vert_norm_comp const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}

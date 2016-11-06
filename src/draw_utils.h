@@ -164,7 +164,7 @@ template< typename vert_type_t > class vbo_block_manager_t : public vbo_wrap_t {
 	void add_points_int(vector<vert_type_t> &dest, typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color);
 
 public:
-	vector<vert_norm> temp_points;
+	vector<vert_norm_comp> temp_points;
 
 	// can't free in the destructor because the gl context may be destroyed before this point
 	vbo_block_manager_t() : prim_type(GL_QUADS) {} // default is quads
