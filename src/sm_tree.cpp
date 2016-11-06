@@ -97,7 +97,7 @@ void small_tree_group::finalize(bool low_detail) {
 	vbo_mgr.clear();
 	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : PINE_TREE_NPTS));
 	if (!low_detail) {vbo_mgr.reserve_offsets(num_pine_trees);}
-	#pragma omp parallel for schedule(static,1) num_threads(2) if (!low_detail)
+	#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_mgr, low_detail);}
 }
 
