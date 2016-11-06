@@ -172,6 +172,7 @@ public:
 	void set_prim_type(int type) {prim_type = type;}
 	bool is_uploaded() const {return (vbo != 0);}
 	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
+	void reserve_offsets(unsigned num) {assert(offsets.empty()); offsets.reserve(num);}
 	void add_points(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {add_points_int(pts, p, npts, color);}
 	void add_points(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {add_points_int(pts, &v.front(), v.size(), color);}
 	unsigned get_offset_for_last_points_added();
