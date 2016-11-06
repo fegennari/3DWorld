@@ -19,6 +19,8 @@ int  const NUM_SMALL_TREES  = 40000;
 unsigned const N_PT_LEVELS  = 6;
 unsigned const N_PT_RINGS   = 5;
 
+unsigned const PINE_TREE_NPTS = 4*N_PT_LEVELS*N_PT_RINGS;
+
 
 small_tree_group small_trees;
 small_tree_group tree_instances;
@@ -93,7 +95,7 @@ void small_tree_group::finalize(bool low_detail) {
 	assert(!is_uploaded(low_detail));
 	vbo_vnc_block_manager_t &vbo_mgr(vbo_manager[low_detail]);
 	vbo_mgr.clear();
-	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : 4*N_PT_LEVELS*N_PT_RINGS));
+	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : PINE_TREE_NPTS));
 	if (!low_detail) {vbo_mgr.reserve_offsets(num_pine_trees);}
 	#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_mgr, low_detail);}
@@ -832,11 +834,10 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	if (!low_detail) { // high detail
 		rand_gen_t rgen;
 		rgen.set_state(long(10000*height), long(10000*leaf_color.B));
-		unsigned const npts(4*N_PT_LEVELS*N_PT_RINGS);
 		float const rd(0.45), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*(height0 + leaf_color.B))%360)*TO_RADIANS);
 		float level_dz(height0/(N_PT_LEVELS + 1.2)), rd_scale(1.0), height_off(1.8*level_dz);
 		point const center(pos + point(0.0, 0.0, dz));
-		vert_norm points[npts];
+		vert_norm points[PINE_TREE_NPTS];
 
 		for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
 			level_dz *= 0.9; rd_scale *= 1.2; // higher slope, closer spacing near the top levels
@@ -851,11 +852,11 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		}
 		if (update_mode) {
 			assert(vbo_mgr_ix >= 0);
-			vbo_manager.update_range(points, npts, leaf_color, vbo_mgr_ix, vbo_mgr_ix+1);
+			vbo_manager.update_range(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix, vbo_mgr_ix+1);
 		}
 		else { // we only get into this case when running in parallel
 			#pragma omp critical(pine_tree_vbo_update)
-			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, npts, leaf_color);
+			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, PINE_TREE_NPTS, leaf_color);
 		}
 	}
 	else { // low detail billboard

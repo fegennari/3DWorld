@@ -865,6 +865,9 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 struct color_wrapper { // size = 4, can be used in a union
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
+	color_wrapper() {}
+	color_wrapper(colorRGBA const &c_) {set_c4(c_);}
+	color_wrapper(colorRGB  const &c_) {set_c3(c_);}
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
 	void set_c4(colorRGBA const &c_) {UNROLL_4X(c[i_]  = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	void add_c4(colorRGBA const &c_) {UNROLL_4X(c[i_] += (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}

@@ -184,6 +184,11 @@ public:
 		assert(!v.empty());
 		return add_points_with_offset(&v.front(), v.size(), color);
 	}
+	unsigned alloc_points_with_offset(unsigned npts) {
+		pts.resize(pts.size() + npts);
+		return get_offset_for_last_points_added();
+	}
+	void fill_pts_from(typename vert_type_t const *const p, unsigned npts, unsigned six);
 	void render_range(unsigned six, unsigned eix, unsigned num_instances=1) const;
 	void render_all(unsigned num_instances=1) const {if (has_data()) {render_range(0, offsets.size()-1, num_instances);}}
 	bool upload();

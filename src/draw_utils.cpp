@@ -648,10 +648,8 @@ unsigned vbo_block_manager_t<vert_type_t>::get_offset_for_last_points_added() {
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest, typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {
-
 	assert(p != NULL && npts > 0);
-	color_wrapper cw;
-	cw.set_c4(color);
+	color_wrapper cw(color);
 	for (unsigned i = 0; i < npts; ++i) {dest.emplace_back(p[i], cw);}
 }
 template<> void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &dest, vert_norm_tc const *const p, unsigned npts, colorRGBA const &color) {
@@ -661,6 +659,13 @@ template<> void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_no
 template<> void vbo_block_manager_t<vert_norm_comp_tc>::add_points_int(vector<vert_norm_comp_tc> &dest, vert_norm_comp_tc const *const p, unsigned npts, colorRGBA const &color) {
 	assert(p != NULL && npts > 0);
 	copy(p, p+npts, back_inserter(dest)); // color is ignored
+}
+template< typename vert_type_t >
+void vbo_block_manager_t<vert_type_t>::fill_pts_from(typename vert_type_t const *const p, unsigned npts, unsigned six) { // unused
+	unsigned const eix(six + 1);
+	assert(six < eix && eix < offsets.size());
+	assert((offsets[eix] - offsets[six]) == npts);
+	for (unsigned i = 0; i < npts; ++i) {pts[i+offsets[six]] = p[i];}
 }
 
 template< typename vert_type_t >
