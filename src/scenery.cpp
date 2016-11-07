@@ -206,7 +206,6 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 		}
 	}
 	else if (type == 1) {
-		timer_t timer("gen scenery rs");
 		alloc_shape(nverts, 10*nverts, 0); // not sure how many faces yet
 		for (unsigned i = 0; i < nverts; ++i) {points[i] = gen_rand_vector2(size);}
 		unsigned face(0);
