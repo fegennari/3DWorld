@@ -159,16 +159,17 @@ struct edge {
 
 class edge_seen_set {
 
-	set<pair<unsigned, unsigned> > seen;
+	vector<uint64_t> seen;
 
 public:
+	edge_seen_set(unsigned const sz) {assert(sz <= 64); seen.resize(sz, 0);}
 	bool find(unsigned a, unsigned b) const {
 		assert(a != b);
-		return (seen.find(make_pair(min(a, b), max(a,b))) != seen.end());
+		return ((seen[min(a,b)] & ((uint64_t)1 << max(a,b))) != 0);
 	}
 	void insert(unsigned a, unsigned b) {
 		assert(a != b);
-		seen.insert(make_pair(min(a, b), max(a,b)));
+		seen[min(a,b)] |= ((uint64_t)1 << max(a,b));
 	}
 };
 
@@ -187,43 +188,35 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 
 		// create default 4x4 prism shape
 		// vertices
-		for (unsigned i = 0; i < 4; ++i) {
-			points[i] = signed_rand_vector2(size);
-		}
+		for (unsigned i = 0; i < 4; ++i) {points[i] = signed_rand_vector2(size);}
 
 		// face vertices
 		unsigned const fv[4][3] = {{2,1,0}, {2,0,3}, {1,2,3}, {0,1,3}};
 
 		for (unsigned i = 0; i < 4; ++i) {
-			for (unsigned j = 0; j < 3; ++j) {
-				faces[i].v[j] = fv[i][j];
-			}
+			for (unsigned j = 0; j < 3; ++j) {faces[i].v[j] = fv[i][j];}
 		}
 		for (unsigned i = 4; i < points.size(); ++i) {
 			point center;
 			unsigned const face_id(rand2()%face_counter);
 			get_face_normal(face_id);
 			get_triangle_center(center, face_id);
-
-			for (unsigned j = 0; j < 3; ++j) {
-				points[i][j] = center[j] + faces[face_id].norm[j]*size*rand2d();
-			}
+			for (unsigned j = 0; j < 3; ++j) {points[i][j] = center[j] + faces[face_id].norm[j]*size*rand2d();}
 			add_vertex(i, face_id, face_counter);
 		}
 	}
 	else if (type == 1) {
+		timer_t timer("gen scenery rs");
 		alloc_shape(nverts, 10*nverts, 0); // not sure how many faces yet
-
-		for (unsigned i = 0; i < nverts; ++i) {
-			points[i] = gen_rand_vector2(size);
-		}
+		for (unsigned i = 0; i < nverts; ++i) {points[i] = gen_rand_vector2(size);}
 		unsigned face(0);
-		vector<unsigned char> used(nverts, 0);
-		edge_seen_set edges_seen;
+		assert(nverts <= 64);
+		uint64_t used(0);
+		edge_seen_set edges_seen(nverts);
 		deque<edge> edges; // incomplete faces
 
 		for (unsigned cv = 0; cv < nverts; ++cv) { // is this outer loop necessary?
-			if (used[cv]) continue; // finished with this vertex
+			if (used & (1ULL<<cv)) continue; // finished with this vertex
 			unsigned imin(0);
 			float dmin(0.0);
 
@@ -234,8 +227,8 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 			}
 			assert(dmin != 0.0);
 			assert(!edges_seen.find(cv, imin));
-			used[cv]   = 1;
-			used[imin] = 1;
+			used |= (1ULL<<cv);
+			used |= (1ULL<<imin);
 
 			for (unsigned d = 0; d < 2; ++d) { // two faces on every new edge
 				assert(face < faces.size());
@@ -248,6 +241,8 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 				edges.pop_back();
 				assert(e.face < faces.size());
 				unsigned *v(faces[e.face].v);
+				point const &pv0(points[v[0]]), &pv1(points[v[1]]);
+				float const pv1_mag(pv1.mag());
 				float dmin(0.0);
 
 				for (unsigned i = 0; i < nverts; ++i) {
@@ -255,29 +250,27 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 
 					if (dmin > 0.0) { // not quite right
 						// points[i] must lie on the edir side of the line (points[v[1]] - points[v[0]])
-						float const dp(dot_product((points[i] - points[v[0]]), (points[v[0]] - points[v[1]])));
-						if ((dp < 0.0)^e.dir) continue;
+						float const dp(dot_product((points[i] - pv0), (pv0 - pv1)));
+						if ((dp < 0.0) ^ e.dir) continue;
 					}
-					vector3d const A(points[v[0]], points[i]), B(points[v[1]], points[i]);
-					point2d<float> const dist(A.mag(), B.mag());
-					float const d(dist.mag_sq() - 0.05*size*fabs(dot_product(points[v[1]].get_norm(), cross_product(A, B).get_norm())));
+					vector3d const A(pv0, points[i]), B(pv1, points[i]), cp(cross_product(A, B));
+					float const d((A.mag_sq() + B.mag_sq()) - 0.05*size*fabs(dot_product(pv1, cp))/(pv1_mag*cp.mag()));
 					if (dmin == 0.0 || d < dmin) {dmin = d; v[2] = i;}
 				}
 				assert(dmin != 0.0);
-				used[v[2]] = 1;
+				used |= (1ULL<<v[2]);
 				
 				for (unsigned d = 0; d < 2; ++d) {
-					if (!edges_seen.find(v[d], v[2])) { // new edge that has no opposite face
-						edges_seen.insert(v[d], v[2]);
-						assert(face < faces.size());
-						faces[face].v[0] = v[d]; // start a new face
-						faces[face].v[1] = v[2];
-						float const dp(dot_product((points[v[!d]] - points[v[d]]), (points[v[d]] - points[v[2]])));
-						edges.push_back(edge(face++, (dp > 0.0)));
-					}
+					if (edges_seen.find(v[d], v[2])) continue; // not a new edge - has opposite face
+					edges_seen.insert(v[d], v[2]); // not a new edge - has opposite face
+					assert(face < faces.size());
+					faces[face].v[0] = v[d]; // start a new face
+					faces[face].v[1] = v[2];
+					float const dp(dot_product((points[v[!d]] - points[v[d]]), (points[v[d]] - points[v[2]])));
+					edges.push_back(edge(face++, (dp > 0.0)));
 				}
-			}
-		}
+			} // while
+		} // for cv
 		faces.resize(face);
 		//cout << "nverts = " << nverts << ", nfaces = " << faces.size() << endl;
 	}
