@@ -28,7 +28,7 @@ pt_line_drawer tree_scenery_pld;
 
 extern bool tree_indir_lighting, only_pine_palm_trees;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
-extern int rand_gen_index, display_mode, force_tree_class;
+extern int rand_gen_index, display_mode, force_tree_class, mesh_gen_mode;
 extern unsigned max_unique_trees;
 extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, CAMERA_RADIUS, tree_type_rand_zone;
 
@@ -347,7 +347,8 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()), ntrees_mult(vegetation*sm_tree_density*tscale*tscale/8.0f);
 	int const skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	bool const use_hmap_tex(using_tiled_terrain_hmap_tex());
-	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !use_hmap_tex); // faster, but lower z-value accuracy, and only works for tiled terrain mode
+	// faster, but lower z-value accuracy, and only works for tiled terrain mode
+	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !use_hmap_tex && (mesh_gen_mode == MGEN_SINE || ntrees_mult > 0.025));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
 	mesh_xy_grid_cache_t density_gen, height_gen; // random tree generation based on transformed mesh height function
