@@ -17,7 +17,8 @@ void main()
 	float ascale= 1.0;
 #ifdef DEC_HEIGHT_WHEN_FAR
 	float dist  = length((fg_ModelViewMatrix * (vertex + vec4(xlate, z_val, 0))).xyz);
-	float ds_val= clamp(dist_slope*(dist - dist_const), 0.0, 1.0);
+	float dscale= 1.0 + 0.3*sin(123.4*fg_Color.g); // randomize distance slope based on color to produce a smoother transition
+	float ds_val= clamp(dist_slope*dscale*(dist - dist_const), 0.0, 1.0);
 	vertex.z   -= 0.9*ds_val*height; // move below mesh far away from camera
 	ascale      = min(1.0, 10.0*(1.0 - ds_val)); // decrease alpha very far away from camera
 #endif
