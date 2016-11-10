@@ -376,7 +376,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 				float const xval(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
 				float const yval(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
 				float const zpos(approx_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
-				int const ttype(get_tree_type_from_height(zpos, rgen));
+				int const ttype(get_tree_type_from_height(zpos, rgen, 0));
 				if (ttype == TREE_NONE) continue;
 				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) continue;
 
@@ -455,10 +455,10 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
 }
 
-int get_tree_type_from_height(float zpos, rand_gen_t &rgen) {
+int get_tree_type_from_height(float zpos, rand_gen_t &rgen, bool for_scenery) {
 
 	//return T_DECID; // TESTING
-	switch (get_tree_class_from_height(zpos, (world_mode == WMODE_INF_TERRAIN && (tree_mode & 2)))) { // force pine trees in small tree mode
+	switch (get_tree_class_from_height(zpos, (world_mode == WMODE_INF_TERRAIN && (tree_mode == 2 || (!for_scenery && tree_mode == 3))))) { // force pine trees in small tree mode
 	case TREE_CLASS_NONE: return TREE_NONE;
 	case TREE_CLASS_PINE: return ((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
 	case TREE_CLASS_PALM: return T_PALM;

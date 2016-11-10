@@ -509,7 +509,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 }
 
 
-void wood_scenery_obj::calc_type() {type = (char)get_tree_type_from_height(pos.z, global_rand_gen);}
+void wood_scenery_obj::calc_type() {type = (char)get_tree_type_from_height(pos.z, global_rand_gen, 1);}
 
 int get_closest_tree_bark_tid(point const &pos);
 
