@@ -117,7 +117,7 @@ extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, ons
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern unsigned erosion_iters, scene_smap_vbo_invalid, spheres_mode;
-extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale, flower_density, universe_ambient_scale;
+extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, tree_dead_prob, lm_dz_adj, nleaves_scale, flower_density, universe_ambient_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale, planet_update_rate;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT, map_x, map_y;
 extern point hmv_pos, camera_last_pos;
@@ -1651,6 +1651,7 @@ int load_config(string const &config_file) {
 	kwmf.add("camera_step_height", C_STEP_HEIGHT);
 	kwmf.add("waypoint_sz_thresh", waypoint_sz_thresh);
 	kwmf.add("tree_deadness", tree_deadness);
+	kwmf.add("tree_dead_prob", tree_dead_prob);
 	kwmf.add("sun_rot", sun_rot);
 	kwmf.add("moon_rot", moon_rot);
 	kwmf.add("cobj_z_bias", cobj_z_bias);

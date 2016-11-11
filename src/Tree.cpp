@@ -52,7 +52,7 @@ vector<tree_branch *> tree_builder_t::branch_ptr_cache;
 bool has_any_billboard_coll(0), next_has_any_billboard_coll(0), tree_4th_branches(0);
 unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(2);
-float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), branch_radius_scale(1.0), tree_height_scale(1.0);
+float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), tree_dead_prob(0.0), nleaves_scale(1.0), branch_radius_scale(1.0), tree_height_scale(1.0);
 float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
 tree_data_manager_t tree_data_manager;
@@ -771,7 +771,7 @@ void tree::add_bounds_to_bcube(cube_t &bcube) const {
 
 void tree_data_t::check_render_textures() {
 
-	if (!render_leaf_texture.is_valid()) {
+	if (!render_leaf_texture.is_valid() && !leaves.empty()) {
 #ifdef USE_TREE_BB_TEX_ATLAS
 		render_leaf_texture.nx = 2;
 #endif
@@ -1427,6 +1427,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 		int const num(rand_gen(1, 100));
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
+	if (deadness < 1.0 && tree_dead_prob > 0.0 && rand_float2() < tree_dead_prob) {deadness = 1.0;}
 	tree_builder_t builder(clip_cube);
 	
 	// create leaves and all_cylins
