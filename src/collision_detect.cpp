@@ -29,7 +29,7 @@ extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height;
-extern double camera_zh;
+extern double camera_zh, tfticks;
 extern dwobject def_objects[];
 extern obj_type object_types[];
 extern player_state *sstates;
@@ -1608,20 +1608,33 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 }
 
 
-void create_snow_footprints(point const &pos, float sz, vector3d const &view_dir, point &prev_snow_pos, unsigned &step_num, bool &foot_down, bool is_camera) {
+void create_footsteps(point const &pos, float sz, vector3d const &view_dir, point &prev_foot_pos, unsigned &step_num, bool &foot_down, bool is_camera) {
 
-	if (!has_snow) return;
+	if (!has_snow /*&& !is_camera*/) return; // only camera has footsteps, all players have snow footprints; non-snow footsteps disabled for now
 	bool const prev_foot_down(foot_down);
 	float const stride(1.8*sz), foot_length(0.5*sz), crush_depth(1.0*sz), foot_spacing(0.25*sz); // spacing from center
-	if      (!foot_down && !dist_less_than(prev_snow_pos, pos, stride     )) {foot_down = 1; prev_snow_pos = pos; ++step_num;} // foot down and update pos
-	else if ( foot_down && !dist_less_than(prev_snow_pos, pos, foot_length)) {foot_down = 0;} // foot up
+	if      (!foot_down && !dist_less_than(prev_foot_pos, pos, stride     )) {foot_down = 1; prev_foot_pos = pos; ++step_num;} // foot down and update pos
+	else if ( foot_down && !dist_less_than(prev_foot_pos, pos, foot_length)) {foot_down = 0;} // foot up
 	vector3d const right_dir(cross_product(view_dir, plus_z).get_norm());
 	point const step_pos(pos + ((step_num&1) ? foot_spacing : -foot_spacing)*right_dir - vector3d(0.0, 0.0, 0.5*sz)); // alternate left and right feet
-	
-	if (foot_down) {
-		bool const crushed(crush_snow_at_pt(step_pos, crush_depth));
-		if (is_camera && !prev_foot_down) {gen_sound((crushed ? SOUND_SNOW_STEP : SOUND_FOOTSTEP), pos, 0.02, (crushed ? 1.5 : 1.2));} // on down step
-	}
+	if (!foot_down) return;
+	bool const crushed(has_snow ? crush_snow_at_pt(step_pos, crush_depth) : 0);
+	if (is_camera && !prev_foot_down) {gen_sound((crushed ? SOUND_SNOW_STEP : SOUND_FOOTSTEP), pos, 0.025, (crushed ? 1.5 : 1.2));} // on down step
+}
+
+void play_camera_footstep_sound() {
+
+	if (!(display_mode & 0x0100)) return;
+	static double fs_time(0.0);
+	static point last_pos(all_zeros), prev_frame_pos(all_zeros);
+	point const pos(get_camera_pos());
+	if (dist_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {fs_time = tfticks;} // reset timer if camera hasn't moved
+	prev_frame_pos = pos;
+	if (tfticks - fs_time < 0.36*TICKS_PER_SECOND) return; // too soon
+	if (dist_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
+	last_pos = pos;
+	fs_time  = tfticks;
+	gen_sound(SOUND_SNOW_STEP, pos, 0.05, 1.25);
 }
 
 
@@ -1683,7 +1696,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstate.zvel, CAMERA, CAMERA_ID, cflight, camera_on_snow); // status return value is unused?
 	}
 	camera_on_snow = 0;
-	//if (display_mode & 0x0100) {create_snow_footprints(pos, radius, cview_dir, sstate.prev_snow_pos, sstate.step_num, sstate.foot_down, 1);}
+	//if (display_mode & 0x0100) {create_footsteps(pos, radius, cview_dir, sstate.prev_foot_pos, sstate.step_num, sstate.foot_down, 1);}
 	
 	if (display_mode & 0x10) { // walk on snow (jumping?)
 		float zval;
@@ -1767,7 +1780,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	bool jumping(0);
 
 	if (is_player && !test_only) {
-		if (display_mode & 0x0100) {create_snow_footprints(pos, radius, sstate->velocity.get_norm(), sstate->prev_snow_pos, sstate->step_num, sstate->foot_down, is_camera);}
+		if (display_mode & 0x0100) {create_footsteps(pos, radius, sstate->velocity.get_norm(), sstate->prev_foot_pos, sstate->step_num, sstate->foot_down, is_camera);}
 
 		/*if (display_mode & 0x10) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
 			float zval;

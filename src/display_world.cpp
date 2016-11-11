@@ -68,6 +68,7 @@ bool indir_lighting_updated();
 point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
+void play_camera_footstep_sound();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -1167,6 +1168,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (!underwater) {draw_local_precipitation();}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	draw_game_elements(timer1);
+	if (camera_surf_collide) {play_camera_footstep_sound();}
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();
 	init_x = 0;
