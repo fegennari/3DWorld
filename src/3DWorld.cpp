@@ -1018,7 +1018,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		tree_color_coherence = 0.2;
 		leaf_base_color.R    = 0.2;
 		leaf_base_color.G    = 1.0;
-		leaf_color_changed   = 1;
+		register_leaf_color_change();
 		break;
 
 	case 'L': // increase terrain zoom

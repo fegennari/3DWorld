@@ -459,6 +459,11 @@ void draw_trees(bool shadow_only, bool reflection_pass) {
 	if (!shadow_only) {leaf_color_changed = 0;}
 }
 
+void register_leaf_color_change() {
+	leaf_color_changed = 1;
+	tree_data_manager.on_leaf_color_change();
+}
+
 
 void tree_data_t::make_private_copy(tree_data_t &dest) const {
 	dest = *this;
@@ -739,7 +744,6 @@ void tree_data_t::clear_vbo_ixs() {
 	leaf_vbo = num_branch_quads = num_unique_pts = 0;
 	branch_manager.reset_vbos_to_zero();
 }
-
 void tree_data_t::clear_context() {
 
 	render_leaf_texture.free_context();
@@ -747,6 +751,9 @@ void tree_data_t::clear_context() {
 	branch_manager.clear_vbos();
 	delete_vbo(leaf_vbo);
 	clear_vbo_ixs();
+}
+void tree_data_t::on_leaf_color_change() {
+	render_leaf_texture.free_context();
 }
 
 
@@ -2190,6 +2197,10 @@ void tree_data_manager_t::ensure_init() {
 
 void tree_data_manager_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
+}
+
+void tree_data_manager_t::on_leaf_color_change() {
+	for (iterator i = begin(); i != end(); ++i) {i->on_leaf_color_change();}
 }
 
 unsigned tree_data_manager_t::get_gpu_mem() const {

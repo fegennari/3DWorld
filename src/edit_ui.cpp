@@ -210,6 +210,7 @@ extern colorRGBA sunlight_color;
 
 void update_grass_length_width(float new_grass_length, float new_grass_width);
 void update_tiled_grass_colors();
+void register_leaf_color_change();
 
 class leaf_color_kbd_menu_t : public keyboard_menu_t {
 
@@ -289,7 +290,7 @@ public:
 			break;
 		default: assert(0);
 		}
-		leaf_color_changed = 1;
+		register_leaf_color_change();
 	}
 };
 

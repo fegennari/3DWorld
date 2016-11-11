@@ -242,6 +242,7 @@ public:
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
 	void clear_data();
 	void clear_context();
+	void on_leaf_color_change();
 	unsigned get_leaf_data_mem() const {return leaf_data.size()*sizeof(leaf_vert_type_t);}
 	unsigned get_gpu_mem() const;
 	int get_tree_type() const {return tree_type;}
@@ -330,6 +331,7 @@ public:
 	tree_data_manager_t() : last_tree_scale(1.0), last_rgi(0) {}
 	void ensure_init();
 	void clear_context();
+	void on_leaf_color_change();
 	unsigned get_gpu_mem() const;
 };
 
@@ -375,6 +377,7 @@ public:
 float get_tree_z_bottom(float z, point const &pos);
 void remove_tree_cobjs();
 void draw_trees(bool shadow_only=0, bool reflection_pass=0);
+void register_leaf_color_change();
 void delete_trees();
 void regen_trees(bool keep_old);
 void shift_trees(vector3d const &vd);
