@@ -1021,8 +1021,6 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 
 void tile_t::init_pine_tree_draw() {
 
-	if (!can_have_pine_palm_trees()) return; // no pine trees, or tile too distant
-	//timer_t timer("Gen Pine Trees");
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
 	if (enable_instanced_pine_trees()) {pine_trees.enable_instanced();}
@@ -1123,7 +1121,6 @@ void tile_t::gen_decid_trees_if_needed() {
 		max_unique_trees = 100;
 	}
 	if (decid_trees.was_generated() || !can_have_decid_trees()) return; // already generated, elevation too high, or distant tile (no trees yet)
-	//timer_t timer("Gen Decid Trees");
 	assert(decid_trees.empty());
 	dtree_off.set_from_xyoff2();
 	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
@@ -2136,11 +2133,11 @@ void tile_draw_t::pre_draw(bool reflection_pass) { // view-dependent updates/GPU
 		if (!tile->is_visible()) continue; // Note: using current camera view frustum
 
 		if (tile->can_have_trees()) { // no trees in water or distant tiles
-			if (pine_trees_enabled() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
+			if (pine_trees_enabled() && tile->can_have_pine_palm_trees() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
 			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
 		}
 		to_update.push_back(tile);
-	}
+	} // for i
 	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {create_pine_tree_instances();}
 	//RESET_TIME;
 	// don't use parallel tree gen for a single tile, or when GPU heightmaps are enabled
