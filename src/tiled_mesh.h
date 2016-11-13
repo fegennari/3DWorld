@@ -307,7 +307,7 @@ public:
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
 	float get_scenery_dist_scale(bool reflection_pass) const {return tree_scale*get_dist_to_camera_in_tiles(0)/get_scenery_thresh(reflection_pass);}
 	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/get_tree_scale_denom();}
-	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
+	float get_tree_far_weight (bool force_high_detail) const {return ((ENABLE_TREE_LOD && !force_high_detail) ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
 	float get_draw_priority() const;
 
 	// *** trees ***
@@ -318,10 +318,11 @@ public:
 		radius = max(radius, (calc_radius() + trmax)); // is this really needed?
 	}
 	void init_pine_tree_draw();
-	void update_pine_tree_state(bool upload_if_needed);
+	void update_pine_tree_state(bool upload_if_needed, bool force_high_detail=0);
 	unsigned num_pine_trees() const {return pine_trees.size();}
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail, int xlate_loc);
-	void draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_trunks, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc);
+	void draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_trunks, bool draw_near_leaves, bool draw_far_leaves,
+		bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc);
 	unsigned num_decid_trees() const {return decid_trees.size();}
 	void gen_decid_trees_if_needed();
 	void set_mesh_ambient_color(shader_t &s) const;
@@ -416,7 +417,7 @@ public:
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_pine_tree_shader(shader_t &s, string const &vs, bool use_texgen=1);
 	static void set_pine_tree_shader_post(shader_t &s);
-	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc);
+	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc);
 	void draw_pine_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	static void billboard_tree_shader_setup(shader_t &s);

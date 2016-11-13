@@ -1029,10 +1029,10 @@ void tile_t::init_pine_tree_draw() {
 	postproc_trees(pine_trees, ptzmax);
 }
 
-void tile_t::update_pine_tree_state(bool upload_if_needed) {
+void tile_t::update_pine_tree_state(bool upload_if_needed, bool force_high_detail) {
 
 	if (!pine_trees_enabled() || pine_trees.empty()) return;
-	float const weight(get_tree_far_weight());
+	float const weight(get_tree_far_weight(force_high_detail)); // force high detail trees during the shadow map pass
 	float const weights[2] = {1.0f-weight, weight}; // {high, low} detail
 	//timer_t timer("Update Pine Trees");
 
@@ -1061,7 +1061,7 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 
 // Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
 void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_trunks, bool draw_near_leaves,
-	bool draw_far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc)
+	bool draw_far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
 	if (pine_trees.empty() || !can_have_pine_palm_trees()) return;
 	//timer_t timer("Draw Pine Trees");
@@ -1079,12 +1079,12 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 			set_mesh_ambient_color(s);
 			pine_trees.draw_trunks(0, xlate, &trunk_pts);
 		}
-		else if (dscale < 2.0 && get_tree_far_weight() < 0.5) { // far away, use low detail branches
+		else if (dscale < 2.0 && get_tree_far_weight(force_high_detail) < 0.5) { // far away, use low detail branches
 			pine_trees.add_trunk_pts(xlate, trunk_pts);
 		} // else very far, skip branches
 	}
 	if (draw_near_leaves || draw_far_leaves) { // could use reflection_pass as an optimization
-		float const weight(1.0 - get_tree_far_weight()); // 0 => low detail, 1 => high detail
+		float const weight(1.0 - get_tree_far_weight(force_high_detail)); // 0 => low detail, 1 => high detail
 		
 		if (draw_far_leaves && weight < 1.0) {
 			assert(xlate_loc >= 0);
@@ -2345,7 +2345,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		if (!i->second->is_visible()) continue;
-		i->second->update_pine_tree_state(1);
+		i->second->update_pine_tree_state(1, 1); // force high detail trees
 		//i->second->update_decid_trees(); // not legal
 		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
 	}
@@ -2355,6 +2355,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
 	render_models(1, 0, model3d_offset.get_xlate()); // VFC should work here (somewhat?) for models
+	for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
 	camera_pdu.near_ = orig_near_plane;
@@ -2399,10 +2400,10 @@ colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
 }
 
 
-void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc) {
+void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-		to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, reflection_pass, enable_smap, xlate_loc);
+		to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, force_high_detail, reflection_pass, enable_smap, xlate_loc);
 	}
 }
 
@@ -2419,7 +2420,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		s.add_uniform_float("radius_scale", calc_tree_size());
 		s.add_uniform_float("ambient_scale", 1.5);
 		s.set_specular(0.2, 8.0);
-		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass, 0, s.get_uniform_loc("xlate"));
+		draw_pine_tree_bl(s, 0, 0, 1, shadow_pass, reflection_pass, 0, s.get_uniform_loc("xlate"));
 		s.clear_specular();
 		s.end_shader();
 		disable_blend();
@@ -2454,7 +2455,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		enable_instancing_for_shader_loc(xlate_loc);
 	}
 	s.set_specular(0.2, 8.0);
-	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, enable_leaf_smap, xlate_loc);
+	draw_pine_tree_bl(s, 0, 1, 0, shadow_pass, reflection_pass, enable_leaf_smap, xlate_loc);
 	assert(tree_trunk_pts.empty());
 	s.clear_specular();
 	if (xlate_loc >= 0) {disable_instancing_for_shader_loc(xlate_loc);}
@@ -2463,7 +2464,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	// near trunks
 	tree_branch_shader_setup(s, enable_smap, 0); // enable_opacity=0
 	s.add_uniform_float("tex_scale_t", 5.0);
-	draw_pine_tree_bl(s, 1, 0, 0, reflection_pass, enable_smap, -1); // branches
+	draw_pine_tree_bl(s, 1, 0, 0, shadow_pass, reflection_pass, enable_smap, -1); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
 	s.end_shader();
 
