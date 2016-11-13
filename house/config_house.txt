@@ -37,7 +37,9 @@ default_ground_tex 0 # grass
 destroy_thresh 0
 ground_effects_level 1
 detail_normal_map 0
-tree_deadness -1.0
+#tree_deadness -1.0
+tree_4th_branches 1
+nleaves_scale 0.8
 
 wind_velocity 0.4 0.2 0.0
 
