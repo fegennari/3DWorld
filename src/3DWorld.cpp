@@ -855,7 +855,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case 'z': // zoom / onscreen display
 		if (map_mode) {map_zoom /= MAP_ZOOM;}
 		else if (world_mode == WMODE_UNIVERSE) {onscreen_display = !onscreen_display;}
-		else if (world_mode == WMODE_GROUND) {do_zoom = !do_zoom;} // Note: tiled mesh reflections are incompatible with zoom
+		// Note: tiled mesh reflections are incompatible with zoom and are disabled; also, zoom doesn't work when moving/flying in TT mode
+		else if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) {do_zoom = !do_zoom;}
 		break;
 
 	case 'f': // print framerate and stats

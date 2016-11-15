@@ -361,7 +361,7 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id,
 
 unsigned create_tt_reflection(float terrain_zmin) {
 
-	if (display_mode & 0x20) return 0; // reflections not enabled
+	if (do_zoom || (display_mode & 0x20)) return 0; // reflections not enabled
 	unsigned const xsize(window_width/2), ysize(window_height/2);
 	setup_reflection_texture(reflection_tid, xsize, ysize);
 	create_tt_reflection_texture(reflection_tid, xsize, ysize, terrain_zmin);
