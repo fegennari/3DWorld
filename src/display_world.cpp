@@ -1126,7 +1126,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	camera_mode   = 1; // walking on ground
 	float min_camera_dist(0.0);
 	float const terrain_zmin(update_tiled_terrain(min_camera_dist));
-	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0);
+	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0 && !do_zoom);
 	bool const draw_water(water_enabled && water_plane_z >= terrain_zmin);
 	if (show_fog || underwater) {set_inf_terrain_fog(underwater, terrain_zmin);}
 	unsigned tt_reflection_tid(0);
