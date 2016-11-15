@@ -2083,7 +2083,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			if (!shared_tree_data.empty()) {
 				if (ttype >= 0) {
 					unsigned const num_per_type(max(1U, shared_tree_data.size()/NUM_TREE_TYPES));
-					tree_id = min(unsigned((global_rand_gen.rseed2 % num_per_type) + ttype*num_per_type), shared_tree_data.size()-1);
+					tree_id = min(unsigned((((global_rand_gen.rseed1 >> 7) + global_rand_gen.rseed2) % num_per_type) + ttype*num_per_type), shared_tree_data.size()-1);
 					if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
 				}
 				else {
