@@ -1341,8 +1341,8 @@ void tree_xform_t::rotate_pts_around_axis(point const &p, point const &rotate, f
 	re_matrix.z = sin_term*yv + cos_term*p.z;
 	// do_reverse, inverse rotate around z
 	float const yv2(re_matrix.y);
-	re_matrix.x = rotate.x*xv - rotate.y*yv2;
-	re_matrix.y = rotate.y*xv + rotate.x*yv2;
+	re_matrix.x = -rotate.x*xv - rotate.y*yv2;
+	re_matrix.y =  rotate.y*xv - rotate.x*yv2;
 }
 
 void tree_xform_t::rotate_around_axis(tree_cylin const &c) {
@@ -1930,23 +1930,22 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 	leaf_acc += num_leaves_per_occ;
 	int const temp((int)leaf_acc);
 	leaf_acc -= (float)temp;
-	float const temp_deg(((cylin.rotate.y < 0.0) ? -1.0 : 1.0)*safe_acosf(cylin.rotate.x));
+	float const temp_deg(((cylin.rotate.y < 0.0) ? -1.0 : 1.0)*safe_acosf(cylin.rotate.x)), angle_step(360.0/temp);
 
 	for (int l = 0; l < temp; l++) {
 		if (deadness > 0 && deadness > rand_float2()) continue;
-		float const rotate_start(360.0*l/temp);
-		vector3d rotate;
-		setup_rotate(rotate, (rotate_start + rand_gen(1,30)), temp_deg);
-		rotate_around_axis(cylin);
+		rotate_around_axis(cylin); // rotate leaf starting point
 		point const start(cylin.p1 + 0.9*re_matrix);
-		tree_leaf leaf;
-		int const val(rand_gen(0,60));
-		float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? val : -val));
+		float const rotate_start(angle_step*l);
+		vector3d rotate;
+		setup_rotate(rotate, (rotate_start + rand_gen(1,60)), temp_deg); // rotate is in XY plane (z=0)
+		float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? 1 : -1)*rand_gen(0,60));
 		float const lsize(rel_leaf_size*tree_types[tree_type].leaf_x_ar*(0.7*rand2d() + 0.3));
+		tree_leaf leaf;
 
 		for (int p = 0; p < 4; ++p) {
-			point lpts(leaf_points[p]*lsize);
-			rotate_pts_around_axis(lpts, rotate, deg_rotate);
+			// calculate re_matrix = offset from leaf starting point for this vertex; deg_rotate is X rotation applied after Z rotation
+			rotate_pts_around_axis(leaf_points[p]*lsize, rotate, deg_rotate);
 			leaf.pts[p] = start + re_matrix;
 		}
 		point const base_pt((leaf.pts[0] + leaf.pts[3])*0.5);
