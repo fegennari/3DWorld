@@ -211,10 +211,10 @@ void small_tree_group::translate_by(vector3d const &vd) {
 }
 
 
-void small_tree_group::draw_trunks(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
+void small_tree_group::draw_trunks(bool shadow_only, bool all_visible, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
 	static vector<vert_norm_tc> cylin_verts; // class member?
-	for (const_iterator i = begin(); i != end(); ++i) {i->draw_trunk(shadow_only, xlate, points, &cylin_verts);}
+	for (const_iterator i = begin(); i != end(); ++i) {i->draw_trunk(shadow_only, all_visible, xlate, points, &cylin_verts);}
 
 	if (!cylin_verts.empty()) {
 		if (!shadow_only) {
@@ -909,11 +909,12 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 }
 
 
-void small_tree::draw_trunk(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const {
+void small_tree::draw_trunk(bool shadow_only, bool all_visible, vector3d const &xlate, vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const {
 
 	if (!(tree_mode & 2) || type == T_BUSH) return; // disabled, or no trunk/bark
 	
-	if (shadow_only) {
+	if (all_visible) {}
+	else if (shadow_only) {
 		if (!is_over_mesh(pos + xlate + height*get_rot_dir())) return;
 	}
 	else {
