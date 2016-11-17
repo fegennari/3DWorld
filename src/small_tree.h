@@ -12,30 +12,36 @@
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 
 
-class small_tree { // size = 128
+class small_tree { // size = 112
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
+	short inst_id; // for instancing
 	int vbo_mgr_ix; // high detail
-	int inst_id; // for instancing
 	float height, width, r_angle, rx, ry;
-	mutable vbo_wrap_t palm_vbo; // created dynamically during drawing
 	point pos;
-	colorRGBA leaf_color, bark_color;
+	colorRGB leaf_color, bark_color;
 	cylinder_3dw trunk_cylin;
-	vector<int> coll_id;
-	std::shared_ptr<vector<vert_norm_comp_color>> palm_verts; // for palm trees only
+	int coll_id[2];
+
+	struct palm_verts_t {
+		vector<vert_norm_comp_color> v;
+		vector<int> coll_id;
+		mutable vbo_wrap_t vbo; // created dynamically during drawing
+	};
+	std::shared_ptr<palm_verts_t> palm_verts; // for palm trees only
 
 public:
-	small_tree() : type(-1), inst_id(-1), height(0.0), width(0.0), r_angle(0.0), rx(0.0), ry(0.0) {clear_vbo_mgr_ix();}
+	small_tree() : type(-1), inst_id(-1), height(0.0), width(0.0), r_angle(0.0), rx(0.0), ry(0.0) {init();}
 	small_tree(point const &p, unsigned instance_id);
 	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation=0);
+	void init() {coll_id[0] = coll_id[1] = -1; clear_vbo_mgr_ix();}
 	void setup_rotation(rand_gen_t &rgen);
 	vector3d get_rot_dir() const;
 	cylinder_3dw get_trunk_cylin() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
 	void add_bounds_to_bcube(cube_t &bcube) const;
-	void clear_vbo() {palm_vbo.clear_vbo();}
+	void clear_vbo() {if (palm_verts != nullptr) {palm_verts->vbo.clear_vbo();}}
 	bool check_sphere_coll(point &center, float radius) const;
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}

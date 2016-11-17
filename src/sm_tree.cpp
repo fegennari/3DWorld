@@ -37,9 +37,9 @@ struct sm_tree_type {
 
 	int leaf_tid, bark_tid;
 	float w2, ws, h, ss, width_scale, height_scale;
-	colorRGBA bc; // trunk color
+	colorRGB bc; // trunk color
 
-	sm_tree_type(float w2_, float ws_, float h_, float ss_, float wscale, float hscale, colorRGBA const &bc_, int ltid, int btid)
+	sm_tree_type(float w2_, float ws_, float h_, float ss_, float wscale, float hscale, colorRGB const &bc_, int ltid, int btid)
 		: leaf_tid(ltid), bark_tid(btid), w2(w2_), ws(ws_), h(h_), ss(ss_), width_scale(wscale), height_scale(hscale), bc(bc_) {}
 };
 
@@ -622,8 +622,8 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 small_tree::small_tree(point const &p, unsigned instance_id) {
 
 	*this = tree_instances.get_tree(instance_id);
-	assert(coll_id.empty());
-	clear_vbo_mgr_ix();
+	assert(coll_id[0] < 0 && coll_id[1] < 0);
+	init();
 	inst_id = instance_id;
 	pos     = p;
 	float const tsize(calc_tree_size());
@@ -637,7 +637,7 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 	type(t), inst_id(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
 	height *= tree_height_scale;
-	clear_vbo_mgr_ix();
+	init();
 	bark_color = stt[type].bc;
 	if (!is_pine_tree()) {UNROLL_3X(bark_color[i_] = min(1.0, bark_color[i_]*(0.85 + 0.3f*rgen.randd()));)} // gen bark color for decid trees
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;}
@@ -667,7 +667,6 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 		break;
 	default: assert(0);
 	}
-	leaf_color.alpha = 1.0;
 	if (allow_rotation) {setup_rotation(rgen);}
 	trunk_cylin = get_trunk_cylin();
 }
@@ -690,7 +689,7 @@ cylinder_3dw small_tree::get_trunk_cylin() const {
 
 	if (type == T_BUSH) {return cylinder_3dw();}
 	vector3d dir(plus_z);
-	rotate_vector3d(vector3d(rx, ry, 0.0), -r_angle/TO_DEG, dir); // oops, rotation is backwards
+	if (r_angle != 0.0) {rotate_vector3d(vector3d(rx, ry, 0.0), -r_angle/TO_DEG, dir);} // oops, rotation is backwards
 	bool const is_pine(is_pine_tree());
 	float const hval(is_pine ? 1.0 : 0.8), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 	float const mod_width(width*(is_pine ? 0.8*len/(hval*height) : 1.0));
@@ -709,7 +708,7 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 	}
 	cp.color       = leaf_color;
 	cp_trunk.color = bark_color;
-	if (type != T_BUSH && type != T_SH_PINE) {coll_id.push_back(add_coll_cylinder(trunk_cylin, cp_trunk, -1, 1));}
+	if (type != T_BUSH && type != T_SH_PINE) {coll_id[0] = add_coll_cylinder(trunk_cylin, cp_trunk, -1, 1);}
 	vector3d const dirh(get_rot_dir()*height);
 
 	switch (type) {
@@ -717,26 +716,26 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 	case T_SH_PINE: // short pine tree
 		// Note2: smaller than the actual pine tree render at the base so that it's easier for the player to walk under pine trees
 		// Note2: could use the actual pine tree branch polygons, but that may be too conservative and too slow
-		coll_id.push_back(add_coll_cylinder((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0, cp, -1, 1));
+		coll_id[1] = add_coll_cylinder((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0, cp, -1, 1);
 		break;
 	case T_DECID: // decidious tree
-		coll_id.push_back(add_coll_sphere((pos + 0.75*dirh), 1.3*width, cp, -1, 1));
+		coll_id[1] = add_coll_sphere((pos + 0.75*dirh), 1.3*width, cp, -1, 1);
 		break;
 	case T_TDECID: // tall decidious tree
-		coll_id.push_back(add_coll_sphere((pos + 0.8*dirh), 0.8*width, cp, -1, 1));
+		coll_id[1] = add_coll_sphere((pos + 0.8*dirh), 0.8*width, cp, -1, 1);
 		break;
 	case T_BUSH: // bush
-		coll_id.push_back(add_coll_sphere(pos, 1.2*width, cp, -1, 1));
+		coll_id[1] = add_coll_sphere(pos, 1.2*width, cp, -1, 1);
 		break;
 	case T_PALM: // palm tree
 		{
 			colorRGBA const palm_tex_color(texture_color(PALM_FROND_TEX));
-			assert(palm_verts != nullptr && !palm_verts->empty());
-			for (unsigned i = 0; i < palm_verts->size(); i += 4) { // iterate over the quads
+			assert(palm_verts != nullptr && !palm_verts->v.empty());
+			for (unsigned i = 0; i < palm_verts->v.size(); i += 4) { // iterate over the quads
 				point pts[4];
-				for (unsigned p = 0; p < 4; ++p) {pts[p] = (*palm_verts)[i+p].v;}
-				cp.color = palm_tex_color.modulate_with((*palm_verts)[i].get_c4());
-				coll_id.push_back(add_coll_polygon(pts, 4, cp, 0.0, -1, 1));
+				for (unsigned p = 0; p < 4; ++p) {pts[p] = palm_verts->v[i+p].v;}
+				cp.color = palm_tex_color.modulate_with(palm_verts->v[i].get_c4());
+				palm_verts->coll_id.push_back(add_coll_polygon(pts, 4, cp, 0.0, -1, 1));
 			}
 			break;
 		}
@@ -746,7 +745,12 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 
 
 void small_tree::remove_cobjs() {
-	for (unsigned j = 0; j < coll_id.size(); ++j) {remove_reset_coll_obj(coll_id[j]);}
+
+	if (palm_verts != nullptr) {
+		for (unsigned j = 0; j < palm_verts->coll_id.size(); ++j) {remove_reset_coll_obj(palm_verts->coll_id[j]);}
+		palm_verts->coll_id.clear();
+	}
+	for (unsigned d = 0; d < 2; ++d) {remove_reset_coll_obj(coll_id[d]);}
 }
 
 
@@ -793,8 +797,9 @@ void small_tree::calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager) {
 	unsigned const num_fronds = 20;
 	float const frond_l(0.3*height), frond_hw(0.2*width), frond_dz(-0.2*width);
 	vector3d const trunk_dir(get_rot_dir());
-	palm_verts.reset(new vector<vert_norm_comp_color>(8*num_fronds));
-	vector<vert_norm_comp_color> &verts(*palm_verts);
+	palm_verts.reset(new palm_verts_t);
+	vector<vert_norm_comp_color> &verts(palm_verts->v);
+	verts.resize(8*num_fronds);
 	rand_gen_t rgen;
 	rgen.set_state(long(1000*leaf_color.R), long(1000*leaf_color.G)); // seed random number generator with the tree color, which is deterministic
 
@@ -976,10 +981,10 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 
 	if (type == T_PALM) {
 		assert(palm_verts != nullptr);
-		palm_vbo.create_and_upload(*palm_verts, 0, 1);
-		palm_vbo.pre_render();
-		draw_quad_verts_as_tris((vert_norm_comp_color *)nullptr, palm_verts->size());
-		palm_vbo.post_render();
+		palm_verts->vbo.create_and_upload(palm_verts->v, 0, 1);
+		palm_verts->vbo.pre_render();
+		draw_quad_verts_as_tris((vert_norm_comp_color *)nullptr, palm_verts->v.size());
+		palm_verts->vbo.post_render();
 		return;
 	}
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*stt[type].ss*width*window_width);
