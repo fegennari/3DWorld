@@ -654,6 +654,7 @@ struct colorRGB { // size = 12
 	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B; return oss.str();}
 	float get_luminance() const {return (R + G + B)/3.0;}
 	float get_max_component() const {return max(R, max(G, B));}
+	void set_for_cur_shader() const;
 };
 
 

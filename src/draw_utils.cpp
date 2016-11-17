@@ -16,8 +16,11 @@ bool using_tess_shader(0);
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 
 
+void colorRGB::set_for_cur_shader() const {
+	assert(cur_shader != NULL);
+	cur_shader->set_cur_color(*this);
+}
 void colorRGBA::set_for_cur_shader() const {
-
 	assert(cur_shader != NULL);
 	cur_shader->set_cur_color(*this);
 }
