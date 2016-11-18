@@ -321,8 +321,9 @@ public:
 	void update_pine_tree_state(bool upload_if_needed, bool force_high_detail=0);
 	unsigned num_pine_trees() const {return pine_trees.size();}
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail, int xlate_loc);
-	void draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_trunks, bool draw_near_leaves, bool draw_far_leaves,
+	void draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, bool draw_trunks, bool draw_near_leaves, bool draw_far_leaves,
 		bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc);
+	void draw_trunk_pts(shader_t &s);
 	unsigned num_decid_trees() const {return decid_trees.size();}
 	void gen_decid_trees_if_needed();
 	void set_mesh_ambient_color(shader_t &s) const;
@@ -379,8 +380,8 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	float terrain_zmin;
 	draw_vect_t to_draw;
 	vector<tile_t *> occluded_tiles;
+	vector<tile_t *> to_draw_trunk_pts;
 	vector<pair<float, tile_t *>> to_gen_zvals;
-	vector<vert_wrap_t> tree_trunk_pts;
 	vector<mesh_xy_grid_cache_t> height_gens;
 	lightning_strike_t lightning_strike;
 	tree_lod_render_t lod_renderer;

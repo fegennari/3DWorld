@@ -81,14 +81,6 @@ void small_tree_group::add_tree(small_tree const &st) {
 }
 
 
-void small_tree_group::calc_trunk_pts() {
-
-	if (!trunk_pts.empty()) return; // already calculated
-	trunk_pts.reserve(2*size());
-	for (iterator i = begin(); i != end(); ++i) {i->add_trunk_as_line(trunk_pts);}
-}
-
-
 void small_tree_group::finalize(bool low_detail) {
 
 	if (empty()) return;
@@ -118,13 +110,25 @@ void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
 }
 
 
-void small_tree_group::add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pts) const {
-	for (vector<point>::const_iterator i = trunk_pts.begin(); i != trunk_pts.end(); ++i) {pts.push_back(*i + xlate);}
+void small_tree_group::draw_trunk_pts() {
+
+	if (!trunk_pts_vbo.vbo_valid()) { // create trunk points
+		vector<point> trunk_pts;
+		trunk_pts.reserve(2*size());
+		for (iterator i = begin(); i != end(); ++i) {i->add_trunk_as_line(trunk_pts);}
+		trunk_pts_vbo.create_and_upload(trunk_pts);
+		num_trunk_pts = trunk_pts.size();
+	}
+	trunk_pts_vbo.pre_render();
+	vert_wrap_t::set_vbo_arrays();
+	glDrawArrays(GL_LINES, 0, num_trunk_pts);
+	bind_vbo(0);
 }
 
 
 void small_tree_group::clear_vbos() {
 
+	trunk_pts_vbo.clear_vbo();
 	for (unsigned i = 0; i < 2; ++i) {vbo_manager[i].clear_vbo();}
 	if (num_palm_trees == 0) return; // no palm tree vbos to clear
 	for (iterator i = begin(); i != end(); ++i) {i->clear_vbo();}
@@ -154,7 +158,6 @@ void small_tree_group::clear_all() {
 	clear_vbos(); // required to clear palm tree VBOs
 	clear();
 	clear_vbo_manager_and_ids();
-	trunk_pts.clear();
 	generated     = 0;
 	max_pt_radius = 0.0;
 }
@@ -211,10 +214,10 @@ void small_tree_group::translate_by(vector3d const &vd) {
 }
 
 
-void small_tree_group::draw_trunks(bool shadow_only, bool all_visible, vector3d const &xlate, vector<vert_wrap_t> *points) const {
+void small_tree_group::draw_trunks(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate) const {
 
 	static vector<vert_norm_tc> cylin_verts; // class member?
-	for (const_iterator i = begin(); i != end(); ++i) {i->draw_trunk(shadow_only, all_visible, xlate, points, &cylin_verts);}
+	for (const_iterator i = begin(); i != end(); ++i) {i->draw_trunk(shadow_only, all_visible, skip_lines, xlate, &cylin_verts);}
 
 	if (!cylin_verts.empty()) {
 		if (!shadow_only) {
@@ -402,7 +405,6 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 
 bool small_tree_group::update_zvals(int x1, int y1, int x2, int y2) {
 
-	assert(trunk_pts.empty());
 	bool updated(0);
 
 	for (iterator i = begin(); i != end(); ++i) {
@@ -914,7 +916,7 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 }
 
 
-void small_tree::draw_trunk(bool shadow_only, bool all_visible, vector3d const &xlate, vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const {
+void small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate, vector<vert_norm_tc> *cylin_verts) const {
 
 	if (!(tree_mode & 2) || type == T_BUSH) return; // disabled, or no trunk/bark
 	
@@ -930,15 +932,9 @@ void small_tree::draw_trunk(bool shadow_only, bool all_visible, vector3d const &
 	if (!shadow_only && size_scale < dist) return; // too small/far
 
 	if (!shadow_only && LINE_THRESH*zoom_f*(trunk_cylin.r1 + trunk_cylin.r2) < dist) { // draw as line
+		if (skip_lines) return;
 		point const p2((trunk_cylin.r2 == 0.0) ? (0.2*trunk_cylin.p1 + 0.8*trunk_cylin.p2) : trunk_cylin.p2);
-				
-		if (points) {
-			points->push_back(trunk_cylin.p1 + xlate);
-			points->push_back(p2 + xlate);
-		}
-		else {
-			tree_scenery_pld.add_textured_line(trunk_cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
-		}
+		tree_scenery_pld.add_textured_line(trunk_cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
 	}
 	else { // draw as cylinder
 		int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));

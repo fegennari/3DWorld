@@ -1025,7 +1025,6 @@ void tile_t::init_pine_tree_draw() {
 	ptree_off.set_from_xyoff2();
 	if (enable_instanced_pine_trees()) {pine_trees.enable_instanced();}
 	pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, density);
-	pine_trees.calc_trunk_pts();
 	postproc_trees(pine_trees, ptzmax);
 }
 
@@ -1060,7 +1059,7 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 }
 
 // Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
-void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_trunks, bool draw_near_leaves,
+void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, bool draw_trunks, bool draw_near_leaves,
 	bool draw_far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
 	if (pine_trees.empty() || !can_have_pine_palm_trees()) return;
@@ -1078,10 +1077,11 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 			if (enable_smap) {bind_and_setup_shadow_map(s);}
 			set_mesh_ambient_color(s);
 			bool const all_visible(camera_pdu.sphere_visible_test(get_center(), -0.5*radius));
-			pine_trees.draw_trunks(0, ((display_mode & 0x10) ? all_visible : 0), xlate, &trunk_pts);
+			pine_trees.draw_trunks(0, all_visible, 1, xlate); // skip_lines=1
+			to_draw_trunk_pts.push_back(this);
 		}
 		else if (dscale < 2.0 && get_tree_far_weight(force_high_detail) < 0.5) { // far away, use low detail branches
-			pine_trees.add_trunk_pts(xlate, trunk_pts);
+			to_draw_trunk_pts.push_back(this);
 		} // else very far, skip branches
 	}
 	if (draw_near_leaves || draw_far_leaves) { // could use reflection_pass as an optimization
@@ -1112,6 +1112,13 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 		}
 	}
 	fgPopMatrix();
+}
+
+void tile_t::draw_trunk_pts(shader_t &s) {
+
+	assert(!pine_trees.empty());
+	s.add_uniform_vector3d("xlate", ptree_off.get_xlate());
+	pine_trees.draw_trunk_pts();
 }
 
 
@@ -1752,7 +1759,6 @@ void tile_draw_t::clear() {
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
 	tiles.clear();
-	tree_trunk_pts.clear();
 }
 
 void tile_draw_t::insert_tile(tile_t *tile) {
@@ -2404,7 +2410,7 @@ colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
 void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-		to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, force_high_detail, reflection_pass, enable_smap, xlate_loc);
+		to_draw[i].second->draw_pine_trees(s, to_draw_trunk_pts, branches, near_leaves, far_leaves, force_high_detail, reflection_pass, enable_smap, xlate_loc);
 	}
 }
 
@@ -2457,7 +2463,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	s.set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 1, 0, shadow_pass, reflection_pass, enable_leaf_smap, xlate_loc);
-	assert(tree_trunk_pts.empty());
+	assert(to_draw_trunk_pts.empty());
 	s.clear_specular();
 	if (xlate_loc >= 0) {disable_instancing_for_shader_loc(xlate_loc);}
 	s.end_shader();
@@ -2470,17 +2476,17 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	s.end_shader();
 
 	// distant/far trunks
-	if (!shadow_pass && !tree_trunk_pts.empty()) { // color/texture already set above
+	if (!shadow_pass && !to_draw_trunk_pts.empty()) { // color/texture already set above
 		enable_blend(); // for fog transparency
 		set_pine_tree_shader(s, "xy_billboard");
-		assert(!(tree_trunk_pts.size() & 1));
 		select_texture(WHITE_TEX);
 		s.set_cur_color(get_tree_trunk_color(T_PINE, 1));
-		draw_verts(tree_trunk_pts, GL_LINES);
+		for (auto i = to_draw_trunk_pts.begin(); i != to_draw_trunk_pts.end(); ++i) {(*i)->draw_trunk_pts(s);}
+		s.add_uniform_vector3d("xlate", zero_vector);
 		s.end_shader();
 		disable_blend();
 	}
-	tree_trunk_pts.resize(0);
+	to_draw_trunk_pts.clear();
 }
 
 

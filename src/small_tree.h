@@ -53,8 +53,7 @@ public:
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
 	bool are_leaves_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
-	void draw_trunk(bool shadow_only, bool all_visible, vector3d const &xlate=zero_vector,
-		vector<vert_wrap_t> *points=NULL, vector<vert_norm_tc> *cylin_verts=NULL) const;
+	void draw_trunk(bool shadow_only, bool all_visible, bool skip_lines=0, vector3d const &xlate=zero_vector, vector<vert_norm_tc> *cylin_verts=nullptr) const;
 	void draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
@@ -83,10 +82,11 @@ public:
 struct small_tree_group : public vector<small_tree> {
 
 	vbo_vnc_block_manager_t vbo_manager[2]; // {high, low} detail
-	vector<point> trunk_pts, inst_pts;
+	vbo_wrap_t trunk_pts_vbo;
+	vector<point> inst_pts;
 	rand_gen_t rgen;
 	bool generated, instanced;
-	unsigned num_pine_trees, num_palm_trees;
+	unsigned num_pine_trees, num_palm_trees, num_trunk_pts;
 	float max_pt_radius;
 	point last_cpos;
 	cube_t all_bcube;
@@ -100,15 +100,14 @@ struct small_tree_group : public vector<small_tree> {
 	};
 	vector<pine_tree_inst_t> insts;
 	
-	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), max_pt_radius(0.0), last_cpos(all_zeros) {all_bcube.set_to_zeros();}
+	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), num_trunk_pts(0), max_pt_radius(0.0), last_cpos(all_zeros) {all_bcube.set_to_zeros();}
 	void enable_instanced() {instanced |= (num_pine_trees == size());} // only if all are pine trees
 	void sort_by_type() {stable_sort(begin(), end());}
 	void sort_by_dist_to_camera();
 	void add_tree(small_tree const &st);
-	void calc_trunk_pts();
 	void finalize(bool low_detail);
 	void finalize_upload_and_clear_pts(bool low_detail);
-	void add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pts) const;
+	void draw_trunk_pts();
 	void draw(bool shadow_only, int reflection_pass);
 	void clear_vbos();
 	void clear_vbo_manager(int which=3);
@@ -123,7 +122,7 @@ struct small_tree_group : public vector<small_tree> {
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void translate_by(vector3d const &vd);
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
-	void draw_trunks(bool shadow_only, bool all_visible=0, vector3d const &xlate=zero_vector, vector<vert_wrap_t> *points=NULL) const;
+	void draw_trunks(bool shadow_only, bool all_visible=0, bool skip_lines=0, vector3d const &xlate=zero_vector) const;
 	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
 	void draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc=-1, int scale_loc=-1, vector3d const &xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
