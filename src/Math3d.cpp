@@ -691,17 +691,17 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 }
 
 
-// spheres and vertical cylinders are rotationally invariant about z, so we can rotate a non-axis aligned cylinder about z
+// spheres and vertical cylinders are rotationally invariant about z, so we can rotate a non-axis aligned cylinder int +z
 // to make it axis aligned, and compute a tighter bounding cube to use with a separating axis test
 bool cylin_proj_circle_z_SAT_test(point const &cc, float cr, point const &cp1, point const &cp2, float r1, float r2) {
+
 	point pts[2] = {cp1, cp2};
 	vector3d const dir(cp2 - cp1);
 	pts[0] -= cc; pts[1] -= cc; // translate to circle center
-	rotate_vector3d_by_vr_multi(dir, plus_x, pts, 2); // rotate around vert cylinder
-	pts[0] += cc; pts[0] += cc; // translate back
+	if (dir.x != 0.0 || dir.y != 0.0) {rotate_vector3d_by_vr_multi(dir, plus_z, pts, 2);} // rotate around vert cylinder if not already vertical
 	cube_t bcube;
 	cylinder_3dw(pts[0], pts[1], r1, r2).calc_bcube(bcube);
-	return circle_rect_intersect(cc, cr, bcube, 2); // in z
+	return circle_rect_intersect(all_zeros, cr, bcube, 2); // at origin in z dir
 }
 
 
@@ -744,7 +744,7 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 {
 	float t, rad;
 	vector3d v1, v2; // v1: cp1-cp2, v2: cp1-sc
-	if (!sphere_int_cylinder_pretest(sc, sr, cp1, cp2, r1, r2, check_ends, v1, v2, t, rad)) return 0;
+	if (!sphere_int_cylinder_pretest(sc, sr, cp1, cp2, r1, r2, check_ends, v1, v2, t, rad)) {return 0;}
 	int const tok(t >= 0.0 && t <= 1.0);
 	if (!calc_int && tok) return 1;
 	unsigned npos(0);
