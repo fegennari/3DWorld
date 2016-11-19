@@ -198,6 +198,8 @@ void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes) {
 	return vbo_ring_buffer[active_buffer].add_verts_bind_vbo(verts, size_bytes);
 }
 
+void bind_dynamic_vbo() {vbo_ring_buffer[active_buffer].pre_render();}
+
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset) {
 	if (!use_core_context) return 0; // not needed
 	vbo_ptr_offset = get_dynamic_vbo_ptr(verts, count*vert_size);
