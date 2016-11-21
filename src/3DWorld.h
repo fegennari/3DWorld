@@ -1041,10 +1041,10 @@ void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0, uns
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts);
 void convert_quad_ixs_to_tri_ixs(vector<unsigned> const &qixs, vector<unsigned> &tixs);
 
-template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start_ix=0) {
+template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start_ix=0, unsigned num_instances=1) {
 	assert(count > 0);
 	set_ptr_state(verts, count, start_ix);
-	draw_quads_as_tris(count, start_ix);
+	draw_quads_as_tris(count, start_ix, num_instances);
 	unset_ptr_state(verts);
 }
 
