@@ -46,7 +46,7 @@ public:
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
-	void calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager);
+	void calc_palm_tree_points();
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_leaf_color() const {return leaf_color;}
@@ -54,6 +54,7 @@ public:
 	bool are_leaves_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
 	void draw_trunk(bool shadow_only, bool all_visible, bool skip_lines=0, vector3d const &xlate=zero_vector, vector<vert_norm_tc> *cylin_verts=nullptr) const;
+	void draw_palm_leaves(unsigned num_instances=1) const;
 	void draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
@@ -91,17 +92,17 @@ struct small_tree_group : public vector<small_tree> {
 	point last_cpos;
 	cube_t all_bcube;
 
-	struct pine_tree_inst_t {
+	struct tree_inst_t {
 		unsigned id;
 		point pt;
 
-		pine_tree_inst_t(unsigned id_, point const &pt_) : id(id_), pt(pt_) {}
-		bool operator<(pine_tree_inst_t const &i) const {return (id < i.id);}
+		tree_inst_t(unsigned id_, point const &pt_) : id(id_), pt(pt_) {}
+		bool operator<(tree_inst_t const &i) const {return (id < i.id);}
 	};
-	vector<pine_tree_inst_t> insts;
+	vector<tree_inst_t> tree_insts[2]; // pine trees, palm trees
 	
 	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), num_trunk_pts(0), max_pt_radius(0.0), last_cpos(all_zeros) {all_bcube.set_to_zeros();}
-	void enable_instanced() {instanced |= (num_pine_trees == size());} // only if all are pine trees
+	void enable_instanced() {instanced |= ((num_pine_trees + num_palm_trees) == size());} // only if all are pine/palm trees
 	void sort_by_type() {stable_sort(begin(), end());}
 	void sort_by_dist_to_camera();
 	void add_tree(small_tree const &st);
@@ -123,10 +124,10 @@ struct small_tree_group : public vector<small_tree> {
 	void translate_by(vector3d const &vd);
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
 	void draw_trunks(bool shadow_only, bool all_visible=0, bool skip_lines=0, vector3d const &xlate=zero_vector) const;
-	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
+	void draw_pine_leaves(shader_t &s, bool shadow_only, bool low_detail=0, bool draw_all=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
 	void draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc=-1, int scale_loc=-1, vector3d const &xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
-	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
+	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());} // FIXME_TREES: excludes palm trees
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}
 	void update_zmax(float &tzmax) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);

@@ -248,45 +248,55 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 }
 
 
-void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, bool sort_front_to_back, vector3d const &xlate, int xlate_loc) {
+void small_tree_group::draw_pine_leaves(shader_t &s, bool shadow_only, bool low_detail, bool draw_all, bool sort_front_to_back, vector3d const &xlate, int xlate_loc) {
 
-	if (empty() || num_pine_trees == 0) return;
-	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
+	if (empty()) return;
 
-	if (instanced && !low_detail) { // sort_front_to_back not supported
-		assert(xlate_loc >= 0);
+	if (instanced && !low_detail) { // high detail instanced; sort_front_to_back not supported
+		for (unsigned ttype = 0; ttype < 2; ++ttype) { // pine, palm
+			bool const is_pine(ttype == 0);
+			unsigned const num_of_this_type(is_pine ? num_pine_trees : num_palm_trees);
+			if (num_of_this_type == 0) continue;
+			vector<tree_inst_t> &insts(tree_insts[ttype]);
 
-		if (!draw_all_pine || insts.size() != size()) { // recompute insts
-			insts.clear();
+			if (!draw_all || insts.size() != num_of_this_type) { // recompute insts
+				insts.clear(); insts.reserve(num_of_this_type);
 
-			for (const_iterator i = begin(); i != end(); ++i) {
-				if (draw_all_pine || i->are_leaves_visible(xlate)) {insts.push_back(pine_tree_inst_t(i->get_inst_id(), i->get_pos()));}
+				for (const_iterator i = begin(); i != end(); ++i) {
+					if ((is_pine && !i->is_pine_tree()) || (!is_pine && i->get_type() != T_PALM)) continue; // only pine/plam trees are instanced
+					if (draw_all || i->are_leaves_visible(xlate)) {insts.push_back(tree_inst_t(i->get_inst_id(), i->get_pos()));}
+				}
+				sort(insts.begin(), insts.end());
 			}
-			if (insts.empty()) return; // nothing to draw
-			sort(insts.begin(), insts.end());
-		}
-		vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail
-		vbomgr.begin_render();
-		inst_pts.resize(insts.size());
-		for (vector<pine_tree_inst_t>::const_iterator i = insts.begin(); i != insts.end(); ++i) {inst_pts[i-insts.begin()] = i->pt;}
-		void const *vbo_ptr(get_dynamic_vbo_ptr(&inst_pts.front(), inst_pts.size()*sizeof(point)));
-		unsigned ptr_offset(0), ix(0);
+			if (insts.empty()) continue; // no insts for this tree type
+			inst_pts.resize(insts.size());
+			for (auto i = insts.begin(); i != insts.end(); ++i) {inst_pts[i-insts.begin()] = i->pt;}
+			vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail, only used for pine trees
+			if (is_pine) {vbomgr.begin_render();} else {s.add_uniform_int("use_bent_quad_tcs", 1);}
+			select_texture((draw_model != 0) ? WHITE_TEX : stt[is_pine ? T_PINE : T_PALM].leaf_tid);
+			void const *vbo_ptr(get_dynamic_vbo_ptr(&inst_pts.front(), inst_pts.size()*sizeof(point)));
+			unsigned ptr_offset(0), ix(0);
+			assert(xlate_loc >= 0);
 
-		for (vector<pine_tree_inst_t>::const_iterator i = insts.begin(); i != insts.end();) { // Note: no increment
-			unsigned const inst_id(i->id);
-			assert(inst_id < tree_instances.size());
-			for (ix = 0; i != insts.end() && i->id == inst_id; ++i, ++ix) {}
-			glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), (void const *)((point const *)vbo_ptr + ptr_offset));
-			tree_instances[inst_id].draw_pine(vbomgr, ix);
-			ptr_offset += ix;
-		}
-		vbomgr.end_render();
+			for (auto i = insts.begin(); i != insts.end();) { // Note: no increment
+				unsigned const inst_id(i->id);
+				assert(inst_id < tree_instances.size());
+				for (ix = 0; i != insts.end() && i->id == inst_id; ++i, ++ix) {}
+				if (!is_pine) {bind_dynamic_vbo();} // need to rebind VBO since draw_palm_leaves() will bind a different VBO
+				glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), (void const *)((point const *)vbo_ptr + ptr_offset));
+				if (is_pine) {tree_instances[inst_id].draw_pine(vbomgr, ix);} else {tree_instances[inst_id].draw_palm_leaves(ix);}
+				ptr_offset += ix;
+			}
+			if (is_pine) {vbomgr.end_render();} else {s.add_uniform_int("use_bent_quad_tcs", 0);}
+		} // for ttype
 	}
-	else {
+	else { // non-instanced (pine trees only)
+		if (num_pine_trees == 0) return;
+		select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
 		vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 		vbomgr.begin_render();
 
-		if (draw_all_pine) {
+		if (draw_all) {
 			if (low_detail) {vbo_manager[1].set_prim_type(GL_POINTS);}
 			vbomgr.render_all();
 		}
@@ -294,10 +304,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 			assert(!low_detail);
 			vector<pair<float, unsigned> > to_draw;
 			get_back_to_front_ordering(to_draw, xlate);
-
-			for (unsigned i = 0; i < to_draw.size(); ++i) {
-				operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);
-			}
+			for (unsigned i = 0; i < to_draw.size(); ++i) {operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);}
 		}
 		else {
 			for (const_iterator i = begin(); i != end(); ++i) {i->draw_pine_leaves(vbomgr, xlate);}
@@ -310,10 +317,9 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 void small_tree_group::draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc, int scale_loc, vector3d const &xlate) const {
 
 	if (!draw_non_palm && num_palm_trees == 0) return; // no palm trees to draw
-
+	
 	for (const_iterator i = begin(); i != end(); ++i) {
 		if (i->is_pine_tree()) continue;
-		assert(!instanced); // only pine trees can be instanced
 		int const type(i->get_type());
 		if (!((type == T_PALM) ? draw_palm : draw_non_palm)) continue;
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
@@ -325,18 +331,40 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, bool draw_palm, bo
 float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0;}
 float calc_tree_size () {return SM_TREE_SIZE*Z_SCENE_SIZE/calc_tree_scale();}
 
+float rand_tree_height(rand_gen_t &rgen) {return rgen.rand_uniform(0.4, 1.0);}
+float rand_tree_width (rand_gen_t &rgen) {return rgen.rand_uniform(0.25, 0.35);}
+
+struct tree_inst_range_t {
+	unsigned start, end;
+	tree_inst_range_t() : start(0), end(0) {}
+	unsigned select_inst(rand_gen_t &rgen) const {
+		assert(start < end);
+		return (start + rgen.rand()%(end - start));
+	}
+};
+tree_inst_range_t num_insts_per_type[NUM_ST_TYPES];
+
 
 void create_pine_tree_instances() {
 
-	if (tree_instances.size() == max_unique_trees) return; // already done
+	unsigned const num_pine_unique(max(1U, max_unique_trees/2)); // don't need as many insts as decid trees
+	unsigned const num_palm_unique(max(1U, max_unique_trees/4)); // don't need as many insts as decid or pine trees
+	if (tree_instances.size() == num_pine_unique+num_palm_unique) return; // already done
 	assert(tree_instances.empty());
+	tree_instances.reserve(num_pine_unique+num_palm_unique);
 	rand_gen_t rgen;
 
-	for (unsigned i = 0; i < max_unique_trees; ++i) { // Note: pine trees not rotated
+	for (unsigned i = 0; i < num_pine_unique; ++i) { // Note: pine trees not rotated
 		int const ttype((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
-		float const height(rgen.rand_uniform(0.4, 1.0)), width(rgen.rand_uniform(0.25, 0.35));
-		tree_instances.add_tree(small_tree(all_zeros, height, width, ttype, 0, rgen));
+		tree_instances.add_tree(small_tree(all_zeros, rand_tree_height(rgen), rand_tree_width(rgen), ttype, 0, rgen)); // FIXME_TREES: multiply width by height?
 	}
+	num_insts_per_type[T_PINE].end = num_insts_per_type[T_PALM].start = tree_instances.size();
+
+	for (unsigned i = 0; i < num_palm_unique; ++i) { // Note: palm trees not rotated
+		tree_instances.add_tree(small_tree(all_zeros, rand_tree_height(rgen), rand_tree_width(rgen), T_PALM, 0, rgen));
+	}
+	num_insts_per_type[T_PALM].end = tree_instances.size();
+	num_insts_per_type[T_SH_PINE]  = num_insts_per_type[T_PINE]; // share the same instance range
 }
 
 
@@ -383,17 +411,16 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 				if (ttype == TREE_NONE) continue;
 				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) continue;
 
-				if (instanced) { // check voxel terrain? or does this mode only get used for tiled terrain?
-					assert(ttype == T_SH_PINE || ttype == T_PINE);
+				if (instanced /*&& (ttype == T_SH_PINE || ttype == T_PINE)*/) { // check voxel terrain? or does this mode only get used for tiled terrain?
+					assert(ttype == T_SH_PINE || ttype == T_PINE || ttype == T_PALM);
 					assert(zval_adj == 0.0); // must be inf terrain mode
-					assert(max_unique_trees > 0);
-					add_tree(small_tree(point(xval, yval, zpos), (rgen.rand()%max_unique_trees)));
+					add_tree(small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen)));
 				}
 				else {
-					float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
+					float const height(tsize*rand_tree_height(rgen));
 					point const pos(xval, yval, zpos+zval_adj*height);
 					if (point_inside_voxel_terrain(pos)) continue; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
-					add_tree(small_tree(pos, height, width, ttype, 0, rgen, 1)); // allow_rotation=1
+					add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
 				}
 			} // for n
 		} // for j
@@ -588,7 +615,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 		s.set_prefix("#define NO_SPECULAR", 1); // FS - disable rain effect
 		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, texgen, is_outside=1
 		setup_leaf_wind(s, wind_mag, 0);
-		draw_pine_leaves(shadow_only);
+		draw_pine_leaves(s, shadow_only);
 		s.end_shader();
 	}
 	if (!all_pine) { // non-pine trees
@@ -793,7 +820,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 }
 
 
-void small_tree::calc_palm_tree_points(vbo_vnc_block_manager_t &vbo_manager) {
+void small_tree::calc_palm_tree_points() {
 
 	if (palm_verts != nullptr) return;
 	unsigned const num_fronds = 20;
@@ -835,7 +862,7 @@ float small_tree::get_pine_tree_radius() const {
 
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 
-	if (type == T_PALM) {calc_palm_tree_points(vbo_manager); return;} // palm tree
+	if (type == T_PALM) {calc_palm_tree_points(); return;} // palm tree
 	if (!is_pine_tree()) return; // only for pine trees
 	float const sz_scale(SQRT2*get_pine_tree_radius()), dz((type == T_PINE) ? 0.35*height : 0.0);
 
@@ -969,20 +996,22 @@ void small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines,
 }
 
 
+void small_tree::draw_palm_leaves(unsigned num_instances) const {
+
+	assert(type == T_PALM);
+	assert(palm_verts != nullptr);
+	palm_verts->vbo.create_and_upload(palm_verts->v, 0, 0);
+	palm_verts->vbo.pre_render();
+	draw_quad_verts_as_tris((vert_norm_comp_color *)nullptr, palm_verts->v.size(), 0, num_instances);
+	palm_verts->vbo.post_render();
+}
+
 void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate) const {
 
 	if (!(tree_mode & 2)) return; // disabled
 	assert(!is_pine_tree()); // handled through draw_pine_leaves()
 	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !are_leaves_visible(xlate)) return;
-
-	if (type == T_PALM) {
-		assert(palm_verts != nullptr);
-		palm_verts->vbo.create_and_upload(palm_verts->v, 0, 1);
-		palm_verts->vbo.pre_render();
-		draw_quad_verts_as_tris((vert_norm_comp_color *)nullptr, palm_verts->v.size());
-		palm_verts->vbo.post_render();
-		return;
-	}
+	if (type == T_PALM) {draw_palm_leaves(); return;}
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*stt[type].ss*width*window_width);
 	vector3d scale;
 	point xl(all_zeros);

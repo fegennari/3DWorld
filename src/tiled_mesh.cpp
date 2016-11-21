@@ -95,7 +95,7 @@ unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
 	float const ntrees_mult(vegetation*sm_tree_density*tree_scale*tree_scale);
-	return (ENABLE_INST_PINE && tree_mode == 2 && ntrees_mult > 20 && max_unique_trees > 0); // enable when there are lots of pine trees, but no palm trees
+	return (ENABLE_INST_PINE && (tree_mode & 2) && ntrees_mult > 20 && max_unique_trees > 0); // enable when there are lots of pine trees, but no palm trees
 }
 
 
@@ -1049,9 +1049,9 @@ void tile_t::update_pine_tree_state(bool upload_if_needed, bool force_high_detai
 void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail, int xlate_loc) {
 
 	bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
-	pine_trees.draw_pine_leaves(0, low_detail, draw_all, contains_camera(), xlate, xlate_loc);
+	pine_trees.draw_pine_leaves(s, 0, low_detail, draw_all, contains_camera(), xlate, xlate_loc);
 	
-	if (!low_detail && pine_trees.num_palm_trees > 0) { // draw palm trees (pine_trees is misnamed)
+	if (!low_detail && pine_trees.num_palm_trees > 0 && !pine_trees.instanced) { // draw palm trees (pine_trees is misnamed)
 		s.add_uniform_int("use_bent_quad_tcs", 1);
 		pine_trees.draw_non_pine_leaves(0, 1, 0, xlate_loc, -1, xlate);
 		s.add_uniform_int("use_bent_quad_tcs", 0);
@@ -1062,7 +1062,7 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, bool draw_trunks, bool draw_near_leaves,
 	bool draw_far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
-	if (pine_trees.empty() || !can_have_pine_palm_trees()) return;
+	if (pine_trees.empty() || /*!can_have_pine_palm_trees()*/!can_have_trees() || !(tree_mode&2)) return; // Note: skip water check for palm trees
 	//timer_t timer("Draw Pine Trees");
 	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());
