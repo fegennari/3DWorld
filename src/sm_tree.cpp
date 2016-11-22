@@ -248,69 +248,70 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 }
 
 
+void small_tree_group::draw_tree_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc, vector<tree_inst_t> &insts, bool is_pine) {
+
+	assert(instanced);
+	unsigned const num_of_this_type(is_pine ? num_pine_trees : num_palm_trees);
+	if (num_of_this_type == 0) return;
+
+	if (!draw_all || insts.size() != num_of_this_type) { // recompute insts
+		insts.clear(); insts.reserve(num_of_this_type);
+
+		for (const_iterator i = begin(); i != end(); ++i) {
+			if ((is_pine && !i->is_pine_tree()) || (!is_pine && i->get_type() != T_PALM)) continue; // only pine/plam trees are instanced
+			if (draw_all || i->are_leaves_visible(xlate)) {insts.push_back(tree_inst_t(i->get_inst_id(), i->get_pos()));}
+		}
+		sort(insts.begin(), insts.end());
+	}
+	if (insts.empty()) return; // no insts for this tree type
+	inst_pts.resize(insts.size());
+	for (auto i = insts.begin(); i != insts.end(); ++i) {inst_pts[i-insts.begin()] = i->pt;}
+	vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail, only used for pine trees
+	if (is_pine) {vbomgr.begin_render();}
+	select_texture((draw_model != 0) ? WHITE_TEX : stt[is_pine ? T_PINE : T_PALM].leaf_tid);
+	void const *vbo_ptr(get_dynamic_vbo_ptr(&inst_pts.front(), inst_pts.size()*sizeof(point)));
+	unsigned ptr_offset(0), ix(0);
+	assert(xlate_loc >= 0);
+
+	for (auto i = insts.begin(); i != insts.end();) { // Note: no increment
+		unsigned const inst_id(i->id);
+		assert(inst_id < tree_instances.size());
+		for (ix = 0; i != insts.end() && i->id == inst_id; ++i, ++ix) {}
+		if (!is_pine) {bind_dynamic_vbo();} // need to rebind VBO since draw_palm_leaves() will bind a different VBO
+		glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), (void const *)((point const *)vbo_ptr + ptr_offset));
+		if (is_pine) {tree_instances[inst_id].draw_pine(vbomgr, ix);} else {tree_instances[inst_id].draw_palm_leaves(ix);}
+		ptr_offset += ix;
+	}
+	if (is_pine) {vbomgr.end_render();}
+}
+
 void small_tree_group::draw_pine_leaves(shader_t &s, bool shadow_only, bool low_detail, bool draw_all, bool sort_front_to_back, vector3d const &xlate, int xlate_loc) {
 
 	if (empty()) return;
 
 	if (instanced && !low_detail) { // high detail instanced; sort_front_to_back not supported
-		for (unsigned ttype = 0; ttype < 2; ++ttype) { // pine, palm
-			bool const is_pine(ttype == 0);
-			unsigned const num_of_this_type(is_pine ? num_pine_trees : num_palm_trees);
-			if (num_of_this_type == 0) continue;
-			vector<tree_inst_t> &insts(tree_insts[ttype]);
-
-			if (!draw_all || insts.size() != num_of_this_type) { // recompute insts
-				insts.clear(); insts.reserve(num_of_this_type);
-
-				for (const_iterator i = begin(); i != end(); ++i) {
-					if ((is_pine && !i->is_pine_tree()) || (!is_pine && i->get_type() != T_PALM)) continue; // only pine/plam trees are instanced
-					if (draw_all || i->are_leaves_visible(xlate)) {insts.push_back(tree_inst_t(i->get_inst_id(), i->get_pos()));}
-				}
-				sort(insts.begin(), insts.end());
-			}
-			if (insts.empty()) continue; // no insts for this tree type
-			inst_pts.resize(insts.size());
-			for (auto i = insts.begin(); i != insts.end(); ++i) {inst_pts[i-insts.begin()] = i->pt;}
-			vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail, only used for pine trees
-			if (is_pine) {vbomgr.begin_render();} else {s.add_uniform_int("use_bent_quad_tcs", 1);}
-			select_texture((draw_model != 0) ? WHITE_TEX : stt[is_pine ? T_PINE : T_PALM].leaf_tid);
-			void const *vbo_ptr(get_dynamic_vbo_ptr(&inst_pts.front(), inst_pts.size()*sizeof(point)));
-			unsigned ptr_offset(0), ix(0);
-			assert(xlate_loc >= 0);
-
-			for (auto i = insts.begin(); i != insts.end();) { // Note: no increment
-				unsigned const inst_id(i->id);
-				assert(inst_id < tree_instances.size());
-				for (ix = 0; i != insts.end() && i->id == inst_id; ++i, ++ix) {}
-				if (!is_pine) {bind_dynamic_vbo();} // need to rebind VBO since draw_palm_leaves() will bind a different VBO
-				glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), (void const *)((point const *)vbo_ptr + ptr_offset));
-				if (is_pine) {tree_instances[inst_id].draw_pine(vbomgr, ix);} else {tree_instances[inst_id].draw_palm_leaves(ix);}
-				ptr_offset += ix;
-			}
-			if (is_pine) {vbomgr.end_render();} else {s.add_uniform_int("use_bent_quad_tcs", 0);}
-		} // for ttype
+		draw_pine_insts(s, draw_all, xlate, xlate_loc);
+		return;
 	}
-	else { // non-instanced (pine trees only)
-		if (num_pine_trees == 0) return;
-		select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
-		vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
-		vbomgr.begin_render();
+	if (num_pine_trees == 0) return;
+	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
+	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);// non-instanced (pine trees only)
+	vbomgr.begin_render();
 
-		if (draw_all) {
-			if (low_detail) {vbo_manager[1].set_prim_type(GL_POINTS);}
-			vbomgr.render_all();
-		}
-		else if (sort_front_to_back) {
-			assert(!low_detail);
-			vector<pair<float, unsigned> > to_draw;
-			get_back_to_front_ordering(to_draw, xlate);
-			for (unsigned i = 0; i < to_draw.size(); ++i) {operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);}
-		}
-		else {
-			for (const_iterator i = begin(); i != end(); ++i) {i->draw_pine_leaves(vbomgr, xlate);}
-		}
-		vbomgr.end_render();
+	if (draw_all) {
+		if (low_detail) {vbo_manager[1].set_prim_type(GL_POINTS);}
+		vbomgr.render_all();
 	}
+	else if (sort_front_to_back) {
+		assert(!low_detail);
+		vector<pair<float, unsigned> > to_draw;
+		get_back_to_front_ordering(to_draw, xlate);
+		for (unsigned i = 0; i < to_draw.size(); ++i) {operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);}
+	}
+	else {
+		for (const_iterator i = begin(); i != end(); ++i) {i->draw_pine_leaves(vbomgr, xlate);}
+	}
+	vbomgr.end_render();
 }
 
 

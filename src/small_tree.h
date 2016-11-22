@@ -124,6 +124,9 @@ struct small_tree_group : public vector<small_tree> {
 	void translate_by(vector3d const &vd);
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
 	void draw_trunks(bool shadow_only, bool all_visible=0, bool skip_lines=0, vector3d const &xlate=zero_vector) const;
+	void draw_tree_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc, vector<tree_inst_t> &insts, bool is_pine);
+	void draw_pine_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc) {draw_tree_insts(s, draw_all, xlate, xlate_loc, tree_insts[0], 1);}
+	void draw_palm_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc) {draw_tree_insts(s, draw_all, xlate, xlate_loc, tree_insts[1], 0);}
 	void draw_pine_leaves(shader_t &s, bool shadow_only, bool low_detail=0, bool draw_all=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
 	void draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc=-1, int scale_loc=-1, vector3d const &xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
