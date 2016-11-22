@@ -412,7 +412,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 				if (ttype == TREE_NONE) continue;
 				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) continue;
 
-				if (instanced /*&& (ttype == T_SH_PINE || ttype == T_PINE)*/) { // check voxel terrain? or does this mode only get used for tiled terrain?
+				if (instanced) { // check voxel terrain? or does this mode only get used for tiled terrain?
 					assert(ttype == T_SH_PINE || ttype == T_PINE || ttype == T_PALM);
 					assert(zval_adj == 0.0); // must be inf terrain mode
 					add_tree(small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen)));

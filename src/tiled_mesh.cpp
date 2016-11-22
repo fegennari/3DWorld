@@ -48,7 +48,7 @@ extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_m
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset;
-extern float ocean_wave_height, sm_tree_density, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
+extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
 extern float smap_thresh_scale;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
@@ -94,8 +94,8 @@ float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
-	float const ntrees_mult(vegetation*sm_tree_density*tree_scale*tree_scale);
-	return (ENABLE_INST_PINE && (tree_mode & 2) && ntrees_mult > 20 && max_unique_trees > 0); // enable when there are lots of pine trees, but no palm trees
+	float const ntrees_mult(vegetation*sm_tree_density*tree_density_thresh*tree_scale*tree_scale);
+	return (ENABLE_INST_PINE && (tree_mode & 2) && ntrees_mult >= ((tree_mode == 3) ? 3 : 8) && max_unique_trees > 0); // enable when there are lots of pine/palm trees
 }
 
 
@@ -1067,7 +1067,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 		float const dscale(get_tree_dist_scale());
 
 		if (dscale < 1.0) { // close, draw as polygons
-			if (enable_smap) {bind_and_setup_shadow_map(s);}
+			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			set_mesh_ambient_color(s);
 			bool const all_visible(camera_pdu.sphere_visible_test(get_center(), -0.5*radius));
 			pine_trees.draw_trunks(0, all_visible, 1, xlate); // skip_lines=1
@@ -1086,7 +1086,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 		}
 		if (weight > 0.0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
 			if (draw_near_leaves) {
-				if (enable_smap) {bind_and_setup_shadow_map(s);}
+				if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 				int const loc(s.get_uniform_loc("max_noise"));
 				s.set_uniform_float(loc, weight);
 				draw_tree_leaves_lod(s, xlate, 0, xlate_loc); // near leaves
@@ -1100,10 +1100,11 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 			}
 		}
 		else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
-			if (enable_smap) {bind_and_setup_shadow_map(s);}
+			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			draw_tree_leaves_lod(s, xlate, (weight == 0.0), xlate_loc);
 		}
-		if (draw_near_leaves && weight > 0.0 && pine_trees.num_palm_trees > 0) { // draw palm trees (pine_trees is misnamed)
+		if (draw_near_leaves && pine_trees.num_palm_trees > 0 && (weight > 0.0 || (pine_trees.instanced && get_tree_dist_scale() < 3.0))) { // draw palm trees
+			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			s.add_uniform_int("use_bent_quad_tcs", 1);
 			if (pine_trees.instanced) {pine_trees.draw_palm_insts(s, camera_pdu.sphere_visible_test(get_center(), -0.5*radius), xlate, xlate_loc);}
 			else {pine_trees.draw_non_pine_leaves(0, 1, 0, xlate_loc, -1, xlate);}
