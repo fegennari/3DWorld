@@ -357,12 +357,14 @@ void create_pine_tree_instances() {
 
 	for (unsigned i = 0; i < num_pine_unique; ++i) { // Note: pine trees not rotated
 		int const ttype((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
-		tree_instances.add_tree(small_tree(all_zeros, rand_tree_height(rgen), rand_tree_width(rgen), ttype, 0, rgen)); // FIXME_TREES: multiply width by height?
+		float const height(rand_tree_height(rgen));
+		tree_instances.add_tree(small_tree(all_zeros, height, height*rand_tree_width(rgen), ttype, 0, rgen));
 	}
 	num_insts_per_type[T_PINE].end = num_insts_per_type[T_PALM].start = tree_instances.size();
 
 	for (unsigned i = 0; i < num_palm_unique; ++i) { // Note: palm trees not rotated
-		tree_instances.add_tree(small_tree(all_zeros, rand_tree_height(rgen), rand_tree_width(rgen), T_PALM, 0, rgen));
+		float const height(rand_tree_height(rgen));
+		tree_instances.add_tree(small_tree(all_zeros, height, height*rand_tree_width(rgen), T_PALM, 0, rgen));
 	}
 	num_insts_per_type[T_PALM].end = tree_instances.size();
 	num_insts_per_type[T_SH_PINE]  = num_insts_per_type[T_PINE]; // share the same instance range
