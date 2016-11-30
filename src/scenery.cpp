@@ -646,8 +646,8 @@ void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3
 	if (get_camera_pos().z > pos.z + height) { // only draw top if visible
 		if (!shadow_only) {select_texture(TREE_END_TEX);}
 		draw_circle_normal(0.0, radius2, ndiv, 0, pos+vector3d(0.0, 0.0, height));
-		if (!shadow_only) {select_texture(get_tid());}
 	}
+	if (!shadow_only) {select_texture(get_tid());}
 	draw_fast_cylinder(pos-vector3d(0.0, 0.0, 0.2*height), pos+vector3d(0.0, 0.0, height), radius, radius2, ndiv, 1);
 }
 
