@@ -96,5 +96,7 @@ struct vect_bird_t : public animal_group_t<bird_t> {
 	void draw() const;
 };
 
+bool birds_active();
+
 
 #endif // _ANIMALS_H_

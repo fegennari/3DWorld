@@ -2711,11 +2711,13 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 void tile_draw_t::draw_animals(bool reflection_pass) {
 
-	// draw birds
 	shader_t s;
-	vect_bird_t::begin_draw(s);
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_birds(s, reflection_pass);}
-	vect_bird_t::end_draw(s);
+
+	if (birds_active()) { // draw birds
+		vect_bird_t::begin_draw(s);
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_birds(s, reflection_pass);}
+		vect_bird_t::end_draw(s);
+	}
 	// draw fish
 	vect_fish_t::begin_draw(s);
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_fish(s, reflection_pass);} // doesn't work with birds above the mesh bcube

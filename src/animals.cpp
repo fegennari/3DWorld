@@ -23,6 +23,8 @@ void rotate_to_plus_x(vector3d const &dir) {
 	rotate_about(TO_DEG*get_norm_angle(dir, plus_x), vector3d(0.0, 0.0, dir.y));
 }
 
+bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe the sun is out
+
 
 class animal_model_loader_t : public model3ds {
 
@@ -162,7 +164,7 @@ bool fish_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
 bool bird_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile is unused
 
-	if (!enabled || !animate2) return 0;
+	if (!enabled || !animate2 || !birds_active()) return 0;
 
 	if ((rand() & 1) == 0) { // randomly update direction
 		float const speed(velocity.mag());
@@ -210,6 +212,7 @@ void fish_t::draw(shader_t &s) const {
 
 void bird_t::draw(shader_t &s) const {
 
+	if (!birds_active()) return;
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 1.0)) return;
 	// Note: birds use distance-based transparency rather than fog, because they may be against the blue sky above rather than the distant gray fog on the horizon;
@@ -318,7 +321,7 @@ void vect_fish_t::draw() const {
 
 void vect_bird_t::draw() const {
 
-	if (empty()) return;
+	if (empty() || !birds_active()) return;
 	shader_t s;
 	begin_draw(s);
 	draw_animals(s);
