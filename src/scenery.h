@@ -93,7 +93,9 @@ protected:
 	mutable int closest_bark_tid;
 	wood_scenery_obj() : closest_bark_tid(-1) {}
 	void calc_type();
+	bool is_from_large_trees() const;
 	int get_tid() const;
+	colorRGBA get_bark_color(vector3d const &xlate=zero_vector) const;
 };
 
 

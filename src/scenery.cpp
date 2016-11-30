@@ -512,18 +512,22 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 void wood_scenery_obj::calc_type() {type = (char)get_tree_type_from_height(pos.z, global_rand_gen, 1);}
 
 int get_closest_tree_bark_tid(point const &pos);
+colorRGBA get_closest_tree_bark_color(point const &pos);
 
+bool wood_scenery_obj::is_from_large_trees() const {
+	if (tree_mode == 0) return 0; // no trees enabled: any solution is acceptable, so use the simplest one
+	if (tree_mode == 2) return 0; // small trees only: correct/simple
+	if (tree_mode == 3) return !is_pine_tree_type(type); // both large and small trees: choose based on pine vs. decid tree type
+	return 1;
+}
 int wood_scenery_obj::get_tid() const {
-
-	if (tree_mode == 0 || // no trees enabled: any solution is acceptable, so use the simplest one
-		tree_mode == 2 || // small trees only: correct/simple
-		(tree_mode == 3 && is_pine_tree_type(type))) // both large and small trees: choose based on pine vs. decid tree type
-	{
-		return get_bark_tex_for_tree_type(type);
-	}
+	if (!is_from_large_trees()) {return get_bark_tex_for_tree_type(type);}
 	// else large trees only, or large (non-pine) trees at this height
 	if (closest_bark_tid < 0) {closest_bark_tid = get_closest_tree_bark_tid(pos);}
 	return closest_bark_tid;
+}
+colorRGBA wood_scenery_obj::get_bark_color(vector3d const &xlate) const {
+	return get_atten_color((is_from_large_trees() ? get_closest_tree_bark_color(pos) : get_tree_trunk_color(type, 0)), xlate);
 }
 
 
@@ -571,7 +575,7 @@ void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d 
 	point const center((pos + pt2)*0.5 + xlate);
 	if (!check_visible(shadow_only, get_bsphere_radius(), center)) return;
 	if (reflection_pass && 0.5*(pos.z + pt2.z) < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(get_tree_trunk_color(type, 0), xlate));
+	colorRGBA const color(shadow_only ? WHITE : get_bark_color(xlate));
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -633,7 +637,7 @@ void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3
 	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
 	if (!check_visible(shadow_only, get_bsphere_radius(), center)) return;
 	if (reflection_pass && pos.z < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(get_tree_trunk_color(type, 0), xlate));
+	colorRGBA const color(shadow_only ? WHITE : get_bark_color(xlate));
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line

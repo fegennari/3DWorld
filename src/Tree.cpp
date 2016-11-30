@@ -2129,7 +2129,9 @@ void regen_trees(bool keep_old) {
 	if (!scrolling) {PRINT_TIME(" Gen Trees");}
 }
 
-int get_closest_tree_bark_tid(point const &pos) {return t_trees.get_closest_tree_bark_tid(pos);}
+// FIXME: incorrect in tiled terrain mode - should use the decid trees on the current tile instead
+int       get_closest_tree_bark_tid  (point const &pos) {return t_trees.get_closest_tree_type(pos).bark_tex;}
+colorRGBA get_closest_tree_bark_color(point const &pos) {return t_trees.get_closest_tree_type(pos).barkc;}
 
 
 void tree::write_to_cobj_file(std::ostream &out) const {
@@ -2221,7 +2223,7 @@ float tree_cont_t::get_rmax() const {
 	return rmax;
 }
 
-int tree_cont_t::get_closest_tree_bark_tid(point const &pos) const {
+tree_type const &tree_cont_t::get_closest_tree_type(point const &pos) const {
 	int closest_type(TREE_MAPLE); // default value for the no-trees-found case
 	float min_dist_sq(0.0);
 	for (const_iterator i = begin(); i != end(); ++i) {
@@ -2231,7 +2233,7 @@ int tree_cont_t::get_closest_tree_bark_tid(point const &pos) const {
 		if (min_dist_sq == 0.0 || dist_sq < min_dist_sq) {min_dist_sq = dist_sq; closest_type = type;}
 	}
 	assert(closest_type >= 0 && closest_type < NUM_TREE_TYPES);
-	return tree_types[closest_type].bark_tex;
+	return tree_types[closest_type];
 }
 
 void tree_cont_t::update_zmax(float &tzmax) const {
