@@ -58,6 +58,7 @@ extern char *mh_filename_tt;
 extern float h_dirt[];
 extern tree_data_manager_t tree_data_manager;
 extern pt_line_drawer tree_scenery_pld;
+extern tree_cont_t *cur_tile_trees;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 void set_water_plane_uniforms(shader_t &s);
@@ -1170,6 +1171,7 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
 	//timer_t timer("Draw Scenery");
+	cur_tile_trees = &decid_trees; // set our tile's decid trees as current so that logs and stumps get the correct colors
 	fgPushMatrix();
 	vector3d const xlate(scenery_off.get_xlate());
 	translate_to(xlate);
@@ -1178,6 +1180,7 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 	if (draw_opaque) {scenery.draw_opaque_objects(s, shadow_pass, xlate, 0, scale_val, reflection_pass);} // shader not passed in here
 	if (draw_leaves) {scenery.draw_plant_leaves  (s, shadow_pass, xlate, reflection_pass);}
 	fgPopMatrix();
+	cur_tile_trees = nullptr;
 }
 
 
