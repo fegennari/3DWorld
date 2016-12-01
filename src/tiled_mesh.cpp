@@ -2533,7 +2533,7 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
 	//s.add_uniform_int("shadow_tex", 6);
-	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
+	s.add_uniform_color("ambient_tint", colorRGB(WHITE));
 	s.add_uniform_color("color_scale", get_color_scale());
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 }
