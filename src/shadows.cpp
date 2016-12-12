@@ -19,18 +19,12 @@ extern vector3d up_norm;
 
 void update_sun_shadows() {
 
-	 // seems like this has to be first, but questionable
+	// seems like this has to be first, but questionable
 	if (!combined_gu && fabs(sun_rot/PI - 1.0) < 0.6 && fabs(sun_rot/PI - 1.0) > 0.4) {calc_visibility(MOON_SHADOW);}
 	calc_visibility(SUN_SHADOW);
 }
 
-void fix_sun_moon_rot(float &angle) {
-
-	angle = fix_angle(angle);
-	// FIXME: this part is required to prevent shadow map singularities when the sun/moon is directly overhead
-	float const toler = 0.001;
-	if (fabs(angle) < toler || fabs(angle - TWO_PI) < toler) {angle = toler;}
-}
+void fix_sun_moon_rot(float &angle) {angle = fix_angle(angle);}
 
 void update_sun_and_moon() {
 
