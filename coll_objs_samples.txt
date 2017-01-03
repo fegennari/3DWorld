@@ -17,7 +17,8 @@ y 4.0
 #t 0 0 0  s 1 2  M 0  m 0.2  O ../models/sponza/sponza.obj 4 1 0
 #t 0 0 0.0  s 1 2  M 0  m 0.002  O ../models/sponza2/sponza.model3d 4 0 0
 #t 0 0 2.4  s 1 2  M 0  m 0.18  O ../models/sibenik/sibenik.model3d 4 1 0
-t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 27 1  O ../models/san-miguel/san-miguel.model3d 4 1 0
+#t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 27 1  O ../models/san-miguel/san-miguel.model3d 4 1 0
+t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 27 1  O ../models/san-miguel-new/sanMiguel.obj 4 1 1
 #t 5 -5 -1  M 0  m 0.003  O ../models/soda/soda.model3d 3 0 0
 #t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/monkey.obj 4 0 0
 #t 0 0 1.0  s 1 2  M 0  m 0.01  O ../models/FlyingSpaghettiMonster.obj 4 0 0
@@ -37,6 +38,7 @@ t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 27 1  O ../models/san-miguel/
 #t 0 0 0  s 1 2  M 0  m 0.0002  O "..\models\Castle\Castle01.obj" 3 1 0
 #t 1.0 0 0.3  s 1 2  M 0  m 0.05  O ../models/museum/museumhallRD.obj 3 1 0
 #t 1.0 0 1.5  s 1 2  M 0  m 0.05  O ../models/-Stahlberg-LC-Challenge-/exportedOBJ.obj 3 1 0
+#t 0 0 0.0  s 1 2  M 0  m 0.04  O ../models/teapot/teapot.obj 4 1 0
 
 l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = white texture
 #t 0 -2.0 0.2  M 0  m 0.002  O "..\models\stealth\stealth.3ds" 3 0 0 # flat face normals

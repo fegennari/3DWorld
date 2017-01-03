@@ -910,6 +910,8 @@ L 0.0 1.0  0.395  1.4 -0.06  1.0 1.0 1.2 1.0  0.395  1.8 -0.06  1.0 0.0 1
 V 0.395  1.6 -0.026
 K # disable light trigger
 
+t 0.48 1.35 0.162  s 1 2  M 0  m 0.0005  O ../models/teapot/teapot.obj 6 1 0 10.0 # cubes from edges, smooth normals
+
 q # Quit
 
 # *** TESTING ***
