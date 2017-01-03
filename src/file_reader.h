@@ -27,14 +27,23 @@ protected:
 	int get_char(FILE *fp_)    const;
 	int get_char(std::ifstream &in) const {return in.get();}
 
+	void strip_trailing_ws(string &str) const {
+		while (!str.empty() && fast_isspace(str.back())) {str.pop_back();}
+	}
+	void add_char_to_str(int c, string &str) const {
+		if (!fast_isspace(c) || !str.empty()) {str.push_back(c);}
+	}
 	template<typename T> void read_to_newline(T &stream, string *str=NULL) const {
 		bool prev_was_escape(0);
 
 		while (1) {
 			int const c(get_char(stream));
-			if ((!prev_was_escape && c == '\n') || c == '\0' || c == EOF) return;
+			if ((!prev_was_escape && c == '\n') || c == '\0' || c == EOF) {
+				if (str) {strip_trailing_ws(*str);}
+				return;
+			}
 			prev_was_escape = (c == '\\'); // handle escape character at end of line
-			if (str && !prev_was_escape) {str->push_back(char(c));}
+			if (str && !prev_was_escape) {add_char_to_str(c, *str);}
 		}
 		assert(0); // never gets here
 	}
@@ -44,8 +53,9 @@ protected:
 		while (1) {
 			int const c(get_char(stream));
 			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
-			if (!fast_isspace(c) || !str.empty()) str.push_back(c);
+			add_char_to_str(c, str);
 		}
+		strip_trailing_ws(str);
 		return;
 	}
 	int fast_atoi(char *str) const;

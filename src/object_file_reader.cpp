@@ -84,11 +84,18 @@ bool base_file_reader::read_string(char *s, unsigned max_len) {
 
 class object_file_reader : public base_file_reader {
 
-protected:
-	void normalize_index(int &ix, unsigned vect_sz) const {
-		assert(ix != 0);
+	bool invalid_index_warned;
 
-		if (ix < 0) { // negative (relative) index
+protected:
+	void normalize_index(int &ix, unsigned vect_sz) {
+		if (ix == 0) {
+			if (!invalid_index_warned) {
+				cerr << "Error: Invalid zero index in object file" << endl;
+				//assert(0);
+				invalid_index_warned = 1;
+			}
+		}
+		else if (ix < 0) { // negative (relative) index
 			ix += vect_sz;
 		}
 		else { // positive (absolute) index
@@ -120,7 +127,7 @@ protected:
 	}
 
 public:
-	object_file_reader(string const &fn) : base_file_reader(fn) {}
+	object_file_reader(string const &fn) : base_file_reader(fn), invalid_index_warned(0) {}
 
 	bool read(vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
@@ -255,12 +262,16 @@ public:
 			}
 			else if (s == "newmtl") { // new material
 				string material_name;
-
+#if 1
+				read_to_newline(mat_in, &material_name);
+				if (material_name.empty()) {
+#else
 				if (!(mat_in >> material_name)) {
+#endif
 					cerr << "Error reading material name" << endl;
 					return 0;
 				}
-				if (verbose) cout << "Material " << material_name << endl; // maybe too verbose?
+				if (verbose) {cout << "Material " << material_name << endl;} // maybe too verbose?
 				cur_mat_id =  model.get_material_ix(material_name, fn);
 				cur_mat    = &model.get_material(cur_mat_id);
 			}
@@ -309,7 +320,12 @@ public:
 				float sharpness; // Note: unused
 				if (!(mat_in >> sharpness)) {cerr << "Error reading material sharpness" << endl; return 0;}
 			}
-			// Note: may want to support the -clamp option to clamp textures
+			else if (s == "clamp") { // Note: unused, normally is On/Off
+				assert(cur_mat);
+				string val; // Note: unused
+				if (!(mat_in >> val)) {cerr << "Error reading material clamp" << endl; return 0;}
+				// Note: may want to support the -clamp option to clamp textures
+			}
 			else if (s == "map_ka") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
