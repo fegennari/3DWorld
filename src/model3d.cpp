@@ -616,6 +616,7 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_
 		for (unsigned p = 0; p < npts; ++p) {poly[p] = get_vert(i+p);}
 
 		if (args.quads_only) {
+			if (npts != 4) {cerr << "Error: model3d mode only works on quads, not triangles" << endl;}
 			assert(npts == 4);
 			args.polygons.push_back(poly);
 		}
@@ -2003,8 +2004,10 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 	cube_t const bcube(get_polygons_bcube(ppts));
 	vector3d const csz(bcube.get_size());
 	unsigned ndiv[3];
-	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing)));} // clamp to [2,1024] range
+	uint64_t tot_grid(1);
+	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing))); tot_grid *= ndiv[i];} // clamp to [2,1024] range
 	cout << "polygons: " << ppts.size() << ", grid: " << ndiv[0] << "x" << ndiv[1] << "x" << ndiv[2] << endl;
+	if (tot_grid > (1<<20)) {cerr << "Error: Too many model3d grid voxels: " << tot_grid << endl; assert(0);}
 	RESET_TIME;
 	voxel_grid<cube_t> grid;
 	grid.init(ndiv[0], ndiv[1], ndiv[2], bcube, all_zeros_cube);

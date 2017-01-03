@@ -1062,7 +1062,7 @@ void add_model_polygons_to_cobjs(vector<coll_tquad> const &ppts, coll_obj &cobj,
 // returns error string
 string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float scale, bool has_layer, model3d_xform_t &model_xf) {
 
-	// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from polygons (voxels), 6=cubes from edges
+	// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from quad polygons (voxels), 6=cubes from edges
 	bool const group_cobjs(model_xf.group_cobjs_level >= 1);
 	bool const use_vbo    (model_xf.group_cobjs_level == 2);
 	bool const use_model3d(model_xf.group_cobjs_level >= 3);
@@ -1261,6 +1261,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				string const fn(read_filename(fp, line_num));
 				int recalc_normals(0), write_file(0);
 
+				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from quad polygons (voxels), 6=cubes from edges
 				if (fn.empty() || fscanf(fp, "%i%i%i%f", &model_xf.group_cobjs_level, &recalc_normals, &write_file, &model_xf.voxel_spacing) < 3) {
 					return read_error(fp, "load model file command", coll_obj_file);
 				}
