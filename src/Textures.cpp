@@ -814,8 +814,8 @@ void texture_t::make_normal_map() {
 	normal_map = 1;
 	if (ncolors == 3) return; // already a normal map
 	
-	if (ncolors == 4) { // better not have an alpha component
-		cout << "Error: Skipping RGBA Bump/Normal map " << name << "." << endl;
+	if (ncolors == 4 || ncolors == 2) { // better not have an alpha component
+		cout << "Error: Skipping RGBA Bump/Normal map " << name << ", which has " << ncolors << " colors components." << endl;
 		return;
 	}
 	assert(is_allocated());
