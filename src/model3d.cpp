@@ -949,7 +949,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (set_ref_ix) {shader.add_uniform_float("refract_ix", ni);} // set index of refraction - may not actually be used
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend();}
-		float const min_alpha(min(0.99*alpha, ((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
+		float const min_alpha(min(0.99*alpha, (get_needs_alpha_test() ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
 		shader.add_uniform_float("min_alpha", min_alpha);
 		if (ns > 0.0) {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
