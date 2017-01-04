@@ -10,6 +10,7 @@
 #include "fast_atof.h"
 
 
+extern bool use_obj_file_bump_grayscale;
 extern float model_auto_tc_scale;
 extern model3ds all_models;
 
@@ -214,14 +215,14 @@ string model_from_file_t::get_path(string const &fn) const {
 	return string();
 }
 
-int model_from_file_t::get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror) {
+int model_from_file_t::get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror, bool force_grayscale) {
 	int const existing_tid(texture_lookup(fn));
 	if (existing_tid >= 0) {return (BUILTIN_TID_START + existing_tid);}
 	ifstream tex_in; // used only for determining file location
 	string const fn_used(open_include_file(fn, "texture", tex_in));
 	if (fn_used.empty()) return -1;
 	tex_in.close();
-	return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose, invert_alpha, wrap, mirror);
+	return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose, invert_alpha, wrap, mirror, force_grayscale);
 }
 
 void model_from_file_t::check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror) {
@@ -229,7 +230,7 @@ void model_from_file_t::check_and_bind(int &tid, string const &tfn, bool is_alph
 		cerr << "Warning: Duplicate specification of object file material texture " << tfn << " ignored" << endl;
 		return;
 	}
-	tid = get_texture(tfn, is_alpha_mask, verbose, invert_alpha, wrap, mirror);
+	tid = get_texture(tfn, is_alpha_mask, verbose, invert_alpha, wrap, mirror, 0);
 }
 
 
@@ -368,7 +369,7 @@ public:
 					float scale(1.0);
 					if (!(mat_in >> scale) || !read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " with -bm" << endl; return 0;}
 				}
-				cur_mat->bump_tid = get_texture(tfn, 0, verbose); // can be set from both map_bump and bump
+				cur_mat->bump_tid = get_texture(tfn, 0, verbose, 0, 1, 0, use_obj_file_bump_grayscale); // can be set from both map_bump and bump
 			}
 			else if (s == "map_refl") {
 				assert(cur_mat);
