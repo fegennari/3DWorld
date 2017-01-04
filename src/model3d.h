@@ -516,11 +516,7 @@ public:
 	string open_include_file(string const &fn, string const &type, ifstream &in_inc) const ;
 	string get_path(string const &fn) const;
 	int get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0);
-
-	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0) {
-		assert(tid < 0);
-		tid = get_texture(tfn, is_alpha_mask, verbose, invert_alpha, wrap, mirror);
-	}
+	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0);
 };
 
 

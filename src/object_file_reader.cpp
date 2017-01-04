@@ -224,6 +224,14 @@ int model_from_file_t::get_texture(string const &fn, bool is_alpha_mask, bool ve
 	return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose, invert_alpha, wrap, mirror);
 }
 
+void model_from_file_t::check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror) {
+	if (tid >= 0) {
+		cerr << "Warning: Duplicate specification of object file material texture " << tfn << " ignored" << endl;
+		return;
+	}
+	tid = get_texture(tfn, is_alpha_mask, verbose, invert_alpha, wrap, mirror);
+}
+
 
 
 class object_file_reader_model : public object_file_reader, public model_from_file_t {
@@ -266,12 +274,9 @@ public:
 			}
 			else if (s == "newmtl") { // new material
 				string material_name;
-#if 1
 				read_to_newline(mat_in, &material_name);
+
 				if (material_name.empty()) {
-#else
-				if (!(mat_in >> material_name)) {
-#endif
 					cerr << "Error reading material name" << endl;
 					return 0;
 				}
