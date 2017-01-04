@@ -20,7 +20,7 @@ unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
-extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
+extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
@@ -33,7 +33,7 @@ extern vector<texture_t> textures;
 model3ds all_models;
 
 
-bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (display_mode & 0x20) == 0);} // enabled by default
+bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (display_mode & 0x20) == 0) && enable_model3d_bump_maps;} // enabled by default
 bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
