@@ -192,7 +192,7 @@ unsigned sky_zval_tid;
 unsigned char *landscape0 = NULL;
 
 
-extern bool mesh_difuse_tex_comp, water_is_lava;
+extern bool mesh_difuse_tex_comp, water_is_lava, invert_bump_maps;
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid, depth_tid, frame_buffer_RGB_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only, window_width, window_height;
@@ -843,6 +843,7 @@ void texture_t::make_normal_map() {
 			vector3d n(-((int)data[xp1+y*width] - (int)data[xm1+y*width])/max_delta_f,
 				        ((int)data[x+yp1*width] - (int)data[x+ym1*width])/max_delta_f, 1.0);
 			n.normalize();
+			if (invert_bump_maps) {n.x = -n.x; n.y = -n.y;}
 			UNROLL_3X(new_data[off+i_] = unsigned char(127.5*(n[i_]+1.0)););
 		}
 	}
