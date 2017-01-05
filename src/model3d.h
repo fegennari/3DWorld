@@ -405,6 +405,7 @@ class model3d {
 	string_map_t mat_map; // maps material names to materials indexes
 	set<string> undef_materials; // to reduce warning messages
 	cobj_tree_tquads_t coll_tree;
+	bool textures_loaded;
 
 	// transforms
 	vector<model3d_xform_t> transforms;
@@ -427,7 +428,7 @@ public:
 	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
 		bcube(all_zeros_cube), model_refl_tid(0), model_refl_tsize(0), reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0),
-		needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), tmgr(tmgr_) {}
+		needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), textures_loaded(0), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 

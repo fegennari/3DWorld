@@ -1330,6 +1330,7 @@ void model3d::clear() {
 	mat_map.clear();
 	coll_tree.clear();
 	smap_data.clear(); // unnecessary
+	textures_loaded = 0;
 }
 
 
@@ -1346,7 +1347,12 @@ void model3d::free_context() {
 
 
 void model3d::load_all_used_tids() {
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->init_textures(tmgr);}
+
+	if (textures_loaded) return; // is this safe to skip?
+	timer_t timer("Texture Load");
+//#pragma omp parallel for schedule(dynamic) // not thread safe due to texture_t::resize() GL calls and reuse of textures across materials
+	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].init_textures(tmgr);}
+	textures_loaded = 1;
 }
 
 
