@@ -42,6 +42,7 @@ use_z_prepass 0
 enable_model3d_bump_maps 1
 use_obj_file_bump_grayscale 1 # set to 1 for new San Miguel scene
 invert_bump_maps 1 # set to 1 for new San Miguel scene
+use_interior_cube_map_refl 1
 
 mesh_height 0.05
 mesh_size  128 128 0

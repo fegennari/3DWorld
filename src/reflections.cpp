@@ -19,7 +19,7 @@ point pre_ref_camera_pos(zero_vector);
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
 
-extern bool combined_gu, show_lightning, begin_motion;
+extern bool combined_gu, show_lightning, begin_motion, use_interior_cube_map_refl;
 extern int display_mode, window_width, window_height, camera_coll_id;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern coll_obj_group coll_objects;
@@ -355,8 +355,8 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id,
 }
 
 unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
-	// slightly more than the cube half width in max dim
-	return create_cube_map_reflection(tid, tsize, cobj_id, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing, is_indoors, skip_mask);
+	float const nclip(use_interior_cube_map_refl ? NEAR_CLIP : max(NEAR_CLIP, 0.5f*cube.max_len())); // slightly more than the cube half width in max dim
+	return create_cube_map_reflection(tid, tsize, cobj_id, cube.get_cube_center(), nclip, FAR_CLIP, only_front_facing, is_indoors, skip_mask);
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {
