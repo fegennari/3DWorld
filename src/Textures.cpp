@@ -253,16 +253,20 @@ void set_landscape_texture_from_file() {
 
 void load_textures() {
 
-	cout << "loading textures";
+	timer_t timer("Texture Load");
+	cout << "loading textures"; cout.flush();
 	if (using_custom_landscape_texture()) {set_landscape_texture_from_file();} // must be done first
 	load_texture_names();
 
-	for (unsigned i = 0; i < textures.size(); ++i) {
-		cout.flush();
-		cout << ".";
-		if (!is_tex_disabled(i)) {textures[i].load(i);}
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < (int)textures.size(); ++i) {
+		//cout << "."; cout.flush();
+		if (!is_tex_disabled(i)) {textures[i].load(i, 0, 0, 1);} // ignore word alignment here, since resizing isn't thread safe
 	}
-	cout << endl;
+	for (int i = 0; i < (int)textures.size(); ++i) {
+		if (!is_tex_disabled(i)) {textures[i].fix_word_alignment();}
+	}
+	cout << " done" << endl;
 	textures[BULLET_D_TEX].merge_in_alpha_channel(textures[BULLET_A_TEX]);
 	gen_smoke_texture();
 	gen_plasma_texture();
@@ -769,7 +773,7 @@ void texture_t::add_alpha_channel() {
 }
 
 
-void texture_t::resize(int new_w, int new_h) {
+void texture_t::resize(int new_w, int new_h) { // Note: not thread safe
 
 	if (new_w == width && new_h == height) return; // already correct size
 	assert(is_allocated());

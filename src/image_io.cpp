@@ -142,7 +142,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 				for (unsigned i = 0; i < npixels; ++i) {data[4*i+3] = (255 - data[4*i+3]);}
 			}
 		}
-	}
+	} // end non-generated texture case
 #if 0
 	if (name.size() > 4 && name.front() != '@') {
 		string fn(name);
