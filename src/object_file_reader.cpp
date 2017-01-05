@@ -92,20 +92,26 @@ class object_file_reader : public base_file_reader {
 	bool invalid_index_warned;
 
 protected:
-	void normalize_index(int &ix, unsigned vect_sz) {
-		if (ix == 0) {
+	void handle_invalid_zero_ref_index(int &ix) {
+		if (ix == -1) {
 			if (!invalid_index_warned) {
 				cerr << "Error: Invalid zero index in object file" << endl;
 				//assert(0);
 				invalid_index_warned = 1;
 			}
+			++ix;
 		}
-		else if (ix < 0) { // negative (relative) index
+	}
+	void normalize_index(int &ix, unsigned vect_sz) {
+		int const input_ix(ix);
+		if (ix < 0) { // negative (relative) index
 			ix += vect_sz;
 		}
 		else { // positive (absolute) index
 			--ix; // specified starting from 1, but we want starting from 0
 		}
+		handle_invalid_zero_ref_index(ix);
+		if ((unsigned)ix >= vect_sz) {cout << TXT(input_ix) << TXT(ix) << TXT(vect_sz) << endl;}
 		assert((unsigned)ix < vect_sz);
 	}
 
