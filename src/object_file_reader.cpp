@@ -389,6 +389,10 @@ public:
 			//else if (s == "map_aat") {} // toggle antialiasing
 			//else if (s == "decal") {} // modifies color
 			//else if (s == "dist") {} // displacement
+			else if (s == "metalness") { // metalness has been added for 3DWorld and is not in the original obj file format
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->metalness)) {cerr << "Error reading material metalness" << endl; return 0;}
+			}
 			else if (s == "skip") { // skip this material
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->skip)) {cerr << "Error reading material skip" << endl; return 0;}

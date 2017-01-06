@@ -344,8 +344,8 @@ struct material_params_t {
 	unsigned illum;
 	bool skip, is_used, unused1, unused2; // unused bools to pad the struct
 
-	material_params_t() : ka(WHITE), kd(WHITE), ks(BLACK), ke(BLACK), tf(WHITE),
-		ns(1.0), ni(1.0), alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0), unused1(0), unused2(0) {}
+	material_params_t() : ka(WHITE), kd(WHITE), ks(BLACK), ke(BLACK), tf(WHITE), ns(1.0), ni(1.0),
+		alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0), unused1(0), unused2(0) {}
 }; // must be padded
 
 
@@ -354,6 +354,7 @@ struct material_t : public material_params_t {
 	bool might_have_alpha_comp;
 	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid;
 	float draw_order_score;
+	float metalness; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
 	string name, filename;
 
 	geometry_t<vert_norm_tc> geom;
@@ -361,7 +362,7 @@ struct material_t : public material_params_t {
 
 	material_t(string const &name_=string(), string const &fn=string())
 		: might_have_alpha_comp(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
-		draw_order_score(0.0), name(name_), filename(fn) {}
+		draw_order_score(0.0), metalness(-1.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}

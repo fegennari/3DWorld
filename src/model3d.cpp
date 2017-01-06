@@ -945,6 +945,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
 			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (FIXME: not implemented in the shader; unclear how to interpret map_ns in object files)
 		}
+		if (metalness >= 0.0) {shader.add_uniform_float("metalness", metalness);} // set metalness if specified/valid; may or may not be used
 		bool const set_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0);
 		if (set_ref_ix) {shader.add_uniform_float("refract_ix", ni);} // set index of refraction - may not actually be used
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
@@ -963,6 +964,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (ns > 0.0) {shader.clear_specular();}
 		if (need_blend) {disable_blend();}
 		if (set_ref_ix) {shader.add_uniform_float("refract_ix", 1.0);}
+		if (metalness >= 0.0) {shader.add_uniform_float("metalness", 0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
 	}
 }
 
