@@ -486,6 +486,7 @@ public:
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
 	static void proc_counted_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
+	static void proc_weighted_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh=0.7);
 	void write_to_cobj_file(std::ostream &out) const;
 };
 

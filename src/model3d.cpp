@@ -1770,13 +1770,23 @@ bool model3d::read_from_disk(string const &fn) { // Note: transforms not read
 
 void model3d::proc_counted_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh) {
 
-	for (vector<counted_normal>::iterator i = cn.begin(); i != cn.end(); ++i) { // if recalc_normals
+	for (vector<counted_normal>::iterator i = cn.begin(); i != cn.end(); ++i) {
 		if (!i->is_valid()) continue; // invalid, remains invalid
 		*i /= (float)i->count;
 		float const mag(i->mag());
-		if (mag < TOLERANCE) {i->count = 0; continue;} // invalid
+		if (mag < TOLERANCE) {i->count = 0; continue;} // make invalid
 		*i /= mag; // normalize
 		i->count = (recalc_normals > 1 || mag > nmag_thresh); // stores the 'valid' state of the normal
+	}
+}
+
+void model3d::proc_weighted_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh) { // unused
+
+	for (vector<weighted_normal>::iterator i = wn.begin(); i != wn.end(); ++i) {
+		if (!i->is_valid()) continue; // invalid, remains invalid
+		float const mag(i->mag());
+		if (mag < TOLERANCE) {i->weight = 0.0; continue;} // make invalid
+		*i /= mag; // normalize
 	}
 }
 
