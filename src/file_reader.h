@@ -22,9 +22,9 @@ protected:
 	void close_file();
 	int get_next_char() {assert(fp); return get_char(fp);}
 	void unget_last_char(int c);
-	bool fast_isspace(char c)  const {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '/r');}
-	bool fast_isdigit(char c)  const {return (c >= '0' && c <= '9');}
-	int get_char(FILE *fp_)    const;
+	bool fast_isspace(char c) const {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '/r');}
+	bool fast_isdigit(char c) const {return (c >= '0' && c <= '9');}
+	int get_char(FILE *fp_)   const;
 	int get_char(std::ifstream &in) const {return in.get();}
 
 	void strip_trailing_ws(string &str) const {
@@ -33,8 +33,8 @@ protected:
 	void add_char_to_str(int c, string &str) const {
 		if (!fast_isspace(c) || !str.empty()) {str.push_back(c);}
 	}
-	template<typename T> void read_to_newline(T &stream, string *str=NULL) const {
-		bool prev_was_escape(0);
+	template<typename T> void read_to_newline(T &stream, string *str=NULL, char comment_char='#') const {
+		bool prev_was_escape(0), saw_comment_char(0);
 
 		while (1) {
 			int const c(get_char(stream));
@@ -43,7 +43,10 @@ protected:
 				return;
 			}
 			prev_was_escape = (c == '\\'); // handle escape character at end of line
-			if (str && !prev_was_escape) {add_char_to_str(c, *str);}
+			if (str && !prev_was_escape) {
+				if (c == comment_char) {saw_comment_char = 1;} // stop adding characters inside a comment
+				if (!saw_comment_char) {add_char_to_str(c, *str);}
+			}
 		}
 		assert(0); // never gets here
 	}
