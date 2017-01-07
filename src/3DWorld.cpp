@@ -94,7 +94,7 @@ float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model
 float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0), jump_height(1.0), force_czmin(0.0), force_czmax(0.0), smap_thresh_scale(1.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
-point mesh_origin(all_zeros), camera_pos(all_zeros);
+point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
 string user_text, cobjs_out_fn;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color, flower_color(ALPHA0);
@@ -1808,6 +1808,10 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "player_start") {
 			if (!read_vector(fp, surface_pos)) cfg_err("player_start command", error);
+		}
+		else if (str == "cube_map_center") {
+			if (!read_vector(fp, cube_map_center)) cfg_err("cube_map_center command", error);
+			if (cube_map_center == all_zeros) {cube_map_center.x += TOLERANCE;} // since all_zeros is a special flag, make sure the user-specified value is different
 		}
 		else if (str == "tree_size") {
 			float tree_size(1.0);

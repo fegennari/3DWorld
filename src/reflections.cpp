@@ -22,6 +22,7 @@ reflective_cobjs_t reflective_cobjs;
 extern bool combined_gu, show_lightning, begin_motion, use_interior_cube_map_refl;
 extern int display_mode, window_width, window_height, camera_coll_id;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
+extern point cube_map_center;
 extern coll_obj_group coll_objects;
 extern vector<shadow_sphere> shadow_objs;
 
@@ -356,7 +357,8 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id,
 
 unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
 	float const nclip(use_interior_cube_map_refl ? NEAR_CLIP : max(NEAR_CLIP, 0.5f*cube.max_len())); // slightly more than the cube half width in max dim
-	return create_cube_map_reflection(tid, tsize, cobj_id, cube.get_cube_center(), nclip, FAR_CLIP, only_front_facing, is_indoors, skip_mask);
+	point const center((cube_map_center == all_zeros) ? cube.get_cube_center() : cube_map_center);
+	return create_cube_map_reflection(tid, tsize, cobj_id, center, nclip, FAR_CLIP, only_front_facing, is_indoors, skip_mask);
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {
