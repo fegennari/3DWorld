@@ -315,11 +315,11 @@ void main()
 #endif // ENABLE_REFLECTIONS
 
 #ifdef ENABLE_CUBE_MAP_REFLECT
-#ifdef USE_BUMP_MAP
+#ifdef ENABLE_CUBE_MAP_BUMP_MAPS
 	vec3 ws_normal = get_bump_map_normal();
 #else
 	vec3 ws_normal = normalize(normal_s);
-#endif // USE_BUMP_MAP
+#endif // ENABLE_CUBE_MAP_BUMP_MAPS
 	vec3 spec_scale = vec3(1.0);
 #ifdef USE_SPEC_MAP
 	spec_scale     *= get_spec_color();
