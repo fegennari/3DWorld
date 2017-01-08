@@ -1,5 +1,6 @@
 t 0.0 0.0 0.0
 l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
+#B 1.8 1.58  -3.0 4.0  -0.2 1.54 # light blocking cube for back wall
 cube_map_ref 1
 metalness 0.0
 t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 white.png 1  O ../models/san-miguel-new/sanMiguel.model3d 4 0 0
