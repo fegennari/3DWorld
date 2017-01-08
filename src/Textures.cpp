@@ -907,7 +907,9 @@ void texture_t::create_custom_mipmaps() {
 				}
 			}
 		}
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
 		glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, format, get_data_format(), &odata.front());
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		idata.swap(odata);
 	}
 }
