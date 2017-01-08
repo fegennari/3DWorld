@@ -1841,6 +1841,11 @@ int load_config(string const &config_file) {
 		else if (str == "sunlight_color") {
 			if (fscanf(fp, "%f%f%f", &sunlight_color.R, &sunlight_color.G, &sunlight_color.B) != 3) {cfg_err("sunlight_color command", error);}
 		}
+		else if (str == "sunlight_intensity") {
+			float intensity(1.0);
+			if (!read_float(fp, intensity)) {cfg_err("sunlight_intensity command", error);}
+			sunlight_color *= intensity;
+		}
 		else if (str == "floating_light_params") { // rmin, rmax, vmin, vmax, imin, imax
 			if (fscanf(fp, "%f%f%f%f%f%f", &dp_params.rmin, &dp_params.rmax, &dp_params.vmin, &dp_params.vmax, &dp_params.imin, &dp_params.imax) != 6) {
 				cfg_err("floating_light_params command", error);

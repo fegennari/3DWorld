@@ -52,7 +52,7 @@ extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, 
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
-extern colorRGBA bkg_color, sun_color, sunlight_color, base_cloud_color, cur_fog_color;
+extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
 extern lightning l_strike;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
