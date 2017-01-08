@@ -959,7 +959,9 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="coll_objs_puzzle.txt" />
+    <Text Include="coll_objs_san_miguel.txt" />
     <Text Include="config_puzzle.txt" />
+    <Text Include="config_san_miguel.txt" />
     <Text Include="mapx\coll_objs_cubes.txt" />
     <Text Include="mapx\coll_objs_mapx.txt" />
     <Text Include="mapx\coll_objs_spheres.txt" />

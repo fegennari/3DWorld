@@ -24,6 +24,7 @@ mapx/config_mapx.txt
 #sponza/config_sponza2.txt
 #model_data/config_soda.txt
 #config_samples.txt
+#config_san_miguel.txt
 #config_minecraft.txt
 #config_museum.txt
 #config_puzzle.txt
