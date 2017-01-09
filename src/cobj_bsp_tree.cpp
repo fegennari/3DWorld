@@ -186,6 +186,7 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 	}
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
 	unsigned pos(n.start), bin_count[3];
+	if (temp_bins[1].capacity() == 0) {temp_bins[1].reserve(11*num/20);} // reserve to 55% to hopefully avoid vector doubling
 
 	// split in this dimension
 	for (unsigned i = n.start; i < n.end; ++i) {
@@ -193,9 +194,11 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 		T const &obj(objects[i]);
 		if (get_vhi(obj, dim) <= sval_lo) {bix =  (depth&1);} // ends   before the split, put in bin 0
 		if (get_vlo(obj, dim) >= sval_hi) {bix = !(depth&1);} // starts after  the split, put in bin 1
-		temp_bins[bix].push_back(obj);
+		if (bix == 0) {objects[pos++] = objects[i];} else {temp_bins[bix].push_back(obj);}
 	}
-	for (unsigned d = 0; d < 3; ++d) {
+	bin_count[0] = (pos - n.start);
+
+	for (unsigned d = 1; d < 3; ++d) {
 		bin_count[d] = temp_bins[d].size();
 		for (unsigned i = 0; i < bin_count[d]; ++i) {objects[pos++] = temp_bins[d][i];}
 		temp_bins[d].resize(0);
@@ -235,8 +238,8 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree_top(bool verbos
 	for (unsigned i = 0; i < 3; ++i) {vector<T>().swap(temp_bins[i]);}
 
 	if (verbose) {
-		cout << "objects: " << objects.size() << ", nodes: " << nodes.size()  << ", depth: "
-			 << max_depth << ", max_leaf: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
+		cout << "objects: " << objects.size() << ", cap: " << objects.capacity() << ", nodes: " << nodes.size() << ", cap: " << nodes.capacity()
+			 << ", depth: " << max_depth << ", max_leaf: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
 	}
 }
 

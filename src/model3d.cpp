@@ -1659,6 +1659,7 @@ void model3d::build_cobj_tree(bool verbose) {
 	if (!coll_tree.is_empty() || has_cobjs) return; // already built or not needed because cobjs will be used instead
 	RESET_TIME;
 	get_polygons(coll_tree.get_tquads_ref());
+	PRINT_TIME(" Get Model3d Polygons");
 	coll_tree.build_tree_top(verbose);
 	PRINT_TIME(" Cobj Tree Create (from model3d)");
 }
