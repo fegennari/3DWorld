@@ -8,6 +8,8 @@ enable_model3d_custom_mipmaps 1
 enable_cube_map_bump_maps 0
 use_interior_cube_map_refl 1
 cube_map_center 0.58 1.75 0.18 # for San Miguel scene
+sunlight_intensity 5.0
+player_speed 0.5
 
 mesh_size  256 256 64
 shadow_map_sz 8192

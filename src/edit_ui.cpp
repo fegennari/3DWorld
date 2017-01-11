@@ -390,11 +390,11 @@ public:
 float def_atmosphere(1.0), def_vegetation(1.0);
 
 extern int temp_change, def_cube_map_reflect_mipmap_level;
-extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP;
+extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP, player_speed;
 extern vector3d wind;
 
-enum {PW_GRAVITY=0, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, CM_MIP_BIAS, NUM_PW_CONT};
-string const phys_weather_names[NUM_PW_CONT] = {"Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation",
+enum {PW_SPEED=0, PW_GRAVITY, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, CM_MIP_BIAS, NUM_PW_CONT};
+string const phys_weather_names[NUM_PW_CONT] = {"Player Speed", "Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation",
 												"Wind X", "Wind Y", "Sun Angle", "Moon Angle", "Physics Timestep", "Weapon Velocity", "Cube Map Mipmap Bias"};
 
 class phys_weather_kbd_menu_t : public keyboard_menu_t {
@@ -407,6 +407,10 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 		float spos(0.0);
 
 		switch (control_ix) {
+		case PW_SPEED:
+			value << player_speed;
+			spos = base_gravity/4.0; // 0.0 to 4.0
+			break;
 		case PW_GRAVITY:
 			value << base_gravity;
 			spos = base_gravity/2.0; // 0.0 to 2.0
@@ -466,7 +470,7 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 		default:
 			assert(0);
 		}
-		draw_one_control_text(control_ix, phys_weather_names[control_ix], value.str(), spos);
+		draw_one_control_text(control_ix, phys_weather_names[control_ix], value.str(), spos, 0, 0.9);
 	}
 
 public:
@@ -477,6 +481,9 @@ public:
 		bool regen_mesh(0);
 
 		switch (cur_control) {
+		case PW_SPEED:
+			player_speed = max(0.0f, (player_speed + 0.2f*delta)); // >= 0.0 in steps of 0.2
+			break;
 		case PW_GRAVITY:
 			base_gravity = max(0.0f, (base_gravity + 0.05f*delta)); // >= 0.0 in steps of 0.1
 			break;
