@@ -650,6 +650,10 @@ struct colorRGB { // size = 12
 		n.y = 2.0*G - 1.0;
 		n.z = 2.0*B - 1.0;
 	}
+	void normalize_to_max_comp() {
+		float const max_comp(get_max_component());
+		if (max_comp > TOLERANCE) {R /= max_comp; G /= max_comp; B /= max_comp;}
+	}
 	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B; return oss.str();}
 	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B; return oss.str();}
 	float get_luminance() const {return (R + G + B)/3.0;}

@@ -320,6 +320,7 @@ colorRGBA attenuate_sun_color(colorRGBA const &c) {
 	colorRGBA sc;
 	sc.A = 1.0;
 	UNROLL_3X(sc[i_] = c[i_]*sunlight_color[i_]/SUN_LT_C[i_];) // scale based on ratio of sunlight color to default value
+	sc.normalize_to_max_comp();
 	return sc;
 }
 

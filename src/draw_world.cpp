@@ -964,7 +964,7 @@ colorRGBA get_cloud_color() {
 
 void get_avg_sky_color(colorRGBA &avg_color) {
 	blend_color(avg_color, colorRGBA(get_cloud_color(), 1.0), bkg_color, 0.5, 1);
-	avg_color.set_valid_color();
+	avg_color.normalize_to_max_comp();
 }
 
 
