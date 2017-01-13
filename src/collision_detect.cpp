@@ -7,6 +7,7 @@
 #include "player_state.h"
 #include "physics_objects.h"
 #include "openal_wrap.h"
+#include "model3d.h"
 
 
 bool const REMOVE_ALL_COLL   = 1;
@@ -36,6 +37,7 @@ extern player_state *sstates;
 extern platform_cont platforms;
 extern set<unsigned> moving_cobjs;
 extern reflective_cobjs_t reflective_cobjs;
+extern model3ds all_models;
 
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
@@ -2010,6 +2012,7 @@ void create_sky_vis_zval_texture(unsigned &tid) {
 	float const dx(DX_VAL/divs_per_cell), dy(DY_VAL/divs_per_cell);
 	vector<float> zvals;
 	zvals.resize(nx*ny, czmin);
+	all_models.build_cobj_trees(1);
 
 #pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < (int)ny; ++y) {
@@ -2030,7 +2033,10 @@ void create_sky_vis_zval_texture(unsigned &tid) {
 					}
 					point cpos;
 					vector3d coll_norm; // unused
-					if (!check_coll_line_exact(p1, p2, cpos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 1, 0)) continue;
+					colorRGBA model_color; // unused
+					bool const cobj_coll(check_coll_line_exact(p1, p2, cpos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 1, 0));
+					bool const model_coll(all_models.check_coll_line(p1, (cobj_coll ? cpos : p2), cpos, coll_norm, model_color, 1));
+					if (!cobj_coll && !model_coll) continue;
 					zval  = (z_set ? min(zval, cpos.z) : cpos.z);
 					z_set = 1;
 				}
