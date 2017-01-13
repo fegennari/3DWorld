@@ -755,8 +755,9 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	bool depth_only, colorRGBA const &color, colorRGBA const &rcolor, bool use_tess)
 {
 	if (no_specular) {s.set_prefix("#define NO_SPECULAR",      1);} // FS
-	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH",  1);} // FS
 	if (depth_only)  {s.set_prefix("#define WRITE_DEPTH_ONLY", 1);} // FS
+	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH",  1);} // FS
+	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH",  4);} // tess eval
 	s.setup_enabled_lights(3, 2); // FS
 	setup_tt_fog_pre(s);
 	bool const use_foam(!water_is_lava), enable_shadow_maps(use_depth && shadow_map_enabled()); // shadow maps are enabled during the normal pass that uses depth

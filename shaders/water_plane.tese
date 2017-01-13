@@ -5,6 +5,7 @@ uniform float normal_z    = 1.0;
 uniform float wave_height = 1.0;
 uniform float wave_width  = 1.0;
 uniform vec3 camera_pos;
+uniform sampler2D height_tex;
 
 in vec3 vertex_ES[];
 in vec2 tc_ES[], tc2_ES[];
@@ -37,6 +38,12 @@ float get_delta_z(in vec2 v) {
 	dz += wave_sin( 0.3*val.x - 0.9*val.y - 30*T + 0.5)*wave_sin(-0.7*val.x - 0.4*val.y - 28*T + 0.7);
 	dz += wave_sin(-0.7*val.x + 0.4*val.y + 27*T + 0.7)*wave_sin(-0.3*val.x + 0.6*val.y - 29*T + 0.3);
 	dz += wave_sin(-0.2*val.x - 0.6*val.y - 37*T + 0.2)*wave_sin( 0.9*val.x - 0.3*val.y + 33*T + 0.8);
+//#ifdef USE_WATER_DEPTH
+#if 0
+	float mesh_z = texture(height_tex, tc2).r;
+	float depth  = water_zval - mesh_z;
+	dz = mix(dz, 3.0*wave_sin(20.0*depth + 60.0*T), clamp(1.0*(2.0 - depth), 0.0, 1.0));
+#endif
 	return dz;
 }
 
@@ -47,6 +54,7 @@ void main() {
 	tc2         = interpolate2D(   tc2_ES[0],    tc2_ES[1],    tc2_ES[2],    tc2_ES[3]);
 	vec3 vertex = interpolate3D(vertex_ES[0], vertex_ES[1], vertex_ES[2], vertex_ES[3]);
 	vec2 wtc    = tc / wave_width;
+	water_zval  = vertex.z; // set to nominal value before calling get_delta_z()
 	wave_dz     = get_delta_z(wtc);
 	vertex.z   += wave_height * wave_dz;
 
