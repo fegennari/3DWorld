@@ -7,6 +7,7 @@ uniform vec2 xlate = vec2(0.0);
 in vec2 local_translate;
 
 out vec2 tc;
+out vec3 vertex_from_vs;
 
 void main()
 {
@@ -26,8 +27,9 @@ void main()
 	vec2 tc2    = vec2(vertex.x*dx_inv, vertex.y*dy_inv); // same as (x2 - x1 - 1.0*DX_VAL)
 	if (enable_grass_wind) {vertex.xyz += get_grass_wind_delta(vertex.xyz, tc.s);}
 
-	vec4 epos   = fg_ModelViewMatrix  * (vertex + vec4(xlate, 0, 0));
-	gl_Position = fg_ProjectionMatrix * epos;
+	vec4 fin_vert   = (vertex + vec4(xlate, 0, 0));
+	vec4 epos       = fg_ModelViewMatrix  * fin_vert;
+	gl_Position     = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
 	vec4 weights    = texture(weight_tex, tc2);
 	float grass_weight = weights.b; // grass weight in weights {sand, dirt, grass, rock, [snow]}
@@ -43,4 +45,5 @@ void main()
 	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale);
 	float alpha   = fg_Color.a * ascale * ((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
 	fg_Color_vf   = vec4(color, alpha);
+	vertex_from_vs= fin_vert.xyz;
 } 

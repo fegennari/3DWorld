@@ -14,6 +14,7 @@ bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
 bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
+bool const USE_GRASS_TESS     = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const NUM_FIRE_MODES = 4;
@@ -1242,7 +1243,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 			vector<vector2d> &v(insts[lod][bix]);
 			if (v.empty()) continue;
 			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(vector2d)));
-			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size());
+			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size(), USE_GRASS_TESS);
 			v.clear();
 		} // for bix
 	} // for lod
@@ -2665,6 +2666,12 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
 			//s.set_geom_shader("grass_tiled"); // triangle => triangle - too slow
+
+			if (USE_GRASS_TESS) {
+				s.set_tess_control_shader("grass_tiled");
+				s.set_tess_eval_shader("grass_tiled"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
+				glPatchParameteri(GL_PATCH_VERTICES, 3); // triangles
+			}
 			setup_grass_flower_shader(s, enable_wind, (spass == 0), 1.0);
 			s.add_uniform_int("weight_tex", 3);
 			set_noise_tex(s, 5);
