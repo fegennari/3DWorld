@@ -24,7 +24,7 @@ void main() {
 	float dist = length(epos.xyz);
 
 	// Calculate the tessellation levels
-	float level = max(1, min(8, 4.0/dist));
+	float level = max(1, min(8, 3.0/dist));
 	gl_TessLevelOuter[0] = level;
 	gl_TessLevelOuter[1] = level;
 	gl_TessLevelOuter[2] = 1;
