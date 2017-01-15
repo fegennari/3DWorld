@@ -83,7 +83,7 @@ int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1
 int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0);
 int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
-unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100);
+unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2);
 float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0), biome_x_offset(0.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0), dodgeball_metalness(1.0);
@@ -1646,6 +1646,7 @@ int load_config(string const &config_file) {
 	kwmu.add("erosion_iters", erosion_iters);
 	kwmu.add("num_dynam_parts", num_dynam_parts);
 	kwmu.add("max_cube_map_tex_sz", max_cube_map_tex_sz);
+	kwmu.add("snow_coverage_resolution", snow_coverage_resolution);
 
 	kw_to_val_map_t<float> kwmf(error);
 	kwmf.add("gravity", base_gravity);

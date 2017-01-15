@@ -15,6 +15,7 @@ scene_size 1.8 4.0 1.8 # slightly off square
 mesh_size  128 256 96
 shadow_map_sz 8192
 max_cube_map_tex_sz 1024
+snow_coverage_resolution 4 # 4x mesh resolution (8 is okay but adds 2s compute time)
 
 num_threads 8
 vertex_optimize_flags 0 1 1 # enable full_opt verbose

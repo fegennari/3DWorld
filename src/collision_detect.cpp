@@ -29,6 +29,7 @@ cobj_draw_groups cdraw_groups;
 extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
+extern unsigned snow_coverage_resolution;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height;
 extern double camera_zh, tfticks;
 extern dwobject def_objects[];
@@ -2006,8 +2007,8 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 void create_sky_vis_zval_texture(unsigned &tid) {
 
 	RESET_TIME;
-	unsigned const divs_per_cell = 2;
-	unsigned const num_samples   = 9;
+	unsigned const num_samples = 9;
+	unsigned const divs_per_cell(max(1U, snow_coverage_resolution));
 	unsigned const nx(MESH_X_SIZE*divs_per_cell), ny(MESH_Y_SIZE*divs_per_cell);
 	float const dx(DX_VAL/divs_per_cell), dy(DY_VAL/divs_per_cell);
 	vector<float> zvals;
