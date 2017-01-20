@@ -534,9 +534,9 @@ public:
 		threads.resize(num_threads);
 	}
 
-	void run(void *(*func)(void *)) {
+	void run(void (*func)(rt_data *)) {
 		assert(threads.size() == data.size());
-		for (unsigned t = 0; t < threads.size(); ++t) {threads[t] = std::thread(func, (void *)(&data[t]));}
+		for (unsigned t = 0; t < threads.size(); ++t) {threads[t] = std::thread(func, (rt_data *)(&data[t]));}
 	}
 
 	void join() {
@@ -586,7 +586,7 @@ void check_for_lighting_finished() { // to be called about once per frame
 
 
 // see https://computing.llnl.gov/tutorials/pthreads/
-void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized, int ltype, unsigned job_id=0) {
+void launch_threaded_job(unsigned num_threads, void (*start_func)(rt_data *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized, int ltype, unsigned job_id=0) {
 
 	kill_current_raytrace_threads();
 	assert(num_threads > 0 && num_threads < 100);
@@ -603,7 +603,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		data[t].lmgr = (use_temp_lmap ? &thread_temp_lmap : &lmap_manager);
 	}
 	if (single_thread && blocking) { // threads disabled
-		start_func((void *)(&data[0]));
+		start_func((rt_data *)(&data[0]));
 	}
 	else {
 		thread_manager.run(start_func);
@@ -703,11 +703,10 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 }
 
 
-void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &color, float weight) {
+void trace_ray_block_global_light(rt_data *data, point const &pos, colorRGBA const &color, float weight) {
 
 	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
-	assert(ptr);
-	rt_data *data(static_cast<rt_data *>(ptr));
+	assert(data);
 	rand_gen_t rgen;
 	data->pre_run(rgen);
 	unsigned long long cube_start_rays(0);
@@ -734,24 +733,22 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 }
 
 
-void *trace_ray_block_global(void *ptr) {
+void trace_ray_block_global(rt_data *data) {
 
-	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return 0; // nothing to do
+	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return; // nothing to do
 	// Note: The light color here is white because it will be multiplied by the ambient color later,
 	//       and the moon color is generally similar to the sun color so they can be approximated as equal
 	float const lfn(CLIP_TO_01(1.0f - 5.0f*(light_factor - 0.4f)));
-	if (light_factor >= 0.4 && !combined_gu) trace_ray_block_global_light(ptr, sun_pos,  WHITE, 1.0-lfn);
-	if (light_factor <= 0.6) trace_ray_block_global_light(ptr, moon_pos, WHITE, lfn);
-	return 0;
+	if (light_factor >= 0.4 && !combined_gu) trace_ray_block_global_light(data, sun_pos,  WHITE, 1.0-lfn);
+	if (light_factor <= 0.6) trace_ray_block_global_light(data, moon_pos, WHITE, lfn);
 }
 
 
 float get_sky_light_ray_weight() {return RAY_WEIGHT/(((float)NPTS)*NRAYS);}
 
-void *trace_ray_block_sky(void *ptr) {
+void trace_ray_block_sky(rt_data *data) {
 
-	assert(ptr);
-	rt_data *data(static_cast<rt_data *>(ptr));
+	assert(data);
 	rand_gen_t rgen;
 	data->pre_run(rgen);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
@@ -819,7 +816,6 @@ void *trace_ray_block_sky(void *ptr) {
 	}
 	data->checksum = rgen.rand();
 	data->post_run();
-	return 0;
 }
 
 
@@ -841,10 +837,9 @@ coll_obj &find_accum_cobj(unsigned id, cobj_ray_accum_t const &arc) {
 	return cobj; // never gets here
 }
 
-void *trace_ray_block_cobj_accum(void *ptr) {
+void trace_ray_block_cobj_accum(rt_data *data) {
 
-	assert(ptr);
-	rt_data *data(static_cast<rt_data *>(ptr));
+	assert(data);
 	rand_gen_t rgen;
 	data->pre_run(rgen);
 	float const line_length(2.0*get_scene_radius()), ray_wt(get_sky_light_ray_weight()); // Note: weight assumes not using cube sky lights
@@ -862,20 +857,18 @@ void *trace_ray_block_cobj_accum(void *ptr) {
 		}
 	}
 	data->post_run();
-	return 0;
 }
 
-void *trace_ray_block_cobj_accum_single_update(void *ptr) {
+void trace_ray_block_cobj_accum_single_update(rt_data *data) {
 
-	assert(ptr);
-	rt_data *data(static_cast<rt_data *>(ptr));
+	assert(data);
 	rand_gen_t rgen;
 	data->pre_run(rgen);
 	unsigned const cid(data->job_id);
 	coll_obj &cobj(coll_objects.get_cobj(cid));
 	assert(cobj.is_update_light_platform());
 	vector3d const platform_delta(platforms.get_cobj_platform(cobj).get_last_delta());
-	if (platform_delta == zero_vector) return 0; // platform hasn't moved - why are we here?
+	if (platform_delta == zero_vector) return; // platform hasn't moved - why are we here?
 	data->update_bcube.set_to_zeros();
 	cube_t const prev_bcube(cobj - platform_delta); // previous frame's position of cobj
 	float const line_length(2.0*get_scene_radius()), ray_wt(get_sky_light_ray_weight()); // Note: weight assumes not using cube sky lights
@@ -898,7 +891,6 @@ void *trace_ray_block_cobj_accum_single_update(void *ptr) {
 		cast_light_ray(data->lmgr, r->pos, end_pt, weight, (ray_wt ? ray_wt : r->weight), r->get_color(), line_length, cid, LIGHTING_COBJ_ACCUM, 0, rgen, nullptr, &data->update_bcube);
 	}
 	data->post_run();
-	return 0;
 }
 
 
@@ -949,11 +941,10 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 }
 
 
-void *trace_ray_block_local(void *ptr) {
+void trace_ray_block_local(rt_data *data) {
 
-	assert(ptr);
-	if (LOCAL_RAYS == 0) return 0; // nothing to do
-	rt_data *data(static_cast<rt_data *>(ptr));
+	assert(data);
+	if (LOCAL_RAYS == 0) return; // nothing to do
 	rand_gen_t rgen;
 	data->pre_run(rgen);
 	float const line_length(2.0*get_scene_radius());
@@ -969,15 +960,13 @@ void *trace_ray_block_local(void *ptr) {
 	}
 	if (data->verbose) {cout << endl;}
 	data->post_run();
-	return 0;
 }
 
 
-void *trace_ray_block_dynamic(void *ptr) {
+void trace_ray_block_dynamic(rt_data *data) {
 
-	assert(ptr);
-	if (DYNAMIC_RAYS == 0) return 0; // nothing to do
-	rt_data *data(static_cast<rt_data *>(ptr));
+	assert(data);
+	if (DYNAMIC_RAYS == 0) return; // nothing to do
 	light_volume_local const &lvol(get_local_light_volume(data->ltype));
 	vector<unsigned> const &dlight_ixs(indir_dlight_group_manager.get_dlight_ixs_for_tag_ix(lvol.get_tag_ix()));
 	assert(!dlight_ixs.empty());
@@ -994,11 +983,10 @@ void *trace_ray_block_dynamic(void *ptr) {
 		ray_trace_local_light_source(nullptr, ls, line_length, num_rays, rgen, data->ltype, DYNAMIC_RAYS); // lmgr is unused, so leave it as null
 	}
 	data->post_run();
-	return 0;
 }
 
 
-typedef void *(*ray_trace_func)(void *);
+typedef void (*ray_trace_func)(rt_data *);
 ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_cobj_accum, trace_ray_block_dynamic};
 
 
