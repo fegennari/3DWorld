@@ -1,13 +1,12 @@
 // 3D World - Ray Tracing Code
 // by Frank Gennari
 // 2/14/10
-#define HAVE_STRUCT_TIMESPEC // required for pthread.h include
-#include <pthread.h>
 #include "3DWorld.h"
 #include "lightmap.h"
 #include "mesh.h"
 #include "model3d.h"
 #include <atomic>
+#include <thread>
 
 
 bool const COLOR_FROM_COBJ_TEX = 0; // 0 = fast/average color, 1 = true color
@@ -238,7 +237,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 		for (unsigned s = 0; s < nsteps; ++s) {
 			lmcell *lmc(lmgr->get_lmcell_round_down(p1));
 		
-			if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
+			if (lmc != NULL) { // could use a mutex here, but it seems too slow
 				float *color(lmc->get_offset(ltype));
 				ADD_LIGHT_CONTRIB(cw, color);
 				if (ltype != LIGHTING_LOCAL) {color[3] += weight;}
@@ -512,7 +511,7 @@ struct rt_data {
 
 template<typename T> class thread_manager_t {
 
-	vector<pthread_t> threads;
+	vector<std::thread> threads;
 
 public:
 	vector<T> data; // to be filled in by the caller
@@ -537,21 +536,12 @@ public:
 
 	void run(void *(*func)(void *)) {
 		assert(threads.size() == data.size());
-		pthread_attr_t attr;
-		pthread_attr_init(&attr);
-		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-		for (unsigned t = 0; t < threads.size(); ++t) {
-			int const rc(pthread_create(&threads[t], &attr, func, (void *)(&data[t]))); 
-			if (rc) {cout << "Error: Return code from pthread_create() is " << rc << endl; assert(0);}
-		}
-		pthread_attr_destroy(&attr);
+		for (unsigned t = 0; t < threads.size(); ++t) {threads[t] = std::thread(func, (void *)(&data[t]));}
 	}
 
 	void join() {
 		for (unsigned t = 0; t < threads.size(); ++t) {
-			int const rc(pthread_join(threads[t], NULL));
-			if (rc) {cout << "Error: return code from pthread_join() is " << rc << endl; assert(0);}
+			threads[t].join();
 			//cout << "checksum[" << t << "]: " << data[t].checksum << endl;
 		}
 	}
@@ -567,7 +557,7 @@ bool indir_lighting_updated() {return (global_lighting_update && (lmap_manager.w
 void kill_current_raytrace_threads() {
 
 	if (thread_manager.is_active()) { // can't have two running at once, so kill the existing one
-		// use pthread_cancel(thread); ?
+		// cancel thread?
 		kill_raytrace = 1;
 		thread_manager.join_and_clear();
 		assert(!thread_manager.is_active());
@@ -600,7 +590,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 
 	kill_current_raytrace_threads();
 	assert(num_threads > 0 && num_threads < 100);
-	assert(!keep_beams || num_threads == 1); // could use a pthread_mutex_t instead to make this legal
+	assert(!keep_beams || num_threads == 1); // could use a mutex instead to make this legal
 	bool const single_thread(num_threads == 1);
 	if (verbose) cout << "Computing lighting on " << num_threads << " threads." << endl;
 	thread_manager.create(num_threads);
@@ -612,7 +602,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0), randomized, ltype, job_id);
 		data[t].lmgr = (use_temp_lmap ? &thread_temp_lmap : &lmap_manager);
 	}
-	if (single_thread && blocking) { // pthreads disabled
+	if (single_thread && blocking) { // threads disabled
 		start_func((void *)(&data[0]));
 	}
 	else {
