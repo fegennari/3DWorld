@@ -3,9 +3,10 @@
 // 10/26/15
 #include "3DWorld.h"
 #include "openal_wrap.h" // for alut_sleep()
-#define HAVE_STRUCT_TIMESPEC // required for pthread.h include
-#include <pthread.h>
 #include <list>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 using namespace std;
 
@@ -13,49 +14,37 @@ unsigned const MAX_FRAMES_BUFFERED = 128;
 
 extern int window_width, window_height;
 
-void *write_video(void *data);
+void write_video();
 
 // from http://vichargrave.com/multithreaded-work-queue-in-c/
 template<typename T> class thread_safe_queue {
 	list<T> m_queue;
-	mutable pthread_mutex_t m_mutex;
-	pthread_cond_t m_condv;
-
+	mutable std::mutex m_mutex;
+	std::condition_variable m_condv;
 public:
-	thread_safe_queue() {
-		pthread_mutex_init(&m_mutex, nullptr);
-		pthread_cond_init (&m_condv, nullptr);
-	}
-	~thread_safe_queue() {
-		pthread_mutex_destroy(&m_mutex);
-		pthread_cond_destroy (&m_condv);
-	}
 	void add(T const &item) {
-		pthread_mutex_lock(&m_mutex);
+		std::unique_lock<std::mutex> mlock(m_mutex);
 		m_queue.push_back(item);
-		pthread_cond_signal(&m_condv);
-		pthread_mutex_unlock(&m_mutex);
+		mlock.unlock(); // unlock before notificiation to minimize mutex contention
+		m_condv.notify_one(); // notify one waiting thread
 	}
 	T remove() {
-		pthread_mutex_lock(&m_mutex);
-		while (m_queue.size() == 0) {pthread_cond_wait(&m_condv, &m_mutex);}
+		std::unique_lock<std::mutex> mlock(m_mutex);
+		while (m_queue.empty()) {m_condv.wait(mlock);}
 		T const item(m_queue.front());
 		m_queue.pop_front();
-		pthread_mutex_unlock(&m_mutex);
 		return item;
 	}
 	size_t size() const {
-        pthread_mutex_lock(&m_mutex);
-        size_t const size(m_queue.size());
-        pthread_mutex_unlock(&m_mutex);
-        return size;
-    }
+		std::unique_lock<std::mutex> mlock(m_mutex);
+		size_t const size(m_queue.size());
+		return size;
+	}
 	bool empty() const {
-        pthread_mutex_lock(&m_mutex);
-        bool const ret(m_queue.empty());
-        pthread_mutex_unlock(&m_mutex);
-        return ret;
-    }
+		std::unique_lock<std::mutex> mlock(m_mutex);
+		bool const ret(m_queue.empty());
+		return ret;
+	}
 };
 
 class video_capture_t {
@@ -90,13 +79,14 @@ class video_capture_t {
 	// multithreaded writing support
 	bool is_recording, is_writing;
 	video_buffer buffer;
-	pthread_t write_thread;
+	unique_ptr<std::thread> write_thread;
 
 	void wait_for_write_complete() {
-		if (!is_writing) return;
+		if (!write_thread) return;
 		is_recording = 0;
-		cout << "Wating for " << buffer.num_pending_frames() << " video frames to be written" << endl;
-		pthread_join(write_thread, nullptr);
+		if (is_writing) {cout << "Wating for " << buffer.num_pending_frames() << " video frames to be written" << endl;}
+		write_thread->join();
+		write_thread.reset();
 		assert(!is_writing);
 	}
 	void queue_frame(void const *const data) {
@@ -126,12 +116,8 @@ public:
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		// start writing in a different thread
 		filename = fn;
-		pthread_attr_t attr;
-		pthread_attr_init(&attr);
-		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-		int const rc(pthread_create(&write_thread, &attr, write_video, nullptr)); 
-		if (rc) {cout << "Error: Return code from pthread_create() is " << rc << endl; assert(0);}
-		pthread_attr_destroy(&attr);
+		assert(!write_thread);
+		write_thread.reset(new std::thread(write_video));
 	}
 	void write_buffer() {
 		assert(!filename.empty());
@@ -181,8 +167,8 @@ public:
 
 video_capture_t video_capture;
 
-// Note: must be a global function rather than member function for pthread_create(); argument and return value are unused
-void *write_video(void *data) {video_capture.write_buffer(); return nullptr;}
+// Note: must be a global function rather than member function for thread constructor
+void write_video() {video_capture.write_buffer();}
 
 // Note: not legal to resize the window between start() and end()
 void start_video_capture(string const &fn) {video_capture.start(fn);}
