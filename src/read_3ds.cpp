@@ -385,7 +385,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 			} // end switch
 		} // end while
 		assert(ftell(fp) == end_pos);
-		vector<counted_normal> normals;
+		vector<counted_normal> normals; // weighted_normal can also be used, but doesn't work well
 		if (use_vertex_normals) {normals.resize(verts.size());}
 		transform_vertices(verts, matrix);
 
@@ -405,7 +405,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				UNROLL_3X(normals[i->ix[i_]].add_normal(normal);)
 			}
 		}
-		model3d::proc_counted_normals(normals, use_vertex_normals); // if use_vertex_normals
+		model3d::proc_model_normals(normals, use_vertex_normals); // if use_vertex_normals
 
 		// assign materials to faces
 		for (face_mat_map_t::const_iterator i = face_materials.begin(); i != face_materials.end(); ++i) {

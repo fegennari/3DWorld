@@ -444,6 +444,7 @@ public:
 		unsigned smoothing_group(0), prev_smoothing_group(0), num_faces(0), num_objects(0), num_groups(0), obj_group_id(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
+		// weighted_normal can also be used, but doesn't work well; see face_weight_avg mode selected by recalc_normals==2
 		vector<counted_normal> vn; // vertex normals
 		vector<point2d<float> > tc; // texture coords
 		deque<poly_data_block> pblocks;
@@ -627,7 +628,7 @@ public:
 		model.load_all_used_tids(); // need to load the textures here to get the colors
 		PRINT_TIME("Model Texture Load");
 		size_t const num_blocks(pblocks.size());
-		model3d::proc_counted_normals(vn, recalc_normals); // if recalc_normals
+		model3d::proc_model_normals(vn, recalc_normals); // if recalc_normals
 
 		while (!pblocks.empty()) {
 			poly_data_block const &pd(pblocks.back());
