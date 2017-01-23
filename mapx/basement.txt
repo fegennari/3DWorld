@@ -13,7 +13,7 @@ B 0.59 0.60  2.64 2.66  -0.29 -0.27 # inside  button 1
 B 0.59 0.60  2.84 2.86  -0.29 -0.27 # outside button 1
 B 0.14 0.16  2.59 2.60  -0.29 -0.27 # inside  button 2
 B 0.14 0.16  2.90 2.91  -0.29 -0.27 # outside button 2
-sensor light 1.2 1.0 -0.10  0.0 0.1
+#sensor light 1.2 1.0 -0.10  0.0 0.1 # disable to improve framerate in gameplay mode
 sound_file machine.wav
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0]]]
 Q 1 0.25 0.25 0.1 0.1 0.4 0.0   0.6 2.76 -0.08  -1 0 0  0 0 1 # platform with update_light=1
