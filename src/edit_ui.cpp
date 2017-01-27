@@ -635,12 +635,12 @@ public:
 		case SM_LIGHT_ATTEN:  mat.light_atten  = max(0.0f, min(25.0f,(mat.light_atten  + 1.0f*delta))); break; // 0.0 to 25.0 in steps of 1.0
 		case SM_LIGHT_RADIUS: mat.light_radius = max(0.0f, min(2.5f, (mat.light_radius + 0.1f*delta))); break; // 0.0 to 2.5 in steps of 0.1
 		case SM_LIGHT_SHADOW: mat.shadows      = ((delta < 0) ? 0 : 1); break; // 0/1
-		case SM_DIFF_R:       mat.diff_c.R     = CLIP_TO_01(mat.diff_c.R + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
-		case SM_DIFF_G:       mat.diff_c.G     = CLIP_TO_01(mat.diff_c.G + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
-		case SM_DIFF_B:       mat.diff_c.B     = CLIP_TO_01(mat.diff_c.B + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
-		case SM_SPEC_R:       mat.spec_c.R     = CLIP_TO_01(mat.spec_c.R + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
-		case SM_SPEC_G:       mat.spec_c.G     = CLIP_TO_01(mat.spec_c.G + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
-		case SM_SPEC_B:       mat.spec_c.B     = CLIP_TO_01(mat.spec_c.B + 0.1f*delta); break; // 0.0 to 1.0 in steps of 0.1
+		case SM_DIFF_R:       mat.diff_c.R     = CLIP_TO_01(mat.diff_c.R + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
+		case SM_DIFF_G:       mat.diff_c.G     = CLIP_TO_01(mat.diff_c.G + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
+		case SM_DIFF_B:       mat.diff_c.B     = CLIP_TO_01(mat.diff_c.B + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
+		case SM_SPEC_R:       mat.spec_c.R     = CLIP_TO_01(mat.spec_c.R + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
+		case SM_SPEC_G:       mat.spec_c.G     = CLIP_TO_01(mat.spec_c.G + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
+		case SM_SPEC_B:       mat.spec_c.B     = CLIP_TO_01(mat.spec_c.B + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
 		default: assert(0);
 		} // end switch
 		if (ix == SM_RSCALE || ix == SM_HARDNESS || ix == SM_DENSITY) {
