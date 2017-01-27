@@ -633,7 +633,7 @@ public:
 		case SM_SHINE:        mat.shine        = pow(2.0, max(0, min(10, int(log2(mat.shine)+delta)))); break; // 1.0 to 1024.0 (log2 0 to 10 in steps of 1)
 		case SM_REFRACT_IX:   mat.refract_ix   = max(1.0f, min(3.0f, (mat.refract_ix   + 0.1f*delta))); break; // 1.0 to 3.0 in steps of 0.1
 		case SM_LIGHT_ATTEN:  mat.light_atten  = max(0.0f, min(25.0f,(mat.light_atten  + 1.0f*delta))); break; // 0.0 to 25.0 in steps of 1.0
-		case SM_LIGHT_RADIUS: mat.light_radius = max(0.0f, min(2.5f, (mat.light_radius + 0.1f*delta))); break; // 0.0 to 2.5 in steps of 0.1
+		case SM_LIGHT_RADIUS: mat.light_radius = max(0.0f, min(2.5f, (mat.light_radius + 0.1f*delta))); if (mat.light_radius < 0.01) {mat.light_radius = 0.0;} break; // 0.0 to 2.5 in steps of 0.1
 		case SM_LIGHT_SHADOW: mat.shadows      = ((delta < 0) ? 0 : 1); break; // 0/1
 		case SM_DIFF_R:       mat.diff_c.R     = CLIP_TO_01(mat.diff_c.R + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
 		case SM_DIFF_G:       mat.diff_c.G     = CLIP_TO_01(mat.diff_c.G + 0.05f*delta); break; // 0.0 to 1.0 in steps of 0.05
