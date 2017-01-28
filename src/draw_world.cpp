@@ -776,7 +776,12 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				if (in_portal) {portal::post_draw(portal_verts); in_portal = 0;}
 				unsigned cix(ix);
 				coll_obj const &c(get_draw_cobj(cix));
-				if (c.cp.normal_map >= 0) {assert(c.cp.light_atten == 0.0); pb.normal_map_cobjs.push_back(cix); continue;} // light atten not supported
+				
+				if (c.cp.normal_map >= 0) {
+					//assert(c.cp.light_atten == 0.0); // light atten not supported, but fatal assertion is too strong
+					pb.normal_map_cobjs.push_back(cix);
+					continue;
+				}
 				cdb.on_new_obj_layer(c.cp);
 				bool using_lt_atten(0);
 				
