@@ -13,6 +13,7 @@
 using namespace std;
 
 unsigned const MAX_SPHERE_MATERIALS = 255;
+float    const MIN_LIGHT_RADIUS     = 0.01; // very small numbers lead to problems
 
 unsigned spheres_mode(0), num_objs_thrown(0); // 0=none, 1=dynamic spheres, 2=dynamic cubes, 3=static spheres, 4=static cubes
 unsigned max_num_mat_spheres(1);
@@ -276,7 +277,7 @@ bool throw_sphere(bool mode) {
 	float const base_radius(object_types[type].radius), radius(base_radius*mat.radius_scale), radius_sum(CAMERA_RADIUS + radius), near_clip(1.01*radius);
 	float const cube_map_beamwidth = 0.4; // 0.3 to 0.5 are okay
 	bool const is_cube(spheres_mode == 2 || spheres_mode == 4);
-	bool const has_shadows(mat.light_radius > 0.0 && mat.shadows);
+	bool const has_shadows(mat.light_radius > MIN_LIGHT_RADIUS && mat.shadows);
 	point const fpos(get_camera_pos() + cview_dir*radius_sum*(is_cube ? SQRT2 : 1.0) + plus_z*(0.2*radius_sum));
 	++num_objs_thrown;
 	gen_sound(SOUND_SWING, fpos, 0.5, 1.0);
@@ -302,7 +303,7 @@ bool throw_sphere(bool mode) {
 				}
 			}
 		}
-		else if (mat.light_radius > 0.0) {
+		else if (mat.light_radius > MIN_LIGHT_RADIUS) {
 			lss.push_back(light_source(mat.light_radius, fpos, fpos, mat.diff_c, 0));
 		}
 		for (auto ls = lss.begin(); ls != lss.end(); ++ls) {
@@ -349,7 +350,7 @@ bool throw_sphere(bool mode) {
 
 bool is_mat_sphere_a_shadower(dwobject const &obj) {
 	sphere_mat_t const &mat(sphere_materials.get_mat(obj.direction));
-	//if (mat.light_radius > 0.0) return 0;
+	//if (mat.light_radius > MIN_LIGHT_RADIUS) return 0;
 	if (mat.alpha < MIN_SHADOW_ALPHA && mat.metal == 0.0) return 0; // transparent glass
 	return 1;
 }
@@ -368,7 +369,7 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 	obj.coll_id = add_cobj_with_material(cp, mat, obj.pos, base_radius, is_cube, 0);
 	coll_obj &cobj(coll_objects.get_cobj(obj.coll_id));
 	
-	if (mat.light_radius > 0.0 && !mat.shadows) {
+	if (mat.light_radius > MIN_LIGHT_RADIUS && !mat.shadows) {
 		add_dynamic_light(mat.light_radius, obj.pos, mat.diff_c); // regular point light
 	}
 	else if (mat.alpha < 0.5 && mat.metal == 0.0 && mat.refract_ix > 1.0 && !is_cube) { // glass
