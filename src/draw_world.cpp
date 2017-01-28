@@ -794,6 +794,9 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 					else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(c.cp.light_atten, c.cp.refract_ix, c.points[0], c.radius);}
 					else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
 				}
+				if (c.use_tex_coords()) {
+					// FIXME: should switch to a tex coords shader - but this is slow and complex, since we need to use a different lt_atten_manager, flush more often, and juggle multiple shaders
+				}
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
 				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
 				assert((int)cix == ix); // should not have changed
