@@ -227,6 +227,7 @@ public:
 	void next_object(float light_atten, float refract_ix);
 	void next_cube(float light_atten, float refract_ix, cube_t const &cube);
 	void next_sphere(float light_atten, float refract_ix, point const &pos, float radius);
+	bool is_enabled() const {return (ulocs[0] >= 0);} // check that first uniform loc is assigned
 };
 
 

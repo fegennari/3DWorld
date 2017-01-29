@@ -232,10 +232,12 @@ void main()
 		}
 		alpha += (1.0 - alpha)*(1.0 - exp(-dist));
 
+#ifndef ENABLE_CUBE_MAP_REFLECT // skip refraction for cube maps since we don't want to reflect the internal surface medium
 		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
 			float reflect_w = get_fresnel_reflection(v_inc, normalize(normal), 1.0, refract_ix);
 			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
 		} // else exiting ray in back surface - ignore for now since we don't refract the ray
+#endif // ENABLE_CUBE_MAP_REFLECT
 	}
 #ifndef NO_ALPHA_TEST
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;

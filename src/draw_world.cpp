@@ -537,6 +537,24 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
+void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id, shader_t &s, cobj_draw_buffer &cdb, int reflection_pass, lt_atten_manager_t &lt_atten_manager) {
+
+	bool using_lt_atten(0);
+	coll_obj const &c(get_draw_cobj(cix));
+
+	if (lt_atten_manager.is_enabled()) { // we only support cubes and spheres for now (Note: may not be compatible with groups)
+		if (c.type == COLL_CUBE || c.type == COLL_SPHERE) {
+			using_lt_atten = (c.cp.light_atten > 0.0);
+			if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
+		}
+		if      (c.type == COLL_CUBE  ) {lt_atten_manager.next_cube(c.cp.light_atten, c.cp.refract_ix, c);}
+		else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(c.cp.light_atten, c.cp.refract_ix, c.points[0], c.radius);}
+		else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
+	}
+	c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
+	if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
+}
+
 void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool has_lt_atten, int enable_reflections) {
 
 	if (cobjs.empty()) return;
@@ -546,6 +564,8 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 	float bump_b_scale(0.0);
 	int nm_tid(-2), last_tid(-2), last_group_id(-1); // Note: use -2 as unset tid so that it differs from "no texture" of -1
+	lt_atten_manager_t lt_atten_manager(s);
+	if (has_lt_atten) {lt_atten_manager.enable();}
 
 	// Note: could stable_sort normal_map_cobjs by normal_map tid, but the normal map is already part of the layer sorting,
 	// so the normal maps are probably already grouped together
@@ -582,7 +602,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			}
 		}
 		unsigned cix(*i);
-		c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
+		draw_cobj_with_light_atten(cix, last_tid, last_group_id, s, cdb, reflection_pass, lt_atten_manager);
 		assert(cix == *i); // should not have been modified
 		//if (use_reflect_tex) {bind_2d_texture(reflection_tid);} // overwrite texture binding
 	}
@@ -669,12 +689,12 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
+	bool const has_lt_atten(coll_objects.has_lt_atten);
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const use_ref_plane(reflection_pass == 1 || (reflection_pass != 2 && reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
 	shader_t s;
-	setup_cobj_shader(s, has_lt_atten, 0, 2, 0, reflection_pass);
+	setup_cobj_shader(s, (draw_trans && has_lt_atten), 0, 2, 0, reflection_pass);
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
 	cdb.clear();
@@ -788,19 +808,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 					continue;
 				}
 				cdb.on_new_obj_layer(c.cp);
-				bool using_lt_atten(0);
-				
-				if (has_lt_atten) { // we only support cubes and spheres for now (Note: may not be compatible with groups)
-					if (c.type == COLL_CUBE || c.type == COLL_SPHERE) {
-						using_lt_atten = (c.cp.light_atten > 0.0);
-						if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
-					}
-					if      (c.type == COLL_CUBE  ) {lt_atten_manager.next_cube(c.cp.light_atten, c.cp.refract_ix, c);}
-					else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(c.cp.light_atten, c.cp.refract_ix, c.points[0], c.radius);}
-					else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
-				}
-				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
-				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
+				draw_cobj_with_light_atten(cix, last_tid, last_group_id, s, cdb, reflection_pass, lt_atten_manager);
 				assert((int)cix == ix); // should not have changed
 			}
 		} // for i
