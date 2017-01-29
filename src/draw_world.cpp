@@ -537,10 +537,10 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
-void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, int enable_reflections) {
+void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool has_lt_atten, int enable_reflections) {
 
 	if (cobjs.empty()) return;
-	setup_cobj_shader(s, 0, use_normal_map, use_texgen, enable_reflections, reflection_pass); // no lt_atten
+	setup_cobj_shader(s, has_lt_atten, use_normal_map, use_texgen, enable_reflections, reflection_pass);
 	if (enable_reflections == 1) {bind_texture_tu(reflection_tid, 14);} // planar reflections
 	cdb.clear();
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
@@ -776,8 +776,13 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				if (in_portal) {portal::post_draw(portal_verts); in_portal = 0;}
 				unsigned cix(ix);
 				coll_obj const &c(get_draw_cobj(cix));
+				bool const use_normal_map(c.cp.normal_map >= 0);
 				
-				if (c.cp.normal_map >= 0) {
+				if (c.use_tex_coords()) { // uncommon case, but may be drawn out of back-to-front order
+					pb.tex_coord_cobjs[use_normal_map].push_back(cix);
+					continue;
+				}
+				if (use_normal_map) { // uncommon case, but may be drawn out of back-to-front order
 					//assert(c.cp.light_atten == 0.0); // light atten not supported, but fatal assertion is too strong
 					pb.normal_map_cobjs.push_back(cix);
 					continue;
@@ -794,9 +799,6 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 					else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(c.cp.light_atten, c.cp.refract_ix, c.points[0], c.radius);}
 					else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
 				}
-				if (c.use_tex_coords()) {
-					// FIXME: should switch to a tex coords shader - but this is slow and complex, since we need to use a different lt_atten_manager, flush more often, and juggle multiple shaders
-				}
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
 				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
 				assert((int)cix == ix); // should not have changed
@@ -811,12 +813,12 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	s.end_shader();
 
 	for (unsigned d = 0; d < 2; ++d) {
-		draw_cobjs_group(pb.tex_coord_cobjs  [d], cdb, reflection_pass, s, 0, (d!=0), 0);
-		draw_cobjs_group(pb.reflect_cobjs    [d], cdb, reflection_pass, s, 2, (d!=0), 1);
-		draw_cobjs_group(pb.cube_map_cobjs[0][d], cdb, reflection_pass, s, 2, (d!=0), 2);
-		draw_cobjs_group(pb.cube_map_cobjs[1][d], cdb, reflection_pass, s, 0, (d!=0), 2);
+		draw_cobjs_group(pb.tex_coord_cobjs  [d], cdb, reflection_pass, s, 0, (d!=0), has_lt_atten, 0);
+		draw_cobjs_group(pb.reflect_cobjs    [d], cdb, reflection_pass, s, 2, (d!=0), has_lt_atten, 1);
+		draw_cobjs_group(pb.cube_map_cobjs[0][d], cdb, reflection_pass, s, 2, (d!=0), has_lt_atten, 2);
+		draw_cobjs_group(pb.cube_map_cobjs[1][d], cdb, reflection_pass, s, 0, (d!=0), has_lt_atten, 2);
 	}
-	draw_cobjs_group(pb.normal_map_cobjs, cdb, reflection_pass, s, 2, 1, 0);
+	draw_cobjs_group(pb.normal_map_cobjs, cdb, reflection_pass, s, 2, 1, has_lt_atten, 0);
 	
 	if (draw_trans) {
 		disable_blend();
