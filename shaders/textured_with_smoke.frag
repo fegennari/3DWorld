@@ -39,6 +39,20 @@ uniform vec3 cube_map_center     = vec3(0.0);
 
 const float SMOKE_SCALE = 0.25;
 
+vec3 get_closest_cube_normal(in float cube[6], in vec3 pos) { // assumes pos has been clipped to cube; cube = {-x, +x, -y, +y, -z, +z}
+	float xn = abs(pos.x - cube[0]), xp = abs(pos.x - cube[1]);
+	float yn = abs(pos.y - cube[2]), yp = abs(pos.y - cube[3]);
+	float zn = abs(pos.z - cube[4]), zp = abs(pos.z - cube[5]);
+	vec3 n   = vec3(-1,0,0);
+	float d  = xn; // -x
+	if (xp < d) {d = xp; n = vec3( 1,0,0);} // +x
+	if (yn < d) {d = yn; n = vec3(0,-1,0);} // -y
+	if (yp < d) {d = yp; n = vec3(0, 1,0);} // +y
+	if (zn < d) {d = zn; n = vec3(0,0,-1);} // -z
+	if (zp < d) {d = zp; n = vec3(0,0, 1);} // +z
+	return n;
+}
+
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
@@ -225,19 +239,17 @@ void main()
 			dist        = light_atten*length(res.v1 - res.v2);
 		}
 		else { // sphere case; alpha is calculated from distance between sphere intersection points
-			float wpdist = distance(vpos, sphere_center);
-			float dp     = dot(v_inc, (vpos - sphere_center));
-			float adsq   = dp*dp - wpdist*wpdist + sphere_radius*sphere_radius;
-			dist         = -light_atten*sqrt(max(adsq, 0.0)); // should always intersect; note that light_atten is negative
+			dist = abs(dot(v_inc, normalize(vpos - sphere_center)*sphere_radius));
+			dist = -light_atten*dist; // should always intersect; note that light_atten is negative
 		}
 		alpha += (1.0 - alpha)*(1.0 - exp(-dist));
 
 #ifndef ENABLE_CUBE_MAP_REFLECT // skip refraction for cube maps since we don't want to reflect the internal surface medium
 		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
-			float reflect_w = get_fresnel_reflection(v_inc, normalize(normal), 1.0, refract_ix);
+			float reflect_w = get_fresnel_reflection(v_inc, normalize(normal), 1.0, refract_ix); // air => object transition
 			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
 		} // else exiting ray in back surface - ignore for now since we don't refract the ray
-#endif // ENABLE_CUBE_MAP_REFLECT
+#endif // not ENABLE_CUBE_MAP_REFLECT
 	}
 #ifndef NO_ALPHA_TEST
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
@@ -336,9 +348,38 @@ void main()
 	//vec3 ref_dir    = -view_dir; // invisible effect
 	vec3 t_color    = color.rgb; // transmitted color
 	
-	if (alpha < 1.0) {
-		vec3 refract_dir = refract(-view_dir, ws_normal, 1.0/ref_ix); // refraction
-		t_color = mix(texture(reflection_tex, refract_dir).rgb, t_color, alpha); // not multiplied by specular color
+	if (alpha < 1.0) { // handle refraction
+		vec3 refract_dir   = refract(-view_dir, ws_normal, 1.0/ref_ix); // refraction into the object
+		vec3 int_ref_color = vec3(0);
+		float int_ref_w    = 0.0;
+
+		if (do_lt_atten && light_atten != 0.0 && refract_ix != 1.0) {
+			vec3 p2, ref_n;
+
+			if (light_atten > 0.0) { // cube case
+				vec3 far_pt = vpos + 100.0*refract_dir; // move it far away
+				pt_pair res = clip_line(vpos, far_pt, cube_bb);
+				p2    = res.v1;
+				ref_n = get_closest_cube_normal(cube_bb, p2); // use tmax point
+			}
+			else { // sphere case
+				float dist = abs(dot(refract_dir, normalize(vpos - sphere_center)*sphere_radius));
+				p2    = vpos + dist*refract_dir; // other intersection point
+				ref_n = normalize(p2 - sphere_center);
+			}
+			if (dot(ref_n, refract_dir) > 0.0) { // camera facing
+				// update cube map lookup position to the back side where the refracted ray exits
+				vec3 rel_pos2 = p2 - cube_map_center; // relative pos on back side
+				vec3 ref_dir2 = reflect(rel_pos2, -ref_n) + cube_map_near_clip*reflect(refract_dir, -ref_n); // internal reflection vector
+				// compute refraction parameters
+				refract_dir = refract(refract_dir, -ref_n, ref_ix/1.0); // refraction out of the object
+				int_ref_w   = get_fresnel_reflection(-refract_dir, -ref_n, refract_ix, 1.0); // object => air transition
+				refract_dir = rel_pos2 + cube_map_near_clip*refract_dir; // refract dir normalized to cube map
+				// compute internal reflection
+				int_ref_color = texture(reflection_tex, ref_dir2).rgb;
+			}
+		}
+		t_color = mix(mix(texture(reflection_tex, refract_dir).rgb, int_ref_color, int_ref_w), t_color, alpha); // not multiplied by specular color
 		alpha   = 1.0;
 	}
 	int blur_val = int(cube_map_reflect_mipmap_level + 0.5); // ranges from 1.0 (no blur) to around 256 (max blur)
