@@ -537,18 +537,22 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
-void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id, shader_t &s, cobj_draw_buffer &cdb, int reflection_pass, lt_atten_manager_t &lt_atten_manager) {
-
+void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id, shader_t &s, cobj_draw_buffer &cdb,
+	int reflection_pass, int enable_reflections, lt_atten_manager_t &lt_atten_manager)
+{
 	bool using_lt_atten(0);
 	coll_obj const &c(get_draw_cobj(cix));
 
 	if (lt_atten_manager.is_enabled()) { // we only support cubes and spheres for now (Note: may not be compatible with groups)
+		float light_atten(c.cp.light_atten); // assign a tiny light atten value to reflective cobjs to enable correct refraction
+		if (enable_reflections == 2 && c.is_reflective() && c.is_semi_trans()) {light_atten = max(light_atten, 0.001f);}
+
 		if (c.type == COLL_CUBE || c.type == COLL_SPHERE) {
-			using_lt_atten = (c.cp.light_atten > 0.0);
+			using_lt_atten = (light_atten > 0.0);
 			if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
 		}
-		if      (c.type == COLL_CUBE  ) {lt_atten_manager.next_cube(c.cp.light_atten, c.cp.refract_ix, c);}
-		else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(c.cp.light_atten, c.cp.refract_ix, c.points[0], c.radius);}
+		if      (c.type == COLL_CUBE  ) {lt_atten_manager.next_cube(light_atten, c.cp.refract_ix, c);}
+		else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(light_atten, c.cp.refract_ix, c.points[0], c.radius);}
 		else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
 	}
 	c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
@@ -558,6 +562,7 @@ void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id
 void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool has_lt_atten, int enable_reflections) {
 
 	if (cobjs.empty()) return;
+	has_lt_atten |= (reflection_pass == 2); // need light atten flow to handle refraction through cubes and spheres
 	setup_cobj_shader(s, has_lt_atten, use_normal_map, use_texgen, enable_reflections, reflection_pass);
 	if (enable_reflections == 1) {bind_texture_tu(reflection_tid, 14);} // planar reflections
 	cdb.clear();
@@ -602,7 +607,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			}
 		}
 		unsigned cix(*i);
-		draw_cobj_with_light_atten(cix, last_tid, last_group_id, s, cdb, reflection_pass, lt_atten_manager);
+		draw_cobj_with_light_atten(cix, last_tid, last_group_id, s, cdb, reflection_pass, enable_reflections, lt_atten_manager);
 		assert(cix == *i); // should not have been modified
 		//if (use_reflect_tex) {bind_2d_texture(reflection_tid);} // overwrite texture binding
 	}
@@ -808,7 +813,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 					continue;
 				}
 				cdb.on_new_obj_layer(c.cp);
-				draw_cobj_with_light_atten(cix, last_tid, last_group_id, s, cdb, reflection_pass, lt_atten_manager);
+				draw_cobj_with_light_atten(cix, last_tid, last_group_id, s, cdb, reflection_pass, 2, lt_atten_manager);
 				assert((int)cix == ix); // should not have changed
 			}
 		} // for i
