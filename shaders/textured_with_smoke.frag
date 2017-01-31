@@ -40,6 +40,10 @@ uniform vec3 cube_map_center     = vec3(0.0);
 const float SMOKE_SCALE = 0.25;
 
 vec3 get_closest_cube_normal(in float cube[6], in vec3 pos) { // assumes pos has been clipped to cube; cube = {-x, +x, -y, +y, -z, +z}
+#if 0 // smoother edges
+	vec3 center = 0.5*vec3(cube[0]+cube[1], cube[2]+cube[3], cube[4]+cube[5]);
+	return normalize(sign(pos - center)*pow(abs(normalize(pos - center)), vec3(80.0)));
+#else
 	float xn = abs(pos.x - cube[0]), xp = abs(pos.x - cube[1]);
 	float yn = abs(pos.y - cube[2]), yp = abs(pos.y - cube[3]);
 	float zn = abs(pos.z - cube[4]), zp = abs(pos.z - cube[5]);
@@ -51,6 +55,7 @@ vec3 get_closest_cube_normal(in float cube[6], in vec3 pos) { // assumes pos has
 	if (zn < d) {d = zn; n = vec3(0,0,-1);} // -z
 	if (zp < d) {d = zp; n = vec3(0,0, 1);} // +z
 	return n;
+#endif
 }
 
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
@@ -367,10 +372,10 @@ void main()
 				p2    = vpos + dist*refract_dir; // other intersection point
 				ref_n = normalize(p2 - sphere_center);
 			}
-			if (dot(ref_n, refract_dir) > 0.0) { // camera facing
+			if (dot(ref_n, refract_dir) > 0.0) { // camera facing (always true?)
 				// update cube map lookup position to the back side where the refracted ray exits
 				vec3 rel_pos2 = p2 - cube_map_center; // relative pos on back side
-				vec3 ref_dir2 = reflect(rel_pos2, -ref_n) + cube_map_near_clip*reflect(refract_dir, -ref_n); // internal reflection vector
+				vec3 ref_dir2 = reflect((rel_pos2 + cube_map_near_clip*refract_dir), -ref_n); // internal reflection vector
 				// compute refraction parameters
 				refract_dir = refract(refract_dir, -ref_n, ref_ix/1.0); // refraction out of the object
 				int_ref_w   = get_fresnel_reflection(-refract_dir, -ref_n, refract_ix, 1.0); // object => air transition
