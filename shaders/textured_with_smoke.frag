@@ -58,6 +58,20 @@ vec3 get_closest_cube_normal(in float cube[6], in vec3 pos) { // assumes pos has
 #endif
 }
 
+void ray_trace_cube_sphere(in vec3 p1, in vec3 dir, out vec3 p2, out vec3 n) {
+	if (light_atten > 0.0) { // cube case
+		vec3 far_pt = p1 + 100.0*dir; // move it far away
+		pt_pair res = clip_line(p1, far_pt, cube_bb);
+		p2 = res.v1;
+		n  = get_closest_cube_normal(cube_bb, p2); // use tmax point
+	}
+	else { // sphere case
+		float dist = abs(dot(dir, normalize(p1 - sphere_center)*sphere_radius));
+		p2 = p1 + dist*dir; // other intersection point
+		n  = normalize(p2 - sphere_center);
+	}
+}
+
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
@@ -360,19 +374,9 @@ void main()
 
 		if (do_lt_atten && light_atten != 0.0 && refract_ix != 1.0) {
 			vec3 p2, ref_n;
+			ray_trace_cube_sphere(vpos, refract_dir, p2, ref_n);
 
-			if (light_atten > 0.0) { // cube case
-				vec3 far_pt = vpos + 100.0*refract_dir; // move it far away
-				pt_pair res = clip_line(vpos, far_pt, cube_bb);
-				p2    = res.v1;
-				ref_n = get_closest_cube_normal(cube_bb, p2); // use tmax point
-			}
-			else { // sphere case
-				float dist = abs(dot(refract_dir, normalize(vpos - sphere_center)*sphere_radius));
-				p2    = vpos + dist*refract_dir; // other intersection point
-				ref_n = normalize(p2 - sphere_center);
-			}
-			if (dot(ref_n, refract_dir) > 0.0) { // camera facing (always true?)
+			if (dot(ref_n, refract_dir) > 0.0) { // camera facing
 				// update cube map lookup position to the back side where the refracted ray exits
 				vec3 rel_pos2 = p2 - cube_map_center; // relative pos on back side
 				vec3 ref_dir2 = reflect((rel_pos2 + cube_map_near_clip*refract_dir), -ref_n); // internal reflection vector
