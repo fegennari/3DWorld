@@ -386,6 +386,11 @@ void main()
 				refract_dir = rel_pos2 + cube_map_near_clip*refract_dir; // refract dir normalized to cube map
 				// compute internal reflection
 				int_ref_color = texture(reflection_tex, ref_dir2).rgb;
+#if 0
+				vec3 p2b, ref_nb;
+				ray_trace_cube_sphere(p2, ref_dir2, p2b, ref_nb);
+				vec3 refract_dir2 = refract(ref_dir2, ref_nb, ref_ix/1.0); // refraction out of the object
+#endif
 			}
 		}
 		t_color = mix(mix(texture(reflection_tex, refract_dir).rgb, int_ref_color, int_ref_w), t_color, alpha); // not multiplied by specular color
