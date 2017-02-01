@@ -376,7 +376,7 @@ void main()
 			vec3 p2, ref_n;
 			ray_trace_cube_sphere(vpos, refract_dir, p2, ref_n);
 
-			if (dot(ref_n, refract_dir) > 0.0) { // camera facing
+			if (light_atten < 0.0 || dot(ref_n, refract_dir) > 0.0) { // camera facing test for cube faces
 				// update cube map lookup position to the back side where the refracted ray exits
 				vec3 rel_pos2 = p2 - cube_map_center; // relative pos on back side
 				vec3 ref_dir2 = reflect((rel_pos2 + cube_map_near_clip*refract_dir), -ref_n); // internal reflection vector
