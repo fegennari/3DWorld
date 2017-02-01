@@ -60,7 +60,6 @@ struct obj_layer : public base_mat_t { // size = 84
 	bool operator==(obj_layer const &layer) const {return (memcmp(this, &layer, sizeof(obj_layer)) == 0);}
 	bool operator< (obj_layer const &layer) const {return (memcmp(this, &layer, sizeof(obj_layer)) <  0);}
 	bool operator!=(obj_layer const &layer) const {return !operator==(layer);}
-	bool no_draw()        const {return (!draw || color.alpha == 0.0);}
 	bool has_alpha_texture() const;
 	bool is_semi_trans()  const {return (color.alpha < 1.0 || has_alpha_texture());}
 	bool might_be_drawn() const {return (draw || cobj_type != COBJ_TYPE_STD);}
@@ -95,6 +94,7 @@ struct cobj_params : public obj_layer { // size = 88
 		if (nc) {flags |= COBJ_NO_COLL;}
 	}
 	void write_to_cobj_file(std::ostream &out, cobj_params &prev) const;
+	bool no_draw() const {return (!draw || (color.alpha == 0.0 && (flags & COBJ_REFLECTIVE) == 0));} // allow reflective cobjs with alpha=0
 };
 
 

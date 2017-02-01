@@ -628,7 +628,7 @@ public:
 		case SM_HARDNESS:     mat.hardness     = max(0.05f, min(1.0f, (mat.hardness + 0.05f*delta)));   break; // 0.05 to 1.0 in steps of 0.05
 		case SM_DENSITY:      mat.density      = max(0.1f,  min(4.0f, (mat.density  + 0.1f* delta)));   break; // 0.1 to 4.0 in steps of 0.1
 		case SM_METAL:        mat.metal        = CLIP_TO_01(mat.metal    + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05
-		case SM_ALPHA:        mat.alpha        = max(0.05f, min(1.0f, (mat.alpha    + 0.05f*delta)));   break; // 0.05 to 1.0 in steps of 0.05
+		case SM_ALPHA:        mat.alpha        = CLIP_TO_01(mat.alpha    + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05 (alpha of 0 is okay for refractive or scattering objects)
 		case SM_SPEC_MAG:     mat.spec_mag     = CLIP_TO_01(mat.spec_mag + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05
 		case SM_SHINE:        mat.shine        = pow(2.0, max(0, min(10, int(log2(mat.shine)+delta)))); break; // 1.0 to 1024.0 (log2 0 to 10 in steps of 1)
 		case SM_REFRACT_IX:   mat.refract_ix   = max(1.0f, min(3.0f, (mat.refract_ix   + 0.1f*delta))); break; // 1.0 to 3.0 in steps of 0.1
