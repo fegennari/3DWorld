@@ -561,7 +561,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	case COLL_SPHERE: {
 		float const scale(NDIV_SCALE*get_zoom_scale()*(reflection_pass ? 0.5 : 1.0)), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 		int ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-		if (is_reflective()) {ndiv *= 3;} // higher tessellation for reflective spheres; required for high quality refraction
+		if (is_reflective()) {ndiv *= 2;} // higher tessellation for reflective spheres; required for high quality refraction
 		bool const use_tcs(cp.tscale == 0.0);
 		if (!use_tcs) {setup_cobj_sc_texgen(plus_z, shader);} // use texgen
 		//draw_cube_mapped_sphere(points[0], radius, ndiv/2, use_tcs);

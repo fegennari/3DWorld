@@ -66,8 +66,9 @@ void ray_trace_cube_sphere(in vec3 p1, in vec3 dir, out vec3 p2, out vec3 n) {
 		n  = get_closest_cube_normal(cube_bb, p2); // use tmax point
 	}
 	else { // sphere case
-		float dist = abs(dot(dir, normalize(p1 - sphere_center)*sphere_radius));
-		p2 = p1 + dist*dir; // other intersection point
+		vec3 ray_dir = normalize(p1 - sphere_center)*sphere_radius; // renormalize to sphere radius to reduce distortion
+		float dist   = abs(dot(dir, ray_dir));
+		p2 = (ray_dir + sphere_center) + dist*dir; // other intersection point
 		n  = normalize(p2 - sphere_center);
 	}
 }
