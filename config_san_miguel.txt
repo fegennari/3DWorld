@@ -10,6 +10,7 @@ use_interior_cube_map_refl 1
 cube_map_center 0.58 1.75 0.18 # for San Miguel scene
 sunlight_intensity 5.0
 player_speed 0.5
+camera_height 0.12
 
 scene_size 1.8 4.0 1.8 # slightly off square
 mesh_size  128 256 96
