@@ -5,6 +5,8 @@
 #include "mesh.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "model3d.h"
+#include <omp.h>
 
 
 unsigned const VOXELS_PER_DIV = 8; // 1024 for 128 vertex mesh
@@ -21,6 +23,7 @@ extern int display_mode, camera_mode, read_snow_file, write_snow_file;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
 extern char *snow_file;
+extern model3ds all_models;
 
 
 typedef short coord_type;
@@ -473,8 +476,17 @@ bool get_mesh_ice_pt(point const &p1, point &p2) {
 
 
 vector3d get_rand_snow_vect(float amount) {
-
 	return (snow_random == 0.0 ? zero_vector : vector3d(amount*snow_random*rgauss(), amount*snow_random*rgauss(), 0.0));
+}
+
+
+bool check_snow_line_coll(point const &pos1, point const &pos2, point &cpos, vector3d &cnorm) {
+
+	int cindex(-1);
+	colorRGBA model_color; // unused
+	bool const cobj_coll(check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1));
+	bool const model_coll(all_models.check_coll_line(pos1, (cobj_coll ? cpos : pos2), cpos, cnorm, model_color, 1));
+	return (cobj_coll || model_coll);
 }
 
 
@@ -484,12 +496,12 @@ void create_snow_map(voxel_map &vmap) {
 	int const num_per_dim(1024*(unsigned)sqrt((float)num_snowflakes)); // in M, so sqrt div by 1024
 	float const zval(max(ztop, czmax));
 	unsigned progress(0);
-	cout << "Snow accumulation progress (out of " << num_per_dim << "): 0";
+	all_models.build_cobj_trees(1);
+	cout << "Snow accumulation progress (out of " << num_per_dim << "):     0";
 
-	#pragma omp parallel for schedule(static,1) // dynamic?
+#pragma omp parallel for schedule(static,1) // dynamic?
 	for (int y = 0; y < num_per_dim; ++y) {
-		#pragma omp critical(snow_prog_update)
-		increment_printed_number(progress++);
+		if (omp_get_thread_num() == 0) {increment_printed_number(y);} // progress for thread 0
 
 		for (int x = 0; x < num_per_dim; ++x) {
 			point pos1(-X_SCENE_SIZE + 2.0*X_SCENE_SIZE*x/num_per_dim,
@@ -505,11 +517,10 @@ void create_snow_map(voxel_map &vmap) {
 			pos1 += get_rand_snow_vect(1.0); // add some gaussian randomness for better distribution
 			point cpos;
 			vector3d cnorm;
-			int cindex;
 			bool invalid(0);
 			unsigned iter(0);
 			
-			while (check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1)) {
+			while (check_snow_line_coll(pos1, pos2, cpos, cnorm)) {
 				if (cnorm.z > 0.0) { // collision with a surface that points up - we're done
 					pos2 = cpos;
 					break;
@@ -530,8 +541,8 @@ void create_snow_map(voxel_map &vmap) {
 				}
 				++iter;
 			}
-			#pragma omp critical(snow_map_update)
-			if (!invalid) vmap[voxel_t(pos2)].update(pos2.z);
+#pragma omp critical(snow_map_update)
+			if (!invalid) {vmap[voxel_t(pos2)].update(pos2.z);}
 		}
 	}
 	cout << endl;
