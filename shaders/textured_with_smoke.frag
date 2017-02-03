@@ -291,13 +291,14 @@ void main()
 #else
 	float normal_sign = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
 #endif
+	vec3 normal_s      = normal_sign*normal;
 	float wet_surf_val = wetness*max(normal.z, 0.0); // only +z surfaces are wet; doesn't apply to spec shininess though
-	vec4 base_color = mix(1.0, 0.25, wet_surf_val)*gl_Color;
+	vec4 base_color    = mix(1.0, 0.25, wet_surf_val)*gl_Color;
 
 #ifdef ENABLE_SNOW_COVERAGE
-	if (snow_cov_amt > 0.0 && normal.z > 0.4) {
+	if (snow_cov_amt > 0.0 && normal_s.z > 0.4) {
 		// add in snow on top of water/texture, using ratio of lit color from base color to pick up lighting
-		float snow_amt = snow_cov_amt*get_water_snow_coverage()*min(1.0, 6.0*(normal.z-0.4));
+		float snow_amt = snow_cov_amt*get_water_snow_coverage()*min(1.0, 6.0*(normal_s.z-0.4));
 		base_color     = mix(base_color, vec4(1.0), snow_amt);
 		texel          = mix(texel, vec4(0.9, 0.9, 1.0, 1.0), snow_amt);
 		alpha          = mix(alpha, 1.0, snow_amt);
@@ -305,7 +306,6 @@ void main()
 #endif
 	vec3 lit_color  = emission.rgb + emissive_scale*gl_Color.rgb;
 	lit_color      += base_color.rgb * get_indir_lighting(normal_sign) * mix(1.0, 0.7, wet_surf_val);
-	vec3 normal_s   = normal_sign*normal;
 
 #ifdef ENABLE_GAMMA_CORRECTION
 	lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
