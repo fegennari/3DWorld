@@ -863,7 +863,14 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 	else { // sine tables
 		float const *const xptr(&xyterms.front() + x*F_TABLE_SIZE);
 		float const *const yptr(&xyterms.front() + yterms_start + y*F_TABLE_SIZE);
-		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
+		int const start_ix(max(start_eval_sin, min_start_sin));
+
+		if (start_ix == 0) { // common case
+			for (int i = 0; i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
+		}
+		else {
+			for (int i = start_ix; i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
+		}
 		apply_noise_shape_final(zval, gen_shape);
 	}
 	if (glaciate) {
