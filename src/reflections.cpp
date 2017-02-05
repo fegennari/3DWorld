@@ -356,8 +356,9 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id,
 }
 
 unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
-	float const nclip(use_interior_cube_map_refl ? NEAR_CLIP : max(NEAR_CLIP, 0.5f*cube.max_len())); // slightly more than the cube half width in max dim
-	point const center((cube_map_center == all_zeros) ? cube.get_cube_center() : cube_map_center);
+	bool const is_cobj(cobj_id >= 0); // !is_model3d
+	float const nclip((use_interior_cube_map_refl && !is_cobj) ? NEAR_CLIP : max(NEAR_CLIP, 0.5f*cube.max_len())); // slightly more than the cube half width in max dim
+	point const center((cube_map_center == all_zeros || is_cobj) ? cube.get_cube_center() : cube_map_center);
 	return create_cube_map_reflection(tid, tsize, cobj_id, center, nclip, FAR_CLIP, only_front_facing, is_indoors, skip_mask);
 }
 
