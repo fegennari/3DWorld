@@ -1081,7 +1081,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_scenery();
 	draw_solid_object_groups(reflection_pass);
 	draw_stuff(1, 0, reflection_pass);
-	if (inc_water && (display_mode & 0x04)) {draw_water(1);} // if we can exclude the mesh we can probably exclude the water as well
+	if (inc_water && (display_mode & 0x04)) {draw_water(1, (reflection_pass == 2));} // if we can exclude the mesh we can probably exclude the water as well
 	draw_stuff(0, 0, reflection_pass);
 	draw_game_elements(0, reflection_pass);
 	setup_basic_fog();

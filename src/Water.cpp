@@ -214,9 +214,10 @@ void get_object_color(int cindex, colorRGBA &color) {
 
 struct water_vertex_calc_t {
 
+	bool draw_fast;
 	float zval1, zval2;
 
-	water_vertex_calc_t() : zval1(def_water_level), zval2(def_water_level) {}
+	water_vertex_calc_t() : draw_fast(0), zval1(def_water_level), zval2(def_water_level) {}
 
 	void calc_zvals(int i, int j, int wsi, int dx, int dy, bool outside_water) {
 		float const water_zmin(zbottom - MIN_WATER_DZ);
@@ -292,7 +293,7 @@ struct water_vertex_calc_t {
 		vnc.n = wat_vert_normals[i][j];
 		colorRGBA color(color_in); // note that the texture is blue, so that's why the color is more whiteish
 
-		if (!(display_mode & 0x20) && !has_snow && vnc.v.z > mesh_height[i][j]) { // calculate water reflection and blend into color
+		if (!(display_mode & 0x20) && !draw_fast && !has_snow && vnc.v.z > mesh_height[i][j]) { // calculate water reflection and blend into color
 			point const camera(get_camera_pos());
 			if (camera.z > vnc.v.z) {blend_reflection_color(vnc.v, color, vnc.n, camera);} // below the camera
 		}
@@ -363,7 +364,7 @@ public:
 		if (verts.empty()) return;
 
 		// run on multiple threads when we have the slow ray-traced per-vertex water reflections enabled (assumes a quad core machine)
-		#pragma omp parallel for num_threads(4) schedule(dynamic) if (!fast_water_reflect && !(display_mode & 0x20))
+		#pragma omp parallel for num_threads(4) schedule(dynamic) if (!fast_water_reflect && !draw_fast && !(display_mode & 0x20))
 		for (int i = 0; i < (int)verts.size(); ++i) {
 			vert_norm_color &vnc(verts[i]);
 			calc_vertex_cn(vnc, get_ypos(vnc.v.y), get_xpos(vnc.v.x), color_in);
@@ -433,7 +434,7 @@ public:
 };
 
 
-void draw_water(bool no_update) {
+void draw_water(bool no_update, bool draw_fast) {
 
 	RESET_TIME;
 	int wsi(0), last_water(2), last_draw(0), lc0(landscape_changed);
@@ -479,6 +480,7 @@ void draw_water(bool no_update) {
 			s.add_uniform_float("detail_tex_scale", 1.0);
 		}
 		static water_strip_drawer wsdraw;
+		wsdraw.draw_fast = draw_fast;
 		// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
 		point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
 		int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
