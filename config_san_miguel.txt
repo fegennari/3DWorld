@@ -1,5 +1,6 @@
 include config_samples.txt
 coll_obj_file coll_objs_san_miguel.txt
+sphere_materials_fn sphere_materials.txt
 
 enable_model3d_bump_maps 1
 use_obj_file_bump_grayscale 1 # set to 1 for new San Miguel scene
