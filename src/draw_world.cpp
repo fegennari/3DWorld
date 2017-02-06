@@ -686,22 +686,6 @@ bool check_cobj_vis_occlude(coll_obj const &c, pos_dir_up const &pdu, int reflec
 	return !cube_cobj_occluded(pdu.pos, c);
 }
 
-void create_static_cobjs_vbo(coll_obj_group &cobjs) {
-
-	cobj_draw_buffer cdb;
-
-	for (auto i = cobjs.drawn_ids.begin(); i != cobjs.drawn_ids.end(); ++i) {
-		coll_obj &c(cobjs.get_cobj(*i));
-		if (c.no_draw() || !c.can_use_vbo()) continue;
-		c.vbo_offset    = -1; // reset offset
-		unsigned const start_off(cdb.get_tri_vbo_offset());
-		c.draw_coll_cube(c.get_tid(), cdb, 1); // force_draw_all_faces=1
-		c.vbo_offset    = start_off;
-		c.num_vbo_verts = cdb.get_tri_vbo_offset() - start_off;
-	}
-	create_vbo_and_upload(cobjs.vbo, cdb.get_tri_verts(), 0, 1);
-}
-
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 
@@ -720,7 +704,6 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	static cobj_draw_buffer cdb;
 	cdb.clear();
 	cobj_proc_buf_t pb;
-	if (coll_objects.vbo == 0) {create_static_cobjs_vbo(coll_objects);}
 
 	// bias the clip plane so that pixels slightly under the reflection plane are drawn to prevent artifacts
 	// we know this is legal because cobjs that are below the true clip/reflection plane will be dropped below
