@@ -56,6 +56,7 @@ void coll_obj::clear_internal_data() {
 
 	fixed    = 0; // unfix it so that it's actually removed
 	cp.surfs = 0;
+	vbo_offset = -1;
 	occluders.clear();
 }
 
@@ -450,13 +451,17 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, texture_offset), p2.x, p2.y, p2.z, dot_product(p2, texture_offset), shader, 1);
 }
 
+bool coll_obj::can_use_vbo() const {
+	return (type == COLL_CUBE && !is_semi_trans() && !may_be_dynamic() && !cp.is_emissive);
+}
+
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb, int reflection_pass) const {
 
 	assert(!disabled());
 	bool const in_group(group_id >= 0), same_group(group_id == last_group_id), start_group(in_group && !same_group);
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
-	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
+	int const tid(get_tid());
 
 	// process groups
 	if (same_group) {
@@ -504,6 +509,13 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		cdb.is_wet = is_wet();
 		shader.add_uniform_float("wet_effect",   (cdb.is_wet ? rain_wetness : 0.0)); // either it's wet or it's not
 		shader.add_uniform_float("reflectivity", (cdb.is_wet ? rain_wetness : 1.0)); // either it's partially wet or dry and reflective
+	}
+	if (0 && vbo_offset >= 0 && can_use_vbo()) {
+		check_bind_vbo(coll_objects.vbo);
+		vert_norm_texp::set_vbo_arrays(1);
+		glDrawArrays(GL_TRIANGLES, vbo_offset, num_vbo_verts);
+		bind_vbo(0); // unbind VBO
+		return;
 	}
 	switch (type) {
 	case COLL_CUBE:

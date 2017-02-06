@@ -134,6 +134,7 @@ extern dpart_params_t dp_params;
 extern hmap_params_t hmap_params;
 extern reflect_plane_selector reflect_planes;
 extern reflective_cobjs_t reflective_cobjs;
+extern coll_obj_group coll_objects;
 
 
 void init_keyset();
@@ -217,6 +218,7 @@ void clear_context() {
 	free_cloud_context();
 	free_animal_context();
 	reflective_cobjs.free_textures();
+	delete_and_zero_vbo(coll_objects.vbo);
 	clear_landscape_vbo = 1;
 }
 

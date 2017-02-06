@@ -116,6 +116,8 @@ public:
 	void draw() const;
 	void flush() {draw(); clear();}
 	obj_layer const &get_last_layer() const {return last_layer;}
+	unsigned get_tri_vbo_offset() const {assert(quad_verts.empty()); return tri_verts.size();}
+	vector<vert_norm_texp> const &get_tri_verts() const {return tri_verts;}
 };
 
 
@@ -123,7 +125,7 @@ class coll_obj_group;
 class csg_cube;
 
 
-class coll_obj : public cube_t { // size = 252
+class coll_obj : public cube_t { // size = 260
 
 public:
 	char type, destroy, status;
@@ -131,14 +133,14 @@ public:
 	bool fixed, is_billboard, falling;
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	float radius, radius2, thickness, volume, v_fall;
-	int counter, id;
+	int counter, id, vbo_offset, num_vbo_verts;
 	short platform_id, group_id, cgroup_id, dgroup_id, waypt_id, npoints;
 	point points[N_COLL_POLY_PTS];
 	vector3d norm, texture_offset;
 	vector<int> occluders;
 
 	coll_obj() : type(COLL_NULL), destroy(NON_DEST), status(COLL_UNUSED), last_coll(0), coll_type(0), fixed(0), is_billboard(0),
-		falling(0), radius(0.0), radius2(0.0), thickness(0.0), volume(0.0), v_fall(0.0), counter(0), id(-1), platform_id(-1),
+		falling(0), radius(0.0), radius2(0.0), thickness(0.0), volume(0.0), v_fall(0.0), counter(0), id(-1), vbo_offset(-1), num_vbo_verts(0), platform_id(-1),
 		group_id(-1), cgroup_id(-1), dgroup_id(-1), waypt_id(-1), npoints(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
 	void clear_internal_data();
@@ -200,8 +202,10 @@ public:
 	bool has_hard_edges()    const {return (type == COLL_CUBE || type == COLL_POLYGON);}
 	bool has_flat_top_bot()  const {return (type == COLL_CUBE || type == COLL_POLYGON || type == COLL_CYLINDER);}
 	bool use_tex_coords()    const {return ((was_a_cube() && cp.tid >= 0) || (cp.tscale == 0.0 && (is_cylinder() || type == COLL_SPHERE || type == COLL_CAPSULE || type == COLL_TORUS)));}
+	bool can_use_vbo()       const;
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
 	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)) && dgroup_id < 0);}
+	int get_tid()         const {return ((cp.tid >= 0) ? cp.tid : WHITE_TEX);}
 	point get_center_pt() const;
 	point get_center_of_mass(bool ignore_group=0) const;
 	float get_max_dim()   const;
@@ -251,7 +255,7 @@ public:
 
 	// drawing functions
 	void setup_cube_face_texgen(texgen_params_t &tp, unsigned tdim0, unsigned tdim1, float const tscale[2]) const;
-	void draw_coll_cube(int tid, cobj_draw_buffer &cdb) const;
+	void draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_all_faces=0) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const;
 	void get_polygon_tparams(int tid, vector3d const &normal, texgen_params_t &tp) const;
 	void draw_polygon(int tid, point const *pts, int npts, vector3d const &normal, cobj_draw_buffer &cdb) const;
@@ -307,10 +311,10 @@ public:
 	bool has_lt_atten, has_voxel_cobjs;
 	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
 	vector<vector<unsigned>> to_draw_streams;
-	unsigned cur_draw_stream_id;
+	unsigned cur_draw_stream_id, vbo;
 	vector<unsigned> temp_cobjs; // temporary to avoid repeated memory allocation
 
-	coll_obj_group() : has_lt_atten(0), has_voxel_cobjs(0), cur_draw_stream_id(0) {to_draw_streams.resize(6);}
+	coll_obj_group() : has_lt_atten(0), has_voxel_cobjs(0), cur_draw_stream_id(0), vbo(0) {to_draw_streams.resize(6);}
 	void clear_ids();
 	void clear();
 	void finalize();

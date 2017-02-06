@@ -153,22 +153,23 @@ void emit_cube_side(vert_norm_texp &vnt, point const pts[4], cobj_draw_buffer &c
 	}
 }
 
-void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
+void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_all_faces) const {
 
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
 	bool const back_face_cull(!is_semi_trans()); // no alpha
 	point const pos(points[0]), camera(get_camera_pos());
-	bool inside(!back_face_cull);
+	bool draw_all_faces(force_draw_all_faces || !back_face_cull);
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
 
-	if (!inside) { // check if the camera's view volume intersects the cube - if so we must render all faces
+	if (!draw_all_faces) { // check if the camera's view volume intersects the cube - if so we must render all faces
 		float const dist(NEAR_CLIP + CAMERA_RADIUS);
-		inside = 1;
+		bool inside(1);
 
 		for (unsigned i = 0; i < 3; ++i) {
 			if (camera[i] <= d[i][0]-dist || camera[i] >= d[i][1]+dist) {inside = 0; break;}
 		}
+		draw_all_faces = inside;
 	}
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) {faces[i].second = i;}
@@ -198,7 +199,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 			vnt.n[dim] = (dir ? 1.0 : -1.0);
 			setup_cube_face_texgen(vnt, t0, t1, tscale);
 
-			if (!((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir)))) { // 6 faces
+			if (!((sides & EFLAGS[dim][dir]) || (!draw_all_faces && !((camera[dim] < d[dim][dir]) ^ dir)))) { // 6 faces
 				p[dim] = d[dim][dir];
 				p[d0 ] = ic.d[d0][0];
 				p[d1 ] = ic.d[d1][0]; pts[dir ? 0 : 3] = p;
@@ -237,7 +238,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 	else {
 		for (unsigned i = 0; i < 6; ++i) {
 			unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
-			if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue; // side disabled
+			if ((sides & EFLAGS[dim][dir]) || (!draw_all_faces && !((camera[dim] < d[dim][dir]) ^ dir))) continue; // side disabled
 			unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
 			p[dim] = d[dim][dir];
 			p[d0 ] = d[d0][0];
