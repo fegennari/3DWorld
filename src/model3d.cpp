@@ -1598,7 +1598,7 @@ cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {
 	cube_t bcube_xf(bcube + xlate);
 
 	if (!transforms.empty()) {
-		assert(transforms.size() == 1); // FIXME: instancing not supported with a single cube map refelction texture
+		assert(transforms.size() == 1); // FIXME: instancing not supported with a single cube map reflection texture
 		bcube_xf = transforms[0].get_xformed_cube(bcube_xf);
 	}
 	return bcube_xf;
