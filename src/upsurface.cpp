@@ -52,7 +52,9 @@ void noise_gen_3d::gen_xyz_vals(point const &start, vector3d const &step, unsign
 		for (unsigned i = 0; i < xyz_num[d]; ++i) {
 			for (unsigned k = 0; k < num_sines; ++k) {
 				unsigned const index2(NUM_SINE_PARAMS*k + 2*d);
-				xyz_vals[d][i*num_sines + k] = SINF(rdata[index2+1]*val + rdata[index2+2]);
+				float &v(xyz_vals[d][i*num_sines + k]);
+				v = SINF(rdata[index2+1]*val + rdata[index2+2]);
+				if (d == 0) {v *= rdata[index2];} // x dim only
 			}
 			val += step[d];
 		}
@@ -65,11 +67,10 @@ float noise_gen_3d::get_val(unsigned x, unsigned y, unsigned z, vector<float> co
 	float val(0.0);
 	unsigned const xyz[3] = {x, y, z};
 	UNROLL_3X(assert(num_sines*xyz[i_]+num_sines <= xyz_vals[i_].size()););
-	unsigned const xs(x*num_sines), ys(y*num_sines), zs(z*num_sines);
-
-	for (unsigned k = 0; k < num_sines; ++k) { // performance critical
-		val += rdata[NUM_SINE_PARAMS*k]*(xyz_vals[0][xs + k])*(xyz_vals[1][ys + k])*(xyz_vals[2][zs + k]);
-	}
+	float const *const xv(&xyz_vals[0][x*num_sines]);
+	float const *const yv(&xyz_vals[1][y*num_sines]);
+	float const *const zv(&xyz_vals[2][z*num_sines]);
+	for (unsigned k = 0; k < num_sines; ++k) {val += xv[k]*yv[k]*zv[k];} // performance critical
 	return val;
 }
 
