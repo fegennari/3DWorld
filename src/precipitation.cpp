@@ -117,6 +117,7 @@ class rain_manager_t : public precip_manager_t<2> {
 
 	deque<sphere_t> splashes;
 	quad_batch_draw splash_qbd;
+	line_tquad_draw_t drawer;
 
 public:
 	void update() {
@@ -146,7 +147,6 @@ public:
 		shader_t s;
 		s.begin_color_only_shader(color);
 		draw_verts(verts, GL_LINES); // 0.08ms for default rain intensity
-		line_tquad_draw_t drawer;
 		point const camera(get_camera_pos());
 		float const width = 0.002;
 
@@ -156,7 +156,7 @@ public:
 			}
 		}
 		glDepthMask(GL_FALSE); // disable depth test
-		drawer.draw(); // draw nearby raindrops as triangles (0.02ms for default rain intensity)
+		drawer.draw_and_clear(); // draw nearby raindrops as triangles (0.02ms for default rain intensity)
 		s.end_shader();
 		disable_blend();
 		//PRINT_TIME("Rain Draw"); // similar to update time
@@ -186,6 +186,7 @@ public:
 
 
 class snow_manager_t : public precip_manager_t<1> {
+	point_sprite_drawer psd;
 public:
 	void update() {
 		//timer_t timer("Snow Update");
@@ -198,13 +199,12 @@ public:
 			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
 		}
 	}
-	void render() const {
+	void render() {
 		if (empty()) return;
-		point_sprite_drawer psd;
 		psd.reserve_pts(size());
 		colorRGBA const color(WHITE*((world_mode == WMODE_GROUND) ? 1.5 : 1.0)*brightness); // constant
 		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {psd.add_pt(vert_color(i->v, color));}
-		psd.draw(WHITE_TEX, 1.0); // unblended pixels
+		psd.draw_and_clear(WHITE_TEX, 1.0); // unblended pixels
 	}
 };
 
