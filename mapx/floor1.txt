@@ -19,7 +19,7 @@ r 0.0 1.0 # reset specularity
 e 0
 
 # front desk
-e 3
+e 0 # enable bottom surface for reflections
 X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.66 1.0 1.0 1.0 1.0 26 1 # paneling
 y 5.0
