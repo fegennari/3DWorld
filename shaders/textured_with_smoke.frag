@@ -5,6 +5,7 @@ uniform float step_delta, step_delta_shadow;
 uniform sampler2D tex0;
 uniform sampler3D wet_noise_tex;
 uniform sampler2D sky_zval_tex;
+uniform sampler2D emissive_map; // only used when ENABLE_EMISSIVE_MAP
 uniform float min_alpha       = 0.0;
 uniform float water_depth     = 0.0;
 uniform float emissive_scale  = 0.0;
@@ -304,8 +305,11 @@ void main()
 		alpha          = mix(alpha, 1.0, snow_amt);
 	}
 #endif
-	vec3 lit_color  = emission.rgb + emissive_scale*gl_Color.rgb;
-	lit_color      += base_color.rgb * get_indir_lighting(normal_sign) * mix(1.0, 0.7, wet_surf_val);
+	vec3 lit_color = emission.rgb + emissive_scale*gl_Color.rgb;
+#ifdef ENABLE_EMISSIVE_MAP
+	lit_color     += texture(emissive_map, tc);
+#endif
+	lit_color     += base_color.rgb * get_indir_lighting(normal_sign) * mix(1.0, 0.7, wet_surf_val);
 
 #ifdef ENABLE_GAMMA_CORRECTION
 	lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction

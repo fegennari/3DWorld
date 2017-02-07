@@ -3,7 +3,7 @@ a 2 # destroyable/shatterable
 e 0
 #l 0.6 1.0 1.0 1.0 1.0 36 1 # wood
 X normal_maps/bcube_tactical_NRM.jpg 0 1 # normal map (swap binorm sign)
-l 0.6 1.0 1.0 1.0 1.0 60 1 # borg cube
+l 0.6 1.0 1.0 1.0 1.0 60 1 # borg cube (spaceship1.jpg is also good)
 y 0 # force texture to fit to the cube
 metalness 1.0
 movable 1
