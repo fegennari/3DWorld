@@ -12,4 +12,4 @@ Gameplay in tiled terrain mode
   - Projectile and object collision detection
 
 Store dlights in screen space
-Better window glass fragments
+Snow or sand terrain layer using blurred heightmap
