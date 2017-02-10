@@ -13,7 +13,8 @@ damage 0.0
 
 # marble center pedestal
 l 0.9 1.0 1.0 1.0 1.0 marble2.jpg 1
-B -0.1 0.1  -0.1 0.1  0.2 2.45
+#B -0.1 0.1  -0.1 0.1  0.2 2.45
+C 0.0 0.0 0.2  0.0 0.0 2.45  0.1 0.1
 B -0.15 0.15  -0.15 0.15  2.45 2.5
 
 # marble support pedestals
