@@ -905,7 +905,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 		}
 	}
 	if (elem_data.size() > 0.9*max_gb_entries) {
-		if (elem_data.size() >= max_gb_entries) {std::cerr << "Warning: Exceeded max number of indexes in dynamic light texture upload" << endl;}
+		if (elem_data.size() >= max_gb_entries) {std::cerr << "Warning: Exceeded max # indexes (" << max_gb_entries << ") in dynamic light texture upload" << endl;}
 		dlight_add_thresh = min(0.25, (dlight_add_thresh + 0.005)); // increase thresh to clip the dynamic lights to a smaller radius
 	}
 	if (elem_tid == 0) {
