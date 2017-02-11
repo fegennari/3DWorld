@@ -128,18 +128,16 @@ template<unsigned N> bool check_clip_plane(point const *const pts, point const &
 
 template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) const {
 
-	bool npass(0), fpass(0); // near, far
-
-	for (unsigned i = 0; i < N && (!npass || !fpass); ++i) {
-		float const dp(dot_product(dir, vector3d(pts[i], pos)));
-		npass |= (dp > near_);
-		fpass |= (dp < far_);
-	}
-	if (!npass || !fpass) return 0;
 	if (!check_clip_plane<N>(pts, pos, upv_, sterm  *sterm,   0)) return 0;
 	if (!check_clip_plane<N>(pts, pos, upv_, sterm  *sterm,   1)) return 0;
 	if (!check_clip_plane<N>(pts, pos, cp,   x_sterm*x_sterm, 0)) return 0;
 	if (!check_clip_plane<N>(pts, pos, cp,   x_sterm*x_sterm, 1)) return 0;
+	bool npass(0), fpass(0); // near, far
+	for (unsigned i = 0; i < N && (!npass || !fpass); ++i) {
+		float const dp(dot_product(dir, vector3d(pts[i], pos)));
+		npass |= (dp > near_); fpass |= (dp < far_);
+	}
+	if (!npass || !fpass) return 0;
 	return 1;
 }
 
