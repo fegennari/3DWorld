@@ -17,6 +17,7 @@ group_back_face_cull 1
 disable_shader_effects 0
 shadow_map_sz 4096
 coll_obj_file coll_objs_minecraft.txt
+num_dynam_parts 200
 
 end
 
