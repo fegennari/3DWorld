@@ -47,7 +47,7 @@ disable_shader_effects 0
 mt_cobj_tree_build 0
 
 mesh_height 0.05
-mesh_size  128 128 128
+mesh_size  256 256 256
 scene_size 8.0 8.0 10.4
 set_czmax 4.0
 
@@ -60,7 +60,8 @@ coll_obj_file model_data/coll_objs_soda.txt
 
 num_threads 8
 num_light_rays 100000 10000 0 0
-lighting_file_sky    model_data/lighting.soda.data 0 1.0
+#lighting_file_sky    model_data/lighting.soda.data 0 1.0
+lighting_file_sky    ../models/soda/lighting.soda.256.data 0 4.0
 
 end
 
