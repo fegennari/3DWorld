@@ -117,32 +117,29 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 	return ((dist + radius) > near_ && (dist - radius) < far_); // Note: approximate/conservative but fast
 }
 
+template<unsigned N> bool check_clip_plane(point const *const pts, point const &pos, vector3d const &v, float aa, unsigned d) {
+	for (unsigned i = 0; i < N; ++i) {
+		vector3d const pv(pts[i], pos);
+		float const dp(dot_product(v, pv));
+		if ((d ? -dp : dp) <= 0.0 || dp*dp <= aa*pv.mag_sq()) return 1;
+	}
+	return 0;
+}
+
 template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) const {
 
 	bool npass(0), fpass(0); // near, far
 
 	for (unsigned i = 0; i < N && (!npass || !fpass); ++i) {
 		float const dp(dot_product(dir, vector3d(pts[i], pos)));
-		npass = (dp > near_);
-		fpass = (dp < far_);
+		npass |= (dp > near_);
+		fpass |= (dp < far_);
 	}
 	if (!npass || !fpass) return 0;
-	vector3d const v [2] = {upv_, cp};
-	float    const aa[2] = {sterm*sterm, x_sterm*x_sterm};
-
-	for (unsigned xy = 0; xy < 2; ++xy) { // y, x
-		for (unsigned d = 0; d < 2; ++d) { // lo, hi
-			float const w(d ? -1.0 : 1.0);
-			bool pass(0);
-		
-			for (unsigned i = 0; i < N && !pass; ++i) {
-				vector3d const pv(pts[i], pos);
-				float const dp(w*dot_product(v[xy], pv));
-				pass = (dp <= 0.0 || dp*dp <= aa[xy]*pv.mag_sq());
-			}
-			if (!pass) return 0;
-		}
-	}
+	if (!check_clip_plane<N>(pts, pos, upv_, sterm  *sterm,   0)) return 0;
+	if (!check_clip_plane<N>(pts, pos, upv_, sterm  *sterm,   1)) return 0;
+	if (!check_clip_plane<N>(pts, pos, cp,   x_sterm*x_sterm, 0)) return 0;
+	if (!check_clip_plane<N>(pts, pos, cp,   x_sterm*x_sterm, 1)) return 0;
 	return 1;
 }
 
