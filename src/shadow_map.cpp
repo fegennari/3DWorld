@@ -297,10 +297,21 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 		if (!tex_ret) {cerr << "Error: unable to set shader uniform 'smap_tex_arr_dl'." << endl;}
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	}
-	char str[20] = {0};
-	sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id
-	bool const mat_ret(s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0));
-	assert(mat_ret);
+	float const *const m(texture_matrix.get_ptr());
+	
+	if (layer_id <= 9) { // most common values
+		char str[18] = "smap_matrix_dl[?]";
+		str[15] = char('0' + layer_id);
+		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
+		assert(mat_ret);
+	}
+	else {
+		char str[20] = {0};
+		sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id (FIXME)
+		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
+		assert(mat_ret);
+	}
+	
 	return 1;
 }
 
