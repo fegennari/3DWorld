@@ -226,11 +226,9 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 		for (unsigned z = 0; z < 2; ++z) { // 8 corners
 			for (unsigned y = 0; y < 2; ++y) {
 				for (unsigned x = 0; x < 2; ++x) {
-					vert_norm_texp v[3];
-					v[0] = vert_norm_texp(point(ic.d[0][x], ic.d[1][y],    d[2][z]), (z ? plus_z : -plus_z), tp); // z-edge point
-					v[1] = vert_norm_texp(point(ic.d[0][x],    d[1][y], ic.d[2][z]), (y ? plus_y : -plus_y), tp); // y-edge point
-					v[2] = vert_norm_texp(point(   d[0][x], ic.d[1][y], ic.d[2][z]), (x ? plus_x : -plus_x), tp); // x-edge point
-					for (unsigned i = 0; i < 3; ++i) {cdb.add_vert(v[i]);}
+					cdb.add_vert(vert_norm_texp(point(ic.d[0][x], ic.d[1][y],    d[2][z]), (z ? plus_z : -plus_z), tp)); // z-edge point
+					cdb.add_vert(vert_norm_texp(point(ic.d[0][x],    d[1][y], ic.d[2][z]), (y ? plus_y : -plus_y), tp)); // y-edge point
+					cdb.add_vert(vert_norm_texp(point(   d[0][x], ic.d[1][y], ic.d[2][z]), (x ? plus_x : -plus_x), tp)); // x-edge point
 				}
 			}
 		}
