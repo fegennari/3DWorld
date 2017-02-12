@@ -48,7 +48,7 @@ extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_f
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale;
-extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP;
+extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
@@ -269,6 +269,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	set_indir_lighting_block(s, use_smoke, use_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
+	if (dlights) {s.add_uniform_float("dlight_intensity_scale", dlight_intensity_scale);}
 	// the z plane bias is somewhat of a hack, set experimentally; maybe should be one pixel in world space?
 	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", clip_plane_z);}
 	if (use_shadow_map && shadow_map_enabled() && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}

@@ -1,3 +1,4 @@
+uniform float dlight_intensity_scale = 1.0;
 uniform vec3 scene_llc, scene_scale; // scene bounds (world space)
 uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
@@ -162,6 +163,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 		vec3 lnorm     = normal;
 		float n_dot_l  = dot(lnorm, light_dir);
 #endif // USE_BUMP_MAP_DL
+		intensity *= dlight_intensity_scale;
 		if (intensity < 0.001) continue; // usually faster
 
 #ifdef HAS_DLIGHT_SMAP
