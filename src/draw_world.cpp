@@ -14,7 +14,6 @@
 
 
 bool const DYNAMIC_SMOKE_SHADOWS = 1; // slower, but looks nice
-bool const MIN_PARTICLE_FILL     = 1;
 unsigned const MAX_CFILTERS      = 10;
 float const NDIV_SCALE           = 1.6;
 float const CLOUD_WIND_SPEED     = 0.00015;
@@ -1189,9 +1188,10 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 		}
 		get_indir_light(c, p); // could move outside of the parts loop if too slow
 	}
-	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
+	if (red_only) {c.G = c.B = 0.0;} // for special luminosity cloud texture rendering
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, tex_range_t(), (MIN_PARTICLE_FILL && !no_lighting)); // use quads for clouds
+	bool const min_fill(!no_lighting && dist_less_than(camera, p, 20.0*r));
+	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, tex_range_t(), min_fill); // use quads for clouds
 }
 
 
