@@ -1689,15 +1689,13 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		pos.z = min((camera_last_pos.z + float(C_STEP_HEIGHT*radius)), pos.z); // don't fall and don't rise too quickly
 		if (pos.z + radius > zbottom) {pos.z = max(pos.z, (mesh_z + radius));} // if not under the mesh
 	}
-	else {
-		if (point_outside_mesh((get_xpos(pos.x) - xoff), (get_ypos(pos.y) - yoff))) {
-			pos = camera_last_pos;
-			camera_change = 0;
-			jump_time     = 0;
-			return;
-		}
-		set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstate.zvel, CAMERA, CAMERA_ID, cflight, camera_on_snow); // status return value is unused?
+	else if (point_outside_mesh((get_xpos(pos.x) - xoff), (get_ypos(pos.y) - yoff))) {
+		pos = camera_last_pos;
+		camera_change = 0;
+		jump_time     = 0;
+		return;
 	}
+	set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstate.zvel, CAMERA, CAMERA_ID, cflight, camera_on_snow); // status return value is unused?
 	camera_on_snow = 0;
 	//if (display_mode & 0x0100) {create_footsteps(pos, radius, cview_dir, sstate.prev_foot_pos, sstate.step_num, sstate.foot_down, 1);}
 	
@@ -1927,7 +1925,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 					zmu   = max(zmu, zt);
 				}
 				else { // stuck against side of surface
-					if (jumping || pos.z > zb) { // head inside the object
+					if (!flight && (jumping || pos.z > zb)) { // head inside the object
 						if (is_player) {sstate->fall_counter = 0;}
 						jump_time = min(jump_time, (jumping ? int((JUMP_COOL - JUMP_TIME)*TICKS_PER_SECOND) : 1)); // end jump time / prevent starting a new jump
 						pos  = lpos; // reset to last known good position
@@ -1935,7 +1933,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 						return 3;
 					}
 					else { // fall down below zb - can recover
-						pos.z = zb - radius;
+						pos.z -= (z2 - zb);
 					}
 				}
 			}
@@ -1943,8 +1941,11 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		} // if coll
 	} // for k
 	bool falling(0);
-	
-	if (jumping) {
+
+	if (flight) {
+		// do nothing
+	}
+	else if (jumping) {
 		falling = 1; // if we're jumping, assume we're in free fall
 	}
 	else if (!any_coll || z2 < zfloor) {
@@ -1964,7 +1965,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			pos.z = zmu + radius; // on mesh or top surface of cobj
 		}
 	}
-	if ((is_camera && camera_change) || mesh_scale_change || on_snow) {
+	if ((is_camera && camera_change) || mesh_scale_change || on_snow || flight) {
 		zvel = 0.0;
 	}
 	else if ((pos.z - lpos.z) < -step) { // falling through the air
