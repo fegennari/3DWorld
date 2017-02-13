@@ -1667,6 +1667,7 @@ void model3d::build_cobj_tree(bool verbose) {
 
 bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
 
+	if (coll_tree.is_empty()) return 0;
 	if (transforms.empty()) {return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);}
 	bool coll(0);
 	point cur(p2);
