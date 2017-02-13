@@ -47,16 +47,31 @@ bool check_smoke_bounds(point const &pt) {
 }
 
 
+class smoke_grid_t {
+	vector<unsigned char> mask; // which x/y grid stacks contain smoke (acceleration structure)
+public:
+	void set_has_smoke(int x, int y, bool val) {
+		assert(!point_outside_mesh(x, y));
+		if (mask.empty()) {mask.resize(XY_MULT_SIZE, 0);} else {assert(mask.size() == XY_MULT_SIZE);}
+		mask[y*MESH_X_SIZE + x] = val;
+	}
+	bool get_has_smoke(int x, int y) const {
+		if (mask.empty() || point_outside_mesh(x, y)) return 0;
+		return (mask[y*MESH_X_SIZE + x] != 0);
+	}
+};
+
+smoke_grid_t smoke_grid;
+
+
 struct smoke_manager {
 	bool enabled, smoke_vis;
 	float tot_smoke;
 	cube_t bbox;
 
 	smoke_manager() {reset();}
-
-	inline bool is_smoke_visible(point const &pos) const {
-		return camera_pdu.sphere_visible_test(pos, HALF_DXY); // could use cube_visible()
-	}
+	inline bool is_smoke_visible(point const &pos) const {return camera_pdu.sphere_visible_test(pos, HALF_DXY);} // could use cube_visible()
+	
 	void reset() {
 		for (unsigned i = 0; i < 3; ++i) { // set backwards so that nothing intersects
 			bbox.d[i][0] =  SCENE_SIZE[i];
@@ -67,6 +82,7 @@ struct smoke_manager {
 		smoke_vis = 0;
 	}
 	void add_smoke(int x, int y, int z, float smoke_amt) {
+		if (smoke_amt == 0) return; // can't happen?
 		point const pos(get_xval(x), get_yval(y), get_zval(z));
 
 		if (is_smoke_visible(pos) && check_smoke_bounds(pos)) {
@@ -103,6 +119,7 @@ void add_smoke(point const &pos, float val) {
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return; // too slow
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
 	smoke_exists |= smoke_man.is_smoke_visible(pos);
+	smoke_grid.set_has_smoke(xpos, ypos, 1);
 }
 
 
@@ -119,6 +136,7 @@ void diffuse_smoke(int x, int y, int z, lmcell &adj, float pos_rate, float neg_r
 		delta *= ((delta < 0.0) ? neg_rate : pos_rate);
 		adjust_smoke_val(lmc.smoke, delta);
 		delta  = (lmc.smoke - cur_smoke); // actual change
+		if (lmc.smoke > 0.0) {smoke_grid.set_has_smoke(x, y, 1);}
 	}
 	else { // edge cell has infinite smoke capacity and zero total smoke
 		delta = 0.5*(pos_rate + neg_rate);
@@ -155,6 +173,8 @@ void distribute_smoke() { // called at most once per frame
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell *vldata(lmap_manager.get_column(x, y));
 			if (vldata == NULL) continue;
+			if (!smoke_grid.get_has_smoke(x, y)) continue;
+			bool any_z_has_smoke(0);
 			
 			for (int z = 0; z < MESH_SIZE[2]; ++z) {
 				lmcell &lmc(vldata[z]);
@@ -168,9 +188,11 @@ void distribute_smoke() { // called at most once per frame
 				diffuse_smoke(x, y+(dy ? -1 :  1), z, lmc, xy_rate, xy_rate, 1, !dy);
 				diffuse_smoke(x, y, (z - 1),  lmc, SMOKE_DIS_ZD, SMOKE_DIS_ZU, 2, 0);
 				diffuse_smoke(x, y, (z + 1),  lmc, SMOKE_DIS_ZU, SMOKE_DIS_ZD, 2, 1);
-			}
-		}
-	}
+				any_z_has_smoke = 1;
+			} // for z
+			if (!any_z_has_smoke) {smoke_grid.set_has_smoke(x, y, 0);} // mark this xy as not having smoke
+		} // for x
+	} // for y
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
 	//PRINT_TIME("Distribute Smoke");
 }
