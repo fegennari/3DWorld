@@ -733,6 +733,7 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 	//timer_t timer("Create Shadow Map Texture");
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	vector<unsigned char> shadow_data(4*stride*stride, 0);
+	vector<unsigned char> const &cur_smask(smask[has_sun ? LIGHT_SUN : LIGHT_MOON]);
 
 	for (unsigned y = 0; y < stride; ++y) { // Note: shadow texture is stored as {mesh_shadow, tree_shadow, ambient_occlusion}
 		for (unsigned x = 0; x < stride; ++x) {
@@ -749,7 +750,7 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 				bool const no_moon((smask[LIGHT_MOON][ix2] & SHADOWED_ALL) != 0);
 				shadow_val *= blend_light(light_factor, !no_sun, !no_moon);
 			}
-			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {shadow_val = 0;} // fully in shadow
+			else if (cur_smask[ix2] & SHADOWED_ALL) {shadow_val = 0;} // fully in shadow
 			shadow_data[ix_off+0] = shadow_val; // mesh shadow
 			shadow_data[ix_off+1] = (tree_map.empty() ? 255 : (unsigned char)(63.75 + 0.75*tree_map[ix].sh)); // 75% tree shadow: fully lit if not nearby trees
 		}
@@ -867,6 +868,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
+		//bool const same_dirt(params[0][1].dirt == params[0][0].dirt && params[1][0].dirt == params[0][0].dirt && params[1][1].dirt == params[0][0].dirt);
 
 		#pragma omp parallel for schedule(static,1) num_threads(2)
 		for (int y = 0; y < (int)tsize-DEBUG_TILE_BOUNDS; ++y) {
@@ -923,7 +925,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				weights[k1] += weight_scale*(1.0 - t);
 				unsigned const ix_val(y*tsize + x), off(4*ix_val);
 				float const xv(float(x)*xy_mult);
-				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv));
+				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv)); // slow
 
 				if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
 					weights[sand_tex_ix ] += (1.0 - dirt_scale)*weights[dirt_tex_ix];
@@ -956,7 +958,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					}
 				} // end grass
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
-					mesh_weight_data[off+i] = (weights[i] ? (unsigned char)(255.0*CLIP_TO_01(weights[i])) : 0);
+					mesh_weight_data[off+i] = ((weights[i] <= 0.0) ? 0 : ((weights[i] == 1.0) ? 255 : (unsigned char)(255.0*min(weights[i], 1.0f))));
 				}
 			} // for x
 		} // for y

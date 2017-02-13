@@ -1260,22 +1260,23 @@ colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 
 
 inline int get_bare_ls_tid(float zval) {
-
 	float const relh(relh_adj_tex + (zval - zmin)/(zmax - zmin));
 	return ((relh > clip_hd1) ? ROCK_TEX : DIRT_TEX); // rock or dirt
 }
 
-
 void update_lttex_ix(int &ix) { // note: assumes lttex_dirt
-
 	if ((water_is_lava || DISABLE_WATER == 2) && lttex_dirt[ix].id == SNOW_TEX) {--ix;}
 	if (vegetation == 0.0  && lttex_dirt[ix].id == GROUND_TEX) {++ix;}
 }
 
-
 void get_tids(float relh, int &k1, int &k2, float *t) {
 
-	for (k1 = 0; k1 < NTEX_DIRT-1 && relh >= h_dirt[k1]; ++k1) {} // find first texture with height greater than relh
+	// find first texture with height greater than relh; unrolled for efficiency
+	if      (relh < h_dirt[0]) {k1 = 0;}
+	else if (relh < h_dirt[1]) {k1 = 1;}
+	else if (relh < h_dirt[2]) {k1 = 2;}
+	else if (relh < h_dirt[3]) {k1 = 3;}
+	else                       {k1 = 4;}
 
 	if (k1 < NTEX_DIRT-1 && (h_dirt[k1] - relh) < TEXTURE_SMOOTH) {
 		if (t) {*t = 1.0 - (h_dirt[k1] - relh)/TEXTURE_SMOOTH;}
