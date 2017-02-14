@@ -272,11 +272,23 @@ void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, 
 	bool is_glass, bool rand_angle, int lifetime, float min_dist_scale, tex_range_t const &tr)
 {
 	static point last_pos(all_zeros);
-	if (dist_less_than(pos, last_pos, min_dist_scale*radius)) return; // skip duplicate/close locations
+	static unsigned last_element(0);
+	float const min_dist(min_dist_scale*radius);
+	
+	if (last_element < decals.size() && dist_less_than(pos, last_pos, 2.0*min_dist)) {
+		decal_obj &decal(decals[last_element]);
+
+		if (decal.color == color && decal.tid == tid && decal.cid == cid && (decal.pos, last_pos, 0.1*radius)) { // last decal is valid and mergeable
+			decal.radius   = min(pow((decal.radius*decal.radius*decal.radius + radius*radius*radius), 1.0f/3.0f), 4.0f*radius); // increase radius of last decal (linear volume increase)
+			decal.lifetime = (lifetime + decal.lifetime)/2; // average lifetime
+			return; // merged
+		}
+	}
+	if (dist_less_than(pos, last_pos, min_dist)) {return;} // skip duplicate/close locations
 	float const rot_angle(rand_angle ? rand_uniform(0.0, TWO_PI) : 0.0);
 	decal_obj decal;
 	decal.gen(pos, radius, rot_angle, orient, lifetime, tid, cid, color, is_glass, tr);
-	if (decal.is_on_cobj(cid)) {decals[decals.choose_element()] = decal; last_pos = pos;}
+	if (decal.is_on_cobj(cid)) {last_element = decals.choose_element(); decals[last_element] = decal; last_pos = pos;}
 }
 
 
