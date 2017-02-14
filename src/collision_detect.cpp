@@ -1426,6 +1426,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	if (animate2 && !player && obj.health <= 0.1) {obj.disable();}
 	vector3d v_old(zero_vector), v0(obj.velocity);
 	bool const static_top_coll(lcoll == 2 && cobj.truly_static());
+	point const decal_pos(obj.pos); // capture actual coll pos for use in decals before applying friction stick adjustment
 
 	if (is_moving || friction < STICK_THRESHOLD) {
 		v_old = obj.velocity;
@@ -1500,7 +1501,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	obj.verify_data();
 		
 	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
-		gen_explosion_decal((obj.pos - norm*o_radius), o_radius, norm, cobj, (cdir >> 1));
+		gen_explosion_decal((decal_pos - norm*o_radius), o_radius, norm, cobj, (cdir >> 1));
 		obj.disable();
 	}
 	if (!obj.disabled()) {
@@ -1523,8 +1524,8 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		if (blood_tid >= 0) {
 			float const sz(sz_scale*o_radius*rand_uniform(0.6, 1.4));
 			
-			if (decal_contained_in_cobj(cobj, obj.pos, norm, sz, (cdir >> 1))) {
-				gen_decal((obj.pos - norm*o_radius), sz, norm, blood_tid, index, color, 0, (blood_tid == BLOOD_SPLAT_TEX), 60*TICKS_PER_SECOND, 1.0, tex_range);
+			if (decal_contained_in_cobj(cobj, decal_pos, norm, sz, (cdir >> 1))) {
+				gen_decal((decal_pos - norm*o_radius), sz, norm, blood_tid, index, color, 0, (blood_tid == BLOOD_SPLAT_TEX), 60*TICKS_PER_SECOND, 1.0, tex_range);
 			}
 		}
 		deform_obj(obj, norm, v0);
@@ -1534,7 +1535,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	coll      |= lcoll; // if not an invalid collision
 	lcoll      = 0; // reset local collision
 	init_reset_pos(); // reset local state
-	if (friction >= STICK_THRESHOLD && (obj.flags & Z_STOPPED)) obj.pos.z = pos.z = z_old;
+	if (friction >= STICK_THRESHOLD && (obj.flags & Z_STOPPED)) {obj.pos.z = pos.z = z_old;}
 }
 
 
