@@ -2018,7 +2018,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 				if (is_laser) {
 					decal_tid = FLARE3_TEX; dcolor = BLACK;
-					decal_pos += signed_rand_vector(0.75*decal_radius*range); // break up the regularity of the laser beam, which has no firing error
+					decal_pos += cross_product(coll_norm, signed_rand_vector(0.75*decal_radius*range)); // break up the regularity of the laser beam, which has no firing error
 				}
 				else if (is_glass) {
 					decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
