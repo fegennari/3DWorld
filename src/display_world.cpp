@@ -199,10 +199,8 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 
 void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 
-	if (draw_uw) {
-		draw_bubbles();
-	}
-	else {
+	if (draw_uw) {draw_bubbles();}
+	else { // camera above water
 		draw_splashes();
 		draw_snow();
 		draw_trees(0, (reflection_pass != 0));
@@ -215,8 +213,8 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		if (TIMETEST) PRINT_TIME("P");
 		draw_teleporters();
 		
-		if (!underwater && !reflection_pass) { // don't draw precip in reflections
-			draw_local_precipitation();
+		if (!underwater && reflection_pass != 1) { // don't draw precip in planar reflections
+			draw_local_precipitation(reflection_pass != 0);
 			check_gl_error(23);
 			if (TIMETEST) PRINT_TIME("R");
 		}
