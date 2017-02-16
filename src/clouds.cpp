@@ -32,6 +32,7 @@ void cloud_manager_t::create_clouds() { // 3D cloud puffs
 	if (!empty()) return; // keep the old clouds
 	clear();
 	free_textures();
+	bcube.set_to_zeros();
 	srand(123);
 	float const xsz(X_SCENE_SIZE), ysz(Y_SCENE_SIZE);
 	unsigned const NCLOUDS = 10;
@@ -140,7 +141,8 @@ void cloud_manager_t::update_lighting() {
 
 cube_t cloud_manager_t::get_bcube() const {
 
-	cube_t bcube(get_scene_bounds()); // default is scene bounds in case of empty clouds (not yet inited)
+	if (empty()) {return get_scene_bounds();}
+	if (bcube.is_strictly_normalized()) return bcube; // already calculated
 
 	for (unsigned i = 0; i < size(); ++i) {
 		point const &pos((*this)[i].pos);
@@ -292,7 +294,7 @@ void cloud_manager_t::draw(bool no_update) {
 
 void draw_puffy_clouds(int order, bool no_update) {
 
-	if (get_camera_pos().z > cloud_manager.get_z_plane() != order) return;
+	if ((get_camera_pos().z > cloud_manager.get_z_plane()) != order) return;
 	if (atmosphere < 0.01) {cloud_manager.clear();}
 	else if (((display_mode & 0x40) != 0) ^ is_cloudy) {cloud_manager.draw(no_update);} // key 7
 }
