@@ -680,9 +680,13 @@ void draw_sun_flare(int ignore_cobj=-1, float intensity=1.0) {
 
 
 void set_multisample(bool enable) {
-
 	if (!enable_multisample) return;
 	if (enable) {glEnable(GL_MULTISAMPLE);} else {glDisable(GL_MULTISAMPLE);}
+}
+
+void draw_sky_and_clouds(bool camera_side, bool no_update=0) {
+	draw_sky(camera_side, no_update);
+	draw_puffy_clouds(camera_side, no_update);
 }
 
 
@@ -904,8 +908,7 @@ void display(void) {
 				draw_sun_moon_stars(0);
 				draw_earth();
 			}
-			draw_sky(0);
-			draw_puffy_clouds(0);
+			draw_sky_and_clouds(0); // Note: depth test is disabled, so must be drawn first
 			check_gl_error(5);
 			if (TIMETEST) PRINT_TIME("G2");
 
@@ -955,8 +958,7 @@ void display(void) {
 			update_blasts(); // not really an update, but needed for draw_blasts
 			draw_game_elements(timer1);
 			setup_basic_fog();
-			draw_sky(1);
-			draw_puffy_clouds(1);
+			draw_sky_and_clouds(1);
 			draw_sun_flare(camera_coll_id);
 			check_gl_error(10);
 			//draw_scene_bounds_and_light_frustum(get_light_pos()); // TESTING
@@ -1067,8 +1069,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 		draw_sun_moon_stars(1);
 		draw_earth();
 	}
-	draw_sky(0, 1);
-	draw_puffy_clouds(0, 1);
+	draw_sky_and_clouds(0, 1); // Note: depth test is disabled, so must be drawn first
 	
 	// draw the scene
 	draw_camera_weapon(0, reflection_pass);
@@ -1085,8 +1086,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_stuff(0, 0, reflection_pass);
 	draw_game_elements(0, reflection_pass);
 	setup_basic_fog();
-	draw_sky(1, 1);
-	draw_puffy_clouds(1);
+	draw_sky_and_clouds(1);
 	draw_sun_flare(cobj_id);
 
 	if (camera_mode == 1 && camera_surf_collide && begin_motion) { // player is on the ground and collision in enabled, draw the player smiley
