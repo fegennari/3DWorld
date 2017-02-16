@@ -266,7 +266,7 @@ void setup_tt_fog_pre(shader_t &s);
 void setup_tt_fog_post(shader_t &s);
 
 // function prototypes - precipitation
-void draw_local_precipitation();
+void draw_local_precipitation(bool no_update=0);
 
 // function prototypes - map_view
 void draw_overhead_map();

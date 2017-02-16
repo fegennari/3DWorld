@@ -118,7 +118,28 @@ class rain_manager_t : public precip_manager_t<2> {
 	deque<sphere_t> splashes;
 	quad_batch_draw splash_qbd;
 	line_tquad_draw_t drawer;
+	colorRGBA color;
 
+	void gen_draw_data() {
+		drawer.clear();
+		splash_qbd.clear();
+		get_avg_sky_color(color);
+		color.alpha = 0.2;
+		point const camera(get_camera_pos());
+		float const width = 0.002;
+		float const splash_size = 0.004; // 2x-8x rain line diameter
+
+		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs (0.07ms for default rain intensity)
+			if (dist_less_than(verts[i].v, camera, 0.5) && (camera_pdu.point_visible_test(verts[i].v) || camera_pdu.point_visible_test(verts[i+1].v))) {
+				drawer.add_line_as_tris(verts[i].v, verts[i+1].v, width, width, color, color);
+			}
+		}
+		// 0.08ms for default rain intensity
+		for (auto i = splashes.begin(); i != splashes.end(); ++i) { // normal always faces up;
+			float const sz(i->radius*splash_size), alpha(0.75*(4.0 - i->radius)/3.0); // size increases with radius/time; alpha decreases with radius/time
+			splash_qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(0.8, 0.9, 1.0, alpha), sz, sz, tex_range_t(), 0, &plus_z);
+		}
+	}
 public:
 	void update() {
 		//timer_t timer("Rain Update"); // 0.64ms for default rain intensity
@@ -135,46 +156,29 @@ public:
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
 		}
+		gen_draw_data();
 	}
-	void render() { // partially transparent
+	void render() const { // partially transparent
 		if (empty()) return;
 		//RESET_TIME;
-		colorRGBA color;
-		get_avg_sky_color(color);
-		color.alpha = 0.2;
 		assert(!(size() & 1));
 		enable_blend(); // split into point smooth and blend?
 		shader_t s;
 		s.begin_color_only_shader(color);
 		draw_verts(verts, GL_LINES); // 0.08ms for default rain intensity
-		point const camera(get_camera_pos());
-		float const width = 0.002;
-
-		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs (0.07ms for default rain intensity)
-			if (dist_less_than(verts[i].v, camera, 0.5) && (camera_pdu.point_visible_test(verts[i].v) || camera_pdu.point_visible_test(verts[i+1].v))) {
-				drawer.add_line_as_tris(verts[i].v, verts[i+1].v, width, width, color, color);
-			}
-		}
 		glDepthMask(GL_FALSE); // disable depth test
-		drawer.draw_and_clear(); // draw nearby raindrops as triangles (0.02ms for default rain intensity)
+		drawer.draw(); // draw nearby raindrops as triangles (0.02ms for default rain intensity)
 		s.end_shader();
 		disable_blend();
 		//PRINT_TIME("Rain Draw"); // similar to update time
 
 		if (!splashes.empty()) { // 0.08ms for default rain intensity
-			point const camera(get_camera_pos());
-			float const size = 0.004; // 2x-8x rain line diameter
 			ensure_filled_polygons();
 			enable_blend();
 			shader_t s;
 			setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
 			select_texture(FLARE2_TEX);
-			
-			for (auto i = splashes.begin(); i != splashes.end(); ++i) { // normal always faces up;
-				float const sz(i->radius*size), alpha(0.75*(4.0 - i->radius)/3.0); // size increases with radius/time; alpha decreases with radius/time
-				splash_qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(0.8, 0.9, 1.0, alpha), sz, sz, tex_range_t(), 0, &plus_z);
-			}
-			splash_qbd.draw_and_clear();
+			splash_qbd.draw();
 			s.end_shader();
 			disable_blend();
 			reset_fill_mode();
@@ -182,11 +186,19 @@ public:
 		}
 		glDepthMask(GL_TRUE);
 	}
+	void clear() {precip_manager_t<2>::clear(); splashes.clear(); drawer.clear(); splash_qbd.clear();}
 };
 
 
 class snow_manager_t : public precip_manager_t<1> {
 	point_sprite_drawer psd;
+
+	void gen_draw_data() {
+		psd.clear();
+		psd.reserve_pts(size());
+		colorRGBA const color(WHITE*((world_mode == WMODE_GROUND) ? 1.5 : 1.0)*brightness); // constant
+		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {psd.add_pt(vert_color(i->v, color));}
+	}
 public:
 	void update() {
 		//timer_t timer("Snow Update");
@@ -198,14 +210,13 @@ public:
 			check_pos(verts[i].v, verts[i].v);
 			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
 		}
+		gen_draw_data();
 	}
-	void render() {
+	void render() const {
 		if (empty()) return;
-		psd.reserve_pts(size());
-		colorRGBA const color(WHITE*((world_mode == WMODE_GROUND) ? 1.5 : 1.0)*brightness); // constant
-		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {psd.add_pt(vert_color(i->v, color));}
-		psd.draw_and_clear(WHITE_TEX, 1.0); // unblended pixels
+		psd.draw(WHITE_TEX, 1.0); // unblended pixels
 	}
+	void clear() {precip_manager_t<1>::clear(); psd.clear();}
 };
 
 
@@ -213,19 +224,19 @@ rain_manager_t rain_manager;
 snow_manager_t snow_manager;
 
 
-void draw_local_precipitation() {
+void draw_local_precipitation(bool no_update) {
 
 	if (!(precip_mode & 1)) return;
 
 	if (temperature <= W_FREEZE_POINT) { // draw snow
 		rain_manager.clear();
 		//if (world_mode != WMODE_INF_TERRAIN) return; // only drawn snow for tiled terrain?
-		snow_manager.update();
+		if (!no_update) {snow_manager.update();}
 		snow_manager.render();
 	}
 	else { // draw rain
 		snow_manager.clear();
-		rain_manager.update();
+		if (!no_update) {rain_manager.update();}
 		rain_manager.render();
 	}
 }
