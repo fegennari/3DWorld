@@ -479,6 +479,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		last_tid = tid;
 	}
 	last_group_id = group_id;
+	bool const draw_as_wet(is_wet() && cp.metalness < 0.5); // wetness doesn't affect metal material properties
 
 	if (in_group) {
 		if (start_group) { // start rendering a new group
@@ -498,9 +499,9 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		obj_draw_groups[group_id].add_draw_polygon(points, norm, npoints, cix);
 		return;
 	}
-	else if (int(is_wet()) != cdb.is_wet) { // check raining state when not in a group
+	else if (int(draw_as_wet) != cdb.is_wet) { // check raining state when not in a group
 		cdb.flush();
-		cdb.is_wet = is_wet();
+		cdb.is_wet = draw_as_wet;
 		shader.add_uniform_float("wet_effect",   (cdb.is_wet ? rain_wetness : 0.0)); // either it's wet or it's not
 		shader.add_uniform_float("reflectivity", (cdb.is_wet ? rain_wetness : 1.0)); // either it's partially wet or dry and reflective
 	}
