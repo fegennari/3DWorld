@@ -62,12 +62,11 @@ public:
 		point const camera(get_camera_pos());
 		return (pos.z < camera.z && dist_less_than(camera, pos, 5.0)); // skip splashes above the camera (assuming the surface points up)
 	}
-	void maybe_add_rain_splash(point const &pos, point const &bot_pos, float z_int, deque<sphere_t> *splashes, int x, int y, bool in_water) {
-		if (splashes == nullptr) return;
+	void maybe_add_rain_splash(point const &pos, point const &bot_pos, float z_int, deque<sphere_t> &splashes, int x, int y, bool in_water) {
 		float const t((z_int - pos.z)/(bot_pos.z - pos.z));
 		point const cpos(pos + (bot_pos - pos)*t);
 		if (!camera_pdu.point_visible_test(cpos)) return;
-		if (check_splash_dist(cpos)) {splashes->push_back(sphere_t(cpos, 1.0));}
+		if (check_splash_dist(cpos)) {splashes.push_back(sphere_t(cpos, 1.0));}
 		if (in_water && (rgen.rand() & 1)) {add_splash(cpos, x, y, 0.5, 0.01, 0, zero_vector, 0);} // 50% of the time; no droplets
 	}
 	bool is_bot_pos_valid(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
@@ -79,11 +78,11 @@ public:
 		if (point_outside_mesh(x, y))   return 1;
 			
 		if (!DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
-			if (rgen.rand() & 1) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], splashes, x, y, 1);} // 50% of the time
+			if (splashes != nullptr && (rgen.rand() & 1)) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], *splashes, x, y, 1);} // 50% of the time
 			return 0;
 		}
 		else if (pos.z < mesh_height[y][x]) { // mesh collision
-			maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], splashes, x, y, 0); // line_intersect_mesh(pos, bot_pos, cpos);
+			if (splashes != nullptr) {maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], *splashes, x, y, 0);} // line_intersect_mesh(pos, bot_pos, cpos);
 			return 0;
 		}
 		else if (bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
@@ -197,18 +196,20 @@ class snow_manager_t : public precip_manager_t<1> {
 		psd.clear();
 		psd.reserve_pts(size());
 		colorRGBA const color(WHITE*((world_mode == WMODE_GROUND) ? 1.5 : 1.0)*brightness); // constant
-		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {psd.add_pt(vert_color(i->v, color));}
+		color_wrapper const cw(color);
+		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {psd.add_pt(vert_color(i->v, cw));}
 	}
 public:
 	void update() {
 		//timer_t timer("Snow Update");
 		pre_update();
-		vector3d const v(get_velocity(-0.02));
 		float const vmult(0.1/verts.size());
+		vector3d const v(get_velocity(-0.02)), v_step(vmult*v);
+		vector3d v_add(v);
 
 		for (unsigned i = 0; i < verts.size(); ++i) {
 			check_pos(verts[i].v, verts[i].v);
-			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
+			if (animate2) {verts[i].v += v_add; v_add += v_step;}
 		}
 		gen_draw_data();
 	}
