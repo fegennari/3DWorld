@@ -175,7 +175,7 @@ public:
 			ensure_filled_polygons();
 			enable_blend();
 			shader_t s;
-			setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
+			setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 1, 0); // disable rain/snow effects on splashes
 			select_texture(FLARE2_TEX);
 			splash_qbd.draw();
 			s.end_shader();
