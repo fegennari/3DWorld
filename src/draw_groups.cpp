@@ -223,7 +223,7 @@ void setup_draw_groups_shader(shader_t &s, int solid, int reflection_pass=0) {
 	bool const force_tsl = (reflection_pass != 1); // two-sided lighting is required for some cobjs, but wrong for all cobjs when the reflection plane is enabled
 	bool const lt_atten(solid ? 0 : 1); // sphere light atten
 	float const burn_tex_scale = 0.5;
-	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, lt_atten, 1, 0, 0, 1, force_tsl, burn_tex_scale);
+	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, lt_atten, 1, 0, 0, 1, force_tsl, burn_tex_scale); // rain/snow effects are disabled due to burn mask
 	if (cobj_z_bias < 0.002)     {s.add_uniform_float("z_bias", 0.002);} // reset larger
 	if (indir_vert_offset > 0.1) {s.add_uniform_float("indir_vert_offset", 0.1);} // reset smaller
 	s.add_uniform_float("winding_normal_sign", 1.0);
@@ -465,7 +465,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 			int last_tid(-1);
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
-			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1); // TSL=1
+			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1); // TSL=1; allow rain/snow effects
 			ls.set_specular(0.75, 25.0);
 			static quad_batch_draw qbd;
 
@@ -769,7 +769,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		if (!draw_large || is_underwater(pos)) return; // don't draw
 		assert(!do_texture);
 		colorRGBA color2(color);
-		if (type == RAIN) color2.alpha *= 0.5; // rain is mostly transparent when small
+		if (type == RAIN) {color2.alpha *= 0.5;} // rain is mostly transparent when small
 		puddle_qbd.add_billboard(pos, (pos + plus_z), plus_x, color2, 5.0*radius, 5.0*radius);
 		return;
 	}
@@ -1156,7 +1156,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 	draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
 	fgPopMatrix();
 	shader.add_uniform_float("min_alpha", 0.01);
-	if (burn_val > -1.0) {shader.add_uniform_float("burn_offset", -1.0);} // reset
+	if (burn_val > -1.0) {shader.add_uniform_float("burn_offset", -2.0);} // reset
 }
 
 

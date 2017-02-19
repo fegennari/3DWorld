@@ -412,7 +412,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	}
 	if (use_burn_mask) {
 		s.add_uniform_float("burn_tex_scale", burn_tex_scale);
-		s.add_uniform_float("burn_offset", -1.0); // starts disabled
+		s.add_uniform_float("burn_offset", -2.0); // starts disabled
 		s.add_uniform_int("burn_mask", 10);
 		select_multitex(DISINT_TEX, 10); // PLASMA_TEX?
 	}

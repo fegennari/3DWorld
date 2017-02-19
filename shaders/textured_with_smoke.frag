@@ -427,7 +427,7 @@ void main()
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK
-	color = apply_black_body_burn_mask(color, tc);
+	if (burn_offset > -1.0) {color = apply_black_body_burn_mask(color, tc);}
 #endif
 
 #ifndef SMOKE_ENABLED
