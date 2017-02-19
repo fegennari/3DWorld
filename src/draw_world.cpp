@@ -175,7 +175,7 @@ void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 
 	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans)) return;
 	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1);
+	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 0, 0); // no rain/snow
 	draw_weapon_in_hand(-1, s, reflection_pass);
 	s.end_shader();
 }
@@ -1470,7 +1470,7 @@ void draw_cracks_and_decals() {
 	bool is_emissive(0);
 
 	if (!blood_tqd.empty() || !crack_qbd.empty()) { // use normal lighting shader
-		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
+		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1); // no rain/snow
 		lighting_shader.enable();
 		select_texture(WHITE_TEX);
 		blood_tqd.draw_tri_verts();
@@ -1486,7 +1486,7 @@ void draw_cracks_and_decals() {
 				// see http://cowboyprogramming.com/2007/01/05/parallax-mapped-bullet-holes/
 				bullet_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
 				bullet_shader.set_prefix("#define ENABLE_PARALLAX_MAP", 1); // FS
-				setup_smoke_shaders(bullet_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1); // bump maps enabled
+				setup_smoke_shaders(bullet_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0); // bump maps enabled; no rain/snow
 				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
 				bullet_shader.add_uniform_float("hole_depth", 0.2);
 				bullet_shader.add_uniform_int("depth_map", 9);
@@ -1496,11 +1496,11 @@ void draw_cracks_and_decals() {
 			bullet_shader.enable();
 		}
 		else if (is_black) { // use black shader
-			if (!black_shader.is_setup()) {setup_smoke_shaders(black_shader, 0.01, 0, 1, 0, 0, 0, 1);} // no lighting
+			if (!black_shader.is_setup()) {setup_smoke_shaders(black_shader, 0.01, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0);} // no lighting; no rain/snow
 			black_shader.enable();
 		}
 		else { // use normal lighting shader
-			if (!lighting_shader.is_setup()) {setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);}
+			if (!lighting_shader.is_setup()) {setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0);} // no rain/snow
 			lighting_shader.enable();
 			if (0 && !is_emissive) {lighting_shader.add_uniform_float("emissive_scale", 1.0); is_emissive = 1;} // make colors emissive
 		}

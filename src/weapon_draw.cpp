@@ -733,7 +733,7 @@ void draw_scheduled_weapons(bool clear_after_draw) {
 	
 	if (scheduled_weapons.empty()) return;
 	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1); // keep_alpha=1; enable smoke?
+	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0.0, 0.0, 0, 0, 0, 0); // keep_alpha=1; no rain/snow enable smoke?
 	for (auto i = scheduled_weapons.begin(); i != scheduled_weapons.end(); ++i) {draw_weapon_in_hand_real(*i, 1, s);}
 	s.end_shader();
 	if (clear_after_draw) {scheduled_weapons.clear();}
