@@ -39,6 +39,7 @@ fog_dist_scale 2.0 # for volume fog
 tree_coll_level 4
 default_ground_tex -1
 mesh_seed 2
+sunlight_intensity 2.0
 
 #snow_depth 0.05
 snow_random 0.0
