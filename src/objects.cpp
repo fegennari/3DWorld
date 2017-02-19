@@ -583,7 +583,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 }
 
 
-void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c, int eflags, vector3d const *const view_dir=NULL) {
+void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c, int eflags, vector3d const *const view_dir=nullptr) {
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d0((i+1)%3), d1((i+2)%3);
@@ -701,11 +701,11 @@ void get_extruded_polygon_triangles(vector<vert_wrap_t> &verts, float thick, poi
 }
 
 
-void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv, bool skip_spheres) const {
+void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv, bool skip_spheres, vector3d const *const view_dir) const {
 
 	switch (type) {
 	case COLL_CUBE:
-		get_shadow_cube_triangle_verts(verts, *this, cp.surfs);
+		get_shadow_cube_triangle_verts(verts, *this, cp.surfs, view_dir);
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
