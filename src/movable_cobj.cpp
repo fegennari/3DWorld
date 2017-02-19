@@ -697,13 +697,15 @@ bool coll_obj::is_point_supported(point const &pos) const {
 float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d const &delta, float step_thresh, float tolerance=0.0) {
 
 	assert(step_thresh > 0.0);
-	float valid_t(0.0);
+	float valid_t(0.0), prev_t(0.0);
 	unsigned num_iters(0);
+	coll_obj test_cobj(c1); // deep copy
+	test_cobj.cgroup_id = -1; // clear cgroup_id flag to avoid unnecessary updates
 
 	// since there is no cobj-cobj closest distance function, binary split the delta range until cobj and c no longer intersect
 	for (float t = 0.5, step = 0.25; step > step_thresh; step *= 0.5) { // initial guess is the midpoint
-		coll_obj test_cobj(c1); test_cobj.cgroup_id = -1; // deep copy, clear cgroup_id flag to avoid unnecessary updates
-		test_cobj.shift_by(t*delta);
+		test_cobj.shift_by((t - prev_t)*delta);
+		prev_t = t;
 		if (test_cobj.intersects_cobj(c2, tolerance)) {t -= step;} else {valid_t = t; t += step;}
 		if (++num_iters > 1000) break; // reached max iteration count (to avoid perf problems)
 	}
