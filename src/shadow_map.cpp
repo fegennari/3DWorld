@@ -171,7 +171,8 @@ public:
 	}
 
 	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv, point const &camera_pos) {
-		if (shadow_objs.empty()) return; // no dynamic objects
+		if (shadow_objs.empty() && movable_cids.empty()) return; // no dynamic objects
+		//timer_t timer("Add Draw Dynamic");
 		shader_t shader;
 		shader.set_vert_shader("vertex_xlate_scale");
 		shader.set_frag_shader("color_only");
@@ -180,7 +181,7 @@ public:
 		assert(shader_loc >= 0);
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
 		bool const is_camera(dist_less_than(pdu.pos, camera_pos, 0.25*CAMERA_RADIUS));
-		vector3d const light_dir(pdu.pos.get_norm()); // approximate as directional light; should be close enough for culling cube faces
+		vector3d const light_dir(-pdu.pos.get_norm()); // approximate as directional light; should be close enough for culling cube faces
 
 		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
