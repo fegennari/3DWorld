@@ -13,15 +13,13 @@ using namespace std;
 
 float const MENU_TEXT_SIZE = 1.0;
 
-void begin_ui_draw();
-void end_ui_draw();
-
 
 class keyboard_menu_t {
 
 protected:
 	string title;
 	unsigned num_controls, cur_control;
+	mutable text_drawer text_draw;
 
 	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos,
 		bool reversed=0, float scale=1.0, colorRGBA const &color=ALPHA0, int tid=-1) const
@@ -39,20 +37,16 @@ protected:
 		for (unsigned n = pos+1; n < ndiv; ++n) {oss << '-';}
 		oss << "  " << name << ": " << cur_value;
 		float const mag(0.01/scale), y_step(0.0014*scale), yval(1.0*mag - y_step*(num_controls - control_ix)), zval(-2.0*mag);
-		draw_text((selected ? ORANGE : YELLOW), -1.0*mag, yval, zval, oss.str().c_str(), MENU_TEXT_SIZE);
-		if (color.A > 0.0) {draw_text(color, -1.06*mag, yval, zval, "O", MENU_TEXT_SIZE);} // draw color indicator
+		text_draw.add_text((selected ? ORANGE : YELLOW), -1.0*mag, yval, zval, oss.str().c_str(), MENU_TEXT_SIZE);
+		if (color.A > 0.0) {text_draw.add_text(color, -1.06*mag, yval, zval, "O", MENU_TEXT_SIZE);} // draw color indicator
 
 		if (tid >= 0) {
 			float const sz(0.75*y_step);
-			glDepthMask(GL_FALSE);
-			begin_ui_draw();
-			shader_t s;
-			s.begin_simple_textured_shader(0.1, 0, 0, &WHITE);
+			text_draw.flush();
+			text_draw.set_color(WHITE);
 			select_texture(tid);
 			draw_one_tquad(-1.08*mag-sz, yval-0.5*sz, -1.08*mag+sz, yval+1.5*sz, zval);
-			s.end_shader();
-			glDepthMask(GL_TRUE);
-			end_ui_draw();
+			text_draw.bind_font_texture(); // restore font texture
 		}
 	}
 	virtual void draw_one_control(unsigned control_ix) const = 0;
@@ -67,8 +61,10 @@ public:
 	virtual void change_value(int delta) = 0;
 
 	void draw_controls() const {
-		if (!title.empty()) {draw_text(YELLOW, -0.01, 0.01, -0.02, title.c_str(), MENU_TEXT_SIZE);}
+		text_draw.begin_draw();
+		if (!title.empty()) {text_draw.add_text(YELLOW, -0.01, 0.01, -0.02, title.c_str(), MENU_TEXT_SIZE);}
 		for (unsigned i = 0; i < num_controls; ++i) {draw_one_control(i);}
+		text_draw.end_draw();
 	}
 };
 

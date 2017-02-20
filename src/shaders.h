@@ -264,6 +264,24 @@ template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 };
 
 
+class text_drawer {
+	shader_t s;
+	vector<vert_tc_t> verts;
+	colorRGBA cur_color;
+public:
+	text_drawer() : cur_color(ALPHA0) {}
+	void begin_draw(colorRGBA const *const color=nullptr);
+	void end_draw();
+	void bind_font_texture();
+	void set_color(colorRGBA const &color);
+	void flush();
+	void add_text(string const &text, point const &pos, float tsize, vector3d const &column_dir=plus_x, vector3d const &row_dir=plus_y, colorRGBA const *const color=nullptr);
+	void add_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize) {
+		add_text(text, point(x, y, z), 0.8*tsize, plus_x, plus_y, &color);
+	}
+};
+
+
 unsigned get_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
 void bind_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
 void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name);

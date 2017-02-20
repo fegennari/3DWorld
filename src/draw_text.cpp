@@ -119,38 +119,46 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 }
 
 
-void begin_ui_draw() {
+void text_drawer::begin_draw(colorRGBA const *const color) {
 	ensure_filled_polygons();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
+	s.begin_simple_textured_shader(0.1, 0, 0, color);
+	bind_font_texture();
 }
-void end_ui_draw() {
+void text_drawer::end_draw() {
+	flush();
+	s.end_shader();
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 	reset_fill_mode();
 }
-void begin_text_draw(shader_t &s, colorRGBA const *const color=nullptr) {
-	begin_ui_draw();
-	s.begin_simple_textured_shader(0.1, 0, 0, color);
+void text_drawer::bind_font_texture() {
 	font_texture_manager.bind_gl();
 }
-void end_text_draw(shader_t &s) {
-	s.end_shader();
-	end_ui_draw();
+void text_drawer::set_color(colorRGBA const &color) {
+	if (color == cur_color) return; // no change
+	flush();
+	cur_color = color;
+	s.set_cur_color(cur_color);
+}
+void text_drawer::flush() {
+	draw_and_clear_verts(verts, GL_TRIANGLES);
+}
+void text_drawer::add_text(string const &text, point const &pos, float tsize, vector3d const &column_dir, vector3d const &row_dir, colorRGBA const *const color) {
+	if (color != nullptr) {set_color(*color);}
+	gen_text_verts(verts, pos, text, tsize, column_dir, row_dir);
 }
 
 
 void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &text, float tsize) {
 
 	if (text.empty()) return; // error?
-	shader_t s;
-	begin_text_draw(s, &color);
-	vector<vert_tc_t> verts;
-	gen_text_verts(verts, pos, text, tsize, plus_x, plus_y);
-	draw_verts(verts, GL_TRIANGLES);
-	end_text_draw(s);
+	text_drawer td;
+	td.begin_draw(&color);
+	td.add_text(text, pos, tsize);
+	td.end_draw();
 }
-
 
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize) {
 	draw_bitmap_text(color, point(x, y, z), text, 0.8*tsize);
@@ -160,21 +168,11 @@ void draw_text(colorRGBA const &color, float x, float y, float z, char const *te
 void text_drawer_t::draw() const {
 
 	if (strs.empty()) return;
-	shader_t s;
-	begin_text_draw(s);
-	vector<vert_tc_t> verts;
 	vector3d const tdir(cross_product(get_vdir_all(), get_upv_all())); // screen space x
 	colorRGBA last_color(ALPHA0);
-
-	for (auto i = strs.begin(); i != strs.end(); ++i) {
-		if (i->color != last_color) {
-			draw_and_clear_verts(verts, GL_TRIANGLES);
-			s.set_cur_color(i->color);
-			last_color = i->color;
-		}
-		gen_text_verts(verts, i->pos, i->str, i->size, tdir, up_vector);
-	}
-	draw_and_clear_verts(verts, GL_TRIANGLES);
-	end_text_draw(s);
+	text_drawer td;
+	td.begin_draw();
+	for (auto i = strs.begin(); i != strs.end(); ++i) {td.add_text(i->str, i->pos, i->size, tdir, up_vector, &i->color);}
+	td.end_draw();
 }
 
