@@ -938,6 +938,19 @@ vector3d get_cobj_drop_delta(unsigned index) {
 			}
 			continue;
 		}
+		if (cobj.type == COLL_CUBE && c.type == COLL_CUBE) { // cube-cube case
+			cube_t overlap;
+			cobj.cube_intersection(c, overlap);
+			vector3d const overlap_sz(overlap.get_size());
+
+			if (min(overlap_sz.x, overlap_sz.y) < 0.05*overlap_sz.z) { // push rather than stack
+				int const dim(overlap_sz[1] < overlap_sz[0]);
+				bool const dir(cobj.get_cube_center()[dim] < c.get_cube_center()[dim]);
+				float const delta(overlap_sz[dim]);
+				if (delta*delta > delta_max.mag_sq()) {delta_max = zero_vector; delta_max[dim] = delta;}
+				continue;
+			}
+		}
 		float const dz(c.d[2][1] - cobj.d[2][0]);
 		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 
