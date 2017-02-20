@@ -136,7 +136,8 @@ float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
 
 unsigned const MAX_SHADER_LIGHTS = 8;
 
-unsigned const quad_to_tris_ixs[6] = {0,1,2, 0,2,3};
+unsigned const quad_to_tris_ixs [6] = {0,1,2, 0,2,3};
+unsigned const cube_dim_table[2][3] = {{1, 2, 0}, {2, 0, 1}};
 
 
 #define CLIP_TO_01(x)  max( 0.0f, min(1.0f, (x)))

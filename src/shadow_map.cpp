@@ -156,7 +156,7 @@ public:
 		draw_sphere_vbo_pre_bound((fixed_ndiv ? fixed_ndiv : get_smap_ndiv(radius, smap_sz)), 0);
 	}
 
-	void draw_shadow_cobj(coll_obj const &c, unsigned smap_sz, unsigned fixed_ndiv, int shader_loc, vector3d const *const light_dir=nullptr) { // handle spheres specially
+	void draw_shadow_cobj(coll_obj const &c, unsigned smap_sz, unsigned fixed_ndiv, int shader_loc, unsigned char eflags) { // handle spheres specially
 		if (c.type == COLL_TORUS) { // special case optimized for torus
 			bind_vbo(0); // unbind sphere VBO
 			unsigned const ndiv(get_smap_ndiv(c.radius, smap_sz));
@@ -167,7 +167,7 @@ public:
 		}
 		if (c.type == COLL_CAPSULE || c.type == COLL_SPHERE) {draw_shadow_sphere(c.points[0], c.radius, shader_loc, smap_sz, fixed_ndiv);}
 		if (c.type == COLL_CAPSULE) {draw_shadow_sphere(c.points[1], c.radius2, shader_loc, smap_sz, fixed_ndiv);}
-		if (c.type != COLL_SPHERE) {c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv), 1, light_dir);} // skip_spheres=1
+		if (c.type != COLL_SPHERE) {c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv), 1, eflags);} // skip_spheres=1
 	}
 
 	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv, point const &camera_pos) {
@@ -182,6 +182,8 @@ public:
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
 		bool const is_camera(dist_less_than(pdu.pos, camera_pos, 0.25*CAMERA_RADIUS));
 		vector3d const light_dir(-pdu.pos.get_norm()); // approximate as directional light; should be close enough for culling cube faces
+		unsigned char eflags(0);
+		UNROLL_3X(eflags |= EFLAGS[i_][light_dir[i_] > 0.0];);
 
 		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
@@ -193,10 +195,10 @@ public:
 				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));
 				
 				for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
-					draw_shadow_cobj(cdraw_groups.get_cobj(*j), smap_sz, fixed_ndiv, shader_loc, &light_dir);
+					draw_shadow_cobj(cdraw_groups.get_cobj(*j), smap_sz, fixed_ndiv, shader_loc, eflags);
 				}
 			}
-			else {draw_shadow_cobj(c, smap_sz, fixed_ndiv, shader_loc, &light_dir);}
+			else {draw_shadow_cobj(c, smap_sz, fixed_ndiv, shader_loc, eflags);}
 		}
 		for (auto i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
