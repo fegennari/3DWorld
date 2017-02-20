@@ -119,21 +119,24 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 }
 
 
-void begin_text_draw(shader_t &s, colorRGBA const *const color=nullptr) {
-
+void begin_ui_draw() {
 	ensure_filled_polygons();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
-	s.begin_simple_textured_shader(0.1, 0, 0, color);
-	font_texture_manager.bind_gl();
 }
-
-void end_text_draw(shader_t &s) {
-
-	s.end_shader();
+void end_ui_draw() {
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 	reset_fill_mode();
+}
+void begin_text_draw(shader_t &s, colorRGBA const *const color=nullptr) {
+	begin_ui_draw();
+	s.begin_simple_textured_shader(0.1, 0, 0, color);
+	font_texture_manager.bind_gl();
+}
+void end_text_draw(shader_t &s) {
+	s.end_shader();
+	end_ui_draw();
 }
 
 

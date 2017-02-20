@@ -7,10 +7,14 @@
 #include "heightmap.h" // for hmap_brush_t
 #include "voxels.h" // for voxel_brush_params_t
 #include "sphere_materials.h" // for sphere_mat_t
+#include "shaders.h"
 
 using namespace std;
 
 float const MENU_TEXT_SIZE = 1.0;
+
+void begin_ui_draw();
+void end_ui_draw();
 
 
 class keyboard_menu_t {
@@ -20,7 +24,7 @@ protected:
 	unsigned num_controls, cur_control;
 
 	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos,
-		bool reversed=0, float scale=1.0, colorRGBA const &color=ALPHA0) const
+		bool reversed=0, float scale=1.0, colorRGBA const &color=ALPHA0, int tid=-1) const
 	{
 		if (reversed) {control_ix = num_controls - control_ix - 1;}
 		//assert(slider_pos >= 0.0 && slider_pos <= 1.0);
@@ -30,13 +34,26 @@ protected:
 		unsigned const ndiv = 20;
 		unsigned const pos(round_fp((ndiv-1)*slider_pos));
 		ostringstream oss;
-		for (unsigned n = 0; n < pos; ++n) {oss << "-";}
-		oss << "+";
-		for (unsigned n = pos+1; n < ndiv; ++n) {oss << "-";}
+		for (unsigned n = 0; n < pos; ++n) {oss << '-';}
+		oss << '+';
+		for (unsigned n = pos+1; n < ndiv; ++n) {oss << '-';}
 		oss << "  " << name << ": " << cur_value;
-		float const mag(0.01/scale), yval(1.0*mag - 0.0014*(num_controls - control_ix)*scale), zval(-2.0*mag);
+		float const mag(0.01/scale), y_step(0.0014*scale), yval(1.0*mag - y_step*(num_controls - control_ix)), zval(-2.0*mag);
 		draw_text((selected ? ORANGE : YELLOW), -1.0*mag, yval, zval, oss.str().c_str(), MENU_TEXT_SIZE);
 		if (color.A > 0.0) {draw_text(color, -1.06*mag, yval, zval, "O", MENU_TEXT_SIZE);} // draw color indicator
+
+		if (tid >= 0) {
+			float const sz(0.75*y_step);
+			glDepthMask(GL_FALSE);
+			begin_ui_draw();
+			shader_t s;
+			s.begin_simple_textured_shader(0.1, 0, 0, &WHITE);
+			select_texture(tid);
+			draw_one_tquad(-1.08*mag-sz, yval-0.5*sz, -1.08*mag+sz, yval+1.5*sz, zval);
+			s.end_shader();
+			glDepthMask(GL_TRUE);
+			end_ui_draw();
+		}
 	}
 	virtual void draw_one_control(unsigned control_ix) const = 0;
 
@@ -578,10 +595,11 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		float spos(0.0);
 		sphere_mat_t const &mat(get_cur_sphere_mat());
 		colorRGBA color(ALPHA0);
+		int tid(-1);
 
 		switch (control_ix) {
 		case SM_MAT_NAME:     value << mat.get_name(); break; // spos stays at 0
-		case SM_TEXTURE:      value << mat.tid << " " << ((mat.tid < 0) ? "None" : textures[mat.tid].name); break; // spos stays at 0
+		case SM_TEXTURE:      value << mat.tid << " " << ((mat.tid < 0) ? "None" : textures[mat.tid].name); tid = mat.tid; break; // spos stays at 0
 		case SM_FDELAY:       value << sphere_mat_fire_delay; spos = sphere_mat_fire_delay; break; // 0.0 to 1.0 seconds
 		case SM_EMISS:        value << mat.emissive;     spos = mat.emissive;         break; // 0/1
 		case SM_REFLECT:      value << mat.reflective;   spos = mat.reflective;       break; // 0/1
@@ -605,7 +623,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_SPEC_B:       value << mat.spec_c.B;     spos = mat.spec_c.B;         color = mat.spec_c; break; // 0.0 to 1.0
 		default: assert(0);
 		}
-		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.75, color); // draw in reverse order at 80% scale
+		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.75, color, tid); // draw in reverse order at 80% scale
 	}
 	static void change_texture(int &tid, int &nm_tid, int delta) {
 		do {
