@@ -25,6 +25,8 @@ extern obj_group obj_groups[NUM_TOT_OBJS];
 
 bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from);
 
+bool coll_obj::is_moving() const {return (is_movable() && moving_cobjs.find(id) != moving_cobjs.end());}
+
 void mark_movable_cobj_smap_update() {
 	scene_smap_vbo_invalid |= 1; // mark for rebuild, but don't force full update
 }
@@ -738,8 +740,8 @@ bool intersects_any_cobj(coll_obj const &cobj, vector<unsigned> const &cobjs, fl
 }
 
 void register_moving_cobj(unsigned index) {
+	moving_cobjs.insert(index); // skip insert if last_coll was set?
 	coll_objects.get_cobj(index).last_coll = 8; // mark as moving/collided to prevent the physics system from immediately putting this cobj to sleep
-	moving_cobjs.insert(index);
 }
 
 void check_moving_cobj_int_with_dynamic_objs(unsigned index, vector3d const &delta) {

@@ -184,6 +184,7 @@ public:
 	bool is_big_occluder()const {return (is_occluder() && fixed && (type == COLL_POLYGON || volume > 0.001));}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
 	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
+	bool is_moving()      const;
 	bool is_indoors()     const {return ((cp.flags & COBJ_IS_INDOORS) != 0);}
 	bool was_a_cube()     const {return ((cp.flags & COBJ_WAS_CUBE) != 0);}
 	bool is_wet()         const {return (!is_indoors() && is_ground_wet());}

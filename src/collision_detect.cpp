@@ -55,7 +55,7 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	//if (c.type == COLL_CUBE && c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
 	point center(ipos + get_platform_delta());
 
-	if (c.is_movable() && moving_cobjs.find(cobj) != moving_cobjs.end()) {
+	if (c.is_moving()) {
 		vector3d const local_delta(c.get_center_of_mass() - cobj_cent_mass); // look at cobj LLC delta
 		center += local_delta;
 		if (delta) {*delta = local_delta;}
