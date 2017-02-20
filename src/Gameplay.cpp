@@ -401,7 +401,7 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 
 bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	if (type == DROPLET && get_blood_mix(position) > 0.5) blood_on_camera(1);
+	if (type == DROPLET && get_blood_mix(position) > 0.5) {blood_on_camera(1);}
 	
 	if (type == CAMERA || type == SMILEY || !camera_mode || !game_mode || spectate || (type != SMILEY && !damage_done(type, obj_index))) {
 		return 1;
@@ -1416,7 +1416,7 @@ void do_area_effect_damage(point const &pos, float effect_radius, float damage, 
 		float const dist_sq(p2p_dist_sq(camera_pos, pos));
 		dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
 	}
-	if (!spectate && camera_mode == 1 && dist_less_than(pos, camera_pos, radius)) { // test the player
+	if (!spectate && camera_mode == 1 && game_mode && dist_less_than(pos, camera_pos, radius)) { // test the player
 		if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), zero_vector, pos, damage, type)) {
 			if (type == FIRE && camera_health > 0.0 && ((rand()&63) == 0)) {gen_sound(SOUND_AGONY, pos);} // skip if player has shielding and self damage?
 		}
