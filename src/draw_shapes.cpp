@@ -145,14 +145,6 @@ void coll_obj::setup_cube_face_texgen(texgen_params_t &tp, unsigned tdim0, unsig
 	}
 }
 
-void emit_cube_side(vert_norm_texp &vnt, point const pts[4], cobj_draw_buffer &cdb) {
-
-	for (unsigned i = 0; i < 6; ++i) { // quads (2 triangles)
-		vnt.v = pts[quad_to_tris_ixs[i]];
-		cdb.add_vert(vnt); // Note: could use quad verts, but this increases draw calls and is actually slightly slower
-	}
-}
-
 void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_all_faces) const {
 
 	int const sides((int)cp.surfs);
@@ -206,7 +198,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 				p[d0 ] = ic.d[d0][1]; pts[dir ? 1 : 2] = p;
 				p[d1 ] = ic.d[d1][1]; pts[dir ? 2 : 1] = p;
 				p[d0 ] = ic.d[d0][0]; pts[dir ? 3 : 0] = p;
-				emit_cube_side(vnt, pts, cdb);
+				cdb.add_polygon<6>(vnt, pts);
 			}
 			for (unsigned e = 0; e < 2; ++e) { // 12 edges
 				vector3d n0(zero_vector);
@@ -248,7 +240,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 			vnt.n      = zero_vector;
 			vnt.n[dim] = (dir ? 1.0 : -1.0);
 			setup_cube_face_texgen(vnt, t0, t1, tscale);
-			emit_cube_side(vnt, pts, cdb);
+			cdb.add_polygon<6>(vnt, pts);
 		} // for i
 	}
 }
@@ -289,17 +281,21 @@ void coll_obj::get_polygon_tparams(int tid, vector3d const &normal, texgen_param
 }
 
 
+template<unsigned NUM> void cobj_draw_buffer::add_polygon(vert_norm_texp const &vnt, point const *const pts) {
+
+	unsigned const six(tri_verts.size());
+	tri_verts.resize(six+NUM, vnt); // push NUM more verts
+	for (unsigned i = 0; i < NUM; ++i) {tri_verts[six+i].v = pts[quad_to_tris_ixs[i]];}
+}
+
+
 void coll_obj::draw_polygon(int tid, point const *pts, int npts, vector3d const &normal, cobj_draw_buffer &cdb) const {
 
 	assert(npts == 3 || npts == 4);
 	vert_norm_texp vnt;
 	vnt.n = get_norm_camera_orient(normal, get_center(pts, npts));
 	get_polygon_tparams(tid, vnt.n, vnt);
-
-	for (int i = 0; i < ((npts == 3) ? 3 : 6); ++i) { // 1-2 triangles
-		vnt.v = pts[quad_to_tris_ixs[i]];
-		cdb.add_vert(vnt);
-	}
+	if (npts == 3) {cdb.add_polygon<3>(vnt, pts);} else {cdb.add_polygon<6>(vnt, pts);}
 }
 
 
@@ -437,10 +433,8 @@ void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 		vnt.n = (i ? v12 : -v12);
 
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
-			unsigned const sn((s+1)%ndiv);
-			vnt.v = points[i];        cdb.add_vert(vnt); // center point
-			vnt.v = vpn.p[(s <<1)+i]; cdb.add_vert(vnt);
-			vnt.v = vpn.p[(sn<<1)+i]; cdb.add_vert(vnt);
+			point const pts[3] = {points[i], vpn.p[(s<<1)+i], vpn.p[(((s+1)%ndiv)<<1)+i]};
+			cdb.add_polygon<3>(vnt, pts); // one triangle
 		}
 	}
 }
