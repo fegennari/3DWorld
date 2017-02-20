@@ -19,7 +19,9 @@ protected:
 	string title;
 	unsigned num_controls, cur_control;
 
-	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos, bool reversed=0, float scale=1.0) const {
+	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos,
+		bool reversed=0, float scale=1.0, colorRGBA const &color=ALPHA0) const
+	{
 		if (reversed) {control_ix = num_controls - control_ix - 1;}
 		//assert(slider_pos >= 0.0 && slider_pos <= 1.0);
 		slider_pos = CLIP_TO_01(slider_pos);
@@ -32,7 +34,9 @@ protected:
 		oss << "+";
 		for (unsigned n = pos+1; n < ndiv; ++n) {oss << "-";}
 		oss << "  " << name << ": " << cur_value;
-		draw_text((selected ? ORANGE : YELLOW), -0.01, (0.01/scale - 0.0014*(num_controls - control_ix)*scale), -0.02/scale, oss.str().c_str(), MENU_TEXT_SIZE);
+		float const mag(0.01/scale), yval(1.0*mag - 0.0014*(num_controls - control_ix)*scale), zval(-2.0*mag);
+		draw_text((selected ? ORANGE : YELLOW), -1.0*mag, yval, zval, oss.str().c_str(), MENU_TEXT_SIZE);
+		if (color.A > 0.0) {draw_text(color, -1.06*mag, yval, zval, "O", MENU_TEXT_SIZE);} // draw color indicator
 	}
 	virtual void draw_one_control(unsigned control_ix) const = 0;
 
@@ -220,6 +224,7 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 		value.precision(1);
 		value << fixed; // fixed precision in units of 0.1
 		float spos(0.0);
+		colorRGBA color(ALPHA0);
 
 		switch (control_ix) {
 		case TREE_COLOR_VAR:
@@ -243,19 +248,21 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 		case LEAF_RED_COMP:
 		case LEAF_GREEN_COMP:
 		case LEAF_BLUE_COMP:
-			spos = leaf_base_color[control_ix-LEAF_RED_COMP];
+			spos  = leaf_base_color[control_ix-LEAF_RED_COMP];
 			value << spos;
-			spos = 0.5*(spos + 1.0); // center around 0.0
+			spos  = 0.5*(spos + 1.0); // center around 0.0
+			color = (leaf_base_color + WHITE)*0.5;
 			break;
 		case SUN_RED:
 		case SUN_GREEN:
 		case SUN_BLUE:
-			spos = sunlight_color[control_ix-SUN_RED];
+			spos  = sunlight_color[control_ix-SUN_RED];
 			value << spos;
+			color = sunlight_color;
 			break;
 		default: assert(0);
 		}
-		draw_one_control_text(control_ix, leaf_ctr_names[control_ix], value.str(), spos);
+		draw_one_control_text(control_ix, leaf_ctr_names[control_ix], value.str(), spos, 0, 1.0, color);
 	}
 
 public:
@@ -570,6 +577,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		value << fixed; // fixed precision in units of 0.01
 		float spos(0.0);
 		sphere_mat_t const &mat(get_cur_sphere_mat());
+		colorRGBA color(ALPHA0);
 
 		switch (control_ix) {
 		case SM_MAT_NAME:     value << mat.get_name(); break; // spos stays at 0
@@ -589,15 +597,15 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_LIGHT_ATTEN:  value << mat.light_atten;  spos = mat.light_atten/25.0; break; // 0.0 to 25.0
 		case SM_LIGHT_RADIUS: value << mat.light_radius; spos = mat.light_radius/2.0; break; // 0.0 to 2.5
 		case SM_LIGHT_SHADOW: value << mat.shadows;      spos = mat.shadows;          break; // 0/1
-		case SM_DIFF_R:       value << mat.diff_c.R;     spos = mat.diff_c.R;         break; // 0.0 to 1.0
-		case SM_DIFF_G:       value << mat.diff_c.G;     spos = mat.diff_c.G;         break; // 0.0 to 1.0
-		case SM_DIFF_B:       value << mat.diff_c.B;     spos = mat.diff_c.B;         break; // 0.0 to 1.0
-		case SM_SPEC_R:       value << mat.spec_c.R;     spos = mat.spec_c.R;         break; // 0.0 to 1.0
-		case SM_SPEC_G:       value << mat.spec_c.G;     spos = mat.spec_c.G;         break; // 0.0 to 1.0
-		case SM_SPEC_B:       value << mat.spec_c.B;     spos = mat.spec_c.B;         break; // 0.0 to 1.0
+		case SM_DIFF_R:       value << mat.diff_c.R;     spos = mat.diff_c.R;         color = mat.diff_c; break; // 0.0 to 1.0
+		case SM_DIFF_G:       value << mat.diff_c.G;     spos = mat.diff_c.G;         color = mat.diff_c; break; // 0.0 to 1.0
+		case SM_DIFF_B:       value << mat.diff_c.B;     spos = mat.diff_c.B;         color = mat.diff_c; break; // 0.0 to 1.0
+		case SM_SPEC_R:       value << mat.spec_c.R;     spos = mat.spec_c.R;         color = mat.spec_c; break; // 0.0 to 1.0
+		case SM_SPEC_G:       value << mat.spec_c.G;     spos = mat.spec_c.G;         color = mat.spec_c; break; // 0.0 to 1.0
+		case SM_SPEC_B:       value << mat.spec_c.B;     spos = mat.spec_c.B;         color = mat.spec_c; break; // 0.0 to 1.0
 		default: assert(0);
 		}
-		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.75); // draw in reverse order at 80% scale
+		draw_one_control_text(control_ix, sphere_mode_names[control_ix], value.str(), spos, 1, 0.75, color); // draw in reverse order at 80% scale
 	}
 	static void change_texture(int &tid, int &nm_tid, int delta) {
 		do {
