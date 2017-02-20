@@ -300,12 +300,11 @@ bool cube_t::cube_merge(cube_t const &cube) { // simplified version of csg_cube:
 void cube_t::get_points(point pts[8]) const {
 
 	unsigned i[3];
+	point *ptr(pts);
 
 	for (i[0] = 0; i[0] < 2; ++i[0]) {
 		for (i[1] = 0; i[1] < 2; ++i[1]) {
-			for (i[2] = 0; i[2] < 2; ++i[2]) {
-				UNROLL_3X(pts[(((i[0]<<1)+i[1])<<1)+i[2]][i_] = d[i_][i[i_]];)
-			}
+			for (i[2] = 0; i[2] < 2; ++i[2], ++ptr) {UNROLL_3X((*ptr)[i_] = d[i_][i[i_]];)}
 		}
 	}
 }
