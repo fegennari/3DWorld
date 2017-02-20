@@ -208,7 +208,6 @@ public:
 	int get_tid()         const {return ((cp.tid >= 0) ? cp.tid : WHITE_TEX);}
 	point get_center_pt() const;
 	point get_center_of_mass(bool ignore_group=0) const;
-	float get_max_dim()   const;
 	float get_light_transmit(point v1, point v2) const;
 	float get_mass()      const {return volume*cp.density;}
 	float get_group_mass()const;

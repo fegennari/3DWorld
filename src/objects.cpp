@@ -816,13 +816,6 @@ point coll_obj::get_center_pt() const {
 	return all_zeros; // never gets here
 }
 
-float coll_obj::get_max_dim() const {
-
-	float md(0.0);
-	for (unsigned i = 0; i < 3; ++i) {md = max(md, fabs(d[i][1] - d[i][0]));}
-	return md;
-}
-
 float coll_obj::get_light_transmit(point v1, point v2) const {
 
 	if (type != COLL_CUBE)        return 1.0; // only cubes are supported due to clipping issues
