@@ -722,7 +722,7 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 		coll_obj const &c(coll_objects.get_cobj(*i));
 		// moving object resting (stacked) on cobj, ignore it
 		if (cobj.has_flat_top_bot() && c.has_flat_top_bot() && c.is_movable() && c.get_cube_center().z > cobj.d[2][1]) continue;
-		if (cobj.intersects_cobj(c, tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck)
+		if (cobj.intersects_cobj(c, 1.5*tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck) (larger tolerance to allow for slight movement)
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
 		if (valid_t < TOLERANCE) return 0; // can't move (avoid div-by-zero and negative t)
 		step_thresh /= valid_t; // adjust thresh to avoid tiny steps for large number of cobjs
@@ -903,7 +903,8 @@ vector3d get_cobj_drop_delta(unsigned index) {
 
 	// Note: non-const because cobj.v_fall is updated - should we pass in/return v_fall and do that update elsewhere?
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
+	float const tolerance(2.0E-6); // Note: 2x larger tolerance, to exclude cobjs that are touching based on adjustment from check_push_cobj()
+	float const cobj_zmin(min(czmin, zbottom));
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
 	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]), prev_v_fall(cobj.v_fall), cur_v_fall(prev_v_fall + accel);
 	cobj.v_fall = 0.0; // assume the cobj stops falling; compute the correct v_fall if we reach the end without returning
