@@ -1146,10 +1146,7 @@ void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point con
 	//RESET_TIME;
 	calc_colliders();
 	upos_point_type const opn(orbital_plane_normal);
-
-	for (iterator i = begin(); i != end(); ++i) {
-		i->apply_belt_physics(pos, opn, colliders);
-	}
+	for (iterator i = begin(); i != end(); ++i) {i->apply_belt_physics(pos, opn, colliders);}
 	calc_shadowers();
 	//PRINT_TIME("Physics"); // < 1ms
 	// no collision detection between asteroids as it's rare and too slow
@@ -1443,7 +1440,8 @@ void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_typ
 	// adjust velocity so asteroids revolve around the sun
 	// Note: slightly off for asteroids not in the plane, should be cross_product(dir, op_normal).get_norm() but that's slower
 	velocity = rev_ang0*cross_product(dir, op_normal);
-	pos      = af_pos + orbital_dist*(pos + fticks*velocity - af_pos).get_norm(); // renormalize for constant distance
+	upos_point_type const orbit_dir(dir + fticks*velocity); // adjust for next frame pos
+	pos      = af_pos + orbit_dir*(orbital_dist/orbit_dir.mag()); // renormalize for constant distance
 
 	for (vector<sphere_t>::const_iterator i = colliders.begin(); i != colliders.end(); ++i) {
 		if (dist_less_than(pos, i->pos, (radius + i->radius))) {
