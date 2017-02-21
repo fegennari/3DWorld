@@ -169,7 +169,10 @@ void add_rotated_textured_triangle(point const &pos, vector3d const &o, float ra
 
 void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<vert_norm_color> &verts, colorRGBA const &color) {
 
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.emplace_back(points[quad_to_tris_ixs[i]], normal, color);} // 1-2 triangles
+	vert_norm_color vnc(all_zeros, normal, color);
+	unsigned const start(verts.size()), num((npoints == 3) ? 3 : 6);
+	verts.resize(start+num, vnc);
+	for (int i = 0; i < num; ++i) {verts[start+i].v = points[quad_to_tris_ixs[i]];} // 1-2 triangles
 }
 
 void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], point const *points,
