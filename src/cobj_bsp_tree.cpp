@@ -273,7 +273,7 @@ void cobj_tree_tquads_t::add_cobjs(coll_obj_group const &cobjs, bool verbose) {
 }
 
 
-void cobj_tree_tquads_t::add_polygons(vector<polygon_t> const &polygons, bool verbose) {
+void cobj_tree_tquads_t::add_polygons(vector<polygon_t> const &polygons, bool verbose) { // unused
 
 	RESET_TIME;
 	clear();
@@ -746,7 +746,7 @@ cobj_bvh_tree cobj_tree_static (&coll_objects, 1, 0, 0, 0, 0); // does not inclu
 cobj_bvh_tree cobj_tree_dynamic(&coll_objects, 0, 1, 0, 0, 0);
 cobj_bvh_tree cobj_tree_occlude(&coll_objects, 1, 0, 1, 0, 0);
 cobj_bvh_tree cobj_tree_static_moving(&coll_objects, 1, 0, 0, 0, 0);
-cobj_tree_tquads_t cobj_tree_triangles;
+//cobj_tree_tquads_t cobj_tree_triangles;
 
 
 cobj_bvh_tree &get_tree(bool dynamic) {
