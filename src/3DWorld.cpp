@@ -1152,7 +1152,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case '0': // toggle universe stencil shadows / toggle spraypaint mode / toggle particles / toggle TT tree leaf shadows
 		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;}
 		else if (world_mode == WMODE_GROUND) {
-			if (begin_motion) {toggle_sphere_mode();} else {toggle_spraypaint_mode();}
+			if (begin_motion || show_scores) {toggle_sphere_mode();} else {toggle_spraypaint_mode();}
 		}
 		else {display_mode ^= 0x0200;}
 		break;
