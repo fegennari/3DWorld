@@ -349,7 +349,7 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 // enable_reflect: 0 = none, 1 = planar, 2 = cube map
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
-	bool use_depth_trans, int enable_reflect, int is_outside, bool enable_rain_snow)
+	bool use_depth_trans, int enable_reflect, int is_outside, bool enable_rain_snow, bool is_cobj)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
@@ -363,7 +363,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
-	if (enable_reflect == 2 && enable_cube_map_bump_maps && use_bmap) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
+	if (enable_reflect == 2 && use_bmap && (enable_cube_map_bump_maps || is_cobj)) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0, use_wet_mask);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -534,7 +534,7 @@ coll_obj const &get_draw_cobj(unsigned index) {
 }
 
 void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
-	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
+	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections, 0, 1, 1);
 }
 
 void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id, shader_t &s, cobj_draw_buffer &cdb,
