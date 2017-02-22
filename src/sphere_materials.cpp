@@ -148,7 +148,7 @@ public:
 					cerr << "Error: Too many materials in sphere materials file '" << fn << "': max is " << MAX_SPHERE_MATERIALS << " but saw " << sphere_materials.size() << endl;
 					return 0;
 				}
-				if (cur_mat.tid >= 0 && cur_mat.nm_tid >= 0) { // bind normal map to texture do that material editor can track their relationship
+				if (cur_mat.tid >= 0 && cur_mat.nm_tid >= 0) { // bind normal map to texture so that material editor can track their relationship
 					assert(cur_mat.tid < (int)textures.size() && cur_mat.nm_tid < (int)textures.size());
 					textures[cur_mat.tid].maybe_assign_normal_map_tid(cur_mat.nm_tid);
 				}
@@ -187,6 +187,7 @@ public:
 };
 
 bool read_sphere_materials_file(string const &fn) {
+	if (fn.empty()) return 1;
 	sphere_materials.clear();
 	return material_file_parser_t(fn).read();
 }

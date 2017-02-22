@@ -65,6 +65,17 @@ density 2.6
 alpha 0.1
 refract_ix 1.52
 add_material Glass
+
+texture stucco.jpg
+normal_map normal_maps/stucco_NRM.jpg
+light_atten 20.0
+diffuse_color 0.7 0.9 1.0
+refract_ix 1.33
+add_material Ice
+diffuse_color 1.0 1.0 1.0
+light_atten 0.0
+texture none
+normal_map none
 refract_ix 1.0
 alpha 1.0
 
