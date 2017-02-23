@@ -580,11 +580,11 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 
 	for (int v = MESH_SIZE[2]-1; v >= 0; --v) { // top to bottom
 		float zb(czmin0 + v*zstep), zt(zb + zstep); // cell Z bounds
-				
+		
 		if (zt < mesh_height[i][j]) { // under mesh
 			UNROLL_3X(vldata[v].pflow[i_] = 0;) // all zeros
 		}
-		else if (!proc_cobjs) {
+		else if (!proc_cobjs /*|| ncv2 == 0*/) { // ignore cobjs or no cobjs
 			UNROLL_3X(vldata[v].pflow[i_] = 255;) // all ones
 		}
 		else { // above mesh case
