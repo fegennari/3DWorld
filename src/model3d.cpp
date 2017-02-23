@@ -22,7 +22,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
-extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps;
+extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, no_subdiv_model;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
@@ -189,7 +189,7 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 	point const &v0(at(ixs.front()).v);
 	cube_t bc(v0, v0);
 	
-	for (vector<unsigned>::const_iterator i = ixs.begin()+1; i != ixs.end(); ++i) {
+	for (vector<unsigned>::const_iterator i = ixs.begin()+1; i != ixs.end(); ++i) { // slow due to cache misses (indices are not in order)
 		bc.union_with_pt(at(*i).v); // update bounding cube
 	}
 	if (num > BLOCK_SIZE) { // subdiv case
@@ -201,8 +201,8 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 			for (unsigned i = 0; i < 2; ++i) {bins[i].reserve(num/2);}
 
 			for (unsigned i = 0; i < num; i += npts) {
-				bool const bix(at(ixs[i]).v[dim] > sval); // use the first point to determine the bin
-				for (unsigned j = i; j < i+npts; ++j) {bins[bix].push_back(ixs[j]);}
+				vector<unsigned> &dest(bins[(at(ixs[i]).v[dim] > sval)]); // use the first point to determine the bin
+				for (unsigned j = i; j < i+npts; ++j) {dest.push_back(ixs[j]);}
 			}
 			if (bins[0].empty() || bins[1].empty()) {skip_dims |= (1 << dim);}
 
@@ -249,7 +249,8 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 	assert((num_verts() % npts) == 0); // triangles or quads
 	assert(blocks.empty());
 
-	if (num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
+	if (!no_subdiv_model && num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
+		//timer_t timer("Subdivide Model");
 		vector<unsigned> ixs;
 		ixs.swap(indices);
 		subdiv_recur(ixs, npts, 0);
