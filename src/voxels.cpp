@@ -712,32 +712,29 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool postproc_brush
 }
 
 
+#define FLOOD_FILL_INNER(pos, min_range, max_range, step) \
+	if (pos >= min_range + 1) { \
+		unsigned const ix(cur - step); \
+		if (outside[ix] == fill_val) {work.push_back(ix); outside[ix] |= bit_mask;} \
+	} \
+	if (pos + 1 < max_range) { \
+		unsigned const ix(cur + step); \
+		if (outside[ix] == fill_val) {work.push_back(ix); outside[ix] |= bit_mask;} \
+	}
+
 void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask) {
 
-	unsigned const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
-	unsigned const step[3] = {nz, nx*nz, 1};
+	unsigned const nxnz(nx*nz);
 
 	while (!work.empty()) {
 		unsigned const cur(work.back());
 		work.pop_back();
 		assert(cur < outside.size());
 		assert(outside[cur] & bit_mask);
-		unsigned const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
-		unsigned const pos[3] = {x, y, z};
-
-		for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				if (dir) {if (pos[dim] + 1 >= max_range[dim]) continue;}
-				else     {if (pos[dim] < min_range[dim] + 1 ) continue;}
-				unsigned const ix(dir ? cur+step[dim] : cur-step[dim]);
-				//assert(ix < outside.size());
-						
-				if (outside[ix] == fill_val) {
-					work.push_back(ix);
-					outside[ix] |= bit_mask; // flag
-				}
-			}
-		}
+		unsigned const y(cur/nxnz), cur_xz(cur - y*nxnz), x(cur_xz/nz), z(cur_xz - x*nz);
+		FLOOD_FILL_INNER(x, x1, x2, nz);
+		FLOOD_FILL_INNER(y, y1, y2, nxnz);
+		FLOOD_FILL_INNER(z, 0,  nz, 1);
 	} // while
 }
 
@@ -747,6 +744,7 @@ void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsi
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 	vector<unsigned> *xy_updated, vector<pt_ix_t> *updated_pts, bool mark_only)
 {
+	//timer_t timer("Remove Unconnected");
 	assert(!outside.empty());
 	vector<unsigned> &work(temp_work); // stack of voxels to process
 	assert(work.empty());
@@ -764,8 +762,9 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	else { // add voxels along the mesh surface
 		for (unsigned y = y1; y < y2; ++y) {
 			for (unsigned x = x1; x < x2; ++x) {
-				for (unsigned z = 0; z < nz; ++z) {
-					unsigned const ix(outside.get_ix(x, y, z));
+				unsigned ix(outside.get_ix(x, y, 0));
+
+				for (unsigned z = 0; z < nz; ++z, ++ix) {
 					if (outside[ix] != UNDER_MESH_BIT) continue; // outside or above mesh
 					work.push_back(ix); // inside, anchored to the mesh
 					outside[ix] |= ANCHORED_BIT; // mark as anchored
