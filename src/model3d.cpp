@@ -182,15 +182,19 @@ template<typename T> void vntc_vect_t<T>::calc_bounding_volumes() {
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims) {
+template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims, cube_t *bcube_in) {
 
 	unsigned const num(ixs.size());
 	assert(num > 0 && (num % npts) == 0);
-	point const &v0(at(ixs.front()).v);
-	cube_t bc(v0, v0);
+	cube_t bc;
 	
-	for (vector<unsigned>::const_iterator i = ixs.begin()+1; i != ixs.end(); ++i) { // slow due to cache misses (indices are not in order)
-		bc.union_with_pt(at(*i).v); // update bounding cube
+	if (bcube_in != nullptr) {bc = *bcube_in;} // use cached bcube
+	else { // compute bcube
+		bc.set_from_point(at(ixs.front()).v);
+
+		for (vector<unsigned>::const_iterator i = ixs.begin()+1; i != ixs.end(); ++i) { // slow due to cache misses (indices are not in order)
+			bc.union_with_pt(at(*i).v); // update bounding cube
+		}
 	}
 	if (num > BLOCK_SIZE) { // subdiv case
 		float max_sz(0), sval(0);
@@ -198,7 +202,7 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 
 		if (max_sz > 0) { // can split
 			vector<unsigned> bins[2];
-			for (unsigned i = 0; i < 2; ++i) {bins[i].reserve(num/2);}
+			for (unsigned i = 0; i < 2; ++i) {bins[i].reserve(3*num/5);} // reserve to 60%
 
 			for (unsigned i = 0; i < num; i += npts) {
 				vector<unsigned> &dest(bins[(at(ixs[i]).v[dim] > sval)]); // use the first point to determine the bin
@@ -250,10 +254,11 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 	assert(blocks.empty());
 
 	if (!no_subdiv_model && num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
+		ensure_bounding_volumes();
 		//timer_t timer("Subdivide Model");
 		vector<unsigned> ixs;
 		ixs.swap(indices);
-		subdiv_recur(ixs, npts, 0);
+		subdiv_recur(ixs, npts, 0, &bcube);
 	}
 }
 
@@ -439,10 +444,8 @@ template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned np
 
 
 template<typename T> void vntc_vect_t<T>::write(ostream &out) const {
-
 	write_vector(out, *this);
 }
-
 
 template<typename T> void vntc_vect_t<T>::read(istream &in) {
 
@@ -461,7 +464,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (empty()) return;
 	assert(npts == 3 || npts == 4);
 	finalize(npts);
-	if (bsphere.radius == 0.0) {calc_bounding_volumes();}
+	ensure_bounding_volumes();
 	//if (is_shadow_pass && vbo == 0 && world_mode == WMODE_GROUND) return; // don't create the vbo on the shadow pass (voxel terrain problems - works now?)
 
 	if (no_vfc) {

@@ -220,12 +220,13 @@ protected:
 public:
 	unsigned obj_id;
 
-	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), obj_id(obj_id_) {}
+	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), obj_id(obj_id_) {bcube.set_to_zeros();}
 	void render(shader_t &shader, bool is_shadow_pass, unsigned npts);
 	void clear();
 	void make_private_copy() {vbo = ivbo = 0;} // Note: to be called *only* after a deep copy
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();
+	void ensure_bounding_volumes() {if (bsphere.radius == 0.0) {calc_bounding_volumes();}}
 	cube_t get_bcube () const {return get_polygon_bbox(*this);}
 	point get_center () const {return bsphere.pos;}
 	float get_bradius() const {return bsphere.radius;}
@@ -258,7 +259,7 @@ public:
 	void add_triangle(triangle const &t, vertex_map_t<T> &vmap);
 	unsigned add_vertex(T const &v, vertex_map_t<T> &vmap);
 	void add_index(unsigned ix) {assert(ix < size()); indices.push_back(ix);}
-	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims);
+	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims, cube_t *bcube_in=nullptr);
 	void optimize(unsigned npts);
 	void finalize(unsigned npts);
 	void simplify(vector<unsigned> &out, float target) const;
