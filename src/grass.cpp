@@ -700,7 +700,7 @@ public:
 					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length,
 									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
 					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
-				
+#if 0
 					if (visible && (display_mode & 0x08) && have_occluders()) {
 						int &last_occ_cobj(last_occluder[y*MESH_X_SIZE + x]);
 
@@ -721,6 +721,7 @@ public:
 							if (last_occ_cobj >= 0) {last_occ_used = last_occ_cobj;}
 						}
 					}
+#endif
 				}
 				if (visible && dist_less_than(camera, mpos, 1000.0*grass_width)) { // nearby grass
 					nearby_ixs.push_back(ix);
