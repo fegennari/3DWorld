@@ -935,6 +935,9 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 	void assign(point const &v_, vector3d const &n_, unsigned char const *const c_) {
 		v = v_; set_norm(n_); c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
+	void assign(point const &v_, char const *const n_, unsigned char const *const c_) {
+		v = v_; n[0] = n_[0]; n[1] = n_[1]; n[2] = n_[2]; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
+	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 

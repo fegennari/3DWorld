@@ -108,12 +108,13 @@ void grass_manager_t::create_new_vbo() {
 
 void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const {
 
-	point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
-	vector3d const binorm(cross_product(g.dir, g.n).get_norm());
-	vector3d const delta(binorm*(0.5*g.w));
-	data[ix++].assign(p1-delta, norm, g.c);
-	data[ix++].assign(p1+delta, norm, g.c);
-	data[ix++].assign(p2,       norm, g.c);
+	point p2(g.p + g.dir); p2.z += 0.05*grass_length;
+	vector3d const binorm(cross_product(g.dir, g.n));
+	vector3d const delta(binorm*(0.5*g.w/binorm.mag()));
+	norm_comp const nc(norm);
+	data[ix++].assign(g.p-delta, nc.n, g.c);
+	data[ix++].assign(g.p+delta, nc.n, g.c);
+	data[ix++].assign(p2,        nc.n, g.c);
 	assert(ix <= data.size());
 }
 
@@ -548,6 +549,7 @@ public:
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
+		float const rad_sq(rad*rad), rad_inv(1.0/rad);
 		color_wrapper cw;
 		cw.set_c3(color);
 
@@ -555,17 +557,19 @@ public:
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				if (point_outside_mesh(x, y)) continue;
-				bool const maybe_underwater((burn || check_uw) && has_water(x, y) && mesh_height[y][x] <= water_matrix[y][x]);
+				point const mpos(get_mesh_xyz_pos(x, y));
+				cube_t const bcube(mpos.x, mpos.x+DX_VAL, mpos.y, mpos.y+DY_VAL, 0.0, 0.0);
+				if (p2p_dist_xy_sq(pos, bcube.closest_pt(pos)) > rad_sq) continue;
+				bool const maybe_underwater((burn || check_uw) && has_water(x, y) && mpos.z <= water_matrix[y][x]);
 				unsigned start, end;
 				unsigned const ix(get_start_and_end(x, y, start, end));
 				unsigned min_up(end+1), max_up(start);
 
 				for (unsigned i = start; i < end; ++i) { // will do nothing if there's no grass here
 					grass_t &g(grass[i]);
-					if (g.dir == zero_vector) continue; // already "removed"
 					float const dsq(p2p_dist_xy_sq(pos, g.p));
-					if (dsq > rad*rad) continue; // too far away
-					float const reld(sqrt(dsq)/rad);
+					if (dsq > rad_sq) continue; // too far away
+					if (g.dir == zero_vector) continue; // already "removed" (uncommon case)
 					bool const underwater(maybe_underwater && g.on_mesh);
 					bool updated(0);
 
@@ -573,7 +577,7 @@ public:
 						float const length(g.dir.mag());
 
 						if (length > 0.25*grass_length) {
-							g.dir  *= reld;
+							g.dir  *= sqrt(dsq)*rad_inv;
 							updated = 1;
 						}
 					}
@@ -582,7 +586,7 @@ public:
 						float const length(g.dir.mag());
 
 						if (fabs(dot_product(g.dir, sn)) > 0.1*length) { // update if not flat against the mesh
-							float const dx(g.p.x - pos.x), dy(g.p.y - pos.y), atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
+							float const om_reld(1.0 - sqrt(dsq)*rad_inv), dx(g.p.x - pos.x), dy(g.p.y - pos.y), atten_val(1.0 - om_reld*om_reld);
 							vector3d const new_dir(vector3d(dx, dy, -(sn.x*dx + sn.y*dy)/sn.z).get_norm()); // point away from crushing point
 
 							if (dot_product(g.dir, new_dir) < 0.95*length) { // update if not already aligned
@@ -596,12 +600,12 @@ public:
 						UNROLL_3X(updated |= (g.c[i_] != cw.c[i_]);) // not already this color
 						
 						if (updated) {
-							float const atten_val(1.0 - color.alpha*(1.0 - reld)*(1.0 - reld));
+							float const om_reld(1.0 - sqrt(dsq)*rad_inv), atten_val(1.0 - color.alpha*om_reld*om_reld);
 							UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_] + (1.0 - atten_val)*cw.c[i_]);)
 						}
 					}
 					if (burn && !underwater) {
-						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
+						float const om_reld(1.0 - sqrt(dsq)*rad_inv), atten_val(1.0 - om_reld*om_reld);
 						UNROLL_3X(updated |= (g.c[i_] > 0);)
 						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_]);)}
 					}
@@ -945,11 +949,12 @@ public:
 	void modify_flowers(point const &pos, float radius, bool crush, bool burn, bool remove) {
 		if (!(crush || burn || remove) || empty()) return; // nothing to modify
 		if (get_grass_density(pos) == 0.0) return; // optimization - if there's no grass, there are no flowers
-		float const radius_sq(radius*radius), y_end(pos.y + radius + DY_VAL);
+		float const radius_sq(radius*radius), y_start(pos.y - radius), y_end(pos.y + radius + DY_VAL);
 		unsigned mod_start(flowers.size()), mod_end(0);
 
 		for (unsigned i = 0; i < flowers.size(); ++i) {
 			flower_t &flower(flowers[i]);
+			if (flower.pos.y < y_start) continue;
 			if (flower.pos.y > y_end) break; // since flowers are created in blocks increasing in y, we can early terminate when y is large enough
 			float const dsq(p2p_dist_sq(flower.pos, pos));
 			if (dsq > radius_sq) continue;
