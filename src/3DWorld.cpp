@@ -95,7 +95,7 @@ float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0), jump_height(1.0), forc
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
-string user_text, cobjs_out_fn;
+string user_text, cobjs_out_fn, sphere_materials_fn;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color, flower_color(ALPHA0);
 set<unsigned char> keys, keyset;
@@ -1061,11 +1061,14 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		cout << "increase precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
 		break;
 
-	case 'H': // save mesh state/modmap
+	case 'H': // save mesh state/modmap/voxel brushes/cobj file/materials
 		if (world_mode == WMODE_UNIVERSE) {export_modmap("output.modmap");}
 		else if (world_mode == WMODE_GROUND) {
 			if (voxel_editing) {write_voxel_brushes();}
-			else if (spheres_mode) {write_def_coll_objects_file();}
+			else if (spheres_mode) {
+				if (show_scores) {write_sphere_materials_file(sphere_materials_fn);} // okay if fails
+				else {write_def_coll_objects_file();}
+			}
 			else {save_state(state_file);}
 		}
 		else if (world_mode == WMODE_INF_TERRAIN) {write_default_hmap_modmap();}
@@ -1548,7 +1551,6 @@ int load_config(string const &config_file) {
 	if (!open_file(fp, config_file.c_str(), "input configuration file")) return 0;
 	int gms_set(0), error(0);
 	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
-	string sphere_materials_fn;
 
 	kw_to_val_map_t<bool> kwmb(error);
 	kwmb.add("gen_tree_roots", gen_tree_roots);

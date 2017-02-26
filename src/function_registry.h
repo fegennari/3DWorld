@@ -813,6 +813,7 @@ void spray_paint(bool mode);
 
 // function prototypes - sphere materials
 bool read_sphere_materials_file(std::string const &fn);
+bool write_sphere_materials_file(std::string const &fn);
 void toggle_sphere_mode();
 void change_sphere_material(int val, bool quiet);
 bool throw_sphere(bool mode);

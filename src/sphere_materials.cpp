@@ -105,6 +105,41 @@ public:
 			light_sources_d[ix].shift_by(obj_pos - old_pos);
 		}
 	}
+	static string texture_str(int tid) {
+		if (tid < 0) return "none";
+		assert(tid < textures.size());
+		return textures[tid].name;
+	}
+	bool write_to_file(string const &fn) const {
+		ofstream out(fn);
+		if (!out.good()) {cerr << "Error: Failed to open sphere materials file '" << fn << "' for writing" << endl; return 0;}
+		out << "max_num_spheres " << max_num_mat_spheres << endl;
+		out << "fire_delay " << sphere_mat_fire_delay << endl;
+
+		for (const_iterator i = begin(); i != end(); ++i) {
+			out << endl;
+			out << "shadows " << i->shadows << endl;
+			out << "emissive " << i->emissive << endl;
+			out << "reflective " << i->reflective << endl;
+			out << "destroyable " << i->destroyable << endl;
+			out << "radius_scale " << i->radius_scale << endl;
+			out << "alpha " << i->alpha << endl;
+			out << "metalness " << i->metal << endl;
+			out << "specular_mag " << i->spec_mag << endl;
+			out << "specular_exp " << i->shine << endl;
+			out << "hardness " << i->hardness << endl;
+			out << "density " << i->density << endl;
+			out << "refract_ix " << i->refract_ix << endl;
+			out << "light_atten " << i->light_atten << endl;
+			out << "light_radius " << i->light_radius << endl;
+			out << "diffuse_color " << i->diff_c.raw_str() << endl;
+			out << "specular_color " << i->spec_c.raw_str() << endl;
+			out << "texture " << texture_str(i->tid) << endl;
+			out << "normal_map " << texture_str(i->nm_tid) << endl;
+			out << "add_material " << i->name << endl;
+		}
+		return 1;
+	}
 };
 
 sphere_mat_vect sphere_materials;
@@ -119,7 +154,7 @@ class material_file_parser_t {
 
 	template<typename T> bool read_mat_value(T &val, const char *name) {
 		if (read_value(val)) return 1;
-		cerr << "Error reading " << name << " from sphere materials file '" << fn << "'" << endl;
+		cerr << "Error reading " << name << " from sphere materials file '" << fn << "' for reading" << endl;
 		return 0;
 	}
 	void read_to_newline() {
@@ -190,6 +225,10 @@ bool read_sphere_materials_file(string const &fn) {
 	if (fn.empty()) return 1;
 	sphere_materials.clear();
 	return material_file_parser_t(fn).read();
+}
+bool write_sphere_materials_file(string const &fn) {
+	if (fn.empty()) return 1;
+	return sphere_materials.write_to_file(fn);
 }
 
 sphere_mat_t &get_cur_sphere_mat() {return sphere_materials.get_cur_mat();}
