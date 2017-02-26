@@ -3,9 +3,15 @@ layout(triangles, equal_spacing, cw) in;
 in vec3 vertex_ES[];
 in vec2 tc_ES[];
 in vec4 fg_Color_vf_ES[];
+#ifdef INCLUDE_NORMALS
+in vec3 normal_ES[], eye_norm_ES[];
+#endif
 
 out vec2 tc;
 out vec4 fg_Color_vf;
+#ifdef INCLUDE_NORMALS
+out vec3 vertex_from_vs, normal, eye_norm;
+#endif
 
 vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2) {
 	return gl_TessCoord.x * v0 + gl_TessCoord.y * v1 + gl_TessCoord.z * v2;
@@ -32,4 +38,10 @@ void main() {
 	vertex     += delta;
 	gl_Position = fg_ModelViewProjectionMatrix * vec4(vertex, 1.0);
 	fg_Color_vf = interpolate4D(fg_Color_vf_ES[0], fg_Color_vf_ES[1], fg_Color_vf_ES[2]); // could also use tip color
+
+#ifdef INCLUDE_NORMALS
+	vertex_from_vs = vertex;
+	normal   = interpolate3D(normal_ES  [0], normal_ES  [1], normal_ES  [2]); // FIXME: update based on new vertex?
+	eye_norm = interpolate3D(eye_norm_ES[0], eye_norm_ES[1], eye_norm_ES[2]); // FIXME: calculate from normal?
+#endif
 }
