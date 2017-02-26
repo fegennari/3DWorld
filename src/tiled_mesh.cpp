@@ -14,7 +14,6 @@ bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
 bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
-bool const USE_GRASS_TESS     = 1;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const NUM_FIRE_MODES = 4;
@@ -44,7 +43,7 @@ string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
-extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex;
+extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
@@ -1245,7 +1244,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 			vector<vector2d> &v(insts[lod][bix]);
 			if (v.empty()) continue;
 			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(vector2d)));
-			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size(), USE_GRASS_TESS);
+			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size(), use_grass_tess);
 			v.clear();
 		} // for bix
 	} // for lod
@@ -2669,7 +2668,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			s.set_frag_shader("linear_fog.part+grass_tiled");
 			//s.set_geom_shader("grass_tiled"); // triangle => triangle - too slow
 
-			if (USE_GRASS_TESS) {
+			if (use_grass_tess) {
 				s.set_tess_control_shader("grass_tiled");
 				s.set_tess_eval_shader("grass_tiled"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
 				glPatchParameteri(GL_PATCH_VERTICES, 3); // triangles
@@ -2680,6 +2679,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			s.add_uniform_float("height", grass_length);
 			s.set_specular(0.1, 20.0);
 			grass_tile_manager.begin_draw();
+			if (use_grass_tess) {s.add_uniform_float("min_tess_level", 1.0);}
 
 			int const lt_loc(s.get_attrib_loc("local_translate"));
 			enable_instancing_for_shader_loc(lt_loc);

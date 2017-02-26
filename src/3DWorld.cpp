@@ -113,7 +113,7 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branches, model_calc_tan_vect, water_is_lava;
+extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -1602,6 +1602,7 @@ int load_config(string const &config_file) {
 	kwmb.add("enable_cube_map_bump_maps", enable_cube_map_bump_maps);
 	kwmb.add("enable_model3d_custom_mipmaps", enable_model3d_custom_mipmaps);
 	kwmb.add("no_subdiv_model", no_subdiv_model);
+	kwmb.add("use_grass_tess", use_grass_tess);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);

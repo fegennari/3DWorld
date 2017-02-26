@@ -2,6 +2,7 @@ include mapx/config_mapx_base.txt
 
 grass_density 600
 grass_size 0.025 0.002
+use_grass_tess 0 # too slow
 
 sunlight_color 1.0 1.0 0.85
 

@@ -12,7 +12,7 @@
 #include "draw_utils.h"
 
 
-bool grass_enabled(1);
+bool grass_enabled(1), use_grass_tess(0);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 
@@ -646,21 +646,29 @@ public:
 
 	void draw_range(unsigned beg_ix, unsigned end_ix) const {
 		assert(beg_ix <= end_ix && end_ix <= grass.size());
-		if (beg_ix < end_ix) {glDrawArrays(GL_TRIANGLES, 3*beg_ix, 3*(end_ix - beg_ix));} // nonempty segment
+		if (beg_ix < end_ix) {glDrawArrays((use_grass_tess ? GL_PATCHES : GL_TRIANGLES), 3*beg_ix, 3*(end_ix - beg_ix));} // nonempty segment
 	}
 
 	static void setup_shaders(shader_t &s, bool distant) { // per-pixel dynamic lighting
 		setup_shaders_pre(s);
 		if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
+		if (use_grass_tess) {s.set_prefixes("#define INCLUDE_NORMALS", 24);} // TC/TE
 		s.set_vert_shader("wind.part*+grass_texture.part+grass_pp_dl");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+grass_with_dlights");
 		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_texture.part+grass");
 		//s.set_frag_shader("linear_fog.part+textured_with_fog");
+
+		if (use_grass_tess) {
+			s.set_tess_control_shader("grass_tiled");
+			s.set_tess_eval_shader("grass_tiled"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
+			glPatchParameteri(GL_PATCH_VERTICES, 3); // triangles
+		}
 		setup_shaders_post(s);
 		s.add_uniform_color("color_scale", (distant ? texture_color(GRASS_BLADE_TEX) : WHITE));
 		s.add_uniform_float("height", grass_length);
 		s.add_uniform_float("snow_cov_amt", snow_cov_amt);
 		s.set_specular((0.2 + 0.3*snow_cov_amt), (20.0 + 60.0*snow_cov_amt));
+		if (use_grass_tess) {s.add_uniform_float("min_tess_level", 1.5);} // > 1 triangle for best results
 	}
 
 	// texture units used: 0: grass texture, 1: wind texture
