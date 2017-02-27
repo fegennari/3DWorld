@@ -15,7 +15,7 @@
 float const NDIV_SCALE = 200.0;
 
 
-extern bool group_back_face_cull, has_any_billboard_coll;
+extern bool group_back_face_cull, has_any_billboard_coll, begin_motion;
 extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
 extern float temperature, rain_wetness, snow_cov_amt;
 extern double tfticks;
@@ -952,18 +952,12 @@ void obj_group::preproc_this_frame() {
 	new_id = 0;
 	if (!enabled) return;
 
-	if (reorderable) { // some objects such as smileys are position dependent
+	if (reorderable && begin_motion) { // some objects such as smileys are position dependent
 		assert(predef_objs.empty());
 		unsigned saw_id(0);
-		
-		for (unsigned j = 0; j < nobjs; ++j) {
-			if (objects[j].enabled()) {saw_id = j+1;}
-		}
+		for (unsigned j = 0; j < nobjs; ++j) {if (objects[j].enabled()) {saw_id = j+1;}}
 		sort(objects.begin(), (objects.begin() + saw_id));
-		
-		for (unsigned j = 0; j < nobjs; ++j) {
-			if (!objects[j].enabled()) {end_id = j; break;}
-		}
+		for (unsigned j = 0; j < nobjs; ++j) {if (!objects[j].enabled()) {end_id = j; break;}}
 	}
 	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
 		if (i->obj_used == -1) continue;
