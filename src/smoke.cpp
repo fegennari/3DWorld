@@ -227,11 +227,11 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 		unsigned const off(zsize*(y*MESH_X_SIZE + x));
 		bool const check_z_thresh((display_mode & 0x01) && !is_mesh_disabled(x, y));
 		float const mh(mesh_height[y][x]);
-		bool proc_llvols(0);
+		unsigned llv_ix_s(0), llv_ix_e(0);
 
 		if (do_lighting) {
-			for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {
-				if (local_light_volumes[*i]->check_xy_bounds(x, y)) {proc_llvols = 1; break;}
+			for (unsigned i = 0; i < llvol_ixs.size(); ++i) {
+				if (local_light_volumes[llvol_ixs[i]]->check_xy_bounds(x, y)) {llv_ix_s = min(i, llv_ix_s); llv_ix_e = max(i+1, llv_ix_e);}
 			}
 		}
 		for (unsigned z = z_start; z < z_end; ++z) {
@@ -253,9 +253,7 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 				else {
 					if (vlm == NULL) {color = default_color;} else {vlm[z].get_final_color(color, 1.0, 1.0);}
 				}
-				if (proc_llvols) {
-					for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {local_light_volumes[*i]->add_lighting(color, x, y, z);} // add local light volumes
-				}
+				for (unsigned i = llv_ix_s; i < llv_ix_e; ++i) {local_light_volumes[llvol_ixs[i]]->add_lighting(color, x, y, z);} // add local light volumes
 				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 			}
 		} // for z
