@@ -217,6 +217,7 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 {
 	unsigned const zsize(MESH_SIZE[2]), ncomp(4);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
+	bool const do_lighting(update_lighting || lmap_manager.was_updated);
 	colorRGB default_color;
 	default_lmc.get_final_color(default_color, 1.0);
 
@@ -228,14 +229,16 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 		float const mh(mesh_height[y][x]);
 		bool proc_llvols(0);
 
-		for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {
-			if (local_light_volumes[*i]->check_xy_bounds(x, y)) {proc_llvols = 1; break;}
+		if (do_lighting) {
+			for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {
+				if (local_light_volumes[*i]->check_xy_bounds(x, y)) {proc_llvols = 1; break;}
+			}
 		}
 		for (unsigned z = z_start; z < z_end; ++z) {
 			unsigned const off2(ncomp*(off + z));
-			float const smoke_val((vlm == NULL) ? 0.0 : CLIP_TO_01(smoke_scale*vlm[z].smoke));
-			data[off2+3] = (unsigned char)(255*smoke_val); // alpha: smoke
-			if (!update_lighting && !lmap_manager.was_updated) continue; // lighting not needed
+			if (vlm == NULL || vlm[z].smoke == 0.0) {data[off2+3] = 0;}
+			else {data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*vlm[z].smoke));} // alpha: smoke
+			if (!do_lighting) continue; // lighting not needed
 				
 			if (check_z_thresh && get_zval(z+1) < mh) { // adjust by one because GPU will interpolate the texel
 				UNROLL_3X(data[off2+i_] = 0;)
@@ -263,6 +266,7 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, unsigned z_start, unsigned z_end, bool update_lighting) {
 
 	if (smoke_tex_data.empty()) return; // not allocated
+	//timer_t timer("smoke update");
 	if (z_end == 0) {z_end = MESH_SIZE[2];}
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 	assert(z_start < z_end && z_end <= (unsigned)MESH_SIZE[2]);
