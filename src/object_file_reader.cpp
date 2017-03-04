@@ -10,8 +10,6 @@
 #include "fast_atof.h"
 
 
-unsigned const FILE_BUF_SZ = 4096;
-
 extern bool use_obj_file_bump_grayscale;
 extern float model_auto_tc_scale;
 extern model3ds all_models;
@@ -37,30 +35,26 @@ void base_file_reader::close_file() {
 }
 
 void base_file_reader::unget_last_char(int c) {
-	assert(fp);
-	if (FILE_BUF_SZ == 0) {_ungetc_nolock(c, fp); return;}
-	file_buf.push_back((char)c);
+	if (FILE_BUF_SZ == 0) {assert(fp != nullptr); _ungetc_nolock(c, fp); return;}
+	if (c == EOF) return; // can't unget EOF
+	assert(file_buf_pos > 0); // can't unget without previous get
+	--file_buf_pos;
 }
 
-int base_file_reader::get_char(FILE *fp_) const {
+int base_file_reader::get_char(FILE *fp_) {
 
 	if (FILE_BUF_SZ == 0) {return _getc_nolock(fp_);}
 
-	if (file_buf.empty()) { // file file buffer
-		file_buf.resize(FILE_BUF_SZ);
-		size_t const nread(fread(&file_buf.front(), 1, FILE_BUF_SZ, fp));
-		if (nread == 0) return EOF; // end of file
-		assert(nread <= FILE_BUF_SZ);
-		file_buf.resize(nread);
-		std::reverse(file_buf.begin(), file_buf.end());
+	if (file_buf_pos == file_buf_end) { // fill file buffer
+		file_buf_pos = 0;
+		file_buf_end = fread(file_buf, 1, FILE_BUF_SZ, fp);
+		if (file_buf_end == 0) return EOF; // end of file
 	}
-	assert(!file_buf.empty());
-	int const ret(file_buf.back());
-	file_buf.pop_back();
-	return ret;
+	assert(file_buf_pos < file_buf_end);
+	return file_buf[file_buf_pos++];
 }
 
-int base_file_reader::fast_atoi(char *str) const {
+int base_file_reader::fast_atoi(char *str) {
 	//return atoi(str);
 	assert(str && str[0] != 0);
 	int v(0);
@@ -75,7 +69,6 @@ int base_file_reader::fast_atoi(char *str) const {
 }
 
 bool base_file_reader::read_int(int &v) {
-	//return (fscanf(fp, "%i", &v) == 1);
 	unsigned ix(0);
 			
 	while (1) {
@@ -99,7 +92,6 @@ bool base_file_reader::read_uint(unsigned &v) {
 }
 
 bool base_file_reader::read_string(char *s, unsigned max_len) {
-	//return (fscanf(fp, "%s", s) == 1);
 	unsigned ix(0);
 			
 	while (1) {
@@ -273,7 +265,7 @@ void model_from_file_t::check_and_bind(int &tid, string const &tfn, bool is_alph
 
 class object_file_reader_model : public object_file_reader, public model_from_file_t {
 
-	bool read_map_name(ifstream &in, string &name) const {
+	bool read_map_name(ifstream &in, string &name) {
 		if (!(in >> name))  {return 0;}
 		assert(!name.empty());
 		if (name[0] == '-') {return 1;} // option, return and let the parser deal with it
