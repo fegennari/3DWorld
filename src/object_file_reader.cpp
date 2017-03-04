@@ -68,6 +68,13 @@ bool base_file_reader::read_int(int &v) {
 	return 1;
 }
 
+bool base_file_reader::read_uint(unsigned &v) {
+	int temp(-1);
+	if (!read_int(temp) || temp < 0) return 0;
+	v = temp; // cast to unsigned
+	return 1;
+}
+
 bool base_file_reader::read_string(char *s, unsigned max_len) {
 	//return (fscanf(fp, "%s", s) == 1);
 	unsigned ix(0);
@@ -214,7 +221,7 @@ string model_from_file_t::open_include_file(string const &fn, string const &type
 	return string();
 }
 
-string model_from_file_t::get_path(string const &fn) const {
+string model_from_file_t::get_path(string const &fn) {
 	for (unsigned pos = (unsigned)fn.size(); pos > 0; --pos) {
 		if (fn[pos-1] == '\\' || fn[pos-1] == '/') {return string(fn.begin(), fn.begin()+pos);}
 	}
@@ -582,7 +589,7 @@ public:
 				++obj_group_id;
 			}
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
-				if (fscanf(fp, "%u", &smoothing_group) != 1) {
+				if (!read_uint(smoothing_group)) {
 					if (!read_string(s, MAX_CHARS) || strcmp(s, "off") != 0) {
 						cerr << "Error reading smoothing group from object file " << filename << " near line " << approx_line << endl;
 						return 0;

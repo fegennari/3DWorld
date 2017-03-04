@@ -517,8 +517,8 @@ protected:
 
 public:
 	model_from_file_t(string const &fn, model3d &model_) : model(model_) {rel_path = get_path(fn);}
-	string open_include_file(string const &fn, string const &type, ifstream &in_inc) const ;
-	string get_path(string const &fn) const;
+	string open_include_file(string const &fn, string const &type, ifstream &in_inc) const;
+	static string get_path(string const &fn);
 	int get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0);
 	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0);
 };

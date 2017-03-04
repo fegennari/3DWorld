@@ -63,6 +63,7 @@ protected:
 	}
 	int fast_atoi(char *str) const;
 	bool read_int(int &v);
+	bool read_uint(unsigned &v);
 	bool read_string(char *s, unsigned max_len);
 
 public:
