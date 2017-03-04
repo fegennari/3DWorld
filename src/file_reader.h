@@ -17,6 +17,7 @@ protected:
 	static unsigned const MAX_CHARS = 1024;
 	char buffer[MAX_CHARS];
 	bool verbose;
+	mutable vector<char> file_buf; // FIXME: better to make read functions non-const?
 
 	bool open_file(bool binary=0);
 	void close_file();

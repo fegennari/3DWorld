@@ -10,6 +10,8 @@
 #include "fast_atof.h"
 
 
+unsigned const FILE_BUF_SZ = 4096;
+
 extern bool use_obj_file_bump_grayscale;
 extern float model_auto_tc_scale;
 extern model3ds all_models;
@@ -34,8 +36,29 @@ void base_file_reader::close_file() {
 	fp = NULL;
 }
 
-void base_file_reader::unget_last_char(int c) {assert(fp); _ungetc_nolock(c, fp);}
-int base_file_reader::get_char(FILE *fp_) const {return _getc_nolock(fp_);}
+void base_file_reader::unget_last_char(int c) {
+	assert(fp);
+	if (FILE_BUF_SZ == 0) {_ungetc_nolock(c, fp); return;}
+	file_buf.push_back((char)c);
+}
+
+int base_file_reader::get_char(FILE *fp_) const {
+
+	if (FILE_BUF_SZ == 0) {return _getc_nolock(fp_);}
+
+	if (file_buf.empty()) { // file file buffer
+		file_buf.resize(FILE_BUF_SZ);
+		size_t const nread(fread(&file_buf.front(), 1, FILE_BUF_SZ, fp));
+		if (nread == 0) return EOF; // end of file
+		assert(nread <= FILE_BUF_SZ);
+		file_buf.resize(nread);
+		std::reverse(file_buf.begin(), file_buf.end());
+	}
+	assert(!file_buf.empty());
+	int const ret(file_buf.back());
+	file_buf.pop_back();
+	return ret;
+}
 
 int base_file_reader::fast_atoi(char *str) const {
 	//return atoi(str);
