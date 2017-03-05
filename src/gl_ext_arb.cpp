@@ -127,7 +127,13 @@ void delete_vbo(unsigned vbo) {
 }
 
 void upload_vbo_data(void const *const data, size_t size, bool is_index, int dynamic_level) {
-	int const mode((dynamic_level == 2) ? GL_STREAM_DRAW : (dynamic_level ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW));
+	int mode(0);
+	switch (dynamic_level) {
+	case 0: mode = GL_STATIC_DRAW;  break;
+	case 1: mode = GL_DYNAMIC_DRAW; break;
+	case 2: mode = GL_STREAM_DRAW;  break;
+	default: assert(0);
+	}
 	glBufferData(get_buffer_target(is_index), size, data, mode);
 }
 
@@ -180,7 +186,7 @@ void vbo_ring_buffer_t::ensure_vbo(unsigned min_size) {
 		size = max(2*size, min_size); // at least double
 	}
 	if (vbo) return; // done
-	create_vbo_with_null_data(vbo, size, is_index); // reserve the space but don't use it
+	create_vbo_with_null_data(vbo, size, is_index, 1); // reserve the space but don't use it; use a dynamic draw buffer
 	pos = 0;
 }
 
