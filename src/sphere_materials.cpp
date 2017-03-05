@@ -107,7 +107,7 @@ public:
 	}
 	static string texture_str(int tid) {
 		if (tid < 0) return "none";
-		assert(tid < textures.size());
+		assert((unsigned)tid < textures.size());
 		return textures[tid].name;
 	}
 	bool write_to_file(string const &fn) const {
