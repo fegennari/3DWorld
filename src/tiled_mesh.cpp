@@ -17,6 +17,7 @@ bool const USE_PARAMS_HSCALE  = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const NUM_FIRE_MODES = 4;
+unsigned const TILE_SMAP_START_TU_ID = 13;
 float const FOG_DIST_TILES    = 1.45;
 float const DRAW_DIST_TILES   = 1.5;
 float const CREATE_DIST_TILES = 1.6;
@@ -781,7 +782,6 @@ void tile_shadow_map_manager::clear_context() {
 	}
 }
 
-
 void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 
 	if (!shadow_map_enabled()) return; // disabled
@@ -789,7 +789,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 	//timer_t timer("Create Tile Shadow Maps");
 	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH*smap_thresh_scale && smap_data.empty()) { // allocate new shadow maps
 		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
-			smap_data.push_back(smap_manager.new_smap_data(13+i, this, i));
+			smap_data.push_back(smap_manager.new_smap_data(TILE_SMAP_START_TU_ID+i, this, i));
 		}
 	}
 	cube_t bcube(get_shadow_bcube());
@@ -2376,6 +2376,16 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
 
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
+
+	// if shadow maps are enabled, we need to find some tile with a valid shadow map to use as the initial value,
+	// so that the tu_id(s) aren't bound to garbage, even if the texture lookup value is discarded (multiplied by 0 or skipped) in the shader
+	if (shadow_map_enabled()) {
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+			if (!i->second->has_valid_shadow_map()) continue; // shadow map not valid
+			i->second->shader_shadow_map_setup(s); // starting value of shadow map, used for the first few tiles that don't have a shadow map
+			break; // done
+		}
+	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_water(s, zval);}
 }
 

@@ -197,6 +197,7 @@ public:
 	bool can_have_decid_trees    () const {return (can_have_trees() && can_have_decid_trees_in_zrange    (mzmin, mzmax));}
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
+	bool has_valid_shadow_map() const {return !smap_data.empty();}
 	void invalidate_mesh_height() {mesh_height_invalid = 1;}
 	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
