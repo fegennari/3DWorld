@@ -479,6 +479,27 @@ public:
 	}
 
 
+	bool try_load_mat_lib(string const &mat_lib, set<string> &loaded_mat_libs, unsigned approx_line) {
+		if (loaded_mat_libs.find(mat_lib) == loaded_mat_libs.end()) { // mtllib not yet loaded
+			if (!load_mat_lib(mat_lib)) { // can materials be redefined with different mat_libs?
+				istringstream iss(mat_lib);
+				bool ret(1);
+				string str;
+				
+				while (iss >> str) { // try to split by whitespace, in case there were multiple mtllib filenames on the same line (instead of treating as whitespace in the filename)
+					if (str == mat_lib) { // no whitespace
+						cerr << "Error reading material library file " << str << " near line " << approx_line << endl;
+						ret = 0;
+					}
+					else if (!try_load_mat_lib(str, loaded_mat_libs, approx_line)) {ret = 0;}
+				}
+				return ret;
+			}
+			loaded_mat_libs.insert(mat_lib);
+		}
+		return 1;
+	}
+
 	bool read(geom_xform_t const &xf, int recalc_normals, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
@@ -650,12 +671,8 @@ public:
 					cerr << "Error reading material library from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
-				if (loaded_mat_libs.find(mat_lib) == loaded_mat_libs.end()) { // mtllib not yet loaded
-					if (!load_mat_lib(mat_lib)) { // can materials be redefined with different mat_libs?
-						cerr << "Error reading material library file " << mat_lib << " near line " << approx_line << endl;
-						//return 0;
-					}
-					loaded_mat_libs.insert(mat_lib);
+				if (!try_load_mat_lib(mat_lib, loaded_mat_libs, approx_line)) {
+					//return 0; // nonfatal
 				}
 			}
 			else {
