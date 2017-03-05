@@ -392,7 +392,7 @@ public:
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
 				check_and_bind(cur_mat->alpha_tid, tfn, 1, verbose);
 			}
-			else if (s == "map_bump" || s == "bump") { // should be ok if both are set
+			else if (s == "map_bump" || s == "bump" || s == "norm") { // should be ok if more than one are set; 3DWorld auto detects grayscale bump maps vs. RGB normal maps
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << endl; return 0;}
 				
@@ -400,26 +400,40 @@ public:
 					float scale(1.0);
 					if (!(mat_in >> scale) || !read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " with -bm" << endl; return 0;}
 				}
-				cur_mat->bump_tid = get_texture(tfn, 0, verbose, 0, 1, 0, use_obj_file_bump_grayscale); // can be set from both map_bump and bump
+				cur_mat->bump_tid = get_texture(tfn, 0, verbose, 0, 1, 0, use_obj_file_bump_grayscale); // can be set from map_bump, bump, and norm
 			}
 			else if (s == "map_refl") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_refl" << endl; return 0;}
 				check_and_bind(cur_mat->refl_tid, tfn, 0, verbose);
 			}
-			else if (s == "map_Ns") { // Note: unused
+			else if (s == "map_ns") { // Note: unused
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns" << endl; return 0;}
 			}
-			//else if (s == "map_aat") {} // toggle antialiasing
-			//else if (s == "decal") {} // modifies color
-			//else if (s == "dist") {} // displacement
-			else if (s == "metalness" || s == "Pm") {
+			// unsupported
+			else if (s == "kt") {unhandled(s, mat_in);} // transmission color
+			else if (s == "map_aat") {unhandled(s, mat_in);} // toggle antialiasing
+			else if (s == "decal"  ) {unhandled(s, mat_in);} // modifies color
+			else if (s == "disp"   ) {unhandled(s, mat_in);} // displacement
+			// PBR parameters, mostly unsupported, see http://exocortex.com/blog/extending_wavefront_mtl_to_support_pbr
+			else if (s == "metalness" || s == "pm") {
 				// Note: metalness has been added for 3DWorld and is not in the original obj file format;
-				// Pm is a PBR parameter, see http://exocortex.com/blog/extending_wavefront_mtl_to_support_pbr
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->metalness)) {cerr << "Error reading material metalness" << endl; return 0;}
 			}
+			else if (s == "pr"    ) {unhandled(s, mat_in);} // roughness
+			else if (s == "ps"    ) {unhandled(s, mat_in);} // sheen
+			else if (s == "pc"    ) {unhandled(s, mat_in);} // clearcoat thickness
+			else if (s == "pcr"   ) {unhandled(s, mat_in);} // clearcoat roughness
+			else if (s == "aniso" ) {unhandled(s, mat_in);} // anisotropy
+			else if (s == "anisor") {unhandled(s, mat_in);} // anisotropy rotation
+			// PBR maps
+			else if (s == "map_pr") {unhandled(s, mat_in);} // metallic
+			else if (s == "map_pm") {unhandled(s, mat_in);} // roughness
+			else if (s == "map_ps") {unhandled(s, mat_in);} // sheen
+			else if (s == "map_ke") {unhandled(s, mat_in);} // emissive
+			// 3DWorld extensions
 			else if (s == "skip") { // skip this material
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->skip)) {cerr << "Error reading material skip" << endl; return 0;}
@@ -432,7 +446,10 @@ public:
 		} // while
 		return 1;
 	}
-
+	void unhandled(string const &s, ifstream &mat_in) {
+		cerr << "Warning: Unhandled entry '" << s << "' in material library. Skipping line." << endl;
+		read_to_newline(mat_in); // ignore
+	}
 
 	bool load_from_model3d_file(bool verbose) {
 		RESET_TIME;
