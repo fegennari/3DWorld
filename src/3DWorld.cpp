@@ -2033,6 +2033,46 @@ int load_config(string const &config_file) {
 void progress() {cout << "."; cout.flush();}
 
 
+void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, GLvoid* userParam) {
+
+	cout << "---------------------opengl-callback-start------------" << endl;
+	cout << "message: "<< message << endl;
+	cout << "type: ";
+	switch (type) {
+	case GL_DEBUG_TYPE_ERROR: cout << "ERROR"; break;
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: cout << "DEPRECATED_BEHAVIOR"; break;
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: cout << "UNDEFINED_BEHAVIOR"; break;
+	case GL_DEBUG_TYPE_PORTABILITY: cout << "PORTABILITY"; break;
+	case GL_DEBUG_TYPE_PERFORMANCE: cout << "PERFORMANCE"; break;
+	case GL_DEBUG_TYPE_OTHER: cout << "OTHER"; break;
+	}
+	cout << endl;
+	cout << "id: " << id << endl;
+	cout << "severity: ";
+	switch (severity) {
+	case GL_DEBUG_SEVERITY_LOW: cout << "LOW"; break;
+	case GL_DEBUG_SEVERITY_MEDIUM: cout << "MEDIUM"; break;
+	case GL_DEBUG_SEVERITY_HIGH: cout << "HIGH"; break;
+	}
+	cout << endl;
+	cout << "---------------------opengl-callback-end--------------" << endl;
+}
+
+void init_debug_callback() {
+
+#if _DEBUG
+	if (glDebugMessageCallback) {
+		cout << "Register OpenGL debug callback " << endl;
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback(openglCallbackFunction, nullptr);
+		GLuint unusedIds = 0;
+		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unusedIds, true);
+	}
+	else {cout << "glDebugMessageCallback not available" << endl;}
+#endif
+}
+
+
 int main(int argc, char** argv) {
 
 	cout << "Starting 3DWorld" << endl;
@@ -2058,7 +2098,11 @@ int main(int argc, char** argv) {
 
 	if (use_core_context) {
 		glutInitContextVersion(4, 2);
-		glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
+		glutInitContextFlags(GLUT_CORE_PROFILE
+#if _DEBUG
+			| GLUT_DEBUG
+#endif
+		);
 		//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
 	}
 	progress();
@@ -2070,6 +2114,7 @@ int main(int argc, char** argv) {
 	init_glew();
 	progress();
 	init_window();
+	if (use_core_context) {init_debug_callback();}
 	cout << ".GL Initialized." << endl;
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();
