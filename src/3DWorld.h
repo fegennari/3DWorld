@@ -1015,6 +1015,13 @@ struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
 };
 
 
+uint32_t jenkins_one_at_a_time_hash(const uint8_t* key, size_t length);
+
+template<typename T> struct hash_by_bytes { // should work with all packed vertex types
+	uint32_t operator()(T const &v) const {return jenkins_one_at_a_time_hash((const uint8_t*)&v, sizeof(T));}
+};
+
+
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset);
 void unbind_temp_vbo();
 

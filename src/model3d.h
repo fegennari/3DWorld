@@ -10,6 +10,7 @@
 #include "cobj_bsp_tree.h" // for cobj_tree_tquads_t
 #include "shadow_map.h" // for smap_data_t
 #include "gl_ext_arb.h"
+//#include <unordered_map>
 
 using namespace std;
 
@@ -177,6 +178,7 @@ struct weighted_normal : public vector3d { // size = 16
 };
 
 
+//template<typename T> class vertex_map_t : public unordered_map<T, unsigned, hash_by_bytes<T>> {
 template<typename T> class vertex_map_t : public map<T, unsigned> {
 
 	int last_mat_id;
