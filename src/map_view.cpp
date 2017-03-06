@@ -30,6 +30,29 @@ bool using_hmap_with_detail();
 void set_temp_clear_color(colorRGBA const &clear_color);
 
 
+struct complex_num {
+	double r, i;
+	complex_num() : r(0), i(0) {}
+	complex_num(double r_, double i_) : r(r_), i(i_) {}
+	complex_num operator+(complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
+	complex_num operator*(complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
+	float mag() const {return sqrt(r*r + i*i);}
+};
+
+float eval_mandelbrot_set(complex_num const &c) {
+
+	complex_num z(0.0, 0.0);
+	float val(0.0);
+	
+	for (unsigned n = 0; n < 100; ++n) {
+		if (z.mag() > 2.0) return val;
+		z = z*z + c;
+		val += 0.01;
+	}
+	return val; // inside the set
+}
+
+
 float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, float ystart, float xscale, float yscale, int i, int j) {
 
 	if (using_tiled_terrain_hmap_tex()) {
@@ -115,6 +138,7 @@ void draw_overhead_map() {
 	int const cx(int(nx2 - map_x/xscale)), cy(int(ny2 - map_y/yscale));
 	int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
 	float const xstart(x0 - nx2*xscale), ystart(y0 - ny2*yscale);
+	float const xsv(xscale_val*(X_SCENE_SIZE/DX_VAL)), ysv(yscale_val*(Y_SCENE_SIZE/DY_VAL));
 
 	bool const uses_hmap(world_mode == WMODE_GROUND && (read_landscape || read_heightmap || do_read_mesh));
 	mesh_xy_grid_cache_t height_gen;
@@ -134,7 +158,13 @@ void draw_overhead_map() {
 		for (int j = 0; j < nx; ++j) {
 			int const offset(3*(inx + j));
 			unsigned char *rgb(&buf[offset]);
-
+#if 0
+			float const mx(10.0*map_zoom*(2.0*double(j)/nx - 1.0) + 0.01*map_x);
+			float const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.01*map_y);
+			float const val(eval_mandelbrot_set(complex_num(mx, my)));
+			rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val);
+			continue;
+#endif
 			if (iyy + (j - xx)*(j - xx) <= 4) {
 				rgb[0] = rgb[1] = rgb[2] = 0; // camera direction
 			}
@@ -152,8 +182,7 @@ void draw_overhead_map() {
 				bool mh_set(0), shadowed(0);
 
 				if (world_mode == WMODE_GROUND) {
-					float const xval((j - nx2)*xscale_val*(X_SCENE_SIZE/DX_VAL) + camera.x + map_x);
-					float const yval((i - ny2)*yscale_val*(Y_SCENE_SIZE/DY_VAL) + camera.y + map_y);
+					float const xval((j - nx2)*xsv + camera.x + map_x), yval((i - ny2)*ysv + camera.y + map_y);
 					point p1(xval, yval, czmax);
 					bool const over_mesh(is_over_mesh(p1));
 					
