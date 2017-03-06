@@ -413,6 +413,7 @@ public:
 	void draw_tiles(bool reflection_pass, bool enable_shadow_map) const;
 	void draw_tiles_shadow_pass(point const &lpos, point const &recv_cent);
 	void draw_shadow_pass(point const &lpos, tile_t *tile);
+	bool find_and_bind_any_valid_shadow_map(shader_t &s) const;
 	void draw_water(shader_t &s, float zval) const;
 	void end_lightning() const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);

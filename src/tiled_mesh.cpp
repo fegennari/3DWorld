@@ -1985,6 +1985,10 @@ void set_tile_xy_vals(shader_t &s) {
 
 void setup_tile_shader_shadow_map(shader_t &s) {
 
+	for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {
+		string sm_tex_str("sm_tex");
+		s.add_uniform_int(append_ix(sm_tex_str, i, 0), TILE_SMAP_START_TU_ID+i);
+	}
 	s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());
 	s.add_uniform_float("z_bias", DEF_Z_BIAS);
 	s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
@@ -2375,17 +2379,23 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 }
 
 
-void tile_draw_t::draw_water(shader_t &s, float zval) const {
+bool tile_draw_t::find_and_bind_any_valid_shadow_map(shader_t &s) const {
 
 	// if shadow maps are enabled, we need to find some tile with a valid shadow map to use as the initial value,
 	// so that the tu_id(s) aren't bound to garbage, even if the texture lookup value is discarded (multiplied by 0 or skipped) in the shader
-	if (shadow_map_enabled()) {
-		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-			if (!i->second->has_valid_shadow_map()) continue; // shadow map not valid
-			i->second->shader_shadow_map_setup(s); // starting value of shadow map, used for the first few tiles that don't have a shadow map
-			break; // done
-		}
+	if (!shadow_map_enabled()) return 1;
+	
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		if (!i->second->has_valid_shadow_map()) continue; // shadow map not valid
+		i->second->shader_shadow_map_setup(s); // starting value of shadow map, used for the first few tiles that don't have a shadow map
+		return 1; // done
 	}
+	return 0; // no shadow maps found
+}
+
+
+void tile_draw_t::draw_water(shader_t &s, float zval) const {
+	find_and_bind_any_valid_shadow_map(s);
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_water(s, zval);}
 }
 
@@ -2439,6 +2449,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		s.set_geom_shader("pine_tree_billboard"); // point => 1 quad
 		set_pine_tree_shader(s, "pine_tree_billboard_gs", 0); // doesn't need texture_gen.part
 		//set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
+		find_and_bind_any_valid_shadow_map(s); // will apply to all shaders below
 		s.add_uniform_float("radius_scale", calc_tree_size());
 		s.add_uniform_float("ambient_scale", 1.5);
 		s.set_specular(0.2, 8.0);
