@@ -922,7 +922,7 @@ void leafy_plant::gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_n
 }
 
 void leafy_plant::add_cobjs() {
-	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, nullptr, 0, -1));
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, nullptr, 0, get_tid()));
 }
 
 bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
@@ -931,6 +931,11 @@ bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_man
 	//if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
 	delta_z += dz;
 	return 1;
+}
+
+int leafy_plant::get_tid() const {
+	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
+	return tids[type];
 }
 
 void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, vbo_vnt_block_manager_t &vbo_manager) const {
@@ -942,8 +947,7 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	(shadow_only ? WHITE : get_atten_color(WHITE, xlate)).set_for_cur_shader(); // no underwater case yet
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
-	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
-	select_texture(tids[type]);
+	select_texture(get_tid());
 	assert(vbo_mgr_ix >= 0);
 	if (delta_z != 0.0) {fgPushMatrix(); fgTranslate(0, 0, delta_z);} // not the cleanest or most efficient solution, but much simpler than updating the VBO data
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);

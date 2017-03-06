@@ -191,6 +191,7 @@ public:
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
 	void add_cobjs();
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager);
+	int get_tid() const;
 	void draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, vbo_vnt_block_manager_t &vbo_manager) const;
 };
 
