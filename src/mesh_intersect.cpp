@@ -374,8 +374,9 @@ mesh_bsp_tree::mesh_bsp_tree() {
 bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level, mesh_query_ret &ret) const { // recursive
 
 	assert(level <= nlevels);
-	unsigned const xsize(MESH_X_SIZE >> ((nlevels-level+unsigned(!dir0)) >> 1));
-	if (!do_line_clip(v1, v2, tree[level][y*xsize + x].c.d)) return 0;
+	unsigned const xsize(MESH_X_SIZE >> ((nlevels-level+unsigned(!dir0)) >> 1)), ix(y*xsize + x);
+	assert((tree[level] - tree[0]) + ix < bsp_data.size());
+	if (!do_line_clip(v1, v2, tree[level][ix].c.d)) return 0;
 
 	if (level == nlevels) { // base case - at a leaf, now verify plane intersection
 		assert(x < unsigned(MESH_X_SIZE) && y < unsigned(MESH_Y_SIZE));
