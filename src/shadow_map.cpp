@@ -14,7 +14,7 @@
 
 
 bool voxel_shadows_updated(0);
-unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0);
+unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0), empty_smap_tid(0);
 pos_dir_up orig_camera_pdu;
 
 extern bool snow_shadows, enable_depth_clamp, flashlight_on;
@@ -29,6 +29,7 @@ extern platform_cont platforms;
 
 void draw_trees(bool shadow_only=0, bool reflection_pass=0);
 void free_light_source_gl_state();
+void set_shadow_tex_params(unsigned &tid, bool is_array);
 
 
 cube_t get_scene_bounds() {
@@ -329,7 +330,12 @@ void smap_data_t::bind_smap_texture(bool light_valid) const {
 		bind_2d_texture(get_tid(), is_arrayed());
 	}
 	else {
-		select_texture(WHITE_TEX); // default white texture
+		if (empty_smap_tid == 0) {
+			set_shadow_tex_params(empty_smap_tid, 0);
+			char const zero_data[16] = {0};
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1, 1, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, zero_data);
+		}
+		bind_2d_texture(empty_smap_tid);
 	}
 	set_active_texture(0);
 }
