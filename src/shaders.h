@@ -109,6 +109,7 @@ public:
 	void set_color4_ptr(unsigned stride, void const *const ptr, bool compressed) const;
 	void set_tcoord_ptr(unsigned stride, void const *const ptr, bool compressed) const;
 	void set_cur_color(colorRGBA const &color) const;
+	void set_cur_normal(vector3d const &normal) const;
 
 	int get_uniform_loc(char const *const name) const;
 	void ensure_uniform_loc(int &loc, char const *const name) const {if (loc < 0) {loc = get_uniform_loc(name);}}

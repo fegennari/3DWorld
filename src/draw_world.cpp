@@ -1473,6 +1473,7 @@ void draw_cracks_and_decals() {
 		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1); // no rain/snow
 		lighting_shader.enable();
 		select_texture(WHITE_TEX);
+		lighting_shader.set_cur_normal(plus_z); // +z is default normal for blood trails
 		blood_tqd.draw_tri_verts();
 		blood_tqd.clear();
 		crack_qbd.draw_and_clear();

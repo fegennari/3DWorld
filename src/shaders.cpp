@@ -1064,6 +1064,9 @@ void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compr
 void shader_t::set_cur_color(colorRGBA const &color) const {
 	if (vnct_locs[2] >= 0) {glVertexAttrib4fv(vnct_locs[2], &color.R);}
 }
+void shader_t::set_cur_normal(vector3d const &normal) const {
+	if (vnct_locs[1] >= 0) {glVertexAttrib3fv(vnct_locs[1], &normal.x);}
+}
 
 
 // some simple shared shaders
