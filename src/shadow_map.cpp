@@ -296,8 +296,7 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	assert(is_arrayed());
 
 	if (!arr_tex_set) { // Note: assumes all lights use the same texture array
-		bind_smap_texture();
-		arr_tex_set = 1;
+		arr_tex_set = bind_smap_texture(); // not setup until we bind a valid texture
 		bool const tex_ret(s.add_uniform_int("smap_tex_arr_dl", tu_id));
 		if (!tex_ret) {cerr << "Error: unable to set shader uniform 'smap_tex_arr_dl'." << endl;}
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
@@ -320,7 +319,7 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	return 1;
 }
 
-void smap_data_t::bind_smap_texture(bool light_valid) const {
+bool smap_data_t::bind_smap_texture(bool light_valid) const {
 
 	set_active_texture(tu_id);
 
@@ -328,16 +327,17 @@ void smap_data_t::bind_smap_texture(bool light_valid) const {
 	// due to some disagreement between the update pass and draw pass during reflection drawing
 	if (light_valid && is_allocated()) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
 		bind_2d_texture(get_tid(), is_arrayed());
+		set_active_texture(0);
+		return 1;
 	}
-	else {
-		if (empty_smap_tid == 0) {
-			set_shadow_tex_params(empty_smap_tid, 0);
-			char const zero_data[16] = {0};
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1, 1, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, zero_data);
-		}
-		bind_2d_texture(empty_smap_tid);
+	if (empty_smap_tid == 0) {
+		set_shadow_tex_params(empty_smap_tid, 0);
+		char const zero_data[16] = {0};
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1, 1, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, zero_data);
 	}
+	bind_2d_texture(empty_smap_tid);
 	set_active_texture(0);
+	return 0;
 }
 
 
