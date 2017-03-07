@@ -2033,7 +2033,7 @@ int load_config(string const &config_file) {
 void progress() {cout << "."; cout.flush();}
 
 
-void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, GLvoid* userParam) {
+void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
 
 	if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) return; // don't spam stdout with notifications
 	cout << "---------------------opengl-callback-start------------" << endl;
