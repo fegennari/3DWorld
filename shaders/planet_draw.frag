@@ -100,10 +100,12 @@ void main()
 	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
 	float nscale = 0.0;
 	float dnval  = 0.0;
+	vec4 shallow_water_color = mix(mix(water_color, color_b, 0.2), vec4(1.0), 0.025);
 	vec4 texel;
 
-	if (height < water_val) {
-		texel    = water_color;
+	if (height < water_val) { // underwater
+		if (height < water_val - 0.2) {texel = water_color;} // under deep water
+		else {texel = mix(shallow_water_color, water_color, (water_val - height)/0.2);}
 		spec_mag = 1.0;
 	}
 	else {
@@ -146,7 +148,7 @@ void main()
 		else if (water_val > 0.0 && temperature < 30.0) { // handle water/ice/snow
 			if (height < water_val + 0.07) { // close to water line (can have a little water even if water == 0)
 				float val = (height - water_val)/0.07;
-				texel     = mix(water_color, texel, val);
+				texel     = mix(shallow_water_color, texel, val);
 				spec_mag  = 1.0 - val;
 				nscale    = val*val; // faster falloff
 			}
