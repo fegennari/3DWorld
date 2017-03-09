@@ -529,8 +529,8 @@ colorRGB tree_data_t::get_leaf_color(unsigned i) const {
 void tree_data_t::update_leaf_color(unsigned i, bool no_mark_changed) {
 
 	assert(i < leaves.size());
-	colorRGB const color(leaves[i].calc_leaf_color(leaf_color, base_color));
-	UNROLL_4X(leaf_data[i_+(i<<2)].set_c3(color);)
+	color_wrapper cw(leaves[i].calc_leaf_color(leaf_color, base_color));
+	UNROLL_4X(leaf_data[i_+(i<<2)].copy_color(cw);)
 	if (!no_mark_changed) {mark_leaf_changed(i);}
 }
 

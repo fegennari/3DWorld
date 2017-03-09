@@ -877,6 +877,7 @@ struct color_wrapper { // size = 4, can be used in a union
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
 	void set_c4(colorRGBA const &c_) {UNROLL_4X(c[i_]  = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	void add_c4(colorRGBA const &c_) {UNROLL_4X(c[i_] += (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
+	void copy_color(color_wrapper const &cw) {c[0] = cw.c[0]; c[1] = cw.c[1]; c[2] = cw.c[2]; c[3] = cw.c[3];}
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
 	static bool is_compressed() {return 1;}
