@@ -952,8 +952,8 @@ template <typename T> void add_cylin_indices_tris(vector<T> &idata, unsigned ndi
 
 	for (unsigned S = 0; S < ndiv; S += step) {
 		bool const last_edge(S == ndiv-step);
-		unsigned const ixs[4] = {0, ndiv, (last_edge ? step : step+ndiv), (last_edge ? step-ndiv : step)};
-		for (unsigned i = 0; i < 6; ++i) {idata[idix++] = ix_start + S + ixs[quad_to_tris_ixs[i]];}
+		unsigned const ix0(ix_start + S), ixs[4] = {0, ndiv, (last_edge ? step : step+ndiv), (last_edge ? step-ndiv : step)};
+		for (unsigned i = 0; i < 6; ++i) {idata[idix++] = ix0 + ixs[quad_to_tris_ixs[i]];}
 	}
 }
 
@@ -983,10 +983,12 @@ template<typename branch_index_t> void tree_data_t::create_branch_vbo() {
 			quad_id  = cylin_id = 0;
 		}
 		for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
+			float const ty(b_tex_scale*(cylin_id + j));
+
 			for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
 				float const tx(2.0*fabs(S*ndiv_inv - 0.5));
 				vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
-				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, b_tex_scale*(cylin_id + j));
+				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, ty);
 			}
 		}
 		add_cylin_indices_tris(idata, ndiv, (data_pos + quad_id), idix,  1); // create index data
