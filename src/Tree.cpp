@@ -1040,7 +1040,7 @@ void tree_data_t::update_normal_for_leaf(unsigned i) {
 	assert(i < leaves.size());
 	vector3d const &normal(leaves[i].norm); // standard leaf plane normal
 	//vector3d const &normal(leaves[i].get_center().get_norm()); // use position of leaf relative to tree center (could also mix in leaf normal)
-	norm_comp const nc(normal);
+	norm_comp nc; nc.set_norm_no_clamp(normal); // already normalized, no need to clamp
 	UNROLL_4X(leaf_data[i_+(i<<2)].set_norm(nc);)
 	mark_leaf_changed(i);
 }
@@ -1098,16 +1098,14 @@ void tree_data_t::bend_leaf(unsigned i, float angle) { // Note: slow
 
 	assert(i < leaves.size());
 	tree_leaf const &l(leaves[i]);
-	point const p1((l.pts[1] + l.pts[2])*0.5); // tip
-	point const p2((l.pts[0] + l.pts[3])*0.5); // base
-	vector3d const orig_dir(p1 - p2); // vector from base to tip
+	vector3d const orig_dir(l.pts[1] - l.pts[0]); // vector from base to tip
 	vector3d const new_dir(orig_dir*COSF(angle) + l.norm*(orig_dir.mag()*SINF(angle))); // s=orig_dir.get_norm(), t=l.norm
 	vector3d const delta(new_dir - orig_dir);
 	vector3d const normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
 	unsigned const ix(i<<2);
 	leaf_data[ix+1].v = l.pts[1] + delta;
 	leaf_data[ix+2].v = l.pts[2] + delta;
-	norm_comp const nc(normal);
+	norm_comp nc; nc.set_norm_no_clamp(normal); // already normalized, no need to clamp
 	UNROLL_4X(leaf_data[i_+ix].set_norm(nc);) // similar to update_normal_for_leaf()
 	mark_leaf_changed(i);
 	reset_leaves = 1; // do we want to update the normals as well?
