@@ -1140,16 +1140,16 @@ bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d co
 
 	if (cobj.type == COLL_CUBE) {
 		if (decal_dist_to_cube_edge(cobj, pos, dim) > radius) return 1; // decal contained in cube surface
-		if (radius > 0.01 && decal_contained_in_union_cube_face(cobj, pos, norm, radius, dim)) return 1; // too slow for small decals such as bullet holes
+		if (/*radius > 0.01 &&*/ decal_contained_in_union_cube_face(cobj, pos, norm, radius, dim)) return 1;
 	}
 	vector3d vab[2];
 	get_ortho_vectors(norm, vab);
-	int cindex2(-1); // unused
+	int cindex(-1); // unused
 
 	for (unsigned d = 0; d < 4; ++d) {
 		point const p0(pos + ((d & 1) ? 1.0 : -1.0)*radius*vab[d>>1]);
 		point const p1(p0 + 2.0*DECAL_OFFSET*norm), p2(p0 - 2.0*DECAL_OFFSET*norm); // move behind the decal into the cobj
-		if (cobj.line_intersect(p1, p2) || check_coll_line(p1, p2, cindex2, cobj.id, 1, 0, 0)) continue; // exclude voxels
+		if (cobj.line_intersect(p1, p2) || check_coll_line(p1, p2, cindex, cobj.id, 1, 0, 0)) continue; // exclude voxels
 		return 0;
 	}
 	return 1;
