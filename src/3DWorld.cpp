@@ -2119,12 +2119,12 @@ int main(int argc, char** argv) {
 	progress();
 	init_window();
 	if (use_core_context) {init_debug_callback();}
-	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // OpenGL 4.5 only
 	cout << ".GL Initialized." << endl;
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();
 	--frame_counter;
 	if (start_maximized) {maximize();}
+	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // OpenGL 4.5 only
 	load_textures();
 	load_flare_textures(); // Sun Flare
 	setup_shaders();
