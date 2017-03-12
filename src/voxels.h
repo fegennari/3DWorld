@@ -50,6 +50,8 @@ struct voxel_brush_params_t {
 	float weight_scale;
 
 	voxel_brush_params_t() : shape(VB_SHAPE_LINEAR), weight_exp(0), delay(0), radius(1), weight_scale(1.0) {}
+	float get_world_space_radius() const;
+	void draw(point const &pos) const;
 };
 
 struct voxel_brush_t : public voxel_brush_params_t {

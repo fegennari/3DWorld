@@ -69,6 +69,7 @@ point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
 void play_camera_footstep_sound();
+void draw_voxel_edit_volume();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -224,6 +225,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		draw_cracks_and_decals();
 		if (TIMETEST) PRINT_TIME("S2");
 		draw_transparent_object_groups(reflection_pass);
+		draw_voxel_edit_volume();
 		check_gl_error(25);
 	}
 }

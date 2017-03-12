@@ -178,7 +178,7 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 			spos = float(brush.radius-1)/float(MAX_VB_RADIUS-1);
 			value.precision(1);
 			value << fixed; // fixed precision in units of 0.1
-			value << get_voxel_brush_step()*brush.radius << " (" << brush.radius << " units)";
+			value << brush.get_world_space_radius() << " (" << brush.radius << " units)";
 			break;
 		case VOXEL_WEIGHT:
 			spos = 0.5*(brush.weight_exp + MAX_VB_WEIGHT_EXP)/MAX_VB_WEIGHT_EXP;

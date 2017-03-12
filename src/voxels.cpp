@@ -2144,7 +2144,7 @@ public:
 	void add_brush(voxel_brush_t const &brush) {brush_vect.push_back(brush);}
 
 	void apply_brush(voxel_brush_t const &brush) {
-		float const radius(get_voxel_brush_step()*brush.radius);
+		float const radius(brush.get_world_space_radius());
 		float const weight(pow(2.0f, brush.weight_exp)*brush.weight_scale);
 		bool const spherical(brush.shape != VB_SHAPE_CUBE);
 		int const falloff_exp(spherical ? (brush.shape - VB_SHAPE_CONSTANT) : 0); // 0 to N
@@ -2250,6 +2250,16 @@ void change_voxel_editing_mode(int val) {
 void apply_brush(voxel_brush_t const &brush) {brush_manager.apply_brush(brush);}
 void undo_voxel_brush() {brush_manager.undo_last_brush();}
 
+bool get_voxel_edit_pos(point &coll_pos, int &cindex) {
+
+	if (!coll_objects.has_voxel_cobjs) return 0; // no voxels to modify
+	point const pos(get_camera_pos());
+	vector3d coll_norm; // unused
+	float range(FAR_CLIP);
+	if (get_range_to_mesh(pos, cview_dir, coll_pos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
+	return check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1); // hit voxel cobjs
+}
+
 void modify_voxels() {
 
 	// add a marker for where voxels will be modified before a fire/key press?
@@ -2257,18 +2267,36 @@ void modify_voxels() {
 	static double last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= voxel_brush_params.delay) return; // limit firing rate
 	last_tfticks = tfticks;
-	point const pos(get_camera_pos());
 	int cindex(-1);
 	point coll_pos;
-	vector3d coll_norm;
-	float range(FAR_CLIP);
-	if (get_range_to_mesh(pos, cview_dir, coll_pos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
 
-	if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1)) { // hit voxel cobjs
+	if (get_voxel_edit_pos(coll_pos, cindex)) { // hit voxel cobjs
 		assert(coll_objects.get_cobj(cindex).cp.cobj_type == COBJ_TYPE_VOX_TERRAIN);
 		voxel_brush_params.weight_scale = ((voxel_editing == 2) ? -0.1 : 0.1);
 		brush_manager.apply_and_add_brush(voxel_brush_t(voxel_brush_params, coll_pos));
 	}
+}
+
+float voxel_brush_params_t::get_world_space_radius() const {return get_voxel_brush_step()*radius;}
+
+void voxel_brush_params_t::draw(point const &pos) const {
+	float const r(get_world_space_radius());
+	if (shape == 0) {draw_cube(pos, 2*r, 2*r, 2*r, 0);} // cube
+	else {draw_sphere_vbo_back_to_front(pos, r, 32, 0);} // sphere
+}
+
+void draw_voxel_edit_volume() {
+
+	if (voxel_editing == 0) return; // not editing
+	int cindex(-1); // unused
+	point coll_pos;
+	if (!get_voxel_edit_pos(coll_pos, cindex)) return;
+	shader_t shader;
+	shader.begin_color_only_shader(colorRGBA(((voxel_editing == 2) ? RED : GREEN), 0.2)); // alpha = 20%
+	enable_blend();
+	voxel_brush_params.draw(coll_pos);
+	disable_blend();
+	shader.end_shader();
 }
 
 
