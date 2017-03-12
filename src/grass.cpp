@@ -65,16 +65,16 @@ void grass_manager_t::clear() {
 	grass.clear();
 }
 
-vector3d grass_manager_t::interpolate_mesh_normal(point const &pos) const {
+vector3d grass_manager_t::interpolate_mesh_normal(point const &pos) const { // Note: not normalized, but close to normalized
 
 	float const xp((pos.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pos.y + Y_SCENE_SIZE)*DY_VAL_INV);
 	int const x0((int)xp), y0((int)yp);
 	if (point_outside_mesh(x0, y0) || point_outside_mesh(x0+1, y0+1)) return plus_z; // shouldn't get here
 	float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0)); // cubic_interpolate()?
 	return vertex_normals[y0+0][x0+0]*((1.0 - xpi)*(1.0 - ypi))
-			+ vertex_normals[y0+1][x0+0]*((1.0 - xpi)*ypi)
-			+ vertex_normals[y0+0][x0+1]*(xpi*(1.0 - ypi))
-		    + vertex_normals[y0+1][x0+1]*(xpi*ypi);
+		 + vertex_normals[y0+1][x0+0]*((1.0 - xpi)*ypi)
+		 + vertex_normals[y0+0][x0+1]*(xpi*(1.0 - ypi))
+		 + vertex_normals[y0+1][x0+1]*(xpi*ypi);
 }
 
 void grass_manager_t::add_grass_blade_int(point const &pos, float cscale, bool on_mesh, vector<grass_t> &grass_, rand_gen_pregen_t &rgen_) const {
@@ -106,16 +106,16 @@ void grass_manager_t::create_new_vbo() {
 	data_valid = 0;
 }
 
-void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const {
+void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d const &norm) const {
 
 	point p2(g.p + g.dir); p2.z += 0.05*grass_length;
 	vector3d const binorm(cross_product(g.dir, g.n));
 	vector3d const delta(binorm*(0.5*g.w/binorm.mag()));
 	norm_comp const nc(norm);
+	assert(ix+2 < data.size());
 	data[ix++].assign(g.p-delta, nc.n, g.c);
 	data[ix++].assign(g.p+delta, nc.n, g.c);
 	data[ix++].assign(p2,        nc.n, g.c);
-	assert(ix <= data.size());
 }
 
 void grass_manager_t::scale_grass(float lscale, float wscale) {
@@ -208,8 +208,8 @@ void grass_tile_manager_t::upload_data() {
 	vector<grass_data_t> data(3*size()); // 3 vertices per grass blade
 
 	for (unsigned i = 0, ix = 0; i < size(); ++i) {
-		vector3d norm(plus_z); // use grass normal? 2-sided lighting? generate normals in vertex shader?
-		//vector3d norm(grass[i].n);
+		vector3d const &norm(plus_z); // use grass normal? 2-sided lighting? generate normals in vertex shader?
+		//vector3d const &norm(grass[i].n);
 		add_to_vbo_data(grass[i], data, ix, norm);
 	}
 	upload_to_vbo(vbo, data, 0, 1);
@@ -449,7 +449,7 @@ public:
 		for (unsigned i = start, ix = 0; i < end; ++i) {
 			//vector3d norm(grass[i].n); // use grass normal? 2-sided lighting?
 			//vector3d norm(surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
-			vector3d norm(grass[i].on_mesh ? interpolate_mesh_normal(grass[i].p) : plus_z); // use +z normal for voxels
+			vector3d const norm(grass[i].on_mesh ? interpolate_mesh_normal(grass[i].p) : plus_z); // use +z normal for voxels
 			add_to_vbo_data(grass[i], vertex_data_buffer, ix, norm);
 
 			if (ix == block_size || i+1 == end) { // filled block or last entry
