@@ -370,8 +370,8 @@ void cobj_stats();
 int  collision_detect_large_sphere(point &pos, float radius, unsigned flags);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
 bool is_point_interior(point const &pos, float radius);
-bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dir);
-void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dir);
+bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dim);
+void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dim);
 
 // function prototypes - movable_cobj
 void register_moving_cobj(unsigned index);

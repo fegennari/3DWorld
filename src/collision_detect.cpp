@@ -1108,15 +1108,40 @@ void vert_coll_detector::check_cobj(int index) {
 }
 
 
-float decal_dist_to_cube_edge(cube_t const &cube, point const &pos, int dir) {
-	int const ds((dir+1)%3), dt((dir+2)%3);
+float decal_dist_to_cube_edge(cube_t const &cube, point const &pos, int dim) {
+	int const ds((dim+1)%3), dt((dim+2)%3);
 	return min(min((cube.d[ds][1] - pos[ds]), (pos[ds] - cube.d[ds][0])), min((cube.d[dt][1] - pos[dt]), (pos[dt] - cube.d[dt][0])));
 }
 
+bool decal_contained_in_union_cube_face(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dim) {
+	
+	// check for decal contained in union of surfaces of nearby cubes (to handle split cube)
+	bool const dir(norm[dim] > 0.0);
+	int const ds((dim+1)%3), dt((dim+2)%3);
+	vector<unsigned> cobjs;
+	cube_t bcube;
+	bcube.set_from_sphere(pos, radius); // should really be disk in direction dir
+	get_intersecting_cobjs_tree(bcube, cobjs, -1, 0.0, 0, 0); // duplicates should be okay
+	if (cobjs.size() < 2) return 0; // not split cobj case
+	float area_covered(0.0);
 
-bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dir) {
+	for (unsigned i = 0; i < cobjs.size(); ++i) {
+		coll_obj const &c(coll_objects.get_cobj(cobjs[i]));
+		if (c.type != COLL_CUBE || c.may_be_dynamic()) continue;
+		if (fabs(cobj.d[dim][dir] - c.d[dim][dir]) > 0.01*radius) continue; // faces not aligned
+		float const s1(max((pos[ds] - radius), c.d[ds][0])), t1(max((pos[dt] - radius), c.d[dt][0]));
+		float const s2(min((pos[ds] + radius), c.d[ds][1])), t2(min((pos[dt] + radius), c.d[dt][1]));
+		area_covered += (s2 - s1)*(t2 - t1);
+	}
+	return (area_covered > 0.99*(4.0*radius*radius));
+}
 
-	if (cobj.type == COLL_CUBE && decal_dist_to_cube_edge(cobj, pos, dir) > radius) return 1;
+bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dim) {
+
+	if (cobj.type == COLL_CUBE) {
+		if (decal_dist_to_cube_edge(cobj, pos, dim) > radius) return 1; // decal contained in cube surface
+		if (radius > 0.01 && decal_contained_in_union_cube_face(cobj, pos, norm, radius, dim)) return 1; // too slow for small decals such as bullet holes
+	}
 	vector3d vab[2];
 	get_ortho_vectors(norm, vab);
 	int cindex2(-1); // unused
@@ -1131,13 +1156,17 @@ bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d co
 }
 
 
-void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dir) { // not sure this belongs here
+void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dim) { // not sure this belongs here
 
 	if (!cobj.has_flat_top_bot() && cobj.type != COLL_CYLINDER_ROT) return;
 	if (!cobj.can_be_scorched()) return;
 	float const sz(5.0*radius*rand_uniform(0.8, 1.2));
 	float max_sz(sz);
-	if      (cobj.type == COLL_CUBE   ) {max_sz = decal_dist_to_cube_edge(cobj, pos, dir);} // only compute max_sz for cubes; other cobjs use sz or fail
+
+	if (cobj.type == COLL_CUBE) {
+		max_sz = decal_dist_to_cube_edge(cobj, pos, dim); // only compute max_sz for cubes; other cobjs use sz or fail
+		if (max_sz < sz && decal_contained_in_union_cube_face(cobj, pos, coll_norm, sz, dim)) {max_sz = sz;} // check for full sized decal contained in split cubes
+	}
 	else if (cobj.type == COLL_POLYGON) {max_sz = min_dist_from_pt_to_polygon_edge(pos, cobj.points, cobj.npoints);} // may not be correct for extruded polygons
 	if (max_sz > 0.5*sz) {gen_decal(pos, min(sz, max_sz), coll_norm, FLARE3_TEX, cobj.id, colorRGBA(BLACK, 0.75), 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
 }
