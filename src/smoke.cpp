@@ -47,17 +47,25 @@ bool check_smoke_bounds(point const &pt) {
 }
 
 
+struct smoke_entry_t {
+	short zmin, zmax;
+	smoke_entry_t() {clear();}
+	bool valid() const {return (zmin < zmax);}
+	void clear() {zmin = 10000; zmax = 0;}
+	void update(short zval) {zmin = min(zmin, zval); zmax = max(zmax, short(zval+1));}
+};
+
 class smoke_grid_t {
-	vector<unsigned char> mask; // which x/y grid stacks contain smoke (acceleration structure)
+	vector<smoke_entry_t> zrng; // z smoke ranges for each xy grid element
 public:
-	void set_has_smoke(int x, int y, bool val) {
+	void register_smoke(int x, int y, int z) {
 		assert(!point_outside_mesh(x, y));
-		if (mask.empty()) {mask.resize(XY_MULT_SIZE, 0);} else {assert(mask.size() == XY_MULT_SIZE);}
-		mask[y*MESH_X_SIZE + x] = val;
+		if (zrng.empty()) {zrng.resize(XY_MULT_SIZE);} else {assert(zrng.size() == XY_MULT_SIZE);}
+		zrng[y*MESH_X_SIZE + x].update(z);
 	}
-	bool get_has_smoke(int x, int y) const {
-		if (mask.empty() || point_outside_mesh(x, y)) return 0;
-		return (mask[y*MESH_X_SIZE + x] != 0);
+	smoke_entry_t &get_z_range(int x, int y) {
+		assert(!point_outside_mesh(x, y));
+		return zrng[y*MESH_X_SIZE + x];
 	}
 };
 
@@ -119,7 +127,7 @@ void add_smoke(point const &pos, float val) {
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return; // too slow
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
 	smoke_exists |= smoke_man.is_smoke_visible(pos);
-	smoke_grid.set_has_smoke(xpos, ypos, 1);
+	smoke_grid.register_smoke(xpos, ypos, get_zpos(pos.z));
 }
 
 
@@ -136,7 +144,7 @@ void diffuse_smoke(int x, int y, int z, lmcell &adj, float pos_rate, float neg_r
 		delta *= ((delta < 0.0) ? neg_rate : pos_rate);
 		adjust_smoke_val(lmc.smoke, delta);
 		delta  = (lmc.smoke - cur_smoke); // actual change
-		if (lmc.smoke > 0.0) {smoke_grid.set_has_smoke(x, y, 1);}
+		if (lmc.smoke > 0.0) {smoke_grid.register_smoke(x, y, z);}
 	}
 	else { // edge cell has infinite smoke capacity and zero total smoke
 		delta = 0.5*(pos_rate + neg_rate);
@@ -173,10 +181,11 @@ void distribute_smoke() { // called at most once per frame
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell *vldata(lmap_manager.get_column(x, y));
 			if (vldata == NULL) continue;
-			if (!smoke_grid.get_has_smoke(x, y)) continue;
+			smoke_entry_t &zrange(smoke_grid.get_z_range(x, y));
+			if (!zrange.valid()) continue;
 			bool any_z_has_smoke(0);
 			
-			for (int z = 0; z < MESH_SIZE[2]; ++z) {
+			for (int z = zrange.zmin; z < zrange.zmax; ++z) {
 				lmcell &lmc(vldata[z]);
 				if (lmc.smoke < SMOKE_THRESH) {lmc.smoke = 0.0;}
 				if (lmc.smoke == 0.0) continue;
@@ -190,7 +199,7 @@ void distribute_smoke() { // called at most once per frame
 				diffuse_smoke(x, y, (z + 1),  lmc, SMOKE_DIS_ZU, SMOKE_DIS_ZD, 2, 1);
 				any_z_has_smoke = 1;
 			} // for z
-			if (!any_z_has_smoke) {smoke_grid.set_has_smoke(x, y, 0);} // mark this xy as not having smoke
+			if (!any_z_has_smoke) {zrange.clear();} // mark this xy as not having smoke
 		} // for x
 	} // for y
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
