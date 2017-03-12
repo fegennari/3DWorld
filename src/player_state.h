@@ -182,6 +182,7 @@ struct player_state { // size = big
 	waypt_used_set waypts_used;
 	unreachable_pts unreachable[2]; // {objects, waypoints}
 	destination_marker dest_mark;
+	rand_gen_t player_rgen;
 
 	// footstep/snow footprint state
 	point prev_foot_pos;

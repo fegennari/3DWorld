@@ -169,7 +169,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	int cid(coll_id[SMILEY]), status;
 	dwobject const &smiley(obj_groups[cid].get_obj(smiley_id));
 	if (smiley.disabled()) return;
-	if (target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
+	if (target_visible != 1 && (weapon != W_LANDMINE || (player_rgen.rand()&3) != 0)) return;
 	assert(target >= CAMERA_ID && target < num_smileys);
 	int const last_weapon(weapon);
 	
@@ -184,7 +184,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 		}
 	}
 	assert(!no_weap_or_ammo());
-	if (weapon == W_BALL && !UNLIMITED_WEAPONS && (rand()&15) != 0) return; // wait to throw
+	if (weapon == W_BALL && !UNLIMITED_WEAPONS && (player_rgen.rand()&15) != 0) return; // wait to throw
 	point pos(smiley.pos);
 	bool const underwater(is_underwater(pos));
 	if (temperature <= W_FREEZE_POINT && underwater) return; // under ice
@@ -368,7 +368,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	if (waypoints[i].next_wpts.empty()) {dmult *= 10.0;} // increase the cost of waypoints disconnected from the rest of the waypoint graph
 	if ((int)i == curw)                 {dmult *= 1.0E-6;} // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
-	float const tot_weight(dmult*(0.5*time_weight + dist_sq)*rand_uniform(0.8, 1.2));
+	float const tot_weight(dmult*(0.5*time_weight + dist_sq)*player_rgen.rand_uniform(0.8, 1.2));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
 }
 
@@ -516,7 +516,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		}
 		if (can_reach || not_too_high2 || (is_wpt && on_waypt_path)) { // not_too_high2 - may be incorrect
 			int const max_vis_level(is_wpt ? 3 : ((type == BALL) ? 5 : 4));
-			bool skip_path_comp(is_next_wpt || (target_pos == pos2 && (rand()&15) != 0)); // infrequent updates if same target
+			bool skip_path_comp(is_next_wpt || (target_pos == pos2 && (player_rgen.rand()&15) != 0)); // infrequent updates if same target
 
 			if ((skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) &&
 				(powerup == PU_FLIGHT || skip_path_comp || is_valid_path(pos, pos2, !is_wpt)))
@@ -560,7 +560,7 @@ int player_state::check_smiley_status(dwobject &obj, int smiley_id) {
 	if (obj.time > object_types[SMILEY].lifetime) {
 		drop_pack(obj.pos);
 		obj.status = 0; // smiley dies of old age (or boredom) after a REALLY long time
-		string const msg(name + " died of " + ((rand()&1) ? "boredom" : "old age"));
+		string const msg(name + " died of " + ((player_rgen.rand()&1) ? "boredom" : "old age"));
 		print_text_onscreen(msg, YELLOW, 1.0, MESSAGE_TIME, 0);
 		return 0;
 	}
@@ -604,11 +604,11 @@ int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, 
 	if (game_mode != 1) return 0;
 	if (type == BEAM || type == BLAST_RADIUS || (type >= DROWNED && type <= CRUSHED)) return 0;
 
-	if (((rand()%31) == 0) && energy > 25.0 && (weapons[weapon].need_weapon || (weapons[weapon].need_ammo && p_ammo[weapon] > 0))) {
+	if (((player_rgen.rand()%31) == 0) && energy > 25.0 && (weapons[weapon].need_weapon || (weapons[weapon].need_ammo && p_ammo[weapon] > 0))) {
 		float const frontv(dot_product(coll_dir, nfront)/(coll_dir.mag()*nfront.mag()));
 
 		if (frontv > 0.97) {
-			vector3d rv(signed_rand_float(), signed_rand_float(), 1.2*rand_float());
+			vector3d rv(player_rgen.signed_rand_float(), player_rgen.signed_rand_float(), 1.2*player_rgen.rand_float());
 			point const dpos(pos + rv*(2.0*object_types[SMILEY].radius));
 			drop_pack(dpos);
 			p_weapons[weapon] = 0;
@@ -841,7 +841,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	assert(!point_outside_mesh(xpos, ypos));
 	bool stuck(0), in_ice(0), no_up(0), no_down(0), using_dest_mark(0);
 
-	if ((rand() % (is_jumping ? 1000 : 4000)) == 0) {is_jumping ^= 1;}
+	if ((player_rgen.rand() % (is_jumping ? 1000 : 4000)) == 0) {is_jumping ^= 1;}
 	if (is_jumping && powerup != PU_FLIGHT) {jump(obj.pos);}
 	
 	// check for stuck underwater
@@ -854,8 +854,8 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			if (dest_mark.valid && dest_mark.min_depth == 0.0) break;
 
 			if (i > 0 || !point_interior_to_mesh(xt, yt)) { // need to calculate a new one
-				xt = 1 + (rand() % (MESH_X_SIZE-2));
-				yt = 1 + (rand() % (MESH_Y_SIZE-2));
+				xt = 1 + (player_rgen.rand() % (MESH_X_SIZE-2));
+				yt = 1 + (player_rgen.rand() % (MESH_Y_SIZE-2));
 			}
 			float const depth(has_water(xt, yt) ? (water_matrix[yt][xt] - mesh_height[yt][xt]) : 0.0);
 			dest_mark.add_candidate(xpos, ypos, xt, yt, depth, radius);
@@ -893,7 +893,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			else {
 				stepv = obj.orientation; // continue along the same orient if no target visible
 			}
-			if (!on_waypt_path && ((rand() % 200) == 0)) {
+			if (!on_waypt_path && ((player_rgen.rand() % 200) == 0)) {
 				add_rand_dir_change(stepv, 1.0); // "dodging"
 				stepv.normalize();
 			}
@@ -952,11 +952,11 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		if ((target_type >= 2 && target_pos.z < opos.z && obj.pos.z < opos.z) || // want health/powerup/waypoint below - go down
 			(target_type == 1 && weapon == W_BBBAT)) // have to go down for baseball bat hit
 		{
-			obj.pos.z = max(max(target_pos.z, obj.pos.z), (opos.z - (no_down ? 0.0f : float(radius*rand_uniform(0.2, 0.6)))));
+			obj.pos.z = max(max(target_pos.z, obj.pos.z), (opos.z - (no_down ? 0.0f : float(radius*player_rgen.rand_uniform(0.2, 0.6)))));
 		}
 		else {
 			obj.pos.z = min(min((zmax + 0.5f), (ztop + 1.0f)), max(obj.pos.z, opos.z));
-			if (!no_up && (rand()&7) == 0) obj.pos.z += radius*rand_uniform(0.0, 0.5); // sometimes fly up
+			if (!no_up && (rand()&7) == 0) obj.pos.z += radius*player_rgen.rand_uniform(0.0, 0.5); // sometimes fly up
 		}
 		if (!point_outside_mesh(xpos, ypos)) {
 			obj.pos.z = max(obj.pos.z, (mesh_height[ypos][xpos] + radius)); // just in case (i.e. mesh was changed when under ice)
@@ -1016,7 +1016,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		camera_origin = obj.pos;
 		update_cpos();
 	}
-	if (is_water_temp && is_underwater(obj.pos, 1) && (rand()&1)) {gen_bubble(obj.pos);}
+	if (is_water_temp && is_underwater(obj.pos, 1) && (player_rgen.rand()&1)) {gen_bubble(obj.pos);}
 	velocity   = (obj.pos - opos)/(TIMESTEP*fticks);
 	obj.status = 3;
 	return 1;
@@ -1211,7 +1211,7 @@ void init_smiley(int smiley_id) {
 void player_state::check_switch_weapon(int smiley_id) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
-	wmode = ((rand()&3) == 0);
+	wmode = ((player_rgen.rand()&3) == 0);
 
 	if (game_mode == 2) { // dodgeball mode
 		weapon     = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? W_BALL : W_UNARMED);
@@ -1227,7 +1227,7 @@ void player_state::check_switch_weapon(int smiley_id) {
 	for (unsigned i = 1; i < NUM_WEAPONS-1; ++i) {
 		weapon = i;
 		if (no_weap_or_ammo()) continue;
-		float weight(rand_float());
+		float weight(player_rgen.rand_float());
 		if (!weapons[weapon].use_underwater && is_underwater(pos)) weight += 0.5;
 		float const range(weapon_range(0));
 		if (range > 0.0)  weight += ((target_in_range(pos) != 0) ? -0.2 : 0.8); // ranged weapon
@@ -1242,7 +1242,7 @@ void player_state::check_switch_weapon(int smiley_id) {
 	fire_frame = 0;
 	weapon     = chosen_weap;
 	//weapon     = W_LASER; // set to force this as weapon choice (if available)
-	if (weapon == W_PLASMA && wmode == 1 && (rand()%4) != 0) plasma_loaded = 1; // fire it up!
+	if (weapon == W_PLASMA && wmode == 1 && (player_rgen.rand()%4) != 0) plasma_loaded = 1; // fire it up!
 }
 
 
@@ -1287,7 +1287,7 @@ void player_state::smiley_action(int smiley_id) {
 	int const in_range(target_in_range(smiley.pos));
 	if (in_range == 1) smiley_fire_weapon(smiley_id);
 	if (powerup == PU_REGEN) {smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);}
-	if ((rand()%((in_range == 0) ? 50 : 500)) == 0) check_switch_weapon(smiley_id); // change weapons
+	if ((player_rgen.rand()%((in_range == 0) ? 50 : 500)) == 0) check_switch_weapon(smiley_id); // change weapons
 	if (was_hit > 0) --was_hit;
 	kill_time += max(1, iticks);
 	check_underwater(smiley_id, depth);
