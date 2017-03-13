@@ -221,6 +221,8 @@ float get_smoke_at_pos(point const &pos) {
 void reset_smoke_tex_data() {smoke_tex_data.clear();}
 
 
+#define CLEAR_Z_RANGE(z1, z2) for (int z = z1; z < (int)z2; ++z) {data[4*(off + z)+3] = 0;}
+
 void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol_ixs, lmcell const &default_lmc,
 	unsigned x_start, unsigned x_end, unsigned z_start, unsigned z_end, unsigned y, bool update_lighting)
 {
@@ -242,6 +244,18 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 			for (unsigned i = 0; i < llvol_ixs.size(); ++i) {
 				if (local_light_volumes[llvol_ixs[i]]->check_xy_bounds(x, y)) {llv_ix_s = min(i, llv_ix_s); llv_ix_e = max(i+1, llv_ix_e);}
 			}
+		}
+		else { // update smoke only
+			smoke_entry_t const &zrange(smoke_grid.get_z_range(x, y));
+			
+			if (!zrange.valid()) { // no smoke in this row
+				CLEAR_Z_RANGE(z_start, z_end);
+				continue;
+			}
+			CLEAR_Z_RANGE(z_start, zrange.zmin);
+			CLEAR_Z_RANGE(zrange.zmax, z_end);
+			z_start = zrange.zmin;
+			z_end   = zrange.zmax;
 		}
 		for (unsigned z = z_start; z < z_end; ++z) {
 			unsigned const off2(ncomp*(off + z));
@@ -273,7 +287,7 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, unsigned z_start, unsigned z_end, bool update_lighting) {
 
 	if (smoke_tex_data.empty()) return; // not allocated
-	//timer_t timer("smoke update");
+	//timer_t timer(update_lighting ? "smoke+lighting update" : "smoke update");
 	if (z_end == 0) {z_end = MESH_SIZE[2];}
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 	assert(z_start < z_end && z_end <= (unsigned)MESH_SIZE[2]);
