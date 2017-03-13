@@ -53,7 +53,7 @@ public:
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
 	bool are_leaves_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
-	void draw_trunk(bool shadow_only, bool all_visible, bool skip_lines=0, vector3d const &xlate=zero_vector, vector<vert_norm_tc> *cylin_verts=nullptr) const;
+	bool draw_trunk(bool shadow_only, bool all_visible, bool skip_lines=0, vector3d const &xlate=zero_vector, vector<vert_norm_tc> *cylin_verts=nullptr) const;
 	void draw_palm_leaves(unsigned num_instances=1) const;
 	void draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
@@ -123,7 +123,7 @@ struct small_tree_group : public vector<small_tree> {
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void translate_by(vector3d const &vd);
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
-	void draw_trunks(bool shadow_only, bool all_visible=0, bool skip_lines=0, vector3d const &xlate=zero_vector) const;
+	bool draw_trunks(bool shadow_only, bool all_visible=0, bool skip_lines=0, vector3d const &xlate=zero_vector) const;
 	void draw_tree_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc, vector<tree_inst_t> &insts, bool is_pine);
 	void draw_pine_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc) {draw_tree_insts(s, draw_all, xlate, xlate_loc, tree_insts[0], 1);}
 	void draw_palm_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc) {draw_tree_insts(s, draw_all, xlate, xlate_loc, tree_insts[1], 0);}

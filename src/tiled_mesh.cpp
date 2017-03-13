@@ -1072,8 +1072,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			set_mesh_ambient_color(s);
 			bool const all_visible(camera_pdu.sphere_visible_test(get_center(), -0.5*radius));
-			pine_trees.draw_trunks(0, all_visible, 1, xlate); // skip_lines=1
-			to_draw_trunk_pts.push_back(this);
+			if (!pine_trees.draw_trunks(0, all_visible, 1, xlate)) {to_draw_trunk_pts.push_back(this);} // skip_lines=1; if some lines were skipped, add trunk pts to draw
 		}
 		else if (dscale < 2.0 && get_tree_far_weight(force_high_detail) < 0.5) { // far away, use low detail branches
 			to_draw_trunk_pts.push_back(this);

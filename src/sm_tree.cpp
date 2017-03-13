@@ -214,11 +214,14 @@ void small_tree_group::translate_by(vector3d const &vd) {
 }
 
 
-void small_tree_group::draw_trunks(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate) const {
+bool small_tree_group::draw_trunks(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate) const {
 
 	static vector<vert_norm_tc> cylin_verts; // class member?
-	for (const_iterator i = begin(); i != end(); ++i) {i->draw_trunk(shadow_only, all_visible, skip_lines, xlate, &cylin_verts);}
+	bool all_drawn(1);
 
+	for (const_iterator i = begin(); i != end(); ++i) {
+		if (!i->draw_trunk(shadow_only, all_visible, skip_lines, xlate, &cylin_verts)) {all_drawn = 0;}
+	}
 	if (!cylin_verts.empty()) {
 		if (!shadow_only) {
 			get_tree_trunk_color(T_PINE, 0).set_for_cur_shader(); // all a constant color
@@ -227,6 +230,7 @@ void small_tree_group::draw_trunks(bool shadow_only, bool all_visible, bool skip
 		// make this work for non-pine trees (where we have to deal with colors, texture changes, and tris vs. strips)?
 		draw_and_clear_verts(cylin_verts, GL_TRIANGLES); // inf terrain mode pine tree trunks
 	}
+	return all_drawn;
 }
 
 void small_tree_group::sort_by_dist_to_camera() {
@@ -946,23 +950,23 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 }
 
 
-void small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate, vector<vert_norm_tc> *cylin_verts) const {
+bool small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate, vector<vert_norm_tc> *cylin_verts) const {
 
-	if (!(tree_mode & 2) || type == T_BUSH) return; // disabled, or no trunk/bark
+	if (!(tree_mode & 2) || type == T_BUSH) return 1; // disabled, or no trunk/bark
 	
 	if (all_visible) {}
 	else if (shadow_only) {
-		if (!is_over_mesh(pos + xlate + height*get_rot_dir())) return;
+		if (!is_over_mesh(pos + xlate + height*get_rot_dir())) return 1;
 	}
 	else {
-		if (!camera_pdu.sphere_visible_test((trunk_cylin.get_center() + xlate), get_trunk_bsphere_radius())) return;
+		if (!camera_pdu.sphere_visible_test((trunk_cylin.get_center() + xlate), get_trunk_bsphere_radius())) return 1;
 	}
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size_scale(zoom_f*stt[type].ss*width*window_width);
 	float const dist(distance_to_camera(pos + xlate));
-	if (!shadow_only && size_scale < dist) return; // too small/far
+	if (!shadow_only && size_scale < dist) return 1; // too small/far
 
 	if (!shadow_only && LINE_THRESH*zoom_f*(trunk_cylin.r1 + trunk_cylin.r2) < dist) { // draw as line
-		if (skip_lines) return;
+		if (skip_lines) return 0; // skipped - this is the only case that returns 0
 		point const p2((trunk_cylin.r2 == 0.0) ? (0.2*trunk_cylin.p1 + 0.8*trunk_cylin.p2) : trunk_cylin.p2);
 		tree_scenery_pld.add_textured_line(trunk_cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
 	}
@@ -996,6 +1000,7 @@ void small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines,
 			}
 		}
 	}
+	return 1;
 }
 
 
