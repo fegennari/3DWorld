@@ -925,13 +925,8 @@ void obj_group::init_group() {
 
 	for (unsigned j = 0; j < max_objects(); ++j) {
 		objects[j] = def_objects[type];
-
-		if (j < init_objects) {
-			gen_object_pos(objects[j].pos, object_types[type].flags);
-		}
-		else {
-			objects[j].status = 0;
-		}
+		if (j < init_objects) {gen_object_pos(objects[j].pos, object_types[type].flags);}
+		else {objects[j].status = 0;}
 	}
 	flags &= (PRECIPITATION | APP_FROM_LT); // keep only this flag
 }
@@ -948,16 +943,17 @@ void obj_group::add_predef_obj(point const &pos, int type, int rtime) {
 void obj_group::preproc_this_frame() {
 
 	unsigned const nobjs((unsigned)max_objects());
-	end_id = nobjs;
+	unsigned const max_used_id(min(nobjs, max(end_id, init_objects+1))); // one past the end
+	end_id = nobjs; // likely will be reset to a smaller value below
 	new_id = 0;
 	if (!enabled) return;
 
 	if (reorderable && begin_motion) { // some objects such as smileys are position dependent
 		assert(predef_objs.empty());
 		unsigned saw_id(0);
-		for (unsigned j = 0; j < nobjs; ++j) {if (objects[j].enabled()) {saw_id = j+1;}}
+		for (unsigned j = 0; j < max_used_id; ++j) {if (objects[j].enabled()) {saw_id = j+1;}} // only need to check up to max_used_id
 		sort(objects.begin(), (objects.begin() + saw_id));
-		for (unsigned j = 0; j < nobjs; ++j) {if (!objects[j].enabled()) {end_id = j; break;}}
+		for (unsigned j = 0; j < nobjs; ++j) {if (!objects[j].enabled()) {end_id = j; break;}} // Note: will likely exit before j reaches max_used_id
 	}
 	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
 		if (i->obj_used == -1) continue;
@@ -989,7 +985,7 @@ void obj_group::create_object_at(unsigned i, point const &pos) {
 	assert(max_objects() == max_objs && i < max_objects());
 	assert(type >= 0 && type < NUM_TOT_OBJS);
 	assert(!is_nan(pos));
-	if (objects[i].coll_id >= 0) remove_reset_coll_obj(objects[i].coll_id); // just in case
+	if (objects[i].coll_id >= 0) {remove_reset_coll_obj(objects[i].coll_id);} // just in case
 	objects[i]     = def_objects[type];
 	objects[i].pos = pos;
 }
@@ -1050,6 +1046,7 @@ void obj_group::enable() {
 		if (tflags & OBJ_ROLLS)     {td->matrices.resize(max_objs);}
 		if (tflags & VERTEX_DEFORM) {td->perturb_maps.resize(max_objs);}
 	}
+	end_id  = 0;
 	enabled = 1;
 }
 
@@ -1062,6 +1059,7 @@ void obj_group::disable() {
 	if (!large_radius()) remove_excess_cap(objects); // free
 	if ((object_types[type].flags & (OBJ_ROLLS | VERTEX_DEFORM))) {td.reset();}
 	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {i->obj_used = -1;}
+	end_id  = 0;
 	enabled = 0;
 }
 
@@ -1069,7 +1067,7 @@ void obj_group::disable() {
 void obj_group::free_objects() {
 
 	remove_reset_cobjs();
-	if (!objects.empty()) reset_status(objects);
+	if (!objects.empty()) {reset_status(objects);}
 	td.reset();
 }
 
@@ -1084,9 +1082,7 @@ void obj_group::shift(vector3d const &vd) {
 			if (type == SMILEY) shift_player_state(vd, j);
 		}
 	}
-	for (unsigned i = 0; i < predef_objs.size(); ++i) {
-		predef_objs[i].pos += vd;
-	}
+	for (unsigned i = 0; i < predef_objs.size(); ++i) {predef_objs[i].pos += vd;}
 }
 
 
