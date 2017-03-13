@@ -45,7 +45,7 @@ hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
+extern unsigned grass_density, max_unique_trees, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset;
@@ -1607,25 +1607,25 @@ void tile_t::draw_water(shader_t &s, float z) const {
 }
 
 
-bool tile_t::check_sphere_collision(point &pos, float radius) const {
+bool tile_t::check_sphere_collision(point &pos, float sradius) const {
 
 	if (is_distant || !contains_point(pos)) return 0;
-	if (pos.z > get_tile_zmax() + radius)   return 0; // sphere is completely above the tile
+	if (pos.z > get_tile_zmax() + sradius)   return 0; // sphere is completely above the tile
 	bool coll(0);
 
 	if (!pine_trees.empty()) {
 		pos  -= ptree_off.get_xlate();
-		coll |= pine_trees.check_sphere_coll(pos, radius);
+		coll |= pine_trees.check_sphere_coll(pos, sradius);
 		pos  += ptree_off.get_xlate();
 	}
 	if (!decid_trees.empty()) {
 		pos  -= dtree_off.get_xlate();
-		coll |= decid_trees.check_sphere_coll(pos, radius);
+		coll |= decid_trees.check_sphere_coll(pos, sradius);
 		pos  += dtree_off.get_xlate();
 	}
 	if (scenery.generated) {
 		pos  -= scenery_off.get_xlate();
-		coll |= scenery.check_sphere_coll(pos, radius);
+		coll |= scenery.check_sphere_coll(pos, sradius);
 		pos  += scenery_off.get_xlate();
 	}
 	return coll;
@@ -2963,6 +2963,47 @@ bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_play
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 
 
+// *** tree addition/removal ***
+
+
+void tile_draw_t::remove_trees_at(point const &pos, float radius) {
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->remove_trees_at(pos, radius, smap_manager);}
+}
+
+template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
+	swap(v[ix], v.back());
+	v.pop_back();
+	--ix;
+}
+
+void tile_t::remove_trees_at(point const &pos, float rradius, tile_shadow_map_manager &smap_manager) {
+	
+	if (pine_trees.empty() && decid_trees.empty()) return; // no trees to remove
+	if (!dist_less_than(pos, get_center(), (radius + rradius))) return; // tile not within sphere's radius
+	bool pine_removed(0), decid_removed(0);
+	point const pt_pos(pos - ptree_off.get_xlate()), dt_pos(pos - dtree_off.get_xlate());
+
+	for (unsigned i = 0; i < pine_trees.size(); ++i) {
+		if (!dist_less_than(pine_trees[i].get_pos(), pt_pos, rradius)) continue;
+		// TODO: update VBO, trunk_pts, inst_pts, num values, etc.
+		remove_element(pine_trees, i);
+		pine_removed = 1;
+	}
+	for (unsigned i = 0; i < decid_trees.size(); ++i) {
+		if (!dist_less_than(decid_trees[i].get_center(), dt_pos, rradius)) continue;
+		remove_element(decid_trees, i);
+		decid_removed = 1;
+	}
+	if (pine_removed || decid_removed) {
+		// TODO: update grass density
+		// TODO: update shadow maps, tree AO map, etc. for adjacent tiles
+		clear_shadow_map(&smap_manager);
+		apply_tree_ao_shadows();
+		clear_shadows();
+	}
+}
+
+
 // *** heightmap modification and queries ***
 
 
@@ -3000,6 +3041,14 @@ void inf_terrain_fire_weapon() {
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
+#if 0
+	point p_int;
+
+	if (line_intersect_tiled_mesh(v1, v2, p_int)) {
+		terrain_tile_draw.remove_trees_at(p_int, cur_brush_param.get_radius()*HALF_DXY);
+		return;
+	}
+#endif
 	float t(0.0); // unused
 	tile_t *tile(NULL);
 	int xpos(0), ypos(0);
