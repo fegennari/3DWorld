@@ -603,21 +603,20 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_he
 	//vector3d const light_dir(get_light_pos().get_norm()); // directional light
 	//point pos(pos_ - light_dir*(center_height/max(0.1f, light_dir.z)));
 	int const xc(round_fp((pos.x - xstart)/deltax)), yc(round_fp((pos.y - ystart)/deltay));
-	int const rval(max(int(tradius/deltax), int(tradius/deltay)) + 1);
+	int const rval(max(int(tradius/deltax), int(tradius/deltay)) + 1), rval_sq(rval*rval);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
 	float const scale(0.6/rval);
 	bool updated(0);
 
 	for (int y = y1; y <= y2; ++y) {
 		for (int x = x1; x <= x2; ++x) {
-			float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
-			
-			if (dist < rval) {
-				float const mult(0.2 + 0.8*scale*dist);
-				tree_map[y*stride + x].ao *= mult;
-				tree_map[y*stride + x].sh *= mult;
-				updated = 1;
-			}
+			float const dx(abs(x - xc)), dy(abs(y - yc)), dist_sq(dx*dx + dy*dy);
+			if (dist_sq > rval_sq) continue;
+			float const mult(0.2 + 0.8*scale*sqrt(dist_sq));
+			tree_map_val &val(tree_map[y*stride + x]);
+			val.ao *= mult;
+			val.sh *= mult;
+			updated = 1;
 		}
 	}
 	if (!no_adj_test) {
@@ -957,7 +956,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					}
 				} // end grass
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
-					mesh_weight_data[off+i] = ((weights[i] <= 0.0) ? 0 : ((weights[i] == 1.0) ? 255 : (unsigned char)(255.0*min(weights[i], 1.0f))));
+					mesh_weight_data[off+i] = ((weights[i] <= 0.01) ? 0 : ((weights[i] >= 0.99) ? 255 : (unsigned char)(255.0*weights[i])));
 				}
 			} // for x
 		} // for y
@@ -972,8 +971,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		for (unsigned i = 0; i < num_texels; ++i) { // replace grass under trees with dirt
 			unsigned const off(4*i);
 			if (tree_map[i].ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
-			float const v(tree_map[i].ao/255.0);
-			weight_data[off+dirt_tex_ix]   = (unsigned char)(max(0.0, min(255.0, (weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]))));
+			float const v(tree_map[i].ao/255.0), w(weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]);
+			weight_data[off+dirt_tex_ix]   = (unsigned char)(max(0.0f, min(255.0f, w)));
 			weight_data[off+grass_tex_ix] *= v;
 		}
 	}
