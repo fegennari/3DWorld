@@ -1830,8 +1830,11 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	unsigned const num_to_gen(to_gen_zvals.size());
 	unsigned gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
 	bool const gpu_mode(mesh_gen_mode == MGEN_SIMPLEX_GPU);
+	
 	// to balance tile gen time across frames, generate a number of tiles equal to the average of this frame and the previous frame
-	if (gen_this_frame > 1 && gen_this_frame < max_tile_gen_per_frame) {gen_this_frame = min(gen_this_frame, (gen_this_frame + tiles_gen_prev_frame + 1)/2);} // round up
+	if (gen_this_frame > 1 && gen_this_frame < max_tile_gen_per_frame && inf_terrain_fire_mode == 0) { // disable this mode when editing mesh height to prevent visual artifacts
+		gen_this_frame = min(gen_this_frame, (gen_this_frame + tiles_gen_prev_frame + 1)/2); // round up
+	}
 	tiles_gen_prev_frame = num_to_gen;
 
 	if (num_to_gen == 0) {
