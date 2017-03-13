@@ -58,12 +58,16 @@ struct smoke_entry_t {
 class smoke_grid_t {
 	vector<smoke_entry_t> zrng; // z smoke ranges for each xy grid element
 public:
-	void register_smoke(int x, int y, int z) {
-		assert(!point_outside_mesh(x, y));
+	void ensure_zrng() {
 		if (zrng.empty()) {zrng.resize(XY_MULT_SIZE);} else {assert(zrng.size() == XY_MULT_SIZE);}
+	}
+	void register_smoke(int x, int y, int z) {
+		ensure_zrng();
+		assert(!point_outside_mesh(x, y));
 		zrng[y*MESH_X_SIZE + x].update(z);
 	}
 	smoke_entry_t &get_z_range(int x, int y) {
+		ensure_zrng();
 		assert(!point_outside_mesh(x, y));
 		return zrng[y*MESH_X_SIZE + x];
 	}
@@ -195,8 +199,8 @@ void distribute_smoke() { // called at most once per frame
 				diffuse_smoke(x+(dx ? -1 :  1), y, z, lmc, xy_rate, xy_rate, 0, !dx);
 				diffuse_smoke(x, y+(dy ?  1 : -1), z, lmc, xy_rate, xy_rate, 1,  dy);
 				diffuse_smoke(x, y+(dy ? -1 :  1), z, lmc, xy_rate, xy_rate, 1, !dy);
-				diffuse_smoke(x, y, (z - 1),  lmc, SMOKE_DIS_ZD, SMOKE_DIS_ZU, 2, 0);
-				diffuse_smoke(x, y, (z + 1),  lmc, SMOKE_DIS_ZU, SMOKE_DIS_ZD, 2, 1);
+				diffuse_smoke(x, y, (z - 1), lmc, SMOKE_DIS_ZD, SMOKE_DIS_ZU, 2, 0);
+				diffuse_smoke(x, y, (z + 1), lmc, SMOKE_DIS_ZU, SMOKE_DIS_ZD, 2, 1);
 				any_z_has_smoke = 1;
 			} // for z
 			if (!any_z_has_smoke) {zrange.clear();} // mark this xy as not having smoke
