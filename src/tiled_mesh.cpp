@@ -16,7 +16,7 @@ bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
-unsigned const NUM_FIRE_MODES = 4;
+unsigned const NUM_FIRE_MODES = 5;
 unsigned const TILE_SMAP_START_TU_ID = 13;
 float const FOG_DIST_TILES    = 1.45;
 float const DRAW_DIST_TILES   = 1.5;
@@ -2886,7 +2886,7 @@ void pre_draw_tiled_terrain(bool reflection_pass) {terrain_tile_draw.pre_draw(re
 
 colorRGBA get_inf_terrain_mod_color() {
 
-	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE};
+	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE, YELLOW};
 	assert(inf_terrain_fire_mode < NUM_FIRE_MODES);
 	return colors[inf_terrain_fire_mode];
 }
@@ -2921,7 +2921,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 
 			// modification marker area rendered with a cylinder + stencil test to mask to mesh surface
 			assert(tile != nullptr);
-			float const tzmin(min(hit_pos.z, tile->get_zmin())), tzmax(max(hit_pos.z, tile->get_zmax())), dz(tzmax - tzmin);
+			float const tzmin(min(hit_pos.z, tile->get_zmin())), tzmax(max(hit_pos.z, tile->get_tile_zmax())), dz(tzmax - tzmin);
 			float const z1(tzmin - dz - SMALL_NUMBER), z2(tzmax + dz + SMALL_NUMBER);
 			float const radius((cur_brush_param.get_radius() + 0.5)*HALF_DXY); // do we need a nonuniform x/y scale for non-square meshes?
 			point const p1(hit_pos.x, hit_pos.y, z1);
@@ -2984,15 +2984,17 @@ void tile_t::remove_trees_at(point const &pos, float rradius, tile_shadow_map_ma
 
 	for (unsigned i = 0; i < pine_trees.size(); ++i) {
 		if (!dist_less_than(pine_trees[i].get_pos(), pt_pos, rradius)) continue;
-		// TODO: update VBO, trunk_pts, inst_pts, num values, etc.
 		remove_element(pine_trees, i);
 		pine_removed = 1;
 	}
 	for (unsigned i = 0; i < decid_trees.size(); ++i) {
 		if (!dist_less_than(decid_trees[i].get_center(), dt_pos, rradius)) continue;
+		decid_trees[i].delete_tree();
 		remove_element(decid_trees, i);
 		decid_removed = 1;
 	}
+	if (pine_removed) {pine_trees.clear_vbos();}
+
 	if (pine_removed || decid_removed) {
 		// TODO: update grass density
 		// TODO: update shadow maps, tree AO map, etc. for adjacent tiles
@@ -3019,7 +3021,7 @@ void change_inf_terrain_fire_mode(int val) {
 
 	if (!using_tiled_terrain_hmap_tex()) return; // ignore
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
-	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh"};
+	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh", "Remove Trees"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 	play_switch_weapon_sound();
 }
@@ -3040,14 +3042,12 @@ void inf_terrain_fire_weapon() {
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
-#if 0
-	point p_int;
 
-	if (line_intersect_tiled_mesh(v1, v2, p_int)) {
-		terrain_tile_draw.remove_trees_at(p_int, cur_brush_param.get_radius()*HALF_DXY);
+	if (inf_terrain_fire_mode == 4) { // tree removal
+		point p_int;
+		if (line_intersect_tiled_mesh(v1, v2, p_int)) {terrain_tile_draw.remove_trees_at(p_int, cur_brush_param.get_radius()*HALF_DXY);}
 		return;
 	}
-#endif
 	float t(0.0); // unused
 	tile_t *tile(NULL);
 	int xpos(0), ypos(0);
