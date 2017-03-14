@@ -302,6 +302,7 @@ public:
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
 	}
 	float get_bsphere_radius_inc_water() const;
+	bool mesh_sphere_intersect(point const &pos, float rradius) const;
 	bool update_range(tile_shadow_map_manager &smap_manager);
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), get_bsphere_radius_inc_water(), get_bcube());}
 	float get_dist_to_camera_in_tiles(bool xy_dist=1) const {return get_rel_dist_to_camera(xy_dist)*TILE_RADIUS;}
@@ -330,7 +331,8 @@ public:
 	void set_mesh_ambient_color(shader_t &s) const;
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	void update_decid_trees();
-	void remove_trees_at(point const &pos, float rradius, tile_shadow_map_manager &smap_manager);
+	void register_tree_change(tile_shadow_map_manager &smap_manager);
+	int remove_trees_at(point const &pos, float rradius, tile_shadow_map_manager &smap_manager, cube_t &rem_bcube);
 
 	// *** scenery/grass ***
 	void update_scenery();

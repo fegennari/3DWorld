@@ -2966,7 +2966,18 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 
 
 void tile_draw_t::remove_trees_at(point const &pos, float radius) {
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->remove_trees_at(pos, radius, smap_manager);}
+
+	cube_t rem_bcube(all_zeros);
+	vector<tile_t *> near_tiles;
+
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		if (i->second->remove_trees_at(pos, radius, smap_manager, rem_bcube)) {near_tiles.push_back(i->second.get());}
+	}
+	if (rem_bcube.is_all_zeros()) return; // no trees removed
+
+	for (auto i = near_tiles.begin(); i != near_tiles.end(); ++i) { // update shadows for nearby tiles
+		if ((*i)->get_mesh_bcube().intersects(rem_bcube)) {(*i)->register_tree_change(smap_manager);}
+	}
 }
 
 template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
@@ -2975,33 +2986,42 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 	--ix;
 }
 
-void tile_t::remove_trees_at(point const &pos, float rradius, tile_shadow_map_manager &smap_manager) {
+template<typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, point const &xlate, cube_t &rem_bcube) {
+	point const &tpos(v[i].get_center());
+	if (!dist_less_than(tpos, pos, rradius)) return 0;
+	float const tradius(2.0*v[i].get_radius());
+	if (rem_bcube.is_all_zeros()) {rem_bcube.set_from_sphere(tpos+xlate, tradius);} else {rem_bcube.union_with_sphere(tpos+xlate, tradius);}
+	remove_element(v, i);
+	return 1;
+}
+
+void tile_t::register_tree_change(tile_shadow_map_manager &smap_manager) {
+	clear_shadow_map(&smap_manager);
+	//if (pine_trees_generated() || decid_trees.was_generated()) {apply_tree_ao_shadows();}
+	tree_map.clear(); // regenerate tree AO shadows
+	clear_shadows();
+}
+
+bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
+	if (!dist_less_than(pos, get_center(), (radius + rradius))) return 0; // tile not within sphere's radius
+	return sphere_cube_intersect(pos, rradius, get_mesh_bcube()); // tighter intersection test
+}
+
+// return value: 0 = not within sphere, 1 = no trees removed, 2 = trees removed
+int tile_t::remove_trees_at(point const &pos, float rradius, tile_shadow_map_manager &smap_manager, cube_t &rem_bcube) {
 	
-	if (pine_trees.empty() && decid_trees.empty()) return; // no trees to remove
-	if (!dist_less_than(pos, get_center(), (radius + rradius))) return; // tile not within sphere's radius
+	if (!mesh_sphere_intersect(pos, (1.1*rradius + 2.0*trmax))) return 0; // sphere not near this tile, and not overlapping any tile trees
+	if (!mesh_sphere_intersect(pos, rradius)) return 1; // not overlapping this tile, but close
+	if (pine_trees.empty() && decid_trees.empty()) return 1; // no trees to remove
 	bool pine_removed(0), decid_removed(0);
-	point const pt_pos(pos - ptree_off.get_xlate()), dt_pos(pos - dtree_off.get_xlate());
-
-	for (unsigned i = 0; i < pine_trees.size(); ++i) {
-		if (!dist_less_than(pine_trees[i].get_pos(), pt_pos, rradius)) continue;
-		remove_element(pine_trees, i);
-		pine_removed = 1;
-	}
-	for (unsigned i = 0; i < decid_trees.size(); ++i) {
-		if (!dist_less_than(decid_trees[i].get_center(), dt_pos, rradius)) continue;
-		decid_trees[i].delete_tree();
-		remove_element(decid_trees, i);
-		decid_removed = 1;
-	}
+	vector3d const pine_xlate(ptree_off.get_xlate()), decid_xlate(dtree_off.get_xlate());
+	point const pt_pos(pos - pine_xlate), dt_pos(pos - decid_xlate);
+	for (unsigned i = 0; i < pine_trees.size();  ++i) {pine_removed  |= remove_tree(pine_trees,  i, pt_pos, rradius, pine_xlate,  rem_bcube);}
+	for (unsigned i = 0; i < decid_trees.size(); ++i) {decid_removed |= remove_tree(decid_trees, i, dt_pos, rradius, decid_xlate, rem_bcube);}
+	if (!pine_removed && !decid_removed) return 1; // no trees removed
 	if (pine_removed) {pine_trees.clear_vbos();}
-
-	if (pine_removed || decid_removed) {
-		// TODO: update grass density
-		// TODO: update shadow maps, tree AO map, etc. for adjacent tiles
-		clear_shadow_map(&smap_manager);
-		apply_tree_ao_shadows();
-		clear_shadows();
-	}
+	register_tree_change(smap_manager);
+	return 2; // trees removed
 }
 
 

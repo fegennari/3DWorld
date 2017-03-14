@@ -397,6 +397,7 @@ struct cube_t { // size = 24
 	std::string str() const;
 	std::string raw_str() const;
 	bool is_near_zero_area() const;
+	bool is_all_zeros() const {return (d[0][0] == 0 && d[0][1] == 0 && d[1][0] == 0 && d[1][1] == 0 && d[2][0] == 0 && d[2][1] == 0);}
 
 	void union_with_pt(point const &pt) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]); d[i_][1] = max(d[i_][1], pt[i_]);)
