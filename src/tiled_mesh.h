@@ -193,8 +193,8 @@ public:
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()? - grass and trees should not be underwater
 	bool can_have_trees() const {return (!no_trees && !is_distant && !all_water());}
-	bool can_have_pine_palm_trees() const {return (can_have_trees() && can_have_pine_palm_trees_in_zrange(mzmin, mzmax));}
-	bool can_have_decid_trees    () const {return (can_have_trees() && can_have_decid_trees_in_zrange    (mzmin, mzmax));}
+	bool can_have_pine_palm_trees() const;
+	bool can_have_decid_trees    () const;
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	bool has_valid_shadow_map() const {return !smap_data.empty();}
@@ -332,7 +332,7 @@ public:
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	void update_decid_trees();
 	void register_tree_change(tile_shadow_map_manager &smap_manager);
-	int remove_trees_at(point const &pos, float rradius, tile_shadow_map_manager &smap_manager, cube_t &rem_bcube);
+	int add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, tile_shadow_map_manager &smap_manager, cube_t &update_bcube);
 
 	// *** scenery/grass ***
 	void update_scenery();
@@ -444,7 +444,7 @@ public:
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
 	float get_actual_zmin() const;
-	void remove_trees_at(point const &pos, float radius);
+	void add_or_remove_trees_at(point const &pos, float radius, bool add_trees);
 }; // tile_draw_t
 
 

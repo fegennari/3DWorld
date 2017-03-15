@@ -16,7 +16,7 @@ bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
-unsigned const NUM_FIRE_MODES = 5;
+unsigned const NUM_FIRE_MODES = 6;
 unsigned const TILE_SMAP_START_TU_ID = 13;
 float const FOG_DIST_TILES    = 1.45;
 float const DRAW_DIST_TILES   = 1.5;
@@ -639,7 +639,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_he
 
 void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test) {
 
-	if (pine_trees_enabled() && can_have_pine_palm_trees()) {
+	if (can_have_pine_palm_trees()) {
 		assert(pine_trees_generated());
 		point const pt_off(tile->ptree_off.subtract_from(mesh_off));
 
@@ -647,7 +647,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 			add_tree_ao_shadow((i->get_pos() + pt_off), 1.8*i->get_pine_tree_radius(), 0.5*i->get_height(), no_adj_test);
 		}
 	}
-	if (decid_trees_enabled() && can_have_decid_trees()) {
+	if (can_have_decid_trees()) {
 		assert(decid_trees.was_generated());
 		point const dt_off(tile->dtree_off.subtract_from(mesh_off));
 
@@ -1020,6 +1020,13 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 
 
 // *** trees ***
+
+bool tile_t::can_have_pine_palm_trees() const {
+	return (pine_trees_enabled() && can_have_trees() && can_have_pine_palm_trees_in_zrange(mzmin, mzmax));
+}
+bool tile_t::can_have_decid_trees() const {
+	return (decid_trees_enabled() && can_have_trees() && can_have_decid_trees_in_zrange(mzmin, mzmax));
+}
 
 void tile_t::init_pine_tree_draw() {
 
@@ -2150,7 +2157,7 @@ void tile_draw_t::pre_draw(bool reflection_pass) { // view-dependent updates/GPU
 		if (!tile->is_visible()) continue; // Note: using current camera view frustum
 
 		if (tile->can_have_trees()) { // no trees in water or distant tiles
-			if (pine_trees_enabled() && tile->can_have_pine_palm_trees() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
+			if (tile->can_have_pine_palm_trees() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
 			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
 		}
 		to_update.push_back(tile);
@@ -2886,7 +2893,7 @@ void pre_draw_tiled_terrain(bool reflection_pass) {terrain_tile_draw.pre_draw(re
 
 colorRGBA get_inf_terrain_mod_color() {
 
-	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE, YELLOW};
+	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE, YELLOW, CYAN};
 	assert(inf_terrain_fire_mode < NUM_FIRE_MODES);
 	return colors[inf_terrain_fire_mode];
 }
@@ -2965,18 +2972,18 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 // *** tree addition/removal ***
 
 
-void tile_draw_t::remove_trees_at(point const &pos, float radius) {
+void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees) {
 
-	cube_t rem_bcube(all_zeros);
+	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		if (i->second->remove_trees_at(pos, radius, smap_manager, rem_bcube)) {near_tiles.push_back(i->second.get());}
+		if (i->second->add_or_remove_trees_at(pos, radius, add_trees, smap_manager, update_bcube)) {near_tiles.push_back(i->second.get());}
 	}
-	if (rem_bcube.is_all_zeros()) return; // no trees removed
+	if (update_bcube.is_all_zeros()) return; // no trees updated
 
 	for (auto i = near_tiles.begin(); i != near_tiles.end(); ++i) { // update shadows for nearby tiles
-		if ((*i)->get_mesh_bcube().intersects(rem_bcube)) {(*i)->register_tree_change(smap_manager);}
+		if ((*i)->get_mesh_bcube().intersects(update_bcube)) {(*i)->register_tree_change(smap_manager);}
 	}
 }
 
@@ -2988,7 +2995,7 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 
 template<typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, point const &xlate, cube_t &rem_bcube) {
 	point const &tpos(v[i].get_center());
-	if (!dist_less_than(tpos, pos, rradius)) return 0;
+	if (!dist_xy_less_than(tpos, pos, rradius)) return 0;
 	float const tradius(2.0*v[i].get_radius());
 	if (rem_bcube.is_all_zeros()) {rem_bcube.set_from_sphere(tpos+xlate, tradius);} else {rem_bcube.union_with_sphere(tpos+xlate, tradius);}
 	remove_element(v, i);
@@ -3007,21 +3014,34 @@ bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
 	return sphere_cube_intersect(pos, rradius, get_mesh_bcube()); // tighter intersection test
 }
 
-// return value: 0 = not within sphere, 1 = no trees removed, 2 = trees removed
-int tile_t::remove_trees_at(point const &pos, float rradius, tile_shadow_map_manager &smap_manager, cube_t &rem_bcube) {
+// return value: 0 = not within sphere, 1 = no trees updated, 2 = trees updated
+int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, tile_shadow_map_manager &smap_manager, cube_t &update_bcube) {
 	
 	if (!mesh_sphere_intersect(pos, (1.1*rradius + 2.0*trmax))) return 0; // sphere not near this tile, and not overlapping any tile trees
 	if (!mesh_sphere_intersect(pos, rradius)) return 1; // not overlapping this tile, but close
 	if (pine_trees.empty() && decid_trees.empty()) return 1; // no trees to remove
-	bool pine_removed(0), decid_removed(0);
+	bool pine_changed(0), decid_changed(0);
 	vector3d const pine_xlate(ptree_off.get_xlate()), decid_xlate(dtree_off.get_xlate());
 	point const pt_pos(pos - pine_xlate), dt_pos(pos - decid_xlate);
-	for (unsigned i = 0; i < pine_trees.size();  ++i) {pine_removed  |= remove_tree(pine_trees,  i, pt_pos, rradius, pine_xlate,  rem_bcube);}
-	for (unsigned i = 0; i < decid_trees.size(); ++i) {decid_removed |= remove_tree(decid_trees, i, dt_pos, rradius, decid_xlate, rem_bcube);}
-	if (!pine_removed && !decid_removed) return 1; // no trees removed
-	if (pine_removed) {pine_trees.clear_vbos();}
+
+	// remove trees first, before adding, so that there are no overlaps of new trees and old trees
+	for (unsigned i = 0; i < pine_trees.size();  ++i) {pine_changed  |= remove_tree(pine_trees,  i, pt_pos, rradius, pine_xlate,  update_bcube);}
+	for (unsigned i = 0; i < decid_trees.size(); ++i) {decid_changed |= remove_tree(decid_trees, i, dt_pos, rradius, decid_xlate, update_bcube);}
+
+	if (add_trees) {
+		if (can_have_pine_palm_trees()) {
+			//assert(pine_trees_generated());
+			// FIXME: WRITE
+		}
+		if (can_have_decid_trees()) {
+			//assert(decid_trees.was_generated());
+			// FIXME: WRITE
+		}
+	}
+	if (!pine_changed && !decid_changed) return 1; // no trees updated
+	if (pine_changed) {pine_trees.clear_vbos();}
 	register_tree_change(smap_manager);
-	return 2; // trees removed
+	return 2; // trees updated
 }
 
 
@@ -3041,7 +3061,7 @@ void change_inf_terrain_fire_mode(int val) {
 
 	if (!using_tiled_terrain_hmap_tex()) return; // ignore
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
-	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh", "Remove Trees"};
+	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh", "Remove Trees", "Add Trees"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 	play_switch_weapon_sound();
 }
@@ -3063,9 +3083,11 @@ void inf_terrain_fire_weapon() {
 	last_tfticks = tfticks;
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 
-	if (inf_terrain_fire_mode == 4) { // tree removal
+	if (inf_terrain_fire_mode == 4 || inf_terrain_fire_mode == 5) { // tree addition/removal
 		point p_int;
-		if (line_intersect_tiled_mesh(v1, v2, p_int)) {terrain_tile_draw.remove_trees_at(p_int, cur_brush_param.get_radius()*HALF_DXY);}
+		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
+			terrain_tile_draw.add_or_remove_trees_at(p_int, cur_brush_param.get_radius()*HALF_DXY, (inf_terrain_fire_mode == 5));
+		}
 		return;
 	}
 	float t(0.0); // unused
