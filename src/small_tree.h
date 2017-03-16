@@ -131,7 +131,10 @@ struct small_tree_group : public vector<small_tree> {
 	void draw_palm_insts(shader_t &s, bool draw_all, vector3d const &xlate, int xlate_loc) {draw_tree_insts(s, draw_all, xlate, xlate_loc, tree_insts[1], 0);}
 	void draw_pine_leaves(shader_t &s, bool shadow_only, bool low_detail=0, bool draw_all=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
 	void draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc=-1, int scale_loc=-1, vector3d const &xlate=zero_vector) const;
+	int get_ntrees_for_mesh_xy(int i, int j, float ntrees_mult_density);
+	void maybe_add_tree(int i, int j, float zpos_in, float tsize, int skip_val, bool check_hmap_normal);
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
+	void gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius);
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());} // FIXME_TREES: excludes palm trees
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}
 	void update_zmax(float &tzmax) const;

@@ -2974,10 +2974,11 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees) {
 
+	//timer_t ("Tree Add/Remove");
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // FIXME: use openmp?
 		if (i->second->add_or_remove_trees_at(pos, radius, add_trees, smap_manager, update_bcube)) {near_tiles.push_back(i->second.get());}
 	}
 	if (update_bcube.is_all_zeros()) return; // no trees updated
@@ -2993,18 +2994,26 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 	--ix;
 }
 
-template<typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, point const &xlate, cube_t &rem_bcube) {
+void update_trees_bcube(point const &tpos, float tradius, cube_t &bcube) {
+	if (bcube.is_all_zeros()) {bcube.set_from_sphere(tpos, tradius);} else {bcube.union_with_sphere(tpos, tradius);}
+}
+template <typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, point const &xlate, cube_t &rem_bcube) {
 	point const &tpos(v[i].get_center());
 	if (!dist_xy_less_than(tpos, pos, rradius)) return 0;
-	float const tradius(2.0*v[i].get_radius());
-	if (rem_bcube.is_all_zeros()) {rem_bcube.set_from_sphere(tpos+xlate, tradius);} else {rem_bcube.union_with_sphere(tpos+xlate, tradius);}
+	update_trees_bcube(tpos+xlate, 2.0*v[i].get_radius(), rem_bcube);
 	remove_element(v, i);
 	return 1;
 }
 
+template <typename T> void post_tree_add(T const &trees, unsigned start_sz, vector3d const &xlate, bool &changed, cube_t &update_bcube) {
+	for (unsigned i = start_sz; i < trees.size(); ++i) {
+		update_trees_bcube(trees[i].get_center()+xlate, 2.0*trees[i].get_radius(), update_bcube);
+		changed = 1;
+	}
+}
+
 void tile_t::register_tree_change(tile_shadow_map_manager &smap_manager) {
 	clear_shadow_map(&smap_manager);
-	//if (pine_trees_generated() || decid_trees.was_generated()) {apply_tree_ao_shadows();}
 	tree_map.clear(); // regenerate tree AO shadows
 	clear_shadows();
 }
@@ -3019,7 +3028,6 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 	
 	if (!mesh_sphere_intersect(pos, (1.1*rradius + 2.0*trmax))) return 0; // sphere not near this tile, and not overlapping any tile trees
 	if (!mesh_sphere_intersect(pos, rradius)) return 1; // not overlapping this tile, but close
-	if (pine_trees.empty() && decid_trees.empty()) return 1; // no trees to remove
 	bool pine_changed(0), decid_changed(0);
 	vector3d const pine_xlate(ptree_off.get_xlate()), decid_xlate(dtree_off.get_xlate());
 	point const pt_pos(pos - pine_xlate), dt_pos(pos - decid_xlate);
@@ -3028,14 +3036,21 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 	for (unsigned i = 0; i < pine_trees.size();  ++i) {pine_changed  |= remove_tree(pine_trees,  i, pt_pos, rradius, pine_xlate,  update_bcube);}
 	for (unsigned i = 0; i < decid_trees.size(); ++i) {decid_changed |= remove_tree(decid_trees, i, dt_pos, rradius, decid_xlate, update_bcube);}
 
-	if (add_trees) {
-		if (can_have_pine_palm_trees()) {
-			//assert(pine_trees_generated());
-			// FIXME: WRITE
+	if (add_trees) { // what if trees are not generated? can we get here in that case?
+		if (can_have_pine_palm_trees() && pine_trees_generated()) {
+			unsigned const start_sz(pine_trees.size());
+			int const orig_xoff2(xoff2), orig_yoff2(yoff2);
+			xoff2 = -ptree_off.dxoff; yoff2 = -ptree_off.dyoff; // translate so that trees are generated relative to ptree_off, rather than current offset
+			pine_trees.gen_trees_tt_within_radius(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, pt_pos, rradius);
+			xoff2 = orig_xoff2; yoff2 = orig_yoff2; // translate back
+			postproc_trees(pine_trees, ptzmax);
+			post_tree_add(pine_trees, start_sz, pine_xlate, pine_changed, update_bcube);
 		}
-		if (can_have_decid_trees()) {
-			//assert(decid_trees.was_generated());
-			// FIXME: WRITE
+		if (can_have_decid_trees() && decid_trees.was_generated()) {
+			unsigned const start_sz(decid_trees.size());
+			//decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, 1.0); // FIXME
+			postproc_trees(decid_trees, dtzmax);
+			post_tree_add(decid_trees, start_sz, decid_xlate, decid_changed, update_bcube);
 		}
 	}
 	if (!pine_changed && !decid_changed) return 1; // no trees updated

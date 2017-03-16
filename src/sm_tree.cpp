@@ -375,6 +375,40 @@ void create_pine_tree_instances() {
 }
 
 
+int small_tree_group::get_ntrees_for_mesh_xy(int i, int j, float ntrees_mult_density) {
+
+	int const ntrees(int(min(1.0f, ntrees_mult_density)*NUM_SMALL_TREES));
+	if (ntrees == 0) return 0;
+	rgen.set_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index), (845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
+	rgen.rand(); // increase randomness (slower, but less regular - which is important for pine trees in tiled terrain mode)
+	if ((rgen.rand_seed_mix()%max(1, XY_MULT_SIZE/ntrees)) != 0) return 0; // not selected based on tree probability
+	return max(1, ntrees/XY_MULT_SIZE);
+}
+
+void small_tree_group::maybe_add_tree(int i, int j, float zpos_in, float tsize, int skip_val, bool check_hmap_normal) {
+
+	rgen.rand_mix();
+	float const xval(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
+	float const yval(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
+	float const zpos((zpos_in != 0.0) ? zpos_in : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
+	int const ttype(get_tree_type_from_height(zpos, rgen, 0));
+	if (ttype == TREE_NONE) return;
+	if (check_hmap_normal && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) return;
+	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
+
+	if (instanced) { // check voxel terrain? or does this mode only get used for tiled terrain?
+		assert(ttype == T_SH_PINE || ttype == T_PINE || ttype == T_PALM);
+		assert(zval_adj == 0.0); // must be inf terrain mode
+		add_tree(small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen)));
+	}
+	else {
+		float const height(tsize*rand_tree_height(rgen));
+		point const pos(xval, yval, zpos+zval_adj*height);
+		if (point_inside_voxel_terrain(pos)) return; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
+		add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
+	}
+}
+
 // density = x1,y1 x2,y1 x1,y2 x2,y2
 void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const density[4]) {
 
@@ -398,42 +432,43 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	for (int i = y1; i < y2; i += skip_val, yv += dyv) {
 		for (int j = x1; j < x2; j += skip_val, xv += dxv) {
 			float const cur_density(yv*(xv*density[3] + (1.0-xv)*density[2]) + (1.0-yv)*(xv*density[1] + (1.0-xv)*density[0]));
-			int const ntrees(int(min(1.0f, cur_density*ntrees_mult)*NUM_SMALL_TREES));
-			if (ntrees == 0) continue;
-			int const tree_prob(max(1, XY_MULT_SIZE/ntrees));
-			rgen.set_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
-						   (845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
-			rgen.rand(); // increase randomness (slower, but less regular - which is important for pine trees in tiled terrain mode)
-			if ((rgen.rand_seed_mix()%tree_prob) != 0) continue; // not selected
-			int const trees_per_block(max(1, ntrees/XY_MULT_SIZE));
+			int const trees_this_xy(get_ntrees_for_mesh_xy(i, j, cur_density*ntrees_mult));
+			if (trees_this_xy == 0) continue;
 			float const hval(density_gen.eval_index(j-x1, i-y1, 0));
 
-			for (int n = 0; n < trees_per_block; ++n) {
+			for (int n = 0; n < trees_this_xy; ++n) {
 				if (hval > get_median_height(tree_density_thresh - TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
-				rgen.rand_mix();
-				float const xval(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
-				float const yval(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
-				float const zpos(approx_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
-				int const ttype(get_tree_type_from_height(zpos, rgen, 0));
-				if (ttype == TREE_NONE) continue;
-				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) continue;
-
-				if (instanced) { // check voxel terrain? or does this mode only get used for tiled terrain?
-					assert(ttype == T_SH_PINE || ttype == T_PINE || ttype == T_PALM);
-					assert(zval_adj == 0.0); // must be inf terrain mode
-					add_tree(small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen)));
-				}
-				else {
-					float const height(tsize*rand_tree_height(rgen));
-					point const pos(xval, yval, zpos+zval_adj*height);
-					if (point_inside_voxel_terrain(pos)) continue; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
-					add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
-				}
+				maybe_add_tree(i, j, (approx_zval ? height_gen.eval_index(j-x1, i-y1, 1) : 0.0), tsize, skip_val, use_hmap_tex);
 			} // for n
 		} // for j
 		xv = 0.0; // reset for next y iter
 	} // for i
 	if (world_mode == WMODE_GROUND) {sort_by_type();}
+}
+
+// Note: for user placed trees in tiled terrain mode with heightmap texture; ignores vegetation, tree density functions, slope, etc.
+void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius) {
+
+	generated = 1; // may already be set
+	assert(x1 < x2 && y1 < y2);
+	float const tscale(calc_tree_scale()), tsize(calc_tree_size()), ntrees_mult(sm_tree_density*tscale*tscale/8.0f);
+	int const skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
+	float const dxv(skip_val/(x2 - x1 - 1.0)), dyv(skip_val/(y2 - y1 - 1.0));
+	float xv(0.0), yv(0.0);
+
+	for (int i = y1; i < y2; i += skip_val, yv += dyv) {
+		for (int j = x1; j < x2; j += skip_val, xv += dxv) {
+			point const tpos(get_xval(j), get_yval(i), 0.0);
+			if (!dist_xy_less_than(pos, tpos, radius)) continue; // Note: uses mesh xy center, not actual tree pos (for simplicity and efficiency)
+			int const trees_this_xy(get_ntrees_for_mesh_xy(i, j, ntrees_mult));
+			
+			for (int n = 0; n < trees_this_xy; ++n) {
+				rgen.rand_float(); // to match the get_median_height() call in gen_trees()
+				maybe_add_tree(i, j, 0.0, tsize, skip_val, 0);
+			}
+		} // for j
+		xv = 0.0; // reset for next y iter
+	} // for i
 }
 
 

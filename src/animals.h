@@ -16,7 +16,9 @@ struct tile_offset_t {
 
 	tile_offset_t(int dxoff_=0, int dyoff_=0) : dxoff(dxoff_), dyoff(dyoff_) {}
 	void set_from_xyoff2() {dxoff = -xoff2; dyoff = -yoff2;}
-	vector3d get_xlate() const {return vector3d(((xoff - xoff2) - dxoff)*DX_VAL, ((yoff - yoff2) - dyoff)*DY_VAL, 0.0);}
+	int get_delta_xoff() const {return ((xoff - xoff2) - dxoff);}
+	int get_delta_yoff() const {return ((yoff - yoff2) - dyoff);}
+	vector3d get_xlate() const {return vector3d(get_delta_xoff()*DX_VAL, get_delta_yoff()*DY_VAL, 0.0);}
 	vector3d subtract_from(tile_offset_t const &o) const {return vector3d((o.dxoff - dxoff)*DX_VAL, (o.dyoff - dyoff)*DY_VAL, 0.0);}
 };
 
