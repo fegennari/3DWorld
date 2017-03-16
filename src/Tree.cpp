@@ -2025,15 +2025,18 @@ void tree_cont_t::post_scroll_remove() {
 }
 
 
-void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) {
+void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) { // default full tile generation function
+
+	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, vegetation_, 1); // not using bounding sphere
+	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
+}
+
+void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, float vegetation_, bool use_density) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
-	
-	if (mod_num_trees == 0) { // no trees
-		generated = 1;
-		return;
-	}
+	generated = 1;
+	if (mod_num_trees == 0) return; // no trees
 	float const min_tree_h(water_plane_z + 0.01*zmax_est), max_tree_h(1.8*zmax_est);
 	float const height_thresh(get_median_height(tree_density_thresh));
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
@@ -2050,6 +2053,10 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 	}
 	for (int i = y1; i < y2; i += skip_val) {
 		for (int j = x1; j < x2; j += skip_val) {
+			if (radius > 0.0) {
+				point const tpos(get_xval(j), get_yval(i), 0.0);
+				if (!dist_xy_less_than(pos, tpos, radius)) continue; // Note: uses mesh xy center, not actual tree pos (for simplicity and efficiency)
+			}
 			if (scrolling) {
 				int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
 				if (ox >= x1 && ox <= x2 && oy >= y1 && oy <= y2) continue; // use orignal tree from last position
@@ -2070,7 +2077,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			int ttype(-1), tree_id(-1);
 
 			if (NONUNIFORM_TREE_DEN) {
-				if (density_gen[0].eval_index(j-x1, i-y1, 0) > height_thresh) continue; // density function test
+				if (use_density && density_gen[0].eval_index(j-x1, i-y1, 0) > height_thresh) continue; // density function test
 				float max_val(0.0);
 
 				for (unsigned tt = 0; tt < NUM_TREE_TYPES; ++tt) {
@@ -2097,8 +2104,6 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			back().gen_tree(pos, 0, ttype, 1, 1, 0, 1.0, 1.0, 1.0, tree_4th_branches);
 		}
 	}
-	generated = 1;
-	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
 

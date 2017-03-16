@@ -332,6 +332,7 @@ public:
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	void update_decid_trees();
 	void register_tree_change(tile_shadow_map_manager &smap_manager);
+	template <typename T> bool add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius);
 	int add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, tile_shadow_map_manager &smap_manager, cube_t &update_bcube);
 
 	// *** scenery/grass ***

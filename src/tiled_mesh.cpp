@@ -3005,13 +3005,6 @@ template <typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &p
 	return 1;
 }
 
-template <typename T> void post_tree_add(T const &trees, unsigned start_sz, vector3d const &xlate, bool &changed, cube_t &update_bcube) {
-	for (unsigned i = start_sz; i < trees.size(); ++i) {
-		update_trees_bcube(trees[i].get_center()+xlate, 2.0*trees[i].get_radius(), update_bcube);
-		changed = 1;
-	}
-}
-
 void tile_t::register_tree_change(tile_shadow_map_manager &smap_manager) {
 	clear_shadow_map(&smap_manager);
 	tree_map.clear(); // regenerate tree AO shadows
@@ -3021,6 +3014,22 @@ void tile_t::register_tree_change(tile_shadow_map_manager &smap_manager) {
 bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
 	if (!dist_less_than(pos, get_center(), (radius + rradius))) return 0; // tile not within sphere's radius
 	return sphere_cube_intersect(pos, rradius, get_mesh_bcube()); // tighter intersection test
+}
+
+template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius) {
+
+	unsigned const start_sz(trees.size());
+	int const orig_xoff2(xoff2), orig_yoff2(yoff2);
+	xoff2 = -toff.dxoff; yoff2 = -toff.dyoff; // translate so that trees are generated relative to toff, rather than current offset
+	trees.gen_trees_tt_within_radius(x1+toff.dxoff, y1+toff.dyoff, x2+toff.dxoff, y2+toff.dyoff, tpos, rradius);
+	xoff2 = orig_xoff2; yoff2 = orig_yoff2; // translate back
+	postproc_trees(trees, tzmax);
+	vector3d const xlate(toff.get_xlate());
+
+	for (unsigned i = start_sz; i < trees.size(); ++i) {
+		update_trees_bcube(trees[i].get_center()+xlate, 2.0*trees[i].get_radius(), update_bcube);
+	}
+	return (trees.size() > start_sz);
 }
 
 // return value: 0 = not within sphere, 1 = no trees updated, 2 = trees updated
@@ -3037,21 +3046,8 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 	for (unsigned i = 0; i < decid_trees.size(); ++i) {decid_changed |= remove_tree(decid_trees, i, dt_pos, rradius, decid_xlate, update_bcube);}
 
 	if (add_trees) { // what if trees are not generated? can we get here in that case?
-		if (can_have_pine_palm_trees() && pine_trees_generated()) {
-			unsigned const start_sz(pine_trees.size());
-			int const orig_xoff2(xoff2), orig_yoff2(yoff2);
-			xoff2 = -ptree_off.dxoff; yoff2 = -ptree_off.dyoff; // translate so that trees are generated relative to ptree_off, rather than current offset
-			pine_trees.gen_trees_tt_within_radius(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, pt_pos, rradius);
-			xoff2 = orig_xoff2; yoff2 = orig_yoff2; // translate back
-			postproc_trees(pine_trees, ptzmax);
-			post_tree_add(pine_trees, start_sz, pine_xlate, pine_changed, update_bcube);
-		}
-		if (can_have_decid_trees() && decid_trees.was_generated()) {
-			unsigned const start_sz(decid_trees.size());
-			//decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, 1.0); // FIXME
-			postproc_trees(decid_trees, dtzmax);
-			post_tree_add(decid_trees, start_sz, decid_xlate, decid_changed, update_bcube);
-		}
+		if (can_have_pine_palm_trees() && pine_trees_generated ()) {pine_changed  |= add_new_trees(pine_trees,  ptree_off, update_bcube, ptzmax, pt_pos, rradius);}
+		if (can_have_decid_trees() && decid_trees.was_generated()) {decid_changed |= add_new_trees(decid_trees, dtree_off, update_bcube, dtzmax, dt_pos, rradius);}
 	}
 	if (!pine_changed && !decid_changed) return 1; // no trees updated
 	if (pine_changed) {pine_trees.clear_vbos();}
