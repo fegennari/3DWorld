@@ -16,7 +16,6 @@ bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
-unsigned const NUM_FIRE_MODES = 6;
 unsigned const TILE_SMAP_START_TU_ID = 13;
 float const FOG_DIST_TILES    = 1.45;
 float const DRAW_DIST_TILES   = 1.5;
@@ -36,6 +35,8 @@ int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
 float const LITNING_TIME2   = 40.0;
 float const LITNING_DIST    = 1.2;
+
+enum {FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS, NUM_FIRE_MODES};
 
 
 bool tt_lightning_enabled(0);
@@ -976,6 +977,17 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			weight_data[off+grass_tex_ix] *= v;
 		}
 	}
+	recalc_tree_grass_weights = 0;
+	create_or_update_weight_tex();
+	calc_avg_mesh_color();
+}
+
+
+void tile_t::create_or_update_weight_tex() {
+
+	unsigned const tsize(stride), num_texels(tsize*tsize);
+	assert(weight_data.size() == 4*num_texels);
+
 	if (weight_tid == 0) { // create weight texture
 		setup_texture(weight_tid, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
@@ -985,11 +997,15 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		bind_2d_texture(weight_tid);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &weight_data.front());
 	}
-	recalc_tree_grass_weights = 0;
+}
+
+
+void tile_t::calc_avg_mesh_color() {
 
 	// determine average mesh color - doesn't work well due to discontinuities at the tile boundaries, would be better if adjacent tile was known
 	unsigned tot_weights[NTEX_DIRT] = {0};
 	avg_mesh_tex_color = BLACK;
+	unsigned const tsize(stride), num_texels(tsize*tsize);
 
 	for (unsigned i = 0; i < num_texels; ++i) {
 		unsigned const off(4*i);
@@ -1837,7 +1853,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	bool const gpu_mode(mesh_gen_mode == MGEN_SIMPLEX_GPU);
 	
 	// to balance tile gen time across frames, generate a number of tiles equal to the average of this frame and the previous frame
-	if (gen_this_frame > 1 && gen_this_frame < max_tile_gen_per_frame && inf_terrain_fire_mode == 0) { // disable this mode when editing mesh height to prevent visual artifacts
+	if (gen_this_frame > 1 && gen_this_frame < max_tile_gen_per_frame && inf_terrain_fire_mode == FM_NONE) { // disable this mode when editing mesh height to prevent visual artifacts
 		gen_this_frame = min(gen_this_frame, (gen_this_frame + tiles_gen_prev_frame + 1)/2); // round up
 	}
 	tiles_gen_prev_frame = num_to_gen;
@@ -2891,9 +2907,10 @@ tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
 void pre_draw_tiled_terrain(bool reflection_pass) {terrain_tile_draw.pre_draw(reflection_pass);}
 
+
 colorRGBA get_inf_terrain_mod_color() {
 
-	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE, YELLOW, CYAN};
+	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE, YELLOW, CYAN, BROWN, WHITE};
 	assert(inf_terrain_fire_mode < NUM_FIRE_MODES);
 	return colors[inf_terrain_fire_mode];
 }
@@ -2918,7 +2935,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 
-	if (inf_terrain_fire_mode != 0 && !reflection_pass) { // use a bool instead?
+	if (inf_terrain_fire_mode != FM_NONE && !reflection_pass) { // use a bool instead?
 		point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 		point hit_pos;
 		tile_t *tile(nullptr);
@@ -2969,12 +2986,12 @@ bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_play
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 
 
-// *** tree addition/removal ***
+// *** tree/grass addition/removal ***
 
 
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees) {
 
-	//timer_t ("Tree Add/Remove");
+	//timer_t ("Tree Edit");
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
@@ -2986,6 +3003,11 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 	for (auto i = near_tiles.begin(); i != near_tiles.end(); ++i) { // update shadows for nearby tiles
 		if ((*i)->get_mesh_bcube().intersects(update_bcube)) {(*i)->register_tree_change(smap_manager);}
 	}
+}
+
+void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass) {
+	//timer_t ("Grass Edit");
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass);}
 }
 
 template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
@@ -3055,6 +3077,55 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 	return 2; // trees updated
 }
 
+bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_grass) {
+
+	if (weight_data.empty()) return 0; // texture weights not yet generated, can this happen?
+	if (!mesh_sphere_intersect(pos, rradius)) return 0; // not overlapping this tile
+	bool updated(0);
+	unsigned const tsize(stride), num_texels(tsize*tsize);
+	assert(weight_data.size() == 4*num_texels);
+	int dirt_tex_ix(-1), grass_tex_ix(-1);
+
+	for (unsigned i = 0; i < NTEX_DIRT; ++i) { // only need grass and dirt tex for now
+		switch (lttex_dirt[i].id) {
+		case DIRT_TEX:   dirt_tex_ix  = i; break;
+		case GROUND_TEX: grass_tex_ix = i; break;
+		}
+	}
+	assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0);
+	float const llc_x(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
+	point pt(llc_x, llcy, 0.0); // z is unused
+
+	for (unsigned y = 0; y < tsize; ++y, pt.y += DY_VAL) {
+		pt.x = llc_x;
+
+		for (unsigned x = 0; x < tsize; ++x, pt.x += DX_VAL) {
+			if (!dist_xy_less_than(pt, pos, rradius)) continue;
+			unsigned const ix(4*(y*tsize + x));
+			unsigned char &grass_weight(weight_data[ix + grass_tex_ix]);
+
+			if (add_grass) {
+				if (grass_weight == 255) continue; // full grass here
+				grass_weight = 255; // max grass
+				UNROLL_4X(if (i_ != grass_tex_ix) {weight_data[ix+i_] = 0;}) // set all other weights to 0
+				// FIXME: update grass data
+				updated = 1;
+			}
+			else { // remove grass
+				if (grass_weight == 0) continue; // no grass here
+				weight_data[ix + dirt_tex_ix] += grass_weight;
+				grass_weight = 0;
+				// FIXME: blend sand/dirt/rock
+				updated = 1;
+			}
+		} // for x
+	} // for y
+	if (!updated) return 0;
+	create_or_update_weight_tex();
+	calc_avg_mesh_color(); // optional
+	return 1;
+}
+
 
 // *** heightmap modification and queries ***
 
@@ -3072,7 +3143,7 @@ void change_inf_terrain_fire_mode(int val) {
 
 	if (!using_tiled_terrain_hmap_tex()) return; // ignore
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
-	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh", "Remove Trees", "Add Trees"};
+	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh", "Remove Trees", "Add Trees", "Remove Grass", "Add Grass"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 	play_switch_weapon_sound();
 }
@@ -3087,17 +3158,25 @@ tile_t *get_tile_for_xy(int x, int y) {
 
 void inf_terrain_fire_weapon() {
 
+	// FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS
 	if (!hmap_mod_enabled()) return; // ignore
 	//RESET_TIME;
 	static double last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
-
-	if (inf_terrain_fire_mode == 4 || inf_terrain_fire_mode == 5) { // tree addition/removal
-		point p_int;
+	float const bradius(cur_brush_param.get_radius());
+	point p_int;
+	
+	if (inf_terrain_fire_mode == FM_REM_TREES || inf_terrain_fire_mode == FM_ADD_TREES) { // tree addition/removal
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
-			terrain_tile_draw.add_or_remove_trees_at(p_int, cur_brush_param.get_radius()*HALF_DXY, (inf_terrain_fire_mode == 5));
+			terrain_tile_draw.add_or_remove_trees_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_TREES));
+		}
+		return;
+	}
+	if (inf_terrain_fire_mode == FM_REM_GRASS || inf_terrain_fire_mode == FM_ADD_GRASS) { // tree addition/removal
+		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
+			terrain_tile_draw.add_or_remove_grass_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS));
 		}
 		return;
 	}
@@ -3107,10 +3186,10 @@ void inf_terrain_fire_weapon() {
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
 	// Note: update is slow when trees are enabled
 	unsigned shape(cur_brush_param.shape);
-	if (inf_terrain_fire_mode == 3) {shape = ((shape == BSHAPE_CONST_SQ) ? BSHAPE_FLAT_SQ : BSHAPE_FLAT_CIR);} // enable a flattening shape
-	float const delta_mag(cur_brush_param.get_delta_mag()*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0));
+	if (inf_terrain_fire_mode == FM_FLATTEN) {shape = ((shape == BSHAPE_CONST_SQ) ? BSHAPE_FLAT_SQ : BSHAPE_FLAT_CIR);} // enable a flattening shape
+	float const delta_mag(cur_brush_param.get_delta_mag()*((inf_terrain_fire_mode == FM_INC_MESH) ? 1.0 : -1.0));
 	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag));
-	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, cur_brush_param.get_radius(), shape);
+	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, bradius, shape);
 	terrain_hmap_manager.apply_brush(brush, tile, 1); // cache
 	//PRINT_TIME("Hmap Brush");
 }

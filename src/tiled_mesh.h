@@ -297,6 +297,8 @@ public:
 	void ensure_height_tid();
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 	void create_texture(mesh_xy_grid_cache_t &height_gen);
+	void create_or_update_weight_tex();
+	void calc_avg_mesh_color();
 
 	float get_rel_dist_to_camera(bool xy_dist=1) const {
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
@@ -333,7 +335,8 @@ public:
 	void update_decid_trees();
 	void register_tree_change(tile_shadow_map_manager &smap_manager);
 	template <typename T> bool add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius);
-	int add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, tile_shadow_map_manager &smap_manager, cube_t &update_bcube);
+	int  add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, tile_shadow_map_manager &smap_manager, cube_t &update_bcube);
+	bool add_or_remove_grass_at(point const &pos, float rradius, bool add_grass);
 
 	// *** scenery/grass ***
 	void update_scenery();
@@ -446,6 +449,7 @@ public:
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
 	float get_actual_zmin() const;
 	void add_or_remove_trees_at(point const &pos, float radius, bool add_trees);
+	void add_or_remove_grass_at(point const &pos, float radius, bool add_grass);
 }; // tile_draw_t
 
 
