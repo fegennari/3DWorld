@@ -18,6 +18,15 @@ extern int display_mode;
 extern float mesh_scale, dxdy;
 
 
+void adjust_brush_weight(float &delta, float dval, int shape) {
+
+	if      (shape == BSHAPE_LINEAR   ) {delta *= 1.0 - dval;} // linear
+	else if (shape == BSHAPE_QUADRATIC) {delta *= 1.0 - dval*dval;} // quadratic
+	else if (shape == BSHAPE_COSINE   ) {delta *= COSF(0.5*PI*dval);} // cosine
+	else if (shape == BSHAPE_SINE     ) {delta *= 0.5*(1.0 + SINF(PI*dval + 0.5*PI));} // sine
+	// else constant
+}
+
 //enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_SINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
 void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int step_sz, unsigned num_steps) const {
 
@@ -34,19 +43,7 @@ void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int
 					float const dist(sqrt(float(yp + dy - y)*float(yp + dy - y) + float(xp + dx - x)*float(xp + dx - x))), dval(dist*r_inv);
 					if (shape != BSHAPE_CONST_SQ && shape != BSHAPE_FLAT_SQ && dval > 1.0) continue; // round (instead of square)
 					float mod_delta(delta); // constant
-
-					if (shape == BSHAPE_LINEAR) {
-						mod_delta *= 1.0 - dval; // linear
-					}
-					else if (shape == BSHAPE_QUADRATIC) {
-						mod_delta *= 1.0 - dval*dval; // quadratic
-					}
-					else if (shape == BSHAPE_COSINE) {
-						mod_delta *= COSF(0.5*PI*dval); // cosine
-					}
-					else if (shape == BSHAPE_SINE) {
-						mod_delta *= 0.5*(1.0 + SINF(PI*dval + 0.5*PI)); // sine
-					}
+					adjust_brush_weight(mod_delta, dval, shape);
 					assert(tmmm);
 					tmmm->modify_height_value(xp, yp, round_fp(mod_delta), is_delta, dx, dy);
 				}

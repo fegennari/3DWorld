@@ -2968,6 +2968,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 			glStencilFunc(GL_NOTEQUAL, -1, ~0U); // one front face only
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			// FIXME: use cube for brush shape BSHAPE_CONST_SQ
 			draw_cylinder_at(p1, z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
 			glDepthMask(GL_TRUE);
 			glDisable(GL_STENCIL_TEST);
@@ -3010,9 +3011,9 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 	}
 }
 
-void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass) {
+void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape) {
 	//timer_t ("Grass Edit");
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass);}
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass, brush_shape);}
 }
 
 template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
@@ -3082,11 +3083,12 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 	return 2; // trees updated
 }
 
-bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_grass) {
+bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_grass, int brush_shape) {
 
+	if (rradius == 0.0) return 0;
 	if (weight_data.empty()) return 0; // texture weights not yet generated, can this happen?
 	if (!mesh_sphere_intersect(pos, rradius)) return 0; // not overlapping this tile
-	if (gen_grass_map() && grass_blocks.empty()) return 0; // known to have no grass (is this safe? does it help?)
+	if (!add_grass && gen_grass_map() && grass_blocks.empty()) return 0; // known to have no grass (is this safe? does it help?)
 	bool updated(0);
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 	assert(weight_data.size() == 4*num_texels);
@@ -3100,6 +3102,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	}
 	assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0);
 	unsigned const grass_block_dim(get_grass_block_dim());
+	float const r_inv(1.0/rradius);
 	float const llc_x(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	point pt(llc_x, llcy, 0.0); // z is unused
 
@@ -3113,9 +3116,26 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 
 			if (add_grass) {
 				if (grass_weight == 255) continue; // full grass here
-				// FIXME: use brush shape
-				grass_weight = 255; // max grass
-				UNROLL_4X(if (i_ != grass_tex_ix) {weight_data[off+i_] = 0;}); // set all other weights to 0
+				float delta(1.0);
+				adjust_brush_weight(delta, p2p_dist_xy(pt, pos)*r_inv, brush_shape);
+
+				if (delta >= 0.99) { // full addition
+					grass_weight = 255; // max grass
+					UNROLL_4X(if (i_ != grass_tex_ix) {weight_data[off+i_] = 0;}); // set all other weights to 0
+				}
+				else if(delta > 0.01) { // partial addition of grass
+					unsigned char const prev_gw(grass_weight);
+					grass_weight = (unsigned char)min(255.0f, (grass_weight + 255.0f*delta));
+					unsigned char grass_added(grass_weight - prev_gw);
+
+					for (unsigned i = 0; i < 4 && grass_added > 0; ++i) { // remove other weights until weights are balanced
+						if (i == grass_tex_ix) continue; // skip grass
+						if (weight_data[off+i] == 0) continue; // none of this layer
+						unsigned char const num_rem(min(weight_data[off+i], grass_added)); // FIXME: should depend on ratio of other weights (but rounding is difficult)
+						weight_data[off+i] -= num_rem;
+						grass_added        -= num_rem;
+					}
+				}
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
@@ -3197,7 +3217,7 @@ void inf_terrain_fire_weapon() {
 	}
 	if (inf_terrain_fire_mode == FM_REM_GRASS || inf_terrain_fire_mode == FM_ADD_GRASS) { // tree addition/removal
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
-			terrain_tile_draw.add_or_remove_grass_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS));
+			terrain_tile_draw.add_or_remove_grass_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS), cur_brush_param.shape);
 		}
 		return;
 	}
