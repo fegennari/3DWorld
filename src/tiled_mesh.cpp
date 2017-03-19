@@ -3113,10 +3113,19 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 			}
 			else { // remove grass
 				if (grass_weight == 0) continue; // no grass here
-				weight_data[ix + dirt_tex_ix] += grass_weight;
+
+				if (grass_weight == 255) { // all grass case - choose to make it all dirt instead since there is no other material for reference
+					weight_data[ix + dirt_tex_ix] += grass_weight; // FIXME: should depend on height, allowing for blending sand and rock as well (but more complex)
+				}
+				else { // mixed/blended case, remove grass weight and normalize other weights to 1.0
+					float const wscale(255.0/(255.0 - grass_weight));
+
+					for (unsigned i = 0; i < 4; ++i) {
+						if (i != grass_tex_ix) {weight_data[ix+i] = (unsigned char)min(255.0f, wscale*weight_data[ix+i]);}
+					}
+				}
 				grass_weight = 0;
-				// FIXME: blend sand/dirt/rock
-				updated = 1;
+				updated      = 1;
 			}
 		} // for x
 	} // for y
