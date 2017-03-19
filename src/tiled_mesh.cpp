@@ -882,8 +882,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const rand_offset(rand_vals[y*tsize + x]);
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
+				float const rand_offset(rand_vals[y*tsize + x]);
 				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
 				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
 				get_tids(relh1, k1, k2);
@@ -938,23 +938,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 						weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
 						weights[grass_tex_ix] *= gscale;
 					}
-					if (!is_distant && x < size && y < size && gen_grass_map()) {
-						unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
-						if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
-						assert(bix < grass_blocks.size());
-						grass_block_t &gb(grass_blocks[bix]);
-					
-						if (gb.ix == 0) { // not yet set
-							gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
-							//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
-							gb.zmin = mhmin;
-							gb.zmax = mhmax;
-						}
-						else {
-							gb.zmin = min(gb.zmin, mhmin);
-							gb.zmax = max(gb.zmax, mhmax);
-						}
-					}
+					add_grass_block_at(x, y, mhmin, mhmax, grass_block_dim);
 				} // end grass
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					mesh_weight_data[off+i] = ((weights[i] <= 0.01) ? 0 : ((weights[i] >= 0.99) ? 255 : (unsigned char)(255.0*weights[i])));
@@ -980,6 +964,27 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	recalc_tree_grass_weights = 0;
 	create_or_update_weight_tex();
 	calc_avg_mesh_color();
+}
+
+
+void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax, unsigned grass_block_dim) {
+
+	if (is_distant || x >= size || y >= size || !gen_grass_map()) return;
+	unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
+	if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
+	assert(bix < grass_blocks.size());
+	grass_block_t &gb(grass_blocks[bix]);
+
+	if (gb.ix == 0) { // not yet set
+		gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+		//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+		gb.zmin = mhmin;
+		gb.zmax = mhmax;
+	}
+	else {
+		gb.zmin = min(gb.zmin, mhmin);
+		gb.zmax = max(gb.zmax, mhmax);
+	}
 }
 
 
@@ -3081,6 +3086,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 
 	if (weight_data.empty()) return 0; // texture weights not yet generated, can this happen?
 	if (!mesh_sphere_intersect(pos, rradius)) return 0; // not overlapping this tile
+	if (gen_grass_map() && grass_blocks.empty()) return 0; // known to have no grass (is this safe? does it help?)
 	bool updated(0);
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 	assert(weight_data.size() == 4*num_texels);
@@ -3093,6 +3099,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		}
 	}
 	assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0);
+	unsigned const grass_block_dim(get_grass_block_dim());
 	float const llc_x(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	point pt(llc_x, llcy, 0.0); // z is unused
 
@@ -3101,27 +3108,31 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 
 		for (unsigned x = 0; x < tsize; ++x, pt.x += DX_VAL) {
 			if (!dist_xy_less_than(pt, pos, rradius)) continue;
-			unsigned const ix(4*(y*tsize + x));
-			unsigned char &grass_weight(weight_data[ix + grass_tex_ix]);
+			unsigned const off(4*(y*tsize + x));
+			unsigned char &grass_weight(weight_data[off + grass_tex_ix]);
 
 			if (add_grass) {
 				if (grass_weight == 255) continue; // full grass here
+				// FIXME: use brush shape
 				grass_weight = 255; // max grass
-				UNROLL_4X(if (i_ != grass_tex_ix) {weight_data[ix+i_] = 0;}) // set all other weights to 0
-				// FIXME: update grass data
+				UNROLL_4X(if (i_ != grass_tex_ix) {weight_data[off+i_] = 0;}); // set all other weights to 0
+				unsigned const ix(y*zvsize + x);
+				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
+				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
+				add_grass_block_at(x, y, mhmin, mhmax, grass_block_dim);
 				updated = 1;
 			}
 			else { // remove grass
 				if (grass_weight == 0) continue; // no grass here
 
 				if (grass_weight == 255) { // all grass case - choose to make it all dirt instead since there is no other material for reference
-					weight_data[ix + dirt_tex_ix] += grass_weight; // FIXME: should depend on height, allowing for blending sand and rock as well (but more complex)
+					weight_data[off + dirt_tex_ix] += grass_weight; // FIXME: should depend on height, allowing for blending sand and rock as well (but more complex)
 				}
 				else { // mixed/blended case, remove grass weight and normalize other weights to 1.0
 					float const wscale(255.0/(255.0 - grass_weight));
 
 					for (unsigned i = 0; i < 4; ++i) {
-						if (i != grass_tex_ix) {weight_data[ix+i] = (unsigned char)min(255.0f, wscale*weight_data[ix+i]);}
+						if (i != grass_tex_ix) {weight_data[off+i] = (unsigned char)min(255.0f, wscale*weight_data[off+i]);}
 					}
 				}
 				grass_weight = 0;
@@ -3130,6 +3141,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		} // for x
 	} // for y
 	if (!updated) return 0;
+	//if (!add_grass && !has_any_grass()) {grass_blocks.clear();} // FIXME: increases edit time slightly but decreased draw time slightly?
 	create_or_update_weight_tex();
 	calc_avg_mesh_color(); // optional
 	return 1;

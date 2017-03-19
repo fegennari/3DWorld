@@ -297,6 +297,7 @@ public:
 	void ensure_height_tid();
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 	void create_texture(mesh_xy_grid_cache_t &height_gen);
+	void add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax, unsigned grass_block_dim);
 	void create_or_update_weight_tex();
 	void calc_avg_mesh_color();
 
