@@ -294,17 +294,22 @@ tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::scale_delta(float delt
 	return scale_factor*CLIP_TO_pm1(delta);
 }
 
-bool terrain_hmap_manager_t::read_mod(string const &fn) {
+bool terrain_hmap_manager_t::read_and_apply_mod(string const &fn) {
 	if (!tex_mod_map_manager_t::read_mod(fn)) return 0;
+	apply_cur_mod_map();
+	apply_cur_brushes();
+	return 1;
+}
 
+void terrain_hmap_manager_t::apply_cur_mod_map() {
 	for (tex_mod_map_t::const_iterator i = mod_map.begin(); i != mod_map.end(); ++i) { // apply the mod to the current texture
 		assert(i->first.x < hmap.width && i->first.y < hmap.height); // ensure the mod values fit within the texture
 		hmap.modify_heightmap_value(i->first.x, i->first.y, i->second.val, 1); // no clamping
 	}
-	for (brush_vect_t::const_iterator i = brush_vect.begin(); i != brush_vect.end(); ++i) { // apply the brushes to the current texture
-		apply_brush(*i);
-	}
-	return 1;
+}
+
+void terrain_hmap_manager_t::apply_cur_brushes() { // apply the brushes to the current texture
+	for (brush_vect_t::const_iterator i = brush_vect.begin(); i != brush_vect.end(); ++i) {apply_brush(*i);}
 }
 
 

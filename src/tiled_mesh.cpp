@@ -190,7 +190,7 @@ vector3d get_tiled_terrain_height_tex_norm(int x, int y)   {return terrain_hmap_
 bool read_default_hmap_modmap() {
 
 	if (read_hmap_modmap_fn.empty()) return 0;
-	if (!terrain_hmap_manager.read_mod(read_hmap_modmap_fn)) return 0;
+	if (!terrain_hmap_manager.read_and_apply_mod(read_hmap_modmap_fn)) return 0;
 	cout << "Read heightmap modmap " << read_hmap_modmap_fn << endl;
 	return 1;
 }

@@ -126,7 +126,9 @@ public:
 	void modify_height(mod_elem_t const &elem, bool is_delta);
 	void modify_and_cache_height(mod_elem_t const &elem, bool is_delta) {modify_height(elem, is_delta); add_mod(elem);} // unused
 	hmap_val_t scale_delta(float delta) const;
-	bool read_mod(std::string const &fn);
+	bool read_and_apply_mod(std::string const &fn);
+	void apply_cur_mod_map();
+	void apply_cur_brushes();
 	bool enabled() const {return hmap.is_allocated();}
 	~terrain_hmap_manager_t() {hmap.free_data();}
 };
