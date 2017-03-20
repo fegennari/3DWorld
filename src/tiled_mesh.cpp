@@ -3020,9 +3020,9 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 	}
 }
 
-void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape) {
+void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape, float brush_weight) {
 	//timer_t ("Grass Edit");
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass, brush_shape);}
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass, brush_shape, brush_weight);}
 }
 
 template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
@@ -3095,7 +3095,7 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 	return 2; // trees updated
 }
 
-bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_grass, int brush_shape) {
+bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_grass, int brush_shape, float brush_weight) {
 
 	if (rradius == 0.0) return 0;
 	if (weight_data.empty()) return 0; // texture weights not yet generated, can this happen?
@@ -3115,6 +3115,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0);
 	unsigned const grass_block_dim(get_grass_block_dim());
 	float const r_inv(1.0/rradius);
+	float const bweight(10.0*brush_weight); // normal brush weight is 0.001 to 0.512
 	float const llc_x(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	point pt(llc_x, llcy, 0.0); // z is unused
 
@@ -3127,12 +3128,11 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 			if (brush_shape != BSHAPE_CONST_SQ && !dist_xy_less_than(pt, pos, rradius)) continue; // check for round shapes
 			unsigned const off(4*(y*tsize + x));
 			unsigned char &grass_weight(weight_data[off + grass_tex_ix]);
+			if (grass_weight == (add_grass ? 255 : 0)) continue; // full/no grass here
+			float delta(bweight);
+			adjust_brush_weight(delta, p2p_dist_xy(pt, pos)*r_inv, brush_shape);
 
 			if (add_grass) {
-				if (grass_weight == 255) continue; // full grass here
-				float delta(1.0);
-				adjust_brush_weight(delta, p2p_dist_xy(pt, pos)*r_inv, brush_shape);
-
 				if (delta >= 0.99) { // full addition
 					grass_weight = 255; // max grass
 					UNROLL_4X(if (i_ != grass_tex_ix) {weight_data[off+i_] = 0;}); // set all other weights to 0
@@ -3157,20 +3157,27 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 				updated = 1;
 			}
 			else { // remove grass
-				if (grass_weight == 0) continue; // no grass here
+				unsigned char const prev_gw(grass_weight);
+				grass_weight = (unsigned char)max(0.0f, (grass_weight - 255.0f*delta));
+				unsigned char grass_rem(prev_gw - grass_weight);
 
-				if (grass_weight == 255) { // all grass case - choose to make it all dirt instead since there is no other material for reference
-					weight_data[off + dirt_tex_ix] += grass_weight; // FIXME: should depend on height, allowing for blending sand and rock as well (but more complex)
+				if (grass_rem == 0) continue; // no change
+				else if (prev_gw == 255) { // all grass case - choose to make it all dirt instead since there is no other material for reference
+					weight_data[off + dirt_tex_ix] += grass_rem; // FIXME: should depend on height, allowing for blending sand and rock as well (but more complex)
 				}
 				else { // mixed/blended case, remove grass weight and normalize other weights to 1.0
-					float const wscale(255.0/(255.0 - grass_weight));
+					//float const wscale(255.0/(255.0 - grass_rem));
+					unsigned char max_w(0);
+					unsigned max_w_ix(dirt_tex_ix); // default is to add dirt
 
 					for (unsigned i = 0; i < 4; ++i) {
-						if (i != grass_tex_ix) {weight_data[off+i] = (unsigned char)min(255.0f, wscale*weight_data[off+i]);}
+						if (i == grass_tex_ix) continue;
+						if (weight_data[off+i] > max_w || (max_w == 0 && i == 3)) {max_w = weight_data[off+i]; max_w_ix = i;} // allow for snow
+						//weight_data[off+i] = (unsigned char)min(255.0f, wscale*weight_data[off+i]);
 					}
+					weight_data[off+max_w_ix] += grass_rem; // add all weights to the max value to saturate it
 				}
-				grass_weight = 0;
-				updated      = 1;
+				updated = 1;
 			}
 		} // for x
 	} // for y
@@ -3235,7 +3242,7 @@ void inf_terrain_fire_weapon() {
 	}
 	if (inf_terrain_fire_mode == FM_REM_GRASS || inf_terrain_fire_mode == FM_ADD_GRASS) { // tree addition/removal
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
-			terrain_tile_draw.add_or_remove_grass_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS), cur_brush_param.shape);
+			terrain_tile_draw.add_or_remove_grass_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS), cur_brush_param.shape, cur_brush_param.get_delta_mag());
 		}
 		return;
 	}
