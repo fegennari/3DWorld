@@ -2027,11 +2027,11 @@ void tree_cont_t::post_scroll_remove() {
 
 void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) { // default full tile generation function
 
-	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, vegetation_, 1); // not using bounding sphere
+	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, 0, vegetation_, 1); // not using bounding sphere
 	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
-void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, float vegetation_, bool use_density) {
+void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square, float vegetation_, bool use_density) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
@@ -2052,9 +2052,14 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 		}
 	}
 	for (int i = y1; i < y2; i += skip_val) {
+		float const yval(get_yval(i));
+		if (radius > 0.0 && fabs(yval - pos.y) > radius) continue;
+
 		for (int j = x1; j < x2; j += skip_val) {
 			if (radius > 0.0) {
-				point const tpos(get_xval(j), get_yval(i), 0.0);
+				float const xval(get_xval(j));
+				if (fabs(xval - pos.x) > radius) continue;
+				point const tpos(xval, yval, 0.0);
 				if (!dist_xy_less_than(pos, tpos, radius)) continue; // Note: uses mesh xy center, not actual tree pos (for simplicity and efficiency)
 			}
 			if (scrolling) {
@@ -2068,7 +2073,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			if (val <= 100)         continue; // scenery
 			if (val%tree_prob != 0) continue; // not selected
 			if ((global_rand_gen.rseed1&127)/128.0 >= vegetation_) continue;
-			point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (get_yval(i) + 0.5*DY_VAL*rand2d()), 0.0);
+			point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (yval + 0.5*DY_VAL*rand2d()), 0.0);
 			// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;

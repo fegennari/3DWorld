@@ -3004,14 +3004,14 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 // *** tree/grass addition/removal ***
 
 
-void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees) {
+void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape) {
 
 	//timer_t ("Tree Edit");
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // FIXME: use openmp?
-		if (i->second->add_or_remove_trees_at(pos, radius, add_trees, smap_manager, update_bcube)) {near_tiles.push_back(i->second.get());}
+		if (i->second->add_or_remove_trees_at(pos, radius, add_trees, brush_shape, smap_manager, update_bcube)) {near_tiles.push_back(i->second.get());}
 	}
 	if (update_bcube.is_all_zeros()) return; // no trees updated
 
@@ -3034,9 +3034,11 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 void update_trees_bcube(point const &tpos, float tradius, cube_t &bcube) {
 	if (bcube.is_all_zeros()) {bcube.set_from_sphere(tpos, tradius);} else {bcube.union_with_sphere(tpos, tradius);}
 }
-template <typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, point const &xlate, cube_t &rem_bcube) {
+template <typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, bool is_square, point const &xlate, cube_t &rem_bcube) {
+
 	point const &tpos(v[i].get_center());
-	if (!dist_xy_less_than(tpos, pos, rradius)) return 0;
+	if (is_square) {if (fabs(tpos.x - pos.x) > rradius || fabs(tpos.y - pos.y) > rradius) return 0;}
+	else if (!dist_xy_less_than(tpos, pos, rradius)) return 0;
 	update_trees_bcube(tpos+xlate, 2.0*v[i].get_radius(), rem_bcube);
 	remove_element(v, i);
 	return 1;
@@ -3053,12 +3055,12 @@ bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
 	return sphere_cube_intersect(pos, rradius, get_mesh_bcube()); // tighter intersection test
 }
 
-template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius) {
+template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius, bool is_square) {
 
 	unsigned const start_sz(trees.size());
 	int const orig_xoff2(xoff2), orig_yoff2(yoff2);
 	xoff2 = -toff.dxoff; yoff2 = -toff.dyoff; // translate so that trees are generated relative to toff, rather than current offset
-	trees.gen_trees_tt_within_radius(x1+toff.dxoff, y1+toff.dyoff, x2+toff.dxoff, y2+toff.dyoff, tpos, rradius);
+	trees.gen_trees_tt_within_radius(x1+toff.dxoff, y1+toff.dyoff, x2+toff.dxoff, y2+toff.dyoff, tpos, rradius, is_square);
 	xoff2 = orig_xoff2; yoff2 = orig_yoff2; // translate back
 	postproc_trees(trees, tzmax);
 	vector3d const xlate(toff.get_xlate());
@@ -3070,21 +3072,22 @@ template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &
 }
 
 // return value: 0 = not within sphere, 1 = no trees updated, 2 = trees updated
-int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, tile_shadow_map_manager &smap_manager, cube_t &update_bcube) {
+int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, int brush_shape, tile_shadow_map_manager &smap_manager, cube_t &update_bcube) {
 	
 	if (!mesh_sphere_intersect(pos, (1.1*rradius + 2.0*trmax))) return 0; // sphere not near this tile, and not overlapping any tile trees
 	if (!mesh_sphere_intersect(pos, rradius)) return 1; // not overlapping this tile, but close
 	bool pine_changed(0), decid_changed(0);
 	vector3d const pine_xlate(ptree_off.get_xlate()), decid_xlate(dtree_off.get_xlate());
 	point const pt_pos(pos - pine_xlate), dt_pos(pos - decid_xlate);
+	bool const is_square(brush_shape == BSHAPE_CONST_SQ);
 
 	// remove trees first, before adding, so that there are no overlaps of new trees and old trees
-	for (unsigned i = 0; i < pine_trees.size();  ++i) {pine_changed  |= remove_tree(pine_trees,  i, pt_pos, rradius, pine_xlate,  update_bcube);}
-	for (unsigned i = 0; i < decid_trees.size(); ++i) {decid_changed |= remove_tree(decid_trees, i, dt_pos, rradius, decid_xlate, update_bcube);}
+	for (unsigned i = 0; i < pine_trees.size();  ++i) {pine_changed  |= remove_tree(pine_trees,  i, pt_pos, rradius, is_square, pine_xlate,  update_bcube);}
+	for (unsigned i = 0; i < decid_trees.size(); ++i) {decid_changed |= remove_tree(decid_trees, i, dt_pos, rradius, is_square, decid_xlate, update_bcube);}
 
 	if (add_trees) { // what if trees are not generated? can we get here in that case?
-		if (can_have_pine_palm_trees() && pine_trees_generated ()) {pine_changed  |= add_new_trees(pine_trees,  ptree_off, update_bcube, ptzmax, pt_pos, rradius);}
-		if (can_have_decid_trees() && decid_trees.was_generated()) {decid_changed |= add_new_trees(decid_trees, dtree_off, update_bcube, dtzmax, dt_pos, rradius);}
+		if (can_have_pine_palm_trees() && pine_trees_generated ()) {pine_changed  |= add_new_trees(pine_trees,  ptree_off, update_bcube, ptzmax, pt_pos, rradius, is_square);}
+		if (can_have_decid_trees() && decid_trees.was_generated()) {decid_changed |= add_new_trees(decid_trees, dtree_off, update_bcube, dtzmax, dt_pos, rradius, is_square);}
 	}
 	if (!pine_changed && !decid_changed) return 1; // no trees updated
 	if (pine_changed) {pine_trees.clear_vbos();}
@@ -3116,10 +3119,12 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	point pt(llc_x, llcy, 0.0); // z is unused
 
 	for (unsigned y = 0; y < tsize; ++y, pt.y += DY_VAL) {
+		if (fabs(pt.y - pos.y) > rradius) continue;
 		pt.x = llc_x;
 
 		for (unsigned x = 0; x < tsize; ++x, pt.x += DX_VAL) {
-			if (!dist_xy_less_than(pt, pos, rradius)) continue;
+			if (fabs(pt.x - pos.x) > rradius) continue;
+			if (brush_shape != BSHAPE_CONST_SQ && !dist_xy_less_than(pt, pos, rradius)) continue; // check for round shapes
 			unsigned const off(4*(y*tsize + x));
 			unsigned char &grass_weight(weight_data[off + grass_tex_ix]);
 
@@ -3170,6 +3175,10 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		} // for x
 	} // for y
 	if (!updated) return 0;
+
+	if (!add_grass && !flowers.empty()) { // remove flowers under grass if grass has been removed
+		//flowers.clear_within(pos, rradius); // FIXME: clear flowers
+	}
 	//if (!add_grass && !has_any_grass()) {grass_blocks.clear();} // FIXME: increases edit time slightly but decreased draw time slightly?
 	create_or_update_weight_tex();
 	calc_avg_mesh_color(); // optional
@@ -3220,7 +3229,7 @@ void inf_terrain_fire_weapon() {
 	
 	if (inf_terrain_fire_mode == FM_REM_TREES || inf_terrain_fire_mode == FM_ADD_TREES) { // tree addition/removal
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
-			terrain_tile_draw.add_or_remove_trees_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_TREES));
+			terrain_tile_draw.add_or_remove_trees_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_TREES), cur_brush_param.shape);
 		}
 		return;
 	}

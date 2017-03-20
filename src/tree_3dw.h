@@ -358,7 +358,7 @@ public:
 	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
 	void post_scroll_remove();
 	void gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_);
-	void gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, float vegetation_=1.0, bool use_density=0);
+	void gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square=0, float vegetation_=1.0, bool use_density=0);
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
 	void calc_bcube();

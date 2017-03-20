@@ -335,8 +335,8 @@ public:
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	void update_decid_trees();
 	void register_tree_change(tile_shadow_map_manager &smap_manager);
-	template <typename T> bool add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius);
-	int  add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, tile_shadow_map_manager &smap_manager, cube_t &update_bcube);
+	template <typename T> bool add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius, bool is_square);
+	int  add_or_remove_trees_at(point const &pos, float rradius, bool add_trees, int brush_shape, tile_shadow_map_manager &smap_manager, cube_t &update_bcube);
 	bool add_or_remove_grass_at(point const &pos, float rradius, bool add_grass, int brush_shape);
 
 	// *** scenery/grass ***
@@ -449,7 +449,7 @@ public:
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
 	float get_actual_zmin() const;
-	void add_or_remove_trees_at(point const &pos, float radius, bool add_trees);
+	void add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape);
 	void add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape);
 }; // tile_draw_t
 

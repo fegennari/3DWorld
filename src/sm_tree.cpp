@@ -447,19 +447,22 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 }
 
 // Note: for user placed trees in tiled terrain mode with heightmap texture; ignores vegetation, tree density functions, slope, etc.
-void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius) {
+void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square) {
 
 	generated = 1; // may already be set
 	assert(x1 < x2 && y1 < y2);
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()), ntrees_mult(sm_tree_density*tscale*tscale/8.0f);
 	int const skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
-	float const dxv(skip_val/(x2 - x1 - 1.0)), dyv(skip_val/(y2 - y1 - 1.0));
-	float xv(0.0), yv(0.0);
 
-	for (int i = y1; i < y2; i += skip_val, yv += dyv) {
-		for (int j = x1; j < x2; j += skip_val, xv += dxv) {
-			point const tpos(get_xval(j), get_yval(i), 0.0);
-			if (!dist_xy_less_than(pos, tpos, radius)) continue; // Note: uses mesh xy center, not actual tree pos (for simplicity and efficiency)
+	for (int i = y1; i < y2; i += skip_val) {
+		float const yval(get_yval(i));
+		if (fabs(yval - pos.y) > radius) continue;
+
+		for (int j = x1; j < x2; j += skip_val) {
+			float const xval(get_xval(j));
+			if (fabs(xval - pos.x) > radius) continue;
+			point const tpos(xval, yval, 0.0);
+			if (!is_square && !dist_xy_less_than(pos, tpos, radius)) continue; // Note: uses mesh xy center, not actual tree pos (for simplicity and efficiency)
 			int const trees_this_xy(get_ntrees_for_mesh_xy(i, j, ntrees_mult));
 			
 			for (int n = 0; n < trees_this_xy; ++n) {
@@ -467,7 +470,6 @@ void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2
 				maybe_add_tree(i, j, 0.0, tsize, skip_val, 0);
 			}
 		} // for j
-		xv = 0.0; // reset for next y iter
 	} // for i
 }
 
