@@ -3006,7 +3006,7 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape) {
 
-	//timer_t ("Tree Edit");
+	//RESET_TIME; // add pine=4.4 add decid=3.6
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
@@ -3018,17 +3018,13 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 	for (auto i = near_tiles.begin(); i != near_tiles.end(); ++i) { // update shadows for nearby tiles
 		if ((*i)->get_mesh_bcube().intersects(update_bcube)) {(*i)->register_tree_change(smap_manager);}
 	}
+	//PRINT_TIME("Tree Update");
 }
 
 void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape, float brush_weight) {
-	//timer_t ("Grass Edit");
+	//RESET_TIME; // rem=1.0 add=1.8
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass, brush_shape, brush_weight);}
-}
-
-template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
-	swap(v[ix], v.back());
-	v.pop_back();
-	--ix;
+	//PRINT_TIME("Grass Update");
 }
 
 void update_trees_bcube(point const &tpos, float tradius, cube_t &bcube) {
@@ -3037,8 +3033,8 @@ void update_trees_bcube(point const &tpos, float tradius, cube_t &bcube) {
 template <typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, bool is_square, point const &xlate, cube_t &rem_bcube) {
 
 	point const &tpos(v[i].get_center());
-	if (is_square) {if (fabs(tpos.x - pos.x) > rradius || fabs(tpos.y - pos.y) > rradius) return 0;}
-	else if (!dist_xy_less_than(tpos, pos, rradius)) return 0;
+	if (fabs(tpos.x - pos.x) > rradius || fabs(tpos.y - pos.y) > rradius) return 0;
+	if (!is_square && !dist_xy_less_than(tpos, pos, rradius)) return 0;
 	update_trees_bcube(tpos+xlate, 2.0*v[i].get_radius(), rem_bcube);
 	remove_element(v, i);
 	return 1;
@@ -3113,6 +3109,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		}
 	}
 	assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0);
+	bool const is_square(brush_shape == BSHAPE_CONST_SQ);
 	unsigned const grass_block_dim(get_grass_block_dim());
 	float const r_inv(1.0/rradius);
 	float const bweight(10.0*brush_weight); // normal brush weight is 0.001 to 0.512
@@ -3125,7 +3122,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 
 		for (unsigned x = 0; x < tsize; ++x, pt.x += DX_VAL) {
 			if (fabs(pt.x - pos.x) > rradius) continue;
-			if (brush_shape != BSHAPE_CONST_SQ && !dist_xy_less_than(pt, pos, rradius)) continue; // check for round shapes
+			if (!is_square && !dist_xy_less_than(pt, pos, rradius)) continue; // check for round shapes
 			unsigned const off(4*(y*tsize + x));
 			unsigned char &grass_weight(weight_data[off + grass_tex_ix]);
 			if (grass_weight == (add_grass ? 255 : 0)) continue; // full/no grass here
@@ -3137,7 +3134,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 					grass_weight = 255; // max grass
 					UNROLL_4X(if (i_ != grass_tex_ix) {weight_data[off+i_] = 0;}); // set all other weights to 0
 				}
-				else if(delta > 0.01) { // partial addition of grass
+				else if (delta > 0.01) { // partial addition of grass
 					unsigned char const prev_gw(grass_weight);
 					grass_weight = (unsigned char)min(255.0f, (grass_weight + 255.0f*delta));
 					unsigned char grass_added(grass_weight - prev_gw);
@@ -3184,7 +3181,8 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	if (!updated) return 0;
 
 	if (!add_grass && !flowers.empty()) { // remove flowers under grass if grass has been removed
-		//flowers.clear_within(pos, rradius); // FIXME: clear flowers
+		point const flower_xlate(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2), 0.0);
+		flowers.clear_within((pos - flower_xlate), rradius, is_square);
 	}
 	if (!add_grass && !grass_blocks.empty()) { // increases edit time slightly but decreased draw time slightly
 		bool has_grass(0);

@@ -120,6 +120,7 @@ public:
 class flower_tile_manager_t : public flower_manager_t {
 public:
 	void gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1);
+	void clear_within(point const &pos, float radius, bool is_square);
 };
 
 

@@ -918,6 +918,20 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 	//PRINT_TIME("Gen Flowers TT");
 }
 
+void flower_tile_manager_t::clear_within(point const &pos, float radius, bool is_square) {
+
+	bool updated(0);
+	
+	for (unsigned i = 0; i < flowers.size(); ++i) {
+		point const &fpos(flowers[i].pos);
+		if (fabs(fpos.x - pos.x) > radius || fabs(fpos.y - pos.y) > radius) continue;
+		if (!is_square && !dist_xy_less_than(fpos, pos, radius)) continue;
+		remove_element(flowers, i);
+		updated = 1;
+	}
+	if (updated) {clear_vbo();} // clear and regenerate VBO data
+}
+
 
 class flower_manager_dynamic_t : public flower_manager_t {
 public:
