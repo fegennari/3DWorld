@@ -2933,6 +2933,16 @@ int get_tiled_terrain_tid_under_point(point const &pos) {
 	return terrain_tile_draw.get_tid_under_point(pos);
 }
 
+void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, bool is_square) {
+
+	if (is_square) { // square, projected to cube
+		draw_cube(point(xval, yval, 0.5*(z1 + z2)), 2.0*radius, 2.0*radius, z2-z1, 0);
+	}
+	else { // circle, projected to cylinder
+		draw_cylinder_at(point(xval, yval, z1), z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
+	}
+}
+
 void draw_tiled_terrain(bool reflection_pass) {
 
 	render_models(0, reflection_pass, model3d_offset.get_xlate()); // not sure where this goes
@@ -2953,7 +2963,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 			float const tzmin(min(hit_pos.z, tile->get_zmin())), tzmax(max(hit_pos.z, tile->get_tile_zmax())), dz(tzmax - tzmin);
 			float const z1(tzmin - dz - SMALL_NUMBER), z2(tzmax + dz + SMALL_NUMBER);
 			float const radius((cur_brush_param.get_radius() + 0.5)*HALF_DXY); // do we need a nonuniform x/y scale for non-square meshes?
-			point const p1(hit_pos.x, hit_pos.y, z1);
+			bool const is_square(cur_brush_param.shape == BSHAPE_CONST_SQ);
 			enable_blend();
 			shader_t s;
 			s.begin_color_only_shader(colorRGBA(get_inf_terrain_mod_color(), 0.2)); // make mostly transparent (wireframe?)
@@ -2964,12 +2974,11 @@ void draw_tiled_terrain(bool reflection_pass) {
 			glStencilFunc(GL_ALWAYS, 0, ~0U);
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
-			draw_cylinder_at(p1, z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
+			draw_brush_shape(hit_pos.x, hit_pos.y, radius, z1, z2, is_square);
 			glStencilFunc(GL_NOTEQUAL, -1, ~0U); // one front face only
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			// FIXME: use cube for brush shape BSHAPE_CONST_SQ
-			draw_cylinder_at(p1, z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
+			draw_brush_shape(hit_pos.x, hit_pos.y, radius, z1, z2, is_square);
 			glDepthMask(GL_TRUE);
 			glDisable(GL_STENCIL_TEST);
 			disable_blend();

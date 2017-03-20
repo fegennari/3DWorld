@@ -1056,11 +1056,12 @@ void draw_simple_cube(cube_t const &c, bool texture) {
 
 
 // need to do something with tex coords for scale
+// Note: cube extends from pos +/- 0.5*(sx, sy, sz)
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv,
 			   float texture_scale, bool proportional_texture, vector3d const *const view_dir)
 {
 	point const scale(sx, sy, sz);
-	point const xlate(pos - 0.5*scale); // move origin from center to min corner
+	vector3d const xlate(pos - 0.5*scale); // move origin from center to min corner
 	float const sizes[3] = {sx, sy, sz};
 	vert_norm_tc verts[24];
 	unsigned vix(0);
