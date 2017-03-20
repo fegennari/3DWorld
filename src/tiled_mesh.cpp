@@ -3186,13 +3186,13 @@ bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 	return line_intersect_tiled_mesh_get_tile(v1, v2, p_int, tile);
 }
 
-
-bool hmap_mod_enabled() {return (inf_terrain_fire_mode && using_tiled_terrain_hmap_tex());}
-
 void change_inf_terrain_fire_mode(int val) {
 
-	if (!using_tiled_terrain_hmap_tex()) return; // ignore
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
+	
+	if (!using_tiled_terrain_hmap_tex() && inf_terrain_fire_mode >= FM_INC_MESH && inf_terrain_fire_mode <= FM_FLATTEN) {
+		inf_terrain_fire_mode = ((val > 0) ? FM_REM_TREES : FM_NONE); // skip over mesh heightmap edit modes, which won't work in this case
+	}
 	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh", "Remove Trees", "Add Trees", "Remove Grass", "Add Grass"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 	play_switch_weapon_sound();
@@ -3209,7 +3209,7 @@ tile_t *get_tile_for_xy(int x, int y) {
 void inf_terrain_fire_weapon() {
 
 	// FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS
-	if (!hmap_mod_enabled()) return; // ignore
+	if (!inf_terrain_fire_mode) return; // ignore
 	//RESET_TIME;
 	static double last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
@@ -3246,7 +3246,9 @@ void inf_terrain_fire_weapon() {
 
 void inf_terrain_undo_hmap_mod() {
 
-	if (!hmap_mod_enabled()) return;
+	if (!inf_terrain_fire_mode) return; // ignore
+	// FIXME: case to handle tree and grass edits
+	if (!using_tiled_terrain_hmap_tex()) return; // height editing only supported for hmap terrain
 	tex_mod_map_manager_t::hmap_brush_t brush;
 	if (!terrain_hmap_manager.pop_last_brush(brush)) return;
 	if (brush.is_flatten_brush()) return; // can't undo this brush since it's lossy
