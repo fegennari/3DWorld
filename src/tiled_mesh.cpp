@@ -3006,7 +3006,7 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape) {
 
-	//RESET_TIME; // add pine=4.4 add decid=3.6
+	//timer_t timer("Add/Remove Trees"); // add pine=4.4 add decid=3.6
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
@@ -3018,13 +3018,11 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 	for (auto i = near_tiles.begin(); i != near_tiles.end(); ++i) { // update shadows for nearby tiles
 		if ((*i)->get_mesh_bcube().intersects(update_bcube)) {(*i)->register_tree_change(smap_manager);}
 	}
-	//PRINT_TIME("Tree Update");
 }
 
 void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape, float brush_weight) {
-	//RESET_TIME; // rem=1.0 add=1.8
+	//timer_t timer("Add/Remove Grass"); // rem=1.0 add=1.8
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass, brush_shape, brush_weight);}
-	//PRINT_TIME("Grass Update");
 }
 
 void update_trees_bcube(point const &tpos, float tradius, cube_t &bcube) {
@@ -3180,9 +3178,13 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	} // for y
 	if (!updated) return 0;
 
-	if (!add_grass && !flowers.empty()) { // remove flowers under grass if grass has been removed
+	if (!flowers.empty() || (add_grass && flower_density > 0)) { // remove flowers under grass if grass has been removed
 		point const flower_xlate(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2), 0.0);
 		flowers.clear_within((pos - flower_xlate), rradius, is_square);
+
+		if (add_grass) {
+			// FIXME: add flowers back
+		}
 	}
 	if (!add_grass && !grass_blocks.empty()) { // increases edit time slightly but decreased draw time slightly
 		bool has_grass(0);
@@ -3245,7 +3247,9 @@ void inf_terrain_fire_weapon() {
 		}
 		return;
 	}
-	if (inf_terrain_fire_mode == FM_REM_GRASS || inf_terrain_fire_mode == FM_ADD_GRASS) { // tree addition/removal
+	if (inf_terrain_fire_mode == FM_REM_GRASS || inf_terrain_fire_mode == FM_ADD_GRASS) { // grass addition/removal
+		if (grass_density == 0) return; // disabled
+
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
 			terrain_tile_draw.add_or_remove_grass_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS), cur_brush_param.shape, cur_brush_param.get_delta_mag());
 		}

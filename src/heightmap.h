@@ -88,9 +88,10 @@ public:
 	void add_mod(tex_mod_vect_t const &mod);
 	void add_mod(tex_mod_map_t const &mod);
 	void apply_brush(hmap_brush_t const &brush, int step_sz=1, unsigned num_steps=1) {brush.apply(this, step_sz, num_steps);}
+	void add_brush(hmap_brush_t const &brush) {brush_vect.push_back(brush);}
 
 	void apply_and_cache_brush(hmap_brush_t const &brush, int step_sz=1, unsigned num_steps=1) {
-		brush_vect.push_back(brush);
+		add_brush(brush);
 		apply_brush(brush, step_sz, num_steps);
 	}
 	bool pop_last_brush(hmap_brush_t &last_brush);
