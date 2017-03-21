@@ -3006,7 +3006,7 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape) {
 
-	//timer_t timer("Add/Remove Trees"); // add pine=4.4 add decid=3.6
+	//timer_t timer("Add/Remove Trees"); // add pine=4.4 add decid=3.5
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
@@ -3178,13 +3178,12 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	} // for y
 	if (!updated) return 0;
 
-	if (!flowers.empty() || (add_grass && flower_density > 0)) { // remove flowers under grass if grass has been removed
+	if (add_grass) {
+		flowers.clear(); // clear and regenerate flowers
+	}
+	else if (!flowers.empty()) { // remove flowers under grass if grass has been removed
 		point const flower_xlate(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2), 0.0);
 		flowers.clear_within((pos - flower_xlate), rradius, is_square);
-
-		if (add_grass) {
-			// FIXME: add flowers back
-		}
 	}
 	if (!add_grass && !grass_blocks.empty()) { // increases edit time slightly but decreased draw time slightly
 		bool has_grass(0);
