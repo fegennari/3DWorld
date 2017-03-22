@@ -3113,6 +3113,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	float const bweight(10.0*brush_weight); // normal brush weight is 0.001 to 0.512
 	float const llc_x(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	point pt(llc_x, llcy, 0.0); // z is unused
+	unsigned xl(size), yl(size), xh(0), yh(0); // for add_grass only; start as denormalized range
 
 	for (unsigned y = 0; y < tsize; ++y, pt.y += DY_VAL) {
 		if (fabs(pt.y - pos.y) > rradius) continue;
@@ -3149,6 +3150,8 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 					}
 				}
 				add_grass_block_at(x, y, mhmin, mhmax, grass_block_dim);
+				xl = min(xl, x); xh = max(xh, min(x+1, size));
+				yl = min(yl, y); yh = max(yh, min(y+1, size));
 				updated = 1;
 			}
 			else { // remove grass
@@ -3171,7 +3174,8 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	if (!updated) return 0;
 
 	if (add_grass) {
-		flowers.clear(); // clear and regenerate flowers
+		//flowers.clear(); // clear and regenerate flowers (simple but slow)
+		flowers.update_subrange(weight_data, stride, x1-xoff2, y1-yoff2, xl, yl, xh, yh); // clear and regenerate range (faster)
 	}
 	else if (!flowers.empty()) { // remove flowers under grass if grass has been removed
 		point const flower_xlate(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2), 0.0);

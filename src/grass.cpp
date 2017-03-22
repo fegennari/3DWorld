@@ -918,6 +918,30 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 	//PRINT_TIME("Gen Flowers TT");
 }
 
+void flower_tile_manager_t::update_subrange(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1, int xl, int yl, int xh, int yh) {
+	
+	if (!generated || xh <= xl || yh <= yl) return; // only update if already generated and nonempty range
+
+	for (unsigned i = 0; i < flowers.size(); ++i) { // remove existing flowers
+		int const fx(flowers[i].pos.x*DX_VAL_INV), fy(flowers[i].pos.y*DY_VAL_INV);
+		if (fx >= xl && fx < xh && fy >= yl && fy < yh) {remove_element(flowers, i);}
+	}
+	rgen.set_state(x1+xl+xoff2+123, y1+yl+yoff2+456); // deterministic for each tile
+	mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
+	gen_density_cache(density_gen, x1, y1);
+	float const hthresh(get_median_height(FLOWER_DIST_THRESH));
+	unsigned const nx(xh - xl), ny(yh - yl);
+
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			unsigned const xx(x + xl), yy(y + yl), wd_ix(4*(yy*wd_stride + xx) + 2);
+			assert(wd_ix < weight_data.size());
+			add_flowers(density_gen, weight_data[wd_ix]/255.0, hthresh, 0.0, 0.0, xx, yy, 0);
+		}
+	}
+	clear_vbo(); // clear and regenerate VBO data
+}
+
 void flower_tile_manager_t::clear_within(point const &pos, float radius, bool is_square) {
 
 	bool updated(0);
