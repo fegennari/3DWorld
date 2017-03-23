@@ -120,6 +120,7 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 
 
 void text_drawer::begin_draw(colorRGBA const *const color) {
+	cur_color = ALPHA0; // reset to invalid text color so that the first call sets color
 	ensure_filled_polygons();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
