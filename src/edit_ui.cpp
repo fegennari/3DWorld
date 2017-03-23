@@ -104,7 +104,7 @@ class hmap_kbd_menu_t : public keyboard_menu_t {
 			break;
 		case HMAP_CTR_RADIUS:
 			spos = ((brush_param.radius_exp + 1)/float(max_radius_exp + 1));
-			value << brush_param.get_radius();
+			value << (brush_param.get_radius() ? brush_param.get_radius() : 0.5);
 			break;
 		case HMAP_CTR_DELTA:
 			spos = (brush_param.delta_exp/9.0);

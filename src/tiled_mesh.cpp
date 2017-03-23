@@ -3233,12 +3233,12 @@ void inf_terrain_fire_weapon() {
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
-	float const bradius(cur_brush_param.get_radius());
+	unsigned const bradius(cur_brush_param.get_radius());
 	point p_int;
 	
 	if (inf_terrain_fire_mode == FM_REM_TREES || inf_terrain_fire_mode == FM_ADD_TREES) { // tree addition/removal
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
-			terrain_tile_draw.add_or_remove_trees_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_TREES), cur_brush_param.shape);
+			terrain_tile_draw.add_or_remove_trees_at(p_int, (bradius + 0.5)*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_TREES), cur_brush_param.shape);
 		}
 		return;
 	}
@@ -3246,7 +3246,7 @@ void inf_terrain_fire_weapon() {
 		if (grass_density == 0) return; // disabled
 
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
-			terrain_tile_draw.add_or_remove_grass_at(p_int, bradius*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS), cur_brush_param.shape, cur_brush_param.get_delta_mag());
+			terrain_tile_draw.add_or_remove_grass_at(p_int, (bradius + 0.5)*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_GRASS), cur_brush_param.shape, cur_brush_param.get_delta_mag());
 		}
 		return;
 	}
