@@ -3094,7 +3094,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	if (rradius == 0.0) return 0;
 	if (weight_data.empty()) return 0; // texture weights not yet generated, can this happen?
 	if (!mesh_sphere_intersect(pos, rradius)) return 0; // not overlapping this tile
-	if (!add_grass && gen_grass_map() && grass_blocks.empty()) return 0; // known to have no grass (is this safe? does it help?)
+	//if (!add_grass && gen_grass_map() && grass_blocks.empty()) return 0; // known to have no grass (is this safe? does it help?)
 	bool updated(0);
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 	assert(weight_data.size() == 4*num_texels);
