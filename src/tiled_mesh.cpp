@@ -831,12 +831,7 @@ void tile_t::ensure_height_tid() {
 }
 
 
-void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
-
-	//timer_t timer("Create Tile Weights Texture");
-	assert(zvals.size() == zvsize*zvsize);
-	unsigned const tsize(stride), num_texels(tsize*tsize);
-	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
+void get_texture_ixs(int &sand_tex_ix, int &dirt_tex_ix, int &grass_tex_ix, int &rock_tex_ix, int &snow_tex_ix) {
 
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {
 		switch (lttex_dirt[i].id) {
@@ -849,6 +844,16 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	assert(sand_tex_ix >= 0 && dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0 && snow_tex_ix >= 0);
+}
+
+
+void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
+
+	//timer_t timer("Create Tile Weights Texture");
+	assert(zvals.size() == zvsize*zvsize);
+	unsigned const tsize(stride), num_texels(tsize*tsize);
+	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
+	get_texture_ixs(sand_tex_ix, dirt_tex_ix, grass_tex_ix, rock_tex_ix, snow_tex_ix);
 
 	if (weight_tid == 0) { // create weights
 		has_any_grass = 0;
@@ -927,8 +932,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv)); // slow
 
 				if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
-					weights[sand_tex_ix ] += (1.0 - dirt_scale)*weights[dirt_tex_ix];
-					weights[dirt_tex_ix ] *= dirt_scale;
+					weights[sand_tex_ix] += (1.0 - dirt_scale)*weights[dirt_tex_ix];
+					weights[dirt_tex_ix] *= dirt_scale;
 				}
 				if (grass) {
 					float const grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
@@ -3021,7 +3026,7 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 }
 
 void tile_draw_t::add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape, float brush_weight) {
-	//timer_t timer("Add/Remove Grass"); // rem=1.3 add=1.4
+	//timer_t timer("Add/Remove Grass"); // rem=1.4 add=1.4
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->add_or_remove_grass_at(pos, radius, add_grass, brush_shape, brush_weight);}
 }
 
@@ -3098,18 +3103,11 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	bool updated(0);
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 	assert(weight_data.size() == 4*num_texels);
-	int dirt_tex_ix(-1), grass_tex_ix(-1);
-
-	for (unsigned i = 0; i < NTEX_DIRT; ++i) { // only need grass and dirt tex for now
-		switch (lttex_dirt[i].id) {
-		case DIRT_TEX:   dirt_tex_ix  = i; break;
-		case GROUND_TEX: grass_tex_ix = i; break;
-		}
-	}
-	assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0);
+	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
+	get_texture_ixs(sand_tex_ix, dirt_tex_ix, grass_tex_ix, rock_tex_ix, snow_tex_ix);
 	bool const is_square(brush_shape == BSHAPE_CONST_SQ);
 	unsigned const grass_block_dim(get_grass_block_dim());
-	float const r_inv(1.0/rradius), dz_inv(1.0/(zmax - zmin));;
+	float const r_inv(1.0/rradius), dz_inv(1.0/(zmax - zmin)), xy_mult(1.0/float(size));
 	float const bweight(10.0*brush_weight); // normal brush weight is 0.001 to 0.512
 	float const llc_x(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	point pt(llc_x, llcy, 0.0); // z is unused
@@ -3167,6 +3165,13 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 				if (k2 == grass_tex_ix) {k2 = dirt_tex_ix;} // replace grass with dirt
 				if (k2 < 4) {weight_data[off + k2] += grass_rem2;} // not snow
 				if (k1 < 4) {weight_data[off + k1] += grass_rem1;} // not snow
+				float const dirt_scale(BILINEAR_INTERP(params, dirt, float(x)*xy_mult, float(y)*xy_mult));
+
+				if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
+					unsigned char &dirt_w(weight_data[off + dirt_tex_ix]);
+					weight_data[off + sand_tex_ix] += (unsigned char)((1.0 - dirt_scale)*dirt_w);
+					dirt_w = (unsigned char)(dirt_scale*dirt_w);
+				}
 				updated = 1;
 			}
 		} // for x
