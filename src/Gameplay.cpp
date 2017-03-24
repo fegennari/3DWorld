@@ -1304,8 +1304,10 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			}
 		}
 	}
-	if (size > 0.2) {gen_particles(pos, (rand() % int(50*size)));}
-	
+	if (size > 0.2) {
+		unsigned const max_parts((type == PLASMA) ? 250 : 50), num_parts(rand() % int(max_parts*size));
+		gen_particles(pos, num_parts);
+	}
 	// large damage - throws up dirt and makes craters (later destroys trees)
 	if ((type == IMPACT || damage > 1000.0) && is_over_mesh(pos) && !point_outside_mesh(xpos, ypos)) {
 		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
