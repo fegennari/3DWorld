@@ -738,10 +738,10 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 	for (unsigned y = 0; y < stride; ++y) { // Note: shadow texture is stored as {mesh_shadow, tree_shadow, ambient_occlusion}
 		for (unsigned x = 0; x < stride; ++x) {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x), ix_off(4*ix);
-			unsigned char const tree_ao_val(tree_map.empty() ? 255 : tree_map[ix].ao); // fully lit (if not nearby trees)
 			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
 			unsigned char const base_ao(ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
-			shadow_data[ix_off+2] = (unsigned char)(base_ao * (0.3 + 0.7*tree_ao_val/255.0)); // add ambient occlusion from trees
+			if (tree_map.empty() || tree_map[ix].ao == 255) {shadow_data[ix_off+2] = base_ao;} // no tree AO
+			else {shadow_data[ix_off+2] = (unsigned char)(base_ao * (0.3 + 0.7*tree_map[ix].ao/255.0));}
 			unsigned char shadow_val(255);
 
 			if (!mesh_shadows) {} // do nothing
@@ -1020,8 +1020,8 @@ void tile_t::calc_avg_mesh_color() {
 	for (unsigned i = 0; i < num_texels; ++i) {
 		unsigned const off(4*i);
 		for (unsigned j = 0; j < 4; ++j) {tot_weights[j] += weight_data[off+j];}
-		tot_weights[4] += (255 - weight_data[off+0] - weight_data[off+1] - weight_data[off+2] - weight_data[off+3]);
 	}
+	tot_weights[4] += (255*num_texels - tot_weights[0] - tot_weights[1] - tot_weights[2] - tot_weights[3]);
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {avg_mesh_tex_color += get_avg_color_for_landscape_tex(i) * (tot_weights[i] / (255.0*num_texels));}
 	//avg_mesh_tex_color *= (1.0/avg_mesh_tex_color.get_luminance());
 	avg_mesh_tex_color *= 5.0;
