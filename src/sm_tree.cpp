@@ -86,7 +86,7 @@ void small_tree_group::finalize(bool low_detail) {
 	if (empty()) return;
 	assert(!is_uploaded(low_detail));
 	vbo_vnc_block_manager_t &vbo_mgr(vbo_manager[low_detail]);
-	vbo_mgr.clear();
+	vbo_mgr.clear(0); // clear_pts_mem = 0
 	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : PINE_TREE_NPTS));
 	if (!low_detail) {vbo_mgr.reserve_offsets(num_pine_trees);}
 	#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)

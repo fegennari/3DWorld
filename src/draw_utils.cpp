@@ -723,8 +723,8 @@ void vbo_block_manager_t<vert_type_t>::begin_render() const {
 }
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::clear() {
-	clear_points();
+void vbo_block_manager_t<vert_type_t>::clear(bool free_pts_mem) {
+	if (free_pts_mem) {clear_points();} else {pts.clear();}
 	temp_points.clear();
 	offsets.clear();
 	clear_vbo();
