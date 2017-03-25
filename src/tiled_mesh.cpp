@@ -588,21 +588,17 @@ void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 }
 
 
-void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius, float center_height) const {
+void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const {
 
 	tile_t *const adj_tile(get_adj_tile_smap(dx, dy));
 	if (!adj_tile || adj_tile->is_distant) return;
 	point const pos2(pos + mesh_off.subtract_from(adj_tile->mesh_off));
-	adj_tile->add_tree_ao_shadow(pos2, tradius, center_height, 1);
+	adj_tile->add_tree_ao_shadow(pos2, tradius, 1);
 }
 
 
-void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_height, bool no_adj_test) {
+void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test) {
 
-	// FIXME: AO uses the normal (xc, yc) but shadow uses the light dir (+ mesh normal?) to offset (xc, yc) and maybe adjust rval to be elliptical;
-	// unfortunately, this requires updating all tree shadows and recreating the AO each time the light source changes, which can be slow
-	//vector3d const light_dir(get_light_pos().get_norm()); // directional light
-	//point pos(pos_ - light_dir*(center_height/max(0.1f, light_dir.z)));
 	int const xc(round_fp((pos.x - xstart)/deltax)), yc(round_fp((pos.y - ystart)/deltay));
 	int const rval(max(int(tradius/deltax), int(tradius/deltay)) + 1), rval_sq(rval*rval);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
@@ -627,7 +623,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_he
 		for (int dy = -1; dy <= 1; ++dy) {
 			for (int dx = -1; dx <= 1; ++dx) {
 				if (dx == 0 && dy == 0) continue;
-				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, tradius, center_height);}
+				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, tradius);}
 			}
 		}
 	}
@@ -637,28 +633,32 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_he
 	}
 }
 
+template<typename T> void tile_t::apply_ao_shadows_for_tree_group(T const &trees, tile_offset_t const &toff, bool no_adj_test, float rscale) {
+
+	point const pt_off(toff.subtract_from(mesh_off));
+	cube_t const bcube(get_mesh_bcube());
+
+	for (typename T::const_iterator i = trees.begin(); i != trees.end(); ++i) {
+		point const pt(i->get_center() + pt_off);
+		float const tr(rscale*i->get_radius());
+		if (no_adj_test && (pt.x+tr < bcube.d[0][0] || pt.x-tr > bcube.d[0][1] || pt.y+tr < bcube.d[1][0] || pt.y-tr > bcube.d[1][1])) continue;
+		add_tree_ao_shadow(pt, tr, no_adj_test);
+	}
+}
 
 void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test) {
 
 	if (can_have_pine_palm_trees()) {
 		assert(pine_trees_generated());
-		point const pt_off(tile->ptree_off.subtract_from(mesh_off));
-
-		for (small_tree_group::const_iterator i = tile->pine_trees.begin(); i != tile->pine_trees.end(); ++i) {
-			add_tree_ao_shadow((i->get_pos() + pt_off), 1.8*i->get_pine_tree_radius(), 0.5*i->get_height(), no_adj_test);
-		}
+		apply_ao_shadows_for_tree_group(tile->pine_trees, tile->ptree_off, no_adj_test, 1.8);
 	}
 	if (can_have_decid_trees()) {
 		assert(decid_trees.was_generated());
-		point const dt_off(tile->dtree_off.subtract_from(mesh_off));
-
-		for (tree_cont_t::const_iterator i = tile->decid_trees.begin(); i != tile->decid_trees.end(); ++i) {
-			add_tree_ao_shadow((i->get_center() + dt_off), 0.5*i->get_radius(), i->get_height_offset(), no_adj_test); // less dense => smaller radius
-		}
+		apply_ao_shadows_for_tree_group(tile->decid_trees, tile->dtree_off, no_adj_test, 0.5);
 	}
 	if (!no_adj_test && !is_distant) { // pull mode
 		for (int dy = -1; dy <= 1; ++dy) {
-			for (int dx = -1; dx <= 1; ++dx) {
+			for (int dx = -1; dx <= 1; ++dx) {     
 				if (dx == 0 && dy == 0) continue;
 				tile_t const *const adj_tile(get_adj_tile_smap(dx, dy));
 				if (adj_tile && !adj_tile->is_distant) {apply_ao_shadows_for_trees(adj_tile, 1);}

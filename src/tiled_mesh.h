@@ -282,8 +282,9 @@ public:
 		tile_t *adj_tile(get_adj_tile(dx, dy));
 		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
 	}
-	void push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius, float center_height) const;
-	void add_tree_ao_shadow(point const &pos, float tradius, float center_height, bool no_adj_test);
+	void push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const;
+	void add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test);
+	template<typename T> void apply_ao_shadows_for_tree_group(T const &trees, tile_offset_t const &toff, bool no_adj_test, float rscale);
 	void apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test);
 	void apply_tree_ao_shadows();
 	void check_shadow_map_and_normal_texture();
