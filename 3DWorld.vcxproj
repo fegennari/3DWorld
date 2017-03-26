@@ -871,6 +871,7 @@
     <None Include="shaders\simple_texture_luminance.frag" />
     <None Include="shaders\snow.vert" />
     <None Include="shaders\spec_map.part.frag" />
+    <None Include="shaders\sphere_refract_screen.frag" />
     <None Include="shaders\sphere_shadow.part" />
     <None Include="shaders\sphere_shadow_casters.part.frag" />
     <None Include="shaders\star_draw.frag" />

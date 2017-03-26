@@ -13,6 +13,8 @@ extern float NEAR_CLIP, FAR_CLIP, fticks, dist_to_fire_sq, CAMERA_RADIUS;
 extern colorRGBA sun_color;
 
 int depth_buffer_frame(0), color_buffer_frame(0);
+float cur_explosion_weight(0.0);
+sphere_t cur_explosion_sphere;
 
 bool player_is_drowning();
 
@@ -116,6 +118,28 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0) {
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
+
+void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
+
+	if (intensity == 0.0) return;
+	static float time(0.0);
+	if (animate2) {time += fticks;}
+	point const center(world_space_to_screen_space(sphere.pos));
+	bind_frame_buffer_RGB();
+	shader_t s;
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("sphere_refract_screen");
+	s.begin_shader();
+	s.add_uniform_int("frame_buffer_tex", 0);
+	s.add_uniform_float("time", time); // FIXME: placeholder
+	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
+	s.add_uniform_float("intensity", CLIP_TO_01(intensity)); // 1.0 at T=0, 0.0 at T=1
+	s.add_uniform_float("radius", sphere.radius/p2p_dist(get_camera_pos(), sphere.pos)); // divide distance/depth to convert to screen space radius
+	s.add_uniform_vector3d("center", center);
+	draw_white_quad_and_end_shader(s);
+	color_buffer_frame = 0; // reset to invalidate buffer
+}
+
 void add_depth_of_field(float focus_depth, float dof_val) {
 
 	set_active_texture(1);
@@ -177,8 +201,14 @@ void run_postproc_effects() {
 	point const camera(get_camera_pos());
 	float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
+	int index(-1);
 	//if (display_mode & 0x20) {add_ssao();}
 	
+	if (cur_explosion_sphere.radius > 0.0 && camera_pdu.sphere_visible_test(cur_explosion_sphere.pos, cur_explosion_sphere.radius)) {
+		if (coll_pt_vis_test(camera, cur_explosion_sphere.pos, 0.0, index, camera_coll_id, 1, 1)) {
+			add_sphere_refract_effect(cur_explosion_sphere, cur_explosion_weight);
+		}
+	}
 	if (camera_underwater) {
 		//add_color_only_effect("screen_space_blur");
 		add_2d_blur();
