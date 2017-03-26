@@ -46,6 +46,7 @@ hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
+extern bool use_instanced_pine_trees;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
@@ -97,6 +98,7 @@ float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
+	if (use_instanced_pine_trees) return 1;
 	float const ntrees_mult(vegetation*sm_tree_density*tree_density_thresh*tree_scale*tree_scale);
 	return (ENABLE_INST_PINE && (tree_mode & 2) && ntrees_mult >= ((tree_mode == 3) ? 3 : 8) && max_unique_trees > 0); // enable when there are lots of pine/palm trees
 }
