@@ -90,7 +90,7 @@ struct small_tree_group : public vector<small_tree> {
 	rand_gen_t rgen;
 	bool generated, instanced;
 	unsigned num_pine_trees, num_palm_trees, num_trunk_pts;
-	float max_pt_radius;
+	float max_tree_radius;
 	point last_cpos;
 	cube_t all_bcube;
 
@@ -103,7 +103,7 @@ struct small_tree_group : public vector<small_tree> {
 	};
 	vector<tree_inst_t> tree_insts[2]; // pine trees, palm trees
 	
-	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), num_trunk_pts(0), max_pt_radius(0.0), last_cpos(all_zeros) {all_bcube.set_to_zeros();}
+	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), num_trunk_pts(0), max_tree_radius(0.0), last_cpos(all_zeros) {all_bcube.set_to_zeros();}
 	void enable_instanced() {instanced |= ((num_pine_trees + num_palm_trees) == size());} // only if all are pine/palm trees
 	void sort_by_type() {stable_sort(begin(), end());}
 	void sort_by_dist_to_camera();
@@ -139,7 +139,7 @@ struct small_tree_group : public vector<small_tree> {
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}
 	void update_zmax(float &tzmax) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
-	float get_rmax() const {return max_pt_radius;}
+	float get_rmax() const {return max_tree_radius;}
 	small_tree const &get_tree(unsigned ix) const {assert(ix < size()); return operator[](ix);}
 };
 

@@ -72,11 +72,9 @@ unsigned get_pine_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
 
 void small_tree_group::add_tree(small_tree const &st) {
 
-	if (st.is_pine_tree()) {
-		max_pt_radius = max(max_pt_radius, st.get_pine_tree_radius());
-		++num_pine_trees;
-	}
+	if      (st.is_pine_tree()      ) {++num_pine_trees;}
 	else if (st.get_type() == T_PALM) {++num_palm_trees;}
+	max_tree_radius = max(max_tree_radius, st.get_radius()); // includes all tree types
 	push_back(st);
 }
 
@@ -158,8 +156,8 @@ void small_tree_group::clear_all() {
 	clear_vbos(); // required to clear palm tree VBOs
 	clear();
 	clear_vbo_manager_and_ids();
-	generated     = 0;
-	max_pt_radius = 0.0;
+	generated       = 0;
+	max_tree_radius = 0.0;
 }
 
 
