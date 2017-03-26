@@ -3011,6 +3011,13 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape) {
 
+	static point last_pos(all_zeros);
+	static float last_radius(0.0);
+
+	if (add_trees) {
+		if (pos == last_pos && radius == last_radius) return; // brush applied at same point (mouse not moving/zero delay), ignore it (weight is unused)
+		last_pos = pos; last_radius = radius;
+	}
 	//timer_t timer("Add/Remove Trees"); // add pine=4.4 add decid=3.5
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
