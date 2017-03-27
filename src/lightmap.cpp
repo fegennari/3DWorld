@@ -894,11 +894,11 @@ void upload_dlights_textures(cube_t const &bounds) {
 			unsigned const gb_ix(x + y*gbx); // {start, end, unused}
 			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
 			vector<unsigned short> const &ixs(ldynamic[gb_ix].get_src_ixs());
-			unsigned const num_ixs(min((unsigned)ixs.size(), 255U)); // max of 255 lights per bin
+			unsigned num_ixs(min((unsigned)ixs.size(), 255U)); // max of 255 lights per bin
+			num_ixs = min(num_ixs, (max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
 			
-			for (unsigned i = 0; i < num_ixs && elem_data.size() < max_gb_entries; ++i) { // end if exceed max entries
-				if (ixs[i] >= ndl) continue; // dlight index is too high, skip
-				elem_data.push_back((unsigned short)ixs[i]);
+			for (unsigned i = 0; i < num_ixs; ++i) {
+				if (ixs[i] < ndl) {elem_data.push_back((unsigned short)ixs[i]);} // if dlight index is too high, skip
 			}
 			unsigned const num_ix(elem_data.size() - gb_data[gb_ix]);
 			assert(num_ix < (1<<8));
