@@ -217,6 +217,7 @@ void run_postproc_effects() {
 	else {
 		if (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
 	}
+#if 0
 	if (display_mode & 0x80) {
 		point const pos2(camera + cview_dir*FAR_CLIP);
 		point cpos(pos2);
@@ -228,6 +229,7 @@ void run_postproc_effects() {
 		float const dof_val(0.04*FAR_CLIP);
 		add_depth_of_field(focus_depth, dof_val);
 	}
+#endif
 	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater && !is_rain_enabled()) {add_god_rays();}
 	if ((display_mode & 0x20) && !camera_underwater) {add_bloom();} // add bloom last
 }

@@ -4,6 +4,10 @@ uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
+#ifdef SCREEN_SPACE_DLIGHTS
+uniform vec2 resolution; // for screen space tiles
+#endif
+
 const   float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
 const   float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
 uniform float LT_DIR_FALLOFF    = 0.005;
@@ -101,7 +105,11 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 #endif
 	const float gamma = 2.2;
 	vec3 dl_color     = vec3(0.0);
+#ifdef SCREEN_SPACE_DLIGHTS
+	vec2 norm_pos = gl_FragCoord.xy / resolution; // screen space in [0.0, 1.0] range
+#else
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
+#endif
 	uint gb_ix  = texture(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFFFU); // 24 low bits
 	uint num_ix = ((gb_ix >> 24U) & 0xFFFFFFU); // 8 high bits

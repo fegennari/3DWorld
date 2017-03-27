@@ -363,6 +363,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
+	if (display_mode & 0x80){s.set_prefix("#define SCREEN_SPACE_DLIGHTS",   1);} // FS
 	if (enable_reflect == 2 && use_bmap && (enable_cube_map_bump_maps || is_cobj)) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0, use_wet_mask);
@@ -376,6 +377,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	s.set_frag_shader(fstr + "textured_with_smoke");
 	s.begin_shader();
 	s.add_uniform_float("water_depth", water_depth);
+	if (display_mode & 0x80) {s.add_uniform_vector2d("resolution", vector2d(window_width, window_height));}
 
 	if (use_texgen == 2) {
 		s.register_attrib_name("tex0_s", TEX0_S_ATTR);

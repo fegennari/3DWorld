@@ -6,6 +6,7 @@
 #include "lightmap.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "transform_obj.h"
 #include <functional>
 
 
@@ -40,6 +41,26 @@ extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, CAMER
 extern colorRGB cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
+
+
+struct tiled_forward_manager : public vector<dls_cell> {
+
+	unsigned ndx, ndy;
+	bool enabled;
+
+	tiled_forward_manager(unsigned ndx_, unsigned ndy_) : ndx(ndx_), ndy(ndy_), enabled(0) {}
+	
+	void clear() {
+		if (!enabled) return;
+		for (iterator i = begin(); i != end(); ++i) {i->clear();}
+	}
+	void set_enabled(bool val) {
+		enabled = val;
+		if (enabled) {resize(ndx*ndy);}
+	}
+};
+
+tiled_forward_manager tile_mgr(64, 32); // hard-coded to 2048 bins for now, assuming a widescreen format
 
 
 inline bool add_cobj_ok(coll_obj const &cobj) { // skip small things like tree leaves and such
@@ -884,16 +905,22 @@ void upload_dlights_textures(cube_t const &bounds) {
 	unsigned const elem_tex_x = (1<<8); // must agree with value in shader
 	unsigned const elem_tex_y = (1<<10); // larger = slower, but more lights/higher quality
 	unsigned const max_gb_entries(elem_tex_x*elem_tex_y);
-	unsigned const gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
+	unsigned const gbx(tile_mgr.enabled ? tile_mgr.ndx : MESH_X_SIZE), gby(tile_mgr.enabled ? tile_mgr.ndy : MESH_Y_SIZE);
+	vector<dls_cell> const &dlc(tile_mgr.enabled ? tile_mgr : ldynamic);
 	assert(max_gb_entries <= (1<<24)); // gb_data low bits allocation
 	elem_data.resize(0);
 	gb_data.resize(gbx*gby, 0);
-
+	static unsigned last_gbx(0), last_gby(0);
+	
+	if (gbx != last_gbx || gby != last_gby) { // regenerate gb texture on size change (mesh vs. screen tile switch)
+		free_texture(gb_tid);
+		last_gbx = gbx; last_gby = gby;
+	}
 	for (unsigned y = 0; y < gby && elem_data.size() < max_gb_entries; ++y) {
 		for (unsigned x = 0; x < gbx && elem_data.size() < max_gb_entries; ++x) {
 			unsigned const gb_ix(x + y*gbx); // {start, end, unused}
 			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
-			vector<unsigned short> const &ixs(ldynamic[gb_ix].get_src_ixs());
+			vector<unsigned short> const &ixs(dlc[gb_ix].get_src_ixs());
 			unsigned const num_ixs(min((unsigned)ixs.size(), 255U)); // max of 255 lights per bin
 			
 			for (unsigned i = 0; i < num_ixs && elem_data.size() < max_gb_entries; ++i) { // end if exceed max entries
@@ -1052,15 +1079,18 @@ inline void dls_cell::clear() {
 	z2 = -FAR_DISTANCE;
 }
 
+inline void dls_cell::add_light(unsigned ix) {
 
-inline void dls_cell::add_light(unsigned ix, float zmin, float zmax) {
-	
 	if (lsrc.capacity() == 0) {lsrc.reserve(INIT_CCELL_SIZE);}
 	lsrc.push_back(ix);
+}
+
+inline void dls_cell::add_light_with_z(unsigned ix, float zmin, float zmax) {
+	
+	add_light(ix);
 	z1 = min(z1, zmin);
 	z2 = max(z2, zmax);
 }
-
 
 bool dls_cell::check_add_light(unsigned ix) const {
 
@@ -1083,6 +1113,7 @@ void clear_dynamic_lights() { // slow for large lights
 	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
 	for (auto i = ldynamic.begin(); i != ldynamic.end(); ++i) {i->clear();}
+	tile_mgr.clear();
 	dl_sources.clear();
 }
 
@@ -1096,6 +1127,7 @@ void add_dynamic_lights_ground() {
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
 	dl_smap_enabled = 0;
+	tile_mgr.set_enabled((display_mode & 0x80) != 0);
 
 	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {
 		// Note: more efficient to do VFC here, but won't apply to get_indir_light() (or is_in_darkness())
@@ -1135,21 +1167,52 @@ void add_dynamic_lights_ground() {
 		int const radius(int(ls.get_radius()*max(DX_VAL_INV, DY_VAL_INV)) + 2), rsq(radius*radius);
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
 
-		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
-			int const y_sq((y-ycent)*(y-ycent));
+		if (tile_mgr.enabled) { // add lights to tile_mgr
+			point corners[8];
+			get_cube_corners(bcube.d, corners);
+			unsigned xy_rng[2][2] = {0};
+			unsigned const ndxy[2] = {tile_mgr.ndx, tile_mgr.ndy};
+			double mats[2][16];
+			fgGetMVM().get_as_doubles(mats[0]); // Model = MVM
+			fgGetPJM().get_as_doubles(mats[1]); // Proj
+			int const view[4] = {0, 0, 1, 1};
+			
+			for (unsigned i = 0; i < 8; ++i) {
+				vector3d_d pss;
+				gluProject(corners[i].x, corners[i].y, corners[i].z, mats[0], mats[1], view, &pss.x, &pss.y, &pss.z); // from world_space_to_screen_space()
 
-			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-				if (rsq > 1) {
-					if (line_light) {
-						float const px(get_xval(x)), py(get_yval(y)), lx(lpos2.x - lpos.x), ly(lpos2.y - lpos.y);
-						float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
-						if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
-					} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
+				for (unsigned d = 0; d < 2; ++d) {
+					unsigned const v(min(unsigned(ndxy[d]*max(pss[d], 0.0)), ndxy[d]-1U));
+					if (i == 0) {xy_rng[d][0] = xy_rng[d][1] = v;}
+					else {
+						xy_rng[d][0] = min(xy_rng[d][0], v);
+						xy_rng[d][1] = max(xy_rng[d][1], v);
+					}
+				} // for d
+			} // for i
+			for (unsigned y = xy_rng[1][0]; y <= xy_rng[1][1]; ++y) {
+				for (unsigned x = xy_rng[0][0]; x <= xy_rng[0][1]; ++x) {
+					tile_mgr[y*tile_mgr.ndx + x].add_light(ix); // FIXME: conservative, do rsq and line light clipping
 				}
-				ldynamic[y*MESH_X_SIZE + x].add_light(ix, bcube.d[2][0], bcube.d[2][1]); // could do flow clipping here?
 			}
 		}
-	}
+		else {
+			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
+				int const y_sq((y-ycent)*(y-ycent));
+
+				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
+					if (rsq > 1) {
+						if (line_light) {
+							float const px(get_xval(x)), py(get_yval(y)), lx(lpos2.x - lpos.x), ly(lpos2.y - lpos.y);
+							float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
+							if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
+						} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
+					}
+					ldynamic[y*MESH_X_SIZE + x].add_light_with_z(ix, bcube.d[2][0], bcube.d[2][1]); // could do flow clipping here?
+				} // for x
+			} // for y
+		}
+	} // for i (light index)
 	//PRINT_TIME("Dynamic Light Add");
 }
 

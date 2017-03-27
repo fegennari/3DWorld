@@ -296,13 +296,13 @@ public:
 	dls_cell() : z1(FAR_DISTANCE), z2(-FAR_DISTANCE) {}
 
 	void clear();
-	void add_light(unsigned ix, float zmin, float zmax);
+	void add_light(unsigned ix);
+	void add_light_with_z(unsigned ix, float zmin, float zmax);
 	bool check_add_light(unsigned ix) const;
 	size_t size() const {return lsrc.size();}
 	bool empty()  const {return lsrc.empty();}
 	unsigned get(unsigned i) const {return lsrc[i];} // no bounds checking
 	bool check_z(float z)    const {return (!empty() && z >= z1 && z <= z2);}
-	bool check_z_range(float zlo, float zhi) const {return (!empty() && zlo <= z2 && zhi >= z1);}
 	vector<unsigned short> const &get_src_ixs() const {return lsrc;}
 };
 
