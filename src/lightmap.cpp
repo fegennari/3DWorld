@@ -1139,7 +1139,7 @@ void add_dynamic_lights_ground() {
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
-			int const y_sq((y-ycent)*(y-ycent));
+			int const y_sq((y-ycent)*(y-ycent)), offset(y*MESH_X_SIZE);
 
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
 				if (rsq > 1) {
@@ -1149,7 +1149,7 @@ void add_dynamic_lights_ground() {
 						if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
 					} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
 				}
-				ldynamic[y*MESH_X_SIZE + x].add_light_with_z(ix, bcube.d[2][0], bcube.d[2][1]); // could do flow clipping here?
+				ldynamic[offset + x].add_light_with_z(ix, bcube.d[2][0], bcube.d[2][1]); // could do flow clipping here?
 			} // for x
 		} // for y
 	} // for i (light index)
