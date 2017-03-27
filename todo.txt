@@ -11,5 +11,5 @@ Gameplay in tiled terrain mode
   - Pickup items
   - Projectile and object collision detection
 
-Store dlights in screen space
 Snow or sand terrain layer using blurred heightmap
+Read/Write tree and grass edit brushes
