@@ -101,8 +101,7 @@ public:
 		for (unsigned i = 0; i < 6; ++i) {
 			unsigned const ix(lix.ixs[i]);
 			assert(ix < light_sources_d.size());
-			point const old_pos(light_sources_d[ix].get_pos());
-			light_sources_d[ix].shift_by(obj_pos - old_pos);
+			light_sources_d[ix].move_to(obj_pos);
 		}
 	}
 	static string texture_str(int tid) {

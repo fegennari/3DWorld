@@ -279,6 +279,7 @@ public:
 	void disable() {release_smap(); bind_point_t::disable();}
 	bool has_bound_platform() const {return (platform_id >= 0);}
 	void shift_by(vector3d const &vd);
+	void move_to(point const &new_pos) {shift_by(new_pos - pos);}
 	bool is_shadow_map_enabled() const;
 	bool check_shadow_map();
 	void release_smap();
