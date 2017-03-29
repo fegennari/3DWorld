@@ -1045,24 +1045,13 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 
 
 inline void dls_cell::clear() {
-
 	if (lsrc.empty()) return;
 	lsrc.clear();
-	z1 =  FAR_DISTANCE;
-	z2 = -FAR_DISTANCE;
 }
 
 inline void dls_cell::add_light(unsigned ix) {
-
 	if (lsrc.capacity() == 0) {lsrc.reserve(INIT_CCELL_SIZE);}
 	lsrc.push_back(ix);
-}
-
-inline void dls_cell::add_light_with_z(unsigned ix, float zmin, float zmax) {
-	
-	add_light(ix);
-	z1 = min(z1, zmin);
-	z2 = max(z2, zmax);
 }
 
 bool dls_cell::check_add_light(unsigned ix) const {
@@ -1149,7 +1138,7 @@ void add_dynamic_lights_ground() {
 						if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
 					} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
 				}
-				ldynamic[offset + x].add_light_with_z(ix, bcube.d[2][0], bcube.d[2][1]); // could do flow clipping here?
+				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
 			} // for x
 		} // for y
 	} // for i (light index)
@@ -1190,21 +1179,18 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 		}
 		if (!dl_sources.empty() && dlight_bcube.contains_pt(p)) {
 			dls_cell const &ldv(ldynamic[y*MESH_X_SIZE + x]);
-		
-			if (ldv.check_z(p[2])) {
-				unsigned const lsz((unsigned)ldv.size());
+			unsigned const lsz((unsigned)ldv.size());
 
-				for (unsigned l = 0; l < lsz; ++l) {
-					unsigned const ls_ix(ldv.get(l));
-					assert(ls_ix < dl_sources.size());
-					light_source const &lsrc(dl_sources[ls_ix]);
-					point lpos;
-					float color_scale(lsrc.get_intensity_at(p, lpos));
-					if (color_scale < CTHRESH) continue;
-					if (lsrc.is_directional()) {color_scale *= lsrc.get_dir_intensity(lpos - p);}
-					cscale += lsrc.get_color()*color_scale;
-				} // for l
-			}
+			for (unsigned l = 0; l < lsz; ++l) {
+				unsigned const ls_ix(ldv.get(l));
+				assert(ls_ix < dl_sources.size());
+				light_source const &lsrc(dl_sources[ls_ix]);
+				point lpos;
+				float color_scale(lsrc.get_intensity_at(p, lpos));
+				if (color_scale < CTHRESH) continue;
+				if (lsrc.is_directional()) {color_scale *= lsrc.get_dir_intensity(lpos - p);}
+				cscale += lsrc.get_color()*color_scale;
+			} // for l
 		}
 	}
 	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_]);)
@@ -1216,7 +1202,6 @@ bool is_any_dlight_visible(point const &p) {
 	if (point_outside_mesh(x, y)) return 0; // outside the mesh range
 	if (dl_sources.empty() || !dlight_bcube.contains_pt(p)) return 0;
 	dls_cell const &ldv(ldynamic[y*MESH_X_SIZE + x]);
-	if (!ldv.check_z(p[2])) return 0;
 	unsigned const lsz((unsigned)ldv.size());
 
 	for (unsigned l = 0; l < lsz; ++l) {
