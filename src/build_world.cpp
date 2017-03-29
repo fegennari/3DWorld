@@ -301,7 +301,7 @@ void process_groups() {
 	if (display_mode & 0x0200) {
 		d_part_sys.create_particles(num_dynam_parts, 1);
 		d_part_sys.apply_physics();
-		d_part_sys.add_light();
+		d_part_sys.add_lights();
 	}
 	set_global_state();
 	if (num_groups == 0) return; // groups not enabled

@@ -7,6 +7,7 @@
 #include "mesh.h"
 #include "physics_objects.h"
 #include "shaders.h"
+#include "lightmap.h"
 
 
 bool     const DEBUG_TIME     = 0;
@@ -20,17 +21,18 @@ dynamic_particle_system d_part_sys;
 dpart_params_t dp_params;
 
 
-extern bool begin_motion;
+extern bool begin_motion, enable_dpart_shadows;
 extern int window_width, iticks, animate2, display_mode, frame_counter;
 extern float zbottom, ztop, fticks, base_gravity, TIMESTEP, XY_SCENE_SIZE;
 extern obj_type object_types[];
+extern vector<light_source_trig> light_sources_d;
 
 
 // ************ dynamic_particle ************
 
 
 dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(dp_params.rmin, dp_params.rmax)), moves(1), lighted(1),
-	collides(1), chdir(0), gravity(0), tid(-1), cid(-1), intensity(rand_uniform(dp_params.imin, dp_params.imax)*XY_SCENE_SIZE),
+	collides(1), chdir(0), gravity(0), shadows_setup(0), tid(-1), cid(-1), intensity(rand_uniform(dp_params.imin, dp_params.imax)*XY_SCENE_SIZE),
 	bwidth(1.0), velocity(signed_rand_vector(rand_uniform(dp_params.vmin, dp_params.vmax)))
 {
 	colorRGBA const colors[] = {WHITE, RED, GREEN, BLUE, YELLOW};
@@ -112,8 +114,19 @@ void dynamic_particle::apply_physics(float stepsize, int index) { // begin_motio
 }
 
 
-void dynamic_particle::add_light() const { // dynamic lights
-	if (lighted) {add_dynamic_light(intensity, pos, color, velocity, bwidth);} // beam in direction of velocity
+void dynamic_particle::add_light(cube_map_shadow_manager &smgr, int index) { // dynamic lights, non-const due to caching of light_id
+
+	if (!lighted) return;
+
+	if (enable_dpart_shadows) {
+		if (!shadows_setup) {
+			cube_map_lix_t lix(smgr.add_obj(index, 1));
+			lix.add_cube_face_lights(pos, intensity, color, 1.01*radius);
+			shadows_setup = 1;
+		}
+		else {smgr.sync_light_pos(index, pos);}
+	}
+	else {add_dynamic_light(intensity, pos, color, velocity, bwidth);} // beam in direction of velocity
 }
 
 void dynamic_particle::add_cobj_shadows() const { // cobjs, dynamic objects
@@ -157,17 +170,18 @@ void dynamic_particle_system::apply_physics(float stepsize) {
 	
 	for (unsigned i = 0; i < size(); ++i) {
 		particles[i].remove_cobj();
-
-		for (unsigned s = 0; s < NUM_COLL_STEPS; ++s) {
-			particles[i].apply_physics(stepsize/NUM_COLL_STEPS, i);
-		}
+		for (unsigned s = 0; s < NUM_COLL_STEPS; ++s) {particles[i].apply_physics(stepsize/NUM_COLL_STEPS, i);}
 		particles[i].add_cobj();
 	}
 }
 
 
-void dynamic_particle_system::add_light() const {
-	for (unsigned i = 0; i < size(); ++i) {particles[i].add_light();}
+void dynamic_particle_system::add_lights() { // non-const due to caching of light_id
+	for (unsigned i = 0; i < size(); ++i) {particles[i].add_light(*this, i);}
+}
+
+void dynamic_particle_system::remove_lights() {
+	for (unsigned i = 0; i < size(); ++i) {remove_obj_light(i);}
 }
 
 void dynamic_particle_system::add_cobj_shadows() const {
