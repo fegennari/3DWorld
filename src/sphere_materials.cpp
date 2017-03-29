@@ -8,12 +8,14 @@
 #include "openal_wrap.h"
 #include "lightmap.h"
 #include "file_utils.h"
+#include "cube_map_shadow_manager.h"
 #include <fstream>
 
 using namespace std;
 
 unsigned const MAX_SPHERE_MATERIALS = 255;
 float    const MIN_LIGHT_RADIUS     = 0.01; // very small numbers lead to problems
+float    const cube_map_beamwidth   = 0.4; // 0.3 to 0.5 are okay
 
 unsigned spheres_mode(0), num_objs_thrown(0); // 0=none, 1=dynamic spheres, 2=dynamic cubes, 3=static spheres, 4=static cubes
 unsigned max_num_mat_spheres(1);
@@ -34,20 +36,76 @@ extern vector<light_source_trig> light_sources_d;
 extern vector<texture_t> textures;
 
 
+void cube_map_lix_t::add_cube_face_lights(point const &pos, float radius, colorRGBA const &color, float near_clip) {
+
+	for (unsigned ldim = 0; ldim < 3; ++ldim) { // setup 6 light sources, one per cube face
+		vector3d dir(zero_vector);
+		for (unsigned ldir = 0; ldir < 2; ++ldir) {
+			dir[ldim] = (ldir ? 1.0 : -1.0);
+			unsigned const ix(ixs[2*ldim + ldir]);
+			assert(ix < light_sources_d.size());
+			light_source_trig &ls(light_sources_d[ix]);
+			ls = light_source_trig(light_source(radius, pos, pos, color, 0, dir, cube_map_beamwidth, 0.0, 1, near_clip), 1, -1, 0);
+			//ls.bind_to_pos(obj.pos, 1); // dynamic binding
+		} // for ldir
+	} // for ldim
+}
+
+void cube_map_shadow_manager::remove_light(int light_id) {
+	if (light_id < 0) return; // disabled
+	assert((unsigned)light_id < light_sources_d.size());
+	light_sources_d[light_id].disable();
+	light_free_list.push_back(light_id);
+}
+void cube_map_shadow_manager::remove_lights(cube_map_lix_t const &lix) {
+	for (unsigned i = 0; i < 6; ++i) {remove_light(lix.ixs[i]);}
+}
+void cube_map_shadow_manager::remove_obj_light(unsigned obj_id) {
+	obj_to_light_map_t::iterator it(obj_to_light_map.find(obj_id));
+	if (it == obj_to_light_map.end()) return; // not found
+	remove_lights(it->second);
+	obj_to_light_map.erase(it);
+}
+unsigned cube_map_shadow_manager::alloc_light() {
+	if (!light_free_list.empty()) {
+		unsigned const light_id(light_free_list.back());
+		light_free_list.pop_back();
+		return light_id;
+	}
+	else {
+		unsigned const light_id(light_sources_d.size());
+		light_sources_d.push_back(light_source_trig());
+		return light_id;
+	}
+}
+cube_map_lix_t cube_map_shadow_manager::add_obj(unsigned obj_id, bool add_light) {
+	remove_obj_light(obj_id);
+	cube_map_lix_t ret;
+	if (add_light) {
+		for (unsigned i = 0; i < 6; ++i) {ret.ixs[i] = alloc_light();}
+		obj_to_light_map[obj_id] = ret;
+	}
+	return ret;
+}
+void cube_map_shadow_manager::sync_light_pos(unsigned obj_id, point const &obj_pos) const {
+	obj_to_light_map_t::const_iterator it(obj_to_light_map.find(obj_id));
+	if (it == obj_to_light_map.end()) return; // not found
+	cube_map_lix_t const &lix(it->second);
+
+	for (unsigned i = 0; i < 6; ++i) {
+		unsigned const ix(lix.ixs[i]);
+		assert(ix < light_sources_d.size());
+		light_sources_d[ix].move_to(obj_pos);
+	}
+}
+
+
 bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map, bool invert_y=0);
 
 
-struct cube_map_lix_t {
-	int ixs[6]; // one per cube face, -1 is disabled
-	cube_map_lix_t() {for (unsigned i = 0; i < 6; ++i) {ixs[i] = -1;}}
-};
-
-class sphere_mat_vect : public vector<sphere_mat_t> {
+class sphere_mat_vect : public vector<sphere_mat_t>, public cube_map_shadow_manager {
 
 	unsigned mat_ix;
-	typedef map<unsigned, cube_map_lix_t> obj_to_light_map_t;
-	obj_to_light_map_t obj_to_light_map;
-	vector<unsigned> light_free_list;
 
 public:
 	sphere_mat_vect() : mat_ix(0) {}
@@ -57,53 +115,6 @@ public:
 	sphere_mat_t const &get_mat(unsigned ix) const {assert(ix < size()); return operator[](ix);}
 	void update_ix(int val) {mat_ix = (mat_ix + size() + val) % size();}
 
-	void remove_light(int light_id) {
-		if (light_id < 0) return; // disabled
-		assert((unsigned)light_id < light_sources_d.size());
-		light_sources_d[light_id].disable();
-		light_free_list.push_back(light_id);
-	}
-	void remove_lights(cube_map_lix_t const &lix) {
-		for (unsigned i = 0; i < 6; ++i) {remove_light(lix.ixs[i]);}
-	}
-	void remove_obj_light(unsigned obj_id) {
-		obj_to_light_map_t::iterator it(obj_to_light_map.find(obj_id));
-		if (it == obj_to_light_map.end()) return; // not found
-		remove_lights(it->second);
-		obj_to_light_map.erase(it);
-	}
-	unsigned alloc_light() {
-		if (!light_free_list.empty()) {
-			unsigned const light_id(light_free_list.back());
-			light_free_list.pop_back();
-			return light_id;
-		}
-		else {
-			unsigned const light_id(light_sources_d.size());
-			light_sources_d.push_back(light_source_trig());
-			return light_id;
-		}
-	}
-	cube_map_lix_t add_obj(unsigned obj_id, bool add_light) {
-		remove_obj_light(obj_id);
-		cube_map_lix_t ret;
-		if (add_light) {
-			for (unsigned i = 0; i < 6; ++i) {ret.ixs[i] = alloc_light();}
-			obj_to_light_map[obj_id] = ret;
-		}
-		return ret;
-	}
-	void sync_light_pos(unsigned obj_id, point const &obj_pos) const {
-		obj_to_light_map_t::const_iterator it(obj_to_light_map.find(obj_id));
-		if (it == obj_to_light_map.end()) return; // not found
-		cube_map_lix_t const &lix(it->second);
-
-		for (unsigned i = 0; i < 6; ++i) {
-			unsigned const ix(lix.ixs[i]);
-			assert(ix < light_sources_d.size());
-			light_sources_d[ix].move_to(obj_pos);
-		}
-	}
 	static string texture_str(int tid) {
 		if (tid < 0) return "none";
 		assert((unsigned)tid < textures.size());
@@ -314,7 +325,6 @@ bool throw_sphere(bool mode) {
 	unsigned const mat_ix(sphere_materials.get_ix());
 	sphere_mat_t const &mat(sphere_materials.get_mat(mat_ix));
 	float const base_radius(object_types[type].radius), radius(base_radius*mat.radius_scale), radius_sum(CAMERA_RADIUS + radius), near_clip(1.01*radius);
-	float const cube_map_beamwidth = 0.4; // 0.3 to 0.5 are okay
 	bool const is_cube(spheres_mode == 2 || spheres_mode == 4);
 	bool const has_shadows(mat.light_radius > MIN_LIGHT_RADIUS && mat.shadows);
 	point const fpos(get_camera_pos() + cview_dir*radius_sum*(is_cube ? SQRT2 : 1.0) + plus_z*(0.2*radius_sum));
@@ -370,20 +380,7 @@ bool throw_sphere(bool mode) {
 	assert(mat_ix <= MAX_SPHERE_MATERIALS); // since it's packed into an unsigned char
 	obj.direction = (unsigned char)mat_ix;
 	cube_map_lix_t lix(sphere_materials.add_obj(chosen, has_shadows));
-
-	if (has_shadows) {
-		for (unsigned ldim = 0; ldim < 3; ++ldim) { // setup 6 light sources, one per cube face
-			vector3d dir(zero_vector);
-			for (unsigned ldir = 0; ldir < 2; ++ldir) {
-				dir[ldim] = (ldir ? 1.0 : -1.0);
-				unsigned const ix(lix.ixs[2*ldim + ldir]);
-				assert(ix < light_sources_d.size());
-				light_source_trig &ls(light_sources_d[ix]);
-				ls = light_source_trig(light_source(mat.light_radius, obj.pos, obj.pos, mat.diff_c, 0, dir, cube_map_beamwidth, 0.0, 1, near_clip), 1, -1, 0);
-				//ls.bind_to_pos(obj.pos, 1); // dynamic binding
-			} // for ldir
-		} // for ldim
-	}
+	if (has_shadows) {lix.add_cube_face_lights(obj.pos, mat.light_radius, mat.diff_c, near_clip);}
 	return 1;
 }
 

@@ -642,6 +642,7 @@
     <ClInclude Include="src\cobj_bsp_tree.h" />
     <ClInclude Include="src\collision_detect.h" />
     <ClInclude Include="src\csg.h" />
+    <ClInclude Include="src\cube_map_shadow_manager.h" />
     <ClInclude Include="src\draw_utils.h" />
     <ClInclude Include="src\dynamic_particle.h" />
     <ClInclude Include="src\fast_atof.h" />
