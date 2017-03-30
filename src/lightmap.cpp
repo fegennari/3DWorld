@@ -893,8 +893,10 @@ void upload_dlights_textures(cube_t const &bounds) {
 		for (unsigned x = 0; x < gbx && elem_data.size() < max_gb_entries; ++x) {
 			unsigned const gb_ix(x + y*gbx); // {start, end, unused}
 			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
-			vector<unsigned short> const &ixs(ldynamic[gb_ix].get_src_ixs());
-			unsigned num_ixs(min((unsigned)ixs.size(), 255U)); // max of 255 lights per bin
+			dls_cell const &dlsc(ldynamic[gb_ix]);
+			unsigned short const *const ixs(dlsc.get_src_ixs());
+			unsigned num_ixs(dlsc.size());
+			assert(num_ixs < 256);
 			num_ixs = min(num_ixs, (max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
 			
 			for (unsigned i = 0; i < num_ixs; ++i) {
@@ -1044,23 +1046,13 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 }
 
 
-inline void dls_cell::clear() {
-	if (lsrc.empty()) return;
-	lsrc.clear();
-}
-
-inline void dls_cell::add_light(unsigned ix) {
-	if (lsrc.capacity() == 0) {lsrc.reserve(INIT_CCELL_SIZE);}
-	lsrc.push_back(ix);
-}
-
 bool dls_cell::check_add_light(unsigned ix) const {
 
 	if (empty()) return 1;
 	assert(ix < dl_sources.size());
 	light_source const &ls(dl_sources[ix]);
 
-	for (unsigned i = 0; i < lsrc.size(); ++i) {
+	for (unsigned i = 0; i < sz; ++i) {
 		unsigned const ix2(lsrc[i]);
 		assert(ix2 < dl_sources.size());
 		assert(ix2 != ix);

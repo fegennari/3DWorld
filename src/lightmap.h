@@ -288,18 +288,22 @@ public:
 };
 
 
+unsigned const MAX_LSRC = 256; // max of 255 lights per bin
+
 class dls_cell {
 
-	vector<unsigned short> lsrc;
+	unsigned short lsrc[MAX_LSRC];
+	unsigned sz;
 
 public:
-	void clear();
-	void add_light(unsigned ix);
+	dls_cell() : sz(0) {}
+	void clear() {sz = 0;}
+	void add_light(unsigned ix) {if (sz+1 < MAX_LSRC) {lsrc[sz++] = ix;}}
 	bool check_add_light(unsigned ix) const;
-	size_t size() const {return lsrc.size();}
-	bool empty()  const {return lsrc.empty();}
+	size_t size() const {return sz;}
+	bool empty()  const {return (sz == 0);}
 	unsigned get(unsigned i) const {return lsrc[i];} // no bounds checking
-	vector<unsigned short> const &get_src_ixs() const {return lsrc;}
+	unsigned short const *get_src_ixs() const {return lsrc;}
 };
 
 
