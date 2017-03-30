@@ -61,6 +61,10 @@ smiley_speed 1.8
 num_dodgeballs 20
 unlimited_weapons 1
 
+num_dynam_parts 200
+#num_dynam_parts 8
+#enable_dpart_shadows 1
+
 #snow_depth 0.01
 snow_random 0.0
 num_test_snowflakes 100 # in M
