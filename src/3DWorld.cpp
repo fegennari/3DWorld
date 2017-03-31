@@ -118,7 +118,7 @@ extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branc
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
-extern unsigned erosion_iters, scene_smap_vbo_invalid, spheres_mode, max_cube_map_tex_sz;
+extern unsigned erosion_iters, scene_smap_vbo_invalid, spheres_mode, max_cube_map_tex_sz, DL_GRID_BS;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, tree_dead_prob, lm_dz_adj, nleaves_scale, flower_density, universe_ambient_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale, planet_update_rate;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT, map_x, map_y;
@@ -1654,6 +1654,7 @@ int load_config(string const &config_file) {
 	kwmu.add("num_dynam_parts", num_dynam_parts);
 	kwmu.add("max_cube_map_tex_sz", max_cube_map_tex_sz);
 	kwmu.add("snow_coverage_resolution", snow_coverage_resolution);
+	kwmu.add("dlight_grid_bitshift", DL_GRID_BS);
 
 	kw_to_val_map_t<float> kwmf(error);
 	kwmf.add("gravity", base_gravity);

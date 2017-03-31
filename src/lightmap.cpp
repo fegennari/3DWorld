@@ -22,7 +22,7 @@ float const FLASHLIGHT_RAD   = 4.0;
 
 
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0), flashlight_on(0);
-unsigned dl_tid(0), elem_tid(0), gb_tid(0);
+unsigned dl_tid(0), elem_tid(0), gb_tid(0), DL_GRID_BS(0);
 float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 cube_t dlight_bcube(all_zeros_cube);
@@ -620,6 +620,10 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 
 float calc_czspan() {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
 
+unsigned get_grid_xsize() {return max((MESH_X_SIZE >> DL_GRID_BS), 1);}
+unsigned get_grid_ysize() {return max((MESH_Y_SIZE >> DL_GRID_BS), 1);}
+unsigned get_ldynamic_ix(unsigned x, unsigned y) {return (y >> DL_GRID_BS)*get_grid_xsize() + (x >> DL_GRID_BS);}
+
 
 void build_lightmap(bool verbose) {
 
@@ -643,7 +647,7 @@ void build_lightmap(bool verbose) {
 	DZ_VAL_INV2 = 1.0/DZ_VAL2;
 	czmin0      = czmin;//max(czmin, zbottom);
 	assert(lm_dz_adj >= 0.0);
-	ldynamic.resize(XY_MULT_SIZE);
+	ldynamic.resize(get_grid_xsize()*get_grid_ysize());
 	if (MESH_Z_SIZE == 0) return;
 
 	RESET_TIME;
@@ -879,12 +883,12 @@ void upload_dlights_textures(cube_t const &bounds) {
 	}
 
 	// step 2: grid bag entries
+	static unsigned num_warnings(0);
 	static vector<unsigned> gb_data;
 	static vector<unsigned short> elem_data;
 	unsigned const elem_tex_x = (1<<8); // must agree with value in shader
 	unsigned const elem_tex_y = (1<<10); // larger = slower, but more lights/higher quality
-	unsigned const max_gb_entries(elem_tex_x*elem_tex_y);
-	unsigned const gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
+	unsigned const max_gb_entries(elem_tex_x*elem_tex_y), gbx(get_grid_xsize()), gby(get_grid_ysize());
 	assert(max_gb_entries <= (1<<24)); // gb_data low bits allocation
 	elem_data.resize(0);
 	gb_data.resize(gbx*gby, 0);
@@ -908,7 +912,10 @@ void upload_dlights_textures(cube_t const &bounds) {
 		}
 	}
 	if (elem_data.size() > 0.9*max_gb_entries) {
-		if (elem_data.size() >= max_gb_entries) {std::cerr << "Warning: Exceeded max # indexes (" << max_gb_entries << ") in dynamic light texture upload" << endl;}
+		if (elem_data.size() >= max_gb_entries && num_warnings < 100) {
+			std::cerr << "Warning: Exceeded max # indexes (" << max_gb_entries << ") in dynamic light texture upload" << endl;
+			++num_warnings;
+		}
 		dlight_add_thresh = min(0.25, (dlight_add_thresh + 0.005)); // increase thresh to clip the dynamic lights to a smaller radius
 	}
 	if (elem_tid == 0) {
@@ -1094,7 +1101,7 @@ void add_dynamic_lights_ground() {
 	}
 	// Note: do we want to sort by y/x position to minimize cache misses?
 	stable_sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
-	unsigned const ndl((unsigned)dl_sources.size());
+	unsigned const ndl((unsigned)dl_sources.size()), gbx(get_grid_xsize()), gby(get_grid_ysize());
 	has_dl_sources = (ndl > 0);
 	dlight_add_thresh *= 0.99;
 	bool first(1);
@@ -1108,28 +1115,27 @@ void add_dynamic_lights_ground() {
 		if ((min(ls.get_pos().z, ls.get_pos2().z) - ls_radius) > max(ztop, czmax)) continue; // above everything, rarely occurs
 		point const &lpos(ls.get_pos()), &lpos2(ls.get_pos2());
 		bool const line_light(ls.is_line_light());
-		int const xcent(get_xpos(lpos.x)), ycent(get_ypos(lpos.y));
-		if (!line_light && !point_outside_mesh(xcent, ycent) && !ldynamic[ycent*MESH_X_SIZE + xcent].check_add_light(i)) continue;
+		int const xcent(get_xpos(lpos.x) >> DL_GRID_BS), ycent(get_ypos(lpos.y) >> DL_GRID_BS);
+		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby && !ldynamic[ycent*gbx + xcent].check_add_light(i)) continue;
 		cube_t bcube;
 		int bnds[3][2];
 		unsigned const ix(i);
 		ls.get_bounds(bcube, bnds, sqrt_dlight_add_thresh, dlight_shift);
 		if (first) {dlight_bcube = bcube;} else {dlight_bcube.union_with_cube(bcube);}
 		first = 0;
-		int const radius(int(ls.get_radius()*max(DX_VAL_INV, DY_VAL_INV)) + 2), rsq(radius*radius);
+		int const radius(((int(ls.get_radius()*max(DX_VAL_INV, DY_VAL_INV)) + 1) >> DL_GRID_BS) + 1), rsq(radius*radius);
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
+		for (unsigned d = 0; d < 4; ++d) {bnds[d>>1][d&1] >>= DL_GRID_BS;}
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
-			int const y_sq((y-ycent)*(y-ycent)), offset(y*MESH_X_SIZE);
+			int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
 
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-				if (rsq > 1) {
-					if (line_light) {
-						float const px(get_xval(x)), py(get_yval(y)), lx(lpos2.x - lpos.x), ly(lpos2.y - lpos.y);
-						float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
-						if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
-					} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
-				}
+				if (line_light) {
+					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS)), lx(lpos2.x - lpos.x), ly(lpos2.y - lpos.y);
+					float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
+					if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) {continue;}
+				} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
 				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
 			} // for x
 		} // for y
@@ -1170,7 +1176,7 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 			cscale *= val;
 		}
 		if (!dl_sources.empty() && dlight_bcube.contains_pt(p)) {
-			dls_cell const &ldv(ldynamic[y*MESH_X_SIZE + x]);
+			dls_cell const &ldv(ldynamic[get_ldynamic_ix(x, y)]);
 			unsigned const lsz((unsigned)ldv.size());
 
 			for (unsigned l = 0; l < lsz; ++l) {
@@ -1193,7 +1199,7 @@ bool is_any_dlight_visible(point const &p) {
 	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
 	if (point_outside_mesh(x, y)) return 0; // outside the mesh range
 	if (dl_sources.empty() || !dlight_bcube.contains_pt(p)) return 0;
-	dls_cell const &ldv(ldynamic[y*MESH_X_SIZE + x]);
+	dls_cell const &ldv(ldynamic[get_ldynamic_ix(x, y)]);
 	unsigned const lsz((unsigned)ldv.size());
 
 	for (unsigned l = 0; l < lsz; ++l) {
