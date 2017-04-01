@@ -573,7 +573,8 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 	render_models(1, 0);
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir, 0.5); // high back_face_thresh of 0.5 to avoid shadow artifacts for close cubes
+	// high back_face_thresh of 0.75 to avoid shadow artifacts for close cubes (should be at least 1/sqrt(2) for 90 deg FOV, and < 1.0)
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir, 0.75);
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 	camera_pos = camera_pos_;
 }
