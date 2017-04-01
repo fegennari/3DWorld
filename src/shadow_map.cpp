@@ -176,7 +176,7 @@ public:
 		if (c.type != COLL_SPHERE) {c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv), 1, eflags);} // skip_spheres=1
 	}
 
-	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv, point const &camera_pos, vector3d const &light_dir) {
+	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv, point const &camera_pos, vector3d const &light_dir, float back_face_thresh) {
 		if (shadow_objs.empty() && movable_cids.empty()) return; // no dynamic objects
 		//timer_t timer("Add Draw Dynamic");
 		shader_t shader;
@@ -188,7 +188,7 @@ public:
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
 		bool const is_camera(dist_less_than(pdu.pos, camera_pos, 0.25*CAMERA_RADIUS));
 		unsigned char eflags(0);
-		UNROLL_3X(if (fabs(light_dir[i_]) > 0.01) {eflags |= EFLAGS[i_][light_dir[i_] > 0.0];});
+		UNROLL_3X(if (fabs(light_dir[i_]) > back_face_thresh) {eflags |= EFLAGS[i_][light_dir[i_] > 0.0];});
 
 		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
@@ -548,7 +548,7 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	smap_vertex_cache.render();
 	render_models(1, 0);
 	render_voxel_data(1);
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, 0, camera_pos_, light_dir);
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, 0, camera_pos_, light_dir, 0.01);
 	// add snow, trees, scenery, and mesh
 	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1);
@@ -573,7 +573,7 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 	render_models(1, 0);
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir);
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir, 0.5); // high back_face_thresh of 0.5 to avoid shadow artifacts for close cubes
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 	camera_pos = camera_pos_;
 }
