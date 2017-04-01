@@ -371,9 +371,10 @@ void process_groups() {
 		bool const reflective(reflect_dodgeballs && type == BALL && enable_all_reflections()); // Note: cobjs only have a lifetime of one frame
 		cobj_params cp(otype.elasticity, otype.color, reflective, 1, coll_func, -1, otype.tid, 1.0, 0, 0);
 		if (reflective) {cp.metalness = dodgeball_metalness; cp.tscale = 0.0; cp.color = WHITE; cp.spec_color = WHITE; cp.shine = 100.0;} // reflective metal sphere
+		size_t const iter_count((large_radius || type == MAT_SPHERE || app_rate > 0) ? max_objs : objg.end_id); // optimization to use end_id when valid
 
-		for (size_t jj = 0; jj < max_objs; ++jj) {
-			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%objg.max_objects() : jj)); // handle smiley permutation
+		for (size_t jj = 0; jj < iter_count; ++jj) {
+			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%max_objs : jj)); // handle smiley permutation
 			dwobject &obj(objg.get_obj(j));
 			if (large_radius && obj.coll_id >= 0) {remove_reset_coll_obj(obj.coll_id);}
 			if (obj.status == OBJ_STAT_RES) continue; // ignore
