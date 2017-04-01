@@ -13,6 +13,11 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 
+// texture storage datatypes for local shadow maps
+//int const SHADOW_MAP_DATATYPE = GL_UNSIGNED_BYTE; // 8-bit shadow maps
+int const SHADOW_MAP_DATATYPE = GL_UNSIGNED_SHORT; // 16-bit shadow maps
+//int const SHADOW_MAP_DATATYPE = GL_UNSIGNED_INT; // 32-bit shadow maps (overkill)
+
 bool voxel_shadows_updated(0);
 unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0), empty_smap_tid(0);
 pos_dir_up orig_camera_pdu;
@@ -332,7 +337,7 @@ bool smap_data_t::bind_smap_texture(bool light_valid) const {
 	if (empty_smap_tid == 0) {
 		set_shadow_tex_params(empty_smap_tid, 0);
 		char const zero_data[16] = {0};
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1, 1, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, zero_data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1, 1, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);
 	}
 	bind_2d_texture(empty_smap_tid);
 	set_active_texture(0);
@@ -457,7 +462,7 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 	if (tid) {return;}
 	++gen_id;
 	set_shadow_tex_params(tid, 1);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT, xsize, ysize, num_layers, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT, xsize, ysize, num_layers, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, NULL);
 	check_gl_error(630);
 }
 
@@ -490,7 +495,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 			}
 			else { // non-arrayed
 				set_shadow_tex_params(local_tid, 0);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, NULL);
 			}
 		}
 		assert(is_allocated());
