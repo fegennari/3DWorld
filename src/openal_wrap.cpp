@@ -514,7 +514,7 @@ void play_thunder(point const &pos, float gain, float delay) {
 	gen_delayed_sound(delay, ((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), pos, gain, pitch);
 }
 
-void play_switch_weapon_sound() {gen_sound(SOUND_CLICK, get_camera_pos(), 0.1, 0.5);}
+void play_switch_weapon_sound() {gen_sound(SOUND_CLICK, get_camera_pos(), 0.2, 0.5);}
 
 
 void init_openal(int &argc, char** argv) {

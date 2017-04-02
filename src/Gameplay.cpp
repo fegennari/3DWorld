@@ -200,7 +200,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 
 bool self_coll_invalid(int type, int obj_index) {
 
-	if (type == ROCKET || type == SEEK_D || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) { // || type == SAWBLADE
+	if (type == ROCKET || type == SEEK_D || type == RAPT_PROJ || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) { // || type == SAWBLADE
 		return 1;
 	}
 	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL || type == SAWBLADE) &&
@@ -847,7 +847,7 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 }
 
 
-void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { // rocket and seekd
+void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { // rocket, seekd, and raptor
 
 	if (animate2) {
 		point const dpos(pos + (3.0*radius)*orient.get_norm());
@@ -1497,7 +1497,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		return;
 	}
 	if (!UNLIMITED_WEAPONS && weapon != W_UNARMED && no_weap_or_ammo()) {
-		if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE) { // this test is questionable
+		if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE && weapon != W_RAPTOR) { // this test is questionable
 			switch_weapon(1, 1);
 			if (weapon == W_BBBAT)   switch_weapon( 1, 1);
 			if (weapon == W_UNARMED) switch_weapon(-1, 1);
@@ -1758,6 +1758,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_CGRENADE: gen_sound(SOUND_SWING,  fpos, 0.6, 1.2); break;
 	case W_STAR5:    gen_sound(SOUND_SWING,  fpos, 0.3, 2.0); break;
 	case W_LANDMINE: gen_sound(SOUND_ALERT,  fpos, 0.3, 2.5); break;
+	case W_RAPTOR:   gen_sound(SOUND_ROCKET, fpos, 0.5, 1.8); break;
 	}
 	int type(w.obj_id);
 	if (type < 0) return 3;

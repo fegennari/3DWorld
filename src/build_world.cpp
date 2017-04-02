@@ -130,6 +130,7 @@ void create_object_groups() {
 	coll_id[FRAGMENT] = create_group(FRAGMENT, 1200,  0, 0, 0, 1, 0);
 	coll_id[PARTICLE] = create_group(PARTICLE, 800,   0, 0, 0, 1, 0);
 	coll_id[SAWBLADE] = create_group(SAWBLADE, 50,    0, 0, 0, 1, 0);
+	coll_id[RAPT_PROJ]= create_group(RAPT_PROJ,400,   0, 0, 0, 1, 0);
 	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 1, 0); // Note: create plasma group last since it uses a special shader during drawing
 	coll_id[MAT_SPHERE]= create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 0, 0);
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
@@ -163,6 +164,9 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		break;
 	case SEEK_D:
 		add_dynamic_light(0.6, pos, colorRGBA(1.0, 0.25, 0.0, 1.0)); // red-orange
+		break;
+	case RAPT_PROJ:
+		//add_dynamic_light(0.4, pos, YELLOW);
 		break;
 	case LANDMINE:
 		if (time > 5) {
@@ -451,7 +455,7 @@ void process_groups() {
 							else if (type == PLASMA || type == BALL || type == SAWBLADE) {
 								spf = 3*LG_STEPS_PER_FRAME;
 							}
-							else if (type == ROCKET || type == SEEK_D) {
+							else if (type == ROCKET || type == SEEK_D || type == RAPT_PROJ) {
 								spf = 2*LG_STEPS_PER_FRAME;
 							}
 							else if (large_radius /*|| type == STAR5 || type == SHELLC*/ || type == FRAGMENT) {

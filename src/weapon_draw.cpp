@@ -137,8 +137,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		}
 		break;
 
-	case W_BLADE:
-		{
+	case W_BLADE: {
 			radius = 0.032;
 			float const dist(max(dpos-radius, radius)); // close enough
 			assert(dist > TOLERANCE);
@@ -154,23 +153,17 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		break;
 
 	case W_ROCKET:
-		{
-			radius = 0.95*object_types[ROCKET].radius;
-			point const pos1(pos0 + dir*radius), pos2(pos0 - dir*(5.8*radius));
-			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.8*radius, 0.8*radius, cp));
-		}
-		break;
-
 	case W_SEEK_D:
+	case W_RAPTOR:
 		{
-			radius = 0.95*object_types[SEEK_D].radius;
-			point const pos1(pos0 + dir*radius), pos2(pos0 - dir*(4.8*radius));
+			radius = 0.95*object_types[weapons[wid].obj_id].radius;
+			float const rscale((wid == W_SEEK_D) ? 4.8 : ((wid == W_RAPTOR) ? 8.8 : 5.8));
+			point const pos1(pos0 + dir*radius), pos2(pos0 - dir*(rscale*radius));
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.8*radius, 0.8*radius, cp));
 		}
 		break;
 
-	case W_PLASMA:
-		{
+	case W_PLASMA: {
 			radius = 0.018;
 			point const pos1(pos0 - dir*0.15), pos2(pos0 + dir*0.03);
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.01,  0.01, cp));
@@ -178,8 +171,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		}
 		break;
 
-	case W_M16:
-		{
+	case W_M16: {
 			point pos1(pos + vector3d(pos0, pos)*0.6), pos2(pos1);
 			pos1 -= dir*0.072;
 
@@ -196,16 +188,14 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		}
 		break;
 
-	case W_SHOTGUN:
-		{
+	case W_SHOTGUN: {
 			radius = 0.0042;
 			point const pos1(pos + vector3d(pos0, pos)*0.6 - dir*0.072), pos2(pos1 + dir*0.121);
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 2.0*radius, 2.0*radius, cp));
 		}
 		break;
 
-	case W_BBBAT: // this was a real bitch
-		{
+	case W_BBBAT: { // this was a real bitch
 			radius = 0.004;
 			vector3d dir2(dir);
 			if (has_xy_comp) rotate_vector3d(vector3d(-dir.y, dir.x, 0.0), PI/4.0, dir2);
@@ -221,15 +211,13 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		}
 		break;
 
-	case W_LASER:
-		{
+	case W_LASER: {
 			point const pos1(pos0 - dir*0.08), pos2(pos0 + dir*0.08);
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.006, 0.0015, cp));
 		}
 		break;
 
-	case W_GASSER:
-		{
+	case W_GASSER: {
 			radius = 0.14*weapons[W_GASSER].blast_radius;
 			point const pos1(pos0 + dir*radius), pos2(pos0 - dir*(16.0*radius));
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, radius, radius, cp));
@@ -451,10 +439,20 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_SEEK_D: // similar to rocket
 			radius = 0.95*object_types[SEEK_D].radius;
 			set_brass_material(shader, alpha);
-			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f));
+			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f)); // recoil
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 			draw_cylinder_at(point(tx, ty, 0.0), 5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(tx, ty, 4.0*radius));
+			shader.clear_specular();
+			break;
+
+		case W_RAPTOR: // similar to rocket
+			radius = 0.95*object_types[RAPT_PROJ].radius;
+			set_gold_material(shader, alpha);
+			rot_angle = max(0.0f, 8.0f*(fire_val - 0.6f)); // recoil
+			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+			draw_cylinder_at(point(tx, ty, 0.0), 8.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
+			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(tx, ty, 7.0*radius));
 			shader.clear_specular();
 			break;
 

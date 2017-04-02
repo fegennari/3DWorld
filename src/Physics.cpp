@@ -493,6 +493,17 @@ void init_objects() {
 	object_types[MAT_SPHERE].color           = WHITE;
 	object_types[MAT_SPHERE].flags           = SPECULAR | SEMI_TRANSPARENT | BLEND | NO_WATER_DAMAGE;
 
+	object_types[RAPT_PROJ].air_factor     = 0.01;
+	object_types[RAPT_PROJ].friction_factor= 0.5;
+	object_types[RAPT_PROJ].gravity        = 0.1; // 10% gravity
+	object_types[RAPT_PROJ].radius         = 0.018;
+	object_types[RAPT_PROJ].damage         = 200.0;
+	object_types[RAPT_PROJ].lifetime       = 100;
+	object_types[RAPT_PROJ].density        = 1.5;
+	object_types[RAPT_PROJ].health         = 8.0;
+	object_types[RAPT_PROJ].color          = LT_GRAY;
+	object_types[RAPT_PROJ].flags          = SPECULAR | SELECTABLE | OBJ_EXPLODES | EXPL_ON_COLL | COLL_DESTROYS;
+
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;
 		object_types[i].friction_factor = 0.9;

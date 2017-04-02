@@ -14,14 +14,14 @@ float const JUMP_TIME  = 0.2; // time of jump acceleration
 float const JUMP_ACCEL = 1.0; // jump acceleration
 
 unsigned const HIT_TIME     = 6;
-int const NUM_WEAPONS       = 15;
+int const NUM_WEAPONS       = 16;
 unsigned const POWERUP_TIME = unsigned(40*TICKS_PER_SECOND);
 int const dodgeball_tids[]  = {SKULL_TEX, RADIATION_TEX, YUCK_TEX};
 unsigned const NUM_DB_TIDS(sizeof(dodgeball_tids)/sizeof(int));
 
 // weapons
 enum {W_UNARMED = 0, W_BBBAT, W_BALL, W_SBALL, W_ROCKET, W_LANDMINE, W_SEEK_D, W_STAR5, W_M16, W_SHOTGUN, W_GRENADE,
-	W_LASER, W_PLASMA, W_BLADE, W_GASSER, /* non-selectable*/ W_CGRENADE, W_SAWBLADE};
+	  W_LASER, W_PLASMA, W_BLADE, W_GASSER, W_RAPTOR, /* non-selectable*/ W_CGRENADE, W_SAWBLADE};
 
 enum {SF_EYE = 0, SF_NOSE, SF_TONGUE, NUM_SMILEY_PARTS};
 

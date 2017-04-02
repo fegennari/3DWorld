@@ -257,7 +257,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 		if (!proj_coll_test(pos, tpos, orient, radius, weapon, smiley.coll_id)) return; // Note: inexact, fails to account for gravity
 
 		// check if we need to fire above or to the side to avoid a projectile collision with an obstacle
-		if (weapon == W_ROCKET || weapon == W_SEEK_D || weapon == W_PLASMA) { // large projectile
+		if (weapon == W_ROCKET || weapon == W_SEEK_D || weapon == W_PLASMA || weapon == W_RAPTOR) { // large projectile
 			assert(w.obj_id != UNDEF);
 			float const proj_radius(object_types[w.obj_id].radius);
 			point const pos1(pos  + point(0.0, 0.0, -proj_radius)); // proj_radius up (+z)
