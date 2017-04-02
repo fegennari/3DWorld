@@ -868,7 +868,7 @@ void small_tree::calc_palm_tree_points() {
 	unsigned const num_fronds = 20;
 	float const frond_l(0.3*height), frond_hw(0.2*width), frond_dz(-0.2*width);
 	vector3d const trunk_dir(get_rot_dir());
-	palm_verts.reset(new palm_verts_t);
+	palm_verts = std::make_shared<palm_verts_t>();
 	vector<vert_norm_comp_color> &verts(palm_verts->v);
 	verts.resize(8*num_fronds);
 	rand_gen_t rgen;
