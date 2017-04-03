@@ -1229,4 +1229,63 @@ void ustar::explode(float damage, float bradius, int etype, vector3d const &edir
 }
 
 
+struct owner_stats_t {
+	unsigned np, nm;
+	float res, pop;
+	owner_stats_t() : np(0), nm(0), res(0.0), pop(0.0) {}
+};
+
+void print_univ_owner_stats() {
+
+	owner_stats_t stats[NUM_ALIGNMENT];
+
+	for (unsigned i = 0; i < U_BLOCKS; ++i) { // z
+		for (unsigned j = 0; j < U_BLOCKS; ++j) { // y
+			for (unsigned k = 0; k < U_BLOCKS; ++k) { // x
+				int const ii[3] = {(int)k, (int)j, (int)i};
+				ucell const &cell(universe.get_cell(ii));
+				if (cell.galaxies == nullptr) continue;
+				for (unsigned g = 0; g < cell.galaxies->size(); ++g) {
+					ugalaxy const &galaxy((*cell.galaxies)[g]);
+					for (unsigned s = 0; s < galaxy.sols.size(); ++s) {
+						ussystem const &system(galaxy.sols[s]);
+						for (unsigned p = 0; p < system.planets.size(); ++p) {
+							uplanet const &planet(system.planets[p]);
+							for (unsigned m = 0; m < planet.moons.size(); ++m) {
+								umoon const &moon(planet.moons[m]);
+								if (moon.owner < 0) continue;
+								assert(moon.owner < NUM_ALIGNMENT);
+								owner_stats_t &os(stats[moon.owner]);
+								os.res += moon.resources;
+								os.pop += moon.population;
+								++os.nm;
+							}
+							if (planet.owner < 0) continue;
+							assert(planet.owner < NUM_ALIGNMENT);
+							owner_stats_t &os(stats[planet.owner]);
+							os.res += planet.resources;
+							os.pop += planet.population;
+							++os.np;
+						} // for p
+					} // for s
+				} // for g
+			} // for k
+		} // for j
+	} // for i
+	cout << endl << "Stats:           <planets> <moons> <resources> <population>" << endl;
+
+	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
+		owner_stats_t const &os(stats[i]);
+		if (os.np == 0 && os.nm == 0) continue; // no resources
+		cout << align_names[i];
+		print_n_spaces(18 - (int)align_names[i].size());
+		cout << ": " << os.np << "\t" << os.nm << "\t" << (int)os.res << "\t";
+		if (os.pop > 1000) {cout << (int)(os.pop)/1000.0 << " B";} // in billions
+		else {cout << (int)os.pop << " M";} // in millions
+		cout << endl;
+	}
+	cout << endl;
+}
+
+
 

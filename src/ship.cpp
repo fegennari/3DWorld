@@ -70,6 +70,7 @@ void collision_detect_objects(vector<cached_obj> &objs0, unsigned t);
 void end_part_cloud_draw();
 void draw_and_update_engine_trails(line_tquad_draw_t &drawer);
 void add_nearby_uobj_text(text_drawer_t &text_drawer);
+void print_univ_owner_stats();
 
 
 // ************ STATISTICS GATHERING ************
@@ -154,21 +155,23 @@ void show_stats() {
 
 	for (unsigned i = 0; i < all_ships.size(); ++i) {
 		if (all_ships[i].flags & OBJ_FLAGS_DECY) continue; // decoy flare?
-		int const sclass(all_ships[i].obj->get_src_sclass());
+		free_obj const *const obj(all_ships[i].obj);
+		assert(obj != nullptr);
+		int const sclass(obj->get_src_sclass());
 		assert(sclass != SWCLASS_UNDEF);
-		unsigned const sc((unsigned)sclass), align(all_ships[i].obj->get_align());
+		unsigned const sc((unsigned)sclass), align(obj->get_align());
 		assert(align < NUM_ALIGNMENT);
 		assert(sc < NUM_US_CLASS);
 		++num_ships[sc];
 
-		if (!all_ships[i].obj->is_fighter()) {
+		if (!obj->is_fighter()) {
 			/*if (TEAM_ALIGNED(align))*/ ++num_ships_align[align][sc];
 		}
-		float const off(TICKS_PER_SECOND*all_ships[i].obj->offense()), def(all_ships[i].obj->defense());
+		float const off(TICKS_PER_SECOND*obj->offense()), def(obj->defense());
 		of[align]   += off;
 		de[align]   += def;
 		val[align]  += 0.001*off*def;
-		cost[align] += all_ships[i].obj->get_cost();
+		cost[align] += obj->get_cost();
 	}
 	cout << endl << "ships:            <d done>  <d taken> <kills> <deaths> <r> <b> <o> <p> <num>" << endl;
 	
@@ -201,6 +204,7 @@ void show_stats() {
 		cout << ": " << (int)of[i] << "\t" << (int)de[i] << "\t" << (int)val[i] << "\t" << cost[i]
 			 << "\t" << team_credits[i] << "\t" << (int)resource_counts[i] << endl;
 	}
+	print_univ_owner_stats();
 	cout << "alloced: ships: " << alloced_fobjs[0] << " - " << alloced_fobjs[1] << " = " <<
 		(alloced_fobjs[0] - alloced_fobjs[1]) << ", proj+part: " << alloced_fobjs[2] << " (x100)" << endl;
 }
