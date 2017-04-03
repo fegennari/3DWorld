@@ -166,7 +166,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		add_dynamic_light(0.6, pos, colorRGBA(1.0, 0.25, 0.0, 1.0)); // red-orange
 		break;
 	case RAPT_PROJ:
-		//add_dynamic_light(0.4, pos, YELLOW);
+		add_dynamic_light(0.4, pos, colorRGBA(1.0, 0.75, 0.0, 1.0)); // orange-yellow
 		break;
 	case LANDMINE:
 		if (time > 5) {
