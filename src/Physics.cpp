@@ -498,7 +498,7 @@ void init_objects() {
 	object_types[RAPT_PROJ].gravity        = 0.1; // 10% gravity
 	object_types[RAPT_PROJ].radius         = 0.018;
 	object_types[RAPT_PROJ].damage         = 200.0;
-	object_types[RAPT_PROJ].lifetime       = 100;
+	object_types[RAPT_PROJ].lifetime       = 80;
 	object_types[RAPT_PROJ].density        = 1.5;
 	object_types[RAPT_PROJ].health         = 8.0;
 	object_types[RAPT_PROJ].color          = LT_GRAY;

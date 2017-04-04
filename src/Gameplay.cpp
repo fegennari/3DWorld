@@ -1617,8 +1617,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	weapon_t const &w(weapons[weapon_id]);
 	int fire_delay((int)w.fire_delay);
 	if (UNLIMITED_WEAPONS && !is_player && weapon_id == W_LANDMINE) {fire_delay *= 2;} // avoid too many landmines
+	else if (weapon == W_RAPTOR && (wmode&1)) {fire_delay *= 2;} // 2x fire delay for multi-shot mode
 	if (rapid_fire) {fire_delay /= 3;}
 	float const radius(get_sstate_radius(shooter));
+	unsigned nshots(w.nshots);
 
 	if (weapon_id == W_LASER) { // always fires
 		assert(fire_delay > 0);
@@ -1630,7 +1632,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	}
 	ticks_since_fired = tfticks;
 	bool const underwater(is_underwater(fpos));
-	float firing_error(w.firing_error);
+	float firing_error(w.firing_error), shot_delta(0.0);
 	if (underwater) {firing_error *= UWATER_FERR_MUL;}
 	if (is_player && do_zoom) {firing_error *= ZOOM_FERR_MULT;} // higher accuracy when zooming in
 	if (rapid_fire) {firing_error *= 20.0;} // rockets
@@ -1668,12 +1670,12 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
 		if ((wmode&1) == 1) { // shrapnel cannon/chaingun
-			create_shrapnel((fpos + dir*(0.1*radius)), dir, firing_error, w.nshots, shooter, weapon_id);
+			create_shrapnel((fpos + dir*(0.1*radius)), dir, firing_error, nshots, shooter, weapon_id);
 		}
 		else { // normal 12-gauge/M16
 			if (underwater) firing_error += UWATER_FERR_ADD;
 
-			for (int i = 0; i < int(w.nshots); ++i) { // can be slow if trees are involved
+			for (int i = 0; i < int(nshots); ++i) { // can be slow if trees are involved
 				projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
 			}
 		}
@@ -1749,6 +1751,21 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		}
 		return 1;
 
+	case W_RAPTOR:
+		if ((wmode&1) == 1) { // multi-shot mode
+			unsigned const shot_count = 4;
+			int &pammo(sstates[shooter].p_ammo[weapon_id]);
+			
+			if (pammo >= shot_count || UNLIMITED_WEAPONS) {
+				firing_error *= 2.0;
+				shot_delta    = 7.0*object_types[RAPT_PROJ].radius; // required to prevent shots from colliding with each other
+				nshots = shot_count;
+				if (!UNLIMITED_WEAPONS) {pammo -= (shot_count-1);} // requires more ammo
+			}
+		}
+		gen_sound(SOUND_ROCKET, fpos, 0.5, 1.8);
+		break;
+
 	case W_BLADE:    gen_sound(SOUND_DRILL,  fpos, 0.5, 0.8); break;
 	case W_SAWBLADE: gen_sound(SOUND_DRILL,  fpos, 0.5, 0.8); break; // bounce?
 	case W_ROCKET:   gen_sound(SOUND_ROCKET, fpos, 1.0, 1.2); break;
@@ -1758,7 +1775,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_CGRENADE: gen_sound(SOUND_SWING,  fpos, 0.6, 1.2); break;
 	case W_STAR5:    gen_sound(SOUND_SWING,  fpos, 0.3, 2.0); break;
 	case W_LANDMINE: gen_sound(SOUND_ALERT,  fpos, 0.3, 2.5); break;
-	case W_RAPTOR:   gen_sound(SOUND_ROCKET, fpos, 0.5, 1.8); break;
 	}
 	int type(w.obj_id);
 	if (type < 0) return 3;
@@ -1768,11 +1784,12 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	assert(objg.max_objs > 0);
 	float const rdist(0.75 + ((weapon_id == W_PLASMA) ? 0.5*(plasma_size - 1.0) : 0.0)); // change?
 	float const radius_sum(radius + object_types[type].radius);
-	assert(w.nshots <= objg.max_objs);
+	assert(nshots <= objg.max_objs);
 	bool const dodgeball(game_mode == 2 && weapon_id == W_BALL && !UNLIMITED_WEAPONS);
-	if (dodgeball) assert(w.nshots <= balls.size());
+	if (dodgeball) assert(nshots <= balls.size());
+	float shot_offset(0.0);
 
-	for (unsigned shot = 0; shot < w.nshots; ++shot) {
+	for (unsigned shot = 0; shot < nshots; ++shot) {
 		int const chosen(dodgeball ? balls.back() : objg.choose_object());
 		if (dodgeball) {balls.pop_back();}
 		chosen_obj = chosen;
@@ -1785,19 +1802,20 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		}
 		objg.create_object_at(chosen, fpos);
 		dwobject &obj(objg.get_obj(chosen));
-		obj.pos      += dir2*(rdist*radius_sum);
+		obj.pos      += dir2*(rdist*radius_sum + shot_offset);
 		obj.velocity  = dir2*vel;
 		obj.init_dir  = -dir2;
 		obj.time      = -1;
 		obj.source    = shooter;
 		obj.direction = rapid_fire;
 		if (rapid_fire) {obj.time = int((1.0 - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);}
+		shot_offset += shot_delta; // move to next shot pos
 
 		switch (weapon_id) {
 		case W_PLASMA:
-			obj.init_dir.x  = float(pow(double(plasma_size), 0.75)); // psize
-			obj.pos.z      += 0.2*radius_sum;
-			plasma_size     = 1.0;
+			obj.init_dir.x = float(pow(double(plasma_size), 0.75)); // psize
+			obj.pos.z     += 0.2*radius_sum;
+			plasma_size    = 1.0;
 			break;
 		case W_BALL:
 			obj.pos.z += 0.2*radius_sum;
@@ -2403,7 +2421,7 @@ int get_damage_source(int type, int index, int questioner) {
 	if (type == CAMERA) return -1;
 	assert(type >= 0);
 	
-	if (type < CAMERA || type == SAWBLADE) {
+	if (type < CAMERA || type == SAWBLADE || type == RAPT_PROJ) {
 		int cid(coll_id[type]);
 
 		if (cid < 0 || cid >= num_groups) {
