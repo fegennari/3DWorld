@@ -160,13 +160,13 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		add_dynamic_light(min(3.5, 45.0*get_true_radius()), pos, get_plasma_color(init_dir.x));
 		break;
 	case ROCKET:
-		add_dynamic_light(0.5, pos, ORANGE);
+		add_dynamic_light(0.5, (pos - 3.5*velocity.get_norm()*object_types[type].radius), ORANGE);
 		break;
 	case SEEK_D:
-		add_dynamic_light(0.6, pos, colorRGBA(1.0, 0.25, 0.0, 1.0)); // red-orange
+		add_dynamic_light(0.6, (pos - 3.0*velocity.get_norm()*object_types[type].radius), colorRGBA(1.0, 0.25, 0.0, 1.0)); // red-orange
 		break;
 	case RAPT_PROJ:
-		add_dynamic_light(0.4, pos, colorRGBA(1.0, 0.75, 0.0, 1.0)); // orange-yellow
+		add_dynamic_light(0.4, (pos - 4.0*velocity.get_norm()*object_types[type].radius), colorRGBA(1.0, 0.75, 0.0, 1.0)); // orange-yellow
 		break;
 	case LANDMINE:
 		if (time > 5) {
