@@ -2527,9 +2527,8 @@ void player_state::update_camera_frame() {
 
 void player_state::update_sstate_game_frame(int i) {
 
-	if (powerup_time == 0) {
-		powerup = PU_NONE;
-	}
+	if (!animate2) return;
+	if (powerup_time == 0) {powerup = PU_NONE;}
 	else if (animate2) {
 		powerup_time -= iticks;
 		if (powerup_time < 0) {powerup_time = 0;}
