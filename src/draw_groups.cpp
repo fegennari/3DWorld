@@ -1026,7 +1026,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (powerup != PU_INVISIBILITY && time%10 < 5 && powerup >= 0) { // powerup
 		shader.set_cur_color(get_powerup_color(powerup));
 	}
-	else if (temperature < 0.75*object_types[SMILEY].min_t) { // frozen
+	else if (sstates[id].frozen || temperature < 0.75*object_types[SMILEY].min_t) { // frozen
 		shader.set_cur_color(colorRGBA(0.3, 0.3, 1.0, alpha)); // light blue
 	}
 	else if (health >= 50.0) { // healthy

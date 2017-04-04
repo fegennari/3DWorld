@@ -502,6 +502,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	bool const burned(is_burned(type, br_source)), alive(camera_health >= 0.0);
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
 	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned);}
+	if (burned) {sstate.frozen = 0;}
 
 	if (alive) {
 		if (is_blood && cam_filter_color == RED) {
@@ -677,6 +678,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	point const obj_pos(obji.pos);
 	float blood_v(6.0 + 0.6*sqrt(energy));
 	vector3d coll_dir(get_norm_rand(vector3d(position, obj_pos)));
+	if (burned) {sstate.frozen = 0;}
 
 	if (alive) {
 		if (type != FELL && type != CRUSHED && !is_area_damage(type)) {
@@ -1490,6 +1492,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	if (!camera_reset) return;
 	point const camera(get_camera_pos());
 	if (temperature <= W_FREEZE_POINT && is_underwater(camera)) return; // under ice
+	if (sstates != nullptr && sstates[CAMERA_ID].frozen) return; // frozen, can't fire
 	
 	if (following) {
 		following    = 0;

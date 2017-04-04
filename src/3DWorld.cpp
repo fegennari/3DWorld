@@ -451,8 +451,11 @@ void advance_camera(int dir) {
 	if (camera_mode != 1 || (map_mode && world_mode != WMODE_INF_TERRAIN)) return;
 	vector3d v;
 	float dist(fticks*speed_mult*player_speed*GROUND_SPEED*calc_speed());
-	if (game_mode && sstates != NULL) {dist *= sstates[CAMERA_ID].get_rspeed_scale();}
-		
+	
+	if (game_mode && sstates != NULL) {
+		if (sstates[CAMERA_ID].frozen) return; // can't move
+		dist *= sstates[CAMERA_ID].get_rspeed_scale();
+	}
 	switch (dir) {
 	case MOVE_BACK: // backward
 		dist  = -dist;

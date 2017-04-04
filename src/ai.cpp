@@ -1044,6 +1044,7 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
+	if (frozen) return; // no motion or action
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
 	smiley_action(smiley_id);
 }
@@ -1459,6 +1460,7 @@ void player_state::init(bool w_start) {
 	uw_time       = 0;
 	jump_time     = 0;
 	is_jumping    = 0;
+	frozen        = 0;
 	cb_hurt       = 0;
 	target_visible= 0;
 	target_type   = 0;
@@ -1527,14 +1529,13 @@ float player_state::weapon_range(bool use_far_clip) const {
 
 void player_state::jump(point const &pos) {
 	
-	if (jump_time > 0) return; // can't start a new jump
+	if (frozen || jump_time > 0) return; // can't start a new jump
 	jump_time = JUMP_COOL*TICKS_PER_SECOND;
 	if (powerup != PU_FLIGHT) {gen_sound(SOUND_BOING, pos, 0.2, 0.6);}
 }
 
 
 void player_state::verify_wmode() {
-
 	if (weapon == W_GRENADE && (wmode&1) && p_ammo[weapon] < int(weapons[W_CGRENADE].def_ammo) && !UNLIMITED_WEAPONS) wmode = 0;
 }
 
