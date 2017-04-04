@@ -499,7 +499,7 @@ void init_objects() {
 	object_types[RAPT_PROJ].radius         = 0.018;
 	object_types[RAPT_PROJ].damage         = 200.0;
 	object_types[RAPT_PROJ].lifetime       = 80;
-	object_types[RAPT_PROJ].density        = 1.5;
+	object_types[RAPT_PROJ].density        = 0.1; // tiny value to prevent excessive damage
 	object_types[RAPT_PROJ].health         = 8.0;
 	object_types[RAPT_PROJ].color          = LT_GRAY;
 	object_types[RAPT_PROJ].flags          = SPECULAR | SELECTABLE | OBJ_EXPLODES | EXPL_ON_COLL | COLL_DESTROYS;

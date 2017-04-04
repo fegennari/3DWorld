@@ -152,7 +152,7 @@ void blastr::process() const { // land mode
 	modify_grass_at(pos, 0.5*cur_size, 1, 1); // crush and burn grass Note: calling this every time looks better, but is slower
 	float const exp_radius(0.6*size);
 
-	if ((damage >= 750.0 || (damage >= 350 && damage <= 450)) && camera_pdu.sphere_visible_test(pos, exp_radius)) { // rocket, seekd, cgrenade, raptor
+	if ((damage >= 750.0 || (damage >= 190 && damage <= 210)) && camera_pdu.sphere_visible_test(pos, exp_radius)) { // rocket, seekd, cgrenade, raptor
 		point const &camera(get_camera_pos());
 		float const weight(float(time)/float(st_time));
 		float const old_w(cur_explosion_sphere.radius/p2p_dist(camera, cur_explosion_sphere.pos)*cur_explosion_weight);
