@@ -1224,7 +1224,7 @@ void player_state::check_switch_weapon(int smiley_id) {
 	float min_weight(0.0);
 	unsigned chosen_weap(W_UNARMED);
 
-	for (unsigned i = 1; i < NUM_WEAPONS-1; ++i) {
+	for (unsigned i = 1; i < NUM_WEAPONS; ++i) {
 		weapon = i;
 		if (no_weap_or_ammo()) continue;
 		float weight(player_rgen.rand_float());
