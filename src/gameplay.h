@@ -119,7 +119,7 @@ string const obj_type_names[NUM_TOT_OBJS] = {
 	"Rain", "Snow", "Hail", "Leaf", "Dodgeball", "Bouncy Ball", "Smiley", "Blood", "Charred Smiley", "Chunk",
 	"Smiley Part", "Rocket", "Landmine", "Seek and Destroy", "Throwing Star", "Plasma", "Grenade", "Cluster Grenade", "Shrapnel", "Shell Casing",
 	"Projectile Hit", "Droplet", "Water Droplet", "Sand", "Dirt", "Rock", "Fragment", "Particle", "Health", "Shields",
-	"Powerup", "Weapon", "Ammo", "Pack", "Camera", "Precipitation", "Blast Radius", "Projectile", "laser beam", "Impact",
+	"Powerup", "Weapon", "Ammo", "Pack", "Camera", "Precipitation", "Blast Radius", "Projectile", "Laser Beam", "Impact",
 	"Plasma Lightning Damage", "Laser", "Drowned", "Burned", "Fire", "Fell", "Froze", "Suffocated", "Crushed", "Poison Gas",
 	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport", "Saw Blade", "Material Sphere", "Collision", "Raptor Shot" // Telefrag?
 };
