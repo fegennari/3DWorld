@@ -1219,7 +1219,7 @@ void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int 
 	draw_sphere_vbo_raw(ndiv, 0);
 	draw_cylinder(-1.1, 1.0, 1.0, ndiv);
 	fgPopMatrix();
-	if (type == RAPT_PROJ && time > 0.1*TICKS_PER_SECOND && (time&1)) {gen_rocket_smoke(pos, orient, 0.8*radius);}
+	if (type == RAPT_PROJ && time > 0.1*TICKS_PER_SECOND) {gen_rocket_smoke(pos, orient, 0.8*radius);}
 }
 
 
