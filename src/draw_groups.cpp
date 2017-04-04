@@ -28,7 +28,7 @@ pt_line_drawer obj_pld, snow_pld;
 extern bool underwater, smoke_exists, reflect_dodgeballs, begin_motion;
 extern int display_mode, num_groups, teams, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
-extern float fticks, TIMESTEP, base_gravity, brightness, indir_vert_offset, cobj_z_bias, camera_health;
+extern float fticks, TIMESTEP, base_gravity, temperature, brightness, indir_vert_offset, cobj_z_bias, camera_health;
 extern point star_pts[];
 extern vector3d up_norm;
 extern vector<spark_t> sparks;
@@ -1026,10 +1026,13 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (powerup != PU_INVISIBILITY && time%10 < 5 && powerup >= 0) { // powerup
 		shader.set_cur_color(get_powerup_color(powerup));
 	}
-	else if (health >= 50.0) {
+	else if (temperature < 0.75*object_types[SMILEY].min_t) { // frozen
+		shader.set_cur_color(colorRGBA(0.3, 0.3, 1.0, alpha)); // light blue
+	}
+	else if (health >= 50.0) { // healthy
 		shader.set_cur_color(mult_alpha(YELLOW, alpha));
 	}
-	else {
+	else { // damaged
 		shader.set_cur_color(colorRGBA(1.0, (0.25 + 0.015*health), 0.0, alpha));
 	}
 	if (game_mode == 2) { // dodgeball
