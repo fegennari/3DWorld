@@ -1219,13 +1219,14 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	
 	if (type == GRENADE || type == CGRENADE) {
 		bradius = 0.9*size;
-		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB);
+		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB, nullptr, (type == CGRENADE));
 	}
 	else {
 		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
-		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE);
-		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE);
+		bool const create_exp_sphere(type == ROCKET || type == SEEK_D || type == RAPT_PROJ || type == LANDMINE);
+		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, create_exp_sphere);
+		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE, nullptr, create_exp_sphere);
 	}
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame
 	exp_damage_groups(pos, shooter, chain_level, damage, size, type, cview);

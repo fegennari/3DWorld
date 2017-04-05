@@ -83,13 +83,13 @@ void check_explosion_refs() {
 
 
 void add_blastr(point const &pos, vector3d const &dir, float size, float damage, int time, int src,
-				colorRGBA const &color1, colorRGBA const &color2, int type, free_obj const *const parent)
+				colorRGBA const &color1, colorRGBA const &color2, int type, free_obj const *const parent, bool create_exp_sphere)
 {
 	if (NO_NONETYPE_BRS && type == ETYPE_NONE) return;
 	bool const one_frame_only(time == 0);
 	if (one_frame_only) {time = 1;}
 	assert(size > 0.0 && time >= 0);
-	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent, one_frame_only);
+	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent, one_frame_only, create_exp_sphere);
 	br.setup();
 
 	if (available.empty()) {
@@ -102,7 +102,7 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 		blastrs[ix] = br;
 	}
 	if (type == ETYPE_NUCLEAR && damage > 0.0) { // add flash
-		add_blastr(pos, (get_camera_pos() - pos), 1.2*size, 0.0, 0, src, WHITE, WHITE, ETYPE_FUSION, parent);
+		add_blastr(pos, (get_camera_pos() - pos), 1.2*size, 0.0, 0, src, WHITE, WHITE, ETYPE_FUSION, parent, create_exp_sphere);
 	}
 }
 
@@ -152,7 +152,7 @@ void blastr::process() const { // land mode
 	modify_grass_at(pos, 0.5*cur_size, 1, 1); // crush and burn grass Note: calling this every time looks better, but is slower
 	float const exp_radius(0.6*size);
 
-	if ((damage >= 750.0 || (damage >= 210 && damage <= 230)) && camera_pdu.sphere_visible_test(pos, exp_radius)) { // rocket, seekd, cgrenade, raptor
+	if (create_exp_sphere && camera_pdu.sphere_visible_test(pos, exp_radius)) { // rocket, seekd, cgrenade, raptor
 		point const &camera(get_camera_pos());
 		float const weight(float(time)/float(st_time));
 		float const old_w(cur_explosion_sphere.radius/p2p_dist(camera, cur_explosion_sphere.pos)*cur_explosion_weight);
