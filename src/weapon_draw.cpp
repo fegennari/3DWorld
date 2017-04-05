@@ -448,7 +448,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 		case W_RAPTOR: // similar to rocket
 			radius = 0.95*object_types[RAPT_PROJ].radius;
-			set_gold_material(shader, alpha);
+			if (wmode&1) {shader.set_cur_color(colorRGBA(FREEZE_COLOR, alpha)); shader.set_specular(0.8, 80.0);} // freeze mode
+			else {set_gold_material(shader, alpha);}
 			rot_angle = max(0.0f, 8.0f*(fire_val - 0.6f)); // recoil
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 			draw_cylinder_at(point(tx, ty, 0.0), 8.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);

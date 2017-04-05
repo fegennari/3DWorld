@@ -50,7 +50,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
-void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
+void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, bool freeze, shader_t &shader);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
@@ -340,7 +340,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_seekd(pos, obj.init_dir, radius, obj.type, ndiv, obj.time, shader);
 		break;
 	case RAPT_PROJ:
-		draw_rapt_proj(pos, -obj.velocity.get_norm(), radius, obj.type, ndiv, obj.time, shader);
+		draw_rapt_proj(pos, -obj.velocity.get_norm(), radius, obj.type, ndiv, obj.time, (obj.direction != 0), shader);
 		break;
 	case LANDMINE:
 		draw_landmine(pos, radius, ndiv, obj.time, obj.source, in_ammo, shader);
@@ -1026,8 +1026,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (powerup != PU_INVISIBILITY && time%10 < 5 && powerup >= 0) { // powerup
 		shader.set_cur_color(get_powerup_color(powerup));
 	}
-	else if (sstates[id].frozen || temperature < 0.75*object_types[SMILEY].min_t) { // frozen
-		shader.set_cur_color(colorRGBA(0.3, 0.3, 1.0, alpha)); // light blue
+	else if (sstates[id].freeze_time > 0 || temperature < 0.75*object_types[SMILEY].min_t) { // frozen
+		shader.set_cur_color(colorRGBA(FREEZE_COLOR, alpha)); // light blue
 	}
 	else if (health >= 50.0) { // healthy
 		shader.set_cur_color(mult_alpha(YELLOW, alpha));
@@ -1211,18 +1211,18 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	if (type == SEEK_D && time > 0.1*TICKS_PER_SECOND) {gen_rocket_smoke(pos, orient, radius);}
 }
 
-void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader) {
+void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, bool freeze, shader_t &shader) {
 
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(orient);
 	uniform_scale(radius);
-	shader.set_cur_color(object_types[RAPT_PROJ].color);
+	shader.set_cur_color(freeze ? FREEZE_COLOR : object_types[RAPT_PROJ].color); // frozen or regular
 	fgScale(1.0, 1.0, 2.0);
 	draw_sphere_vbo_raw(ndiv, 0);
 	draw_cylinder(-1.1, 1.0, 1.0, ndiv);
 	fgPopMatrix();
-	if (type == RAPT_PROJ && time > 0.1*TICKS_PER_SECOND) {gen_rocket_smoke(pos, orient, 0.8*radius);}
+	if (type == RAPT_PROJ && time > 0.1*TICKS_PER_SECOND) {gen_rocket_smoke(pos, orient, 0.8*radius, freeze);}
 }
 
 

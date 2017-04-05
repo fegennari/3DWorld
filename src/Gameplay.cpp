@@ -19,6 +19,7 @@ float const UWATER_FERR_ADD  = 0.05;
 float const UWATER_FERR_MUL  = 2.0; // lower accuracy
 float const ZOOM_FERR_MULT   = 0.5; // higher accuracy
 float const LASER_REFL_ATTEN = 0.95;
+float const FREEZE_TIME      = 10.0;
 
 // should put these in a file
 string const all_smiley_names[] =
@@ -502,7 +503,8 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	bool const burned(is_burned(type, br_source)), alive(camera_health >= 0.0);
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
 	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned);}
-	if (burned) {sstate.frozen = 0;}
+	if (burned) {sstate.freeze_time = 0;} // thaw
+	else if (type == RAPT_PROJ && obj_groups[coll_id[RAPT_PROJ]].get_obj(obj_index).direction == 1) {sstate.freeze_time = int(FREEZE_TIME*TICKS_PER_SECOND);}
 
 	if (alive) {
 		if (is_blood && cam_filter_color == RED) {
@@ -678,7 +680,8 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	point const obj_pos(obji.pos);
 	float blood_v(6.0 + 0.6*sqrt(energy));
 	vector3d coll_dir(get_norm_rand(vector3d(position, obj_pos)));
-	if (burned) {sstate.frozen = 0;}
+	if (burned) {sstate.freeze_time = 0;} // thaw
+	else if (type == RAPT_PROJ && obj_groups[coll_id[RAPT_PROJ]].get_obj(obj_index).direction == 1) {sstate.freeze_time = int(FREEZE_TIME*TICKS_PER_SECOND);}
 
 	if (alive) {
 		if (type != FELL && type != CRUSHED && !is_area_damage(type)) {
@@ -849,14 +852,18 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 }
 
 
-void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { // rocket, seekd, and raptor
+void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bool freeze) { // rocket, seekd, and raptor
 
-	if (animate2) {
-		point const dpos(pos + (3.0*radius)*orient.get_norm());
-		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {gen_smoke(dpos, 0.2);}
-		//add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);
-		add_blastr(dpos, orient, 3.0*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0.2,0,0,0), ETYPE_PART_CLOUD);
+	if (!animate2) return;
+	point const dpos(pos + (3.0*radius)*orient.get_norm());
+	
+	if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {
+		if (freeze) {gen_arb_smoke(pos, ICE_C, vector3d(0.0, 0.0, 0.1), rand_uniform(0.01, 0.025), 0.5, 0.2, 0.0, NO_SOURCE, SMOKE, 0);}
+		else {gen_smoke(dpos, 0.2, 1.0);}
 	}
+	if (freeze) {add_blastr(pos, orient, 4.0*radius, 0.0, 4, NO_SOURCE, FREEZE_COLOR, colorRGBA(0,0,0.5,0), ETYPE_FUSION);}
+	//else {add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);}
+	else {add_blastr(dpos, orient, 3.0*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0.2,0,0,0), ETYPE_PART_CLOUD);}
 }
 
 
@@ -1017,6 +1024,12 @@ bool sawblade_collision(int index, int obj_index, vector3d const &velocity, poin
 	return 1;
 }
 
+bool raptor_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+	//dwobject &obj(obj_groups[coll_id[RAPT_PROJ]].get_obj(index));
+	//if (obj.direction == 1 && (type == CAMERA || type == SMILEY)) {sstates[obj_index].freeze_time = int(FREEZE_TIME*TICKS_PER_SECOND);} // freeze case - unreliable
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, RAPT_PROJ);
+}
+
 
 // ***********************************
 // WEAPON/EFFECTS CODE
@@ -1093,10 +1106,11 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 	int const wtype(obj_weapons[type]);
 	if (wtype < 0)  return;
 	assert(type >= 0);
-	if (BLAST_CHAIN_DELAY > 0) gen_smoke(pos);
+	if (BLAST_CHAIN_DELAY > 0) {gen_smoke(pos);}
 	assert(wtype <= NUM_WEAPONS);
 	float damage(weapons[wtype].blast_damage), size(weapons[wtype].blast_radius);
 	dwobject const &obj(obj_groups[coll_id[type]].get_obj(obj_index));
+	bool const freeze(type == RAPT_PROJ && obj.direction == 1);
 
 	if (type == PLASMA) {
 		float const psize(obj.init_dir.x);
@@ -1111,7 +1125,7 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 	if (type != IMPACT && type < NUM_TOT_OBJS && coll_id[type] > 0) shooter = obj.source;
 	damage *= sstates[shooter].get_damage_scale();
 	bool const cview((obj.flags & CAMERA_VIEW) != 0);
-	create_explosion(pos, shooter, chain_level, damage, size, type, cview);
+	create_explosion(pos, shooter, chain_level, damage, size, type, cview, freeze);
 
 	if (following) {
 		camera_origin = temp1;
@@ -1209,7 +1223,7 @@ void exp_damage_groups(point const &pos, int shooter, int chain_level, float dam
 }
 
 
-void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview) {
+void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview, bool freeze) {
 
 	assert(damage >= 0.0 && size >= 0.0);
 	assert(type != SMILEY);
@@ -1217,7 +1231,17 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	float bradius;
 	//RESET_TIME;
 	
-	if (type == GRENADE || type == CGRENADE) {
+	if (freeze) {
+		damage  = 0.0;
+		bradius = 1.2*size;
+		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_NUCLEAR, nullptr, 1); // no damage
+		gen_delayed_from_player_sound(SOUND_SPLASH1, pos, 1.0); // FIXME: SOUND_ICE
+		//add_water_particles(pos, vector3d(0.0, 0.0, 10.0), 1.0, 0.5*bradius, 0.0, 0.0, rand_uniform(50, 100)); // doesn't alpha blend properly with explosion
+		modify_grass_at(pos, 1.0*bradius, 0, 0, 0, 1, 1, 0, ICE_C);
+		// FIXME: water splash?
+		return; // no other effects
+	}
+	else if (type == GRENADE || type == CGRENADE) {
 		bradius = 0.9*size;
 		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB, nullptr, (type == CGRENADE));
 	}
@@ -1243,7 +1267,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		assert(damage >= 0.0);
 		add_splash(pos, xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
 	}
-	if (damage > 500.0) { // everything except for plasma
+	if (damage > 500.0 || type == RAPT_PROJ) { // everything except for plasma
 		gen_delayed_from_player_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
 		float const blast_force(size/distance_to_camera(pos));
 		if (!underwater && blast_force > 0.5) {camera_shake = min(1.0, 2.0*blast_force);}
@@ -1492,8 +1516,8 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	}
 	if (!camera_reset) return;
 	point const camera(get_camera_pos());
-	if (temperature <= W_FREEZE_POINT && is_underwater(camera)) return; // under ice
-	if (sstates != nullptr && sstates[CAMERA_ID].frozen) return; // frozen, can't fire
+	if (temperature <= W_FREEZE_POINT && is_underwater(camera))   return; // under ice
+	if (sstates != nullptr && sstates[CAMERA_ID].freeze_time > 0) return; // frozen, can't fire
 	
 	if (following) {
 		following    = 0;
@@ -1644,6 +1668,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
 	int const ignore_cobj(get_shooter_coll_id(shooter));
+	bool type_tag(rapid_fire);
 	
 	if (is_player && powerup != PU_FLIGHT) { // recoil (only for player)
 		float recoil(w.recoil);
@@ -1709,8 +1734,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		gen_sound(SOUND_FIREBALL, fpos);
 		break;
 
-	case W_LASER: // line of sight damage
-		{
+	case W_LASER: { // line of sight damage
 			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
 			if (range > 1.1*radius) {
 				beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
@@ -1724,8 +1748,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		gen_sound(SOUND_ROCKET, fpos, 1.5, 1.0);
 		break;
 
-	case W_GASSER:
-		{
+	case W_GASSER: {
 			float const r(radius + w.blast_radius);
 			point start_pos(fpos + dir*(0.5*r));
 			
@@ -1756,15 +1779,18 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		return 1;
 
 	case W_RAPTOR:
-		if ((wmode&1) == 1) { // multi-shot mode
-			unsigned const shot_count = 4;
-			int &pammo(sstates[shooter].p_ammo[weapon_id]);
+		if ((wmode&1) == 1) { // secondary fire mode, double the reload time/half the fire rate
+			if (1) {type_tag = 1;} // freeze mode
+			else { // multi-shot mode
+				unsigned const shot_count = 4;
+				int &pammo(sstates[shooter].p_ammo[weapon_id]);
 			
-			if (pammo >= shot_count || UNLIMITED_WEAPONS) {
-				firing_error *= 2.0;
-				shot_delta    = 7.0*object_types[RAPT_PROJ].radius; // required to prevent shots from colliding with each other
-				nshots = shot_count;
-				if (!UNLIMITED_WEAPONS) {pammo -= (shot_count-1);} // requires more ammo
+				if (pammo >= shot_count || UNLIMITED_WEAPONS) {
+					firing_error *= 2.0;
+					shot_delta    = 7.0*object_types[RAPT_PROJ].radius; // required to prevent shots from colliding with each other
+					nshots = shot_count;
+					if (!UNLIMITED_WEAPONS) {pammo -= (shot_count-1);} // requires more ammo
+				}
 			}
 		}
 		gen_sound(SOUND_ROCKET, fpos, 0.5, 1.8);
@@ -1811,7 +1837,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		obj.init_dir  = -dir2;
 		obj.time      = -1;
 		obj.source    = shooter;
-		obj.direction = rapid_fire;
+		obj.direction = type_tag;
 		if (rapid_fire) {obj.time = int((1.0 - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);}
 		shot_offset += shot_delta; // move to next shot pos
 
@@ -2526,6 +2552,7 @@ void player_state::update_camera_frame() {
 	if (powerup == PU_REGEN ) {camera_health = min(MAX_REGEN_HEALTH, camera_health + 0.1f*fticks);}
 	if (powerup == PU_FLIGHT) {camera_flight = 1;}
 	kill_time += max(1, iticks);
+	next_frame();
 }
 
 

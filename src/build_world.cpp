@@ -166,7 +166,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		add_dynamic_light(0.6, (pos - 3.0*velocity.get_norm()*object_types[type].radius), colorRGBA(1.0, 0.25, 0.0, 1.0)); // red-orange
 		break;
 	case RAPT_PROJ:
-		add_dynamic_light(0.4, (pos - 4.0*velocity.get_norm()*object_types[type].radius), colorRGBA(1.0, 0.75, 0.0, 1.0)); // orange-yellow
+		add_dynamic_light(0.4, (pos - 4.0*velocity.get_norm()*object_types[type].radius), ((direction == 1) ? FREEZE_COLOR : colorRGBA(1.0, 0.75, 0.0, 1.0))); // orange-yellow
 		break;
 	case LANDMINE:
 		if (time > 5) {
@@ -362,6 +362,7 @@ void process_groups() {
 		case MAT_SPHERE:coll_func = mat_sphere_collision; break;
 		case SKULL:    coll_func = skull_collision;     break;
 		case SAWBLADE: coll_func = sawblade_collision;  break;
+		case RAPT_PROJ:coll_func = raptor_collision;    break;
 		}
 		//cout << "group %d %d\n", i, GET_DELTA_TIME);
 		RESET_TIME;
@@ -566,8 +567,9 @@ void process_groups() {
 					obj.status = 0;
 					if (otype.flags & EXPL_ON_COLL) {collision_detect_large_sphere(pos, radius, flags);}
 					blast_radius(pos, type, j, obj.source, 0);
-					gen_smoke(pos);
-					gen_fire(pos, ((type == PLASMA) ? obj.init_dir.x : rand_uniform(0.4, 1.0)), obj.source);
+					bool const frozen(type == RAPT_PROJ && obj.direction == 1);
+					if (!frozen) {gen_smoke(pos);}
+					if (!frozen) {gen_fire(pos, ((type == PLASMA) ? obj.init_dir.x : rand_uniform(0.4, 1.0)), obj.source);}
 					if (type == LANDMINE) {gen_landmine_scorch(obj.pos);}
 					if (type != PLASMA) {cur_frame_explosions.push_back(sphere_t(pos, radius));} // exploding cobjs only
 				}

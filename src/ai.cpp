@@ -1029,7 +1029,6 @@ void advance_smiley(dwobject &obj, int smiley_id) {
 	sstates[smiley_id].advance(obj, smiley_id);
 }
 
-
 void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly favor smileys with later ids
 
 	assert(obj.type == SMILEY);
@@ -1044,9 +1043,14 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
-	if (frozen) return; // no motion or action
+	if (freeze_time > 0) return; // no motion or action
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
 	smiley_action(smiley_id);
+	next_frame();
+}
+
+void player_state::next_frame() {
+	freeze_time = max(0, freeze_time-iticks);
 }
 
 
@@ -1056,7 +1060,6 @@ void player_state::shift(vector3d const &vd) {
 	objective_pos += vd;
 	for (unsigned i = 0; i < 2; ++i) unreachable[i].shift_by(vd);
 }
-
 
 void shift_player_state(vector3d const &vd, int smiley_id) {
 
@@ -1460,7 +1463,7 @@ void player_state::init(bool w_start) {
 	uw_time       = 0;
 	jump_time     = 0;
 	is_jumping    = 0;
-	frozen        = 0;
+	freeze_time   = 0;
 	cb_hurt       = 0;
 	target_visible= 0;
 	target_type   = 0;
@@ -1529,7 +1532,7 @@ float player_state::weapon_range(bool use_far_clip) const {
 
 void player_state::jump(point const &pos) {
 	
-	if (frozen || jump_time > 0) return; // can't start a new jump
+	if (freeze_time > 0 || jump_time > 0) return; // can't start a new jump
 	jump_time = JUMP_COOL*TICKS_PER_SECOND;
 	if (powerup != PU_FLIGHT) {gen_sound(SOUND_BOING, pos, 0.2, 0.6);}
 }

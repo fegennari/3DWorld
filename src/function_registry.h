@@ -280,7 +280,7 @@ void gen_bubble(point const &pos, float r=0.0, colorRGBA const &c=WATER_C);
 void gen_line_of_bubbles(point const &p1, point const &p2, float r=0.0, colorRGBA const &c=WATER_C);
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv, float r, float den, float dark, float dam,
 	int src, int dt, bool as, float spread=1.0);
-void gen_smoke(point const &pos, float zvel_scale=1.0, float radius_scale=1.0);
+void gen_smoke(point const &pos, float zvel_scale=1.0, float radius_scale=1.0, colorRGBA const &color=WHITE);
 bool gen_fire(point const &pos, float size, int source, bool allow_close=0, bool is_static=0, float light_bwidth=1.0, float intensity=1.0);
 void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid=-1, colorRGBA const &color=BLACK,
 	bool is_glass=0, bool rand_angle=0, int lifetime=60*TICKS_PER_SECOND, float min_dist_scale=1.0, tex_range_t const &tr=tex_range_t());
@@ -371,7 +371,7 @@ int  collision_detect_large_sphere(point &pos, float radius, unsigned flags);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
 bool is_point_interior(point const &pos, float radius);
 bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dim);
-void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dim);
+void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dim, colorRGBA const &color=BLACK);
 
 // function prototypes - movable_cobj
 void register_moving_cobj(unsigned index);
@@ -594,12 +594,13 @@ bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 bool mat_sphere_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool sawblade_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool raptor_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 
-void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius);
+void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bool freeze=0);
 void gen_landmine_scorch(point const &pos);
 int get_smiley_hit(vector3d &hdir, int index);
 void blast_radius(point const &pos, int type, int obj_index, int shooter, int chain_level);
-void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);
+void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview, bool freeze=0);
 void do_area_effect_damage(point const &pos, float effect_radius, float damage, int index, int source, int type);
 void switch_player_weapon(int val);
 void draw_beams(bool clear_at_end);

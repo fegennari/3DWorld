@@ -1156,7 +1156,7 @@ bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d co
 }
 
 
-void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dim) { // not sure this belongs here
+void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dim, colorRGBA const &color) { // not sure this belongs here
 
 	if (!cobj.has_flat_top_bot() && cobj.type != COLL_CYLINDER_ROT) return;
 	if (!cobj.can_be_scorched()) return;
@@ -1168,7 +1168,7 @@ void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_no
 		if (max_sz < sz && decal_contained_in_union_cube_face(cobj, pos, coll_norm, sz, dim)) {max_sz = sz;} // check for full sized decal contained in split cubes
 	}
 	else if (cobj.type == COLL_POLYGON) {max_sz = min_dist_from_pt_to_polygon_edge(pos, cobj.points, cobj.npoints);} // may not be correct for extruded polygons
-	if (max_sz > 0.5*sz) {gen_decal(pos, min(sz, max_sz), coll_norm, FLARE3_TEX, cobj.id, colorRGBA(BLACK, 0.75), 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
+	if (max_sz > 0.5*sz) {gen_decal(pos, min(sz, max_sz), coll_norm, FLARE3_TEX, cobj.id, colorRGBA(color, 0.75), 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
 }
 
 
@@ -1530,7 +1530,8 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	obj.verify_data();
 		
 	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
-		gen_explosion_decal((decal_pos - norm*o_radius), o_radius, norm, cobj, (cdir >> 1));
+		bool const freeze(type == RAPT_PROJ && obj.direction == 1);
+		gen_explosion_decal((decal_pos - norm*o_radius), o_radius, norm, cobj, (cdir >> 1), (freeze ? ICE_C : BLACK));
 		obj.disable();
 	}
 	if (!obj.disabled()) {

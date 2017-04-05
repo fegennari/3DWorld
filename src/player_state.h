@@ -164,10 +164,10 @@ struct player_state { // size = big
 		count_t(unsigned c_=0) : c(c_) {}
 	};
 
-	bool plasma_loaded, on_waypt_path, is_jumping, frozen;
+	bool plasma_loaded, on_waypt_path, is_jumping;
 	int target, objective, weapon, wmode, powerup, powerup_time, cb_hurt;
 	int kills, deaths, suicides, team_kills, max_kills, tot_kills, killer;
-	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time, jump_time;
+	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time, jump_time, freeze_time;
 	int target_type, stopped_time, last_waypoint;
 	unsigned tid, fall_counter, chunk_index;
 	float shields, plasma_size, zvel, dpos, last_dz, last_zvel, last_wpt_dist;
@@ -189,9 +189,9 @@ struct player_state { // size = big
 	unsigned step_num;
 	bool foot_down;
 
-	player_state() : plasma_loaded(0), on_waypt_path(0), is_jumping(0), frozen(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(PU_NONE), powerup_time(0),
+	player_state() : plasma_loaded(0), on_waypt_path(0), is_jumping(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(PU_NONE), powerup_time(0),
 		 cb_hurt(0), kills(0), deaths(0), suicides(0), team_kills(0), max_kills(0), tot_kills(0), killer(NO_SOURCE), init_frame(0), fire_frame(0), was_hit(0),
-		hitter(NO_SOURCE), target_visible(0), kill_time(0), rot_counter(0), uw_time(0), jump_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0),
+		hitter(NO_SOURCE), target_visible(0), kill_time(0), rot_counter(0), uw_time(0), jump_time(0), freeze_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0),
 		fall_counter(0), chunk_index(0), shields(0.0), plasma_size(0.0), zvel(0.0), dpos(0.0), last_dz(0.0), last_zvel(0.0), last_wpt_dist(0.0), ticks_since_fired(0.0),
 		target_pos(all_zeros), objective_pos(all_zeros), cb_pos(all_zeros), hit_dir(all_zeros), velocity(zero_vector), prev_foot_pos(all_zeros), step_num(0), foot_down(0)
 	{init_wa();}
@@ -238,6 +238,7 @@ struct player_state { // size = big
 	float get_rel_enemy_vel(point const &pos) const;
 	int target_in_range(point const &pos) const;
 	void smiley_action(int smiley_id);
+	void next_frame();
 
 	// camera members
 	void gamemode_fire_weapon();
