@@ -1043,10 +1043,10 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
+	next_frame();
 	if (freeze_time > 0) return; // no motion or action
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
 	smiley_action(smiley_id);
-	next_frame();
 }
 
 void player_state::next_frame() {
