@@ -1532,7 +1532,7 @@ void draw_smoke_and_fires() {
 
 	bool const use_depth_trans = 1;
 	bool const have_part_clouds(part_clouds.any_active());
-	if (!have_part_clouds && !fires.any_active() && have_explosions()) return; // nothing to draw
+	if (!have_part_clouds && !fires.any_active() && !have_explosions()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans, 0, 0, 0); // no rain, snow, or reflections
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive

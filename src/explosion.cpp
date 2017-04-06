@@ -245,7 +245,14 @@ void cloud_explosion::draw(vpc_shader_t &s, point const &pos, float radius) cons
 }
 
 
-bool have_explosions() {return !blastrs.empty();}
+bool have_explosions() {
+
+	for (unsigned i = 0; i < blastrs.size(); ++i) {
+		blastr const &br(blastrs[i]);
+		if (br.time > 0 && br.cur_color.alpha > 0.0 && br.type != ETYPE_NONE) return 1;
+	}
+	return 0;
+}
 
 void draw_blasts(shader_t &s) {
 
