@@ -594,7 +594,6 @@ bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 bool mat_sphere_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool sawblade_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-bool raptor_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 
 void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bool freeze=0);
 void gen_landmine_scorch(point const &pos);
@@ -645,6 +644,7 @@ void player_teleported(point const &pos, int player_id);
 
 // function prototypes - explosion
 void update_blasts();
+bool have_explosions();
 void draw_blasts(shader_t &s);
 void draw_universe_blasts();
 

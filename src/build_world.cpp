@@ -362,7 +362,6 @@ void process_groups() {
 		case MAT_SPHERE:coll_func = mat_sphere_collision; break;
 		case SKULL:    coll_func = skull_collision;     break;
 		case SAWBLADE: coll_func = sawblade_collision;  break;
-		case RAPT_PROJ:coll_func = raptor_collision;    break;
 		}
 		//cout << "group %d %d\n", i, GET_DELTA_TIME);
 		RESET_TIME;

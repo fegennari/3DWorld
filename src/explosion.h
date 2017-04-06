@@ -48,19 +48,19 @@ struct cloud_explosion : public volume_part_cloud {
 struct blastr { // size = 118 (120)
 
 	int time, st_time, type, src;
-	float size, cur_size, damage;
+	float size, cur_size, damage, exp_sphere_scale;
 	point pos;
 	vector3d dir, up_vector;
 	colorRGBA color1, color2, cur_color;
 	free_obj const *parent;
-	bool one_frame_only, one_frame_seen, create_exp_sphere;
+	bool one_frame_only, one_frame_seen;
 	cloud_explosion cloud_exp; // not always used
 
 	blastr() {}
 	blastr(int tm, int ty, int sr, float sz, float dam, point const &p, vector3d const &d,
-		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0, bool ces=0)
+		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0, float esc=0.0)
 		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), pos(p), dir(d.get_norm()), up_vector(plus_y),
-		color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), one_frame_seen(0), create_exp_sphere(ces) {}
+		color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), one_frame_seen(0), exp_sphere_scale(esc) {}
 	void setup();
 	void check_pointers();
 	void update();
@@ -95,7 +95,7 @@ inline float calc_damage_scale(float dist, float radius, float bradius) {
 
 void register_explosion(point const &pos, float radius, float damage, unsigned eflags, int wclass, uobject *src, free_obj const *parent);
 void add_blastr(point const &pos, vector3d const &dir, float size, float damage, int time, int src,
-				colorRGBA const &color1, colorRGBA const &color2, int type=ETYPE_FIRE, free_obj const *const parent=NULL, bool create_exp_sphere=0);
+				colorRGBA const &color1, colorRGBA const &color2, int type=ETYPE_FIRE, free_obj const *const parent=NULL, float exp_sphere_scale=0.0);
 void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light, shader_t *shader);
 bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_t *shader);
 bool higher_priority(unsigned first, unsigned second);

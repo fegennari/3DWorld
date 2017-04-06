@@ -14,12 +14,12 @@
 bool const SELF_LASER_DAMAGE = 1;
 bool const SMILEY_GAS        = 1;
 bool const FADE_MESSAGE_ALPHA= 1;
+bool const FREEZE_MODE       = 1; // for raptor
 float const SHADOW_COL_VAL   = 0.5;
 float const UWATER_FERR_ADD  = 0.05;
 float const UWATER_FERR_MUL  = 2.0; // lower accuracy
 float const ZOOM_FERR_MULT   = 0.5; // higher accuracy
 float const LASER_REFL_ATTEN = 0.95;
-float const FREEZE_TIME      = 10.0;
 
 // should put these in a file
 string const all_smiley_names[] =
@@ -399,6 +399,13 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 	return 0;
 }
 
+void maybe_freeze(player_state &sstate, int rapt_proj_id, float energy) {
+
+	if (obj_groups[coll_id[RAPT_PROJ]].get_obj(rapt_proj_id).direction != 1) return; // not freeze mode
+	float const freeze_secs(0.2*sqrt(energy)), freeze_ticks(freeze_secs*TICKS_PER_SECOND);
+	sstate.freeze_time = int(sqrt(freeze_ticks*freeze_ticks + sstate.freeze_time*sstate.freeze_time)); // stacks as sqrt()
+}
+
 
 bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
@@ -504,7 +511,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
 	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned);}
 	if (burned) {sstate.freeze_time = 0;} // thaw
-	else if (type == RAPT_PROJ && obj_groups[coll_id[RAPT_PROJ]].get_obj(obj_index).direction == 1) {sstate.freeze_time = int(FREEZE_TIME*TICKS_PER_SECOND);}
+	else if (type == RAPT_PROJ) {maybe_freeze(sstate, obj_index, energy);}
 
 	if (alive) {
 		if (is_blood && cam_filter_color == RED) {
@@ -681,7 +688,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	float blood_v(6.0 + 0.6*sqrt(energy));
 	vector3d coll_dir(get_norm_rand(vector3d(position, obj_pos)));
 	if (burned) {sstate.freeze_time = 0;} // thaw
-	else if (type == RAPT_PROJ && obj_groups[coll_id[RAPT_PROJ]].get_obj(obj_index).direction == 1) {sstate.freeze_time = int(FREEZE_TIME*TICKS_PER_SECOND);}
+	else if (type == RAPT_PROJ) {maybe_freeze(sstate, obj_index, energy);}
 
 	if (alive) {
 		if (type != FELL && type != CRUSHED && !is_area_damage(type)) {
@@ -858,12 +865,12 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bo
 	point const dpos(pos + (3.0*radius)*orient.get_norm());
 	
 	if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {
-		if (freeze) {gen_arb_smoke(pos, ICE_C, vector3d(0.0, 0.0, 0.1), rand_uniform(0.01, 0.025), 0.5, 0.2, 0.0, NO_SOURCE, SMOKE, 0);}
+		if (freeze) {/*gen_arb_smoke(pos, ICE_C, vector3d(0.0, 0.0, 0.1), rand_uniform(0.01, 0.025), 0.5, 0.2, 0.0, NO_SOURCE, SMOKE, 0);*/}
 		else {gen_smoke(dpos, 0.2, 1.0);}
 	}
 	if (freeze) {add_blastr(pos, orient, 4.0*radius, 0.0, 4, NO_SOURCE, FREEZE_COLOR, colorRGBA(0,0,0.5,0), ETYPE_FUSION);}
-	//else {add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);}
 	else {add_blastr(dpos, orient, 3.0*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0.2,0,0,0), ETYPE_PART_CLOUD);}
+	//else {add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);}
 }
 
 
@@ -1022,12 +1029,6 @@ bool sawblade_collision(int index, int obj_index, vector3d const &velocity, poin
 	if (!default_obj_coll(index, obj_index, velocity, position, energy, type, SAWBLADE)) return 0;
 	if (type == CAMERA || type == SMILEY) {obj_groups[coll_id[SAWBLADE]].get_obj(index).direction = 1;} // flag as bloody
 	return 1;
-}
-
-bool raptor_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-	//dwobject &obj(obj_groups[coll_id[RAPT_PROJ]].get_obj(index));
-	//if (obj.direction == 1 && (type == CAMERA || type == SMILEY)) {sstates[obj_index].freeze_time = int(FREEZE_TIME*TICKS_PER_SECOND);} // freeze case - unreliable
-	return default_obj_coll(index, obj_index, velocity, position, energy, type, RAPT_PROJ);
 }
 
 
@@ -1234,7 +1235,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	if (freeze) {
 		damage  = 0.0;
 		bradius = 1.2*size;
-		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_NUCLEAR, nullptr, 1); // no damage
+		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_NUCLEAR, nullptr, 0.5); // no damage, half size sphere
 		gen_delayed_from_player_sound(SOUND_SPLASH1, pos, 1.0); // FIXME: SOUND_ICE
 		//add_water_particles(pos, vector3d(0.0, 0.0, 10.0), 1.0, 0.5*bradius, 0.0, 0.0, rand_uniform(50, 100)); // doesn't alpha blend properly with explosion
 		modify_grass_at(pos, 1.0*bradius, 0, 0, 0, 1, 1, 0, ICE_C);
@@ -1243,13 +1244,13 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	}
 	else if (type == GRENADE || type == CGRENADE) {
 		bradius = 0.9*size;
-		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB, nullptr, (type == CGRENADE));
+		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB, nullptr, ((type == CGRENADE) ? 1.0 : 0.0));
 	}
 	else {
 		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
 		bool const create_exp_sphere(type == ROCKET || type == SEEK_D || type == RAPT_PROJ || type == LANDMINE);
-		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, create_exp_sphere);
+		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, (create_exp_sphere ? 1.0 : 0.0));
 		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE, nullptr, create_exp_sphere);
 	}
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame
@@ -1645,7 +1646,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	weapon_t const &w(weapons[weapon_id]);
 	int fire_delay((int)w.fire_delay);
 	if (UNLIMITED_WEAPONS && !is_player && weapon_id == W_LANDMINE) {fire_delay *= 2;} // avoid too many landmines
-	else if (weapon == W_RAPTOR && (wmode&1)) {fire_delay *= 2;} // 2x fire delay for multi-shot mode
+	else if (!FREEZE_MODE && weapon == W_RAPTOR && (wmode&1)) {fire_delay *= 2;} // 2x fire delay for multi-shot mode (but regular fire for freeze mode)
 	if (rapid_fire) {fire_delay /= 3;}
 	float const radius(get_sstate_radius(shooter));
 	unsigned nshots(w.nshots);
@@ -1780,7 +1781,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	case W_RAPTOR:
 		if ((wmode&1) == 1) { // secondary fire mode, double the reload time/half the fire rate
-			if (1) {type_tag = 1;} // freeze mode
+			if (FREEZE_MODE) {type_tag = 1;} // freeze mode
 			else { // multi-shot mode
 				unsigned const shot_count = 4;
 				int &pammo(sstates[shooter].p_ammo[weapon_id]);
