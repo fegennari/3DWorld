@@ -130,6 +130,20 @@ void blastr::add_as_dynamic_light() const {
 
 void blastr::process() const { // land mode
 
+	float const exp_radius(0.6*size);
+
+	if (animate2 && create_exp_sphere && camera_pdu.sphere_visible_test(pos, exp_radius)) { // rocket, seekd, cgrenade, raptor
+		point const &camera(get_camera_pos());
+		float const weight(float(time)/float(st_time));
+		float const old_w(cur_explosion_sphere.radius/p2p_dist(camera, cur_explosion_sphere.pos)*cur_explosion_weight);
+		float const new_w(exp_radius/p2p_dist(camera, pos)*weight);
+
+		if (cur_explosion_weight == 0.0 || new_w > old_w) { // update if current explosion has higher screen space + intensity influence
+			cur_explosion_sphere.pos    = pos;
+			cur_explosion_sphere.radius = exp_radius * pow((1.0 - weight), 0.75); // radius expands at 0.75 power over time
+			cur_explosion_weight        = weight;
+		}
+	}
 	int const x0(get_xpos(pos.x)), y0(get_ypos(pos.y));
 	if (!point_interior_to_mesh(x0, y0)) return;
 	add_as_dynamic_light();
@@ -150,20 +164,6 @@ void blastr::process() const { // land mode
 	}
 	//if (time == st_time) // only update grass on the first blast?
 	modify_grass_at(pos, 0.5*cur_size, 1, 1); // crush and burn grass Note: calling this every time looks better, but is slower
-	float const exp_radius(0.6*size);
-
-	if (create_exp_sphere && camera_pdu.sphere_visible_test(pos, exp_radius)) { // rocket, seekd, cgrenade, raptor
-		point const &camera(get_camera_pos());
-		float const weight(float(time)/float(st_time));
-		float const old_w(cur_explosion_sphere.radius/p2p_dist(camera, cur_explosion_sphere.pos)*cur_explosion_weight);
-		float const new_w(exp_radius/p2p_dist(camera, pos)*weight);
-
-		if (cur_explosion_weight == 0.0 || new_w > old_w) { // update if current explosion has higher screen space + intensity influence
-			cur_explosion_sphere.pos    = pos;
-			cur_explosion_sphere.radius = exp_radius * pow((1.0 - weight), 0.75); // radius expands at 0.75 power over time
-			cur_explosion_weight        = weight;
-		}
-	}
 }
 
 
@@ -195,7 +195,7 @@ bool blastr::next_frame(unsigned i) {
 			if (animate2) {add_parts_projs(pos, cur_size, dir, cur_color, type, src, parent);}
 		}
 	}
-	else if (world_mode == WMODE_GROUND && game_mode && damage > 0.0) {process();}
+	else if (world_mode == WMODE_GROUND && game_mode) {process();}
 	one_frame_seen = 1;
 	return 1;
 }
@@ -244,6 +244,8 @@ void cloud_explosion::draw(vpc_shader_t &s, point const &pos, float radius) cons
 	fgPopMatrix();
 }
 
+
+bool have_explosions() {return !blastrs.empty();}
 
 void draw_blasts(shader_t &s) {
 
