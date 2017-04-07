@@ -82,27 +82,25 @@ void check_explosion_refs() {
 }
 
 
-void add_blastr(point const &pos, vector3d const &dir, float size, float damage, int time, int src,
-				colorRGBA const &color1, colorRGBA const &color2, int type, free_obj const *const parent, float exp_sphere_scale)
+void add_blastr(point const &pos, vector3d const &dir, float size, float damage, int time, int src, colorRGBA const &color1,
+	colorRGBA const &color2, int type, free_obj const *const parent, bool emits_light, float exp_sphere_scale)
 {
 	if (NO_NONETYPE_BRS && type == ETYPE_NONE) return;
 	bool const one_frame_only(time == 0);
 	if (one_frame_only) {time = 1;}
 	assert(size > 0.0 && time >= 0);
-	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent, one_frame_only, exp_sphere_scale);
+	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent, one_frame_only, emits_light, exp_sphere_scale);
 	br.setup();
 
-	if (available.empty()) {
-		blastrs.push_back(br);
-	}
+	if (available.empty()) {blastrs.push_back(br);}
 	else {
 		unsigned const ix(available.back());
 		available.pop_back();
 		assert(ix < blastrs.size());
 		blastrs[ix] = br;
 	}
-	if (type == ETYPE_NUCLEAR && damage > 0.0) { // add flash
-		add_blastr(pos, (get_camera_pos() - pos), 1.2*size, 0.0, 0, src, WHITE, WHITE, ETYPE_FUSION, parent, exp_sphere_scale);
+	if (type == ETYPE_NUCLEAR && (emits_light || damage > 0.0)) { // add flash
+		add_blastr(pos, (get_camera_pos() - pos), 1.2*size, 0.0, 0, src, WHITE, WHITE, ETYPE_FUSION, parent, emits_light, exp_sphere_scale);
 	}
 }
 
@@ -146,7 +144,7 @@ void blastr::process() const { // land mode
 	}
 	int const x0(get_xpos(pos.x)), y0(get_ypos(pos.y));
 	if (!point_interior_to_mesh(x0, y0)) return;
-	add_as_dynamic_light();
+	if (emits_light) {add_as_dynamic_light();}
 	if (!animate2 || damage == 0.0) return;
 	float rad(3.0*cur_size/(DX_VAL + DY_VAL));
 	int const irad(ceil(rad));

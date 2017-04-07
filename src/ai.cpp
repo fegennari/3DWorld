@@ -1562,7 +1562,7 @@ bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id
 	gen_sound(SOUND_POWERUP, opos, gain, pitch); // different sound?
 	if (is_player) {player_teleported(opos, player_id);}
 	add_dynamic_light(12.0*oradius, opos, LT_BLUE);
-	if (player_id != CAMERA_ID) {add_blastr(opos, plus_z, 6.0*oradius, 0.0, int(0.5*TICKS_PER_SECOND), NO_SOURCE, WHITE, BLUE, ETYPE_NUCLEAR);}
+	if (player_id != CAMERA_ID) {add_blastr(opos, plus_z, 6.0*oradius, 0.0, int(0.5*TICKS_PER_SECOND), NO_SOURCE, WHITE, BLUE, ETYPE_NUCLEAR, nullptr, 1);}
 	last_used_tfticks = tfticks;
 	return 1;
 }

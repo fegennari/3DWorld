@@ -1235,7 +1235,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	if (freeze) {
 		damage  = 0.0;
 		bradius = 1.2*size;
-		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_NUCLEAR, nullptr, 0.5); // no damage, half size sphere
+		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_NUCLEAR, nullptr, 1, 0.5); // no damage, half size sphere
 		gen_delayed_from_player_sound(SOUND_SPLASH1, pos, 1.0); // FIXME: SOUND_ICE
 		//add_water_particles(pos, vector3d(0.0, 0.0, 10.0), 1.0, 0.5*bradius, 0.0, 0.0, rand_uniform(50, 100)); // doesn't alpha blend properly with explosion
 		modify_grass_at(pos, 1.0*bradius, 0, 0, 0, 1, 1, 0, ICE_C);
@@ -1244,14 +1244,14 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	}
 	else if (type == GRENADE || type == CGRENADE) {
 		bradius = 0.9*size;
-		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB, nullptr, ((type == CGRENADE) ? 1.0 : 0.0));
+		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB, nullptr, 1, ((type == CGRENADE) ? 1.0 : 0.0));
 	}
 	else {
 		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
 		bool const create_exp_sphere(type == ROCKET || type == SEEK_D || type == RAPT_PROJ || type == LANDMINE);
-		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, (create_exp_sphere ? 1.0 : 0.0));
-		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE, nullptr, create_exp_sphere);
+		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
+		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
 	}
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame
 	exp_damage_groups(pos, shooter, chain_level, damage, size, type, cview);
