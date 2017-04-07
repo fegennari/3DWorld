@@ -125,6 +125,7 @@ public:
 		add_new_sound("wood_crack.wav" ); // SOUND_WOOD_CRACK
 		add_new_sound("footstep.wav"   ); // SOUND_FOOTSTEP
 		add_new_sound("snow_step.wav"  ); // SOUND_SNOW_STEP
+		add_new_sound("ice_crack.wav"  ); // SOUND_ICE_CRACK
 		cout << endl;
 
 		// create sources
