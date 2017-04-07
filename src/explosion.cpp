@@ -45,6 +45,7 @@ exp_type_params et_params[NUM_ETYPES] = {
 	exp_type_params(0.8, PURPLE,  LT_BLUE), // ETYPE_SIEGE
 	exp_type_params(1.7, LT_BLUE, WHITE),   // ETYPE_FUSION_ROT
 	exp_type_params(2.0, WHITE,   BLACK),   // ETYPE_PART_CLOUD
+	exp_type_params(2.0, WHITE,   BLACK),   // ETYPE_PC_ICE
 };
 
 
@@ -108,7 +109,7 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 void blastr::setup() {
 
 	if (type == ETYPE_ANIM_FIRE ) {up_vector = signed_rand_vector_norm();}
-	if (type == ETYPE_PART_CLOUD) {cloud_exp.setup(size);}
+	if (type == ETYPE_PART_CLOUD || type == ETYPE_PC_ICE) {cloud_exp.setup(size);}
 	update(); // initial update
 }
 
@@ -225,14 +226,13 @@ struct ix_type_pair {
 	s.set_cur_color(WHITE);
 	//enable_blend();
 }
-void cloud_explosion::draw(vpc_shader_t &s, point const &pos, float radius) const {
+void cloud_explosion::draw(vpc_shader_t &s, point const &pos, float radius, int cloud_exp_type) const {
 	//if (!sphere_in_camera_view(pos, radius, 0)) return; // checked by the caller
-	s.set_uniform_color(s.c1i_loc, YELLOW);
-	s.set_uniform_color(s.c1o_loc, ORANGE);
-	s.set_uniform_color(s.c2i_loc, ORANGE);
-	s.set_uniform_color(s.c2o_loc, RED);
-	s.set_uniform_color(s.c3i_loc, RED);
-	s.set_uniform_color(s.c3o_loc, BLACK);
+	switch (cloud_exp_type) {
+	case CLOUD_EXP_FIRE: s.set_all_colors(YELLOW, ORANGE,   ORANGE,  RED,   RED,  BLACK); break;
+	case CLOUD_EXP_ICE : s.set_all_colors(WHITE,  LT_BLUE,  LT_BLUE, BLUE,  BLUE, BLACK); break;
+	default: assert(0);
+	}
 	s.set_uniform_float(s.rad_loc, radius);
 	s.set_uniform_float(s.off_loc, (100.0*sinf(pos.x) + ((world_mode == WMODE_UNIVERSE) ? 0.00005 : 0.0004)*tfticks)); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
@@ -357,10 +357,11 @@ void draw_blasts(shader_t &s) {
 			break;
 
 		case ETYPE_PART_CLOUD:
+		case ETYPE_PC_ICE:
 			if (begin_type) {cloud_explosion::draw_setup(vpc_shader);}
 			vpc_shader.add_uniform_color("color_mult", br.cur_color);
 			vpc_shader.add_uniform_float("noise_scale", 0.1/br.size);
-			br.cloud_exp.draw(vpc_shader, br.pos, br.cur_size); // Note: no ground mode depth-based attenuation
+			br.cloud_exp.draw(vpc_shader, br.pos, br.cur_size, ((br.type == ETYPE_PC_ICE) ? CLOUD_EXP_ICE : CLOUD_EXP_FIRE)); // Note: no ground mode depth-based attenuation
 			
 			if (end_type) {
 				vpc_shader.add_uniform_color("color_mult", WHITE); // restore default
@@ -368,7 +369,7 @@ void draw_blasts(shader_t &s) {
 				s.make_current();
 			}
 			break;
-
+		
 		default:
 			assert(0);
 		} // switch

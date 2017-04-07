@@ -480,7 +480,6 @@ void volume_part_cloud::gen_pts(vector3d const &size, point const &pos, bool sim
 
 
 void vpc_shader_t::cache_locs() {
-
 	ns_loc  = get_uniform_loc("noise_scale");
 	c1i_loc = get_uniform_loc("color1i");
 	c1o_loc = get_uniform_loc("color1o");
@@ -494,6 +493,14 @@ void vpc_shader_t::cache_locs() {
 	vd_loc  = get_uniform_loc("view_dir");
 	as_loc  = get_uniform_loc("alpha_scale");
 	nexp_loc= get_uniform_loc("noise_exp");
+}
+void vpc_shader_t::set_all_colors(colorRGBA const &c1i, colorRGBA const &c1o, colorRGBA const &c2i, colorRGBA const &c2o, colorRGBA const &c3i, colorRGBA const &c3o) {
+	set_uniform_color(c1i_loc, c1i);
+	set_uniform_color(c1o_loc, c1o);
+	set_uniform_color(c2i_loc, c2i);
+	set_uniform_color(c2o_loc, c2o);
+	set_uniform_color(c3i_loc, c3i);
+	set_uniform_color(c3o_loc, c3o);
 }
 
 

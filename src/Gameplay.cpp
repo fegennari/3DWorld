@@ -868,8 +868,9 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bo
 		if (freeze) {/*gen_arb_smoke(pos, ICE_C, vector3d(0.0, 0.0, 0.1), rand_uniform(0.01, 0.025), 0.5, 0.2, 0.0, NO_SOURCE, SMOKE, 0);*/}
 		else {gen_smoke(dpos, 0.2, 1.0);}
 	}
-	if (freeze) {add_blastr(pos, orient, 4.0*radius, 0.0, 4, NO_SOURCE, FREEZE_COLOR, colorRGBA(0,0,0.5,0), ETYPE_FUSION);}
-	else {add_blastr(dpos, orient, 3.0*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0.2,0,0,0), ETYPE_PART_CLOUD);}
+	//if (freeze) {add_blastr(dpos, orient, 4.0*radius, 0.0, 4, NO_SOURCE, FREEZE_COLOR, colorRGBA(0,0,0.5,0), ETYPE_FUSION);}
+	if (freeze) {add_blastr(dpos, orient, 3.5*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0,0,0.2,0), ETYPE_PC_ICE);}
+	else        {add_blastr(dpos, orient, 3.0*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0.2,0,0,0), ETYPE_PART_CLOUD);}
 	//else {add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);}
 }
 

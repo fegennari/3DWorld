@@ -20,9 +20,10 @@ unsigned const EXP_FLAGS_SHIP     = 0x02;
 unsigned const EXP_FLAGS_NO_PART  = 0x04;
 
 
-enum {ETYPE_NONE=0, ETYPE_FIRE, ETYPE_NUCLEAR, ETYPE_ENERGY, ETYPE_ATOMIC, ETYPE_PLASMA, ETYPE_EMP, ETYPE_STARB,
-	  ETYPE_FUSION, ETYPE_EBURST, ETYPE_ESTEAL, ETYPE_ANIM_FIRE, ETYPE_SIEGE, ETYPE_FUSION_ROT, ETYPE_PART_CLOUD, NUM_ETYPES};
+enum {ETYPE_NONE=0, ETYPE_FIRE, ETYPE_NUCLEAR, ETYPE_ENERGY, ETYPE_ATOMIC, ETYPE_PLASMA, ETYPE_EMP, ETYPE_STARB, ETYPE_FUSION,
+	  ETYPE_EBURST, ETYPE_ESTEAL, ETYPE_ANIM_FIRE, ETYPE_SIEGE, ETYPE_FUSION_ROT, ETYPE_PART_CLOUD, ETYPE_PC_ICE, NUM_ETYPES};
 
+enum {CLOUD_EXP_NONE=0, CLOUD_EXP_FIRE, CLOUD_EXP_ICE};
 
 class free_obj; // forward references
 class uobject;
@@ -41,7 +42,7 @@ struct cloud_explosion : public volume_part_cloud {
 
 	void setup(float radius) {gen_pts(radius);}
 	static void draw_setup(vpc_shader_t &s);
-	void draw(vpc_shader_t &s, point const &pos, float radius) const;
+	void draw(vpc_shader_t &s, point const &pos, float radius, int cloud_exp_type=CLOUD_EXP_FIRE) const;
 };
 
 

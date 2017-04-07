@@ -188,6 +188,7 @@ public:
 	int ns_loc, c1i_loc, c1o_loc, c2i_loc, c2o_loc, c3i_loc, c3o_loc, rad_loc, rs_loc, off_loc, vd_loc, as_loc, nexp_loc;
 	vpc_shader_t() : ns_loc(0), c1i_loc(0), c1o_loc(0), c2i_loc(0), c2o_loc(0), c3i_loc(0), c3o_loc(0), rad_loc(0), rs_loc(0), off_loc(0), vd_loc(0), as_loc(0), nexp_loc(0) {}
 	void cache_locs();
+	void set_all_colors(colorRGBA const &c1i, colorRGBA const &c1o, colorRGBA const &c2i, colorRGBA const &c2o, colorRGBA const &c3i, colorRGBA const &c3o);
 };
 
 
