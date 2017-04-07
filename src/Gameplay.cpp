@@ -402,7 +402,7 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 void maybe_freeze(player_state &sstate, int rapt_proj_id, float energy) {
 
 	if (obj_groups[coll_id[RAPT_PROJ]].get_obj(rapt_proj_id).direction != 1) return; // not freeze mode
-	float const freeze_secs(0.2*sqrt(energy)), freeze_ticks(freeze_secs*TICKS_PER_SECOND);
+	float const freeze_secs(0.3*sqrt(energy)), freeze_ticks(freeze_secs*TICKS_PER_SECOND);
 	sstate.freeze_time = int(sqrt(freeze_ticks*freeze_ticks + sstate.freeze_time*sstate.freeze_time)); // stacks as sqrt()
 }
 
