@@ -157,9 +157,9 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 	case W_RAPTOR:
 		{
 			radius = 0.95*object_types[weapons[wid].obj_id].radius;
-			float const rscale((wid == W_SEEK_D) ? 4.8 : ((wid == W_RAPTOR) ? 8.8 : 5.8));
+			float const rscale((wid == W_SEEK_D) ? 4.8 : ((wid == W_RAPTOR) ? 8.8 : 5.8)), cylin_radius(((wid == W_RAPTOR) ? 0.9 : 0.8)*radius);
 			point const pos1(pos0 + dir*radius), pos2(pos0 - dir*(rscale*radius));
-			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.8*radius, 0.8*radius, cp));
+			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, cylin_radius, cylin_radius, cp));
 		}
 		break;
 
@@ -292,16 +292,18 @@ int select_dodgeball_texture(int shooter) {
 
 
 void rotate_into_camera_dir(point const &pos, vector3d const &dir) {
-
 	rotate_by_vector(-dir); // undo rotation
 	rotate_towards_camera(pos);
 }
 
-
-void draw_chaingun_section(float tx, float ty, float radius, int ndiv) {
-
-	draw_cylinder_at(point(tx, ty, 0.0), 0.11, radius, radius, 2*ndiv);
-	draw_circle_normal(0.0, radius, ndiv, 1, point(tx, ty, 0.08));
+void draw_chaingun_section(float tx, float ty, float tz, float length, float radius, int ndiv) {
+	draw_cylinder_at(point(tx, ty, tz), length, radius, radius, 2*ndiv);
+	draw_circle_normal(0.0, radius, ndiv, 1, point(tx, ty, tz+0.75*length));
+}
+void draw_raptor_section(float tx, float ty, float tz, float length, float radius, int ndiv) {
+	draw_cylinder_at(point(tx, ty, tz), length, radius, radius, 2*ndiv);
+	draw_subdiv_sphere(point(tx, ty, tz       ), radius, 2*ndiv, 0, 1);
+	draw_subdiv_sphere(point(tx, ty, tz+length), radius, 2*ndiv, 0, 1);
 }
 
 
@@ -446,17 +448,31 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.clear_specular();
 			break;
 
-		case W_RAPTOR: // similar to rocket
+		case W_RAPTOR: { // similar to rocket
 			radius = 0.95*object_types[RAPT_PROJ].radius;
 			if (wmode&1) {shader.set_cur_color(colorRGBA(FREEZE_COLOR, alpha)); shader.set_specular(0.8, 80.0);} // freeze mode
 			else {set_gold_material(shader, alpha);}
 			rot_angle = max(0.0f, 8.0f*(fire_val - 0.6f)); // recoil
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
-			draw_cylinder_at(point(tx, ty, 0.0), 8.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
-			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(tx, ty, 7.0*radius));
+			fgTranslate(1.0*tx, 1.0*ty, 0.0);
+			draw_cylinder_at(all_zeros, 8.8*radius, 0.9*radius, 0.9*radius, 2*ndiv);
+			//draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(0.0, 0.0, 7.0*radius));
+			draw_cylinder_at(point(0.0, 0.0, 8.8*radius), -1.8*radius, 0.9*radius, 0.0, 2*ndiv); // cone
+			// draw shell chambers
+			radius *= 0.5;
+			float const rdx(1.5*radius*dir.x/rxy), rdy(1.5*radius*dir.y/rxy), length(5.0*radius), tz(9.0*radius);
+			if (wmode&1) {set_silver_material(shader, alpha);} else {set_copper_material(shader, alpha);}
+			fgPushMatrix();
+			fgRotate(15.0*rot_counter, 0.0, 0.0, 1.0);
+			draw_raptor_section( rdx,  rdy, tz, length, radius, ndiv);
+			draw_raptor_section(-rdx, -rdy, tz, length, radius, ndiv);
+			fgRotate(90.0, 0.0, 0.0, 1.0);
+			draw_raptor_section( rdx,  rdy, tz, length, radius, ndiv);
+			draw_raptor_section(-rdx, -rdy, tz, length, radius, ndiv);
+			fgPopMatrix();
 			shader.clear_specular();
 			break;
-
+		}
 		case W_PLASMA:
 			radius = 0.018;
 			shader.set_cur_color(colorRGBA(BLACK, alpha));
@@ -507,16 +523,16 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			}
 			else { // shrapnel chaingun
 				radius = 0.004;
-				float const rdx(1.4*radius*dir.x/rxy), rdy(1.4*radius*dir.y/rxy);
+				float const rdx(1.4*radius*dir.x/rxy), rdy(1.4*radius*dir.y/rxy), length(0.11);
 				set_silver_material(shader, alpha);
 				fgTranslate(0.6*tx, 0.6*ty, 0.0);
 				fgPushMatrix();
 				fgRotate(15.0*rot_counter, 0.0, 0.0, 1.0);
-				draw_chaingun_section( rdx,  rdy, radius, ndiv);
-				draw_chaingun_section(-rdx, -rdy, radius, ndiv);
+				draw_chaingun_section( rdx,  rdy, 0.0, length, radius, ndiv);
+				draw_chaingun_section(-rdx, -rdy, 0.0, length, radius, ndiv);
 				fgRotate(90.0, 0.0, 0.0, 1.0);
-				draw_chaingun_section( rdx,  rdy, radius, ndiv);
-				draw_chaingun_section(-rdx, -rdy, radius, ndiv);
+				draw_chaingun_section( rdx,  rdy, 0.0, length, radius, ndiv);
+				draw_chaingun_section(-rdx, -rdy, 0.0, length, radius, ndiv);
 				shader.set_cur_color(colorRGBA(0.3, 0.3, 0.3, alpha));
 				draw_cylinder_at(point(0.0, 0.0, 0.08), 0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1); // outer band
 				fgPopMatrix();

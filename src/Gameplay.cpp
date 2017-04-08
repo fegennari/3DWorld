@@ -1641,7 +1641,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	int weapon_id(weapon);
 	if (weapon == W_GRENADE && (wmode&1)) {weapon_id = W_CGRENADE;}
 	if (weapon == W_BLADE   && (wmode&1)) {weapon_id = W_SAWBLADE;}
-	if (weapon_id == W_M16  && (wmode&1) == 1) {++rot_counter;}
 	int const dtime(get_prev_fire_time_in_ticks());
 	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1)), is_player(shooter == CAMERA_ID);
 	weapon_t const &w(weapons[weapon_id]);
@@ -1660,6 +1659,8 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		if (!vsync_enabled && is_player && weapon_id == W_M16) {add_dynamic_light(1.0, fpos, YELLOW);}
 		return 0;
 	}
+	if (weapon_id == W_M16  && (wmode&1) == 1) {++rot_counter;}
+	if (weapon_id == W_RAPTOR) {++rot_counter;}
 	ticks_since_fired = tfticks;
 	bool const underwater(is_underwater(fpos));
 	float firing_error(w.firing_error), shot_delta(0.0);
