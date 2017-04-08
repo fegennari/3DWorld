@@ -399,11 +399,12 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 	return 0;
 }
 
-void maybe_freeze(player_state &sstate, int rapt_proj_id, float energy) {
+bool maybe_freeze(player_state &sstate, int rapt_proj_id, float energy) {
 
-	if (obj_groups[coll_id[RAPT_PROJ]].get_obj(rapt_proj_id).direction != 1) return; // not freeze mode
+	if (obj_groups[coll_id[RAPT_PROJ]].get_obj(rapt_proj_id).direction != 1) return 0; // not freeze mode
 	float const freeze_secs(0.3*sqrt(energy)), freeze_ticks(freeze_secs*TICKS_PER_SECOND);
 	sstate.freeze_time = int(sqrt(freeze_ticks*freeze_ticks + sstate.freeze_time*sstate.freeze_time)); // stacks as sqrt()
+	return 1;
 }
 
 
@@ -511,8 +512,9 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
 	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned);}
 	if (burned) {sstate.freeze_time = 0;} // thaw
-	else if (type == RAPT_PROJ) {maybe_freeze(sstate, obj_index, energy);}
-
+	else if (type == RAPT_PROJ) {
+		if (maybe_freeze(sstate, obj_index, energy)) {print_text_onscreen("Frozen", RED, 1.2, MESSAGE_TIME, 3);}
+	}
 	if (alive) {
 		if (is_blood && cam_filter_color == RED) {
 			if (sstate.drop_weapon(coll_dir, cview_dir, camera, CAMERA_ID, energy, type)) {
