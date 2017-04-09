@@ -113,7 +113,8 @@ public:
 	void add_vert_quad_tc(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
 	template<unsigned NUM> void add_polygon(vert_norm_texp const &vnt, point const *const pts);
 	bool on_new_obj_layer(obj_layer const &l);
-	void clear() {tri_verts.clear(); quad_verts.clear(); tc_verts.clear(); is_wet = 2;}
+	void full_clear() {clear(); is_wet = 2;}
+	void clear() {tri_verts.clear(); quad_verts.clear(); tc_verts.clear();}
 	void draw() const;
 	void flush() {draw(); clear();}
 	obj_layer const &get_last_layer() const {return last_layer;}

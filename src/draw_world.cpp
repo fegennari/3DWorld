@@ -566,7 +566,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	has_lt_atten |= (reflection_pass == 2); // need light atten flow to handle refraction through cubes and spheres
 	setup_cobj_shader(s, has_lt_atten, use_normal_map, use_texgen, enable_reflections, reflection_pass);
 	if (enable_reflections == 1) {bind_texture_tu(reflection_tid, 14);} // planar reflections
-	cdb.clear();
+	cdb.full_clear();
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 	float bump_b_scale(0.0);
 	int nm_tid(-2), last_tid(-2), last_group_id(-1); // Note: use -2 as unset tid so that it differs from "no texture" of -1
@@ -703,7 +703,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	setup_cobj_shader(s, (draw_trans && has_lt_atten), 0, 2, 0, reflection_pass);
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
-	cdb.clear();
+	cdb.full_clear();
 	cobj_proc_buf_t pb;
 
 	// bias the clip plane so that pixels slightly under the reflection plane are drawn to prevent artifacts
