@@ -2175,6 +2175,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					reflect = CLIP_TO_01(alpha*(specular + (1.0f - specular)*luminance)); // could use red component
 				}
 				if (reflect > 0.01) { // reflected light
+					reflect = min(reflect, 0.95f); // prevent stack overflow
 					calc_reflection_angle(vcf, vref, coll_norm);
 					end_pos = projectile_test(coll_pos, vref, 0.0, reflect*damage, shooter, range0, reflect*intensity);
 				}
