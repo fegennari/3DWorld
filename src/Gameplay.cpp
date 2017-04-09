@@ -1109,7 +1109,7 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 	int const wtype(obj_weapons[type]);
 	if (wtype < 0)  return;
 	assert(type >= 0);
-	if (BLAST_CHAIN_DELAY > 0) {gen_smoke(pos);}
+	if (BLAST_CHAIN_DELAY > 0 && type != FREEZE_BOMB) {gen_smoke(pos);}
 	assert(wtype <= NUM_WEAPONS);
 	float damage(weapons[wtype].blast_damage), size(weapons[wtype].blast_radius);
 	dwobject const &obj(obj_groups[coll_id[type]].get_obj(obj_index));
@@ -1201,7 +1201,7 @@ void exp_damage_groups(point const &pos, int shooter, int chain_level, float dam
 						if (BLAST_CHAIN_DELAY == 0) {
 							obj.status = 0;
 							blast_radius(obj.pos, type2, i, obj.source, chain_level+1);
-							gen_smoke(obj.pos);
+							if (type2 != FREEZE_BOMB) {gen_smoke(obj.pos);}
 						}
 						else {
 							obj.health = object_types[type2].health; // ???
