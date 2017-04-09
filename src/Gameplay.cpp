@@ -201,7 +201,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 
 bool self_coll_invalid(int type, int obj_index) {
 
-	if (type == ROCKET || type == SEEK_D || type == RAPT_PROJ || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) { // || type == SAWBLADE
+	if (is_rocket_type(type) || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) { // || type == SAWBLADE
 		return 1;
 	}
 	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL || type == SAWBLADE) &&
@@ -399,12 +399,10 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 	return 0;
 }
 
-bool maybe_freeze(player_state &sstate, int rapt_proj_id, float energy) {
+void freeze_player(player_state &sstate, float energy) {
 
-	if (obj_groups[coll_id[RAPT_PROJ]].get_obj(rapt_proj_id).direction != 1) return 0; // not freeze mode
-	float const freeze_secs(0.3*sqrt(energy)), freeze_ticks(freeze_secs*TICKS_PER_SECOND);
+	float const freeze_secs(0.4*sqrt(energy)), freeze_ticks(freeze_secs*TICKS_PER_SECOND);
 	sstate.freeze_time = int(sqrt(freeze_ticks*freeze_ticks + sstate.freeze_time*sstate.freeze_time)); // stacks as sqrt()
-	return 1;
 }
 
 
@@ -512,8 +510,9 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
 	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned);}
 	if (burned) {sstate.freeze_time = 0;} // thaw
-	else if (type == RAPT_PROJ) {
-		if (maybe_freeze(sstate, obj_index, energy)) {print_text_onscreen("Frozen", RED, 1.2, MESSAGE_TIME, 3);}
+	else if (type == FREEZE_BOMB) {
+		freeze_player(sstate, energy);
+		print_text_onscreen("Frozen", RED, 1.2, MESSAGE_TIME, 3);
 	}
 	if (alive) {
 		if (is_blood && cam_filter_color == RED) {
@@ -690,7 +689,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	float blood_v(6.0 + 0.6*sqrt(energy));
 	vector3d coll_dir(get_norm_rand(vector3d(position, obj_pos)));
 	if (burned) {sstate.freeze_time = 0;} // thaw
-	else if (type == RAPT_PROJ) {maybe_freeze(sstate, obj_index, energy);}
+	else if (type == FREEZE_BOMB) {freeze_player(sstate, energy);}
 
 	if (alive) {
 		if (type != FELL && type != CRUSHED && !is_area_damage(type)) {
@@ -1114,7 +1113,6 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 	assert(wtype <= NUM_WEAPONS);
 	float damage(weapons[wtype].blast_damage), size(weapons[wtype].blast_radius);
 	dwobject const &obj(obj_groups[coll_id[type]].get_obj(obj_index));
-	bool const freeze(type == RAPT_PROJ && obj.direction == 1);
 
 	if (type == PLASMA) {
 		float const psize(obj.init_dir.x);
@@ -1129,7 +1127,7 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 	if (type != IMPACT && type < NUM_TOT_OBJS && coll_id[type] > 0) shooter = obj.source;
 	damage *= sstates[shooter].get_damage_scale();
 	bool const cview((obj.flags & CAMERA_VIEW) != 0);
-	create_explosion(pos, shooter, chain_level, damage, size, type, cview, freeze);
+	create_explosion(pos, shooter, chain_level, damage, size, type, cview);
 
 	if (following) {
 		camera_origin = temp1;
@@ -1227,7 +1225,7 @@ void exp_damage_groups(point const &pos, int shooter, int chain_level, float dam
 }
 
 
-void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview, bool freeze) {
+void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview) {
 
 	assert(damage >= 0.0 && size >= 0.0);
 	assert(type != SMILEY);
@@ -1235,7 +1233,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	float bradius;
 	//RESET_TIME;
 	
-	if (freeze) {
+	if (type == FREEZE_BOMB) {
 		damage  = 0.0;
 		bradius = 1.2*size;
 		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_NUCLEAR, nullptr, 1, 0.5); // no damage, half size sphere
@@ -1252,7 +1250,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	else {
 		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
-		bool const create_exp_sphere(type == ROCKET || type == SEEK_D || type == RAPT_PROJ || type == LANDMINE);
+		bool const create_exp_sphere(is_rocket_type(type) || type == LANDMINE);
 		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
 		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
 	}
@@ -1271,7 +1269,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		assert(damage >= 0.0);
 		add_splash(pos, xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
 	}
-	if (damage > 500.0 || type == RAPT_PROJ) { // everything except for plasma
+	if (damage > 500.0 || is_rocket_type(type)) { // everything except for plasma
 		gen_delayed_from_player_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
 		float const blast_force(size/distance_to_camera(pos));
 		if (!underwater && blast_force > 0.5) {camera_shake = min(1.0, 2.0*blast_force);}
@@ -1673,7 +1671,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
 	int const ignore_cobj(get_shooter_coll_id(shooter));
-	bool type_tag(rapid_fire);
+	int type(w.obj_id);
 	
 	if (is_player && powerup != PU_FLIGHT) { // recoil (only for player)
 		float recoil(w.recoil);
@@ -1785,7 +1783,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	case W_RAPTOR:
 		if ((wmode&1) == 1) { // secondary fire mode, double the reload time/half the fire rate
-			if (FREEZE_MODE) {type_tag = 1;} // freeze mode
+			if (FREEZE_MODE) {type = FREEZE_BOMB;} // freeze mode
 			else { // multi-shot mode
 				unsigned const shot_count = 4;
 				int &pammo(sstates[shooter].p_ammo[weapon_id]);
@@ -1811,7 +1809,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_STAR5:    gen_sound(SOUND_SWING,  fpos, 0.3, 2.0); break;
 	case W_LANDMINE: gen_sound(SOUND_ALERT,  fpos, 0.3, 2.5); break;
 	}
-	int type(w.obj_id);
 	if (type < 0) return 3;
 	int const cid(coll_id[type]);
 	assert(cid >= 0 && cid < NUM_TOT_OBJS);
@@ -1842,7 +1839,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		obj.init_dir  = -dir2;
 		obj.time      = -1;
 		obj.source    = shooter;
-		obj.direction = type_tag;
 		if (rapid_fire) {obj.time = int((1.0 - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);}
 		shot_offset += shot_delta; // move to next shot pos
 
@@ -2456,7 +2452,7 @@ int get_damage_source(int type, int index, int questioner) {
 	if (type == CAMERA) return -1;
 	assert(type >= 0);
 	
-	if (type < CAMERA || type == SAWBLADE || type == RAPT_PROJ) {
+	if (type < CAMERA || type == SAWBLADE || type == RAPT_PROJ || type == FREEZE_BOMB) {
 		int cid(coll_id[type]);
 
 		if (cid < 0 || cid >= num_groups) {

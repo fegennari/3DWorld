@@ -449,7 +449,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_RAPTOR: { // similar to rocket
-			radius = 0.95*object_types[RAPT_PROJ].radius;
+			radius = 0.95*object_types[(wmode&1) ? FREEZE_BOMB : RAPT_PROJ].radius;
 			if (wmode&1) {shader.set_cur_color(colorRGBA(FREEZE_COLOR, alpha)); shader.set_specular(0.8, 80.0);} // freeze mode
 			else {set_gold_material(shader, alpha);}
 			rot_angle = max(0.0f, 8.0f*(fire_val - 0.6f)); // recoil

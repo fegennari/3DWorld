@@ -131,6 +131,7 @@ void create_object_groups() {
 	coll_id[PARTICLE] = create_group(PARTICLE, 800,   0, 0, 0, 1, 0);
 	coll_id[SAWBLADE] = create_group(SAWBLADE, 50,    0, 0, 0, 1, 0);
 	coll_id[RAPT_PROJ]= create_group(RAPT_PROJ,400,   0, 0, 0, 1, 0);
+	coll_id[FREEZE_BOMB]=create_group(FREEZE_BOMB,200,0, 0, 0, 1, 0);
 	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 1, 0); // Note: create plasma group last since it uses a special shader during drawing
 	coll_id[MAT_SPHERE]= create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 0, 0);
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
@@ -166,7 +167,10 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		add_dynamic_light(0.6, (pos - 3.0*velocity.get_norm()*object_types[type].radius), colorRGBA(1.0, 0.25, 0.0, 1.0)); // red-orange
 		break;
 	case RAPT_PROJ:
-		add_dynamic_light(0.4, (pos - 4.0*velocity.get_norm()*object_types[type].radius), ((direction == 1) ? FREEZE_COLOR : colorRGBA(1.0, 0.75, 0.0, 1.0))); // orange-yellow
+		add_dynamic_light(0.4, (pos - 4.0*velocity.get_norm()*object_types[type].radius), colorRGBA(1.0, 0.75, 0.0, 1.0)); // orange-yellow
+		break;
+	case FREEZE_BOMB:
+		add_dynamic_light(0.4, (pos - 4.0*velocity.get_norm()*object_types[type].radius), FREEZE_COLOR); // blue
 		break;
 	case LANDMINE:
 		if (time > 5) {
@@ -176,16 +180,14 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		}
 		break;
 	case SHRAPNEL:
-	case PARTICLE:
-		{
+	case PARTICLE: {
 			if (type == SHRAPNEL && direction == W_GRENADE && (index % SHRAP_DLT_IX_MOD) != 0) break; // optimization hack
 			float stime;
 			colorRGBA const scolor(get_glowing_obj_color(pos, time, object_types[type].lifetime, stime, (type == SHRAPNEL), 0));
 			if (stime < 1.0) add_dynamic_light(0.2, pos, scolor);
 		}
 		break;
-	case BALL:
-		{
+	case BALL: {
 			colorRGBA colors[NUM_DB_TIDS] = {BLUE, colorRGBA(1.0, 0.5, 0.5, 1.0), colorRGBA(0.5, 1.0, 0.5, 1.0)};
 			colorRGBA const color((game_mode == 2) ? colors[index%NUM_DB_TIDS] : colorRGBA(-1.0, -1.0, -1.0, 1.0));
 			add_dynamic_light(0.8, pos, color);
@@ -197,6 +199,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 			colorRGBA const scolor(get_glowing_obj_color(pos, time, object_types[type].lifetime, stime, 1, 0));
 			if (stime < 1.0) add_dynamic_light(0.5, pos, scolor);
 		}
+		break;
 	}
 }
 
@@ -449,27 +452,14 @@ void process_groups() {
 
 						// What about rolling objects (type_flags & OBJ_ROLLS) on the ground (status == 3)?
 						if (obj.status == 1 && is_over_mesh(pos) && !((obj_flags & XY_STOPPED) && (obj_flags & Z_STOPPED))) {
-							if (obj.flags & CAMERA_VIEW) { // smaller timesteps if camera view
-								spf = 4*LG_STEPS_PER_FRAME;
-							}
-							else if (type == PLASMA || type == BALL || type == SAWBLADE) {
-								spf = 3*LG_STEPS_PER_FRAME;
-							}
-							else if (type == ROCKET || type == SEEK_D || type == RAPT_PROJ) {
-								spf = 2*LG_STEPS_PER_FRAME;
-							}
-							else if (large_radius /*|| type == STAR5 || type == SHELLC*/ || type == FRAGMENT) {
-								spf = LG_STEPS_PER_FRAME;
-							}
-							else if (type == SHRAPNEL) {
-								spf = max(1, min(((obj.direction == W_GRENADE) ? 4 : 20), int(0.2*obj.velocity.mag())));
-							}
-							else if (type == PRECIP || (flags & PRECIPITATION)) {
-								spf = 1;
-							}
-							else {
-								spf = SM_STEPS_PER_FRAME;
-							}
+							if (obj.flags & CAMERA_VIEW) {spf = 4*LG_STEPS_PER_FRAME;} // smaller timesteps if camera view
+							else if (type == PLASMA || type == BALL || type == SAWBLADE) {spf = 3*LG_STEPS_PER_FRAME;}
+							else if (is_rocket_type(type)) {spf = 2*LG_STEPS_PER_FRAME;}
+							else if (large_radius /*|| type == STAR5 || type == SHELLC*/ || type == FRAGMENT) {spf = LG_STEPS_PER_FRAME;}
+							else if (type == SHRAPNEL) {spf = max(1, min(((obj.direction == W_GRENADE) ? 4 : 20), int(0.2*obj.velocity.mag())));}
+							else if (type == PRECIP || (flags & PRECIPITATION)) {spf = 1;}
+							else {spf = SM_STEPS_PER_FRAME;}
+
 							if (MORE_COLL_TSTEPS && obj.status == 1 && spf < LG_STEPS_PER_FRAME && pos.z < czmax && pos.z > czmin) {
 								point pos2(pos + obj.velocity*time); // makes precipitation slower, but collision detection is more correct
 								pos2.z -= grav_dz; // maybe want to try with and without this?
@@ -566,9 +556,11 @@ void process_groups() {
 					obj.status = 0;
 					if (otype.flags & EXPL_ON_COLL) {collision_detect_large_sphere(pos, radius, flags);}
 					blast_radius(pos, type, j, obj.source, 0);
-					bool const frozen(type == RAPT_PROJ && obj.direction == 1);
-					if (!frozen) {gen_smoke(pos);}
-					if (!frozen) {gen_fire(pos, ((type == PLASMA) ? obj.init_dir.x : rand_uniform(0.4, 1.0)), obj.source);}
+					
+					if (type != FREEZE_BOMB) {
+						gen_smoke(pos);
+						gen_fire(pos, ((type == PLASMA) ? obj.init_dir.x : rand_uniform(0.4, 1.0)), obj.source);
+					}
 					if (type == LANDMINE) {gen_landmine_scorch(obj.pos);}
 					if (type != PLASMA) {cur_frame_explosions.push_back(sphere_t(pos, radius));} // exploding cobjs only
 				}

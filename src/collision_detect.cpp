@@ -1530,8 +1530,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	obj.verify_data();
 		
 	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
-		bool const freeze(type == RAPT_PROJ && obj.direction == 1);
-		gen_explosion_decal((decal_pos - norm*o_radius), o_radius, norm, cobj, (cdir >> 1), (freeze ? ICE_C : BLACK));
+		gen_explosion_decal((decal_pos - norm*o_radius), o_radius, norm, cobj, (cdir >> 1), ((type == FREEZE_BOMB) ? ICE_C : BLACK));
 		obj.disable();
 	}
 	if (!obj.disabled()) {

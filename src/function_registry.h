@@ -599,7 +599,7 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bo
 void gen_landmine_scorch(point const &pos);
 int get_smiley_hit(vector3d &hdir, int index);
 void blast_radius(point const &pos, int type, int obj_index, int shooter, int chain_level);
-void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview, bool freeze=0);
+void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);
 void do_area_effect_damage(point const &pos, float effect_radius, float damage, int index, int source, int type);
 void switch_player_weapon(int val);
 void draw_beams(bool clear_at_end);

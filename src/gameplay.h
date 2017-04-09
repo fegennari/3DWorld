@@ -103,7 +103,8 @@ int const obj_weapons[NUM_TOT_OBJS] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, W_SAWBLADE, -1, -1, W_RAPTOR
+	-1, -1, -1, -1, -1, -1, W_SAWBLADE, -1, -1, W_RAPTOR,
+	W_RAPTOR
 };
 
 bool const damage_done_obj[NUM_TOT_OBJS] = {
@@ -112,7 +113,8 @@ bool const damage_done_obj[NUM_TOT_OBJS] = {
 	0,0,0,0,0,1,1,0,1,1,
 	1,1,1,1,0,0,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,
-	0,0,0,0,0,1,1,1,1,1
+	0,0,0,0,0,1,1,1,1,1,
+	1
 };
 
 string const obj_type_names[NUM_TOT_OBJS] = {
@@ -121,7 +123,8 @@ string const obj_type_names[NUM_TOT_OBJS] = {
 	"Projectile Hit", "Droplet", "Water Droplet", "Sand", "Dirt", "Rock", "Fragment", "Particle", "Health", "Shields",
 	"Powerup", "Weapon", "Ammo", "Pack", "Camera", "Precipitation", "Blast Radius", "Projectile", "Laser Beam", "Impact",
 	"Plasma Lightning Damage", "Laser", "Drowned", "Burned", "Fire", "Fell", "Froze", "Suffocated", "Crushed", "Poison Gas",
-	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport", "Saw Blade", "Material Sphere", "Collision", "Raptor Shot" // Telefrag?
+	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport", "Saw Blade", "Material Sphere", "Collision", "Raptor Shot", // Telefrag?
+	"Freeze Bomb"
 };
 
 string const powerup_names[NUM_POWERUPS] = {"Quad Damage", "Regeneration", "Shielding", "Haste", "Flight", "Invisibility"};

@@ -504,6 +504,9 @@ void init_objects() {
 	object_types[RAPT_PROJ].color          = LT_GRAY;
 	object_types[RAPT_PROJ].flags          = SPECULAR | SELECTABLE | OBJ_EXPLODES | EXPL_ON_COLL | COLL_DESTROYS;
 
+	object_types[FREEZE_BOMB]              = object_types[RAPT_PROJ]; // copy from RAPT_PROJ
+	object_types[FREEZE_BOMB].color        = FREEZE_COLOR;
+
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;
 		object_types[i].friction_factor = 0.9;
