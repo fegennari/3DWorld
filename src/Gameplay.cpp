@@ -900,7 +900,7 @@ bool default_obj_coll(int index, int obj_index, vector3d const &velocity, point 
 		valid_coll = smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, cobj_type);
 		if (valid_coll && cobj_type != MAT_SPHERE) {obj.disable();} // return?
 	}
-	obj.elastic_collision(position, energy, type); // partially elastic collision
+	if (type != LASER && type != BEAM && type != PARTICLE) {obj.elastic_collision(position, energy, type);} // partially elastic collision
 	return valid_coll;
 }
 
@@ -2247,7 +2247,7 @@ float get_projectile_range(point const &pos, vector3d vcf, float dist, float ran
 
 	if (coll) {
 		coll_obj &cobj(coll_objects.get_cobj(cindex));
-		if (cobj.cp.coll_func) {cobj.cp.coll_func(cobj.cp.cf_index, 0, zero_vector, pos, 0.0, PROJC);} // apply collision function
+		if (cobj.cp.coll_func) {cobj.cp.coll_func(cobj.cp.cf_index, 0, zero_vector, pos, 0.0, (check_splash ? PROJC : LASER));} // apply collision function
 		range = p2p_dist(coll_pos, pos);
 	}
 	if (splash_val > 0.0 && is_underwater(pos1)) {gen_line_of_bubbles(pos1, (pos + vcf*range));}
