@@ -234,11 +234,11 @@ void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA co
 
 
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv, float r, float den, float dark, float dam,
-	int src, int dt, bool as, float spread)
+	int src, int dt, bool as, float spread, bool no_lighting)
 {
 	if (!animate2 || is_underwater(pos) || is_under_mesh(pos)) return 0;
 	// Note: we scale by 0.62 since we're using BLUR_CENT_TEX rather than BLUR_TEX to draw smoke (to reduce fill rate)
-	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as, 1, 0, spread);
+	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as, 1, no_lighting, spread);
 	return 1;
 }
 
