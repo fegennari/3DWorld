@@ -37,6 +37,7 @@ read_hmap_modmap_filename ../models/Puget_Sound/hmap.mod
 write_hmap_modmap_filename ../models/Puget_Sound/hmap.mod
 
 end
+enable_tt_model_reflect 0
 two_sided_lighting 1
 enable_model3d_bump_maps 1
 model3d_winding_number_normal 1 # works better

@@ -46,7 +46,7 @@ hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
@@ -2952,7 +2952,9 @@ void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, 
 
 void draw_tiled_terrain(bool reflection_pass) {
 
-	render_models(0, reflection_pass, model3d_offset.get_xlate()); // not sure where this goes
+	if (!reflection_pass || enable_tt_model_reflect) {
+		render_models(0, reflection_pass, model3d_offset.get_xlate()); // not sure where this goes
+	}
 	//RESET_TIME;
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
