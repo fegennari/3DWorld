@@ -1429,8 +1429,6 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 	
 	// render all materials (opaque then transparent)
-	vector<pair<float, unsigned> > to_draw;
-
 	for (unsigned pass = 0; pass < (is_z_prepass ? 1U : 2U); ++pass) { // opaque, transparent
 		for (unsigned i = 0; i < materials.size(); ++i) {
 			if (materials[i].is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(materials[i].use_bump_map())))) {

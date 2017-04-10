@@ -411,6 +411,9 @@ class model3d {
 	typedef vect_smap_t<model_smap_data_t> per_model_smap_data;
 	map<rotation_t, per_model_smap_data> smap_data;
 
+	// temporaries to be reused
+	vector<pair<float, unsigned> > to_draw;
+
 	void update_bbox(polygon_t const &poly);
 
 public:

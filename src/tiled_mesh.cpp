@@ -2243,8 +2243,6 @@ void tile_draw_t::draw(bool reflection_pass) {
 	}
 
 	// determine potential occluders
-	vector<tile_t *> occluders;
-	vector<cube_t> test_cubes;
 	point const camera(get_camera_pos());
 
 	if ((display_mode & 0x08) && (display_mode & 0x01)) { // check occlusion when occlusion culling and mesh are enabled
@@ -2306,6 +2304,8 @@ void tile_draw_t::draw(bool reflection_pass) {
 		to_draw.push_back(make_pair(dist, tile));
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	} // for i
+	occluders.clear();
+	test_cubes.clear();
 	sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 
 	if (display_mode & 0x01) { // draw visible tiles

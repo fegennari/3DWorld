@@ -402,6 +402,8 @@ class tile_draw_t : public indexed_vbo_manager_t {
 		point cube_pts[4];
 		void calc_cube_top_points(cube_t const &bcube);
 	};
+	vector<tile_t *> occluders; // reused across draw calls
+	vector<cube_t> test_cubes; // reused across draw calls
 	void insert_tile(tile_t *tile);
 
 public:
