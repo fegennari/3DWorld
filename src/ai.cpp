@@ -843,7 +843,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	bool stuck(0), in_ice(0), no_up(0), no_down(0), using_dest_mark(0);
 
 	if ((player_rgen.rand() % (is_jumping ? 1000 : 4000)) == 0) {is_jumping ^= 1;}
-	if (is_jumping && powerup != PU_FLIGHT) {jump(obj.pos);}
+	if (is_jumping && !has_flight) {jump(obj.pos);}
 	
 	// check for stuck underwater
 	if (is_water_temp && underwater && !on_waypt_path) { // ok if on a waypoint path
@@ -956,8 +956,8 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			obj.pos.z = max(max(target_pos.z, obj.pos.z), (opos.z - (no_down ? 0.0f : float(radius*player_rgen.rand_uniform(0.2, 0.6)))));
 		}
 		else {
-			obj.pos.z = min(min((zmax + 0.5f), (ztop + 1.0f)), max(obj.pos.z, opos.z));
-			if (!no_up && (rand()&7) == 0) obj.pos.z += radius*player_rgen.rand_uniform(0.0, 0.5); // sometimes fly up
+			obj.pos.z = min(min((zmax + 0.5f), (max(ztop, czmax) + 1.0f)), max(obj.pos.z, opos.z));
+			if (!no_up && (rand()&7) == 0) {obj.pos.z += radius*player_rgen.rand_uniform(0.0, 0.5);} // sometimes fly up
 		}
 		if (!point_outside_mesh(xpos, ypos)) {
 			obj.pos.z = max(obj.pos.z, (mesh_height[ypos][xpos] + radius)); // just in case (i.e. mesh was changed when under ice)
