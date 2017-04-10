@@ -659,7 +659,8 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	if (obj.disabled()) return;
 	int min_ie(NO_SOURCE), min_ih(-1);
 	float diste(0.0), disth(0.0), health(obj.health);
-	vector<type_wt_t> types;
+	vector<type_wt_t> &types(target_types);
+	types.clear();
 	point targete(all_zeros), targeth(all_zeros);
 	int const last_target_visible(target_visible), last_target_type(target_type);
 	target_visible = 0;
@@ -1223,7 +1224,6 @@ void player_state::check_switch_weapon(int smiley_id) {
 		return;
 	}
 	// we get here even when game_mode==0, but that's ok
-	vector<pair<float, unsigned> > choices;
 	point const &pos(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos);
 	float min_weight(0.0);
 	unsigned chosen_weap(W_UNARMED);
@@ -1232,11 +1232,11 @@ void player_state::check_switch_weapon(int smiley_id) {
 		weapon = i;
 		if (no_weap_or_ammo()) continue;
 		float weight(player_rgen.rand_float());
-		if (!weapons[weapon].use_underwater && is_underwater(pos)) weight += 0.5;
+		if (!weapons[weapon].use_underwater && is_underwater(pos)) {weight += 0.5;}
 		float const range(weapon_range(0));
-		if (range > 0.0)  weight += ((target_in_range(pos) != 0) ? -0.2 : 0.8); // ranged weapon
-		if (i == W_BBBAT) weight *= 1.5;
-		if (i == W_SBALL) weight *= 1.2;
+		if (range > 0.0)  {weight += ((target_in_range(pos) != 0) ? -0.2 : 0.8);} // ranged weapon
+		if (i == W_BBBAT) {weight *= 1.5;}
+		if (i == W_SBALL) {weight *= 1.2;}
 		
 		if (chosen_weap == W_UNARMED || weight < min_weight) {
 			min_weight  = weight;

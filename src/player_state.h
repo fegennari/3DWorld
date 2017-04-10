@@ -178,6 +178,7 @@ struct player_state { // size = big
 	int p_weapons[NUM_WEAPONS], p_ammo[NUM_WEAPONS];
 	vector<unsigned char> tdata;
 	vector<int> balls;
+	vector<type_wt_t> target_types; // reused across frames in smiley_select_target()
 	map<unsigned, count_t> blocked_waypts;
 	waypt_used_set waypts_used;
 	unreachable_pts unreachable[2]; // {objects, waypoints}
