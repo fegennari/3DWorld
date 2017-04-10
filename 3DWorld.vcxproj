@@ -963,6 +963,7 @@
     <ResourceCompile Include="Script1.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="coll_objs_puget_sound.txt" />
     <Text Include="coll_objs_puzzle.txt" />
     <Text Include="coll_objs_san_miguel.txt" />
     <Text Include="config_puzzle.txt" />

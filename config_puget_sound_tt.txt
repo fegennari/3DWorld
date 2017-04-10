@@ -36,4 +36,16 @@ mh_filename_tiled_terrain ../models/Puget_Sound/ps_height_16K.bmp
 read_hmap_modmap_filename ../models/Puget_Sound/hmap.mod
 write_hmap_modmap_filename ../models/Puget_Sound/hmap.mod
 
+end
+two_sided_lighting 1
+enable_model3d_bump_maps 1
+model3d_winding_number_normal 1 # works better
+group_back_face_cull 0 # doesn't work
+model_calc_tan_vect 0
+invert_model_nmap_bscale 1
+use_z_prepass 0
+model_auto_tc_scale 10.0
+load_coll_objs 1
+coll_obj_file coll_objs_puget_sound.txt
+
 
