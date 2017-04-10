@@ -85,6 +85,21 @@ struct local_cube_map_smap_data_t : public local_smap_data_t { // to be implemen
 };
 
 
+struct rotation_t {
+	vector3d axis;
+	float angle; // in degrees
+
+	rotation_t() : axis(zero_vector), angle(0.0) {}
+	rotation_t(vector3d const &axis_, float angle_) : axis(axis_), angle(angle_) {}
+	bool operator==(rotation_t const &r) const {return (r.axis == axis && r.angle == angle);}
+	bool operator< (rotation_t const &r) const {return ((angle == r.angle) ? (axis < r.axis) : (angle < r.angle));}
+	void apply_gl() const {if (angle != 0.0) {rotate_about(angle, axis);}}
+	void rotate_point(point &pos, float sign) const {
+		if (angle != 0.0) {rotate_vector3d(axis, sign*TO_RADIANS*angle, pos);}
+	}
+};
+
+
 template<class SD> struct vect_smap_t : public vector<SD> { // one per light source (sun, moon)
 	void set_for_all_lights(shader_t &s, xform_matrix const *const mvm) const {
 		for (unsigned i = 0; i < size(); ++i) {operator[](i).set_smap_shader_for_light(s, i, mvm);}
@@ -93,10 +108,11 @@ template<class SD> struct vect_smap_t : public vector<SD> { // one per light sou
 		for (iterator i = begin(); i != end(); ++i) {i->free_gl_state();}
 		vector<SD>::clear();
 	}
-	void create_if_needed(cube_t const &bcube) {
+	void create_if_needed(cube_t const &bcube, rotation_t const *const inv_rot=nullptr) {
 		for (unsigned i = 0; i < size(); ++i) {
 			point lpos;
 			if (!light_valid_and_enabled(i, lpos)) continue;
+			if (inv_rot != nullptr) {inv_rot->rotate_point(lpos, 1.0);} // inverse rotation from shadow casting object
 			operator[](i).create_shadow_map_for_light(lpos, &bcube);
 		}
 	}

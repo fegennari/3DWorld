@@ -8,7 +8,7 @@
 #include "3DWorld.h"
 #include "collision_detect.h" // for polygon_t
 #include "cobj_bsp_tree.h" // for cobj_tree_tquads_t
-#include "shadow_map.h" // for smap_data_t
+#include "shadow_map.h" // for smap_data_t and rotation_t
 #include "gl_ext_arb.h"
 //#include <unordered_map>
 
@@ -72,20 +72,6 @@ struct geom_xform_t { // should be packed, can read/write as POD
 	}
 	bool operator==(geom_xform_t const &x) const;
 	bool operator!=(geom_xform_t const &x) const {return !operator==(x);}
-};
-
-
-struct rotation_t {
-	vector3d axis;
-	float angle; // in degrees
-
-	rotation_t() : axis(zero_vector), angle(0.0) {}
-	rotation_t(vector3d const &axis_, float angle_) : axis(axis_), angle(angle_) {}
-	bool operator==(rotation_t const &r) const {return (r.axis == axis && r.angle == angle);}
-	void apply_gl() const {if (angle != 0.0) {rotate_about(angle, axis);}}
-	void rotate_point(point &pos, float sign) const {
-		if (angle != 0.0) {rotate_vector3d(axis, sign*TO_RADIANS*angle, pos);}
-	}
 };
 
 
@@ -422,7 +408,8 @@ class model3d {
 		virtual void render_scene_shadow_pass(point const &lpos);
 		//virtual bool needs_update(point const &lpos);
 	};
-	vect_smap_t<model_smap_data_t> smap_data;
+	typedef vect_smap_t<model_smap_data_t> per_model_smap_data;
+	map<rotation_t, per_model_smap_data> smap_data;
 
 	void update_bbox(polygon_t const &poly);
 
@@ -456,17 +443,17 @@ public:
 	void optimize();
 	void clear();
 	void free_context();
-	void clear_smaps() {smap_data.clear();} // frees GL state
+	void clear_smaps(); // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 		unsigned bmap_pass_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{
-		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, unbound_mat, xlate, mvm);
+		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, unbound_mat, rotation_t(), xlate, mvm);
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-		base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm=nullptr);
+		base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm=nullptr);
 	void render_with_xform(shader_t &shader, model3d_xform_t const &xf, xform_matrix const &mvm, bool is_shadow_pass,
 		int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode);
 	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate);

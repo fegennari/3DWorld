@@ -1341,7 +1341,6 @@ void model3d::clear() {
 	textures_loaded = 0;
 }
 
-
 void model3d::free_context() {
 
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
@@ -1351,6 +1350,14 @@ void model3d::free_context() {
 	unbound_geom.free_vbos();
 	clear_smaps();
 	free_texture(model_refl_tid);
+}
+
+void model3d::clear_smaps() { // frees GL state
+	
+	for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {
+		for (auto j = i->second.begin(); j != i->second.end(); ++j) {j->free_gl_state();}
+	}
+	smap_data.clear();
 }
 
 
@@ -1398,10 +1405,10 @@ void set_def_spec_map() {
 }
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
-	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm)
+	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
-	if (is_normal_pass) {smap_data.set_for_all_lights(shader, mvm);}
+	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
 
 	if (group_back_face_cull && reflection_pass != 2) { // okay enable culling if is_shadow_pass on some scenes
 		if (reflection_pass == 1) {glCullFace(GL_FRONT);} // the reflection pass uses a mirror, which changes the winding direction, so we cull the front faces instead
@@ -1530,7 +1537,7 @@ void model3d::render_with_xform(shader_t &shader, model3d_xform_t const &xf, xfo
 	base_mat_t ub_mat(unbound_mat);
 	xf.apply_material_override(ub_mat);
 	//point xlate2(xlate); // complex transforms, occlusion culling disabled
-	render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, nullptr, &mvm);
+	render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, xf, nullptr, &mvm);
 	// cptw2 dtor called here
 }
 
@@ -1639,9 +1646,15 @@ void model3d::setup_shadow_maps() {
 	if (!shadow_map_enabled()) return; // disabled
 
 	if (smap_data.empty()) { // allocate new shadow maps
-		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(model_smap_data_t(6+i, shadow_map_sz, this));} // uses tu_id 6 and 7
+		if (transforms.empty()) {smap_data[rotation_t()];} // no transforms case, insert def rotation in map
+		for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {smap_data[*xf];}
 	}
-	smap_data.create_if_needed(get_bcube());
+	for (auto m = smap_data.begin(); m != smap_data.end(); ++m) {
+		if (m->second.empty()) {
+			for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {m->second.push_back(model_smap_data_t(6+i, shadow_map_sz, this));} // uses tu_id 6 and 7
+		}
+		m->second.create_if_needed(get_bcube(), &m->first); // inverse rotate light source
+	}
 }
 
 
