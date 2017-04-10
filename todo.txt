@@ -3,7 +3,7 @@ Draw more distant tiles (larger/lower res at high delta-z)
 TT lower res distant shadow map for tiled terrain mode with smooth blend
 
 Load/display model3d models in tiled terrain mode
-  - Model Shadow Maps - Fix Scale and Rotations
+  - Model Shadow Maps - Fix Scale
   - Model LOD - use mesh simplification
 
 Gameplay in tiled terrain mode
