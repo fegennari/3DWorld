@@ -1656,10 +1656,10 @@ void model3d::setup_shadow_maps() {
 }
 
 
-cube_t model3d::calc_bcube_including_transforms() const {
+cube_t model3d::calc_bcube_including_transforms() { // non-const because bcube_xf is cached
 
-	if (transforms.empty()) {return bcube;} // no transforms case
-	cube_t bcube_xf(all_zeros_cube); // will return this if transforms.empty()
+	if (transforms.empty()) return bcube; // no transforms case
+	if (bcube_xf != all_zeros_cube) return bcube_xf; // already calculated
 	
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		cube_t const bc(xf->get_xformed_cube(bcube));
@@ -1937,12 +1937,12 @@ bool model3ds::has_any_transforms() const {
 }
 
 
-cube_t model3ds::get_bcube(bool only_reflective) const {
+cube_t model3ds::get_bcube(bool only_reflective) { // Note: calculates bcubes, so non-const
 
 	cube_t bcube(all_zeros_cube); // will return this if empty()
 	bool bcube_set(0);
 
-	for (const_iterator m = begin(); m != end(); ++m) {
+	for (iterator m = begin(); m != end(); ++m) {
 		cube_t const bb(m->calc_bcube_including_transforms());
 		if (only_reflective && !m->is_planar_reflective()) continue;
 		if (!bcube_set) {bcube = bb; bcube_set = 1;} else {bcube.union_with_cube(bb);}

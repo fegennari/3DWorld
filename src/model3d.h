@@ -383,7 +383,7 @@ class model3d {
 	geometry_t<vert_norm_tc> unbound_geom;
 	base_mat_t unbound_mat;
 	vector<polygon_t> split_polygons_buffer;
-	cube_t bcube;
+	cube_t bcube, bcube_xf;
 	unsigned model_refl_tid, model_refl_tsize;
 	int reflective; // reflective: 0=none, 1=planar, 2=cube map
 	int indoors; // 0=no/outdoors, 1=yes/indoors, 2=unknown
@@ -421,7 +421,7 @@ public:
 
 	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
-		bcube(all_zeros_cube), model_refl_tid(0), model_refl_tsize(0), reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0),
+		bcube(all_zeros_cube), bcube_xf(all_zeros), model_refl_tid(0), model_refl_tsize(0), reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0),
 		needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), textures_loaded(0), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
@@ -465,7 +465,7 @@ public:
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
-	cube_t calc_bcube_including_transforms() const;
+	cube_t calc_bcube_including_transforms();
 	void build_cobj_tree(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
@@ -494,7 +494,7 @@ struct model3ds : public deque<model3d> {
 	void render(bool is_shadow_pass, int reflection_pass, vector3d const &xlate); // non-const
 	void ensure_reflection_cube_maps();
 	bool has_any_transforms() const;
-	cube_t get_bcube(bool only_reflective) const;
+	cube_t get_bcube(bool only_reflective);
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	void write_to_cobj_file(std::ostream &out) const;
