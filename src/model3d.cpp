@@ -1545,6 +1545,7 @@ void model3d::render_with_xform(shader_t &shader, model3d_xform_t const &xf, xfo
 void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 	unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate)
 {
+	assert(trans_op_mask > 0 && trans_op_mask <= 3);
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	
 	if (reflect_mode) {
@@ -1582,8 +1583,23 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, &xlate, &mvm);
 	}
-	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		render_with_xform(shader, *xf, mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
+	if (trans_op_mask < 3) { // drawing opaque and transparent in separate passes, sort by distance (TT mode)
+		to_draw_xf.resize(transforms.size());
+		
+		for (unsigned i = 0; i < transforms.size(); ++i) {
+			float const dist(distance_to_camera(transforms[i].tv + xlate)); // only use translate; assumes models are approx centered and rotated about their centers
+			to_draw_xf[i] = make_pair(((trans_op_mask == 1) ? dist : -dist), i); // opaque: front-to-back, transparent: back-to-front
+		}
+		sort(to_draw_xf.begin(), to_draw_xf.end());
+
+		for (auto i = to_draw_xf.begin(); i != to_draw_xf.end(); ++i) {
+			render_with_xform(shader, transforms[i->second], mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
+		}
+	}
+	else {
+		for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
+			render_with_xform(shader, *xf, mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
+		}
 	}
 	// cptw dtor called here
 }

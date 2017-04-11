@@ -412,7 +412,7 @@ class model3d {
 	map<rotation_t, per_model_smap_data> smap_data;
 
 	// temporaries to be reused
-	vector<pair<float, unsigned> > to_draw;
+	vector<pair<float, unsigned> > to_draw, to_draw_xf;
 
 	void update_bbox(polygon_t const &poly);
 
