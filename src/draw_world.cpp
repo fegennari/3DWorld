@@ -42,7 +42,7 @@ pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
-extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps;
+extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps, enable_tt_model_indir;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
@@ -225,7 +225,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 
 	bool const hemi_lighting(!have_indir_smoke_tex);
 	use_shadow_map &= shadow_map_enabled();
-	indir_lighting &= have_indir_smoke_tex;
+	indir_lighting &= (have_indir_smoke_tex || (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN));
 	dlights        &= (dl_tid > 0 && has_dl_sources);
 	s.check_for_fog_disabled();
 	if (enable_gamma_correct) {s.set_prefix("#define ENABLE_GAMMA_CORRECTION", 1);} // FS

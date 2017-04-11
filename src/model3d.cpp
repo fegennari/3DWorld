@@ -22,7 +22,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
-extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, no_subdiv_model;
+extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
@@ -1350,6 +1350,7 @@ void model3d::free_context() {
 	unbound_geom.free_vbos();
 	clear_smaps();
 	free_texture(model_refl_tid);
+	free_texture(model_indir_tid);
 }
 
 void model3d::clear_smaps() { // frees GL state
@@ -1548,6 +1549,12 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	assert(trans_op_mask > 0 && trans_op_mask <= 3);
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	
+	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
+		if (model_indir_tid == 0) {
+			// FIXME: create model_indir_tid
+		}
+		if (model_indir_tid != 0) {set_3d_texture_as_current(model_indir_tid, 1);} // indir texture uses TU_ID=1
+	}
 	if (reflect_mode) {
 		shader.add_uniform_float("metalness", metalness); // may or may not be used
 		shader.add_uniform_float("cube_map_reflect_mipmap_level", 0.0); // may or may not be used; should actually be per-material, based on specular exponent
@@ -1920,7 +1927,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, use_spec_map, use_mvm, two_sided_lighting,
+					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, use_smap, use_bmap, use_spec_map, use_mvm, two_sided_lighting,
 						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
