@@ -236,6 +236,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_shadow_map), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("use_water_coverage", use_wet_mask), 1); // FS
 	set_dlights_booleans(s, dlights, 1, no_dl_smap); // FS
+	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_pre(s);}
 }
 
 
@@ -274,6 +275,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	if (use_shadow_map && shadow_map_enabled() && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
 	set_active_texture(0);
 	s.clear_specular();
+	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);}
 }
 
 
