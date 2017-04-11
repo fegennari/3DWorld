@@ -451,15 +451,16 @@ public:
 	void bind_all_used_tids();
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
-		unsigned bmap_pass_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
+		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{
-		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, unbound_mat, rotation_t(), xlate, mvm);
+		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, unbound_mat, rotation_t(), xlate, mvm);
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-		base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm=nullptr);
+		int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm=nullptr);
 	void render_with_xform(shader_t &shader, model3d_xform_t const &xf, xform_matrix const &mvm, bool is_shadow_pass,
-		int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode);
-	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate);
+		int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask);
+	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+		unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate);
 	void ensure_reflection_cube_map();
 	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
 	void setup_shadow_maps();
@@ -491,7 +492,7 @@ struct model3ds : public deque<model3d> {
 
 	void clear();
 	void free_context();
-	void render(bool is_shadow_pass, int reflection_pass, vector3d const &xlate); // non-const
+	void render(bool is_shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate); // non-const
 	void ensure_reflection_cube_maps();
 	bool has_any_transforms() const;
 	cube_t get_bcube(bool only_reflective);
@@ -520,7 +521,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
-void render_models(bool shadow_pass, int reflection_pass, vector3d const &xlate=zero_vector);
+void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask=3, vector3d const &xlate=zero_vector);
 void ensure_model_reflection_cube_maps();
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);

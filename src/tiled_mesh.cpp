@@ -2406,7 +2406,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
-	render_models(1, 0, model3d_offset.get_xlate()); // VFC should work here (somewhat?) for models
+	render_models(1, 0, 3, model3d_offset.get_xlate()); // both transparent and opaque; VFC should work here (somewhat?) for models
 	for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
@@ -2950,11 +2950,14 @@ void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, 
 	}
 }
 
+void render_tt_models(bool reflection_pass, bool transparent_pass) {
+	if (reflection_pass && !enable_tt_model_reflect) return;
+	render_models(0, reflection_pass, (transparent_pass ? 2 : 1), model3d_offset.get_xlate());
+}
+
 void draw_tiled_terrain(bool reflection_pass) {
 
-	if (!reflection_pass || enable_tt_model_reflect) {
-		render_models(0, reflection_pass, model3d_offset.get_xlate()); // not sure where this goes
-	}
+	render_tt_models(reflection_pass, 0); // opaque pass
 	//RESET_TIME;
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
@@ -2997,6 +3000,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 	if (!reflection_pass && camera_surf_collide) {
 		//int const tid(get_tiled_terrain_tid_under_point(get_camera_pos())); // TESTING
 	}
+	render_tt_models(reflection_pass, 1); // transparent pass
 }
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}

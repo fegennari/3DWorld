@@ -1404,8 +1404,8 @@ void set_def_spec_map() {
 	if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 }
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
-	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm)
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
+	int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
@@ -1416,7 +1416,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 
 	// render geom that was not bound to a material
-	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0) { // enabled, not in bump map only pass
+	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0 && (trans_op_mask & 1)) { // enabled, not in bump map only pass; assume opaque
 		if (is_normal_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
 			assert(unbound_mat.tid >= 0);
 			select_texture(unbound_mat.tid);
@@ -1430,6 +1430,8 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	
 	// render all materials (opaque then transparent)
 	for (unsigned pass = 0; pass < (is_z_prepass ? 1U : 2U); ++pass) { // opaque, transparent
+		if (!(trans_op_mask & (1<<pass))) continue; // wrong opaque vs. transparent pass
+
 		for (unsigned i = 0; i < materials.size(); ++i) {
 			if (materials[i].is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(materials[i].use_bump_map())))) {
 				to_draw.push_back(make_pair(materials[i].draw_order_score, i));
@@ -1526,7 +1528,7 @@ void model3d::set_target_translate_scale(point const &target_pos, float target_r
 }
 
 void model3d::render_with_xform(shader_t &shader, model3d_xform_t const &xf, xform_matrix const &mvm, bool is_shadow_pass,
-	int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode)
+	int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask)
 {
 	if (!is_cube_visible_to_camera(xf.get_xformed_cube(bcube), is_shadow_pass)) return; // Note: xlate has already been applied to camera_pdu
 	// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
@@ -1535,13 +1537,14 @@ void model3d::render_with_xform(shader_t &shader, model3d_xform_t const &xf, xfo
 	base_mat_t ub_mat(unbound_mat);
 	xf.apply_material_override(ub_mat);
 	//point xlate2(xlate); // complex transforms, occlusion culling disabled
-	render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, xf, nullptr, &mvm);
+	render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, ub_mat, xf, nullptr, &mvm);
 	// cptw2 dtor called here
 }
 
 // non-const due to vbo caching, normal computation, etc.
-void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
-
+void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+	unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate)
+{
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	
 	if (reflect_mode) {
@@ -1577,10 +1580,10 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	bind_all_used_tids();
 
 	if (transforms.empty()) { // no transforms case
-		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &xlate, &mvm);
+		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, &xlate, &mvm);
 	}
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		render_with_xform(shader, *xf, mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode);
+		render_with_xform(shader, *xf, mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
 	}
 	// cptw dtor called here
 }
@@ -1633,7 +1636,7 @@ void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) {
 		shader_t s;
 		setup_smap_shader(s, (sam_pass != 0));
-		model->render_materials_def(s, 1, 0, 0, (sam_pass == 1), 3, &zero_vector); // no transforms
+		model->render_materials_def(s, 1, 0, 0, (sam_pass == 1), 3, 3, &zero_vector); // no transforms; both opaque and partially transparent
 		s.end_shader();
 	}
 }
@@ -1846,7 +1849,7 @@ void model3ds::free_context() {
 }
 
 
-void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &xlate) { // Note: xlate is only used in tiled terrain mode
+void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // Note: xlate is only used in tiled terrain mode
 	
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
@@ -1873,12 +1876,12 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &
 		cerr << "Error: Cannot mix planar reflections and cube map reflections for model3ds" << endl;
 		exit(1); // FIXME: better/earlier error? make this work?
 	}
-	if (use_z_prepass && !is_shadow_pass && reflection_pass == 0) { // check use_mvm?
+	if (use_z_prepass && !is_shadow_pass && reflection_pass == 0 && (trans_op_mask & 1)) { // check use_mvm?
 		// faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
 		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
 		s.begin_color_only_shader(BLACK); // don't even need colors, only need depth
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
-		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, 0, xlate);}
+		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, 0, trans_op_mask, xlate);}
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		s.end_shader();
 		glDepthFunc(GL_LEQUAL);
@@ -1914,7 +1917,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &
 				}
 				for (iterator m = begin(); m != end(); ++m) { // non-const
 					if (any_non_reflective && (reflect_mode != 0) && (ref_pass != 0) != m->is_reflective()) continue; // wrong reflection pass for this object
-					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, xlate);
+					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, trans_op_mask, xlate);
 				}
 				if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
 				s.clear_specular(); // may be unnecessary
@@ -1990,8 +1993,8 @@ void model3d_stats_t::print() const {
 void free_model_context() {
 	all_models.free_context();
 }
-void render_models(bool shadow_pass, int reflection_pass, vector3d const &xlate) {
-	all_models.render(shadow_pass, reflection_pass, xlate);
+void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) {
+	all_models.render(shadow_pass, reflection_pass, trans_op_mask, xlate);
 }
 void ensure_model_reflection_cube_maps() {
 	all_models.ensure_reflection_cube_maps();

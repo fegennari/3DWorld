@@ -56,7 +56,7 @@ public:
 		local_rotate.apply_gl();
 		uniform_scale(radius / (0.5*bcube.max_len()));
 		translate_to(-bcube.get_cube_center()); // cancel out model local translate
-		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, model.get_unbound_material(), rotation_t(), nullptr);
+		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
 		fgPopMatrix();
 		camera_pdu.valid = camera_pdu_valid;
 	}
