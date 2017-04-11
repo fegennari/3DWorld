@@ -255,16 +255,15 @@ lmcell *lmap_manager_t::get_lmcell(point const &p) { // round to center
 
 template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell) {
 
-	assert(nonempty_bins != NULL);
 	if (vlmap == NULL) {matrix_gen_2d(vlmap);} // create column headers once
 	lm_zsize = zsize;
 	vldata_alloc.resize(max(nbins, 1U), init_lmcell); // make size at least 1, even if there are no bins, so we can test on emptiness
 	unsigned cur_v(0);
 
-	// initialize lightmap
+	// initialize light volume
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			if (!nonempty_bins[i][j]) {
+			if (nonempty_bins != nullptr && !nonempty_bins[i][j]) { // nonempty_bins is used for sparse mode
 				vlmap[i][j] = NULL;
 				continue;
 			}
