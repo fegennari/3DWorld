@@ -9,6 +9,7 @@
 #include "vertex_opt.h"
 #include "voxels.h" // for get_cur_model_edges_as_cubes
 #include "csg.h" // for clip_polygon_to_cube
+#include "lightmap.h" // for lmap_manager_t
 #include <fstream>
 #include <queue>
 
@@ -24,7 +25,7 @@ extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effect
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model;
 extern unsigned shadow_map_sz, reflection_tid;
-extern int display_mode;
+extern int display_mode, MESH_SIZE[3];
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
@@ -1550,9 +1551,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
-		if (model_indir_tid == 0) {
-			// FIXME: create model_indir_tid
-		}
+		if (model_indir_tid == 0) {create_indir_texture();}
 		if (model_indir_tid != 0) {set_3d_texture_as_current(model_indir_tid, 1);} // indir texture uses TU_ID=1
 	}
 	if (reflect_mode) {
@@ -1609,6 +1608,34 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 		}
 	}
 	// cptw dtor called here
+}
+
+void model3d::create_indir_texture() {
+
+	unsigned const zsize(MESH_SIZE[2]), tot_sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
+	if (tot_sz == 0) return; // nothing to do (error?)
+	lmap_manager_t local_lmap_manager; // FIXME: store in the model3d and cache for reuse on context change?
+	lmcell init_lmcell;
+	unsigned char **need_lmcell = nullptr;
+	local_lmap_manager.alloc(tot_sz, zsize, need_lmcell, init_lmcell);
+	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
+
+	for (unsigned y = 0; y < (unsigned)MESH_Y_SIZE; ++y) {
+		for (unsigned x = 0; x < (unsigned)MESH_X_SIZE; ++x) {
+			unsigned const off(zsize*(y*MESH_X_SIZE + x));
+			lmcell const *const vlm(local_lmap_manager.get_column(x, y));
+			assert(vlm != nullptr); // not supported in this flow
+
+			for (unsigned z = 0; z < zsize; ++z) {
+				unsigned const off2(ncomp*(off + z));
+				colorRGB color;
+				vlm[z].get_final_color(color, 1.0, 1.0);
+				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
+			} // for z
+		}
+	}
+	model_indir_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
+	//cout << TXT(zsize) << TXT(tot_sz) << TXT(model_indir_tid) << endl;
 }
 
 void model3d::ensure_reflection_cube_map() {

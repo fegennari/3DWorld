@@ -415,6 +415,7 @@ class model3d {
 	vector<pair<float, unsigned> > to_draw, to_draw_xf;
 
 	void update_bbox(polygon_t const &poly);
+	void create_indir_texture();
 
 public:
 	texture_manager &tmgr; // stores all textures
