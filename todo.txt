@@ -3,8 +3,22 @@ Draw more distant tiles (larger/lower res at high delta-z)
 TT lower res distant shadow map for tiled terrain mode with smooth blend
 
 Load/display model3d models in tiled terrain mode
-  - Model Shadow Maps - Fix Scale
-  - Model LOD - use mesh simplification
+  - Support for array creation
+  - Distance culling
+    - Faster early reject test before distance sort
+	- Group into tiles (8x8 mesh tiles in size)
+  - Indirect lighting (per model, shared across instances/transforms/orients)
+    - Coordinate space local to untransformed model
+	- Precompute and store on disk
+  - Collision detection for camera
+    - BVH + downward ray cast
+  - Calculate z pos from terrain
+  - Model Shadow Maps
+    - Fix scaled model shadows
+	- Shadows between different models
+  - Model LOD
+    - Mesh Simplification
+	- Billboards
 
 Gameplay in tiled terrain mode
   - Dynamic Objects
