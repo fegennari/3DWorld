@@ -1554,6 +1554,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
 		if (model_indir_tid == 0) {create_indir_texture();}
 		if (model_indir_tid != 0) {set_3d_texture_as_current(model_indir_tid, 1);} // indir texture uses TU_ID=1
+		set_local_model_scene_bounds(shader);
 	}
 	if (reflect_mode) {
 		shader.add_uniform_float("metalness", metalness); // may or may not be used
@@ -1625,6 +1626,8 @@ void model3d::create_indir_texture() {
 	local_lmap_manager.alloc(tot_sz, zsize, need_lmcell, init_lmcell);
 	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
 
+	// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds
+
 	for (unsigned y = 0; y < (unsigned)MESH_Y_SIZE; ++y) {
 		for (unsigned x = 0; x < (unsigned)MESH_X_SIZE; ++x) {
 			unsigned const off(zsize*(y*MESH_X_SIZE + x));
@@ -1635,12 +1638,18 @@ void model3d::create_indir_texture() {
 				unsigned const off2(ncomp*(off + z));
 				colorRGB color;
 				vlm[z].get_final_color(color, 1.0, 1.0);
+				//color = colorRGBA(float(y)/MESH_Y_SIZE, float(x)/MESH_X_SIZE, float(z)/zsize, 1.0); // for debugging
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
 			} // for z
 		}
 	}
 	model_indir_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
 	//cout << TXT(zsize) << TXT(tot_sz) << TXT(model_indir_tid) << endl;
+}
+
+void model3d::set_local_model_scene_bounds(shader_t &s) { // tight bounds
+	s.add_uniform_vector3d("scene_llc",   bcube.get_llc());
+	s.add_uniform_vector3d("scene_scale", bcube.get_size());
 }
 
 void model3d::ensure_reflection_cube_map() {
@@ -2169,7 +2178,7 @@ void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) 
 
 	if (pos.z > mesh_zval) { // above the mesh
 		assert(step_height >= 0.0);
-		all_models.build_cobj_trees(1);
+		all_models.build_cobj_trees(1); // FIXME: only create if pos is within the bcube of a model
 		point cpos(pos);
 		vector3d cnorm; // unused
 		colorRGBA color; // unused

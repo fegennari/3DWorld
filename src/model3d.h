@@ -465,6 +465,7 @@ public:
 	void ensure_reflection_cube_map();
 	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
 	void setup_shadow_maps();
+	void set_local_model_scene_bounds(shader_t &s);
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
 	cube_t calc_bcube_including_transforms();
