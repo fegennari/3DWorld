@@ -1589,20 +1589,24 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, &xlate, &mvm);
 	}
-	if (trans_op_mask < 3) { // drawing opaque and transparent in separate passes, sort by distance (TT mode)
-		to_draw_xf.resize(transforms.size());
+	else if (world_mode == WMODE_INF_TERRAIN) {
+		//timer_t timer("Draw Models");
+		float const view_dist(get_tt_fog_based_far_clip(0.0) + bcube.get_max_extent());
+		to_draw_xf.clear();
 		
 		for (unsigned i = 0; i < transforms.size(); ++i) {
 			float const dist(distance_to_camera(transforms[i].tv + xlate)); // only use translate; assumes models are approx centered and rotated about their centers
-			to_draw_xf[i] = make_pair(((trans_op_mask == 1) ? dist : -dist), i); // opaque: front-to-back, transparent: back-to-front
+			if (dist > view_dist) continue; // too far away
+			to_draw_xf.emplace_back(((trans_op_mask == 1) ? dist : -dist), i); // opaque: front-to-back, transparent: back-to-front
 		}
-		sort(to_draw_xf.begin(), to_draw_xf.end());
-
+		if (trans_op_mask < 3) { // drawing opaque and transparent in separate passes, sort by distance
+			sort(to_draw_xf.begin(), to_draw_xf.end());
+		}
 		for (auto i = to_draw_xf.begin(); i != to_draw_xf.end(); ++i) {
 			render_with_xform(shader, transforms[i->second], mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
 		}
 	}
-	else {
+	else { // ground mode, no sorting or distance culling
 		for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 			render_with_xform(shader, *xf, mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
 		}
