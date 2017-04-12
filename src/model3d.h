@@ -470,7 +470,8 @@ public:
 	cube_t const &get_bcube() const {return bcube;}
 	cube_t calc_bcube_including_transforms();
 	void build_cobj_tree(bool verbose);
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
+	bool check_coll_line_cur_xf(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact);
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
 	bool get_needs_bump_maps () const {return needs_bump_maps;}
 	bool uses_spec_map()        const {return has_spec_maps;}
@@ -499,7 +500,7 @@ struct model3ds : public deque<model3d> {
 	bool has_any_transforms() const;
 	cube_t get_bcube(bool only_reflective);
 	void build_cobj_trees(bool verbose);
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);
 	void write_to_cobj_file(std::ostream &out) const;
 };
 

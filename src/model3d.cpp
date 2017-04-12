@@ -1746,21 +1746,27 @@ void model3d::build_cobj_tree(bool verbose) {
 	PRINT_TIME(" Cobj Tree Create (from model3d)");
 }
 
+bool model3d::check_coll_line_cur_xf(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) {
+	if (!check_line_clip(p1, p2, bcube.d)) return 0;
+	build_cobj_tree(1);
+	return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);
+}
 
-bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+// Note: const as long as build_bvh_if_needed=0
+bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed) {
 
-	if (coll_tree.is_empty()) return 0;
-	if (transforms.empty()) {return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);}
+	if (!build_bvh_if_needed && coll_tree.is_empty()) return 0;
+	//timer_t timer("Check Coll Line");
+	if (transforms.empty()) {return check_coll_line_cur_xf(p1, p2, cpos, cnorm, color, exact);}
 	bool coll(0);
 	point cur(p2);
 
-	// Note: this case unused/untested
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		point p1x(p1), p2x(cur);
 		xf->inv_xform_pos(p1x);
 		xf->inv_xform_pos(p2x);
 
-		if (coll_tree.check_coll_line(p1x, p2x, cpos, cnorm, color, exact)) { // Note: only modifies cnorm and color if a collision is found
+		if (check_coll_line_cur_xf(p1x, p2x, cpos, cnorm, color, exact)) { // Note: only modifies cnorm and color if a collision is found
 			xf->xform_pos(cpos);
 			xf->xform_pos_rm(cnorm);
 			coll = 1;
@@ -2023,13 +2029,13 @@ void model3ds::build_cobj_trees(bool verbose) {
 }
 
 
-bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed) {
 
 	bool ret(0);
 	point end_pos(p2);
 
-	for (const_iterator m = begin(); m != end(); ++m) {
-		if (m->check_coll_line(p1, end_pos, cpos, cnorm, color, exact)) {
+	for (iterator m = begin(); m != end(); ++m) { // Note: const as long as build_bvh_if_needed=0
+		if (m->check_coll_line(p1, end_pos, cpos, cnorm, color, exact, build_bvh_if_needed)) {
 			end_pos = cpos; // advance so that we get the closest intersection point to p1
 			ret = 1;
 		}
@@ -2178,7 +2184,6 @@ void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) 
 
 	if (pos.z > mesh_zval) { // above the mesh
 		assert(step_height >= 0.0);
-		all_models.build_cobj_trees(1); // FIXME: only create if pos is within the bcube of a model
 		point cpos(pos);
 		vector3d cnorm; // unused
 		colorRGBA color; // unused
@@ -2189,7 +2194,7 @@ void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) 
 		p2.z  = mesh_zval;
 		
 		// ray cast from step height above current point down to mesh
-		if (all_models.check_coll_line(p1, p2, cpos, cnorm, color, 1)) {
+		if (all_models.check_coll_line(p1, p2, cpos, cnorm, color, 1, 1)) { // exact=1 build_bvh_if_needed=1
 			//cout << TXT(pos.z) << TXT(step_height) << TXT(mesh_zval) << TXT(cpos.z) << endl;
 			pos.z = cpos.z; // only update zval
 			return;
