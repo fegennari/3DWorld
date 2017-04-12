@@ -40,6 +40,7 @@ bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
 string texture_str(int tid);
+vector3d get_tiled_terrain_model_xlate();
 
 
 // ************ texture_manager ************
@@ -2163,5 +2164,29 @@ void add_transform_for_cur_model(model3d_xform_t const &xf) {
 cube_t get_all_models_bcube(bool only_reflective) {return all_models.get_bcube(only_reflective);}
 
 void write_models_to_cobj_file(ostream &out) {all_models.write_to_cobj_file(out);}
+
+void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) {
+
+	if (pos.z > mesh_zval) { // above the mesh
+		assert(step_height >= 0.0);
+		all_models.build_cobj_trees(1);
+		point cpos(pos);
+		vector3d cnorm; // unused
+		colorRGBA color; // unused
+		vector3d const xlate(get_tiled_terrain_model_xlate());
+		assert(xlate.z == 0.0);
+		point p1(pos - xlate), p2(p1);
+		p1.z += step_height;
+		p2.z  = mesh_zval;
+		
+		// ray cast from step height above current point down to mesh
+		if (all_models.check_coll_line(p1, p2, cpos, cnorm, color, 1)) {
+			//cout << TXT(pos.z) << TXT(step_height) << TXT(mesh_zval) << TXT(cpos.z) << endl;
+			pos.z = cpos.z; // only update zval
+			return;
+		}
+	}
+	pos.z = mesh_zval; // no model collision, place no mesh
+}
 
 

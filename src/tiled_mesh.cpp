@@ -97,6 +97,8 @@ float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
 float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile_width();}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
+vector3d get_tiled_terrain_model_xlate() {return model3d_offset.get_xlate();}
+
 bool enable_instanced_pine_trees() {
 	if (use_instanced_pine_trees) return 1;
 	float const ntrees_mult(vegetation*sm_tree_density*tree_density_thresh*tree_scale*tree_scale);

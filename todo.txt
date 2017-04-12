@@ -7,8 +7,7 @@ Load/display model3d models in tiled terrain mode
   - Indirect lighting (per model, shared across instances/transforms/orients)
     - Coordinate space local to untransformed model
 	- Precompute and store on disk
-  - Collision detection for camera
-    - BVH + downward ray cast
+  - Collision detection for camera against vertical surfaces
   - Calculate z pos from terrain
   - Model Shadow Maps
     - Fix scaled model shadows

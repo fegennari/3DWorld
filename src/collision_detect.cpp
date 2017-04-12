@@ -1706,8 +1706,10 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		pos.y = camera_obj.pos.y;
 		if (!cflight) {player_clip_to_scene(pos);}
 	}
-	else if (!cflight) {
-		pos.z           = int_mesh_zval_pt_off(pos, 1, 0) + radius;
+	else if (!cflight) { // tiled terrain mode
+		pos.z -= radius; // bottom of camera sphere
+		adjust_zval_for_model_coll(pos, int_mesh_zval_pt_off(pos, 1, 0), C_STEP_HEIGHT*radius);
+		pos.z += radius;
 		camera_last_pos = pos;
 		camera_change   = 0;
 		return; // infinite terrain mode
