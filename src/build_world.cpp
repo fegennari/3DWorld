@@ -1058,7 +1058,7 @@ void add_model_polygons_to_cobjs(vector<coll_tquad> const &ppts, coll_obj &cobj,
 }
 
 // returns error string
-string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float scale, bool has_layer, model3d_xform_t &model_xf) {
+string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float scale, bool has_layer, model3d_xform_t const &model_xf) {
 
 	// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from quad polygons (voxels), 6=cubes from edges
 	bool const group_cobjs(model_xf.group_cobjs_level >= 1);
@@ -1072,11 +1072,12 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float sca
 		add_model_polygons_to_cobjs(ppts, cobj, group_cobjs, use_vbo, (use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD), has_layer, scale);
 	}
 	else if (use_cubes) {
-		model_xf.voxel_spacing *= scale;
-		if (model_xf.voxel_spacing <= 0.0) {return "model file voxel_spacing (scaled)";}
+		model3d_xform_t model_xf_scaled(model_xf);
+		model_xf_scaled.voxel_spacing *= scale;
+		if (model_xf_scaled.voxel_spacing <= 0.0) {return "model file voxel_spacing (scaled)";}
 		vector<cube_t> cubes;
-		if (cube_edges) {get_cur_model_edges_as_cubes(cubes, model_xf);}
-		else {get_cur_model_as_cubes(cubes, model_xf);}
+		if (cube_edges) {get_cur_model_edges_as_cubes(cubes, model_xf_scaled);}
+		else {get_cur_model_as_cubes(cubes, model_xf_scaled);}
 		check_layer(has_layer);
 		coll_obj cur_cube(cobj); // color and tid left as-is for now
 		cur_cube.cp.draw      = 0;
@@ -1096,6 +1097,16 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float sca
 		using_model_bcube = 1; // if any model is set (group_cobjs_level should generally agree across all models loaded)
 	}
 	return "";
+}
+
+int add_model_transform(FILE *fp, model3d_xform_t const &model_xf, vector<coll_tquad> &ppts, coll_obj const &cobj, float scale, bool has_layer) {
+
+	add_transform_for_cur_model(model_xf);
+	bool const no_cobjs(model_xf.group_cobjs_level >= 4);
+	if (!no_cobjs) {get_cur_model_polygons(ppts, model_xf);} // add cobjs for collision detection
+	string const error_str(add_loaded_model(ppts, cobj, scale, has_layer, model_xf));
+	if (error_str.empty()) return 1;
+	return read_error(fp, error_str.c_str(), coll_obj_file);
 }
 
 
@@ -1150,6 +1161,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	material_map_t materials;
 	multi_trigger_t triggers;
 	sensor_t cur_sensor;
+	model3d_xform_t model_xf;
 	
 	while (!end) { // available: hou
 		assert(fp != NULL);
@@ -1222,6 +1234,35 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "sensor") {
 					if (!cur_sensor.read_from_file(fp, xf)) {return read_error(fp, "sensor", coll_obj_file);}
 				}
+				else if (keyword == "transform_array_1d") {
+					unsigned num(0);
+					vector3d step(zero_vector);
+					if (fscanf(fp, "%u%f%f%f", &num, &step.x, &step.y, &step.z) != 4 || num == 0) {return read_error(fp, "transform_array_1d", coll_obj_file);}
+					model3d_xform_t model_xf_xlate(model_xf);
+
+					for (unsigned n = 0; n < num; ++n, model_xf_xlate.tv += step) {
+						if (n == 0) continue; // first element has already been placed prior to this command
+						if (!add_model_transform(fp, model_xf_xlate, ppts, cobj, xf.scale, has_layer)) return 0;
+					}
+				}
+				else if (keyword == "transform_array_2d") {
+					unsigned num1(0), num2(0);
+					vector3d step1(zero_vector), step2(zero_vector);
+					if (fscanf(fp, "%u%u%f%f%f%f%f%f", &num1, &num2, &step1.x, &step1.y, &step1.z, &step2.x, &step2.y, &step2.z) != 8 || num1 == 0 || num2 == 0) {
+						return read_error(fp, "transform_array_2d", coll_obj_file);
+					}
+					model3d_xform_t model_xf_xlate(model_xf);
+
+					for (unsigned n = 0; n < num1; ++n) {
+						vector3d const orig_tv(model_xf_xlate.tv);
+						
+						for (unsigned m = 0; m < num2; ++m, model_xf_xlate.tv += step2) {
+							if (n == 0 && m == 0) continue; // first element has already been placed prior to this command
+							if (!add_model_transform(fp, model_xf_xlate, ppts, cobj, xf.scale, has_layer)) return 0;
+						}
+						model_xf_xlate.tv = orig_tv + step1; // undo m iteration and add step1
+					}
+				}
 				else {
 					ostringstream oss;
 					oss << "unrecognized keyword: '" << keyword << "' on line " << line_num;
@@ -1282,18 +1323,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'Z': // add model3d transform: group_cobjs_level tx ty tz [scale [rx ry rz angle [<voxel_spacing>]]]
 			{
-				model3d_xform_t model_xf;
 				int const num_args(fscanf(fp, "%i%f%f%f%f%f%f%f%f%f", &model_xf.group_cobjs_level, &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
 					&model_xf.axis.x, &model_xf.axis.y, &model_xf.axis.z, &model_xf.angle, &model_xf.voxel_spacing));
 				if (num_args != 4 && num_args != 5 && num_args != 9 && num_args != 10) {return read_error(fp, "model3d transform", coll_obj_file);}
 				if (model_xf.group_cobjs_level < 0 || model_xf.group_cobjs_level > 6) {return read_error(fp, "add model transform command group_cobjs_level", coll_obj_file);}
 				if (model_xf.scale == 0.0) {return read_error(fp, "model3d transform scale", coll_obj_file);} // what about negative scales?
 				model_xf.material = cobj.cp; // copy base material from cobj
-				add_transform_for_cur_model(model_xf);
-				bool const no_cobjs(model_xf.group_cobjs_level >= 4);
-				if (!no_cobjs) {get_cur_model_polygons(ppts, model_xf);} // add cobjs for collision detection
-				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf));
-				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
+				if (!add_model_transform(fp, model_xf, ppts, cobj, xf.scale, has_layer)) return 0;
 			}
 			break;
 
