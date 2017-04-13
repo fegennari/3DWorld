@@ -1555,7 +1555,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	assert(trans_op_mask > 0 && trans_op_mask <= 3);
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	
-	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
+	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) { // FIXME: move out of transform loop?
 		if (model_indir_tid == 0) {create_indir_texture();}
 		if (model_indir_tid != 0) {set_3d_texture_as_current(model_indir_tid, 1);} // indir texture uses TU_ID=1
 		set_local_model_scene_bounds(shader);
@@ -1927,13 +1927,15 @@ void model3ds::free_context() {
 void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // Note: xlate is only used in tiled terrain mode
 	
 	if (empty()) return;
+	bool const tt_mode(world_mode == WMODE_INF_TERRAIN);
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
-	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
+	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && tt_mode);
 	bool const enable_any_reflections(shader_effects && !is_shadow_pass && (reflection_pass == 0 || ENABLE_INTER_REFLECTIONS));
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const enable_planar_reflections(reflection_pass != 2 && enable_any_reflections && reflection_tid > 0 && use_reflection_plane());
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
-	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
+	// Note: in ground mode, lighting is global, so transforms are included in vpos with use_mvm=1; in TT mode, lighting is relative to each model instance
+	bool const use_mvm(!tt_mode && has_any_transforms()), v(!tt_mode), use_smap(1 || v);
 	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0);
 	shader_t s;
 	set_fill_mode();
