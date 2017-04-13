@@ -1,6 +1,10 @@
 t 0.0 0.0 0.0
-l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw (no texture)
-y 4.0
+l 0.8 0.72 0.73 0.64 1.0 marble.jpg 1 # elasticity R G B A texture_id draw
+y 8.0
+
+# fill the two holes at the top of the stairs with marble
+B 1.82 2.30   0.725  0.755  0.39 0.4045
+B 1.82 2.30  -0.90  -0.87   0.39 0.4045
 
 # lights
 L 1.2 1.2   2.25996  0.172403 0.598725  1.0 0.9 0.7 1.0
