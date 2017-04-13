@@ -535,6 +535,7 @@ void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube(bool only_reflective=0);
 void write_models_to_cobj_file(std::ostream &out);
 void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height=0.0);
+void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius=0.0);
 
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);

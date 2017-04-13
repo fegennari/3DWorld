@@ -2189,14 +2189,14 @@ void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) 
 
 	if (pos.z > mesh_zval) { // above the mesh
 		assert(step_height >= 0.0);
-		point cpos(pos);
-		vector3d cnorm; // unused
-		colorRGBA color; // unused
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		assert(xlate.z == 0.0);
 		point p1(pos - xlate), p2(p1);
 		p1.z += step_height;
 		p2.z  = mesh_zval;
+		point cpos(pos);
+		vector3d cnorm; // unused
+		colorRGBA color; // unused
 		
 		// ray cast from step height above current point down to mesh
 		if (all_models.check_coll_line(p1, p2, cpos, cnorm, color, 1, 1)) { // exact=1 build_bvh_if_needed=1
@@ -2206,6 +2206,22 @@ void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) 
 		}
 	}
 	pos.z = mesh_zval; // no model collision, place no mesh
+}
+
+void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius) {
+	
+	if (prev == cur) return; // no change
+	vector3d const dir((cur - prev).get_norm());
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	point const p2(cur + dir*radius - xlate); // extend outward by radius in movement direction
+	point cpos(cur);
+	vector3d cnorm; // unused
+	colorRGBA color; // unused
+
+	if (all_models.check_coll_line((prev - xlate), p2, cpos, cnorm, color, 1, 1)) { // exact=1 build_bvh_if_needed=1
+		//cur = cpos - dir*radius + xlate; // move radius away from collision point in reverse movement dir
+		UNROLL_3X(cur[i_] += fabs(cnorm[i_])*((cpos[i_] + xlate[i_] - dir[i_]*radius) - cur[i_]);) // allow for sliding along walls
+	}
 }
 
 

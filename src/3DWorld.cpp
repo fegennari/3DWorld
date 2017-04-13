@@ -425,9 +425,11 @@ void update_cpos() {
 void move_camera_pos_xy(vector3d const &v, float dist) {
 
 	// normal ground movement - should speed depend on orientation or not?
+	point const prev(surface_pos);
 	float const xy_scale(dist*(v.mag()/v.xy_mag()));
 	surface_pos.x += xy_scale*v.x;
 	surface_pos.y += xy_scale*v.y;
+	if (world_mode == WMODE_INF_TERRAIN) {check_legal_movement_using_model_coll(prev, surface_pos, CAMERA_RADIUS);} // collision with models
 }
 
 
