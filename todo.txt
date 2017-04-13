@@ -5,7 +5,6 @@ TT lower res distant shadow map for tiled terrain mode with smooth blend
 Load/display model3d models in tiled terrain mode
   - Indirect lighting (per model, shared across instances/transforms/orients)
 	- Precompute and store on disk
-  - Collision detection for camera against vertical surfaces
   - Calculate z pos from terrain
   - Model Shadow Maps
     - Fix scaled model shadows
@@ -21,3 +20,4 @@ Gameplay in tiled terrain mode
 
 Snow or sand terrain layer using blurred heightmap
 Read/Write tree and grass edit brushes
+Place mapx objects (weapons, ammo, health, shields, powerups)
