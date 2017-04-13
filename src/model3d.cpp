@@ -1807,7 +1807,7 @@ void model3d::show_stats() const {
 
 	cout << "model stats:" << endl; 
 	cout << "bcube: " << bcube.str() << endl;
-	cout << "center: " << bcube.get_cube_center().str() << endl;
+	cout << "center: " << bcube.get_cube_center().str() << ", size: " << bcube.get_size().str() << endl;
 	model3d_stats_t stats;
 	get_stats(stats);
 	stats.print();
