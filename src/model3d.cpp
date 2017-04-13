@@ -1630,8 +1630,13 @@ void model3d::create_indir_texture() {
 	local_lmap_manager.alloc(tot_sz, zsize, need_lmcell, init_lmcell);
 	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
 
-	// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds
-
+	if (!sky_lighting_fn.empty()) {
+		assert(sky_lighting_weight > 0.0);
+		// FIXME: use sky_lighting_fn
+	}
+	else {
+		// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds
+	}
 	for (unsigned y = 0; y < (unsigned)MESH_Y_SIZE; ++y) {
 		for (unsigned x = 0; x < (unsigned)MESH_X_SIZE; ++x) {
 			unsigned const off(zsize*(y*MESH_X_SIZE + x));
@@ -2184,6 +2189,9 @@ void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) { 
 
 void add_transform_for_cur_model(model3d_xform_t const &xf) {
 	get_cur_model("transform").add_transform(xf);
+}
+void set_sky_lighting_file_for_cur_model(string const &fn, float weight) {
+	get_cur_model("sky_lighting_file").set_sky_lighting_file(fn, weight);
 }
 
 cube_t get_all_models_bcube(bool only_reflective) {return all_models.get_bcube(only_reflective);}

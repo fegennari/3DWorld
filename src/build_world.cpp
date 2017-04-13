@@ -1263,6 +1263,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 						model_xf_xlate.tv = orig_tv + step1; // undo m iteration and add step1
 					}
 				}
+				else if (keyword == "lighting_file_sky_model") {
+					float weight(0.0);
+					if (fscanf(fp, "%255s%f", str, &weight) != 2) {return read_error(fp, "lighting_file_sky_model", coll_obj_file);}
+					set_sky_lighting_file_for_cur_model(str, weight);
+				}
 				else {
 					ostringstream oss;
 					oss << "unrecognized keyword: '" << keyword << "' on line " << line_num;
