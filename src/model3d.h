@@ -80,10 +80,12 @@ struct model3d_xform_t : public geom_xform_t, public rotation_t { // should be p
 	base_mat_t material;
 	int group_cobjs_level;
 	float voxel_spacing;
+	cube_t bcube_xf;
 
-	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), group_cobjs_level(0.0), voxel_spacing(0.0) {}
-	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), group_cobjs_level(0.0), voxel_spacing(0.0) {}
+	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), group_cobjs_level(0.0), voxel_spacing(0.0), bcube_xf(all_zeros) {}
+	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), group_cobjs_level(0.0), voxel_spacing(0.0), bcube_xf(all_zeros) {}
 	cube_t get_xformed_cube(cube_t const &cube) const;
+	cube_t const &get_xformed_bcube(cube_t const &bcube);
 	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
 	void apply_to_tquad(coll_tquad &tquad) const;
 	void apply_gl() const;
@@ -458,7 +460,7 @@ public:
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
 		int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm=nullptr);
-	void render_with_xform(shader_t &shader, model3d_xform_t const &xf, xform_matrix const &mvm, bool is_shadow_pass,
+	void render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
 		int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask);
 	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 		unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate);

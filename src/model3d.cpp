@@ -1484,6 +1484,10 @@ cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const { // Note: RM
 	if (angle == 0.0) {return cube*scale + tv;} // optimization
 	return rotate_cube(cube*scale, axis, -TO_RADIANS*angle) + tv; // negative rotate?
 }
+cube_t const &model3d_xform_t::get_xformed_bcube(cube_t const &bcube) {
+	if (bcube_xf.is_all_zeros()) {bcube_xf = get_xformed_cube(bcube);}
+	return bcube_xf;
+}
 
 void model3d_xform_t::apply_gl() const {
 	assert(scale != 0.0);
@@ -1530,10 +1534,10 @@ void model3d::set_target_translate_scale(point const &target_pos, float target_r
 	xf.tv    = target_pos - xf.scale*bcube.get_cube_center(); // scale is applied before translate
 }
 
-void model3d::render_with_xform(shader_t &shader, model3d_xform_t const &xf, xform_matrix const &mvm, bool is_shadow_pass,
+void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
 	int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask)
 {
-	if (!is_cube_visible_to_camera(xf.get_xformed_cube(bcube), is_shadow_pass)) return; // Note: xlate has already been applied to camera_pdu
+	if (!is_cube_visible_to_camera(xf.get_xformed_bcube(bcube), is_shadow_pass)) return; // Note: xlate has already been applied to camera_pdu
 	// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 	// Note: currently, only translate is supported (and somewhat scale)
 	camera_pdu_transform_wrapper cptw2(xf);
@@ -1544,7 +1548,7 @@ void model3d::render_with_xform(shader_t &shader, model3d_xform_t const &xf, xfo
 	// cptw2 dtor called here
 }
 
-// non-const due to vbo caching, normal computation, etc.
+// non-const due to vbo caching, normal computation, bcube caching, etc.
 void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 	unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate)
 {
@@ -1729,7 +1733,7 @@ cube_t model3d::calc_bcube_including_transforms() { // non-const because bcube_x
 	if (bcube_xf != all_zeros_cube) return bcube_xf; // already calculated
 	
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		cube_t const bc(xf->get_xformed_cube(bcube));
+		cube_t const &bc(xf->get_xformed_bcube(bcube));
 		if (bcube_xf == all_zeros_cube) {bcube_xf = bc;} else {bcube_xf.union_with_cube(bc);}
 	}
 	return bcube_xf;
@@ -1762,6 +1766,7 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 	point cur(p2);
 
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
+		if (!check_line_clip(p1, p2, xf->get_xformed_bcube(bcube).d)) continue;
 		point p1x(p1), p2x(cur);
 		xf->inv_xform_pos(p1x);
 		xf->inv_xform_pos(p2x);
