@@ -26,7 +26,7 @@ extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode, MESH_SIZE[3];
-extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
+extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias, light_int_scale[];
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
 extern vector<texture_t> textures;
@@ -1557,7 +1557,10 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) { // FIXME: move out of transform loop?
 		if (model_indir_tid == 0) {create_indir_texture();}
-		if (model_indir_tid != 0) {set_3d_texture_as_current(model_indir_tid, 1);} // indir texture uses TU_ID=1
+		if (model_indir_tid != 0) {
+			set_3d_texture_as_current(model_indir_tid, 1); // indir texture uses TU_ID=1
+			shader.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // set black indir color - assumes all models will get here, so not reset
+		}
 		set_local_model_scene_bounds(shader);
 	}
 	if (reflect_mode) {
@@ -1622,17 +1625,20 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 
 void model3d::create_indir_texture() {
 
+	timer_t timer("Create Indir Texture");
 	unsigned const zsize(MESH_SIZE[2]), tot_sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
 	if (tot_sz == 0) return; // nothing to do (error?)
 	lmap_manager_t local_lmap_manager; // FIXME: store in the model3d and cache for reuse on context change?
 	lmcell init_lmcell;
+	//init_lmcell.set_outside_colors();
 	unsigned char **need_lmcell = nullptr;
 	local_lmap_manager.alloc(tot_sz, zsize, need_lmcell, init_lmcell);
 	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
+	float const init_weight(light_int_scale[LIGHTING_SKY]); // record orig value
 
-	if (!sky_lighting_fn.empty()) {
+	if (!sky_lighting_fn.empty() && local_lmap_manager.read_data_from_file(sky_lighting_fn.c_str(), LIGHTING_SKY)) {
 		assert(sky_lighting_weight > 0.0);
-		// FIXME: use sky_lighting_fn
+		light_int_scale[LIGHTING_SKY] = sky_lighting_weight;
 	}
 	else {
 		// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds
@@ -1650,9 +1656,10 @@ void model3d::create_indir_texture() {
 				//color = colorRGBA(float(y)/MESH_Y_SIZE, float(x)/MESH_X_SIZE, float(z)/zsize, 1.0); // for debugging
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
 			} // for z
-		}
-	}
+		} // for x
+	} // for y
 	model_indir_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
+	light_int_scale[LIGHTING_SKY] = init_weight; // restore orig value
 	//cout << TXT(zsize) << TXT(tot_sz) << TXT(model_indir_tid) << endl;
 }
 

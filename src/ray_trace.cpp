@@ -1085,22 +1085,29 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 	cout << "Reading lighting file from " << fn << endl;
 	unsigned data_size(0);
 	size_t const sz_read(fread(&data_size, sizeof(unsigned), 1, fp));
+	bool ret(1);
 	assert(sz_read == 1);
 
 	if (data_size != vldata_alloc.size()) {
-		cout << "Error: Lighting file " << fn << " data size of " << data_size
+		cerr << "Error: Lighting file " << fn << " data size of " << data_size
 			 << " does not equal the expected size of " << vldata_alloc.size() << ". Ignoring file." << endl;
+		ret = 0;
 	}
 	else {
 		unsigned const sz(lmcell::get_dsz(ltype));
 
 		for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
 			size_t const nread(fread(i->get_offset(ltype), sizeof(float), sz, fp));
-			assert(nread == sz);
+			
+			if (nread != sz) {
+				cerr << "Error reading data from ligthing file " << fn << endl;
+				ret = 0;
+				break;
+			}
 		}
 	}
 	fclose(fp);
-	return 1;
+	return ret;
 }
 
 
