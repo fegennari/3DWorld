@@ -236,7 +236,11 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_shadow_map), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("use_water_coverage", use_wet_mask), 1); // FS
 	set_dlights_booleans(s, dlights, 1, no_dl_smap); // FS
-	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_pre(s);}
+	
+	if (world_mode == WMODE_INF_TERRAIN) {
+		if (indir_lighting) {s.set_prefix("#define USE_SIMPLE_INDIR", 1);} // FS
+		setup_tt_fog_pre(s);
+	}
 }
 
 

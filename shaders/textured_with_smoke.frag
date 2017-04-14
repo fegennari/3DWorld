@@ -438,6 +438,9 @@ void main()
 	vec4 fcolor = fog_color;
 	
 	if (indir_lighting) {
+#ifdef USE_SIMPLE_INDIR
+		vec3 pixel_color = indir_lookup(vpos, normal);
+#else
 		vec3 scene_urc  = scene_llc + scene_scale;
 		float scene_bb[6]; scene_bb[0]=scene_llc.x; scene_bb[1]=scene_urc.x; scene_bb[2]=scene_llc.y; scene_bb[3]=scene_urc.y; scene_bb[4]=scene_llc.z; scene_bb[5]=scene_urc.z;
 		float view_dist = distance(vpos, camera_pos);
@@ -458,6 +461,7 @@ void main()
 		}
 		//pixel_color = lit_color.rgb/max(vec3(0.01), gl_Color.rgb);
 		fcolor.rgb *= mix(vec3(1.0), min(2.0*pixel_color, vec3(1.0)), scene_len);
+#endif // USE_SIMPLE_INDIR
 	}
 	// FIXME: more physically correct to clip the view ray by the distance traveled through the water,
 	// but not all shaders use this flow (leaves, plants, scenery, etc.)
