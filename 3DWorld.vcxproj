@@ -963,9 +963,11 @@
     <ResourceCompile Include="Script1.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="coll_objs\COLL_OBJS_museum_tt_model.txt" />
     <Text Include="coll_objs_puget_sound.txt" />
     <Text Include="coll_objs_puzzle.txt" />
     <Text Include="coll_objs_san_miguel.txt" />
+    <Text Include="config_museum_tt_model.txt" />
     <Text Include="config_puzzle.txt" />
     <Text Include="config_san_miguel.txt" />
     <Text Include="mapx\coll_objs_cubes.txt" />
