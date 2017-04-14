@@ -515,6 +515,7 @@ public:
 		tc.push_back(point2d<float>(0.0, 0.0)); // default tex coords
 		n.push_back(zero_vector); // default normal
 		unsigned approx_line(0);
+		bool is_textured(0);
 
 		while (read_string(s, MAX_CHARS)) {
 			++approx_line;
@@ -589,8 +590,9 @@ public:
 					for (unsigned i = pix; i < pix+npts; ++i) {
 						unsigned const vix(pb.pts[i].vix);
 						assert((unsigned)vix < vn.size());
+						bool const using_texgen(is_textured && model_auto_tc_scale > 0.0 && pb.pts[i].tix == 0);
 
-						if (vn[vix].is_valid() && dot_product(normal, vn[vix].get_norm()) < 0.25) { // normals in disagreement
+						if (vn[vix].is_valid() && (using_texgen || dot_product(normal, vn[vix].get_norm()) < 0.25)) { // normals in disagreement (or using texgen)
 							vn[vix] = zero_vector; // zero it out so that it becomes invalid later
 						}
 						else if (face_weight_avg) {vn[vix].add_normal(face_area*normal);} // face weighted average
@@ -658,7 +660,9 @@ public:
 					cerr << "Error reading material from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
-				cur_mat_id = model.find_material(material_name);
+				cur_mat_id  = model.find_material(material_name);
+				int const tid(model.get_material(cur_mat_id).d_tid);
+				is_textured = (tid >= 0 && model.tmgr.get_tex_avg_color(tid) != WHITE); // no texture, or all white texture
 			}
 			else if (strcmp(s, "mtllib") == 0) { // material library
 				read_str_to_newline(fp, mat_lib);
