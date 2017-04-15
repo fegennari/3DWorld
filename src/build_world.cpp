@@ -1264,9 +1264,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 				}
 				else if (keyword == "lighting_file_sky_model") {
+					int sz[3] = {0};
 					float weight(0.0);
-					if (fscanf(fp, "%255s%f", str, &weight) != 2) {return read_error(fp, "lighting_file_sky_model", coll_obj_file);}
-					set_sky_lighting_file_for_cur_model(str, weight);
+					if (fscanf(fp, "%255s%u%u%u%f", str, &sz[0], &sz[1], &sz[2], &weight) != 5) {return read_error(fp, "lighting_file_sky_model", coll_obj_file);}
+					set_sky_lighting_file_for_cur_model(str, weight, sz);
 				}
 				else {
 					ostringstream oss;

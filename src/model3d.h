@@ -415,6 +415,7 @@ class model3d {
 
 	// lighting
 	string sky_lighting_fn;
+	unsigned sky_lighting_sz[3];
 	float sky_lighting_weight;
 	//lmap_manager_t local_lmap_manager;
 
@@ -430,7 +431,7 @@ public:
 	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
 		bcube(all_zeros_cube), bcube_xf(all_zeros), model_refl_tid(0), model_refl_tsize(0), model_indir_tid(0), reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0),
-		needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_) {}
+		needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_) {UNROLL_3X(sky_lighting_sz[i_] = 0;)}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -457,7 +458,7 @@ public:
 	void clear_smaps(); // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void set_sky_lighting_file(string const &fn, float weight) {sky_lighting_fn = fn; sky_lighting_weight = weight; assert(weight > 0.0);}
+	void set_sky_lighting_file(string const &fn, float weight, int sz[3]);
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
@@ -538,7 +539,7 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
-void set_sky_lighting_file_for_cur_model(string const &fn, float weight);
+void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[3]);
 cube_t get_all_models_bcube(bool only_reflective=0);
 void write_models_to_cobj_file(std::ostream &out);
 void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height=0.0);

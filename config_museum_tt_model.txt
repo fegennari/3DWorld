@@ -8,7 +8,7 @@ invert_model_nmap_bscale 1
 use_z_prepass 1
 model_auto_tc_scale 10.0
 
-mesh_size  128 128 64
+mesh_size  256 128 64
 scene_size 3.5825 1.794 1.9775
 
 coll_obj_file coll_objs/coll_objs_museum_tt_model.txt

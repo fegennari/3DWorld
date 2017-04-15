@@ -230,9 +230,7 @@ void lmcell::get_final_color(colorRGB &color, float max_indir, float indir_scale
 			  color[i_] = min(max_indir, indir_scale*indir_term) + min(1.0f, lc[i_]*light_int_scale[LIGHTING_LOCAL]);)
 }
 
-
 void lmcell::set_outside_colors() {
-
 	sv = 1.0;
 	gv = 0.0;
 	UNROLL_3X(sc[i_] = gc[i_] = 1.0; lc[i_] = 0.0;)
@@ -242,7 +240,7 @@ void lmcell::set_outside_colors() {
 inline bool is_inside_lmap(int x, int y, int z) {return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y));}
 bool lmap_manager_t::is_valid_cell(int x, int y, int z) const {return (is_inside_lmap(x, y, z) && vlmap[y][x] != NULL);}
 
-
+// Note: only intended to work in ground mode where sizes are MESH_X_SIZE and MESH_Y_SIZE
 lmcell *lmap_manager_t::get_lmcell_round_down(point const &p) { // round down
 	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
 	return (is_valid_cell(x, y, z) ? &vlmap[y][x][z] : NULL);
@@ -252,17 +250,16 @@ lmcell *lmap_manager_t::get_lmcell(point const &p) { // round to center
 	return (is_valid_cell(x, y, z) ? &vlmap[y][x][z] : NULL);
 }
 
+template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell) {
 
-template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell) {
-
-	if (vlmap == NULL) {matrix_gen_2d(vlmap);} // create column headers once
-	lm_zsize = zsize;
+	lm_xsize = xsize; lm_ysize = ysize; lm_zsize = zsize;
+	if (vlmap == NULL) {matrix_gen_2d(vlmap, lm_xsize, lm_ysize);} // create column headers once
 	vldata_alloc.resize(max(nbins, 1U), init_lmcell); // make size at least 1, even if there are no bins, so we can test on emptiness
 	unsigned cur_v(0);
 
 	// initialize light volume
-	for (int i = 0; i < MESH_Y_SIZE; ++i) {
-		for (int j = 0; j < MESH_X_SIZE; ++j) {
+	for (unsigned i = 0; i < lm_ysize; ++i) {
+		for (unsigned j = 0; j < lm_xsize; ++j) {
 			if (nonempty_bins != nullptr && !nonempty_bins[i][j]) { // nonempty_bins is used for sparse mode
 				vlmap[i][j] = NULL;
 				continue;
@@ -280,7 +277,7 @@ void lmap_manager_t::init_from(lmap_manager_t const &src) {
 
 	//assert(!is_allocated());
 	//clear_cells(); // probably unnecessary
-	alloc(src.vldata_alloc.size(), src.lm_zsize, src.vlmap, lmcell());
+	alloc(src.vldata_alloc.size(), src.lm_xsize, src.lm_ysize, src.lm_zsize, src.vlmap, lmcell());
 	copy_data(src);
 }
 
@@ -289,7 +286,7 @@ void lmap_manager_t::init_from(lmap_manager_t const &src) {
 void lmap_manager_t::copy_data(lmap_manager_t const &src, float blend_weight) {
 
 	assert(vlmap && src.vlmap);
-	assert(src.lm_zsize == lm_zsize);
+	assert(src.lm_xsize == lm_xsize && src.lm_ysize == lm_ysize && src.lm_zsize == lm_zsize);
 	assert(src.vldata_alloc.size() == vldata_alloc.size());
 	assert(blend_weight >= 0.0);
 	if (blend_weight == 0.0) return; // keep existing dest
@@ -298,8 +295,8 @@ void lmap_manager_t::copy_data(lmap_manager_t const &src, float blend_weight) {
 		vldata_alloc = src.vldata_alloc; // deep copy all lmcell data
 		return;
 	}
-	for (int i = 0; i < MESH_Y_SIZE; ++i) { // openmp?
-		for (int j = 0; j < MESH_X_SIZE; ++j) {
+	for (unsigned i = 0; i < lm_ysize; ++i) { // openmp?
+		for (unsigned j = 0; j < lm_xsize; ++j) {
 			if (!vlmap[i][j]) {assert(!src.vlmap[i][j]); continue;}
 			assert(src.vlmap[i][j]);
 			
@@ -706,7 +703,7 @@ void build_lightmap(bool verbose) {
 		init_lmcell.sv = init_lmcell.gv = DEF_SKY_GLOBAL_LT;
 		UNROLL_3X(init_lmcell.sc[i_] = init_lmcell.gc[i_] = 1.0;)
 	}
-	lmap_manager.alloc(nbins, zsize, need_lmcell, init_lmcell);
+	lmap_manager.alloc(nbins, MESH_X_SIZE, MESH_Y_SIZE, zsize, need_lmcell, init_lmcell);
 	assert(!ldynamic.empty() && lmap_manager.is_allocated());
 	using_lightmap = (nonempty > 0);
 	lm_alloc       = 1;

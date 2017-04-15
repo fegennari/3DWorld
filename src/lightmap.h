@@ -84,7 +84,7 @@ struct lmcell { // size = 52
 class lmap_manager_t {
 
 	vector<lmcell> vldata_alloc;
-	unsigned lm_zsize;
+	unsigned lm_xsize, lm_ysize, lm_zsize;
 	lmcell ***vlmap; // y, x, z (size is determined by {MESH_Y_SIZE, MESH_X_SIZE, MESH_Z_SIZE}
 
 	lmap_manager_t(lmap_manager_t const &); // forbidden
@@ -94,7 +94,7 @@ public:
 	bool was_updated;
 	cube_t update_bcube;
 
-	lmap_manager_t() : lm_zsize(0), vlmap(NULL), was_updated(0) {update_bcube.set_to_zeros();}
+	lmap_manager_t() : lm_xsize(0), lm_ysize(0), lm_zsize(0), vlmap(NULL), was_updated(0) {update_bcube.set_to_zeros();}
 	void clear_cells() {vldata_alloc.clear();} // vlmap matrix headers are not cleared
 	bool is_allocated() const {return (vlmap != NULL && !vldata_alloc.empty());}
 	size_t size() const {return vldata_alloc.size();}
@@ -102,11 +102,12 @@ public:
 	bool write_data_to_file(char const *const fn, int ltype) const;
 	void clear_lighting_values(int ltype);
 	bool is_valid_cell(int x, int y, int z) const;
+	lmcell const *get_column(int x, int y) const {return vlmap[y][x];} // Note: no bounds checking
 	lmcell *get_column(int x, int y) {return vlmap[y][x];} // Note: no bounds checking
 	lmcell &get_lmcell(int x, int y, int z) {return get_column(x, y)[z];} // Note: no bounds checking
 	lmcell *get_lmcell_round_down(point const &p);
 	lmcell *get_lmcell(point const &p);
-	template<typename T> void alloc(unsigned nbins, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell);
+	template<typename T> void alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell);
 	void init_from(lmap_manager_t const &src);
 	void copy_data(lmap_manager_t const &src, float blend_weight=1.0);
 };

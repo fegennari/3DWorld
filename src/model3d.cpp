@@ -25,7 +25,7 @@ extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effect
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model;
 extern unsigned shadow_map_sz, reflection_tid;
-extern int display_mode, MESH_SIZE[3];
+extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias, light_int_scale[];
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
@@ -1623,16 +1623,23 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	// cptw dtor called here
 }
 
+void model3d::set_sky_lighting_file(string const &fn, float weight, int sz[3]) {
+	sky_lighting_fn = fn;
+	sky_lighting_weight = weight;
+	assert(weight > 0.0);
+	UNROLL_3X(assert(sz[i_] > 0); sky_lighting_sz[i_] = sz[i_];)
+}
+
 void model3d::create_indir_texture() {
 
 	timer_t timer("Create Indir Texture");
-	unsigned const zsize(MESH_SIZE[2]), tot_sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
-	if (tot_sz == 0) return; // nothing to do (error?)
+	unsigned const xsize(sky_lighting_sz[0]), ysize(sky_lighting_sz[1]), zsize(sky_lighting_sz[2]), tot_sz(xsize*ysize*zsize), ncomp(4);
+	assert(tot_sz > 0);
+	if (tot_sz == 0) return; // nothing to do
 	lmap_manager_t local_lmap_manager; // FIXME: store in the model3d and cache for reuse on context change?
 	lmcell init_lmcell;
-	//init_lmcell.set_outside_colors();
-	unsigned char **need_lmcell = nullptr;
-	local_lmap_manager.alloc(tot_sz, zsize, need_lmcell, init_lmcell);
+	unsigned char **need_lmcell = nullptr; // not used - dense mode
+	local_lmap_manager.alloc(tot_sz, xsize, ysize, zsize, need_lmcell, init_lmcell);
 	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
 	float const init_weight(light_int_scale[LIGHTING_SKY]); // record orig value
 
@@ -1643,9 +1650,9 @@ void model3d::create_indir_texture() {
 	else {
 		// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds
 	}
-	for (unsigned y = 0; y < (unsigned)MESH_Y_SIZE; ++y) {
-		for (unsigned x = 0; x < (unsigned)MESH_X_SIZE; ++x) {
-			unsigned const off(zsize*(y*MESH_X_SIZE + x));
+	for (unsigned y = 0; y < ysize; ++y) {
+		for (unsigned x = 0; x < xsize; ++x) {
+			unsigned const off(zsize*(y*xsize + x));
 			lmcell const *const vlm(local_lmap_manager.get_column(x, y));
 			assert(vlm != nullptr); // not supported in this flow
 
@@ -1653,12 +1660,12 @@ void model3d::create_indir_texture() {
 				unsigned const off2(ncomp*(off + z));
 				colorRGB color;
 				vlm[z].get_final_color(color, 1.0, 1.0);
-				//color = colorRGBA(float(y)/MESH_Y_SIZE, float(x)/MESH_X_SIZE, float(z)/zsize, 1.0); // for debugging
+				//color = colorRGBA(float(y)/ysize, float(x)/xsize, float(z)/zsize, 1.0); // for debugging
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
 			} // for z
 		} // for x
 	} // for y
-	model_indir_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
+	model_indir_tid = create_3d_texture(zsize, xsize, ysize, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
 	light_int_scale[LIGHTING_SKY] = init_weight; // restore orig value
 	//cout << TXT(zsize) << TXT(tot_sz) << TXT(model_indir_tid) << endl;
 }
@@ -2197,8 +2204,8 @@ void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) { 
 void add_transform_for_cur_model(model3d_xform_t const &xf) {
 	get_cur_model("transform").add_transform(xf);
 }
-void set_sky_lighting_file_for_cur_model(string const &fn, float weight) {
-	get_cur_model("sky_lighting_file").set_sky_lighting_file(fn, weight);
+void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[3]) {
+	get_cur_model("sky_lighting_file").set_sky_lighting_file(fn, weight, sz);
 }
 
 cube_t get_all_models_bcube(bool only_reflective) {return all_models.get_bcube(only_reflective);}
