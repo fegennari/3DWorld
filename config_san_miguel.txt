@@ -1,5 +1,5 @@
 include config_samples.txt
-coll_obj_file coll_objs_san_miguel.txt
+coll_obj_file coll_objs/coll_objs_san_miguel.txt
 sphere_materials_fn sphere_materials.txt
 
 enable_model3d_bump_maps 1

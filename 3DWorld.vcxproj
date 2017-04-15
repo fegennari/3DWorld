@@ -696,10 +696,6 @@
     <ClInclude Include="Targa\targa.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="coll_objs\COLL_OBJS_museum.txt" />
-    <None Include="coll_objs_minecraft.txt" />
-    <None Include="coll_objs_samples.txt" />
-    <None Include="coll_objs_transformed.txt" />
     <None Include="config_berkeley.txt" />
     <None Include="config_gameplay.txt" />
     <None Include="config_grand_canyon.txt" />
@@ -719,7 +715,6 @@
     <None Include="config_voxel_params.txt" />
     <None Include="house\cobjs_out.txt" />
     <None Include="icon1.ico" />
-    <None Include="coll_objs\COLL_OBJS_Test.TXT" />
     <None Include="config.txt" />
     <None Include="config_gym.txt" />
     <None Include="config_landscape.txt" />
@@ -758,7 +753,6 @@
     <None Include="house\config_house.txt" />
     <None Include="house\config_house_winter.txt" />
     <None Include="house\placements.TXT" />
-    <None Include="model_data\coll_objs_soda.txt" />
     <None Include="model_data\config_soda.txt" />
     <None Include="shaders\alpha_mask.frag" />
     <None Include="shaders\asteroid.frag" />
@@ -963,10 +957,21 @@
     <ResourceCompile Include="Script1.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="coll_objs\COLL_OBJS.TXT" />
+    <Text Include="coll_objs\COLL_OBJS1.TXT" />
+    <Text Include="coll_objs\COLL_OBJS2.TXT" />
+    <Text Include="coll_objs\COLL_OBJS3.TXT" />
+    <Text Include="coll_objs\COLL_OBJS_Maze.TXT" />
+    <Text Include="coll_objs\coll_objs_minecraft.txt" />
+    <Text Include="coll_objs\COLL_OBJS_museum.txt" />
     <Text Include="coll_objs\COLL_OBJS_museum_tt_model.txt" />
-    <Text Include="coll_objs_puget_sound.txt" />
-    <Text Include="coll_objs_puzzle.txt" />
-    <Text Include="coll_objs_san_miguel.txt" />
+    <Text Include="coll_objs\coll_objs_puget_sound.txt" />
+    <Text Include="coll_objs\coll_objs_puzzle.txt" />
+    <Text Include="coll_objs\COLL_OBJS_River.TXT" />
+    <Text Include="coll_objs\coll_objs_samples.txt" />
+    <Text Include="coll_objs\coll_objs_san_miguel.txt" />
+    <Text Include="coll_objs\COLL_OBJS_Test.TXT" />
+    <Text Include="coll_objs\coll_objs_transformed.txt" />
     <Text Include="config_museum_tt_model.txt" />
     <Text Include="config_puzzle.txt" />
     <Text Include="config_san_miguel.txt" />

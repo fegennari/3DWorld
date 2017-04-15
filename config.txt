@@ -92,7 +92,7 @@ smap_thresh_scale 2.0
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0
 coll_obj_file coll_objs/COLL_OBJS_Test.TXT
-#coll_obj_file coll_objs_transformed.txt
+#coll_obj_file coll_objs/coll_objs_transformed.txt
 ship_def_file universe/ship_defs.txt
 
 end
