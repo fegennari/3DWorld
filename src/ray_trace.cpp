@@ -5,6 +5,7 @@
 #include "lightmap.h"
 #include "mesh.h"
 #include "model3d.h"
+#include "binary_file_io.h"
 #include <atomic>
 #include <thread>
 
@@ -1079,55 +1080,46 @@ void check_all_platform_cobj_lighting_update() {
 
 bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 
-	FILE *fp;
-	assert(fn != NULL);
-	if (!open_file(fp, fn, "lighting input", "rb")) return 0;
+	assert(fn != nullptr);
+	binary_file_reader reader;
+	if (!reader.open(fn)) return 0;
 	cout << "Reading lighting file from " << fn << endl;
 	unsigned data_size(0);
-	size_t const sz_read(fread(&data_size, sizeof(unsigned), 1, fp));
-	bool ret(1);
-	assert(sz_read == 1);
+	if (!reader.read(&data_size, sizeof(unsigned), 1)) return 0;
 
 	if (data_size != vldata_alloc.size()) {
 		cerr << "Error: Lighting file " << fn << " data size of " << data_size
 			 << " does not equal the expected size of " << vldata_alloc.size() << ". Ignoring file." << endl;
-		ret = 0;
+		return 0;
 	}
-	else {
-		unsigned const sz(lmcell::get_dsz(ltype));
+	unsigned const sz(lmcell::get_dsz(ltype));
 
-		for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-			size_t const nread(fread(i->get_offset(ltype), sizeof(float), sz, fp));
-			
-			if (nread != sz) {
-				cerr << "Error reading data from ligthing file " << fn << endl;
-				ret = 0;
-				break;
-			}
+	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
+		if (!reader.read(i->get_offset(ltype), sizeof(float), sz)) {
+			cerr << "Error reading data from ligthing file " << fn << endl;
+			return 0;
 		}
 	}
-	fclose(fp);
-	return ret;
+	return 1;
 }
 
 
 bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 
-	if (fn == NULL || strcmp(fn, "''") == 0 || strcmp(fn, "\"\"") == 0) return 0; // don't write
-	FILE *fp;
-	assert(fn != NULL);
-	if (!open_file(fp, fn, "lighting output", "wb")) return 0;
+	if (fn == nullptr || strcmp(fn, "''") == 0 || strcmp(fn, "\"\"") == 0) return 0; // don't write
+	binary_file_writer writer;
+	if (!writer.open(fn)) return 0;
 	cout << "Writing lighting file to " << fn << endl;
 	unsigned const data_size((unsigned)vldata_alloc.size()); // should be size_t?
-	size_t const sz_write(fwrite(&data_size, sizeof(data_size), 1, fp));
-	assert(sz_write == 1);
+	if (!writer.write(&data_size, sizeof(unsigned), 1)) return 0;
 	unsigned const sz(lmcell::get_dsz(ltype));
 
 	for (vector<lmcell>::const_iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) { // const_iterator?
-		size_t const nwrite(fwrite(i->get_offset(ltype), sizeof(float), sz, fp));
-		assert(nwrite == sz);
+		if (!writer.write(i->get_offset(ltype), sizeof(float), sz)) {
+			cerr << "Error writing data to ligthing file " << fn << endl;
+			return 0;
+		}
 	}
-	fclose(fp);
 	return 1;
 }
 

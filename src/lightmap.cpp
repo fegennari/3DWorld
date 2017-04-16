@@ -6,8 +6,10 @@
 #include "lightmap.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "binary_file_io.h"
 #include <functional>
 
+using std::cerr;
 
 unsigned const NUM_RAND_LTS  = 0;
 int      const START_LIGHT   = 2;
@@ -354,22 +356,20 @@ void light_volume_local::add_lighting(colorRGB &color, int x, int y, int z) cons
 bool light_volume_local::read(string const &filename) {
 
 	assert(!is_allocated());
-	if (filename.empty()) return 0;
-	FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
-	if (fp == nullptr) return 0; // file doesn't exist yet
+	binary_file_reader reader;
+	if (!reader.open(filename)) return 0;
 
-	if (fread(bounds, sizeof(int), 6, fp) != 6) {
-		std::cerr << "Error: Failed to read header from light volume file '" << filename << "'." << endl;
-		fclose(fp); return 0;
+	if (!reader.read(bounds, sizeof(int), 6)) {
+		cerr << "Error: Failed to read header from light volume file '" << filename << "'." << endl;
+		return 0;
 	}
 	data.resize(get_num_data());
 	assert(is_allocated());
 
-	if (fread(&data.front(), sizeof(lmcell_local), data.size(), fp) != data.size()) {
-		std::cerr << "Error: Failed to read data from light volume file '" << filename << "'." << endl;
-		fclose(fp); return 0;
+	if (!reader.read(&data.front(), sizeof(lmcell_local), data.size())) {
+		cerr << "Error: Failed to read data from light volume file '" << filename << "'." << endl;
+		return 0;
 	}
-	fclose(fp);
 	compressed = 1; // llvols are always written compressed
 	changed    = 1;
 	cout << "Read light volume file '" << filename << "'." << endl;
@@ -380,22 +380,17 @@ bool light_volume_local::write(string const &filename) const {
 
 	assert(is_allocated());
 	assert(compressed); // llvols are always written compressed
-	if (filename.empty()) return 1;
-	FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
+	binary_file_writer writer;
+	if (!writer.open(filename)) return 0;
 
-	if (fp == nullptr) {
-		std::cerr << "Error: Failed to open light volume file '" << filename << "' for write." << endl;
+	if (!writer.write(bounds, sizeof(int), 6)) {
+		cerr << "Error: Failed to write header to light volume file '" << filename << "'." << endl;
 		return 0;
 	}
-	if (fwrite(bounds, sizeof(int), 6, fp) != 6) {
-		std::cerr << "Error: Failed to write header to light volume file '" << filename << "'." << endl;
-		fclose(fp); return 0;
+	if (!writer.write(&data.front(), sizeof(lmcell_local), data.size())) {
+		cerr << "Error: Failed to write data to light volume file '" << filename << "'." << endl;
+		return 0;
 	}
-	if (fwrite(&data.front(), sizeof(lmcell_local), data.size(), fp) != data.size()) {
-		std::cerr << "Error: Failed to write data to light volume file '" << filename << "'." << endl;
-		fclose(fp); return 0;
-	}
-	fclose(fp);
 	cout << "Wrote light volume file '" << filename << "'." << endl;
 	return 1;
 }
