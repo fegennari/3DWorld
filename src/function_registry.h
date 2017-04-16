@@ -237,6 +237,7 @@ void draw_water_sides(shader_t &shader, int check_zvals);
 float get_tt_fog_top();
 float get_tt_fog_bot();
 float get_tt_cloud_level();
+float get_draw_tile_dist();
 float get_inf_terrain_fog_dist();
 float get_tt_fog_based_far_clip(float min_camera_dist);
 
