@@ -1093,13 +1093,18 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 		return 0;
 	}
 	unsigned const sz(lmcell::get_dsz(ltype));
+	vector<float> data(data_size*sz);
+	unsigned pos(0);
 
-	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		if (!reader.read(i->get_offset(ltype), sizeof(float), sz)) {
-			cerr << "Error reading data from ligthing file " << fn << endl;
-			return 0;
-		}
+	if (!reader.read(&data.front(), sizeof(float), data.size())) {
+		cerr << "Error reading data from ligthing file " << fn << endl;
+		return 0;
 	}
+	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
+		float *ptr(i->get_offset(ltype));
+		for (unsigned n = 0; n < sz; ++n) {ptr[n] = data[pos++];}
+	}
+	assert(pos == data.size());
 	return 1;
 }
 
