@@ -258,6 +258,7 @@ public:
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
 	unsigned get_ix  (unsigned i) const {assert(i < indices.size()); return indices[i];}
+	float get_area(unsigned npts) const;
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void write(ostream &out) const;
 	void read(istream &in);
@@ -276,6 +277,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
 	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)size(); stats.verts += num_unique_verts();}
+	float get_area(unsigned npts) const;
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
@@ -299,6 +301,7 @@ template<typename T> struct geometry_t {
 	void free_vbos() {triangles.free_vbos(); quads.free_vbos();}
 	void clear();
 	void get_stats(model3d_stats_t &stats) const;
+	void get_area(float &area, unsigned &ntris) const;
 	bool write(ostream &out) const {return (triangles.write(out) && quads.write(out));}
 	bool read(istream &in)         {return (triangles.read (in ) && quads.read (in ));}
 };
@@ -344,7 +347,7 @@ struct material_t : public material_params_t {
 
 	bool might_have_alpha_comp;
 	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid;
-	float draw_order_score;
+	float draw_order_score, avg_area_per_tri;
 	float metalness; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
 	string name, filename;
 
@@ -353,7 +356,7 @@ struct material_t : public material_params_t {
 
 	material_t(string const &name_=string(), string const &fn=string())
 		: might_have_alpha_comp(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
-		draw_order_score(0.0), metalness(-1.0), name(name_), filename(fn) {}
+		draw_order_score(0.0), avg_area_per_tri(0.0), metalness(-1.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
@@ -363,6 +366,7 @@ struct material_t : public material_params_t {
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
+	void compute_area_per_tri();
 	void init_textures(texture_manager &tmgr);
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate);
 	colorRGBA get_ad_color() const;
@@ -487,6 +491,7 @@ public:
 	bool is_planar_reflective() const {return (reflective == 1);}
 	bool is_cube_map_reflective() const {return (reflective == 2);}
 	bool is_reflective()        const {return (reflective != 0);}
+	void compute_area_per_tri();
 	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;

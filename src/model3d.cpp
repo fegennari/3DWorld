@@ -572,6 +572,18 @@ struct shared_vertex_t {
 };
 
 
+template<typename T> float indexed_vntc_vect_t<T>::get_area(unsigned npts) const {
+	
+	float area(0.0);
+	unsigned const nv(num_verts());
+
+	for (unsigned i = 0; i < nv; i += npts) {
+		area                 += triangle_area(get_vert(i).v, get_vert(i+1).v, get_vert(i+2).v);  // first triangle
+		if (npts == 4) {area += triangle_area(get_vert(i).v, get_vert(i+2).v, get_vert(i+3).v);} // second triangle (for quads)
+	}
+	return area;
+}
+
 template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_t &args, unsigned npts) const {
 
 	if (args.lod_level > 1 && !indices.empty()) {
@@ -719,7 +731,6 @@ template<typename T> void vntc_vect_block_t<T>::free_vbos() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
 }
 
-
 template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
 
 	if (empty()) return all_zeros_cube;
@@ -728,7 +739,6 @@ template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
 	return bcube;
 }
 
-
 template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 
 	unsigned s(0);
@@ -736,14 +746,12 @@ template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 	return s;
 }
 
-
 template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 
 	unsigned s(0);
 	for (const_iterator i = begin(); i != end(); ++i) {s += (unsigned)i->size();}
 	return s;
 }
-
 
 template<typename T> float vntc_vect_block_t<T>::calc_draw_order_score() const {
 
@@ -757,6 +765,11 @@ template<typename T> float vntc_vect_block_t<T>::calc_draw_order_score() const {
 	return ((count == 0) ? 0.0 : -area/count);
 }
 
+template<typename T> float vntc_vect_block_t<T>::get_area(unsigned npts) const {
+	float area(0.0);
+	for (const_iterator i = begin(); i != end(); ++i) {area += i->get_area(npts);}
+	return area;
+}
 
 template<typename T> void vntc_vect_block_t<T>::get_polygons(get_polygon_args_t &args, unsigned npts) const {
 	for (const_iterator i = begin(); i != end(); ++i) {i->get_polygons(args, npts);}
@@ -791,11 +804,9 @@ template<> void geometry_t<vert_norm_tc_tan>::calc_tangents_blocks(vntc_vect_blo
 }
 
 template<typename T> void geometry_t<T>::calc_tangents() {
-
 	calc_tangents_blocks(triangles, 3);
 	calc_tangents_blocks(quads,     4);
 }
-
 
 template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, point const *const xlate, vntc_vect_block_t<T> &blocks, unsigned npts) {
 
@@ -804,13 +815,10 @@ template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is
 	}
 }
 
-
 template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate) {
-
 	render_blocks(shader, is_shadow_pass, xlate, triangles, 3);
 	render_blocks(shader, is_shadow_pass, xlate, quads,     4);
 }
-
 
 template<typename T> void geometry_t<T>::add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id) const {
 
@@ -820,7 +828,6 @@ template<typename T> void geometry_t<T>::add_poly_to_polys(polygon_t const &poly
 	}
 	v.back().add_poly(poly, vmap);
 }
-
 
 template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id) {
 	
@@ -835,12 +842,10 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 	}
 }
 
-
 template<typename T> void geometry_t<T>::get_polygons(get_polygon_args_t &args) const {
 	triangles.get_polygons(args, 3); // should be empty in quads_only mode (will be checked)
 	quads.get_polygons    (args, 4);
 }
-
 
 template<typename T> cube_t geometry_t<T>::get_bcube() const {
 
@@ -856,7 +861,6 @@ template<typename T> cube_t geometry_t<T>::get_bcube() const {
 	return bcube;
 }
 
-
 template<typename T> void geometry_t<T>::clear() {
 
 	free_vbos();
@@ -864,13 +868,17 @@ template<typename T> void geometry_t<T>::clear() {
 	quads.clear();
 }
 
-
 template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const {
 	
 	stats.tris  += triangles.num_verts()/3;
 	stats.quads += quads.num_verts()/4;
 	triangles.get_stats(stats);
 	quads.get_stats(stats);
+}
+
+template<typename T> void geometry_t<T>::get_area(float &area, unsigned &ntris) const {
+	area  += triangles.get_area(3) + quads.get_area(4);
+	ntris += (triangles.num_verts()/3) + 2*(quads.num_verts()/4); // quads count as 2 triangles
 }
 
 
@@ -883,6 +891,17 @@ template<typename T> void update_score(vntc_vect_block_t<T> const &v, float &sco
 	++num_nonempty;
 }
 
+
+void material_t::compute_area_per_tri() {
+
+	if (avg_area_per_tri > 0) return; // already computed
+	unsigned tris(0);
+	float area(0.0);
+	geom.get_area(area, tris);
+	geom_tan.get_area(area, tris);
+	avg_area_per_tri = alpha*area/tris;
+	cout << "name: " << name << " " << TXT(tris) << TXT(area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
+}
 
 void material_t::init_textures(texture_manager &tmgr) {
 
@@ -1802,12 +1821,12 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 
 
 void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
-
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		mat_lib_fns.insert(m->filename);
-	}
+	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {mat_lib_fns.insert(m->filename);}
 }
 
+void model3d::compute_area_per_tri() {
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->compute_area_per_tri();}
+}
 
 void model3d::get_stats(model3d_stats_t &stats) const {
 
@@ -1820,7 +1839,6 @@ void model3d::get_stats(model3d_stats_t &stats) const {
 		++stats.mats;
 	}
 }
-
 
 void model3d::show_stats() const {
 
