@@ -900,7 +900,7 @@ void material_t::compute_area_per_tri() {
 	geom.get_area(area, tris);
 	geom_tan.get_area(area, tris);
 	avg_area_per_tri = alpha*area/tris;
-	cout << "name: " << name << " " << TXT(tris) << TXT(area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
+	//cout << "name: " << name << " " << TXT(tris) << TXT(area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
 }
 
 void material_t::init_textures(texture_manager &tmgr) {
@@ -1346,9 +1346,9 @@ void model3d::mark_mat_as_used(int mat_id) {
 
 void model3d::optimize() {
 
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->optimize();}
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].optimize();}
 	unbound_geom.optimize();
-	if (model_mat_lod_thresh > 0.0) {compute_area_per_tri();} // used for TT LOD/distance culling
 }
 
 
@@ -1834,7 +1834,8 @@ void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
 }
 
 void model3d::compute_area_per_tri() {
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->compute_area_per_tri();}
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].compute_area_per_tri();}
 }
 
 void model3d::get_stats(model3d_stats_t &stats) const {
@@ -2137,7 +2138,7 @@ model3d &get_cur_model(string const &operation) {
 
 void xform_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned start_ix=0) {
 	if (xf.is_identity()) return;
-	#pragma omp parallel for schedule(static,1)
+#pragma omp parallel for schedule(static,1)
 	for (int i = start_ix; i < (int)ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
 }
 

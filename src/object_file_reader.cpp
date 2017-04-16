@@ -14,7 +14,7 @@
 
 
 extern bool use_obj_file_bump_grayscale;
-extern float model_auto_tc_scale;
+extern float model_auto_tc_scale, model_mat_lod_thresh;
 extern model3ds all_models;
 
 // hack to avoid slow multithreaded locking in getc()/ungetc() in MSVC++
@@ -809,6 +809,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 			if (write_file && !write_model3d_file(filename, cur_model)) return 0;
 		}
 	}
+	if (model_mat_lod_thresh > 0.0) {cur_model.compute_area_per_tri();} // used for TT LOD/distance culling
 	return 1;
 }
 
