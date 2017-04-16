@@ -46,6 +46,7 @@ model_calc_tan_vect 0
 invert_model_nmap_bscale 1
 use_z_prepass 0
 model_auto_tc_scale 10.0
+model_mat_lod_thresh 5.0
 load_coll_objs 1
 enable_tt_model_indir 1
 mesh_size  128 128 64 # zsize required for indir lighting

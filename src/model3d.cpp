@@ -26,7 +26,7 @@ extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
-extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias, light_int_scale[];
+extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, light_int_scale[];
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
 extern vector<texture_t> textures;
@@ -1345,9 +1345,10 @@ void model3d::mark_mat_as_used(int mat_id) {
 
 
 void model3d::optimize() {
+
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->optimize();}
 	unbound_geom.optimize();
-	compute_area_per_tri(); // used for TT LOD/distance culling
+	if (model_mat_lod_thresh > 0.0) {compute_area_per_tri();} // used for TT LOD/distance culling
 }
 
 
@@ -1462,7 +1463,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 
 			if (mat.is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(mat.use_bump_map())))) {
 				if (world_mode == WMODE_INF_TERRAIN && mat.avg_area_per_tri > 0.0) {
-					if (p2p_dist(camera_pdu.pos, center) > 5.0E6*mat.avg_area_per_tri) continue; // LOD/distance culling
+					if (p2p_dist(camera_pdu.pos, center) > 1.0E6*model_mat_lod_thresh*mat.avg_area_per_tri) continue; // LOD/distance culling
 				}
 				to_draw.push_back(make_pair(mat.draw_order_score, i));
 			}
