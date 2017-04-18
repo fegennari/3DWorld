@@ -49,6 +49,7 @@ model_auto_tc_scale 10.0
 model_mat_lod_thresh 5.0
 load_coll_objs 1
 enable_tt_model_indir 1
+auto_calc_tt_model_zvals 1
 vertex_optimize_flags 1 0 0
 mesh_size  128 128 64 # zsize required for indir lighting
 coll_obj_file coll_objs/coll_objs_puget_sound.txt

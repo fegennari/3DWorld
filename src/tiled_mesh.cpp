@@ -2953,7 +2953,9 @@ void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, 
 }
 
 void render_tt_models(bool reflection_pass, bool transparent_pass) {
+
 	if (reflection_pass && !enable_tt_model_reflect) return;
+	auto_calc_model_zvals();
 	render_models(0, reflection_pass, (transparent_pass ? 2 : 1), model3d_offset.get_xlate());
 }
 

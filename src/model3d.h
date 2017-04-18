@@ -393,7 +393,7 @@ class model3d {
 	unsigned model_refl_tid, model_refl_tsize, model_indir_tid;
 	int reflective; // reflective: 0=none, 1=planar, 2=cube map
 	int indoors; // 0=no/outdoors, 1=yes/indoors, 2=unknown
-	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps;
+	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps, xform_zvals_set;
 	float metalness; // should be per-material, but not part of the material file and specified per-object instead
 
 	// materials
@@ -434,8 +434,9 @@ public:
 
 	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
-		bcube(all_zeros_cube), bcube_xf(all_zeros), model_refl_tid(0), model_refl_tsize(0), model_indir_tid(0), reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0),
-		needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_) {UNROLL_3X(sky_lighting_sz[i_] = 0;)}
+		bcube(all_zeros_cube), bcube_xf(all_zeros), model_refl_tid(0), model_refl_tsize(0), model_indir_tid(0), reflective(reflective_), indoors(2), from_model3d_file(0),
+		has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), xform_zvals_set(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_)
+	{UNROLL_3X(sky_lighting_sz[i_] = 0;)}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -456,6 +457,7 @@ public:
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
+	void set_xform_zval_from_tt_height();
 	void optimize();
 	void clear();
 	void free_context();
@@ -511,6 +513,7 @@ struct model3ds : public deque<model3d> {
 	void free_context();
 	void render(bool is_shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate); // non-const
 	void ensure_reflection_cube_maps();
+	void set_xform_zval_from_tt_height();
 	bool has_any_transforms() const;
 	cube_t get_bcube(bool only_reflective);
 	void build_cobj_trees(bool verbose);
@@ -540,6 +543,7 @@ void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_t
 void free_model_context();
 void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask=3, vector3d const &xlate=zero_vector);
 void ensure_model_reflection_cube_maps();
+void auto_calc_model_zvals();
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
