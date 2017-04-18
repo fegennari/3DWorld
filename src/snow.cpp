@@ -475,8 +475,8 @@ bool get_mesh_ice_pt(point const &p1, point &p2) {
 }
 
 
-vector3d get_rand_snow_vect(float amount) {
-	return (snow_random == 0.0 ? zero_vector : vector3d(amount*snow_random*rgauss(), amount*snow_random*rgauss(), 0.0));
+vector3d get_rand_snow_vect(rand_gen_t &rgen, float amount=1.0) {
+	return (snow_random == 0.0 ? zero_vector : vector3d(amount*snow_random*rgen.rgauss(), amount*snow_random*rgen.rgauss(), 0.0));
 }
 
 
@@ -503,15 +503,17 @@ void create_snow_map(voxel_map &vmap) {
 #pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < num_per_dim; ++y) {
 		if (omp_get_thread_num() == 0) {increment_printed_number(y);} // progress for thread 0
+		rand_gen_t rgen;
+		rgen.set_state(123, y);
 
 		for (int x = 0; x < num_per_dim; ++x) {
 			point pos1(-X_SCENE_SIZE + x*xscale, -Y_SCENE_SIZE + y*yscale, zval);
 			// add slightly more randomness for numerical precision reasons
-			for (unsigned d = 0; d < 2; ++d) {pos1[d] += SMALL_NUMBER*signed_rand_float();}
+			for (unsigned d = 0; d < 2; ++d) {pos1[d] += SMALL_NUMBER*rgen.signed_rand_float();}
 			point pos2;
 			if (!get_mesh_ice_pt(pos1, pos2)) continue; // invalid point
 			assert(pos2.z < pos1.z);
-			pos1 += get_rand_snow_vect(1.0); // add some gaussian randomness for better distribution
+			pos1 += get_rand_snow_vect(rgen, 1.0); // add some gaussian randomness for better distribution
 			point cpos;
 			vector3d cnorm;
 			bool invalid(0);
@@ -528,7 +530,7 @@ void create_snow_map(voxel_map &vmap) {
 				}
 				// collision with vertical or bottom surface
 				float const val(CLIP_TO_01((pos1.z - zbottom)*zv_scale));
-				vector3d const delta(get_rand_snow_vect(0.1*val));
+				vector3d const delta(get_rand_snow_vect(rgen, 0.1*val));
 				pos1 = cpos - (pos2 - pos1).get_norm()*SMALL_NUMBER; // push a small amount back from the object
 				pos2 = pos1 + ((dot_product(delta, cnorm) < 0.0) ? -delta : delta);
 				
