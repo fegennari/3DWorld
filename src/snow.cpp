@@ -676,7 +676,7 @@ void gen_snow_coverage() {
 	
 	if (read_snow_file) {
 		RESET_TIME;
-		vmap.read(snow_file);
+		if (!vmap.read(snow_file)) {has_snow = 0; return;}
 		PRINT_TIME("Read Snow Voxel Map");
 	}
 	else {
