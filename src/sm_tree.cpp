@@ -87,6 +87,7 @@ void small_tree_group::finalize(bool low_detail) {
 	vbo_mgr.clear(0); // clear_pts_mem = 0
 	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : PINE_TREE_NPTS));
 	if (!low_detail) {vbo_mgr.reserve_offsets(num_pine_trees);}
+	//if (!low_detail) {for (auto i = begin(); i != end(); ++i) {i->alloc_pine_tree_pts(vbo_mgr);}} // correct, but doesn't seem to help
 	#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_mgr, low_detail);}
 }
@@ -902,6 +903,10 @@ float small_tree::get_pine_tree_radius() const {
 	return 0.35*(height0 + 0.03/tree_scale);
 }
 
+void small_tree::alloc_pine_tree_pts(vbo_vnc_block_manager_t &vbo_manager) {
+	if (is_pine_tree()) {vbo_mgr_ix = vbo_manager.alloc_points_with_offset(PINE_TREE_NPTS);}
+}
+
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 
 	if (type == T_PALM) {calc_palm_tree_points(); return;} // palm tree
@@ -930,6 +935,9 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		if (update_mode) {
 			assert(vbo_mgr_ix >= 0);
 			vbo_manager.update_range(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix, vbo_mgr_ix+1);
+		}
+		else if (vbo_mgr_ix >= 0) { // already allocated, just copy the points
+			vbo_manager.fill_pts_from(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix);
 		}
 		else { // we only get into this case when running in parallel
 			#pragma omp critical(pine_tree_vbo_update)
