@@ -511,7 +511,7 @@ void tree_data_t::gen_leaf_color() {
 
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
 
-	float const ilch(1.0 - leaf_color_coherence);
+	float const ilch((1.0 - leaf_color_coherence)/255.0); // scale by 255 to convert uchar to 0-1 range
 	return colorRGB(max(0.0f, (color*(leaf_color.R + ilch*lred  ) + base_color.R*tree_color_coherence)),
 		            max(0.0f, (color*(leaf_color.G + ilch*lgreen) + base_color.G*tree_color_coherence)), 0.0);
 }
@@ -1919,8 +1919,8 @@ void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, f
 void tree_leaf::create_init_color(bool deterministic) {
 
 	color  = 1.0;
-	lred   = (deterministic ? rand2d() : rand_float());
-	lgreen = (deterministic ? rand2d() : rand_float());
+	lred   = (deterministic ? rand2() : rand()) & 255;
+	lgreen = (deterministic ? rand2() : rand()) & 255;
 }
 
 
