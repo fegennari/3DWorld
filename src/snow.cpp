@@ -494,23 +494,20 @@ void create_snow_map(voxel_map &vmap) {
 
 	// distribute snowflakes over the scene and build the voxel map of hits
 	int const num_per_dim(1024*(unsigned)sqrt((float)num_snowflakes)); // in M, so sqrt div by 1024
-	float const zval(max(ztop, czmax));
+	float const zval(max(ztop, czmax)), zv_scale(1.0/(zval - zbottom));
+	float const xscale(2.0*X_SCENE_SIZE/num_per_dim), yscale(2.0*Y_SCENE_SIZE/num_per_dim);
 	unsigned progress(0);
 	all_models.build_cobj_trees(1);
 	cout << "Snow accumulation progress (out of " << num_per_dim << "):     0";
 
-#pragma omp parallel for schedule(static,1) // dynamic?
+#pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < num_per_dim; ++y) {
 		if (omp_get_thread_num() == 0) {increment_printed_number(y);} // progress for thread 0
 
 		for (int x = 0; x < num_per_dim; ++x) {
-			point pos1(-X_SCENE_SIZE + 2.0*X_SCENE_SIZE*x/num_per_dim,
-				       -Y_SCENE_SIZE + 2.0*Y_SCENE_SIZE*y/num_per_dim, zval);
-
+			point pos1(-X_SCENE_SIZE + x*xscale, -Y_SCENE_SIZE + y*yscale, zval);
 			// add slightly more randomness for numerical precision reasons
-			for (unsigned d = 0; d < 2; ++d) {
-				pos1[d] += SMALL_NUMBER*signed_rand_float();
-			}
+			for (unsigned d = 0; d < 2; ++d) {pos1[d] += SMALL_NUMBER*signed_rand_float();}
 			point pos2;
 			if (!get_mesh_ice_pt(pos1, pos2)) continue; // invalid point
 			assert(pos2.z < pos1.z);
@@ -530,7 +527,7 @@ void create_snow_map(voxel_map &vmap) {
 					break;
 				}
 				// collision with vertical or bottom surface
-				float const val(CLIP_TO_01((pos1.z - zbottom)/(zval - zbottom)));
+				float const val(CLIP_TO_01((pos1.z - zbottom)*zv_scale));
 				vector3d const delta(get_rand_snow_vect(0.1*val));
 				pos1 = cpos - (pos2 - pos1).get_norm()*SMALL_NUMBER; // push a small amount back from the object
 				pos2 = pos1 + ((dot_product(delta, cnorm) < 0.0) ? -delta : delta);
@@ -540,11 +537,14 @@ void create_snow_map(voxel_map &vmap) {
 					break;
 				}
 				++iter;
-			}
+			} // end while
+			if (!invalid) {
+				voxel_t const voxel(pos2);
 #pragma omp critical(snow_map_update)
-			if (!invalid) {vmap[voxel_t(pos2)].update(pos2.z);}
-		}
-	}
+				vmap[voxel].update(pos2.z);
+			}
+		} // for x
+	} // for y
 	cout << endl;
 }
 
