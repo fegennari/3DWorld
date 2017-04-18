@@ -1135,7 +1135,7 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) { // lod_level == 
 		if (v+3 < num_verts) { // have a next triangle
 			point const pts2[3] = {td.get_vert(v+3).v, td.get_vert(v+4).v, td.get_vert(v+5).v};
 
-			if ((normal - get_poly_norm(pts2)).mag() < 0.01) {
+			if ((normal - get_poly_norm(pts2)).mag_sq() < 0.0001) {
 				if (pts2[0] == pts[1] && pts2[2] == pts[2]) { // merge two tris into a quad
 					point const quad_pts[4] = {pts[0], pts[1], pts2[1], pts[2]};
 					cindex = add_simple_coll_polygon(quad_pts, 4, cparams[cp_ix], normal);
