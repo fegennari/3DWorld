@@ -572,7 +572,7 @@ struct shared_vertex_t {
 };
 
 
-template<typename T> float indexed_vntc_vect_t<T>::get_area(unsigned npts) const {
+template<typename T> float indexed_vntc_vect_t<T>::calc_area(unsigned npts) {
 	
 	float area(0.0);
 	unsigned const nv(num_verts());
@@ -581,6 +581,7 @@ template<typename T> float indexed_vntc_vect_t<T>::get_area(unsigned npts) const
 		area                 += triangle_area(get_vert(i).v, get_vert(i+1).v, get_vert(i+2).v);  // first triangle
 		if (npts == 4) {area += triangle_area(get_vert(i).v, get_vert(i+2).v, get_vert(i+3).v);} // second triangle (for quads)
 	}
+	avg_area_per_tri = area/(nv/npts);
 	return area;
 }
 
@@ -765,9 +766,9 @@ template<typename T> float vntc_vect_block_t<T>::calc_draw_order_score() const {
 	return ((count == 0) ? 0.0 : -area/count);
 }
 
-template<typename T> float vntc_vect_block_t<T>::get_area(unsigned npts) const {
+template<typename T> float vntc_vect_block_t<T>::calc_area(unsigned npts) {
 	float area(0.0);
-	for (const_iterator i = begin(); i != end(); ++i) {area += i->get_area(npts);}
+	for (iterator i = begin(); i != end(); ++i) {area += i->calc_area(npts);}
 	return area;
 }
 
@@ -876,8 +877,8 @@ template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const
 	quads.get_stats(stats);
 }
 
-template<typename T> void geometry_t<T>::get_area(float &area, unsigned &ntris) const {
-	area  += triangles.get_area(3) + quads.get_area(4);
+template<typename T> void geometry_t<T>::calc_area(float &area, unsigned &ntris) {
+	area  += triangles.calc_area(3) + quads.calc_area(4);
 	ntris += (triangles.num_verts()/3) + 2*(quads.num_verts()/4); // quads count as 2 triangles
 }
 
@@ -897,8 +898,8 @@ void material_t::compute_area_per_tri() {
 	if (avg_area_per_tri > 0) return; // already computed
 	unsigned tris(0);
 	float area(0.0);
-	geom.get_area(area, tris);
-	geom_tan.get_area(area, tris);
+	geom.calc_area(area, tris);
+	geom_tan.calc_area(area, tris);
 	avg_area_per_tri = alpha*area/tris;
 	//cout << "name: " << name << " " << TXT(tris) << TXT(area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
 }

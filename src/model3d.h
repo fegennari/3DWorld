@@ -231,6 +231,7 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 	vector<unsigned> indices;
 	bool need_normalize;
+	float avg_area_per_tri;
 
 	struct geom_block_t {
 		unsigned start_ix, num;
@@ -241,7 +242,7 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 	vector<geom_block_t> blocks;
 
 public:
-	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0) {}
+	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0), avg_area_per_tri(0.0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
@@ -258,7 +259,7 @@ public:
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
 	unsigned get_ix  (unsigned i) const {assert(i < indices.size()); return indices[i];}
-	float get_area(unsigned npts) const;
+	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void write(ostream &out) const;
 	void read(istream &in);
@@ -277,7 +278,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
 	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)size(); stats.verts += num_unique_verts();}
-	float get_area(unsigned npts) const;
+	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
@@ -301,7 +302,7 @@ template<typename T> struct geometry_t {
 	void free_vbos() {triangles.free_vbos(); quads.free_vbos();}
 	void clear();
 	void get_stats(model3d_stats_t &stats) const;
-	void get_area(float &area, unsigned &ntris) const;
+	void calc_area(float &area, unsigned &ntris);
 	bool write(ostream &out) const {return (triangles.write(out) && quads.write(out));}
 	bool read(istream &in)         {return (triangles.read (in ) && quads.read (in ));}
 };
