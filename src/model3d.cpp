@@ -1452,9 +1452,17 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		if (is_normal_pass || !enable_alpha_mask) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask pass
 		if (is_normal_pass) {shader.clear_specular();}
 	}
-	point center(bcube.get_cube_center()); // for LOD/distance culling
-	if (xlate != nullptr) {center -= *xlate;}
-	
+	bool check_lod(0);
+	point center(all_zeros);
+
+	if (world_mode == WMODE_INF_TERRAIN) { // setup LOD/distance culling
+		point pts[2] = {bcube.get_llc(), bcube.get_urc()};
+		rot.rotate_point(pts[0], -1.0); rot.rotate_point(pts[1], -1.0);
+		cube_t const bcube_rot(pts[0], pts[1]);
+		point const &xlate_(xlate ? *xlate : all_zeros);
+		check_lod = (!bcube_rot.contains_pt(camera_pdu.pos + xlate_));
+		if (check_lod) {center = bcube_rot.get_cube_center() + xlate_;}
+	}
 	// render all materials (opaque then transparent)
 	for (unsigned pass = 0; pass < (is_z_prepass ? 1U : 2U); ++pass) { // opaque, transparent
 		if (!(trans_op_mask & (1<<pass))) continue; // wrong opaque vs. transparent pass
@@ -1463,7 +1471,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 			material_t const &mat(materials[i]);
 
 			if (mat.is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(mat.use_bump_map())))) {
-				if (world_mode == WMODE_INF_TERRAIN && mat.avg_area_per_tri > 0.0) {
+				if (check_lod && mat.avg_area_per_tri > 0.0) {
 					if (p2p_dist(camera_pdu.pos, center) > 1.0E6*model_mat_lod_thresh*mat.avg_area_per_tri) continue; // LOD/distance culling
 				}
 				to_draw.push_back(make_pair(mat.draw_order_score, i));
