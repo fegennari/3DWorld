@@ -23,7 +23,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
-extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals;
+extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, light_int_scale[];
@@ -234,6 +234,55 @@ template<typename T> void indexed_vntc_vect_t<T>::optimize(unsigned npts) {
 }
 
 
+unsigned get_area_pow2(float area, float amin) {return unsigned(log2(max(area/amin, 1.0f)));} // truncate
+
+template<typename T> unsigned indexed_vntc_vect_t<T>::get_block_ix(float area) const {
+	unsigned const ix(get_area_pow2(area, amin));
+	assert(ix < lod_blocks.size());
+	return (lod_blocks.size() - ix - 1);
+}
+
+template<typename T> void indexed_vntc_vect_t<T>::gen_lod_blocks(unsigned npts) {
+
+	//timer_t timer("Gen LOD Blocks");
+	unsigned const num(indices.size()), num_prims(num/npts);
+	assert(num > 0 && (num % npts) == 0);
+
+	// compute min/max area, and use this to determine the number of LOD blocks
+	for (unsigned i = 0; i < num_prims; ++i) {
+		float const area(get_prim_area(i*npts, npts));
+		if (i == 0) {amin = amax = area;} else {amin = min(amin, area); amax = max(amax, area);}
+	}
+	amin = max(amin, amax/4000.0f); // limit to a reasonable number of blocks
+	assert(amin > 0.0);
+	unsigned const num_blocks(get_area_pow2(amax, amin) + 1);
+	//cout << TXT(amin) << TXT(amax) << TXT(num_blocks) << endl;
+	if (num_blocks == 1) return; // all triangles have similar area, don't subdivide
+	lod_blocks.resize(num_blocks);
+
+	// count and record the number of triangles in each block and start index for each block
+	for (unsigned i = 0; i < num_prims; ++i) {
+		lod_blocks[get_block_ix(get_prim_area(i*npts, npts))].num += npts;
+	}
+	for (unsigned i = 0; i < num_blocks-1; ++i) {lod_blocks[i+1].start_ix = lod_blocks[i].get_end_ix();}
+	//cout << "start: "; for (unsigned i = 0; i < num_blocks; ++i) {cout << lod_blocks[i].start_ix << " ";} cout << endl;
+	//cout << "num  : "; for (unsigned i = 0; i < num_blocks; ++i) {cout << lod_blocks[i].num << " ";} cout << endl;
+	assert(lod_blocks.back().get_end_ix() == indices.size());
+	for (unsigned i = 0; i < num_blocks; ++i) {lod_blocks[i].num = 0;} // reset for next pass
+
+	// reorder indices based on LOD blocks
+	vector<unsigned> ixs(indices.size());
+
+	for (unsigned i = 0; i < num_prims; ++i) {
+		unsigned const ix(get_block_ix(get_prim_area(i*npts, npts)));
+		unsigned const cur_pos(lod_blocks[ix].get_end_ix());
+		assert(cur_pos + npts <= ((ix+1 == num_blocks) ? indices.size() : lod_blocks[ix+1].start_ix));
+		for (unsigned n = 0; n < npts; ++n) {ixs[cur_pos + n] = indices[i*npts + n];} // copy indices
+		lod_blocks[ix].num += npts;
+	}
+	indices.swap(ixs);
+}
+
 template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 
 	if (need_normalize) {
@@ -253,9 +302,12 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 	finalized = 1;
 	//optimize(npts); // now optimized in the object file loading phase
 	assert((num_verts() % npts) == 0); // triangles or quads
-	assert(blocks.empty());
+	assert(blocks.empty() && lod_blocks.empty());
 
-	if (!no_subdiv_model && num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
+	if (use_model_lod_blocks && indices.size() > 1024) {
+		gen_lod_blocks(npts);
+	}
+	else if (!no_subdiv_model && num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
 		ensure_bounding_volumes();
 		//timer_t timer("Subdivide Model");
 		vector<unsigned> ixs;
@@ -412,6 +464,7 @@ template<typename T> void indexed_vntc_vect_t<T>::clear() {
 	vntc_vect_t<T>::clear();
 	indices.clear();
 	blocks.clear();
+	lod_blocks.clear();
 	need_normalize = 0;
 }
 
@@ -502,14 +555,26 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	// FIXME: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
 	T::set_vbo_arrays(); // calls check_mvm_update()
 
-	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+	if (!is_shadow_pass && !lod_blocks.empty()) {
+		float const dmin(2.0*bsphere.radius), dist(p2p_dist(camera_pdu.pos, bsphere.pos));
+		unsigned end_ix(indices.size());
+
+		if (dist > dmin) { // no LOD if within the bounding sphere
+			float const area_thresh((dist - dmin)*(dist - dmin)/(1.0E5f*model_mat_lod_thresh));
+			if      (area_thresh > amax) {end_ix = 0;} // draw none
+			else if (area_thresh > amin) {end_ix = lod_blocks[get_block_ix(area_thresh)].get_end_ix();}
+			assert(end_ix <= indices.size());
+		}
+		if (end_ix > 0) {glDrawRangeElements(prim_type, 0, (unsigned)size(), (ixn*end_ix/ixd), GL_UNSIGNED_INT, 0);}
+	}
+	else if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
 		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)(ixn*indices.size()/ixd), GL_UNSIGNED_INT, 0);
 	}
 	else { // draw each block independently
 		// could use glDrawElementsIndirect(), but the draw calls don't seem to add any significant overhead for the current set of models
 		for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
 			if (camera_pdu.cube_visible(i->bcube)) {
-				glDrawRangeElements(prim_type, 0, (unsigned)size(), ixn*i->num/ixd, GL_UNSIGNED_INT, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));
+				glDrawRangeElements(prim_type, 0, (unsigned)size(), (ixn*i->num/ixd), GL_UNSIGNED_INT, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));
 			}
 		}
 	}
@@ -564,26 +629,30 @@ template<typename T> unsigned indexed_vntc_vect_t<T>::add_vertex(T const &v, ver
 }
 
 
+template<typename T> float indexed_vntc_vect_t<T>::get_prim_area(unsigned i, unsigned npts) const {
+
+	assert(i+npts <= num_verts());
+	float area(triangle_area(get_vert(i).v, get_vert(i+1).v, get_vert(i+2).v)); // first triangle
+	if (npts == 4) {area += triangle_area(get_vert(i).v, get_vert(i+2).v, get_vert(i+3).v);} // second triangle (for quads)
+	return area;
+}
+
+template<typename T> float indexed_vntc_vect_t<T>::calc_area(unsigned npts) {
+	
+	float area(0.0);
+	unsigned const nv(num_verts());
+	for (unsigned i = 0; i < nv; i += npts) {area += get_prim_area(i, npts);}
+	avg_area_per_tri = area/(nv/npts);
+	return area;
+}
+
+
 struct shared_vertex_t {
 	unsigned ai, bi;
 	bool shared;
 	shared_vertex_t() : ai(0), bi(0), shared(0) {}
 	shared_vertex_t(unsigned ai_, unsigned bi_) : ai(ai_), bi(bi_), shared(1) {}
 };
-
-
-template<typename T> float indexed_vntc_vect_t<T>::calc_area(unsigned npts) {
-	
-	float area(0.0);
-	unsigned const nv(num_verts());
-
-	for (unsigned i = 0; i < nv; i += npts) {
-		area                 += triangle_area(get_vert(i).v, get_vert(i+1).v, get_vert(i+2).v);  // first triangle
-		if (npts == 4) {area += triangle_area(get_vert(i).v, get_vert(i+2).v, get_vert(i+3).v);} // second triangle (for quads)
-	}
-	avg_area_per_tri = area/(nv/npts);
-	return area;
-}
 
 template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_t &args, unsigned npts) const {
 
@@ -650,14 +719,11 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_
 
 
 template<typename T> void indexed_vntc_vect_t<T>::write(ostream &out) const {
-
 	vntc_vect_t<T>::write(out);
 	write_vector(out, indices);
 }
 
-
 template<typename T> void indexed_vntc_vect_t<T>::read(istream &in) {
-
 	vntc_vect_t<T>::read(in);
 	read_vector(in, indices);
 }
@@ -1455,13 +1521,12 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	bool check_lod(0);
 	point center(all_zeros);
 
-	if (world_mode == WMODE_INF_TERRAIN) { // setup LOD/distance culling
+	if (world_mode == WMODE_INF_TERRAIN || use_model_lod_blocks) { // setup LOD/distance culling
 		point pts[2] = {bcube.get_llc(), bcube.get_urc()};
 		rot.rotate_point(pts[0], -1.0); rot.rotate_point(pts[1], -1.0);
 		cube_t const bcube_rot(pts[0], pts[1]);
-		point const &xlate_(xlate ? *xlate : all_zeros);
-		check_lod = (!bcube_rot.contains_pt(camera_pdu.pos + xlate_));
-		if (check_lod) {center = bcube_rot.get_cube_center() + xlate_;}
+		check_lod = (!bcube_rot.contains_pt(camera_pdu.pos));
+		if (check_lod) {center = bcube_rot.get_cube_center();}
 	}
 	// render all materials (opaque then transparent)
 	for (unsigned pass = 0; pass < (is_z_prepass ? 1U : 2U); ++pass) { // opaque, transparent

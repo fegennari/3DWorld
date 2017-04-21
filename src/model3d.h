@@ -231,7 +231,7 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 	vector<unsigned> indices;
 	bool need_normalize;
-	float avg_area_per_tri;
+	float avg_area_per_tri, amin, amax;
 
 	struct geom_block_t {
 		unsigned start_ix, num;
@@ -241,8 +241,18 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 	};
 	vector<geom_block_t> blocks;
 
+	struct lod_block_t {
+		unsigned start_ix, num;
+		float tri_area;
+		lod_block_t() : start_ix(0), num(0), tri_area(0.0) {}
+		lod_block_t(unsigned s, unsigned n, float a) : start_ix(s), num(n), tri_area(a) {}
+		unsigned get_end_ix() const {return (start_ix + num);}
+	};
+	vector<lod_block_t> lod_blocks;
+	unsigned get_block_ix(float area) const;
+
 public:
-	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0), avg_area_per_tri(0.0) {}
+	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
@@ -252,6 +262,7 @@ public:
 	void add_index(unsigned ix) {assert(ix < size()); indices.push_back(ix);}
 	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims, cube_t *bcube_in=nullptr);
 	void optimize(unsigned npts);
+	void gen_lod_blocks(unsigned npts);
 	void finalize(unsigned npts);
 	void simplify(vector<unsigned> &out, float target) const;
 	void clear();
@@ -259,6 +270,7 @@ public:
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
 	unsigned get_ix  (unsigned i) const {assert(i < indices.size()); return indices[i];}
+	float get_prim_area(unsigned i, unsigned npts) const;
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void write(ostream &out) const;
