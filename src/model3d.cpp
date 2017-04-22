@@ -253,7 +253,7 @@ template<typename T> void indexed_vntc_vect_t<T>::gen_lod_blocks(unsigned npts) 
 		float const area(get_prim_area(i*npts, npts));
 		if (i == 0) {amin = amax = area;} else {amin = min(amin, area); amax = max(amax, area);}
 	}
-	amin = max(amin, amax/4000.0f); // limit to a reasonable number of blocks
+	amin = max(amin, amax/1024.0f); // limit to a reasonable number of blocks
 	assert(amin > 0.0);
 	unsigned const num_blocks(get_area_pow2(amax, amin) + 1);
 	//cout << TXT(amin) << TXT(amax) << TXT(num_blocks) << endl;
@@ -537,8 +537,18 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	assert(!indices.empty()); // now always using indexed drawing
 	int prim_type(GL_TRIANGLES);
-	unsigned ixn(1), ixd(1);
+	unsigned ixn(1), ixd(1), end_ix(indices.size());
 
+	if (!is_shadow_pass && !lod_blocks.empty()) { // block LOD
+		float const dmin(2.0*bsphere.radius), dist(p2p_dist(camera_pdu.pos, bsphere.pos));
+
+		if (dist > dmin) { // no LOD if within the bounding sphere
+			float const area_thresh((dist - dmin)*(dist - dmin)/(1.0E5f*model_mat_lod_thresh));
+			if      (area_thresh > amax) {return;} // draw none
+			else if (area_thresh > amin) {end_ix = lod_blocks[get_block_ix(area_thresh)].get_end_ix();}
+			assert(end_ix <= indices.size());
+		}
+	}
 	if (use_core_context && npts == 4) {
 		if (!ivbo) {
 			vector<unsigned> tixs;
@@ -555,20 +565,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	// FIXME: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
 	T::set_vbo_arrays(); // calls check_mvm_update()
 
-	if (!is_shadow_pass && !lod_blocks.empty()) {
-		float const dmin(2.0*bsphere.radius), dist(p2p_dist(camera_pdu.pos, bsphere.pos));
-		unsigned end_ix(indices.size());
-
-		if (dist > dmin) { // no LOD if within the bounding sphere
-			float const area_thresh((dist - dmin)*(dist - dmin)/(1.0E5f*model_mat_lod_thresh));
-			if      (area_thresh > amax) {end_ix = 0;} // draw none
-			else if (area_thresh > amin) {end_ix = lod_blocks[get_block_ix(area_thresh)].get_end_ix();}
-			assert(end_ix <= indices.size());
-		}
-		if (end_ix > 0) {glDrawRangeElements(prim_type, 0, (unsigned)size(), (ixn*end_ix/ixd), GL_UNSIGNED_INT, 0);}
-	}
-	else if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)(ixn*indices.size()/ixd), GL_UNSIGNED_INT, 0);
+	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)(ixn*end_ix/ixd), GL_UNSIGNED_INT, 0);
 	}
 	else { // draw each block independently
 		// could use glDrawElementsIndirect(), but the draw calls don't seem to add any significant overhead for the current set of models
