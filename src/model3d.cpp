@@ -1519,7 +1519,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	bool check_lod(0);
 	point center(all_zeros);
 
-	if (world_mode == WMODE_INF_TERRAIN || use_model_lod_blocks) { // setup LOD/distance culling
+	if ((world_mode == WMODE_INF_TERRAIN || use_model_lod_blocks) && !is_shadow_pass) { // setup LOD/distance culling
 		point pts[2] = {bcube.get_llc(), bcube.get_urc()};
 		rot.rotate_point(pts[0], -1.0); rot.rotate_point(pts[1], -1.0);
 		cube_t const bcube_rot(pts[0], pts[1]);
