@@ -1064,8 +1064,9 @@ unsigned voxel_model::create_block(voxel_ix_cache &vix_cache, unsigned block_ix,
 
 	assert(lod_level < tri_data.size());
 	tri_data_t &td(tri_data[lod_level]);
-	assert(block_ix <td.size());
-	assert(td[block_ix].empty());
+	assert(block_ix < td.size());
+	auto &tri_block(td[block_ix]);
+	assert(tri_block.empty());
 	vix_cache.init(xblocks+1, yblocks+1, nz, vsz, zero_vector, vert_ix_cache_entry(), 1);
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks), step(1 << lod_level);
 	unsigned count(0);
@@ -1073,7 +1074,7 @@ unsigned voxel_model::create_block(voxel_ix_cache &vix_cache, unsigned block_ix,
 	for (unsigned y = ybix*yblocks; y < (ybix+1)*yblocks; y += step) {
 		for (unsigned x = xbix*xblocks; x < (xbix+1)*xblocks; x += step) {
 			for (unsigned z = 0; z < nz; z += step) {
-				count += add_triangles_for_voxel(td[block_ix], vix_cache, x, y, z, xbix*xblocks, ybix*yblocks, count_only, lod_level);
+				count += add_triangles_for_voxel(tri_block, vix_cache, x, y, z, xbix*xblocks, ybix*yblocks, count_only, lod_level);
 			}
 		}
 	}
@@ -1084,9 +1085,10 @@ unsigned voxel_model::create_block(voxel_ix_cache &vix_cache, unsigned block_ix,
 			pt_to_ix[lod_level][block_ix].ix = block_ix;
 		}
 		if (lod_level == 0) {create_block_hook(block_ix);}
+		tri_block.finalize(3); // needed to compute bounding sphere and vertex normals
 	}
 	else { // count_only
-		td[block_ix].reserve_for_num_verts(3*count);
+		tri_block.reserve_for_num_verts(3*count);
 	}
 	return count;
 }
