@@ -8,6 +8,7 @@ in vec3 normal_ES[], eye_norm_ES[];
 #endif
 
 out vec2 tc;
+out vec4 epos;
 out vec4 fg_Color_vf;
 #ifdef INCLUDE_NORMALS
 out vec3 vertex_from_vs, normal, eye_norm;
@@ -27,7 +28,7 @@ void main() {
 	// Interpolate the attributes of the output vertex; vertex 2 is the tip of the grass blade
 	tc          = interpolate2D(    tc_ES[0],     tc_ES[1],     tc_ES[2]);
 	vec3 vertex = interpolate3D(vertex_ES[0], vertex_ES[1], vertex_ES[2]);
-	vec4 epos   = fg_ModelViewMatrix * vec4(vertex, 1.0); // use epos before modifying vertex
+	epos        = fg_ModelViewMatrix * vec4(vertex, 1.0); // use epos before modifying vertex
 	vec3 delta  = vertex - 0.5*(vertex_ES[0] + vertex_ES[1]); // delta from base of grass
 	vertex     -= delta;
 	float dist  = length(delta);

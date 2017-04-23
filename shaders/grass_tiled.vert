@@ -7,6 +7,7 @@ uniform vec2 xlate = vec2(0.0);
 in vec2 local_translate;
 
 out vec2 tc;
+//out vec4 epos; // required when not using tess shader flow for grass
 out vec3 vertex_from_vs;
 
 void main()
