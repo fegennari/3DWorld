@@ -282,7 +282,7 @@ public:
 
 template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t<T> > {
 
-	void optimize(unsigned npts);
+	void finalize(unsigned npts);
 	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();
 	cube_t get_bcube() const;
@@ -310,7 +310,7 @@ template<typename T> struct geometry_t {
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
 	void get_polygons(get_polygon_args_t &args) const;
 	cube_t get_bcube() const;
-	void optimize()  {triangles.optimize(3); quads.optimize(4);}
+	void finalize()  {triangles.finalize(3); quads.finalize(4);}
 	void free_vbos() {triangles.free_vbos(); quads.free_vbos();}
 	void clear();
 	void get_stats(model3d_stats_t &stats) const;
@@ -375,7 +375,7 @@ struct material_t : public material_params_t {
 	bool mat_is_used () const {return is_used;}
 	bool use_bump_map() const;
 	bool use_spec_map() const;
-	void optimize() {geom.optimize(); geom_tan.optimize();}
+	void finalize() {geom.finalize(); geom_tan.finalize();}
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
@@ -471,7 +471,7 @@ public:
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
 	void set_xform_zval_from_tt_height();
-	void optimize();
+	void finalize();
 	void clear();
 	void free_context();
 	void clear_smaps(); // frees GL state

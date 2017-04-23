@@ -285,10 +285,13 @@ template<typename T> void indexed_vntc_vect_t<T>::gen_lod_blocks(unsigned npts) 
 
 template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 
+	optimize(npts);
+
 	if (need_normalize) {
 		for (iterator i = begin(); i != end(); ++i) {i->n.normalize();}
 		need_normalize = 0;
 	}
+	ensure_bounding_volumes();
 	if (indices.empty() || finalized) return; // nothing to do
 
 	bool const do_simplify = 0; // TESTING, maybe this doesn't really go here
@@ -300,7 +303,6 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 		}
 	}
 	finalized = 1;
-	//optimize(npts); // now optimized in the object file loading phase
 	assert((num_verts() % npts) == 0); // triangles or quads
 	assert(blocks.empty() && lod_blocks.empty());
 
@@ -518,8 +520,6 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 
 	if (empty()) return;
 	assert(npts == 3 || npts == 4);
-	finalize(npts);
-	ensure_bounding_volumes();
 	//if (is_shadow_pass && vbo == 0 && world_mode == WMODE_GROUND) return; // don't create the vbo on the shadow pass (voxel terrain problems - works now?)
 
 	if (no_vfc) {
@@ -788,8 +788,8 @@ template struct vntc_vect_block_t<vert_norm_tc>;
 template struct vntc_vect_block_t<vert_norm_tc_tan>;
 
 
-template<typename T> void vntc_vect_block_t<T>::optimize(unsigned npts) {
-	for (iterator i = begin(); i != end(); ++i) {i->optimize(npts);}
+template<typename T> void vntc_vect_block_t<T>::finalize(unsigned npts) {
+	for (iterator i = begin(); i != end(); ++i) {i->finalize(npts);}
 }
 
 template<typename T> void vntc_vect_block_t<T>::free_vbos() {
@@ -862,10 +862,7 @@ template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 
 
 template<> void geometry_t<vert_norm_tc_tan>::calc_tangents_blocks(vntc_vect_block_t<vert_norm_tc_tan> &blocks, unsigned npts) {
-
-	for (vntc_vect_block_t<vert_norm_tc_tan>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
-		i->calc_tangents(npts);
-	}
+	for (auto i = blocks.begin(); i != blocks.end(); ++i) {i->calc_tangents(npts);}
 }
 
 template<typename T> void geometry_t<T>::calc_tangents() {
@@ -874,10 +871,7 @@ template<typename T> void geometry_t<T>::calc_tangents() {
 }
 
 template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, point const *const xlate, vntc_vect_block_t<T> &blocks, unsigned npts) {
-
-	for (vntc_vect_block_t<T>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
-		i->render(shader, is_shadow_pass, xlate, npts);
-	}
+	for (auto i = blocks.begin(); i != blocks.end(); ++i) {i->render(shader, is_shadow_pass, xlate, npts);}
 }
 
 template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate) {
@@ -1409,11 +1403,11 @@ void model3d::mark_mat_as_used(int mat_id) {
 }
 
 
-void model3d::optimize() {
+void model3d::finalize() {
 
 #pragma omp parallel for schedule(dynamic)
-	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].optimize();}
-	unbound_geom.optimize();
+	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].finalize();}
+	unbound_geom.finalize();
 }
 
 

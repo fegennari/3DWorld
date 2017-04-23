@@ -730,7 +730,7 @@ public:
 			}
 			pblocks.pop_back();
 		}
-		model.optimize(); // optimize vertices and remove excess capacity
+		model.finalize(); // optimize vertices, remove excess capacity, compute bounding cube, subdivide, generate LOD blocks
 		PRINT_TIME("Model3d Build");
 		
 		if (verbose) {
