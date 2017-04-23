@@ -936,9 +936,9 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 			assert(vbo_mgr_ix >= 0);
 			vbo_manager.update_range(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix, vbo_mgr_ix+1);
 		}
-		else if (vbo_mgr_ix >= 0) { // already allocated, just copy the points
+		/*else if (vbo_mgr_ix >= 0) { // already allocated, just copy the points (requires additional code to be enabled in small_tree_group::finalize())
 			vbo_manager.fill_pts_from(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix);
-		}
+		}*/
 		else { // we only get into this case when running in parallel
 			#pragma omp critical(pine_tree_vbo_update)
 			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, PINE_TREE_NPTS, leaf_color);
