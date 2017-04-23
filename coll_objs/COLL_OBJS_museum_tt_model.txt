@@ -1,5 +1,7 @@
 t 0.0 0.0 0.0
-l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
+l 0.8 1.0 1.0 1.0 1.0 snow2.jpg 1 # elasticity R G B A texture_id draw
+
+#B -2.74 3.0  -1.34 1.34  -0.34 0.76
 
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
 t 1.265 0.675 0.3  s 1 2  M 0  m 0.05  O ../models/museum/museumhallRD.obj 3 1 0

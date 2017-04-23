@@ -14,6 +14,8 @@ L 1.5 1.5  -2.47426  0.407699 0.255833  0.8 0.8 1.0 1.0
 L 1.5 1.5  -2.47426 -0.558990 0.760717  0.8 0.8 1.0 1.0
 L 1.5 1.5  -2.47426  0.407699 0.760717  0.8 0.8 1.0 1.0
 
+l 0.8 0.72 0.73 0.64 1.0 snow2.jpg 1 # set default for dinosaur bones
+
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
 reflective 1
 # Note: recalc_normals makes bones and railings look smoother, but causes texture coord artifacts on corners of walls and arches
