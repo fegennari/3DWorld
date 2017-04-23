@@ -225,6 +225,8 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 
 template<typename T> void indexed_vntc_vect_t<T>::optimize(unsigned npts) {
 
+	if (optimized) return;
+	optimized = 1;
 	vntc_vect_t<T>::optimize(npts);
 
 	if (vert_opt_flags[0]) { // only if not subdivided?
@@ -291,7 +293,7 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 		for (iterator i = begin(); i != end(); ++i) {i->n.normalize();}
 		need_normalize = 0;
 	}
-	ensure_bounding_volumes();
+	if (!empty()) {ensure_bounding_volumes();}
 	if (indices.empty() || finalized) return; // nothing to do
 
 	bool const do_simplify = 0; // TESTING, maybe this doesn't really go here
@@ -310,7 +312,6 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 		gen_lod_blocks(npts);
 	}
 	else if (!no_subdiv_model && num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
-		ensure_bounding_volumes();
 		//timer_t timer("Subdivide Model");
 		vector<unsigned> ixs;
 		ixs.swap(indices);
