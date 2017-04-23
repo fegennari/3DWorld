@@ -941,7 +941,7 @@ int dwobject::surface_advance() {
 	}
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y)), val(0);
 	if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
-	float const mesh_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)), radius(otype.radius), density(get_true_density());
+	float const mesh_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)), radius(get_true_radius()), density(get_true_density());
 
 	if (pos.z < (mesh_height - RECOVER_DEPTH*radius)) { // below surface
 		if (pos.z < (mesh_height - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
