@@ -794,6 +794,7 @@ public:
 	virtual u_ship_base const *get_ship_base() const {assert(0); return NULL;} // sort of a hack
 	virtual ship_explosion get_explosion()     const {assert(0); return ship_explosion();} // shouldn't be here
 	virtual void next_frame() {} // empty
+	virtual void acknowledge_kill() {} // empty
 	virtual bool dock_fighter(u_ship *ship) {assert(0); return 0;} // shouldn't be here
 	virtual bool orbital_dock(u_ship *ship) {assert(0); return 0;} // shouldn't be here
 	virtual bool do_boarding(u_ship *ship)  {assert(0); return 0;} // shouldn't be here

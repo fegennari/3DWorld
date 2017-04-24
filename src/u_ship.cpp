@@ -200,6 +200,7 @@ string u_ship::get_info() const { // destination, homeworld?
 	if (specs().max_shields > 0.0) oss << "Shields: " << unsigned(100.0*shields/specs().max_shields) << "%  ";
 	if (specs().max_armor   > 0.0) oss << "Armor: "   << unsigned(100.0*armor/specs().max_armor)     << "%  ";
 	if (specs().ncrew       > 0  ) oss << "Crew: "    << ncrew << "  ";
+	oss << "Kills: " << kills << " ";
 	if ((ai_type & AI_BASE_TYPE) == AI_ATT_ALL) oss << "(Pirate) ";
 	if (ai_type & AI_GUARDIAN) oss << "(Guardian) ";
 	if (is_flagship)           oss << "(Flagship) ";
@@ -2051,7 +2052,7 @@ bool u_ship::capture_ship(u_ship *ship, bool add_as_fighter) { // this captures 
 	bool const player(ship->is_player_ship());
 	if (player) destroy_player_ship(1);
 	register_damage(sclass, ship->sclass, WCLASS_CAPTURE, (ship->get_shields() + ship->get_armor()), alignment, ship->get_align(), 1); // counts as a kill
-	if (is_player_ship()) acknowledge_kill(); // counts as a kill - player only for now
+	acknowledge_kill(); // counts as a kill
 	ship->register_destruction(this); // counts as destroying the ship
 	ship->alignment  = alignment;
 	ship->parent     = this; // or could set to NULL?
@@ -2392,8 +2393,9 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	val        -= armor;
 	armor       = 0.0;
 	assert(is_kill);
-	if (attack) register_destruction(source);
-	if (source && source->source_is_player()) player_ship().acknowledge_kill();  // player only for now
+	if (attack) {register_destruction(source);}
+	// FIXME: we may need to increment kills here, which means that source can't be const, so we have to cast it to const; is it better to make kills mutable?
+	if (source) {const_cast<free_obj *>(source)->acknowledge_kill();}
 	acknowledge_death();
 	destroy_ship(val);
 	return damage_amt;
