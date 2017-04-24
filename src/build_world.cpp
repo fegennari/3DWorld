@@ -1170,13 +1170,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		if (!is_end_of_string(letter)) {
 			int const next_letter(getc(fp));
 
-			if (!is_end_of_string(next_letter)) {
+			if (!is_end_of_string(next_letter)) { // multi-character keyword
 				string keyword;
 				keyword.push_back(letter);
 				letter = next_letter;
 				while (!is_end_of_string(letter)) {keyword.push_back(letter); letter = getc(fp);}
 
 				if (0) {}
+				// long name aliases remapped to single character
 				else if (keyword == "cube") {letter = 'B';}
 				else if (keyword == "sphere") {letter = 'S';}
 				else if (keyword == "cylinder") {letter = 'C';}
@@ -1189,6 +1190,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "indir_dlight_group") {letter = 'U';}
 				else if (keyword == "movable") {letter = 'd';}
 				else if (keyword == "end") {letter = 'q';}
+				// long keywords
 				else if (keyword == "density") {
 					if (!read_float(fp, cobj.cp.density)) {return read_error(fp, "density", coll_obj_file);}
 				}
@@ -1268,6 +1270,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					float weight(0.0);
 					if (fscanf(fp, "%255s%u%u%u%f", str, &sz[0], &sz[1], &sz[2], &weight) != 5) {return read_error(fp, "lighting_file_sky_model", coll_obj_file);}
 					set_sky_lighting_file_for_cur_model(str, weight, sz);
+				}
+				else if (keyword == "model_occlusion_cube") { // Note: in local model space, so tr
+					cube_t cube;
+					if (!read_cube(fp, geom_xform_t(), cube)) {return read_error(fp, "model_occlusion_cube", coll_obj_file);}
+					set_occlusion_cube_for_cur_model(cube);
 				}
 				else {
 					ostringstream oss;

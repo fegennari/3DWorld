@@ -6,7 +6,9 @@ y 4.0
 # Z group_cobjs_level tx ty tz [scale [rx ry rz angle [<voxel_xy_spacing>]]]
 
 t 0 0 0  s 1 2  M 0  m 0.05  O ../models/museum/museumhallRD.obj 4 1 0
+s 1 2  m 1.0 # reset
 lighting_file_sky_model ../models/museum/lighting.tt.data.gz 256 128 64 2.0
+model_occlusion_cube -4.2 1.45  -2.0 0.65  -0.66 0.75
 
 #Z 4   0.0  0.0  0.0 # identity transform
 #Z 4   2.0  1.0  1.0  1.0  0.0 0.0 1.0 90.0 # with scale and rotation

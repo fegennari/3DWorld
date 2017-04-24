@@ -7,8 +7,6 @@ Load/display model3d models in tiled terrain mode
     - Fix scaled model shadows
 	- Shadows between different models
   - Model LOD
-    - Mesh Simplification
-	- Billboards
 
 Gameplay in tiled terrain mode
   - Dynamic Objects

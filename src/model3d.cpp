@@ -1700,14 +1700,41 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 		
 		for (unsigned i = 0; i < transforms.size(); ++i) {
 			float const dist(distance_to_camera(transforms[i].tv + xlate)); // only use translate; assumes models are approx centered and rotated about their centers
-			if (dist > view_dist) continue; // too far away
-			to_draw_xf.emplace_back(((trans_op_mask == 1) ? dist : -dist), i); // opaque: front-to-back, transparent: back-to-front
+			if (dist < view_dist) {to_draw_xf.emplace_back(dist, i);} // add if not too far away
 		}
-		if (trans_op_mask < 3) { // drawing opaque and transparent in separate passes, sort by distance
-			sort(to_draw_xf.begin(), to_draw_xf.end());
+		if (trans_op_mask < 3) {sort(to_draw_xf.begin(), to_draw_xf.end());} // drawing opaque and trans in separate passes, sort by dist
+		vector<cube_t> occluders;
+		point const camera(get_camera_pos() - xlate);
+
+		if (!is_shadow_pass && (display_mode & 0x08) != 0 && !occlusion_cube.is_all_zeros()) { // enable occlusion culling
+			for (auto i = to_draw_xf.begin(); i != to_draw_xf.end(); ++i) {
+				if (transforms[i->second].get_xformed_bcube(bcube).contains_pt(camera)) continue; // skip cases where the camera is inside the cube
+				cube_t const occ_cube(transforms[i->second].get_xformed_cube(occlusion_cube));
+				if (!camera_pdu.cube_visible(occ_cube)) continue;
+				occluders.push_back(occ_cube);
+				if (occluders.size() >= 5) break; // at most 5 occluders, starting from closest model, which is largest in screen space
+			}
 		}
+		if (trans_op_mask == 2) {reverse(to_draw_xf.begin(), to_draw_xf.end());} // opaque: front-to-back, transparent: back-to-front
+
 		for (auto i = to_draw_xf.begin(); i != to_draw_xf.end(); ++i) {
-			render_with_xform(shader, transforms[i->second], mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
+			bool skip(0);
+
+			if (!occluders.empty()) {
+				cube_t const bc(transforms[i->second].get_xformed_bcube(bcube));
+				point pts[8];
+				unsigned const ncorners(get_cube_corners(bc.d, pts, camera, 0)); // 8 corners allocated, but only 6 used
+
+				for (vector<cube_t>::const_iterator j = occluders.begin(); j != occluders.end(); ++j) {
+					bool int_all(1);
+
+					for (unsigned c = 0; c < ncorners; ++c) {
+						if (!check_line_clip(camera, pts[c], j->d)) {int_all = 0; break;}
+					}
+					if (int_all) {skip = 1; break;}
+				}
+			}
+			if (!skip) {render_with_xform(shader, transforms[i->second], mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);}
 		}
 	}
 	else { // ground mode, no sorting or distance culling
@@ -2320,6 +2347,9 @@ void add_transform_for_cur_model(model3d_xform_t const &xf) {
 }
 void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[3]) {
 	get_cur_model("sky_lighting_file").set_sky_lighting_file(fn, weight, sz);
+}
+void set_occlusion_cube_for_cur_model(cube_t const &cube) {
+	get_cur_model("model_occlusion_cube").set_occlusion_cube(cube);
 }
 
 cube_t get_all_models_bcube(bool only_reflective) {return all_models.get_bcube(only_reflective);}
