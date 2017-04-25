@@ -1214,7 +1214,7 @@ void u_ship::ai_action() {
 	}
 
 	// fire
-	if (!no_ammo && !pickup_fighter && !targ_friend) ai_fire(fire_dir, target_dist, min_dist, move_dir);
+	if (!no_ammo && !pickup_fighter && !targ_friend) {ai_fire(fire_dir, target_dist, min_dist, move_dir);}
 }
 
 
@@ -1374,6 +1374,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			fire_dir = predict_target_dir(pos, target_obj, weapon_id);
 			if (fire_dir == zero_vector) continue;
 		}
+		if (!weap.is_fighter && !maybe_has_line_of_sight(pos + fire_dir*target_dist)) continue; // no LOS for orbiting ship
 		free_obj *fobj;
 		float line_radius(0.0), tdist(0.0); // tdist is unused
 
@@ -2950,6 +2951,10 @@ void orbiting_ship::ai_action() {
 		last_build_time = time; // don't queue up builds - if can't build now then too bad, have to wait another iteration
 	}
 	u_ship::ai_action();
+}
+
+bool orbiting_ship::maybe_has_line_of_sight(point const &to_pos) const {
+	return !line_sphere_intersect(pos, to_pos, sobj_pos, sobj_radius);
 }
 
 

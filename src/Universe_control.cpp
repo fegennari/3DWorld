@@ -1073,6 +1073,7 @@ orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_
 		rel_pos.normalize();
 	}
 	set_pos_from_sobj(&world);
+	sobj_radius = world.radius;
 }
 
 
@@ -1133,6 +1134,7 @@ void orbiting_ship::set_pos_from_sobj(urev_body const *const sobj) {
 		rotate_norm_vector3d_into_plus_z(axis, delta, -1.0); // switch to local coordinate system (inverse rotate)
 		rotate_vector3d_norm (axis, -angle, delta); // negate angle?
 	}
+	sobj_pos  = sobj->pos;
 	pos       = sobj->pos + delta*double(orbit_r);
 	reset_pos = pos;
 	if (specs().max_turn  == 0.0) {dir = delta;} // face outward (no turning?)

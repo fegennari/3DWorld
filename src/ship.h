@@ -1328,6 +1328,7 @@ public:
 	bool rename(string const &name_) {name = name_; return 1;}
 	vector3d predict_target_dir(point const &fpos, free_obj const *targ, unsigned wclass=UWEAP_NONE) const;
 	u_ship_base const *get_ship_base() const {return this;}
+	virtual bool maybe_has_line_of_sight(point const &to_pos) const {return 1;} // only orbiting_ship can return 0
 
 	bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const;
 	bool sphere_int_obj(point const &c, float r, intersect_params &ip=def_int_params) const;
@@ -1352,9 +1353,9 @@ private:
 	bool GSO, fixed_pos, has_sobj, sobj_liveable;
 	unsigned orbiting_type, last_build_time;
 	int system_ix, planet_ix, moon_ix;
-	float orbit_r, rot_rate, start_angle, angle;
+	float orbit_r, rot_rate, start_angle, angle, sobj_radius;
 	vector3d axis;
-	point rel_pos;
+	point rel_pos, sobj_pos;
 
 public:
 	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
@@ -1366,6 +1367,7 @@ public:
 	void ai_action();
 	void advance_time(float timestep) {} // empty
 	bool regen_enabled() const;
+	bool maybe_has_line_of_sight(point const &to_pos) const;
 };
 
 
