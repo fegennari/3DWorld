@@ -717,7 +717,7 @@ public:
 	void move_to(upos_point_type const &pos_) {pos      = pos_;}
 	void move_reset_by(point const &pos_) {reset_pos   += pos_;}
 	void add_mass(float const m)          {extra_mass  += m; assert(extra_mass >= 0.0);} // can this be negative?
-	void add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh);
+	virtual void add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh);
 
 	vector3d const &get_velocity() const {return velocity;}
 	vector3d const &get_dir()      const {return dir;}
@@ -1031,6 +1031,7 @@ public:
 	void ai_action();
 	void apply_physics();
 	free_obj const *get_src() const {return ((parent == NULL) ? NULL : parent->get_src());}
+	void add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh);
 	bool collision(point const &copos, vector3d const &vcoll, float obj_mass, float obj_radius, free_obj *source, float elastic);
 	float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
 	float offense()     const {return specs().offense_rating();}

@@ -189,6 +189,7 @@ void free_obj::add_gravity_swp(vector3d const &gravity, vector3d const &swp, flo
 
 	near_b_hole = near_bh;
 	gvect       = gravity;
+	if (gscale == 0.0) return;
 	velocity   += swp*SOLAR_WIND_PRES*gscale; // apply solar wind pressure (usually negligible)
 	if (gravity == zero_vector) return;
 	velocity   += gravity*GRAVITY_FACTOR*gscale; // velocity scale due to gravitational pull
@@ -1115,6 +1116,17 @@ void us_projectile::apply_physics() {
 		}
 		free_obj::apply_physics();
 	}
+}
+
+
+void us_projectile::add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh) {
+
+	// seeking projectiles can counteract the effect of moderate gravity; avoids long range rockets fired at orbiting ships from hitting planets
+	if (!near_bh && specs().seeking) {
+		float const avoid(2000.0*specs().seek_dist), val(avoid*avoid/gravity.mag_sq());
+		gscale *= 1.0 - min(val, 1.0f);
+	}
+	free_obj::add_gravity_swp(gravity, swp, gscale, near_bh);
 }
 
 

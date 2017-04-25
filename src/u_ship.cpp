@@ -1375,13 +1375,11 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			if (fire_dir == zero_vector) continue;
 		}
 		free_obj *fobj;
-		float line_radius(0.0), tdist; // tdist is unused
+		float line_radius(0.0), tdist(0.0); // tdist is unused
 
-		// FIXME: even if there's a clear line of sight, long range missles fired near planets can be pulled by the planet's gravity,
-		// causing them to crash into the planet; is it possible to account for this when firing (expecially defense stats)?
 		if (!weap.is_beamlike() && !weap.is_fighter && !weap.no_ffire) {
 			line_radius = weap.radius;
-			if (weap.armor > 0.0) {line_radius *= 2.0;} // long range armored weapons such as rockets, 129 nukes, torpedos should have more clearance
+			if (weap.armor > 0.0) {line_radius *= 1.2;} // long range armored weapons such as rockets, 129 nukes, torpedos should have more clearance
 		}
 		uobject const *line_of_fire(setup_int_query(fire_dir, target_dist, fobj, tdist, 0, line_radius));
 		assert(line_of_fire == NULL || line_of_fire != target_obj);
