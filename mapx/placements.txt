@@ -162,17 +162,24 @@ p 0 -7.26771 4.77374 0.074124
 #######################################
 # items
 #######################################
+# obj_class obj_subtype regen_time(s) xpos ypos [zpos]
 
-# powerups
-#I 29 0 1.0 -1.0 1.0
+# powerups (30)
+#I 30 0 10.0 -4.0 -1.0 0.725 # on table
 
-# health
+# health (28)
+I 28 10.0 -6.67 5.14 0.09 # stairs back left
+I 28 10.0 -0.78 -4.62 0.09 # stairs front left
+I 28 10.0 6.71 0.843 0.09 # stairs right
+I 28 10.0 -3.0 5.7 -0.6 # bottom of elevator shaft
 
-# shields
+# shields (29)
+I 29 0 10.0 1.5 2.27 0.09 # by chair
+I 29 0 10.0 -3.0 -1.40 1.2 # by lights
 
-# weapons
+# weapons (31)
 
-# ammo
+# ammo (32)
 
 #######################################
 # teleporters
