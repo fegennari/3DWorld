@@ -6,13 +6,10 @@ Load/display model3d models in tiled terrain mode
   - Model Shadow Maps
     - Fix scaled model shadows
 	- Shadows between different models
-  - Model LOD
 
 Gameplay in tiled terrain mode
   - Dynamic Objects
   - Pickup items
   - Projectile and object collision detection
 
-Snow or sand terrain layer using blurred heightmap
-Read/Write tree and grass edit brushes
 Place mapx objects (weapons, ammo, health, shields, powerups)
