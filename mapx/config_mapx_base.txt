@@ -2,7 +2,6 @@ ntrees 0
 tree_4th_branches 1
 nleaves_scale 0.5
 nsmileys 9
-num_items 4 4 4 12 12
 verbose 0
 rand_seed 0
 load_hmv 0 0 0 0 0
@@ -54,6 +53,7 @@ fog_dist_scale 1.0
 no_subdiv_model 1 # not needed for dragon statue, since it's so small
 
 include config_gameplay.txt
+num_items 4 4 4 12 12 # override
 self_damage 0.5
 team_damage 0.1
 player_speed 1.8

@@ -1783,7 +1783,7 @@ int load_config(string const &config_file) {
 			}
 			if (tree_lod_scales[0] < tree_lod_scales[1] || tree_lod_scales[2] < tree_lod_scales[3]) {cfg_err("tree_lod_scale values", error);}
 		}
-		else if (str == "num_items") {
+		else if (str == "num_items") { // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 			for (unsigned n = 0; n < sizeof(init_item_counts)/sizeof(unsigned); ++n) {
 				if (!read_uint(fp, init_item_counts[n])) {
 					cfg_err("number of items", error); break;
