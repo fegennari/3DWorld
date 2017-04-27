@@ -993,7 +993,7 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 			}
 		}
 	}
-	else if (world.get_owner() == NO_OWNER && world.colonizable() &&
+	else if (world.get_owner() == NO_OWNER && world.colonizable() && // or last orbiting ship is exploding?
 		!is_fighter() && !is_orbiting() && !is_rand_spawn() && can_move() && have_resources_to_colonize(alignment))
 	{
 		float const odist_sq(p2p_dist_sq(pos, world.get_pos()));
@@ -1110,7 +1110,8 @@ void orbiting_ship::update_state() {
 	if (homeworld.update_pos_if_close(world)) { // the object we are orbiting is still there
 		set_pos_from_sobj(world);
 	}
-	if (!ORBITAL_REGEN && exploding_now && world->get_owner() == (int)alignment) { // is this correct?
+	// release ownership on explosion, (or on death if we're the last owner?)
+	if (!ORBITAL_REGEN && (exploding_now /*|| (is_exploding() && world->orbiting_refs == 1)*/) && world->get_owner() == (int)alignment) {
 		world->dec_orbiting_refs(result); // will die this frame
 	}
 	else if (!is_exploding() && !world->is_owned()) {
