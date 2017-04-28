@@ -2833,11 +2833,8 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 	if (!clouds_enabled() || atmosphere < 0.5) return; // only for high atmosphere
 	//timer_t timer("Draw Clouds");
 	to_draw_clouds.clear();
-
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		i->second->update_tile_clouds();
-		i->second->get_cloud_draw_list(to_draw_clouds);
-	}
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->update_tile_clouds();}
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->get_cloud_draw_list(to_draw_clouds);}
 	if (to_draw_clouds.empty()) return;
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
 	vpc_shader_t s; // see draw_scenery()
