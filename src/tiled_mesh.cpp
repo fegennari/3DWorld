@@ -1328,47 +1328,78 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 	rgen.set_state(x1+123, y1+321);
 	unsigned const num(max(0.0f, rgen.rand_gaussian(0.5, 4.0)));
 	resize(num);
-	if (num == 0) return;
 	float const z_range(zmax - zmin), z_cloud_bot(zmax + cloud_height_offset*z_range + 2.0); // shift up slightly so that bottom of cloud is here
-	cube_t const range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), (z_cloud_bot + 0.0*z_range), (z_cloud_bot + 0.9*z_range));
+	range = cube_t(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), (z_cloud_bot + 0.0*z_range), (z_cloud_bot + 0.9*z_range));
 
 	for (auto i = begin(); i != end(); ++i) {
 		i->pos   = rgen.gen_rand_cube_point(range);
 		i->size  = vector3d(rgen.rand_uniform(1.0, 2.0), rgen.rand_uniform(1.0, 2.0), rgen.rand_uniform(0.6, 1.0)); // smaller in z
 		i->size *= rgen.rand_uniform(2.0, 4.0);
 		i->gen_pts(i->size);
-		cube_t cloud_bcube(i->pos, i->pos);
-		cloud_bcube.expand_by(i->size);
-		if (i == begin()) {bcube = cloud_bcube;} else {bcube.union_with_cube(cloud_bcube);}
 	}
+	calc_bcube();
 }
 
-bool tile_cloud_manager_t::any_visible(vector3d const &xlate) const {
-	return (!empty() && camera_pdu.cube_visible(bcube + xlate));
+void tile_cloud_manager_t::try_add_cloud(tile_cloud_t const &cloud) {
+	if (!generated) return;
+	push_back(cloud);
+	update_bcube(cloud);
 }
 
-void tile_cloud_manager_t::draw(vpc_shader_t &s, vector3d const &xlate) { // not const (sorted is modified)
+void tile_cloud_manager_t::update_bcube(tile_cloud_t const &c) {
+	if (bcube.is_all_zeros()) {bcube = c.get_bcube();}
+	else {bcube.union_with_cube(c.get_bcube());}
+}
+void tile_cloud_manager_t::calc_bcube() {
+	bcube.set_to_zeros();
+	for (auto i = begin(); i != end(); ++i) {update_bcube(*i);}
+}
 
-	if (empty()) return;
-	//timer_t timer("Draw Clouds");
-	point const camera(get_camera_pos()); // Note: VFC done by the caller
-	sorted.clear();
+void tile_cloud_manager_t::move_by_wind(tile_t const &tile) {
+
+	if (empty() || wind == zero_vector) return;
+	vector3d const move_amt((0.02*fticks)*vector3d(wind.x, wind.y, 0.0)); // no z movement
 
 	for (auto i = begin(); i != end(); ++i) {
-		if (!camera_pdu.sphere_visible_test((i->pos + xlate), i->get_rmax())) continue; // VFC
-		sorted.push_back(make_pair(-p2p_dist_sq(camera, (i->pos + xlate)), i-begin()));
+		float const wscale(1.5 - 0.5*(i->pos.z - range.d[2][0])/(range.d[2][1] - range.d[2][0])); // lower clouds have higher wind speed
+		i->pos += wscale*move_amt;
+		int dx(0), dy(0);
+		if (i->pos.x < range.d[0][0]) {dx = -1;} else if (i->pos.x > range.d[0][1]) {dx = 1;}
+		if (i->pos.y < range.d[1][0]) {dy = -1;} else if (i->pos.y > range.d[1][1]) {dy = 1;}
+		if (dx == 0 && dy == 0) continue; // still within the tile's bounds
+		tile_t *adj(tile.get_adj_tile(dx, dy));
+		if (adj != nullptr) {adj->add_cloud(*i);}
+		std::swap(*i, back()); pop_back(); --i; // remove this cloud
+		if (tile.get_adj_tile(-dx, -dy) != nullptr) continue;
+		// FIXME: if no adj tile in opposite dir, generate a new cloud
 	}
-	sort(sorted.begin(), sorted.end()); // sort back-to-front
-	for (auto i = sorted.begin(); i != sorted.end(); ++i) {operator[](i->second).draw(s, xlate);}
+	calc_bcube();
 }
 
-bool tile_t::any_clouds_visible() const {
-	return clouds.any_visible(vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
+/*static*/ vector3d tile_cloud_manager_t::get_camera_xlate() {
+	return vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0);
 }
-void tile_t::draw_tile_clouds(vpc_shader_t &s, bool reflection_pass) {
-	clouds.draw(s, vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
+
+bool tile_cloud_manager_t::any_visible() const {
+	return (!empty() && camera_pdu.cube_visible(bcube + get_camera_xlate()));
 }
-void tile_t::gen_tile_clouds() {clouds.gen(x1, y1, x2, y2);}
+
+void tile_cloud_manager_t::get_draw_list(cloud_draw_list_t &clouds_to_draw) const {
+
+	if (empty()) return;
+	vector3d const camera(get_camera_pos()), xlate(get_camera_xlate());
+
+	for (auto i = begin(); i != end(); ++i) {
+		point const pt(i->pos + xlate);
+		if (!camera_pdu.sphere_visible_test(pt, i->get_rmax())) continue; // VFC
+		clouds_to_draw.push_back(make_pair(-p2p_dist_sq(camera, (i->pos + xlate)), &(*i)));
+	}
+}
+
+void tile_t::update_tile_clouds() {
+	if (animate2) {clouds.move_by_wind(*this);}
+	clouds.gen(x1, y1, x2, y2);
+}
 
 
 // *** animals ***
@@ -2800,12 +2831,12 @@ void tile_draw_t::draw_animals(bool reflection_pass) {
 void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 
 	if (!clouds_enabled() || atmosphere < 0.5) return; // only for high atmosphere
-	draw_vect_t to_draw_clouds;
+	//timer_t timer("Draw Clouds");
+	to_draw_clouds.clear();
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		i->second->gen_tile_clouds();
-		if (!i->second->any_clouds_visible()) continue;
-		to_draw_clouds.push_back(make_pair(-i->second->get_rel_dist_to_camera(), i->second.get()));
+		i->second->update_tile_clouds();
+		i->second->get_cloud_draw_list(to_draw_clouds);
 	}
 	if (to_draw_clouds.empty()) return;
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
@@ -2816,7 +2847,8 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
 	set_multisample(0);
-	for (auto i = to_draw_clouds.begin(); i != to_draw_clouds.end(); ++i) {i->second->draw_tile_clouds(s, reflection_pass);}
+	vector3d const xlate(tile_cloud_manager_t::get_camera_xlate());
+	for (auto i = to_draw_clouds.begin(); i != to_draw_clouds.end(); ++i) {i->second->draw(s, xlate);}
 	set_multisample(1);
 	glDepthMask(GL_TRUE);
 	disable_blend();

@@ -115,19 +115,27 @@ struct tile_cloud_t : public volume_part_cloud {
 	vector3d size; // {x, y, z}
 
 	float get_rmax() const {return size.get_max_val();}
+	cube_t get_bcube() const {cube_t bcube(pos, pos); bcube.expand_by(size); return bcube;}
 	void draw(vpc_shader_t &s, vector3d const &xlate) const;
 };
+
+typedef vector<pair<float, tile_cloud_t const*>> cloud_draw_list_t;
 
 class tile_cloud_manager_t : public vector<tile_cloud_t> {
 
 	bool generated;
-	cube_t bcube;
-	vector<pair<float, unsigned>> sorted;
+	cube_t bcube, range;
+
+	void update_bcube(tile_cloud_t const &c);
 public:
 	tile_cloud_manager_t() : generated(0) {}
+	static vector3d get_camera_xlate();
 	void gen(int x1, int y1, int x2, int y2);
-	bool any_visible(vector3d const &xlate) const;
-	void draw(vpc_shader_t &s, vector3d const &xlate);
+	void calc_bcube();
+	void move_by_wind(tile_t const &tile);
+	void try_add_cloud(tile_cloud_t const &cloud);
+	bool any_visible() const;
+	void get_draw_list(cloud_draw_list_t &clouds_to_draw) const;
 };
 
 
@@ -282,6 +290,7 @@ public:
 		tile_t *adj_tile(get_adj_tile(dx, dy));
 		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
 	}
+	void add_cloud(tile_cloud_t const &cloud) {clouds.try_add_cloud(cloud);}
 	void push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const;
 	void add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test);
 	template<typename T> void apply_ao_shadows_for_tree_group(T const &trees, tile_offset_t const &toff, bool no_adj_test, float rscale);
@@ -348,9 +357,9 @@ public:
 	unsigned draw_flowers(shader_t &s, bool use_cloud_shadows);
 
 	// *** clouds ***
-	bool any_clouds_visible() const;
-	void draw_tile_clouds(vpc_shader_t &s, bool reflection_pass);
-	void gen_tile_clouds();
+	bool any_clouds_visible() const {return clouds.any_visible();}
+	void get_cloud_draw_list(cloud_draw_list_t &clouds_to_draw) const {clouds.get_draw_list(clouds_to_draw);}
+	void update_tile_clouds();
 
 	// *** animals ***
 	void add_animal(fish_t const &f) {fish.push_back (f);}
@@ -392,6 +401,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	vector<tile_t *> occluded_tiles;
 	vector<tile_t *> to_draw_trunk_pts;
 	vector<pair<float, tile_t *>> to_gen_zvals;
+	cloud_draw_list_t to_draw_clouds;
 	vector<mesh_xy_grid_cache_t> height_gens;
 	lightning_strike_t lightning_strike;
 	tree_lod_render_t lod_renderer;
