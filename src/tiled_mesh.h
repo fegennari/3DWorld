@@ -111,6 +111,7 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 struct tile_cloud_t : public volume_part_cloud {
 
+	float pos_hash;
 	point pos;
 	vector3d size; // {x, y, z}
 
@@ -124,17 +125,21 @@ typedef vector<pair<float, tile_cloud_t const*>> cloud_draw_list_t;
 class tile_cloud_manager_t : public vector<tile_cloud_t> {
 
 	bool generated;
+	unsigned num_clouds;
+	float cur_move_dist;
 	cube_t bcube, range;
+	rand_gen_t rgen;
 
 	void update_bcube(tile_cloud_t const &c);
+	void populate_clouds();
+	void choose_num_clouds();
 public:
-	tile_cloud_manager_t() : generated(0) {}
+	tile_cloud_manager_t() : generated(0), num_clouds(0), cur_move_dist(0.0) {}
 	static vector3d get_camera_xlate();
+	void gen_new_cloud();
 	void gen(int x1, int y1, int x2, int y2);
-	void calc_bcube();
 	void move_by_wind(tile_t const &tile);
 	void try_add_cloud(tile_cloud_t const &cloud);
-	bool any_visible() const;
 	void get_draw_list(cloud_draw_list_t &clouds_to_draw) const;
 };
 
@@ -357,9 +362,8 @@ public:
 	unsigned draw_flowers(shader_t &s, bool use_cloud_shadows);
 
 	// *** clouds ***
-	bool any_clouds_visible() const {return clouds.any_visible();}
 	void get_cloud_draw_list(cloud_draw_list_t &clouds_to_draw) const {clouds.get_draw_list(clouds_to_draw);}
-	void update_tile_clouds();
+	unsigned update_tile_clouds();
 
 	// *** animals ***
 	void add_animal(fish_t const &f) {fish.push_back (f);}
