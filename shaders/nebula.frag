@@ -13,12 +13,28 @@ uniform vec4 color_mult  = vec4(1.0);
 
 in vec3 normal, vertex; // local object space
 
+#ifdef ENABLE_HEIGHT_ATTEN
+uniform vec3 xy_off_scale; // {x_off, y_off, xy_scale}
+uniform sampler2D height_tex;
+
+float apply_height_atten() {
+	vec3 pos     = vertex.xy*xy_off_scale.z + xy_off_scale.xy;
+	float mesh_z = texture(height_tex, pos).r;
+	float height = pos.z - mesh_z;
+	if (height < 0.1) discard;
+	return min(0.2*(height - 0.1), 1.0);
+}
+#endif
+
 // Note: the nebula center is always assumed to be at 0,0,0 in local object space
 void main() {
 
 	vec4 color   = color1o;
 	float ascale = alpha_scale;
 	ascale *= clamp((1.5*abs(dot(normal, view_dir)) - 0.5), 0.0, 1.0); // attenuate billboards not facing the camera
+#ifdef ENABLE_HEIGHT_ATTEN
+	ascale *= apply_height_atten();
+#endif
 
 	if (!line_mode) {
 		vec3 view_vect = vertex/(rscale*radius);

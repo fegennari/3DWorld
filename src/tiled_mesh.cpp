@@ -2873,6 +2873,7 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 	if (to_draw_clouds.empty()) return;
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
 	vpc_shader_t s; // see draw_scenery()
+	//s.set_prefix("#define ENABLE_HEIGHT_ATTEN", 1); // FS Note: not drawn per-tile, and source tile isn't tracked, so not easy to set the correct height texture
 	tile_cloud_t::shader_setup(s, 1, 0, -0.12, -0.3, 5, 1, 1); // grayscale, not ridged, with lighting, custom alpha/dist bias, and cloud_mode
 	s.add_uniform_float("noise_scale", 0.02);
 	s.set_cur_color(WHITE); // unnecessary?
