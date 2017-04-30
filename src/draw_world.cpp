@@ -359,8 +359,11 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
-	bool const is_wet(is_ground_wet() && !use_burn_mask), is_snowy(enable_rain_snow && is_ground_snowy() && !use_burn_mask), use_wet_mask(is_wet && is_outside == 2);
-	bool const enable_puddles(enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
+	bool const ground_mode(world_mode == WMODE_GROUND);
+	bool const is_wet(is_ground_wet() && !use_burn_mask);
+	bool const is_snowy(ground_mode && enable_rain_snow && is_ground_snowy() && !use_burn_mask);
+	bool const use_wet_mask(ground_mode && is_wet && is_outside == 2);
+	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
