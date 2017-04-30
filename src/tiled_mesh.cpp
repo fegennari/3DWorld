@@ -1304,12 +1304,12 @@ unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
 // *** clouds ***
 
-void tile_cloud_t::draw(vpc_shader_t &s, vector3d const &xlate) const {
+void tile_cloud_t::draw(vpc_shader_t &s, vector3d const &xlate, float alpha_mult) const {
 
 	vector3d const view_dir(get_camera_pos() - (pos + xlate));
 	float const view_dist(view_dir.mag()), max_dist(max(get_draw_tile_dist(), get_inf_terrain_fog_dist()));
 	if (view_dist >= max_dist) return; // too distant to draw
-	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(1.0 - val*val);
+	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(alpha_mult*(1.0 - val*val));
 	colorRGBA const cloud_color(get_cloud_color());
 	s.set_uniform_color(s.c1i_loc, colorRGBA(cloud_color*0.75, alpha)); // inner color
 	s.set_uniform_color(s.c1o_loc, colorRGBA(cloud_color*1.00, alpha)); // outer color
@@ -1416,16 +1416,26 @@ void tile_cloud_manager_t::move_by_wind(tile_t const &tile) {
 	return vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0);
 }
 
-void tile_cloud_manager_t::get_draw_list(cloud_draw_list_t &clouds_to_draw) const {
+void tile_cloud_manager_t::get_draw_list(cloud_draw_list_t &clouds_to_draw, float mesh_zmin, float mesh_zmax) const {
 
 	if (empty()) return;
-	vector3d const camera(get_camera_pos()), xlate(get_camera_xlate());
+	vector3d const xlate(get_camera_xlate());
 
 	for (auto i = begin(); i != end(); ++i) {
 		point const pt(i->pos + xlate);
 		if (!camera_pdu.sphere_visible_test(pt, i->get_rmax())) continue; // VFC
-		clouds_to_draw.push_back(make_pair(-p2p_dist_sq(camera, (i->pos + xlate)), &(*i)));
-	}
+		float const zbot(i->pos.z - i->size.z);
+		float alpha(1.0);
+		if (zbot < mesh_zmin) continue; // definitely below the mesh
+		float const start_dist(1.0*i->size.z);
+
+		if (zbot < mesh_zmax+start_dist) { // may be below the mesh
+			float const dist(zbot - get_exact_zval(i->pos.x-xoff2*DX_VAL, i->pos.y-yoff2*DY_VAL));
+			if (dist < 0.0) continue; // below the mesh
+			if (dist < start_dist) {alpha = dist/start_dist;}
+		}
+		clouds_to_draw.push_back(cloud_inst_t(*i, -p2p_dist_sq(get_camera_pos(), pt), alpha));
+	} // for i
 }
 
 unsigned tile_t::update_tile_clouds() {
@@ -1805,7 +1815,7 @@ void lightning_strike_t::gen() {
 	while (1) {
 		pos.z -= max_dz*rand_float(); // move down
 		for (unsigned d = 0; d < 2; ++d) {pos[d] += max_dxy*signed_rand_float();}
-		float const mzval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 0)), zstop(max(mzval, water_plane_z));
+		float const mzval(get_exact_zval(pos.x, pos.y)), zstop(max(mzval, water_plane_z));
 		path.points.push_back(pos);
 		if (pos.z < zstop) break; // mesh or water intersection (should the line be clipped?)
 	}
@@ -2881,7 +2891,7 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 	glDepthMask(GL_FALSE); // no depth writing
 	set_multisample(0);
 	vector3d const xlate(tile_cloud_manager_t::get_camera_xlate());
-	for (auto i = to_draw_clouds.begin(); i != to_draw_clouds.end(); ++i) {i->second->draw(s, xlate);}
+	for (auto i = to_draw_clouds.begin(); i != to_draw_clouds.end(); ++i) {i->cloud->draw(s, xlate, i->alpha);}
 	set_multisample(1);
 	glDepthMask(GL_TRUE);
 	disable_blend();

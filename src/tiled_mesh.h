@@ -117,10 +117,17 @@ struct tile_cloud_t : public volume_part_cloud {
 
 	float get_rmax() const {return size.get_max_val();}
 	cube_t get_bcube() const {cube_t bcube(pos, pos); bcube.expand_by(size); return bcube;}
-	void draw(vpc_shader_t &s, vector3d const &xlate) const;
+	void draw(vpc_shader_t &s, vector3d const &xlate, float alpha_mult=1.0) const;
 };
 
-typedef vector<pair<float, tile_cloud_t const*>> cloud_draw_list_t;
+struct cloud_inst_t {
+	tile_cloud_t const *cloud;
+	float dist_sq, alpha;
+	cloud_inst_t(tile_cloud_t const &cloud_, float dist_sq_, float alpha_=1.0) : cloud(&cloud_), dist_sq(dist_sq_), alpha(alpha_) {}
+	bool operator<(cloud_inst_t const &ci) const {return (dist_sq < ci.dist_sq);}
+};
+
+typedef vector<cloud_inst_t> cloud_draw_list_t;
 
 class tile_cloud_manager_t : public vector<tile_cloud_t> {
 
@@ -140,7 +147,7 @@ public:
 	void gen(int x1, int y1, int x2, int y2);
 	void move_by_wind(tile_t const &tile);
 	void try_add_cloud(tile_cloud_t const &cloud);
-	void get_draw_list(cloud_draw_list_t &clouds_to_draw) const;
+	void get_draw_list(cloud_draw_list_t &clouds_to_draw, float mesh_zmin, float mesh_zmax) const;
 };
 
 
@@ -362,7 +369,7 @@ public:
 	unsigned draw_flowers(shader_t &s, bool use_cloud_shadows);
 
 	// *** clouds ***
-	void get_cloud_draw_list(cloud_draw_list_t &clouds_to_draw) const {clouds.get_draw_list(clouds_to_draw);}
+	void get_cloud_draw_list(cloud_draw_list_t &clouds_to_draw) const {clouds.get_draw_list(clouds_to_draw, mzmin, mzmax);}
 	unsigned update_tile_clouds();
 
 	// *** animals ***
