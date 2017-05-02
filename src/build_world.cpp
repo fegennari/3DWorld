@@ -1276,6 +1276,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (!read_cube(fp, geom_xform_t(), cube)) {return read_error(fp, "model_occlusion_cube", coll_obj_file);}
 					set_occlusion_cube_for_cur_model(cube);
 				}
+				else if (keyword == "cube_light") { // ambient/precomputed light only
+					cube_t cube; // x1 y1 x2 y2 z1 z2 size color
+					float size(0.0);
+					if (!read_cube(fp, xf, cube)) {return read_error(fp, "cube_light", coll_obj_file);}
+					if (fscanf(fp, "%f%f%f%f%f", &size, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 5) {return read_error(fp, "cube_light", coll_obj_file);}
+					light_sources_a.push_back(light_source(size*xf.scale, cube.get_llc(), cube.get_urc(), lcolor));
+					light_sources_a.back().mark_is_cube_light(cobj.cp.surfs);
+				}
 				else {
 					ostringstream oss;
 					oss << "unrecognized keyword: '" << keyword << "' on line " << line_num;

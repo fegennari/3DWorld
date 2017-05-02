@@ -802,7 +802,7 @@ void trace_ray_block_sky(rt_data *data) {
 
 		for (unsigned p = 0; p < num_rays; ++p) {
 			if (kill_raytrace) break;
-			if (data->verbose && ((p%1000) == 0)) increment_printed_number(p/1000);
+			if (data->verbose && ((p%1000) == 0)) {increment_printed_number(p/1000);}
 			point const pt(rgen.gen_rand_cube_point(i->bounds));
 			vector3d dir(rgen.signed_rand_vector_spherical().get_norm()); // need high quality distribution
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
@@ -903,12 +903,56 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 	point const &lpos(ls.get_pos()), &lpos2(ls.get_pos2());
 	vector3d delta; // only nonzero for line lights
 	if (line_light && num_rays > 1) {delta = (lpos2 - lpos)/float(num_rays-1);}
-	float const ray_wt(1000.0*lcolor.alpha*ls.get_radius()/N_RAYS), r_inner(ls.get_r_inner());
+	float const radius(ls.get_radius()), r_inner(ls.get_r_inner()), ray_wt(1000.0*lcolor.alpha*radius/N_RAYS);
 	assert(ray_wt > 0.0);
+
+	if (ls.get_is_cube_light()) {
+		assert(!line_light);
+		cube_t const cube(lpos, lpos2);
+		float tot_area(0.0), side_area[3];
+		
+		for (unsigned dim = 0; dim < 3; ++dim) {
+			unsigned const d1((dim+1)%3), d2((dim+2)%3);
+			side_area[dim] = (fabs(cube.d[d1][1] - cube.d[d1][0])*fabs(cube.d[d2][1] - cube.d[d2][0]));
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (!(ls.get_cube_eflags() & EFLAGS[dim][dir])) {tot_area += side_area[dim];}
+			}
+		}
+		assert(tot_area > 0.0);
+		//cout << TXT(tot_area) << TXT(radius) << TXT(ray_wt) << TXT(num_rays) << TXT(N_RAYS) << endl;
+
+		for (unsigned dim = 0; dim < 3; ++dim) {
+			unsigned const d1((dim+1)%3), d2((dim+2)%3);
+			unsigned const side_rays(unsigned(num_rays*side_area[dim]/tot_area)); // number of rays for each of the two sides
+			if (side_rays == 0) continue;
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (ls.get_cube_eflags() & EFLAGS[dim][dir]) continue; // this surface is disabled
+				vector3d normal(zero_vector);
+				normal[dim] = (dir ? 1.0 : -1.0);
+				point start_pt;
+				start_pt[dim] = cube.d[dim][dir] + 1.0E-5*radius*normal[dim]; // move slightly away from cube edge
+				//cout << TXT(dim) << TXT(dir) << TXT(d1) << TXT(d2) << TXT(side_area[dim]) << TXT(side_rays) << endl;
+
+				for (unsigned n = 0; n < side_rays; ++n) {
+					if (kill_raytrace) break;
+					vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
+					if (dot_product(dir, normal) < 0.0) {dir.negate();}
+					start_pt[d1] = rgen.rand_uniform(cube.d[d1][0], cube.d[d1][1]);
+					start_pt[d2] = rgen.rand_uniform(cube.d[d2][0], cube.d[d2][1]);
+					point const end_pt(start_pt + dir*line_length);
+					cast_light_ray(lmgr, start_pt, end_pt, ray_wt, ray_wt, lcolor, line_length, -1, ltype, 0, rgen, nullptr); // init_cobj not used here
+				} // for n
+			} // for dir
+		} // for dim
+		return;
+	} // end cube light case
+
 	int init_cobj(-1);
 	check_coll_line(lpos, lpos2, init_cobj, -1, 1, 2); // find most opaque (max alpha) containing object
 	assert(init_cobj < (int)coll_objects.size());
-	
+
 	for (unsigned n = 0; n < num_rays; ++n) {
 		if (kill_raytrace) break;
 		vector3d dir;
@@ -930,7 +974,7 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 				if (cobj.line_intersect(start_pt, start_pt)) break; // intersection (point contained)
 			}
 		}
-		else {
+		else { // use a point light source
 			// move r_inner away from the light source
 			// necessary for sources contained in more than one cobj (like the lamps in mapx)
 			start_pt = lpos + dir*r_inner;
@@ -938,7 +982,7 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 		}
 		point const end_pt(start_pt + dir*line_length);
 		cast_light_ray(lmgr, start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, ltype, 0, rgen, nullptr);
-	}
+	} // for n
 }
 
 

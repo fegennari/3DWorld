@@ -47,8 +47,8 @@ point bind_point_t::get_updated_bind_pos() const {
 
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc) :
-	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
-	r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_index(0)
+	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
+	r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_index(0), cube_eflags(0)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	assert(r_inner <= radius);
@@ -66,7 +66,7 @@ void light_source::add_color(colorRGBA const &c) {
 float light_source::get_intensity_at(point const &p, point &updated_lpos) const {
 
 	if (radius == 0.0) return color[3]; // no falloff
-	updated_lpos = pos;
+	updated_lpos = (is_cube_light ? cube_t(pos, pos2).closest_pt(p) : pos);
 
 	if (is_line_light()) {
 		vector3d const L(pos2 - pos);

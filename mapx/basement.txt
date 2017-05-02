@@ -140,6 +140,11 @@ B -7.5 -7.2  -0.85 -0.6  -0.4 -0.395
 damage 0.0
 y 1.0
 
+# top surface is emissive cube light
+e 1 # exclude bottom surface
+cube_light -7.5 -7.2  -0.85 -0.6  -0.4 -0.395  0.25  0.8 0.2 0.1 0.1 # cube size colorRGBA
+e 0
+
 
 K -6.3 -0.65 -0.29  0.4 0.0 1.0 0 0 # 5s player auto trigger for switch
 L 0.0 0.5  -6.3 -0.845 -0.29  1.0 0.4 0.7 1.0

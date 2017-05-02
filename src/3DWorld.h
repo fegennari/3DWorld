@@ -504,9 +504,9 @@ struct cube_t { // size = 24
 		return pt;
 	}
 	float get_max_extent() const { // from (0,0,0)
-		float extent(0.0);
-		UNROLL_3X(extent = max(extent, max(-d[i_][0], d[i_][1]));)
-		return extent;
+		float mextent(0.0);
+		UNROLL_3X(mextent = max(mextent, max(-d[i_][0], d[i_][1]));)
+		return mextent;
 	}
 	int closest_face(point const &pos) const;
 	bool cube_merge(cube_t const &cube);
