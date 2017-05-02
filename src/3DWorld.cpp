@@ -743,6 +743,7 @@ void switch_weapon_mode() {
 	if (sstates == NULL) return;
 	++sstates[CAMERA_ID].wmode;
 	sstates[CAMERA_ID].verify_wmode();
+	play_switch_wmode_sound();
 }
 
 
@@ -1304,7 +1305,7 @@ void keyboard2(int key, int x, int y) {
 		break;
 
 	case GLUT_KEY_F4: // switch weapon mode
-		switch_weapon_mode();
+		if (world_mode == WMODE_GROUND) {switch_weapon_mode();}
 		break;
 	case GLUT_KEY_F5: // toggle large/small trees
 		change_tree_mode();

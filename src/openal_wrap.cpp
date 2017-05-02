@@ -126,6 +126,7 @@ public:
 		add_new_sound("footstep.wav"   ); // SOUND_FOOTSTEP
 		add_new_sound("snow_step.wav"  ); // SOUND_SNOW_STEP
 		add_new_sound("ice_crack.wav"  ); // SOUND_ICE_CRACK
+		add_new_sound("reload.wav"     ); // SOUND_RELOAD
 		cout << endl;
 
 		// create sources
@@ -515,7 +516,8 @@ void play_thunder(point const &pos, float gain, float delay) {
 	gen_delayed_sound(delay, ((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), pos, gain, pitch);
 }
 
-void play_switch_weapon_sound() {gen_sound(SOUND_CLICK, get_camera_pos(), 0.2, 0.5);}
+void play_switch_weapon_sound() {gen_sound(SOUND_CLICK,  get_camera_pos(), 1.0, 0.7);}
+void play_switch_wmode_sound () {gen_sound(SOUND_RELOAD, get_camera_pos(), 1.0, 1.0);}
 
 
 void init_openal(int &argc, char** argv) {
