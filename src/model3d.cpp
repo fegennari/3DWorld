@@ -1752,7 +1752,9 @@ void model3d::set_xform_zval_from_tt_height() { // set zval to place bottom cent
 
 	timer_t timer("Calc Zvals");
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		xf->tv.z = get_exact_zval((xf->tv.x - xoff2*DX_VAL), (xf->tv.y - yoff2*DY_VAL)) - bcube.d[2][0]; // cancel out xoff2/yoff2 translate
+		cube_t const &bcube_xf(xf->get_xformed_bcube(bcube));
+		point const center(bcube_xf.get_cube_center());
+		xf->tv.z += get_exact_zval((center.x - xoff2*DX_VAL), (center.y - yoff2*DY_VAL)) - bcube_xf.d[2][0]; // cancel out xoff2/yoff2 translate
 		xf->bcube_xf.set_to_zeros(); // invalidate and force recompute
 	}
 }
