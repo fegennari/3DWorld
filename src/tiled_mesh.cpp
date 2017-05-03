@@ -173,9 +173,23 @@ public:
 		}
 		cur_tile = NULL;
 	}
-	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x, float fract_y) {
+	void flatten_region(cube_t const &cube, bool allow_wrap) {
+		// Note: to be applied before tiles are generated so that they don't need to be invalidated
+		// Note: to be applied to unscaled mesh only
+		assert(mesh_scale == 1.0); // too strong?
+		cur_tile = NULL;
+		int const x1(get_xpos(cube.d[0][0])), y1(get_ypos(cube.d[1][0])), x2(get_xpos(cube.d[0][1])), y2(get_ypos(cube.d[1][1]));
+		int const height_val(get_clamped_pixel_value((x1 + x2)/2, (y1 + y2)/2)); // at cube center
+
+		for (int y = y1; y <= y2; ++y) {
+			for (int x = x1; x <= x2; ++x) {
+				modify_height_value(x, y, height_val, 0, 0.0, 0.0, allow_wrap);
+			}
+		}
+	}
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x, float fract_y, bool allow_wrap=1) {
 		int clamped_x(x), clamped_y(y);
-		if (!clamp_xy(clamped_x, clamped_y, fract_x, fract_y)) return 0;
+		if (!clamp_xy(clamped_x, clamped_y, fract_x, fract_y, allow_wrap)) return 0;
 		assert(clamped_x >= 0 && clamped_y >= 0);
 		modify_height(tex_mod_map_manager_t::mod_elem_t(clamped_x, clamped_y, val), is_delta); // Note: *not* cached at this level
 		if (cur_tile) {cur_tile->fill_adj_mask(modified, x, y);}
@@ -3375,6 +3389,10 @@ void inf_terrain_undo_hmap_mod() {
 	// FIXME: won't work if clamping to min/max height occurred when applying the brush the first time
 	brush.delta = -brush.delta; // invert
 	terrain_hmap_manager.apply_brush(brush, get_tile_for_xy(brush.x, brush.y), 0); // don't cache
+}
+
+void flatten_hmap_region(cube_t const &cube, bool allow_wrap) {
+	if (using_tiled_terrain_hmap_tex()) {terrain_hmap_manager.flatten_region(cube, allow_wrap);}
 }
 
 

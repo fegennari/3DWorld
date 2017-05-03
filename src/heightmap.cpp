@@ -201,19 +201,20 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 	return 1;
 }
 
-bool terrain_hmap_manager_t::clamp_xy(int &x, int &y, float fract_x, float fract_y) const {
+bool terrain_hmap_manager_t::clamp_xy(int &x, int &y, float fract_x, float fract_y, bool allow_wrap) const {
 
 	x = round_fp(mesh_scale*(x + fract_x));
 	y = round_fp(mesh_scale*(y + fract_y));
-	return clamp_no_scale(x, y);
+	return clamp_no_scale(x, y, allow_wrap);
 }
 
-bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y) const {
+bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y, bool allow_wrap) const {
 
 	assert(hmap.width > 0 && hmap.height > 0);
 	x += hmap.width /2; // scale and offset (0,0) to texture center
 	y += hmap.height/2;
 	if (x >= 0 && y >= 0 && x < hmap.width && y < hmap.height) return 1; // nothing to do (optimization)
+	if (!allow_wrap) return 0; // off the texture
 
 	switch (TEX_EDGE_MODE) {
 	case 0: // clamp

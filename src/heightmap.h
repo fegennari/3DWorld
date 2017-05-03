@@ -99,7 +99,7 @@ public:
 	bool read_mod(std::string const &fn);
 	bool write_mod(std::string const &fn) const;
 
-	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x=0.0, float fract_y=0.0) = 0;
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x=0.0, float fract_y=0.0, bool allow_wrap=1) = 0;
 	virtual ~tex_mod_map_manager_t() {}
 };
 
@@ -111,15 +111,15 @@ class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 public:
 	void load(char const *const fn, bool invert_y=0);
 	bool maybe_load(char const *const fn, bool invert_y=0);
-	bool clamp_xy(int &x, int &y, float fract_x=0.0, float fract_y=0.0) const;
-	bool clamp_no_scale(int &x, int &y) const;
+	bool clamp_xy(int &x, int &y, float fract_x=0.0, float fract_y=0.0, bool allow_wrap=1) const;
+	bool clamp_no_scale(int &x, int &y, bool allow_wrap=1) const;
 	hmap_val_t get_clamped_pixel_value(int x, int y) const;
 	float get_raw_height(int x, int y) const {return scale_mh_texture_val(hmap.get_heightmap_value(x, y));}
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;
 
-	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x=0.0, float fract_y=0.0) { // unused
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x=0.0, float fract_y=0.0, bool allow_wrap=1) { // unused
 		assert(fract_x == 0.0 && fract_y == 0.0);
 		modify_height(mod_elem_t(x, y, val), is_delta);
 		return 1;

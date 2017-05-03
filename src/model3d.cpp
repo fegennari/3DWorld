@@ -24,6 +24,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
+extern bool flatten_tt_mesh_under_models;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, light_int_scale[];
@@ -1745,17 +1746,19 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	// cptw dtor called here
 }
 
-void model3d::set_xform_zval_from_tt_height() { // set zval to place bottom center of bcube at the mesh surface
+void model3d::set_xform_zval_from_tt_height(bool flatten_mesh) { // set zval to place bottom center of bcube at the mesh surface
 
 	if (xform_zvals_set) return; // already set
 	xform_zvals_set = 1;
-
 	timer_t timer("Calc Zvals");
+	vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0); // cancel out xoff2/yoff2 translate
+
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		cube_t const &bcube_xf(xf->get_xformed_bcube(bcube));
-		point const center(bcube_xf.get_cube_center());
-		xf->tv.z += get_exact_zval((center.x - xoff2*DX_VAL), (center.y - yoff2*DY_VAL)) - bcube_xf.d[2][0]; // cancel out xoff2/yoff2 translate
-		xf->bcube_xf.set_to_zeros(); // invalidate and force recompute
+		point const center(bcube_xf.get_cube_center() + xlate);
+		xf->tv.z += get_exact_zval(center.x, center.y) - bcube_xf.d[2][0];
+		if (flatten_mesh) {flatten_hmap_region(bcube_xf, 0);} // flatten the mesh under the bcube to a height of mesh_zval, no wrap
+		xf->clear_bcube(); // invalidate and force recompute
 	}
 }
 
@@ -2168,9 +2171,9 @@ void model3ds::ensure_reflection_cube_maps() {
 	for (iterator m = begin(); m != end(); ++m) {m->ensure_reflection_cube_map();}
 }
 
-void model3ds::set_xform_zval_from_tt_height() {
+void model3ds::set_xform_zval_from_tt_height(bool flatten_mesh) {
 	if (!auto_calc_tt_model_zvals) return;
-	for (iterator m = begin(); m != end(); ++m) {m->set_xform_zval_from_tt_height();}
+	for (iterator m = begin(); m != end(); ++m) {m->set_xform_zval_from_tt_height(flatten_mesh);}
 }
 
 bool model3ds::has_any_transforms() const {
@@ -2239,7 +2242,7 @@ void ensure_model_reflection_cube_maps() {
 	all_models.ensure_reflection_cube_maps();
 }
 void auto_calc_model_zvals() {
-	all_models.set_xform_zval_from_tt_height();
+	all_models.set_xform_zval_from_tt_height(flatten_tt_mesh_under_models);
 }
 
 model3d &get_cur_model(string const &operation) {

@@ -86,6 +86,7 @@ struct model3d_xform_t : public geom_xform_t, public rotation_t { // should be p
 	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), group_cobjs_level(0.0), voxel_spacing(0.0), bcube_xf(all_zeros) {}
 	cube_t get_xformed_cube(cube_t const &cube) const;
 	cube_t const &get_xformed_bcube(cube_t const &bcube);
+	void clear_bcube() {bcube_xf.set_to_zeros();}
 	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
 	void apply_to_tquad(coll_tquad &tquad) const;
 	void apply_gl() const;
@@ -470,7 +471,7 @@ public:
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
-	void set_xform_zval_from_tt_height();
+	void set_xform_zval_from_tt_height(bool flatten_mesh);
 	void finalize();
 	void clear();
 	void free_context();
@@ -527,7 +528,7 @@ struct model3ds : public deque<model3d> {
 	void free_context();
 	void render(bool is_shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate); // non-const
 	void ensure_reflection_cube_maps();
-	void set_xform_zval_from_tt_height();
+	void set_xform_zval_from_tt_height(bool flatten_mesh);
 	bool has_any_transforms() const;
 	cube_t get_bcube(bool only_reflective);
 	void build_cobj_trees(bool verbose);
