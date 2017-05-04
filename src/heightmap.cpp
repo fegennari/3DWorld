@@ -214,9 +214,10 @@ bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y, bool allow_wrap) con
 	x += hmap.width /2; // scale and offset (0,0) to texture center
 	y += hmap.height/2;
 	if (x >= 0 && y >= 0 && x < hmap.width && y < hmap.height) return 1; // nothing to do (optimization)
-	if (!allow_wrap) return 0; // off the texture
+	unsigned tex_edge_mode(TEX_EDGE_MODE);
+	if (!allow_wrap && tex_edge_mode == 2) {tex_edge_mode = 0;} // replace mirror with clamp
 
-	switch (TEX_EDGE_MODE) {
+	switch (tex_edge_mode) {
 	case 0: // clamp
 		x = max(0, min(hmap.width -1, x));
 		y = max(0, min(hmap.height-1, y));
@@ -252,9 +253,8 @@ bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
 	return 1;
 }
 
-tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::get_clamped_pixel_value(int x, int y) const {
-
-	if (!clamp_xy(x, y)) return 0; // not sure what to do in this case - can we ever get here?
+tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::get_clamped_pixel_value(int x, int y, bool allow_wrap) const {
+	if (!clamp_xy(x, y, allow_wrap)) return 0; // not sure what to do in this case - can we ever get here?
 	return hmap.get_pixel_value(x, y);
 }
 

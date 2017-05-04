@@ -173,18 +173,19 @@ public:
 		}
 		cur_tile = NULL;
 	}
-	void flatten_region(cube_t const &cube, bool allow_wrap) {
+	void flatten_region(cube_t const &cube) {
 		// Note: to be applied before tiles are generated so that they don't need to be invalidated
-		// Note: to be applied to unscaled mesh only
-		assert(mesh_scale == 1.0); // too strong?
-		cur_tile = NULL;
+		point const center(cube.get_cube_center());
+		int const xc(get_xpos(center.x)), yc(get_ypos(center.y));
 		int const x1(get_xpos(cube.d[0][0])), y1(get_ypos(cube.d[1][0])), x2(get_xpos(cube.d[0][1])), y2(get_ypos(cube.d[1][1]));
-		int const height_val(get_clamped_pixel_value((x1 + x2)/2, (y1 + y2)/2)); // at cube center
+		int const height_val(get_clamped_pixel_value(xc, yc, 0)); // at cube center, not wrapped
+		int cx1(x1), cy1(y1), cx2(x2), cy2(y2);
+		if (!clamp_xy(cx1, cy1, 0.0, 0.0, 0) || !clamp_xy(cx2, cy2, 0.0, 0.0, 0)) return; // off the texture, skip
+		assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);
+		tex_mod_map_manager_t::mod_elem_t elem(cx1, cy1, height_val);
 
-		for (int y = y1; y <= y2; ++y) {
-			for (int x = x1; x <= x2; ++x) {
-				modify_height_value(x, y, height_val, 0, 0.0, 0.0, allow_wrap);
-			}
+		for (elem.y = cy1; elem.y <= cy2; ++elem.y) {
+			for (elem.x = cx1; elem.x <= cx2; ++elem.x) {modify_height(elem, 0);} // not wrapped
 		}
 	}
 	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x, float fract_y, bool allow_wrap=1) {
@@ -3391,8 +3392,8 @@ void inf_terrain_undo_hmap_mod() {
 	terrain_hmap_manager.apply_brush(brush, get_tile_for_xy(brush.x, brush.y), 0); // don't cache
 }
 
-void flatten_hmap_region(cube_t const &cube, bool allow_wrap) {
-	if (using_tiled_terrain_hmap_tex()) {terrain_hmap_manager.flatten_region(cube, allow_wrap);}
+void flatten_hmap_region(cube_t const &cube) {
+	if (using_tiled_terrain_hmap_tex()) {terrain_hmap_manager.flatten_region(cube);}
 }
 
 
