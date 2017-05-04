@@ -375,6 +375,7 @@ public:
 		assert(!smd.used);
 		smd.used = 1; // mark as used (for error checking)
 		smd.last_has_dynamic = 1; // force recreation
+		smd.outdoor_shadows  = 0; // reset to default
 
 		if (size > 0 && smd.smap_sz != size) { // size change - free and reallocate
 			smd.free_gl_state();
@@ -461,6 +462,7 @@ bool light_source_trig::check_shadow_map() {
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
 	smap.pdu = calc_pdu(dynamic_cobj); // Note: could cache this in the light source for static lights
+	smap.outdoor_shadows = outdoor_shadows;
 #if 0 // draw light/shadow frustum for debugging
 	shader_t shader;
 	shader.begin_color_only_shader(RED);

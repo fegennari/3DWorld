@@ -1155,7 +1155,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector<coll_tquad> ppts;
 	// tree state
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
-	bool enable_leaf_wind(1), remove_t_junctions(0);
+	bool enable_leaf_wind(1), remove_t_junctions(0), outdoor_shadows(0);
 	int reflective(0); // reflective: 0=none, 1=planar, 2=cube map (applies to cobjs and model3d)
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
@@ -1286,6 +1286,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "light_rotate") { // axis.x axis.y axis.z rotate_rate
 					if (fscanf(fp, "%f%f%f%f", &light_axis.x, &light_axis.y, &light_axis.z, &light_rotate) != 4) {return read_error(fp, "light_rotate", coll_obj_file);}
+				}
+				else if (keyword == "outdoor_shadows") {
+					if (!read_bool(fp, outdoor_shadows)) {return read_error(fp, "outdoor_shadows", coll_obj_file);}
 				}
 				else {
 					ostringstream oss;
@@ -1504,7 +1507,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 						if (d) { // diffuse
 							if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
 							indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
-							light_sources_d.push_back(light_source_trig(*ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix, cur_sensor));
+							light_sources_d.push_back(light_source_trig(*ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix, cur_sensor, outdoor_shadows));
 							light_sources_d.back().add_triggers(triggers);
 							if (light_rotate != 0.0 && light_axis != zero_vector && dir != zero_vector) {light_sources_d.back().set_rotate(light_axis, light_rotate);}
 						}
@@ -1979,8 +1982,10 @@ void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const 
 	triggers.write_to_cobj_file(out);
 	sensor.write_to_cobj_file(out);
 	indir_dlight_group_manager.write_entry_to_cobj_file(indir_dlight_ix, out);
+	if (outdoor_shadows) {out << "outdoor_shadows 1" << endl;}
 	if (rot_rate != 0.0) {out << "light_rotate " << rot_axis.raw_str() << " " << rot_rate << endl;}
 	light_source::write_to_cobj_file(out, is_diffuse);
+	if (outdoor_shadows) {out << "outdoor_shadows 0" << endl;}
 	if (use_smap) {out << " " << (is_cube_face ? 2 : 1);}
 	out << endl;
 	if (bound) {out << "bind_light " << bind_pos.raw_str() << endl;} // 'V'/"bind_light": // bind prev light source to cobj at location <x y z>

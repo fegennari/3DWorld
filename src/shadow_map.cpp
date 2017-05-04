@@ -537,6 +537,15 @@ void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {
 	fgPopMatrix();
 }
 
+void draw_outdoor_shadow_pass(point const &lpos, unsigned smap_sz) {
+
+	render_voxel_data(1);
+	if (snow_shadows) {draw_snow(1);} // slow
+	draw_trees(1); // shadow_only=1
+	draw_scenery(1); // shadow_only=1
+	draw_mesh_shadow_pass(lpos, smap_sz);
+}
+
 void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 
 	point const camera_pos_(camera_pos);
@@ -547,13 +556,8 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 	render_models(1, 0);
-	render_voxel_data(1);
 	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, 0, camera_pos_, light_dir, 0.01);
-	// add snow, trees, scenery, and mesh
-	if (snow_shadows) {draw_snow(1);} // slow
-	draw_trees(1);
-	draw_scenery(1); // shadow_only=1
-	draw_mesh_shadow_pass(lpos, smap_sz);
+	draw_outdoor_shadow_pass(lpos, smap_sz); // add snow, trees, scenery, and mesh
 	voxel_shadows_updated = 0;
 	camera_pos = camera_pos_;
 }
@@ -575,6 +579,7 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	render_models(1, 0);
 	// high back_face_thresh of 0.75 to avoid shadow artifacts for close cubes (should be at least 1/sqrt(2) for 90 deg FOV, and < 1.0)
 	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir, 0.75);
+	if (outdoor_shadows) {draw_outdoor_shadow_pass(lpos, smap_sz);}
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 	camera_pos = camera_pos_;
 }
