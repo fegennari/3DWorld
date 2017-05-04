@@ -1148,9 +1148,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	char str[MAX_CHARS];
 	unsigned line_num(1), npoints(0), indir_dlight_ix(0), prev_light_ix_start(0);
 	int end(0), use_z(0), use_vel(0), ivals[3];
-	float fvals[3];
+	float fvals[3], light_rotate(0.0);
 	point pos(all_zeros);
-	vector3d tv0, vel;
+	vector3d tv0(zero_vector), vel(zero_vector), light_axis(zero_vector);
 	polygon_t poly;
 	vector<coll_tquad> ppts;
 	// tree state
@@ -1283,6 +1283,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (fscanf(fp, "%f%f%f%f%f", &size, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 5) {return read_error(fp, "cube_light", coll_obj_file);}
 					light_sources_a.push_back(light_source(size*xf.scale, cube.get_llc(), cube.get_urc(), lcolor));
 					light_sources_a.back().mark_is_cube_light(cobj.cp.surfs);
+				}
+				else if (keyword == "light_rotate") { // axis.x axis.y axis.z rotate_rate
+					if (fscanf(fp, "%f%f%f%f", &light_axis.x, &light_axis.y, &light_axis.z, &light_rotate) != 4) {return read_error(fp, "light_rotate", coll_obj_file);}
 				}
 				else {
 					ostringstream oss;
@@ -1503,10 +1506,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 							indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
 							light_sources_d.push_back(light_source_trig(*ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix, cur_sensor));
 							light_sources_d.back().add_triggers(triggers);
+							if (light_rotate != 0.0 && light_axis != zero_vector && dir != zero_vector) {light_sources_d.back().set_rotate(light_axis, light_rotate);}
 						}
 						else {light_sources_a.push_back(*ls);} // ambient
 					}
-				}
+				} // for d
+				light_rotate = 0.0; light_axis = zero_vector; // state variables have been used
 			}
 			break;
 
@@ -1974,6 +1979,7 @@ void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const 
 	triggers.write_to_cobj_file(out);
 	sensor.write_to_cobj_file(out);
 	indir_dlight_group_manager.write_entry_to_cobj_file(indir_dlight_ix, out);
+	if (rot_rate != 0.0) {out << "light_rotate " << rot_axis.raw_str() << " " << rot_rate << endl;}
 	light_source::write_to_cobj_file(out, is_diffuse);
 	if (use_smap) {out << " " << (is_cube_face ? 2 : 1);}
 	out << endl;

@@ -271,12 +271,17 @@ class light_source_trig : public light_source, public bind_point_t {
 	multi_trigger_t triggers;
 	sensor_t sensor;
 
+	float rot_rate;
+	vector3d rot_axis;
+
 public:
-	light_source_trig() : use_smap(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0) {}
+	light_source_trig() : use_smap(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0), rot_rate(0.0), rot_axis(zero_vector) {}
 	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t())
-		: light_source(ls), use_smap(smap), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0), sensor(cur_sensor)
+		: light_source(ls), use_smap(smap), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0), sensor(cur_sensor),
+		rot_rate(0.0), rot_axis(zero_vector)
 	{user_placed = 1; dynamic = (platform_id >= 0); if (is_cube_face) {assert(use_smap);}}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
+	void set_rotate(vector3d const &axis, float rotate);
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_enabled() {return (bind_point_t::is_valid() && light_source::is_enabled());}

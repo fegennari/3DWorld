@@ -468,11 +468,11 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 
 
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
-void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space, bool no_update) {
+void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space, bool no_update, bool force_update) {
 
 	// setup render state
 	assert(smap_sz > 0);
-	bool const do_update(!no_update && needs_update(lpos)); // must be called first, because this may indirectly update bounds
+	bool const do_update(!no_update && (force_update || needs_update(lpos))); // must be called first, because this may indirectly update bounds
 	xform_matrix camera_mv_matrix; // starts as identity matrix
 	if (!use_world_space) {camera_mv_matrix = fgGetMVM();} // cache the camera modelview matrix before we change it
 	fgPushMatrix();

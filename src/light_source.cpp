@@ -287,6 +287,8 @@ void light_source::pack_to_floatv(float *data) const {
 
 void light_source_trig::advance_timestep() {
 
+	if (enabled && rot_rate != 0.0) {rotate_vector3d(rot_axis, rot_rate*fticks, dir); dir.normalize();}
+
 	if (bind_point_t::valid && bound) { // shift light if bound to a movable cobj
 		point const new_bind_pos(get_updated_bind_pos());
 		if (new_bind_pos != bind_pos) {shift_by(new_bind_pos - bind_pos); dynamic = 1;} // if the light moves, flag it as dynamic
@@ -309,6 +311,14 @@ void light_source_trig::shift_by(vector3d const &vd) {
 	light_source::shift_by(vd);
 	bind_point_t::shift_by(vd);
 	triggers.shift_by(vd);
+}
+
+void light_source_trig::set_rotate(vector3d const &axis, float rotate) {
+	
+	assert(axis != zero_vector);
+	assert(dir != zero_vector);
+	rot_rate = rotate;
+	rot_axis = axis.get_norm();
 }
 
 bool light_source_trig::check_activate(point const &p, float radius, int activator) {
@@ -457,7 +467,8 @@ bool light_source_trig::check_shadow_map() {
 	smap.pdu.draw_frustum();
 	shader.end_shader();
 #endif
-	smap.create_shadow_map_for_light(pos, nullptr, 1); // no bcube, in world space, no texture array (layer=nullptr)
+	bool const force_update(rot_rate != 0.0); // force shadow map update if rotating
+	smap.create_shadow_map_for_light(pos, nullptr, 1, 0, force_update); // no bcube, in world space, no texture array (layer=nullptr)
 	return 1;
 }
 
