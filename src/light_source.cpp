@@ -287,7 +287,7 @@ void light_source::pack_to_floatv(float *data) const {
 
 void light_source_trig::advance_timestep() {
 
-	if (enabled && rot_rate != 0.0) {rotate_vector3d(rot_axis, rot_rate*fticks, dir); dir.normalize();}
+	if (enabled && rot_rate != 0.0) {rotate_vector3d(rot_axis, rot_rate*fticks/TICKS_PER_SECOND, dir); dir.normalize();}
 
 	if (bind_point_t::valid && bound) { // shift light if bound to a movable cobj
 		point const new_bind_pos(get_updated_bind_pos());
