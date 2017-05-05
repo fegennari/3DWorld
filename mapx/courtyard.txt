@@ -164,20 +164,51 @@ T  0.0  0.0 -0.29
 m 1.0
 
 # flag
+a 0 # non-destroyable
 l 0.8 0.5 0.5 0.5 1.0 -1 1 # silver
 r 2.0 50.0  0.8 0.8 0.8 # set silver specular
-a 0 # non-destroyable
 e 3
-C 2.55 -3.0 0.0 2.55 -3.0 2.8 0.016 0.016
+C 2.55 -3.0 0.0  2.55 -3.0 2.8  0.016 0.016 # flag pole
+C 3.40 -3.4 0.0  3.40 -3.4 1.6  0.032 0.024 # spotlight post
 e 0
-a 1 # destroyable
 l 0.8 0.4 0.25 0.03 1.0 -1 1 # gold
 r 2.0 40.0  0.9 0.6 0.1 # set gold specular
-S 2.55 -3.0 2.8 0.03
+S 2.55 -3.0 2.8 0.03 # flag pole
+S 3.40 -3.4 1.6 0.03 # spotlight post
 r 0.0 1.0 # reset specularity
 l 0.1 1.0 1.0 1.0 1.0 37 1 # Jolly Roger
 y 3.1
 B 2.55 2.9 -3.001 -2.999 2.6 2.8
+
+# rotating spotlights on post
+K 3.36 -3.4 0.13  0.08 0.0 0.0 0 1 # manual toggle trigger
+y 50.0
+l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
+B 3.36 3.38  -3.42 -3.38  0.11 0.15
+
+# light fixtures
+# platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
+Q 1  1.2 0.0 0.0 0.0  0.0 0.0  3.4 -3.4 1.6  0 0 1  0 1 # rotating platform
+#r 0.8 40.0
+l 0.8  0.1 0.2 1.0 1.0  -1 1 # blue
+C 3.4 -3.4 1.6  3.4 -3.26 1.572  0.0 0.064
+l 0.8  1.0 0.2 0.1 1.0  -1 1 # red
+C 3.4 -3.4 1.6  3.4 -3.54 1.572  0.0 0.064
+r 0.0 1.0 # reset specularity
+Q 0
+
+# lights
+outdoor_shadows 1 # include trees and mesh
+# ambient_size diffuse_size xpos ypos zpos color direction beamwidth inner_radius is_line_light use_shadow_map
+light_rotate 0.0 0.0 1.0  1.2 # rotate around Z
+L 0.0 100.0  3.4 -3.4 1.75  0.2 0.5 4.0 1.0  0.0  1.0 -0.2  0.04  0.0 0 1 # blue; with shadow map
+light_rotate 0.0 0.0 1.0  1.2 # rotate around Z
+L 0.0 100.0  3.4 -3.4 1.75  4.0 0.5 0.2 1.0  0.0 -1.0 -0.2  0.04  0.0 0 1 # red ; with shadow map
+outdoor_shadows 0
+
+K # disable trigger
+
+a 1 # destroyable
 
 # CommandCAD logo sign
 l 0.1 1.0 1.0 1.0 1.0 51 1 # CC logo
