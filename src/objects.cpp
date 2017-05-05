@@ -223,7 +223,9 @@ void coll_obj::expand_to_platform_max_bounds() {
 
 void coll_obj::unexpand_from_platform_max_bounds() {
 	if (platform_id < 0 || type != COLL_CUBE || !is_expanded_platform()) return; // only expanded platform cubes
-	vector3d const platform_range(platforms.get_cobj_platform(*this).get_range());
+	platform const &pf(platforms.get_cobj_platform(*this));
+	assert(!pf.is_rotation()); // rotations not supported
+	vector3d const platform_range(pf.get_range());
 	for (unsigned i = 0; i < 3; ++i) {d[i][platform_range[i] > 0.0] -= platform_range[i];} // undo the above transform
 	cp.flags &= ~COBJ_EXPANDED_PLATFORM;
 }

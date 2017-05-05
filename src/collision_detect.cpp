@@ -685,11 +685,18 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 	// update the z values if this cobj is part of a vertically moving platform
 	// if it's a cube then it's handled in add_coll_cube_to_matrix()
 	if (cobj.type != COLL_CUBE && cobj.platform_id >= 0) {
-		vector3d const range(platforms.get_cobj_platform(cobj).get_range());
+		platform const &pf(platforms.get_cobj_platform(cobj));
 
-		if (range.x == 0.0 && range.y == 0.0) { // vertical platform
-			if (range.z > 0.0) {zmaxv += range.z;} // travels up
-			else               {zminv += range.z;} // travels down
+		if (pf.is_rotation()) {
+			// FIXME: unclear how to calculate this; use bounding sphere? case split on primitive type and sweep over all possible rotations?
+		}
+		else { // translation
+			vector3d const range(pf.get_range());
+
+			if (range.x == 0.0 && range.y == 0.0) { // vertical platform
+				if (range.z > 0.0) {zmaxv += range.z;} // travels up
+				else               {zminv += range.z;} // travels down
+			}
 		}
 	}
 	if (dhcm == 0 && add_to_hcm && h_collision_matrix[i][j] < zmaxv && (mesh_height[i][j] + 2.0*object_types[SMILEY].radius) > zminv) {

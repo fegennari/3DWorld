@@ -200,7 +200,8 @@ platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, 
 	origin(o), dir(dir_.get_norm()), sound_id(sid), delta(all_zeros), sensor(cur_sensor)
 {
 	assert(dir_ != all_zeros);
-	assert(fspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
+	assert(fspeed > 0.0 && sdelay >= 0.0 && act_dist >= 0.0);
+	assert(is_rot || ext_dist > 0.0);
 	if (act_dist > 0.0) {triggers.push_back(trigger_t(origin, act_dist));}
 	reset();
 }
@@ -279,7 +280,7 @@ void platform::advance_timestep() {
 					float dist_traveled(-fspeed*ns_time), cur_dist(get_dist_traveled()); // dist is pos
 					assert(dist_traveled > 0.0);
 					
-					if (dist_traveled + cur_dist > ext_dist) { // traveled past the end
+					if (ext_dist > 0.0 && dist_traveled + cur_dist > ext_dist) { // traveled past the end
 						dist_traveled = ext_dist - cur_dist;
 						ns_time      += dist_traveled/fspeed; // ns_time will generally still be neg at this step
 						ns_time      += max(0.0f, rdelay); // add in reverse delay (ns_time can be pos or neg)
