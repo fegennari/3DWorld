@@ -210,6 +210,7 @@ void platform::reset() {
 
 	state      = ST_NOACT;
 	is_stopped = 0;
+	is_paused  = 0;
 	ns_time    = active_time = 0.0;
 	pos        = origin;
 	cur_angle  = 0.0;
@@ -226,11 +227,37 @@ void platform::activate() {
 	active_time = 0.0;
 }
 
+void platform::pause() {
+
+	assert(!is_paused);
+	state      = ST_NOACT;
+	is_stopped = 0;
+	is_paused  = 1;
+}
+
+void platform::unpause() {
+
+	assert(is_paused);
+	state      = ST_FWD; // Note: currently can only pause while moving forward
+	is_stopped = 0;
+	is_paused  = 0;
+}
+
 bool platform::check_activate(point const &p, float radius, int activator) {
 
-	if (cont || (state != ST_NOACT && !is_stopped) || empty()) return 1; // continuous, already activated, or no cobjs/lights
+	if (cont || empty()) return 1; // continuous or no cobjs/lights
+
+	if (state != ST_NOACT && !is_stopped && !is_paused) { // already activated
+		if (ext_dist == 0.0) { // unbounded rotation
+			assert(is_rot);
+			if (triggers.register_activator_pos(p, radius, activator, 1) == 2) {pause(); check_play_sound(); return 0;} // deactivate/pause
+		}
+		return 1;
+	}
 	if (!triggers.register_activator_pos(p, radius, activator, 1)) return 0; // not yet triggered
-	if (is_stopped) {is_stopped = 0; check_play_sound();} else {activate();}
+	if (is_stopped) {is_stopped = 0; check_play_sound();}
+	else if (is_paused) {unpause(); check_play_sound();}
+	else {activate();}
 	return 1;
 }
 
@@ -250,7 +277,7 @@ void platform::check_play_sound() const {
 
 void platform::advance_timestep() {
 
-	if (fticks == 0.0 || empty()) return; // no progress, no cobjs/lights
+	if (fticks == 0.0 || empty() || is_paused) return; // no progress, no cobjs/lights, or paused
 	if (is_stopped && !is_sensor_active()) return; // stopped and waiting for trigger re-activate
 	is_stopped = 0;
 	
