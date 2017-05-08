@@ -12,6 +12,7 @@
 
 bool const MAP_VIEW_LIGHTING = 1;
 bool const MAP_VIEW_SHADOWS  = 1;
+bool const SHOW_MANDELBROT   = 0; // for fun
 
 int map_drag_x(0), map_drag_y(0);
 float map_x(0.0), map_y(0.0), map_zoom(0.0);
@@ -70,6 +71,16 @@ bool is_shadowed(point const &cpos, vector3d const &cnorm, point const &lpos, in
 	point const cpos2(cpos + 0.001*cnorm);
 	if (cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(cpos2, lpos)) return 1;
 	return check_coll_line(cpos2, lpos, cindex, -1, 1, 3); // static cobj shadows only for performance
+}
+
+
+void colorize(float val, unsigned char *rgb) {
+
+	//rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val);
+	float const a(20*val), b(21*val), c(22*val);
+	rgb[0] = 255.0*(a - int(a));
+	rgb[1] = 255.0*(b - int(b));
+	rgb[2] = 255.0*(c - int(c));
 }
 
 
@@ -158,13 +169,14 @@ void draw_overhead_map() {
 		for (int j = 0; j < nx; ++j) {
 			int const offset(3*(inx + j));
 			unsigned char *rgb(&buf[offset]);
-#if 0
-			float const mx(10.0*map_zoom*(2.0*double(j)/nx - 1.0) + 0.01*map_x);
-			float const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.01*map_y);
-			float const val(eval_mandelbrot_set(complex_num(mx, my)));
-			rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val);
-			continue;
-#endif
+
+			if (SHOW_MANDELBROT) {
+				float const mx(10.0*map_zoom*(2.0*double(j)/nx - 1.0) + 0.05*map_x);
+				float const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.05*map_y);
+				float const val(eval_mandelbrot_set(complex_num(mx, my)));
+				colorize(val, rgb);
+				continue;
+			}
 			if (iyy + (j - xx)*(j - xx) <= 4) {
 				rgb[0] = rgb[1] = rgb[2] = 0; // camera direction
 			}
