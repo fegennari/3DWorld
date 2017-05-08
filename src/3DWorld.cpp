@@ -1279,7 +1279,7 @@ void keyboard2(int key, int x, int y) {
 	switch (key) {
 	case GLUT_KEY_UP:
 	case GLUT_KEY_DOWN:
-		if (map_mode) {map_y += ((key == GLUT_KEY_UP) ? 1 : -1)*(get_map_shift_val() + 1);}
+		if (map_mode) {map_y += ((key == GLUT_KEY_UP) ? 1 : -1)*(get_map_shift_val() + 0);}
 		else {
 			wind.y += ((key == GLUT_KEY_UP) ? 1 : -1)*WIND_ADJUST;
 			print_wind();
@@ -1288,7 +1288,7 @@ void keyboard2(int key, int x, int y) {
 
 	case GLUT_KEY_LEFT:
 	case GLUT_KEY_RIGHT:
-		if (map_mode) {map_x += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*(get_map_shift_val() + 1);}
+		if (map_mode) {map_x += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*(get_map_shift_val() + 0);}
 		else {
 			wind.x += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*WIND_ADJUST;
 			print_wind();
