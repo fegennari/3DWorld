@@ -12,12 +12,12 @@
 
 bool const MAP_VIEW_LIGHTING = 1;
 bool const MAP_VIEW_SHADOWS  = 1;
-bool const SHOW_MANDELBROT   = 0; // for fun
 
 int map_drag_x(0), map_drag_y(0);
-float map_x(0.0), map_y(0.0), map_zoom(0.0);
+float map_zoom(0.0);
+double map_x(0.0), map_y(0.0);
 
-extern bool water_is_lava, begin_motion;
+extern bool water_is_lava, begin_motion, show_map_view_mandelbrot;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex;
 extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature;
@@ -37,13 +37,13 @@ struct complex_num {
 	complex_num(double r_, double i_) : r(r_), i(i_) {}
 	complex_num operator+(complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
 	complex_num operator*(complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
-	float mag() const {return sqrt(r*r + i*i);}
+	double mag() const {return sqrt(r*r + i*i);}
 };
 
-float eval_mandelbrot_set(complex_num const &c) {
+double eval_mandelbrot_set(complex_num const &c) {
 
 	complex_num z(0.0, 0.0);
-	float val(0.0);
+	double val(0.0);
 	
 	for (unsigned n = 0; n < 100; ++n) {
 		if (z.mag() > 2.0) return val;
@@ -153,7 +153,7 @@ void draw_overhead_map() {
 
 	bool const uses_hmap(world_mode == WMODE_GROUND && (read_landscape || read_heightmap || do_read_mesh));
 	mesh_xy_grid_cache_t height_gen;
-	if (!uses_hmap) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
+	if (!uses_hmap && !show_map_view_mandelbrot) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
 	point const lpos(get_light_pos());
 	vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
@@ -170,10 +170,10 @@ void draw_overhead_map() {
 			int const offset(3*(inx + j));
 			unsigned char *rgb(&buf[offset]);
 
-			if (SHOW_MANDELBROT) {
-				float const mx(10.0*map_zoom*(2.0*double(j)/nx - 1.0) + 0.05*map_x);
-				float const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.05*map_y);
-				float const val(eval_mandelbrot_set(complex_num(mx, my)));
+			if (show_map_view_mandelbrot) {
+				double const mx(10.0*map_zoom*(2.0*double(j)/nx - 1.0) + 0.05*map_x);
+				double const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.05*map_y);
+				double const val(eval_mandelbrot_set(complex_num(mx, my)));
 				colorize(val, rgb);
 				continue;
 			}
@@ -267,7 +267,7 @@ void draw_overhead_map() {
 			}
 		} // for j
 	} // for i
-	if (begin_motion && obj_groups[coll_id[SMILEY]].enabled) { // game_mode?
+	if (begin_motion && obj_groups[coll_id[SMILEY]].enabled && !show_map_view_mandelbrot) { // game_mode?
 		float const camx((world_mode == WMODE_GROUND) ? camera.x : 0.0), camy((world_mode == WMODE_GROUND) ? camera.y : 0.0);
 
 		for (int s = 0; s < num_smileys; ++s) { // add in smiley markers

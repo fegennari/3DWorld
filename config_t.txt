@@ -11,3 +11,5 @@ tree_coll_level 3
 #ntrees 500
 #tree_density_thresh 0.9
 
+show_map_view_mandelbrot 0
+
