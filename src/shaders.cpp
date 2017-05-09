@@ -570,7 +570,7 @@ public:
 		if (str.front() == cs && str.back() == ce) {str = str.substr(1, str.size()-2); return 1;} // strip off the characters
 		return 0;
 	}
-	bool load_shader_file(string const &fname, string &data) {
+	bool load_shader_file(string const &fname, string &data, set<string> &all_fns) {
 		if (fname.empty()) return 0;
 		auto i(loaded_files.find(fname));
 	
@@ -592,8 +592,9 @@ public:
 					else if (check_strip_wrapper_chars(str, '\"', '\"')) {} // strip off the quotes (include from local directory)
 					if (str == fname) {cerr << "Error: recusrive include of shader file '" << fname << "'" << endl; return 0;}
 					// load the contents of this shader directly into the file contents of the including shader (inline it)
-					if (!load_shader_file(str, file_contents)) {cerr << "Error: Failed to load included shader file '" << str << "'" << endl; return 0;}
+					if (!load_shader_file(str, file_contents, all_fns)) {cerr << "Error: Failed to load included shader file '" << str << "'" << endl; return 0;}
 					file_contents += '\n';
+					all_fns.insert(str); // record so that this file can be reloaded on error
 					continue;
 				}
 			}
@@ -771,6 +772,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	string const version_info((type == 5) ? "#version 430\n" : "#version 430\n"); // use version 430 for compute shaders and 430 for other shaders
 	vector<string> fns;
 	shader_manager.get_shader_filenames(name, type, fns);
+	set<string> all_fns(fns.begin(), fns.end()); // fns + include files
 	bool failed(0);
 	unsigned shader(0);
 
@@ -780,7 +782,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 				cerr << "Exiting." << endl;
 				exit(1);
 			}
-			for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
+			for (set<string>::const_iterator i = all_fns.begin(); i != all_fns.end(); ++i) {
 				if (shader_manager.clear_shader_file(*i)) {cout << "Reloading shader component " << *i << endl;}
 			}
 			failed = 0;
@@ -789,7 +791,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		//data += "#line 1\n"; // add this to start from line 0 here to exclude header lines
 
 		for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
-			if (!shader_manager.load_shader_file(*i, data)) {
+			if (!shader_manager.load_shader_file(*i, data, all_fns)) {
 				cerr << "Error loading shader file " << *i << "." << endl;
 				failed = 1; break;
 			}
