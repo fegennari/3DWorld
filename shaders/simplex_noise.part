@@ -1,0 +1,46 @@
+
+float gen_simplex_noise_raw(in float xv, in float yv) {
+
+	float zval = 0.0;
+	float mag  = 1.0;
+	float freq = 1.0;
+	float crx  = rx;
+	float cry  = ry;
+	const float lacunarity = 1.92;
+	const float gain       = 0.5;
+	const int NUM_OCTAVES  = 9;
+
+	for (int i = 0; i < NUM_OCTAVES; ++i) {
+		vec2 pos    = vec2((freq*xv + crx), (freq*yv + cry));
+		float noise = simplex(pos);
+#ifdef RIDGED
+		noise = 0.45 - abs(noise); // ridged
+#endif
+#ifdef BILLOWY
+		noise = abs(noise) - 0.40; // billowy
+#endif
+		zval += mag*noise;
+		mag  *= gain;
+		freq *= lacunarity;
+		crx  *= 1.5;
+		cry  *= 1.5;
+	}
+	return zval;
+}
+
+
+float gen_simplex_noise_height(in float xv, in float yv) {
+
+#ifdef DOMAIN_WARP
+	const float scale = 0.5;
+	float dx1 = gen_simplex_noise_raw(xv+0.0, yv+0.0);
+	float dy1 = gen_simplex_noise_raw(xv+5.2, yv+1.3);
+	float dx2 = gen_simplex_noise_raw((xv + scale*dx1 + 1.7), (yv + scale*dy1 + 9.2));
+	float dy2 = gen_simplex_noise_raw((xv + scale*dx1 + 8.3), (yv + scale*dy1 + 2.8));
+	xv += scale*dx2; yv += scale*dy2;
+#endif
+	return gen_simplex_noise_raw(xv, yv);
+}
+
+
+
