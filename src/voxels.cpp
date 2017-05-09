@@ -291,7 +291,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	else {
 		gen_rx_ry(rx, ry);
 	}
-	if (gen_mode == MGEN_SIMPLEX_GPU) { // GPU simplex
+	if (gen_mode >= MGEN_SIMPLEX_GPU) { // GPU simplex
 		unsigned tid(0);
 		compute_shader_comp_t cshader("noise_2d_3d.part*+gen_voxel_weights", nz, nx, ny, 16, 16, 1); // Note: {x,y,z} is reordered to {z,x,y}
 		cshader.begin();

@@ -888,6 +888,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const steep_mult_grass(1.0/(sthresh[0][1] - sthresh[0][0]));
 		float const steep_mult_snow (1.0/(sthresh[1][1] - sthresh[1][0]));
 		float const steep_mult_rock (1.0/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
+		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
@@ -928,7 +929,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				if (grass || snow) {
 					float const *const sti(sthresh[snow]);
 					vector3d const normal(get_norm_not_normalized(ix));
-					float const vnz(normal.z/normal.mag());
+					float const vnz(vnz_scale*normal.z/normal.mag());
 
 					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
 						if (grass) { // ground/grass
@@ -1954,7 +1955,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	//if (to_gen_zvals.size() < max_cpu_tiles) {to_gen_zvals.clear();} // block until at least max_cpu_tiles tiles to generate (lower average gen time, but causes more slow frames/lag)
 	unsigned const num_to_gen(to_gen_zvals.size());
 	unsigned gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
-	bool const gpu_mode(mesh_gen_mode == MGEN_SIMPLEX_GPU);
+	bool const gpu_mode(mesh_gen_mode >= MGEN_SIMPLEX_GPU);
 	
 	// to balance tile gen time across frames, generate a number of tiles equal to the average of this frame and the previous frame
 	if (gen_this_frame > 1 && gen_this_frame < max_tile_gen_per_frame && inf_terrain_fire_mode == FM_NONE) { // disable this mode when editing mesh height to prevent visual artifacts
@@ -2285,7 +2286,7 @@ void tile_draw_t::pre_draw(bool reflection_pass) { // view-dependent updates/GPU
 	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {create_pine_tree_instances();}
 	//RESET_TIME;
 	// don't use parallel tree gen for a single tile, or when GPU heightmaps are enabled
-	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode != MGEN_SIMPLEX_GPU && to_gen_trees.size() > 1)
+	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode < MGEN_SIMPLEX_GPU && to_gen_trees.size() > 1)
 	for (int i = 0; i < (int)to_gen_trees.size(); ++i) {to_gen_trees[i]->init_pine_tree_draw();}
 	//if (!to_gen_trees.empty()) {PRINT_TIME("Gen Trees2");}
 	assert(!height_gens.empty());

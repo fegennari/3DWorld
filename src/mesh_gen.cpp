@@ -673,7 +673,8 @@ void compute_scale() {
 }
 
 float get_hmap_scale(int mode) {
-	return ((mode == MGEN_SIMPLEX || mode == MGEN_SIMPLEX_GPU) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z; // simplex vs. perlin
+	float const scale((mode == MGEN_SIMPLEX || mode == MGEN_SIMPLEX_GPU || mode == MGEN_DWARP_GPU) ? 16.0 : 32.0); // simplex vs. perlin
+	return scale*MESH_HEIGHT*mesh_height_scale/mesh_scale_z;
 }
 
 void postproc_noise_zval(float &zval) {
@@ -720,7 +721,7 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	gen_shape = (force_sine_mode ? 0 : mesh_gen_shape);
 	cached_vals.clear();
 
-	if (gen_mode == MGEN_SIMPLEX_GPU) { // GPU simplex noise - always cache values
+	if (gen_mode >= MGEN_SIMPLEX_GPU) { // GPU simplex noise - always cache values
 		bool const is_running(cshader && cshader->get_is_running());
 		if (!is_running) {run_gpu_simplex();} // launch the job
 		if (no_wait && !is_running) return 0; // just started, results not yet available
@@ -771,6 +772,7 @@ void mesh_xy_grid_cache_t::run_gpu_simplex() {
 		cshader = new grid_gen_shader_t("noise_2d_3d.part*+procedural_height_gen", cur_nx, cur_ny);
 		if (gen_shape == 1) {cshader->set_comp_prefix("#define BILLOWY");}
 		if (gen_shape == 2) {cshader->set_comp_prefix("#define RIDGED" );}
+		if (gen_mode  == MGEN_DWARP_GPU) {cshader->set_comp_prefix("#define DOMAIN_WARP");}
 		cshader->begin();
 	}
 	else {
@@ -815,22 +817,17 @@ void mesh_xy_grid_cache_t::free_cshader() { // don't make any GPU calls - hard r
 }
 
 
-// mode: 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex
-// shape: 0=linear, 1=billowy, 2=ridged
-float get_noise_zval(float xval, float yval, int mode, int shape) {
+float gen_noise(float xv, float yv, int mode, int shape) {
 
-	assert(mode != MGEN_SINE); // mode 0 not supported by this function
-	float const xy_scale(0.0007*mesh_scale), xv(xy_scale*xval), yv(xy_scale*yval);
-	float zval(0.0), mag(1.0), freq(1.0);
+	float zval(0.0), mag(1.0), freq(1.0), rx, ry;
 	unsigned const end_octave(NUM_FREQ_COMP - start_eval_sin/N_RAND_SIN2);
 	float const lacunarity(1.92), gain(0.5);
-	float rx, ry;
 	gen_rx_ry(rx, ry);
 
 	//#pragma omp parallel for schedule(static,1)
 	for (unsigned i = 0; i < end_octave; ++i) {
 		glm::vec2 const pos((freq*xv + rx), (freq*yv + ry));
-		float noise((mode == MGEN_SIMPLEX || mode == MGEN_SIMPLEX_GPU) ? glm::simplex(pos) : glm::perlin(pos));
+		float noise((mode == MGEN_SIMPLEX || mode == MGEN_SIMPLEX_GPU || mode == MGEN_DWARP_GPU) ? glm::simplex(pos) : glm::perlin(pos));
 		switch (shape) {
 		case 0: break; // linear - do nothing
 		case 1: noise = fabs(noise) - 0.40; break; // billowy
@@ -843,6 +840,26 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 		rx   *= 1.5;
 		ry   *= 1.5;
 	}
+	return zval;
+}
+
+// mode: 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex, 4=GPU domain warp
+// shape: 0=linear, 1=billowy, 2=ridged
+float get_noise_zval(float xval, float yval, int mode, int shape) {
+
+	assert(mode != MGEN_SINE); // mode 0 not supported by this function
+	float const xy_scale(0.0007*mesh_scale);
+	float xv(xy_scale*xval), yv(xy_scale*yval);
+
+	if (mode == MGEN_DWARP_GPU) { // domain warping
+		float const scale(0.2);
+		float const dx1(gen_noise(xv+0.0, yv+0.0, mode, shape));
+		float const dy1(gen_noise(xv+5.2, yv+1.3, mode, shape));
+		float const dx2(gen_noise((xv + scale*dx1 + 1.7), (yv + scale*dy1 + 9.2), mode, shape));
+		float const dy2(gen_noise((xv + scale*dx1 + 8.3), (yv + scale*dy1 + 2.8), mode, shape));
+		xv += scale*dx2; yv += scale*dy2;
+	}
+	float zval(gen_noise(xv, yv, mode, shape));
 	postproc_noise_zval(zval);
 	return zval*get_hmap_scale(mode);
 }
@@ -853,7 +870,7 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 	assert(x < cur_nx && y < cur_ny);
 	float zval(0.0);
 
-	if ((use_cache || gen_mode == MGEN_SIMPLEX_GPU) && !cached_vals.empty()) {
+	if ((use_cache || gen_mode >= MGEN_SIMPLEX_GPU) && !cached_vals.empty()) {
 		zval += cached_vals[y*cur_nx + x];
 	}
 	else if (gen_mode != MGEN_SINE) { // perlin/simplex

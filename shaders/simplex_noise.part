@@ -32,7 +32,7 @@ float gen_simplex_noise_raw(in float xv, in float yv) {
 float gen_simplex_noise_height(in float xv, in float yv) {
 
 #ifdef DOMAIN_WARP
-	const float scale = 0.5;
+	const float scale = 0.2;
 	float dx1 = gen_simplex_noise_raw(xv+0.0, yv+0.0);
 	float dy1 = gen_simplex_noise_raw(xv+5.2, yv+1.3);
 	float dx2 = gen_simplex_noise_raw((xv + scale*dx1 + 1.7), (yv + scale*dy1 + 9.2));

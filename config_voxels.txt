@@ -18,7 +18,7 @@ default_ground_tex 13 # dirt texture
 #grass_density 400
 #grass_size 0.05 0.002
 
-mesh_gen_mode 0 # 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex
+mesh_gen_mode 0 # 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex, 4=GPU domain warp
 mesh_freq_filter 0 # rougher landscape
 
 gravity 1.0
