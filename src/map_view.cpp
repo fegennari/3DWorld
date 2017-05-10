@@ -37,20 +37,21 @@ struct complex_num {
 	complex_num(double r_, double i_) : r(r_), i(i_) {}
 	complex_num operator+(complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
 	complex_num operator*(complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
-	double mag() const {return sqrt(r*r + i*i);}
+	double mag_sq() const {return (r*r + i*i);}
+	double mag() const {return sqrt(mag_sq());}
 };
 
 double eval_mandelbrot_set(complex_num const &c) {
 
 	complex_num z(0.0, 0.0);
-	double val(0.0);
+	unsigned val(0);
 	
-	for (unsigned n = 0; n < 100; ++n) {
-		if (z.mag() > 2.0) return val;
+	for (; val < 200; ++val) {
+		if (z.mag_sq() > 4.0) break;
 		z = z*z + c;
-		val += 0.01;
 	}
-	return val; // inside the set
+	return (double(val) - log2(log2(z.mag_sq())) + 1.0)/200.0; // from http://www.iquilezles.org/www/articles/mset_smooth/mset_smooth.htm
+	//return val/200.0;
 }
 
 
@@ -76,8 +77,8 @@ bool is_shadowed(point const &cpos, vector3d const &cnorm, point const &lpos, in
 
 void colorize(float val, unsigned char *rgb) {
 
-	//rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val);
-	float const a(20*val), b(21*val), c(22*val);
+	//rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val); return;
+	float const a(5*val), b(7*val), c(11*val);
 	rgb[0] = 255.0*(a - int(a));
 	rgb[1] = 255.0*(b - int(b));
 	rgb[2] = 255.0*(c - int(c));
@@ -109,177 +110,195 @@ void draw_overhead_map() {
 	float const xscale_val(xscale/64), yscale_val(yscale/64);
 
 	// translate map_drag_x/y (screen pixel space) into map_x/y (world unit space)
-	float const x_scale(nx*xscale/window_width), y_scale(ny*yscale/window_height);
+	double const x_scale(nx*xscale/window_width), y_scale(ny*yscale/window_height);
 	map_x += x_scale*map_drag_x; map_drag_x = 0;
 	map_y += y_scale*map_drag_y; map_drag_y = 0;
-
-	float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
-	float const relh_water(get_rel_height(water_plane_z, -zmax_est, zmax_est));
-	point const camera(get_camera_pos());
-	float map_heights[6];
-	map_heights[0] = 0.9*lttex_dirt[3].zval  + 0.1*lttex_dirt[4].zval;
-	map_heights[1] = 0.5*(lttex_dirt[2].zval + lttex_dirt[3].zval);
-	map_heights[2] = 0.5*(lttex_dirt[1].zval + lttex_dirt[2].zval);
-	map_heights[3] = 0.5*(lttex_dirt[0].zval + lttex_dirt[1].zval);
-	map_heights[4] = relh_water;
-	map_heights[5] = 0.5*map_heights[4];
-	for (unsigned i = 0; i < 6; ++i) {map_heights[i] = pow(map_heights[i], glaciate_exp);}
-	colorRGBA ground_color(BLACK);
-	if (default_ground_tex >= 0) {ground_color = texture_color(default_ground_tex);}
-
-	colorRGBA const map_colors[6] = {
-		((water_is_lava || DISABLE_WATER == 2) ? DK_GRAY : WHITE),
-		GRAY,
-		((vegetation == 0.0) ? colorRGBA(0.55,0.45,0.35,1.0) : GREEN),
-		LT_BROWN,
-		(no_water ? BROWN    : (water_is_lava ? RED        : colorRGBA(0.3,0.2,0.6))),
-		(no_water ? DK_BROWN : (water_is_lava ? LAVA_COLOR : (is_ice ? LT_BLUE : BLUE)))};
-
-	if (world_mode == WMODE_GROUND) {
-		float const xv(-(camera.x + map_x)/X_SCENE_SIZE), yv(-(camera.y + map_y)/Y_SCENE_SIZE);
-		float const xs(DX_VAL/xscale_val), ys(DY_VAL/yscale_val);
-		x0 += camera.x;
-		y0 += camera.y;
-		bx1 = int(nx2 + xs*(xv - 1.0));
-		by1 = int(ny2 + ys*(yv - 1.0));
-		bx2 = int(nx2 + xs*(xv + 1.0));
-		by2 = int(ny2 + ys*(yv + 1.0));
-	}
-	vector3d const dir(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm());
-	int const cx(int(nx2 - map_x/xscale)), cy(int(ny2 - map_y/yscale));
-	int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
-	float const xstart(x0 - nx2*xscale), ystart(y0 - ny2*yscale);
-	float const xsv(xscale_val*(X_SCENE_SIZE/DX_VAL)), ysv(yscale_val*(Y_SCENE_SIZE/DY_VAL));
-
-	bool const uses_hmap(world_mode == WMODE_GROUND && (read_landscape || read_heightmap || do_read_mesh));
-	mesh_xy_grid_cache_t height_gen;
-	if (!uses_hmap && !show_map_view_mandelbrot) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
-	point const lpos(get_light_pos());
-	vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
 
-	#pragma omp parallel for schedule(static,1)
-	for (int i = 0; i < ny; ++i) {
-		int const inx(i*nx), iyy((i - yy)*(i - yy)), icy((i - cy)*(i - cy));
-		float last_height(0.0);
-		point cpos;
-		vector3d cnorm;
-		int cindex(-1), cindex2(-1);
+	if (show_map_view_mandelbrot) {
+		double const y_scale(10.0*map_zoom), x_scale(window_ar*y_scale);
+		double const i_scale(2.0*y_scale/ny), j_scale(2.0*x_scale/nx);
+		double const x_off(-x_scale + 0.05*map_x), y_off(-y_scale + 0.05*map_y);
 
-		for (int j = 0; j < nx; ++j) {
-			int const offset(3*(inx + j));
-			unsigned char *rgb(&buf[offset]);
+#pragma omp parallel for schedule(static,1)
+		for (int i = 0; i < ny; ++i) {
+			double const my(i_scale*i + y_off);
 
-			if (show_map_view_mandelbrot) {
-				double const mx(10.0*map_zoom*(2.0*double(j)/nx - 1.0) + 0.05*map_x);
-				double const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.05*map_y);
+			for (int j = 0; j < nx; ++j) {
+				double const mx(j_scale*j + x_off);
 				double const val(eval_mandelbrot_set(complex_num(mx, my)));
-				colorize(val, rgb);
-				continue;
+				colorize(val, &buf[3*(i*nx + j)]);
 			}
-			if (iyy + (j - xx)*(j - xx) <= 4) {
-				rgb[0] = rgb[1] = rgb[2] = 0; // camera direction
-			}
-			else if (icy + (j - cx)*(j - cx) <= 9) {
-				rgb[0] = 255;
-				rgb[1] = rgb[2] = 0; // camera position
-			}
-			else if (world_mode == WMODE_GROUND &&
-				(((i == by1 || i == by2) && j >= bx1 && j < bx2) || ((j == bx1 || j == bx2) && i >= by1 && i < by2)))
-			{
-				rgb[0] = rgb[1] = rgb[2] = 0; // world boundary
-			}
-			else {
-				float mh(0.0);
-				bool mh_set(0), shadowed(0);
+		}
+	}
+	else {
+		float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
+		float const relh_water(get_rel_height(water_plane_z, -zmax_est, zmax_est));
+		point const camera(get_camera_pos());
+		float map_heights[6];
+		map_heights[0] = 0.9*lttex_dirt[3].zval  + 0.1*lttex_dirt[4].zval;
+		map_heights[1] = 0.5*(lttex_dirt[2].zval + lttex_dirt[3].zval);
+		map_heights[2] = 0.5*(lttex_dirt[1].zval + lttex_dirt[2].zval);
+		map_heights[3] = 0.5*(lttex_dirt[0].zval + lttex_dirt[1].zval);
+		map_heights[4] = relh_water;
+		map_heights[5] = 0.5*map_heights[4];
+		for (unsigned i = 0; i < 6; ++i) {map_heights[i] = pow(map_heights[i], glaciate_exp);}
+		colorRGBA ground_color(BLACK);
+		if (default_ground_tex >= 0) {ground_color = texture_color(default_ground_tex);}
 
-				if (world_mode == WMODE_GROUND) {
-					float const xval((j - nx2)*xsv + camera.x + map_x), yval((i - ny2)*ysv + camera.y + map_y);
-					point p1(xval, yval, czmax);
-					bool const over_mesh(is_over_mesh(p1));
-					
-					if (over_mesh || uses_hmap) { // if using a heightmap, clamp values to scene bounds
-						mh = interpolate_mesh_zval(max(-X_SCENE_SIZE, min(X_SCENE_SIZE-DX_VAL, xval)), max(-Y_SCENE_SIZE, min(Y_SCENE_SIZE-DY_VAL, yval)), 0.0, 0, 1);
-						mh_set = 1;
-					}
-					if (over_mesh && czmin < czmax) { // check cobjs
-						// Note: as an optimization, can skip the cobj test if no cobjs at this pos, but it makes little difference and will miss dynamic objects
-						//int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
-						//if (point_outside_mesh(xpos, ypos) || v_collision_matrix[ypos][xpos].zmin == v_collision_matrix[ypos][xpos].zmax) {}
-						point p2(xval, yval, max(mh, czmin));
-						float t;
-						int cindex0(-1);
-						if (cindex >= 0 && coll_objects.get_cobj(cindex).line_int_exact(p1, p2, t, cnorm)) {cpos = p1 + t*(p2 - p1); p2 = cpos;} // previous cobj int
-						else {cindex = -1;} // else reset
-						if (check_coll_line_exact(p1, p2, cpos, cnorm, cindex0, 0.0, cindex, 1, 0, 0, 0, 0)) {cindex = cindex0;} // cobj intersection
+		colorRGBA const map_colors[6] = {
+			((water_is_lava || DISABLE_WATER == 2) ? DK_GRAY : WHITE),
+			GRAY,
+			((vegetation == 0.0) ? colorRGBA(0.55,0.45,0.35,1.0) : GREEN),
+			LT_BROWN,
+			(no_water ? BROWN    : (water_is_lava ? RED        : colorRGBA(0.3,0.2,0.6))),
+			(no_water ? DK_BROWN : (water_is_lava ? LAVA_COLOR : (is_ice ? LT_BLUE : BLUE)))};
 
-						if (cindex >= 0) {
-							colorRGBA const color(get_cobj_color_at_point(cindex, cpos, cnorm, 0));
-							unpack_color(rgb, color*(is_shadowed(cpos, cnorm, lpos, cindex2) ? 0.5 : 1.0));
-							continue;
-						}
-						if (mh_set) {shadowed = is_shadowed(point(xval, yval, mh), plus_z, lpos, cindex2);}
-					}
-				}
-				if (default_ground_tex >= 0 && map_color) {
-					unpack_color(rgb, ground_color*(shadowed ? 0.5 : 1.0));
+		if (world_mode == WMODE_GROUND) {
+			float const xv(-(camera.x + map_x)/X_SCENE_SIZE), yv(-(camera.y + map_y)/Y_SCENE_SIZE);
+			float const xs(DX_VAL/xscale_val), ys(DY_VAL/yscale_val);
+			x0 += camera.x;
+			y0 += camera.y;
+			bx1 = int(nx2 + xs*(xv - 1.0));
+			by1 = int(ny2 + ys*(yv - 1.0));
+			bx2 = int(nx2 + xs*(xv + 1.0));
+			by2 = int(ny2 + ys*(yv + 1.0));
+		}
+		vector3d const dir(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm());
+		int const cx(int(nx2 - map_x/xscale)), cy(int(ny2 - map_y/yscale));
+		int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
+		float const xstart(x0 - nx2*xscale), ystart(y0 - ny2*yscale);
+		float const xsv(xscale_val*(X_SCENE_SIZE/DX_VAL)), ysv(yscale_val*(Y_SCENE_SIZE/DY_VAL));
+
+		bool const uses_hmap(world_mode == WMODE_GROUND && (read_landscape || read_heightmap || do_read_mesh));
+		mesh_xy_grid_cache_t height_gen;
+		if (!uses_hmap && !show_map_view_mandelbrot) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
+		point const lpos(get_light_pos());
+		vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
+
+#pragma omp parallel for schedule(static,1)
+		for (int i = 0; i < ny; ++i) {
+			int const inx(i*nx), iyy((i - yy)*(i - yy)), icy((i - cy)*(i - cy));
+			float last_height(0.0);
+			point cpos;
+			vector3d cnorm;
+			int cindex(-1), cindex2(-1);
+
+			for (int j = 0; j < nx; ++j) {
+				int const offset(3*(inx + j));
+				unsigned char *rgb(&buf[offset]);
+
+				if (show_map_view_mandelbrot) {
+					double const mx(10.0*window_ar*map_zoom*(2.0*double(j)/nx - 1.0) + 0.05*map_x);
+					double const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.05*map_y);
+					double const val(eval_mandelbrot_set(complex_num(mx, my)));
+					colorize(val, rgb);
 					continue;
 				}
-				if (!mh_set) {mh = get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j);} // calculate mesh height here if not yet set
-				float height(CLIP_TO_01(hscale*(mh + zmax2)));
-
-				if (!map_color) { // grayscale
-					rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow
+				if (iyy + (j - xx)*(j - xx) <= 4) {
+					rgb[0] = rgb[1] = rgb[2] = 0; // camera direction
+				}
+				else if (icy + (j - cx)*(j - cx) <= 9) {
+					rgb[0] = 255;
+					rgb[1] = rgb[2] = 0; // camera position
+				}
+				else if (world_mode == WMODE_GROUND &&
+					(((i == by1 || i == by2) && j >= bx1 && j < bx2) || ((j == bx1 || j == bx2) && i >= by1 && i < by2)))
+				{
+					rgb[0] = rgb[1] = rgb[2] = 0; // world boundary
 				}
 				else {
-					height += relh_adj_tex;
-					colorRGBA color;
-					if      (height <= map_heights[5]) {color = map_colors[5];} // deep water
-					else if (height <= map_heights[3]) {color = map_colors[3];} // sand
-					else if (height >= map_heights[0]) {color = map_colors[0];} // snow
+					float mh(0.0);
+					bool mh_set(0), shadowed(0);
+
+					if (world_mode == WMODE_GROUND) {
+						float const xval((j - nx2)*xsv + camera.x + map_x), yval((i - ny2)*ysv + camera.y + map_y);
+						point p1(xval, yval, czmax);
+						bool const over_mesh(is_over_mesh(p1));
+					
+						if (over_mesh || uses_hmap) { // if using a heightmap, clamp values to scene bounds
+							mh = interpolate_mesh_zval(max(-X_SCENE_SIZE, min(X_SCENE_SIZE-DX_VAL, xval)), max(-Y_SCENE_SIZE, min(Y_SCENE_SIZE-DY_VAL, yval)), 0.0, 0, 1);
+							mh_set = 1;
+						}
+						if (over_mesh && czmin < czmax) { // check cobjs
+							// Note: as an optimization, can skip the cobj test if no cobjs at this pos, but it makes little difference and will miss dynamic objects
+							//int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
+							//if (point_outside_mesh(xpos, ypos) || v_collision_matrix[ypos][xpos].zmin == v_collision_matrix[ypos][xpos].zmax) {}
+							point p2(xval, yval, max(mh, czmin));
+							float t;
+							int cindex0(-1);
+							if (cindex >= 0 && coll_objects.get_cobj(cindex).line_int_exact(p1, p2, t, cnorm)) {cpos = p1 + t*(p2 - p1); p2 = cpos;} // previous cobj int
+							else {cindex = -1;} // else reset
+							if (check_coll_line_exact(p1, p2, cpos, cnorm, cindex0, 0.0, cindex, 1, 0, 0, 0, 0)) {cindex = cindex0;} // cobj intersection
+
+							if (cindex >= 0) {
+								colorRGBA const color(get_cobj_color_at_point(cindex, cpos, cnorm, 0));
+								unpack_color(rgb, color*(is_shadowed(cpos, cnorm, lpos, cindex2) ? 0.5 : 1.0));
+								continue;
+							}
+							if (mh_set) {shadowed = is_shadowed(point(xval, yval, mh), plus_z, lpos, cindex2);}
+						}
+					}
+					if (default_ground_tex >= 0 && map_color) {
+						unpack_color(rgb, ground_color*(shadowed ? 0.5 : 1.0));
+						continue;
+					}
+					if (!mh_set) {mh = get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j);} // calculate mesh height here if not yet set
+					float height(CLIP_TO_01(hscale*(mh + zmax2)));
+
+					if (!map_color) { // grayscale
+						rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow
+					}
 					else {
-						for (unsigned k = 0; k < 4; ++k) { // mixed
-							if (height > map_heights[k+1]) {
-								float const h((height - map_heights[k+1])/(map_heights[k] - map_heights[k+1])), v(cubic_interpolate(h));
-								blend_color(color, map_colors[k], map_colors[k+1], v);
-								break;
+						height += relh_adj_tex;
+						colorRGBA color;
+						if      (height <= map_heights[5]) {color = map_colors[5];} // deep water
+						else if (height <= map_heights[3]) {color = map_colors[3];} // sand
+						else if (height >= map_heights[0]) {color = map_colors[0];} // snow
+						else {
+							for (unsigned k = 0; k < 4; ++k) { // mixed
+								if (height > map_heights[k+1]) {
+									float const h((height - map_heights[k+1])/(map_heights[k] - map_heights[k+1])), v(cubic_interpolate(h));
+									blend_color(color, map_colors[k], map_colors[k+1], v);
+									break;
+								}
 							}
 						}
-					}
-					if (height <= map_heights[4] && height > map_heights[5]) { // shallow water
-						float const h(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(cubic_interpolate(h));
-						blend_color(color, color, map_colors[5], v);
-					}
-					if (MAP_VIEW_LIGHTING && !uses_hmap && !(display_mode & 0x20)) {
-						vector3d normal(plus_z);
-
-						if (height > map_heights[4]) {
-							float const hx((j == 0) ? height : last_height);
-							float const hy(CLIP_TO_01(hscale*(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, max(i-1, 0), j) + zmax2)));
-							normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
+						if (height <= map_heights[4] && height > map_heights[5]) { // shallow water
+							float const h(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(cubic_interpolate(h));
+							blend_color(color, color, map_colors[5], v);
 						}
-						last_height = height;
-						color *= (0.2 + (shadowed ? 0.0 : 0.8)*max(0.0f, dot_product(light_dir, normal)));
-						shadowed = 0; // handled correctly above
+						if (MAP_VIEW_LIGHTING && !uses_hmap && !(display_mode & 0x20)) {
+							vector3d normal(plus_z);
+
+							if (height > map_heights[4]) {
+								float const hx((j == 0) ? height : last_height);
+								float const hy(CLIP_TO_01(hscale*(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, max(i-1, 0), j) + zmax2)));
+								normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
+							}
+							last_height = height;
+							color *= (0.2 + (shadowed ? 0.0 : 0.8)*max(0.0f, dot_product(light_dir, normal)));
+							shadowed = 0; // handled correctly above
+						}
+						unpack_color(rgb, color*(shadowed ? 0.5 : 1.0));
 					}
-					unpack_color(rgb, color*(shadowed ? 0.5 : 1.0));
 				}
-			}
-		} // for j
-	} // for i
-	if (begin_motion && obj_groups[coll_id[SMILEY]].enabled && !show_map_view_mandelbrot) { // game_mode?
-		float const camx((world_mode == WMODE_GROUND) ? camera.x : 0.0), camy((world_mode == WMODE_GROUND) ? camera.y : 0.0);
+			} // for j
+		} // for i
+		if (begin_motion && obj_groups[coll_id[SMILEY]].enabled) { // game_mode?
+			float const camx((world_mode == WMODE_GROUND) ? camera.x : 0.0), camy((world_mode == WMODE_GROUND) ? camera.y : 0.0);
 
-		for (int s = 0; s < num_smileys; ++s) { // add in smiley markers
-			point const spos(obj_groups[coll_id[SMILEY]].get_obj(s).pos);
-			int const xpos(int(nx2 + ((-camx - map_x + spos.x)/X_SCENE_SIZE)*DX_VAL/xscale_val));
-			int const ypos(int(ny2 + ((-camy - map_y + spos.y)/Y_SCENE_SIZE)*DY_VAL/yscale_val));
-			colorRGBA const color(get_smiley_team_color(s));
+			for (int s = 0; s < num_smileys; ++s) { // add in smiley markers
+				point const spos(obj_groups[coll_id[SMILEY]].get_obj(s).pos);
+				int const xpos(int(nx2 + ((-camx - map_x + spos.x)/X_SCENE_SIZE)*DX_VAL/xscale_val));
+				int const ypos(int(ny2 + ((-camy - map_y + spos.y)/Y_SCENE_SIZE)*DY_VAL/yscale_val));
+				colorRGBA const color(get_smiley_team_color(s));
 
-			for (int i = max(0, ypos-1); i < min(ny, ypos+1); ++i) {
-				for (int j = max(0, xpos-1); j < min(nx, xpos+1); ++j) {
-					int const offset(3*(i*nx + j));
-					unpack_color(&buf[offset], color);
+				for (int i = max(0, ypos-1); i < min(ny, ypos+1); ++i) {
+					for (int j = max(0, xpos-1); j < min(nx, xpos+1); ++j) {
+						int const offset(3*(i*nx + j));
+						unpack_color(&buf[offset], color);
+					}
 				}
 			}
 		}
