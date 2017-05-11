@@ -178,7 +178,8 @@ void draw_overhead_map() {
 
 #pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < ny; ++i) {
-			int const inx(i*nx), iyy((i - yy)*(i - yy)), icy((i - cy)*(i - cy));
+			int const inx(i*nx);
+			int64_t const iyy(int64_t(i - yy)*int64_t(i - yy)), icy(int64_t(i - cy)*int64_t(i - cy));
 			float last_height(0.0);
 			point cpos;
 			vector3d cnorm;
@@ -187,11 +188,12 @@ void draw_overhead_map() {
 			for (int j = 0; j < nx; ++j) {
 				int const offset(3*(inx + j));
 				unsigned char *rgb(&buf[offset]);
+				int64_t const jxx(j - xx), jcx(j - cx);
 
-				if (iyy + (j - xx)*(j - xx) <= 4) {
+				if (iyy + jxx*jxx <= 4) {
 					rgb[0] = rgb[1] = rgb[2] = 0; // camera direction
 				}
-				else if (icy + (j - cx)*(j - cx) <= 9) {
+				else if (icy + jcx*jcx <= 9) {
 					rgb[0] = 255;
 					rgb[1] = rgb[2] = 0; // camera position
 				}
