@@ -677,13 +677,18 @@ void mouseMotion(int x, int y) {
 		break;
 
 	case GLUT_RIGHT_BUTTON: // v: radius, h: up_vector
+		if (map_mode) { // map scroll
+			if      (dy < 0) {map_zoom /= (1.0 - 0.01*dy);}
+			else if (dy > 0) {map_zoom *= (1.0 + 0.01*dy);}
+			break;
+		}
 		if (camera_mode == 1) break;
 
 		if (!camera_view) {
 			up_theta += MOUSE_ANG_ADJ*dx;
 			up_theta  = fix_angle(up_theta);
 			c_radius  = c_radius*(1.0 + MOUSE_R_ADJ*dy);
-			if (c_radius <= 0.05*MOUSE_R_ADJ) c_radius = 0.05*MOUSE_R_ADJ;
+			if (c_radius <= 0.05*MOUSE_R_ADJ) {c_radius = 0.05*MOUSE_R_ADJ;}
 			update_cpos();
 		}
 		break;
