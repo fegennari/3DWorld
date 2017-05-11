@@ -188,13 +188,6 @@ void draw_overhead_map() {
 				int const offset(3*(inx + j));
 				unsigned char *rgb(&buf[offset]);
 
-				if (show_map_view_mandelbrot) {
-					double const mx(10.0*window_ar*map_zoom*(2.0*double(j)/nx - 1.0) + 0.05*map_x);
-					double const my(10.0*map_zoom*(2.0*double(i)/ny - 1.0) + 0.05*map_y);
-					double const val(eval_mandelbrot_set(complex_num(mx, my)));
-					colorize(val, rgb);
-					continue;
-				}
 				if (iyy + (j - xx)*(j - xx) <= 4) {
 					rgb[0] = rgb[1] = rgb[2] = 0; // camera direction
 				}
