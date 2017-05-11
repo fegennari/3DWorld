@@ -591,7 +591,7 @@ void resize(int x, int y) {
 // x and y are the location of the mouse (in window-relative coordinates)
 void mouseButton(int button, int state, int x, int y) {
 
-	bool const fire_button((button == GLUT_RIGHT_BUTTON || (enable_mouse_look && button == GLUT_LEFT_BUTTON)));
+	bool const fire_button(!map_mode && (button == GLUT_RIGHT_BUTTON || (enable_mouse_look && button == GLUT_LEFT_BUTTON)));
 	add_uevent_mbutton(button, state, x, y);
 	if (ui_intercept_mouse(button, state, x, y, 1)) return; // already handled
 	ctrl_key_pressed = is_ctrl_key_pressed();
