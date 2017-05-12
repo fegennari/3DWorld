@@ -1035,7 +1035,7 @@ typedef void (*ray_trace_func)(rt_data *);
 ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_cobj_accum, trace_ray_block_dynamic};
 
 
-void compute_ray_trace_lighting(unsigned ltype) {
+void compute_ray_trace_lighting(unsigned ltype, bool verbose) {
 
 	bool const dynamic(is_ltype_dynamic(ltype));
 	unsigned const c_ltype(clamp_ltype_range(ltype));
@@ -1048,7 +1048,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 
 			if (store_cobj_accum_lighting_as_blocked) {
 				timer_t t("Cobj Accum Lighting");
-				launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype); // update fully blocked lighting with currently blocked portion
+				launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], verbose, 1, 0, 0, ltype); // update fully blocked lighting with currently blocked portion
 			}
 		}
 		else {lmap_manager.read_data_from_file(fn, c_ltype);}
@@ -1057,7 +1057,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 		if (c_ltype != LIGHTING_LOCAL && !dynamic) {cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;}
 		all_models.build_cobj_trees(1);
 		if (enable_platform_lights(ltype)) {pre_rt_bvh_build_hook();}
-		launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype);
+		launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], verbose, 1, 0, 0, ltype);
 		if (enable_platform_lights(ltype)) {post_rt_bvh_build_hook();}
 	}
 	if (!dynamic && write_light_files[c_ltype]) {

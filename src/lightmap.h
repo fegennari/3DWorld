@@ -130,7 +130,7 @@ class light_volume_local : public light_grid_base {
 	unsigned get_num_data() const {return (bounds[0][1] - bounds[0][0])*(bounds[1][1] - bounds[1][0])*(bounds[2][1] - bounds[2][0]);}
 	bool read(std::string const &filename);
 	bool write(std::string const &filename) const;
-	void compress();
+	void compress(bool verbose);
 public:
 
 	light_volume_local(unsigned tag_ix_) : changed(0), compressed(0), tag_ix(tag_ix_), scale(0.0) {}
@@ -143,6 +143,7 @@ public:
 	void allocate();
 	unsigned get_tag_ix() const {return tag_ix;}
 	void init(unsigned lvol_ix, float scale_, std::string const &filename);
+	void gen_data(unsigned lvol_ix, bool verbose);
 	
 	void reset_to_zero() {
 		if (!is_allocated()) return;
@@ -296,6 +297,7 @@ public:
 	bool check_shadow_map();
 	void release_smap();
 	unsigned get_indir_dlight_ix() const {return indir_dlight_ix;}
+	bool has_dynamic_indir() const {return dynamic_indir;}
 	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
 };
 
@@ -337,7 +339,7 @@ public:
 
 
 void check_for_lighting_finished();
-void compute_ray_trace_lighting(unsigned ltype);
+void compute_ray_trace_lighting(unsigned ltype, bool verbose);
 
 
 #endif

@@ -61,8 +61,9 @@ smiley_speed 1.8
 num_dodgeballs 20
 unlimited_weapons 1
 
-num_dynam_parts 200
-#num_dynam_parts 8
+num_dynam_parts 200 # normal
+#num_dynam_parts 8 # test shadow maps
+#num_dynam_parts 1 # test indirect lighting
 #enable_dpart_shadows 1
 
 #snow_depth 0.01

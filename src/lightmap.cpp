@@ -330,7 +330,9 @@ int light_grid_base::check_lmap_get_grid_index(point const &p) const {
 
 
 void light_volume_local::allocate() {
+	compressed = 0;
 	set_bounds(0, MESH_X_SIZE, 0, MESH_Y_SIZE, 0, MESH_SIZE[2]);
+	data.clear();
 	data.resize(get_num_data()); // init to all zeros
 }
 
@@ -401,7 +403,7 @@ void light_volume_local::set_bounds(int x1, int x2, int y1, int y2, int z1, int 
 
 void update_range(int bnds[2], int v) {bnds[0] = min(bnds[0], v); bnds[1] = max(bnds[1], v+1);} // max is one past the end
 
-void light_volume_local::compress() {
+void light_volume_local::compress(bool verbose) {
 
 	if (compressed) return; // already compressed
 	float const toler(1.0/(256.0 * max(0.001f, scale)));
@@ -436,8 +438,11 @@ void light_volume_local::compress() {
 		}
 	}
 	assert(data_pos == comp_data.size());
-	cout << "uncomp size: " << data.size() << ", bounds: {" << bounds[0][0] << "," << bounds[0][1] << "},{" << bounds[1][0] << ","
-		 << bounds[1][1] << "},{" << bounds[2][0] << "," << bounds[2][1] << "}" << " comp size: " << comp_data.size() << endl;
+
+	if (verbose) {
+		cout << "uncomp size: " << data.size() << ", bounds: {" << bounds[0][0] << "," << bounds[0][1] << "},{" << bounds[1][0] << ","
+			 << bounds[1][1] << "},{" << bounds[2][0] << "," << bounds[2][1] << "}" << " comp size: " << comp_data.size() << endl;
+	}
 	data.swap(comp_data);
 	compressed = 1;
 }
@@ -447,11 +452,15 @@ void light_volume_local::init(unsigned lvol_ix, float scale_, string const &file
 	RESET_TIME;
 	set_scale(scale_);
 	if (!filename.empty() && read(filename)) return; // see if there is an existing file to read
-	allocate();
-	compute_ray_trace_lighting(LIGHTING_DYNAMIC + lvol_ix);
-	compress();
+	gen_data(lvol_ix, 1);
 	if (!filename.empty()) {write(filename);} // write the output file
 	PRINT_TIME("Local Dlight Volume Creation");
+}
+
+void light_volume_local::gen_data(unsigned lvol_ix, bool verbose) {
+	allocate();
+	compute_ray_trace_lighting((LIGHTING_DYNAMIC + lvol_ix), verbose);
+	compress(verbose);
 }
 
 
@@ -486,11 +495,14 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 		group_t &g(groups[i]);
 		if (g.dlight_ixs.empty()) continue; // no lights for this group (including empty group 0)
 		unsigned num_enabled(0);
+		bool is_dynamic(0);
 
 		for (auto l = g.dlight_ixs.begin(); l != g.dlight_ixs.end(); ++l) {
 			assert(*l < light_sources_d.size());
-			assert(light_sources_d[*l].get_indir_dlight_ix() == i);
-			num_enabled += light_sources_d[*l].is_enabled();
+			light_source_trig &ls(light_sources_d[*l]);
+			assert(ls.get_indir_dlight_ix() == i);
+			num_enabled += ls.is_enabled();
+			is_dynamic  |= ls.has_dynamic_indir();
 		}
 		// scale by the ratio of enabled to disabled lights, which is approximate but as close as we can get with a single volume for this group of lights;
 		// if more precision/control is required, the group can be split into multiple lighting volumes at the cost of increased runtime/memory/storage
@@ -499,6 +511,7 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 		if (g.llvol_ix >= 0) { // already valid - check enabled state
 			assert((unsigned)g.llvol_ix < local_light_volumes.size());
 			local_light_volumes[g.llvol_ix]->set_scale(scale);
+			if (is_dynamic && num_enabled > 0) {local_light_volumes[g.llvol_ix]->gen_data(g.llvol_ix, 0);} // dynamic update
 		}
 		else if (num_enabled > 0) { // not valid but needed - create
 			g.llvol_ix = local_light_volumes.size();
@@ -769,7 +782,7 @@ void build_lightmap(bool verbose) {
 
 		for (unsigned ltype = 0; ltype < NUM_LIGHTING_TYPES; ++ltype) {
 			if (raytrace_lights[ltype]) {
-				compute_ray_trace_lighting(ltype);
+				compute_ray_trace_lighting(ltype, 1); // verbose=1
 				if (verbose) {PRINT_TIME((type_names[ltype] + " Lighting Load/Ray Trace").c_str());}
 			}
 		}
