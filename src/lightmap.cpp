@@ -407,6 +407,7 @@ void light_volume_local::compress() {
 	float const toler(1.0/(256.0 * max(0.001f, scale)));
 	assert(is_allocated());
 	set_bounds(MESH_X_SIZE, 0, MESH_Y_SIZE, 0, MESH_SIZE[2], 0);
+	bool nonempty(0);
 
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -415,8 +416,14 @@ void light_volume_local::compress() {
 				update_range(bounds[0], x);
 				update_range(bounds[1], y);
 				update_range(bounds[2], z);
+				nonempty = 1;
 			}
 		}
+	}
+	if (!nonempty) { // empty case, generally shouldn't happen
+		set_bounds(0, 0, 0, 0, 0, 0);
+		data.clear();
+		return;
 	}
 	vector<lmcell_local> comp_data(get_num_data());
 	unsigned data_pos(0);
@@ -439,11 +446,11 @@ void light_volume_local::init(unsigned lvol_ix, float scale_, string const &file
 
 	RESET_TIME;
 	set_scale(scale_);
-	if (read(filename)) return; // see if there is an existing file to read
+	if (!filename.empty() && read(filename)) return; // see if there is an existing file to read
 	allocate();
 	compute_ray_trace_lighting(LIGHTING_DYNAMIC + lvol_ix);
 	compress();
-	write(filename); // write the output file
+	if (!filename.empty()) {write(filename);} // write the output file
 	PRINT_TIME("Local Dlight Volume Creation");
 }
 
