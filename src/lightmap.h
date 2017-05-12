@@ -195,7 +195,7 @@ class light_source { // size = 68
 
 protected:
 	bool dynamic, enabled, user_placed, is_cube_face, is_cube_light;
-	unsigned smap_index, cube_eflags; // index of shadow map texture/data
+	unsigned smap_index, cube_eflags, num_dlight_rays; // index of shadow map texture/data
 	float radius, radius_inv, r_inner, bwidth, near_clip;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
@@ -204,10 +204,11 @@ protected:
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), smap_index(0), cube_eflags(0) {}
+	light_source() : enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), smap_index(0), cube_eflags(0), num_dlight_rays(0) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
 	void set_dynamic_state(point const &pos_, vector3d const &dir_, bool enabled_) {pos = pos2 = pos_; dir = dir_; enabled = enabled_;}
+	void set_num_dlight_rays(unsigned num) {num_dlight_rays = num;} // zero = use default
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
 	float get_radius()           const {return radius;}
@@ -222,6 +223,7 @@ public:
 	cylinder_3dw calc_bounding_cylin(float sqrt_thresh=0.0) const;
 	pos_dir_up calc_pdu(bool dynamic_cobj) const;
 	unsigned get_cube_eflags() const {return cube_eflags;}
+	unsigned get_num_rays()    const {return num_dlight_rays;}
 	bool is_visible()     const;
 	bool is_directional() const {return (bwidth < 1.0);}
 	bool is_very_directional() const {return ((bwidth + LT_DIR_FALLOFF) < 0.5);}
@@ -264,7 +266,7 @@ public:
 
 class light_source_trig : public light_source, public bind_point_t {
 
-	bool use_smap, outdoor_shadows;
+	bool use_smap, outdoor_shadows, dynamic_indir;
 	short platform_id;
 	unsigned indir_dlight_ix;
 	float active_time, inactive_time;
@@ -275,13 +277,14 @@ class light_source_trig : public light_source, public bind_point_t {
 	vector3d rot_axis;
 
 public:
-	light_source_trig() : use_smap(0), outdoor_shadows(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0), rot_rate(0.0), rot_axis(zero_vector) {}
+	light_source_trig() : use_smap(0), outdoor_shadows(0), dynamic_indir(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0), rot_rate(0.0), rot_axis(zero_vector) {}
 	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t(), bool outdoor_shadows_=0)
-		: light_source(ls), use_smap(smap), outdoor_shadows(outdoor_shadows_), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0),
+		: light_source(ls), use_smap(smap), outdoor_shadows(outdoor_shadows_), dynamic_indir(0), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0),
 		sensor(cur_sensor), rot_rate(0.0), rot_axis(zero_vector)
 	{user_placed = 1; dynamic = (platform_id >= 0); if (is_cube_face) {assert(use_smap);}}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	void set_rotate(vector3d const &axis, float rotate);
+	void enable_dynamic_indir() {dynamic_indir = 1;}
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_enabled() {return (bind_point_t::is_valid() && light_source::is_enabled());}

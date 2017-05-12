@@ -1155,7 +1155,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector<coll_tquad> ppts;
 	// tree state
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
-	bool enable_leaf_wind(1), remove_t_junctions(0), outdoor_shadows(0);
+	bool enable_leaf_wind(1), remove_t_junctions(0), outdoor_shadows(0), dynamic_indir(0);
 	int reflective(0); // reflective: 0=none, 1=planar, 2=cube map (applies to cobjs and model3d)
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
@@ -1286,6 +1286,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "light_rotate") { // axis.x axis.y axis.z rotate_rate
 					if (fscanf(fp, "%f%f%f%f", &light_axis.x, &light_axis.y, &light_axis.z, &light_rotate) != 4) {return read_error(fp, "light_rotate", coll_obj_file);}
+				}
+				else if (keyword == "dynamic_indir") { // <enable> <num_rays>
+					if (!read_bool(fp, dynamic_indir)) {return read_error(fp, "dynamic_indir", coll_obj_file);}
 				}
 				else if (keyword == "outdoor_shadows") {
 					if (!read_bool(fp, outdoor_shadows)) {return read_error(fp, "outdoor_shadows", coll_obj_file);}
@@ -1457,7 +1460,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
+		case 'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0 [num_dlight_rays=0]]]]]]
 			// type: 0 = ambient/baked only, 1 = diffuse/dynamic only, 2 = both
 			if (fscanf(fp, "%f%f%f%f%f%f%f%f%f", &fvals[0], &fvals[1], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 9) {
 				return read_error(fp, "light source", coll_obj_file);
@@ -1474,10 +1477,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				// direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]
 				long const fpos(ftell(fp));
 				int const num_read(fscanf(fp, "%f%f%f", &dir.x, &dir.y, &dir.z));
+				unsigned num_dlight_rays(0);
 
 				if (num_read == 0) {fseek(fp, fpos, SEEK_SET);}
 				else if (num_read == 3) {
-					fscanf(fp, "%f%f%i%i", &beamwidth, &r_inner, &ivals[0], &use_smap);
+					fscanf(fp, "%f%f%i%i%u", &beamwidth, &r_inner, &ivals[0], &use_smap, &num_dlight_rays);
 					if (use_smap < 0 || use_smap > 2) {return read_error(fp, "light source use_smap (must be 0, 1, or 2)", coll_obj_file);}
 					if (ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
 					else {xf.xform_pos_rm(dir);} // spotlight (or hemispherical light ray culling if beamwidth == 1.0)
@@ -1504,12 +1508,15 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 						lss.push_back(light_source(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner, (use_smap == 2)));
 					}
 					for (auto ls = lss.begin(); ls != lss.end(); ++ls) {
+						if (num_dlight_rays > 0) {ls->set_num_dlight_rays(num_dlight_rays);}
+
 						if (d) { // diffuse
 							if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
 							indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
 							light_sources_d.push_back(light_source_trig(*ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix, cur_sensor, outdoor_shadows));
 							light_sources_d.back().add_triggers(triggers);
 							if (light_rotate != 0.0 && light_axis != zero_vector && dir != zero_vector) {light_sources_d.back().set_rotate(light_axis, light_rotate);}
+							if (dynamic_indir) {light_sources_d.back().enable_dynamic_indir();}
 						}
 						else {light_sources_a.push_back(*ls);} // ambient
 					}
@@ -1972,9 +1979,10 @@ string texture_str(int tid) {
 
 void light_source::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 
-	// 'L'/"light": // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
+	// 'L'/"light": // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0 [num_dlight_rays=0]]]]]]
 	out << "light " << (is_diffuse ? 0.0 : radius) << " " << (is_diffuse ? radius : 0.0) << " " << pos.raw_str() << " " << color.raw_str() << " "
-		<< (is_line_light() ? pos2 : dir).raw_str() << " " << bwidth << " " << r_inner << " " << is_line_light();
+		<< (is_line_light() ? pos2 : dir).raw_str() << " " << bwidth << " " << r_inner << " " << is_line_light() << " "
+		<< (smap_enabled() ? (is_cube_face ? 2 : 1) : 0) << " " << num_dlight_rays << endl;
 }
 void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 
@@ -1986,8 +1994,6 @@ void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const 
 	if (rot_rate != 0.0) {out << "light_rotate " << rot_axis.raw_str() << " " << rot_rate << endl;}
 	light_source::write_to_cobj_file(out, is_diffuse);
 	if (outdoor_shadows) {out << "outdoor_shadows 0" << endl;}
-	if (use_smap) {out << " " << (is_cube_face ? 2 : 1);}
-	out << endl;
 	if (bound) {out << "bind_light " << bind_pos.raw_str() << endl;} // 'V'/"bind_light": // bind prev light source to cobj at location <x y z>
 	sensor.write_end_sensor_to_cobj_file(out);
 	triggers.write_end_triggers_cobj_file(out);

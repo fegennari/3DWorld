@@ -993,7 +993,6 @@ void trace_ray_block_local(rt_data *data) {
 	rand_gen_t rgen;
 	data->pre_run(rgen);
 	float const line_length(2.0*get_scene_radius());
-	unsigned const num_rays(max(1U, LOCAL_RAYS/data->num));
 	
 	if (data->verbose) {
 		cout << "Local light sources progress (of " << light_sources_a.size() << "): 0";
@@ -1001,7 +1000,8 @@ void trace_ray_block_local(rt_data *data) {
 	}
 	for (unsigned i = 0; i < light_sources_a.size(); ++i) {
 		if (data->verbose) {increment_printed_number(i);}
-		ray_trace_local_light_source(data->lmgr, light_sources_a[i], line_length, num_rays, rgen, data->ltype, LOCAL_RAYS);
+		unsigned const light_nrays(light_sources_a[i].get_num_rays()), NRAYS(light_nrays ? light_nrays : LOCAL_RAYS), num_rays(max(1U, NRAYS/data->num));
+		ray_trace_local_light_source(data->lmgr, light_sources_a[i], line_length, num_rays, rgen, data->ltype, NRAYS);
 	}
 	if (data->verbose) {cout << endl;}
 	data->post_run();
@@ -1018,14 +1018,14 @@ void trace_ray_block_dynamic(rt_data *data) {
 	rand_gen_t rgen;
 	data->pre_run(rgen);
 	float const max_line_length(2.0*get_scene_radius());
-	unsigned const num_rays(max(1U, DYNAMIC_RAYS/data->num));
 	
 	for (auto i = dlight_ixs.begin(); i != dlight_ixs.end(); ++i) {
 		assert(*i < light_sources_d.size());
 		light_source_trig const &ls(light_sources_d[*i]);
 		//if (!ls.is_enabled()) continue; // error?
 		float const line_length(min(4.0f*ls.get_radius(), max_line_length)); // limit ray length to improve perf
-		ray_trace_local_light_source(nullptr, ls, line_length, num_rays, rgen, data->ltype, DYNAMIC_RAYS); // lmgr is unused, so leave it as null
+		unsigned const light_nrays(ls.get_num_rays()), NRAYS(light_nrays ? light_nrays : DYNAMIC_RAYS), num_rays(max(1U, NRAYS/data->num));
+		ray_trace_local_light_source(nullptr, ls, line_length, num_rays, rgen, data->ltype, NRAYS); // lmgr is unused, so leave it as null
 	}
 	data->post_run();
 }
