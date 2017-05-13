@@ -260,6 +260,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	int ignore_cobj, int ltype, unsigned depth, rand_gen_t &rgen, cobj_ray_accum_map_t *accum_map, cube_t *bcube=nullptr)
 {
 	if (depth > MAX_RAY_BOUNCES) return;
+	if (ltype == LIGHTING_DYNAMIC && depth > 4) return; // use a sensible default since this is running during rendering
 	//assert(!is_nan(p1) && !is_nan(p2));
 	++tot_rays;
 

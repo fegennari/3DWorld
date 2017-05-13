@@ -458,9 +458,14 @@ void light_volume_local::init(unsigned lvol_ix, float scale_, string const &file
 }
 
 void light_volume_local::gen_data(unsigned lvol_ix, bool verbose) {
+	
+	//RESET_TIME;
 	allocate();
+	//PRINT_TIME("Alloc");
 	compute_ray_trace_lighting((LIGHTING_DYNAMIC + lvol_ix), verbose);
+	//PRINT_TIME("Alloc + Trace");
 	compress(verbose);
+	//PRINT_TIME("Alloc + Trace + Compress");
 }
 
 
