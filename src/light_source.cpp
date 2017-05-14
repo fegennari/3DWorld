@@ -313,6 +313,15 @@ void light_source_trig::shift_by(vector3d const &vd) {
 	triggers.shift_by(vd);
 }
 
+bool light_source_trig::need_update_indir() {
+
+	if (!dynamic_indir) return 0;
+	if (pos == last_pos && dir == last_dir) return 0;
+	last_pos = pos;
+	last_dir = dir;
+	return 1;
+}
+
 void light_source_trig::set_rotate(vector3d const &axis, float rotate) {
 	
 	assert(axis != zero_vector);

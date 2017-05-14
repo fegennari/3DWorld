@@ -507,7 +507,7 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 			light_source_trig &ls(light_sources_d[*l]);
 			assert(ls.get_indir_dlight_ix() == i);
 			num_enabled += ls.is_enabled();
-			is_dynamic  |= ls.has_dynamic_indir();
+			is_dynamic  |= ls.need_update_indir();
 		}
 		// scale by the ratio of enabled to disabled lights, which is approximate but as close as we can get with a single volume for this group of lights;
 		// if more precision/control is required, the group can be split into multiple lighting volumes at the cost of increased runtime/memory/storage
