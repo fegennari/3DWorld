@@ -20,6 +20,7 @@ float const ICE_ALBEDO    = 0.8;
 
 bool keep_beams(0); // debugging mode
 bool kill_raytrace(0);
+bool no_stat_moving(0); // generally not thread safe for dynamic lighting update, since BVH is rebuilt per-frame; also, wrong to cache lighting for moving cobjs
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), DYNAMIC_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 std::atomic<unsigned long long> tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1, 1}; // sky, global, local, cobj_accum, dynamic
@@ -273,9 +274,6 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	float t(0.0), zval(0.0);
 	bool snow_coll(0), ice_coll(0), water_coll(0), mesh_coll(0);
 	vector3d const dir((p2 - p1).get_norm());
-	// generally not thread safe for dynamic lighting update, since BVH is rebuilt per-frame
-	// also, wrong to cache lighting for moving cobjs
-	bool const no_stat_moving(1);
 	bool coll(check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, ignore_cobj, 1, 0, 1, 1, (p1 == orig_p1), no_stat_moving)); // fast=1, exclude voxels, maybe skip init colls
 	assert(coll ? (cindex >= 0 && cindex < (int)coll_objects.size()) : (cindex == -1));
 
@@ -1091,8 +1089,8 @@ void check_update_global_lighting(unsigned lights) {
 	if (!(lights & (SUN_SHADOW | MOON_SHADOW))) return;
 	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return; // nothing to do
 	if (!pre_lighting_update()) return; // lmap is not yet allocated
-	// Note: we could check if the sun/moon is visible, but it might have been visible previously and now is not,
-	//       and in that case we still need to update lighting
+	// Note: we could check if the sun/moon is visible, but it might have been visible previously and now is not, and in that case we still need to update lighting
+	no_stat_moving = 1; // disable static moving cobjs for async updates, which aren't thread safe because the BVH is rebuilt every frame; no need to set back after first frame
 	lmap_manager.clear_lighting_values(LIGHTING_GLOBAL);
 	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 0, 0, lighting_update_offline, 0, LIGHTING_GLOBAL); // reserve a thread for rendering
 }
