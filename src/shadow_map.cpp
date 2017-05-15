@@ -78,8 +78,10 @@ class smap_vertex_cache_t : public vbo_wrap_t {
 	void end_block1(unsigned size) {num_verts1 = size;}
 
 	void upload(vector<vert_wrap_t> const &verts) {
-		if (!verts.empty()) {create_and_upload(verts);}
-		assert(vbo_valid());
+		if (!verts.empty()) {
+			create_and_upload(verts);
+			assert(vbo_valid());
+		}
 		num_verts2 = verts.size();
 	}
 	int get_ndiv(coll_obj const &c, unsigned smap_sz, unsigned fixed_ndiv) {
