@@ -786,12 +786,12 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 
 // can use with ray trace lighting, snow collision?, maybe water reflections
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
-	bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels, bool skip_init_colls, bool skip_movable)
+	bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels, bool skip_init_colls, bool skip_movable, bool no_stat_moving)
 {
 	cindex = -1;
 	//return cobj_tree_triangles.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
 	bool ret(get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn, skip_init_colls, skip_movable));
-	if (!dynamic) {ret |= cobj_tree_static_moving.check_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn, skip_init_colls, skip_movable);}
+	if (!dynamic && !no_stat_moving) {ret |= cobj_tree_static_moving.check_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn, skip_init_colls, skip_movable);}
 	if (!dynamic && include_voxels) {ret |= check_voxel_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1);}
 	return ret;
 }

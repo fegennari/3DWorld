@@ -265,19 +265,19 @@ bool check_coll_line(point const &pos1, point const &pos2, int &cindex, int cobj
 }
 
 
-bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val,
-						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic, bool include_voxels, bool skip_init_colls)
+bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val, int ignore_cobj,
+	bool fast, bool test_alpha, bool skip_dynamic, bool include_voxels, bool skip_init_colls, bool no_stat_moving)
 {
 	if (world_mode != WMODE_GROUND) return 0;
 #if 0
 	int const xpos1(get_xpos(pos1.x)), xpos2(get_xpos(pos2.x)), ypos1(get_ypos(pos1.y)), ypos2(get_ypos(pos2.y));
 	if (xpos1 == xpos2 && ypos1 == ypos2 && !point_outside_mesh(xpos1, ypos1) && !(do_line_clip_scene(pos1, pos2, v_collision_matrix[ypos1][xpos1].zmin, v_collision_matrix[ypos1][xpos1].zmax))) return 0;
 #endif
-	if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, 0, include_voxels, skip_init_colls)) {pos2 = cpos;}
+	if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, 0, include_voxels, skip_init_colls, 0, no_stat_moving)) {pos2 = cpos;}
 
 	if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
 		int cindex2;
-		if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex2, ignore_cobj, 1, test_alpha, 0, 0, skip_init_colls)) {cindex = cindex2;}
+		if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex2, ignore_cobj, 1, test_alpha, 0, 0, skip_init_colls, 0, no_stat_moving)) {cindex = cindex2;}
 	}
 	if (splash_val > 0.0) { // handle water splashes
 		if (cindex >= 0) pos2 = cpos;

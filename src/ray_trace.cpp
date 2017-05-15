@@ -273,7 +273,10 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	float t(0.0), zval(0.0);
 	bool snow_coll(0), ice_coll(0), water_coll(0), mesh_coll(0);
 	vector3d const dir((p2 - p1).get_norm());
-	bool coll(check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, ignore_cobj, 1, 0, 1, 1, (p1 == orig_p1))); // fast=1, exclude voxels, maybe skip init colls
+	// generally not thread safe for dynamic lighting update, since BVH is rebuilt per-frame
+	// also, wrong to cache lighting for moving cobjs
+	bool const no_stat_moving(1);
+	bool coll(check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, ignore_cobj, 1, 0, 1, 1, (p1 == orig_p1), no_stat_moving)); // fast=1, exclude voxels, maybe skip init colls
 	assert(coll ? (cindex >= 0 && cindex < (int)coll_objects.size()) : (cindex == -1));
 
 	// find the intersection point with the model3ds

@@ -388,7 +388,7 @@ void free_cobj_draw_group_vbos();
 void build_static_moving_cobj_tree();
 void build_cobj_tree(bool dynamic=0, bool verbose=1);
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
-	bool dynamic=0, int test_alpha=0, bool skip_non_drawn=0, bool include_voxels=1, bool skip_init_colls=0, bool skip_movable=0);
+	bool dynamic=0, int test_alpha=0, bool skip_non_drawn=0, bool include_voxels=1, bool skip_init_colls=0, bool skip_movable=0, bool no_stat_moving=0);
 bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0,
 	bool skip_non_drawn=0, bool include_voxels=1, bool skip_init_colls=0, bool skip_movable=0);
 bool cobj_contained_tree(point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj);
@@ -401,8 +401,8 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 	bool dynamic, bool check_ccounter, int id_for_cobj_int=-1);
 bool check_coll_line(point const &pos1, point const &pos2, int &cindex, int c_obj, int skip_dynamic, int test_alpha,
 	bool include_voxels=1, bool skip_init_colls=0, bool skip_movable=0);
-bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex, float splash_val=0.0,
-						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool include_voxels=1, bool skip_init_colls=0);
+bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex, float splash_val=0.0, int ignore_cobj=-1,
+	bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool include_voxels=1, bool skip_init_colls=0, bool no_stat_moving=0);
 bool cobj_contained_ref(point const &pos1, const point *pts, unsigned npts, int cobj, int &last_cobj);
 bool cobj_contained(point const &pos1, const point *pts, unsigned npts, int cobj);
 colorRGBA get_cobj_color_at_point(int cindex, point const &pos, vector3d const &normal, bool fast);
