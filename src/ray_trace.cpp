@@ -625,6 +625,8 @@ void launch_threaded_job(unsigned num_threads, void (*start_func)(rt_data *), bo
 		}
 		thread_manager.clear();
 	}
+	//cout << "total rays: " << tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
+	//tot_rays = num_hits = cells_touched = 0;
 	// if non-blocking, threads are finished when lmap_manager.was_updated is not set to true during the current frame
 }
 
