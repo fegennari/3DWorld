@@ -820,6 +820,7 @@
     <None Include="shaders\nebula.frag" />
     <None Include="shaders\nebula.vert" />
     <None Include="shaders\noise_2d_3d.part" />
+    <None Include="shaders\noise_deriv.part" />
     <None Include="shaders\noise_dither.part.frag" />
     <None Include="shaders\no_lighting_pos_tc.vert" />
     <None Include="shaders\no_lighting_tex_coord.vert" />

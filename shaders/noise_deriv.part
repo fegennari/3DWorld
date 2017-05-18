@@ -1,0 +1,130 @@
+// Created by inigo quilez - iq/2016
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+
+// Normals are analytical (true derivatives) for the terrain and for the clouds, that 
+// includes the noise, the fbm and the smoothsteps involved chain derivatives correctly.
+//
+// See here for more info: http://iquilezles.org/www/articles/morenoise/morenoise.htm
+
+// return smoothstep and its derivative
+vec2 smoothstepd( float a, float b, float x)
+{
+	if( x<a ) return vec2( 0.0, 0.0 );
+	if( x>b ) return vec2( 1.0, 0.0 );
+    float ir = 1.0/(b-a);
+    x = (x-a)*ir;
+    return vec2( x*x*(3.0-2.0*x), 6.0*x*(1.0-x)*ir );
+}
+
+float hash1( vec2 p ) {
+    p  = 50.0*fract( p*0.3183099 );
+    return fract( p.x*p.y*(p.x+p.y) );
+}
+
+//==========================================================================================
+// noises
+//==========================================================================================
+
+vec3 noised( in vec2 x ) {
+    vec2 p = floor(x);
+    vec2 w = fract(x);
+    
+    vec2 u = w*w*w*(w*(w*6.0-15.0)+10.0);
+    vec2 du = 30.0*w*w*(w*(w-2.0)+1.0);
+    
+    float a = hash1(p+vec2(0,0));
+    float b = hash1(p+vec2(1,0));
+    float c = hash1(p+vec2(0,1));
+    float d = hash1(p+vec2(1,1));
+
+    float k0 = a;
+    float k1 = b - a;
+    float k2 = c - a;
+    float k4 = a - b - c + d;
+
+    return vec3( -1.0+2.0*(k0 + k1*u.x + k2*u.y + k4*u.x*u.y), 2.0* du * vec2( k1 + k4*u.y, k2 + k4*u.x ) );
+}
+
+float noise( in vec2 x ) {
+    vec2 p = floor(x);
+    vec2 w = fract(x);
+    vec2 u = w*w*w*(w*(w*6.0-15.0)+10.0);
+    
+    float a = hash1(p+vec2(0,0));
+    float b = hash1(p+vec2(1,0));
+    float c = hash1(p+vec2(0,1));
+    float d = hash1(p+vec2(1,1));
+    
+    return -1.0+2.0*( a + (b-a)*u.x + (c-a)*u.y + (a - b - c + d)*u.x*u.y );
+}
+
+//==========================================================================================
+// fbm constructions
+//==========================================================================================
+
+const mat2 m2 = mat2(  0.80,  0.60,
+                      -0.60,  0.80 );
+const mat2 m2i = mat2( 0.80, -0.60,
+                       0.60,  0.80 );
+
+float fbm_9( in vec2 x ) {
+    float f = 1.9;
+    float s = 0.55;
+    float a = 0.0;
+    float b = 0.5;
+    for( int i=0; i<9; i++ ) {
+
+        float n = noise(x);
+        a += b*n;
+        b *= s;
+        x = f*m2*x;
+    }
+	return a;
+}
+
+vec3 fbmd_9( in vec2 x ) {
+    float f = 1.9;
+    float s = 0.55;
+    float a = 0.0;
+    float b = 0.5;
+    vec2  d = vec2(0.0);
+    mat2  m = mat2(1.0,0.0,0.0,1.0);
+
+    for( int i=0; i<9; i++ ) {
+        vec3 n = noised(x);
+        a += b*n.x;          // accumulate values		
+        d += b*m*n.yz;       // accumulate derivatives
+        b *= s;
+        x = f*m2*x;
+        m = f*m2i*m;
+    }
+	return vec3( a, d );
+}
+
+//------------------------------------------------------------------------------------------
+// terrain
+//------------------------------------------------------------------------------------------
+
+vec2 terrainMap( in vec2 p ) {
+    const float sca = 0.0010;
+    const float amp = 300.0;
+    p *= sca;
+    float e = fbm_9( p + vec2(1.0,-2.0) );
+    float a = 1.0-smoothstep( 0.12, 0.13, abs(e+0.12) ); // flag high-slope areas (-0.25, 0.0)
+    e = e + 0.15*smoothstep( -0.08, -0.01, e );
+    e *= amp;
+    return vec2(e,a);
+}
+
+vec4 terrainMapD( in vec2 p ) {
+	const float sca = 0.0010;
+    const float amp = 300.0;
+    p *= sca;
+    vec3 e = fbmd_9( p + vec2(1.0,-2.0) );
+    vec2 c = smoothstepd( -0.08, -0.01, e.x );
+	e.x = e.x + 0.15*c.x;
+	e.yz = e.yz + 0.15*c.y*e.yz;    
+    e.x *= amp;
+    e.yz *= amp*sca;
+    return vec4( e.x, normalize( vec3(-e.y,1.0,-e.z) ) );
+}
