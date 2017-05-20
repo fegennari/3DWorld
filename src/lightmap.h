@@ -222,7 +222,7 @@ public:
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
 	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0) const;
 	cylinder_3dw calc_bounding_cylin(float sqrt_thresh=0.0) const;
-	pos_dir_up calc_pdu(bool dynamic_cobj) const;
+	pos_dir_up calc_pdu(bool dynamic_cobj, bool is_cube_face) const;
 	unsigned get_cube_eflags() const {return cube_eflags;}
 	unsigned get_num_rays()    const {return num_dlight_rays;}
 	bool is_visible()     const;

@@ -8,6 +8,8 @@
 #include "shadow_map.h"
 
 
+float const MAX_SMAP_FOV = 0.24;
+
 extern bool dl_smap_enabled, skip_light_vis_test, enable_dlight_shadows;
 extern int display_mode, camera_coll_id, max_tius;
 extern unsigned shadow_map_sz;
@@ -425,9 +427,9 @@ void light_source::setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) c
 	if (smap_index > 0) {local_smap_manager.get(smap_index).set_smap_shader_for_light(s, arr_tex_set);}
 }
 
-pos_dir_up light_source::calc_pdu(bool dynamic_cobj) const {
+pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face) const {
 
-	float const cos_theta(1.0 - min(0.16f, (bwidth + LT_DIR_FALLOFF))), angle(2.0*acosf(cos_theta));
+	float const cos_theta(1.0 - min((is_cube_face ? 0.16f : MAX_SMAP_FOV), (bwidth + LT_DIR_FALLOFF))), angle(2.0*acosf(cos_theta));
 	int const dim(get_min_dim(dir));
 	vector3d temp(zero_vector), up_dir;
 	temp[dim] = 1.0; // choose up axis
@@ -470,7 +472,7 @@ bool light_source_trig::check_shadow_map() {
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
-	smap.pdu = calc_pdu(dynamic_cobj); // Note: could cache this in the light source for static lights
+	smap.pdu = calc_pdu(dynamic_cobj, is_cube_face); // Note: could cache this in the light source for static lights
 	smap.outdoor_shadows = outdoor_shadows;
 #if 0 // draw light/shadow frustum for debugging
 	shader_t shader;
