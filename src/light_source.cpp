@@ -429,7 +429,8 @@ void light_source::setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) c
 
 pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face) const {
 
-	float const cos_theta(1.0 - min((is_cube_face ? 0.16f : MAX_SMAP_FOV), (bwidth + LT_DIR_FALLOFF))), angle(2.0*acosf(cos_theta));
+	float const cos_theta(1.0 - min((is_cube_face ? 0.16f : MAX_SMAP_FOV), 0.5f*SQRT2*(bwidth + LT_DIR_FALLOFF))); // Note: the 0.5*SQRT2 term is questionable
+	float const angle(2.0*acosf(cos_theta)); // full FOV
 	int const dim(get_min_dim(dir));
 	vector3d temp(zero_vector), up_dir;
 	temp[dim] = 1.0; // choose up axis
@@ -474,12 +475,13 @@ bool light_source_trig::check_shadow_map() {
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
 	smap.pdu = calc_pdu(dynamic_cobj, is_cube_face); // Note: could cache this in the light source for static lights
 	smap.outdoor_shadows = outdoor_shadows;
-#if 0 // draw light/shadow frustum for debugging
-	shader_t shader;
-	shader.begin_color_only_shader(RED);
-	smap.pdu.draw_frustum();
-	shader.end_shader();
-#endif
+
+	if (0 && (display_mode & 0x10)) { // draw light/shadow frustum for debugging
+		shader_t shader;
+		shader.begin_color_only_shader(RED);
+		smap.pdu.draw_frustum();
+		shader.end_shader();
+	}
 	bool const force_update(rot_rate != 0.0); // force shadow map update if rotating
 	smap.create_shadow_map_for_light(pos, nullptr, 1, 0, force_update); // no bcube, in world space, no texture array (layer=nullptr)
 	return 1;
