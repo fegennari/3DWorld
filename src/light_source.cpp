@@ -8,7 +8,7 @@
 #include "shadow_map.h"
 
 
-float const MAX_SMAP_FOV = 0.24;
+float const MAX_SMAP_FOV = 0.8; // acos(1.0 - 0.8) = 78 degrees
 
 extern bool dl_smap_enabled, skip_light_vis_test, enable_dlight_shadows;
 extern int display_mode, camera_coll_id, max_tius;
@@ -429,8 +429,8 @@ void light_source::setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) c
 
 pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face) const {
 
-	float const cos_theta(1.0 - min((is_cube_face ? 0.16f : MAX_SMAP_FOV), 0.5f*SQRT2*(bwidth + LT_DIR_FALLOFF))); // Note: the 0.5*SQRT2 term is questionable
-	float const angle(2.0*acosf(cos_theta)); // full FOV
+	float const cos_theta(1.0 - min((is_cube_face ? 0.35f : MAX_SMAP_FOV), 2.0f*(bwidth + LT_DIR_FALLOFF))); // Note: cube face is 49.5 degrees (must be > 45)
+	float const angle(acosf(cos_theta)); // half FOV
 	int const dim(get_min_dim(dir));
 	vector3d temp(zero_vector), up_dir;
 	temp[dim] = 1.0; // choose up axis
