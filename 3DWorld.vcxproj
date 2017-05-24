@@ -414,6 +414,7 @@
     <ClCompile Include="src\edit_ui.cpp" />
     <ClCompile Include="src\explosion.cpp" />
     <ClCompile Include="src\Gameplay.cpp" />
+    <ClCompile Include="src\gen_buildings.cpp" />
     <ClCompile Include="src\gen_object.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>

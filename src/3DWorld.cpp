@@ -1772,6 +1772,9 @@ int load_config(string const &config_file) {
 		else if (str == "voxel") { // voxel option
 			if (!parse_voxel_option(fp)) cfg_err("voxel option", error);
 		}
+		else if (str == "buildings") { // buildings option
+			if (!parse_buildings_option(fp)) cfg_err("buildings option", error);
+		}
 		else if (str == "include") {
 			if (!read_str(fp, include_fname)) cfg_err("include", error);
 			if (!load_config(include_fname )) cfg_err("nested include file", error);

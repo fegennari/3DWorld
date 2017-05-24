@@ -2186,6 +2186,7 @@ void init_models() {
 
 	build_hmv_shape();
 	gen_star_points();
+	gen_buildings();
 }
 
 void free_models() {

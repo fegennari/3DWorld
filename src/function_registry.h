@@ -879,6 +879,11 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id,
 unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, cube_t const &cube, bool only_front_facing=0, bool is_indoors=0, unsigned skip_mask=0);
 void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid, unsigned tsize);
 
+// function prototypes - gen_buildings
+bool parse_buildings_option(FILE *fp);
+void gen_buildings();
+void draw_buildings(bool shadow_only, vector3d const &xlate=zero_vector);
+
 #include "inlines.h"
 
 
