@@ -1,0 +1,8 @@
+buildings num 100
+buildings flatten_mesh 1
+buildings tid -1
+buildings nm_tid -1
+buildings size_range 1.0 2.0  1.0 2.0  0.5 1.0
+buildings pos_range -100.0 100.0  -100.0 100.0  0 0
+buildings color_min 0.6 0.6 0.6 1.0
+buildings color_max 0.8 0.8 0.8 1.0
