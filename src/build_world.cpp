@@ -604,6 +604,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		if (generate_mesh != 2) {
 		  gen_mesh(0, keep_sin_table, update_zvals);
 		  PRINT_TIME("Surface generation");
+		  gen_buildings();
 		}
 		gen_tex_height_tables();
 		clear_landscape_vbo = 1;
@@ -2186,7 +2187,6 @@ void init_models() {
 
 	build_hmv_shape();
 	gen_star_points();
-	gen_buildings();
 }
 
 void free_models() {

@@ -1879,7 +1879,7 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), terrain_zmin(0.0), tiles_gen_prev_frame(0) {
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), buildings_valid(0), terrain_zmin(0.0), tiles_gen_prev_frame(0) {
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 
@@ -1889,6 +1889,7 @@ void tile_draw_t::clear() {
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
 	tiles.clear();
+	buildings_valid = 0;
 }
 
 void tile_draw_t::insert_tile(tile_t *tile) {
@@ -1908,6 +1909,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	unsigned const max_defer_tiles        = 8; // 0 = disable
 	if (height_gens.empty()) {height_gens.resize(max(max_defer_tiles, 1U));}
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
+	if (!buildings_valid) {gen_buildings(); buildings_valid = 1;}
 	auto_calc_model_zvals(); // must be done after heightmap loading but before any tiles are created
 	to_draw.clear();
 	terrain_zmin = FAR_DISTANCE;

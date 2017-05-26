@@ -405,6 +405,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
 	tile_map tiles;
+	bool buildings_valid;
 	unsigned ivbo_ixs[NUM_LODS+1];
 	unsigned tiles_gen_prev_frame;
 	float terrain_zmin;

@@ -1,8 +1,8 @@
-buildings num 100
+buildings num 5000
 buildings flatten_mesh 1
-buildings tid -1
-buildings nm_tid -1
-buildings size_range 1.0 2.0  1.0 2.0  0.5 1.0
+buildings tid bricks_tan.png
+buildings nm_tid normal_maps/bricks_tan_norm.png
+buildings size_range 1.0 2.0  1.0 2.0  1.0 2.0
 buildings pos_range -100.0 100.0  -100.0 100.0  0 0
-buildings color_min 0.6 0.6 0.6 1.0
-buildings color_max 0.8 0.8 0.8 1.0
+buildings color_min 0.5 0.3 0.2 1.0
+buildings color_max 0.6 0.5 0.4 1.0
