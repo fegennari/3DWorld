@@ -221,7 +221,7 @@ void clear_context() {
 	free_cloud_context();
 	free_animal_context();
 	reflective_cobjs.free_textures();
-	clear_landscape_vbo = 1;
+	clear_landscape_vbo_now();
 }
 
 

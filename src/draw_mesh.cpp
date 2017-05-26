@@ -196,18 +196,15 @@ void set_landscape_texture_texgen(shader_t &shader) {
 }
 
 
-// Note: currently we never calls this with shadow_pass set to both 0 and 1 in the same frame
+vao_manager_t mesh_data_vao_mgr;
+
 void draw_mesh_vbo(bool shadow_pass) {
 
-	static vao_manager_t mesh_data;
-
 	if (clear_landscape_vbo) {
-		mesh_data.clear();
+		mesh_data_vao_mgr.clear();
 		clear_landscape_vbo = 0;
 	}
-	// uploading the new mesh data during the shadow pass sometimes corrupts VBO contents,
-	// so if we know that we're not in sparse update mode we can skip the shadow map update on the first frame, because we know that the next fram will create it
-	if (shadow_pass && mesh_data.vbo == 0 && no_sparse_smap_update()) return;
+	//if (shadow_pass && mesh_data_vao_mgr.vbo == 0 && no_sparse_smap_update()) return;
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
 	// Note: ignores detail texture
 	colorRGBA const color(mesh_color_scale*DEF_DIFFUSE);
@@ -222,7 +219,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 	}
 	set_landscape_texture_texgen(s);
 	
-	if (mesh_data.vbo == 0) {
+	if (mesh_data_vao_mgr.vbo == 0) {
 		vector<vert_norm_comp> data; // vertex and normals
 		data.reserve(2*MESH_X_SIZE*(MESH_Y_SIZE-1));
 
@@ -231,15 +228,15 @@ void draw_mesh_vbo(bool shadow_pass) {
 				for (unsigned k = 0; k < 2; ++k) {data.emplace_back(get_mesh_xyz_pos(j, i+k), vertex_normals[i+k][j]);}
 			}
 		}
-		mesh_data.create_and_upload(data, 0, 1); // and setup pointers
+		mesh_data_vao_mgr.create_and_upload(data, 0, 1); // and setup pointers
 		bind_vbo(0); // unbind mesh vbo
 	}
-	mesh_data.enable_vao();
+	mesh_data_vao_mgr.enable_vao();
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
 		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
 	}
-	mesh_data.disable_vao();
+	mesh_data_vao_mgr.disable_vao();
 	s.end_shader();
 }
 
@@ -424,6 +421,12 @@ template<typename T> void draw_mesh_mvd_core(T &mvd) {
 	} // for i
 }
 
+mesh_vertex_draw_vbo mvd_vbo;
+
+void clear_landscape_vbo_now() { // called during context switch
+	mesh_data_vao_mgr.clear();
+	mvd_vbo.clear();
+}
 
 void draw_mesh_mvd(bool reflection_pass) {
 
@@ -433,12 +436,11 @@ void draw_mesh_mvd(bool reflection_pass) {
 	set_landscape_texture_texgen(s);
 
 	if (use_core_context) {
-		static mesh_vertex_draw_vbo mvd;
-		mvd.reflection_pass = reflection_pass;
-		if (clear_mvd_vbo) {mvd.clear(); clear_mvd_vbo = 0;}
-		mvd.begin_draw();
-		draw_mesh_mvd_core(mvd);
-		mvd.final_draw();
+		mvd_vbo.reflection_pass = reflection_pass;
+		if (clear_mvd_vbo) {mvd_vbo.clear(); clear_mvd_vbo = 0;}
+		mvd_vbo.begin_draw();
+		draw_mesh_mvd_core(mvd_vbo);
+		mvd_vbo.final_draw();
 	}
 	else {
 		mesh_vertex_draw mvd;
