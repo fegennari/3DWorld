@@ -1066,8 +1066,8 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 	unsigned vix(0);
 		
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		if (!(dim_mask & (1<<i))) continue;
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+		if (!(dim_mask & (1<<n))) continue;
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
@@ -1094,7 +1094,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 		} // for j
 	} // for i
 	assert(vix <= 24);
-	draw_quad_verts_as_tris(verts, vix);
+	if (vix > 0) {draw_quad_verts_as_tris(verts, vix);}
 }
 
 
