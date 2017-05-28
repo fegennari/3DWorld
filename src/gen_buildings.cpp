@@ -80,13 +80,20 @@ struct building_t {
 
 	building_t() : tid(-1), nm_tid(-1), color(WHITE) {}
 
-	void draw(shader_t &s, bool shadow_only, vector3d const &xlate=zero_vector) const { // FIXME: more efficient, use batched verts or VBO
-		point const pos(bcube.get_cube_center() + xlate);
-		if (world_mode == WMODE_INF_TERRAIN && distance_to_camera(pos) > get_inf_terrain_fog_dist() + bcube.get_size().get_max_val()) return; // dist clipping
-		if (!camera_pdu.sphere_and_cube_visible_test(pos, bcube.get_bsphere_radius(), (bcube + xlate))) return; // FIXME: cache center and radius?
-		if (!shadow_only) {select_texture(tid); select_multitex(nm_tid, 5);}
-		s.set_cur_color(color);
-		draw_simple_cube(bcube, (!shadow_only && tid >= 0));
+	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate=zero_vector) const {
+		// FIXME: more efficient, use batched verts or VBO, cache verts, store color in verts
+		point const center(bcube.get_cube_center()), pos(center + xlate);
+		float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
+		if (!dist_less_than(get_camera_pos(), pos, dmax)) return; // dist clipping
+		if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
+		
+		if (!shadow_only) {
+			select_texture(tid);
+			select_multitex(nm_tid, 5);
+			s.set_cur_color(color);
+		}
+		vector3d const sz(bcube.get_size()), view_dir(pos - get_camera_pos());
+		draw_cube(center, sz.x, sz.y, sz.z, (!shadow_only && tid >= 0), 0, 1.0, 0, &view_dir);
 	}
 };
 
@@ -152,59 +159,65 @@ public:
 		clear();
 		buildings.reserve(params.num);
 		grid.resize(grid_sz*grid_sz); // square
-		unsigned num_gen(0);
+		unsigned num_tries(0), num_gen(0);
 
 		for (unsigned i = 0; i < params.num; ++i) {
 			building_t b;
 			point center;
 			
-			for (unsigned d = 0; d < 3; ++d) { // x,y,z
-				if (d < 2) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]);} // x,y
-				else {center[d] = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // z
-				float const sz(0.5*rgen.rand_uniform(params.sz_range.d [d][0], params.sz_range.d [d][1]));
-				b.bcube.d[d][0] = center[d] - ((d == 2) ? 0.0 : sz); // only in XY
-				b.bcube.d[d][1] = center[d] + sz;
-			} // for d
-			if (center.z < water_plane_z) continue; // skip underwater buildings
-			++num_gen;
+			for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a non-overlapping building placement
+				for (unsigned d = 0; d < 3; ++d) { // x,y,z
+					if (d < 2) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]);} // x,y
+					else {center[d] = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // z
+					float const sz(0.5*rgen.rand_uniform(params.sz_range.d [d][0], params.sz_range.d [d][1]));
+					b.bcube.d[d][0] = center[d] - ((d == 2) ? 0.0 : sz); // only in XY
+					b.bcube.d[d][1] = center[d] + sz;
+				} // for d
+				++num_tries;
+				if (center.z < water_plane_z) break; // skip underwater buildings, failed placement
+				++num_gen;
 
-			// check building for overlap with other buildings
-			cube_t test_bc(b.bcube);
-			test_bc.expand_by(0.1*b.bcube.get_size()); // expand by 10%
-			bool overlaps(0);
+				// check building for overlap with other buildings
+				cube_t test_bc(b.bcube);
+				test_bc.expand_by(0.1*b.bcube.get_size()); // expand by 10%
+				bool overlaps(0);
+				unsigned ixr[2][2];
+				get_grid_range(b.bcube, ixr);
 
-#if 1 // use grid acceleration
-			unsigned ixr[2][2];
-			get_grid_range(b.bcube, ixr);
-
-			for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
-				for (unsigned x = ixr[0][0]; x <= ixr[1][0] && !overlaps; ++x) {
-					grid_elem_t const &ge(get_grid_elem(x, y));
-					for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
-						assert(*g < buildings.size());
-						if (test_bc.intersects_xy(buildings[*g].bcube)) {overlaps = 1; break;} // Note: only check for XY intersection
+				for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
+					for (unsigned x = ixr[0][0]; x <= ixr[1][0] && !overlaps; ++x) {
+						grid_elem_t const &ge(get_grid_elem(x, y));
+						for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
+							assert(*g < buildings.size());
+							if (test_bc.intersects_xy(buildings[*g].bcube)) {overlaps = 1; break;} // Note: only check for XY intersection
+						}
 					}
 				}
-			}
-#else // brute force iteration
-			for (auto j = buildings.begin(); j != buildings.end(); ++j) {
-				if (test_bc.intersects_xy(j->bcube)) {overlaps = 1; break;} // Note: only check for XY intersection
-			}
-#endif
-			if (overlaps) continue;
-			// FIXME: create acceleration structure: 2D grid in XY plane
-			// FIXME: check for overlaps with other buildings
-			if (params.flatten_mesh) {flatten_hmap_region(b.bcube);} // flatten the mesh under the bcube to a height of mesh_zval
-			for (unsigned d = 0; d < 4; ++d) {b.color[d] = rgen.rand_uniform(params.color_min[d], params.color_max[d]);}
-			b.tid = params.tid;
-			add_to_grid(b.bcube, buildings.size());
-			buildings.push_back(b);
+				if (!overlaps) {
+					if (params.flatten_mesh) {
+						if (using_tiled_terrain_hmap_tex()) {
+							flatten_hmap_region(b.bcube); // flatten the mesh under the bcube to a height of mesh_zval
+						}
+						else { // extend building bottom downward to min mesh height
+							float &zmin(b.bcube.d[2][0]);
+							for (unsigned d = 0; d < 4; ++d) {zmin = min(zmin, get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y));}
+							zmin = max(zmin, water_plane_z); // don't go below the water
+						}
+					}
+					for (unsigned d = 0; d < 4; ++d) {b.color[d] = rgen.rand_uniform(params.color_min[d], params.color_max[d]);}
+					b.tid = params.tid;
+					add_to_grid(b.bcube, buildings.size());
+					buildings.push_back(b);
+					break; // done
+				}
+			} // for n
 		} // for i
-		cout << "Buildings: " << params.num << " / " << num_gen << " / " << buildings.size() << endl;
+		cout << "Buildings: " << params.num << " / " << num_tries << " / " << num_gen << " / " << buildings.size() << endl;
 	}
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
 		if (empty()) return;
+		//timer_t timer("Draw Buildings");
 		fgPushMatrix();
 		translate_to(xlate);
 		shader_t s;
@@ -214,12 +227,31 @@ public:
 		}
 		else {
 			int const use_bmap(global_building_params.nm_tid >= 0), is_outside(1);
-			bool const indir(0), use_smap(0); // FIXME
+			bool const indir(0), use_smap(0); // FIXME: shadows between buildings
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, 0, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
 		}
-		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->draw(s, shadow_only, xlate);}
+		float const far_clip(get_inf_terrain_fog_dist());
+		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->draw(s, shadow_only, far_clip, xlate);}
 		s.end_shader();
 		fgPopMatrix();
+	}
+
+	// FIXME: collision detection
+	bool check_sphere_coll(point const &pos, float radius=0.0) const {
+		cube_t bcube; bcube.set_from_sphere(pos, radius);
+		unsigned ixr[2][2];
+		get_grid_range(bcube, ixr);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
+					assert(*g < buildings.size());
+					if (sphere_cube_intersect(pos, radius, buildings[*g].bcube)) return 1;
+				}
+			}
+		}
+		return 0;
 	}
 };
 
@@ -228,5 +260,6 @@ building_creator_t building_creator;
 
 void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
+bool check_buildings_sphere_coll(point const &pos, float radius) {return building_creator.check_sphere_coll(pos, radius);}
 
 

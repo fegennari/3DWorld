@@ -884,6 +884,7 @@ void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigne
 bool parse_buildings_option(FILE *fp);
 void gen_buildings();
 void draw_buildings(bool shadow_only, vector3d const &xlate=zero_vector);
+bool check_buildings_sphere_coll(point const &pos, float radius=0.0);
 
 #include "inlines.h"
 
