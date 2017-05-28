@@ -196,16 +196,6 @@ public:
 					}
 				}
 				if (!overlaps) {
-					if (params.flatten_mesh) {
-						if (using_tiled_terrain_hmap_tex()) {
-							flatten_hmap_region(b.bcube); // flatten the mesh under the bcube to a height of mesh_zval
-						}
-						else { // extend building bottom downward to min mesh height
-							float &zmin(b.bcube.d[2][0]);
-							for (unsigned d = 0; d < 4; ++d) {zmin = min(zmin, get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y));}
-							zmin = max(zmin, water_plane_z); // don't go below the water
-						}
-					}
 					for (unsigned d = 0; d < 4; ++d) {b.color[d] = rgen.rand_uniform(params.color_min[d], params.color_max[d]);}
 					b.tid = params.tid;
 					add_to_grid(b.bcube, buildings.size());
@@ -214,7 +204,30 @@ public:
 				}
 			} // for n
 		} // for i
+		timer.end();
 		cout << "Buildings: " << params.num << " / " << num_tries << " / " << num_gen << " / " << buildings.size() << endl;
+
+		if (params.flatten_mesh) {
+			timer_t timer("Gen Building Zvals");
+			bool const do_flatten(using_tiled_terrain_hmap_tex());
+
+#pragma omp parallel for schedule(static,1)
+			for (int i = 0; i < (int)buildings.size(); ++i) {
+				building_t &b(buildings[i]);
+
+				if (do_flatten) {
+					flatten_hmap_region(b.bcube); // flatten the mesh under the bcube to a height of mesh_zval
+				}
+				else { // extend building bottom downward to min mesh height
+					float &zmin(b.bcube.d[2][0]); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
+					for (int d = 0; d < 4; ++d) {zmin = min(zmin, get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y));}
+					zmin = max(zmin, water_plane_z); // don't go below the water
+				}
+			} // for i
+			if (do_flatten) { // use conservative zmin for grid
+				for (auto i = grid.begin(); i != grid.end(); ++i) {i->bcube.d[2][0] = water_plane_z;}
+			}
+		}
 	}
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
