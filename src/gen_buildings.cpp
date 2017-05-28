@@ -13,7 +13,6 @@ using std::string;
 extern float water_plane_z;
 
 // TODO:
-// side/roof texture scale
 // multiple texture/color sets for sides/roof
 
 
@@ -192,7 +191,7 @@ public:
 
 	void gen(building_params_t const &params) {
 		timer_t timer("Gen Buildings");
-		vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0); // cancel out xoff2/yoff2 translate
+		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? vector3d(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0) : zero_vector); // cancel out xoff2/yoff2 translate
 		range    = params.pos_range;
 		range_sz = range.get_size();
 		UNROLL_3X(range_sz_inv[i_] = 1.0/range_sz[i_];)
@@ -325,6 +324,8 @@ building_creator_t building_creator;
 
 void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
-bool check_buildings_sphere_coll(point &pos, point const &p_last, float radius) {return building_creator.check_sphere_coll(pos, p_last, radius);}
+bool check_buildings_point_coll(point const &pos) {return check_buildings_sphere_coll(pos, 0.0);}
+bool check_buildings_sphere_coll(point const &pos, float radius) {point pos2(pos); return building_creator.check_sphere_coll(pos2, pos, radius);}
+bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius) {return building_creator.check_sphere_coll(pos, p_int, radius);}
 
 
