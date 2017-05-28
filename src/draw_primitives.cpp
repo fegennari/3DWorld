@@ -1057,16 +1057,16 @@ void draw_simple_cube(cube_t const &c, bool texture) {
 
 // need to do something with tex coords for scale
 // Note: cube extends from pos +/- 0.5*(sx, sy, sz)
-void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv,
-			   float texture_scale, bool proportional_texture, vector3d const *const view_dir)
+void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv, float texture_scale,
+	bool proportional_texture, vector3d const *const view_dir, unsigned dim_mask, bool swap_y_st)
 {
 	point const scale(sx, sy, sz);
 	vector3d const xlate(pos - 0.5*scale); // move origin from center to min corner
-	float const sizes[3] = {sx, sy, sz};
 	vert_norm_tc verts[24];
 	unsigned vix(0);
 		
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		if (!(dim_mask & (1<<i))) continue;
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
@@ -1085,8 +1085,9 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 					verts[vix].n = norm;
 
 					if (texture) {
-						verts[vix].t[0] = (proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]];
-						verts[vix].t[1] = (proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]];
+						bool const st(swap_y_st ? (i&1) : 0);
+						verts[vix].t[ st] = (proportional_texture ? scale[d[1]] : 1.0)*texture_scale*pt[d[1]];
+						verts[vix].t[!st] = (proportional_texture ? scale[d[0]] : 1.0)*texture_scale*pt[d[0]];
 					}
 				}
 			}

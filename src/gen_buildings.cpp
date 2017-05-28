@@ -12,6 +12,15 @@ using std::string;
 
 extern float water_plane_z;
 
+// TODO:
+// different roof texture
+// select from texture/color group
+
+
+struct building_mat_t {
+	int side_tid, side_nm_tid, roof_tid, roof_nm_tid;
+	colorRGBA color;
+};
 
 struct building_params_t {
 
@@ -93,7 +102,7 @@ struct building_t {
 			s.set_cur_color(color);
 		}
 		vector3d const sz(bcube.get_size()), view_dir(pos - get_camera_pos());
-		draw_cube(center, sz.x, sz.y, sz.z, (!shadow_only && tid >= 0), 0, 1.0, 0, &view_dir);
+		draw_cube(center, sz.x, sz.y, sz.z, (!shadow_only && (tid >= 0 || nm_tid >= 0)), 0, 1.0, 0, &view_dir, 7, 1);
 	}
 };
 
@@ -169,7 +178,7 @@ public:
 				for (unsigned d = 0; d < 3; ++d) { // x,y,z
 					if (d < 2) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]);} // x,y
 					else {center[d] = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // z
-					float const sz(0.5*rgen.rand_uniform(params.sz_range.d [d][0], params.sz_range.d [d][1]));
+					float const sz(0.5*rgen.rand_uniform(params.sz_range.d[d][0], params.sz_range.d[d][1]));
 					b.bcube.d[d][0] = center[d] - ((d == 2) ? 0.0 : sz); // only in XY
 					b.bcube.d[d][1] = center[d] + sz;
 				} // for d
@@ -198,6 +207,7 @@ public:
 				if (!overlaps) {
 					for (unsigned d = 0; d < 4; ++d) {b.color[d] = rgen.rand_uniform(params.color_min[d], params.color_max[d]);}
 					b.tid = params.tid;
+					b.nm_tid = params.nm_tid;
 					add_to_grid(b.bcube, buildings.size());
 					buildings.push_back(b);
 					break; // done
