@@ -1531,7 +1531,8 @@ class timer_t {
 public:
 	timer_t(char const *const name_) : name(name_), timer1(GET_TIME_MS()) {}
 	timer_t(std::string const &name_) : name(name_), timer1(GET_TIME_MS()) {}
-	~timer_t() {register_timing_value(name.c_str(), GET_DELTA_TIME);}
+	~timer_t() {end();}
+	void end() {if (!name.empty()) {register_timing_value(name.c_str(), GET_DELTA_TIME); name.clear();}}
 };
 
 
