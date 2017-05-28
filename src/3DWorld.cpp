@@ -433,6 +433,7 @@ void move_camera_pos_xy(vector3d const &v, float dist) {
 	surface_pos.x += xy_scale*v.x;
 	surface_pos.y += xy_scale*v.y;
 	if (world_mode == WMODE_INF_TERRAIN) {check_legal_movement_using_model_coll(prev, surface_pos, CAMERA_RADIUS);} // collision with models
+	check_buildings_sphere_coll(surface_pos, prev, CAMERA_RADIUS); // use prev pos for building collisions
 }
 
 

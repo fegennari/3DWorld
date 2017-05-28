@@ -187,6 +187,8 @@ public:
 				for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
 					for (unsigned x = ixr[0][0]; x <= ixr[1][0] && !overlaps; ++x) {
 						grid_elem_t const &ge(get_grid_elem(x, y));
+						if (!test_bc.intersects_xy(ge.bcube)) continue;
+
 						for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 							assert(*g < buildings.size());
 							if (test_bc.intersects_xy(buildings[*g].bcube)) {overlaps = 1; break;} // Note: only check for XY intersection
@@ -236,18 +238,29 @@ public:
 		fgPopMatrix();
 	}
 
-	// FIXME: collision detection
-	bool check_sphere_coll(point const &pos, float radius=0.0) const {
-		cube_t bcube; bcube.set_from_sphere(pos, radius);
+	bool check_sphere_coll(point &pos, point const &p_last, float radius=0.0) const {
+		if (empty()) return 0;
+		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
+		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
+		float const dist(p2p_dist(pos, p_last));
 
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (!sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate))) continue;
+
 				for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 					assert(*g < buildings.size());
-					if (sphere_cube_intersect(pos, radius, buildings[*g].bcube)) return 1;
+					point p_int;
+					vector3d cnorm; // unused
+					unsigned cdir(0); // unused
+
+					if (sphere_cube_intersect(pos, radius, (buildings[*g].bcube + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
+						pos = p_int;
+						return 1;
+					}
 				}
 			}
 		}
@@ -260,6 +273,6 @@ building_creator_t building_creator;
 
 void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
-bool check_buildings_sphere_coll(point const &pos, float radius) {return building_creator.check_sphere_coll(pos, radius);}
+bool check_buildings_sphere_coll(point &pos, point const &p_last, float radius) {return building_creator.check_sphere_coll(pos, p_last, radius);}
 
 
