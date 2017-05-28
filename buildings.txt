@@ -1,5 +1,7 @@
 buildings num 100000
 buildings flatten_mesh 1
+buildings side_tscale 2.0
+buildings roof_tscale 1.0
 buildings side_tid bricks_tan.png
 buildings side_nm_tid normal_maps/bricks_tan_norm.png
 buildings roof_tid stucco.jpg

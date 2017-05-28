@@ -20,9 +20,11 @@ extern float water_plane_z;
 struct tid_nm_pair_t {
 
 	int tid, nm_tid;
-	tid_nm_pair_t() : tid(-1), nm_tid(-1) {}
+	float tscale;
+
+	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale(1.0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
-	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid);}
+	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale == t.tscale);}
 
 	void set_gl() const {
 		select_texture(tid);
@@ -39,7 +41,6 @@ struct building_params_t : public building_mat_t {
 
 	bool flatten_mesh;
 	unsigned num;
-	int tid, nm_tid;
 	cube_t sz_range, pos_range; // z is unused?
 	colorRGBA color_min, color_max; // alpha is unused?
 
@@ -65,6 +66,12 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "num") {
 		if (!read_uint(fp, global_building_params.num)) {buildings_file_err("num", error);}
+	}
+	else if (str == "side_tscale") {
+		if (!read_float(fp, global_building_params.side_tex.tscale)) {buildings_file_err("side_tscale", error);}
+	}
+	else if (str == "roof_tscale") {
+		if (!read_float(fp, global_building_params.roof_tex.tscale)) {buildings_file_err("roof_tscale", error);}
 	}
 	else if (str == "side_tid") {
 		if (!read_str(fp, strc)) {buildings_file_err("side_tid", error);}
@@ -121,11 +128,11 @@ struct building_t : public building_mat_t {
 		
 		// draw sides
 		if (!shadow_only) {side_tex.set_gl();}
-		draw_cube(center, sz.x, sz.y, sz.z, (!shadow_only && side_tex.enabled()), 0, 1.0, 0, &view_dir, (single_pass ? 7 : 3), 1);
+		draw_cube(center, sz.x, sz.y, sz.z, (!shadow_only && side_tex.enabled()), 0, side_tex.tscale, 1, &view_dir, (single_pass ? 7 : 3), 1);
 		
 		if (!single_pass) { // draw roof (and floor if at water edge)
 			roof_tex.set_gl();
-			draw_cube(center, sz.x, sz.y, sz.z, roof_tex.enabled(), 0, 1.0, 0, &view_dir, 4, 1); // only Z dim
+			draw_cube(center, sz.x, sz.y, sz.z, roof_tex.enabled(), 0, roof_tex.tscale, 1, &view_dir, 4, 1); // only Z dim
 		}
 	}
 };
@@ -273,7 +280,7 @@ public:
 			s.begin_color_only_shader(); // really don't even need colors
 		}
 		else {
-			int const use_bmap(global_building_params.nm_tid >= 0), is_outside(1);
+			int const use_bmap(global_building_params.side_tex.nm_tid >= 0 || global_building_params.roof_tex.nm_tid >= 0), is_outside(1);
 			bool const indir(0), use_smap(0); // FIXME: shadows between buildings
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, 0, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
 		}
@@ -304,7 +311,7 @@ public:
 
 					if (sphere_cube_intersect(pos, radius, (buildings[*g].bcube + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
 						pos = p_int;
-						return 1;
+						return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
 					}
 				}
 			}
