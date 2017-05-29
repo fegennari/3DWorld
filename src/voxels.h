@@ -243,8 +243,9 @@ protected:
 
 	struct step_dir_t {
 		unsigned nsteps;
+		float nsteps_inv;
 		int dir[3], dist_per_step;
-		step_dir_t(int x, int y, int z, unsigned n, int d) : nsteps(n), dist_per_step(d) {dir[0] = x; dir[1] = y; dir[2] = z;}
+		step_dir_t(int x, int y, int z, unsigned n, int d) : nsteps(n), nsteps_inv(1.0/nsteps), dist_per_step(d) {dir[0] = x; dir[1] = y; dir[2] = z;}
 	};
 	vector<step_dir_t> ao_dirs;
 	vector<vector<pt_ix_t> > pt_to_ix;

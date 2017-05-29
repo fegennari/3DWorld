@@ -1221,7 +1221,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 							ix += i->dist_per_step; // increment first to skip the current voxel
 						
 							if (outside[ix] == 0 || (outside[ix] & end_ray_flags)) {
-								cur_val = float(s)/float(i->nsteps);
+								cur_val = s*i->nsteps_inv; // Note: ambient obscurance - uses actual distance to occluder
 								break; // voxel known to be inside the volume or under the mesh
 							}
 						}

@@ -518,7 +518,7 @@ void tile_t::calc_mesh_ao_lighting() {
 						//assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
 						
 						if (czv[yv*context_sz + xv] > z0) { // hit a higher point
-							atten += (NUM_STEPS - s);
+							atten += (NUM_STEPS - s); // Note: ambient obscurance - uses actual distance to occluder
 							break;
 						}
 					} // for s
