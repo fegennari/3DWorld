@@ -187,6 +187,7 @@ texture_map_t noise_tex_3ds;
 typedef map<string, unsigned> name_map_t;
 name_map_t texture_name_map;
 
+bool textures_inited(0);
 int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0), lty2(0), ls0_invalid(1);
 unsigned sky_zval_tid;
 unsigned char *landscape0 = NULL;
@@ -290,6 +291,7 @@ void load_textures() {
 		textures[i].init();
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
+	textures_inited = 1;
 
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_tius);
 	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_ctius);
@@ -315,8 +317,11 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y) {
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
 	tid = textures.size();
 	texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, invert_y, !is_normal_map, 2.0, 1.0, is_normal_map); // anisotropy=2.0
-	new_tex.load(tid);
-	new_tex.init();
+
+	if (textures_inited) {
+		new_tex.load(tid);
+		new_tex.init();
+	}
 	textures.push_back(new_tex);
 	texture_name_map[name] = tid;
 	return tid;
@@ -783,7 +788,7 @@ void texture_t::resize(int new_w, int new_h) { // Note: not thread safe
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // required to handle calls from from fix_word_alignment()
 	int const ret(gluScaleImage(calc_format(), width, height, get_data_format(), data, new_w, new_h, get_data_format(), new_data));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	if (ret) cout << "GLU error during image scale: " << gluErrorString(ret) << "." << endl;
+	if (ret) {cout << "GLU error during image scale: " << gluErrorString(ret) << "." << endl;}
 	free_data(); // only if size increases?
 	data   = new_data;
 	width  = new_w;
