@@ -13,7 +13,6 @@ using std::string;
 extern float water_plane_z;
 
 // TODO:
-// receive shadows
 // multilevel buildings
 // custom window textures
 
@@ -342,7 +341,7 @@ public:
 		}
 		else {
 			int const use_bmap(global_building_params.has_normal_map), is_outside(1);
-			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(0); // FIXME: shadows between buildings
+			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v); // shadows between buildings in TT mode?
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
 		}
 		float const far_clip(get_inf_terrain_fog_dist());
