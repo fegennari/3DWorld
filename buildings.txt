@@ -1,7 +1,7 @@
 buildings num 100000
 buildings flatten_mesh 1
 buildings side_tscale 2.0
-buildings roof_tscale 1.0
+buildings roof_tscale 4.0
 buildings side_tid bricks_tan.png
 buildings side_nm_tid normal_maps/bricks_tan_norm.png
 buildings roof_tid stucco.jpg
@@ -10,3 +10,4 @@ buildings size_range 0.5 1.0  0.5 1.0  0.5 1.0
 buildings pos_range -200.0 200.0  -200.0 200.0  0 0
 buildings color_min 0.50 0.35 0.25 1.0
 buildings color_max 0.60 0.45 0.35 1.0
+buildings add_material

@@ -13,13 +13,15 @@ using std::string;
 extern float water_plane_z;
 
 // TODO:
-// multiple texture/color sets for sides/roof
-
+// dynamic lighting
+// receive shadows
+// multilevel buildings
+// custom window textures
 
 struct tid_nm_pair_t {
 
 	int tid, nm_tid;
-	float tscale;
+	float tscale; // FIXME: tscale_x vs. tscale_y?
 
 	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale(1.0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
@@ -31,19 +33,43 @@ struct tid_nm_pair_t {
 	}
 };
 
-struct building_mat_t {
-
+struct building_tex_params_t {
 	tid_nm_pair_t side_tex, roof_tex;
 };
 
-struct building_params_t : public building_mat_t {
+struct building_mat_t : public building_tex_params_t {
 
-	bool flatten_mesh;
-	unsigned num;
-	cube_t sz_range, pos_range; // z is unused?
 	colorRGBA color_min, color_max; // alpha is unused?
 
-	building_params_t(unsigned num_=0) : flatten_mesh(0), num(num_), sz_range(all_zeros), pos_range(all_zeros), color_min(WHITE), color_max(WHITE) {}
+	building_mat_t() : color_min(WHITE), color_max(WHITE) {}
+
+	void gen_color(colorRGBA &color, rand_gen_t &rgen) const {
+		if (color_min == color_max) {color = color_min; return;} // single exact color
+		for (unsigned d = 0; d < 4; ++d) {color[d] = rgen.rand_uniform(color_min[d], color_max[d]);}
+	}
+};
+
+struct building_params_t {
+
+	bool flatten_mesh, has_normal_map;
+	unsigned num;
+	cube_t sz_range, pos_range; // z is unused?
+	building_mat_t cur_mat;
+	vector<building_mat_t> materials;
+
+	building_params_t(unsigned num_=0) : flatten_mesh(0), has_normal_map(0), num(num_), sz_range(all_zeros), pos_range(all_zeros) {}
+	
+	void add_cur_mat() {
+		materials.push_back(cur_mat);
+		has_normal_map |= (cur_mat.side_tex.nm_tid >= 0 || cur_mat.roof_tex.nm_tid >= 0);
+	}
+	void finalize() {
+		if (materials.empty()) {add_cur_mat();} // add current (maybe default) material
+	}
+	building_mat_t const &choose_rand_mat(rand_gen_t &rgen) const {
+		assert(!materials.empty());
+		return materials[rgen.rand()%materials.size()];
+	}
 };
 
 building_params_t global_building_params;
@@ -60,33 +86,12 @@ bool parse_buildings_option(FILE *fp) {
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
 
+	// global parameters
 	if (str == "flatten_mesh") {
 		if (!read_bool(fp, global_building_params.flatten_mesh)) {buildings_file_err("flatten_mesh", error);}
 	}
 	else if (str == "num") {
 		if (!read_uint(fp, global_building_params.num)) {buildings_file_err("num", error);}
-	}
-	else if (str == "side_tscale") {
-		if (!read_float(fp, global_building_params.side_tex.tscale)) {buildings_file_err("side_tscale", error);}
-	}
-	else if (str == "roof_tscale") {
-		if (!read_float(fp, global_building_params.roof_tex.tscale)) {buildings_file_err("roof_tscale", error);}
-	}
-	else if (str == "side_tid") {
-		if (!read_str(fp, strc)) {buildings_file_err("side_tid", error);}
-		global_building_params.side_tex.tid = get_texture_by_name(std::string(strc));
-	}
-	else if (str == "side_nm_tid") {
-		if (!read_str(fp, strc)) {buildings_file_err("side_nm_tid", error);}
-		global_building_params.side_tex.nm_tid = get_texture_by_name(std::string(strc));
-	}
-	else if (str == "roof_tid") {
-		if (!read_str(fp, strc)) {buildings_file_err("roof_tid", error);}
-		global_building_params.roof_tex.tid = get_texture_by_name(std::string(strc));
-	}
-	else if (str == "roof_nm_tid") {
-		if (!read_str(fp, strc)) {buildings_file_err("roof_nm_tid", error);}
-		global_building_params.roof_tex.nm_tid = get_texture_by_name(std::string(strc));
 	}
 	else if (str == "size_range") {
 		if (!read_cube(fp, global_building_params.sz_range)) {buildings_file_err("size_range", error);}
@@ -94,12 +99,42 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "pos_range") {
 		if (!read_cube(fp, global_building_params.pos_range)) {buildings_file_err("pos_range", error);}
 	}
+	// material textures
+	else if (str == "side_tscale") {
+		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale)) {buildings_file_err("side_tscale", error);}
+	}
+	else if (str == "roof_tscale") {
+		if (!read_float(fp, global_building_params.cur_mat.roof_tex.tscale)) {buildings_file_err("roof_tscale", error);}
+	}
+	else if (str == "side_tid") {
+		if (!read_str(fp, strc)) {buildings_file_err("side_tid", error);}
+		global_building_params.cur_mat.side_tex.tid = get_texture_by_name(std::string(strc));
+	}
+	else if (str == "side_nm_tid") {
+		if (!read_str(fp, strc)) {buildings_file_err("side_nm_tid", error);}
+		global_building_params.cur_mat.side_tex.nm_tid = get_texture_by_name(std::string(strc));
+	}
+	else if (str == "roof_tid") {
+		if (!read_str(fp, strc)) {buildings_file_err("roof_tid", error);}
+		global_building_params.cur_mat.roof_tex.tid = get_texture_by_name(std::string(strc));
+	}
+	else if (str == "roof_nm_tid") {
+		if (!read_str(fp, strc)) {buildings_file_err("roof_nm_tid", error);}
+		global_building_params.cur_mat.roof_tex.nm_tid = get_texture_by_name(std::string(strc));
+	}
+	// material colors
+	else if (str == "color") {
+		if (!read_color(fp, global_building_params.cur_mat.color_min)) {buildings_file_err("color", error);}
+		global_building_params.cur_mat.color_max = global_building_params.cur_mat.color_min; // same
+	}
 	else if (str == "color_min") {
-		if (!read_color(fp, global_building_params.color_min)) {buildings_file_err("color_min", error);}
+		if (!read_color(fp, global_building_params.cur_mat.color_min)) {buildings_file_err("color_min", error);}
 	}
 	else if (str == "color_max") {
-		if (!read_color(fp, global_building_params.color_max)) {buildings_file_err("color_max", error);}
+		if (!read_color(fp, global_building_params.cur_mat.color_max)) {buildings_file_err("color_max", error);}
 	}
+	// special commands
+	else if (str == "add_material") {global_building_params.add_cur_mat();}
 	else {
 		cout << "Unrecognized buildings keyword in input file: " << str << endl;
 		error = 1;
@@ -108,12 +143,12 @@ bool parse_buildings_option(FILE *fp) {
 }
 
 
-struct building_t : public building_mat_t {
+struct building_t : public building_tex_params_t {
 
 	colorRGBA color;
 	cube_t bcube;
 
-	building_t(building_mat_t const &mat=building_mat_t()) : building_mat_t(mat), color(WHITE) {}
+	building_t(building_tex_params_t const &tp=building_tex_params_t()) : building_tex_params_t(tp), color(WHITE) {}
 
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate=zero_vector) const {
 		// FIXME: more efficient, use batched verts or VBO, cache verts, store color in verts
@@ -201,7 +236,8 @@ public:
 		unsigned num_tries(0), num_gen(0);
 
 		for (unsigned i = 0; i < params.num; ++i) {
-			building_t b(params); // copy material
+			building_mat_t const &material(params.choose_rand_mat(rgen));
+			building_t b(material); // copy material
 			point center;
 			
 			for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a non-overlapping building placement
@@ -235,7 +271,7 @@ public:
 					}
 				}
 				if (!overlaps) {
-					for (unsigned d = 0; d < 4; ++d) {b.color[d] = rgen.rand_uniform(params.color_min[d], params.color_max[d]);}
+					material.gen_color(b.color, rgen);
 					add_to_grid(b.bcube, buildings.size());
 					buildings.push_back(b);
 					break; // done
@@ -279,9 +315,9 @@ public:
 			s.begin_color_only_shader(); // really don't even need colors
 		}
 		else {
-			int const use_bmap(global_building_params.side_tex.nm_tid >= 0 || global_building_params.roof_tex.nm_tid >= 0), is_outside(1);
-			bool const indir(0), use_smap(0); // FIXME: shadows between buildings
-			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, 0, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
+			int const use_bmap(global_building_params.has_normal_map), is_outside(1);
+			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(0); // FIXME: shadows between buildings
+			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
 		}
 		float const far_clip(get_inf_terrain_fog_dist());
 		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->draw(s, shadow_only, far_clip, xlate);}
