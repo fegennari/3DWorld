@@ -2031,7 +2031,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
-void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square, float vegetation_, bool use_density) {
+void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square, float vegetation_, bool use_density) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
@@ -2053,14 +2053,14 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 	}
 	for (int i = y1; i < y2; i += skip_val) {
 		float const yval(get_yval(i));
-		if (radius > 0.0 && fabs(yval - pos.y) > radius) continue;
+		if (radius > 0.0 && fabs(yval - center.y) > radius) continue;
 
 		for (int j = x1; j < x2; j += skip_val) {
 			if (radius > 0.0) {
 				float const xval(get_xval(j));
-				if (fabs(xval - pos.x) > radius) continue;
+				if (fabs(xval - center.x) > radius) continue;
 				point const tpos(xval, yval, 0.0);
-				if (!dist_xy_less_than(pos, tpos, radius)) continue; // Note: uses mesh xy center, not actual tree pos (for simplicity and efficiency)
+				if (!dist_xy_less_than(center, tpos, radius)) continue; // Note: uses mesh xy center, not actual tree pos (for simplicity and efficiency)
 			}
 			if (scrolling) {
 				int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
@@ -2092,6 +2092,10 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 					if (max_val == 0.0 || den_val > max_val) {max_val = den_val; ttype = tt;}
 				}
 			}
+			point center(pos + vector3d(0.0, 0.0, 0.3*tree_scale));
+			if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);}
+			if (check_buildings_sphere_coll(center, 0.4*tree_scale)) continue; // approximate bsphere
+
 			if (!shared_tree_data.empty()) {
 				if (ttype >= 0) {
 					unsigned const num_per_type(max(1U, shared_tree_data.size()/NUM_TREE_TYPES));
