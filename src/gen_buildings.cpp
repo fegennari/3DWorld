@@ -13,7 +13,6 @@ using std::string;
 extern int rand_gen_index;
 
 // TODO:
-// place_radius, max_delta_z
 // batching of buildings by texture
 // parallel draw
 // multilevel buildings
@@ -62,11 +61,12 @@ struct building_params_t {
 
 	bool flatten_mesh, has_normal_map;
 	unsigned num;
+	float place_radius, max_delta_z;
 	cube_t sz_range, pos_range; // z is unused?
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 
-	building_params_t(unsigned num_=0) : flatten_mesh(0), has_normal_map(0), num(num_), sz_range(all_zeros), pos_range(all_zeros) {}
+	building_params_t(unsigned num_=0) : flatten_mesh(0), has_normal_map(0), num(num_), place_radius(0.0), max_delta_z(0.0), sz_range(all_zeros), pos_range(all_zeros) {}
 	
 	void add_cur_mat() {
 		materials.push_back(cur_mat);
@@ -107,6 +107,12 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "pos_range") {
 		if (!read_cube(fp, global_building_params.pos_range)) {buildings_file_err(str, error);}
+	}
+	else if (str == "place_radius") {
+		if (!read_float(fp, global_building_params.place_radius)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_delta_z") {
+		if (!read_float(fp, global_building_params.max_delta_z)) {buildings_file_err(str, error);}
 	}
 	// material textures
 	else if (str == "side_tscale") {
@@ -177,6 +183,7 @@ struct building_t : public building_tex_params_t {
 
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate=zero_vector) const {
 		// FIXME: more efficient, use batched verts or VBO, cache verts, store color in verts
+		if (bcube.is_all_zeros()) return; // invalid building
 		point const center(bcube.get_cube_center()), pos(center + xlate);
 		float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
 		if (!dist_less_than(get_camera_pos(), pos, dmax)) return; // dist clipping
@@ -202,6 +209,7 @@ unsigned const grid_sz = 32;
 
 class building_creator_t {
 
+	float place_radius;
 	vector3d range_sz, range_sz_inv;
 	cube_t range;
 	rand_gen_t rgen;
@@ -248,6 +256,7 @@ class building_creator_t {
 	}
 
 public:
+	building_creator_t() : place_radius(0.0) {}
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear();}
 
@@ -255,24 +264,33 @@ public:
 		timer_t timer("Gen Buildings");
 		float const def_water_level(get_water_z_height());
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? vector3d(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0) : zero_vector); // cancel out xoff2/yoff2 translate
-		range    = params.pos_range;
+		range    = params.pos_range - xlate;
 		range_sz = range.get_size();
+		place_radius = params.place_radius;
 		UNROLL_3X(range_sz_inv[i_] = 1.0/range_sz[i_];)
 		clear();
 		buildings.reserve(params.num);
 		grid.resize(grid_sz*grid_sz); // square
-		unsigned num_tries(0), num_gen(0);
+		unsigned num_tries(0), num_gen(0), num_skip(0);
+		point const place_center(range.get_cube_center());
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
 
 		for (unsigned i = 0; i < params.num; ++i) {
 			building_mat_t const &material(params.choose_rand_mat(rgen));
 			building_t b(material); // copy material
-			point center;
+			point center(all_zeros);
 			
 			for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a non-overlapping building placement
+				bool keep(0);
+
+				for (unsigned m = 0; m < 10; ++m) {
+					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]);} // x,y
+					if (place_radius == 0.0 || dist_xy_less_than(center, place_center, place_radius)) {keep = 1; break;}
+				}
+				if (!keep) continue; // placement failed, skip
+				center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
+
 				for (unsigned d = 0; d < 3; ++d) { // x,y,z
-					if (d < 2) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]) - xlate[d];} // x,y
-					else {center[d] = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // z
 					float const sz(0.5*rgen.rand_uniform(params.sz_range.d[d][0], params.sz_range.d[d][1]));
 					b.bcube.d[d][0] = center[d] - ((d == 2) ? 0.0 : sz); // only in XY
 					b.bcube.d[d][1] = center[d] + sz;
@@ -309,7 +327,6 @@ public:
 			} // for n
 		} // for i
 		timer.end();
-		cout << "Buildings: " << params.num << " / " << num_tries << " / " << num_gen << " / " << buildings.size() << endl;
 
 		if (params.flatten_mesh) {
 			timer_t timer("Gen Building Zvals");
@@ -324,14 +341,28 @@ public:
 				}
 				else { // extend building bottom downward to min mesh height
 					float &zmin(b.bcube.d[2][0]); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
-					for (int d = 0; d < 4; ++d) {zmin = min(zmin, get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y));}
+					float const zmin0(zmin);
+					unsigned num_below(0);
+					
+					for (int d = 0; d < 4; ++d) {
+						float const zval(get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y));
+						zmin = min(zmin, zval);
+						num_below += (zval < def_water_level);
+					}
 					zmin = max(zmin, def_water_level); // don't go below the water
+					if (num_below > 2 || // more than 2 corners underwater
+						(params.max_delta_z > 0.0 && (zmin0 - zmin) > params.max_delta_z)) // too steep of a slope
+					{
+						b.bcube.set_to_zeros();
+						++num_skip;
+					}
 				}
 			} // for i
 			if (do_flatten) { // use conservative zmin for grid
 				for (auto i = grid.begin(); i != grid.end(); ++i) {i->bcube.d[2][0] = def_water_level;}
 			}
-		}
+		} // if flatten_mesh
+		cout << "Buildings: " << params.num << " / " << num_tries << " / " << num_gen << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
 	}
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
@@ -370,11 +401,13 @@ public:
 
 				for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 					assert(*g < buildings.size());
+					cube_t const bc(buildings[*g].bcube);
+					if (bc.is_all_zeros()) continue; // invalid building
 					point p_int;
 					vector3d cnorm; // unused
 					unsigned cdir(0); // unused
 
-					if (sphere_cube_intersect(pos, radius, (buildings[*g].bcube + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
+					if (sphere_cube_intersect(pos, radius, (bc + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
 						pos = p_int;
 						return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
 					}

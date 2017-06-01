@@ -1,7 +1,9 @@
 buildings num 100000
 buildings flatten_mesh 1
 buildings size_range 0.5 1.0  0.5 1.0  0.5 1.0
-buildings pos_range -200.0 200.0  -200.0 200.0  0 0
+buildings pos_range -225.0 225.0  -225.0 225.0  0 0
+buildings place_radius 225.0
+buildings max_delta_z 1.0
 
 buildings side_tscale 2.0
 buildings side_tid bricks_tan.png
