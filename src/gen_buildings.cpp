@@ -10,9 +10,12 @@
 
 using std::string;
 
-extern float water_plane_z;
+extern int rand_gen_index;
 
 // TODO:
+// place_radius, max_delta_z
+// batching of buildings by texture
+// parallel draw
 // multilevel buildings
 // custom window textures
 
@@ -250,6 +253,7 @@ public:
 
 	void gen(building_params_t const &params) {
 		timer_t timer("Gen Buildings");
+		float const def_water_level(get_water_z_height());
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? vector3d(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0) : zero_vector); // cancel out xoff2/yoff2 translate
 		range    = params.pos_range;
 		range_sz = range.get_size();
@@ -258,6 +262,7 @@ public:
 		buildings.reserve(params.num);
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0);
+		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
 
 		for (unsigned i = 0; i < params.num; ++i) {
 			building_mat_t const &material(params.choose_rand_mat(rgen));
@@ -266,14 +271,14 @@ public:
 			
 			for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a non-overlapping building placement
 				for (unsigned d = 0; d < 3; ++d) { // x,y,z
-					if (d < 2) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]);} // x,y
+					if (d < 2) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]) - xlate[d];} // x,y
 					else {center[d] = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // z
 					float const sz(0.5*rgen.rand_uniform(params.sz_range.d[d][0], params.sz_range.d[d][1]));
 					b.bcube.d[d][0] = center[d] - ((d == 2) ? 0.0 : sz); // only in XY
 					b.bcube.d[d][1] = center[d] + sz;
 				} // for d
 				++num_tries;
-				if (center.z < water_plane_z) break; // skip underwater buildings, failed placement
+				if (center.z < def_water_level) break; // skip underwater buildings, failed placement
 				++num_gen;
 
 				// check building for overlap with other buildings
@@ -320,11 +325,11 @@ public:
 				else { // extend building bottom downward to min mesh height
 					float &zmin(b.bcube.d[2][0]); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
 					for (int d = 0; d < 4; ++d) {zmin = min(zmin, get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y));}
-					zmin = max(zmin, water_plane_z); // don't go below the water
+					zmin = max(zmin, def_water_level); // don't go below the water
 				}
 			} // for i
 			if (do_flatten) { // use conservative zmin for grid
-				for (auto i = grid.begin(); i != grid.end(); ++i) {i->bcube.d[2][0] = water_plane_z;}
+				for (auto i = grid.begin(); i != grid.end(); ++i) {i->bcube.d[2][0] = def_water_level;}
 			}
 		}
 	}
