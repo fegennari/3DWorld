@@ -13,6 +13,10 @@ using std::string;
 extern int rand_gen_index;
 
 // TODO:
+// fix shadow pass BFC
+// store colors in material/no ranges?
+// factor out materials list and use that instead of tid for batching
+// probabilities for each material
 // parallel draw
 // custom window textures
 
@@ -198,7 +202,7 @@ class building_draw_t {
 
 	struct draw_block_t {
 		tid_nm_pair_t tex;
-		vector<vert_norm_tc_color> verts;
+		vector<vert_norm_comp_tc_color> verts;
 
 		void draw_and_clear(bool shadow_only) {
 			if (!shadow_only) {tex.set_gl();}
@@ -209,19 +213,19 @@ class building_draw_t {
 	};
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
-	vector<vert_norm_tc_color> &get_verts(tid_nm_pair_t const &tex) {
+	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex) {
 		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		if (to_draw[ix].empty()) {to_draw[ix].tex = tex;} // copy material first time
 		else {assert(to_draw[ix].tex.nm_tid == tex.nm_tid);} // else normal maps must agree
 		return to_draw[ix].verts;
 	}
-	void add_cube_verts(cube_t const &cube, vector<vert_norm_tc_color> &verts, colorRGBA const &color,
+	void add_cube_verts(cube_t const &cube, vector<vert_norm_comp_tc_color> &verts, colorRGBA const &color,
 		bool texture, float texture_scale, vector3d const *const view_dir, unsigned dim_mask)
 	{
 		point const scale(cube.get_size());
 		vector3d const xlate(cube.get_llc()); // move origin from center to min corner
-		vert_norm_tc_color vert;
+		vert_norm_comp_tc_color vert;
 		vert.set_c4(color); // color is shared across all verts
 
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
@@ -230,8 +234,9 @@ class building_draw_t {
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
-				vert.n = zero_vector;
-				vert.n[n] = (2.0*j - 1.0); // -1 or 1
+				vert.n[d[0]] = 127; // 0.0
+				vert.n[d[1]] = 127; // 0.0
+				vert.n[n] = (j ? 255 : 0); // -1.0 or 1.0
 				point pt;
 				pt[n] = j;
 
@@ -493,7 +498,7 @@ public:
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
 		if (empty()) return;
-		//timer_t timer("Draw Buildings"); // 1.4ms for <=10 level buildings
+		//timer_t timer("Draw Buildings"); // 2.2ms for <=10 level buildings
 		fgPushMatrix();
 		translate_to(xlate);
 		shader_t s;
