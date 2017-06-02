@@ -320,7 +320,7 @@ void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, b
 		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
 		bdraw.add_cube(*i, side_tex, side_color, shadow_only, vdir, 3); // XY
-		if (i != levels.begin() && camera.z < i->d[2][1]) break; // top surface not visible, bottom surface occluded, skip
+		if (i != levels.begin() && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		bdraw.add_cube(*i, roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
 	}
 }
