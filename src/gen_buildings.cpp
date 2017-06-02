@@ -234,9 +234,9 @@ class building_draw_t {
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
-				vert.n[d[0]] = 127; // 0.0
-				vert.n[d[1]] = 127; // 0.0
-				vert.n[n] = (j ? 255 : 0); // -1.0 or 1.0
+				vert.n[d[0]] = 0;
+				vert.n[d[1]] = 0;
+				vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				point pt;
 				pt[n] = j;
 
