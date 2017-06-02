@@ -1050,13 +1050,13 @@ void pos_dir_up::draw_frustum() const {
 
 
 void draw_simple_cube(cube_t const &c, bool texture) {
-
 	draw_cube(c.get_cube_center(), (c.d[0][1]-c.d[0][0]), (c.d[1][1]-c.d[1][0]), (c.d[2][1]-c.d[2][0]), texture);
 }
 
 
 // need to do something with tex coords for scale
 // Note: cube extends from pos +/- 0.5*(sx, sy, sz)
+// Note: scale_ndiv is now unused
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv, float texture_scale,
 	bool proportional_texture, vector3d const *const view_dir, unsigned dim_mask, bool swap_y_st)
 {

@@ -13,13 +13,12 @@ using std::string;
 extern int rand_gen_index;
 
 // TODO:
-// batching of buildings by texture
 // parallel draw
 // custom window textures
 
 struct tid_nm_pair_t {
 
-	int tid, nm_tid;
+	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
 	float tscale; // FIXME: tscale_x vs. tscale_y?
 
 	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale(1.0) {}
@@ -180,6 +179,8 @@ bool parse_buildings_option(FILE *fp) {
 }
 
 
+class building_draw_t;
+
 struct building_t : public building_tex_params_t {
 
 	colorRGBA side_color, roof_color;
@@ -188,79 +189,142 @@ struct building_t : public building_tex_params_t {
 
 	building_t(building_tex_params_t const &tp=building_tex_params_t()) : building_tex_params_t(tp), side_color(WHITE), roof_color(WHITE) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
+	void gen_levels(unsigned max_levels, unsigned ix);
+	void draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw) const;
+};
 
-	void gen_levels(unsigned max_levels, unsigned ix) {
-		if (!is_valid()) return; // invalid building
-		if (max_levels == 1) return; // single level, for now the bounding cube
-		unsigned const num_levels((ix%max_levels) + 1); // use ix value as the seed/hash; at least one level
-		if (num_levels == 1) return; // single level, for now the bounding cube
-		levels.resize(num_levels);
-		rand_gen_t rgen;
-		rgen.set_state(ix, 345);
-		float const height(bcube.d[2][1] - bcube.d[2][0]), dz(height/num_levels);
 
-		for (unsigned i = 0; i < num_levels; ++i) {
-			cube_t &bc(levels[i]);
-			if (i == 0) {bc = bcube;} // use full building footprint
-			else {
-				cube_t const &prev(levels[i-1]);
-				for (unsigned d = 0; d < 2; ++d) {
-					float const len(prev.d[d][1] - prev.d[d][0]);
-					for (unsigned e = 0; e < 2; ++e) {
-						float delta(0.0);
-						if (rgen.rand()&3) {delta = rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
-						bc.d[d][e] = prev.d[d][e] + (e ? -delta : delta)*len;
+class building_draw_t {
+
+	struct draw_block_t {
+		tid_nm_pair_t tex;
+		vector<vert_norm_tc_color> verts;
+
+		void draw_and_clear(bool shadow_only) {
+			if (!shadow_only) {tex.set_gl();}
+			draw_quad_verts_as_tris(verts);
+			verts.clear();
+		}
+		bool empty() const {return verts.empty();}
+	};
+	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
+
+	vector<vert_norm_tc_color> &get_verts(tid_nm_pair_t const &tex) {
+		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
+		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
+		if (to_draw[ix].empty()) {to_draw[ix].tex = tex;} // copy material first time
+		else {assert(to_draw[ix].tex.nm_tid == tex.nm_tid);} // else normal maps must agree
+		return to_draw[ix].verts;
+	}
+	void add_cube_verts(cube_t const &cube, vector<vert_norm_tc_color> &verts, colorRGBA const &color,
+		bool texture, float texture_scale, vector3d const *const view_dir, unsigned dim_mask)
+	{
+		point const scale(cube.get_size());
+		vector3d const xlate(cube.get_llc()); // move origin from center to min corner
+		vert_norm_tc_color vert;
+		vert.set_c4(color); // color is shared across all verts
+
+		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+			if (!(dim_mask & (1<<n))) continue;
+
+			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+				if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
+				vert.n = zero_vector;
+				vert.n[n] = (2.0*j - 1.0); // -1 or 1
+				point pt;
+				pt[n] = j;
+
+				for (unsigned s1 = 0; s1 < 2; ++s1) {
+					pt[d[1]] = s1;
+
+					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+						pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
+						vert.v = pt*scale + xlate;
+
+						if (texture) {
+							bool const st(i&1);
+							vert.t[ st] = texture_scale*pt[d[1]];
+							vert.t[!st] = texture_scale*pt[d[0]];
+						}
+						verts.push_back(vert);
 					}
 				}
-				bc.d[2][0] = prev.d[2][1]; // z1
-			}
-			bc.d[2][1] = bc.d[2][0] + dz; // z2
-			bc.normalize(); // handle XY inversion due to shift
-		} // for i
-		for (unsigned i = 1; i < num_levels; ++i) {
-			float const ddz(rgen.rand_uniform(-0.35*dz, 0.35*dz)); // random shift in z height
-			levels[i  ].d[2][0] += ddz;
-			levels[i-1].d[2][1] += ddz;
+			} // for j
 		} // for i
 	}
-	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate=zero_vector) const {
-		// FIXME: more efficient, use batched verts or VBO, cache verts, store color in verts
-		if (!is_valid()) return; // invalid building
-		point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
-		float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
-		if (!dist_less_than(camera, pos, dmax)) return; // dist clipping
-		if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
-		vector3d const sz(bcube.get_size()), view_dir(pos - camera);
-		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		bool const single_pass(shadow_only || (side_tex == roof_tex && side_color == roof_color));
-		if (!shadow_only) {s.set_cur_color(side_color);}
-		
-		// draw sides
-		if (!shadow_only) {side_tex.set_gl();}
-		if (levels.empty()) {draw_cube(center, sz.x, sz.y, sz.z, (!shadow_only && side_tex.enabled()), 0, side_tex.tscale, 1, vdir, (single_pass ? 7 : 3), 1);}
-		
-		for (auto i = levels.begin(); i != levels.end(); ++i) {
-			draw_level_cube(s, shadow_only, xlate, *i, side_tex, (single_pass ? 7 : 3));
-		}
-		if (!single_pass) { // draw roof (and floor if at water edge)
-			roof_tex.set_gl();
-			if (side_color != roof_color) {s.set_cur_color(roof_color);}
-			if (levels.empty()) {draw_cube(center, sz.x, sz.y, sz.z, roof_tex.enabled(), 0, roof_tex.tscale, 1, vdir, 4, 1);} // only Z dim
-
-			for (auto i = levels.begin(); i != levels.end(); ++i) {
-				if (i != levels.begin() && camera.z < i->d[2][1]) break; // top surface not visible, bottom surface occluded, skip
-				draw_level_cube(s, shadow_only, xlate, *i, roof_tex, 4); // only Z dim
-			}
-		}
+public:
+	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask) {
+		add_cube_verts(cube, get_verts(tex), color, (!shadow_only && tex.enabled()), tex.tscale, view_dir, dim_mask);
 	}
-private:
-	void draw_level_cube(shader_t &s, bool shadow_only, vector3d const &xlate, cube_t const &cube, tid_nm_pair_t const &tex, unsigned dim_mask) const {
-		point const center(cube.get_cube_center());
-		vector3d const sz(cube.get_size()), view_dir(center + xlate - get_camera_pos());
-		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		draw_cube(center, sz.x, sz.y, sz.z, (!shadow_only && tex.enabled()), 0, tex.tscale, 1, vdir, dim_mask, 1); // only Z dim
+	void draw_and_clear(bool shadow_only) {
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
 	}
 };
+
+building_draw_t building_draw;
+
+
+void building_t::gen_levels(unsigned max_levels, unsigned ix) {
+
+	if (!is_valid()) return; // invalid building
+	if (max_levels == 1) return; // single level, for now the bounding cube
+	unsigned const num_levels((ix%max_levels) + 1); // use ix value as the seed/hash; at least one level
+	if (num_levels == 1) return; // single level, for now the bounding cube
+	levels.resize(num_levels);
+	rand_gen_t rgen;
+	rgen.set_state(ix, 345);
+	float const height(bcube.d[2][1] - bcube.d[2][0]), dz(height/num_levels);
+
+	for (unsigned i = 0; i < num_levels; ++i) {
+		cube_t &bc(levels[i]);
+		if (i == 0) {bc = bcube;} // use full building footprint
+		else {
+			cube_t const &prev(levels[i-1]);
+			for (unsigned d = 0; d < 2; ++d) {
+				float const len(prev.d[d][1] - prev.d[d][0]);
+				for (unsigned e = 0; e < 2; ++e) {
+					float delta(0.0);
+					if (rgen.rand()&3) {delta = rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
+					bc.d[d][e] = prev.d[d][e] + (e ? -delta : delta)*len;
+				}
+			}
+			bc.d[2][0] = prev.d[2][1]; // z1
+		}
+		bc.d[2][1] = bc.d[2][0] + dz; // z2
+		bc.normalize(); // handle XY inversion due to shift
+	} // for i
+	for (unsigned i = 1; i < num_levels; ++i) {
+		float const ddz(rgen.rand_uniform(-0.35*dz, 0.35*dz)); // random shift in z height
+		levels[i  ].d[2][0] += ddz;
+		levels[i-1].d[2][1] += ddz;
+	}
+}
+
+void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw) const {
+
+	// FIXME: store in VBO?
+	if (!is_valid()) return; // invalid building
+	point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
+	float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
+	if (!dist_less_than(camera, pos, dmax)) return; // dist clipping
+	if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
+
+	if (levels.empty()) { // single cube/level case
+		vector3d const view_dir(pos - camera);
+		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
+		bdraw.add_cube(bcube, side_tex, side_color, shadow_only, vdir, 3); // XY sides
+		bdraw.add_cube(bcube, roof_tex, roof_color, shadow_only, vdir, 4); // Z roof (and floor if at water edge)
+	}
+	for (auto i = levels.begin(); i != levels.end(); ++i) { // multiple cubes/levels case
+		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
+		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
+		bdraw.add_cube(*i, side_tex, side_color, shadow_only, vdir, 3); // XY
+		if (i != levels.begin() && camera.z < i->d[2][1]) break; // top surface not visible, bottom surface occluded, skip
+		bdraw.add_cube(*i, roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
+	}
+}
+
 
 unsigned const grid_sz = 32;
 
@@ -429,7 +493,7 @@ public:
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
 		if (empty()) return;
-		//timer_t timer("Draw Buildings");
+		//timer_t timer("Draw Buildings"); // 1.4ms for <=10 level buildings
 		fgPushMatrix();
 		translate_to(xlate);
 		shader_t s;
@@ -443,7 +507,8 @@ public:
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
 		}
 		float const far_clip(get_inf_terrain_fog_dist());
-		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->draw(s, shadow_only, far_clip, xlate);}
+		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->draw(shadow_only, far_clip, xlate, building_draw);}
+		building_draw.draw_and_clear(shadow_only);
 		s.end_shader();
 		fgPopMatrix();
 	}
