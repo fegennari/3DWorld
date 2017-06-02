@@ -1078,7 +1078,7 @@ void uobj_draw_data::draw_us_carrier() const {
 	set_ship_texture(SPACESHIP2_TEX);
 	enable_normal_map(spaceship2_tex_nm);
 	light_engine_pair(engine_color, 0, 0.5, 0.7, 0.0, 1.3);
-	draw_cube(point(0.0, 0.0, -0.32), 0.8, 0.38, 2.04, 1, 1, 1.0, 1); // main body
+	draw_cube(point(0.0, 0.0, -0.32), 0.8, 0.38, 2.04, 1, 1.0, 1); // main body
 
 	if (t_exp > 0.0) { // while exploding, the front section breaks off and floats away
 		fgPushMatrix();
@@ -1188,7 +1188,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 	set_color(color_b);
 	set_ship_texture(SPACESHIP2_TEX);
 	enable_normal_map(spaceship2_tex_nm);
-	draw_cube(point(0.0, -0.68, 0.0), 0.6, 0.4, 1.2, 1, 1, 1.0, 1); // box
+	draw_cube(point(0.0, -0.68, 0.0), 0.6, 0.4, 1.2, 1, 1.0, 1); // box
 	end_ship_texture();
 	disable_normal_map();
 	unsigned const nbands(5), nspikes(8); // > 1
@@ -1278,10 +1278,7 @@ void uobj_draw_data::draw_defsat() const {
 	set_color(color_b);
 	set_uobj_specular(0.8, 90.0);
 	select_texture(PARTB_TEX);
-	
-	for (unsigned i = 0; i < 2; ++i) {
-		draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8, 0.1, 1, 1, 4.0);
-	}
+	for (unsigned i = 0; i < 2; ++i) {draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8, 0.1, 1, 4.0);}
 	end_ship_texture();
 	set_cloak_color(GRAY);
 	end_specular();
@@ -1333,25 +1330,15 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		select_texture((is_cube && is_small) ? BCUBE_T_TEX : BCUBE_TEX);
 		enable_normal_map((is_cube && is_small) ? "normal_maps/bcube_tactical_NRM.jpg" : "normal_maps/bcube_NRM.jpg");
 		set_color(color_b);
-
-		if (is_cube) {
-			draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, 0, 1.0, 0, &view_dir);
-		}
-		else {
-			draw_sphere_vbo(all_zeros, 0.97, get_ndiv((3*ndiv)/2), 1); // cube mapped sphere?
-		}
+		if (is_cube) {draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, 1.0, 0, &view_dir);}
+		else {draw_sphere_vbo(all_zeros, 0.97, get_ndiv((3*ndiv)/2), 1);} // cube mapped sphere?
 		disable_normal_map();
 	}
 	if (phase2) {
 		select_texture(SMOKE_TEX);
 		set_color(color_a*0.5); // outer color
-
-		if (is_cube) {
-			draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, 0, 1.0, 0, &view_dir);
-		}
-		else {
-			draw_sphere_vbo(all_zeros, 1.0, get_ndiv((3*ndiv)/2), 1); // cube mapped sphere?
-		}
+		if (is_cube) {draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, 1.0, 0, &view_dir);}
+		else {draw_sphere_vbo(all_zeros, 1.0, get_ndiv((3*ndiv)/2), 1);} // cube mapped sphere?
 	}
 	end_ship_texture();
 	
@@ -1606,9 +1593,9 @@ void uobj_draw_data::draw_dwexterm() const {
 
 	// backbone + body
 	select_texture(BCUBE2_TEX);
-	draw_cube(point(0.0, 0.01,  0.45), 0.12, 0.14, 1.5, 1, 1, 2.0, 1);
-	draw_cube(point(0.0, 0.01, -1.15), 0.12, 0.14, 0.1, 1, 1, 2.0, 1);
-	draw_cube(point(0.0, 0.00, -0.70), 0.36, 0.16, 0.8, 1, 1, 2.0, 1);
+	draw_cube(point(0.0, 0.01,  0.45), 0.12, 0.14, 1.5, 1, 2.0, 1);
+	draw_cube(point(0.0, 0.01, -1.15), 0.12, 0.14, 0.1, 1, 2.0, 1);
+	draw_cube(point(0.0, 0.00, -0.70), 0.36, 0.16, 0.8, 1, 2.0, 1);
 
 	// the bridge
 	set_ship_texture(SHIP_HULL_TEX);
@@ -1635,7 +1622,7 @@ void uobj_draw_data::draw_dwexterm() const {
 	set_ship_texture(BCUBE2_TEX);
 
 	// forward deck
-	draw_cube(point(0.0, 0.11, 0.30), 0.32, 0.06, 0.60, 1, 1, 1.0, 1);
+	draw_cube(point(0.0, 0.11, 0.30), 0.32, 0.06, 0.60, 1, 1.0, 1);
 
 	for (unsigned i = 0; i < 2; ++i) { // forward "wings"
 		float const val(i ? 1.0 : -1.0);
@@ -1649,7 +1636,7 @@ void uobj_draw_data::draw_dwexterm() const {
 	}
 
 	// rear deck
-	draw_cube(point(0.0, 0.11, -0.70), 0.40, 0.06, 0.80, 1, 1, 1.0, 1);
+	draw_cube(point(0.0, 0.11, -0.70), 0.40, 0.06, 0.80, 1, 1.0, 1);
 	fgPushMatrix();
 	fgScale(1.0, 0.13, 1.0);
 	draw_cylinder(0.1, 0.1, 0.22, 6, 1, 0, 0, -1.2);
@@ -1947,7 +1934,7 @@ void uobj_draw_data::draw_supply() const {
 	fgScale(1.0, 0.667, 0.5);
 	draw_sphere_vbo(point(0.0, 0.0, 3.2), 0.45, ndiv, 1, 1); // front sphere
 	fgPopMatrix();
-	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, 1, 1); // rear
+	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, 1); // rear
 
 	if (ndiv > 4) { // draw engines
 		draw_ehousing_pairs(0.55, 0.2, 0.12, 0.1, 0.5, 0.0, 1, point(-0.25, -0.4, -1.7), point(0.0, 0.4, 0.0), 3);

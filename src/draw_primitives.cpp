@@ -1056,8 +1056,7 @@ void draw_simple_cube(cube_t const &c, bool texture) {
 
 // need to do something with tex coords for scale
 // Note: cube extends from pos +/- 0.5*(sx, sy, sz)
-// Note: scale_ndiv is now unused
-void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv, float texture_scale,
+void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, float texture_scale,
 	bool proportional_texture, vector3d const *const view_dir, unsigned dim_mask, bool swap_y_st)
 {
 	point const scale(sx, sy, sz);
