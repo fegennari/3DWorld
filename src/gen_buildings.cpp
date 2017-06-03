@@ -196,12 +196,13 @@ struct building_t {
 	colorRGBA side_color, roof_color;
 	cube_t bcube;
 	vector<cube_t> levels;
+	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_levels(unsigned max_levels, unsigned ix);
-	void draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw) const;
+	void draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 };
 
 
@@ -314,13 +315,15 @@ void building_t::gen_levels(unsigned max_levels, unsigned ix) {
 	}
 }
 
-void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw) const {
+void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
 
 	// store in VBO?
 	if (!is_valid()) return; // invalid building
+	if (draw_ix == cur_draw_ix) return; // already drawn this pass
+	cur_draw_ix = draw_ix;
 	point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
 	float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
-	if (!dist_less_than(camera, pos, dmax)) return; // dist clipping
+	if (!shadow_only && !dist_less_than(camera, pos, dmax)) return; // dist clipping
 	if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
 	building_mat_t const &mat(get_material());
 
@@ -507,7 +510,7 @@ public:
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
 		if (empty()) return;
-		//timer_t timer("Draw Buildings"); // 2.2ms for <=10 level buildings
+		//timer_t timer("Draw Buildings"); // 1.8ms for <=10 level buildings
 		fgPushMatrix();
 		translate_to(xlate);
 		shader_t s;
@@ -521,7 +524,15 @@ public:
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
 		}
 		float const far_clip(get_inf_terrain_fog_dist());
-		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->draw(shadow_only, far_clip, xlate, building_draw);}
+		point const camera(get_camera_pos());
+		static unsigned draw_ix(0); ++draw_ix;
+
+		for (auto g = grid.begin(); g != grid.end(); ++g) {
+			point const pos(g->bcube.get_cube_center() + xlate);
+			if (!shadow_only && !dist_less_than(camera, pos, (far_clip + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
+			if (!camera_pdu.sphere_visible_test(pos, g->bcube.get_bsphere_radius())) continue; // VFC
+			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(shadow_only, far_clip, xlate, building_draw, draw_ix);}
+		}
 		building_draw.draw_and_clear(shadow_only);
 		s.end_shader();
 		fgPopMatrix();
