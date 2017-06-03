@@ -10,13 +10,11 @@
 
 using std::string;
 
-extern int rand_gen_index;
+extern int rand_gen_index, display_mode;
 
 // TODO:
-// fix shadow pass BFC
 // store colors in material/no ranges?
 // factor out materials list and use that instead of tid for batching
-// probabilities for each material
 // parallel draw
 // custom window textures
 
@@ -62,16 +60,19 @@ struct building_mat_t : public building_tex_params_t {
 struct building_params_t {
 
 	bool flatten_mesh, has_normal_map;
-	unsigned num_place, num_tries, num_levels;
+	unsigned num_place, num_tries, num_levels, cur_prob;
 	float place_radius, max_delta_z;
 	cube_t sz_range, pos_range; // z is unused?
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
+	vector<unsigned> mat_gen_ix;
 
 	building_params_t(unsigned num_place_=0) : flatten_mesh(0), has_normal_map(0), num_place(num_place_), num_tries(10), num_levels(1),
-		place_radius(0.0), max_delta_z(0.0), sz_range(all_zeros), pos_range(all_zeros) {}
+		cur_prob(1), place_radius(0.0), max_delta_z(0.0), sz_range(all_zeros), pos_range(all_zeros) {}
 	
 	void add_cur_mat() {
+		unsigned const mat_ix(materials.size());
+		for (unsigned n = 0; n < cur_prob; ++n) {mat_gen_ix.push_back(mat_ix);} // add more references to this mat for higher probability
 		materials.push_back(cur_mat);
 		has_normal_map |= (cur_mat.side_tex.nm_tid >= 0 || cur_mat.roof_tex.nm_tid >= 0);
 	}
@@ -79,8 +80,10 @@ struct building_params_t {
 		if (materials.empty()) {add_cur_mat();} // add current (maybe default) material
 	}
 	building_mat_t const &choose_rand_mat(rand_gen_t &rgen) const {
-		assert(!materials.empty());
-		return materials[rgen.rand()%materials.size()];
+		assert(!mat_gen_ix.empty());
+		unsigned const mat_ix(mat_gen_ix[rgen.rand()%mat_gen_ix.size()]);
+		assert(mat_ix < materials.size());
+		return materials[mat_ix];
 	}
 };
 
@@ -174,6 +177,9 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_float(fp, global_building_params.cur_mat.roof_color.grayscale_rand)) {buildings_file_err(str, error);}
 	}
 	// special commands
+	else if (str == "probability") {
+		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
+	}
 	else if (str == "add_material") {global_building_params.add_cur_mat();}
 	else {
 		cout << "Unrecognized buildings keyword in input file: " << str << endl;
@@ -308,7 +314,7 @@ void building_t::gen_levels(unsigned max_levels, unsigned ix) {
 
 void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw) const {
 
-	// FIXME: store in VBO?
+	// store in VBO?
 	if (!is_valid()) return; // invalid building
 	point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
 	float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
