@@ -20,8 +20,8 @@ extern int rand_gen_index, display_mode;
 
 struct tid_nm_pair_t {
 
-	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
-	float tscale; // FIXME: tscale_x vs. tscale_y?
+	int tid, nm_tid;
+	float tscale; // tscale_x vs. tscale_y?
 
 	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale(1.0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
@@ -79,11 +79,13 @@ struct building_params_t {
 	void finalize() {
 		if (materials.empty()) {add_cur_mat();} // add current (maybe default) material
 	}
-	building_mat_t const &choose_rand_mat(rand_gen_t &rgen) const {
-		assert(!mat_gen_ix.empty());
-		unsigned const mat_ix(mat_gen_ix[rgen.rand()%mat_gen_ix.size()]);
+	building_mat_t const &get_material(unsigned mat_ix) const {
 		assert(mat_ix < materials.size());
 		return materials[mat_ix];
+	}
+	unsigned choose_rand_mat(rand_gen_t &rgen) const {
+		assert(!mat_gen_ix.empty());
+		return mat_gen_ix[rgen.rand()%mat_gen_ix.size()];
 	}
 };
 
@@ -191,14 +193,16 @@ bool parse_buildings_option(FILE *fp) {
 
 class building_draw_t;
 
-struct building_t : public building_tex_params_t {
+struct building_t {
 
+	unsigned mat_ix;
 	colorRGBA side_color, roof_color;
 	cube_t bcube;
 	vector<cube_t> levels;
 
-	building_t(building_tex_params_t const &tp=building_tex_params_t()) : building_tex_params_t(tp), side_color(WHITE), roof_color(WHITE) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
+	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_levels(unsigned max_levels, unsigned ix);
 	void draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw) const;
 };
@@ -207,25 +211,23 @@ struct building_t : public building_tex_params_t {
 class building_draw_t {
 
 	struct draw_block_t {
-		tid_nm_pair_t tex;
-		vector<vert_norm_comp_tc_color> verts;
+		vector<vert_norm_comp_tc_color> side_verts, roof_verts;
 
-		void draw_and_clear(bool shadow_only) {
+		void draw_and_clear(unsigned mat_ix, bool shadow_only) {
+			building_mat_t const &mat(global_building_params.get_material(mat_ix));
+			draw_and_clear_block(side_verts, mat.side_tex, shadow_only);
+			draw_and_clear_block(roof_verts, mat.roof_tex, shadow_only);
+		}
+		void draw_and_clear_block(vector<vert_norm_comp_tc_color> &verts, tid_nm_pair_t const &tex, bool shadow_only) {
+			if (verts.empty()) return; // nothing to do
 			if (!shadow_only) {tex.set_gl();}
 			draw_quad_verts_as_tris(verts);
 			verts.clear();
 		}
-		bool empty() const {return verts.empty();}
+		bool empty() const {return (side_verts.empty() && roof_verts.empty());}
 	};
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
-	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex) {
-		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
-		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
-		if (to_draw[ix].empty()) {to_draw[ix].tex = tex;} // copy material first time
-		else {assert(to_draw[ix].tex.nm_tid == tex.nm_tid);} // else normal maps must agree
-		return to_draw[ix].verts;
-	}
 	void add_cube_verts(cube_t const &cube, vector<vert_norm_comp_tc_color> &verts, colorRGBA const &color,
 		bool texture, float texture_scale, vector3d const *const view_dir, unsigned dim_mask)
 	{
@@ -265,11 +267,16 @@ class building_draw_t {
 		} // for i
 	}
 public:
-	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask) {
-		add_cube_verts(cube, get_verts(tex), color, (!shadow_only && tex.enabled()), tex.tscale, view_dir, dim_mask);
+	void add_cube(cube_t const &cube, unsigned mat_ix, bool is_roof, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask) {
+		if (to_draw.empty()) {to_draw.resize(global_building_params.materials.size());} // one bin per material
+		assert(mat_ix < to_draw.size());
+		draw_block_t &block(to_draw[mat_ix]);
+		building_mat_t const &mat(global_building_params.get_material(mat_ix));
+		tid_nm_pair_t const &tex(is_roof ? mat.roof_tex : mat.side_tex);
+		add_cube_verts(cube, (is_roof ? block.roof_verts : block.side_verts), color, (!shadow_only && tex.enabled()), tex.tscale, view_dir, dim_mask);
 	}
 	void draw_and_clear(bool shadow_only) {
-		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
+		for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].draw_and_clear(i, shadow_only);}
 	}
 };
 
@@ -324,15 +331,15 @@ void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, b
 	if (levels.empty()) { // single cube/level case
 		vector3d const view_dir(pos - camera);
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		bdraw.add_cube(bcube, side_tex, side_color, shadow_only, vdir, 3); // XY sides
-		bdraw.add_cube(bcube, roof_tex, roof_color, shadow_only, vdir, 4); // Z roof (and floor if at water edge)
+		bdraw.add_cube(bcube, mat_ix, 0, side_color, shadow_only, vdir, 3); // XY sides
+		bdraw.add_cube(bcube, mat_ix, 1, roof_color, shadow_only, vdir, 4); // Z roof (and floor if at water edge)
 	}
 	for (auto i = levels.begin(); i != levels.end(); ++i) { // multiple cubes/levels case
 		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		bdraw.add_cube(*i, side_tex, side_color, shadow_only, vdir, 3); // XY
+		bdraw.add_cube(*i, mat_ix, 0, side_color, shadow_only, vdir, 3); // XY
 		if (i != levels.begin() && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		bdraw.add_cube(*i, roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
+		bdraw.add_cube(*i, mat_ix, 1, roof_color, shadow_only, vdir, 4); // only Z dim
 	}
 }
 
@@ -408,8 +415,7 @@ public:
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
-			building_mat_t const &material(params.choose_rand_mat(rgen));
-			building_t b(material); // copy material
+			building_t b(params.choose_rand_mat(rgen)); // set material
 			point center(all_zeros);
 			
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
@@ -450,8 +456,9 @@ public:
 					}
 				}
 				if (!overlaps) {
-					material.side_color.gen_color(b.side_color, rgen);
-					material.roof_color.gen_color(b.roof_color, rgen);
+					building_mat_t const &mat(b.get_material());
+					mat.side_color.gen_color(b.side_color, rgen);
+					mat.roof_color.gen_color(b.roof_color, rgen);
 					add_to_grid(b.bcube, buildings.size());
 					buildings.push_back(b);
 					break; // done
