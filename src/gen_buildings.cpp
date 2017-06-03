@@ -212,6 +212,7 @@ class building_draw_t {
 		vector<vert_norm_comp_tc_color> verts;
 
 		void draw_and_clear(bool shadow_only) {
+			if (verts.empty()) return;
 			if (!shadow_only) {tex.set_gl();}
 			draw_quad_verts_as_tris(verts);
 			verts.clear();
