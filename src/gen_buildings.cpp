@@ -232,6 +232,7 @@ class building_draw_t {
 	void add_cube_verts(cube_t const &cube, vector<vert_norm_comp_tc_color> &verts, colorRGBA const &color,
 		bool texture, float texture_scale, vector3d const *const view_dir, unsigned dim_mask)
 	{
+		texture_scale *= 2.0; // adjust for local vs. global space change
 		point const scale(cube.get_size());
 		vector3d const xlate(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
@@ -254,12 +255,12 @@ class building_draw_t {
 
 					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 						pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
-						vert.v = pt*scale + xlate;
+						vert.v   = pt*scale + xlate;
 
 						if (texture) {
 							bool const st(i&1);
-							vert.t[ st] = texture_scale*pt[d[1]];
-							vert.t[!st] = texture_scale*pt[d[0]];
+							vert.t[ st] = texture_scale*vert.v[d[1]];
+							vert.t[!st] = texture_scale*vert.v[d[0]];
 						}
 						verts.push_back(vert);
 					}
