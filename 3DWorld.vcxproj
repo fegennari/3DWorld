@@ -977,6 +977,7 @@
     <Text Include="coll_objs\coll_objs_san_miguel.txt" />
     <Text Include="coll_objs\COLL_OBJS_Test.TXT" />
     <Text Include="coll_objs\coll_objs_transformed.txt" />
+    <Text Include="config_buildings.txt" />
     <Text Include="config_museum_tt_model.txt" />
     <Text Include="config_puzzle.txt" />
     <Text Include="config_san_miguel.txt" />
