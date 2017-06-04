@@ -57,15 +57,15 @@ struct building_mat_t : public building_tex_params_t {
 struct building_params_t {
 
 	bool flatten_mesh, has_normal_map;
-	unsigned num_place, num_tries, num_levels, cur_prob;
+	unsigned num_place, num_tries, min_levels, max_levels, cur_prob;
 	float place_radius, max_delta_z;
 	cube_t sz_range, pos_range; // z is unused?
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
-	building_params_t(unsigned num_place_=0) : flatten_mesh(0), has_normal_map(0), num_place(num_place_), num_tries(10), num_levels(1),
-		cur_prob(1), place_radius(0.0), max_delta_z(0.0), sz_range(all_zeros), pos_range(all_zeros) {}
+	building_params_t(unsigned num_place_=0) : flatten_mesh(0), has_normal_map(0), num_place(num_place_), num_tries(10),
+		min_levels(1), max_levels(1), cur_prob(1), place_radius(0.0), max_delta_z(0.0), sz_range(all_zeros), pos_range(all_zeros) {}
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
@@ -110,8 +110,11 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "num_tries") {
 		if (!read_uint(fp, global_building_params.num_tries)) {buildings_file_err(str, error);}
 	}
-	else if (str == "num_levels") {
-		if (!read_uint(fp, global_building_params.num_levels)) {buildings_file_err(str, error);}
+	else if (str == "min_levels") {
+		if (!read_uint(fp, global_building_params.min_levels)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_levels") {
+		if (!read_uint(fp, global_building_params.max_levels)) {buildings_file_err(str, error);}
 	}
 	else if (str == "size_range") {
 		if (!read_cube(fp, global_building_params.sz_range)) {buildings_file_err(str, error);}
@@ -201,7 +204,7 @@ struct building_t {
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
-	void gen_levels(unsigned max_levels, unsigned ix);
+	void gen_levels(unsigned min_levels, unsigned max_levels, unsigned ix);
 	void draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 };
 
@@ -280,11 +283,13 @@ public:
 building_draw_t building_draw;
 
 
-void building_t::gen_levels(unsigned max_levels, unsigned ix) {
+void building_t::gen_levels(unsigned min_levels, unsigned max_levels, unsigned ix) {
 
 	if (!is_valid()) return; // invalid building
-	if (max_levels == 1) return; // single level, for now the bounding cube
-	unsigned const num_levels((ix%max_levels) + 1); // use ix value as the seed/hash; at least one level
+	// use ix value as the seed/hash; at least one level
+	unsigned num_levels(min_levels);
+	if (min_levels < max_levels) {num_levels += ix%(max_levels - min_levels + 1);}
+	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	if (num_levels == 1) return; // single level, for now the bounding cube
 	levels.resize(num_levels);
 	rand_gen_t rgen;
@@ -504,7 +509,7 @@ public:
 
 		timer_t timer2("Gen Building Levels");
 #pragma omp parallel for schedule(static,1)
-		for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_levels(params.num_levels, i);}
+		for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_levels(params.min_levels, params.max_levels, i);}
 
 		cout << "Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
 	}
