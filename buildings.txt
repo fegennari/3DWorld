@@ -1,12 +1,15 @@
+# global building parameters
 buildings num_place 100000
 buildings num_tries 10
-buildings min_levels 1
-buildings max_levels 4
 buildings flatten_mesh 1
-buildings size_range 0.5 1.0  0.5 1.0  0.5 2.0
 buildings pos_range -225.0 225.0  -225.0 225.0  0 0
 buildings place_radius 225.0
 buildings max_delta_z 1.0
+
+# brick buildings
+buildings min_levels 1
+buildings max_levels 3
+buildings size_range 0.4 0.8  0.4 0.8  0.3 1.0
 
 buildings side_tscale 2.0
 buildings side_tid bricks_tan.png
@@ -55,6 +58,11 @@ buildings add_material
 buildings side_color 0.6 0.3 0.2 1.0
 buildings add_material
 
+# concrete buildings - slightly larger
+buildings min_levels 1
+buildings max_levels 5
+buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
+
 buildings side_tscale 8.0
 buildings side_tid cblock.png
 buildings side_nm_tid normal_maps/cblock_NRM.jpg
@@ -85,3 +93,10 @@ buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
 buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
+
+# metal/glass buildings - taller
+buildings min_levels 1
+buildings max_levels 8
+buildings size_range 0.5 1.0  0.5 1.0  1.0 4.0
+
+# TODO
