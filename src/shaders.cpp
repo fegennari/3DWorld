@@ -143,55 +143,6 @@ bool shader_t::add_uniform_matrix_4x4(char const *const name, float const *m, bo
 }
 
 
-// unused, unfinished
-bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsigned size, unsigned &buffer_id) const {
-
-	assert(program && name && data && size);
-
-	// There's only one uniform block.
-	int const uniformBlockIndex(glGetUniformBlockIndex(program, "uniform_block"));
-	if (uniformBlockIndex < 0) return 0;
-	//cout << "ix: " << uniformBlockIndex << endl;
-
-	// Associate the uniform block to binding point 0
-	glUniformBlockBinding(program, uniformBlockIndex, 0);
-
-	// Get the uniform block's size
-	int uniformBlockSize;
-	glGetActiveUniformBlockiv(program, uniformBlockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &uniformBlockSize);
-	//cout << "block_size: " << uniformBlockSize << endl;
-
-	// The data uniform will need to be updated, so we'll query its offset/size.
-	unsigned index;
-	int offset, buf_size;
-
-	// First, get the index for the uniform
-	glGetUniformIndices(program, 1, &name, &index);
-	assert((int)index >= 0);
-
-	// Use the index to query offset and size
-	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_OFFSET, &offset);
-	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE,   &buf_size);
-	//cout << "index: " << index << ", offset: " << offset << ", size: " << buf_size << endl;
-	assert(size <= (unsigned)buf_size);
-	size = min(size, (unsigned)buf_size);
-
-	// Create UBO
-	if (buffer_id == 0 || !glIsBuffer(buffer_id)) glGenBuffers(1, &buffer_id);
-	assert(buffer_id > 0);
-	glBindBuffer(GL_UNIFORM_BUFFER, buffer_id);
-	
-	// We can use BufferData to upload our data to the shader, since we know it's in the std140 layout
-	glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize, NULL, GL_DYNAMIC_DRAW); // glBufferSubData() after buffer is created?
-
-	// Bind constants to UBO binding point 0
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, buffer_id);
-	glBufferSubData(GL_UNIFORM_BUFFER, offset, size, data);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0); // unbind
-	return 1;
-}
-
-
 // *** subroutines ***
 
 

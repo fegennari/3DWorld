@@ -167,7 +167,7 @@ void r_profile::clear_within(float const c[2]) {
 	copy(pend.begin(), pend.end(), back_inserter(rects));
 	pend.resize(0);
 	if (removed) filled = 0;
-	//avg_alpha = 1.0; // *** FIX ***
+	//avg_alpha = 1.0; // FIXME
 }
 
 
@@ -200,15 +200,6 @@ void light_dir_grid::write_to_texture(vector<unsigned char> tex_data[2]) const {
 			pos += 3;
 		}
 	}
-}
-
-bool light_dir_grid::read(std::string const &filename) {
-	// WRITE
-	return 0;
-}
-bool light_dir_grid::write(std::string const &filename) const {
-	// WRITE
-	return 0;
 }
 
 

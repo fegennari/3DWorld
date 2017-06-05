@@ -1250,9 +1250,7 @@ cube_t rotate_cube(cube_t const &cube, vector3d const &axis, float angle_in_radi
 	return cube_t(corners, 8);
 }
 
-
-// unused
-float angle_of_projected_vectors(vector3d const &v1, vector3d const &v2, vector3d n) {
+float angle_of_projected_vectors(vector3d const &v1, vector3d const &v2, vector3d n) { // unused
 
 	vector3d vp1, vp2;
 	n.normalize();
@@ -1261,9 +1259,7 @@ float angle_of_projected_vectors(vector3d const &v1, vector3d const &v2, vector3
 	return get_norm_angle(vp1, vp2); // angle from 'v1' to 'v2' about 'n'
 }
 
-
 vector3d rtp_to_xyz(float radius, double theta, double phi) {
-
 	double const msin_phi(radius*sin(phi));
 	return vector3d(cos(theta)*msin_phi, sin(theta)*msin_phi, radius*cos(phi));
 }

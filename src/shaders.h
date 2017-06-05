@@ -133,7 +133,6 @@ public:
 	bool add_uniform_color       (char const *const name, colorRGBA const &val) const;
 	bool add_uniform_color       (char const *const name, colorRGB  const &val) const;
 	bool add_uniform_matrix_4x4  (char const *const name, float const *m, bool transpose) const;
-	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
 	unsigned get_subroutine_index(int shader_type, char const *const name) const;
 	unsigned get_subroutine_uniform_loc(int shader_type, char const *const name) const;

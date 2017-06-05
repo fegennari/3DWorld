@@ -59,8 +59,6 @@ public:
 	void add_intensity(point const &p, vector3d const &dir, colorRGBA const &color) {add_intensity(p, dir, color.get_luminance()*color.A);}
 	void normalize();
 	void write_to_texture(vector<unsigned char> tex_data[2]) const;
-	bool read(std::string const &filename);
-	bool write(std::string const &filename) const;
 };
 
 

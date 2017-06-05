@@ -778,15 +778,12 @@ void flag_cobjs_indoors_outdoors() {
 
 
 void coll_obj_group::clear_ids() {
-	
 	dynamic_ids.clear();
 	drawn_ids.clear();
 	platform_ids.clear();
 }
 
-
 void coll_obj_group::clear() { // unused, but may be useful
-	
 	has_lt_atten = has_voxel_cobjs = 0;
 	vector<coll_obj>::clear();
 	clear_ids();
