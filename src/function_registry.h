@@ -257,6 +257,7 @@ void clear_tiled_terrain();
 void reset_tiled_terrain_state();
 void clear_tiled_terrain_shaders();
 float get_tiled_terrain_water_level();
+bool try_bind_tile_smap_at_point(point const &pos, shader_t &s);
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(shader_t &s, float zval);
 bool check_player_tiled_terrain_collision();

@@ -1554,17 +1554,19 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
+bool tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
 	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
 	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
 	if (smap_data.empty()) { // disable shadow map lookup when shadow map textures are unavailable
 		s.add_uniform_float("sm_scale0", -1.0);
 		s.add_uniform_float("sm_scale1", -1.0);
+		return 0;
 	}
-	else {smap_data.set_for_all_lights(s, mvm);}
+	smap_data.set_for_all_lights(s, mvm);
+	return 1;
 }
-void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
-	if (shadow_map_enabled()) {shader_shadow_map_setup(s);}
+bool tile_t::bind_and_setup_shadow_map(shader_t &s) const {
+	return (shadow_map_enabled() && shader_shadow_map_setup(s));
 }
 
 
@@ -2947,6 +2949,11 @@ tile_t *tile_draw_t::get_tile_containing_point(point const &pos) const {
 	return get_tile_from_xy(tp);
 }
 
+bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s) const {
+	tile_t const *const tile(get_tile_containing_point(pos));
+	return (tile != nullptr && tile->bind_and_setup_shadow_map(s));
+}
+
 bool tile_draw_t::check_sphere_collision(point &pos, float radius) const { // Note: pos is modified
 	tile_t const *const tile(get_tile_containing_point(pos)); // can return null for camera during tile generation frames
 	return (tile ? tile->check_sphere_collision(pos, radius) : 0);
@@ -3110,6 +3117,7 @@ void clear_tiled_terrain_shaders() {terrain_tile_draw.free_compute_shader();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
+bool try_bind_tile_smap_at_point(point const &pos, shader_t &s) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s);}
 
 
 // *** tree/grass addition/removal ***
