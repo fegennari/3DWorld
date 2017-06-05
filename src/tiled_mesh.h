@@ -383,8 +383,9 @@ public:
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
-	bool shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
-	bool bind_and_setup_shadow_map(shader_t &s) const;
+	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
+	void bind_and_setup_shadow_map(shader_t &s) const;
+	bool try_bind_shadow_map(shader_t &s) const;
 	void bind_textures() const;
 	void draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], unsigned lod_level) const;
 	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const;

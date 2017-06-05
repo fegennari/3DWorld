@@ -1554,19 +1554,22 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-bool tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
+void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
 	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
 	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
 	if (smap_data.empty()) { // disable shadow map lookup when shadow map textures are unavailable
 		s.add_uniform_float("sm_scale0", -1.0);
 		s.add_uniform_float("sm_scale1", -1.0);
-		return 0;
 	}
-	smap_data.set_for_all_lights(s, mvm);
-	return 1;
+	else {smap_data.set_for_all_lights(s, mvm);}
 }
-bool tile_t::bind_and_setup_shadow_map(shader_t &s) const {
-	return (shadow_map_enabled() && shader_shadow_map_setup(s));
+void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
+	if (shadow_map_enabled()) {shader_shadow_map_setup(s);}
+}
+bool tile_t::try_bind_shadow_map(shader_t &s) const {
+	if (!shadow_map_enabled() || smap_data.empty()) return 0;
+	smap_data.set_for_all_lights(s, nullptr);
+	return 1;
 }
 
 
@@ -2951,7 +2954,7 @@ tile_t *tile_draw_t::get_tile_containing_point(point const &pos) const {
 
 bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s) const {
 	tile_t const *const tile(get_tile_containing_point(pos));
-	return (tile != nullptr && tile->bind_and_setup_shadow_map(s));
+	return (tile != nullptr && tile->try_bind_shadow_map(s));
 }
 
 bool tile_draw_t::check_sphere_collision(point &pos, float radius) const { // Note: pos is modified
