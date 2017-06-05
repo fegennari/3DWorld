@@ -18,7 +18,7 @@ buildings roof_tscale 8.0
 buildings roof_tid stucco.jpg
 buildings roof_nm_tid normal_maps/stucco_NRM.jpg
 buildings roof_color 0.1 0.1 0.1 1.0
-buildings roof_color_grayscale_rand 0.5
+buildings roof_color_grayscale_rand 0.4
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -58,7 +58,8 @@ buildings add_material
 buildings side_color 0.6 0.3 0.2 1.0
 buildings add_material
 
-# concrete buildings - slightly larger
+
+# concrete and metal buildings - slightly larger
 buildings min_levels 1
 buildings max_levels 5
 buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
@@ -71,10 +72,8 @@ buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
 buildings side_color_min 0.55 0.40 0.30 1.0
 buildings side_color_max 0.60 0.45 0.35 1.0
-buildings probability 2 # twice as likely as other materials
 buildings add_material
 
-buildings probability 1
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
 buildings side_color 0.4 0.4 0.4 1.0
@@ -94,9 +93,45 @@ buildings add_material
 buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
 
+buildings side_tid buildings/metal_building.jpg
+buildings side_tscale 4.0
+buildings side_nm_tid -1
+buildings side_color 1.0 1.0 1.0 1.0
+buildings probability 2 # twice as likely as other materials
+buildings add_material
+
+
 # metal/glass buildings - taller
 buildings min_levels 1
 buildings max_levels 8
 buildings size_range 0.5 1.0  0.5 1.0  1.0 4.0
+buildings side_tscale 2.0
+buildings side_nm_tid -1
+buildings roof_color 0.2 0.2 0.2 1.0
+buildings roof_color_grayscale_rand 0.25
+buildings probability 2
 
-# TODO
+buildings side_tid buildings/apartment_windows.jpg # high quality
+buildings roof_tscale 2.0
+buildings roof_tid mossy_rock.jpg
+buildings roof_nm_tid -1
+buildings side_color 1.0 0.8 0.6 1.0
+buildings add_material
+
+buildings side_tid buildings/office_windows.jpg # nice but misaligned
+buildings side_color 0.5 0.5 0.5 1.0
+buildings side_color_grayscale_rand 0.25
+buildings roof_tscale 8.0
+buildings roof_tid stucco.jpg
+buildings roof_nm_tid normal_maps/stucco_NRM.jpg
+buildings add_material
+
+buildings side_tid buildings/office_windows2.jpg # looks a bit odd
+buildings side_color 0.5 0.5 0.5 1.0
+buildings side_color_grayscale_rand 0.25
+buildings add_material
+
+buildings side_tid buildings/office_windows3.jpg # high quality
+buildings side_color 1.0 0.9 0.8 1.0
+buildings add_material
+

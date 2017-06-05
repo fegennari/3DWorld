@@ -13,7 +13,9 @@ using std::string;
 extern int rand_gen_index, display_mode;
 
 // TODO:
-// custom window textures
+// windows in brick/block buildings
+// TT tile shadows
+// L-shaped/non-rectangular buildings
 
 struct tid_nm_pair_t {
 
