@@ -93,52 +93,5 @@ public:
 };
 
 
-// the rest of these classes are unused
-class cobj_triangle_visitor {
-
-protected:
-	bool skip_dynamic;
-	vector<vert_wrap_t> verts;
-
-	virtual void proc_tri(point const &p1, point const &p2, point const &p3) = 0;
-	void proc_tri(point const *const p) {proc_tri(p[0], p[1], p[2]);}
-
-	void proc_quad(point const *const p) {
-		proc_tri(p[0], p[1], p[2]);
-		proc_tri(p[0], p[2], p[3]);
-	}
-	template<typename V> void proc_triangle_verts(vector<V> const &verts);
-	void proc_poly(point const *p, unsigned npts);
-	void proc_cobj(coll_obj const &c);
-
-public:
-	cobj_triangle_visitor(bool skip_dynamic_) : skip_dynamic(skip_dynamic_) {}
-	void proc_cobjs(coll_obj_group const &cobjs);
-};
-
-
-class triangle_counter : public cobj_triangle_visitor {
-
-	unsigned tris_visited;
-
-	virtual void proc_tri(point const &p1, point const &p2, point const &p3) {++tris_visited;}
-public:
-	triangle_counter(bool skip_dynamic_) : cobj_triangle_visitor(skip_dynamic_), tris_visited(0) {}
-	unsigned proc_cobjs(coll_obj_group const &cobjs);
-};
-
-
-class scene_flatten : public cobj_triangle_visitor {
-
-	virtual void proc_tri(point const &p1, point const &p2, point const &p3) {
-		triangles.push_back(triangle(p1, p2, p3));
-	}
-public:
-	vector<triangle> triangles;
-
-	scene_flatten(bool skip_dynamic_) : cobj_triangle_visitor(skip_dynamic_) {}
-};
-
-
 #endif
 
