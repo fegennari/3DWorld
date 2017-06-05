@@ -11,10 +11,11 @@
 using std::string;
 
 extern int rand_gen_index, display_mode;
+extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // windows in brick/block buildings
-// TT tile shadows
+// TT tile shadows for buildings in tile borders
 // L-shaped/non-rectangular buildings
 
 struct tid_nm_pair_t {
@@ -214,7 +215,7 @@ struct building_t {
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_levels(unsigned ix);
-	void draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
+	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 };
 
 
@@ -225,14 +226,15 @@ class building_draw_t {
 		vector<vert_norm_comp_tc_color> verts;
 
 		void draw_and_clear(bool shadow_only) {
-			if (verts.empty()) return;
+			if (empty()) return;
 			if (!shadow_only) {tex.set_gl();}
 			draw_quad_verts_as_tris(verts);
-			verts.clear();
+			clear();
 		}
+		void clear() {verts.clear();}
 		bool empty() const {return verts.empty();}
 	};
-	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
+	vector<draw_block_t> to_draw, pend_draw; // one per texture, assumes tids are dense
 
 	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex) {
 		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
@@ -287,6 +289,14 @@ public:
 	void draw_and_clear(bool shadow_only) {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
 	}
+	void begin_immediate_building() { // to be called before any add_cube() calls
+		pend_draw.swap(to_draw); // move current draw queue to pending queue
+	}
+	void end_immediate_building(bool shadow_only) { // to be matched with begin_building()
+		// Note: in this case, there generally aren't more than one building of the same material within the same tile, so batching doesn't help
+		draw_and_clear(shadow_only); // draw current building - sparse iteration?
+		pend_draw.swap(to_draw); // restore draw queue
+	}
 };
 
 building_draw_t building_draw;
@@ -331,7 +341,11 @@ void building_t::gen_levels(unsigned ix) {
 	}
 }
 
-void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
+bool check_tile_smap(bool shadow_only) {
+	return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
+}
+
+void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
 
 	// store in VBO?
 	if (!is_valid()) return; // invalid building
@@ -342,6 +356,8 @@ void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, b
 	if (!shadow_only && !dist_less_than(camera, pos, dmax)) return; // dist clipping
 	if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
 	building_mat_t const &mat(get_material());
+	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
+	if (immediate_mode) {bdraw.begin_immediate_building();}
 
 	if (levels.empty()) { // single cube/level case
 		vector3d const view_dir(pos - camera);
@@ -356,6 +372,7 @@ void building_t::draw(bool shadow_only, float far_clip, vector3d const &xlate, b
 		if (i != levels.begin() && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		bdraw.add_cube(*i, mat.roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
 	}
+	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
 
 
@@ -526,28 +543,32 @@ public:
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
 		if (empty()) return;
-		//timer_t timer("Draw Buildings"); // 1.8ms for <=10 level buildings
-		fgPushMatrix();
-		translate_to(xlate);
-		shader_t s;
-
-		if (shadow_only) {
-			s.begin_color_only_shader(); // really don't even need colors
-		}
-		else {
-			int const use_bmap(global_building_params.has_normal_map), is_outside(1);
-			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v); // shadows between buildings in TT mode?
-			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, is_outside);
-		}
+		//timer_t timer("Draw Buildings"); // 1.7ms, 2.3ms with shadow maps
 		float const far_clip(get_inf_terrain_fog_dist());
 		point const camera(get_camera_pos());
+		int const use_bmap(global_building_params.has_normal_map);
+		bool const use_tt_smap(check_tile_smap(shadow_only));
 		static unsigned draw_ix(0); ++draw_ix;
+		shader_t s;
+		fgPushMatrix();
+		translate_to(xlate);
 
+		if (use_tt_smap) { // pre-pass to render buildings in nearby tiles that have shadow maps
+			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+			s.add_uniform_float("z_bias", cobj_z_bias);
+			s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
+		}
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
 			point const pos(g->bcube.get_cube_center() + xlate);
 			if (!shadow_only && !dist_less_than(camera, pos, (far_clip + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
 			if (!camera_pdu.sphere_visible_test(pos, g->bcube.get_bsphere_radius())) continue; // VFC
-			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(shadow_only, far_clip, xlate, building_draw, draw_ix);}
+			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, xlate, building_draw, draw_ix);}
+		}
+		if (use_tt_smap) {s.end_shader();}
+		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
+		else { // main/batched draw pass
+			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
+			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		}
 		building_draw.draw_and_clear(shadow_only);
 		s.end_shader();
