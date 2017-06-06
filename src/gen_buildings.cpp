@@ -15,7 +15,6 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // windows in brick/block buildings
-// TT tile shadows for buildings in tile borders
 // L-shaped/non-rectangular buildings
 
 struct tid_nm_pair_t {
@@ -381,7 +380,7 @@ unsigned const grid_sz = 32;
 class building_creator_t {
 
 	float place_radius;
-	vector3d range_sz, range_sz_inv;
+	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range;
 	rand_gen_t rgen;
 	vector<building_t> buildings;
@@ -427,9 +426,10 @@ class building_creator_t {
 	}
 
 public:
-	building_creator_t() : place_radius(0.0) {}
+	building_creator_t() : place_radius(0.0), max_extent(zero_vector) {}
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear();}
+	vector3d const &get_max_extent() const {return max_extent;}
 
 	void gen(building_params_t const &params) {
 		timer_t timer("Gen Buildings");
@@ -438,6 +438,7 @@ public:
 		range    = params.pos_range - xlate;
 		range_sz = range.get_size();
 		place_radius = params.place_radius;
+		max_extent   = zero_vector;
 		UNROLL_3X(range_sz_inv[i_] = 1.0/range_sz[i_];)
 		clear();
 		buildings.reserve(params.num_place);
@@ -492,6 +493,9 @@ public:
 					mat.side_color.gen_color(b.side_color, rgen);
 					mat.roof_color.gen_color(b.roof_color, rgen);
 					add_to_grid(b.bcube, buildings.size());
+					vector3d const sz(b.bcube.get_size());
+					float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
+					UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
 					buildings.push_back(b);
 					break; // done
 				}
@@ -615,5 +619,6 @@ void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.d
 bool check_buildings_point_coll(point const &pos) {return check_buildings_sphere_coll(pos, 0.0);}
 bool check_buildings_sphere_coll(point const &pos, float radius) {point pos2(pos); return building_creator.check_sphere_coll(pos2, pos, radius);}
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius) {return building_creator.check_sphere_coll(pos, p_int, radius);}
+vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
 
 
