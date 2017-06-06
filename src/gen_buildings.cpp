@@ -14,6 +14,7 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
+// pine trees
 // windows in brick/block buildings
 // L-shaped/non-rectangular buildings
 
@@ -309,10 +310,16 @@ void building_t::gen_levels(unsigned ix) {
 	unsigned num_levels(mat.min_levels);
 	if (mat.min_levels < mat.max_levels) {num_levels += ix%(mat.max_levels - mat.min_levels + 1);}
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
-	if (num_levels == 1) return; // single level, for now the bounding cube
-	levels.resize(num_levels);
 	rand_gen_t rgen;
 	rgen.set_state(ix, 345);
+
+	if (num_levels == 1) { // single level
+		if (rgen.rand()&1) {
+			// FIXME: generate L or T shape
+		}
+		return; // for now the bounding cube
+	}
+	levels.resize(num_levels);
 	float const height(bcube.d[2][1] - bcube.d[2][0]), dz(height/num_levels);
 
 	for (unsigned i = 0; i < num_levels; ++i) {
@@ -594,15 +601,25 @@ public:
 
 				for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 					assert(*g < buildings.size());
-					cube_t const bc(buildings[*g].bcube);
-					if (bc.is_all_zeros()) continue; // invalid building
+					building_t const &b(buildings[*g]);
+					if (b.bcube.is_all_zeros()) continue; // invalid building
 					point p_int;
 					vector3d cnorm; // unused
 					unsigned cdir(0); // unused
 
-					if (sphere_cube_intersect(pos, radius, (bc + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
-						pos = p_int;
-						return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
+					if (sphere_cube_intersect(pos, radius, (b.bcube + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
+						if (b.levels.empty()) { // single cube building
+							pos = p_int;
+							return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
+						}
+						else {
+							for (auto i = b.levels.begin(); i != b.levels.end(); ++i) {
+								if (sphere_cube_intersect(pos, radius, (*i + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
+									pos = p_int;
+									return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
+								}
+							}
+						}
 					}
 				}
 			}
