@@ -393,19 +393,21 @@ void small_tree_group::maybe_add_tree(int i, int j, float zpos_in, float tsize, 
 	int const ttype(get_tree_type_from_height(zpos, rgen, 0));
 	if (ttype == TREE_NONE) return;
 	if (check_hmap_normal && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) return;
-	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
+	small_tree tree;
 
 	if (instanced) { // check voxel terrain? or does this mode only get used for tiled terrain?
 		assert(ttype == T_SH_PINE || ttype == T_PINE || ttype == T_PALM);
-		assert(zval_adj == 0.0); // must be inf terrain mode
-		add_tree(small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen)));
+		assert(world_mode == WMODE_INF_TERRAIN); // must be inf terrain mode
+		tree = small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen));
 	}
 	else {
-		float const height(tsize*rand_tree_height(rgen));
+		float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1), height(tsize*rand_tree_height(rgen));
 		point const pos(xval, yval, zpos+zval_adj*height);
 		if (point_inside_voxel_terrain(pos)) return; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
-		add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
+		tree = small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1); // allow_rotation=1
 	}
+	if (check_buildings_sphere_coll(tree.get_pos(), 2.0*tree.get_radius(), 1)) return; // conservative bsphere, apply TT xlate
+	add_tree(tree);
 }
 
 // density = x1,y1 x2,y1 x1,y2 x2,y2

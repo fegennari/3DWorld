@@ -2092,9 +2092,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 					if (max_val == 0.0 || den_val > max_val) {max_val = den_val; ttype = tt;}
 				}
 			}
-			point center(pos + vector3d(0.0, 0.0, 0.3*tree_scale));
-			if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);}
-			if (check_buildings_sphere_coll(center, 0.4*tree_scale)) continue; // approximate bsphere
+			if (check_buildings_sphere_coll((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale, 1)) continue; // approximate bsphere, apply TT xlate
 
 			if (!shared_tree_data.empty()) {
 				if (ttype >= 0) {
