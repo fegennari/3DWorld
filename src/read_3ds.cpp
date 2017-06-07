@@ -155,13 +155,6 @@ protected:
 			for (unsigned j = 0; j < 3; ++j) {mp[4*i+j] = m[3*i+j];}
 		}
 		//UNROLL_3X(mp[12+i_] = m[9+i_];) // copy translate only
-#if 0
-		cout << "matrix final" << endl;
-		for (unsigned i = 0; i < 4; ++i) {
-			for (unsigned j = 0; j < 4; ++j) {cout << mp[4*j+i] << " ";}
-			cout << endl;
-		}
-#endif
 #endif
 		return 1;
 	}

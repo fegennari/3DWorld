@@ -684,8 +684,6 @@ public:
 		bool last_visible(0);
 		unsigned beg_ix(0);
 		point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
-		last_occluder.resize(XY_MULT_SIZE, -1);
-		int last_occ_used(-1);
 		vector<unsigned> nearby_ixs;
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
@@ -708,28 +706,6 @@ public:
 					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length,
 									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
 					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
-#if 0
-					if (visible && (display_mode & 0x08) && have_occluders()) {
-						int &last_occ_cobj(last_occluder[y*MESH_X_SIZE + x]);
-
-						if (last_occ_cobj >= 0 || ((frame_counter + y) & 7) == 0) { // only sometimes update if not previously occluded
-							point pts[8];
-							cube.get_points(pts);
-
-							if (x > 0 && last_occ_cobj >= 0 && last_occluder[y*MESH_X_SIZE + x-1] == last_occ_cobj &&
-								!coll_objects[last_occ_cobj].disabled() && coll_objects[last_occ_cobj].intersects_all_pts(camera, (pts+4), 4))
-							{
-								visible = 0; // check last 4 points (first 4 should already be checked from the last grass block)
-							}
-							else {
-								if (last_occ_cobj < 0) {last_occ_cobj = last_occ_used;}
-								visible &= !cobj_contained_ref(camera, pts, 8, -1, last_occ_cobj);
-								if (visible) {last_occ_cobj = -1;}
-							}
-							if (last_occ_cobj >= 0) {last_occ_used = last_occ_cobj;}
-						}
-					}
-#endif
 				}
 				if (visible && dist_less_than(camera, mpos, 1000.0*grass_width)) { // nearby grass
 					nearby_ixs.push_back(ix);
