@@ -15,7 +15,7 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // windows in brick/block buildings
-// L-shaped/non-rectangular buildings
+// non-rectangular buildings
 
 struct tid_nm_pair_t {
 
@@ -207,14 +207,16 @@ struct building_t {
 	unsigned mat_ix;
 	colorRGBA side_color, roof_color;
 	cube_t bcube;
-	vector<cube_t> levels;
+	vector<cube_t> parts;
 	mutable unsigned cur_draw_ix;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
-	void gen_levels(unsigned ix);
+	void gen_geometry(unsigned ix);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
+private:
+	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 };
 
 
@@ -301,9 +303,39 @@ public:
 building_draw_t building_draw;
 
 
-void building_t::gen_levels(unsigned ix) {
+void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
+
+	// generate L, T, or U shape
+	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // {x,y}, {neg,pos}
+	int const shape(rand()%7); // 0-6
+	float const div(rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
+	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
+	unsigned const start(parts.size()), num((shape == 6) ? 3 : 2);
+	parts.resize(start+num, seed_cube);
+	parts[start].d[dim][dir] = dpos; // full width part
+	for (unsigned n = 1; n < num; ++n) {parts[start+n].d[dim][!dir] = dpos;} // partial width parts
+
+	switch (shape) {
+	case 0: case 1: case 2: case 3: // L
+		parts[start+1].d[!dim][shape>>1] = ((shape&1) ? spos2 : spos1);
+		break;
+	case 4: case 5: // T
+		parts[start+1].d[!dim][0] = spos1;
+		parts[start+1].d[!dim][1] = spos2;
+		break;
+	case 6: // U
+		parts[start+1].d[!dim][1] = spos1;
+		parts[start+2].d[!dim][0] = spos2;
+		break;
+	default: assert(0);
+	}
+}
+
+void building_t::gen_geometry(unsigned ix) {
 
 	if (!is_valid()) return; // invalid building
+	parts.clear(); // just in case
 	building_mat_t const &mat(get_material());
 	// use ix value as the seed/hash; at least one level
 	unsigned num_levels(mat.min_levels);
@@ -313,19 +345,17 @@ void building_t::gen_levels(unsigned ix) {
 	rgen.set_state(ix, 345);
 
 	if (num_levels == 1) { // single level
-		if (rgen.rand()&1) {
-			// FIXME: generate L or T shape
-		}
+		if (rgen.rand()%3) {split_in_xy(bcube, rgen);} // generate L, T, or U shape 67% of the time
 		return; // for now the bounding cube
 	}
-	levels.resize(num_levels);
+	parts.resize(num_levels);
 	float const height(bcube.d[2][1] - bcube.d[2][0]), dz(height/num_levels);
 
 	for (unsigned i = 0; i < num_levels; ++i) {
-		cube_t &bc(levels[i]);
+		cube_t &bc(parts[i]);
 		if (i == 0) {bc = bcube;} // use full building footprint
 		else {
-			cube_t const &prev(levels[i-1]);
+			cube_t const &prev(parts[i-1]);
 			for (unsigned d = 0; d < 2; ++d) {
 				float const len(prev.d[d][1] - prev.d[d][0]);
 				for (unsigned e = 0; e < 2; ++e) {
@@ -341,8 +371,13 @@ void building_t::gen_levels(unsigned ix) {
 	} // for i
 	for (unsigned i = 1; i < num_levels; ++i) {
 		float const ddz(rgen.rand_uniform(-0.35*dz, 0.35*dz)); // random shift in z height
-		levels[i  ].d[2][0] += ddz;
-		levels[i-1].d[2][1] += ddz;
+		parts[i  ].d[2][0] += ddz;
+		parts[i-1].d[2][1] += ddz;
+	}
+	if (num_levels < 4 && rgen.rand_bool()) { // generate L, T, or U shape 50% of the time
+		cube_t const split_cube(parts.back());
+		parts.pop_back();
+		split_in_xy(split_cube, rgen);
 	}
 }
 
@@ -364,17 +399,17 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
 	if (immediate_mode) {bdraw.begin_immediate_building();}
 
-	if (levels.empty()) { // single cube/level case
+	if (parts.empty()) { // single cube/level case
 		vector3d const view_dir(pos - camera);
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
 		bdraw.add_cube(bcube, mat.side_tex, side_color, shadow_only, vdir, 3); // XY sides
 		bdraw.add_cube(bcube, mat.roof_tex, roof_color, shadow_only, vdir, 4); // Z roof (and floor if at water edge)
 	}
-	for (auto i = levels.begin(); i != levels.end(); ++i) { // multiple cubes/levels case
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
 		bdraw.add_cube(*i, mat.side_tex, side_color, shadow_only, vdir, 3); // XY
-		if (i != levels.begin() && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
+		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		bdraw.add_cube(*i, mat.roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
@@ -544,9 +579,9 @@ public:
 			}
 		} // if flatten_mesh
 
-		timer_t timer2("Gen Building Levels");
+		timer_t timer2("Gen Building Geometry");
 #pragma omp parallel for schedule(static,1)
-		for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_levels(i);}
+		for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
 
 		cout << "Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
 	}
@@ -607,12 +642,12 @@ public:
 					unsigned cdir(0); // unused
 
 					if (sphere_cube_intersect(pos, radius, (b.bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
-						if (b.levels.empty()) { // single cube building
+						if (b.parts.empty()) { // single cube building
 							pos = p_int;
 							return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
 						}
 						else {
-							for (auto i = b.levels.begin(); i != b.levels.end(); ++i) {
+							for (auto i = b.parts.begin(); i != b.parts.end(); ++i) {
 								if (sphere_cube_intersect(pos, radius, (*i + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
 									pos = p_int;
 									return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
