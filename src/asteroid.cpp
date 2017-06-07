@@ -1024,13 +1024,11 @@ void uasteroid_belt_planet::init_rings(point const &pos) {
 
 
 void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
-
 	pt -= pos;
 	rotate_norm_vector3d_into_plus_z(orbital_plane_normal, pt);
 	UNROLL_3X(pt[i_] /= scale[i_];) // account for squished/elliptical torus in orbital plane
 }
 void uasteroid_belt::xform_from_local_torus_coord_space(point &pt) const { // unused
-
 	UNROLL_3X(pt[i_] *= scale[i_];) // account for squished/elliptical torus in orbital plane
 	rotate_norm_vector3d_into_plus_z(orbital_plane_normal, pt); // inverse rotate
 	pt += pos;

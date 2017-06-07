@@ -13,7 +13,6 @@ extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[3];
 #define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}
 
 unsigned const FLASHLIGHT_LIGHT_ID = 0;
-
 float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const CTHRESH          = 0.025;
@@ -24,41 +23,6 @@ class light_grid_base {
 protected:
 	unsigned get_ix(int x, int y, int z) const {return ((y*MESH_X_SIZE + x)*MESH_SIZE[2] + z);}
 	int check_lmap_get_grid_index(point const &p) const;
-};
-
-
-struct normal_cell { // size = 24, must be packed, unused
-
-	vector3d n[2]; // {negative, positive}
-	normal_cell() {UNROLL_3X(n[0][i_] = n[1][i_] = 0.0;)}
-
-	void add_normal(vector3d const &N, float weight=1.0) { // normal should be normalized
-		UNROLL_3X(n[N[i_] > 0.0][i_] += weight*N[i_];)
-	}
-	void normalize() {
-		UNROLL_3X(assert(n[0][i_] >= 0.0 && n[1][i_] >= 0.0);)
-		float const mag(sqrt(n[0].mag_sq() + n[1].mag_sq()));
-		n[0] /= mag; n[1] /= mag;
-	}
-	float dot_product(vector3d const &v) const {
-		float dp(0.0);
-		UNROLL_3X(dp += n[v[i_] > 0.0][i_]*v[i_];)
-		assert(dp >= 0.0);
-		return dp;
-	}
-};
-
-class light_dir_grid : public light_grid_base { // unused
-
-	vector<normal_cell> data;
-
-public:
-	bool is_allocated() const {return !data.empty();}
-	void alloc();
-	void add_intensity(point const &p, vector3d const &dir, float val);
-	void add_intensity(point const &p, vector3d const &dir, colorRGBA const &color) {add_intensity(p, dir, color.get_luminance()*color.A);}
-	void normalize();
-	void write_to_texture(vector<unsigned char> tex_data[2]) const;
 };
 
 

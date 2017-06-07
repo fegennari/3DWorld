@@ -271,14 +271,6 @@ bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d
 	return 1;
 }
 
-bool line_int_plane_test_only(point const &p1, point const &p2, point const &pp0, vector3d const &norm) { // unused
-
-	vector3d const v1(p2, p1);
-	float const denom(dot_product(norm, v1)); // doesn't require norm to be normalized
-	float const dp(dot_product_ptv(norm, pp0, p1));
-	return (SIGN(dp) == SIGN(denom) && fabs(dp) <= fabs(denom));
-}
-
 
 // Note: this test considers the extruded polygon to be a collection of N planar polygons, not a volume,
 // which means that lines completely inside the polygon volume (p1 and p2 contained) are not intersecting;

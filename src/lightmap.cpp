@@ -171,38 +171,6 @@ void r_profile::clear_within(float const c[2]) {
 }
 
 
-// *** light_dir_grid ***
-
-
-void light_dir_grid::alloc() {
-	data.clear();
-	data.resize(XY_MULT_SIZE*MESH_Z_SIZE); // dense; making this sparse likely won't help much since it can already be a sub-cube of the light volume
-}
-
-void light_dir_grid::add_intensity(point const &p, vector3d const &dir, float val) { // Note: dir should be normalized
-	int const ix(check_lmap_get_grid_index(p));
-	if (ix < 0) return; // if the global lightmap doesn't have this cell, it's not needed here
-	assert((unsigned)ix < data.size());
-	data[ix].add_normal(dir, val);
-}
-
-void light_dir_grid::normalize() {
-	for (auto i = data.begin(); i != data.end(); ++i) {i->normalize();}
-}
-
-void light_dir_grid::write_to_texture(vector<unsigned char> tex_data[2]) const {
-	for (unsigned d = 0; d < 2; ++d) {
-		tex_data[d].resize(3*data.size()); // pack XYZ into RGB (3 colors)
-		unsigned pos(0);
-
-		for (auto i = data.begin(); i != data.end(); ++i) {
-			UNROLL_3X(tex_data[d][pos+i_] = (unsigned char)(255.0*i->n[d][i_]);)
-			pos += 3;
-		}
-	}
-}
-
-
 // *** MAIN LIGHTMAP CODE ***
 
 
