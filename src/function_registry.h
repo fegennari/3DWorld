@@ -885,7 +885,7 @@ void gen_buildings();
 void draw_buildings(bool shadow_only, vector3d const &xlate=zero_vector);
 bool check_buildings_point_coll(point const &pos);
 bool check_buildings_sphere_coll(point const &pos, float radius);
-bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius);
+bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only);
 vector3d const &get_buildings_max_extent();
 
 #include "inlines.h"

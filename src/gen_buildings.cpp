@@ -586,7 +586,7 @@ public:
 		fgPopMatrix();
 	}
 
-	bool check_sphere_coll(point &pos, point const &p_last, float radius=0.0) const {
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0) const {
 		if (empty()) return 0;
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
@@ -607,14 +607,14 @@ public:
 					vector3d cnorm; // unused
 					unsigned cdir(0); // unused
 
-					if (sphere_cube_intersect(pos, radius, (b.bcube + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
+					if (sphere_cube_intersect(pos, radius, (b.bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
 						if (b.levels.empty()) { // single cube building
 							pos = p_int;
 							return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
 						}
 						else {
 							for (auto i = b.levels.begin(); i != b.levels.end(); ++i) {
-								if (sphere_cube_intersect(pos, radius, (*i + xlate), p_last, p_int, cnorm, cdir, 1, 0)) {
+								if (sphere_cube_intersect(pos, radius, (*i + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
 									pos = p_int;
 									return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
 								}
@@ -635,7 +635,10 @@ void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
 bool check_buildings_point_coll(point const &pos) {return check_buildings_sphere_coll(pos, 0.0);}
 bool check_buildings_sphere_coll(point const &pos, float radius) {point pos2(pos); return building_creator.check_sphere_coll(pos2, pos, radius);}
-bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius) {return building_creator.check_sphere_coll(pos, p_int, radius);}
+
+bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only) {
+	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only);
+}
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
 
 
