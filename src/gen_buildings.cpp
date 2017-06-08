@@ -348,6 +348,7 @@ void building_t::gen_geometry(unsigned ix) {
 
 	if (num_levels == 1) { // single level
 		if (rgen.rand()%3) {split_in_xy(bcube, rgen);} // generate L, T, or U shape 67% of the time
+		else {parts.push_back(bcube);} // single part, entire cube
 		return; // for now the bounding cube
 	}
 	parts.resize(num_levels);
@@ -401,12 +402,6 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
 	if (immediate_mode) {bdraw.begin_immediate_building();}
 
-	if (parts.empty()) { // single cube/level case
-		vector3d const view_dir(pos - camera);
-		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		bdraw.add_cube(bcube, mat.side_tex, side_color, shadow_only, vdir, 3); // XY sides
-		bdraw.add_cube(bcube, mat.roof_tex, roof_color, shadow_only, vdir, 4); // Z roof (and floor if at water edge)
-	}
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
@@ -643,23 +638,18 @@ public:
 					vector3d cnorm; // unused
 					unsigned cdir(0); // unused
 
+					// Note: assumes buildings are separated so that only one sphere collision can occur
 					if (sphere_cube_intersect(pos, radius, (b.bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
-						if (b.parts.empty()) { // single cube building
-							pos = p_int;
-							return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
-						}
-						else {
-							for (auto i = b.parts.begin(); i != b.parts.end(); ++i) {
-								if (sphere_cube_intersect(pos, radius, (*i + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
-									pos = p_int;
-									return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
-								}
+						for (auto i = b.parts.begin(); i != b.parts.end(); ++i) {
+							if (sphere_cube_intersect(pos, radius, (*i + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
+								pos = p_int;
+								return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
 							}
 						}
 					}
-				}
-			}
-		}
+				} // for g
+			} // for x
+		} // for y
 		return 0;
 	}
 };
