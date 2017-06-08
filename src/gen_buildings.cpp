@@ -14,8 +14,10 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
+// AO for lower vertices using vertex color
 // windows in brick/block buildings
 // non-rectangular buildings
+// rotated rectangle buildings
 
 struct tid_nm_pair_t {
 

@@ -116,14 +116,14 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess;
+extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern unsigned erosion_iters, scene_smap_vbo_invalid, spheres_mode, max_cube_map_tex_sz, DL_GRID_BS;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, tree_dead_prob, lm_dz_adj, nleaves_scale, flower_density, universe_ambient_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale, planet_update_rate;
-extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
+extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT, def_tex_aniso;
 extern double map_x, map_y;
 extern point hmv_pos, camera_last_pos;
 extern colorRGBA sunlight_color;
@@ -1629,6 +1629,7 @@ int load_config(string const &config_file) {
 	kwmb.add("use_model_lod_blocks", use_model_lod_blocks);
 	kwmb.add("flatten_tt_mesh_under_models", flatten_tt_mesh_under_models);
 	kwmb.add("show_map_view_mandelbrot", show_map_view_mandelbrot);
+	kwmb.add("def_texture_compress", def_tex_compress);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
@@ -1736,6 +1737,7 @@ int load_config(string const &config_file) {
 	kwmf.add("force_czmax", force_czmax);
 	kwmf.add("dlight_intensity_scale", dlight_intensity_scale);
 	kwmf.add("model_mat_lod_thresh", model_mat_lod_thresh);
+	kwmf.add("def_texture_aniso", def_tex_aniso);
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);

@@ -187,9 +187,10 @@ texture_map_t noise_tex_3ds;
 typedef map<string, unsigned> name_map_t;
 name_map_t texture_name_map;
 
-bool textures_inited(0);
+bool textures_inited(0), def_tex_compress(1);
 int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0), lty2(0), ls0_invalid(1);
 unsigned sky_zval_tid;
+float def_tex_aniso(2.0);
 unsigned char *landscape0 = NULL;
 
 
@@ -316,7 +317,8 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y) {
 	if (tid >= 0) {assert((unsigned)tid < textures.size()); return tid;}
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
 	tid = textures.size();
-	texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, invert_y, !is_normal_map, 2.0, 1.0, is_normal_map); // anisotropy=2.0
+	// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
+	texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, invert_y, (def_tex_compress && !is_normal_map), def_tex_aniso, 1.0, is_normal_map);
 
 	if (textures_inited) {
 		new_tex.load(tid);
