@@ -208,12 +208,13 @@ class building_draw_t;
 struct building_t {
 
 	unsigned mat_ix;
+	float rot_angle; // in radians, always around Z (up) axis
 	colorRGBA side_color, roof_color;
 	cube_t bcube;
 	vector<cube_t> parts;
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), rot_angle(0.0), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_geometry(unsigned ix);
@@ -248,17 +249,23 @@ class building_draw_t {
 		return to_draw[ix].verts;
 	}
 public:
-	void add_cube(cube_t const &cube, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only,
-		vector3d const *const view_dir, unsigned dim_mask)
+	void add_cube(cube_t const &cube, float rot_angle, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
+		bool shadow_only, vector3d const *const view_dir, unsigned dim_mask)
 	{
 		auto &verts(get_verts(tex));
 		bool const texture(!shadow_only && tex.enabled());
 		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
-		point const scale(cube.get_size());
-		vector3d const xlate(cube.get_llc()); // move origin from center to min corner
+		vector3d const scale(cube.get_size()), xlate(cube.get_llc()); // move origin from center to min corner
+		point center(all_zeros); // used for rotations
+		float sin_a(0.0), cos_a(0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
 
+		if (rot_angle != 0.0) {
+			center = bcube.get_cube_center(); // rotate about bounding cube / building center
+			sin_a  = sin(rot_angle); // FIXME: precompute?
+			cos_a  = cos(rot_angle);
+		}
 		if (!shadow_only) { // only for textured (non-shadow pass) cubes
 			if (BUILDING_AO_FACTOR > 0.0) {
 				float const dz_mult(BUILDING_AO_FACTOR/(bcube.d[2][1] - bcube.d[2][0]));
@@ -271,10 +278,20 @@ public:
 			if (!(dim_mask & (1<<n))) continue;
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-				if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
-				vert.n[d[0]] = 0;
-				vert.n[d[1]] = 0;
-				vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
+				if (n < 2 && rot_angle != 0.0) { // XY only
+					vector3d norm(zero_vector);
+					if (n == 0) {norm.x =  cos_a; norm.y = sin_a;} // X
+					else        {norm.x = -sin_a; norm.y = cos_a;} // Y
+					if (!j)     {norm   = -norm;}
+					if (view_dir && dot_product(*view_dir, norm) > 0.0) continue; // back facing
+					vert.set_norm(norm);
+				}
+				else {
+					if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
+					vert.n[d[0]] = 0;
+					vert.n[d[1]] = 0;
+					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
+				}
 				point pt;
 				pt[n] = j;
 
@@ -291,6 +308,12 @@ public:
 							vert.t[!st] = texture_scale*vert.v[d[0]];
 						}
 						if (BUILDING_AO_FACTOR > 0.0 && !shadow_only) {vert.copy_color(cw[pt.z == 1]);}
+
+						if (rot_angle != 0.0) {
+							float const x(vert.v.x - center.x), y(vert.v.y - center.y); // translate to center
+							vert.v.x = x*cos_a - y*sin_a + center.x;
+							vert.v.y = y*cos_a + x*sin_a + center.y;
+						}
 						verts.push_back(vert);
 					}
 				}
@@ -353,6 +376,7 @@ void building_t::gen_geometry(unsigned ix) {
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	rand_gen_t rgen;
 	rgen.set_state(ix, 345);
+	//rot_angle = rgen.rand_uniform(0.0, PI_TWO); // up to 90 degree rotations
 
 	if (num_levels == 1) { // single level
 		if (rgen.rand()%3) {split_in_xy(bcube, rgen);} // generate L, T, or U shape 67% of the time
@@ -413,9 +437,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		bdraw.add_cube(*i, bcube, mat.side_tex, side_color, shadow_only, vdir, 3); // XY
+		bdraw.add_cube(*i, rot_angle, bcube, mat.side_tex, side_color, shadow_only, vdir, 3); // XY
 		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		bdraw.add_cube(*i, bcube, mat.roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
+		bdraw.add_cube(*i, rot_angle, bcube, mat.roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
