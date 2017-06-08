@@ -10,11 +10,12 @@
 
 using std::string;
 
+float const BUILDING_AO_FACTOR = 0.4;
+
 extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// AO for lower vertices using vertex color
 // windows in brick/block buildings
 // non-rectangular buildings
 // rotated rectangle buildings
@@ -246,15 +247,25 @@ class building_draw_t {
 		else {assert(to_draw[ix].tex.nm_tid == tex.nm_tid);} // else normal maps must agree
 		return to_draw[ix].verts;
 	}
-	void add_cube_verts(cube_t const &cube, vector<vert_norm_comp_tc_color> &verts, colorRGBA const &color,
-		bool texture, float texture_scale, vector3d const *const view_dir, unsigned dim_mask)
+public:
+	void add_cube(cube_t const &cube, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only,
+		vector3d const *const view_dir, unsigned dim_mask)
 	{
-		texture_scale *= 2.0; // adjust for local vs. global space change
+		auto &verts(get_verts(tex));
+		bool const texture(!shadow_only && tex.enabled());
+		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
 		point const scale(cube.get_size());
 		vector3d const xlate(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
-		vert.set_c4(color); // color is shared across all verts
+		color_wrapper cw[2];
 
+		if (!shadow_only) { // only for textured (non-shadow pass) cubes
+			if (BUILDING_AO_FACTOR > 0.0) {
+				float const dz_mult(BUILDING_AO_FACTOR/(bcube.d[2][1] - bcube.d[2][0]));
+				UNROLL_2X(cw[i_].set_c4(color*((1.0 - BUILDING_AO_FACTOR) + dz_mult*(cube.d[2][i_] - bcube.d[2][0])));)
+			}
+			else {vert.set_c4(color);} // color is shared across all verts
+		}
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 			if (!(dim_mask & (1<<n))) continue;
@@ -279,15 +290,12 @@ class building_draw_t {
 							vert.t[ st] = texture_scale*vert.v[d[1]];
 							vert.t[!st] = texture_scale*vert.v[d[0]];
 						}
+						if (BUILDING_AO_FACTOR > 0.0 && !shadow_only) {vert.copy_color(cw[pt.z == 1]);}
 						verts.push_back(vert);
 					}
 				}
 			} // for j
 		} // for i
-	}
-public:
-	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask) {
-		add_cube_verts(cube, get_verts(tex), color, (!shadow_only && tex.enabled()), tex.tscale, view_dir, dim_mask);
 	}
 	void draw_and_clear(bool shadow_only) {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
@@ -405,9 +413,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
 		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		bdraw.add_cube(*i, mat.side_tex, side_color, shadow_only, vdir, 3); // XY
+		bdraw.add_cube(*i, bcube, mat.side_tex, side_color, shadow_only, vdir, 3); // XY
 		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		bdraw.add_cube(*i, mat.roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
+		bdraw.add_cube(*i, bcube, mat.roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
