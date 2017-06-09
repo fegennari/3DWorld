@@ -17,7 +17,6 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 // building instancing?
 // windows in brick/block buildings
 // non-rectangular buildings
-// rotated buildings closer together
 
 struct tid_nm_pair_t {
 
@@ -225,7 +224,11 @@ struct building_t {
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
-	bool check_sphere_coll(point &pos, point const &p_last, point const &xlate, float radius, bool xy_only=0) const;
+	bool check_sphere_coll(point const &pos, float radius, bool xy_only=0) const {
+		point pos2(pos);
+		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only);
+	}
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only=0) const;
 	void gen_geometry(unsigned ix);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 private:
@@ -403,7 +406,7 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	}
 }
 
-bool building_t::check_sphere_coll(point &pos, point const &p_last, point const &xlate, float radius, bool xy_only) const {
+bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only) const {
 
 	if (bcube.is_all_zeros()) return 0; // invalid building
 	point p_int;
@@ -614,7 +617,8 @@ public:
 
 				// check building for overlap with other buildings
 				cube_t test_bc(b.bcube);
-				test_bc.expand_by((b.is_rotated() ? 0.05 : 0.1)*b.bcube.get_size()); // expand by 5-10%
+				test_bc.expand_by((b.is_rotated() ? 0.02 : 0.1)*b.bcube.get_size()); // expand by 2-10%
+				sphere_t const bsphere(test_bc.get_bcylin()); // only care about XY radius
 				bool overlaps(0);
 				unsigned ixr[2][2];
 				get_grid_range(b.bcube, ixr);
@@ -626,7 +630,14 @@ public:
 
 						for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 							assert(*g < buildings.size());
-							if (test_bc.intersects_xy(buildings[*g].bcube)) {overlaps = 1; break;} // Note: only check for XY intersection
+							building_t const &ob(buildings[*g]);
+
+							if (test_bc.intersects_xy(ob.bcube)) { // Note: only check for XY intersection
+								if (!b.is_rotated() || ob.check_sphere_coll(bsphere.pos, bsphere.radius, 1)) {
+									sphere_t const bsphere2(ob.bcube.get_bcylin());
+									if (!b.is_rotated() || b.check_sphere_coll(bsphere2.pos, bsphere2.radius, 1)) {overlaps = 1; break;}
+								}
+							}
 						}
 					}
 				}

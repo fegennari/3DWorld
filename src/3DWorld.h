@@ -492,6 +492,11 @@ struct cube_t { // size = 24
 	float get_bsphere_radius() const {
 		return 0.5*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]) + (d[2][1]-d[2][0])*(d[2][1]-d[2][0]));
 	}
+	float get_xy_bsphere_radius() const {
+		return 0.5*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]));
+	}
+	sphere_t get_bsphere() const {return sphere_t(get_cube_center(), get_bsphere_radius());}
+	sphere_t get_bcylin () const {return sphere_t(get_cube_center(), get_xy_bsphere_radius());}
 	point get_llc() const {return point(d[0][0], d[1][0], d[2][0]);}
 	point get_urc() const {return point(d[0][1], d[1][1], d[2][1]);}
 	vector3d get_size() const {return vector3d((d[0][1]-d[0][0]), (d[1][1]-d[1][0]), (d[2][1]-d[2][0]));}
