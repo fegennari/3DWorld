@@ -409,9 +409,9 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, point const 
 	point p_int;
 	vector3d cnorm; // unused
 	unsigned cdir(0); // unused
-
 	if (!sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
 	point pos2(pos), p_last2(p_last), center;
+	bool had_coll(0);
 	
 	if (is_rotated()) {
 		center = bcube.get_cube_center() + xlate;
@@ -420,12 +420,14 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, point const 
 	}
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
-			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, p_int);} // rotate back
-			pos = p_int;
-			return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
+			pos2 = p_int; // update current pos
+			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 		}
 	}
-	return 0;
+	if (!had_coll) return 0;
+	if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, pos2);} // rotate back
+	pos = pos2;
+	return had_coll;
 }
 
 void building_t::gen_geometry(unsigned ix) {
