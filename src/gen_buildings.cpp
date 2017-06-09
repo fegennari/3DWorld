@@ -17,7 +17,7 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 // building instancing?
 // windows in brick/block buildings
 // non-rectangular buildings
-// rotated rectangle buildings
+// rotated buildings closer together
 
 struct tid_nm_pair_t {
 
@@ -214,20 +214,30 @@ class building_draw_t;
 struct building_t {
 
 	unsigned mat_ix;
-	float rot_angle; // in radians, always around Z (up) axis
+	float rot_sin, rot_cos; // in XY plane, around Z (up) axis
 	colorRGBA side_color, roof_color;
 	cube_t bcube;
 	vector<cube_t> parts;
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), rot_angle(0.0), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
-	bool is_valid() const {return !bcube.is_all_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), rot_sin(0.0), rot_cos(1.0), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
+	bool is_valid  () const {return !bcube.is_all_zeros();}
+	bool is_rotated() const {return (rot_sin != 0.0);}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
+	void gen_rotation(rand_gen_t &rgen);
+	bool check_sphere_coll(point &pos, point const &p_last, point const &xlate, float radius, bool xy_only=0) const;
 	void gen_geometry(unsigned ix);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 private:
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 };
+
+
+void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos) {
+	float const x(pos.x - center.x), y(pos.y - center.y); // translate to center
+	pos.x = x*rot_cos - y*rot_sin + center.x;
+	pos.y = y*rot_cos + x*rot_sin + center.y;
+}
 
 
 class building_draw_t {
@@ -255,45 +265,58 @@ class building_draw_t {
 		return to_draw[ix].verts;
 	}
 public:
-	void add_cube(cube_t const &cube, float rot_angle, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
-		bool shadow_only, vector3d const *const view_dir, unsigned dim_mask)
+	void add_cube(cube_t const &cube, float rot_sin, float rot_cos, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
+		bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
 		auto &verts(get_verts(tex));
-		bool const texture(!shadow_only && tex.enabled()), apply_ao(global_building_params.ao_factor > 0.0 && !shadow_only);
-		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
 		vector3d const scale(cube.get_size()), xlate(cube.get_llc()); // move origin from center to min corner
-		point center(all_zeros); // used for rotations
-		float sin_a(0.0), cos_a(0.0);
+		point center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
 		vert_norm_comp_tc_color vert;
+
+		if (shadow_only) {
+			for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+				unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+				if (!(dim_mask & (1<<n))) continue;
+				for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+					point pt; pt[n] = j;
+					for (unsigned s1 = 0; s1 < 2; ++s1) {
+						pt[d[1]] = s1;
+						for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+							pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
+							vert.v   = pt*scale + xlate;
+							if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);}
+							verts.push_back(vert);
+						}
+					}
+				} // for j
+			} // for i
+			return;
+		}
+		bool const apply_ao(global_building_params.ao_factor > 0.0);
+		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
 		color_wrapper cw[2];
 
-		if (rot_angle != 0.0) {
-			center = bcube.get_cube_center(); // rotate about bounding cube / building center
-			sin_a  = sin(rot_angle); // FIXME: precompute?
-			cos_a  = cos(rot_angle);
+		if (apply_ao) {
+			float const dz_mult(global_building_params.ao_factor/(bcube.d[2][1] - bcube.d[2][0]));
+			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*(cube.d[2][i_] - bcube.d[2][0])));)
 		}
-		if (!shadow_only) { // only for textured (non-shadow pass) cubes
-			if (apply_ao) {
-				float const dz_mult(global_building_params.ao_factor/(bcube.d[2][1] - bcube.d[2][0]));
-				UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*(cube.d[2][i_] - bcube.d[2][0])));)
-			}
-			else {vert.set_c4(color);} // color is shared across all verts
-		}
+		else {vert.set_c4(color);} // color is shared across all verts
+		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 			if (!(dim_mask & (1<<n))) continue;
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-				if (n < 2 && rot_angle != 0.0) { // XY only
-					vector3d norm(zero_vector);
-					if (n == 0) {norm.x =  cos_a; norm.y = sin_a;} // X
-					else        {norm.x = -sin_a; norm.y = cos_a;} // Y
+				if (n < 2 && rot_sin != 0.0) { // XY only
+					vector3d norm; norm.z = 0.0;
+					if (n == 0) {norm.x =  rot_cos; norm.y = rot_sin;} // X
+					else        {norm.x = -rot_sin; norm.y = rot_cos;} // Y
 					if (!j)     {norm   = -norm;}
-					if (view_dir && dot_product(*view_dir, norm) > 0.0) continue; // back facing
+					if (dot_product(view_dir, norm) > 0.0) continue; // back facing
 					vert.set_norm(norm);
 				}
 				else {
-					if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
+					if ((view_dir[n] < 0.0) ^ j) continue; // back facing
 					vert.n[d[0]] = 0;
 					vert.n[d[1]] = 0;
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
@@ -307,19 +330,11 @@ public:
 					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 						pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
 						vert.v   = pt*scale + xlate;
-
-						if (texture) {
-							bool const st(i&1);
-							vert.t[ st] = texture_scale*vert.v[d[1]];
-							vert.t[!st] = texture_scale*vert.v[d[0]];
-						}
+						bool const st(i&1);
+						vert.t[ st] = texture_scale*vert.v[d[1]];
+						vert.t[!st] = texture_scale*vert.v[d[0]];
 						if (apply_ao) {vert.copy_color(cw[pt.z == 1]);}
-
-						if (rot_angle != 0.0) {
-							float const x(vert.v.x - center.x), y(vert.v.y - center.y); // translate to center
-							vert.v.x = x*cos_a - y*sin_a + center.x;
-							vert.v.y = y*cos_a + x*sin_a + center.y;
-						}
+						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);}
 						verts.push_back(vert);
 					}
 				}
@@ -371,9 +386,52 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 	}
 }
 
+void building_t::gen_rotation(rand_gen_t &rgen) {
+
+	if (global_building_params.max_rot_angle == 0.0) return;
+	float const rot_angle(rgen.rand_uniform(0.0, global_building_params.max_rot_angle));
+	rot_sin = sin(rot_angle);
+	rot_cos = cos(rot_angle);
+	parts.push_back(bcube); // this is the actual building base
+	cube_t const &bc(parts.back());
+	point const center(bc.get_cube_center());
+
+	for (unsigned i = 0; i < 4; ++i) {
+		point corner(bc.d[0][i&1], bc.d[1][i>>1], bc.d[2][i&1]);
+		do_xy_rotate(rot_sin, rot_cos, center, corner);
+		if (i == 0) {bcube.set_from_point(corner);} else {bcube.union_with_pt(corner);}
+	}
+}
+
+bool building_t::check_sphere_coll(point &pos, point const &p_last, point const &xlate, float radius, bool xy_only) const {
+
+	if (bcube.is_all_zeros()) return 0; // invalid building
+	point p_int;
+	vector3d cnorm; // unused
+	unsigned cdir(0); // unused
+
+	if (!sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
+	point pos2(pos), p_last2(p_last), center;
+	
+	if (is_rotated()) {
+		center = bcube.get_cube_center() + xlate;
+		do_xy_rotate(-rot_sin, rot_cos, center, pos2); // inverse rotate - negate the sine term
+		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
+	}
+	for (auto i = parts.begin(); i != parts.end(); ++i) {
+		if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
+			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, p_int);} // rotate back
+			pos = p_int;
+			return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
+		}
+	}
+	return 0;
+}
+
 void building_t::gen_geometry(unsigned ix) {
 
 	if (!is_valid()) return; // invalid building
+	cube_t const base(parts.empty() ? bcube : parts.back());
 	parts.clear(); // just in case
 	building_mat_t const &mat(get_material());
 	// use ix value as the seed/hash; at least one level
@@ -381,20 +439,19 @@ void building_t::gen_geometry(unsigned ix) {
 	if (mat.min_levels < mat.max_levels) {num_levels += ix%(mat.max_levels - mat.min_levels + 1);}
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	rand_gen_t rgen;
-	rgen.set_state(ix, 345);
-	if (global_building_params.max_rot_angle > 0.0) {rot_angle = rgen.rand_uniform(0.0, global_building_params.max_rot_angle);}
+	rgen.set_state(123+ix, 345*ix);
 
 	if (num_levels == 1) { // single level
-		if (rgen.rand()%3) {split_in_xy(bcube, rgen);} // generate L, T, or U shape 67% of the time
-		else {parts.push_back(bcube);} // single part, entire cube
+		if (rgen.rand()%3) {split_in_xy(base, rgen);} // generate L, T, or U shape 67% of the time
+		else {parts.push_back(base);} // single part, entire cube
 		return; // for now the bounding cube
 	}
 	parts.resize(num_levels);
-	float const height(bcube.d[2][1] - bcube.d[2][0]), dz(height/num_levels);
+	float const height(base.d[2][1] - base.d[2][0]), dz(height/num_levels);
 
 	for (unsigned i = 0; i < num_levels; ++i) {
 		cube_t &bc(parts[i]);
-		if (i == 0) {bc = bcube;} // use full building footprint
+		if (i == 0) {bc = base;} // use full building footprint
 		else {
 			cube_t const &prev(parts[i-1]);
 			for (unsigned d = 0; d < 2; ++d) {
@@ -441,11 +498,16 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	if (immediate_mode) {bdraw.begin_immediate_building();}
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		vector3d const view_dir(shadow_only ? zero_vector : (i->get_cube_center() + xlate - camera));
-		vector3d const *const vdir(shadow_only ? nullptr : &view_dir);
-		bdraw.add_cube(*i, rot_angle, bcube, mat.side_tex, side_color, shadow_only, vdir, 3); // XY
+		vector3d view_dir(zero_vector);
+		
+		if (!shadow_only) {
+			point ccenter(i->get_cube_center());
+			if (!shadow_only && is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
+			view_dir = (ccenter + xlate - camera);
+		}
+		bdraw.add_cube(*i, rot_sin, rot_cos, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
 		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		bdraw.add_cube(*i, rot_angle, bcube, mat.roof_tex, roof_color, shadow_only, vdir, 4); // only Z dim
+		bdraw.add_cube(*i, rot_sin, rot_cos, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
@@ -545,11 +607,12 @@ public:
 				} // for d
 				++num_tries;
 				if (center.z < def_water_level) break; // skip underwater buildings, failed placement
+				b.gen_rotation(rgen);
 				++num_gen;
 
 				// check building for overlap with other buildings
 				cube_t test_bc(b.bcube);
-				test_bc.expand_by(0.1*b.bcube.get_size()); // expand by 10%
+				test_bc.expand_by((b.is_rotated() ? 0.05 : 0.1)*b.bcube.get_size()); // expand by 5-10%
 				bool overlaps(0);
 				unsigned ixr[2][2];
 				get_grid_range(b.bcube, ixr);
@@ -588,6 +651,7 @@ public:
 				building_t &b(buildings[i]);
 
 				if (do_flatten) {
+					//assert(!b.is_rotated()); // too strong?
 					flatten_hmap_region(b.bcube); // flatten the mesh under the bcube to a height of mesh_zval
 				}
 				else { // extend building bottom downward to min mesh height
@@ -596,7 +660,7 @@ public:
 					unsigned num_below(0);
 					
 					for (int d = 0; d < 4; ++d) {
-						float const zval(get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y));
+						float const zval(get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y)); // approximate for rotated buildings
 						zmin = min(zmin, zval);
 						num_below += (zval < def_water_level);
 					}
@@ -607,6 +671,7 @@ public:
 						b.bcube.set_to_zeros();
 						++num_skip;
 					}
+					else if (!b.parts.empty()) {b.parts.back().d[2][0] = b.bcube.d[2][0];} // update base z1
 				}
 			} // for i
 			if (do_flatten) { // use conservative zmin for grid
@@ -623,7 +688,7 @@ public:
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
 		if (empty()) return;
-		//timer_t timer("Draw Buildings"); // 1.7ms, 2.3ms with shadow maps
+		//timer_t timer("Draw Buildings"); // 1.7ms, 2.3ms with shadow maps, 2.8ms with AO, 3.3s with rotations
 		float const far_clip(get_inf_terrain_fog_dist());
 		point const camera(get_camera_pos());
 		int const use_bmap(global_building_params.has_normal_map);
@@ -668,23 +733,10 @@ public:
 				grid_elem_t const &ge(get_grid_elem(x, y));
 				if (!sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate))) continue;
 
+				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 					assert(*g < buildings.size());
-					building_t const &b(buildings[*g]);
-					if (b.bcube.is_all_zeros()) continue; // invalid building
-					point p_int;
-					vector3d cnorm; // unused
-					unsigned cdir(0); // unused
-
-					// Note: assumes buildings are separated so that only one sphere collision can occur
-					if (sphere_cube_intersect(pos, radius, (b.bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
-						for (auto i = b.parts.begin(); i != b.parts.end(); ++i) {
-							if (sphere_cube_intersect(pos, radius, (*i + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) {
-								pos = p_int;
-								return 1; // Note: assumes buildings are separated so that only one sphere collision can occur
-							}
-						}
-					}
+					if (buildings[*g].check_sphere_coll(pos, p_last, xlate, radius, xy_only)) return 1;
 				} // for g
 			} // for x
 		} // for y
