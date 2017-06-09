@@ -5,6 +5,8 @@ buildings flatten_mesh 1
 buildings pos_range -225.0 225.0  -225.0 225.0  0 0
 buildings place_radius 225.0
 buildings max_delta_z 1.0
+buildings ao_factor 0.4
+buildings max_rot_angle 0.0
 
 # brick buildings
 buildings min_levels 1

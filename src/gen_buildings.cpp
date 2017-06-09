@@ -10,12 +10,11 @@
 
 using std::string;
 
-float const BUILDING_AO_FACTOR = 0.4;
-
 extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
+// building instancing?
 // windows in brick/block buildings
 // non-rectangular buildings
 // rotated rectangle buildings
@@ -69,14 +68,14 @@ struct building_params_t {
 
 	bool flatten_mesh, has_normal_map;
 	unsigned num_place, num_tries, cur_prob;
-	float place_radius, max_delta_z;
+	float place_radius, max_delta_z, ao_factor, max_rot_angle;
 	cube_t pos_range; // z is unused?
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
 	building_params_t(unsigned num_place_=0) : flatten_mesh(0), has_normal_map(0), num_place(num_place_), num_tries(10),
-		cur_prob(1), place_radius(0.0), max_delta_z(0.0), pos_range(-100,100,-100,100,0,0) {}
+		cur_prob(1), place_radius(0.0), max_delta_z(0.0), ao_factor(0.0), max_rot_angle(0.0), pos_range(-100,100,-100,100,0,0) {}
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
@@ -129,6 +128,13 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "max_delta_z") {
 		if (!read_float(fp, global_building_params.max_delta_z)) {buildings_file_err(str, error);}
+	}
+	else if (str == "ao_factor") {
+		if (!read_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_rot_angle") {
+		if (!read_float(fp, global_building_params.max_rot_angle)) {buildings_file_err(str, error);}
+		global_building_params.max_rot_angle *= TO_RADIANS; // specified in degrees, stored in radians
 	}
 	// material parameters
 	else if (str == "min_levels") {
@@ -253,7 +259,7 @@ public:
 		bool shadow_only, vector3d const *const view_dir, unsigned dim_mask)
 	{
 		auto &verts(get_verts(tex));
-		bool const texture(!shadow_only && tex.enabled());
+		bool const texture(!shadow_only && tex.enabled()), apply_ao(global_building_params.ao_factor > 0.0 && !shadow_only);
 		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
 		vector3d const scale(cube.get_size()), xlate(cube.get_llc()); // move origin from center to min corner
 		point center(all_zeros); // used for rotations
@@ -267,9 +273,9 @@ public:
 			cos_a  = cos(rot_angle);
 		}
 		if (!shadow_only) { // only for textured (non-shadow pass) cubes
-			if (BUILDING_AO_FACTOR > 0.0) {
-				float const dz_mult(BUILDING_AO_FACTOR/(bcube.d[2][1] - bcube.d[2][0]));
-				UNROLL_2X(cw[i_].set_c4(color*((1.0 - BUILDING_AO_FACTOR) + dz_mult*(cube.d[2][i_] - bcube.d[2][0])));)
+			if (apply_ao) {
+				float const dz_mult(global_building_params.ao_factor/(bcube.d[2][1] - bcube.d[2][0]));
+				UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*(cube.d[2][i_] - bcube.d[2][0])));)
 			}
 			else {vert.set_c4(color);} // color is shared across all verts
 		}
@@ -307,7 +313,7 @@ public:
 							vert.t[ st] = texture_scale*vert.v[d[1]];
 							vert.t[!st] = texture_scale*vert.v[d[0]];
 						}
-						if (BUILDING_AO_FACTOR > 0.0 && !shadow_only) {vert.copy_color(cw[pt.z == 1]);}
+						if (apply_ao) {vert.copy_color(cw[pt.z == 1]);}
 
 						if (rot_angle != 0.0) {
 							float const x(vert.v.x - center.x), y(vert.v.y - center.y); // translate to center
@@ -376,7 +382,7 @@ void building_t::gen_geometry(unsigned ix) {
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	rand_gen_t rgen;
 	rgen.set_state(ix, 345);
-	//rot_angle = rgen.rand_uniform(0.0, PI_TWO); // up to 90 degree rotations
+	if (global_building_params.max_rot_angle > 0.0) {rot_angle = rgen.rand_uniform(0.0, global_building_params.max_rot_angle);}
 
 	if (num_levels == 1) { // single level
 		if (rgen.rand()%3) {split_in_xy(bcube, rgen);} // generate L, T, or U shape 67% of the time
