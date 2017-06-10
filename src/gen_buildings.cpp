@@ -14,6 +14,9 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
+// place large buildings first
+// player walk on buildings
+// cache verts in buildings
 // building instancing?
 // windows in brick/block buildings
 // non-rectangular buildings
@@ -762,12 +765,14 @@ building_creator_t building_creator;
 
 void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
-bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate) {return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate);}
 
-bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate) {
+bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {
+	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only);
+}
+bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only) {
 	point center(pos);
 	if (apply_tt_xlate && world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects - not the camera
-	return building_creator.check_sphere_coll(center, pos, radius);
+	return building_creator.check_sphere_coll(center, pos, radius, xy_only);
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only) {
 	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only);

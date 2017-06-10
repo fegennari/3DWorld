@@ -28,6 +28,7 @@ public:
 	colorRGBA get_atten_color(colorRGBA c, vector3d const &xlate) const;
 	void remove_cobjs();
 	point get_pos() const {return pos;}
+	float get_radius() const {return radius;} // Note: approximate, actual radius may be smaller (for example plants)
 	void add_bounds_to_bcube(cube_t &bcube, float bradius=0.0) const {bcube.assign_or_union_with_sphere(pos, ((bradius == 0.0) ? radius : bradius));}
 };
 
