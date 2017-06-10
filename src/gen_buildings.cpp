@@ -14,8 +14,6 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// place large buildings first
-// player walk on buildings
 // cache verts in buildings
 // building instancing?
 // windows in brick/block buildings

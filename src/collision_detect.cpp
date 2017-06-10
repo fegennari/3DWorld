@@ -1717,6 +1717,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		pos.z -= radius; // bottom of camera sphere
 		adjust_zval_for_model_coll(pos, int_mesh_zval_pt_off(pos, 1, 0), C_STEP_HEIGHT*radius);
 		pos.z += radius;
+		proc_buildings_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, 0); // use prev pos for building collisions; z dir
 		camera_last_pos = pos;
 		camera_change   = 0;
 		return; // infinite terrain mode
@@ -1749,6 +1750,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		}
 	}
 	if (camera_coll_smooth) {collision_detect_large_sphere(pos, radius, (unsigned char)0);}
+	proc_buildings_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, 0); // use prev pos for building collisions; z dir
 	point const adj_pos(pos + vector3d(0.0, 0.0, camera_zh));
 	if (temperature > W_FREEZE_POINT && is_underwater(adj_pos, 1) && (rand()&1)) {gen_bubble(adj_pos);}
 
