@@ -632,11 +632,12 @@ public:
 						for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 							assert(*g < buildings.size());
 							building_t const &ob(buildings[*g]);
+							bool const have_rot(b.is_rotated() || ob.is_rotated());
 
 							if (test_bc.intersects_xy(ob.bcube)) { // Note: only check for XY intersection
-								if (!b.is_rotated() || ob.check_sphere_coll(bsphere.pos, bsphere.radius, 1)) {
+								if (!have_rot || ob.check_sphere_coll(bsphere.pos, bsphere.radius, 1)) {
 									sphere_t const bsphere2(ob.bcube.get_bcylin());
-									if (!b.is_rotated() || b.check_sphere_coll(bsphere2.pos, bsphere2.radius, 1)) {overlaps = 1; break;}
+									if (!have_rot || b.check_sphere_coll(bsphere2.pos, bsphere2.radius, 1)) {overlaps = 1; break;}
 								}
 							}
 						}

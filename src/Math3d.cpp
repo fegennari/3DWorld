@@ -906,6 +906,13 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) {
 	UNROLL_3X(DMIN_CHECK(i_));
 	return 1;
 }
+bool sphere_cube_intersect_xy(point const &pos, float radius, cube_t const &cube) {
+
+	float dmin(0.0);
+	float const r2(radius*radius);
+	UNROLL_2X(DMIN_CHECK(i_));
+	return 1;
+}
 
 
 void cylinder_3dw::calc_bcube(cube_t &bcube) const {
@@ -941,7 +948,7 @@ bool approx_poly_cylin_int(point const *const pts, unsigned npts, cylinder_3dw c
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last, point &p_int,
 						   vector3d &norm, unsigned &cdir, bool check_int, bool skip_z)
 {
-	if (check_int && !sphere_cube_intersect(pos, radius, cube)) return 0;
+	if (check_int && !(skip_z ? sphere_cube_intersect_xy(pos, radius, cube) : sphere_cube_intersect(pos, radius, cube))) return 0;
 	float min_dist(0.0);
 	bool found(0);
 
