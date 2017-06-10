@@ -66,14 +66,14 @@ struct building_params_t {
 
 	bool flatten_mesh, has_normal_map;
 	unsigned num_place, num_tries, cur_prob;
-	float place_radius, max_delta_z, ao_factor, max_rot_angle;
+	float place_radius, max_delta_z, ao_factor, max_rot_angle, min_level_height;
 	cube_t pos_range; // z is unused?
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
 	building_params_t(unsigned num_place_=0) : flatten_mesh(0), has_normal_map(0), num_place(num_place_), num_tries(10),
-		cur_prob(1), place_radius(0.0), max_delta_z(0.0), ao_factor(0.0), max_rot_angle(0.0), pos_range(-100,100,-100,100,0,0) {}
+		cur_prob(1), place_radius(0.0), max_delta_z(0.0), ao_factor(0.0), max_rot_angle(0.0), min_level_height(0.0), pos_range(-100,100,-100,100,0,0) {}
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
@@ -126,6 +126,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "max_delta_z") {
 		if (!read_float(fp, global_building_params.max_delta_z)) {buildings_file_err(str, error);}
+	}
+	else if (str == "min_level_height") {
+		if (!read_float(fp, global_building_params.min_level_height)) {buildings_file_err(str, error);}
 	}
 	else if (str == "ao_factor") {
 		if (!read_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
@@ -455,6 +458,7 @@ void building_t::gen_geometry(unsigned ix) {
 	// use ix value as the seed/hash; at least one level
 	unsigned num_levels(mat.min_levels);
 	if (mat.min_levels < mat.max_levels) {num_levels += ix%(mat.max_levels - mat.min_levels + 1);}
+	if (global_building_params.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.get_size().z/global_building_params.min_level_height)));}
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	rand_gen_t rgen;
 	rgen.set_state(123+ix, 345*ix);
