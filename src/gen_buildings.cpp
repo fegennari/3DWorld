@@ -14,7 +14,6 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// cache verts in buildings
 // building instancing?
 // windows in brick/block buildings
 // non-rectangular buildings
@@ -244,6 +243,14 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 }
 
 
+#define EMIT_VERTEX() \
+	vert.v = pt*scale + xlate; \
+	vert.t[ st] = texture_scale*vert.v[d]; \
+	vert.t[!st] = texture_scale*vert.v[i]; \
+	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
+	if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);} \
+	verts.push_back(vert);
+
 class building_draw_t {
 
 	struct draw_block_t {
@@ -279,15 +286,16 @@ public:
 
 		if (shadow_only) {
 			for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-				unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+				unsigned const n((i+2)%3);
 				if (!(dim_mask & (1<<n))) continue;
+				unsigned const d((i+1)%3);
 				for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 					point pt; pt[n] = j;
 					for (unsigned s1 = 0; s1 < 2; ++s1) {
-						pt[d[1]] = s1;
+						pt[d] = s1;
 						for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-							pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
-							vert.v   = pt*scale + xlate;
+							pt[i]  = k^j^s1^1; // need to orient the vertices differently for each side
+							vert.v = pt*scale + xlate;
 							if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);}
 							verts.push_back(vert);
 						}
@@ -307,41 +315,36 @@ public:
 		else {vert.set_c4(color);} // color is shared across all verts
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+			unsigned const n((i+2)%3);
 			if (!(dim_mask & (1<<n))) continue;
+			unsigned const d((i+1)%3);
+			bool const st(i&1);
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (n < 2 && rot_sin != 0.0) { // XY only
 					vector3d norm; norm.z = 0.0;
 					if (n == 0) {norm.x =  rot_cos; norm.y = rot_sin;} // X
 					else        {norm.x = -rot_sin; norm.y = rot_cos;} // Y
-					if (!j)     {norm   = -norm;}
-					if (dot_product(view_dir, norm) > 0.0) continue; // back facing
-					vert.set_norm(norm);
+					if ((view_dir.x*norm.x + view_dir.y*norm.y < 0.0) ^ j) continue; // back facing
+					vert.set_norm(j ? norm : -norm);
 				}
 				else {
 					if ((view_dir[n] < 0.0) ^ j) continue; // back facing
-					vert.n[d[0]] = 0;
-					vert.n[d[1]] = 0;
+					vert.n[i] = 0;
+					vert.n[d] = 0;
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
 				point pt;
 				pt[n] = j;
-
-				for (unsigned s1 = 0; s1 < 2; ++s1) {
-					pt[d[1]] = s1;
-
-					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
-						vert.v   = pt*scale + xlate;
-						bool const st(i&1);
-						vert.t[ st] = texture_scale*vert.v[d[1]];
-						vert.t[!st] = texture_scale*vert.v[d[0]];
-						if (apply_ao) {vert.copy_color(cw[pt.z == 1]);}
-						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);}
-						verts.push_back(vert);
-					}
-				}
+				pt[d] = 0;
+				pt[i] = !j; // need to orient the vertices differently for each side
+				EMIT_VERTEX();
+				pt[i] = j;
+				EMIT_VERTEX();
+				pt[d] = 1;
+				EMIT_VERTEX();
+				pt[i] = !j;
+				EMIT_VERTEX();
 			} // for j
 		} // for i
 	}
@@ -502,10 +505,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	building_mat_t const &mat(get_material());
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
 	if (immediate_mode) {bdraw.begin_immediate_building();}
+	vector3d view_dir(zero_vector);
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		vector3d view_dir(zero_vector);
-		
 		if (!shadow_only) {
 			point ccenter(i->get_cube_center());
 			if (!shadow_only && is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
