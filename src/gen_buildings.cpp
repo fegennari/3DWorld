@@ -15,7 +15,6 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // building instancing?
-// windows in brick/block buildings
 // non-rectangular buildings
 
 struct tid_nm_pair_t {
@@ -257,12 +256,13 @@ class building_draw_t {
 		tid_nm_pair_t tex;
 		vector<vert_norm_comp_tc_color> verts;
 
-		void draw_and_clear(bool shadow_only) {
+		void draw_verts(bool shadow_only, int force_tid=-1) {
 			if (empty()) return;
-			if (!shadow_only) {tex.set_gl();}
+			if (force_tid >= 0) {select_texture(force_tid); select_multitex(FLAT_NMAP_TEX, 5);} // no normal map
+			else if (!shadow_only) {tex.set_gl();}
 			draw_quad_verts_as_tris(verts);
-			clear();
 		}
+		void draw_and_clear(bool shadow_only, int force_tid=-1) {draw_verts(shadow_only, force_tid); clear();}
 		void clear() {verts.clear();}
 		bool empty() const {return verts.empty();}
 	};
@@ -349,6 +349,15 @@ public:
 		} // for i
 	}
 	void draw_and_clear(bool shadow_only) {
+#if 0
+		// if (fract(3.0*tc.s) < 0.3 && fract(1.5*tc.t) < 0.4) {texel.rgb = vec3(0.1);} // building experiments
+		if (!shadow_only) { // second pass using alpha mask
+			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_verts(shadow_only);} // first pass
+			glDepthFunc(GL_LEQUAL); enable_blend();
+			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only, SMILEY_SKULL_TEX);} // second decal pass
+			disable_blend(); glDepthFunc(GL_LESS);
+		} else
+#endif
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
 	}
 	void begin_immediate_building() { // to be called before any add_cube() calls
