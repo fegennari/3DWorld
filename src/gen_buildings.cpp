@@ -29,7 +29,7 @@ struct tid_nm_pair_t {
 
 	void set_gl() const {
 		select_texture(tid);
-		select_multitex(nm_tid, 5);
+		select_multitex(((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid), 5);
 	}
 };
 
