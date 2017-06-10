@@ -6,6 +6,7 @@ include config.txt
 include buildings.txt
 
 ntrees 50 # fewer trees
+inf_terrain_scenery 0 # off for now
 
 # use smoother noise and no islands
 mesh_gen_mode 3 # 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex, 4=GPU domain warp
