@@ -427,9 +427,8 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	}
 }
 
-bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const {
+bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const { // can be called before levels/splits are created
 
-	// Note: called before parts are created, just check bcubes (including rotation)
 	if (expand == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
@@ -446,7 +445,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 		}
 		for (unsigned i = 0; i < 5; ++i) {do_xy_rotate(-rot_sin, rot_cos, center2, pts[i]);} // inverse rotate into local coord space - negate the sine term
 		
-		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // Note: likely only one part at this point
+		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
 			for (unsigned i = 0; i < 5; ++i) {if (p2->contains_pt_xy(pts[i])) return 1;}
 		}
 	}
