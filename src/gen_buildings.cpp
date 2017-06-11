@@ -14,6 +14,7 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
+// tighter overlap detection - look for points contained in XY
 // building instancing?
 // non-rectangular buildings
 
@@ -411,6 +412,7 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	float const rot_angle(rgen.rand_uniform(0.0, global_building_params.max_rot_angle));
 	rot_sin = sin(rot_angle);
 	rot_cos = cos(rot_angle);
+	parts.clear();
 	parts.push_back(bcube); // this is the actual building base
 	cube_t const &bc(parts.back());
 	point const center(bc.get_cube_center());
@@ -424,7 +426,7 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only) const {
 
-	if (bcube.is_all_zeros()) return 0; // invalid building
+	if (!is_valid()) return 0; // invalid building
 	point p_int;
 	vector3d cnorm; // unused
 	unsigned cdir(0); // unused
@@ -438,6 +440,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
 	}
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
+		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
 		if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
 			pos2 = p_int; // update current pos
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
