@@ -14,7 +14,6 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// tighter overlap detection - look for points contained in XY
 // building instancing?
 // non-rectangular buildings
 
@@ -227,6 +226,9 @@ struct building_t {
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
+	bool check_bcube_overlap_xy(building_t const &b, float expand) const {
+		return (check_bcube_overlap_xy_one_dir(b, expand) || b.check_bcube_overlap_xy_one_dir(*this, expand));
+	}
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only=0) const {
 		point pos2(pos);
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only);
@@ -235,6 +237,7 @@ struct building_t {
 	void gen_geometry(unsigned ix);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 private:
+	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 };
 
@@ -422,6 +425,32 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 		do_xy_rotate(rot_sin, rot_cos, center, corner);
 		if (i == 0) {bcube.set_from_point(corner);} else {bcube.union_with_pt(corner);}
 	}
+}
+
+bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const {
+
+	// Note: called before parts are created, just check bcubes (including rotation)
+	if (expand == 0.0 && !bcube.intersects(b.bcube)) return 0;
+	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
+	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
+	
+	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
+		point pts[5];
+		pts[0] = p1->get_cube_center();
+		cube_t c_exp(*p1);
+		c_exp.expand_by(expand*p1->get_size());
+
+		for (unsigned i = 0; i < 4; ++i) {
+			pts[i+1].assign(c_exp.d[0][i&1], c_exp.d[1][i>>1], 0.0); // XY only
+			do_xy_rotate(b.rot_sin, b.rot_cos, center1, pts[i+1]); // rotate into global space (pts[0] doesn't change)
+		}
+		for (unsigned i = 0; i < 5; ++i) {do_xy_rotate(-rot_sin, rot_cos, center2, pts[i]);} // inverse rotate into local coord space - negate the sine term
+		
+		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // Note: likely only one part at this point
+			for (unsigned i = 0; i < 5; ++i) {if (p2->contains_pt_xy(pts[i])) return 1;}
+		}
+	}
+	return 0;
 }
 
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only) const {
@@ -635,8 +664,9 @@ public:
 				++num_gen;
 
 				// check building for overlap with other buildings
+				float const expand(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
 				cube_t test_bc(b.bcube);
-				test_bc.expand_by((b.is_rotated() ? 0.02 : 0.1)*b.bcube.get_size()); // expand by 2-10%
+				test_bc.expand_by(expand*b.bcube.get_size());
 				sphere_t const bsphere(test_bc.get_bcylin()); // only care about XY radius
 				bool overlaps(0);
 				unsigned ixr[2][2];
@@ -650,17 +680,10 @@ public:
 						for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
 							assert(*g < buildings.size());
 							building_t const &ob(buildings[*g]);
-							bool const have_rot(b.is_rotated() || ob.is_rotated());
-
-							if (test_bc.intersects_xy(ob.bcube)) { // Note: only check for XY intersection
-								if (!have_rot || ob.check_sphere_coll(bsphere.pos, bsphere.radius, 1)) {
-									sphere_t const bsphere2(ob.bcube.get_bcylin());
-									if (!have_rot || b.check_sphere_coll(bsphere2.pos, bsphere2.radius, 1)) {overlaps = 1; break;}
-								}
-							}
+							if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand)) {overlaps = 1; break;}
 						}
-					}
-				}
+					} // for x
+				} // for y
 				if (!overlaps) {
 					mat.side_color.gen_color(b.side_color, rgen);
 					mat.roof_color.gen_color(b.roof_color, rgen);
@@ -721,7 +744,7 @@ public:
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
 		if (empty()) return;
-		//timer_t timer("Draw Buildings"); // 1.7ms, 2.3ms with shadow maps, 2.8ms with AO, 3.3s with rotations
+		//timer_t timer("Draw Buildings"); // 1.7ms, 2.3ms with shadow maps, 2.8ms with AO, 3.3s with rotations (currently 2.5)
 		float const far_clip(get_inf_terrain_fog_dist());
 		point const camera(get_camera_pos());
 		int const use_bmap(global_building_params.has_normal_map);
