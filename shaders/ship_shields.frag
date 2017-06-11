@@ -12,18 +12,23 @@ void main()
 {
 	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard;
-	vec3 time_v = 0.04*time*vec3(1.0, 1.2, 1.3);
-	float val  = 0.0;
-	float freq = 1.0;
+	vec3 time_v = 0.002*time*vec3(1.0, 1.2, 1.3);
+	float val   = 0.0;
+	float freq  = 1.0;
 
 	for (int i = 0; i < NUM_OCTAVES; ++i) { // use highly ridged noise
-		float v = texture(noise_tex, noise_scale*(freq*vertex + time_v)).r;
+		float v = texture(noise_tex, (noise_scale*freq*vertex + time_v)).r;
 		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
 		v = 1.0 - abs(v); // ridged noise in [0,1] range
 		val  += pow(v, 5.0)/freq;
 		freq *= 2.0;
 	}
-	texel.a *= 0.2 + 1.8*clamp(1.2*(val-0.4), 0.0, 1.0);
+	float noise_val = 0.2 + 1.8*clamp(1.2*(val-0.4), 0.0, 1.0);
+#ifdef LINE_MODE
+	texel.a *= mix(texel.a, noise_val, smoothstep(0.0, 1.0, min(1.0, 4.0*abs(tc.s - 0.5))));
+#else
+	texel.a *= noise_val;
+#endif
 	if (texel.a <= min_alpha) discard;
 	fg_FragColor = gl_Color * texel;
 }

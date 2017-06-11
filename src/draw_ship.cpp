@@ -136,7 +136,7 @@ bool usw_ray::either_end_visible() const {
 	//return (player_pdu.sphere_visible_test(p1, w1) || player_pdu.sphere_visible_test(p2, w2));
 }
 
-void usw_ray_group::draw() {
+void usw_ray_group::draw(bool add_noise) {
 
 	if (empty() && drawer.empty()) return;
 	//RESET_TIME;
@@ -148,7 +148,7 @@ void usw_ray_group::draw() {
 		point const *next((i+1 != end() && (i+1)->p1 == i->p2) ? &(i+1)->p2 : nullptr);
 		i->draw(drawer, prev, next);
 	}
-	drawer.draw_and_clear();
+	drawer.draw_and_clear(add_noise);
 	glDepthMask(GL_TRUE);
 	//PRINT_TIME("Ray Draw");
 }
