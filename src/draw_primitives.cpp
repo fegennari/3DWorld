@@ -963,20 +963,21 @@ int get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, p
 
 
 void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
-	point const* const prev, point const *const next, bool make_global)
+	point const* const prev, point const *const next, bool make_global, bool use_2d_tex_coords)
 {
 	//assert(color1.is_valid() && color2.is_valid()); // validate
 	if (prev || next) {assert(w1 > 0.0 && w2 > 0.0);} else {assert(w1 >= 0.0 && w2 >= 0.0);}
 	point pts[5];
 	int const npts(get_line_as_quad_pts(p1, p2, w1, w2, pts));
+	float const tc1(use_2d_tex_coords ? 0.0 : 0.5), tc2(use_2d_tex_coords ? 1.0 : 0.5);
 	if (npts == 0) return;
 
 	if (npts == 3) { // single triangle
 		assert(!prev && !next);
-		if (make_global) {for (unsigned i = 0; i < 3; ++i) {pts[i] = make_pt_global(pts[i]);}}
-		verts.emplace_back(pts[0], 0.0, 0.5, color1);
-		verts.emplace_back(pts[1], ((w1 == 0.0) ? 1.0 : 0.0), 0.5, ((w1 == 0.0) ? color2 : color1));
-		verts.emplace_back(pts[2], 1.0, 0.5, color2);
+		if (make_global) {UNROLL_3X(pts[i_] = make_pt_global(pts[i_]);)}
+		verts.emplace_back(pts[0], 0.0, tc1, color1);
+		verts.emplace_back(pts[1], ((w1 == 0.0) ? 1.0 : 0.0), ((w1 == 0.0) ? tc2 : tc1), ((w1 == 0.0) ? color2 : color1));
+		verts.emplace_back(pts[2], 1.0, tc2, color2);
 		return;
 	}
 	if (prev && *prev != p1) {
@@ -992,15 +993,15 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	pts[4] = p2;
 	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
 	color_wrapper cw1, cw2; cw1.set_c4(color1); cw2.set_c4(color2);
-	verts.emplace_back(pts[2], 0.0, 0.5, cw2.c);
-	verts.emplace_back(pts[1], 0.0, 0.5, cw1.c);
-	verts.emplace_back(pts[4], 0.5, 0.5, cw2.c);
+	verts.emplace_back(pts[2], 0.0, tc2, cw2.c);
+	verts.emplace_back(pts[1], 0.0, tc1, cw1.c);
+	verts.emplace_back(pts[4], 0.5, tc2, cw2.c);
 	verts.push_back(verts.back()); // duplicate
-	verts.emplace_back(pts[1], 0.0, 0.5, cw1.c);
-	verts.emplace_back(pts[0], 1.0, 0.5, cw1.c);
+	verts.emplace_back(pts[1], 0.0, tc1, cw1.c);
+	verts.emplace_back(pts[0], 1.0, tc1, cw1.c);
 	verts.push_back(verts.back()); // duplicate
-	verts.emplace_back(pts[3], 1.0, 0.5, cw2.c);
-	verts.emplace_back(pts[4], 0.5, 0.5, cw2.c);
+	verts.emplace_back(pts[3], 1.0, tc2, cw2.c);
+	verts.emplace_back(pts[4], 0.5, tc2, cw2.c);
 }
 
 

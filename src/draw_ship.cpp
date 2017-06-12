@@ -126,9 +126,9 @@ void draw_and_update_engine_trails(line_tquad_draw_t &drawer) {
 // ******************* USW_RAY, and SHIP_COLL_OBJ classes *******************
 
 
-void usw_ray::draw(line_tquad_draw_t &drawer, point const *prev, point const *next) const {
+void usw_ray::draw(line_tquad_draw_t &drawer, point const *prev, point const *next, bool noise_mode) const {
 	// use single sided cylinder with 1D blur rotated towards camera
-	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, prev, next, 1);
+	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, prev, next, 1, (0 && noise_mode));
 }
 
 bool usw_ray::either_end_visible() const {
@@ -146,7 +146,7 @@ void usw_ray_group::draw(bool add_noise) {
 	for (const_iterator i = begin(); i != end(); ++i) {
 		point const *prev((i != begin() && (i-1)->p2 == i->p1) ? &(i-1)->p1 : nullptr);
 		point const *next((i+1 != end() && (i+1)->p1 == i->p2) ? &(i+1)->p2 : nullptr);
-		i->draw(drawer, prev, next);
+		i->draw(drawer, prev, next, add_noise);
 	}
 	drawer.draw_and_clear(add_noise);
 	glDepthMask(GL_TRUE);

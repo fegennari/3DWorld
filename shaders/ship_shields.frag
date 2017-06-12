@@ -10,11 +10,13 @@ in vec3 vertex;
 
 void main()
 {
+	//vec2 tc2 = vec2(tc.s, 0.5); // for line mode 2D TCs
 	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard;
 	vec3 time_v = 0.002*time*vec3(1.0, 1.2, 1.3);
 	float val   = 0.0;
 	float freq  = 1.0;
+	//vec3 pos = vec3(0.001*tc.s, 0.005*tc.t, 1.0); // for line mode noise stretch
 
 	for (int i = 0; i < NUM_OCTAVES; ++i) { // use highly ridged noise
 		float v = texture(noise_tex, (noise_scale*freq*vertex + time_v)).r;
