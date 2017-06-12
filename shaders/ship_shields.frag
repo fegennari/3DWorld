@@ -25,7 +25,9 @@ void main()
 	}
 	float noise_val = 0.2 + 1.8*clamp(1.2*(val-0.4), 0.0, 1.0);
 #ifdef LINE_MODE
-	texel.a *= mix(texel.a, noise_val, smoothstep(0.0, 1.0, min(1.0, 4.0*abs(tc.s - 0.5))));
+	float line_pos  = abs(tc.s - 0.5); // 0 at line center, 1 at line edge
+	float noise_amp = min(4.0*length(fg_ModelViewProjectionMatrix * vec4(vertex, 1.0)), 1.0); // attenuate with distance to reduce noise
+	texel.a *= mix(mix(texel.a, noise_val, smoothstep(0.0, 1.0, min(1.0, 4.0*line_pos))), 1.0, noise_amp);
 #else
 	texel.a *= noise_val;
 #endif
