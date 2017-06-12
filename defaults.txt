@@ -29,4 +29,5 @@ mapx/config_mapx.txt
 #config_museum.txt
 #config_museum_tt_model.txt
 #config_puzzle.txt
+#config_buildings.txt
 
