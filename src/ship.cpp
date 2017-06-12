@@ -33,7 +33,7 @@ vector<cached_obj> c_uobjs_lit; // lit objects, used for lighting
 vector<ship_explosion> exploding;
 vector<free_obj const *> a_targets(NUM_ALIGNMENT, NULL), attackers(NUM_ALIGNMENT, NULL);
 vector<cached_obj> c_uobjs;
-usw_ray_group t_wrays; // beams and engine trails
+usw_ray_group trail_rays, beam_rays; // engine trails, beams
 vector<temp_source> temp_sources;
 pt_line_drawer particle_pld;
 point_sprite_drawer_sized glow_psd;
@@ -354,7 +354,7 @@ void apply_univ_physics() {
 	if (show_framerate) show_stats();
 	unsigned nsh(0), npr(0), npa(0); // testing
 	RESET_TIME;
-	if (animate2) {t_wrays.resize(0);}
+	if (animate2) {trail_rays.clear(); beam_rays.clear();}
 	player_ship().fix_upv();
 	purge_old_objs();
 	if (TIMETEST) PRINT_TIME("  Purge");
@@ -693,7 +693,7 @@ public:
 		}
 		for (unsigned i = 0; i < pts.size(); ++i) {
 			if (!is_valid_pos(pts[i], camera)) {gen_pos(pts[i], camera, vnorm);}
-			t_wrays.push_back(usw_ray(width, width, pts[i], (pts[i] - length*vnorm), GRAY, GRAY));
+			trail_rays.push_back(usw_ray(width, width, pts[i], (pts[i] - length*vnorm), GRAY, GRAY));
 		}
 	}
 };
@@ -911,8 +911,9 @@ void draw_univ_objects() {
 	disable_blend();
 	set_additive_blend_mode();
 	maybe_draw_motion_dust();
-	draw_and_update_engine_trails(t_wrays.drawer);
-	t_wrays.draw(); // draw beam weapons, engine trails, and lightning
+	draw_and_update_engine_trails(trail_rays.drawer);
+	trail_rays.draw(0); // draw engine trails
+	beam_rays.draw(1); // draw beam weapons and lightning
 	set_std_blend_mode();
 	add_nearby_uobj_text(text_drawer); // only if show_scores?
 	text_drawer.draw();

@@ -25,7 +25,7 @@ string const spaceship2_tex_nm = "normal_maps/spaceship2_NRM.jpg";
 
 extern int display_mode, animate2, frame_counter; // for testing, etc.
 extern float fticks;
-extern usw_ray_group t_wrays;
+extern usw_ray_group trail_rays, beam_rays;
 extern point_sprite_drawer_sized glow_psd;
 extern shader_t emissive_shader;
 
@@ -392,7 +392,7 @@ void uobj_draw_data::draw_engine_trail(int eix, point const &offset, float width
 		if (ndiv > 3) {engine_trail_drawer.add_trail_pt(obj, eix, pos2, beamwidth, color, 0.5);}
 	}
 	else {
-		t_wrays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, (pos2 - delta), color, ALPHA0));
+		trail_rays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, (pos2 - delta), color, ALPHA0));
 	}
 }
 
@@ -610,7 +610,7 @@ void uobj_draw_data::draw_usw_emp() const {
 
 void add_lightning_wray(float width, point const &p1, point const &p2) {
 
-	//t_wrays.push_back(usw_ray(width, width, p1, p2, LITN_C, ALPHA0));
+	//beam_rays.push_back(usw_ray(width, width, p1, p2, LITN_C, ALPHA0));
 	unsigned const num_segments((rand()&7)+1);
 	float const ns_inv(1.0/num_segments);
 	point cur(p1);
@@ -630,7 +630,7 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 			w[d] = (1.0 - 0.5*(i+d)*ns_inv)*width;
 		}
 		point const next(cur + delta);
-		t_wrays.push_back(usw_ray(w[0], w[1], cur, next, c[0], c[1]));
+		beam_rays.push_back(usw_ray(w[0], w[1], cur, next, c[0], c[1]));
 		cur = next;
 		// create recursive forks?
 	}

@@ -39,7 +39,7 @@ extern float fticks;
 extern double tfticks;
 extern colorRGBA sun_color;
 extern vector<us_weapon> us_weapons;
-extern usw_ray_group t_wrays;
+extern usw_ray_group trail_rays;
 
 shader_t cached_voxel_shaders[9]; // one for each value of num_lights (0-8)
 shader_t cached_proc_shaders [9];
@@ -1660,7 +1660,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 					vector3d const dir(radius*rgen.signed_rand_vector());
 					point const pos2(pos + 30.0*radius*rgen.rand_uniform(0.75, 1.0)*(pos - sun_pos).get_norm() + 2.0*dir);
 					float const width(rgen.rand_uniform(0.5, 1.0));
-					t_wrays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color, color2));
+					trail_rays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color, color2));
 				}
 			}
 			if (temperature > 2.0 && ddata.ndiv > 6) { // dust tail follows velocity/path
