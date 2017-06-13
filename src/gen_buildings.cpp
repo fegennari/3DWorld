@@ -55,10 +55,11 @@ struct color_range_t {
 struct building_mat_t : public building_tex_params_t {
 
 	unsigned min_levels, max_levels;
+	float min_alt, max_alt;
 	color_range_t side_color, roof_color;
 	cube_t sz_range;
 
-	building_mat_t() : min_levels(1), max_levels(1), sz_range(1,1,1,1,1,1) {}
+	building_mat_t() : min_levels(1), max_levels(1), min_alt(-1000), max_alt(1000), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 };
 
@@ -146,6 +147,12 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "size_range") {
 		if (!read_cube(fp, global_building_params.cur_mat.sz_range)) {buildings_file_err(str, error);}
+	}
+	else if (str == "min_altitude") {
+		if (!read_float(fp, global_building_params.cur_mat.min_alt)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_altitude") {
+		if (!read_float(fp, global_building_params.cur_mat.max_alt)) {buildings_file_err(str, error);}
 	}
 	// material textures
 	else if (str == "side_tscale") {
@@ -658,7 +665,9 @@ public:
 					b.bcube.d[d][1] = center[d] + sz;
 				} // for d
 				++num_tries;
-				if (center.z < def_water_level) break; // skip underwater buildings, failed placement
+				float const z_sea_level(center.z - def_water_level);
+				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
+				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break;
 				b.gen_rotation(rgen);
 				++num_gen;
 

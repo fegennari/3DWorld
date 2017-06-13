@@ -9,6 +9,9 @@ buildings min_level_height 0.25
 buildings ao_factor 0.4
 buildings max_rot_angle 90.0
 
+buildings min_altitude 0.05 # slightly above sea level
+buildings max_altitude 4.00 # same for all buildings
+
 # brick buildings
 buildings min_levels 1
 buildings max_levels 3
