@@ -268,34 +268,92 @@ class building_draw_t {
 
 	struct draw_block_t {
 		tid_nm_pair_t tex;
-		vector<vert_norm_comp_tc_color> verts;
+		vector<vert_norm_comp_tc_color> quad_verts, tri_verts;
 
-		void draw_verts(bool shadow_only, int force_tid=-1) {
+		void draw_geom(bool shadow_only, int force_tid=-1) {
 			if (empty()) return;
 			if (force_tid >= 0) {select_texture(force_tid); select_multitex(FLAT_NMAP_TEX, 5);} // no normal map
 			else if (!shadow_only) {tex.set_gl();}
-			draw_quad_verts_as_tris(verts);
+			draw_quad_verts_as_tris(quad_verts);
+			draw_verts(tri_verts, GL_TRIANGLES);
 		}
-		void draw_and_clear(bool shadow_only, int force_tid=-1) {draw_verts(shadow_only, force_tid); clear();}
-		void clear() {verts.clear();}
-		bool empty() const {return verts.empty();}
+		void draw_and_clear(bool shadow_only, int force_tid=-1) {draw_geom(shadow_only, force_tid); clear();}
+		void clear() {quad_verts.clear(); tri_verts.clear();}
+		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
 	};
 	vector<draw_block_t> to_draw, pend_draw; // one per texture, assumes tids are dense
 
-	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex) {
+	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
 		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
-		if (to_draw[ix].empty()) {to_draw[ix].tex = tex;} // copy material first time
-		else {assert(to_draw[ix].tex.nm_tid == tex.nm_tid);} // else normal maps must agree
-		return to_draw[ix].verts;
+		draw_block_t &block(to_draw[ix]);
+		if (block.empty()) {block.tex = tex;} // copy material first time
+		else {assert(block.tex.nm_tid == tex.nm_tid);} // else normal maps must agree
+		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
+	vector<vector3d> normals; // reused across add_cylinder() calls
 public:
+	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos,
+		unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, unsigned dim_mask)
+	{
+		// FIXME: AO?
+		auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
+		ndiv = max(ndiv, 4U);
+		float const ndiv_inv(1.0/ndiv);
+		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
+		vert_norm_comp_tc_color vert;
+		vert.set_c4(color); // color is shared across all verts
+
+		if (dim_mask & 3) { // draw sides
+			float const css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
+			float sin_s(0.0), cos_s(1.0);
+			normals.resize(ndiv);
+
+			for (unsigned S = 0; S < ndiv; ++S) { // build normals table
+				float const s(sin_s), c(cos_s);
+				normals[S].assign(s, c, 0.0);
+				sin_s = s*cos_ds + c*sin_ds;
+				cos_s = c*cos_ds - s*sin_ds;
+			}
+			for (unsigned S = 0; S < ndiv; ++S) { // generated vertex data
+				for (unsigned d = 0; d < 2; ++d) {
+					vector3d const &n(normals[(S+d)%ndiv]);
+
+					if (!shadow_only) {
+						vert.set_norm(n);
+						vert.t[0] = texture_scale*((S+d)*ndiv_inv); // texture_scale should be a multiple of 1.0
+					}
+					for (unsigned e = 0; e < 2; ++e) {
+						vert.v.x  = pos.x + rx*n.x;
+						vert.v.y  = pos.y + ry*n.y;
+						vert.v.z  = ((d^e) ? pos.z : pos.z+height);
+						if (!shadow_only) {vert.t[1] = texture_scale*(d^e);}
+						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, rot_center, vert.v);}
+						verts.push_back(vert);
+					}
+				}
+			}
+		}
+		if (dim_mask & 4) { // draw end(s)
+			auto &tri_verts(get_verts(tex, 1));
+			// WRITE
+		}
+	}
 	void add_cube(cube_t const &cube, float rot_sin, float rot_cos, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
 		bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
+		point center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
+#if 0 // for debugging
+		vector3d const sz(cube.get_size());
+		if (sz.z > sz.x + sz.y) { // tall and thin building
+			point const ccenter(cube.get_cube_center());
+			float const rscale(0.5*SQRT2);
+			add_cylinder(point(ccenter.x, ccenter.y, cube.d[2][0]), center, sz.z, rscale*sz.x, rscale*sz.y, rot_sin, rot_cos, N_CYL_SIDES, tex, color, shadow_only, dim_mask);
+			return;
+		}
+#endif
 		auto &verts(get_verts(tex));
 		vector3d const scale(cube.get_size()), xlate(cube.get_llc()); // move origin from center to min corner
-		point center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
 		vert_norm_comp_tc_color vert;
 
 		if (shadow_only) {
