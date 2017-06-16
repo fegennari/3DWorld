@@ -257,7 +257,7 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 
 
 #define EMIT_VERTEX() \
-	vert.v = pt*scale + xlate; \
+	vert.v = pt*scale + llc; \
 	vert.t[ st] = texture_scale*vert.v[d]; \
 	vert.t[!st] = texture_scale*vert.v[i]; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
@@ -291,69 +291,105 @@ class building_draw_t {
 		else {assert(block.tex.nm_tid == tex.nm_tid);} // else normal maps must agree
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
+	static void setup_ao_color(colorRGBA const &color, cube_t const &bcube, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert) {
+		if (global_building_params.ao_factor > 0.0) {
+			float const dz_mult(global_building_params.ao_factor/(bcube.d[2][1] - bcube.d[2][0]));
+			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcube.d[2][0])));)
+		} else {vert.set_c4(color);} // color is shared across all verts
+	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
 public:
-	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos,
-		unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, unsigned dim_mask)
+	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos, point const &xlate,
+		cube_t const &bcube, unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
-		// FIXME: AO?
-		auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
+		float const dist(distance_to_camera(pos + xlate));
+		ndiv = min(ndiv, unsigned(1000.0*max(rx, ry)/dist));
 		ndiv = max(ndiv, 4U);
-		float const ndiv_inv(1.0/ndiv);
-		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
+		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
+		bool const apply_ao(!shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
-		vert.set_c4(color); // color is shared across all verts
+		color_wrapper cw[2];
+		setup_ao_color(color, bcube, pos.z, z_top, cw, vert);
+		float const css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
+		float sin_s(0.0), cos_s(1.0), tex_pos[2] = {0.0, 1.0};
+		normals.resize(ndiv);
 
+		if (!shadow_only) {
+			float const dz_inv(1.0/(bcube.d[2][1] - bcube.d[2][0]));
+			UNROLL_2X(tex_pos[i_] = dz_inv*((i_ ? z_top : pos.z) - bcube.d[2][0]);)
+		}
+		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
+			float const s(sin_s), c(cos_s);
+			normals[S].assign(s, c, 0.0);
+			sin_s = s*cos_ds + c*sin_ds;
+			cos_s = c*cos_ds - s*sin_ds;
+		}
 		if (dim_mask & 3) { // draw sides
-			float const css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
-			float sin_s(0.0), cos_s(1.0);
-			normals.resize(ndiv);
+			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
 
-			for (unsigned S = 0; S < ndiv; ++S) { // build normals table
-				float const s(sin_s), c(cos_s);
-				normals[S].assign(s, c, 0.0);
-				sin_s = s*cos_ds + c*sin_ds;
-				cos_s = c*cos_ds - s*sin_ds;
-			}
-			for (unsigned S = 0; S < ndiv; ++S) { // generated vertex data
+			for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
 				for (unsigned d = 0; d < 2; ++d) {
 					vector3d const &n(normals[(S+d)%ndiv]);
 
 					if (!shadow_only) {
-						vert.set_norm(n);
+						vector3d normal(n);
+						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, all_zeros, normal);}
+						vert.set_norm(normal);
 						vert.t[0] = texture_scale*((S+d)*ndiv_inv); // texture_scale should be a multiple of 1.0
 					}
 					for (unsigned e = 0; e < 2; ++e) {
-						vert.v.x  = pos.x + rx*n.x;
-						vert.v.y  = pos.y + ry*n.y;
-						vert.v.z  = ((d^e) ? pos.z : pos.z+height);
-						if (!shadow_only) {vert.t[1] = texture_scale*(d^e);}
+						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), ((d^e) ? z_top : pos.z));
+						if (!shadow_only) {vert.t[1] = texture_scale*tex_pos[d^e];}
+						if (apply_ao) {vert.copy_color(cw[d^e]);}
 						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, rot_center, vert.v);}
 						verts.push_back(vert);
 					}
-				}
-			}
-		}
+				} // for d
+			} // for S
+		} // end draw sides
 		if (dim_mask & 4) { // draw end(s)
 			auto &tri_verts(get_verts(tex, 1));
-			// WRITE
-		}
+			
+			for (unsigned d = 0; d < 2; ++d) { // bottom, top
+				if ((view_dir.z < 0.0) ^ d) continue; // back facing
+				float const zval(d ? z_top : pos.z);
+				vert.set_norm(d ? plus_z : -plus_z);
+				if (apply_ao) {vert.copy_color(cw[d]);}
+				vert_norm_comp_tc_color center(vert);
+				center.t[0] = center.t[1] = 0.0; // center of texture space for this disk
+				center.v = pos;
+				if (d) {center.v.z += height;}
+				if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, rot_center, center.v);}
+
+				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data triangles
+					tri_verts.push_back(center);
+
+					for (unsigned e = 0; e < 2; ++e) {
+						vector3d const &n(normals[(S+e)%ndiv]);
+						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), center.v.z);
+						if (!shadow_only) {UNROLL_2X(vert.t[i_] = texture_scale*n[i_];)}
+						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, rot_center, vert.v);}
+						tri_verts.push_back(vert);
+					}
+				} // for S
+			} // for d
+		} // end draw end(s)
 	}
-	void add_cube(cube_t const &cube, float rot_sin, float rot_cos, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
-		bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
+	void add_cube(cube_t const &cube, float rot_sin, float rot_cos, point const &xlate, cube_t const &bcube, tid_nm_pair_t const &tex,
+		colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
 		point center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
 #if 0 // for debugging
-		vector3d const sz(cube.get_size());
-		if (sz.z > sz.x + sz.y) { // tall and thin building
-			point const ccenter(cube.get_cube_center());
-			float const rscale(0.5*SQRT2);
-			add_cylinder(point(ccenter.x, ccenter.y, cube.d[2][0]), center, sz.z, rscale*sz.x, rscale*sz.y, rot_sin, rot_cos, N_CYL_SIDES, tex, color, shadow_only, dim_mask);
+		vector3d const sz(cube.get_size()), bcube_sz(bcube.get_size());
+		if (bcube_sz.z > 0.5*(bcube_sz.x + bcube_sz.y)) {
+			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.d[2][0]);
+			float const rscale(0.5*sqrt(SQRT2));
+			add_cylinder(pos, center, sz.z, rscale*sz.x, rscale*sz.y, rot_sin, rot_cos, xlate, bcube, N_CYL_SIDES, tex, color, shadow_only, view_dir, dim_mask);
 			return;
 		}
 #endif
 		auto &verts(get_verts(tex));
-		vector3d const scale(cube.get_size()), xlate(cube.get_llc()); // move origin from center to min corner
+		vector3d const scale(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
 
 		if (shadow_only) {
@@ -367,7 +403,7 @@ public:
 						pt[d] = s1;
 						for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 							pt[i]  = k^j^s1^1; // need to orient the vertices differently for each side
-							vert.v = pt*scale + xlate;
+							vert.v = pt*scale + llc;
 							if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);}
 							verts.push_back(vert);
 						}
@@ -376,15 +412,10 @@ public:
 			} // for i
 			return;
 		}
-		bool const apply_ao(global_building_params.ao_factor > 0.0);
 		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
+		bool const apply_ao(global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
-
-		if (apply_ao) {
-			float const dz_mult(global_building_params.ao_factor/(bcube.d[2][1] - bcube.d[2][0]));
-			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*(cube.d[2][i_] - bcube.d[2][0])));)
-		}
-		else {vert.set_c4(color);} // color is shared across all verts
+		setup_ao_color(color, bcube, cube.d[2][0], cube.d[2][1], cw, vert);
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3);
@@ -622,9 +653,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 			if (!shadow_only && is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
-		bdraw.add_cube(*i, rot_sin, rot_cos, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
+		bdraw.add_cube(*i, rot_sin, rot_cos, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
 		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		bdraw.add_cube(*i, rot_sin, rot_cos, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
+		bdraw.add_cube(*i, rot_sin, rot_cos, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
