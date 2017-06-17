@@ -12,9 +12,16 @@ buildings max_rot_angle 90.0
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings
 
+# shapes
+buildings min_sides 4 # cubes
+buildings max_sides 4
+buildings round_prob 0.0
+
+
 # brick buildings
 buildings min_levels 1
 buildings max_levels 3
+buildings split_prob 0.70 # 70%
 buildings size_range 0.4 0.8  0.4 0.8  0.3 1.0
 
 buildings side_tscale 2.0
@@ -68,6 +75,7 @@ buildings add_material
 # concrete and metal buildings - slightly larger
 buildings min_levels 1
 buildings max_levels 5
+buildings split_prob 0.60 # 60%
 buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
 
 buildings side_tscale 8.0
@@ -110,11 +118,16 @@ buildings add_material
 # metal/glass buildings - taller
 buildings min_levels 1
 buildings max_levels 8
+buildings split_prob 0.50 # 50%
 buildings size_range 0.5 1.0  0.5 1.0  1.0 4.0
 buildings side_tscale 2.0
 buildings side_nm_tid -1
 buildings roof_color 0.2 0.2 0.2 1.0
 buildings roof_color_grayscale_rand 0.25
+buildings min_sides 3 # N-gons: triangles - octagons
+buildings max_sides 8
+buildings round_prob 0.25 # 25%
+buildings cube_prob 0.75 # 75% of non-round buildings
 buildings probability 2
 
 buildings side_tid buildings/apartment_windows.jpg # high quality

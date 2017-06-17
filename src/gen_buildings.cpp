@@ -14,8 +14,9 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// building instancing?
-// non-rectangular buildings
+// non-rectangular buildings:
+// - Cylinder collision detection
+// - multilevel cylinders and N-gons?
 
 struct tid_nm_pair_t {
 
@@ -54,12 +55,13 @@ struct color_range_t {
 
 struct building_mat_t : public building_tex_params_t {
 
-	unsigned min_levels, max_levels;
-	float min_alt, max_alt;
+	unsigned min_levels, max_levels, min_sides, max_sides;
+	float min_alt, max_alt, split_prob, cube_prob, round_prob;
 	color_range_t side_color, roof_color;
 	cube_t sz_range;
 
-	building_mat_t() : min_levels(1), max_levels(1), min_alt(-1000), max_alt(1000), sz_range(1,1,1,1,1,1) {}
+	building_mat_t() : min_levels(1), max_levels(1), min_sides(4), max_sides(4), min_alt(-1000), max_alt(1000),
+		split_prob(0.0), cube_prob(1.0), round_prob(0.0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 };
 
@@ -139,11 +141,28 @@ bool parse_buildings_option(FILE *fp) {
 		global_building_params.max_rot_angle *= TO_RADIANS; // specified in degrees, stored in radians
 	}
 	// material parameters
+	else if (str == "split_prob") {
+		if (!read_zero_one_float(fp, global_building_params.cur_mat.split_prob)) {buildings_file_err(str, error);}
+	}
+	else if (str == "cube_prob") {
+		if (!read_zero_one_float(fp, global_building_params.cur_mat.cube_prob)) {buildings_file_err(str, error);}
+	}
+	else if (str == "round_prob") {
+		if (!read_zero_one_float(fp, global_building_params.cur_mat.round_prob)) {buildings_file_err(str, error);}
+	}
 	else if (str == "min_levels") {
 		if (!read_uint(fp, global_building_params.cur_mat.min_levels)) {buildings_file_err(str, error);}
 	}
 	else if (str == "max_levels") {
 		if (!read_uint(fp, global_building_params.cur_mat.max_levels)) {buildings_file_err(str, error);}
+	}
+	else if (str == "min_sides") {
+		if (!read_uint(fp, global_building_params.cur_mat.min_sides)) {buildings_file_err(str, error);}
+		if (global_building_params.cur_mat.min_sides < 3) {buildings_file_err(str+" (< 3)", error);}
+	}
+	else if (str == "max_sides") {
+		if (!read_uint(fp, global_building_params.cur_mat.max_sides)) {buildings_file_err(str, error);}
+		if (global_building_params.cur_mat.max_sides < 3) {buildings_file_err(str+" (< 3)", error);}
 	}
 	else if (str == "size_range") {
 		if (!read_cube(fp, global_building_params.cur_mat.sz_range)) {buildings_file_err(str, error);}
@@ -221,16 +240,18 @@ class building_draw_t;
 
 struct building_t {
 
-	unsigned mat_ix;
+	unsigned mat_ix, num_sides;
 	float rot_sin, rot_cos; // in XY plane, around Z (up) axis
 	colorRGBA side_color, roof_color;
 	cube_t bcube;
 	vector<cube_t> parts;
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), rot_sin(0.0), rot_cos(1.0), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), num_sides(4), rot_sin(0.0), rot_cos(1.0), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid  () const {return !bcube.is_all_zeros();}
 	bool is_rotated() const {return (rot_sin != 0.0);}
+	bool is_cube()    const {return (num_sides == 4);}
+	bool use_cylinder_coll() const {return !is_cube();} // use cylinder collision if not a cube (approximate)
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
 	bool check_bcube_overlap_xy(building_t const &b, float expand) const {
@@ -257,7 +278,7 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 
 
 #define EMIT_VERTEX() \
-	vert.v = pt*scale + llc; \
+	vert.v = pt*sz + llc; \
 	vert.t[ st] = texture_scale*vert.v[d]; \
 	vert.t[!st] = texture_scale*vert.v[i]; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
@@ -303,15 +324,16 @@ public:
 		cube_t const &bcube, unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
 		float const dist(distance_to_camera(pos + xlate));
-		ndiv = min(ndiv, unsigned(1000.0*max(rx, ry)/dist));
-		ndiv = max(ndiv, 4U);
+		ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U);
 		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
 		bool const apply_ao(!shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, pos.z, z_top, cw, vert);
 		float const css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
-		float sin_s(0.0), cos_s(1.0), tex_pos[2] = {0.0, 1.0};
+		//float sin_s(sin(0.5*css)), cos_s(cos(0.5*css)); // start at half step - useful for cubes
+		float sin_s(0.0), cos_s(1.0); // start at 0 - more efficient
+		float tex_pos[2] = {0.0, 1.0};
 		normals.resize(ndiv);
 
 		if (!shadow_only) {
@@ -375,21 +397,23 @@ public:
 			} // for d
 		} // end draw end(s)
 	}
-	void add_cube(cube_t const &cube, float rot_sin, float rot_cos, point const &xlate, cube_t const &bcube, tid_nm_pair_t const &tex,
-		colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
+	void add_section(cube_t const &cube, unsigned num_sides, float rot_sin, float rot_cos, point const &xlate, cube_t const &bcube,
+		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
-		point center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
-#if 0 // for debugging
-		vector3d const sz(cube.get_size()), bcube_sz(bcube.get_size());
-		if (bcube_sz.z > 0.5*(bcube_sz.x + bcube_sz.y)) {
+		assert(num_sides >= 3); // must be nonzero volume
+		point const center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
+		vector3d const sz(cube.get_size());
+
+		if (num_sides != 4) { // not a cube, use cylinder
+			vector3d const bcube_sz(bcube.get_size());
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.d[2][0]);
-			float const rscale(0.5*sqrt(SQRT2));
-			add_cylinder(pos, center, sz.z, rscale*sz.x, rscale*sz.y, rot_sin, rot_cos, xlate, bcube, N_CYL_SIDES, tex, color, shadow_only, view_dir, dim_mask);
+			float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
+			add_cylinder(pos, center, sz.z, rscale*sz.x, rscale*sz.y, rot_sin, rot_cos, xlate, bcube, num_sides, tex, color, shadow_only, view_dir, dim_mask);
 			return;
 		}
-#endif
+		// else draw as a cube (optimized flow)
 		auto &verts(get_verts(tex));
-		vector3d const scale(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
+		vector3d const llc(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
 
 		if (shadow_only) {
@@ -403,7 +427,7 @@ public:
 						pt[d] = s1;
 						for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 							pt[i]  = k^j^s1^1; // need to orient the vertices differently for each side
-							vert.v = pt*scale + llc;
+							vert.v = pt*sz + llc;
 							if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);}
 							verts.push_back(vert);
 						}
@@ -463,7 +487,7 @@ public:
 #endif
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
 	}
-	void begin_immediate_building() { // to be called before any add_cube() calls
+	void begin_immediate_building() { // to be called before any add_section() calls
 		pend_draw.swap(to_draw); // move current draw queue to pending queue
 	}
 	void end_immediate_building(bool shadow_only) { // to be matched with begin_building()
@@ -555,6 +579,10 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	vector3d cnorm; // unused
 	unsigned cdir(0); // unused
 	if (!sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
+
+	if (use_cylinder_coll()) {
+		// FIXME: WRITE
+	}
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0);
 	
@@ -582,19 +610,30 @@ void building_t::gen_geometry(unsigned ix) {
 	cube_t const base(parts.empty() ? bcube : parts.back());
 	parts.clear(); // just in case
 	building_mat_t const &mat(get_material());
-	// use ix value as the seed/hash; at least one level
-	unsigned num_levels(mat.min_levels);
-	if (mat.min_levels < mat.max_levels) {num_levels += ix%(mat.max_levels - mat.min_levels + 1);}
-	if (global_building_params.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.get_size().z/global_building_params.min_level_height)));}
-	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	rand_gen_t rgen;
 	rgen.set_state(123+ix, 345*ix);
 
+	// determine building shape (cube, cylinder, other)
+	if (rgen.rand_probability(mat.round_prob)) {num_sides = N_CYL_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
+	else if (rgen.rand_probability(mat.cube_prob)) {num_sides = 4;} // cube
+	else { // N-gon
+		num_sides = mat.min_sides;
+		if (mat.min_sides != mat.max_sides) {num_sides += (rgen.rand() % (1 + abs((int)mat.max_sides - (int)mat.min_sides)));}
+	}
+
+	// determine the number of levels and splits
+	unsigned num_levels(mat.min_levels);
+	if (mat.min_levels < mat.max_levels && is_cube()) {num_levels += rgen.rand()%(mat.max_levels - mat.min_levels + 1);} // only cubes are multilevel (unless min_level > 1)
+	if (global_building_params.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.get_size().z/global_building_params.min_level_height)));}
+	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
+	bool const do_split(num_levels < 4 && is_cube() && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
+
 	if (num_levels == 1) { // single level
-		if (rgen.rand()%3) {split_in_xy(base, rgen);} // generate L, T, or U shape 67% of the time
+		if (do_split) {split_in_xy(base, rgen);} // generate L, T, or U shape
 		else {parts.push_back(base);} // single part, entire cube
 		return; // for now the bounding cube
 	}
+	// generate building levels and splits
 	parts.resize(num_levels);
 	float const height(base.d[2][1] - base.d[2][0]), dz(height/num_levels);
 
@@ -621,7 +660,7 @@ void building_t::gen_geometry(unsigned ix) {
 		parts[i  ].d[2][0] += ddz;
 		parts[i-1].d[2][1] += ddz;
 	}
-	if (num_levels < 4 && rgen.rand_bool()) { // generate L, T, or U shape 50% of the time
+	if (do_split) { // generate L, T, or U shape
 		cube_t const split_cube(parts.back());
 		parts.pop_back();
 		split_in_xy(split_cube, rgen);
@@ -653,9 +692,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 			if (!shadow_only && is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
-		bdraw.add_cube(*i, rot_sin, rot_cos, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
+		bdraw.add_section(*i, num_sides, rot_sin, rot_cos, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
 		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		bdraw.add_cube(*i, rot_sin, rot_cos, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
+		bdraw.add_section(*i, num_sides, rot_sin, rot_cos, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }

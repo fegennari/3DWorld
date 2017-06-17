@@ -1385,6 +1385,7 @@ public:
 	unsigned rand_uniform_uint(unsigned min_val, unsigned max_val) {assert(min_val <= max_val); return (min_val + (rand() % (max_val - min_val + 1)));}
 	float rgauss() {return gauss_rand_arr[rand()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
 	float rand_gaussian(float mean, float std_dev) {return mean + std_dev*rgauss();}
+	bool rand_probability(float prob) {return (prob >= 1.0 || (prob > 0.0 && rand_float() < prob));}
 	vector3d rand_vector(float scale=1.0);
 	vector3d signed_rand_vector(float scale=1.0);
 	vector3d signed_rand_vector_xy(float scale=1.0);
