@@ -1983,7 +1983,7 @@ bool parse_voxel_option(FILE *fp) {
 		if (!read_float(fp, global_voxel_params.isolevel)) voxel_file_err("isolevel", error);
 	}
 	else if (str == "elasticity") {
-		if (!read_float(fp, global_voxel_params.elasticity) || global_voxel_params.elasticity < 0.0) voxel_file_err("elasticity", error);
+		if (!read_zero_one_float(fp, global_voxel_params.elasticity)) voxel_file_err("elasticity", error);
 	}
 	else if (str == "tex_scale") {
 		if (!read_float(fp, global_voxel_params.tex_scale)) voxel_file_err("tex_scale", error);

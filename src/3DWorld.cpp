@@ -1863,7 +1863,7 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "bush_probability") {
 			for (unsigned i = 0; i < NUM_TREE_TYPES; ++i) { // read a list of floating-point numbers (could allow a partial set to be read)
-				if (!read_float(fp, tree_types[i].bush_prob)) {cfg_err("bush_probability command", error); break;}
+				if (!read_zero_one_float(fp, tree_types[i].bush_prob)) {cfg_err("bush_probability command", error); break;}
 			}
 		}
 		else if (str == "leaf_color") {
@@ -1899,7 +1899,7 @@ int load_config(string const &config_file) {
 			if (!read_str(fp, player_name)) cfg_err("player name", error);
 		}
 		else if (str == "model3d_alpha_thresh") {
-			if (!read_float(fp, model3d_alpha_thresh) || model3d_alpha_thresh < 0.0 || model3d_alpha_thresh > 1.0) cfg_err("model3d_alpha_thresh command", error);
+			if (!read_zero_one_float(fp, model3d_alpha_thresh)) cfg_err("model3d_alpha_thresh command", error);
 		}
 		else if (str == "create_voxel_landscape") {
 			if (!read_uint(fp, create_voxel_landscape) || create_voxel_landscape > 2) cfg_err("create_voxel_landscape command", error);
@@ -1945,7 +1945,7 @@ int load_config(string const &config_file) {
 			float rmz(0.0);
 			alloc_if_req(mesh_file, dmesh_file);
 			if (fscanf(fp, "%255s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) < 1) cfg_err("mesh_file command", error);
-			if (read_float(fp, rmz)) read_mesh_zmm = rmz;
+			if (read_float(fp, rmz)) {read_mesh_zmm = rmz;}
 		}
 		else if (str == "mh_filename") { // only the first parameter is required
 			alloc_if_req(mh_filename, NULL);

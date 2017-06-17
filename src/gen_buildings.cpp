@@ -134,7 +134,7 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_float(fp, global_building_params.min_level_height)) {buildings_file_err(str, error);}
 	}
 	else if (str == "ao_factor") {
-		if (!read_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
 	}
 	else if (str == "max_rot_angle") {
 		if (!read_float(fp, global_building_params.max_rot_angle)) {buildings_file_err(str, error);}

@@ -1206,7 +1206,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					cobj.set_reflective_flag(reflective == 2); // only for cube maps
 				}
 				else if (keyword == "metalness") {
-					if (!read_float(fp, cobj.cp.metalness)) {return read_error(fp, "metalness", coll_obj_file);}
+					if (!read_zero_one_float(fp, cobj.cp.metalness)) {return read_error(fp, "metalness", coll_obj_file);}
 				}
 				else if (keyword == "damage") {
 					if (!read_float(fp, cobj.cp.damage)) {return read_error(fp, "damage", coll_obj_file);}
