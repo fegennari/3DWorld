@@ -284,10 +284,8 @@ public:
 		grass_manager_t::clear();
 		mesh_to_grass_map.clear();
 	}
-
 	bool ao_lighting_too_low(point const &pos, rand_gen_pregen_t &rgen_) {
-		float const keep_prob(5.0*(get_voxel_terrain_ao_lighting_val(pos) - 0.8));
-		return (keep_prob < 0.0 || (keep_prob < 1.0 && rgen_.randd() > keep_prob)); // too dark
+		return !rgen_.rand_probability(5.0*(get_voxel_terrain_ao_lighting_val(pos) - 0.8)); // lower AO lighting, more likely to fail
 	}
 
 	void gen_grass() {

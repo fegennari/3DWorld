@@ -1396,9 +1396,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	}
 	else {
 		type = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
-		float const bush_prob(tree_types[type].bush_prob);
-		bool create_bush(0);
-		if (bush_prob > 0.0) {create_bush = (bush_prob >= 1.0 || rand_float2() < bush_prob);}
+		bool const create_bush(global_rand_gen.rand_probability(tree_types[type].bush_prob));
 		if (create_bush) {type = (type + 1) % NUM_TREE_TYPES;} // mix up the tree types so that bushes stand out from trees
 		tree_type const &treetype(tree_types[type]);
 		UNROLL_3X(tree_color[i_] = 1.0 + treetype.branch_color_var*color_var[i_];)
