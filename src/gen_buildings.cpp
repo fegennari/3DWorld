@@ -10,13 +10,17 @@
 
 using std::string;
 
+unsigned const MAX_CYLIN_SIDES = 36;
+
 extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // non-rectangular buildings:
-// - Cylinder collision detection
+// - N-gon collision detection
 // - multilevel cylinders and N-gons?
+// - place multiple cube at different heights
+// Line intersection with buildings
 
 struct tid_nm_pair_t {
 
@@ -262,6 +266,7 @@ struct building_t {
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only);
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only=0) const;
+	bool check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const;
 	void gen_geometry(unsigned ix);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 private:
@@ -579,10 +584,6 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	vector3d cnorm; // unused
 	unsigned cdir(0); // unused
 	if (!sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
-
-	if (use_cylinder_coll()) {
-		// FIXME: WRITE
-	}
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0);
 	
@@ -593,7 +594,23 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
-		if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
+
+		if (use_cylinder_coll()) {
+			if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
+			point const cc(i->get_cube_center() + xlate);
+			vector3d const csz(i->get_size());
+			float const r_sum(radius + 0.5*max(csz.x, csz.y)); // use conservative radius
+
+			if (dist_xy_less_than(pos2, cc, r_sum)) {
+				vector3d const dir(vector3d(pos2.x-cc.x, pos2.y-cc.y, 0.0).get_norm()); // xy dir
+				UNROLL_2X(pos2[i_] = cc[i_] + dir[i_]*r_sum;)
+				had_coll = 1;
+			}
+		}
+		else if (num_sides != 4) {
+			// FIXME: test planes for 3 or 5-8 sides
+		}
+		else if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
 			pos2 = p_int; // update current pos
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 		}
@@ -602,6 +619,31 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, pos2);} // rotate back
 	pos = pos2;
 	return had_coll;
+}
+
+bool building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const {
+
+	if (!check_line_clip(p1-xlate, p2-xlate, bcube.d)) return 0; // no intersection
+	point p1r(p1), p2r(p2);
+	float t_new(1.0), tmin(0.0), tmax(1.0);
+
+	if (is_rotated()) {
+		point const center(bcube.get_cube_center() + xlate);
+		do_xy_rotate(-rot_sin, rot_cos, center, p1r); // inverse rotate - negate the sine term
+		do_xy_rotate(-rot_sin, rot_cos, center, p2r);
+	}
+	p1r -= xlate; p2r -= xlate;
+
+	for (auto i = parts.begin(); i != parts.end(); ++i) {
+		if (use_cylinder_coll()) {
+			// FIXME: WRITE
+		}
+		else if (num_sides != 4) {
+			// FIXME: test planes for 3 or 5-8 sides
+		}
+		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax)) {t_new = min(t_new, tmin);}
+	}
+	return (t_new < 1.0);
 }
 
 void building_t::gen_geometry(unsigned ix) {
@@ -614,7 +656,7 @@ void building_t::gen_geometry(unsigned ix) {
 	rgen.set_state(123+ix, 345*ix);
 
 	// determine building shape (cube, cylinder, other)
-	if (rgen.rand_probability(mat.round_prob)) {num_sides = N_CYL_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
+	if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
 	else if (rgen.rand_probability(mat.cube_prob)) {num_sides = 4;} // cube
 	else { // N-gon
 		num_sides = mat.min_sides;
@@ -748,6 +790,9 @@ class building_creator_t {
 				get_grid_elem(x, y).add(bcube, bix);
 			}
 		}
+	}
+	vector3d const get_query_xlate() const {
+		return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
 	}
 
 public:
@@ -914,7 +959,7 @@ public:
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0) const {
 		if (empty()) return 0;
-		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
+		vector3d const xlate(get_query_xlate());
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
@@ -926,13 +971,35 @@ public:
 				if (!sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate))) continue;
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
-				for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
-					assert(*g < buildings.size());
-					if (buildings[*g].check_sphere_coll(pos, p_last, xlate, radius, xy_only)) return 1;
+				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
+					assert(*b < buildings.size());
+					if (buildings[*b].check_sphere_coll(pos, p_last, xlate, radius, xy_only)) return 1;
 				} // for g
 			} // for x
 		} // for y
 		return 0;
+	}
+
+	bool check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix) const {
+		if (empty()) return 0;
+		vector3d const xlate(get_query_xlate());
+		point end_pos(p2);
+		bool coll(0);
+		t = 1.0; // start at end point
+
+		// for now, just do a slow iteration over every grid element; still faster than checking every building
+		// Note: should probably iterate over the grid in XY order from the start to the end of the line, or better yet use a line drawing algorithm
+		for (auto g = grid.begin(); g != grid.end(); ++g) {
+			if (!check_line_clip(p1, end_pos, g->bcube.d)) continue; // no intersection - skip this grid
+
+			for (auto b = g->ixs.begin(); b != g->ixs.end(); ++b) { // Note: okay to check the same building more than once
+				float t_new(t);
+				assert(*b < buildings.size());
+				if (!buildings[*b].check_line_coll(p1, p2, xlate, t_new)) continue; // no intersection - skip this building
+				if (t_new <= t) {t = t_new; hit_bix = *b; coll = 1; end_pos = p1 + t*(p2 - p1);} // closer hit pos, update state
+			}
+		}
+		return coll;
 	}
 };
 
@@ -952,6 +1019,10 @@ bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_x
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only) {
 	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only);
+}
+bool check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate) {
+	vector3d const xlate((apply_tt_xlate && world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);
+	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix);
 }
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
 

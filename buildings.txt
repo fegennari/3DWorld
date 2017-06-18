@@ -154,3 +154,7 @@ buildings side_tid buildings/office_windows3.jpg # high quality
 buildings side_color 1.0 0.9 0.8 1.0
 buildings add_material
 
+#buildings side_tid buildings/pixelcity_windows.jpg # for fun
+#buildings side_color 1.0 1.0 1.0 1.0
+#buildings side_tscale 0.5
+#buildings add_material
