@@ -17,7 +17,6 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // non-rectangular buildings:
-// - N-gon collision detection
 // - multilevel cylinders and N-gons?
 // - place multiple cube at different heights
 // Line intersection with buildings
@@ -25,7 +24,7 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 struct tid_nm_pair_t {
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
-	float tscale; // FIXME: tscale_x vs. tscale_y?
+	float tscale; // tscale_x vs. tscale_y?
 
 	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale(1.0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
@@ -256,7 +255,7 @@ struct building_t {
 	bool is_valid  () const {return !bcube.is_all_zeros();}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
-	bool use_cylinder_coll() const {return !is_cube();} // use cylinder collision if not a cube (approximate)
+	bool use_cylinder_coll() const {return (num_sides > 8);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
 	colorRGBA get_avg_side_color() const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color() const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
@@ -328,6 +327,20 @@ class building_draw_t {
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
 public:
+	vector<vector3d> const &calc_normals(unsigned ndiv) {
+		float const ndiv_inv(1.0/ndiv), css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
+		//float sin_s(sin(0.5*css)), cos_s(cos(0.5*css)); // start at half step - useful for cubes
+		float sin_s(0.0), cos_s(1.0); // start at 0 - more efficient
+		normals.resize(ndiv);
+
+		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
+			float const s(sin_s), c(cos_s);
+			normals[S].assign(s, c, 0.0);
+			sin_s = s*cos_ds + c*sin_ds;
+			cos_s = c*cos_ds - s*sin_ds;
+		}
+		return normals;
+	}
 	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos, point const &xlate,
 		cube_t const &bcube, unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
@@ -338,21 +351,12 @@ public:
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, pos.z, z_top, cw, vert);
-		float const css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
-		//float sin_s(sin(0.5*css)), cos_s(cos(0.5*css)); // start at half step - useful for cubes
-		float sin_s(0.0), cos_s(1.0); // start at 0 - more efficient
 		float tex_pos[2] = {0.0, 1.0};
-		normals.resize(ndiv);
+		calc_normals(ndiv);
 
 		if (!shadow_only) {
 			float const dz_inv(1.0/bcube.get_dz());
 			UNROLL_2X(tex_pos[i_] = dz_inv*((i_ ? z_top : pos.z) - bcube.d[2][0]);)
-		}
-		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
-			float const s(sin_s), c(cos_s);
-			normals[S].assign(s, c, 0.0);
-			sin_s = s*cos_ds + c*sin_ds;
-			cos_s = c*cos_ds - s*sin_ds;
 		}
 		if (dim_mask & 3) { // draw sides
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
@@ -415,7 +419,8 @@ public:
 		if (num_sides != 4) { // not a cube, use cylinder
 			vector3d const bcube_sz(bcube.get_size());
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.d[2][0]);
-			float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
+			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
+			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
 			add_cylinder(pos, center, sz.z, rscale*sz.x, rscale*sz.y, rot_sin, rot_cos, xlate, bcube, num_sides, tex, color, shadow_only, view_dir, dim_mask);
 			return;
 		}
@@ -602,7 +607,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
 			point const cc(i->get_cube_center() + xlate);
 			vector3d const csz(i->get_size());
-			float const r_sum(radius + 0.5*max(csz.x, csz.y)); // use conservative radius
+			float const r_sum(radius + 0.5*max(csz.x, csz.y)); // FIXME: use conservative max radius - circle ellipse intersection is hard
 
 			if (dist_xy_less_than(pos2, cc, r_sum)) {
 				vector3d const dir(vector3d(pos2.x-cc.x, pos2.y-cc.y, 0.0).get_norm()); // xy dir
@@ -610,8 +615,18 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				had_coll = 1;
 			}
 		}
-		else if (num_sides != 4) {
-			// FIXME: test planes for 3 or 5-8 sides
+		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
+			vector<vector3d> const &normals(building_draw.calc_normals(num_sides));
+			vector3d const sz(i->get_size());
+			point const cc(i->get_cube_center() + xlate);
+			float const rscale(0.5), rx(rscale*sz.x + radius), ry(rscale*sz.y + radius); // expand polygon by sphere radius
+			vector<point> points(num_sides);
+			for (unsigned i = 0; i < num_sides; ++i) {points[i].assign((cc.x + rx*normals[i].x), (cc.y + ry*normals[i].y), 0.0);}
+			
+			if (point_in_polygon_2d(pos2.x, pos2.y, &points.front(), num_sides, 0, 1)) { // XY plane test
+				pos2 = p_last2; // FIXME: smooth collision: iterate? find closest edge normal? use cylinder approximation?
+				had_coll = 1;
+			}
 		}
 		else if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
 			pos2 = p_int; // update current pos
@@ -644,7 +659,8 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			// FIXME: WRITE
 		}
 		else if (num_sides != 4) {
-			// FIXME: test planes for 3 or 5-8 sides
+			vector<vector3d> const &normals(building_draw.calc_normals(num_sides));
+			// FIXME: test polygon/planes
 		}
 		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {
 			t = tmin;
