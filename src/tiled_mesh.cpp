@@ -30,7 +30,6 @@ float const SMAP_DEL_THRESH   = 1.3;
 float const SMAP_FADE_THRESH  = 1.5;
 float const OCCLUDER_DIST     = 0.2;
 float const FLOWER_REL_DIST   = 0.9; // flower view distance relative to grass view distance
-float const CLOUDS_PER_TILE   = 0.5;
 
 int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
@@ -51,7 +50,7 @@ extern bool use_instanced_pine_trees, enable_tt_model_reflect;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
 extern float smap_thresh_scale;
 extern double tfticks;
@@ -1368,8 +1367,8 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 	populate_clouds();
 }
 
-void tile_cloud_manager_t::choose_num_clouds() {
-	num_clouds = unsigned(max(0.0f, rgen.rand_gaussian(CLOUDS_PER_TILE, 4.0))); // this tile will always create a constant number of clouds
+void tile_cloud_manager_t::choose_num_clouds() { // this tile will always create a constant number of clouds
+	num_clouds = ((clouds_per_tile == 0.0) ? 0 : unsigned(max(0.0f, rgen.rand_gaussian(clouds_per_tile, 4.0))));
 }
 
 void tile_cloud_manager_t::populate_clouds() {
