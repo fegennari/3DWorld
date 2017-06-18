@@ -143,7 +143,7 @@ float r_profile::clipped_den_inv(float const c[2]) const { // clip by first dime
 	}
 	if (a == 0.0) return 1.0;
 	a *= avg_alpha;
-	float const area(no_clip ? tot_area : (c[1] - c[0])*bb.get_dy());
+	float const area(no_clip ? tot_area : (c[1] - c[0])*(bb.d[1][1] - bb.d[1][0]));
 	if (a > area + TOLER) cout << "a = " << a << ", area = " << area << ", size = " << rects.size() << endl;
 	assert(a <= area + TOLER);
 	return (area - a)/area;
