@@ -628,7 +628,7 @@ void texture_t::set_to_color(colorRGBA const &c) {
 
 
 colorRGBA texture_color(int tid) {
-	if (tid < 0) {return WHITE;} // ???
+	if (tid < 0) {return WHITE;}
 	assert(tid >= 0 && (unsigned)tid < textures.size());
 	return textures[tid].get_avg_color();
 }

@@ -30,6 +30,7 @@ struct tid_nm_pair_t {
 	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale(1.0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale == t.tscale);}
+	colorRGBA get_avg_color() const {return texture_color(tid);}
 
 	void set_gl() const {
 		select_texture(tid);
@@ -256,6 +257,8 @@ struct building_t {
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
 	bool use_cylinder_coll() const {return !is_cube();} // use cylinder collision if not a cube (approximate)
+	colorRGBA get_avg_side_color() const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
+	colorRGBA get_avg_roof_color() const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
 	bool check_bcube_overlap_xy(building_t const &b, float expand) const {
@@ -266,7 +269,7 @@ struct building_t {
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only);
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only=0) const;
-	bool check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const;
+	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const;
 	void gen_geometry(unsigned ix);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 private:
@@ -319,7 +322,7 @@ class building_draw_t {
 	}
 	static void setup_ao_color(colorRGBA const &color, cube_t const &bcube, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert) {
 		if (global_building_params.ao_factor > 0.0) {
-			float const dz_mult(global_building_params.ao_factor/(bcube.d[2][1] - bcube.d[2][0]));
+			float const dz_mult(global_building_params.ao_factor/bcube.get_dz());
 			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcube.d[2][0])));)
 		} else {vert.set_c4(color);} // color is shared across all verts
 	}
@@ -342,7 +345,7 @@ public:
 		normals.resize(ndiv);
 
 		if (!shadow_only) {
-			float const dz_inv(1.0/(bcube.d[2][1] - bcube.d[2][0]));
+			float const dz_inv(1.0/bcube.get_dz());
 			UNROLL_2X(tex_pos[i_] = dz_inv*((i_ ? z_top : pos.z) - bcube.d[2][0]);)
 		}
 		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
@@ -621,11 +624,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	return had_coll;
 }
 
-bool building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const {
+unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const {
 
 	if (!check_line_clip(p1-xlate, p2-xlate, bcube.d)) return 0; // no intersection
 	point p1r(p1), p2r(p2);
-	float t_new(1.0), tmin(0.0), tmax(1.0);
+	float tmin(0.0), tmax(1.0);
+	unsigned coll(0); // 0=none, 1=side, 2=roof
 
 	if (is_rotated()) {
 		point const center(bcube.get_cube_center() + xlate);
@@ -634,6 +638,7 @@ bool building_t::check_line_coll(point const &p1, point const &p2, vector3d cons
 	}
 	p1r -= xlate; p2r -= xlate;
 
+	// FIXME: special case for vertical line (from map mode query)?
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (use_cylinder_coll()) {
 			// FIXME: WRITE
@@ -641,9 +646,13 @@ bool building_t::check_line_coll(point const &p1, point const &p2, vector3d cons
 		else if (num_sides != 4) {
 			// FIXME: test planes for 3 or 5-8 sides
 		}
-		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax)) {t_new = min(t_new, tmin);}
+		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {
+			t = tmin;
+			float const zval(p1.z + t*(p2.z - p1.z));
+			coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->get_dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
+		}
 	}
-	return (t_new < 1.0);
+	return coll;
 }
 
 void building_t::gen_geometry(unsigned ix) {
@@ -677,7 +686,7 @@ void building_t::gen_geometry(unsigned ix) {
 	}
 	// generate building levels and splits
 	parts.resize(num_levels);
-	float const height(base.d[2][1] - base.d[2][0]), dz(height/num_levels);
+	float const height(base.get_dz()), dz(height/num_levels);
 
 	for (unsigned i = 0; i < num_levels; ++i) {
 		cube_t &bc(parts[i]);
@@ -800,6 +809,7 @@ public:
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear();}
 	vector3d const &get_max_extent() const {return max_extent;}
+	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 
 	void gen(building_params_t const &params) {
 		timer_t timer("Gen Buildings");
@@ -859,8 +869,7 @@ public:
 						if (!test_bc.intersects_xy(ge.bcube)) continue;
 
 						for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
-							assert(*g < buildings.size());
-							building_t const &ob(buildings[*g]);
+							building_t const &ob(get_building(*g));
 							if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand)) {overlaps = 1; break;}
 						}
 					} // for x
@@ -972,33 +981,38 @@ public:
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-					assert(*b < buildings.size());
-					if (buildings[*b].check_sphere_coll(pos, p_last, xlate, radius, xy_only)) return 1;
+					if (get_building(*b).check_sphere_coll(pos, p_last, xlate, radius, xy_only)) return 1;
 				} // for g
 			} // for x
 		} // for y
 		return 0;
 	}
 
-	bool check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix) const {
+	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_query_xlate());
+		cube_t bcube(p1-xlate, p2-xlate);
+		unsigned ixr[2][2];
+		get_grid_range(bcube, ixr);
 		point end_pos(p2);
-		bool coll(0);
+		unsigned coll(0); // 0=none, 1=side, 2=roof
 		t = 1.0; // start at end point
 
-		// for now, just do a slow iteration over every grid element; still faster than checking every building
+		// for now, just do a slow iteration over every grid element within the line's bbox in XY
 		// Note: should probably iterate over the grid in XY order from the start to the end of the line, or better yet use a line drawing algorithm
-		for (auto g = grid.begin(); g != grid.end(); ++g) {
-			if (!check_line_clip(p1, end_pos, g->bcube.d)) continue; // no intersection - skip this grid
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (!check_line_clip(p1, end_pos, ge.bcube.d)) continue; // no intersection - skip this grid
 
-			for (auto b = g->ixs.begin(); b != g->ixs.end(); ++b) { // Note: okay to check the same building more than once
-				float t_new(t);
-				assert(*b < buildings.size());
-				if (!buildings[*b].check_line_coll(p1, p2, xlate, t_new)) continue; // no intersection - skip this building
-				if (t_new <= t) {t = t_new; hit_bix = *b; coll = 1; end_pos = p1 + t*(p2 - p1);} // closer hit pos, update state
-			}
-		}
+				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) { // Note: okay to check the same building more than once
+					float t_new(t);
+					unsigned const ret(get_building(*b).check_line_coll(p1, p2, xlate, t_new));
+					if (ret == 0) continue; // no intersection - skip this building
+					if (t_new <= t) {t = t_new; hit_bix = *b; coll = ret; end_pos = p1 + t*(p2 - p1);} // closer hit pos, update state
+				}
+			} // for x
+		} // for y
 		return coll;
 	}
 };
@@ -1020,9 +1034,18 @@ bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_x
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only) {
 	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only);
 }
-bool check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate) {
+unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate) {
 	vector3d const xlate((apply_tt_xlate && world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);
 	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix);
+}
+bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
+	float t(0.0); // unused
+	unsigned hit_bix(0);
+	unsigned const ret(check_buildings_line_coll(p1, p2, t, hit_bix, 1)); // apply_tt_xlate=1; 0=no hit, 1=hit side, 2=hit roof
+	if (ret == 0) return 0;
+	building_t const &b(building_creator.get_building(hit_bix));
+	color = ((ret == 2) ? b.get_avg_roof_color() : b.get_avg_side_color());
+	return 1;
 }
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
 
