@@ -916,7 +916,9 @@ void draw_sun() {
 	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 2)) return;
 	colorRGBA color(attenuate_sun_color(SUN_C));
 	apply_red_sky(color);
+	glDepthMask(GL_FALSE); // disable depth write - sun is further away than any other objects, so it should always be behind everything
 	draw_single_colored_sphere(pos, sun_radius, N_SPHERE_DIV, color);
+	glDepthMask(GL_TRUE);
 }
 
 
