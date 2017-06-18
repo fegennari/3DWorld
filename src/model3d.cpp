@@ -1260,7 +1260,7 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 		assert(i->npts == 4);
 		if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
 		cube_t const bcube(i->get_bcube());
-		if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
+		if ((bcube.get_dz()) > 0.5*spacing) continue; // can this happen?
 		int cbounds[2][2];
 		calc_bounds(bcube, cbounds, spacing);
 		bool const is_top(i->normal.z > 0.0);

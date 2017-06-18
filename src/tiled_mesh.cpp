@@ -1416,7 +1416,7 @@ void tile_cloud_manager_t::move_by_wind(tile_t const &tile) {
 		return;
 	}
 	if (empty()) return;
-	float const ws_mult(0.5/(range.d[2][1] - range.d[2][0]));
+	float const ws_mult(0.5/range.get_dz());
 	bcube.set_to_zeros();
 
 	for (auto i = begin(); i != end(); ++i) {

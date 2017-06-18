@@ -448,7 +448,7 @@ void coll_obj::get_contact_points(coll_obj const &c, vector<point> &contact_pts,
 vector3d coll_obj::get_cobj_supporting_normal(point const &support_pos, bool bot_surf) const {
 
 	if (type == COLL_CUBE || type == COLL_CYLINDER) return (bot_surf ? -plus_z : plus_z); // exact since cobj is axis aligned in x
-	float const cobj_height(d[2][1] - d[2][0]);
+	float const cobj_height(get_dz());
 	point line_pts[2] = {support_pos, support_pos};
 	line_pts[0].z = d[2][0] - cobj_height; // make sure the line completely crosses the z range of the cobj
 	line_pts[1].z = d[2][1] + cobj_height;
@@ -752,7 +752,7 @@ void check_moving_cobj_int_with_dynamic_objs(unsigned index, vector3d const &del
 	// wake up adjacent/nearby moving cobjs in case they need to move
 	cube_t bcube(cobj);
 	bcube.union_with_cube(bcube - delta); // expand to cover entire range of movement
-	bcube.d[2][1] += 0.1*(cobj.d[2][1] - cobj.d[2][0]); // increase height by 10% to include cobjs resting on this cobj
+	bcube.d[2][1] += 0.1*cobj.get_dz(); // increase height by 10% to include cobjs resting on this cobj
 	get_intersecting_cobjs_tree(bcube, cobjs, index, 0.0, 0, 0, -1);
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
@@ -814,7 +814,7 @@ void check_cobj_alignment(unsigned index) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!cobj.has_hard_edges()) return; // not yet supported (use has_flat_top_bot()?)
-	float const tolerance(1.0E-6), cobj_height(cobj.d[2][1] - cobj.d[2][0]);
+	float const tolerance(1.0E-6), cobj_height(cobj.get_dz());
 	point const center_of_mass(cobj.get_center_of_mass());
 	// check other static cobjs
 	// Note: since we're going to rotate the cobj, we need to use the bounding sphere, which is rotation invariant, so that we don't intersect a new cobj after rotation
@@ -906,7 +906,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 	float const tolerance(2.0E-6); // Note: 2x larger tolerance, to exclude cobjs that are touching based on adjustment from check_push_cobj()
 	float const cobj_zmin(min(czmin, zbottom));
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
-	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]), prev_v_fall(cobj.v_fall), cur_v_fall(prev_v_fall + accel);
+	float const cobj_height(cobj.get_dz()), prev_v_fall(cobj.v_fall), cur_v_fall(prev_v_fall + accel);
 	cobj.v_fall = 0.0; // assume the cobj stops falling; compute the correct v_fall if we reach the end without returning
 	float gravity_dz(-tstep*cur_v_fall), max_dz(min(gravity_dz, cobj.d[2][0]-cobj_zmin)); // usually positive
 	if (max_dz < tolerance) return zero_vector; // can't drop further
@@ -1219,7 +1219,7 @@ int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point 
 				cobj.rotate_about(cobj.get_center_of_mass(), plus_z, angle, 0); // don't re-add yet
 				cobjs.clear();
 				cube_t bcube(cobj);
-				float const dh(0.01*(cobj.d[2][1] - cobj.d[2][0]));
+				float const dh(0.01*cobj.get_dz());
 				bcube.d[2][0] += dh; bcube.d[2][1] -= dh; // shrink slightly in z to exclude cobjs above (resting on) and below (resting on)
 				get_intersecting_cobjs_tree(bcube, cobjs, index, -tolerance, 0, 0, -1); // duplicates should be okay, include adjacent cobjs
 				// FIXME: only partially effective

@@ -143,7 +143,7 @@ float r_profile::clipped_den_inv(float const c[2]) const { // clip by first dime
 	}
 	if (a == 0.0) return 1.0;
 	a *= avg_alpha;
-	float const area(no_clip ? tot_area : (c[1] - c[0])*(bb.d[1][1] - bb.d[1][0]));
+	float const area(no_clip ? tot_area : (c[1] - c[0])*bb.get_dy());
 	if (a > area + TOLER) cout << "a = " << a << ", area = " << area << ", size = " << rects.size() << endl;
 	assert(a <= area + TOLER);
 	return (area - a)/area;
@@ -832,7 +832,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 	unsigned const ysz((max_floats_per_light+3)/4); // round up
 	float dl_data[max_dlights*(4*ysz)] = {0.0}; // use max possible size
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
-	float const radius_scale(1.0/(0.5*(bounds.d[0][1] - bounds.d[0][0]))); // bounds x radius inverted
+	float const radius_scale(1.0/(0.5*bounds.get_dx())); // bounds x radius inverted
 	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
 	vector3d const pscale(1.0/psize.x, 1.0/psize.y, 1.0/psize.z);
 	has_spotlights = has_line_lights = 0;
