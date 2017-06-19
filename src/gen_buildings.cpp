@@ -326,6 +326,7 @@ class building_draw_t {
 		} else {vert.set_c4(color);} // color is shared across all verts
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
+	vector<point> points;
 public:
 	vector<vector3d> const &calc_normals(unsigned ndiv) {
 		float const ndiv_inv(1.0/ndiv), css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
@@ -340,6 +341,15 @@ public:
 			cos_s = c*cos_ds - s*sin_ds;
 		}
 		return normals;
+	}
+	vector<point> const &calc_poly_pts(cube_t const &bcube, unsigned ndiv, float expand=0.0) {
+		vector<vector3d> const &normals(calc_normals(ndiv));
+		vector3d const sz(bcube.get_size());
+		point const cc(bcube.get_cube_center());
+		float const rscale(0.5), rx(rscale*sz.x + expand), ry(rscale*sz.y + expand); // expand polygon by sphere radius
+		points.resize(ndiv);
+		for (unsigned i = 0; i < ndiv; ++i) {points[i].assign((cc.x + rx*normals[i].x), (cc.y + ry*normals[i].y), 0.0);}
+		return points;
 	}
 	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos, point const &xlate,
 		cube_t const &bcube, unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
@@ -607,21 +617,25 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
 			point const cc(i->get_cube_center() + xlate);
 			vector3d const csz(i->get_size());
-			float const r_sum(radius + 0.5*max(csz.x, csz.y)); // FIXME: use conservative max radius - circle ellipse intersection is hard
+#if 0 // unstable
+			float const dx(pos2.x - cc.x), dy(pos2.y - cc.y), rx(0.5*csz.x + radius), ry(0.5*csz.y + radius);
+			if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // approximate ellipse test
+			float const mag(sqrt(dx*dx + dy*dy));
+			pos2.x = cc.x + dx*rx/mag;
+			pos2.y = cc.y + dy*ry/mag;
+			had_coll = 1;
+#else // conservative
+			float const r_sum(radius + 0.5*max(csz.x, csz.y));
 
-			if (dist_xy_less_than(pos2, cc, r_sum)) {
+			if (dist_xy_less_than(pos2, cc, r_sum)) { // FIXME: conservative for ellipse case
 				vector3d const dir(vector3d(pos2.x-cc.x, pos2.y-cc.y, 0.0).get_norm()); // xy dir
 				UNROLL_2X(pos2[i_] = cc[i_] + dir[i_]*r_sum;)
 				had_coll = 1;
 			}
+#endif
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			vector<vector3d> const &normals(building_draw.calc_normals(num_sides));
-			vector3d const sz(i->get_size());
-			point const cc(i->get_cube_center() + xlate);
-			float const rscale(0.5), rx(rscale*sz.x + radius), ry(rscale*sz.y + radius); // expand polygon by sphere radius
-			vector<point> points(num_sides);
-			for (unsigned i = 0; i < num_sides; ++i) {points[i].assign((cc.x + rx*normals[i].x), (cc.y + ry*normals[i].y), 0.0);}
+			vector<point> const &points(building_draw.calc_poly_pts((*i + xlate), num_sides, radius)); // expand by radius
 			
 			if (point_in_polygon_2d(pos2.x, pos2.y, &points.front(), num_sides, 0, 1)) { // XY plane test
 				pos2 = p_last2; // FIXME: smooth collision: iterate? find closest edge normal? use cylinder approximation?
@@ -632,7 +646,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			pos2 = p_int; // update current pos
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 		}
-	}
+	} // for i
 	if (!had_coll) return 0;
 	if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, pos2);} // rotate back
 	pos = pos2;
@@ -652,22 +666,51 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 		do_xy_rotate(-rot_sin, rot_cos, center, p2r);
 	}
 	p1r -= xlate; p2r -= xlate;
+	float const pzmin(min(p1r.z, p2r.z)), pzmax(max(p1r.z, p2r.z));
+	bool const vert(p1r.x == p2r.x && p1r.y == p2r.y);
 
-	// FIXME: special case for vertical line (from map mode query)?
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
+		if (pzmin > i->d[2][1] || pzmax < i->d[2][0]) continue; // no overlap in z
+		bool hit(0);
+
 		if (use_cylinder_coll()) {
-			// FIXME: WRITE
+			point const cc(i->get_cube_center());
+			float const dist(pt_line_dist(cc, p1r, p2r));
+			vector3d const csz(i->get_size());
+			float const radius(0.5*max(csz.x, csz.y));
+			if (dist > radius) continue; // test conservative bounding circle
+			
+			if (vert) { // vertical cylinder optimization + handling of ellipsoids
+				float const dx(cc.x - p1r.x), dy(cc.y - p1r.y), rx(0.5*csz.x), ry(0.5*csz.y);
+				if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // no intersection (below test should return true as well)
+				tmin = (i->d[2][1] - p1r.z)/(p2r.z - p1r.z);
+				if (tmin < t) {t = tmin; hit = 1;}
+			}
+			else {
+				point const cp1(cc - vector3d(0.0, 0.0, 0.5*csz.z)), cp2(cc + vector3d(0.0, 0.0, 0.5*csz.z));
+				if (line_int_cylinder(p1r, p2r, cp1, cp2, radius, radius, 1, tmin) && tmin < t) {t = tmin; hit = 1;}
+			}
 		}
 		else if (num_sides != 4) {
-			vector<vector3d> const &normals(building_draw.calc_normals(num_sides));
-			// FIXME: test polygon/planes
+			vector<point> const &points(building_draw.calc_poly_pts((*i + xlate), num_sides));
+
+			if (vert) {
+				if (point_in_polygon_2d(p1r.x, p1r.y, &points.front(), num_sides, 0, 1)) { // XY plane test
+					tmin = (i->d[2][1] - p1r.z)/(p2r.z - p1r.z);
+					if (tmin < t) {t = tmin; hit = 1;}
+				}
+			}
+			else {
+				// FIXME: test polygon/planes
+			}
 		}
-		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {
-			t = tmin;
+		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; hit = 1;}
+
+		if (hit) {
 			float const zval(p1.z + t*(p2.z - p1.z));
 			coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->get_dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
 		}
-	}
+	} // for i
 	return coll;
 }
 

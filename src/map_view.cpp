@@ -171,6 +171,7 @@ void draw_overhead_map() {
 		int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
 		float const xstart(x0 - nx2*xscale), ystart(y0 - ny2*yscale);
 		float const xsv(xscale_val*(X_SCENE_SIZE/DX_VAL)), ysv(yscale_val*(Y_SCENE_SIZE/DY_VAL));
+		float const max_building_dz(2.0*get_buildings_max_extent().z); // pad by 2x
 
 		bool const uses_hmap(world_mode == WMODE_GROUND && (read_landscape || read_heightmap || do_read_mesh));
 		mesh_xy_grid_cache_t height_gen;
@@ -215,10 +216,16 @@ void draw_overhead_map() {
 						float const xval((j - nx2)*xsv + camera.x + map_x), yval((i - ny2)*ysv + camera.y + map_y);
 						point p1(xval, yval, czmax);
 						bool const over_mesh(is_over_mesh(p1));
+						colorRGBA building_color;
 					
 						if (over_mesh || uses_hmap) { // if using a heightmap, clamp values to scene bounds
 							mh = interpolate_mesh_zval(max(-X_SCENE_SIZE, min(X_SCENE_SIZE-DX_VAL, xval)), max(-Y_SCENE_SIZE, min(Y_SCENE_SIZE-DY_VAL, yval)), 0.0, 0, 1);
 							mh_set = 1;
+						}
+						if (over_mesh && get_buildings_line_hit_color(point(xval, yval, mh+max_building_dz), point(xval, yval, mh), building_color)) {
+							//unpack_color(rgb, building_color*(is_shadowed(cpos, plus_z, lpos, cindex2) ? 0.5 : 1.0));
+							unpack_color(rgb, building_color); // no shadows
+							continue;
 						}
 						if (over_mesh && czmin < czmax) { // check cobjs
 							// Note: as an optimization, can skip the cobj test if no cobjs at this pos, but it makes little difference and will miss dynamic objects
