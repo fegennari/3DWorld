@@ -888,8 +888,9 @@ public:
 	void gen(building_params_t const &params) {
 		timer_t timer("Gen Buildings");
 		float const def_water_level(get_water_z_height());
-		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? vector3d(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0) : zero_vector); // cancel out xoff2/yoff2 translate
-		range    = params.pos_range - xlate;
+		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
+		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
+		range    = params.pos_range + ((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
 		range_sz = range.get_size();
 		place_radius = params.place_radius;
 		max_extent   = zero_vector;
@@ -1003,7 +1004,8 @@ public:
 #pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
 
-		cout << "Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
+		cout << "WM: " << world_mode << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
+			 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
 	}
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
