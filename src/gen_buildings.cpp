@@ -16,8 +16,7 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// non-rectangular buildings:
-// - multilevel cylinders and N-gons?
+// Multilevel cylinders and N-gons shapes?
 // Line intersection with buildings
 
 struct tid_nm_pair_t {
@@ -753,12 +752,13 @@ void building_t::gen_geometry(unsigned ix) {
 			cube_t &bc(parts[i]);
 
 			for (unsigned d = 0; d < 2; ++d) { // x,y
-				bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz.x;
-				bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz.x;
+				bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
+				bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
 			}
 			bc.d[2][0] = base.d[2][0]; // z1
-			bc.d[2][1] = base.d[2][0] + i*dz; // z2
+			bc.d[2][1] = base.d[2][0] + (i+1)*dz; // z2
 			if (i > 0) {bc.d[2][1] += dz*rgen.rand_uniform(-0.5, 0.5); bc.d[2][1] = min(bc.d[2][1], base.d[2][1]);}
+			assert(bc.is_strictly_normalized());
 		}
 		return;
 	}
@@ -814,7 +814,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		if (!shadow_only) {
 			point ccenter(i->get_cube_center());
-			if (!shadow_only && is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
+			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
 		bdraw.add_section(*i, num_sides, rot_sin, rot_cos, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
@@ -890,9 +890,9 @@ public:
 		float const def_water_level(get_water_z_height());
 		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
-		range    = params.pos_range + ((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
-		range_sz = range.get_size();
-		place_radius = params.place_radius;
+		range        = params.pos_range + ((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
+		range_sz     = range.get_size();
+		place_radius = params.place_radius; // relative to range cube center
 		max_extent   = zero_vector;
 		UNROLL_3X(range_sz_inv[i_] = 1.0/range_sz[i_];)
 		clear();
