@@ -498,7 +498,7 @@ public:
 	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode != WMODE_UNIVERSE);}
 
 	virtual void change_value(int delta) {
-		bool regen_mesh(0);
+		int regen_mesh(0);
 
 		switch (cur_control) {
 		case PW_SPEED:
@@ -516,7 +516,7 @@ public:
 				float const water_level(max(-1.0f, min(1.0f, (get_rel_wpz() + 0.05f*delta)))); // -1.0 to 1.0 in steps of 0.05
 				change_water_level(water_level); // 0.0 to 1.0
 			}
-			regen_mesh = 1; // regen texture
+			regen_mesh = 2; // regen texture
 			break;
 		case PW_VEG:
 			def_vegetation = CLIP_TO_01(def_vegetation + 0.1f*delta); // 0.0 to 1.0 in steps of 0.1
@@ -561,7 +561,7 @@ public:
 		} // end switch
 		if (regen_mesh) {
 			init_terrain_mesh(); // Note: texture not actually regenerated
-			clear_tiled_terrain();
+			clear_tiled_terrain(regen_mesh == 1);
 		}
 	}
 };

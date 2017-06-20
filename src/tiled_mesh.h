@@ -429,7 +429,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 public:
 	tile_draw_t();
 	~tile_draw_t() {/*clear();*/}
-	void clear();
+	void clear(bool no_regen_buildings);
 	void free_compute_shader();
 	float update(float &min_camera_dist);
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id);

@@ -1892,13 +1892,13 @@ tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), buildings_valid(
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 
-void tile_draw_t::clear() {
+void tile_draw_t::clear(bool no_regen_buildings) {
 
 	clear_vbos_tids(); // needed to clear vbo, ivbo, and free list
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
 	tiles.clear();
-	buildings_valid = 0;
+	if (!no_regen_buildings) {buildings_valid = 0;}
 }
 
 void tile_draw_t::insert_tile(tile_t *tile) {
@@ -3117,7 +3117,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void end_tiled_terrain_lightning() {terrain_tile_draw.end_lightning();}
-void clear_tiled_terrain() {terrain_tile_draw.clear();}
+void clear_tiled_terrain(bool no_regen_buildings) {terrain_tile_draw.clear(no_regen_buildings);}
 void draw_tiled_terrain_clouds(bool reflection_pass) {terrain_tile_draw.draw_tile_clouds(reflection_pass);}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}
 void clear_tiled_terrain_shaders() {terrain_tile_draw.free_compute_shader();}

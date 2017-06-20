@@ -530,7 +530,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = universe, 3 =
 	else if (combined_gu) {
 		setup_current_system();
 	}
-	if (!map_mode) reset_offsets(); // ???
+	if (!map_mode) {reset_offsets();} // ???
 	init_x        = 1;
 	camera_change = 1;
 	reset_fog();
@@ -731,7 +731,7 @@ void change_tree_mode() {
 	tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
 			
 	if (world_mode == WMODE_INF_TERRAIN) {
-		clear_tiled_terrain();
+		clear_tiled_terrain(1); // no_regen_buildings=1
 	}
 	else {
 		//if (num_trees == 0) return; // Note: will skip scene/cobj updates on scenes that have placed trees
@@ -1009,7 +1009,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 				build_cobj_tree();
 				gen_grass();
 			}
-			clear_tiled_terrain();
+			clear_tiled_terrain(1); // no_regen_buildings=1
 			
 			if (!combined_gu) {
 				setup_landscape_tex_colors(ALPHA0, ALPHA0);

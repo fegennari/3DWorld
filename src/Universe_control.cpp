@@ -104,7 +104,7 @@ bool player_near_system() {return (clobj0.system >= 0);}
 
 void setup_current_system(float sun_intensity) { // called in ground mode
 	
-	bool regen_mesh(0);
+	int regen_mesh(0);
 	static bool last_is_lava(0);
 	static int inited(0);
 	static float last_water(-1.0);
@@ -177,7 +177,7 @@ void setup_current_system(float sun_intensity) { // called in ground mode
 		if (fabs(water_level - rel_wpz) > 0.001) {
 			cout << TXT(water) << TXT(water_level) << TXT(rel_wpz) << TXT(water_h_off_rel) << TXT(water_is_lava) << endl;
 			change_water_level(water_level);
-			regen_mesh = 1; // regen texture (is this needed?)
+			regen_mesh = 2; // regen texture (is this needed?)
 		}
 	}
 	if (water_is_lava != last_is_lava) {
@@ -203,7 +203,7 @@ void setup_current_system(float sun_intensity) { // called in ground mode
 
 	if (regen_mesh) {
 		init_terrain_mesh();
-		clear_tiled_terrain();
+		clear_tiled_terrain(regen_mesh == 1);
 	}
 }
 
