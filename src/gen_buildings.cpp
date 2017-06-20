@@ -18,7 +18,6 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 // TODO:
 // non-rectangular buildings:
 // - multilevel cylinders and N-gons?
-// - place multiple cube at different heights
 // Line intersection with buildings
 
 struct tid_nm_pair_t {
@@ -747,6 +746,22 @@ void building_t::gen_geometry(unsigned ix) {
 	parts.resize(num_levels);
 	float const height(base.get_dz()), dz(height/num_levels);
 
+	if ((rgen.rand()&1) && !do_split) {
+		point const llc(base.get_llc()), sz(base.get_size());
+
+		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels
+			cube_t &bc(parts[i]);
+
+			for (unsigned d = 0; d < 2; ++d) { // x,y
+				bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz.x;
+				bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz.x;
+			}
+			bc.d[2][0] = base.d[2][0]; // z1
+			bc.d[2][1] = base.d[2][0] + i*dz; // z2
+			if (i > 0) {bc.d[2][1] += dz*rgen.rand_uniform(-0.5, 0.5); bc.d[2][1] = min(bc.d[2][1], base.d[2][1]);}
+		}
+		return;
+	}
 	for (unsigned i = 0; i < num_levels; ++i) {
 		cube_t &bc(parts[i]);
 		if (i == 0) {bc = base;} // use full building footprint
