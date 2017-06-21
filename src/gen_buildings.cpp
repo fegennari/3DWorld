@@ -16,7 +16,6 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// Faster ray test for map mode
 // Polygon non-vertical rays
 // Multilevel cylinders and N-gons shapes?
 // Line intersection with buildings
@@ -1073,6 +1072,7 @@ public:
 
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix) const {
 		if (empty()) return 0;
+		bool const vertical(p1.x == p2.x && p1.y == p2.y);
 		vector3d const xlate(get_query_xlate());
 		cube_t bcube(p1-xlate, p2-xlate);
 		unsigned ixr[2][2];
@@ -1089,10 +1089,18 @@ public:
 				if (!check_line_clip(p1, end_pos, ge.bcube.d)) continue; // no intersection - skip this grid
 
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) { // Note: okay to check the same building more than once
+					building_t const &building(get_building(*b));
+					if (!building.bcube.intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(get_building(*b).check_line_coll(p1, p2, xlate, t_new));
-					if (ret == 0) continue; // no intersection - skip this building
-					if (t_new <= t) {t = t_new; hit_bix = *b; coll = ret; end_pos = p1 + t*(p2 - p1);} // closer hit pos, update state
+					unsigned const ret(building.check_line_coll(p1, p2, xlate, t_new));
+
+					if (ret && t_new <= t) { // closer hit pos, update state
+						t       = t_new;
+						hit_bix = *b;
+						coll    = ret;
+						end_pos = p1 + t*(p2 - p1);
+						if (vertical) return coll; // vertical lines can only intersect one building
+					}
 				}
 			} // for x
 		} // for y
