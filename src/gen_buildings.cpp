@@ -16,6 +16,8 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
+// Faster ray test for map mode
+// Polygon non-vertical rays
 // Multilevel cylinders and N-gons shapes?
 // Line intersection with buildings
 
@@ -750,16 +752,21 @@ void building_t::gen_geometry(unsigned ix) {
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels
 			cube_t &bc(parts[i]);
-
-			for (unsigned d = 0; d < 2; ++d) { // x,y
-				bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
-				bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
-			}
 			bc.d[2][0] = base.d[2][0]; // z1
 			bc.d[2][1] = base.d[2][0] + (i+1)*dz; // z2
 			if (i > 0) {bc.d[2][1] += dz*rgen.rand_uniform(-0.5, 0.5); bc.d[2][1] = min(bc.d[2][1], base.d[2][1]);}
-			assert(bc.is_strictly_normalized());
-		}
+
+			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to generate a cube that doesn't contain any existing cubes (can occasionally still fail)
+				for (unsigned d = 0; d < 2; ++d) { // x,y
+					bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
+					bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
+				}
+				assert(bc.is_strictly_normalized());
+				bool contains(0);
+				for (unsigned j = 0; j < i; ++j) {contains |= bc.contains_cube(parts[j]);}
+				if (!contains) break; // success
+			} // for n
+		} // for i
 		return;
 	}
 	for (unsigned i = 0; i < num_levels; ++i) {
