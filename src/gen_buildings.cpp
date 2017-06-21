@@ -16,9 +16,7 @@ extern int rand_gen_index, display_mode;
 extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
-// Polygon non-vertical rays
 // Multilevel cylinders and N-gons shapes?
-// Line intersection with buildings
 
 struct tid_nm_pair_t {
 
@@ -692,15 +690,23 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 		}
 		else if (num_sides != 4) {
 			vector<point> const &points(building_draw.calc_poly_pts((*i + xlate), num_sides));
+			float const tz((i->d[2][1] - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
+			float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
 
-			if (vert) {
-				if (point_in_polygon_2d(p1r.x, p1r.y, &points.front(), num_sides, 0, 1)) { // XY plane test
-					tmin = (i->d[2][1] - p1r.z)/(p2r.z - p1r.z);
-					if (tmin < t) {t = tmin; hit = 1;}
-				}
+			if (point_in_polygon_2d(xval, yval, &points.front(), num_sides, 0, 1)) { // XY plane test for vertical lines and top surface
+				tmin = (i->d[2][1] - p1r.z)/(p2r.z - p1r.z);
+				if (tmin < t) {t = tmin; hit = 1;}
 			}
-			else {
-				// FIXME: test polygon/planes
+			if (!vert) { // test building sides
+				point quad_pts[4]; // quads
+
+				for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
+					for (unsigned d = 0, ix = 0; d < 2; ++d) {
+						point const &p(points[(S+d)%num_sides]);
+						for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, i->d[2][d^e]);}
+					}
+					if (line_poly_intersect(p1r, p2r, quad_pts, 4, get_poly_norm(quad_pts), tmin) && tmin < t) {t = tmin; hit = 1;} // Note: untested
+				} // for S
 			}
 		}
 		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; hit = 1;}
