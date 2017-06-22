@@ -17,6 +17,7 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // Multilevel cylinders and N-gons shapes?
+// Cut corners of cube buildings
 
 struct tid_nm_pair_t {
 
@@ -348,6 +349,7 @@ public:
 		for (unsigned i = 0; i < ndiv; ++i) {points[i].assign((cc.x + rx*normals[i].x), (cc.y + ry*normals[i].y), 0.0);}
 		return points;
 	}
+
 	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos, point const &xlate,
 		cube_t const &bcube, unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
@@ -416,10 +418,12 @@ public:
 			} // for d
 		} // end draw end(s)
 	}
+
 	void add_section(cube_t const &cube, unsigned num_sides, float rot_sin, float rot_cos, point const &xlate, cube_t const &bcube,
-		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
+		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask, float cut_amt=0.0)
 	{
 		assert(num_sides >= 3); // must be nonzero volume
+		assert(cut_amt <= 0.5);
 		point const center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size());
 
@@ -437,6 +441,7 @@ public:
 		vert_norm_comp_tc_color vert;
 
 		if (shadow_only) {
+			// FIXME: use cut_amt
 			for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 				unsigned const n((i+2)%3);
 				if (!(dim_mask & (1<<n))) continue;
@@ -466,6 +471,8 @@ public:
 			if (!(dim_mask & (1<<n))) continue;
 			unsigned const d((i+1)%3);
 			bool const st(i&1);
+			cube_t vals(0,1,0,1,0,1); // low/high values
+			if (n < 2 && cut_amt > 0.0) {vals.d[1-n][0] += cut_amt; vals.d[1-n][1] -= cut_amt;} // XY add side cuts
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (n < 2 && rot_sin != 0.0) { // XY only
@@ -482,19 +489,23 @@ public:
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
 				point pt;
-				pt[n] = j;
-				pt[d] = 0;
-				pt[i] = !j; // need to orient the vertices differently for each side
+				pt[n] = j; // in direction of normal
+				pt[d] = vals.d[d][0]; // lo
+				pt[i] = vals.d[i][!j]; // need to orient the vertices differently for each side
 				EMIT_VERTEX();
-				pt[i] = j;
+				pt[i] = vals.d[i][j];
 				EMIT_VERTEX();
-				pt[d] = 1;
+				pt[d] = vals.d[d][1]; // hi
 				EMIT_VERTEX();
-				pt[i] = !j;
+				pt[i] = vals.d[i][!j];
 				EMIT_VERTEX();
 			} // for j
+			if (n < 2 && cut_amt > 0.0) {
+				// FIXME: add 45-degree angled cut quads
+			}
 		} // for i
 	}
+
 	void draw_and_clear(bool shadow_only) {
 #if 0
 		// if (fract(3.0*tc.s) < 0.3 && fract(1.5*tc.t) < 0.4) {texel.rgb = vec3(0.1);} // building experiments
