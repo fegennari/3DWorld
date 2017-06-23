@@ -59,12 +59,12 @@ struct color_range_t {
 struct building_mat_t : public building_tex_params_t {
 
 	unsigned min_levels, max_levels, min_sides, max_sides;
-	float min_alt, max_alt, split_prob, cube_prob, round_prob, min_fsa, max_fsa, min_asf, max_asf;
+	float min_alt, max_alt, split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf;
 	color_range_t side_color, roof_color;
 	cube_t sz_range;
 
 	building_mat_t() : min_levels(1), max_levels(1), min_sides(4), max_sides(4), min_alt(-1000), max_alt(1000),
-		split_prob(0.0), cube_prob(1.0), round_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), sz_range(1,1,1,1,1,1) {}
+		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 };
 
@@ -152,6 +152,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "round_prob") {
 		if (!read_zero_one_float(fp, global_building_params.cur_mat.round_prob)) {buildings_file_err(str, error);}
+	}
+	else if (str == "alt_step_factor_prob") {
+		if (!read_zero_one_float(fp, global_building_params.cur_mat.asf_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "min_levels") {
 		if (!read_uint(fp, global_building_params.cur_mat.min_levels)) {buildings_file_err(str, error);}
@@ -787,10 +790,12 @@ void building_t::gen_geometry(unsigned ix) {
 		num_sides = mat.min_sides;
 		if (mat.min_sides != mat.max_sides) {num_sides += (rgen.rand() % (1 + abs((int)mat.max_sides - (int)mat.min_sides)));}
 	}
+	bool const can_split(is_cube()); // before adjustment due to ASF
+
 	if (num_sides >= 6 && mat.max_fsa > 0.0) { // at least 6 sides
 		flat_side_amt = max(0.0f, min(0.45f, rgen.rand_uniform(mat.min_fsa, mat.max_fsa)));
 	}
-	if (num_sides <= 6 && mat.max_asf > 0.0) { // no more than 6 sides
+	if (num_sides <= 6 && mat.max_asf > 0.0 && rgen.rand_probability(mat.asf_prob)) { // no more than 6 sides
 		alt_step_factor = max(0.0f, min(0.99f, rgen.rand_uniform(mat.min_asf, mat.max_asf)));
 		if (alt_step_factor > 0.0 && !(num_sides&1)) {half_offset = 1;} // chamfered cube/hexagon
 		if (alt_step_factor > 0.0) {num_sides *= 2;}
@@ -801,7 +806,7 @@ void building_t::gen_geometry(unsigned ix) {
 	if (mat.min_levels < mat.max_levels && is_cube()) {num_levels += rgen.rand()%(mat.max_levels - mat.min_levels + 1);} // only cubes are multilevel (unless min_level > 1)
 	if (global_building_params.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.get_size().z/global_building_params.min_level_height)));}
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
-	bool const do_split(num_levels < 4 && is_cube() && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
+	bool const do_split(num_levels < 4 && can_split && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
 
 	if (num_levels == 1) { // single level
 		if (do_split) {split_in_xy(base, rgen);} // generate L, T, or U shape
