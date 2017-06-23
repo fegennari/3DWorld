@@ -126,9 +126,14 @@ buildings roof_color 0.2 0.2 0.2 1.0
 buildings roof_color_grayscale_rand 0.25
 buildings min_sides 3 # N-gons: triangles - octagons
 buildings max_sides 8
-buildings round_prob 0.25 # 25%
-buildings cube_prob 0.75 # 75% of non-round buildings
+buildings round_prob 0.05 # 25%
+buildings cube_prob 0.05 # 75% of non-round buildings
 buildings probability 2
+
+buildings min_flat_side_amt -1.0 # rare
+buildings max_flat_side_amt 0.4
+buildings min_alt_step_factor 0.8
+buildings max_alt_step_factor 0.9
 
 buildings side_tid buildings/apartment_windows.jpg # high quality
 buildings roof_tscale 2.0

@@ -17,7 +17,8 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // Multilevel cylinders and N-gons shapes?
-// Cut corners of cube buildings
+// Cut corners of cube buildings - fix texture coords
+// Fix noise in overhead map view
 
 struct tid_nm_pair_t {
 
@@ -58,12 +59,12 @@ struct color_range_t {
 struct building_mat_t : public building_tex_params_t {
 
 	unsigned min_levels, max_levels, min_sides, max_sides;
-	float min_alt, max_alt, split_prob, cube_prob, round_prob;
+	float min_alt, max_alt, split_prob, cube_prob, round_prob, min_fsa, max_fsa, min_asf, max_asf;
 	color_range_t side_color, roof_color;
 	cube_t sz_range;
 
 	building_mat_t() : min_levels(1), max_levels(1), min_sides(4), max_sides(4), min_alt(-1000), max_alt(1000),
-		split_prob(0.0), cube_prob(1.0), round_prob(0.0), sz_range(1,1,1,1,1,1) {}
+		split_prob(0.0), cube_prob(1.0), round_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 };
 
@@ -166,6 +167,18 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_uint(fp, global_building_params.cur_mat.max_sides)) {buildings_file_err(str, error);}
 		if (global_building_params.cur_mat.max_sides < 3) {buildings_file_err(str+" (< 3)", error);}
 	}
+	else if (str == "min_flat_side_amt") {
+		if (!read_float(fp, global_building_params.cur_mat.min_fsa)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_flat_side_amt") {
+		if (!read_float(fp, global_building_params.cur_mat.max_fsa)) {buildings_file_err(str, error);}
+	}
+	else if (str == "min_alt_step_factor") {
+		if (!read_float(fp, global_building_params.cur_mat.min_asf)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_alt_step_factor") {
+		if (!read_float(fp, global_building_params.cur_mat.max_asf)) {buildings_file_err(str, error);}
+	}
 	else if (str == "size_range") {
 		if (!read_cube(fp, global_building_params.cur_mat.sz_range)) {buildings_file_err(str, error);}
 	}
@@ -240,16 +253,23 @@ bool parse_buildings_option(FILE *fp) {
 
 class building_draw_t;
 
-struct building_t {
+struct building_geom_t { // describes the physical shape of a building
+	unsigned num_sides;
+	bool half_offset;
+	float rot_sin, rot_cos, flat_side_amt, alt_step_factor; // in XY plane, around Z (up) axis
 
-	unsigned mat_ix, num_sides;
-	float rot_sin, rot_cos; // in XY plane, around Z (up) axis
+	building_geom_t() : num_sides(4), half_offset(0), rot_sin(0.0), rot_cos(1.0), flat_side_amt(0.0), alt_step_factor(0.0) {}
+};
+
+struct building_t : public building_geom_t {
+
+	unsigned mat_ix;
 	colorRGBA side_color, roof_color;
 	cube_t bcube;
 	vector<cube_t> parts;
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), num_sides(4), rot_sin(0.0), rot_cos(1.0), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid  () const {return !bcube.is_all_zeros();}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
@@ -287,7 +307,7 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 	vert.t[ st] = texture_scale*vert.v[d]; \
 	vert.t[!st] = texture_scale*vert.v[i]; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
-	if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);} \
+	if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
 
 class building_draw_t {
@@ -326,22 +346,37 @@ class building_draw_t {
 	vector<vector3d> normals; // reused across add_cylinder() calls
 	vector<point> points;
 public:
-	vector<vector3d> const &calc_normals(unsigned ndiv) {
-		float const ndiv_inv(1.0/ndiv), css(TWO_PI*ndiv_inv), sin_ds(sin(css)), cos_ds(cos(css));
-		//float sin_s(sin(0.5*css)), cos_s(cos(0.5*css)); // start at half step - useful for cubes
+	vector<vector3d> const &calc_normals(building_geom_t const &bg, unsigned ndiv) {
+		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
+		assert(bg.alt_step_factor >= 0.0 && bg.alt_step_factor < 1.0);
+		if (bg.flat_side_amt > 0.0) {assert(ndiv > 4);} // should be at least 5 sides, 6-8 is better
+		float const ndiv_inv(1.0/ndiv), css(TWO_PI*ndiv_inv*(1.0f - bg.flat_side_amt));
+		float sin_ds[2], cos_ds[2];
+
+		if (bg.alt_step_factor > 0.0) { // alternate between large and small steps (cube with angled corners, etc.)
+			assert(!(ndiv&1));
+			float const css_v[2] = {css*(1.0f + bg.alt_step_factor), css*(1.0f - bg.alt_step_factor)};
+			UNROLL_2X(sin_ds[i_] = sin(css_v[i_]); cos_ds[i_] = cos(css_v[i_]);)
+		}
+		else { // uniform side length
+			sin_ds[0] = sin_ds[1] = sin(css);
+			cos_ds[0] = cos_ds[1] = cos(css);
+		}
 		float sin_s(0.0), cos_s(1.0); // start at 0 - more efficient
+		if (bg.half_offset) {sin_s = sin(0.5*css); cos_s = cos(0.5*css);} // for cube
 		normals.resize(ndiv);
 
 		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
+			bool const d(S&1);
 			float const s(sin_s), c(cos_s);
 			normals[S].assign(s, c, 0.0);
-			sin_s = s*cos_ds + c*sin_ds;
-			cos_s = c*cos_ds - s*sin_ds;
+			sin_s = s*cos_ds[d] + c*sin_ds[d];
+			cos_s = c*cos_ds[d] - s*sin_ds[d];
 		}
 		return normals;
 	}
-	vector<point> const &calc_poly_pts(cube_t const &bcube, unsigned ndiv, float expand=0.0) {
-		vector<vector3d> const &normals(calc_normals(ndiv));
+	vector<point> const &calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, unsigned ndiv, float expand=0.0) {
+		vector<vector3d> const &normals(calc_normals(bg, ndiv));
 		vector3d const sz(bcube.get_size());
 		point const cc(bcube.get_cube_center());
 		float const rscale(0.5), rx(rscale*sz.x + expand), ry(rscale*sz.y + expand); // expand polygon by sphere radius
@@ -350,19 +385,24 @@ public:
 		return points;
 	}
 
-	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos, point const &xlate,
-		cube_t const &bcube, unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
+	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
+		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
+		unsigned ndiv(bg.num_sides);
+		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
 		float const dist(distance_to_camera(pos + xlate));
-		ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U);
+		
+		if (ndiv > 4 && bg.flat_side_amt == 0.0 && bg.alt_step_factor == 0.0) {
+			ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U); // LOD if not flat sides: use at least 3 sides
+		}
 		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
 		bool const apply_ao(!shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, pos.z, z_top, cw, vert);
 		float tex_pos[2] = {0.0, 1.0};
-		calc_normals(ndiv);
+		calc_normals(bg, ndiv);
 
 		if (!shadow_only) {
 			float const dz_inv(1.0/bcube.get_dz());
@@ -376,7 +416,7 @@ public:
 
 				if (!shadow_only && !smooth_normals) { // average the two vertex normals for the flat face normal
 					vector3d normal((normals[ix[0]] + normals[ix[1]]).get_norm());
-					if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, all_zeros, normal);}
+					if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
 					vert.set_norm(normal);
 				}
 				for (unsigned d = 0; d < 2; ++d) {
@@ -385,7 +425,7 @@ public:
 					if (!shadow_only) {
 						if (smooth_normals) {
 							vector3d normal(n);
-							if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, all_zeros, normal);}
+							if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
 							vert.set_norm(normal);
 						}
 						vert.t[0] = texture_scale*((S+d)*ndiv_inv); // texture_scale should be a multiple of 1.0
@@ -394,7 +434,7 @@ public:
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), ((d^e) ? z_top : pos.z));
 						if (!shadow_only) {vert.t[1] = texture_scale*tex_pos[d^e];}
 						if (apply_ao) {vert.copy_color(cw[d^e]);}
-						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, rot_center, vert.v);}
+						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
 						verts.push_back(vert);
 					}
 				} // for d
@@ -412,7 +452,7 @@ public:
 				center.t[0] = center.t[1] = 0.0; // center of texture space for this disk
 				center.v = pos;
 				if (d) {center.v.z += height;}
-				if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, rot_center, center.v);}
+				if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, center.v);}
 
 				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data triangles
 					tri_verts.push_back(center);
@@ -421,7 +461,7 @@ public:
 						vector3d const &n(normals[(S+e)%ndiv]);
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), center.v.z);
 						if (!shadow_only) {UNROLL_2X(vert.t[i_] = texture_scale*n[i_];)}
-						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, rot_center, vert.v);}
+						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
 						tri_verts.push_back(vert);
 					}
 				} // for S
@@ -429,19 +469,19 @@ public:
 		} // end draw end(s)
 	}
 
-	void add_section(cube_t const &cube, unsigned num_sides, float rot_sin, float rot_cos, point const &xlate, cube_t const &bcube,
+	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube,
 		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
-		assert(num_sides >= 3); // must be nonzero volume
-		point const center((rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
+		assert(bg.num_sides >= 3); // must be nonzero volume
+		point const center((bg.rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size());
 
-		if (num_sides != 4) { // not a cube, use cylinder
+		if (bg.num_sides != 4) { // not a cube, use cylinder
 			vector3d const bcube_sz(bcube.get_size());
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.d[2][0]);
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(pos, center, sz.z, rscale*sz.x, rscale*sz.y, rot_sin, rot_cos, xlate, bcube, num_sides, tex, color, shadow_only, view_dir, dim_mask);
+			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, xlate, bcube, tex, color, shadow_only, view_dir, dim_mask);
 			return;
 		}
 		// else draw as a cube (optimized flow)
@@ -461,7 +501,7 @@ public:
 						for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 							pt[i]  = k^j^s1^1; // need to orient the vertices differently for each side
 							vert.v = pt*sz + llc;
-							if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, center, vert.v);}
+							if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 							verts.push_back(vert);
 						}
 					}
@@ -481,10 +521,10 @@ public:
 			bool const st(i&1);
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-				if (n < 2 && rot_sin != 0.0) { // XY only
+				if (n < 2 && bg.rot_sin != 0.0) { // XY only
 					vector3d norm; norm.z = 0.0;
-					if (n == 0) {norm.x =  rot_cos; norm.y = rot_sin;} // X
-					else        {norm.x = -rot_sin; norm.y = rot_cos;} // Y
+					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
+					else        {norm.x = -bg.rot_sin; norm.y = bg.rot_cos;} // Y
 					if ((view_dir.x*norm.x + view_dir.y*norm.y < 0.0) ^ j) continue; // back facing
 					vert.set_norm(j ? norm : -norm);
 				}
@@ -645,7 +685,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 #endif
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			vector<point> const &points(building_draw.calc_poly_pts((*i + xlate), num_sides, radius)); // expand by radius
+			vector<point> const &points(building_draw.calc_poly_pts(*this, (*i + xlate), num_sides, radius)); // expand by radius
 			
 			if (point_in_polygon_2d(pos2.x, pos2.y, &points.front(), num_sides, 0, 1)) { // XY plane test
 				pos2 = p_last2; // FIXME: smooth collision: iterate? find closest edge normal? use cylinder approximation?
@@ -702,7 +742,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			}
 		}
 		else if (num_sides != 4) {
-			vector<point> const &points(building_draw.calc_poly_pts((*i + xlate), num_sides));
+			vector<point> const &points(building_draw.calc_poly_pts(*this, (*i + xlate), num_sides));
 			float const tz((i->d[2][1] - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 			float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
 
@@ -747,6 +787,14 @@ void building_t::gen_geometry(unsigned ix) {
 	else { // N-gon
 		num_sides = mat.min_sides;
 		if (mat.min_sides != mat.max_sides) {num_sides += (rgen.rand() % (1 + abs((int)mat.max_sides - (int)mat.min_sides)));}
+	}
+	if (num_sides >= 6 && mat.max_fsa > 0.0) { // at least 6 sides
+		flat_side_amt = max(0.0f, min(0.45f, rgen.rand_uniform(mat.min_fsa, mat.max_fsa)));
+	}
+	if (num_sides <= 6 && mat.max_asf > 0.0) { // no more than 6 sides
+		alt_step_factor = max(0.0f, min(0.99f, rgen.rand_uniform(mat.min_asf, mat.max_asf)));
+		if (alt_step_factor > 0.0 && !(num_sides&1)) {half_offset = 1;} // chamfered cube/hexagon
+		if (alt_step_factor > 0.0) {num_sides *= 2;}
 	}
 
 	// determine the number of levels and splits
@@ -842,9 +890,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
-		bdraw.add_section(*i, num_sides, rot_sin, rot_cos, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
+		bdraw.add_section(*this, *i, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
 		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		bdraw.add_section(*i, num_sides, rot_sin, rot_cos, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
+		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
