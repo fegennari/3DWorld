@@ -344,9 +344,9 @@ class building_draw_t {
 		} else {vert.set_c4(color);} // color is shared across all verts
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
-	vector<point> points;
+	vector<point> points; // reused across calc_poly_pts() calls
 public:
-	vector<vector3d> const &calc_normals(building_geom_t const &bg, unsigned ndiv) {
+	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
 		assert(bg.alt_step_factor >= 0.0 && bg.alt_step_factor < 1.0);
 		if (bg.flat_side_amt > 0.0) {assert(ndiv > 4);} // should be at least 5 sides, 6-8 is better
@@ -364,25 +364,22 @@ public:
 		}
 		float sin_s(0.0), cos_s(1.0); // start at 0 - more efficient
 		if (bg.half_offset) {sin_s = sin(0.5*css); cos_s = cos(0.5*css);} // for cube
-		normals.resize(ndiv);
+		nv.resize(ndiv);
 
 		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
 			bool const d(S&1);
 			float const s(sin_s), c(cos_s);
-			normals[S].assign(s, c, 0.0);
+			nv[S].assign(s, c, 0.0);
 			sin_s = s*cos_ds[d] + c*sin_ds[d];
 			cos_s = c*cos_ds[d] - s*sin_ds[d];
 		}
-		return normals;
 	}
-	vector<point> const &calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, unsigned ndiv, float expand=0.0) {
-		vector<vector3d> const &normals(calc_normals(bg, ndiv));
+	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, unsigned ndiv, float expand=0.0) {
+		calc_normals(bg, pts, ndiv);
 		vector3d const sz(bcube.get_size());
 		point const cc(bcube.get_cube_center());
 		float const rscale(0.5), rx(rscale*sz.x + expand), ry(rscale*sz.y + expand); // expand polygon by sphere radius
-		points.resize(ndiv);
-		for (unsigned i = 0; i < ndiv; ++i) {points[i].assign((cc.x + rx*normals[i].x), (cc.y + ry*normals[i].y), 0.0);}
-		return points;
+		for (unsigned i = 0; i < ndiv; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
 	}
 
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
@@ -402,7 +399,7 @@ public:
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, pos.z, z_top, cw, vert);
 		float tex_pos[2] = {0.0, 1.0};
-		calc_normals(bg, ndiv);
+		calc_normals(bg, normals, ndiv);
 
 		if (!shadow_only) {
 			float const dz_inv(1.0/bcube.get_dz());
@@ -685,7 +682,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 #endif
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			vector<point> const &points(building_draw.calc_poly_pts(*this, (*i + xlate), num_sides, radius)); // expand by radius
+			vector<point> points;
+			building_draw.calc_poly_pts(*this, (*i + xlate), points, num_sides, radius); // expand by radius
 			
 			if (point_in_polygon_2d(pos2.x, pos2.y, &points.front(), num_sides, 0, 1)) { // XY plane test
 				pos2 = p_last2; // FIXME: smooth collision: iterate? find closest edge normal? use cylinder approximation?
@@ -742,7 +740,8 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			}
 		}
 		else if (num_sides != 4) {
-			vector<point> const &points(building_draw.calc_poly_pts(*this, (*i + xlate), num_sides));
+			vector<point> points;
+			building_draw.calc_poly_pts(*this, (*i + xlate), points, num_sides);
 			float const tz((i->d[2][1] - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 			float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
 
