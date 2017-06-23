@@ -353,6 +353,7 @@ public:
 	void add_cylinder(point const &pos, point const &rot_center, float height, float rx, float ry, float rot_sin, float rot_cos, point const &xlate,
 		cube_t const &bcube, unsigned ndiv, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
 	{
+		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
 		float const dist(distance_to_camera(pos + xlate));
 		ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U);
 		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
@@ -371,13 +372,22 @@ public:
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
 
 			for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
-				for (unsigned d = 0; d < 2; ++d) {
-					vector3d const &n(normals[(S+d)%ndiv]);
+				unsigned const ix[2] = {S, (S+1)%ndiv};
 
+				if (!shadow_only && !smooth_normals) { // average the two vertex normals for the flat face normal
+					vector3d normal((normals[ix[0]] + normals[ix[1]]).get_norm());
+					if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, all_zeros, normal);}
+					vert.set_norm(normal);
+				}
+				for (unsigned d = 0; d < 2; ++d) {
+					vector3d const &n(normals[ix[d]]);
+					
 					if (!shadow_only) {
-						vector3d normal(n);
-						if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, all_zeros, normal);}
-						vert.set_norm(normal);
+						if (smooth_normals) {
+							vector3d normal(n);
+							if (rot_sin != 0.0) {do_xy_rotate(rot_sin, rot_cos, all_zeros, normal);}
+							vert.set_norm(normal);
+						}
 						vert.t[0] = texture_scale*((S+d)*ndiv_inv); // texture_scale should be a multiple of 1.0
 					}
 					for (unsigned e = 0; e < 2; ++e) {
