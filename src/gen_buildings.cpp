@@ -17,8 +17,6 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // Multilevel cylinders and N-gons shapes?
-// Cut corners of cube buildings - fix texture coords
-// Fix noise in overhead map view
 
 struct tid_nm_pair_t {
 
@@ -415,14 +413,25 @@ public:
 		}
 		if (dim_mask & 3) { // draw sides
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
-
+			float tot_perim_inv(0.0), cur_perim[2] = {0.0, 0.0};
+			
+			if (!shadow_only) {
+				float tot_perim(0.0);
+				for (unsigned S = 0; S < ndiv; ++S) {tot_perim += p2p_dist(normals[S], normals[(S+1)%ndiv]);}
+				tot_perim_inv = 1.0/tot_perim;
+			}
 			for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
 				unsigned const ix[2] = {S, (S+1)%ndiv};
 
-				if (!shadow_only && !smooth_normals) { // average the two vertex normals for the flat face normal
-					vector3d normal((normals[ix[0]] + normals[ix[1]]).get_norm());
-					if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
-					vert.set_norm(normal);
+				if (!shadow_only) {
+					cur_perim[0]  = cur_perim[1];
+					cur_perim[1] += p2p_dist(normals[ix[0]], normals[ix[1]]);
+
+					if (!smooth_normals) { // average the two vertex normals for the flat face normal
+						vector3d normal((normals[ix[0]] + normals[ix[1]]).get_norm());
+						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
+						vert.set_norm(normal);
+					}
 				}
 				for (unsigned d = 0; d < 2; ++d) {
 					vector3d const &n(normals[ix[d]]);
@@ -433,7 +442,7 @@ public:
 							if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
 							vert.set_norm(normal);
 						}
-						vert.t[0] = texture_scale*((S+d)*ndiv_inv); // texture_scale should be a multiple of 1.0
+						vert.t[0] = texture_scale*cur_perim[d]*tot_perim_inv; // texture_scale should be a multiple of 1.0
 					}
 					for (unsigned e = 0; e < 2; ++e) {
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), ((d^e) ? z_top : pos.z));
