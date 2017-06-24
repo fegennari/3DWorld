@@ -348,7 +348,12 @@ class building_draw_t {
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
 	vector<point> points; // reused across calc_poly_pts() calls
+	point cur_camera_pos;
+
 public:
+	building_draw_t() : cur_camera_pos(zero_vector) {}
+	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
+
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
 		assert(bg.alt_step_factor >= 0.0 && bg.alt_step_factor < 1.0);
@@ -391,9 +396,9 @@ public:
 		unsigned ndiv(bg.num_sides);
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
-		float const dist(distance_to_camera(pos + xlate));
 		
 		if (ndiv > 4 && bg.flat_side_amt == 0.0 && bg.alt_step_factor == 0.0) {
+			float const dist(max(p2p_dist(cur_camera_pos, (pos + xlate)), 0.001f));
 			ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U); // LOD if not flat sides: use at least 3 sides
 		}
 		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
@@ -790,12 +795,12 @@ void building_t::gen_geometry(unsigned ix) {
 		num_sides = mat.min_sides;
 		if (mat.min_sides != mat.max_sides) {num_sides += (rgen.rand() % (1 + abs((int)mat.max_sides - (int)mat.min_sides)));}
 	}
-	bool const can_split(is_cube()); // before adjustment due to ASF
+	bool const was_cube(is_cube()); // before num_sides increase due to ASF
 
 	if (num_sides >= 6 && mat.max_fsa > 0.0) { // at least 6 sides
 		flat_side_amt = max(0.0f, min(0.45f, rgen.rand_uniform(mat.min_fsa, mat.max_fsa)));
 	}
-	if (num_sides <= 6 && mat.max_asf > 0.0 && rgen.rand_probability(mat.asf_prob)) { // no more than 6 sides
+	if ((num_sides == 3 || num_sides == 4 || num_sides == 6) && mat.max_asf > 0.0 && rgen.rand_probability(mat.asf_prob)) { // triangles/cubes/hexagons
 		alt_step_factor = max(0.0f, min(0.99f, rgen.rand_uniform(mat.min_asf, mat.max_asf)));
 		if (alt_step_factor > 0.0 && !(num_sides&1)) {half_offset = 1;} // chamfered cube/hexagon
 		if (alt_step_factor > 0.0) {num_sides *= 2;}
@@ -803,10 +808,10 @@ void building_t::gen_geometry(unsigned ix) {
 
 	// determine the number of levels and splits
 	unsigned num_levels(mat.min_levels);
-	if (mat.min_levels < mat.max_levels && is_cube()) {num_levels += rgen.rand()%(mat.max_levels - mat.min_levels + 1);} // only cubes are multilevel (unless min_level > 1)
+	if (mat.min_levels < mat.max_levels && was_cube) {num_levels += rgen.rand()%(mat.max_levels - mat.min_levels + 1);} // only cubes are multilevel (unless min_level > 1)
 	if (global_building_params.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.get_size().z/global_building_params.min_level_height)));}
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
-	bool const do_split(num_levels < 4 && can_split && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
+	bool const do_split(num_levels < 4 && is_cube() && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
 
 	if (num_levels == 1) { // single level
 		if (do_split) {split_in_xy(base, rgen);} // generate L, T, or U shape
@@ -1096,6 +1101,7 @@ public:
 		shader_t s;
 		fgPushMatrix();
 		translate_to(xlate);
+		if (!shadow_only) {building_draw.init_draw_frame();}
 
 		if (use_tt_smap) { // pre-pass to render buildings in nearby tiles that have shadow maps
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
