@@ -413,17 +413,30 @@ public:
 		}
 		if (dim_mask & 3) { // draw sides
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
-			float tot_perim_inv(0.0), cur_perim[2] = {0.0, 0.0};
-			
-			if (!shadow_only) {
-				float tot_perim(0.0);
+
+			if (shadow_only) {
+				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
+					unsigned const ix[2] = {S, (S+1)%ndiv};
+
+					for (unsigned d = 0; d < 2; ++d) {
+						vector3d const &n(normals[ix[d]]);
+						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
+						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
+
+						for (unsigned e = 0; e < 2; ++e) {
+							vert.v.z = ((d^e) ? z_top : pos.z);
+							verts.push_back(vert);
+						}
+					} // for d
+				} // for S
+			}
+			else {
+				float tot_perim(0.0), tot_perim_inv(0.0), cur_perim[2] = {0.0, 0.0};
 				for (unsigned S = 0; S < ndiv; ++S) {tot_perim += p2p_dist(normals[S], normals[(S+1)%ndiv]);}
 				tot_perim_inv = 1.0/tot_perim;
-			}
-			for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
-				unsigned const ix[2] = {S, (S+1)%ndiv};
-
-				if (!shadow_only) {
+				
+				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
+					unsigned const ix[2] = {S, (S+1)%ndiv};
 					cur_perim[0]  = cur_perim[1];
 					cur_perim[1] += p2p_dist(normals[ix[0]], normals[ix[1]]);
 
@@ -432,27 +445,27 @@ public:
 						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
 						vert.set_norm(normal);
 					}
-				}
-				for (unsigned d = 0; d < 2; ++d) {
-					vector3d const &n(normals[ix[d]]);
+					for (unsigned d = 0; d < 2; ++d) {
+						vector3d const &n(normals[ix[d]]);
+						vert.t[0] = texture_scale*cur_perim[d]*tot_perim_inv; // texture_scale should be a multiple of 1.0
 					
-					if (!shadow_only) {
 						if (smooth_normals) {
 							vector3d normal(n);
 							if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
 							vert.set_norm(normal);
 						}
-						vert.t[0] = texture_scale*cur_perim[d]*tot_perim_inv; // texture_scale should be a multiple of 1.0
-					}
-					for (unsigned e = 0; e < 2; ++e) {
-						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), ((d^e) ? z_top : pos.z));
-						if (!shadow_only) {vert.t[1] = texture_scale*tex_pos[d^e];}
-						if (apply_ao) {vert.copy_color(cw[d^e]);}
+						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
 						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
-						verts.push_back(vert);
-					}
-				} // for d
-			} // for S
+
+						for (unsigned e = 0; e < 2; ++e) {
+							vert.v.z = ((d^e) ? z_top : pos.z);
+							vert.t[1] = texture_scale*tex_pos[d^e];
+							if (apply_ao) {vert.copy_color(cw[d^e]);}
+							verts.push_back(vert);
+						}
+					} // for d
+				} // for S
+			}
 		} // end draw sides
 		if (dim_mask & 4) { // draw end(s)
 			auto &tri_verts(get_verts(tex, 1));
