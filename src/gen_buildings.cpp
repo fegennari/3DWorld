@@ -59,14 +59,25 @@ struct building_mat_t : public building_tex_params_t {
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf;
-	cube_t pos_range; // z is unused?
-	cube_t sz_range;
+	cube_t pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 
 	building_mat_t() : min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0), max_rot_angle(0.0),
 		min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
 		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
+
+	void update_range(vector3d const &range_translate) {
+		if (place_radius > 0.0) { // clip range to place_radius
+			point const center(pos_range.get_cube_center());
+			
+			for (unsigned d = 0; d < 2; ++d) { // x,y
+				max_eq(pos_range.d[d][0], (center[d] - place_radius));
+				min_eq(pos_range.d[d][1], (center[d] + place_radius));
+			}
+		}
+		pos_range += range_translate;
+	}
 };
 
 struct building_params_t {
@@ -74,16 +85,18 @@ struct building_params_t {
 	bool flatten_mesh, has_normal_map;
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor;
+	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0) {}
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), range_translate(zero_vector) {}
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
 		for (unsigned n = 0; n < cur_prob; ++n) {mat_gen_ix.push_back(mat_ix);} // add more references to this mat for higher probability
 		materials.push_back(cur_mat);
+		materials.back().update_range(range_translate);
 		has_normal_map |= cur_mat.has_normal_map();
 	}
 	void finalize() {
@@ -127,6 +140,10 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
 	}
 	// material parameters
+	else if (str == "range_translate") { // x,y only
+		if (!(read_float(fp, global_building_params.range_translate.x) &&
+			read_float(fp, global_building_params.range_translate.y))) {buildings_file_err(str, error);}
+	}
 	else if (str == "pos_range") {
 		if (!read_cube(fp, global_building_params.cur_mat.pos_range, 1)) {buildings_file_err(str, error);}
 	}
@@ -1089,10 +1106,10 @@ public:
 					
 					for (int d = 0; d < 4; ++d) {
 						float const zval(get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y)); // approximate for rotated buildings
-						zmin = min(zmin, zval);
+						min_eq(zmin, zval);
 						num_below += (zval < def_water_level);
 					}
-					zmin = max(zmin, def_water_level); // don't go below the water
+					max_eq(zmin, def_water_level); // don't go below the water
 					float const max_dz(b.get_material().max_delta_z);
 					if (num_below > 2 || // more than 2 corners underwater
 						(max_dz > 0.0 && (zmin0 - zmin) > max_dz)) // too steep of a slope
