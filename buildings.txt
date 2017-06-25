@@ -2,7 +2,7 @@
 buildings num_place 100000
 buildings num_tries 10
 buildings flatten_mesh 1
-buildings pos_range -225.0 225.0  -225.0 225.0  0 0
+buildings pos_range -225.0 225.0  -225.0 225.0
 buildings place_radius 225.0
 buildings max_delta_z 1.0
 buildings min_level_height 0.25
@@ -128,7 +128,10 @@ buildings min_sides 3 # N-gons: triangles - octagons
 buildings max_sides 8
 buildings round_prob 0.25 # 25%
 buildings cube_prob 0.75 # 75% of non-round buildings
-buildings probability 2
+
+buildings probability 4 # was 2
+buildings range_translate -10.0 -10.0
+buildings place_radius 50.0 # city center
 
 buildings min_flat_side_amt -1.0 # rare
 buildings max_flat_side_amt 0.4
