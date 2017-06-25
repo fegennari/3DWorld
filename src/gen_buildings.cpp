@@ -17,7 +17,6 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // Multilevel cylinders and N-gons shapes?
-// Place area per-material
 
 struct tid_nm_pair_t {
 
@@ -58,13 +57,15 @@ struct color_range_t {
 struct building_mat_t : public building_tex_params_t {
 
 	unsigned min_levels, max_levels, min_sides, max_sides;
-	float max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt, split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf;
-	color_range_t side_color, roof_color;
+	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
+	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf;
+	cube_t pos_range; // z is unused?
 	cube_t sz_range;
+	color_range_t side_color, roof_color;
 
-	building_mat_t() : min_levels(1), max_levels(1), min_sides(4), max_sides(4), max_delta_z(0.0), max_rot_angle(0.0),
+	building_mat_t() : min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0), max_rot_angle(0.0),
 		min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
-		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), sz_range(1,1,1,1,1,1) {}
+		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 };
 
@@ -72,14 +73,12 @@ struct building_params_t {
 
 	bool flatten_mesh, has_normal_map;
 	unsigned num_place, num_tries, cur_prob;
-	float place_radius, ao_factor;
-	cube_t pos_range; // z is unused?
+	float ao_factor;
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), num_place(num), num_tries(10),
-		cur_prob(1), ao_factor(0.0), place_radius(0.0), pos_range(-100,100,-100,100,0,0) {}
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0) {}
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
@@ -127,13 +126,13 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "ao_factor") {
 		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
 	}
+	// material parameters
 	else if (str == "pos_range") {
-		if (!read_cube(fp, global_building_params.pos_range)) {buildings_file_err(str, error);}
+		if (!read_cube(fp, global_building_params.cur_mat.pos_range)) {buildings_file_err(str, error);}
 	}
 	else if (str == "place_radius") {
-		if (!read_float(fp, global_building_params.place_radius)) {buildings_file_err(str, error);}
+		if (!read_float(fp, global_building_params.cur_mat.place_radius)) {buildings_file_err(str, error);}
 	}
-	// material parameters
 	else if (str == "max_delta_z") {
 		if (!read_float(fp, global_building_params.cur_mat.max_delta_z)) {buildings_file_err(str, error);}
 	}
@@ -992,11 +991,14 @@ public:
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 
 	void gen(building_params_t const &params) {
+		if (params.materials.empty()) return; // no materials
 		timer_t timer("Gen Buildings");
 		float const def_water_level(get_water_z_height());
 		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
-		range      = params.pos_range + ((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
+		range = params.materials.front().pos_range; // range is union over all material ranges
+		for (auto i = params.materials.begin()+1; i != params.materials.end(); ++i) {range.union_with_cube(i->pos_range);}
+		range     += ((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
 		range_sz   = range.get_size(); // Note: place_radius is relative to range cube center
 		max_extent = zero_vector;
 		UNROLL_3X(range_sz_inv[i_] = 1.0/range_sz[i_];)
@@ -1008,16 +1010,16 @@ public:
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
-			building_t b(params.choose_rand_mat(rgen)); // set material
-			building_mat_t const &mat(b.get_material());
 			point center(all_zeros);
 			
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
+				building_t b(params.choose_rand_mat(rgen)); // set material
+				building_mat_t const &mat(b.get_material());
 				bool keep(0);
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
 					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]);} // x,y
-					if (params.place_radius == 0.0 || dist_xy_less_than(center, place_center, params.place_radius)) {keep = 1; break;}
+					if (mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;}
 				}
 				if (!keep) continue; // placement failed, skip
 				center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
