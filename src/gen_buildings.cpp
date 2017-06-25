@@ -434,10 +434,8 @@ public:
 
 			if (shadow_only) {
 				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
-					unsigned const ix[2] = {S, (S+1)%ndiv};
-
 					for (unsigned d = 0; d < 2; ++d) {
-						vector3d const &n(normals[ix[d]]);
+						vector3d const &n(normals[d ? ((S+1)%ndiv) : S]);
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
 						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
 
@@ -454,23 +452,22 @@ public:
 				tot_perim_inv = 1.0/tot_perim;
 				
 				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
-					unsigned const ix[2] = {S, (S+1)%ndiv};
+					vector3d const &n1(normals[S]), &n2(normals[(S+1)%ndiv]);
 					cur_perim[0]  = cur_perim[1];
-					cur_perim[1] += p2p_dist(normals[ix[0]], normals[ix[1]]);
+					cur_perim[1] += p2p_dist(n1, n2);
+					vector3d normal(n1 + n2); normal.x *= ry; normal.y *= rx; // average the two vertex normals for the flat face normal
+					if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
+					if (view_dir.x*normal.x + view_dir.y*normal.y > 0.0) continue; // back facing
+					if (!smooth_normals) {vert.set_norm(normal.get_norm());}
 
-					if (!smooth_normals) { // average the two vertex normals for the flat face normal
-						vector3d normal((normals[ix[0]] + normals[ix[1]]).get_norm());
-						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
-						vert.set_norm(normal);
-					}
 					for (unsigned d = 0; d < 2; ++d) {
-						vector3d const &n(normals[ix[d]]);
+						vector3d const &n(d ? n2 : n1);
 						vert.t[0] = texture_scale*cur_perim[d]*tot_perim_inv; // texture_scale should be a multiple of 1.0
 					
 						if (smooth_normals) {
-							vector3d normal(n);
+							vector3d normal(n); normal.x *= ry; normal.y *= rx; // scale normal by radius (swapped)
 							if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
-							vert.set_norm(normal);
+							vert.set_norm(normal.get_norm());
 						}
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
 						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
@@ -503,6 +500,7 @@ public:
 					tri_verts.push_back(center);
 
 					for (unsigned e = 0; e < 2; ++e) {
+						if (S > 0 && e == 0) {tri_verts.push_back(tri_verts[tri_verts.size()-2]); continue;} // reuse prev vertex
 						vector3d const &n(normals[(S+e)%ndiv]);
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), center.v.z);
 						if (!shadow_only) {UNROLL_2X(vert.t[i_] = texture_scale*n[i_];)}
