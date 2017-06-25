@@ -1006,7 +1006,6 @@ public:
 		buildings.reserve(params.num_place);
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
-		point const place_center(range.get_cube_center());
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
@@ -1015,10 +1014,11 @@ public:
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
 				building_t b(params.choose_rand_mat(rgen)); // set material
 				building_mat_t const &mat(b.get_material());
+				point const place_center(mat.pos_range.get_cube_center());
 				bool keep(0);
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
-					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(range.d[d][0], range.d[d][1]);} // x,y
+					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(mat.pos_range.d[d][0], mat.pos_range.d[d][1]);} // x,y
 					if (mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;}
 				}
 				if (!keep) continue; // placement failed, skip
