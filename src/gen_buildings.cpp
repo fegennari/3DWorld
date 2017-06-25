@@ -708,7 +708,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
 
 		if (use_cylinder_coll()) {
-			if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
+			if ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z)) continue; // test z overlap
 			point const cc(i->get_cube_center() + xlate);
 			vector3d const csz(i->get_size());
 #if 0 // unstable
@@ -730,10 +730,28 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
 			vector<point> points;
-			building_draw.calc_poly_pts(*this, (*i + xlate), points, num_sides, radius); // expand by radius
-			
-			if (point_in_polygon_2d(pos2.x, pos2.y, &points.front(), num_sides, 0, 1)) { // XY plane test
-				pos2 = p_last2; // FIXME: smooth collision: iterate? find closest edge normal? use cylinder approximation?
+			building_draw.calc_poly_pts(*this, (*i + xlate), points, num_sides); // without the expand
+			float const dist(p2p_dist(p_last2, pos2));
+			point quad_pts[4]; // quads
+			bool updated(0);
+
+			// FIXME: if the player is moving too quickly, the intersection with a side polygon may be missed,
+			// which allows the player to travel through the building, but using a line intersection test from p_past2 to pos2 has other problems
+			for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
+				for (unsigned d = 0, ix = 0; d < 2; ++d) {
+					point const &p(points[(S+d)%num_sides]);
+					for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, i->d[2][d^e]);}
+				}
+				vector3d const normal(get_poly_norm(quad_pts));
+				float const rdist(dot_product_ptv(normal, pos2, quad_pts[0]));
+				if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
+				if (!sphere_poly_intersect(quad_pts, 4, pos2, normal, rdist, radius)) continue;
+				pos2 += normal*min(rdist, dist); // calculate intersection point, adjust outward by min of distance and step size (FIXME: jittery)
+				updated = 1;
+			} // for S
+			if (updated) {had_coll = 1;}
+			else if (point_in_polygon_2d(pos2.x, pos2.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
+				pos2.z = p_last2.z; // assume falling/z coll
 				had_coll = 1;
 			}
 		}
