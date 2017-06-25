@@ -292,7 +292,7 @@ struct building_t : public building_geom_t {
 	bool is_valid  () const {return !bcube.is_all_zeros();}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
-	bool use_cylinder_coll() const {return (num_sides > 8);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
+	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
 	colorRGBA get_avg_side_color() const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color() const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
