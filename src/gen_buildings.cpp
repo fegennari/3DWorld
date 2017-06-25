@@ -941,7 +941,10 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 			view_dir = (ccenter + xlate - camera);
 		}
 		bdraw.add_section(*this, *i, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
-		if (i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
+		
+		if (num_sides == 4 && i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) { // stacked cubes viewed from below; cur corners can have overhangs
+			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
+		}
 		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
