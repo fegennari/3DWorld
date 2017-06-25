@@ -128,7 +128,7 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	// material parameters
 	else if (str == "pos_range") {
-		if (!read_cube(fp, global_building_params.cur_mat.pos_range)) {buildings_file_err(str, error);}
+		if (!read_cube(fp, global_building_params.cur_mat.pos_range, 1)) {buildings_file_err(str, error);}
 	}
 	else if (str == "place_radius") {
 		if (!read_float(fp, global_building_params.cur_mat.place_radius)) {buildings_file_err(str, error);}

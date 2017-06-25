@@ -50,8 +50,10 @@ inline bool read_string(FILE *fp, std::string &str) {
 	return 1;
 }
 
-inline bool read_cube(FILE *fp, cube_t &c) { // x1 x2 y1 y2 z1 z2
-	return (fscanf(fp, "%f%f%f%f%f%f", &c.d[0][0], &c.d[0][1], &c.d[1][0], &c.d[1][1], &c.d[2][0], &c.d[2][1]) == 6);
+inline bool read_cube(FILE *fp, cube_t &c, bool z_is_optional=0) { // x1 x2 y1 y2 [z1 z2]
+	int const num_read(fscanf(fp, "%f%f%f%f%f%f", &c.d[0][0], &c.d[0][1], &c.d[1][0], &c.d[1][1], &c.d[2][0], &c.d[2][1]));
+	if (z_is_optional && num_read == 4) {c.d[2][0] = c.d[2][1] = 0.0; return 1;}
+	return (num_read == 6);
 }
 
 
