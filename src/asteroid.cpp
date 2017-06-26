@@ -999,6 +999,7 @@ void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroi
 	//RESET_TIME;
 	float const belt_width(AB_WIDTH_TO_RADIUS*rand_uniform2(0.9, 1.1)*radius);
 	float const belt_thickness(AB_THICK_TO_WIDTH*rand_uniform2(0.9, 1.1)*belt_width);
+	temperature = system->sun.get_temperature_at_dist(radius);
 	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius); // circular orbit, animated
 	//PRINT_TIME("Asteroid Belt"); // 4ms
 }
@@ -1008,6 +1009,7 @@ void uasteroid_belt_planet::gen_asteroid_placements() { // radius is the asteroi
 
 	assert(planet);
 	pos = planet->get_pos(); // update to current planet pos (necessary if physics is paused)
+	temperature = planet->temp;
 	float const belt_thickness(rand_uniform2(0.08, 0.10)*bwidth);
 	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius); // elliptical orbit, static
 }
@@ -1134,7 +1136,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 				}
 			}
 		}
-	}
+	} // for i
 }
 
 

@@ -546,7 +546,7 @@ void set_current_system_light(s_object const &clobj, point const &pspos, float a
 		set_sun_loc_color(pos, sunlight_color, sun.radius, 0, 0, a_scale, d_scale); // ending light from current system
 		univ_sun_pos = pos;
 		univ_sun_rad = sun.radius;
-		univ_temp    = sun.get_energy()/max(TOLERANCE, p2p_dist_sq(sun.pos, pspos));
+		univ_temp    = sun.get_temperature_at_pt(pspos);
 		have_sun     = 1;
 
 		if (clobj.type == UTYPE_PLANET) { // planet (what about moon?)
@@ -1542,7 +1542,7 @@ bool urev_body::liveable() const { // only planets are liveable
 
 void uplanet::calc_temperature() {
 	assert(orbit > TOLERANCE);
-	temp = system->sun.get_energy()/(orbit*orbit); // ~2-50
+	temp = system->sun.get_temperature_at_dist(orbit); // ~2-50
 }
 
 
@@ -1784,7 +1784,7 @@ void umoon::get_valid_orbit_r(float &orbit_r, float obj_r) const { // for satell
 
 void umoon::calc_temperature() {
 
-	temp = planet->system->sun.get_energy()/max(TOLERANCE, p2p_dist_sq(planet->system->sun.pos, pos));
+	temp = planet->system->sun.get_temperature_at_pt(pos);
 	if (shadowed_by_planet()) {temp *= 0.75;} // cooler in shadow
 }
 
@@ -3293,6 +3293,8 @@ void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, flo
 	vgravity += dir*(min(gfactor/(dist*dist), gmax)/dist);
 }
 
+
+float ustar::get_temperature_at_pt(point const &pt) const {return get_temperature_at_dist_sq(p2p_dist_sq(pos, pt));}
 
 vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const {
 

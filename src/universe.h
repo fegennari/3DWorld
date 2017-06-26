@@ -359,6 +359,9 @@ public:
 	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant, bool closest);
 	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
+	float get_temperature_at_dist_sq(float dist_sq) const {return get_energy()/max(TOLERANCE, dist_sq);}
+	float get_temperature_at_dist(float dist)       const {return get_temperature_at_dist_sq(dist*dist);}
+	float get_temperature_at_pt(point const &pt)    const;
 	vector3d get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const;
 	string get_name()  const {return "Star " + getname();}
 	string get_info()  const;

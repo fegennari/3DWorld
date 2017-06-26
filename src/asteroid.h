@@ -116,7 +116,7 @@ protected:
 		bool operator()(pair<float, cloud_inst> const &a, pair<float, cloud_inst> const &b) const {return (a.first < b.first);}
 	};
 	vector3d orbital_plane_normal, scale;
-	float max_asteroid_radius, inner_radius, outer_radius;
+	float max_asteroid_radius, inner_radius, outer_radius, temperature;
 	vector<cloud_inst> cloud_insts;
 	mutable vector<pair<float, cloud_inst>> clouds_to_draw;
 
@@ -153,6 +153,7 @@ class uasteroid_belt_system : public uasteroid_belt {
 
 public:
 	uasteroid_belt_system(vector3d const &opn, ussystem *system_) : uasteroid_belt(opn, system_->orbit_scale), system(system_) {}
+	virtual bool get_is_ice() const {return (temperature < 6.0);} // 50% of FREEZE_TEMP
 	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
 };
 
