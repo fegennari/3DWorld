@@ -56,5 +56,5 @@ use_model_lod_blocks 1
 vertex_optimize_flags 1 0 0
 mesh_size  128 128 64 # zsize required for indir lighting
 coll_obj_file coll_objs/coll_objs_puget_sound.txt
-
+#include buildings.txt
 
