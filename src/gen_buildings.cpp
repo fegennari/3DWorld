@@ -17,6 +17,7 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // Multilevel cylinders and N-gons shapes?
+// Texture alignment for windows
 
 struct tid_nm_pair_t {
 
@@ -275,7 +276,8 @@ class building_draw_t;
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
 	bool half_offset;
-	float rot_sin, rot_cos, flat_side_amt, alt_step_factor; // in XY plane, around Z (up) axis
+	float rot_sin, rot_cos, flat_side_amt, alt_step_factor; // rotation in XY plane, around Z (up) axis
+	//float roof_recess;
 
 	building_geom_t() : num_sides(4), half_offset(0), rot_sin(0.0), rot_cos(1.0), flat_side_amt(0.0), alt_step_factor(0.0) {}
 };
@@ -539,6 +541,7 @@ public:
 				unsigned const d((i+1)%3);
 				for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 					point pt; pt[n] = j;
+					//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
 					for (unsigned s1 = 0; s1 < 2; ++s1) {
 						pt[d] = s1;
 						for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
@@ -581,6 +584,7 @@ public:
 				pt[n] = j; // in direction or normal
 				pt[d] = 0;
 				pt[i] = !j; // need to orient the vertices differently for each side
+				//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
 				EMIT_VERTEX();
 				pt[i] = j;
 				EMIT_VERTEX();
