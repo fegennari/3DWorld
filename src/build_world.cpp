@@ -1597,6 +1597,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				return read_error(fp, "place item", coll_obj_file);
 			}
 			{
+				if (fvals[0] < 0.0) {return read_error(fp, "invalid place item regen time", coll_obj_file);}
 				assert(ivals[0] >= 0 && ivals[0] < NUM_TOT_OBJS);
 				float const radius(object_types[ivals[0]].radius);
 				read_or_calc_zval(fp, pos, radius, radius, xf);
