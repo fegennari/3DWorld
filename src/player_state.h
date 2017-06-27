@@ -269,7 +269,7 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 
 // function prototypes
 bool check_step_dz(point &cur, point const &lpos, float radius);
-int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal);
+int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned> const &wps_penalty);
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal);
 bool can_make_progress(point const &pos, point const &opos, bool check_uw);
 bool is_valid_path(point const &start, point const &end, bool check_uw);

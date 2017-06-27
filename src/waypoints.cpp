@@ -614,7 +614,7 @@ public:
 	waypoint_search(wpt_goal const &goal_, waypoint_cache &wc_) : goal(goal_), wc(wc_) {}
 
 	// returns min distance to goal following connected waypoints along path
-	float run_a_star(vector<pair<unsigned, float> > const &start, vector<unsigned> &path) {
+	float run_a_star(vector<pair<unsigned, float> > const &start, vector<unsigned> &path, set<unsigned> const &wps_penalty) {
 		if (!goal.is_reachable()) return 0.0; // nothing to do
 		assert(path.empty());
 		bool const orig_has_wpt_goal(has_wpt_goal);
@@ -635,6 +635,7 @@ public:
 			waypoint_t &w(waypoints[ix]);
 			w.g_score   = i->second; // cost from start along best known path
 			w.h_score   = get_h_dist(ix);
+			//if (wps_penalty.find(ix) != wps_penalty.end()) {w.h_score *= 10.0;} // distance penalty for this waypoint
 			w.f_score   = w.h_score; // estimated total cost from start to goal through current
 			w.came_from = -1;
 
@@ -726,7 +727,7 @@ void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 
 
 // find the optimal next waypoint when already on a waypoint path
-int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
+int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned> const &wps_penalty) {
 
 	if (!goal.is_reachable()) return -1; // nothing to do
 	//RESET_TIME;
@@ -734,7 +735,7 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
 	waypoint_search ws(goal, global_wpt_cache);
 	vector<pair<unsigned, float> > start;
 	start.push_back(make_pair(cur, 0.0));
-	ws.run_a_star(start, path);
+	ws.run_a_star(start, path, wps_penalty);
 	//PRINT_TIME("A Star");
 	if (path.empty())     return -1; // no path to goal
 	assert(path[0] == cur);
@@ -774,7 +775,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	}
 	waypoint_search ws(goal, global_wpt_cache);
 	vector<unsigned> path;
-	ws.run_a_star(start, path);
+	ws.run_a_star(start, path, set<unsigned>());
 	//PRINT_TIME("Find Optimal Waypoint");
 	//cout << "query size: " << oddatav.size() << ", start size: " << start.size() << ", path length: " << path.size() << endl;
 	if (path.empty()) return; // no path found, nothing to do

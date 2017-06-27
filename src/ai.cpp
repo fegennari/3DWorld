@@ -27,7 +27,7 @@ vector<point> app_spots;
 vector<od_data> oddatav; // used as a temporary
 
 
-extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields;
+extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields, smileys_chase_player;
 extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
@@ -399,10 +399,15 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		if (type == WAYPOINT) { // process waypoints
 			int curw(last_waypoint);
 			int ignore_w(-1);
-			// mode: 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt index, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
-			wpt_goal goal((has_wpt_goal ? 3 : 2), 0, all_zeros); // mode, wpt, goal_pos
-			//wpt_goal goal(6, 0, get_camera_pos()-point(0.0, 0.0, camera_zh)); // closest wpt visible to camera
+			wpt_goal goal;
 
+			// mode: 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt index, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
+			if (smileys_chase_player) {
+				goal = wpt_goal(6, 0, get_camera_pos()-point(0.0, 0.0, camera_zh)); // closest wpt visible to camera
+			}
+			else {
+				goal = wpt_goal((has_wpt_goal ? 3 : 2), 0, all_zeros); // mode, wpt, goal_pos
+			}
 			if (last_target_visible && last_target_type != 3 && goal.mode <= 2) { // have a previous enemy/item target and no real goal
 				goal.mode = 6; // closest visible waypoint
 				goal.pos  = target_pos; // should still be valid
@@ -424,8 +429,14 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 					waypt_adj_vect const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
+						set<unsigned> wps_used; // penalize waypoints on other smiley paths to reduce clustering of smileys
+#if 0
+						for (unsigned i = 0; i < (unsigned)num_smileys; ++i) {
+							if (sstates != nullptr && i != smiley_id && sstates[i].last_waypoint >= 0) {wps_used.insert(sstates[i].last_waypoint);}
+						}
+#endif
 						// FIXME: skip path waypoints that are in unreachable[1]?
-						curw = next_path_wpt = find_optimal_next_waypoint(curw, goal); // can return -1
+						curw = next_path_wpt = find_optimal_next_waypoint(curw, goal, wps_used); // can return -1
 
 						for (unsigned i = 0; i < next.size(); ++i) {
 							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1, 0.0);

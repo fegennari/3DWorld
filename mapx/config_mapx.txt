@@ -10,6 +10,7 @@ reflect_plane_z -8.0 8.0  -6.6 6.6  -0.291 -0.27 # this range includes the couty
 
 use_waypoints 1
 show_waypoints 0
+smileys_chase_player 0
 dynamic_smap_bias 1
 #cobjs_out_filename mapx/cobjs_out.txt
 

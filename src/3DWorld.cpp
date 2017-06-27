@@ -67,7 +67,7 @@ bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_s
 bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only_pine_palm_trees(0), enable_gamma_correct(0), use_z_prepass(0), reflect_dodgeballs(0);
 bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_motion(0), enable_mouse_look(MOUSE_LOOK_DEF), enable_init_shields(1), tt_triplanar_tex(0);
 bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_maps(0), use_interior_cube_map_refl(0), enable_cube_map_bump_maps(1);
-bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map_view_mandelbrot(0);
+bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map_view_mandelbrot(0), smileys_chase_player(0);
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1);
@@ -1630,6 +1630,7 @@ int load_config(string const &config_file) {
 	kwmb.add("flatten_tt_mesh_under_models", flatten_tt_mesh_under_models);
 	kwmb.add("show_map_view_mandelbrot", show_map_view_mandelbrot);
 	kwmb.add("def_texture_compress", def_tex_compress);
+	kwmb.add("smileys_chase_player", smileys_chase_player);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
