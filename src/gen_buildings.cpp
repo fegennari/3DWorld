@@ -596,15 +596,6 @@ public:
 		} // for i
 	}
 	void draw_and_clear(bool shadow_only) {
-#if 0
-		// if (fract(3.0*tc.s) < 0.3 && fract(1.5*tc.t) < 0.4) {texel.rgb = vec3(0.1);} // building experiments
-		if (!shadow_only) { // second pass using alpha mask
-			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_verts(shadow_only);} // first pass
-			glDepthFunc(GL_LEQUAL); enable_blend();
-			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only, SMILEY_SKULL_TEX);} // second decal pass
-			disable_blend(); glDepthFunc(GL_LESS);
-		} else
-#endif
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
 	}
 	void begin_immediate_building() { // to be called before any add_section() calls
@@ -941,7 +932,6 @@ bool check_tile_smap(bool shadow_only) {
 
 void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
 
-	// store in VBO?
 	if (!is_valid()) return; // invalid building
 	if (draw_ix == cur_draw_ix) return; // already drawn this pass
 	cur_draw_ix = draw_ix;
