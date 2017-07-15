@@ -57,7 +57,6 @@ bool light_valid_and_enabled(int l, point &lpos);
 // function prototypes - mesh_intersect
 bool sphere_visible_to_pt(point const &pt, point const &center, float radius);
 bool is_visible_from_light(point const &pos, point const &lpos, int fast);
-bool line_intersect_surface_cached(point const &v1, point const &v2, int &xpos, int &ypos, float &zval, int fast=0);
 bool line_intersect_mesh(point const &v1, point const &v2, int &xpos, int &ypos, float &zval, int fast=0, bool cached=0);
 bool line_intersect_mesh(point const &v1, point const &v2, int fast=0);
 bool line_intersect_mesh(point const &v1, point const &v2, point &cpos, int fast=0, bool cached=0);
@@ -335,7 +334,6 @@ void auto_advance_time();
 void advance_smiley(dwobject &obj, int smiley_id);
 void shift_player_state(vector3d const &vd, int smiley_id);
 void player_clip_to_scene(point &pos);
-void smiley_action(int smiley_id);
 
 // function prototypes - matrix
 void set_scene_constants();
@@ -416,7 +414,6 @@ int  set_true_obj_height(point &pos, point const &lpos, float step_height, float
 
 // function prototypes - math3d
 float fix_angle(float angle);
-void get_face_normal(shape3d &shape, int face_id);
 void calc_reflection_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm);
 bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm, float n1, float n2);
 float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float n1, float n2);
@@ -726,8 +723,6 @@ point get_camera_light_pos();
 void add_camera_flashlight();
 void add_camera_candlelight();
 void add_dynamic_lights_ground();
-void get_xyz(point const &p, int v[3]);
-void get_xyz_v2(point &p, int const v[3]);
 void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, unsigned z_start=0, unsigned z_end=0, bool update_lighting=1);
 bool upload_smoke_indir_texture();
 void upload_dlights_textures(cube_t const &bounds);
@@ -813,6 +808,7 @@ void toggle_spraypaint_mode();
 void change_spraypaint_color(int val);
 void draw_spraypaint_crosshair();
 void spray_paint(bool mode);
+void spraypaint_tree_leaves(point const &pos, float radius, colorRGBA const &color); // from Tree.cpp
 
 // function prototypes - sphere materials
 bool read_sphere_materials_file(std::string const &fn);

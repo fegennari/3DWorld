@@ -386,7 +386,6 @@ void regen_trees(bool keep_old);
 void shift_trees(vector3d const &vd);
 void add_tree_cobjs();
 void clear_tree_context();
-void spraypaint_tree_leaves(point const &pos, float radius, colorRGBA const &color);
 
 // function prototypes - small trees
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z);
