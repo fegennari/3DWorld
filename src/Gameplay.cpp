@@ -1239,7 +1239,13 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_STARB, nullptr, 1, 0.5); // no damage, half size sphere
 		gen_delayed_from_player_sound(SOUND_ICE_CRACK, pos, 1.0);
 		//add_water_particles(pos, vector3d(0.0, 0.0, 10.0), 1.0, 0.5*bradius, 0.0, 0.0, rand_uniform(50, 100)); // doesn't alpha blend properly with explosion
-		modify_grass_at(pos, 1.0*bradius, 0, 0, 0, 1, 1, 0, ICE_C);
+		colorRGBA const color(0.75, 0.75, 1.0, 1.0); // white-ice
+		//spraypaint_tree_leaves(pos, 1.0*bradius, color); // ineffective, since leaves tend to be green and don't tint to blue
+
+		if (pos.z < interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) + 0.25*bradius) { // near mesh surface
+			if (display_mode & 0x01) {add_color_to_landscape_texture(color, pos.x, pos.y, 0.3*bradius);}
+			if (display_mode & 0x02) {modify_grass_at(pos, 1.0*bradius, 0, 0, 0, 1, 1, 0, color);}
+		}
 		// FIXME: water splash?
 		return; // no other effects
 	}
