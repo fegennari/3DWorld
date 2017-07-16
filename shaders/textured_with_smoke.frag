@@ -184,8 +184,10 @@ float get_puddle_val(in float wetness) {
 	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
 }
 
-float get_reflect_weight(in vec3 view_dir, in vec3 ws_normal, in float reflectivity2, in float refract_ix) {
-	return reflectivity2 * mix(get_fresnel_reflection(view_dir, ws_normal, 1.0, refract_ix), 1.0, metalness);
+// returns {fresnel_term, reflect_weight}
+vec2 get_reflect_weight(in vec3 view_dir, in vec3 ws_normal, in float reflectivity2, in float refract_ix) {
+	float fresnel = get_fresnel_reflection(view_dir, ws_normal, 1.0, refract_ix);
+	return vec2(fresnel, (reflectivity2 * mix(fresnel, 1.0, metalness)));
 }
 
 #ifdef ENABLE_CUBE_MAP_REFLECT
@@ -345,7 +347,7 @@ void main()
 		spec_scale     *= get_spec_color();
 #endif
 		// Note: this doesn't work for refact_ix == 1, so we choose an arbitrary value of 1.3 (metals are lower, dielectrics are higher)
-		float reflect_w = get_reflect_weight(normalize(camera_pos - vpos), ws_normal, reflectivity2, ((refract_ix == 1.0) ? 1.3 : refract_ix)); // default is water
+		float reflect_w = get_reflect_weight(normalize(camera_pos - vpos), ws_normal, reflectivity2, ((refract_ix == 1.0) ? 1.3 : refract_ix)).y; // default is water
 		vec4 proj_pos   = fg_ProjectionMatrix * epos;
 		vec2 ref_tex_st = clamp(0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5), 0.0, 1.0);
 		color.rgb       = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w*spec_scale);
@@ -364,8 +366,8 @@ void main()
 #endif
 	float ref_ix    = refract_ix;
 	vec3 view_dir   = normalize(camera_pos - vpos);
-	float reflected = get_reflect_weight(view_dir, ws_normal, reflectivity2, ref_ix);
-	vec3 reflect_w  = reflected*spec_scale;
+	vec2 reflected  = get_reflect_weight(view_dir, ws_normal, reflectivity2, ref_ix);
+	vec3 reflect_w  = reflected.y*spec_scale; // use reflected weight including metalness
 	vec3 rel_pos    = vpos - cube_map_center;
 	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds
 	vec3 ref_dir    = rel_pos + cube_map_near_clip*reflect(-view_dir, ws_normal); // position offset within cube (approx.)
@@ -423,7 +425,9 @@ void main()
 	else { // auto mipmaps + anisotropic filtering with no blur
 		color.rgb = texture(reflection_tex, ref_dir).rgb;
 	}
-	color.rgb = mix(t_color, color.rgb*specular_color.rgb, reflect_w);
+	// use fresnel term to select between metallic specular color and monochrome fresnel specular color
+	vec3 spec_color = mix(specular_color.rgb, vec3((specular_color.r + specular_color.g + specular_color.b)/3.0), reflected.x);
+	color.rgb       = mix(t_color, color.rgb*spec_color, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK
