@@ -607,7 +607,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_ALPHA:        value << mat.alpha;        spos = mat.alpha;            break; // 0.05 to 1.0
 		case SM_SPEC_MAG:     value << mat.spec_mag;     spos = mat.spec_mag;         break; // 0.0 to 1.0
 		case SM_SHINE:        value << int(mat.shine);   spos = log2(mat.shine)/10.0; break; // 1.0 to 1024.0 (log2 0 to 10)
-		case SM_REFRACT_IX:   value << mat.refract_ix;   spos = (mat.refract_ix-1.0)/2.0; break; // 1.0 to 3.0
+		case SM_REFRACT_IX:   value << mat.refract_ix;   spos = (mat.refract_ix-1.0)/3.0; break; // 1.0 to 4.0
 		case SM_LIGHT_ATTEN:  value << mat.light_atten;  spos = mat.light_atten/25.0; break; // 0.0 to 25.0
 		case SM_LIGHT_RADIUS: value << mat.light_radius; spos = mat.light_radius/2.0; break; // 0.0 to 2.5
 		case SM_LIGHT_SHADOW: value << mat.shadows;      spos = mat.shadows;          break; // 0/1
@@ -653,7 +653,7 @@ public:
 		case SM_ALPHA:        mat.alpha        = CLIP_TO_01(mat.alpha    + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05 (alpha of 0 is okay for refractive or scattering objects)
 		case SM_SPEC_MAG:     mat.spec_mag     = CLIP_TO_01(mat.spec_mag + 0.05f*delta);                break; // 0.0 to 1.0 in steps of 0.05
 		case SM_SHINE:        mat.shine        = pow(2.0, max(0, min(10, int(log2(mat.shine)+delta)))); break; // 1.0 to 1024.0 (log2 0 to 10 in steps of 1)
-		case SM_REFRACT_IX:   mat.refract_ix   = max(1.0f, min(3.0f, (mat.refract_ix   + 0.1f*delta))); break; // 1.0 to 3.0 in steps of 0.1
+		case SM_REFRACT_IX:   mat.refract_ix   = max(1.0f, min(4.0f, (mat.refract_ix   + 0.1f*delta))); break; // 1.0 to 4.0 in steps of 0.1
 		case SM_LIGHT_ATTEN:  mat.light_atten  = max(0.0f, min(25.0f,(mat.light_atten  + 1.0f*delta))); break; // 0.0 to 25.0 in steps of 1.0
 		case SM_LIGHT_RADIUS: mat.light_radius = max(0.0f, min(2.5f, (mat.light_radius + 0.1f*delta))); if (mat.light_radius < 0.01) {mat.light_radius = 0.0;} break; // 0.0 to 2.5 in steps of 0.1
 		case SM_LIGHT_SHADOW: mat.shadows      = ((delta < 0) ? 0 : 1); break; // 0/1

@@ -35,14 +35,17 @@ add_material Mirror
 
 density 19.29
 specular_color 0.9 0.6 0.1
+refract_ix 2.78 # magnitude of R+I vector
 add_material Gold
 
 density 8.79
 specular_color 0.8 0.4 0.25
+refract_ix 3.01 # magnitude of R+I vector
 add_material Copper
 
 density 8.48
 specular_color 0.85 0.85 0.25
+refract_ix 3.16 # magnitude of R+I vector
 add_material Brass
 
 density 7.1 # chrome
