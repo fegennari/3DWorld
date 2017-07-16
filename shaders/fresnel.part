@@ -2,7 +2,7 @@ float get_fresnel_reflection(in vec3 v_inc, in vec3 norm, in float n1, in float 
 	// http://en.wikipedia.org/wiki/Fresnel_equations
 	float cos_theta_i = dot(v_inc, norm);
 	float sin_theta_i = length(cross(v_inc, norm));
-	float val = (n1/n2)*sin_theta_i;
+	float val = min(0.999, (n1/n2)*sin_theta_i); // clamp to avoid NaN in the sqrt() - more correct to make this work with imaginary numbers
 	float cos_theta_t = sqrt(1.0 - val*val);
 	float rs_sqrt = (n1*cos_theta_i - n2*cos_theta_t)/(n1*cos_theta_i + n2*cos_theta_t);
 	float rp_sqrt = (n1*cos_theta_t - n2*cos_theta_i)/(n1*cos_theta_t + n2*cos_theta_i);
