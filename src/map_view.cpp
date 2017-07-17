@@ -21,7 +21,7 @@ double map_x(0.0), map_y(0.0);
 extern bool water_is_lava, begin_motion, show_map_view_mandelbrot;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex;
-extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature;
+extern float zmax_est, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
@@ -135,16 +135,19 @@ void draw_overhead_map() {
 	}
 	else {
 		float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
-		float const relh_water(get_rel_height(water_plane_z, -zmax_est, zmax_est));
+		float const relh_water(get_rel_height_no_clamp(water_plane_z, -zmax_est, zmax_est));
 		point const camera(get_camera_pos());
 		float map_heights[6];
 		map_heights[0] = 0.9*lttex_dirt[3].zval  + 0.1*lttex_dirt[4].zval;
 		map_heights[1] = 0.5*(lttex_dirt[2].zval + lttex_dirt[3].zval);
 		map_heights[2] = 0.5*(lttex_dirt[1].zval + lttex_dirt[2].zval);
 		map_heights[3] = 0.5*(lttex_dirt[0].zval + lttex_dirt[1].zval);
-		map_heights[4] = relh_water;
-		map_heights[5] = 0.5*map_heights[4];
-		for (unsigned i = 0; i < 6; ++i) {map_heights[i] = pow(map_heights[i], glaciate_exp);}
+		map_heights[4] = relh_water; // Note: can be negative
+		map_heights[5] = min(0.5*relh_water, relh_water-0.01); // handle negative case
+		
+		for (unsigned i = 0; i < 6; ++i) {
+			if (map_heights[i] > 0.0) {map_heights[i] = pow(map_heights[i], glaciate_exp);} // handle negative case
+		}
 		colorRGBA ground_color(BLACK);
 		if (default_ground_tex >= 0) {ground_color = texture_color(default_ground_tex);}
 
@@ -252,7 +255,7 @@ void draw_overhead_map() {
 					}
 					if (!mh_set) {mh = get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j);} // calculate mesh height here if not yet set
 					if (ADD_RIVERS) {heights[inx + j] = mh;}
-					float height(CLIP_TO_01(hscale*(mh + zmax2)));
+					float height(min(1.0f, hscale*(mh + zmax2))); // can be negative
 
 					if (!map_color) { // grayscale
 						rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow

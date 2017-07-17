@@ -637,13 +637,15 @@ inline void atten_by_water_depth(float *c, float dist) {
 
 
 inline float get_rel_height(float zval, float zmin0, float zmax0) {
-
 	float const zv(relh_adj_tex + (zval - zmin0)/(zmax0 - zmin0));
 	return ((zv > 0.0) ? pow(zv, glaciate_exp_inv) : 0.0);
 }
+inline float get_rel_height_no_clamp(float zval, float zmin0, float zmax0) {
+	float const zv(relh_adj_tex + (zval - zmin0)/(zmax0 - zmin0));
+	return ((zv > 0.0) ? pow(zv, glaciate_exp_inv) : zv);
+}
 
 inline bool is_mesh_disabled(int xpos, int ypos) {
-
 	int const x(xpos + xoff2), y(ypos + yoff2);
 	return (mesh_draw != NULL && !point_outside_mesh(x, y) && !mesh_draw[y][x]);
 }
