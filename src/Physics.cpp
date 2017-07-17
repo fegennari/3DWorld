@@ -52,7 +52,7 @@ extern obj_vector_t<particle_cloud> part_clouds;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
 extern water_particle_manager water_part_man;
-extern physics_particle_manager explosion_part_man;
+extern physics_particle_manager explosion_part_man[];
 
 
 int get_obj_zval(point &pt, float &dz, float z_offset);
@@ -1510,7 +1510,7 @@ bool physics_particle_manager::is_pos_valid(point const &pos) const {
 	return (pos.z > mesh_height[ypos][xpos] && pos.z > water_matrix[ypos][xpos]); // above mesh and water
 }
 
-void physics_particle_manager::apply_physics(float gravity, float terminal_velocity) {
+void physics_particle_manager::apply_physics(float gravity, float terminal_velocity, bool emissive) {
 
 	if (parts.empty()) return;
 	//RESET_TIME;
@@ -1524,6 +1524,7 @@ void physics_particle_manager::apply_physics(float gravity, float terminal_veloc
 		part.v.y *= xy_damp;
 		//point const p0(part.p);
 		part.p   += tstep*part.v; // add velocity to position
+		if (emissive) {part.c.set_c3(colorRGBA(1.0, 1.0-0.75*max(0.0f, -part.v.z/terminal_velocity), 0.0));} // varies from yellow to red-orange based on vz/vt
 		int cindex;
 		
 		//if (check_coll_line(p0, part.p, cindex, -1, 1, 0)) { // skip dynamic
@@ -1569,7 +1570,7 @@ void advance_physics_objects() {
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
 	apply_obj_physics(decals);
-	explosion_part_man.apply_physics(1.0, 4.0); // gravity=1.0, air_factor=0.25
+	for (unsigned d = 0; d < 2; ++d) {explosion_part_man[d].apply_physics(0.5, 4.0, (d == 1));} // gravity=0.5, air_factor=0.25
 	water_part_man.apply_physics();
 	for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
 }

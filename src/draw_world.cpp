@@ -67,7 +67,7 @@ extern cloud_manager_t cloud_manager;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
 extern water_particle_manager water_part_man;
-extern physics_particle_manager explosion_part_man;
+extern physics_particle_manager explosion_part_man[];
 extern cube_t cur_smoke_bb;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
@@ -1308,7 +1308,7 @@ void draw_part_clouds(vector<particle_cloud> const &pc, int tid) {
 }
 
 
-void physics_particle_manager::draw(float radius, int tid) const {
+void physics_particle_manager::draw(float radius, int tid, bool emissive) const {
 
 	if (parts.empty()) return;
 	point const camera(get_camera_pos());
@@ -1321,12 +1321,12 @@ void physics_particle_manager::draw(float radius, int tid) const {
 		psd.add_pt(sized_vert_t<vert_norm_color>(vert_norm_color(parts[i].p, (camera - parts[i].p).get_norm(), parts[i].c.c), radius)); // normal faces camera
 	}
 	if (tid >= 0) {psd.sort_back_to_front();} // if we have an alpha texture, sort back to front
-	psd.draw(tid, 0.0, 1); // draw with lighting
+	psd.draw(tid, 0.0, !emissive); // draw with lighting
 	disable_blend();
 }
 
 void water_particle_manager::draw() const {
-	physics_particle_manager::draw(0.5*object_types[DROPLET].radius, BLUR_CENT_TEX); // constant value, half the size of regular droplets
+	physics_particle_manager::draw(0.5*object_types[DROPLET].radius, BLUR_CENT_TEX, 0); // constant value, half the size of regular droplets
 }
 
 
@@ -1682,7 +1682,8 @@ void draw_projectile_effects(int reflection_pass) {
 
 	draw_beams(reflection_pass == 0);
 	draw_sparks(reflection_pass == 0);
-	explosion_part_man.draw(0.001, -1); // untextured
+	explosion_part_man[0].draw(0.001, -1, 0); // lit
+	explosion_part_man[1].draw(0.001, -1, 1); // emissive
 	water_part_man.draw(); // not really a projectile effect, but it's drawn with them
 }
 

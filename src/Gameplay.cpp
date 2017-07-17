@@ -1318,6 +1318,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		get_intersecting_cobjs_tree(bcube, cobjs, -1, 0.0, 0, 0, -1); // get candidates
 		// not entirely correct, since this ignores non-intersecting cobjs (bcube intersects but sphere does not)
 		unsigned const max_parts(cobjs.empty() ? 0 : unsigned(10000*size/cobjs.size()));
+		bool const emissive(type == PLASMA);
 
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) { // find closest cobj(s), use normal and color
 			coll_obj const &cobj(coll_objects.get_cobj(*i));
@@ -1326,8 +1327,8 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			if (!cobj.sphere_intersects_exact(pos, search_radius, normal, cpos)) continue;
 			//if (!cobj.sphere_intersects(pos, search_radius)) continue;
 			//vector3d normal((plus_z + (pos - cobj.get_center_pt()).get_norm()).get_norm()); // too inexact
-			colorRGBA color(cobj.get_avg_color(), 1.0); // ignore texture since this is an area effect; alpha is always 1.0
-			add_explosion_particles(pos, 10.0*normal, 5.0, 0.25*bradius, color, (rand() % max_parts));
+			colorRGBA color((emissive ? YELLOW : cobj.get_avg_color()), 1.0); // ignore texture since this is an area effect; alpha is always 1.0
+			add_explosion_particles(pos, 10.0*normal, 5.0, 0.25*bradius, color, (rand() % max_parts), emissive);
 
 			if (cobj.is_movable() && cobj.destroy <= destroy_thresh) {
 				float const dist(p2p_dist(cobj.get_cube_center(), pos)), move_radius(0.5*bradius);

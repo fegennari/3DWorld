@@ -140,8 +140,8 @@ protected:
 public:
 	void clear() {parts.clear();}
 	void gen_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num);
-	void apply_physics(float gravity, float terminal_velocity);
-	void draw(float radius, int tid) const;
+	void apply_physics(float gravity, float terminal_velocity, bool emissive=0);
+	void draw(float radius, int tid, bool emissive=0) const;
 	bool is_pos_valid(point const &pos) const;
 };
 
