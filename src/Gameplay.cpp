@@ -2153,7 +2153,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			point const light_pos(coll_pos - vcf*(0.1*ssize));
 			add_dynamic_light(0.6*CLIP_TO_01(sqrt(intensity)), light_pos, scolor);
 
-			if (coll && hardness >= 0.5 && intensity >= 0.5 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
+			if (coll && (is_laser || hardness >= 0.5) && intensity >= 0.5 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
 				gen_particles(light_pos, 1, 0.5, 1); // particle
 			}
 		}
