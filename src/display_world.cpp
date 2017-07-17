@@ -312,7 +312,9 @@ float get_star_alpha(bool obscured_by_clouds) {
 	if (star_alpha >= 1.0) {return 1.0;}
 	//if (world_mode != WMODE_INF_TERRAIN) {return star_alpha;}
 	float const dist_above_clouds(get_camera_pos().z - get_tt_cloud_level());
-	return ((dist_above_clouds > 0.0) ? min(1.0, (star_alpha + 0.05*dist_above_clouds)) : star_alpha);
+	if (dist_above_clouds > 0.0) {star_alpha = min(1.0, (star_alpha + 0.05*dist_above_clouds));}
+	star_alpha = atmosphere*star_alpha + (1.0 - atmosphere); // star alpha increases as atmosphere decreases
+	return star_alpha;
 }
 
 colorRGBA attenuate_sun_color(colorRGBA const &c) {
@@ -339,7 +341,7 @@ void calc_bkg_color() {
 		blend_color(bkg_color, bkg_color, GRAY, 0.5, 1);
 		UNROLL_3X(bkg_color[i_] = min(bkg_color[i_], orig_bkgc[i_]);) // can't make it brighter
 	}
-	if (atmosphere < 1.0) {blend_color(bkg_color, bkg_color, BACKGROUND_NIGHT, atmosphere, 0);}
+	//if (atmosphere < 1.0) {blend_color(bkg_color, bkg_color, BACKGROUND_NIGHT, atmosphere, 0);}
 }
 
 
@@ -467,7 +469,7 @@ void draw_sun_moon_stars(bool no_update) {
 
 	float star_alpha(get_star_alpha(is_cloudy != 0));
 	if (star_alpha > 0.0) {gen_and_draw_stars(star_alpha, 0, no_update);}
-	if (light_factor <= 0.6) {draw_moon();} // moon
+	if (light_factor <= 0.6 || atmosphere <= 0.5) {draw_moon();} // moon
 	if (light_factor >= 0.4) {draw_sun ();} // sun
 }
 

@@ -57,6 +57,9 @@ sm_tree_density 2.0
 sun_rot 0.4
 default_ground_tex -1
 #cloud_height_offset -1.0
+#water_h_off -5.0 0.0
+atmosphere 1.0
+vegetation 1.0
 
 #mesh_seed 1
 mesh_gen_mode 4 # 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex, 4=GPU domain warp
