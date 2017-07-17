@@ -2168,6 +2168,7 @@ int main(int argc, char** argv) {
 	//cout << "Extensions: " << get_all_gl_extensions() << endl;
 
 	if (!universe_only) { // universe mode should be able to do without these initializations
+		reset_planet_defaults(); // set atmosphere and vegetation
 		init_objects();
 		alloc_matrices();
 		t_trees.resize(num_trees);
