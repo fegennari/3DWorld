@@ -94,7 +94,7 @@ float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperatu
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(0.6), waypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), model3d_texture_anisotropy(1.0), dist_to_fire_sq(0.0);
 float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model_auto_tc_scale(0.0), model_triplanar_tc_scale(0.0), shadow_map_pcf_offset(0.0);
 float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0), jump_height(1.0), force_czmin(0.0), force_czmax(0.0), smap_thresh_scale(1.0), dlight_intensity_scale(1.0);
-float model_mat_lod_thresh(5.0), clouds_per_tile(0.5);
+float model_mat_lod_thresh(5.0), clouds_per_tile(0.5), def_atmosphere(1.0), def_vegetation(1.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
@@ -1742,6 +1742,8 @@ int load_config(string const &config_file) {
 	kwmf.add("model_mat_lod_thresh", model_mat_lod_thresh);
 	kwmf.add("def_texture_aniso", def_tex_aniso);
 	kwmf.add("clouds_per_tile", clouds_per_tile);
+	kwmf.add("atmosphere", def_atmosphere);
+	kwmf.add("vegetation", def_vegetation);
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);

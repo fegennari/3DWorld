@@ -407,10 +407,8 @@ public:
 
 // ************ Physics and Weather ************
 
-float def_atmosphere(1.0), def_vegetation(1.0);
-
 extern int temp_change, def_cube_map_reflect_mipmap_level;
-extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP, player_speed;
+extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP, player_speed, def_atmosphere, def_vegetation;
 extern vector3d wind;
 
 enum {PW_SPEED=0, PW_GRAVITY, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, CM_MIP_BIAS, NUM_PW_CONT};
