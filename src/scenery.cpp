@@ -15,6 +15,8 @@ bool     const USE_VOXEL_ROCKS = 0;
 bool const ENABLE_PLANT_SHADOWS= 1;
 unsigned const ROCK_NDIV       = 24;
 unsigned const ROCK_VOX_SZ     = 32;
+unsigned const VOX_ROCK_NUM_LOD= 1;
+unsigned const NUM_VROCK_MODELS= 100;
 float    const SHADOW_VAL      = 0.5;
 float    const PT_LINE_THRESH  = 800.0;
 
@@ -474,18 +476,55 @@ void s_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d
 }
 
 
+
+unsigned voxel_rock_manager_t::gen_model_ix(int rseed) {
+
+	models.resize(NUM_VROCK_MODELS);
+	unsigned const ix(rseed % models.size());
+	if (!models[ix]) {to_gen.insert(ix);} // mark new model for building
+	return ix;
+}
+
+void voxel_rock_manager_t::build_models(noise_texture_manager_t *ntg, unsigned num_lod_levels) {
+
+	if (to_gen.empty()) return;
+	timer_t timer("Gen Voxel Rocks");
+	vector<unsigned> const gen_queue(to_gen.begin(), to_gen.end());
+
+//#pragma omp parallel for schedule(dynamic,1) // not needed, gen_voxel_rock() already uses openmp
+	for (int i = 0; i < (int)gen_queue.size(); ++i) { // build scheduled models
+		unsigned const ix(gen_queue[i]);
+		assert(!models[ix]);
+		models[ix].reset(new voxel_model_rock(ntg, num_lod_levels));
+		gen_voxel_rock(*models[ix], all_zeros, 1.0, ROCK_VOX_SZ, 1, ix);
+	}
+	to_gen.clear();
+}
+
+void voxel_rock_manager_t::free_context() {
+	for (auto i = models.begin(); i != models.end(); ++i) {if (*i) {(*i)->free_context();}}
+}
+
+voxel_rock_manager_t voxel_rock_manager;
+
+
 void voxel_rock::create(int x, int y, int use_xy) {
 
 	gen_spos(x, y, use_xy);
-	radius = 0.2*rand_uniform2(0.5, 1.0)*rand_float2()/tree_scale;
-	rseed  = rand2();
+	radius   = 0.2*rand_uniform2(0.5, 1.0)*rand_float2()/tree_scale;
+	rseed    = rand2();
+	model_ix = voxel_rock_manager.gen_model_ix(rseed); // will be translated to pos and scaled by radius during rendering
 }
 
 void voxel_rock::build_model() {
 
-	float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ROCK_VOX_SZ, 1, rseed)); // will be translated to pos and scaled by radius during rendering
+	float const gen_radius(voxel_rock_manager.get_model(model_ix).get_bsphere().radius);
 	assert(gen_radius > 0.0);
 	radius /= gen_radius;
+}
+
+unsigned voxel_rock::get_tid() const {
+	return voxel_rock_manager.get_model(model_ix).get_params().tids[0];
 }
 
 void voxel_rock::add_cobjs() {
@@ -503,6 +542,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
+	voxel_model_rock &model(voxel_rock_manager.get_model(model_ix));
 	if (use_model_texgen) {model.setup_tex_gen_for_rendering(s);} else {select_texture(get_tid());}
 	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	fgPopMatrix();
@@ -1011,10 +1051,10 @@ template<typename T, typename ARG> void update_scenery_zvals_vector(vector<T> &v
 void scenery_group::clear_vbos() {
 	
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {rock_shapes[i].clear_vbo();}
-	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {voxel_rocks[i].free_context();}
 	plant_vbo_manager.clear_vbo();
 	rock_vbo_manager.clear_vbo();
 	leafy_vbo_manager.clear_vbo();
+	voxel_rock_manager.free_context();
 }
 
 void scenery_group::clear() {
@@ -1134,7 +1174,6 @@ void scenery_group::add_plant(point const &pos, float height, float radius, int 
 void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache) {
 
 	//RESET_TIME;
-	unsigned const num_voxel_rock_lod_levels = 1;
 	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(tree_scale+1))));
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
@@ -1177,10 +1216,9 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				surface_rocks.back().create(j, i, 1, rock_vbo_manager, fixed_sz_rock_cache);
 				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
-			else if (USE_VOXEL_ROCKS && val < 35) { // FIXME: too slow, and need special shaders for texturing
-				voxel_rocks.push_back(voxel_rock(&voxel_rock_ntg, num_voxel_rock_lod_levels));
+			else if (USE_VOXEL_ROCKS && val < 35) { // FIXME: need special shaders for texturing
+				voxel_rocks.push_back(voxel_rock());
 				voxel_rocks.back().create(j, i, 1);
-				voxel_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (val < 50) { // 24.5%
 				rocks.push_back(s_rock());
@@ -1207,12 +1245,11 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	}
 	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
 	sort(plants.begin(), plants.end()); // sort by type
-
-	if (!voxel_rocks.empty()) {
-		RESET_TIME;
-		#pragma omp parallel for schedule(dynamic,1)
-		for (int i = 0; i < (int)voxel_rocks.size(); ++i) {voxel_rocks[i].build_model();}
-		PRINT_TIME("Gen Voxel Rocks");
+	if (!voxel_rocks.empty()) {voxel_rock_manager.build_models(&voxel_rock_ntg, VOX_ROCK_NUM_LOD);}
+		
+	for (auto i = voxel_rocks.begin(); i != voxel_rocks.end(); ++i) {
+		i->build_model();
+		i->add_bounds_to_bcube(all_bcube);
 	}
 	//PRINT_TIME("Gen Scenery");
 }

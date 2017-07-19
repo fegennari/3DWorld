@@ -518,6 +518,7 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 }
 
 
+// Note: non-const due to VBO caching
 template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc) {
 
 	if (empty()) return;

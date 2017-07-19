@@ -71,20 +71,29 @@ public:
 };
 
 
+class voxel_rock_manager_t {
+	vector<unique_ptr<voxel_model_rock>> models;
+	set<unsigned> to_gen;
+public:
+	unsigned gen_model_ix(int rseed);
+	void build_models(noise_texture_manager_t *ntg, unsigned num_lod_levels);
+	voxel_model_rock       &get_model(unsigned ix)       {assert(ix < models.size()); assert(models[ix] != nullptr); return *models[ix];}
+	voxel_model_rock const &get_model(unsigned ix) const {assert(ix < models.size()); assert(models[ix] != nullptr); return *models[ix];}
+	void free_context();
+};
+
 class voxel_rock : public scenery_obj {
 
-	voxel_model_rock model;
+	unsigned model_ix;
 	int rseed;
 
-	unsigned get_tid() const {return model.get_params().tids[0];}
+	unsigned get_tid() const;
 
 public:
-	voxel_rock(noise_texture_manager_t *ntg, unsigned num_lod_levels) : model(ntg, num_lod_levels), rseed(1) {}
 	void create(int x, int y, int use_xy);
 	void build_model();
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen);
-	void free_context() {model.free_context();}
 };
 
 
