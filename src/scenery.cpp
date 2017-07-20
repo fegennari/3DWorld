@@ -526,7 +526,7 @@ void voxel_rock::build_model() {
 }
 
 unsigned voxel_rock::get_tid() const {
-	return (global_voxel_params.tids[0] ? global_voxel_params.tids[0] : voxel_rock_manager.get_model(model_ix).get_params().tids[0]);
+	return ((global_voxel_params.tids[0] > 0) ? global_voxel_params.tids[0] : voxel_rock_manager.get_model(model_ix).get_params().tids[0]);
 }
 
 void voxel_rock::add_cobjs() {
