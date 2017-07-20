@@ -11,14 +11,14 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 
-bool     const USE_VOXEL_ROCKS = 0;
-bool const ENABLE_PLANT_SHADOWS= 1;
-unsigned const ROCK_NDIV       = 24;
-unsigned const ROCK_VOX_SZ     = 32;
-unsigned const VOX_ROCK_NUM_LOD= 1;
-unsigned const NUM_VROCK_MODELS= 100;
-float    const SHADOW_VAL      = 0.5;
-float    const PT_LINE_THRESH  = 800.0;
+int      const USE_VOXEL_ROCKS  = 2; // 0=never, 1=always, 2=only when no vegetation
+bool const ENABLE_PLANT_SHADOWS = 1;
+unsigned const ROCK_NDIV        = 24;
+unsigned const ROCK_VOX_SZ      = 32;
+unsigned const VOX_ROCK_NUM_LOD = 1;
+unsigned const NUM_VROCK_MODELS = 100;
+float    const SHADOW_VAL       = 0.5;
+float    const PT_LINE_THRESH   = 800.0;
 
 
 colorRGBA const stem_c(0.4, 0.6, 0.2, 1.0);
@@ -43,6 +43,7 @@ extern bool underwater, has_snow;
 extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
+extern voxel_params_t global_voxel_params;
 
 
 int get_bark_tex_for_tree_type(int type);
@@ -485,7 +486,7 @@ unsigned voxel_rock_manager_t::gen_model_ix(int rseed) {
 	return ix;
 }
 
-void voxel_rock_manager_t::build_models(noise_texture_manager_t *ntg, unsigned num_lod_levels) {
+void voxel_rock_manager_t::build_models(unsigned num_lod_levels) {
 
 	if (to_gen.empty()) return;
 	timer_t timer("Gen Voxel Rocks");
@@ -495,7 +496,7 @@ void voxel_rock_manager_t::build_models(noise_texture_manager_t *ntg, unsigned n
 	for (int i = 0; i < (int)gen_queue.size(); ++i) { // build scheduled models
 		unsigned const ix(gen_queue[i]);
 		assert(!models[ix]);
-		models[ix].reset(new voxel_model_rock(ntg, num_lod_levels));
+		models[ix].reset(new voxel_model_rock(&ntg, num_lod_levels));
 		gen_voxel_rock(*models[ix], all_zeros, 1.0, ROCK_VOX_SZ, 1, ix);
 	}
 	to_gen.clear();
@@ -503,6 +504,7 @@ void voxel_rock_manager_t::build_models(noise_texture_manager_t *ntg, unsigned n
 
 void voxel_rock_manager_t::free_context() {
 	for (auto i = models.begin(); i != models.end(); ++i) {if (*i) {(*i)->free_context();}}
+	ntg.clear();
 }
 
 voxel_rock_manager_t voxel_rock_manager;
@@ -524,7 +526,7 @@ void voxel_rock::build_model() {
 }
 
 unsigned voxel_rock::get_tid() const {
-	return voxel_rock_manager.get_model(model_ix).get_params().tids[0];
+	return (global_voxel_params.tids[0] ? global_voxel_params.tids[0] : voxel_rock_manager.get_model(model_ix).get_params().tids[0]);
 }
 
 void voxel_rock::add_cobjs() {
@@ -536,14 +538,14 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
-	unsigned const lod_level = 0;
+	unsigned const lod_level = 0; // Note: max is VOX_ROCK_NUM_LOD, but makes little difference in runtime
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate));
 	color.set_for_cur_shader();
 	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
 	voxel_model_rock &model(voxel_rock_manager.get_model(model_ix));
-	if (use_model_texgen) {model.setup_tex_gen_for_rendering(s);} else {select_texture(get_tid());}
+	if (use_model_texgen) {model.setup_tex_gen_for_rendering(s);} else {select_texture(get_tid());} // set for first rock and reuse?
 	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	fgPopMatrix();
 }
@@ -1216,7 +1218,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				surface_rocks.back().create(j, i, 1, rock_vbo_manager, fixed_sz_rock_cache);
 				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
-			else if (USE_VOXEL_ROCKS && val < 35) { // FIXME: need special shaders for texturing
+			else if (USE_VOXEL_ROCKS == 1 || (USE_VOXEL_ROCKS == 2 && !veg) && val < 35) {
 				voxel_rocks.push_back(voxel_rock());
 				voxel_rocks.back().create(j, i, 1);
 			}
@@ -1245,7 +1247,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	}
 	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
 	sort(plants.begin(), plants.end()); // sort by type
-	if (!voxel_rocks.empty()) {voxel_rock_manager.build_models(&voxel_rock_ntg, VOX_ROCK_NUM_LOD);}
+	if (!voxel_rocks.empty()) {voxel_rock_manager.build_models(VOX_ROCK_NUM_LOD);}
 		
 	for (auto i = voxel_rocks.begin(); i != voxel_rocks.end(); ++i) {
 		i->build_model();
@@ -1283,7 +1285,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 }
 
 
-void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val, bool reflection_pass) {
+void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val, bool reflection_pass) {
 
 	select_texture(DARK_ROCK_TEX);
 
@@ -1300,10 +1302,6 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	}
 	rock_vbo_manager.end_render();
 	draw_scenery_vector(rocks, sscale, shadow_only, reflection_pass, xlate, scale_val);
-
-	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
-		voxel_rocks[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val, s, 0); // Note: no model texgen
-	}
 	draw_scenery_vector(logs,   sscale, shadow_only, reflection_pass, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
@@ -1318,6 +1316,22 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 		s.clear_specular();
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
+
+	if (!voxel_rocks.empty()) {
+		if (!shadow_only) { // uses a custom shader
+			if (!vrs.is_setup()) { // setup voxel rock shader once
+				bool const v(world_mode == WMODE_GROUND), use_noise_tex(0), use_bmap(0), use_smap(v); // FIXME: no TT shadow maps or fog
+				setup_procedural_shaders(vrs, 0.0, v, v, use_smap, use_bmap, use_noise_tex,
+					global_voxel_params.top_tex_used, global_voxel_params.tex_scale, global_voxel_params.noise_scale, global_voxel_params.tex_mix_saturate);
+				vrs.set_cur_color(WHITE);
+			}
+			vrs.make_current();
+		}
+		for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
+			voxel_rocks[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val, (shadow_only ? s : vrs), 0); // Note: no model texgen
+		}
+		if (!shadow_only) {s.make_current();} // restore original shader
+	}
 }
 
 
@@ -1325,7 +1339,7 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 
 	if (all_bcube.is_zero_area() || !camera_pdu.cube_visible(all_bcube)) return; // empty, or no scenery is visible
 	// draw stems, rocks, logs, and stumps
-	shader_t s;
+	shader_t s, vrs;
 
 	if (!shadow_only) {
 		setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // direct lighting + dlights + shadow map, is_outside=1
@@ -1333,7 +1347,7 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	else {
 		s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only
 	}
-	draw_opaque_objects(s, shadow_only, xlate, 1);
+	draw_opaque_objects(s, vrs, shadow_only, xlate, 1);
 	s.end_shader();
 
 	if (!(plants.empty() && leafy_plants.empty())) { // draw leaves

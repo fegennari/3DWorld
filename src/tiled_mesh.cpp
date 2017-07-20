@@ -1226,7 +1226,7 @@ void tile_t::update_scenery() {
 }
 
 
-void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_shadow_maps) {
+void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_shadow_maps) {
 
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
 	//timer_t timer("Draw Scenery");
@@ -1236,7 +1236,7 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 	translate_to(xlate);
 	float const scale_val(get_scenery_thresh(reflection_pass)*get_tile_width());
 	if (enable_shadow_maps) {bind_and_setup_shadow_map(s);}
-	if (draw_opaque) {scenery.draw_opaque_objects(s, shadow_pass, xlate, 0, scale_val, reflection_pass);} // shader not passed in here
+	if (draw_opaque) {scenery.draw_opaque_objects(s, vrs, shadow_pass, xlate, 0, scale_val, reflection_pass);} // shader not passed in here
 	if (draw_leaves) {scenery.draw_plant_leaves  (s, shadow_pass, xlate, reflection_pass);}
 	fgPopMatrix();
 	cur_tile_trees = nullptr;
@@ -2768,7 +2768,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled());
-	shader_t s;
+	shader_t s, vrs;
 
 	// draw opaque objects
 	// rocks, stumps, and logs are close enough to tree branches that we can reuse the shader
@@ -2776,7 +2776,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);}
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, vrs, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);}
 	tree_scenery_pld.draw_and_clear();
 	s.end_shader();
 
@@ -2785,7 +2785,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps, 1);
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 	s.add_uniform_color("color_scale", get_color_scale(1.0, 0.5));
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);}
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, vrs, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);}
 	s.add_uniform_color("color_scale", WHITE);
 	s.end_shader();
 }

@@ -74,9 +74,10 @@ public:
 class voxel_rock_manager_t {
 	vector<unique_ptr<voxel_model_rock>> models;
 	set<unsigned> to_gen;
+	noise_texture_manager_t ntg;
 public:
 	unsigned gen_model_ix(int rseed);
-	void build_models(noise_texture_manager_t *ntg, unsigned num_lod_levels);
+	void build_models(unsigned num_lod_levels);
 	voxel_model_rock       &get_model(unsigned ix)       {assert(ix < models.size()); assert(models[ix] != nullptr); return *models[ix];}
 	voxel_model_rock const &get_model(unsigned ix) const {assert(ix < models.size()); assert(models[ix] != nullptr); return *models[ix];}
 	void free_context();
@@ -218,7 +219,6 @@ class scenery_group {
 	vbo_vnc_block_manager_t plant_vbo_manager;
 	vbo_vnt_block_manager_t rock_vbo_manager;
 	vbo_vnt_block_manager_t leafy_vbo_manager;
-	noise_texture_manager_t voxel_rock_ntg;
 	cube_t all_bcube;
 
 public:
@@ -237,7 +237,7 @@ public:
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache);
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass=0);
-	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
+	void draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	void draw(bool shadow_only, vector3d const &xlate=zero_vector);
 	void write_plants_to_cobj_file(std::ostream &out) const;
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
