@@ -7,9 +7,6 @@ Load/display model3d models in tiled terrain mode
     - Fix scaled model shadows
 	- Shadows between different models
 
-Gameplay in tiled terrain mode
-  - Dynamic Objects
-  - Pickup items
-  - Projectile and object collision detection
+TT Projectile and object collision detection
 
-Place mapx objects (weapons, ammo, health, shields, powerups)
+Place mapx objects (weapons, ammo, powerups)
