@@ -2457,7 +2457,8 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
 
-	if ((display_mode & 0x01) && draw_distant_water()) {
+	if ((display_mode & 0x01) && draw_distant_water() && water_plane_z > terrain_zmin) {
+		bind_2d_texture(BLACK_TEX); // all snow? at least it's set to something valid
 		int const loc(s.get_uniform_loc("htex_scale"));
 		if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
 		draw_distant_mesh_bottom(terrain_zmin); // Note: textures from last drawn tile are bound, but don't really affect the results
