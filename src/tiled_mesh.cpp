@@ -2769,6 +2769,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled());
 	shader_t s, vrs;
+	vrs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS - is this needed/useful?
 
 	// draw opaque objects
 	// rocks, stumps, and logs are close enough to tree branches that we can reuse the shader

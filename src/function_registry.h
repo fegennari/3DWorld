@@ -267,6 +267,7 @@ void inf_terrain_undo_hmap_mod();
 void flatten_hmap_region(cube_t const &cube);
 void setup_tt_fog_pre(shader_t &s);
 void setup_tt_fog_post(shader_t &s);
+void setup_tile_shader_shadow_map(shader_t &s);
 
 // function prototypes - precipitation
 void draw_local_precipitation(bool no_update=0);

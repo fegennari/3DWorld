@@ -1318,20 +1318,24 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
 
 	if (!voxel_rocks.empty()) {
-		if (!shadow_only) { // uses a custom shader
-			if (!vrs.is_setup()) { // setup voxel rock shader once
-				bool const v(world_mode == WMODE_GROUND), use_noise_tex(0), use_bmap(0), use_smap(v); // FIXME: no TT shadow maps or fog
-				setup_procedural_shaders(vrs, 0.0, v, v, use_smap, use_bmap, use_noise_tex,
-					global_voxel_params.top_tex_used, global_voxel_params.tex_scale, global_voxel_params.noise_scale, global_voxel_params.tex_mix_saturate);
-				vrs.set_cur_color(WHITE);
-			}
-			vrs.make_current();
-		}
+		bool const need_restore(setup_voxel_rocks_shader(vrs, shadow_only)); // uses a custom shader
+		
 		for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
 			voxel_rocks[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val, (shadow_only ? s : vrs), 0); // Note: no model texgen
 		}
-		if (!shadow_only) {s.make_current();} // restore original shader
+		if (need_restore) {s.make_current();} // restore original shader
 	}
+}
+
+bool scenery_group::setup_voxel_rocks_shader(shader_t &vrs, bool shadow_only) const {
+
+	if (voxel_rocks.empty() || shadow_only)  return 0; // setup not needed
+	if (vrs.is_setup()) {vrs.make_current(); return 1;} // already setup
+	bool const v(world_mode == WMODE_GROUND), use_noise_tex(0), use_bmap(0), use_smap(v); // FIXME: no TT shadow maps, fog not setup (not needed?)
+	setup_procedural_shaders(vrs, 0.0, v, v, use_smap, use_bmap, use_noise_tex,
+		global_voxel_params.top_tex_used, global_voxel_params.tex_scale, global_voxel_params.noise_scale, global_voxel_params.tex_mix_saturate);
+	vrs.set_cur_color(WHITE);
+	return 1;
 }
 
 
