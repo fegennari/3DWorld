@@ -58,6 +58,7 @@ sun_rot 0.4
 default_ground_tex -1
 #cloud_height_offset -1.0
 #water_h_off -5.0 0.0
+#water_is_lava 1
 atmosphere 1.0
 vegetation 1.0
 
@@ -94,6 +95,8 @@ mesh_freq_mult 0.5
 include config_resolution.txt
 shadow_map_sz 2048
 smap_thresh_scale 2.0
+
+voxel tid1 rock.png
 
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0

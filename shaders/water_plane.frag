@@ -115,7 +115,7 @@ void main() {
 	float dscale = 1.0;
 #endif
 	vec4 lighting = vec4(0,0,0,1);
-	if (is_lava) {lighting += vec4(0.3, 0.05, 0.0, 0.0);} // add emissive light
+	if (is_lava) {lighting += vec4(0.5, 0.1, 0.0, 0.0);} // add emissive light
 
 	// Note: when drawing the mesh we use two passes, one with shadow maps enabled and one without
 	// for water we only have one pass, and the shadow map texture may not be bound/valid in all cases,

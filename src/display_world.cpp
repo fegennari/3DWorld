@@ -594,12 +594,13 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 		float const camera_z(get_camera_pos().z);
 		fog_color = colorRGBA(get_tt_water_color(), 1.0); // alpha = 1.0
 		atten_uw_fog_color(fog_color, 2.0*water_params.alpha*(water_plane_z - camera_z)); // more opaque = effectively deeper
-		fog_dist = (0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * max(0.1, (1.5 - water_params.alpha));
+		fog_dist = (water_is_lava ? 0.5 : 1.0)*(0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * max(0.1, (1.5 - water_params.alpha));
 	}
 	else {
 		get_avg_sky_color(fog_color);
 		colorRGBA const cloud_color(get_cloud_color(), 1.0); // alpha = 1.0
 		blend_color(fog_color, cloud_color, bkg_color, 0.375, 1); // weighted more towards bkg_color
+		if (water_is_lava) {blend_color(fog_color, fog_color, colorRGBA(1.0, 0.2, 0.0, 1.0), 0.75, 0);} // add slight red-orange color
 		fog_dist = get_inf_terrain_fog_dist();
 	}
 	setup_linear_fog(fog_color, fog_dist); // under water/ice
@@ -919,7 +920,7 @@ void display(void) {
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
 				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
-				setup_linear_fog(fog_color, fog_dist);
+				setup_linear_fog(fog_color, (water_is_lava ? 0.5 : 1.0)*fog_dist);
 			}
 
 			// draw the scene
