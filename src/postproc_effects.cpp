@@ -7,9 +7,10 @@
 #include "shaders.h"
 
 
+extern bool water_is_lava;
 extern unsigned depth_tid, frame_buffer_RGB_tid;
 extern int frame_counter, display_mode, show_fog, camera_coll_id, window_width, window_height, animate2;
-extern float NEAR_CLIP, FAR_CLIP, fticks, dist_to_fire_sq, CAMERA_RADIUS;
+extern float NEAR_CLIP, FAR_CLIP, fticks, dist_to_fire_sq, water_plane_z, CAMERA_RADIUS;
 extern colorRGBA sun_color;
 
 int depth_buffer_frame(0), color_buffer_frame(0);
@@ -199,7 +200,6 @@ void add_bloom() {
 void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
-	float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
 	int index(-1);
 	//if (display_mode & 0x20) {add_ssao();}
@@ -215,7 +215,10 @@ void run_postproc_effects() {
 		if (player_is_drowning()) {add_color_only_effect("drunken_wave", 1.0);}
 	}
 	else {
-		if (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
+		float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
+		float const dist_to_lava((water_is_lava && world_mode == WMODE_INF_TERRAIN) ? (camera.z - water_plane_z) : 0.0), lava_max_dist(16.0*CAMERA_RADIUS);
+		if      (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
+		else if (dist_to_lava > 0.0 && dist_to_lava < lava_max_dist) {add_color_only_effect("heat_waves", (lava_max_dist - dist_to_lava)/lava_max_dist);}
 	}
 	if (display_mode & 0x80) {
 		point const pos2(camera + cview_dir*FAR_CLIP);
