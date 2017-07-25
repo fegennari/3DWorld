@@ -1557,13 +1557,15 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
+void disable_shadow_maps(shader_t &s) {
+	s.add_uniform_float("sm_scale0", -1.0);
+	s.add_uniform_float("sm_scale1", -1.0);
+}
+
 void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
 	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
 	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
-	if (smap_data.empty()) { // disable shadow map lookup when shadow map textures are unavailable
-		s.add_uniform_float("sm_scale0", -1.0);
-		s.add_uniform_float("sm_scale1", -1.0);
-	}
+	if (smap_data.empty()) {disable_shadow_maps(s);} // disable shadow map lookup when shadow map textures are unavailable
 	else {smap_data.set_for_all_lights(s, mvm);}
 }
 void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
@@ -2032,7 +2034,7 @@ float tile_draw_t::get_actual_zmin() const {return min(zmin, terrain_zmin);}
 
 float const mesh_tex_cscale[NTEX_DIRT] = {1.0, 1.0, TT_GRASS_COLOR_SCALE, 0.5, 1.0}; // darker grass and rock
 float const mesh_tex_scale [NTEX_DIRT] = {1.0, 1.0, 1.0, 1.0, 1.0};
-int const normal_tids_dirt [NTEX_DIRT] = {ROCK2_NORMAL_TEX, ROCK3_NORMAL_TEX, BLACK_TEX, ROCK1_NORMAL_TEX, ROCK_NORMAL_TEX};
+int const normal_tids_dirt [NTEX_DIRT] = {ROCK2_NORMAL_TEX, ROCK3_NORMAL_TEX, FLAT_NMAP_TEX, ROCK1_NORMAL_TEX, ROCK_NORMAL_TEX};
 
 colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 	assert(id < NTEX_DIRT);
@@ -2457,8 +2459,11 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
 
-	if ((display_mode & 0x01) && draw_distant_water() && water_plane_z > terrain_zmin) {
+	if ((display_mode & 0x01) && !enable_shadow_map && !reflection_pass && draw_distant_water() && water_plane_z > terrain_zmin) {
 		bind_2d_texture(BLACK_TEX); // all snow? at least it's set to something valid
+		bind_texture_tu(WHITE_TEX, 15); // shadow_map texture, use something determinsitic (not that it matters visually)
+		select_multitex(FLAT_NMAP_TEX, 7); // normal_map texture
+		disable_shadow_maps(s);
 		int const loc(s.get_uniform_loc("htex_scale"));
 		if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
 		draw_distant_mesh_bottom(terrain_zmin); // Note: textures from last drawn tile are bound, but don't really affect the results
