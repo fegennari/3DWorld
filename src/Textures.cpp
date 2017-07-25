@@ -170,6 +170,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks1.jpg", 0, 0, 2.0, 1.0, 1
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks2.jpg", 0, 0, 2.0, 1.0, 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks3.jpg", 0, 0, 2.0, 1.0, 1),
 texture_t(0, 6, 16,   16,   1, 3, 0, "cyan.png"), // for normal maps
+texture_t(0, 6, 16,   16,   1, 3, 0, "red.png"), // for TT default sand weights texture
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 };
 
