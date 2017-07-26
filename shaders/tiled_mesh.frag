@@ -40,7 +40,7 @@ vec3 get_raw_nm_normal(in vec4 weights, in float weights4, in float tscale) {
 	vec3 normal = vec3(0.0);
 	if (weights.r > 0) {normal += weights.r*texture(nm_tex2, nm_tc).rgb;} // sand
 	if (weights.g > 0) {normal += weights.g*texture(nm_tex3, nm_tc).rgb;} // dirt
-	if (weights.b > 0) {normal += weights.b*vec3(0.5,0.5,1);} // grass (no normal map)
+	if (weights.b > 0) {normal += weights.b*texture(nm_tex4, nm_tc).rgb;} // grass
 	if (weights.a > 0) {normal += weights.a*texture(nm_tex5, 0.25*nm_tc).rgb;} // rock
 	if (weights4  > 0) {normal += weights4 *texture(nm_tex6, nm_tc).rgb;} // snow
 	return normal;
@@ -161,7 +161,7 @@ void main() {
 	vec4 color  = vec4(0,0,0,1);
 	vec4 epos   = fg_ModelViewMatrix * vertex;
 	float vdist = length(epos.xyz);
-	float bump_scale = 1.0 - weights.b; // bumps on everything but grass
+	float bump_scale = 1.0;// - weights.b; // bumps on everything but grass
 	bump_scale *= clamp((2.5 - 0.06*vdist), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
 	float smap_scale = 0.0;
 	
