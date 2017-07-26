@@ -22,6 +22,7 @@ float    const W_PLANE_Z          = 0.42;
 float    const HEIGHT_SCALE       = 0.01;
 unsigned const EST_RAND_PARAM     = 128;
 float    const READ_MESH_H_SCALE  = 0.0008;
+float    const MESH_SCALE_FACTOR  = 0.0007;
 bool     const AUTOSCALE_HEIGHT   = 1;
 bool     const DEF_GLACIATE       = 1;
 float    const DEF_GLACIATE_EXP   = 3.0;
@@ -764,7 +765,7 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 void mesh_xy_grid_cache_t::run_gpu_simplex() {
 
 	//timer_t("GPU Mesh Gen");
-	float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
+	float const xy_scale(MESH_SCALE_FACTOR*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
 	float rx, ry;
 	gen_rx_ry(rx, ry);
 
@@ -848,7 +849,7 @@ float gen_noise(float xv, float yv, int mode, int shape) {
 float get_noise_zval(float xval, float yval, int mode, int shape) {
 
 	assert(mode != MGEN_SINE); // mode 0 not supported by this function
-	float const xy_scale(0.0007*mesh_scale);
+	float const xy_scale(MESH_SCALE_FACTOR*mesh_scale);
 	float xv(xy_scale*xval), yv(xy_scale*yval);
 
 	if (mode == MGEN_DWARP_GPU) { // domain warping
@@ -885,7 +886,7 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 		if (start_ix == 0) { // common case
 			for (int i = 0; i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];}
 		}
-		if (start_ix == 50) { // another common case
+		else if (start_ix == 50) { // another common case
 			for (int i = 50; i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];}
 		}
 		else {
