@@ -36,6 +36,10 @@ float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
 float const LITNING_TIME2   = 40.0;
 float const LITNING_DIST    = 1.2;
 
+unsigned const NUM_AO_DIRS  = 8; // Note: required to be 8 for adj tile calculation
+unsigned const NUM_AO_STEPS = 8;
+unsigned const AO_RAY_LEN(NUM_AO_STEPS*(NUM_AO_STEPS+1)/2); // 36
+
 enum {FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS, NUM_FIRE_MODES};
 
 
@@ -381,13 +385,27 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 	zvals.resize(zvsize*zvsize);
 	mzmin =  FAR_DISTANCE;
 	mzmax = -FAR_DISTANCE;
-	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
-	unsigned const block_size(zvsize/4);
+	unsigned const block_size(zvsize/4), context_sz(stride + 2*AO_RAY_LEN);
 	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail()); // add procedural detail to heightmap
-	bool const results_ready(setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize, 0, no_wait)); // cache_values=0
-	if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
 
-	#pragma omp parallel for schedule(static,1)
+	// When using AO + GPU noise generation, it's faster to compute the AO + context and clip the zvals from this rather than making two separate compute calls (one without blocking)
+	if (enable_tiled_mesh_ao && !using_hmap && mesh_gen_mode >= MGEN_SIMPLEX_GPU) {
+		bool results_ready(setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), deltax, deltay, context_sz, context_sz, 0, no_wait)); // cache_values=0
+		if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
+		ao_zvals.resize(context_sz*context_sz);
+
+#pragma omp parallel for schedule(static,1)
+		for (int y = 0; y < (int)context_sz; ++y) {
+			for (unsigned x = 0; x < context_sz; ++x) {ao_zvals[y*context_sz + x] = height_gen.eval_index(x, y, 1);}
+		}
+	}
+	else {
+		bool results_ready(setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize, 0, no_wait)); // cache_values=0
+		if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
+	}
+	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
+
+#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)zvsize; ++y) {
 		for (unsigned x = 0; x < zvsize; ++x) {
 			float &zval(zvals[y*zvsize + x]);
@@ -397,7 +415,8 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 				if (add_detail) {zval += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);} // less hard-coded - scale by delta between adjacent zvals?
 			}
 			else {
-				zval = height_gen.eval_index(x, y, 1);
+				if (!ao_zvals.empty()) {zval = ao_zvals[(y + AO_RAY_LEN)*context_sz + (x + AO_RAY_LEN)];} // use AO zvals
+				else                   {zval = height_gen.eval_index(x, y, 1);} // use height gen
 
 				if (USE_PARAMS_HSCALE) {
 					float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
@@ -455,14 +474,8 @@ float tile_t::get_zval_at(float x, float y, bool in_global_space) const {
 void tile_t::calc_mesh_ao_lighting() {
 
 	//timer_t timer("Calc Tile AO Lighting");
-	unsigned const NUM_DIRS  = 8; // Note: required to be 8 for adj tile calculation
-	unsigned const NUM_STEPS = 8;
-	unsigned const ray_len(NUM_STEPS*(NUM_STEPS+1)/2); // 36
-	assert(ray_len <= size);
-
-	// caclulate ray step directions and adjacent tiles
-	tile_xy_pair const cur_tp(get_tile_xy_pair());
-	tile_xy_pair ao_dirs[NUM_DIRS]; // 0  1  2  3  4  5  6  7
+	// caclulate ray step directions
+	tile_xy_pair ao_dirs[NUM_AO_DIRS]; // 0  1  2  3  4  5  6  7
 	unsigned ix(0);
 
 	for (int y = -1; y <= 1; ++y) {
@@ -470,60 +483,67 @@ void tile_t::calc_mesh_ao_lighting() {
 			if (x != 0 || y != 0) {ao_dirs[ix++] = tile_xy_pair(x, y);}
 		}
 	}
-	assert(ix == NUM_DIRS);
+	assert(ix == NUM_AO_DIRS);
+	assert(AO_RAY_LEN <= size);
 
 	// create context zvals, which may overlap with other tiles (that need not be created at this point)
-	unsigned const context_sz(stride + 2*ray_len);
-	vector<float> czv(context_sz*context_sz);
+	unsigned const context_sz(stride + 2*AO_RAY_LEN);
+	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail()), use_ao_zvals(!ao_zvals.empty());
+	vector<float> czv;
 	mesh_xy_grid_cache_t height_gen;
-	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail());
-	setup_height_gen(height_gen, get_xval(x1 - ray_len), get_yval(y1 - ray_len), deltax, deltay, context_sz, context_sz, 0); // cache_values=0
+	
+	if (use_ao_zvals) {czv.swap(ao_zvals);} // use precomputed values, will clear ao_zvals at the end
+	else {
+		czv.resize(context_sz*context_sz);
+		setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), deltax, deltay, context_sz, context_sz, 0); // cache_values=0
+	}
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
 
-	#pragma omp parallel
+#pragma omp parallel
 	{
-		#pragma omp for schedule(static,1)
-		for (int y = 0; y < (int)context_sz; ++y) {
-			for (int x = 0; x < (int)context_sz; ++x) {
-				int const xv(x - ray_len), yv(y - ray_len);
-				float &zv(czv[y*context_sz + x]);
-				if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {zv = zvals[yv*zvsize + xv];}
-				else if (using_hmap) {
-					zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
-					if (add_detail) {zv += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);}
+		if (!use_ao_zvals) {
+#pragma omp for schedule(static,1)
+			for (int y = 0; y < (int)context_sz; ++y) {
+				for (int x = 0; x < (int)context_sz; ++x) {
+					int const xv(x - AO_RAY_LEN), yv(y - AO_RAY_LEN);
+					float &zv(czv[y*context_sz + x]);
+					if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {zv = zvals[yv*zvsize + xv];}
+					else if (using_hmap) {
+						zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
+						if (add_detail) {zv += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);}
+					}
+					else {zv = height_gen.eval_index(x, y, 1);} // Note: not using hoff/hscale here since they are undefined outside the tile bounds
 				}
-				else {zv = height_gen.eval_index(x, y, 1);} // Note: not using hoff/hscale here since they are undefined outside the tile bounds
 			}
 		}
-
 		// calculate ao_lighting values by casting rays through the mesh zvals
-		#pragma omp for schedule(static,1)
+#pragma omp for schedule(static,1)
 		for (int y = 0; y < (int)stride; ++y) {
 			for (int x = 0; x < (int)stride; ++x) {
 				unsigned atten(0);
 
-				for (unsigned d = 0; d < NUM_DIRS; ++d) {
+				for (unsigned d = 0; d < NUM_AO_DIRS; ++d) {
 					float z0(zvals[y*zvsize + x]);
 					tile_xy_pair step(ao_dirs[d]);
 					tile_xy_pair v(x, y);
 
-					for (unsigned s = 0; s < NUM_STEPS; ++s) {
+					for (unsigned s = 0; s < NUM_AO_STEPS; ++s) {
 						v    += step;
 						z0   += dz;
 						//step += step; // multiply by 2 for exponential step size
 						step += ao_dirs[d]; // linear increase (Note: must agree with max_ray_length)
-						int const xv(v.x + ray_len), yv(v.y + ray_len);
+						int const xv(v.x + AO_RAY_LEN), yv(v.y + AO_RAY_LEN);
 						//assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
 						
 						if (czv[yv*context_sz + xv] > z0) { // hit a higher point
-							atten += (NUM_STEPS - s); // Note: ambient obscurance - uses actual distance to occluder
+							atten += (NUM_AO_STEPS - s); // Note: ambient obscurance - uses actual distance to occluder
 							break;
 						}
 					} // for s
 				} // for d
-				assert(atten <= NUM_DIRS*NUM_STEPS);
-				float const ao_scale(1.0 - float(atten)/float(NUM_DIRS*NUM_STEPS));
+				assert(atten <= NUM_AO_DIRS*NUM_AO_STEPS);
+				float const ao_scale(1.0 - float(atten)/float(NUM_AO_DIRS*NUM_AO_STEPS));
 				ao_lighting[y*stride + x] = (unsigned char)(255.0*ao_scale);
 			} // for x
 		} // for y
