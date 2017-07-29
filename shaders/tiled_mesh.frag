@@ -38,11 +38,11 @@ vec3 get_raw_nm_normal(in vec4 weights, in float weights4, in float tscale) {
 	vec2 nm_tc = tscale*detail_normal_tex_scale*tc;
 	//if (length(epos.xyz) < 1.0) {nm_tc *= 4.0;}
 	vec3 normal = vec3(0.0);
-	if (weights.r > 0) {normal += weights.r*texture(nm_tex2, nm_tc).rgb;} // sand
-	if (weights.g > 0) {normal += weights.g*texture(nm_tex3, nm_tc).rgb;} // dirt
-	if (weights.b > 0) {normal += weights.b*texture(nm_tex4, nm_tc).rgb;} // grass
+	if (weights.r > 0) {normal += weights.r*texture(nm_tex2,      nm_tc).rgb;} // sand
+	if (weights.g > 0) {normal += weights.g*texture(nm_tex3,      nm_tc).rgb;} // dirt
+	if (weights.b > 0) {normal += weights.b*texture(nm_tex4, 2.0* nm_tc).rgb;} // grass
 	if (weights.a > 0) {normal += weights.a*texture(nm_tex5, 0.25*nm_tc).rgb;} // rock
-	if (weights4  > 0) {normal += weights4 *texture(nm_tex6, nm_tc).rgb;} // snow
+	if (weights4  > 0) {normal += weights4 *texture(nm_tex6,      nm_tc).rgb;} // snow
 	return normal;
 }
 

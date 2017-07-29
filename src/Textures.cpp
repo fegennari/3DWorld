@@ -166,7 +166,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_birch.jpg", 0, 0), // 512x512, n
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark6.jpg", 0, 0), // 894x894, no compress
 texture_t(0, 6, 0,    0,    1, 4, 1, "ripple_map.png", 0, 0), // 256x256, mipmaps?, no compress?
 texture_t(0, 6, 0,    0,    1, 4, 1, "starburst.png",  0, 0), // disable compression - causes artifacts
-texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks1.jpg", 0, 0, 2.0, 1.0, 1), // sand_normal = snow, rocks1 = rock, rocks2 = sand, rocks3 = dirt
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks1.jpg", 0, 0, 2.0, 1.0, 1), // sand_normal = snow, rocks1 = rock, rocks2 = sand, rocks3 = dirt/grass
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks2.jpg", 0, 0, 2.0, 1.0, 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks3.jpg", 0, 0, 2.0, 1.0, 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/dirt_normal.jpg", 0, 0, 2.0, 1.0, 1),
