@@ -954,7 +954,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				if (grass || snow) {
 					float const *const sti(sthresh[snow]);
 					vector3d const normal(get_norm_not_normalized(ix));
-					float const vnz(vnz_scale*normal.z/normal.mag());
+					float vnz(vnz_scale*normal.z/normal.mag());
+					// add random noise here as well to produce dry patches of dirt and sand in the grass
+					if (grass && vnz > sti[1]) {vnz = CLIP_TO_01(1.0f + 20.0f*rand_offset);}
 
 					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
 						if (grass) { // ground/grass
