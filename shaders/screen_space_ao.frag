@@ -14,6 +14,7 @@ void main() {
 
 	// http://www.digitalrune.com/Support/Blog/tabid/719/EntryId/178/Decal-Rendering-Preview.aspx
 	// https://mtnphil.wordpress.com/2014/05/24/decals-deferred-rendering/
+	// http://john-chapman-graphics.blogspot.ca/2013/01/ssao-tutorial.html
 	//vec3 normal = normalize(cross(dFdy(position), dFdx(position))); 
 	
 	for (int d = 0; d < NUM_DIRS; d++) {
@@ -25,7 +26,7 @@ void main() {
 		for (int s = 0; s < NUM_STEPS; s++) {
 			pos += step;
 			float depth = get_linear_depth_01(pos);
-			if (depth + 0.01 < depth0) {break;} // large depth disconuity, skip this dir
+			if (depth + 0.005 < depth0) {break;} // large depth disconuity, skip this dir
 
 			if (depth < depth0) {
 				//if (s == 0) {denom -= 1.0; break;} // if first sample is closer, assume this is the edge of the feature and the back of the face and discard
@@ -34,6 +35,6 @@ void main() {
 			}
 		}
 	}
-	float darken = max(0.0, 1.0*weight/max(denom, 1.0)-0.1);
+	float darken = max(0.0, 2.0*(weight/max(denom, 1.0)-0.5));
 	fg_FragColor = vec4(0.0, 0.0, 0.0, darken); // darken by weight
 }
