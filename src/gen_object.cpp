@@ -301,7 +301,7 @@ void gen_particles(point const &pos, unsigned num, float lt_scale, bool fade) { 
 		objg.create_object_at(i, pos);
 		objg.get_obj(i).velocity = gen_rand_vector((fade ? 1.5 : 1.0)*rand_uniform(3.0, 5.0), (fade ? 1.5 : 1.8), 0.75*PI);
 		if (lt_scale != 1.0) objg.get_obj(i).time = lt_scale*object_types[PARTICLE].lifetime;
-		if (fade) objg.get_obj(i).flags |= TYPE_FLAG;
+		if (fade) {objg.get_obj(i).flags |= TYPE_FLAG;}
 	}
 }
 

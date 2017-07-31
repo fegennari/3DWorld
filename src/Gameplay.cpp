@@ -266,7 +266,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		gen_blood_velocity(obj.velocity, velocity, coll_dir, chunk_v, 0.25, 0.22, damage_type, health);
 		float const vmag(obj.velocity.mag());
 		if (vmag > TOLERANCE) obj.pos += obj.velocity*(radius/vmag);
-		if (burned) obj.flags |= TYPE_FLAG;
+		if (burned) {obj.flags |= TYPE_FLAG;}
 	}
 
 	// skull
@@ -822,7 +822,6 @@ string get_weapon_qualifier(int type, int index, int source) {
 
 
 bool dwobject::lm_coll_invalid() const {
-
 	return (time < LM_ACT_TIME);
 }
 
