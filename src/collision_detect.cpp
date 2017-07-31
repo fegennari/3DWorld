@@ -1506,7 +1506,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		obj.velocity = zero_vector; // I think this is correct
 	}
 	// only use cubes for now, because leaves colliding with tree leaves and branches and resetting the normals is too unstable
-	if (cobj.type == COLL_CUBE && (otype.flags & OBJ_IS_FLAT)) {obj.set_orient_for_coll(&norm);}
+	if (cobj.type == COLL_CUBE && obj.is_flat()) {obj.set_orient_for_coll(&norm);}
 		
 	if ((otype.flags & OBJ_IS_CYLIN) && !already_bounced) {
 		if (fabs(norm.z) == 1.0) { // z collision

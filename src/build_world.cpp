@@ -220,6 +220,9 @@ void dwobject::update_precip_type() {
 	health = def_objects[type].health;
 }
 
+// flat (leaves, etc. - okay) or tri fragment (doesn't look good)
+bool dwobject::is_flat() const {return ((object_types[type].flags & OBJ_IS_FLAT) || (type == FRAGMENT && (flags & TYPE_FLAG)));}
+
 
 template<typename T> void check_all_activate(T &triggers, int start_i, int end_i, bool use_bottom=0) {
 
@@ -498,9 +501,7 @@ void process_groups() {
 			if (!obj.disabled()) {
 				update_deformation(obj);
 				
-				if ((otype.flags & OBJ_IS_FLAT) || type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || type == SAWBLADE ||
-					(type == FRAGMENT && (obj.flags & TYPE_FLAG))) // shatterable fragments
-				{
+				if (type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || type == SAWBLADE || obj.is_flat()) {
 					float const vmag(fabs(obj.velocity.z)); // rotate
 					
 					if (obj.status == 1 && vmag > 0.5 && !(obj.flags & (STATIC_COBJ_COLL | OBJ_COLLIDED))) {

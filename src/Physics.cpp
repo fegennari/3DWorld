@@ -722,7 +722,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 
 		if (!(flags & UNDERWATER)) {
 			if (flags & FLOATING) {
-				if (otype.flags & OBJ_IS_FLAT) {
+				if (is_flat()) {
 					//init_dir.z = 0.0;
 					int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 					vector3d const wnorm(has_water(xpos, ypos) ? wat_vert_normals[ypos][xpos] : plus_z);
@@ -863,7 +863,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (flags & STATIC_COBJ_COLL) return; // stuck on vertical collision surface
 		if (check_water_collision(velocity.z) && (frozen || get_true_density() < WATER_DENSITY)) return;
 		if (flags & IS_CUBE_FLAG) return;
-		if (otype.flags & (OBJ_IS_FLAT | OBJ_IS_CYLIN)) set_orient_for_coll(NULL);
+		if (is_flat() || (otype.flags & OBJ_IS_CYLIN)) {set_orient_for_coll(NULL);}
 		point const old_pos(pos);
 		int const val(surface_advance()); // move along ground
 
@@ -984,24 +984,24 @@ int dwobject::surface_advance() {
 }
 
 
+vector3d get_terrain_normal(point const &pos) {
+
+	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+
+	if (point_interior_to_mesh(xpos, ypos)
+		&& (h_collision_matrix[ypos][xpos] < mesh_height[ypos][xpos] + SMALL_NUMBER)
+		&& !is_mesh_disabled(xpos, ypos) && !mesh_is_underwater(xpos, ypos))
+	{
+		return surface_normals[ypos][xpos];
+	}
+	return plus_z;
+}
+
 // NOTE: norm must be normalized
 float get_terrain_rotation(vector3d &axis, point const &pos, vector3d const &norm, vector3d const *const forced_norm) {
 
-	vector3d snorm(plus_z);
+	vector3d const snorm(forced_norm ? *forced_norm : get_terrain_normal(pos));
 
-	if (forced_norm) {
-		snorm = *forced_norm;
-	}
-	else {
-		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-
-		if (point_interior_to_mesh(xpos, ypos)
-			&& (h_collision_matrix[ypos][xpos] < mesh_height[ypos][xpos] + SMALL_NUMBER)
-			&& !is_mesh_disabled(xpos, ypos) && !mesh_is_underwater(xpos, ypos))
-		{
-			snorm = surface_normals[ypos][xpos];
-		}
-	}
 	if (snorm == norm) { // normals are parallel
 		axis.assign(1.0, 0.0, 0.0);
 		return 0.0;
@@ -1014,6 +1014,12 @@ float get_terrain_rotation(vector3d &axis, point const &pos, vector3d const &nor
 
 void dwobject::set_orient_for_coll(vector3d const *const forced_norm) {
 
+	if (type == FRAGMENT) { // orientation = rotation axis, angle = rotation angle
+		// Note: doesn't look right due to lack of secondary rotation around z-axis and uniform radius applied in +z rather than thickness
+		//angle = get_terrain_rotation(orientation, pos, plus_y, forced_norm);
+		//orientation = (forced_norm ? *forced_norm : get_terrain_normal(pos)); // set orient/rot axis, but don't change angle
+		return;
+	}
 	float const r_angle(init_dir.x);
 	vector3d const norm(-sinf(r_angle), cosf(r_angle), 0.0);
 	angle = get_terrain_rotation(orientation, pos, norm, forced_norm);

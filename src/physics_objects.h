@@ -221,6 +221,7 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	bool lm_coll_invalid() const;
 	bool invalid_coll(coll_obj const &cobj) const {return (type == LANDMINE && lm_coll_invalid() && cobj.is_player());}
 	bool proc_stuck(bool static_top_coll);
+	bool is_flat() const;
 };
 
 
