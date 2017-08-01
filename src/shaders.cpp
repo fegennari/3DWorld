@@ -750,6 +750,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		if (failed) continue;
 		if (DEBUG_SHADER) {cout << "final shader data for <" << name << ">:" << endl << data << endl;}
 		if (GEN_FINAL_SHADER_FILES) {write_shader_file(name, data, type);}
+		assert(shader == 0);
 		shader = glCreateShader(shader_type_table[type]);
 	
 		if (!shader) {
@@ -769,6 +770,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 			cerr << "Compilation of " << shader_name_table[type] << " shader " << name << " failed with status " << status << endl;
 			print_shader_info_log(shader);
 			cerr << endl;
+			glDeleteShader(shader); shader = 0; // recreate rather than reusing to ensure there is no bad state (probably unnecessary)
 			failed = 1; continue;
 		}
 		break;

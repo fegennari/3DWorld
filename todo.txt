@@ -8,5 +8,4 @@ Load/display model3d models in tiled terrain mode
 	- Shadows between different models
 
 TT Projectile and object collision detection
-
 Place mapx objects (weapons, ammo, powerups)
