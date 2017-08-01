@@ -1038,7 +1038,12 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 	set_ship_texture(SHIP_HULL_TEX);
 	enable_normal_map(ship_hull_tex_nm);
 	fgTranslate(0.0, 0.0, -1.1);
-	draw_cylinder(2.4, 0.65, 0.0, ndiv32, 1); // main body
+	set_uobj_specular(0.5, 50.0);
+	draw_cylinder(1.2, 0.65,  0.325, ndiv32, 1, 0, 0, 0.0, 2.0); // main body cylinder with tscale=2.0
+	fgTranslate(0.0, 0.0,  1.2);
+	draw_cylinder(1.2, 0.325, 0.0,   ndiv32, 1, 0, 0, 0.0, 2.0); // main body cone     with tscale=2.0
+	fgTranslate(0.0, 0.0, -1.2);
+	end_specular();
 	set_color(color_b);
 	end_ship_texture();
 	disable_normal_map();
