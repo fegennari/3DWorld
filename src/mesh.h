@@ -25,10 +25,11 @@ class compute_shader_comp_t;
 
 class mesh_xy_grid_cache_t {
 
-	vector<float> xyterms, cached_vals;
+	vector<float> xyterms, sine_mag_terms, cached_vals;
 	unsigned cur_nx, cur_ny, yterms_start, tid;
-	float mx0, my0, mdx, mdy;
+	float mx0, my0, mdx, mdy, sine_offset;
 	int gen_mode, gen_shape;
+	bool do_glaciate;
 
 	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain (size not a multiple of block_size=16 and lack of async results read)
 	typedef compute_shader_t grid_gen_shader_t;
@@ -38,10 +39,12 @@ class mesh_xy_grid_cache_t {
 	void cache_gpu_simplex_vals();
 
 public:
-	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), yterms_start(0), tid(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), gen_mode(MGEN_SINE), gen_shape(0), cshader(nullptr) {}
+	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), yterms_start(0), tid(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), sine_offset(0.0),
+		gen_mode(MGEN_SINE), gen_shape(0), do_glaciate(0), cshader(nullptr) {}
 	~mesh_xy_grid_cache_t() {clear_context();}
 	bool build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values=0, bool force_sine_mode=0, bool no_wait=0);
-	float eval_index(unsigned x, unsigned y, bool glaciate=1, int min_start_sin=0, bool use_cache=1) const;
+	void enable_glaciate();
+	float eval_index(unsigned x, unsigned y, int min_start_sin=0, bool use_cache=1) const;
 	void clear_context();
 	void free_cshader();
 };

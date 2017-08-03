@@ -195,7 +195,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 	height_gen.build_arrays((x_offset - xsize/2)*DX_VAL, (y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
 
 	for (int i = 0; i < ysize; ++i) {
-		for (int j = 0; j < xsize; ++j) {matrix[i][j] = height_gen.eval_index(j, i, 0);}
+		for (int j = 0; j < xsize; ++j) {matrix[i][j] = height_gen.eval_index(j, i);}
 	}
 }
 
@@ -354,20 +354,16 @@ float do_glaciate_exp(float value) {
 float get_rel_wpz() {return CLIP_TO_01(W_PLANE_Z + water_h_off_rel);}
 
 void apply_mesh_sine(float &zval, float x, float y) {
-	hmap_params_t const &h(hmap_params);
-
-	if (h.sine_mag > 0.0) { // Note: snow thresh is still off when highly zoomed in
-		float const freq(mesh_scale*h.sine_freq);
-		zval += (h.sine_mag*COSF(x*freq)*COSF(y*freq) + h.sine_bias)/mesh_scale_z;
+	if (hmap_params.sine_mag > 0.0) { // Note: snow thresh is still off when highly zoomed in
+		float const freq(mesh_scale*hmap_params.sine_freq);
+		zval += (hmap_params.sine_mag*COSF(x*freq)*COSF(y*freq) + hmap_params.sine_bias)/mesh_scale_z;
 	}
 }
-
-void apply_glaciate_and_sine(float &zval, float xval, float yval) {
+void apply_glaciate(float &zval) {
 	if (GLACIATE) {
 		float const relh((zval + zmax_est)*zmax_est2_inv);
 		zval = do_glaciate_exp(relh)*zmax_est2 - zmax_est;
 	}
-	if (hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, xval, yval);}
 }
 
 
@@ -381,7 +377,8 @@ void glaciate() {
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			float &zval(mesh_height[i][j]);
-			apply_glaciate_and_sine(zval, (j + xoff2 - MESH_X_SIZE/2), (i + yoff2 - MESH_Y_SIZE/2));
+			apply_glaciate(zval);
+			apply_mesh_sine(zval, (j + xoff2 - MESH_X_SIZE/2), (i + yoff2 - MESH_Y_SIZE/2));
 			zbottom = min(zbottom, zval);
 			ztop    = max(ztop, zval);
 		}
@@ -597,7 +594,7 @@ void estimate_zminmax(bool using_eq) {
 
 		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
 			for (unsigned j = 0; j < EST_RAND_PARAM; ++j) {
-				float const height(height_gen.eval_index(j, i, 0)); // no sine
+				float const height(height_gen.eval_index(j, i)); // no glaciate
 				zmax_est = max(zmax_est, float(fabs(height)));
 				if (!(i&3) && !(j&3)) {height_histogram.push_back(height);} // only 1/16 of the values
 			}
@@ -720,6 +717,7 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	cur_nx = nx; cur_ny = ny; mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
 	gen_mode  = (force_sine_mode ? MGEN_SINE : mesh_gen_mode);
 	gen_shape = (force_sine_mode ? 0 : mesh_gen_shape);
+	do_glaciate = 0; // must set enable_glaciate() after this call if needed
 	cached_vals.clear();
 
 	if (gen_mode >= MGEN_SIMPLEX_GPU) { // GPU simplex noise - always cache values
@@ -752,14 +750,26 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	if (cache_values) {
 		cached_vals.resize(cur_nx*cur_ny);
 		
-		#pragma omp parallel for schedule(static,1)
+#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)cur_ny; ++y) {
 			for (unsigned x = 0; x < cur_nx; ++x) {
-				cached_vals[y*cur_nx + x] = eval_index(x, y, 0, 0, 0); // Note: glaciate=0, min_start_sin=0, use_cache=0
+				cached_vals[y*cur_nx + x] = eval_index(x, y, 0, 0); // Note: no glaciate, min_start_sin=0, use_cache=0
 			}
 		}
 	}
 	return 1; // results are available
+}
+
+void mesh_xy_grid_cache_t::enable_glaciate() {
+
+	do_glaciate = 1;
+	if (hmap_params.sine_mag == 0.0) return;
+	assert(cur_nx > 0 && cur_ny > 0); // build_arrays() must have been called first
+	sine_mag_terms.resize(cur_nx*cur_ny);
+	sine_offset = hmap_params.sine_bias/mesh_scale_z;
+	float const sm_scale(hmap_params.sine_mag/mesh_scale_z), freq(mesh_scale*hmap_params.sine_freq);
+	for (unsigned x = 0; x < cur_nx; ++x) {sine_mag_terms[x] = sm_scale*COSF((x*mdx + mx0)*DX_VAL_INV*freq);}
+	for (unsigned y = 0; y < cur_ny; ++y) {sine_mag_terms[cur_nx + y] = COSF((y*mdy + my0)*DY_VAL_INV*freq);}
 }
 
 void mesh_xy_grid_cache_t::run_gpu_simplex() {
@@ -866,7 +876,7 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 }
 
 
-float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache) const {
+float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, int min_start_sin, bool use_cache) const {
 
 	assert(x < cur_nx && y < cur_ny);
 	float zval(0.0);
@@ -894,9 +904,13 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 		}
 		apply_noise_shape_final(zval, gen_shape);
 	}
-	if (glaciate) {
-		float const xval((x*mdx + mx0)*DX_VAL_INV), yval((y*mdy + my0)*DY_VAL_INV);
-		apply_glaciate_and_sine(zval, xval, yval);
+	if (do_glaciate) {
+		apply_glaciate(zval);
+		
+		if (hmap_params.sine_mag > 0.0) {
+			assert(cur_nx + y < sine_mag_terms.size());
+			zval += sine_mag_terms[x]*sine_mag_terms[cur_nx + y] + sine_offset;
+		}
 	}
 	return zval;
 }
@@ -944,7 +958,8 @@ float get_exact_zval(float xval_in, float yval_in) {
 		return zval;
 	}
 	float zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
-	apply_glaciate_and_sine(zval, (xval - float(MESH_X_SIZE >> 1)), (yval - float(MESH_Y_SIZE >> 1)));
+	apply_glaciate(zval);
+	apply_mesh_sine(zval, (xval - float(MESH_X_SIZE >> 1)), (yval - float(MESH_Y_SIZE >> 1)));
 	return zval;
 }
 

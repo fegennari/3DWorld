@@ -374,7 +374,9 @@ bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, floa
 	bool const add_detail(using_hmap_with_detail());
 	if (!add_detail && using_tiled_terrain_hmap_tex()) return 1; // nothing to do
 	float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
-	return height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values, 0, no_wait);
+	bool const results_avail(height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values, 0, no_wait));
+	height_gen.enable_glaciate();
+	return results_avail;
 }
 
 
@@ -396,7 +398,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 
 #pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)context_sz; ++y) {
-			for (unsigned x = 0; x < context_sz; ++x) {ao_zvals[y*context_sz + x] = height_gen.eval_index(x, y, 1);}
+			for (unsigned x = 0; x < context_sz; ++x) {ao_zvals[y*context_sz + x] = height_gen.eval_index(x, y);}
 		}
 	}
 	else {
@@ -412,11 +414,11 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 
 			if (using_hmap) {
 				zval = terrain_hmap_manager.get_clamped_height((x1 + x), (y1 + y));
-				if (add_detail) {zval += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);} // less hard-coded - scale by delta between adjacent zvals?
+				if (add_detail) {zval += HMAP_DETAIL_MAG*height_gen.eval_index(x, y);} // less hard-coded - scale by delta between adjacent zvals?
 			}
 			else {
 				if (!ao_zvals.empty()) {zval = ao_zvals[(y + AO_RAY_LEN)*context_sz + (x + AO_RAY_LEN)];} // use AO zvals
-				else                   {zval = height_gen.eval_index(x, y, 1);} // use height gen
+				else                   {zval = height_gen.eval_index(x, y);} // use height gen
 
 				if (USE_PARAMS_HSCALE) {
 					float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
@@ -511,9 +513,9 @@ void tile_t::calc_mesh_ao_lighting() {
 					if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {zv = zvals[yv*zvsize + xv];}
 					else if (using_hmap) {
 						zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
-						if (add_detail) {zv += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);}
+						if (add_detail) {zv += HMAP_DETAIL_MAG*height_gen.eval_index(x, y);}
 					}
-					else {zv = height_gen.eval_index(x, y, 1);} // Note: not using hoff/hscale here since they are undefined outside the tile bounds
+					else {zv = height_gen.eval_index(x, y);} // Note: not using hoff/hscale here since they are undefined outside the tile bounds
 				}
 			}
 		}
@@ -920,10 +922,10 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		vector<float> rand_vals(tsize*tsize);
 		//bool const same_dirt(params[0][1].dirt == params[0][0].dirt && params[1][0].dirt == params[0][0].dirt && params[1][1].dirt == params[0][0].dirt);
 
-		#pragma omp parallel for schedule(static,1) num_threads(2)
+#pragma omp parallel for schedule(static,1) num_threads(2)
 		for (int y = 0; y < (int)tsize-DEBUG_TILE_BOUNDS; ++y) {
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
-				rand_vals[y*tsize + x] = noise_scale*height_gen.eval_index(x, y, 0, 50);
+				rand_vals[y*tsize + x] = noise_scale*height_gen.eval_index(x, y, 50);
 			}
 		}
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe

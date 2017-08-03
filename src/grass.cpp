@@ -827,8 +827,8 @@ void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
 	if (grass_den < 0.5) return; // no flowers
 	unsigned const NUM_COLORS(3), start_eval_sine(50);
 	colorRGBA const colors[NUM_COLORS] = {WHITE, YELLOW, LT_BLUE};
-	float const dval(density_gen[0].eval_index(xpos, ypos, 0, start_eval_sine));
-	float const cval(density_gen[1].eval_index(xpos, ypos, 0, start_eval_sine));
+	float const dval(density_gen[0].eval_index(xpos, ypos, start_eval_sine));
+	float const cval(density_gen[1].eval_index(xpos, ypos, start_eval_sine));
 	unsigned const num_per_bin(unsigned(flower_density*grass_den + 0.5));
 
 	for (unsigned n = 0; n < num_per_bin; ++n) {

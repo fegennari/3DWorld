@@ -60,10 +60,10 @@ float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, floa
 
 	if (using_tiled_terrain_hmap_tex()) {
 		float zval(get_tiled_terrain_height_tex((xstart + X_SCENE_SIZE + j*xscale)*DX_VAL_INV, (ystart + Y_SCENE_SIZE + i*yscale)*DY_VAL_INV));
-		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*height_gen.eval_index(j, i, 0);}
+		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*height_gen.eval_index(j, i);}
 		return zval;
 	}
-	return height_gen.eval_index(j, i, 1);
+	return height_gen.eval_index(j, i);
 }
 
 bool is_shadowed(point const &cpos, vector3d const &cnorm, point const &lpos, int &cindex) {

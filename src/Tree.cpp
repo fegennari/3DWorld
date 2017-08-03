@@ -2080,11 +2080,11 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			int ttype(-1), tree_id(-1);
 
 			if (NONUNIFORM_TREE_DEN) {
-				if (use_density && density_gen[0].eval_index(j-x1, i-y1, 0) > height_thresh) continue; // density function test
+				if (use_density && density_gen[0].eval_index(j-x1, i-y1) > height_thresh) continue; // density function test
 				float max_val(0.0);
 
 				for (unsigned tt = 0; tt < NUM_TREE_TYPES; ++tt) {
-					float den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 0)); // no glaciate
+					float den_val(density_gen[tt+1].eval_index(j-x1, i-y1)); // no glaciate
 					float const jitter(extract_low_bits_01(den_val, 100.0)); // randomize to make the border more fuzzy
 					den_val += 0.8*jitter*jitter; // quadratic distribution
 					if (max_val == 0.0 || den_val > max_val) {max_val = den_val; ttype = tt;}
