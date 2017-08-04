@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "transform_obj.h"
 
 
 extern bool water_is_lava;
@@ -202,6 +203,8 @@ void run_postproc_effects() {
 	point const camera(get_camera_pos());
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
 	int index(-1);
+	static xform_matrix prev_mvm, prev_pjm; // previous frame's matrices, for use with motion blur, etc.
+	static bool prev_mat_valid(0);
 	//if (display_mode & 0x20) {add_ssao();}
 	
 	if (cur_explosion_sphere.radius > 0.0 && camera_pdu.sphere_visible_test(cur_explosion_sphere.pos, cur_explosion_sphere.radius)) {
@@ -233,5 +236,11 @@ void run_postproc_effects() {
 	}
 	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater && !is_rain_enabled()) {add_god_rays();}
 	if ((display_mode & 0x20) && !camera_underwater && world_mode != WMODE_INF_TERRAIN) {add_bloom();} // add bloom last
+
+	if (0) { // capture matrices from this frame for use with next frame (if needed in the future)
+		prev_mvm = fgGetMVM();
+		prev_pjm = fgGetPJM();
+		prev_mat_valid = 1;
+	}
 }
 
