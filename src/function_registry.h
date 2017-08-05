@@ -709,7 +709,6 @@ void clear_cached_shaders();
 
 // function prototypes - lightmap
 void update_flow_for_voxels(vector<cube_t> const &cubes);
-void shift_light_sources(vector3d const &vd);
 void regen_lightmap();
 void clear_lightmap();
 void build_lightmap(bool verbose);
@@ -732,6 +731,10 @@ bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj, int s
 bool is_in_darkness(point const &pos, float radius, int cobj);
 void get_indir_light(colorRGBA &a, point const &p);
 bool is_any_dlight_visible(point const &p);
+
+// function protoptypes - light_source
+void shift_light_sources(vector3d const &vd);
+void draw_spotlight_cones();
 
 // function prototypes - tessellate
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt, bool split_quads);

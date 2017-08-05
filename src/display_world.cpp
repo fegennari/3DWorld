@@ -219,6 +219,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 			check_gl_error(23);
 			if (TIMETEST) PRINT_TIME("R");
 		}
+		//draw_spotlight_cones();
 		draw_coll_surfaces(1, reflection_pass); // transparent
 		check_gl_error(24);
 		if (TIMETEST) PRINT_TIME("S");

@@ -453,6 +453,18 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face) const {
 	return pos_dir_up(pos, dir, up_dir, angle, nclip, max(radius, nclip+0.01f*radius), 1.0, 1); // force near_clip < far_clip
 }
 
+void light_source::draw_light_cone(shader_t &shader, float alpha) const {
+
+	if (!is_enabled()) return;
+	if (is_cube_face || is_cube_light || is_line_light() || !is_very_directional()) return; // not a spotlight
+	//if (!is_visible()) return; // too slow?
+	if (!camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
+	shader.set_cur_color(colorRGBA(color, alpha));
+	cylinder_3dw const cylin(calc_bounding_cylin());
+	draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, 32, 0, 0); // untextured cone with no end
+}
+
+
 bool light_source_trig::is_shadow_map_enabled() const {
 
 	if (!use_smap || shadow_map_sz == 0 || !enable_dlight_shadows) return 0;
@@ -498,5 +510,16 @@ template<typename T> void shift_ls_vect(T &v, vector3d const &vd) {
 void shift_light_sources(vector3d const &vd) {
 	shift_ls_vect(light_sources_a, vd);
 	shift_ls_vect(light_sources_d, vd);
+}
+
+void draw_spotlight_cones() {
+
+	float const alpha = 0.1;
+	shader_t shader;
+	shader.begin_color_only_shader();
+	enable_blend();
+	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->draw_light_cone(shader, alpha);}
+	disable_blend();
+	shader.end_shader();
 }
 

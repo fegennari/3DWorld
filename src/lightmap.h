@@ -204,6 +204,7 @@ public:
 	bool try_merge_into(light_source &ls) const;
 	void setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const;
 	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
+	void draw_light_cone(shader_t &shader, float alpha) const;
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };
