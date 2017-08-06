@@ -170,7 +170,7 @@ public:
 	light_source() : enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), smap_index(0), cube_eflags(0), num_dlight_rays(0) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
-	void set_dynamic_state(point const &pos_, vector3d const &dir_, bool enabled_) {pos = pos2 = pos_; dir = dir_; enabled = enabled_;}
+	void set_dynamic_state(point const &pos_, vector3d const &dir_, colorRGBA const &color_, bool enabled_) {pos = pos2 = pos_; dir = dir_; color = color_; enabled = enabled_;}
 	void set_num_dlight_rays(unsigned num) {num_dlight_rays = num;} // zero = use default
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}

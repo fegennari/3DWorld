@@ -22,9 +22,11 @@ float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
 float const FLASHLIGHT_BW    = 0.02;
 float const FLASHLIGHT_RAD   = 4.0;
 
+colorRGBA const flashlight_colors[2] = {colorRGBA(1.0, 0.8, 0.5, 1.0), colorRGBA(0.8, 0.8, 1.0, 1.0)}; // incandescent, LED
+
 
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0), flashlight_on(0);
-unsigned dl_tid(0), elem_tid(0), gb_tid(0), DL_GRID_BS(0);
+unsigned dl_tid(0), elem_tid(0), gb_tid(0), DL_GRID_BS(0), flashlight_color_id(0);
 float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 cube_t dlight_bcube(all_zeros_cube);
@@ -47,6 +49,7 @@ extern vector<light_source> enabled_lights;
 inline bool add_cobj_ok(coll_obj const &cobj) { // skip small things like tree leaves and such
 	return (cobj.fixed && !cobj.disabled() && cobj.volume > 0.0001); // cobj.type == COLL_CUBE
 }
+colorRGBA const &get_flashlight_color() {return flashlight_colors[flashlight_color_id];}
 
 
 // *** R_PROFILE IMPLEMENTATION ***
@@ -957,7 +960,7 @@ void add_camera_candlelight() {
 void add_camera_flashlight() {
 
 	point const lpos(get_camera_light_pos());
-	//add_dynamic_light(FLASHLIGHT_RAD, lpos, SUN_C, cview_dir, FLASHLIGHT_BW);
+	//add_dynamic_light(FLASHLIGHT_RAD, lpos, get_flashlight_color(), cview_dir, FLASHLIGHT_BW);
 	flashlight_on = 1;
 
 	if (0 && (display_mode & 0x10)) { // add one bounce of indirect lighting
@@ -978,7 +981,7 @@ void add_camera_flashlight() {
 			if (check_coll_line_exact(lpos, (lpos + 0.5*FLASHLIGHT_RAD*dir), cpos, cnorm, cindex, 0.0, camera_coll_id, 1, 0, 0)) {
 				cpos -= 0.0001*FLASHLIGHT_RAD*cnorm; // move behind the collision plane so as not to multiply light
 				assert(cindex >= 0);
-				colorRGBA const color(SUN_C.modulate_with(coll_objects[cindex].get_avg_color()));
+				colorRGBA const color(get_flashlight_color().modulate_with(coll_objects[cindex].get_avg_color()));
 				add_dynamic_light(0.1*FLASHLIGHT_RAD, cpos, color*0.15, cnorm, 0.5); // wide angle (almost hemisphere)
 			}
 		}
@@ -990,13 +993,13 @@ void init_lights() {
 	assert(light_sources_d.size() == FLASHLIGHT_LIGHT_ID); // must be empty at this point (first light is added here)
 	bool const use_smap = 0; // not yet enabled
 	point const camera(get_camera_pos());
-	light_sources_d.push_back(light_source_trig(light_source(FLASHLIGHT_RAD, camera, camera, SUN_C, 1, cview_dir, FLASHLIGHT_BW), use_smap));
+	light_sources_d.push_back(light_source_trig(light_source(FLASHLIGHT_RAD, camera, camera, get_flashlight_color(), 1, cview_dir, FLASHLIGHT_BW), use_smap));
 }
 
 void sync_flashlight() {
 
 	assert(FLASHLIGHT_LIGHT_ID < light_sources_d.size());
-	light_sources_d[FLASHLIGHT_LIGHT_ID].set_dynamic_state(get_camera_light_pos(), cview_dir, flashlight_on);
+	light_sources_d[FLASHLIGHT_LIGHT_ID].set_dynamic_state(get_camera_light_pos(), cview_dir, get_flashlight_color(), flashlight_on);
 }
 
 

@@ -290,7 +290,6 @@ void final_draw(float framerate) {
 	draw_frame_rate(framerate);
 	show_other_messages();
 	user_action_key = 0;
-	flashlight_on   = 0;
 }
 
 
@@ -744,8 +743,9 @@ void display(void) {
 		fticks = 1.0;
 		iticks = 1;
 	}
-	tstep        = TIMESTEP*fticks;
-	reset_timing = 0;
+	tstep         = TIMESTEP*fticks;
+	reset_timing  = 0;
+	flashlight_on = 0;
 	check_gl_error(1);
 	set_fill_mode();
 	set_std_blend_mode();

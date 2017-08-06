@@ -52,12 +52,12 @@ vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion;
+extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
-extern unsigned create_voxel_landscape, spheres_mode;
+extern unsigned create_voxel_landscape, spheres_mode, flashlight_color_id;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, czmax, fticks, crater_depth, crater_radius;
 extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
 extern double camera_zh, c_phi, tfticks;
@@ -1485,6 +1485,7 @@ void switch_player_weapon(int val) {
 	else if (world_mode == WMODE_GROUND && create_voxel_landscape) {change_voxel_editing_mode(val);}
 	else if (spraypaint_mode) {change_spraypaint_color(val);}
 	else if (spheres_mode   ) {change_sphere_material (val, 0);}
+	else if (flashlight_on  ) {flashlight_color_id ^= 1;}
 }
 
 
