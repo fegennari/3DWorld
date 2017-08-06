@@ -13,7 +13,7 @@ float const MAX_SMAP_FOV = 0.8; // acos(1.0 - 0.8) = 78 degrees
 extern bool dl_smap_enabled, skip_light_vis_test, enable_dlight_shadows;
 extern int display_mode, camera_coll_id, max_tius;
 extern unsigned shadow_map_sz;
-extern float fticks;
+extern float fticks, CAMERA_RADIUS;
 extern vector<light_source> light_sources_a;
 extern vector<light_source_trig> light_sources_d;
 extern coll_obj_group coll_objects;
@@ -459,9 +459,22 @@ void light_source::draw_light_cone(shader_t &shader, float alpha) const {
 	if (is_cube_face || is_cube_light || is_line_light() || !is_very_directional()) return; // not a spotlight
 	//if (!is_visible()) return; // too slow?
 	if (!camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
-	shader.set_cur_color(colorRGBA(color, alpha));
+	if (dist_less_than(pos, camera_pos, 0.25*CAMERA_RADIUS)) return; // skip player flashlight
+	unsigned const ndiv = 32;
 	cylinder_3dw const cylin(calc_bounding_cylin());
-	draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, 32, 0, 0); // untextured cone with no end
+	point const ce[2] = {cylin.p2, cylin.p1}; // swap points to make second point the tip/zero radius
+	vector3d v12;
+	vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r2, cylin.r1, ndiv, v12));
+	vector<vert_norm_color> verts(2*(ndiv+1)); // triangle strip
+	color_wrapper cw_tip(colorRGBA(color, alpha)), cw_end(colorRGBA(color, 0.0));
+
+	for (unsigned S = 0; S <= ndiv; ++S) {
+		unsigned const s(S%ndiv), vix(2*S);
+		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+		verts[vix+0].assign(vpn.p[(s<<1)+0], normal, cw_end);
+		verts[vix+1].assign(vpn.p[(s<<1)+1], normal, cw_tip);
+	}
+	draw_verts(verts, GL_TRIANGLE_STRIP); // untextured triangle strip with normals and color gradient from tip to end
 }
 
 
@@ -517,9 +530,11 @@ void draw_spotlight_cones() {
 	float const alpha = 0.1;
 	shader_t shader;
 	shader.begin_color_only_shader();
+	glDepthMask(GL_FALSE); // no depth writing
 	enable_blend();
 	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->draw_light_cone(shader, alpha);}
 	disable_blend();
+	glDepthMask(GL_TRUE);
 	shader.end_shader();
 }
 
