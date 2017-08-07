@@ -872,6 +872,7 @@
     <None Include="shaders\sphere_refract_screen.frag" />
     <None Include="shaders\sphere_shadow.part" />
     <None Include="shaders\sphere_shadow_casters.part.frag" />
+    <None Include="shaders\spotlight_volume.frag" />
     <None Include="shaders\star_draw.frag" />
     <None Include="shaders\star_draw.vert" />
     <None Include="shaders\star_draw_iq.frag" />
@@ -896,6 +897,7 @@
     <None Include="shaders\triplanar_bump_map.part.frag" />
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vertex_xlate_scale.vert" />
+    <None Include="shaders\vert_plus_normal.vert" />
     <None Include="shaders\vert_xform_only.vert" />
     <None Include="shaders\vert_xform_vpos.vert" />
     <None Include="shaders\voxel_asteroid.frag" />

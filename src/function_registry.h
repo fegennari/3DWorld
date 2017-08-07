@@ -150,6 +150,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid);
 void draw_splashes();
 void draw_bubbles();
 void draw_cracks_and_decals();
+void setup_depth_trans_texture(shader_t &s, unsigned &depth_tid);
 void draw_smoke_and_fires();
 void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix, bool fades=0);
 void draw_camera_filters(vector<camera_filter> &cfs);

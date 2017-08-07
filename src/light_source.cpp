@@ -460,7 +460,7 @@ void light_source::draw_light_cone(shader_t &shader, float alpha) const {
 	//if (!is_visible()) return; // too slow?
 	if (!camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
 	if (dist_less_than(pos, camera_pos, 0.25*CAMERA_RADIUS)) return; // skip player flashlight
-	unsigned const ndiv = 32;
+	unsigned const ndiv = 64;
 	cylinder_3dw const cylin(calc_bounding_cylin());
 	point const ce[2] = {cylin.p2, cylin.p1}; // swap points to make second point the tip/zero radius
 	vector3d v12;
@@ -527,14 +527,19 @@ void shift_light_sources(vector3d const &vd) {
 
 void draw_spotlight_cones() {
 
-	float const alpha = 0.1;
-	shader_t shader;
-	shader.begin_color_only_shader();
+	float const alpha = 0.5;
+	unsigned depth_tid(0);
+	shader_t s;
+	s.set_vert_shader("vert_plus_normal");
+	s.set_frag_shader("depth_utils.part+spotlight_volume");
+	s.begin_shader();
+	//setup_depth_trans_texture(s, depth_tid);
 	glDepthMask(GL_FALSE); // no depth writing
 	enable_blend();
-	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->draw_light_cone(shader, alpha);}
+	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->draw_light_cone(s, alpha);}
 	disable_blend();
 	glDepthMask(GL_TRUE);
-	shader.end_shader();
+	s.end_shader();
+	free_texture(depth_tid);
 }
 
