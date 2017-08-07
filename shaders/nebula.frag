@@ -18,7 +18,7 @@ uniform vec3 xy_off_scale; // {x_off, y_off, xy_scale}
 uniform sampler2D height_tex;
 
 float apply_height_atten() {
-	vec3 pos     = vertex.xy*xy_off_scale.z + xy_off_scale.xy;
+	vec2 pos     = vertex.xy*xy_off_scale.z + xy_off_scale.xy;
 	float mesh_z = texture(height_tex, pos).r;
 	float height = pos.z - mesh_z;
 	if (height < 0.1) discard;
