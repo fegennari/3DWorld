@@ -197,6 +197,7 @@ public:
 	bool is_enabled()     const {return enabled;}
 	bool is_user_placed() const {return user_placed;}
 	bool smap_enabled()   const {return (smap_index != 0 || is_cube_face);}
+	bool is_enabled_spotlight() const {return (is_enabled() && !is_cube_face && !is_cube_light && !is_line_light() && is_very_directional());}
 	void set_enabled(bool enabled_) {enabled = enabled_;}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void pack_to_floatv(float *data) const;

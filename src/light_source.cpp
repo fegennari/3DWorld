@@ -455,26 +455,32 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face) const {
 
 void light_source::draw_light_cone(shader_t &shader, float alpha) const {
 
-	if (!is_enabled()) return;
-	if (is_cube_face || is_cube_light || is_line_light() || !is_very_directional()) return; // not a spotlight
+	if (!is_enabled_spotlight()) return; // disabled or not a spotlight
 	//if (!is_visible()) return; // too slow?
 	if (!camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
 	if (dist_less_than(pos, camera_pos, 0.25*CAMERA_RADIUS)) return; // skip player flashlight
-	unsigned const ndiv = 64;
+	unsigned const ndiv    = 40;
+	unsigned const nstacks = 16;
 	cylinder_3dw const cylin(calc_bounding_cylin());
-	point const ce[2] = {cylin.p2, cylin.p1}; // swap points to make second point the tip/zero radius
-	vector3d v12;
-	vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r2, cylin.r1, ndiv, v12));
+	vector3d const dir(cylin.p2 - cylin.p1);
 	vector<vert_norm_color> verts(2*(ndiv+1)); // triangle strip
-	color_wrapper cw_tip(colorRGBA(color, alpha)), cw_end(colorRGBA(color, 0.0));
+	float const stack_delta(1.0/nstacks);
 
-	for (unsigned S = 0; S <= ndiv; ++S) {
-		unsigned const s(S%ndiv), vix(2*S);
-		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-		verts[vix+0].assign(vpn.p[(s<<1)+0], normal, cw_end);
-		verts[vix+1].assign(vpn.p[(s<<1)+1], normal, cw_tip);
+	for (unsigned n = 0; n < nstacks; ++n) { // stacks
+		float const v1(n*stack_delta), v2(v1 + stack_delta);
+		point const ce[2] = {(cylin.p1 + v2*dir), (cylin.p1 + v1*dir)}; // swap points to make second point the tip/zero radius
+		vector3d v12;
+		vector_point_norm const &vpn(gen_cylinder_data(ce, v2*cylin.r2, v1*cylin.r2, ndiv, v12));
+		color_wrapper cw_tip(colorRGBA(color, (1.0 - v1)*alpha)), cw_end(colorRGBA(color, (1.0 - v2)*alpha));
+
+		for (unsigned S = 0; S <= ndiv; ++S) {
+			unsigned const s(S%ndiv), vix(2*S);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]);
+			verts[vix+0].assign(vpn.p[(s<<1)+0], normal, cw_end);
+			verts[vix+1].assign(vpn.p[(s<<1)+1], normal, cw_tip);
+		}
+		draw_verts(verts, GL_TRIANGLE_STRIP); // untextured triangle strip with normals and color gradient from tip to end
 	}
-	draw_verts(verts, GL_TRIANGLE_STRIP); // untextured triangle strip with normals and color gradient from tip to end
 }
 
 
@@ -527,13 +533,17 @@ void shift_light_sources(vector3d const &vd) {
 
 void draw_spotlight_cones() {
 
+	bool has_spotlight(0);
+	for (auto i = light_sources_d.begin(); i != light_sources_d.end() && !has_spotlight; ++i) {has_spotlight |= i->is_enabled_spotlight();}
+	if (!has_spotlight) return;
 	float const alpha = 0.5;
 	unsigned depth_tid(0);
 	shader_t s;
 	s.set_vert_shader("vert_plus_normal");
 	s.set_frag_shader("depth_utils.part+spotlight_volume");
+	s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1); // FS
 	s.begin_shader();
-	//setup_depth_trans_texture(s, depth_tid);
+	setup_depth_trans_texture(s, depth_tid);
 	glDepthMask(GL_FALSE); // no depth writing
 	enable_blend();
 	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->draw_light_cone(s, alpha);}
