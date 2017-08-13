@@ -1452,6 +1452,7 @@ void do_area_effect_damage(point const &pos, float effect_radius, float damage, 
 	if (type == FIRE) {
 		float const dist_sq(p2p_dist_sq(camera_pos, pos));
 		dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
+		if (((frame_counter+index)&31) == 0) {destroy_coll_objs(pos, 32.0*damage, source, FIRE);} // check for exploding objects every 32 frames
 	}
 	if (!spectate && camera_mode == 1 && game_mode && dist_less_than(pos, camera_pos, radius)) { // test the player
 		if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), zero_vector, pos, damage, type)) {

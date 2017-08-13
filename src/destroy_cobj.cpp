@@ -39,7 +39,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 	float const radius((force_radius > 0.0) ? force_radius : ((damage_type == BLAST_RADIUS) ? 4.0 : 1.0)*sqrt(damage)/650.0);
 	vector3d cdir;
 	vector<color_tid_vol> cts;
-	int const dmin((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE));
+	int const dmin((damage_type == FIRE) ? EXPLODEABLE : ((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE)));
 	csg_cube cube(pos.x, pos.x, pos.y, pos.y, pos.z, pos.z);
 	cube.expand_by(radius);
 	unsigned nrem(subtract_cube(cts, cdir, cube, dmin));
