@@ -1637,6 +1637,42 @@ void create_shrapnel(point const &pos, vector3d const &dir, float firing_error, 
 }
 
 
+struct delayed_proj_t {
+	point pos;
+	vector3d dir;
+	int shooter;
+	float damage, velocity;
+
+	delayed_proj_t(point const &p, vector3d const &d, float dam, int s, float v) : pos(p), dir(d), damage(dam), shooter(s), velocity(v) {}
+};
+
+vector<delayed_proj_t> delayed_projs;
+
+void projectile_test_delayed(point const &pos, vector3d const &dir, float firing_error, float damage,
+	int shooter, float &range, float intensity, int ignore_cobj, float velocity)
+{
+	float const max_range(velocity*fticks); // Note: velocity=0.0 => infinite speed/instant hit
+	vector3d dir_used(dir);
+	point const ret(projectile_test(pos, dir, firing_error, damage, shooter, range, intensity, ignore_cobj, max_range, &dir_used));
+	if (max_range == 0.0 || range < max_range) return; // inf speed, or hit something within range, done
+	point const new_pos(pos + dir_used.get_norm()*max_range); // the location of this projectile after this frame's timestep
+	if (!get_scene_bounds().contains_pt(new_pos)) return; // outside the scene, done
+	delayed_projs.push_back(delayed_proj_t(new_pos, dir_used, damage, shooter, velocity));
+}
+
+void proc_delayed_projs() {
+
+	if (!animate2) return;
+	vector<delayed_proj_t> cur_delayed_projs;
+	cur_delayed_projs.swap(delayed_projs); // swap for next frame, calls below may add to delayed_projs
+
+	for (auto i = cur_delayed_projs.begin(); i != cur_delayed_projs.end(); ++i) { // Note: firing error has already been applied
+		float range(0.0); // unused
+		projectile_test_delayed(i->pos, i->dir, 0.0, i->damage, i->shooter, range, 1.0, get_shooter_coll_id(i->shooter), i->velocity);
+	}
+}
+
+
 float weapon_t::get_fire_vel() const {return (v_add + ball_velocity*v_mult);}
 
 
@@ -1698,12 +1734,13 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	switch (weapon_id) {
 	case W_M16: // line of sight damage
 		gen_sound(SOUND_GUNSHOT, fpos, 0.5);
-		gen_arb_smoke((fpos + ((wmode&1) ? 1.5 : 1.8)*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE, vector3d(0.0, 0.0, 0.15), ((wmode&1) ? 0.0025 : 0.0015), 0.25, 0.2, 0.0, shooter, SMOKE, 0, 0.01);
+		gen_arb_smoke((fpos + ((wmode&1) ? 1.5 : 1.8)*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE,
+			vector3d(0.0, 0.0, 0.15), ((wmode&1) ? 0.0025 : 0.0015), 0.25, 0.2, 0.0, shooter, SMOKE, 0, 0.01);
 
 		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) {firing_error *= 0.1;}
 			if (underwater) {firing_error += UWATER_FERR_ADD;}
-			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
+			projectile_test_delayed(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj, vel);
 			create_shell_casing(fpos, dir, shooter, radius, 0);
 			if (!is_player && range > 0.1*radius) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
 			return 1;
@@ -1713,10 +1750,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			create_shrapnel((fpos + dir*(0.1*radius)), dir, firing_error, nshots, shooter, weapon_id);
 		}
 		else { // normal 12-gauge/M16
-			if (underwater) firing_error += UWATER_FERR_ADD;
+			if (underwater) {firing_error += UWATER_FERR_ADD;}
 
 			for (int i = 0; i < int(nshots); ++i) { // can be slow if trees are involved
-				projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
+				projectile_test_delayed(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj, vel);
 			}
 		}
 		if (weapon_id == W_SHOTGUN) {
@@ -1951,20 +1988,21 @@ void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp,
 }
 
 
-point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage,
-					  int shooter, float &range, float intensity, int ignore_cobj)
+point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage, int shooter,
+	float &range, float intensity, int ignore_cobj, float max_range, vector3d *vcf_used)
 {
 	assert(!is_nan(damage));
 	assert(intensity <= 1.0 && LASER_REFL_ATTEN < 1.0);
 	int closest(-1), closest_t(0), coll(0), cindex(-1);
 	point coll_pos(pos);
-	vector3d vcf(vcf_), vca(pos), coll_norm(plus_z);
-	float const vcf_mag(vcf.mag()), MAX_RANGE(min((float)FAR_CLIP, 2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE + Z_SCENE_SIZE)));
+	vector3d vcf(vcf_), coll_norm(plus_z);
 	float specular(0.0), luminance(0.0), alpha(1.0), refract_ix(1.0), hardness(1.0);
 	player_state const &sstate(sstates[shooter]);
 	int const wtype(sstate.weapon), wmode(sstate.wmode);
-	float const radius(get_sstate_radius(shooter));
+	float const vcf_mag(vcf.mag()), radius(get_sstate_radius(shooter));
 	bool const is_laser(wtype == W_LASER);
+	float MAX_RANGE(min((float)FAR_CLIP, 2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE + Z_SCENE_SIZE)));
+	if (max_range > 0.0) {MAX_RANGE = min(MAX_RANGE, max_range);}
 	range = MAX_RANGE;
 	vcf  /= vcf_mag;
 
@@ -1973,7 +2011,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		vcf.normalize();
 	}
 	vector3d const vcf0(vcf*vcf_mag);
-	vca += vcf*FAR_CLIP;
+	if (vcf_used) {*vcf_used = vcf0;}
 	int const intersect(get_range_to_mesh(pos, vcf, coll_pos));
 
 	if (intersect) {
@@ -2106,11 +2144,11 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			float range_unused(0.0);
 
 			if (cobj.is_tree_leaf()) { // leaf hit, projectile continues
-				projectile_test(coll_pos, vcf, firing_error, damage, shooter, range_unused, 1.0, cindex); // return value is unused
+				projectile_test(coll_pos, vcf, firing_error, damage, shooter, range_unused, 1.0, cindex, max_range); // return value is unused
 				no_spark = 1;
 			}
 			else if (is_glass && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
-				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex); // return value is unused
+				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex, max_range); // return value is unused
 				no_spark = 1;
 			}
 		}
@@ -2185,7 +2223,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				if (reflect > 0.01) { // reflected light
 					reflect = min(reflect, 0.95f); // prevent stack overflow
 					calc_reflection_angle(vcf, vref, coll_norm);
-					end_pos = projectile_test(coll_pos, vref, 0.0, reflect*damage, shooter, range0, reflect*intensity);
+					end_pos = projectile_test(coll_pos, vref, 0.0, reflect*damage, shooter, range0, reflect*intensity, -1, max_range);
 				}
 			}
 			if (alpha < 1.0) {
@@ -2196,7 +2234,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					refract = min(LASER_REFL_ATTEN, refract);
 
 					if (refract > 0.01) {
-						point const cp(projectile_test(coll_pos, vcf, 0.0, refract*damage, shooter, range1, refract*intensity, cindex));
+						point const cp(projectile_test(coll_pos, vcf, 0.0, refract*damage, shooter, range1, refract*intensity, cindex, max_range));
 						add_laser_beam_segment(coll_pos, cp, vcf, coll, (range1 > 0.9*MAX_RANGE), refract*intensity);
 					}
 				}
@@ -2207,7 +2245,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 			if (!point_outside_mesh(xpos, ypos)) { // can this ever fail?
 				calc_reflection_angle(vcf, vref, wat_vert_normals[ypos][xpos]); // don't have water surface normals
-				end_pos = projectile_test(coll_pos, vref, 0.0, atten*damage, shooter, range0, atten*intensity);
+				end_pos = projectile_test(coll_pos, vref, 0.0, atten*damage, shooter, range0, atten*intensity, -1, max_range);
 				coll2   = (end_pos != coll_pos);
 			}
 		}
@@ -2225,7 +2263,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				float range0(MAX_RANGE);
 				vector3d vref(vcf);
 				calc_reflection_angle(vcf, vref, coll_norm);
-				projectile_test(coll_pos, vref, 0.0, rdscale*damage, shooter, range0, rdscale*intensity);
+				projectile_test(coll_pos, vref, 0.0, rdscale*damage, shooter, range0, rdscale*intensity, -1, max_range);
 			}
 		}
 	}
@@ -2553,6 +2591,7 @@ void update_game_frame() {
 	assert(sstates != NULL);
 	sstates[CAMERA_ID].update_camera_frame();
 	for (int i = CAMERA_ID; i < num_smileys; ++i) {sstates[i].update_sstate_game_frame(i);}
+	proc_delayed_projs(); // after game state update but before processing of fire key
 }
 
 
