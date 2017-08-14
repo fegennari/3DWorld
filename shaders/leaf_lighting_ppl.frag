@@ -22,4 +22,7 @@ void main() {
 #ifndef NO_FOG
 	fg_FragColor = apply_fog(fg_FragColor);
 #endif
+#ifdef ENABLE_ALPHA_TO_COVERAGE
+	fg_FragColor.a = (fg_FragColor.a - min_alpha) / max(0.5*fwidth(texel.a), 0.0001) + 0.5;
+#endif
 }
