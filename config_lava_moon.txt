@@ -1,0 +1,12 @@
+include config.txt
+
+ntrees 0
+num_birds_per_tile 0
+num_fish_per_tile 0
+clouds_per_tile 0.75
+grass_density 0
+cloud_height_offset -1.2
+water_h_off -5.0 0.0
+water_is_lava 1
+atmosphere 0.5
+vegetation 0.0
