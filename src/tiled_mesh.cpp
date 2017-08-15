@@ -1470,9 +1470,10 @@ void tile_cloud_manager_t::get_draw_list(cloud_draw_list_t &clouds_to_draw, floa
 		point const pt(i->pos + xlate);
 		if (!camera_pdu.sphere_visible_test(pt, i->get_rmax())) continue; // VFC
 		float const zbot(i->pos.z - i->size.z);
-		float alpha(1.0);
 		if (zbot < mesh_zmin) continue; // definitely below the mesh
+		if (zbot + 0.2*i->size.z < water_plane_z) continue; // below the water
 		float const start_dist(1.0*i->size.z);
+		float alpha(1.0);
 
 		if (zbot < mesh_zmax+start_dist) { // may be below the mesh
 			float const dist(zbot - get_exact_zval(i->pos.x-xoff2*DX_VAL, i->pos.y-yoff2*DY_VAL));
