@@ -128,7 +128,7 @@ void main() {
 #endif
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
-	color = mix(color, vec4(0.0, 1.0, 0.5, color.a), min(1.0, water_green_comp*green_scale));
+	color = mix(color, (is_lava ? vec4(1.0, 0.5, 0.0, color.a) : vec4(0.0, 1.0, 0.5, color.a)), min(1.0, water_green_comp*green_scale));
 
 #ifdef USE_SHALLOW_WATER_MUD // unset/unused
 	float mud_amt = 1.0 - clamp(0.25*depth, 0.0, 1.0);
