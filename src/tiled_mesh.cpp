@@ -50,7 +50,7 @@ hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees, enable_tt_model_reflect;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
@@ -1523,16 +1523,18 @@ void tile_t::update_animals() {
 	// this means that there will be FP errors when the player is far from the origin - but since fish and birds are "distant" objects, that may be okay;
 	// using camera space is more difficult due to all of update code interacting with the rest of the scene, which is in global space;
 	// also, animals can move between tiles, which complicates the math (since adjacent tiles may create their animals in a different starting camera space)
-	if (!fish.was_generated()) {
+	if (water_is_lava || temperature > 0.5*WATER_MAX_TEMP || vegetation < 0.1) {} // no fish
+	else if (!fish.was_generated()) {
 		cube_t range(get_mesh_bcube_global());
 		range.d[2][1] = water_plane_z; // z extends from lowest mesh point to water surface
-		fish.gen(num_birds_per_tile, range, this); // Note: could use get_water_bcube() for tighter range
+		fish.gen(num_fish_per_tile, range, this); // Note: could use get_water_bcube() for tighter range
 	}
 	else {
 		fish.update(this);
 		propagate_animals_to_neighbor_tiles(fish);
 	}
-	if (!birds.was_generated()) {
+	if (atmosphere < 0.4 || vegetation < 0.2) {} // no birds
+	else if (!birds.was_generated()) {
 		cube_t range(get_mesh_bcube_global());
 		float const z_range(zmax - zmin);
 		range.d[2][0] = zmax;
