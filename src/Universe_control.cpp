@@ -364,7 +364,7 @@ void process_univ_objects() {
 						proc_collision(uobj, cpos, asteroid.pos, asteroid.radius, asteroid.get_velocity(), 1.0, elastic, asteroid.get_fragment_tid(obj_pos));
 
 						if (is_ship && clobj.asteroid_field == AST_BELT_ID) { // ship collision with asteroid belt
-							//clobj.get_asteroid_belt().detatch_asteroid(clobj.asteroid); // incomplete
+							//clobj.get_asteroid_belt().detach_asteroid(clobj.asteroid); // incomplete
 						}
 					}
 				}

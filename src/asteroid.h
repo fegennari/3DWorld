@@ -84,7 +84,7 @@ public:
 	virtual bool get_is_ice() const {return 0;}
 	virtual void gen_asteroids();
 	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set);
-	void detatch_asteroid(unsigned ix);
+	void detach_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
 	void begin_render(shader_t &shader, bool custom_lighting) {begin_render(shader, shadow_casters.size(), custom_lighting);}
