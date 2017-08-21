@@ -52,7 +52,7 @@ vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on;
+extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
@@ -1689,6 +1689,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1)), is_player(shooter == CAMERA_ID);
 	weapon_t const &w(weapons[weapon_id]);
 	int fire_delay((int)w.fire_delay);
+	if (disable_fire_delay) {fire_delay = 0;}
 	if (UNLIMITED_WEAPONS && !is_player && weapon_id == W_LANDMINE) {fire_delay *= 2;} // avoid too many landmines
 	else if (!FREEZE_MODE && weapon == W_RAPTOR && (wmode&1)) {fire_delay *= 2;} // 2x fire delay for multi-shot mode (but regular fire for freeze mode)
 	if (rapid_fire) {fire_delay /= 3;}
@@ -1696,8 +1697,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	unsigned nshots(w.nshots);
 
 	if (weapon_id == W_LASER) { // always fires
-		assert(fire_delay > 0);
-		damage_scale = fticks/fire_delay;
+		damage_scale = fticks/max(fire_delay, 1);
 	}
 	else if (dtime < fire_delay) { // add light between firing frames to avoid tearing
 		if (!vsync_enabled && is_player && weapon_id == W_M16) {add_dynamic_light(1.0, fpos, YELLOW);}
@@ -1717,7 +1717,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	int const ignore_cobj(get_shooter_coll_id(shooter));
 	int type(w.obj_id);
 	
-	if (is_player && powerup != PU_FLIGHT) { // recoil (only for player)
+	if (is_player && camera_surf_collide && !disable_recoil && powerup != PU_FLIGHT) { // recoil (only for player)
 		float recoil(w.recoil);
 		if (is_jumping || fall_counter > 0 ) {recoil *= 2.5;} // low friction when in the air
 		else if (velocity.mag() < TOLERANCE) {recoil *= 0.4;} // only static (not kinetic) friction (Note: only player velocity is correct)

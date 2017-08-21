@@ -14,4 +14,6 @@ teams 2
 crater_size 0.1
 player_name Deathtool
 num_dodgeballs 3
+disable_fire_delay 0
+disable_recoil 0
 

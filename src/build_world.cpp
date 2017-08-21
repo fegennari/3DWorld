@@ -47,7 +47,7 @@ vector<obj_draw_group> obj_draw_groups;
 vector<sphere_t> cur_frame_explosions;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc, reflect_dodgeballs, begin_motion;
+extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc, reflect_dodgeballs, begin_motion, disable_fire_delay;
 extern int camera_view, camera_mode, camera_reset, animate2, recreated, temp_change, preproc_cube_cobjs, precip_mode;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -111,7 +111,7 @@ void create_object_groups() {
 	coll_id[CHUNK]    = create_group(CHUNK,    SMILEY_NCHUNKS*NUM_CHUNK_BLOCKS*num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[SKULL]    = create_group(SKULL,    num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[BALL]     = create_group(BALL,     num_dodgeballs, 0, 1, 0, 0, 0);
-	coll_id[S_BALL]   = create_group(S_BALL,   200,   0, 0, 0, 1, 0);
+	coll_id[S_BALL]   = create_group(S_BALL,   (disable_fire_delay ? 10000 : 200), 0, 0, 0, 1, 0);
 	coll_id[ROCKET]   = create_group(ROCKET,   100,   0, 0, 0, 1, 0);
 	coll_id[LANDMINE] = create_group(LANDMINE, 100,   0, 0, 0, 1, 0);
 	coll_id[SEEK_D]   = create_group(SEEK_D,   50,    0, 0, 0, 1, 0);
