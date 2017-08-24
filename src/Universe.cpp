@@ -338,7 +338,7 @@ public:
 		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring(uplanet const &planet, point const &planet_pos, bool dir, bool a2c) {	
+	bool enable_ring(uplanet const &planet, point const &planet_pos, float back_face_mult, bool a2c) {	
 		if (!is_setup()) {
 			set_vert_shader("planet_draw");
 			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+planet_rings");
@@ -358,7 +358,7 @@ public:
 		set_uniform_float(get_loc("planet_radius"), planet.radius);
 		set_uniform_float(get_loc("ring_ri"),       planet.ring_ri);
 		set_uniform_float(get_loc("ring_ro"),       planet.ring_ro);
-		set_uniform_float(get_loc("bf_draw_sign"),  (dir ? -1.0 : 1.0));
+		set_uniform_float(get_loc("bf_draw_sign"),  back_face_mult);
 		set_uniform_float(get_loc("alpha_scale"),   (a2c ?  1.0 : 0.6));
 		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
 		return 1;
@@ -413,7 +413,9 @@ public:
 	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius) {return star_shader.enable_star(colorA, colorB, radius);}
 	void disable_star_shader() {star_shader.disable_star();}
-	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, bool dir, bool a2c) {return ring_shader.enable_ring(planet, planet_pos, dir, a2c);}
+	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, float back_face_mult, bool a2c) {
+		return ring_shader.enable_ring(planet, planet_pos, back_face_mult, a2c);
+	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
 	void enable_atmospheric_shader(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
 		atmospheric_shader.enable_atmospheric(planet, planet_pos, svars);
@@ -1003,13 +1005,16 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					enable_blend();
 
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
-						if (!usg.rings_to_draw.empty()) {
-							for (auto k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
-								bool const use_a2c(!k->selected); // only for distant rings (looks bad when up close)
+						for (auto k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
+							uplanet &planet(sol.planets[k->ix]);
+							bool const use_a2c(!k->selected); // only for distant rings (looks bad when up close)
+							bool const use_two_passes(!use_a2c && !usg.atmos_to_draw.empty() && fabs(dot_product((camera - (pos + planet.pos)).get_norm(), planet.rot_axis.get_norm())) < 0.5);
+							
+							// distant planets: draw planet+atmos then rings; nearby planets: draw rings, then planet+atmos, then maybe draw near part of rings in a second pass
+							if ((pass != 0) == use_a2c || use_two_passes) {
 								if (use_a2c) {glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
-								uplanet &planet(sol.planets[k->ix]);
 								planet.ensure_rings_texture();
-								planet.draw_prings(usg, (pos + planet.pos), k->size, (pass == 1), use_a2c);
+								planet.draw_prings(usg, (pos + planet.pos), k->size, (use_two_passes ? ((pass == 1) ? -1.0 : 1.0) : 0), use_a2c);
 								if (use_a2c) {glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 							}
 						}
@@ -2631,13 +2636,13 @@ void uplanet::bind_rings_texture(unsigned tu_id) const { // setup ring texture s
 	set_active_texture(0);
 }
 
-void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, bool dir, bool a2c) const {
+void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, float back_face_mult, bool a2c) const {
 
 	if (ring_data.empty()) return;
 	assert(ring_ri > 0.0 && ring_ri < ring_ro);
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
-	usg.enable_ring_shader(*this, make_pt_global(pos_), dir, a2c); // always WHITE
+	usg.enable_ring_shader(*this, make_pt_global(pos_), back_face_mult, a2c); // always WHITE
 	//glDepthMask(GL_FALSE); // no depth writing - causes bright spots (rather than dark spots)
 	fgPushMatrix();
 	global_translate(pos_);

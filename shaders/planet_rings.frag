@@ -30,7 +30,7 @@ void main()
 	vec3 world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
 	float ws_cdist = distance(world_space_pos, camera_pos);
 	float pp_cdist = distance(planet_pos, camera_pos);
-	if (bf_draw_sign*(ws_cdist - pp_cdist) < -0.01*pp_cdist) discard; // on the wrong side of the planet
+	if (bf_draw_sign != 0.0 && bf_draw_sign*(ws_cdist - pp_cdist) < -0.01*pp_cdist) discard; // on the wrong side of the planet
 
 	float rval = clamp((length(vertex) - ring_ri)/(ring_ro - ring_ri), 0.0, 1.0);
 	vec4 texel = texture(ring_tex, rval);
