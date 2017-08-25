@@ -1573,7 +1573,7 @@ void uplanet::create(bool phase) {
 		water     = (gas_giant ? 0.2 : 1.0)*min(1.0f, rand_uniform2(0.0, 1.2)); // ice // rand_uniform2(0.0, MAX_WATER)
 		comment   = " (Cold)";
 		if      (gas_giant)    {comment += " Gas Giant";}
-		else if (atmos > 0.5 && water > 0.25 && temp > MIN_PLANT_TEMP) {comment += " Terran Planet";}
+		else if (atmos > 0.5 && water > 0.25 && temp > MIN_PLANT_TEMP) {comment += ((water > 0.99) ? " Ocean Planet" : " Terran Planet");}
 		else if (water > 0.75) {comment += " Ice Planet";}
 		else                   {comment += " Rocky Planet";}
 	}
@@ -1596,8 +1596,9 @@ void uplanet::create(bool phase) {
 		atmos   = rand_uniform2(-0.3, 1.5);
 		water   = max(0.0f, min(MAX_WATER, 0.5f*(atmos + rand_uniform2(-MAX_WATER, 0.9*MAX_WATER))));
 		comment = " (Temperate)";
-		if (atmos > 0.5 && water > 0.25) {comment += " Terran Planet";}
-		else                             {comment += " Rocky Planet";}
+		if (water > 0.99)                     {comment += " Ocean Planet";} // Note: currently doesn't exist
+		else if (atmos > 0.5 && water > 0.25) {comment += " Terran Planet";}
+		else                                  {comment += " Rocky Planet";}
 	}
 	atmos     = CLIP_TO_01(atmos);
 	float const rsc_scale(liveable() ? 2.0 : (colonizable() ? 1.0 : 0.5));
