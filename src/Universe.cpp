@@ -1627,7 +1627,7 @@ void uplanet::process() {
 	if (gen) return;
 	current.type = UTYPE_PLANET;
 	set_rseeds();
-	if (temp < CGAS_TEMP && (rand2()&1)) {gen_prings();} // rings
+	if ((gas_giant || temp < CGAS_TEMP) && (rand2()&1)) {gen_prings();} // rings
 	unsigned num_moons(0);
 
 	if (rand2()&1) { // has moons
