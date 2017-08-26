@@ -268,6 +268,8 @@ void model_from_file_t::check_and_bind(int &tid, string const &tfn, bool is_alph
 
 class object_file_reader_model : public object_file_reader, public model_from_file_t {
 
+	bool had_empty_mat_error;
+
 	bool read_map_name(ifstream &in, string &name) {
 		if (!(in >> name))  {return 0;}
 		assert(!name.empty());
@@ -276,9 +278,9 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 		return 1;
 	}
 
-	bool read_color_rgb(ifstream &in, string const &name, colorRGB &color) const {
+	bool read_color_rgb(ifstream &in, string const &name, colorRGB &color, string const &material_name) const {
 		// Note: does not support "xyz" CIE-XYZ color space specification
-		if (!(in >> color.R)) {cerr << "Error reading material " << name << endl; return 0;}
+		if (!(in >> color.R)) {cerr << "Error reading material " << name << " for " << material_name << endl; return 0;}
 		if (!(in >> color.G >> color.B)) { // G and B are optional
 			in.clear(); // clear error bits
 			color.G = color.B = color.R; // grayscale
@@ -287,7 +289,7 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 	}
 
 public:
-	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model_from_file_t(fn, model_) {}
+	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model_from_file_t(fn, model_), had_empty_mat_error(0) {}
 
 	bool load_mat_lib(string const &fn) { // Note: could cache filename, but seems to never be included more than once
 		ifstream mat_in;
@@ -295,7 +297,7 @@ public:
 		cout << "loading material library " << fn << endl;
 		int cur_mat_id(-1); // not set
 		material_t *cur_mat(0);
-		string s, tfn;
+		string s, tfn, material_name;
 
 		while (mat_in.good() && (mat_in >> s)) {
 			assert(!s.empty());
@@ -305,7 +307,7 @@ public:
 				read_to_newline(mat_in); // ignore
 			}
 			else if (s == "newmtl") { // new material
-				string material_name;
+				material_name.clear();
 				read_to_newline(mat_in, &material_name);
 
 				if (material_name.empty()) {
@@ -314,102 +316,103 @@ public:
 				}
 				if (verbose) {cout << "Material " << material_name << endl;} // maybe too verbose?
 				cur_mat_id =  model.get_material_ix(material_name, fn);
+				assert(cur_mat_id >= 0); // must be valid
 				cur_mat    = &model.get_material(cur_mat_id);
 			}
 			else if (s == "ka") {
 				assert(cur_mat);
-				if (!read_color_rgb(mat_in, "Ka", cur_mat->ka)) return 0;
+				if (!read_color_rgb(mat_in, "Ka", cur_mat->ka, material_name)) return 0;
 			}
 			else if (s == "kd") {
 				assert(cur_mat);
-				if (!read_color_rgb(mat_in, "Kd", cur_mat->kd)) return 0;
+				if (!read_color_rgb(mat_in, "Kd", cur_mat->kd, material_name)) return 0;
 			}
 			else if (s == "ks") {
 				assert(cur_mat);
-				if (!read_color_rgb(mat_in, "Ks", cur_mat->ks)) return 0;
+				if (!read_color_rgb(mat_in, "Ks", cur_mat->ks, material_name)) return 0;
 			}
 			else if (s == "ke") {
 				assert(cur_mat);
-				if (!read_color_rgb(mat_in, "Ke", cur_mat->ke)) return 0;
+				if (!read_color_rgb(mat_in, "Ke", cur_mat->ke, material_name)) return 0;
 			}
 			else if (s == "ns") { // specular exponent
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->ns)) {cerr << "Error reading material Ns" << endl; return 0;}
+				if (!(mat_in >> cur_mat->ns)) {cerr << "Error reading material Ns for " << material_name << endl; return 0;}
 			}
 			else if (s == "ni") { // index of refraction
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->ni)) {cerr << "Error reading material Ni" << endl; return 0;}
+				if (!(mat_in >> cur_mat->ni)) {cerr << "Error reading material Ni for " << material_name << endl; return 0;}
 			}
 			else if (s == "d") { // dissolve, treated as alpha
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->alpha)) {cerr << "Error reading material d" << endl; return 0;}
+				if (!(mat_in >> cur_mat->alpha)) {cerr << "Error reading material d for " << material_name << endl; return 0;}
 			}
 			else if (s == "tr") { // transmittance
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->tr)) {cerr << "Error reading material Tr" << endl; return 0;}
+				if (!(mat_in >> cur_mat->tr)) {cerr << "Error reading material Tr for " << material_name << endl; return 0;}
 			}
 			else if (s == "tf") { // transmittion filter
 				assert(cur_mat);
-				if (!read_color_rgb(mat_in, "Tf", cur_mat->tf)) return 0;
+				if (!read_color_rgb(mat_in, "Tf", cur_mat->tf, material_name)) return 0;
 			}
 			else if (s == "illum") { // 0 - 10
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->illum)) {cerr << "Error reading material Tr" << endl; return 0;}
+				if (!(mat_in >> cur_mat->illum)) {cerr << "Error reading material Tr for " << material_name << endl; return 0;}
 			}
 			else if (s == "sharpness") { // Note: unused
 				assert(cur_mat);
 				float sharpness; // Note: unused
-				if (!(mat_in >> sharpness)) {cerr << "Error reading material sharpness" << endl; return 0;}
+				if (!(mat_in >> sharpness)) {cerr << "Error reading material sharpness for " << material_name << endl; return 0;}
 			}
 			else if (s == "clamp") { // Note: unused, normally is On/Off
 				assert(cur_mat);
 				string val; // Note: unused
-				if (!(mat_in >> val)) {cerr << "Error reading material clamp" << endl; return 0;}
+				if (!(mat_in >> val)) {cerr << "Error reading material clamp for " << material_name << endl; return 0;}
 				// Note: may want to support the -clamp option to clamp textures
 			}
 			else if (s == "map_ka") {
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ka for " << material_name << endl; return 0;}
 				check_and_bind(cur_mat->a_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_kd") {
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Kd for " << material_name << endl; return 0;}
 				check_and_bind(cur_mat->d_tid, tfn, 0, verbose); // invert=0, wrap=1, mirror=0
 			}
 			else if (s == "map_ks") {
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks for " << material_name << endl; return 0;}
 				check_and_bind(cur_mat->s_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_ns") {
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns for " << material_name << endl; return 0;}
 				check_and_bind(cur_mat->ns_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_d") { // dissolve
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_d for " << material_name << endl; return 0;}
 				check_and_bind(cur_mat->alpha_tid, tfn, 1, verbose);
 			}
 			else if (s == "map_bump" || s == "bump" || s == "norm") { // should be ok if more than one are set; 3DWorld auto detects grayscale bump maps vs. RGB normal maps
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " for " << material_name << endl; return 0;}
 				
 				if (tfn == "-bm") { // this is the only material sub-option we handle, and the scale is ignored
 					float scale(1.0);
-					if (!(mat_in >> scale) || !read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " with -bm" << endl; return 0;}
+					if (!(mat_in >> scale) || !read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " with -bm for " << material_name << endl; return 0;}
 				}
 				cur_mat->bump_tid = get_texture(tfn, 0, verbose, 0, 1, 0, use_obj_file_bump_grayscale); // can be set from map_bump, bump, and norm
 			}
 			else if (s == "map_refl") {
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_refl" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_refl for " << material_name << endl; return 0;}
 				check_and_bind(cur_mat->refl_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_ns") { // Note: unused
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns for " << material_name << endl; return 0;}
 			}
 			// unsupported
 			else if (s == "kt") {unhandled(s, mat_in);} // transmission color
@@ -420,7 +423,7 @@ public:
 			else if (s == "metalness" || s == "pm") {
 				// Note: metalness has been added for 3DWorld and is not in the original obj file format;
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->metalness)) {cerr << "Error reading material metalness" << endl; return 0;}
+				if (!(mat_in >> cur_mat->metalness)) {cerr << "Error reading material metalness for " << material_name << endl; return 0;}
 			}
 			else if (s == "pr"    ) {unhandled(s, mat_in);} // roughness
 			else if (s == "ps"    ) {unhandled(s, mat_in);} // sheen
@@ -436,7 +439,7 @@ public:
 			// 3DWorld extensions
 			else if (s == "skip") { // skip this material
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->skip)) {cerr << "Error reading material skip" << endl; return 0;}
+				if (!(mat_in >> cur_mat->skip)) {cerr << "Error reading material skip for " << material_name << endl; return 0;}
 			}
 			else {
 				cerr << "Error: Undefined entry '" << s << "' in material library. Skipping line." << endl;
@@ -489,6 +492,7 @@ public:
 					}
 					else if (!try_load_mat_lib(str, loaded_mat_libs, approx_line)) {ret = 0;}
 				}
+				loaded_mat_libs.insert(mat_lib); // mark as loaded, even if load failed
 				return ret;
 			}
 			loaded_mat_libs.insert(mat_lib);
@@ -657,12 +661,16 @@ public:
 				read_str_to_newline(fp, material_name);
 
 				if (material_name.empty()) {
-					cerr << "Error reading material from object file " << filename << " near line " << approx_line << endl;
+					if (!had_empty_mat_error) {cerr << "Error reading material from object file " << filename << " near line " << approx_line << endl;}
+					had_empty_mat_error = 1;
 					return 0;
 				}
-				cur_mat_id  = model.find_material(material_name);
-				int const tid(model.get_material(cur_mat_id).d_tid);
-				is_textured = (tid >= 0 && model.tmgr.get_tex_avg_color(tid) != WHITE); // no texture, or all white texture
+				cur_mat_id = model.find_material(material_name);
+				
+				if (cur_mat_id >= 0) { // material was valid
+					int const tid(model.get_material(cur_mat_id).d_tid);
+					is_textured = (tid >= 0 && model.tmgr.get_tex_avg_color(tid) != WHITE); // no texture, or all white texture
+				}
 			}
 			else if (strcmp(s, "mtllib") == 0) { // material library
 				read_str_to_newline(fp, mat_lib);
