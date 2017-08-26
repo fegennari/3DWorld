@@ -20,6 +20,8 @@ shadow_map_sz 8192
 max_cube_map_tex_sz 1024
 snow_coverage_resolution 4 # 4x mesh resolution (8 is okay but adds 2s compute time)
 
+#end # uncomment to disable precomputed lighting and snow
+
 #snow_depth 0.01
 snow_random 0.05
 num_test_snowflakes 1000 # in M
