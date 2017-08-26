@@ -44,7 +44,7 @@ metalness 0.0 # can set to 1.0 for metallic objects
 #t 0 0 0.0  s 1 2  M 0  m 0.5  O ../models/test_object/testObj.obj 4 1 0
 #t 0 0 0.0  s 1 2  M 0  m 1.0  O ../models/sports_car/sportsCar.obj 4 1 0
 #t 0 0 0.0  s 1 2  M 0  m 1.0  O "D:\Frank\Desktop\Open Source SW Code\tinyobjloader-master\models\mtllib-multiple-files-issue-112.obj" 4 1 0
-t 0 0 0.0  s 1 2  M 0  m 0.5  O ../models/house/models/Mesh121.obj 4 1 0
+#t 0 0 0.0  s 1 2  M 0  m 0.5  O ../models/house/models/Mesh121.obj 4 1 0
 
 l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = white texture
 #t 0 -2.0 0.2  M 0  m 0.002  O "..\models\stealth\stealth.3ds" 3 0 0 # flat face normals
@@ -56,6 +56,7 @@ l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = 
 #t 0 8.0 16.0  s 1 2  M 0  m 0.5  O "..\models\fish\pez_02\fishOBJ.obj" 3 0 0 # Note: model3d file created with t 0,0,.3 and m 0.1
 #t 0 0.0 0.5  s 1 2  M 0  m 0.006  O "..\models\fish\baleia\baleia.obj" 3 1 0
 #t 0 0.0 0.5  s 1 2  M 0  m 0.05  O "..\models\fish\rudd\Rudd-Fish.obj" 3 1 0
+t 0.0 0.0 -0.3  s 1 2  M 0  m 0.001  O "..\models\bistro\interior.obj" 4 0 0  O "..\models\bistro\exterior.obj" 4 0 0
 
 cube_map_ref 0
 metalness 0.0
