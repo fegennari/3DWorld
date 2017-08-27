@@ -900,18 +900,13 @@ int collision_detect_large_sphere(point &pos, float radius, unsigned flags) {
 			if (mag_sq >= rsqf) continue;
 			float const old_z(pos.z), mag(sqrt(mag_sq));
 			pos = mpt;
-
-			if (mag < TOLERANCE) {
-				pos.x += radius; // avoid divide by zero, choose x-direction (arbitrary)
-			}
-			else {
-				pos += v*(radius/mag);
-			}
+			if (mag < TOLERANCE) {pos.x += radius;} // avoid divide by zero, choose x-direction (arbitrary)
+			else {pos += v*(radius/mag);}
 			if (!z_up && pos.z >= old_z) pos.z = old_z;
 			coll = 1; // return 1; ?
 		}
 	}
-	assert(!is_nan(pos));
+	//assert(!is_nan(pos));
 	return coll;
 }
 
