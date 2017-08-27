@@ -24,7 +24,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
-extern bool flatten_tt_mesh_under_models;
+extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, light_int_scale[];
@@ -965,15 +965,20 @@ void material_t::compute_area_per_tri() {
 	//cout << "name: " << name << " " << TXT(tris) << TXT(area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
 }
 
+void material_t::ensure_textures_loaded(texture_manager &tmgr) {
+
+	tmgr.ensure_tid_loaded(get_render_texture(), 0); // only one tid for now
+	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded( s_tid, 0);}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid, 0);}
+}
+
 void material_t::init_textures(texture_manager &tmgr) {
 
 	if (!mat_is_used()) return;
 	int const tid(get_render_texture());
 	tmgr.bind_alpha_channel_to_texture(tid, alpha_tid);
-	tmgr.ensure_tid_loaded(tid, 0); // only one tid for now
-	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);}
-	if (use_spec_map()) {tmgr.ensure_tid_loaded( s_tid, 0);}
-	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid, 0);}
+	ensure_textures_loaded(tmgr);
 	might_have_alpha_comp |= tmgr.might_have_alpha_comp(tid);
 }
 
@@ -1436,6 +1441,7 @@ void model3d::free_context() {
 	clear_smaps();
 	free_texture(model_refl_tid);
 	free_texture(model_indir_tid);
+	if (tmgr.free_after_upload) {textures_loaded = 0;} // must reload textures
 }
 
 void model3d::clear_smaps() { // frees GL state
@@ -1450,6 +1456,7 @@ void model3d::clear_smaps() { // frees GL state
 void model3d::load_all_used_tids() {
 
 	if (textures_loaded) return; // is this safe to skip?
+	tmgr.free_after_upload = no_store_model_textures_in_memory;
 	timer_t timer("Texture Load");
 //#pragma omp parallel for schedule(dynamic) // not thread safe due to texture_t::resize() GL calls and reuse of textures across materials
 	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].init_textures(tmgr);}

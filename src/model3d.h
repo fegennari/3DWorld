@@ -328,6 +328,9 @@ protected:
 	string_map_t tex_map; // maps texture filenames to texture indexes
 
 public:
+	bool free_after_upload;
+
+	texture_manager() : free_after_upload(0) {}
 	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0);
 	void clear();
 	void free_tids();
@@ -335,7 +338,7 @@ public:
 	void ensure_texture_loaded(texture_t &t, int tid, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
 	void ensure_tid_loaded(int tid, bool is_bump) {if (tid >= 0) {ensure_texture_loaded(get_texture(tid), tid, is_bump);}}
-	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init();}} // if allocated
+	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init(free_after_upload);}} // if allocated
 	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
 	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
 	bool has_binary_alpha(int tid) const {return get_texture(tid).has_binary_alpha;}
@@ -381,6 +384,7 @@ struct material_t : public material_params_t {
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
 	void compute_area_per_tri();
+	void ensure_textures_loaded(texture_manager &tmgr);
 	void init_textures(texture_manager &tmgr);
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate);
 	colorRGBA get_ad_color() const;

@@ -1242,7 +1242,7 @@ public:
 		has_binary_alpha(0), is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(nm), width(w), height(h), ncolors(nc), bump_tid(-1),
 		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();
-	void do_gl_init();
+	void do_gl_init(bool free_after_upload=0);
 	GLenum calc_internal_format() const;
 	GLenum calc_format() const;
 	GLenum get_data_format() const {return (is_16_bit_gray ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE);}
@@ -1257,7 +1257,8 @@ public:
 	void alloc();
 	void bind_gl() const;
 	void free_mm_data();
-	void free_data();
+	void free_client_mem();
+	void free_data() {gl_delete(); free_client_mem();}
 	void gl_delete();
 	void load(int index, bool allow_diff_width_height=0, bool allow_two_byte_grayscale=0, bool ignore_word_alignment=0);
 	void load_raw_bmp(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
@@ -1285,7 +1286,7 @@ public:
 	colorRGBA get_texel(unsigned ix) const;
 	colorRGBA get_texel(float u, float v) const {return get_texel(get_texel_ix(u, v));}
 	float get_component(float u, float v, int comp) const;
-	void check_init() {if (tid == 0) do_gl_init();}
+	void check_init(bool free_after_upload=0) {if (tid == 0) do_gl_init(free_after_upload);}
 	unsigned num_pixels() const {return unsigned(width*height);}
 	unsigned num_bytes()  const {return ncolors*num_pixels();}
 	unsigned bytes_per_channel() const {return (is_16_bit_gray ? 2U : 1U);}

@@ -66,7 +66,7 @@ bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0), use_instanced_pine_trees(0);
 bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only_pine_palm_trees(0), enable_gamma_correct(0), use_z_prepass(0), reflect_dodgeballs(0);
 bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_motion(0), enable_mouse_look(MOUSE_LOOK_DEF), enable_init_shields(1), tt_triplanar_tex(0);
-bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_maps(0), use_interior_cube_map_refl(0), enable_cube_map_bump_maps(1);
+bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_maps(0), use_interior_cube_map_refl(0), enable_cube_map_bump_maps(1), no_store_model_textures_in_memory(0);
 bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map_view_mandelbrot(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0);
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
@@ -1619,6 +1619,7 @@ int load_config(string const &config_file) {
 	kwmb.add("use_interior_cube_map_refl", use_interior_cube_map_refl);
 	kwmb.add("enable_cube_map_bump_maps", enable_cube_map_bump_maps);
 	kwmb.add("enable_model3d_custom_mipmaps", enable_model3d_custom_mipmaps);
+	kwmb.add("no_store_model_textures_in_memory", no_store_model_textures_in_memory);
 	kwmb.add("no_subdiv_model", no_subdiv_model);
 	kwmb.add("use_grass_tess", use_grass_tess);
 	kwmb.add("use_instanced_pine_trees", use_instanced_pine_trees);

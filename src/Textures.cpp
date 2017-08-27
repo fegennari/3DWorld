@@ -436,11 +436,10 @@ void texture_t::free_mm_data() {
 	mm_offsets.clear();
 }
 
-void texture_t::free_data() {
+void texture_t::free_client_mem() {
 
-	gl_delete();
-	if (orig_data    != data) delete [] orig_data;
-	if (colored_data != data) delete [] colored_data;
+	if (orig_data    != data) {delete [] orig_data;}
+	if (colored_data != data) {delete [] colored_data;}
 	delete [] data;
 	data = orig_data = colored_data = NULL;
 	free_mm_data();
@@ -467,7 +466,7 @@ GLenum texture_t::calc_format() const {
 }
 
 
-void texture_t::do_gl_init() {
+void texture_t::do_gl_init(bool free_after_upload) {
 
 	if (SHOW_TEXTURE_MEMORY) {
 		static unsigned tmem(0);
@@ -479,10 +478,7 @@ void texture_t::do_gl_init() {
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//RESET_TIME;
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
-
-	if (defer_load()) {
-		deferred_load_and_bind(); // FIXME: mipmaps?
-	}
+	if (defer_load()) {deferred_load_and_bind();} // FIXME: mipmaps?
 	else {
 		assert(is_allocated() && width > 0 && height > 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
@@ -490,16 +486,14 @@ void texture_t::do_gl_init() {
 		if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
 	}
 	assert(glIsTexture(tid));
+	if (free_after_upload) {free_client_mem();}
 	//PRINT_TIME("Texture Init");
 }
 
 
 void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 
-	if (defer_load() && !is_allocated()) {
-		color = WHITE; // FIXME: can we do any better than this?
-		return;
-	}
+	if (defer_load() && !is_allocated()) {color = WHITE; return;} // texture not loaded - this is the best we can do
 	assert(is_allocated());
 	float colors[4] = {0.0}, weight(0.0);
 	unsigned const size(num_pixels());
