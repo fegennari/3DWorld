@@ -17,6 +17,7 @@ indir_dlight_group none
 K # disable trigger
 
 # glass walls
+#a 2 # shatterable
 l 0.7 1.0 0.0 0.0 0.1 -1 1 1.4 10.0 # semi-transparent red glass
 B -3.36 -2.72  -2.42 -2.40  1.20 1.65 # back
 
@@ -28,3 +29,4 @@ B -3.36 -3.34  -2.40 -1.66  1.20 1.65 # left
 B -2.72 -2.74  -2.40 -1.66  1.20 1.65 # right
 B -3.34 -2.74  -2.40 -1.66  1.20 1.22 # bot
 B -3.34 -2.74  -2.40 -1.66  1.63 1.65 # top
+#a 0 # non-destroyable
