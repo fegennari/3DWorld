@@ -111,7 +111,7 @@ void create_object_groups() {
 	coll_id[CHUNK]    = create_group(CHUNK,    SMILEY_NCHUNKS*NUM_CHUNK_BLOCKS*num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[SKULL]    = create_group(SKULL,    num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[BALL]     = create_group(BALL,     num_dodgeballs, 0, 1, 0, 0, 0);
-	coll_id[S_BALL]   = create_group(S_BALL,   (disable_fire_delay ? 10000 : 200), 0, 0, 0, 1, 0);
+	coll_id[S_BALL]   = create_group(S_BALL,   (disable_fire_delay ? 20000 : 200), 0, 0, 0, 1, 0);
 	coll_id[ROCKET]   = create_group(ROCKET,   100,   0, 0, 0, 1, 0);
 	coll_id[LANDMINE] = create_group(LANDMINE, 100,   0, 0, 0, 1, 0);
 	coll_id[SEEK_D]   = create_group(SEEK_D,   50,    0, 0, 0, 1, 0);
