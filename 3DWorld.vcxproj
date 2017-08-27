@@ -637,6 +637,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h" />
+    <ClInclude Include="src\allocators.h" />
     <ClInclude Include="src\animals.h" />
     <ClInclude Include="src\asteroid.h" />
     <ClInclude Include="src\binary_file_io.h" />

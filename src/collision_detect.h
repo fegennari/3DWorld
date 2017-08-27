@@ -8,6 +8,7 @@
 
 #include "function_registry.h"
 #include "trigger.h"
+#include "allocators.h"
 
 typedef bool (*collision_func)(int, int, vector3d const &, point const &, float, int);
 
@@ -265,7 +266,7 @@ public:
 };
 
 
-struct cobj_id_set_t : public set<unsigned> {
+struct cobj_id_set_t : public set<unsigned, std::less<unsigned>, single_free_list_allocator<unsigned>> {
 
 	void must_insert(unsigned index) {
 		bool const did_ins(insert(index).second);

@@ -321,7 +321,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 				// Note: all cobjs in this group should have the same destroy thresh if any are shatterable or explodeable
 				if (cgid >= 0 && full_destroy && cgroups_added.insert(cgid).second) { // newly inserted nonzero group
-					set<unsigned> const &group(cobj_groups.get_set(cgid));
+					cobj_id_set_t const &group(cobj_groups.get_set(cgid));
 
 					for (auto c = group.begin(); c != group.end(); ++c) { // destroy all cobjs in the group
 						if (!seen_cobjs.insert(*c).second) continue; // already processed
