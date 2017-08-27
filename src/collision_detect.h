@@ -275,7 +275,6 @@ struct cobj_id_set_t : public set<unsigned> {
 		unsigned const num_removed(erase(index));
 		assert(num_removed == 1);
 	}
-	bool has(unsigned index) {return find(index) != end();}
 };
 
 struct cgroup_props_t {

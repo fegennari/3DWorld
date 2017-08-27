@@ -739,8 +739,9 @@ int remove_coll_object(int index, bool reset_draw) {
 	for (int i = y1; i <= y2; ++i) {
 		for (int j = x1; j <= x2; ++j) {
 			vector<int> &cvals(v_collision_matrix[i][j].cvals);
+			unsigned const num_cvals(cvals.size());
 			
-			for (unsigned k = 0; k < cvals.size() ; ++k) {
+			for (unsigned k = 0; k < num_cvals; ++k) {
 				if (cvals[k] == index) {
 					cvals.erase(cvals.begin()+k); // can't change zmin or zmax (I think)
 					break; // should only be in here once

@@ -382,11 +382,22 @@ void process_groups() {
 		cobj_params cp(otype.elasticity, otype.color, reflective, 1, coll_func, -1, otype.tid, 1.0, 0, 0);
 		if (reflective) {cp.metalness = dodgeball_metalness; cp.tscale = 0.0; cp.color = WHITE; cp.spec_color = WHITE; cp.shine = 100.0;} // reflective metal sphere
 		size_t const iter_count((large_radius || type == MAT_SPHERE || app_rate > 0) ? max_objs : objg.end_id); // optimization to use end_id when valid
+		bool defer_remove_cobj(0);
 
 		for (size_t jj = 0; jj < iter_count; ++jj) {
 			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%max_objs : jj)); // handle smiley permutation
 			dwobject &obj(objg.get_obj(j));
-			if (large_radius && obj.coll_id >= 0) {remove_reset_coll_obj(obj.coll_id);}
+			point cobj_pos(all_zeros);
+			assert(!defer_remove_cobj); // prev iter should have handled this
+
+			if (large_radius && obj.coll_id >= 0) {
+				if (obj.status == OBJ_STAT_STOP && type != MAT_SPHERE && type != LANDMINE) { // stopped cobj
+					// defer removal of stopped dynamic spheres, with the hope that the location is the same and we can skip re-adding it as well
+					coll_obj const &cobj(coll_objects.get_cobj(obj.coll_id));
+					if (cobj.type == COLL_SPHERE && cobj.status == COLL_DYNAMIC && cobj.cp.cf_index == j) {cobj_pos = cobj.points[0]; defer_remove_cobj = 1;}
+				}
+				if (!defer_remove_cobj) {remove_reset_coll_obj(obj.coll_id);}
+			}
 			if (obj.status == OBJ_STAT_RES) continue; // ignore
 			point &pos(obj.pos);
 
@@ -428,7 +439,7 @@ void process_groups() {
 					obj.angle    = signed_rand_float();
 				}
 				if (type == SNOW) {obj.angle = rand_uniform(0.7, 1.3);} // used as radius
-			}
+			} // end obj.status == 0
 			if (precip) {obj.update_precip_type();}
 			unsigned char const obj_flags(obj.flags);
 			int const orig_status(obj.status);
@@ -436,17 +447,11 @@ void process_groups() {
 			++used_objs;
 			++num_objs;
 
-			if (obj.health < 0.0) { // can get here for smileys?
-				obj.status = 0;
-			}
-			else if (type == SMILEY) {
-				advance_smiley(obj, j);
-			}
+			if (obj.health < 0.0) {obj.status = 0;} // can get here for smileys?
+			else if (type == SMILEY) {advance_smiley(obj, j);}
 			else {
 				if (obj.time >= 0) {
-					if (type == PLASMA && obj.velocity.mag_sq() < 1.0) {
-						obj.disable(); // plasma dies when it stops
-					}
+					if (type == PLASMA && obj.velocity.mag_sq() < 1.0) {obj.disable();} // plasma dies when it stops
 					else {
 						if (large_radius) {maybe_teleport_object(obj.pos, radius, NO_SOURCE);} // teleport!
 						point const old_pos(pos); // after teleporting
@@ -518,7 +523,14 @@ void process_groups() {
 						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
 						if (type == MAT_SPHERE) {add_cobj_for_mat_sphere(obj, cp);}
-						else {obj.coll_id = add_coll_sphere(pos, radius, cp, -1, 0, reflective);}
+						else {
+							if (defer_remove_cobj) { // is defer candidate, see if pos has changed
+								assert(obj.coll_id >= 0);
+								if (cobj_pos != pos) {remove_reset_coll_obj(obj.coll_id); defer_remove_cobj = 0;} // if same pos, don't need to remove + re-add
+							}
+							if (!defer_remove_cobj) {assert(obj.coll_id < 0); obj.coll_id = add_coll_sphere(pos, radius, cp, -1, 0, reflective);} // remove and add
+							defer_remove_cobj = 0;
+						}
 					}
 				}
 				if (obj_flags & CAMERA_VIEW) {
@@ -566,7 +578,8 @@ void process_groups() {
 					if (type != PLASMA) {cur_frame_explosions.push_back(sphere_t(pos, radius));} // exploding cobjs only
 				}
 			}
-			if (type == LANDMINE && obj.status == 1 && !(obj.flags & (STATIC_COBJ_COLL | PLATFORM_COLL))) obj.time = 0; // don't start time until it lands
+			if (type == LANDMINE && obj.status == 1 && !(obj.flags & (STATIC_COBJ_COLL | PLATFORM_COLL))) {obj.time = 0;} // don't start time until it lands
+			if (defer_remove_cobj) {remove_reset_coll_obj(obj.coll_id); defer_remove_cobj = 0;}
 		} // for jj
 		objg.flags |= WAS_ADVANCED;
 		if (num_objs > 0 && (SHOW_PROC_TIME /*|| type == SMILEY*/)) {cout << "type = " << type << ", num = " << num_objs << " "; PRINT_TIME("Process");}
