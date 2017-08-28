@@ -127,7 +127,7 @@ void create_object_groups() {
 	coll_id[WEAPON]   = create_group(WEAPON,   init_item_counts[3], 0, 1, 0, 1, 0);
 	coll_id[AMMO]     = create_group(AMMO,     init_item_counts[4], 0, 1, 0, 1, 0);
 	coll_id[WA_PACK]  = create_group(WA_PACK,  50,    0, 0, 0, 1, 0);
-	coll_id[FRAGMENT] = create_group(FRAGMENT, 1200,  0, 0, 0, 1, 0);
+	coll_id[FRAGMENT] = create_group(FRAGMENT, 2000,  0, 0, 0, 1, 0);
 	coll_id[PARTICLE] = create_group(PARTICLE, 800,   0, 0, 0, 1, 0);
 	coll_id[SAWBLADE] = create_group(SAWBLADE, 50,    0, 0, 0, 1, 0);
 	coll_id[RAPT_PROJ]= create_group(RAPT_PROJ,400,   0, 0, 0, 1, 0);
