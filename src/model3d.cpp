@@ -969,8 +969,15 @@ void material_t::ensure_textures_loaded(texture_manager &tmgr) {
 
 	tmgr.ensure_tid_loaded(get_render_texture(), 0); // only one tid for now
 	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);}
-	if (use_spec_map()) {tmgr.ensure_tid_loaded( s_tid, 0);}
-	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid, 0);}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded( s_tid,   0);}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid,   0);}
+}
+
+void maybe_free_tid(texture_manager &tmgr, unsigned tid) {
+	if (tid < BUILTIN_TID_START) {tmgr.get_texture(tid).free_client_mem();}
+}
+void maybe_upload_and_free(texture_manager &tmgr, unsigned tid) {
+	if (tid < BUILTIN_TID_START) {tmgr.ensure_tid_bound(tid);} // upload to GPU and free if not a built-in texture
 }
 
 void material_t::init_textures(texture_manager &tmgr) {
@@ -980,6 +987,13 @@ void material_t::init_textures(texture_manager &tmgr) {
 	tmgr.bind_alpha_channel_to_texture(tid, alpha_tid);
 	ensure_textures_loaded(tmgr);
 	might_have_alpha_comp |= tmgr.might_have_alpha_comp(tid);
+	
+	if (tmgr.free_after_upload) { // now that textures have been loaded, free their client memory; will need to be reloaded before sending to GPU
+		maybe_upload_and_free(tmgr, get_render_texture());
+		if (use_bump_map()) {maybe_upload_and_free(tmgr, bump_tid);}
+		if (use_spec_map()) {maybe_upload_and_free(tmgr, s_tid);}
+		if (use_spec_map()) {maybe_upload_and_free(tmgr, ns_tid);}
+	}
 }
 
 

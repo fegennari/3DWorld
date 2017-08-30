@@ -58,6 +58,7 @@ unlimited_weapons 1
 
 group_back_face_cull 1
 enable_model3d_tex_comp 0
+no_store_model_textures_in_memory 0
 
 mesh_height 0.05
 mesh_size  256 128 64
