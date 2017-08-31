@@ -295,7 +295,7 @@ struct cobj_group_t : public cobj_id_set_t, public cgroup_props_t {
 	cgroup_props_t const &get_props() {if (!valid) {update_props();} return *this;}
 };
 
-struct cobj_groups_t : public vector<cobj_group_t> {
+struct cobj_groups_t : public deque<cobj_group_t> { // use deque rather than vector to avoid deep copying the cobj groups
 
 	unsigned new_group() {unsigned const id(size()); push_back(cobj_group_t()); return id;}
 	void invalidate_group(unsigned gid)               {assert(gid < size()); operator[](gid).valid = 0;}

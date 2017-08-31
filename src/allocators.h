@@ -10,6 +10,9 @@ class single_free_list_allocator {
 public:
 	typedef T value_type;
 	template <typename O> struct rebind {typedef single_free_list_allocator<O> other;};
+	void operator=(single_free_list_allocator const &a) {assert(free_list.empty() && a.free_list.empty());} // free list must be empty during copy
+	single_free_list_allocator(single_free_list_allocator const &a) {assert(a.free_list.empty());}
+	single_free_list_allocator() {}
 	~single_free_list_allocator() {
 		for (auto i = free_list.begin(); i != free_list.end(); ++i) {delete *i;}
 	}
