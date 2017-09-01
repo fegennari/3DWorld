@@ -287,7 +287,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 
 void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &pos2, float radius, int id, int hitter, int killer) {
 
-	if (!sphere_in_view(pdu, pos2, radius, 0)) return; // view culling
+	if (!sphere_in_view(pdu, pos2, radius, 0)) return; // fast view culling, no ray casting
 	float dist_sq(p2p_dist_sq(pdu.pos, pos2));
 	if (hitter == id) {dist_sq *= 0.25;} // prefer to attack your attacker
 	if (killer == id) {dist_sq *= 0.5;}  // prefer to attack your last killer in revenge
@@ -736,12 +736,17 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 			types.push_back(type_wt_t(WAYPOINT, 1.0));
 			min_ih = find_nearest_obj(obj.pos, pdu, avoid_dir, smiley_id, target_pos, disth, types, last_target_visible, last_target_type);
 		}
-		objective_pos = target_pos;
-		
 		if (min_ih >= 0) {
 			target_type    = (min_ih == WAYPOINT) ? 3 : 2;
 			target_visible = 2;
 		}
+		else { // no valid target
+			if (dist_less_than(objective_pos, obj.pos, 2.0*object_types[SMILEY].radius)) {
+				gen_smiley_or_player_pos(target_pos, smiley_id); // if close to the target, select a random new target that's a valid location
+			}
+		}
+		objective_pos = target_pos;
+
 		/*if (target_pos != obj.pos) { // look beyond the target
 			vector3d const o(target_pos - obj.pos); // motion direction
 			target_pos += o*(2.0*object_types[SMILEY].radius/o.mag());
