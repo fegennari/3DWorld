@@ -698,15 +698,15 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 		types.push_back(type_wt_t(AMMO,    0.7));
 		types.push_back(type_wt_t(WA_PACK, 1.0));
 		types.push_back(type_wt_t(SHIELD,  (almost_dead ? 10 : 1.2)*(1.0 - shields/MAX_SHIELDS))); // always below max since it ticks down over time
-		if (health < MAX_HEALTH) types.push_back(type_wt_t(HEALTH, (almost_dead ? 15 : 1.5)*(1.0 - health/MAX_HEALTH)));
+		if (health < MAX_HEALTH) {types.push_back(type_wt_t(HEALTH, (almost_dead ? 15 : 1.5)*(1.0 - health/MAX_HEALTH)));}
 		if (game_mode) {min_ie = find_nearest_enemy(obj.pos, pdu, avoid_dir, smiley_id, targete, target_visible, diste);}
-		min_ih = find_nearest_obj(  obj.pos, pdu, avoid_dir, smiley_id, targeth, disth, types, last_target_visible, last_target_type);
+		min_ih = find_nearest_obj(obj.pos, pdu, avoid_dir, smiley_id, targeth, disth, types, last_target_visible, last_target_type);
 
 		if (!target_visible) { // can't find an enemy, choose health/pickup
 			if (min_ih >= 0) {target_pos = targeth;}
 		}
 		else if (min_ih < 0) { // can't find health/pickup, choose attack
-			if (target_visible) {target_pos = targete;}
+			target_pos = targete;
 		}
 		else { // found both item and enemy
 			float const dp(dot_product((obj.pos - targeth).get_norm(), (obj.pos - targete).get_norm()));
@@ -895,16 +895,12 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		}
 		else {
 			vector3d stepv;
-			
-			if (target_visible) {
-				stepv = (target_pos - obj.pos).get_norm();
-			}
+			if (target_visible) {stepv = (target_pos - obj.pos).get_norm();}
 			else if (!(xpos > 1 && ypos > 1 && xpos < MESH_X_SIZE-1 && ypos < MESH_Y_SIZE-1)) {
 				stepv = vector3d(-obj.pos.x, -obj.pos.y, 0.0).get_norm(); // move toward the center of the scene (0,0)
 			}
-			else {
-				stepv = obj.orientation; // continue along the same orient if no target visible
-			}
+			else {stepv = obj.orientation;} // continue along the same orient if no target visible
+			
 			if (!on_waypt_path && ((player_rgen.rand() % 200) == 0)) {
 				add_rand_dir_change(stepv, 1.0); // "dodging"
 				stepv.normalize();
@@ -949,7 +945,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		return 0;
 	}
 	if (coll && p2p_dist_sq(obj.pos, opos) < p2p_dist_sq(obj.pos, wanted_pos)) {
-		if (++stopped_time > 4) stuck = 1;
+		if (++stopped_time > 4) {stuck = 1;}
 	}
 	else {
 		stopped_time = 0;
@@ -1402,14 +1398,12 @@ void select_smiley_texture(int smiley_id) {
 
 
 void free_smiley_textures() {
-
 	if (sstates == NULL) return;
 	for (int i = 0; i < num_smileys; ++i) {free_texture(sstates[i].tid);}
 }
 
 
 void clear_cached_waypoints() {
-
 	if (sstates == NULL) return;
 	for (int i = 0; i < num_smileys; ++i) {sstates[i].last_waypoint = -1;}
 }
@@ -1421,15 +1415,12 @@ void init_sstate(int id, bool w_start) {
 	sstates[id].init(w_start);
 
 	for (int i = CAMERA_ID; i < num_smileys; ++i) {
-		if (sstates[i].target_visible == 1 && sstates[i].target == id) {
-			sstates[i].target_visible = 0;
-		}
+		if (sstates[i].target_visible == 1 && sstates[i].target == id) {sstates[i].target_visible = 0;}
 	}
 }
 
 
 void init_smileys() {
-
 	for (int i = 0; i < num_smileys; ++i) {init_smiley(i);}
 }
 
