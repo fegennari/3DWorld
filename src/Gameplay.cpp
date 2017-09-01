@@ -2592,6 +2592,10 @@ void update_game_frame() {
 	sstates[CAMERA_ID].update_camera_frame();
 	for (int i = CAMERA_ID; i < num_smileys; ++i) {sstates[i].update_sstate_game_frame(i);}
 	proc_delayed_projs(); // after game state update but before processing of fire key
+
+	if (game_mode && sstates != NULL && sstates[CAMERA_ID].freeze_time > 0) {
+		add_camera_filter(colorRGBA(FREEZE_COLOR, min(0.5, 0.5*sstates[CAMERA_ID].freeze_time/TICKS_PER_SECOND)), 1, -1, CAM_FILT_FROZEN);
+	}
 }
 
 

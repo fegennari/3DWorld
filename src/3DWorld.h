@@ -149,7 +149,7 @@ unsigned const cube_dim_table[2][3] = {{1, 2, 0}, {2, 0, 1}};
 #define UNROLL_3X(expr) {UNROLL_2X(expr) {unsigned const i_(2); expr}}
 #define UNROLL_4X(expr) {UNROLL_3X(expr) {unsigned const i_(3); expr}}
 
-enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER, CAM_FILT_TELEPORT};
+enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER, CAM_FILT_TELEPORT, CAM_FILT_FROZEN, CAM_FILT_END};
 enum {FG_PROJECTION=0, FG_MODELVIEW};
 
 
