@@ -208,8 +208,10 @@ void run_postproc_effects() {
 	//if (display_mode & 0x20) {add_ssao();}
 	
 	if (cur_explosion_sphere.radius > 0.0 && camera_pdu.sphere_visible_test(cur_explosion_sphere.pos, cur_explosion_sphere.radius)) {
-		if (coll_pt_vis_test(camera, cur_explosion_sphere.pos, 0.0, index, camera_coll_id, 1, 1)) {
-			add_sphere_refract_effect(cur_explosion_sphere, cur_explosion_weight);
+		if (dist_less_than(camera, cur_explosion_sphere.pos, max(40.0*cur_explosion_sphere.radius, 8.0*CAMERA_RADIUS))) { // close/large on the screen
+			if (coll_pt_vis_test(camera, cur_explosion_sphere.pos, 0.0, index, camera_coll_id, 1, 1)) {
+				add_sphere_refract_effect(cur_explosion_sphere, cur_explosion_weight);
+			}
 		}
 	}
 	if (camera_underwater) {
