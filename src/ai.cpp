@@ -177,7 +177,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 		check_switch_weapon(smiley_id); // out of ammo, switch weapons
 		if (weapon != last_weapon) fire_frame = 0;
 	}
-	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && weapons[weapon].self_damage) { // can damage self
+	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && (weapons[weapon].self_damage & (1<<(wmode&1)))) { // can damage self
 		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
 			check_switch_weapon(smiley_id); // switch weapons to avoid suicide
 			if (weapon != last_weapon) fire_frame = 0;
@@ -1258,7 +1258,7 @@ void player_state::check_switch_weapon(int smiley_id) {
 	fire_frame = 0;
 	weapon     = chosen_weap;
 	//weapon     = W_LASER; // set to force this as weapon choice (if available)
-	if (weapon == W_PLASMA && wmode == 1 && (player_rgen.rand()%4) != 0) plasma_loaded = 1; // fire it up!
+	if (weapon == W_PLASMA && wmode == 1 && (player_rgen.rand()%4) != 0) {plasma_loaded = 1;} // fire it up!
 }
 
 
@@ -1495,7 +1495,7 @@ void player_state::init(bool w_start) {
 		powerup_time  = 0;
 	}
 	//powerup = PU_FLIGHT; powerup_time = 1000000; // testing
-	for (unsigned i = 0; i < 2; ++i) unreachable[i].clear();
+	for (unsigned i = 0; i < 2; ++i) {unreachable[i].clear();}
 	reset_wpt_state();
 	waypts_used.clear();
 	dest_mark.clear();
