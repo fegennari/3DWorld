@@ -280,14 +280,21 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 	bool had_empty_mat_error;
 
 	bool read_map_name(ifstream &in, string &name, float *scale=nullptr) {
-		if (name == "-bm") { // this is the only material sub-option we handle, and the scale is ignored
-			float scale_(1.0);
-			if (!(in >> scale_)) return 0;
-			if (scale != nullptr) {*scale = scale_;}
-		}
-		if (!(in >> name))  {return 0;}
+		if (!(in >> name)) {return 0;} // no name read (EOF?)
 		assert(!name.empty());
-		if (name[0] == '-') {return 1;} // option, return and let the parser deal with it
+
+		if (name[0] == '-') {
+			if (name == "-bm") { // this is the only material sub-option we handle, and the scale is ignored
+				float scale_(1.0);
+				if (!(in >> scale_)) return 0; // read the scale
+				if (scale != nullptr) {*scale = scale_;}
+				if (!(in >> name)) {return 0;} // now read the actual name
+			}
+			else {
+				cerr << "Map option " << name << " is not supported." << endl;
+				return 0;
+			}
+		}
 		read_to_newline(in, &name);
 		return 1;
 	}
