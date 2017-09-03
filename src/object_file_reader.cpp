@@ -139,27 +139,36 @@ protected:
 		if ((unsigned)ix >= vect_sz) {cout << TXT(input_ix) << TXT(ix) << TXT(vect_sz) << endl;}
 		assert((unsigned)ix < vect_sz);
 	}
+	bool read_float(float &val) {
+		unsigned ix(0);
 
+		while (1) {
+			if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
+			char const c(get_next_char());
+			if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
+
+			if (ix == 0 && !fast_isdigit(c) && c != '.' && c != '-') { // not a fp number
+				unget_last_char(c);
+				return 0;
+			}
+			buffer[ix++] = c;
+		}
+		buffer[ix] = 0; // add null terminator
+		val = Assimp::fast_atof(buffer);
+		return 1;
+	}
 	bool read_point(point &p, unsigned req_num=3) {
 		//return (fscanf(fp, "%f%f%f", &p.x, &p.y, &p.z) >= (int)req_num);
 		for (unsigned i = 0; i < 3; ++i) {
-			unsigned ix(0);
-			
-			while (1) {
-				if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
-				char const c(get_next_char());
-				if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
-				
-				if (ix == 0 && !fast_isdigit(c) && c != '.' && c != '-') { // not a fp number
-					unget_last_char(c);
-					return ((i >= req_num) ? 1 : 0); // success if we read enough values
-				}
-				buffer[ix++] = c;
-			}
-			buffer[ix] = 0; // add null terminator
-			p[i] = Assimp::fast_atof(buffer);
+			if (!read_float(p[i])) {return ((i >= req_num) ? 1 : 0);} // success if we read enough values
 		}
 		return 1;
+	}
+	int read_optional_color_RGB(colorRGB &c) { // return value: 0=no color read, 1=color read, 2=error
+		float val(0.0);
+		if (!read_float(val)) return 0; // no more numbers to read
+		c.R = val;
+		return ((read_float(c.G) && read_float(c.B)) ? 1 : 2); // success or error
 	}
 
 public:
@@ -612,6 +621,10 @@ public:
 					cerr << "Error reading vertex from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
+				colorRGB color;
+				int const color_ret(read_optional_color_RGB(color));
+				if (color_ret == 2) {cerr << "Error reading vertex color from object file " << filename << " near line " << approx_line << endl; return 0;}
+				else if (color_ret == 1) {} // FIXME: use color somehow
 				xf.xform_pos(v.back());
 			}
 			else if (strcmp(s, "vt") == 0) { // tex coord
