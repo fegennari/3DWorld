@@ -279,14 +279,18 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 
 	bool had_empty_mat_error;
 
-	bool read_map_name(ifstream &in, string &name) {
+	bool read_map_name(ifstream &in, string &name, float *scale=nullptr) {
+		if (name == "-bm") { // this is the only material sub-option we handle, and the scale is ignored
+			float scale_(1.0);
+			if (!(in >> scale_)) return 0;
+			if (scale != nullptr) {*scale = scale_;}
+		}
 		if (!(in >> name))  {return 0;}
 		assert(!name.empty());
 		if (name[0] == '-') {return 1;} // option, return and let the parser deal with it
 		read_to_newline(in, &name);
 		return 1;
 	}
-
 	bool read_color_rgb(ifstream &in, string const &name, colorRGB &color, string const &material_name) const {
 		// Note: does not support "xyz" CIE-XYZ color space specification
 		if (!(in >> color.R)) {cerr << "Error reading material " << name << " for " << material_name << endl; return 0;}
@@ -407,11 +411,6 @@ public:
 			else if (s == "map_bump" || s == "bump" || s == "norm") { // should be ok if more than one are set; 3DWorld auto detects grayscale bump maps vs. RGB normal maps
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " for " << material_name << endl; return 0;}
-				
-				if (tfn == "-bm") { // this is the only material sub-option we handle, and the scale is ignored
-					float scale(1.0);
-					if (!(mat_in >> scale) || !read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " with -bm for " << material_name << endl; return 0;}
-				}
 				cur_mat->bump_tid = get_texture(tfn, 0, verbose, 0, 1, 0, use_obj_file_bump_grayscale); // can be set from map_bump, bump, and norm
 			}
 			else if (s == "map_refl") {
