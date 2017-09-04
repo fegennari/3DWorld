@@ -86,7 +86,7 @@ void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump)
 
 	if (t.is_loaded()) return;
 	//if (is_bump) {t.do_compress = 0;} // don't compress normal maps
-	if (enable_model3d_custom_mipmaps && t.has_alpha()) {t.use_mipmaps = 4;}
+	if (use_model2d_tex_mipmaps && enable_model3d_custom_mipmaps && t.has_alpha()) {t.use_mipmaps = 4;}
 	t.load(-1);
 		
 	if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
