@@ -527,6 +527,7 @@ public:
 		// weighted_normal can also be used, but doesn't work well; see face_weight_avg mode selected by recalc_normals==2
 		vector<counted_normal> vn; // vertex normals
 		vector<point2d<float> > tc; // texture coords
+		vector<colorRGB> colors; // vertex colors
 		deque<poly_data_block> pblocks;
 		set<string> loaded_mat_libs;
 		char s[MAX_CHARS];
@@ -630,7 +631,11 @@ public:
 				colorRGB color;
 				int const color_ret(read_optional_color_RGB(color));
 				if (color_ret == 2) {cerr << "Error reading vertex color from object file " << filename << " near line " << approx_line << endl; return 0;}
-				else if (color_ret == 1) {} // FIXME: use color somehow
+				else if (color_ret == 1) {
+					if (colors.empty()) {colors.resize(v.size()-1, WHITE);} // pad colors up to this point with white
+					colors.push_back(color);
+				}
+				else if (!colors.empty()) {colors.push_back(WHITE);} // color not specified, and in colors mode, pad with white
 				xf.xform_pos(v.back());
 			}
 			else if (strcmp(s, "vt") == 0) { // tex coord
@@ -712,6 +717,7 @@ public:
 		remove_excess_cap(n);
 		remove_excess_cap(tc);
 		remove_excess_cap(vn);
+		remove_excess_cap(colors);
 		PRINT_TIME("Object File Load");
 		model.load_all_used_tids(); // need to load the textures here to get the colors
 		PRINT_TIME("Model Texture Load");
@@ -750,6 +756,7 @@ public:
 						tcoord.y = model_auto_tc_scale*v[V.vix][dimy];
 					}
 					else {tcoord = tc[V.tix];}
+					if (!colors.empty()) {} // FIXME: use colors
 					poly[p] = vert_norm_tc(v[V.vix], normal, tcoord.x, tcoord.y);
 				}
 				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id);
@@ -762,8 +769,8 @@ public:
 		
 		if (verbose) {
 			size_t const nn(recalc_normals ? vn.size() : n.size());
-			cout << "verts: " << v.size() << ", normals: " << nn << ", tcs: " << tc.size() << ", faces: " << num_faces << ", objects: " << num_objects
-				 << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
+			cout << "verts: " << v.size() << ", normals: " << nn << ", tcs: " << tc.size() << ", colors: " << colors.size() << ", faces: " << num_faces
+				 << ", objects: " << num_objects << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
 			model.show_stats();
 		}
 		return 1;
