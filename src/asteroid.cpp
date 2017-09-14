@@ -1436,7 +1436,7 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector<sphere_t> const &colliders) {
 
 	upos_point_type const dir(pos - af_pos);
-	rot_ang += 0.25*fticks*rot_ang0; // slow rotation
+	rot_ang += 0.5*fticks*rot_ang0; // slow rotation
 	// adjust velocity so asteroids revolve around the sun
 	// Note: slightly off for asteroids not in the plane, should be cross_product(dir, op_normal).get_norm() but that's slower
 	velocity = rev_ang0*cross_product(dir, op_normal);
