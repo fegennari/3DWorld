@@ -718,6 +718,7 @@ struct colorRGBA : public colorRGB { // size = 16
 		return colorRGB::operator<(c);
 	}
 	colorRGBA operator* (float val) const             {return colorRGBA(R*val, G*val, B*val, A);}
+	colorRGBA operator/ (float val) const             {return colorRGBA(R/val, G/val, B/val, A);}
 	colorRGBA operator+ (colorRGBA const &c) const    {return colorRGBA(R+c.R, G+c.G, B+c.B, A+c.A);}
 	void      operator+=(colorRGBA const &c)          {R += c.R; G += c.G; B += c.B; A += c.A;}
 	colorRGBA modulate_with(colorRGBA const &c) const {return colorRGBA(R*c.R, G*c.G, B*c.B, A*c.A);}

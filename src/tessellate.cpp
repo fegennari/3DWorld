@@ -175,7 +175,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 	// calculate polygon normal (assuming planar polygon)
 	vector3d n(poly.get_planar_normal()), cp_sum(zero_vector);
 	for (unsigned i = 0; i < npts; ++i) {cp_sum += cross_product(poly[i].v, poly[(i+1)%npts].v);}
-	if (dot_product(n, cp_sum) < 0.0) n *= -1.0;
+	if (dot_product(n, cp_sum) < 0.0) {n *= -1.0;}
 	static polygon_t new_poly;
 	new_poly.resize(3);
 	new_poly.color = poly.color;
@@ -184,7 +184,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 	for (unsigned i = 0; i < triangles.size(); ++i) {
 		UNROLL_3X(new_poly[i_] = triangles[i].pts[i_];)
 		if (!new_poly.is_valid()) continue; // invalid zero area triangle - skip
-		if (dot_product(new_poly.get_planar_normal(), n) < 0.0) swap(new_poly[0], new_poly[2]); // invert draw order
+		if (dot_product(new_poly.get_planar_normal(), n) < 0.0) {swap(new_poly[0], new_poly[2]);} // invert draw order
 		ppts.push_back(new_poly);
 	}
 	// triangles and split_polygons can be empty here if they're all small fragments that get dropped

@@ -585,16 +585,12 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 
 
 template<typename T> void indexed_vntc_vect_t<T>::reserve_for_num_verts(unsigned num_verts) {
-
 	if (empty()) {indices.reserve(num_verts);}
 }
 
-
 template<typename T> void indexed_vntc_vect_t<T>::add_poly(polygon_t const &poly, vertex_map_t<T> &vmap) {
-
-	for (unsigned i = 0; i < poly.size(); ++i) {add_vertex(poly[i], vmap);}
+	for (unsigned i = 0; i < poly.size(); ++i) {add_vertex(poly[i], vmap);} // FIXME: ignores poly color
 }
-
 
 template<typename T> void indexed_vntc_vect_t<T>::add_triangle(triangle const &t, vertex_map_t<T> &vmap) {
 
