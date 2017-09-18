@@ -1863,7 +1863,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	float const radius_sum(radius + object_types[type].radius);
 	assert(nshots <= objg.max_objs);
 	bool const dodgeball(game_mode == 2 && weapon_id == W_BALL && !UNLIMITED_WEAPONS);
-	if (dodgeball) assert(nshots <= balls.size());
+	if (dodgeball) {assert(nshots <= balls.size());}
 	float shot_offset(0.0);
 
 	for (unsigned shot = 0; shot < nshots; ++shot) {

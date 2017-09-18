@@ -1516,7 +1516,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	}
 	if (do_coll_funcs && enable_cfs && cobj.cp.coll_func != NULL) { // call collision function
 		float energy_mult(1.0);
-		if (type == PLASMA) energy_mult *= obj.init_dir.x*obj.init_dir.x; // size squared
+		if (type == PLASMA) {energy_mult *= obj.init_dir.x*obj.init_dir.x;} // size squared
 		float const energy(get_coll_energy(v_old, obj.velocity, otype.mass));
 			
 		if (!cobj.cp.coll_func(cobj.cp.cf_index, obj_index, v_old, obj.pos, energy_mult*energy, type)) { // invalid collision - reset local collision
