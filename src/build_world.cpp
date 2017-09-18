@@ -507,11 +507,11 @@ void process_groups() {
 				update_deformation(obj);
 				
 				if (type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || type == SAWBLADE || obj.is_flat()) {
-					float const vmag(fabs(obj.velocity.z)); // rotate
+					float const vz_mag(fabs(obj.velocity.z)); // rotate
 					
-					if (obj.status == 1 && vmag > 0.5 && !(obj.flags & (STATIC_COBJ_COLL | OBJ_COLLIDED))) {
+					if (obj.status == 1 && vz_mag > 0.5 && obj.velocity.xy_mag() > 0.05 && !(obj.flags & (STATIC_COBJ_COLL | OBJ_COLLIDED))) {
 						float const rr((type == LEAF) ? 0.25 : 1.0);
-						obj.angle += fticks*(TIMESTEP/DEF_TIMESTEP)*rr*ROTATE_RATE*sqrt(vmag); // rotate while airborne
+						obj.angle += fticks*(TIMESTEP/DEF_TIMESTEP)*rr*ROTATE_RATE*sqrt(vz_mag); // rotate while airborne based on z-velocity
 					}
 				}
 				if (large_radius) {
