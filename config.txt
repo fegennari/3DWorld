@@ -74,6 +74,7 @@ biome_x_offset 550.0
 #custom_glaciate_exp 2.0
 #erosion_iters 5000
 enable_tiled_mesh_ao 1 # looks okay for ridged noise, a bit dark, but slower
+tt_triplanar_tex 1 # slower, but looks better when using domain warping and steep cliffs
 
 #snow_depth 0.05
 snow_random 0.0
