@@ -1496,7 +1496,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	}
 	else { // sticks
 		if (cobj.status == COLL_STATIC) {
-			if (!obj.proc_stuck(static_top_coll) && static_top_coll) obj.flags |= STATIC_COBJ_COLL; // coll with top
+			if (!obj.proc_stuck(static_top_coll) && static_top_coll) {obj.flags |= STATIC_COBJ_COLL;} // coll with top
 			obj.pos -= norm*(0.1*o_radius); // make sure it still intersects
 		}
 		obj.velocity = zero_vector; // I think this is correct
