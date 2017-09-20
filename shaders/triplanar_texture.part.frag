@@ -47,11 +47,24 @@ vec4 lookup_triplanar_texture_2sz(in vec3 pos, in vec3 normal, in sampler2D tex_
 
 vec3 lookup_triplanar_texture_bump(in vec3 pos, in vec3 normal, in sampler2D bump_tex) {
 	vec3 blend_weights = get_blend_weights(normal);
+	// triplanar UVs => tangent space normal maps
 	vec2 bump_tx = texture(bump_tex, pos.yz).xy - 0.5;
 	vec2 bump_ty = texture(bump_tex, pos.zx).xy - 0.5;
 	vec2 bump_tz = texture(bump_tex, pos.xy).xy - 0.5;
+#if 0 // UDN blending
+	vec3 ws_pos = normalize(pos);
+	// swizzle world normals into tangent space and apply UDN blend
+	// these should get normalized, but it's very a minor visual difference to skip it until after the blend
+	vec3 tnormalX = vec3(bump_tx + ws_pos.zy, ws_pos.x);
+	vec3 tnormalY = vec3(bump_ty + ws_pos.xz, ws_pos.y);
+	vec3 tnormalZ = vec3(bump_tz + ws_pos.xy, ws_pos.z);
+	// swizzle tangent normals to match world orientation and triblend
+	return normalize(tnormalX.zyx*blend_weights.x + tnormalY.xzy*blend_weights.y + tnormalZ.xyz*blend_weights.z);
+#else
 	vec3 bump_x  = vec3(0.0, bump_tx.x, bump_tx.y);
 	vec3 bump_y  = vec3(bump_ty.y, 0.0, bump_ty.x);
 	vec3 bump_z  = vec3(bump_tz.x, bump_tz.y, 0.0);
 	return normalize(bump_x*blend_weights.xxx + bump_y*blend_weights.yyy + bump_z*blend_weights.zzz);
+#endif
 }
+
