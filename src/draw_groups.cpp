@@ -146,7 +146,6 @@ vector3d get_rotation_dirs_and_normal(vector3d const &o, float angle, vector3d &
 	return cross_product(v2, v1).get_norm();
 }
 
-
 void add_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, colorRGBA const &color, vector<vert_norm_color> &verts) {
 
 	point p1, p2;
@@ -155,7 +154,6 @@ void add_rotated_triangle(point const &pos, vector3d const &o, float radius, flo
 	verts.emplace_back((pos - 1.5*radius*p1), normal, color);
 	verts.emplace_back((pos + 3.0*radius*p2), normal, color);
 }
-
 
 void add_rotated_textured_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, colorRGBA const &color, vector<vert_norm_tc_color> &verts) {
 
@@ -168,21 +166,36 @@ void add_rotated_textured_triangle(point const &pos, vector3d const &o, float ra
 }
 
 
-void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<vert_norm_color> &verts, colorRGBA const &color) {
+template<typename T> void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<T> &verts, colorRGBA const &color, float tscale) {
 
 	vert_norm_color vnc(all_zeros, normal, color);
 	unsigned const start(verts.size()), num((npoints == 3) ? 3 : 6);
 	verts.resize(start+num, vnc);
 	for (unsigned i = 0; i < num; ++i) {verts[start+i].v = points[quad_to_tris_ixs[i]];} // 1-2 triangles
 }
+template<> void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<vert_norm_tc_color> &verts, colorRGBA const &color, float tscale) {
+
+	float const ts(123.456*tscale), tt(654.321*tscale); // pseudo-random
+	vert_norm_tc_color vnc(all_zeros, normal, ts, tt, color);
+	unsigned const start(verts.size()), num((npoints == 3) ? 3 : 6);
+	verts.resize(start+num, vnc);
+	float const tsv[3] = {0.0, 2*tscale, 0.0};
+	float const ttv[3] = {0.0, 0.0, 2*tscale};
+
+	for (unsigned i = 0; i < num; ++i) { // 1-2 triangles
+		vert_norm_tc_color &v(verts[start+i]);
+		v.v = points[quad_to_tris_ixs[i]];
+		if (npoints == 3) {v.t[0] += tsv[i]; v.t[1] += ttv[i];} // triangles = textured face, quads = untextured edges
+	}
+}
 
 void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], point const *points,
 	unsigned npoints, vector3d const &norm, float thick, bool bfc);
 
-void add_thick_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
-	vector<vert_norm_color> &verts, float thickness, colorRGBA const &color)
+template<typename T> void add_thick_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
+	vector<T> &verts, float thickness, colorRGBA const &color)
 {
-	//tscale = tscale*radius
+	tscale *= radius;
 	unsigned const npoints(3);
 	point p1, p2;
 	vector3d const norm(get_rotation_dirs_and_normal(o, angle, p1, p2));
@@ -197,13 +210,13 @@ void add_thick_triangle(point const &pos, vector3d const &o, float radius, float
 
 		if (s < 2) { // draw front and back
 			if (!s) {std::reverse(pts[s], pts[s]+npoints);}
-			draw_polygon_side(pts[s], npoints, (s ? norm : -norm), verts, color); // draw bottom surface
+			draw_polygon_side(pts[s], npoints, (s ? norm : -norm), verts, color, tscale); // draw bottom surface
 			if (!s) {std::reverse(pts[s], pts[s]+npoints);}
 		}
 		else { // draw sides
 			unsigned const i(s-2), ii((i+1)%npoints);
 			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-			draw_polygon_side(side_pts, 4, get_poly_norm(side_pts), verts, color);
+			draw_polygon_side(side_pts, 4, get_poly_norm(side_pts), verts, color, tscale);
 		}
 	}
 }
@@ -652,7 +665,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 			} // switch (type)
 		} // for j
 		sort(tri_fragments.begin(), tri_fragments.end()); // sort by tid
-		vector<vert_norm_color> fragment_vn;
+		vector<vert_norm_color> fragment_vnc;
 		vector<vert_norm_tc_color> fragment_vntc;
 		int last_tid(-1), emission_loc(-1);
 
@@ -661,16 +674,17 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 			bool const is_emissive(obj.direction > 0); // hot object, add color
 			
 			if (is_emissive || i->tid != last_tid) { // emit on state change
-				draw_and_clear_tris(fragment_vn, fragment_vntc);
+				draw_and_clear_tris(fragment_vnc, fragment_vntc);
 				if (i->tid != last_tid) {select_texture(i->tid); last_tid = i->tid;}
 			}
-			float const tradius(obj.get_true_radius());
+			float const tradius(obj.get_true_radius()); // Note: tscale is stored in obj.vdeform.z
 
-			if (i->tid < 0) { // not textured, use thick triangle
-				add_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, fragment_vn, 0.2*tradius, i->c);
+			if (i->tid < 0 || obj.vdeform.z == 0.0) { // not textured, use thick triangle + VNC
+				add_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, fragment_vnc, 0.2*tradius, i->c);
 			}
-			else {
-				add_rotated_textured_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, i->c, fragment_vntc); // obj.vdeform.z = tscale
+			else { // textured, use VNTC
+				add_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, fragment_vntc, 0.2*tradius, i->c); // thick triangle
+				//add_rotated_textured_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, i->c, fragment_vntc); // thin triangle
 			}
 			if (is_emissive) { // hot object, add color
 				colorRGBA emissive_color(get_glow_color(obj, 1));
@@ -678,11 +692,11 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				emissive_color.alpha = i->c.alpha;
 				s.ensure_uniform_loc(emission_loc, "emission");
 				s.set_uniform_color(emission_loc, emissive_color);
-				draw_and_clear_tris(fragment_vn, fragment_vntc); // emit immediately
+				draw_and_clear_tris(fragment_vnc, fragment_vntc); // emit immediately
 				s.set_uniform_color(emission_loc, BLACK); // clear
 			}
 		}
-		draw_and_clear_tris(fragment_vn, fragment_vntc); // draw any remaining triangles
+		draw_and_clear_tris(fragment_vnc, fragment_vntc); // draw any remaining triangles
 		sort(sphere_fragments.begin(), sphere_fragments.end()); // sort by tid
 
 		for (vector<tid_color_to_ix_t>::const_iterator i = sphere_fragments.begin(); i != sphere_fragments.end(); ++i) {
