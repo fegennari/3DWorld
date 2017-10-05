@@ -29,8 +29,9 @@ vector<unsigned char> smoke_tex_data; // several MB
 
 extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
-extern int animate2, display_mode, scrolling, game_mode;
-extern float czmin0;
+extern int animate2, display_mode, scrolling, game_mode, frame_counter;
+extern float czmin0, rain_wetness, fticks;
+extern vector3d wind;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
 extern vector<cube_t> smoke_bounds;
@@ -374,3 +375,97 @@ bool upload_smoke_indir_texture() {
 	return 1;
 }
 
+
+// fire spreading
+
+class ground_fire_manager_t {
+	struct elem_t {
+		float hp, fuel, burn_amt;
+		elem_t() : hp(0.0), fuel(0.0), burn_amt(0.0) {}
+		
+		bool burn(float val) {
+			if (fuel == 0.0) return 0; // no fuel, no burning
+			if (hp >= val) {hp -= val; return 0;} // not yet burning
+			val -= hp; // remove remaining HP
+			burn_amt += val;
+			return 1;
+		}
+		void next_frame(float burn_rate) {
+			if (burn_amt == 0.0) return; // not burning
+			float const prev_amt(burn_amt);
+			burn_amt = min(1.0, (burn_amt + 0.01*fticks*burn_rate)); // increase burn level, max is 1.0
+			float consumed(0.5*fticks*(burn_amt + prev_amt)); // average of prev/next frames
+			if (consumed >= fuel) {fuel = 0.0; burn_amt = 0.0; return;} // all fuel consumed
+			fuel -= consumed; // consume fuel
+		}
+	};
+	vector<elem_t> grid;
+
+	void burn_elem(int x, int y, float val) {
+		assert(val >= 0.0); // not negative
+		if (val > 0.0 && !point_outside_mesh(x, y)) {grid[y*MESH_Y_SIZE + x].burn(val);}
+	}
+	bool empty() const {return grid.empty();}
+public:
+	static float get_burn_rate() {
+		float const v(1.0 - 0.75*rain_wetness); // 0.25 to 1.0
+		if (is_rain_enabled()) return 0.5*v;
+		if (is_snow_enabled()) return 0.5*v;
+		return v;
+	}
+	void init() {
+		grid.resize(XY_MULT_SIZE);
+		rand_gen_t rgen;
+
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
+				elem_t &elem(grid[y*MESH_Y_SIZE + x]);
+				float const grass_density(get_grass_density(x, y)); // Note: should return 0 underwater and on disabled mesh areas
+				if (grass_density == 0) continue; // leave HP and fuel at 0
+				elem.fuel = 100.0*grass_density;
+				elem.hp   = rgen.rand_uniform(50.0, 100.0); // dryness factor
+			}
+		}
+	}
+	void next_frame() {
+		if (empty()) return; // not inited
+		assert(grid.size() == XY_MULT_SIZE);
+		int const dirs[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}}; // W, E, S, N
+		int const dx(dirs[frame_counter&3][0]), dy(dirs[frame_counter&3][1]);
+		vector3d const dir(dx, dy, 0.0);
+		float const burn_rate(get_burn_rate());
+		float const spread_rate(burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
+
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
+				elem_t &elem(grid[y*MESH_Y_SIZE + x]);
+				elem.next_frame(burn_rate);
+				if (spread_rate <= 0.0 || elem.burn_amt == 0.0) continue;
+				burn_elem((x + dx), (y + dy), elem.burn_amt*spread_rate); // try to burn a neighbor
+			}
+		}
+	}
+	void add_fire(point const &pos, float val) {
+		if (empty()) return; // not inited
+		if (val == 0.0) return;
+		burn_elem(get_xpos(pos.x), get_ypos(pos.y), val*get_burn_rate());
+	}
+	void draw() const {
+		if (empty()) return; // not inited
+		// FIXME: shader setup
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
+				float const burn_amt(grid[y*MESH_Y_SIZE + x].burn_amt);
+				if (burn_amt == 0.0) continue; // not burning
+				// FIXME: WRITE
+			}
+		}
+	}
+};
+
+ground_fire_manager_t ground_fire_manager;
+
+void init_ground_fire() {ground_fire_manager.init();}
+void next_frame_ground_fire() {ground_fire_manager.next_frame();}
+void add_ground_fire(point const &pos, float val) {ground_fire_manager.add_fire(pos, val);}
+void draw_ground_fires() {ground_fire_manager.draw();}

@@ -512,14 +512,16 @@ public:
 		return updated;
 	}
 
-	float get_grass_density(point const &pos) {
-		if (empty() || !is_over_mesh(pos)) return 0.0;
-		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
-		if (point_outside_mesh(x, y))      return 0.0;
+	float get_grass_density(int x, int y) {
+		if (empty() || point_outside_mesh(x, y)) return 0.0;
 		unsigned const ix(y*MESH_X_SIZE + x);
 		assert(ix+1 < mesh_to_grass_map.size());
 		unsigned const num_grass(mesh_to_grass_map[ix+1] - mesh_to_grass_map[ix]); // Note: ignores crushed/cut/removed grass
 		return ((float)num_grass)/((float)grass_density);
+	}
+	float get_grass_density(point const &pos) {
+		if (empty() || !is_over_mesh(pos)) return 0.0;
+		return get_grass_density(get_xpos(pos.x), get_ypos(pos.y));
 	}
 
 	void mesh_height_change(int x, int y) {
@@ -1115,6 +1117,9 @@ bool place_obj_on_grass(point &pos, float radius) {
 	return (!no_grass() && grass_manager.place_obj_on_grass(pos, radius));
 }
 
+float get_grass_density(int x, int y) {
+	return (no_grass() ? 0.0 : grass_manager.get_grass_density(x, y));
+}
 float get_grass_density(point const &pos) {
 	return (no_grass() ? 0.0 : grass_manager.get_grass_density(pos));
 }

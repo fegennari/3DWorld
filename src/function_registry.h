@@ -669,6 +669,7 @@ void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, 
 void grass_mesh_height_change(int xpos, int ypos);
 void flower_mesh_height_change(int xpos, int ypos, int rad);
 bool place_obj_on_grass(point &pos, float radius);
+float get_grass_density(int x, int y);
 float get_grass_density(point const &pos);
 
 // function prototypes - draw mech
@@ -713,9 +714,6 @@ void update_flow_for_voxels(vector<cube_t> const &cubes);
 void regen_lightmap();
 void clear_lightmap();
 void build_lightmap(bool verbose);
-void add_smoke(point const &pos, float val);
-void distribute_smoke();
-float get_smoke_at_pos(point const &pos);
 void add_line_light(point const &p1, point const &p2, colorRGBA const &color, float size, float intensity=1.0);
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c=WHITE, vector3d const &d=plus_z, float bw=1.0, point *line_end_pos=nullptr, bool is_static_pos=0);
 colorRGBA gen_fire_color(float &cval, float &inten, float rate=1.0);
@@ -724,14 +722,23 @@ point get_camera_light_pos();
 void add_camera_flashlight();
 void add_camera_candlelight();
 void add_dynamic_lights_ground();
-void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, unsigned z_start=0, unsigned z_end=0, bool update_lighting=1);
-bool upload_smoke_indir_texture();
 void upload_dlights_textures(cube_t const &bounds);
 void setup_dlight_textures(shader_t &s, bool enable_dlights_smap=1);
 bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj, int skip_dynamic);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 void get_indir_light(colorRGBA &a, point const &p);
 bool is_any_dlight_visible(point const &p);
+
+// function prototypes - smoke
+void add_smoke(point const &pos, float val);
+void distribute_smoke();
+float get_smoke_at_pos(point const &pos);
+void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, unsigned z_start=0, unsigned z_end=0, bool update_lighting=1);
+bool upload_smoke_indir_texture();
+void init_ground_fire();
+void next_frame_ground_fire();
+void add_ground_fire(point const &pos, float val);
+void draw_ground_fires();
 
 // function protoptypes - light_source
 void shift_light_sources(vector3d const &vd);
