@@ -507,6 +507,17 @@ void init_objects() {
 	object_types[FREEZE_BOMB]              = object_types[RAPT_PROJ]; // copy from RAPT_PROJ
 	object_types[FREEZE_BOMB].color        = FREEZE_COLOR;
 
+	object_types[XLOCATOR].air_factor      = 0.02;
+	object_types[XLOCATOR].friction_factor = 0.5;
+	object_types[XLOCATOR].gravity         = 1.0;
+	object_types[XLOCATOR].radius          = 0.02;
+	object_types[XLOCATOR].lifetime        = 1000000; // nearly infinite
+	object_types[XLOCATOR].density         = 1.5;
+	object_types[XLOCATOR].elasticity      = 0.25;
+	object_types[XLOCATOR].health          = 200.0;
+	object_types[XLOCATOR].color           = LT_GRAY;
+	object_types[XLOCATOR].flags           = SPECULAR | SELECTABLE;
+
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;
 		object_types[i].friction_factor = 0.9;

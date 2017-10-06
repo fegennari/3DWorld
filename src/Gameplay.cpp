@@ -52,7 +52,7 @@ vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil;
+extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil, enable_translocator;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
@@ -100,6 +100,7 @@ int gen_game_obj(int type) {
 			while (1) {
 				//return W_LASER;
 				int const id(rand()%NUM_WEAPONS);
+				if (id == W_XLOCATOR) continue; // translocator can't be picked up as ammo
 				if (weapons[id].need_ammo) return id;
 			}
 		default: assert(0);
@@ -201,7 +202,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 
 bool self_coll_invalid(int type, int obj_index) {
 
-	if (is_rocket_type(type) || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) { // || type == SAWBLADE
+	if (is_rocket_type(type) || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER || type == XLOCATOR) { // || type == SAWBLADE
 		return 1;
 	}
 	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL || type == SAWBLADE) &&
@@ -977,6 +978,11 @@ bool skull_collision(int index, int obj_index, vector3d const &velocity, point c
 	return 1;
 }
 
+bool translocator_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+	pushable_collision(index, position, 20000.0, type, XLOCATOR);
+	return 1;
+}
+
 bool health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, HEALTH);
 }
@@ -1498,7 +1504,8 @@ void player_state::switch_weapon(int val, int verbose) {
 	}
 	do {
 		weapon = (weapon+NUM_WEAPONS+val)%NUM_WEAPONS;
-	} while (!UNLIMITED_WEAPONS && no_weap_or_ammo());
+		if (!enable_translocator && weapon == W_XLOCATOR) continue; // translocator disabled
+	} while (!can_fire_weapon());
 
 	if (verbose) {print_weapon(weapon);}
 	play_switch_weapon_sound();
@@ -1509,6 +1516,8 @@ void player_state::switch_weapon(int val, int verbose) {
 
 
 int player_state::get_prev_fire_time_in_ticks() const {return int(get_fspeed_scale()*(tfticks - ticks_since_fired));}
+
+bool player_state::can_fire_weapon() const {return ((UNLIMITED_WEAPONS && weapon != W_XLOCATOR) || !no_weap_or_ammo());}
 
 void player_state::gamemode_fire_weapon() { // camera/player fire
 
@@ -1534,8 +1543,8 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		camera_reset = 1;
 		return;
 	}
-	if (!UNLIMITED_WEAPONS && weapon != W_UNARMED && no_weap_or_ammo()) {
-		if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE && weapon != W_RAPTOR) { // this test is questionable
+	if (weapon != W_UNARMED && !can_fire_weapon()) {
+		if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE && weapon != W_RAPTOR && weapon != W_XLOCATOR) { // this test is questionable
 			switch_weapon(1, 1);
 			if (weapon == W_BBBAT)   switch_weapon( 1, 1);
 			if (weapon == W_UNARMED) switch_weapon(-1, 1);
@@ -1559,7 +1568,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		}
 		int &pammo(p_ammo[weapon]);
 
-		if (status != 0 && !UNLIMITED_WEAPONS && !no_weap() && pammo > 0) {
+		if (status != 0 && (!UNLIMITED_WEAPONS || weapon == W_XLOCATOR) && !no_weap() && pammo > 0) {
 			if (weapon == W_PLASMA && psize > 1) {
 				pammo = max(0, pammo-psize); // large plasma burst
 			}
@@ -1681,7 +1690,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	chosen_obj = -1;
 	float damage_scale(1.0), range(0.0);
-	assert(UNLIMITED_WEAPONS || !no_weap_or_ammo());
+	assert(can_fire_weapon());
 	int weapon_id(weapon);
 	if (weapon == W_GRENADE && (wmode&1)) {weapon_id = W_CGRENADE;}
 	if (weapon == W_BLADE   && (wmode&1)) {weapon_id = W_SAWBLADE;}
@@ -1853,6 +1862,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_CGRENADE: gen_sound(SOUND_SWING,  fpos, 0.6, 1.2); break;
 	case W_STAR5:    gen_sound(SOUND_SWING,  fpos, 0.3, 2.0); break;
 	case W_LANDMINE: gen_sound(SOUND_ALERT,  fpos, 0.3, 2.5); break;
+	case W_XLOCATOR: gen_sound(SOUND_BOING,  fpos, 1.0, 1.5); break;
 	}
 	if (type < 0) return 3;
 	int const cid(coll_id[type]);

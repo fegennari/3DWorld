@@ -133,6 +133,7 @@ void create_object_groups() {
 	coll_id[RAPT_PROJ]= create_group(RAPT_PROJ,400,   0, 0, 0, 0, 0);
 	coll_id[FREEZE_BOMB]=create_group(FREEZE_BOMB,200,0, 0, 0, 0, 0);
 	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 0, 0); // Note: create plasma group last since it uses a special shader during drawing
+	coll_id[XLOCATOR] = create_group(XLOCATOR, num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[MAT_SPHERE]= create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 0, 0);
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
 }
@@ -368,6 +369,7 @@ void process_groups() {
 		case MAT_SPHERE:coll_func = mat_sphere_collision; break;
 		case SKULL:    coll_func = skull_collision;     break;
 		case SAWBLADE: coll_func = sawblade_collision;  break;
+		case XLOCATOR: coll_func = translocator_collision; break;
 		}
 		//cout << "group %d %d\n", i, GET_DELTA_TIME);
 		RESET_TIME;

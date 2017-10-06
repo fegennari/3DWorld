@@ -129,6 +129,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 	case W_CGRENADE:
 	case W_STAR5:
 	case W_SAWBLADE:
+	case W_XLOCATOR: // close enough
 		{
 			int const oid(weapons[wid].obj_id);
 			radius = 0.4*object_types[oid].radius;
@@ -366,6 +367,15 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				fgRotate(((wid == W_BALL) ? 135.0 : 45.0), 1.0, 0.0, 0.0); // rotate the texture to face the player
 			}
 			if (wid == W_BALL) {draw_cube_mapped_sphere(all_zeros, radius, ndiv, do_texture);} else {draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);}
+			shader.clear_specular();
+			break;
+
+		case W_XLOCATOR:
+			radius = 0.4*object_types[oid].radius;
+			set_silver_material(shader, alpha);
+			translate_to(v_trans);
+			fgScale(1.6, 1.6, 1.0); // short and fat
+			draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
 			shader.clear_specular();
 			break;
 

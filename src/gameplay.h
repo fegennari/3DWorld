@@ -91,8 +91,9 @@ weapon_t const weapons[NUM_WEAPONS+2] = {
 	weapon_t(0, 1, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.0,   0.0,  0.0,  0.00, "Laser"           ), // firing error of 0.002 may be acceptable, but not for bouncing beams
 	weapon_t(3, 0, 1, 1, 20,  200, PLASMA,   13,  1,  1,   1.4,  3.5, 200.0,  0.43, 0.0,   3.8,  4.5,  0.00, "Plasma Cannon"   ),
 	weapon_t(0, 1, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, CBLADE_EXT, 0.00, "Carnage Blade"),
-	weapon_t(0, 0, 1, 1, 60,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  2.8,  0.00, "Gasser"),
-	weapon_t(1, 0, 1, 1, 25,  400, RAPT_PROJ,14,  1,  1,   1.2,  3.2, 220.0,  0.35, 0.025, 0.0,  6.0,  0.05, "Raptor" ), // Note: only self damage in primary fire mode (not freeze)
+	weapon_t(0, 0, 1, 1, 60,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  2.8,  0.00, "Gasser"          ),
+	weapon_t(1, 0, 1, 1, 25,  400, RAPT_PROJ,14,  1,  1,   1.2,  3.2, 220.0,  0.35, 0.025, 0.0,  6.0,  0.05, "Raptor"          ), // Note: only self damage in primary fire mode (not freeze)
+	weapon_t(0, 1, 0, 1, 1,   1,   XLOCATOR, 30,  1,  1,   1.6,  3.2, 0.0,    0.0,  0.0,   0.0,  0.0,  0.00, "Translocator"    ),
 	/* non-selectable */
 	weapon_t(1, 0, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.6,  1.6,  0.04, "Cluster Grenade" ),
 	weapon_t(0, 1, 1, 1, 1,   10,  SAWBLADE, CBFD,1,  1,   2.0,  4.0, 0.0,    0.0,  0.01,  0.0,  0.0,  0.03, "Saw Blade")
@@ -105,7 +106,7 @@ int const obj_weapons[NUM_TOT_OBJS] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, W_SAWBLADE, -1, -1, W_RAPTOR,
-	W_RAPTOR
+	W_RAPTOR, W_XLOCATOR
 };
 
 bool const damage_done_obj[NUM_TOT_OBJS] = {
@@ -115,7 +116,7 @@ bool const damage_done_obj[NUM_TOT_OBJS] = {
 	1,1,1,1,0,0,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,
 	0,0,0,0,0,1,1,1,1,1,
-	1
+	1,0
 };
 
 string const obj_type_names[NUM_TOT_OBJS] = {
@@ -125,7 +126,7 @@ string const obj_type_names[NUM_TOT_OBJS] = {
 	"Powerup", "Weapon", "Ammo", "Pack", "Camera", "Precipitation", "Blast Radius", "Projectile", "Laser Beam", "Impact",
 	"Plasma Lightning Damage", "Laser", "Drowned", "Burned", "Fire", "Fell", "Froze", "Suffocated", "Crushed", "Poison Gas",
 	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport", "Saw Blade", "Material Sphere", "Collision", "Raptor Shot", // Telefrag?
-	"Freeze Bomb"
+	"Freeze Bomb", "Translocator"
 };
 
 string const powerup_names[NUM_POWERUPS] = {"Quad Damage", "Regeneration", "Shielding", "Haste", "Flight", "Invisibility"};

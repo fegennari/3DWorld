@@ -27,7 +27,7 @@ vector<point> app_spots;
 vector<od_data> oddatav; // used as a temporary
 
 
-extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields, smileys_chase_player;
+extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields, smileys_chase_player, enable_translocator;
 extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
@@ -173,7 +173,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	assert(target >= CAMERA_ID && target < num_smileys);
 	int const last_weapon(weapon);
 	
-	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && no_weap_or_ammo())) {
+	if (weapon == W_UNARMED || !can_fire_weapon()) {
 		check_switch_weapon(smiley_id); // out of ammo, switch weapons
 		if (weapon != last_weapon) fire_frame = 0;
 	}
@@ -589,6 +589,7 @@ int player_state::check_smiley_status(dwobject &obj, int smiley_id) {
 void player_state::drop_pack(point const &pos) {
 
 	if (UNLIMITED_WEAPONS) return; // no pack
+	if (weapon == W_XLOCATOR) return; // translocator isn't dropped
 	int const ammo(p_ammo[weapon]);
 	if (!weapons[weapon].need_weapon && (!weapons[weapon].need_ammo || ammo == 0)) return; // no weapon/ammo
 	bool const dodgeball(game_mode == 2 && weapon == W_BALL); // drop their balls
@@ -624,7 +625,7 @@ int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, 
 			drop_pack(dpos);
 			p_weapons[weapon] = 0;
 			p_ammo[weapon]    = 0;
-			if (index == CAMERA_ID) switch_weapon(1, 0); else check_switch_weapon(index);
+			if (index == CAMERA_ID) {switch_weapon(1, 0);} else {check_switch_weapon(index);}
 			return 1;
 		}
 	}
@@ -1225,7 +1226,7 @@ void init_smiley(int smiley_id) {
 }
 
 
-void player_state::check_switch_weapon(int smiley_id) {
+void player_state::check_switch_weapon(int smiley_id) { // called by smileys
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	wmode = ((player_rgen.rand()&3) == 0);
@@ -1241,6 +1242,7 @@ void player_state::check_switch_weapon(int smiley_id) {
 	unsigned chosen_weap(W_UNARMED);
 
 	for (unsigned i = 1; i < NUM_WEAPONS; ++i) {
+		if (i == W_XLOCATOR) continue; // translocator not used by smileys
 		weapon = i;
 		if (no_weap_or_ammo()) continue;
 		float weight(player_rgen.rand_float());
@@ -1303,7 +1305,7 @@ void player_state::smiley_action(int smiley_id) {
 	int const in_range(target_in_range(smiley.pos));
 	if (in_range == 1) smiley_fire_weapon(smiley_id);
 	if (powerup == PU_REGEN) {smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);}
-	if ((player_rgen.rand()%((in_range == 0) ? 50 : 500)) == 0) check_switch_weapon(smiley_id); // change weapons
+	if ((player_rgen.rand()%((in_range == 0) ? 50 : 500)) == 0) {check_switch_weapon(smiley_id);} // change weapons
 	if (was_hit > 0) --was_hit;
 	kill_time += max(1, iticks);
 	check_underwater(smiley_id, depth);
@@ -1459,8 +1461,9 @@ void player_state::init(bool w_start) {
 		else {
 			weapon = W_UNARMED;
 		}
-		wmode     = 0;
+		wmode = 0;
 	}
+	p_ammo[W_XLOCATOR] = (enable_translocator ? 1 : 0); // always 1
 	ticks_since_fired = tfticks;
 	init_frame    = frame_counter;
 	fire_frame    = 0;
@@ -1525,7 +1528,7 @@ bool player_state::no_ammo() const {
 	if (!game_mode) return 0;
 	assert(weapon < NUM_WEAPONS);
 	assert(p_ammo[weapon] >= 0);
-	return (!UNLIMITED_WEAPONS && weapons[weapon].need_ammo && p_ammo[weapon] == 0);
+	return ((!UNLIMITED_WEAPONS || weapon == W_XLOCATOR) && weapons[weapon].need_ammo && p_ammo[weapon] == 0);
 }
 
 

@@ -55,6 +55,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader);
+void draw_translocator(point const &pos, float radius, int ndiv, int source, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate, int ndiv, bool bloody);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
@@ -386,6 +387,9 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		break;
 	case SAWBLADE:
 		draw_sawblade(pos, obj.orientation, obj.init_dir, radius, obj.angle, 1, ndiv, (obj.direction != 0));
+		break;
+	case XLOCATOR:
+		draw_translocator(pos, radius, ndiv, obj.source, shader);
 		break;
 	default:
 		if (obj.vdeform != all_ones) {
@@ -1367,6 +1371,29 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	sparks.push_back(spark_t(spos, scolor, size));
 	add_dynamic_light(0.15, spos, scolor); // out of sync by a frame?
 	if (!in_ammo && (rand()&15) == 0) {gen_particles(spos, 1, 0.5, 1);}
+}
+
+
+void draw_translocator(point const &pos, float radius, int ndiv, int source, shader_t &shader) {
+
+	set_silver_material(shader);
+	fgPushMatrix();
+	translate_to(pos - vector3d(0.0, 0.0, 0.5*radius));
+	uniform_scale(radius);
+	fgScale(1.0, 1.0, 0.5); // short and fat
+	draw_sphere_vbo_raw(ndiv, 0);
+	fgScale(1.2, 1.2, 0.2); // shorter and fatter
+	draw_sphere_vbo_raw(ndiv, 0);
+	fgPopMatrix();
+
+	// draw colored top
+	shader.set_cur_color(get_smiley_team_color(source));
+	set_obj_specular(object_types[XLOCATOR].flags, brightness, shader);
+	fgPushMatrix();
+	translate_to(pos);
+	uniform_scale(0.2*radius);
+	draw_sphere_vbo_raw(ndiv, 0);
+	fgPopMatrix();
 }
 
 
