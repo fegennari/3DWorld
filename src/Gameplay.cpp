@@ -567,17 +567,10 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		}
 		else {
 			string str;
+			if (type == SMILEY) {str = string("Fragged by ") + sstates[source].name;}
+			else if (type == FIRE || type == BURNED) {str = string("BURNED to DEATH by ") + sstates[source].name;}
+			else {str = string("Fragged by ") + sstates[source].name + "'s " + get_weapon_qualifier(type, index, source) + " " + obj_type_names[type];}
 
-			if (type == SMILEY) {
-				string const str(string("Fragged by ") + sstates[source].name);
-			}
-			else if (type == FIRE || type == BURNED) {
-				str = string("BURNED to DEATH by ") + sstates[source].name;
-			}
-			else {
-				str = string("Fragged by ") + sstates[source].name + "'s " +
-					get_weapon_qualifier(type, index, source) + " " + obj_type_names[type];
-			}
 			if (same_team(source, CAMERA_ID)) {
 				sstates[source].register_team_kill();
 				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3); // killed by your teammate
