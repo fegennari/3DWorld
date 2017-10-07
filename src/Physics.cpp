@@ -155,7 +155,7 @@ void init_objects() {
 	object_types[BALL].elasticity          = 0.92;
 	object_types[BALL].health              = 20000.0;
 	object_types[BALL].color               = WHITE;
-	object_types[BALL].flags               = SPECULAR | SELECTABLE | OBJ_ROLLS;
+	object_types[BALL].flags               = SPECULAR | SELECTABLE | OBJ_ROLLS | NO_COLL_DAMAGE;
 	object_types[BALL].tid                 = SKULL_TEX;
 
 	object_types[S_BALL].air_factor        = 0.035;
@@ -169,7 +169,7 @@ void init_objects() {
 	object_types[S_BALL].def_recover       = 0.5;
 	object_types[S_BALL].health            = 10000.0;
 	object_types[S_BALL].color             = ORANGE;
-	object_types[S_BALL].flags             = SPECULAR | SELECTABLE | DEFORMABLE;
+	object_types[S_BALL].flags             = SPECULAR | SELECTABLE | DEFORMABLE | NO_COLL_DAMAGE;
 
 	object_types[SMILEY].air_factor        = 0.005;
 	object_types[SMILEY].friction_factor   = 0.001;
@@ -181,7 +181,7 @@ void init_objects() {
 	object_types[SMILEY].elasticity        = 0.4;
 	object_types[SMILEY].health            = 100.0;
 	object_types[SMILEY].color             = YELLOW;
-	object_types[SMILEY].flags             = SELECTABLE | NO_FALL | VERTEX_DEFORM | NO_WATER_DAMAGE | SPECULAR;
+	object_types[SMILEY].flags             = SELECTABLE | NO_FALL | VERTEX_DEFORM | NO_WATER_DAMAGE | NO_COLL_DAMAGE | SPECULAR;
 	object_types[SMILEY].min_t             = -50.0;
 	object_types[SMILEY].max_t             = 100.0;
 
@@ -321,7 +321,7 @@ void init_objects() {
 	object_types[CAMERA].elasticity        = 0.4;
 	object_types[CAMERA].health            = 100.0;
 	object_types[CAMERA].color             = YELLOW;
-	object_types[CAMERA].flags             = NO_FALL | NO_WATER_DAMAGE;
+	object_types[CAMERA].flags             = NO_FALL | NO_WATER_DAMAGE | NO_COLL_DAMAGE;
 	object_types[CAMERA].min_t             = -50.0;
 	object_types[CAMERA].max_t             = 100.0;
 
@@ -344,7 +344,7 @@ void init_objects() {
 	object_types[LANDMINE].density         = 2.5;
 	object_types[LANDMINE].health          = 80.0;
 	object_types[LANDMINE].color           = WHITE;
-	object_types[LANDMINE].flags           = SPECULAR | SELECTABLE | OBJ_EXPLODES;
+	object_types[LANDMINE].flags           = SPECULAR | SELECTABLE | OBJ_EXPLODES | NO_COLL_DAMAGE;
 	object_types[LANDMINE].tid             = CAMOFLAGE_TEX;
 
 	object_types[SEEK_D].air_factor        = 0.015;
@@ -449,7 +449,7 @@ void init_objects() {
 	object_types[SKULL].elasticity         = 0.75;
 	object_types[SKULL].health             = 25.0;
 	object_types[SKULL].color              = LT_GRAY;
-	object_types[SKULL].flags              = SPECULAR | SELECTABLE | NO_WATER_DAMAGE;
+	object_types[SKULL].flags              = SPECULAR | SELECTABLE | NO_WATER_DAMAGE; // yes coll damage
 	object_types[SKULL].tid                = SMILEY_SKULL_TEX;
 
 	object_types[HEALTH].color             = MAGENTA;
@@ -491,7 +491,7 @@ void init_objects() {
 	object_types[MAT_SPHERE].elasticity      = 0.9;
 	object_types[MAT_SPHERE].health          = 10000.0;
 	object_types[MAT_SPHERE].color           = WHITE;
-	object_types[MAT_SPHERE].flags           = SPECULAR | SEMI_TRANSPARENT | BLEND | NO_WATER_DAMAGE;
+	object_types[MAT_SPHERE].flags           = SPECULAR | SEMI_TRANSPARENT | BLEND | NO_WATER_DAMAGE | NO_COLL_DAMAGE;
 
 	object_types[RAPT_PROJ].air_factor     = 0.01;
 	object_types[RAPT_PROJ].friction_factor= 0.5;
@@ -508,7 +508,7 @@ void init_objects() {
 	object_types[FREEZE_BOMB].color        = FREEZE_COLOR;
 
 	object_types[XLOCATOR].air_factor      = 0.02;
-	object_types[XLOCATOR].friction_factor = 0.5;
+	object_types[XLOCATOR].friction_factor = 0.25;
 	object_types[XLOCATOR].gravity         = 1.0;
 	object_types[XLOCATOR].radius          = 0.02;
 	object_types[XLOCATOR].lifetime        = 1000000; // nearly infinite
@@ -516,7 +516,7 @@ void init_objects() {
 	object_types[XLOCATOR].elasticity      = 0.25;
 	object_types[XLOCATOR].health          = 200.0;
 	object_types[XLOCATOR].color           = LT_GRAY;
-	object_types[XLOCATOR].flags           = SPECULAR | SELECTABLE;
+	object_types[XLOCATOR].flags           = SPECULAR | SELECTABLE | NO_WATER_DAMAGE | NO_COLL_DAMAGE;
 
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;
@@ -655,7 +655,7 @@ vector3d get_local_wind(point const &pt, bool no_use_mesh) {
 
 void dwobject::do_coll_damage() {
 
-	if (type == LANDMINE) return;
+	if (object_types[type].flags & NO_COLL_DAMAGE) return;
 	assert(type != SMILEY);
 	if (health <= COLL_DAMAGE) {disable();} else {health -= COLL_DAMAGE;}
 }

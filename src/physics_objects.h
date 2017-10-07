@@ -477,6 +477,7 @@ public:
 #define NO_WATER_DAMAGE  0x10000
 #define OBJ_IS_FLAT      0x20000
 #define OBJ_IS_CYLIN     0x40000
+#define NO_COLL_DAMAGE   0x80000
 
 // object flag bits
 #define XY_STOPPED       0x01
