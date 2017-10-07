@@ -1561,18 +1561,23 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id) {
 	return 0;
 }
 
+void teleport_object(point &opos, point const &src_pos, point const &dest_pos, float oradius, int player_id) {
 
-bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id) {
-
-	if (!dist_less_than(pos, opos, radius+oradius)) return 0; // not close enough
 	bool const is_player(player_id != NO_SOURCE);
 	float const gain(is_player ? 1.0 : 0.1), pitch(is_player ? 0.6 : 2.0);
 	gen_sound(SOUND_POWERUP, opos, gain, pitch); // different sound?
-	opos += (dest - pos); // maintain relative distance from center (could also use opos = dest)
+	opos += (dest_pos - src_pos); // maintain relative distance from center (could also use opos = dest)
 	gen_sound(SOUND_POWERUP, opos, gain, pitch); // different sound?
 	if (is_player) {player_teleported(opos, player_id);}
 	add_dynamic_light(12.0*oradius, opos, LT_BLUE);
 	if (player_id != CAMERA_ID) {add_blastr(opos, plus_z, 6.0*oradius, 0.0, int(0.5*TICKS_PER_SECOND), NO_SOURCE, WHITE, BLUE, ETYPE_NUCLEAR, nullptr, 1);}
+}
+
+
+bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id) {
+
+	if (!dist_less_than(pos, opos, radius+oradius)) return 0; // not close enough
+	teleport_object(opos, pos, dest, oradius, player_id);
 	last_used_tfticks = tfticks;
 	return 1;
 }

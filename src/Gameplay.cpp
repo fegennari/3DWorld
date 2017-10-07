@@ -71,11 +71,11 @@ extern coll_obj_group coll_objects;
 bool push_movable_cobj(unsigned index, vector3d &delta, point const &pushed_from);
 
 
-point get_sstate_pos(int id) {
-	return ((id == CAMERA_ID) ? get_camera_pos() : obj_groups[coll_id[SMILEY]].get_obj(id).pos);
+point &get_sstate_pos(int id) {
+	return ((id == CAMERA_ID) ? camera_pos : obj_groups[coll_id[SMILEY]].get_obj(id).pos);
 }
 
-vector3d get_sstate_dir(int id) {
+vector3d &get_sstate_dir(int id) {
 	return ((id == CAMERA_ID) ? cview_dir : obj_groups[coll_id[SMILEY]].get_obj(id).orientation);
 }
 
@@ -591,7 +591,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		if (!same_team(CAMERA_ID, source) && obj_groups[coll_id[SMILEY]].is_enabled()) {
 			update_kill_health(obj_groups[coll_id[SMILEY]].get_obj(source).health);
 		}
-		if (is_blood && !burned) blood_on_camera(rand()%10);
+		if (is_blood && !burned) {blood_on_camera(rand()%10);}
 		sstate.drop_pack(camera);
 		remove_reset_coll_obj(camera_coll_id);
 		init_sstate(CAMERA_ID, 0);
@@ -601,19 +601,15 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		following     = 0; // ???
 		orig_camera   = camera_origin;
 	}
-	if (cam_filter_color.alpha > 0.0) add_camera_filter(cam_filter_color, CAMERA_SPHERE_TIME, -1, CAM_FILT_DAMAGE);
+	if (cam_filter_color.alpha > 0.0) {add_camera_filter(cam_filter_color, CAMERA_SPHERE_TIME, -1, CAM_FILT_DAMAGE);}
 	return 1;
 }
 
 
 bool smiley_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	if (index == CAMERA_ID) {
-		return camera_collision(type, obj_index, velocity, position, energy, type);
-	}
-	if (type == CAMERA) {
-		return camera_collision(type, index, velocity, position, energy, SMILEY);
-	}
+	if (index == CAMERA_ID) {return camera_collision(type, obj_index, velocity, position, energy, type);}
+	if (type  == CAMERA   ) {return camera_collision(type, index, velocity, position, energy, SMILEY);}
 	int damage_type(0), cid(coll_id[SMILEY]);
 	assert(cid >= 0);
 	assert(obj_groups[cid].enabled);
@@ -822,9 +818,7 @@ string get_weapon_qualifier(int type, int index, int source) {
 }
 
 
-bool dwobject::lm_coll_invalid() const {
-	return (time < LM_ACT_TIME);
-}
+bool dwobject::lm_coll_invalid() const {return (time < LM_ACT_TIME);}
 
 
 int damage_done(int type, int index) {
@@ -1483,6 +1477,36 @@ void player_teleported(point const &pos, int player_id) { // check for telefrags
 }
 
 
+bool try_use_translocator(int player_id) {
+
+	// TODO/FIXME:
+	// * Draw weapon for both modes
+	// * Sticks to player on shallow throw
+	assert(sstates != NULL); // shouldn't get here in this case
+	assert(player_id >= CAMERA_ID && player_id < num_smileys);
+	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);
+	if (!objg.enabled) return 0; // disabled, do nothing
+	bool const is_camera(player_id == CAMERA_ID);
+	float const delta_h(CAMERA_RADIUS - object_types[XLOCATOR].radius + (is_camera ? camera_zh : 0.0));
+	point &player_pos(get_sstate_pos(player_id)); // by reference - can modify
+	player_state &sstate(sstates[player_id]);
+	sstate.ticks_since_fired = tfticks; // update fire time to avoid spurious refire, whether or not this fails
+
+	for (unsigned i = 0; i < objg.end_id; ++i) {
+		dwobject &obj(objg.get_obj(i));
+		if (obj.disabled() || obj.source != player_id) continue; // disabled, or wrong player's translocator
+		obj.status = OBJ_STAT_BAD; // remove translocator
+		assert(sstate.p_ammo[W_XLOCATOR] == 0);
+		sstate.p_ammo[W_XLOCATOR] = 1; // add translocator back into player's inventory for reuse
+		teleport_object(player_pos, player_pos, (obj.pos + vector3d(0, 0, delta_h)), CAMERA_RADIUS, player_id); // teleport the player
+		if (is_camera) {camera_last_pos = surface_pos = (player_pos - vector3d(0, 0, camera_zh));} // update surface_pos and last_pos as well (actually moves the player/camera)
+		return 1; // success
+	} // for i
+	smiley_collision(player_id, player_id, zero_vector, player_pos, 10000, XLOCATOR_DEATH); // no translocator = death
+	return 0; // not found
+}
+
+
 void switch_player_weapon(int val) {
 
 	if (game_mode) {
@@ -1504,7 +1528,10 @@ void player_state::switch_weapon(int val, int verbose) {
 	}
 	do {
 		weapon = (weapon+NUM_WEAPONS+val)%NUM_WEAPONS;
-		if (!enable_translocator && weapon == W_XLOCATOR) continue; // translocator disabled
+		if (weapon == W_XLOCATOR) {
+			if (enable_translocator) break; // always selectable, even if no ammo
+			continue; // translocator disabled (Note: check is probably unnecessary because ammo will be 0)
+		}
 	} while (!can_fire_weapon());
 
 	if (verbose) {print_weapon(weapon);}
@@ -1543,16 +1570,19 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		camera_reset = 1;
 		return;
 	}
-	if (weapon != W_UNARMED && !can_fire_weapon()) {
-		if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE && weapon != W_RAPTOR && weapon != W_XLOCATOR) { // this test is questionable
-			switch_weapon(1, 1);
+	if (weapon != W_UNARMED && !can_fire_weapon()) { // can't fire
+		if (weapon == W_XLOCATOR) { // FIXME: only works for player, what about smileys?
+			if (get_prev_fire_time_in_ticks() > (int)weapons[weapon].fire_delay) {try_use_translocator(CAMERA_ID);}
+		}
+		else if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE && weapon != W_RAPTOR) { // this test is questionable
+			switch_weapon(1, 1); // auto-switch to a weapon that can be fired
 			if (weapon == W_BBBAT)   switch_weapon( 1, 1);
 			if (weapon == W_UNARMED) switch_weapon(-1, 1);
 			if (game_mode == 2 && weapon == W_BBBAT) switch_weapon(1, 1);
 			return; // no weapon/out of ammo
 		}
 	}
-	else {
+	else { // can fire
 		verify_wmode();
 		bool const fmode2(wmode & 1);
 		int const psize((int)ceil(plasma_size));
@@ -1560,7 +1590,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		int const status(fire_projectile(camera, cview_dir, CAMERA_ID, chosen));
 
 		if (status == 2 && weapon == W_SEEK_D && fmode2) { // follow the seek and destroy
-			if (chosen >= 0) obj_groups[coll_id[SEEK_D]].get_obj(chosen).flags |= CAMERA_VIEW;
+			if (chosen >= 0) {obj_groups[coll_id[SEEK_D]].get_obj(chosen).flags |= CAMERA_VIEW;}
 			orig_camera  = camera_origin; // camera is actually at the SEEK_D location, not quite right, but interesting
 			orig_cdir    = cview_dir;
 			camera_reset = 0;

@@ -642,6 +642,7 @@ int get_ammo_or_obj(int wid);
 int wid_need_weapon(int wid);
 void draw_teleporters();
 bool maybe_teleport_object(point &opos, float oradius, int player_id);
+void teleport_object(point &opos, point const &src_pos, point const &dest_pos, float oradius, int player_id);
 void player_teleported(point const &pos, int player_id);
 
 // function prototypes - explosion
