@@ -93,7 +93,7 @@ weapon_t const weapons[NUM_WEAPONS+2] = {
 	weapon_t(0, 1, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, CBLADE_EXT, 0.00, "Carnage Blade"),
 	weapon_t(0, 0, 1, 1, 60,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  2.8,  0.00, "Gasser"          ),
 	weapon_t(1, 0, 1, 1, 25,  400, RAPT_PROJ,14,  1,  1,   1.2,  3.2, 220.0,  0.35, 0.025, 0.0,  6.0,  0.05, "Raptor"          ), // Note: only self damage in primary fire mode (not freeze)
-	weapon_t(0, 1, 0, 1, 1,   1,   XLOCATOR, 75,  1,  1,   2.0,  4.0, 0.0,    0.0,  0.0,   0.0,  0.0,  0.00, "Translocator"    ),
+	weapon_t(0, 1, 0, 1, 1,   1,   XLOCATOR, 20,  1,  1,   2.0,  4.0, 0.0,    0.0,  0.0,   0.0,  0.0,  0.03, "Translocator"    ),
 	/* non-selectable */
 	weapon_t(1, 0, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.6,  1.6,  0.04, "Cluster Grenade" ),
 	weapon_t(0, 1, 1, 1, 1,   10,  SAWBLADE, CBFD,1,  1,   2.0,  4.0, 0.0,    0.0,  0.01,  0.0,  0.0,  0.03, "Saw Blade")
@@ -153,7 +153,7 @@ void gen_rubble(int type, int num, point const &pos, int shooter, float const p[
 void add_damage_to_smiley(vector3d const &dir, float size, int smiley_id, int type);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader);
 void do_cblade_damage_and_update_pos(point &pos, int shooter);
-
+void remove_player_translocator(int player_id);
 
 #endif
 

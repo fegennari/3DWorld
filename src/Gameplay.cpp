@@ -1466,15 +1466,24 @@ void do_area_effect_damage(point const &pos, float effect_radius, float damage, 
 
 
 void player_teleported(point const &pos, int player_id) { // check for telefrags
-	do_area_effect_damage(pos, object_types[SMILEY].radius, 10000, -1, player_id, TELEPORTER);
+	do_area_effect_damage(pos, 2.0*object_types[SMILEY].radius, 10000, -1, player_id, TELEPORTER);
 }
 
+void remove_player_translocator(int player_id) {
+
+	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);
+	if (!objg.enabled) return; // disabled, do nothing
+
+	for (unsigned i = 0; i < objg.end_id; ++i) {
+		dwobject &obj(objg.get_obj(i));
+		if (!obj.disabled() && obj.source == player_id) {obj.status = OBJ_STAT_BAD; return;}
+	}
+}
 
 bool try_use_translocator(int player_id) {
 
 	// TODO/FIXME:
 	// * Draw weapon for both modes
-	// * Sticks to player on shallow throw
 	assert(sstates != NULL); // shouldn't get here in this case
 	assert(player_id >= CAMERA_ID && player_id < num_smileys);
 	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);

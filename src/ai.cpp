@@ -1424,6 +1424,7 @@ void init_sstate(int id, bool w_start) {
 	for (int i = CAMERA_ID; i < num_smileys; ++i) {
 		if (sstates[i].target_visible == 1 && sstates[i].target == id) {sstates[i].target_visible = 0;}
 	}
+	remove_player_translocator(id);
 }
 
 
