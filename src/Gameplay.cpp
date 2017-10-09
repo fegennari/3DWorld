@@ -966,6 +966,17 @@ bool skull_collision(int index, int obj_index, vector3d const &velocity, point c
 }
 
 bool translocator_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+
+	if (type == CAMERA || type == SMILEY) {
+		int const player_id((type == CAMERA) ? CAMERA_ID : obj_index);
+		dwobject const &obj(obj_groups[coll_id[XLOCATOR]].get_obj(obj_index));
+		
+		if (obj.enabled() && obj.source == player_id) {
+			bool const picked_up(pickup_player_translator(player_id));
+			assert(picked_up);
+			return 1;
+		}
+	}
 	pushable_collision(index, position, 20000.0, type, XLOCATOR);
 	return 1;
 }
@@ -1469,21 +1480,39 @@ void player_teleported(point const &pos, int player_id) { // check for telefrags
 	do_area_effect_damage(pos, 2.0*object_types[SMILEY].radius, 10000, -1, player_id, TELEPORTER);
 }
 
-void remove_player_translocator(int player_id) {
+bool remove_player_translocator(int player_id) {
 
 	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);
-	if (!objg.enabled) return; // disabled, do nothing
+	if (!objg.enabled) return 0; // disabled, do nothing
 
 	for (unsigned i = 0; i < objg.end_id; ++i) {
 		dwobject &obj(objg.get_obj(i));
-		if (!obj.disabled() && obj.source == player_id) {obj.status = OBJ_STAT_BAD; return;}
+		if (!obj.disabled() && obj.source == player_id) {obj.status = OBJ_STAT_BAD; return 1;}
 	}
+	return 0;
+}
+
+bool pickup_player_translator(int player_id) {
+
+	assert(sstates != NULL); // shouldn't get here in this case
+	assert(player_id >= CAMERA_ID && player_id < num_smileys);
+	if (!remove_player_translocator(player_id)) return 0;
+	player_state &sstate(sstates[player_id]);
+	sstate.ticks_since_fired = tfticks; // update fire time to avoid spurious refire
+	assert(sstate.p_ammo[W_XLOCATOR] == 0);
+	sstate.p_ammo[W_XLOCATOR] = 1; // pickup
+	gen_sound(SOUND_ITEM, get_sstate_pos(player_id), 1.0);
+	return 1;
+}
+
+void translocator_death(int player_id) {
+	smiley_collision(player_id, player_id, zero_vector, get_sstate_pos(player_id), 10000, XLOCATOR_DEATH);
 }
 
 bool try_use_translocator(int player_id) {
 
 	// TODO/FIXME:
-	// * Draw weapon for both modes
+	// * Smileys shoot enemy translocator
 	assert(sstates != NULL); // shouldn't get here in this case
 	assert(player_id >= CAMERA_ID && player_id < num_smileys);
 	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);
@@ -1498,13 +1527,14 @@ bool try_use_translocator(int player_id) {
 		dwobject &obj(objg.get_obj(i));
 		if (obj.disabled() || obj.source != player_id) continue; // disabled, or wrong player's translocator
 		obj.status = OBJ_STAT_BAD; // remove translocator
+		remove_coll_object(obj.coll_id);
 		assert(sstate.p_ammo[W_XLOCATOR] == 0);
 		sstate.p_ammo[W_XLOCATOR] = 1; // add translocator back into player's inventory for reuse
 		teleport_object(player_pos, player_pos, (obj.pos + vector3d(0, 0, delta_h)), CAMERA_RADIUS, player_id); // teleport the player
 		if (is_camera) {camera_last_pos = surface_pos = (player_pos - vector3d(0, 0, camera_zh));} // update surface_pos and last_pos as well (actually moves the player/camera)
 		return 1; // success
 	} // for i
-	smiley_collision(player_id, player_id, zero_vector, player_pos, 10000, XLOCATOR_DEATH); // no translocator = death
+	translocator_death(player_id); // no translocator = death
 	return 0; // not found
 }
 
@@ -1574,7 +1604,10 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	}
 	if (weapon != W_UNARMED && !can_fire_weapon()) { // can't fire
 		if (weapon == W_XLOCATOR) { // FIXME: only works for player, what about smileys?
-			if (get_prev_fire_time_in_ticks() > (int)weapons[weapon].fire_delay) {try_use_translocator(CAMERA_ID);}
+			if (get_prev_fire_time_in_ticks() > (int)weapons[weapon].fire_delay) {
+				if (wmode&1) {if (!pickup_player_translator(CAMERA_ID)) {translocator_death(CAMERA_ID);}} // recall
+				else {try_use_translocator(CAMERA_ID);} // use
+			}
 		}
 		else if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE && weapon != W_RAPTOR) { // this test is questionable
 			switch_weapon(1, 1); // auto-switch to a weapon that can be fired

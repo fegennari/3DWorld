@@ -512,7 +512,7 @@ void init_objects() {
 	object_types[XLOCATOR].gravity         = 1.0;
 	object_types[XLOCATOR].radius          = 0.02;
 	object_types[XLOCATOR].lifetime        = 1000000; // nearly infinite
-	object_types[XLOCATOR].density         = 1.5;
+	object_types[XLOCATOR].density         = 2.0;
 	object_types[XLOCATOR].elasticity      = 0.25;
 	object_types[XLOCATOR].health          = 100.0;
 	object_types[XLOCATOR].color           = LT_GRAY;
