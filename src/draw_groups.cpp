@@ -1387,13 +1387,15 @@ void draw_translocator(point const &pos, float radius, int ndiv, int source, sha
 	fgPopMatrix();
 
 	// draw colored top
-	shader.set_cur_color(get_smiley_team_color(source));
+	shader.set_cur_color(BLACK);
+	shader.set_color_e(get_smiley_team_color(source));
 	set_obj_specular(object_types[XLOCATOR].flags, brightness, shader);
 	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(0.2*radius);
 	draw_sphere_vbo_raw(ndiv, 0);
 	fgPopMatrix();
+	shader.clear_color_e();
 }
 
 

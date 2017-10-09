@@ -31,6 +31,7 @@ extern player_state *sstates;
 void set_emissive_only(colorRGBA const &color, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_plasmaball(point const &pos0, int shooter, shader_t &shader);
+void draw_translocator(point const &pos, float radius, int ndiv, int source, shader_t &shader);
 
 
 void beam3d::draw(line_tquad_draw_t &drawer) const {
@@ -372,11 +373,28 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 		case W_XLOCATOR:
 			radius = 0.4*object_types[oid].radius;
-			set_silver_material(shader, alpha);
 			translate_to(v_trans);
-			fgScale(1.6, 1.6, 1.0); // short and fat
-			draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
-			shader.clear_specular();
+			rotate_to_dir(dir, 90.0, 1.0); // cancel out rotation with camera
+			fgRotate(90.0, 1.0, 0.0, 0.0); // make it vertical
+
+			if (sstates != nullptr && sstates[shooter].p_ammo[W_XLOCATOR] > 0) { // have the translocator
+				draw_translocator(all_zeros, radius, N_SPHERE_DIV, shooter, shader);
+			}
+			else { // don't have the translocator
+				shader.set_cur_color(GRAY_BLACK);
+				draw_cube(all_zeros, 1.6*radius, 1.0*radius, 2.4*radius, 0); // untextured remote control box
+				shader.set_cur_color(colorRGBA(1.0, 0.15, 0.0, 1.0)); // reddish orange
+				draw_sphere_vbo(vector3d(0.0, -0.9*radius, 0.5*radius), 0.48*radius, 32, 0); // fire button
+				shader.set_cur_color(RED);
+				shader.set_color_e(RED);
+				draw_sphere_vbo(vector3d(0.5*radius, -0.95*radius, 1.2*radius), 0.1*radius, 24, 0); // power light
+				shader.clear_color_e();
+				set_silver_material(shader, alpha);
+				fgTranslate(0.0, 0.0, 1.4*radius);
+				draw_cylinder(2.0*radius, 0.12*radius, 0.12*radius, 24, 0); // antenna
+				draw_sphere_vbo(vector3d(0.0, 0.0, 2.0*radius), 0.2*radius, 24, 0);
+				shader.clear_specular();
+			}
 			break;
 
 		case W_STAR5:
@@ -386,7 +404,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			fgRotate(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
 			shader.set_cur_color(colorRGBA(object_types[oid].color, alpha));
 			shader.set_specular(0.8, 40.0);
-			draw_star(zero_vector, plus_z, zero_vector, radius, 0.0, 0); // Note: +z may not be the correct normal?
+			draw_star(all_zeros, plus_z, zero_vector, radius, 0.0, 0); // Note: +z may not be the correct normal?
 			shader.clear_specular();
 			break;
 
