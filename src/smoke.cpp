@@ -5,6 +5,7 @@
 #include "mesh.h"
 #include "lightmap.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 bool const DYNAMIC_SMOKE     = 1; // looks cool
@@ -400,6 +401,7 @@ class ground_fire_manager_t {
 		}
 	};
 	vector<elem_t> grid;
+	bool has_fire;
 
 	void burn_elem(int x, int y, float val) {
 		assert(val >= 0.0); // not negative
@@ -407,6 +409,8 @@ class ground_fire_manager_t {
 	}
 	bool empty() const {return grid.empty();}
 public:
+	ground_fire_manager_t() : has_fire(0) {}
+
 	static float get_burn_rate() {
 		float const v(1.0 - 0.75*rain_wetness); // 0.25 to 1.0
 		if (is_rain_enabled()) return 0.5*v;
@@ -414,6 +418,7 @@ public:
 		return v;
 	}
 	void init() {
+		return; // FIXME: not yet enabled
 		grid.resize(XY_MULT_SIZE);
 		rand_gen_t rgen;
 
@@ -428,13 +433,15 @@ public:
 		}
 	}
 	void next_frame() {
-		if (empty()) return; // not inited
+		if (empty() || !has_fire || !animate2) return; // not inited or no fire
+		//timer_t timer("Ground Fire Update");
 		assert(grid.size() == XY_MULT_SIZE);
 		int const dirs[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}}; // W, E, S, N
 		int const dx(dirs[frame_counter&3][0]), dy(dirs[frame_counter&3][1]);
 		vector3d const dir(dx, dy, 0.0);
 		float const burn_rate(get_burn_rate());
 		float const spread_rate(burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
+		has_fire = 0; // reset for next frame
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -442,16 +449,19 @@ public:
 				elem.next_frame(burn_rate);
 				if (spread_rate <= 0.0 || elem.burn_amt == 0.0) continue;
 				burn_elem((x + dx), (y + dy), elem.burn_amt*spread_rate); // try to burn a neighbor
-			}
-		}
+				has_fire = 1;
+			} // for x
+		} // for y
 	}
-	void add_fire(point const &pos, float val) {
-		if (empty()) return; // not inited
+	void add_fire(point const &pos, float val) { // val is around 0.01 for fires
+		if (empty() || !animate2) return; // not inited
 		if (val == 0.0) return;
 		burn_elem(get_xpos(pos.x), get_ypos(pos.y), val*get_burn_rate());
+		has_fire = 1;
 	}
 	void draw() const {
-		if (empty()) return; // not inited
+		if (empty() || !has_fire) return; // not inited or no fire
+		shader_t shader;
 		// FIXME: shader setup
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {

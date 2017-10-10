@@ -2181,6 +2181,7 @@ int main(int argc, char** argv) {
 		init_lights();
 		gen_scene(1, (world_mode == WMODE_GROUND), 0, 0, 0);
 		gen_snow_coverage();
+		init_ground_fire();
 		create_object_groups();
 		init_game_state();
 

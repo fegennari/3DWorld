@@ -514,6 +514,7 @@ void setup_object_render_data() {
 	calc_cur_ambient_diffuse();
 	create_dlight_volumes();
 	distribute_smoke();
+	next_frame_ground_fire();
 	if (TIMETEST) {PRINT_TIME("1 Distribute Smoke");}
 	upload_smoke_indir_texture();
 	if (TIMETEST) {PRINT_TIME("2 Upload Smoke");}
@@ -1574,6 +1575,7 @@ void draw_smoke_and_fires() {
 	s.end_shader();
 	set_multisample(1);
 	free_texture(depth_tid);
+	draw_ground_fires();
 }
 
 
