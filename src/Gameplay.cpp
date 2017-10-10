@@ -1511,8 +1511,7 @@ void translocator_death(int player_id) {
 
 bool try_use_translocator(int player_id) {
 
-	// TODO/FIXME:
-	// * Smileys shoot enemy translocator
+	// TODO: Smileys shoot enemy translocator
 	assert(sstates != NULL); // shouldn't get here in this case
 	assert(player_id >= CAMERA_ID && player_id < num_smileys);
 	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);

@@ -347,6 +347,24 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 }
 
 
+int find_nearest_enemy_translocator(int smiley_id, pos_dir_up const &pdu) { // unused
+
+	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);
+	if (!objg.enabled) return -1; // disabled, return none
+	float dmin_sq(0.0);
+	int min_ix(-1);
+
+	for (unsigned i = 0; i < objg.end_id; ++i) {
+		dwobject &obj(objg.get_obj(i));
+		if (obj.disabled() || same_team(smiley_id, obj.source)) continue;
+		float const dist_sq(p2p_dist_sq(pdu.pos, obj.pos));
+		if (dmin_sq > 0.0 && dist_sq > dmin_sq) continue;
+		if (sphere_in_view(pdu, obj.pos, object_types[SMILEY].radius, 5)) {dmin_sq = dist_sq; min_ix = i;}
+	}
+	return min_ix;
+}
+
+
 // i = cand waypoint; curw = prev cand waypoint; sstates[smiley_id].last_waypoint is prev waypoint
 void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
 	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next, float max_dist_sq)
