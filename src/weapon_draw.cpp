@@ -384,10 +384,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.set_cur_color(GRAY_BLACK);
 				draw_cube(all_zeros, 1.6*radius, 1.0*radius, 2.4*radius, 0); // untextured remote control box
 				shader.set_cur_color(colorRGBA(1.0, 0.15, 0.0, 1.0)); // reddish orange
-				draw_sphere_vbo(vector3d(0.0, -0.9*radius, 0.5*radius), 0.48*radius, 32, 0); // fire button
+				draw_sphere_vbo(vector3d(0.0, -0.4*radius, 0.5*radius), 0.48*radius, 32, 0); // fire button
 				shader.set_cur_color(RED);
 				shader.set_color_e(RED);
-				draw_sphere_vbo(vector3d(0.5*radius, -0.95*radius, 1.2*radius), 0.1*radius, 24, 0); // power light
+				draw_sphere_vbo(vector3d(0.5*radius, -0.5*radius, 1.05*radius), 0.1*radius, 24, 0); // power light
 				shader.clear_color_e();
 				set_silver_material(shader, alpha);
 				fgTranslate(0.0, 0.0, 1.4*radius);
