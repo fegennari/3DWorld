@@ -174,13 +174,16 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	int const last_weapon(weapon);
 	
 	if (weapon == W_UNARMED || !can_fire_weapon()) {
-		check_switch_weapon(smiley_id); // out of ammo, switch weapons
-		if (weapon != last_weapon) fire_frame = 0;
+		if (weapon == W_XLOCATOR) {use_translocator(smiley_id); return;}
+		else {
+			check_switch_weapon(smiley_id); // out of ammo, switch weapons
+			if (weapon != last_weapon) {fire_frame = 0;}
+		}
 	}
 	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && (weapons[weapon].self_damage & (1<<(wmode&1)))) { // can damage self
 		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
 			check_switch_weapon(smiley_id); // switch weapons to avoid suicide
-			if (weapon != last_weapon) fire_frame = 0;
+			if (weapon != last_weapon) {fire_frame = 0;}
 		}
 	}
 	assert(!no_weap_or_ammo());
@@ -277,7 +280,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	int chosen;
 	status = fire_projectile(pos, orient, smiley_id, chosen);
 
-	if (status != 0 && !UNLIMITED_WEAPONS && !no_weap_or_ammo() && w.need_ammo) {
+	if (status != 0 && (!UNLIMITED_WEAPONS || weapon == W_XLOCATOR) && !no_weap_or_ammo() && w.need_ammo) {
 		ammo -= (weapon == W_GRENADE && (wmode&1)) ? 3 : 1; // check for cluster grenade
 		assert(ammo >= 0);
 		if (ammo == 0) {fire_frame = 0;} // could switch weapons
@@ -1242,9 +1245,9 @@ void player_state::check_switch_weapon(int smiley_id) { // called by smileys
 	unsigned chosen_weap(W_UNARMED);
 
 	for (unsigned i = 1; i < NUM_WEAPONS; ++i) {
-		if (i == W_XLOCATOR) continue; // translocator not used by smileys
+		//if (i == W_XLOCATOR) continue; // translocator not used by smileys
 		weapon = i;
-		if (no_weap_or_ammo()) continue;
+		if ((weapon == W_XLOCATOR) ? !enable_translocator : no_weap_or_ammo()) continue;
 		float weight(player_rgen.rand_float());
 		if (!weapons[weapon].use_underwater && is_underwater(pos)) {weight += 0.5;}
 		float const range(weapon_range(0));

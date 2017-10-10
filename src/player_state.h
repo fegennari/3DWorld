@@ -241,6 +241,7 @@ struct player_state { // size = big
 	int target_in_range(point const &pos) const;
 	void smiley_action(int smiley_id);
 	void next_frame();
+	void use_translocator(int player_id);
 
 	// camera members
 	void gamemode_fire_weapon();

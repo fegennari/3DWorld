@@ -1578,6 +1578,13 @@ int player_state::get_prev_fire_time_in_ticks() const {return int(get_fspeed_sca
 
 bool player_state::can_fire_weapon() const {return ((UNLIMITED_WEAPONS && weapon != W_XLOCATOR) || !no_weap_or_ammo());}
 
+void player_state::use_translocator(int player_id) {
+	if (get_prev_fire_time_in_ticks() > (int)weapons[weapon].fire_delay) {
+		if (wmode&1) {if (!pickup_player_translator(player_id)) {translocator_death(player_id);}} // recall
+		else {try_use_translocator(player_id);} // use
+	}
+}
+
 void player_state::gamemode_fire_weapon() { // camera/player fire
 
 	static int fire_frame(0);
@@ -1603,12 +1610,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		return;
 	}
 	if (weapon != W_UNARMED && !can_fire_weapon()) { // can't fire
-		if (weapon == W_XLOCATOR) { // FIXME: only works for player, what about smileys?
-			if (get_prev_fire_time_in_ticks() > (int)weapons[weapon].fire_delay) {
-				if (wmode&1) {if (!pickup_player_translator(CAMERA_ID)) {translocator_death(CAMERA_ID);}} // recall
-				else {try_use_translocator(CAMERA_ID);} // use
-			}
-		}
+		if (weapon == W_XLOCATOR) {use_translocator(CAMERA_ID);}
 		else if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE && weapon != W_RAPTOR) { // this test is questionable
 			switch_weapon(1, 1); // auto-switch to a weapon that can be fired
 			if (weapon == W_BBBAT)   switch_weapon( 1, 1);
@@ -1927,7 +1929,9 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_CGRENADE: gen_sound(SOUND_SWING,  fpos, 0.6, 1.2); break;
 	case W_STAR5:    gen_sound(SOUND_SWING,  fpos, 0.3, 2.0); break;
 	case W_LANDMINE: gen_sound(SOUND_ALERT,  fpos, 0.3, 2.5); break;
-	case W_XLOCATOR: gen_sound(SOUND_BOING,  fpos, 1.0, 1.5); break;
+	case W_XLOCATOR: gen_sound(SOUND_BOING,  fpos, 1.0, 1.5);
+		fpos += dir*(0.25*radius); // fire from in front of shooter
+		break;
 	}
 	if (type < 0) return 3;
 	int const cid(coll_id[type]);
