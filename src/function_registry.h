@@ -739,7 +739,7 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 bool upload_smoke_indir_texture();
 void init_ground_fire();
 void next_frame_ground_fire();
-void add_ground_fire(point const &pos, float val);
+void add_ground_fire(point const &pos, float radius, float val);
 void draw_ground_fires();
 
 // function protoptypes - light_source

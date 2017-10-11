@@ -6,6 +6,7 @@
 #include "lightmap.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 bool const DYNAMIC_SMOKE     = 1; // looks cool
@@ -32,6 +33,7 @@ extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
 extern int animate2, display_mode, scrolling, game_mode, frame_counter;
 extern float czmin0, rain_wetness, fticks;
+extern double tfticks;
 extern vector3d wind;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
@@ -385,17 +387,18 @@ class ground_fire_manager_t {
 		elem_t() : hp(0.0), fuel(0.0), burn_amt(0.0) {}
 		
 		bool burn(float val) {
+			//cout << TXT(val) << TXT(fuel) << TXT(hp) << TXT(burn_amt) << endl;
 			if (fuel == 0.0) return 0; // no fuel, no burning
 			if (hp >= val) {hp -= val; return 0;} // not yet burning
 			val -= hp; // remove remaining HP
-			burn_amt += val;
+			burn_amt = min(1.0f, (burn_amt + 0.1f*val));
 			return 1;
 		}
 		void next_frame(float burn_rate) {
 			if (burn_amt == 0.0) return; // not burning
 			float const prev_amt(burn_amt);
-			burn_amt = min(1.0, (burn_amt + 0.01*fticks*burn_rate)); // increase burn level, max is 1.0
-			float consumed(0.5*fticks*(burn_amt + prev_amt)); // average of prev/next frames
+			burn_amt = min(1.0, (burn_amt + 0.001*fticks*burn_rate)); // increase burn level, max is 1.0
+			float consumed(0.1*fticks*(burn_amt + prev_amt)); // average of prev/next frames
 			if (consumed >= fuel) {fuel = 0.0; burn_amt = 0.0; return;} // all fuel consumed
 			fuel -= consumed; // consume fuel
 		}
@@ -405,7 +408,7 @@ class ground_fire_manager_t {
 
 	void burn_elem(int x, int y, float val) {
 		assert(val >= 0.0); // not negative
-		if (val > 0.0 && !point_outside_mesh(x, y)) {grid[y*MESH_Y_SIZE + x].burn(val);}
+		if (val > 0.0 && !point_outside_mesh(x, y) && !mesh_is_underwater(x, y)) {grid[y*MESH_X_SIZE + x].burn(val);}
 	}
 	bool empty() const {return grid.empty();}
 public:
@@ -418,13 +421,13 @@ public:
 		return v;
 	}
 	void init() {
-		return; // FIXME: not yet enabled
+		//return; // FIXME: not yet enabled
 		grid.resize(XY_MULT_SIZE);
 		rand_gen_t rgen;
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				elem_t &elem(grid[y*MESH_Y_SIZE + x]);
+				elem_t &elem(grid[y*MESH_X_SIZE + x]);
 				float const grass_density(get_grass_density(x, y)); // Note: should return 0 underwater and on disabled mesh areas
 				if (grass_density == 0) continue; // leave HP and fuel at 0
 				elem.fuel = 100.0*grass_density;
@@ -440,36 +443,74 @@ public:
 		int const dx(dirs[frame_counter&3][0]), dy(dirs[frame_counter&3][1]);
 		vector3d const dir(dx, dy, 0.0);
 		float const burn_rate(get_burn_rate());
-		float const spread_rate(burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
+		float const spread_rate(0.5*burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
+		rand_gen_t rgen;
+		rgen.set_state(frame_counter, 123);
 		has_fire = 0; // reset for next frame
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				elem_t &elem(grid[y*MESH_Y_SIZE + x]);
+				elem_t &elem(grid[y*MESH_X_SIZE + x]);
 				elem.next_frame(burn_rate);
+				has_fire |= (elem.burn_amt > 0.0);
 				if (spread_rate <= 0.0 || elem.burn_amt == 0.0) continue;
+				// Note: assumes the mesh is continuous and connected so that fire can spread in X and Y
 				burn_elem((x + dx), (y + dy), elem.burn_amt*spread_rate); // try to burn a neighbor
-				has_fire = 1;
+				if ((rgen.rand()&31) != 0) continue; // only update every 31 frames
+				point const pos((get_xval(x) + 0.25*DX_VAL*rgen.signed_rand_float()), (get_yval(y) + 0.25*DY_VAL*rgen.signed_rand_float()), mesh_height[y][x]);
+				modify_grass_at(pos, HALF_DXY, 0, 1);
 			} // for x
 		} // for y
 	}
-	void add_fire(point const &pos, float val) { // val is around 0.01 for fires
+	void add_fire(point const &pos, float radius, float val) { // val is around 0.01 for fires
 		if (empty() || !animate2) return; // not inited
-		if (val == 0.0) return;
-		burn_elem(get_xpos(pos.x), get_ypos(pos.y), val*get_burn_rate());
+		if (val == 0.0 || radius == 0.0) return; // no fire
+		assert(radius > 0.0);
+		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
+		if (abs(zval - pos.z) > 2.0*radius) return; // too far above/below the mesh
+		burn_elem(get_xpos(pos.x), get_ypos(pos.y), 100.0*val*get_burn_rate());
 		has_fire = 1;
 	}
 	void draw() const {
 		if (empty() || !has_fire) return; // not inited or no fire
 		shader_t shader;
-		// FIXME: shader setup
+		setup_smoke_shaders(shader, 0.01, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0); // no rain, snow, or reflections - outdoor only
+		shader.add_uniform_float("emissive_scale", 1.0); // make colors emissive
+		enable_blend();
+		quad_batch_draw qbd;
+		select_texture(FIRE_TEX);
+		set_additive_blend_mode();
+		glDepthMask(GL_FALSE);
+		rand_gen_t rgen;
+		int const tick_ix(tfticks);
+		colorRGBA const color(1.0, 0.4, 0.0, 0.45); // red tint, partially transparent
+
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				float const burn_amt(grid[y*MESH_Y_SIZE + x].burn_amt);
+				float const burn_amt(grid[y*MESH_X_SIZE + x].burn_amt);
 				if (burn_amt == 0.0) continue; // not burning
-				// FIXME: WRITE
-			}
-		}
+				point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
+				rgen.set_state(x, y);
+				rgen.rand_mix();
+				unsigned const num((rgen.rand()%int(1.0 + 5.5*burn_amt)) + 1);
+
+				for (unsigned n = 0; n < num; ++n) {
+					int const ix(rgen.rand());
+					float const radius(burn_amt*HALF_DXY*rgen.rand_uniform(0.8, 1.3));
+					point pos2(pos);
+					pos2.x += 0.5*DX_VAL*rgen.signed_rand_float();
+					pos2.y += 0.5*DY_VAL*rgen.signed_rand_float();
+					pos2.z  = interpolate_mesh_zval(pos2.x, pos2.y, 0.0, 0, 1) + 0.5*radius;
+					qbd.add_animated_billboard(pos2, get_camera_pos(), up_vector, color, radius, radius, ((tick_ix + ix)&15)/16.0);
+				}
+			} // for x
+		} // for y
+		qbd.draw();
+		glDepthMask(GL_TRUE);
+		set_std_blend_mode();
+		disable_blend();
+		shader.add_uniform_float("emissive_scale", 0.0); // reset
+		shader.end_shader();
 	}
 };
 
@@ -477,5 +518,5 @@ ground_fire_manager_t ground_fire_manager;
 
 void init_ground_fire() {ground_fire_manager.init();}
 void next_frame_ground_fire() {ground_fire_manager.next_frame();}
-void add_ground_fire(point const &pos, float val) {ground_fire_manager.add_fire(pos, val);}
+void add_ground_fire(point const &pos, float radius, float val) {ground_fire_manager.add_fire(pos, radius, val);}
 void draw_ground_fires() {ground_fire_manager.draw();}

@@ -1542,6 +1542,7 @@ void setup_depth_trans_texture(shader_t &s, unsigned &depth_tid) {
 
 void draw_smoke_and_fires() {
 
+	draw_ground_fires();
 	bool const use_depth_trans = 1;
 	bool const have_part_clouds(part_clouds.any_active());
 	if (!have_part_clouds && !fires.any_active() && !have_explosions()) return; // nothing to draw
@@ -1575,7 +1576,6 @@ void draw_smoke_and_fires() {
 	s.end_shader();
 	set_multisample(1);
 	free_texture(depth_tid);
-	draw_ground_fires();
 }
 
 
