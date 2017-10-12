@@ -2710,6 +2710,8 @@ void player_state::update_sstate_game_frame(int i) {
 	obj_type const &objt(object_types[SMILEY]);
 	point const pos(get_sstate_pos(i));
 	bool const obj_enabled((i == CAMERA_ID && camera_mode == 1) || (i != CAMERA_ID && !objg.get_obj(i).disabled()));
+	float const fire_intensity(get_ground_fire_intensity(pos, objt.radius));
+	if (fire_intensity > 0.0) {smiley_collision(i, NO_SOURCE, zero_vector, pos, 20.0*fticks*fire_intensity, BURNED);}
 
 	if (temperature < 0.75*objt.min_t) {
 		float const damage(1.0*fticks/max(0.001f, (objt.min_t - temperature)/objt.min_t));
@@ -2718,7 +2720,7 @@ void player_state::update_sstate_game_frame(int i) {
 	if (temperature > 0.75*objt.max_t) {
 		float const damage(2.0*fticks/max(0.001f, (objt.max_t - temperature)/objt.max_t));
 		smiley_collision(i, NO_SOURCE, zero_vector, pos, damage, BURNED);
-		if (obj_enabled && (rand()&3) == 0) gen_smoke(pos);
+		if (obj_enabled && (rand()&3) == 0) {gen_smoke(pos);}
 	}
 	if (atmosphere < 0.2) {
 		float const damage(1.0*fticks/max(atmosphere, 0.01f));

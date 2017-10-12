@@ -31,9 +31,9 @@ vector<unsigned char> smoke_tex_data; // several MB
 
 extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
-extern int animate2, display_mode, scrolling, game_mode, frame_counter;
-extern float czmin0, rain_wetness, fticks;
-extern double tfticks;
+extern int animate2, display_mode, scrolling, game_mode, frame_counter, precip_mode;
+extern float czmin0, rain_wetness, fticks, dist_to_fire_sq;
+extern double tfticks, camera_zh;
 extern vector3d wind;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
@@ -381,19 +381,6 @@ bool upload_smoke_indir_texture() {
 
 // fire spreading
 
-// TODO:
-// Burn area jitter
-// VFC
-// Burn mesh
-// Grass texture to dirt texture
-// Damage players
-// Damage objects
-// Burning sound
-// Heat effect
-// Fade fire out when fuel exhausted
-// Rain puts fires out
-// Smoke?
-
 class ground_fire_manager_t {
 	struct elem_t {
 		float hp, fuel, burn_amt;
@@ -409,10 +396,11 @@ class ground_fire_manager_t {
 		}
 		void next_frame(float burn_rate) {
 			if (burn_amt == 0.0) return; // not burning
+			if (fuel == 0.0 || precip_mode != 0) {burn_amt = max(0.0, (burn_amt - 0.015*fticks)); return;} // no fuel or raining/snowing, slowly die down
 			float const prev_amt(burn_amt);
 			burn_amt = min(1.0, (burn_amt + 0.001*fticks*burn_rate)); // increase burn level, max is 1.0
 			float consumed(0.1*fticks*(burn_amt + prev_amt)); // average of prev/next frames
-			if (consumed >= fuel) {fuel = 0.0; burn_amt = 0.0; return;} // all fuel consumed
+			if (consumed >= fuel) {fuel = 0.0; return;} // all fuel consumed
 			fuel -= consumed; // consume fuel
 		}
 	};
@@ -428,13 +416,14 @@ public:
 	ground_fire_manager_t() : has_fire(0) {}
 
 	static float get_burn_rate() {
-		float const v(1.0 - 0.75*rain_wetness); // 0.25 to 1.0
+		if (snow_enabled()) return 0.0;
+		float const v(1.0 - 0.9*rain_wetness); // 0.1 to 1.0
 		if (is_rain_enabled()) return 0.5*v;
 		if (is_snow_enabled()) return 0.5*v;
 		return v;
 	}
 	void init() {
-		//return; // FIXME: not yet enabled
+		if (snow_enabled()) return; // fires don't mix with snow
 		grid.resize(XY_MULT_SIZE);
 		rand_gen_t rgen;
 
@@ -460,8 +449,12 @@ public:
 		rand_gen_t rgen;
 		rgen.set_state(frame_counter, 123);
 		has_fire = 0; // reset for next frame
+		point camera_pos(get_camera_pos());
+		camera_pos.z -= 0.5*camera_zh; // average/center of camera
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			float const yval(get_yval(y));
+
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				elem_t &elem(grid[y*MESH_X_SIZE + x]);
 				elem.next_frame(burn_rate);
@@ -469,9 +462,18 @@ public:
 				if (spread_rate <= 0.0 || elem.burn_amt == 0.0) continue;
 				// Note: assumes the mesh is continuous and connected so that fire can spread in X and Y
 				burn_elem((x + dx), (y + dy), elem.burn_amt*spread_rate); // try to burn a neighbor
-				if ((rgen.rand()&31) != 0) continue; // only update every 31 frames
-				point const pos((get_xval(x) + 0.25*DX_VAL*rgen.signed_rand_float()), (get_yval(y) + 0.25*DY_VAL*rgen.signed_rand_float()), mesh_height[y][x]);
-				modify_grass_at(pos, HALF_DXY, 0, 1);
+				point pos(get_xval(x), yval, mesh_height[y][x]);
+				float const dist_sq(0.25*p2p_dist_sq(camera_pos, pos)); // half distance for this type of fire, for a stronger effect
+				dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
+				int const val(rgen.rand()&31);
+				if (val > 3) continue;
+				pos.x += 0.5*DX_VAL*rgen.signed_rand_float();
+				pos.y += 0.5*DY_VAL*rgen.signed_rand_float();
+				if      (val == 0) {modify_grass_at(pos, HALF_DXY*elem.burn_amt, 0, 1);} // only update every 31 frames
+				//else if (val == 1) {add_color_to_landscape_texture(BLACK, pos.x, pos.y, 0.5*HALF_DXY*elem.burn_amt);}
+				else if (val == 1) {add_crater_to_landscape_texture(pos.x, pos.y, 2.0*HALF_DXY*elem.burn_amt);}
+				else if (val == 2) {surface_damage[y][x] += 0.05*elem.burn_amt;}
+				else if (val == 3 && (rgen.rand()&15) == 0) {gen_smoke(pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.25));}
 			} // for x
 		} // for y
 	}
@@ -480,17 +482,33 @@ public:
 		if (val == 0.0 || radius == 0.0) return; // no fire
 		assert(radius > 0.0);
 		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
-		if (abs(zval - pos.z) > 2.0*radius) return; // too far above/below the mesh
+		if (abs(zval - (pos.z - radius)) > 2.0*radius) return; // too far above/below the mesh
 		burn_elem(get_xpos(pos.x), get_ypos(pos.y), 100.0*val*get_burn_rate());
 		has_fire = 1;
 	}
+	float get_burn_intensity(point const &pos, float radius) const {
+		if (empty() || !has_fire || world_mode != WMODE_GROUND) return 0.0; // not inited or no fire
+		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
+		if (point_outside_mesh(x, y)) return 0.0;
+		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
+		if (abs(zval - (pos.z - radius)) > 2.0*radius) return 0.0; // too far above/below the mesh
+		return grid[y*MESH_X_SIZE + x].burn_amt;
+	}
 	void draw() const {
 		if (empty() || !has_fire) return; // not inited or no fire
+		bool const use_depth_trans = 1;
+		//timer_t timer("Ground Fire Draw");
 		shader_t shader;
-		setup_smoke_shaders(shader, 0.01, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0); // no rain, snow, or reflections - outdoor only
+		setup_smoke_shaders(shader, 0.01, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans, 0, 0, 0); // no rain, snow, or reflections - outdoor only
 		shader.add_uniform_float("emissive_scale", 1.0); // make colors emissive
-		enable_blend();
+		unsigned depth_tid(0);
+
+		if (use_depth_trans) {
+			setup_depth_trans_texture(shader, depth_tid);
+			shader.add_uniform_float("depth_trans_bias", 0.05);
+		}
 		quad_batch_draw qbd;
+		enable_blend();
 		select_texture(FIRE_TEX);
 		set_additive_blend_mode();
 		glDepthMask(GL_FALSE);
@@ -503,7 +521,8 @@ public:
 				float const burn_amt(grid[y*MESH_X_SIZE + x].burn_amt);
 				if (burn_amt == 0.0) continue; // not burning
 				point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
-				rgen.set_state(x, y);
+				if (!camera_pdu.sphere_visible_test(pos, 2.0*HALF_DXY)) continue; // VFC
+				rgen.set_state(845631*x, 667239*y);
 				rgen.rand_mix();
 				unsigned const num((rgen.rand()%int(1.0 + 5.5*burn_amt)) + 1);
 
@@ -524,6 +543,7 @@ public:
 		disable_blend();
 		shader.add_uniform_float("emissive_scale", 0.0); // reset
 		shader.end_shader();
+		free_texture(depth_tid);
 	}
 };
 
@@ -532,4 +552,5 @@ ground_fire_manager_t ground_fire_manager;
 void init_ground_fire() {ground_fire_manager.init();}
 void next_frame_ground_fire() {ground_fire_manager.next_frame();}
 void add_ground_fire(point const &pos, float radius, float val) {ground_fire_manager.add_fire(pos, radius, val);}
+float get_ground_fire_intensity(point const &pos, float radius) {return ground_fire_manager.get_burn_intensity(pos, radius);}
 void draw_ground_fires() {ground_fire_manager.draw();}

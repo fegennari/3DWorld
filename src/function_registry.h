@@ -740,6 +740,7 @@ bool upload_smoke_indir_texture();
 void init_ground_fire();
 void next_frame_ground_fire();
 void add_ground_fire(point const &pos, float radius, float val);
+float get_ground_fire_intensity(point const &pos, float radius);
 void draw_ground_fires();
 
 // function protoptypes - light_source

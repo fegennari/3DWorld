@@ -99,7 +99,8 @@ bool check_for_heat(point const &pos, float radius, float thresh) {
 	for (auto i = fires.begin(); i != fires.end(); ++i) { // check fires
 		if (i->enabled() && dist_less_than(pos, i->pos, (radius + i->radius))) return 1; // "infinitely" hot
 	}
-	return 0; // WRITE
+	if (get_ground_fire_intensity(pos, radius) > 0.0) return 1; // "infinitely" hot
+	return 0;
 }
 
 bool check_for_metal(point const &pos, float radius) {
