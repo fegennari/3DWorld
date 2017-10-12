@@ -381,6 +381,19 @@ bool upload_smoke_indir_texture() {
 
 // fire spreading
 
+// TODO:
+// Burn area jitter
+// VFC
+// Burn mesh
+// Grass texture to dirt texture
+// Damage players
+// Damage objects
+// Burning sound
+// Heat effect
+// Fade fire out when fuel exhausted
+// Rain puts fires out
+// Smoke?
+
 class ground_fire_manager_t {
 	struct elem_t {
 		float hp, fuel, burn_amt;
