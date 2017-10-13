@@ -475,7 +475,7 @@ public:
 				//else if (val == 1) {add_color_to_landscape_texture(BLACK, pos.x, pos.y, 0.5*HALF_DXY*elem.burn_amt);}
 				else if (val == 1 && (rgen.rand()&1) == 0) {add_crater_to_landscape_texture(pos.x, pos.y, 2.0*HALF_DXY*elem.burn_amt);}
 				else if (val == 2) {surface_damage[y][x] += 0.05*elem.burn_amt;}
-				else if (val == 3 && (rgen.rand()&15) == 0) {gen_smoke(pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.25));}
+				else if (val == 3 && (rgen.rand()&15) == 0) {gen_smoke(pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.25), 1);} // no_lighting=1
 			} // for x
 		} // for y
 	}
