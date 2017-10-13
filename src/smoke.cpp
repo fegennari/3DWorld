@@ -466,6 +466,7 @@ public:
 				float const dist_sq(0.25*p2p_dist_sq(camera_pos, pos)); // half distance for this type of fire, for a stronger effect
 				dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
 				int const val(rgen.rand()&31);
+				if (val == 4) {fire_damage_cobjs(x, y);}
 				if (val > 3) continue;
 				pos.x += 0.5*DX_VAL*rgen.signed_rand_float();
 				pos.y += 0.5*DY_VAL*rgen.signed_rand_float();

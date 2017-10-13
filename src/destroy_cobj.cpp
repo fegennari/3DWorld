@@ -499,3 +499,19 @@ int coll_obj::is_anchored() const {
 	return 0;
 }
 
+
+void fire_damage_cobjs(int xpos, int ypos) {
+
+	if (point_outside_mesh(xpos, ypos)) return;
+	vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
+	point const pos(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);
+
+	for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
+		if (*i < 0) continue;
+		coll_obj &cobj(coll_objects.get_cobj(*i));
+		if (cobj.destroy < EXPLODEABLE) continue;
+		if (!cobj.sphere_intersects(pos, HALF_DXY)) continue;
+		destroy_coll_objs(pos, 1000.0, NO_SOURCE, FIRE, HALF_DXY);
+	}
+}
+
