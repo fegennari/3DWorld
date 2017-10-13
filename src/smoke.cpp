@@ -445,7 +445,7 @@ public:
 		int const dx(dirs[frame_counter&3][0]), dy(dirs[frame_counter&3][1]);
 		vector3d const dir(dx, dy, 0.0);
 		float const burn_rate(get_burn_rate());
-		float const spread_rate(0.5*burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
+		float const spread_rate(2.5*fticks*burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
 		rand_gen_t rgen;
 		rgen.set_state(frame_counter, 123);
 		has_fire = 0; // reset for next frame
