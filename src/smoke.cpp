@@ -453,16 +453,17 @@ public:
 		camera_pos.z -= 0.5*camera_zh; // average/center of camera
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			float const yval(get_yval(y));
+			float const yval(get_yval(y) + 0.5*DY_VAL);
 
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				elem_t &elem(grid[y*MESH_X_SIZE + x]);
 				elem.next_frame(burn_rate);
 				has_fire |= (elem.burn_amt > 0.0);
+				//if (elem.fuel > 0.0) {elem.burn_amt = 1.0;} // for perf testing
 				if (spread_rate <= 0.0 || elem.burn_amt == 0.0) continue;
 				// Note: assumes the mesh is continuous and connected so that fire can spread in X and Y
 				burn_elem((x + dx), (y + dy), elem.burn_amt*spread_rate); // try to burn a neighbor
-				point pos(get_xval(x), yval, mesh_height[y][x]);
+				point pos((get_xval(x) + 0.5*DX_VAL), yval, mesh_height[y][x]);
 				float const dist_sq(0.25*p2p_dist_sq(camera_pos, pos)); // half distance for this type of fire, for a stronger effect
 				dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
 				int const val(rgen.rand()&31);
@@ -470,9 +471,9 @@ public:
 				if (val > 3) continue;
 				pos.x += 0.5*DX_VAL*rgen.signed_rand_float();
 				pos.y += 0.5*DY_VAL*rgen.signed_rand_float();
-				if      (val == 0) {modify_grass_at(pos, HALF_DXY*elem.burn_amt, 0, 1);} // only update every 31 frames
+				if      (val == 0) {modify_grass_at(pos, 0.5*HALF_DXY*elem.burn_amt, 0, 2);} // sharp burn, only update every 31 frames
 				//else if (val == 1) {add_color_to_landscape_texture(BLACK, pos.x, pos.y, 0.5*HALF_DXY*elem.burn_amt);}
-				else if (val == 1) {add_crater_to_landscape_texture(pos.x, pos.y, 2.0*HALF_DXY*elem.burn_amt);}
+				else if (val == 1 && (rgen.rand()&1) == 0) {add_crater_to_landscape_texture(pos.x, pos.y, 2.0*HALF_DXY*elem.burn_amt);}
 				else if (val == 2) {surface_damage[y][x] += 0.05*elem.burn_amt;}
 				else if (val == 3 && (rgen.rand()&15) == 0) {gen_smoke(pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.25));}
 			} // for x
@@ -498,7 +499,7 @@ public:
 	void draw() const {
 		if (empty() || !has_fire) return; // not inited or no fire
 		bool const use_depth_trans = 1;
-		//timer_t timer("Ground Fire Draw");
+		//timer_t timer("Ground Fire Draw"); // 9.7ms / 4.4ms
 		shader_t shader;
 		setup_smoke_shaders(shader, 0.01, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans, 0, 0, 0); // no rain, snow, or reflections - outdoor only
 		shader.add_uniform_float("emissive_scale", 1.0); // make colors emissive
@@ -518,10 +519,12 @@ public:
 		colorRGBA const color(1.0, 0.4, 0.0, 0.45); // red tint, partially transparent
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			float const yval(get_yval(y) + 0.5*DY_VAL);
+
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				float const burn_amt(grid[y*MESH_X_SIZE + x].burn_amt);
 				if (burn_amt == 0.0) continue; // not burning
-				point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
+				point const pos((get_xval(x) + 0.5*DX_VAL), yval, mesh_height[y][x]);
 				if (!camera_pdu.sphere_visible_test(pos, 2.0*HALF_DXY)) continue; // VFC
 				rgen.set_state(845631*x, 667239*y);
 				rgen.rand_mix();

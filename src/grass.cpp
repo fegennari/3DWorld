@@ -544,7 +544,8 @@ public:
 		check_and_update_grass(ix, min_up, max_up);
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
+	// burn: 0=none, 1=quadratic falloff, 2=linear falloff
+	void modify_grass(point const &pos, float radius, bool crush, int burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
 		if (!burn && !crush && !cut && !check_uw && !add_color && !remove) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
@@ -605,7 +606,7 @@ public:
 						}
 					}
 					if (burn && !underwater) {
-						float const om_reld(1.0 - sqrt(dsq)*rad_inv), atten_val(1.0 - om_reld*om_reld);
+						float const om_reld(1.0 - sqrt(dsq)*rad_inv), atten_val(1.0 - ((burn == 2) ? om_reld : om_reld*om_reld));
 						UNROLL_3X(updated |= (g.c[i_] > 0);)
 						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_]);)}
 					}
@@ -969,7 +970,7 @@ public:
 		if (mod_start < mod_end) {upload_range(mod_start, mod_end);}
 	}
 
-	void modify_flowers(point const &pos, float radius, bool crush, bool burn, bool remove) {
+	void modify_flowers(point const &pos, float radius, bool crush, int burn, bool remove) {
 		if (!(crush || burn || remove) || empty()) return; // nothing to modify
 		if (get_grass_density(pos) == 0.0) return; // optimization - if there's no grass, there are no flowers
 		float const radius_sq(radius*radius), y_start(pos.y - radius), y_end(pos.y + radius + DY_VAL);
@@ -1004,7 +1005,7 @@ public:
 			if (burn) {
 				if (flower.color != BLACK) { // not already black (max burned)
 					float const reld(sqrt(dsq)/radius);
-					flower.color *= 1.0 - (1.0 - reld)*(1.0 - reld);
+					flower.color *= 1.0 - (1.0 - reld)*((burn == 2) ? 1.0 : (1.0 - reld));
 					if (flower.color.get_luminance() < 0.05) {flower.color = BLACK;}
 					modified = 1;
 				}
@@ -1098,7 +1099,7 @@ void draw_grass() { // and flowers
 	}
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
+void modify_grass_at(point const &pos, float radius, bool crush, int burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
 	if (no_grass()) return;
 	if (burn && is_underwater(pos)) {burn = 0;}
 	grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_color, remove, color);

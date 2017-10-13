@@ -667,7 +667,7 @@ bool no_grass();
 void gen_grass();
 void update_grass_vbos();
 void draw_grass();
-void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, bool cut=0, bool check_uw=0, bool add_color=0, bool remove=0, colorRGBA const &color=BLACK);
+void modify_grass_at(point const &pos, float radius, bool crush=0, int burn=0, bool cut=0, bool check_uw=0, bool add_color=0, bool remove=0, colorRGBA const &color=BLACK);
 void grass_mesh_height_change(int xpos, int ypos);
 void flower_mesh_height_change(int xpos, int ypos, int rad);
 bool place_obj_on_grass(point &pos, float radius);
