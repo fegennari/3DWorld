@@ -1312,6 +1312,9 @@ void keyboard2(int key, int x, int y) {
 		change_game_mode();
 		break;
 
+	case GLUT_KEY_F3: // UNUSED
+		break;
+
 	case GLUT_KEY_F4: // switch weapon mode
 		if (world_mode == WMODE_GROUND) {switch_weapon_mode();}
 		break;
