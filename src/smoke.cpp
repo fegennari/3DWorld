@@ -414,6 +414,7 @@ class ground_fire_manager_t {
 	bool empty() const {return grid.empty();}
 public:
 	ground_fire_manager_t() : has_fire(0) {}
+	bool is_active() const {return (!empty() && has_fire);}
 
 	static float get_burn_rate() {
 		if (snow_enabled()) return 0.0;
@@ -438,7 +439,7 @@ public:
 		}
 	}
 	void next_frame() {
-		if (empty() || !has_fire || !animate2) return; // not inited or no fire
+		if (!is_active() || !animate2) return; // not inited or no fire
 		//timer_t timer("Ground Fire Update");
 		assert(grid.size() == XY_MULT_SIZE);
 		int const dirs[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}}; // W, E, S, N
@@ -489,27 +490,18 @@ public:
 		has_fire = 1;
 	}
 	float get_burn_intensity(point const &pos, float radius) const {
-		if (empty() || !has_fire || world_mode != WMODE_GROUND) return 0.0; // not inited or no fire
+		if (!is_active() || world_mode != WMODE_GROUND) return 0.0; // not inited or no fire
 		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		if (point_outside_mesh(x, y)) return 0.0;
 		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
 		if (abs(zval - (pos.z - radius)) > 2.0*radius) return 0.0; // too far above/below the mesh
 		return grid[y*MESH_X_SIZE + x].burn_amt;
 	}
-	void draw() const {
-		if (empty() || !has_fire) return; // not inited or no fire
+	void draw(shader_t &s) const {
+		if (!is_active()) return; // not inited or no fire
 		bool const use_depth_trans = 1;
 		//timer_t timer("Ground Fire Draw"); // 9.7ms / 4.4ms
-		shader_t shader;
-		setup_smoke_shaders(shader, 0.01, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans, 0, 0, 0); // no rain, snow, or reflections - outdoor only
-		shader.add_uniform_float("emissive_scale", 1.0); // make colors emissive
-		unsigned depth_tid(0);
-
-		if (use_depth_trans) {
-			setup_depth_trans_texture(shader, depth_tid);
-			shader.add_uniform_float("depth_trans_bias", 0.05);
-		}
-		quad_batch_draw qbd;
+		s.add_uniform_float("depth_trans_bias", 0.05);
 		enable_blend();
 		select_texture(FIRE_TEX);
 		set_additive_blend_mode();
@@ -517,6 +509,7 @@ public:
 		rand_gen_t rgen;
 		int const tick_ix(tfticks);
 		colorRGBA const color(1.0, 0.5, 0.5, 0.45); // red tint, partially transparent
+		quad_batch_draw qbd;
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			float const yval(get_yval(y) + 0.5*DY_VAL);
@@ -545,9 +538,6 @@ public:
 		glDepthMask(GL_TRUE);
 		set_std_blend_mode();
 		disable_blend();
-		shader.add_uniform_float("emissive_scale", 0.0); // reset
-		shader.end_shader();
-		free_texture(depth_tid);
 	}
 };
 
@@ -557,4 +547,5 @@ void init_ground_fire() {ground_fire_manager.init();}
 void next_frame_ground_fire() {ground_fire_manager.next_frame();}
 void add_ground_fire(point const &pos, float radius, float val) {ground_fire_manager.add_fire(pos, radius, val);}
 float get_ground_fire_intensity(point const &pos, float radius) {return ground_fire_manager.get_burn_intensity(pos, radius);}
-void draw_ground_fires() {ground_fire_manager.draw();}
+void draw_ground_fires(shader_t &s) {ground_fire_manager.draw(s);}
+bool ground_fires_active() {return ground_fire_manager.is_active();}

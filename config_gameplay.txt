@@ -16,4 +16,5 @@ player_name Deathtool
 num_dodgeballs 3
 disable_fire_delay 0
 disable_recoil 0
+enable_grass_fire 1
 

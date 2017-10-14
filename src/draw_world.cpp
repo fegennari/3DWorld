@@ -1542,20 +1542,17 @@ void setup_depth_trans_texture(shader_t &s, unsigned &depth_tid) {
 
 void draw_smoke_and_fires() {
 
-	draw_ground_fires();
 	bool const use_depth_trans = 1;
 	bool const have_part_clouds(part_clouds.any_active());
-	if (!have_part_clouds && !fires.any_active() && !have_explosions()) return; // nothing to draw
+	if (!have_part_clouds && !fires.any_active() && !have_explosions() && !ground_fires_active()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans, 0, 0, 0); // no rain, snow, or reflections
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 	set_multisample(0);
 	unsigned depth_tid(0);
-	
-	if (use_depth_trans) {
-		setup_depth_trans_texture(s, depth_tid);
-		s.add_uniform_float("depth_trans_bias", 0.1); // for part clouds and explosions
-	}
+	if (use_depth_trans) {setup_depth_trans_texture(s, depth_tid);}
+	draw_ground_fires(s);
+	if (use_depth_trans) {s.add_uniform_float("depth_trans_bias", 0.1);} // for part clouds and explosions
 	draw_blasts(s);
 	if (have_part_clouds) {draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);} // smoke: slow when a lot of smoke is up close
 	order_vect_t fire_order;

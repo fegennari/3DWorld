@@ -741,7 +741,8 @@ void init_ground_fire();
 void next_frame_ground_fire();
 void add_ground_fire(point const &pos, float radius, float val);
 float get_ground_fire_intensity(point const &pos, float radius);
-void draw_ground_fires();
+void draw_ground_fires(shader_t &s);
+bool ground_fires_active();
 
 // function protoptypes - light_source
 void shift_light_sources(vector3d const &vd);
