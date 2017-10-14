@@ -516,7 +516,7 @@ public:
 		glDepthMask(GL_FALSE);
 		rand_gen_t rgen;
 		int const tick_ix(tfticks);
-		colorRGBA const color(1.0, 0.4, 0.0, 0.45); // red tint, partially transparent
+		colorRGBA const color(1.0, 0.5, 0.5, 0.45); // red tint, partially transparent
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			float const yval(get_yval(y) + 0.5*DY_VAL);
