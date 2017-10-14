@@ -1105,7 +1105,8 @@ void modify_grass_at(point const &pos, float radius, bool crush, int burn, bool 
 	if (no_grass()) return;
 	if (burn && is_underwater(pos)) {burn = 0;}
 	grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_color, remove, color);
-	flower_manager.modify_flowers(pos, radius, crush, burn, (cut || remove));
+	point const fpos(pos + vector3d(0, 0, (burn ? grass_length : 0.0))); // if mesh is burning, shift base of fire up to flower height
+	flower_manager.modify_flowers(fpos, radius, crush, burn, (cut || remove));
 }
 
 void grass_mesh_height_change(int xpos, int ypos) {
