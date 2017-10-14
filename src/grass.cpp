@@ -141,12 +141,14 @@ void grass_manager_t::end_draw() const {
 
 void grass_tile_manager_t::gen_block(unsigned bix) {
 
+	float const rscale_x(DX_VAL/2147483562.0), rscale_y(DY_VAL/2147483562.0);
+
 	for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
 		for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
 			float const xval(x*DX_VAL), yval(y*DY_VAL);
 
 			for (unsigned n = 0; n < grass_density; ++n) {
-				add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), TT_GRASS_COLOR_SCALE, 0); // no mesh normal
+				add_grass_blade(point((xval + rscale_x*rgen.rand()), (yval + rscale_y*rgen.rand()), 0.0), TT_GRASS_COLOR_SCALE, 0); // no mesh normal
 			}
 		}
 	}
@@ -305,7 +307,7 @@ public:
 			#pragma omp parallel for schedule(dynamic,1)
 			for (int y = 0; y <= MESH_Y_SIZE; ++y) {
 				rand_gen_t occ_rgen;
-				occ_rgen.set_state(y, 123);
+				occ_rgen.set_state(845631*y, 667239);
 
 				for (int x = 0; x <= MESH_X_SIZE; ++x) {
 					if (is_mesh_disabled(x, y)) continue;
@@ -323,6 +325,7 @@ public:
 		}
 		vector<vector<unsigned>> mesh_to_grass_local(MESH_Y_SIZE); // one per Y row
 		vector<vector<grass_t>> grass_local(MESH_Y_SIZE); // one per Y row
+		float const rscale_x(DX_VAL/2147483562.0), rscale_y(DY_VAL/2147483562.0);
 
 		#pragma omp parallel for schedule(dynamic,1)
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
@@ -331,7 +334,7 @@ public:
 			mesh_to_grass.resize(MESH_X_SIZE);
 			vector<grass_t> &grass_(grass_local[y]);
 			rand_gen_pregen_t rgen_(rgen); // deep copy
-			rgen_.set_state(123, 456*y); // unique state for each y row
+			rgen_.set_state(845631, 667239*y); // unique state for each y row
 
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				mesh_to_grass[x] = (unsigned)grass_.size();
@@ -391,8 +394,7 @@ public:
 				unsigned const tile_density(round_fp(mod_den));
 
 				for (unsigned n = 0; n < tile_density; ++n) {
-					float const xv(rgen_.rand_uniform(xval, xval + DX_VAL));
-					float const yv(rgen_.rand_uniform(yval, yval + DY_VAL));
+					float const xv(xval + rscale_x*rgen_.rand()), yv(yval + rscale_y*rgen_.rand());
 					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
 					point const pos(xv, yv, mh);
 
