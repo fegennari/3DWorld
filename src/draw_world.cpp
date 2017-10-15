@@ -1760,7 +1760,7 @@ void draw_compass_and_alt() { // and temperature
 }
 
 
-void draw_health_bar(float health, float shields) {
+void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color) {
 
 	shader_t s;
 	s.begin_color_only_shader();
@@ -1768,7 +1768,7 @@ void draw_health_bar(float health, float shields) {
 	enable_blend();
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(-0.7*0.5*zval*tan_val), x((y*window_width)/window_height);
-	s.set_cur_color(colorRGBA(1.0, 0.0, 0.0, 0.2)); // translucent red
+	s.set_cur_color(colorRGBA(RED, 0.2)); // translucent red
 	draw_one_tquad(-0.9*x, 0.92*y, -0.7*x, 0.94*y, zval); // full health background
 	s.set_cur_color(RED);
 	draw_one_tquad(-0.9*x, 0.92*y, (-0.9 + 0.002*min(health, 100.0f))*x, 0.94*y, zval); // health bar up to 100
@@ -1777,10 +1777,17 @@ void draw_health_bar(float health, float shields) {
 		s.set_cur_color(ORANGE);
 		draw_one_tquad(-0.7*x, 0.92*y, (-0.7 + 0.002*(health - 100.0))*x, 0.94*y, zval); // extra health bar
 	}
-	s.set_cur_color(colorRGBA(1.0, 1.0, 0.0, 0.2)); // translucent yellow
+	s.set_cur_color(colorRGBA(YELLOW, 0.2)); // translucent yellow
 	draw_one_tquad(-0.9*x, 0.88*y, -0.6*x, 0.90*y, zval); // full shields background
 	s.set_cur_color(YELLOW);
 	draw_one_tquad(-0.9*x, 0.88*y, (-0.9 + 0.002*shields)*x, 0.90*y, zval); // shields bar up to 150
+	
+	if (pu_time > 0.0) {
+		s.set_cur_color(colorRGBA(pu_color, 0.2));
+		draw_one_tquad(-0.9*x, 0.84*y, -0.7*x, 0.86*y, zval); // full PU time background
+		s.set_cur_color(pu_color);
+		draw_one_tquad(-0.9*x, 0.84*y, (-0.9 + 0.2*pu_time)*x, 0.86*y, zval);
+	}
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 }
