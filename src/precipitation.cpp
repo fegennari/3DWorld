@@ -165,7 +165,7 @@ public:
 		shader_t s;
 		s.begin_color_only_shader(color);
 		draw_verts(verts, GL_LINES); // 0.08ms for default rain intensity
-		glDepthMask(GL_FALSE); // disable depth test
+		glDepthMask(GL_FALSE); // disable depth writing
 		drawer.draw(); // draw nearby raindrops as triangles (0.02ms for default rain intensity)
 		s.end_shader();
 		disable_blend();

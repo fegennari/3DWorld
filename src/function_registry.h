@@ -161,6 +161,7 @@ void draw_projectile_effects(int reflection_pass=0);
 void draw_splash(float x, float y, float z, float size, colorRGBA color=WATER_C);
 void draw_framerate(float val);
 void draw_compass_and_alt();
+void draw_health_bar(float health, float shields);
 void exec_universe_text(std::string const &text);
 void set_silver_material(shader_t &shader, float alpha=1.0);
 void set_gold_material  (shader_t &shader, float alpha=1.0);

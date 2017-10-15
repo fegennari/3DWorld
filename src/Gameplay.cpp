@@ -2464,6 +2464,7 @@ void show_user_stats() {
 			sprintf(text, "%is %s", int(sstate.powerup_time/TICKS_PER_SECOND + 0.5), powerup_names[sstate.powerup].c_str());
 			draw_text(get_powerup_color(sstate.powerup), -0.015, -0.012, -0.025, text);
 		}
+		draw_health_bar(chealth, sstate.shields);
 	}
 	if (show_scores) {
 		team_stats_t tot_stats;
