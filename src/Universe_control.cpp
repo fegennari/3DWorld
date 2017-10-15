@@ -660,6 +660,7 @@ void draw_universe_stats() {
 		sprintf(text, "Shields %d  Armor %d", shields, armor);
 	}
 	draw_text(RED, -0.006*aspect_ratio, -0.011, -0.02, text);
+	draw_health_bar(armor, shields);
 
 	// draw credits, kills, total kills
 	sprintf(text, "Credits: %u", (ps.ncredits + team_credits[ALIGN_PLAYER]));
