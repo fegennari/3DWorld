@@ -813,6 +813,7 @@ float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, po
 			if (is_underwater(pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
 		}
 	}
+	if (get_ground_fire_intensity(pos, radius) > get_ground_fire_intensity(opos, radius)) return 6.0;
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
 	if (avoid_dir != zero_vector) return 5.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
 	if (powerup != PU_FLIGHT && !can_make_progress(pos, opos, !on_waypt_path)) return 4.0; // can't make progress in this direction
@@ -874,12 +875,11 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	float const speed(get_rspeed_scale()), radius(object_types[SMILEY].radius);
 	assert(radius >= 0.0);
 	float const step_dist(speed*smiley_speed*fticks*GROUND_SPEED), step_height(C_STEP_HEIGHT*radius);
-	point const opos(obj.pos);
+	point const opos(obj.pos); // orig pos
 	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y));
 	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT), underwater(is_underwater(opos));
 	assert(!point_outside_mesh(xpos, ypos));
 	bool stuck(0), in_ice(0), no_up(0), no_down(0), using_dest_mark(0);
-
 	if ((player_rgen.rand() % (is_jumping ? 1000 : 4000)) == 0) {is_jumping ^= 1;}
 	if (is_jumping && !has_flight) {jump(obj.pos);}
 	
