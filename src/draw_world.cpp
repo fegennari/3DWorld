@@ -47,6 +47,7 @@ extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_f
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale;
+extern double tfticks;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
@@ -1773,6 +1774,10 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 	s.set_cur_color(RED);
 	draw_one_tquad(-0.9*x, 0.92*y, (-0.9 + 0.002*min(health, 100.0f))*x, 0.94*y, zval); // health bar up to 100
 
+	if (health < 25.0 && ((int(tfticks)/12)&1)) { // low on health, add flashing red strip
+		s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
+		draw_one_tquad(-0.905*x, 0.915*y, (-0.895 + 0.002*min(health, 100.0f))*x, 0.945*y, zval);
+	}
 	if (health > 100.0) {
 		s.set_cur_color(ORANGE);
 		draw_one_tquad(-0.7*x, 0.92*y, (-0.7 + 0.002*(health - 100.0))*x, 0.94*y, zval); // extra health bar
