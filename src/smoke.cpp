@@ -433,7 +433,7 @@ public:
 				elem_t &elem(grid[y*MESH_X_SIZE + x]);
 				float const grass_density(get_grass_density(x, y)); // Note: should return 0 underwater and on disabled mesh areas
 				if (grass_density == 0) continue; // leave HP and fuel at 0
-				elem.fuel = 100.0*grass_density;
+				elem.fuel = grass_density*rgen.rand_uniform(100.0, 150.0);
 				elem.hp   = rgen.rand_uniform(50.0, 100.0); // dryness factor
 			}
 		}
