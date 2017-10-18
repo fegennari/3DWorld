@@ -257,6 +257,20 @@ public:
 };
 
 
+class tree_fire_t {
+
+	vector<draw_cylin> const &branches;
+	vector<fire_elem_t> fires; // active fires, one per branch
+	bool has_fire;
+
+public:
+	tree_fire_t(vector<draw_cylin> const &branches_);
+	void next_frame();
+	void add_fire(point const &pos, float radius, float val);
+	void draw(shader_t &s) const;
+};
+
+
 class tree {
 
 	tree_data_t priv_tree_data; // by pointer?
@@ -273,6 +287,7 @@ class tree {
 	colorRGBA tree_color;
 	vector<int> branch_cobjs, leaf_cobjs;
 	cube_t clip_cube;
+	std::shared_ptr<tree_fire_t> tree_fire;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void update_leaf_orients();
@@ -320,6 +335,7 @@ public:
 	void check_render_textures() {tdata().check_render_textures();}
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
+	void add_fire(point const &pos, float radius, float val);
 	void write_to_cobj_file(std::ostream &out) const;
 };
 

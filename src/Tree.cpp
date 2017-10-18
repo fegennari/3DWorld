@@ -2312,5 +2312,80 @@ void clear_tree_context() {
 }
 
 
+// tree fires
 
+void tree::add_fire(point const &pos, float radius, float val) {
 
+	if (!dist_less_than(pos, sphere_center(), (radius + get_radius()))) return; // not within tree bounding sphere
+	if (tree_fire == nullptr) {tree_fire.reset(new tree_fire_t(tdata().get_all_cylins()));} // create if needed
+	tree_fire->add_fire(pos, radius, val);
+}
+
+tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_) : branches(branches_), has_fire(0) {
+
+	rand_gen_t rgen;
+	unsigned num(branches.size());
+
+	for (vector<draw_cylin>::const_iterator i = branches.begin(); i != branches.end(); ++i) {
+		if (i->level > 2) {num = i - branches.begin(); break;} // end when we reach branches of a high enough level
+	}
+	fires.resize(num);
+
+	for (unsigned i = 0; i < num; ++i) { // gen random params
+		fires[i].fuel = rgen.rand_uniform(100.0, 150.0)*branches[i].get_volume();
+		fires[i].hp   = rgen.rand_uniform( 50.0, 100.0)*branches[i].get_avg_radius();
+	}
+	has_fire = 0;
+}
+
+void tree_fire_t::next_frame() {
+
+	if (!has_fire) return;
+	assert(fires.size() <= branches.size());
+	float const burn_rate(fire_elem_t::get_burn_rate());
+	//float const spread_rate(2.5*fticks*burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
+	float const spread_rate(2.5*fticks*burn_rate);
+	has_fire = 0;
+	rand_gen_t rgen;
+
+	for (unsigned i = 0; i < fires.size(); ++i) {
+		fire_elem_t &elem(fires[i]);
+		if (elem.burn_amt == 0.0) continue;
+		elem.next_frame(burn_rate*branches[i].get_avg_radius());
+		has_fire = 1;
+		// WRITE - spread
+		//add_fire(pos + rand, radius, spread_rate*elem.burn_amt);
+	}
+}
+
+void tree_fire_t::add_fire(point const &pos, float radius, float val) {
+
+	if (!animate2) return;
+	if (val == 0.0 || radius == 0.0) return; // no fire
+	assert(radius > 0.0);
+	assert(fires.size() <= branches.size());
+	unsigned min_hp_ix(0);
+	float min_hp(0.0);
+
+	for (unsigned i = 0; i < fires.size(); ++i) {
+		float const hp(fires[i].hp);
+		if (hp <= 0.0) continue; // already burning/burned
+		draw_cylin const &cylin(branches[i]);
+		
+		if ((min_hp == 0.0 || hp < min_hp) && sphere_intersect_cylinder(pos, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2)) {
+			min_hp_ix = i;
+			min_hp    = hp; // choose to burn the branch with min HP
+		}
+	} // for i
+	if (min_hp > 0.0) {has_fire |= fires[min_hp_ix].burn(val);} // a fire was started
+}
+
+void tree_fire_t::draw(shader_t &s) const {
+
+	if (!has_fire) return;
+	// FIXME: factor out pre_draw()/post_draw() functions for fires
+
+	for (vector<fire_elem_t>::const_iterator i = fires.begin(); i != fires.end(); ++i) {
+		// WRITE
+	}
+}

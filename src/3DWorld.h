@@ -610,6 +610,7 @@ struct cylinder_3dw : public line_3dw { // size = 32
 	void calc_bcube(cube_t &bcube) const;
 	float get_volume() const {return PI*(r1*r1 + r1*r2 + r2*r2)*get_length()/3.0;}
 	point get_center() const {return 0.5*(p1 + p2);}
+	float get_avg_radius() const {return 0.5*(r1 + r2);}
 };
 
 
@@ -1327,6 +1328,17 @@ struct portal {
 	void draw(vector<vert_wrap_t> &verts) const;
 	point get_center_pt() const {return (pts[0] + pts[1] + pts[2] + pts[3])*0.25;}
 	bool is_visible(int reflection_pass) const;
+};
+
+
+struct fire_elem_t {
+
+	float hp, fuel, burn_amt;
+
+	fire_elem_t() : hp(0.0), fuel(0.0), burn_amt(0.0) {}
+	bool burn(float val);
+	void next_frame(float burn_rate);
+	static float get_burn_rate();
 };
 
 

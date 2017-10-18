@@ -381,48 +381,47 @@ bool upload_smoke_indir_texture() {
 
 // fire spreading
 
+
+bool fire_elem_t::burn(float val) {
+	//cout << TXT(val) << TXT(fuel) << TXT(hp) << TXT(burn_amt) << endl;
+	if (fuel == 0.0) return 0; // no fuel, no burning
+	if (hp >= val) {hp -= val; return 0;} // not yet burning
+	val -= hp; // remove remaining HP
+	burn_amt = min(1.0f, (burn_amt + 0.1f*val));
+	return 1;
+}
+void fire_elem_t::next_frame(float burn_rate) {
+	if (burn_amt == 0.0) return; // not burning
+	if (fuel == 0.0 || precip_mode != 0) {burn_amt = max(0.0, (burn_amt - 0.015*fticks)); return;} // no fuel or raining/snowing, slowly die down
+	float const prev_amt(burn_amt);
+	burn_amt = min(1.0, (burn_amt + 0.001*fticks*burn_rate)); // increase burn level, max is 1.0
+	float consumed(0.1*fticks*(burn_amt + prev_amt)); // average of prev/next frames
+	if (consumed >= fuel) {fuel = 0.0; return;} // all fuel consumed
+	fuel -= consumed; // consume fuel
+}
+/*static*/ float fire_elem_t::get_burn_rate() {
+	if (snow_enabled()) return 0.0;
+	float const v(1.0 - 0.9*rain_wetness); // 0.1 to 1.0
+	if (is_rain_enabled()) return 0.5*v;
+	if (is_snow_enabled()) return 0.5*v;
+	return v;
+}
+
 class ground_fire_manager_t {
-	struct elem_t {
-		float hp, fuel, burn_amt;
-		elem_t() : hp(0.0), fuel(0.0), burn_amt(0.0) {}
-		
-		bool burn(float val) {
-			//cout << TXT(val) << TXT(fuel) << TXT(hp) << TXT(burn_amt) << endl;
-			if (fuel == 0.0) return 0; // no fuel, no burning
-			if (hp >= val) {hp -= val; return 0;} // not yet burning
-			val -= hp; // remove remaining HP
-			burn_amt = min(1.0f, (burn_amt + 0.1f*val));
-			return 1;
-		}
-		void next_frame(float burn_rate) {
-			if (burn_amt == 0.0) return; // not burning
-			if (fuel == 0.0 || precip_mode != 0) {burn_amt = max(0.0, (burn_amt - 0.015*fticks)); return;} // no fuel or raining/snowing, slowly die down
-			float const prev_amt(burn_amt);
-			burn_amt = min(1.0, (burn_amt + 0.001*fticks*burn_rate)); // increase burn level, max is 1.0
-			float consumed(0.1*fticks*(burn_amt + prev_amt)); // average of prev/next frames
-			if (consumed >= fuel) {fuel = 0.0; return;} // all fuel consumed
-			fuel -= consumed; // consume fuel
-		}
-	};
-	vector<elem_t> grid;
+	
+	vector<fire_elem_t> grid;
 	bool has_fire;
 
-	void burn_elem(int x, int y, float val) {
+	bool burn_elem(int x, int y, float val) {
 		assert(val >= 0.0); // not negative
-		if (val > 0.0 && !point_outside_mesh(x, y) && !mesh_is_underwater(x, y)) {grid[y*MESH_X_SIZE + x].burn(val);}
+		if (val > 0.0 && !point_outside_mesh(x, y) && !mesh_is_underwater(x, y)) {return grid[y*MESH_X_SIZE + x].burn(val);}
+		return 0;
 	}
 	bool empty() const {return grid.empty();}
 public:
 	ground_fire_manager_t() : has_fire(0) {}
 	bool is_active() const {return (!empty() && has_fire);}
 
-	static float get_burn_rate() {
-		if (snow_enabled()) return 0.0;
-		float const v(1.0 - 0.9*rain_wetness); // 0.1 to 1.0
-		if (is_rain_enabled()) return 0.5*v;
-		if (is_snow_enabled()) return 0.5*v;
-		return v;
-	}
 	void init() {
 		if (snow_enabled()) return; // fires don't mix with snow
 		grid.resize(XY_MULT_SIZE);
@@ -430,7 +429,7 @@ public:
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				elem_t &elem(grid[y*MESH_X_SIZE + x]);
+				fire_elem_t &elem(grid[y*MESH_X_SIZE + x]);
 				float const grass_density(get_grass_density(x, y)); // Note: should return 0 underwater and on disabled mesh areas
 				if (grass_density == 0) continue; // leave HP and fuel at 0
 				elem.fuel = grass_density*rgen.rand_uniform(100.0, 150.0);
@@ -445,7 +444,7 @@ public:
 		int const dirs[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}}; // W, E, S, N
 		int const dx(dirs[frame_counter&3][0]), dy(dirs[frame_counter&3][1]);
 		vector3d const dir(dx, dy, 0.0);
-		float const burn_rate(get_burn_rate());
+		float const burn_rate(fire_elem_t::get_burn_rate());
 		float const spread_rate(2.5*fticks*burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
 		rand_gen_t rgen;
 		rgen.set_state(frame_counter, 123);
@@ -457,7 +456,7 @@ public:
 			float const yval(get_yval(y) + 0.5*DY_VAL);
 
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				elem_t &elem(grid[y*MESH_X_SIZE + x]);
+				fire_elem_t &elem(grid[y*MESH_X_SIZE + x]);
 				elem.next_frame(burn_rate);
 				has_fire |= (elem.burn_amt > 0.0);
 				//if (elem.fuel > 0.0) {elem.burn_amt = 1.0;} // for perf testing
@@ -486,8 +485,7 @@ public:
 		assert(radius > 0.0);
 		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
 		if (abs(zval - (pos.z - radius)) > 2.0*radius) return; // too far above/below the mesh
-		burn_elem(get_xpos(pos.x), get_ypos(pos.y), 100.0*val*get_burn_rate());
-		has_fire = 1;
+		has_fire |= burn_elem(get_xpos(pos.x), get_ypos(pos.y), 100.0*val*fire_elem_t::get_burn_rate());
 	}
 	float get_burn_intensity(point const &pos, float radius) const {
 		if (!is_active() || world_mode != WMODE_GROUND) return 0.0; // not inited or no fire
