@@ -248,5 +248,14 @@ public:
 };
 
 
+struct fire_drawer_t {
+
+	quad_batch_draw qbd;
+
+	void add_fire(point const &pos, float radius, int frame_ix);
+	void draw(shader_t &s);
+};
+
+
 #endif // _DRAW_UTILS_H_
 

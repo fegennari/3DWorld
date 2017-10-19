@@ -261,13 +261,15 @@ class tree_fire_t {
 
 	vector<draw_cylin> const &branches;
 	vector<fire_elem_t> fires; // active fires, one per branch
+	point tree_center;
 	bool has_fire;
 
 public:
-	tree_fire_t(vector<draw_cylin> const &branches_);
+	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_);
 	void next_frame();
 	void add_fire(point const &pos, float radius, float val);
 	void draw(shader_t &s) const;
+	bool get_has_fire() const {return has_fire;}
 };
 
 
@@ -297,7 +299,7 @@ class tree {
 	void create_leaf_obj(unsigned ix) const;
 
 	bool is_over_mesh() const;
-	bool is_visible_to_camera(vector3d const &xlate) const;
+	bool is_visible_to_camera(vector3d const &xlate=zero_vector) const;
 	void burn_leaves();
 	void lightning_damage(point const &ltpos);
 	void drop_leaves();
@@ -335,8 +337,12 @@ public:
 	void check_render_textures() {tdata().check_render_textures();}
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
-	void add_fire(point const &pos, float radius, float val);
 	void write_to_cobj_file(std::ostream &out) const;
+	// fires
+	void next_fire_frame();
+	void add_fire(point const &pos, float radius, float val);
+	void draw_fire(shader_t &s) const;
+	bool is_on_fire() const {return (tree_fire != nullptr && tree_fire->get_has_fire());}
 };
 
 
@@ -389,6 +395,10 @@ public:
 	void spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void check_render_textures();
 	void apply_exp_damage(point const &epos, float damage, float bradius, int type);
+	// fires
+	void next_fire_frame();
+	void draw_fire(shader_t &s) const;
+	bool has_any_fire() const;
 };
 
 

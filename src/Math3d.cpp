@@ -925,6 +925,7 @@ void cylinder_3dw::calc_bcube(cube_t &bcube) const {
 		bcube.d[i][1] = max((p1[i] + ni*r1), (p2[i] + ni*r2));
 	}
 }
+float cylinder_3dw::get_surface_area() const {return PI*(r1 + r2)*sqrt((r1 + r2)*(r1 + r2) + p2p_dist_sq(p1, p2));}
 
 
 // Note: assumes a planar convex polygon, and assumes the cylinder is closed

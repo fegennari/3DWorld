@@ -387,15 +387,16 @@ bool fire_elem_t::burn(float val) {
 	if (fuel == 0.0) return 0; // no fuel, no burning
 	if (hp >= val) {hp -= val; return 0;} // not yet burning
 	val -= hp; // remove remaining HP
+	hp = 0.0;
 	burn_amt = min(1.0f, (burn_amt + 0.1f*val));
 	return 1;
 }
-void fire_elem_t::next_frame(float burn_rate) {
+void fire_elem_t::next_frame(float burn_rate, float consume_rate) {
 	if (burn_amt == 0.0) return; // not burning
 	if (fuel == 0.0 || precip_mode != 0) {burn_amt = max(0.0, (burn_amt - 0.015*fticks)); return;} // no fuel or raining/snowing, slowly die down
 	float const prev_amt(burn_amt);
 	burn_amt = min(1.0, (burn_amt + 0.001*fticks*burn_rate)); // increase burn level, max is 1.0
-	float consumed(0.1*fticks*(burn_amt + prev_amt)); // average of prev/next frames
+	float consumed(consume_rate*fticks*(burn_amt + prev_amt)); // average of prev/next frames
 	if (consumed >= fuel) {fuel = 0.0; return;} // all fuel consumed
 	fuel -= consumed; // consume fuel
 }
@@ -407,9 +408,26 @@ void fire_elem_t::next_frame(float burn_rate) {
 	return v;
 }
 
+void fire_drawer_t::add_fire(point const &pos, float radius, int frame_ix) {
+	colorRGBA const color(1.0, 0.5, 0.5, 0.45); // red tint, partially transparent
+	qbd.add_animated_billboard(pos, get_camera_pos(), up_vector, color, radius, radius, ((int(tfticks) + frame_ix)&15)/16.0);
+}
+void fire_drawer_t::draw(shader_t &s) {
+	s.add_uniform_float("depth_trans_bias", 0.05);
+	enable_blend();
+	select_texture(FIRE_TEX);
+	set_additive_blend_mode();
+	glDepthMask(GL_FALSE);
+	qbd.draw_and_clear();
+	glDepthMask(GL_TRUE);
+	set_std_blend_mode();
+	disable_blend();
+}
+
 class ground_fire_manager_t {
 	
 	vector<fire_elem_t> grid;
+	fire_drawer_t fire_drawer;
 	bool has_fire;
 
 	bool burn_elem(int x, int y, float val) {
@@ -457,7 +475,7 @@ public:
 
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				fire_elem_t &elem(grid[y*MESH_X_SIZE + x]);
-				elem.next_frame(burn_rate);
+				elem.next_frame(burn_rate, 0.1);
 				has_fire |= (elem.burn_amt > 0.0);
 				//if (elem.fuel > 0.0) {elem.burn_amt = 1.0;} // for perf testing
 				if (spread_rate <= 0.0 || elem.burn_amt == 0.0) continue;
@@ -495,19 +513,10 @@ public:
 		if (abs(zval - (pos.z - radius)) > 2.0*radius) return 0.0; // too far above/below the mesh
 		return grid[y*MESH_X_SIZE + x].burn_amt;
 	}
-	void draw(shader_t &s) const {
+	void draw(shader_t &s) { // Note: not const because fire_drawer is modified
 		if (!is_active()) return; // not inited or no fire
-		bool const use_depth_trans = 1;
 		//timer_t timer("Ground Fire Draw"); // 9.7ms / 4.4ms
-		s.add_uniform_float("depth_trans_bias", 0.05);
-		enable_blend();
-		select_texture(FIRE_TEX);
-		set_additive_blend_mode();
-		glDepthMask(GL_FALSE);
 		rand_gen_t rgen;
-		int const tick_ix(tfticks);
-		colorRGBA const color(1.0, 0.5, 0.5, 0.45); // red tint, partially transparent
-		quad_batch_draw qbd;
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			float const yval(get_yval(y) + 0.5*DY_VAL);
@@ -522,20 +531,16 @@ public:
 				unsigned const num((rgen.rand()%int(1.0 + 5.5*burn_amt)) + 1);
 
 				for (unsigned n = 0; n < num; ++n) {
-					int const ix(rgen.rand());
 					float const radius(burn_amt*HALF_DXY*rgen.rand_uniform(0.8, 1.3));
 					point pos2(pos);
 					pos2.x += 0.5*DX_VAL*rgen.signed_rand_float();
 					pos2.y += 0.5*DY_VAL*rgen.signed_rand_float();
 					pos2.z  = interpolate_mesh_zval(pos2.x, pos2.y, 0.0, 0, 1) + 0.5*radius;
-					qbd.add_animated_billboard(pos2, get_camera_pos(), up_vector, color, radius, radius, ((tick_ix + ix)&15)/16.0);
+					fire_drawer.add_fire(pos2, radius, rgen.rand());
 				}
 			} // for x
 		} // for y
-		qbd.draw();
-		glDepthMask(GL_TRUE);
-		set_std_blend_mode();
-		disable_blend();
+		fire_drawer.draw(s);
 	}
 };
 

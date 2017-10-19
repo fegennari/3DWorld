@@ -516,6 +516,7 @@ void setup_object_render_data() {
 	create_dlight_volumes();
 	distribute_smoke();
 	next_frame_ground_fire();
+	next_frame_tree_fires();
 	if (TIMETEST) {PRINT_TIME("1 Distribute Smoke");}
 	upload_smoke_indir_texture();
 	if (TIMETEST) {PRINT_TIME("2 Upload Smoke");}
@@ -1545,7 +1546,7 @@ void draw_smoke_and_fires() {
 
 	bool const use_depth_trans = 1;
 	bool const have_part_clouds(part_clouds.any_active());
-	if (!have_part_clouds && !fires.any_active() && !have_explosions() && !ground_fires_active()) return; // nothing to draw
+	if (!have_part_clouds && !fires.any_active() && !have_explosions() && !ground_fires_active() && !any_trees_on_fire()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans, 0, 0, 0); // no rain, snow, or reflections
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
@@ -1553,6 +1554,7 @@ void draw_smoke_and_fires() {
 	unsigned depth_tid(0);
 	if (use_depth_trans) {setup_depth_trans_texture(s, depth_tid);}
 	draw_ground_fires(s);
+	draw_tree_fires(s);
 	if (use_depth_trans) {s.add_uniform_float("depth_trans_bias", 0.1);} // for part clouds and explosions
 	draw_blasts(s);
 	if (have_part_clouds) {draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);} // smoke: slow when a lot of smoke is up close

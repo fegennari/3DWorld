@@ -692,6 +692,9 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix=0, bool 
 bool update_decid_tree_zvals(int x1, int y1, int x2, int y2);
 bool update_small_tree_zvals(int x1, int y1, int x2, int y2);
 void exp_damage_trees(point const &epos, float damage, float bradius, int type);
+void next_frame_tree_fires();
+void draw_tree_fires(shader_t &s);
+bool any_trees_on_fire();
 
 // function prototypes - ship
 upos_point_type const &get_player_pos();

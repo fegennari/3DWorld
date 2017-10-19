@@ -11,6 +11,7 @@
 #include "shaders.h"
 #include "sinf.h"
 #include "cobj_bsp_tree.h"
+#include "draw_utils.h"
 
 float const BURN_RADIUS      = 0.2;
 float const BURN_DAMAGE      = 80.0;
@@ -645,13 +646,11 @@ void tree::burn_leaves() {
 
 
 bool tree::physics_enabled() const {
-
 	return (created && (tree_mode & 1) && world_mode == WMODE_GROUND);
 }
 
 
 void tree::get_abs_leaf_pts(point pts[4], unsigned ix) const {
-	
 	vector<tree_leaf> const &leaves(tdata().get_leaves());
 	UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)
 }
@@ -713,6 +712,7 @@ void tree::blast_damage(blastr const *const blast_radius) {
 		if (damage_leaf(i, bdamage*InvSqrt(dist_sq))) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
 	}
 	damage = min(1.0f, damage);
+	add_fire(bpos, 0.25*bradius, blast_radius->damage);
 }
 
 
@@ -1211,17 +1211,14 @@ unsigned tree_cont_t::delete_all() {
 	return deleted;
 }
 
-
 void delete_trees() {
 	t_trees.delete_all();
 	if (tree_coll_level && !t_trees.empty()) {purge_coll_freed(1);} // MUST do this for collision detection to work
 }
 
-
 void tree::clear_context() {
 	if (td_is_private()) {tdata().clear_context();}
 }
-
 
 int tree::delete_tree() {
 
@@ -1230,10 +1227,10 @@ int tree::delete_tree() {
 	if (tree_coll_level) {remove_collision_objects();}
 	if (no_delete) return 0;
 	if (td_is_private()) {tdata().clear_data();}
+	tree_fire.reset();
 	created = 0;
 	return 1;
 }
-
 
 void tree_data_t::clear_data() {
 	
@@ -2314,26 +2311,55 @@ void clear_tree_context() {
 
 // tree fires
 
+unsigned const MAX_BRANCH_BURN_LEVEL = 2;
+
 void tree::add_fire(point const &pos, float radius, float val) {
 
+	if (val < 100.0) return; // too small optimization
+	if (!physics_enabled()) return;
 	if (!dist_less_than(pos, sphere_center(), (radius + get_radius()))) return; // not within tree bounding sphere
-	if (tree_fire == nullptr) {tree_fire.reset(new tree_fire_t(tdata().get_all_cylins()));} // create if needed
-	tree_fire->add_fire(pos, radius, val);
+	//make_private_tdata_copy(); // required if branches and/or leaves are modified (burned)
+	if (tree_fire == nullptr) {tree_fire.reset(new tree_fire_t(tdata().get_all_cylins(), tree_center));} // create if needed
+	tree_fire->add_fire(pos, radius, 0.1*val);
+}
+void tree::next_fire_frame() {
+	if (tree_fire != nullptr) {tree_fire->next_frame();}
+}
+void tree::draw_fire(shader_t &s) const {
+	if (tree_fire != nullptr && is_visible_to_camera()) {tree_fire->draw(s);}
 }
 
-tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_) : branches(branches_), has_fire(0) {
+void tree_cont_t::next_fire_frame() {
+	for (iterator i = begin(); i != end(); ++i) {i->next_fire_frame();}
+}
+void tree_cont_t::draw_fire(shader_t &s) const {
+	//timer_t timer("Draw Tree Fires");
+	for (const_iterator i = begin(); i != end(); ++i) {i->draw_fire(s);}
+}
+bool tree_cont_t::has_any_fire() const {
+	for (const_iterator i = begin(); i != end(); ++i) {if (i->is_on_fire()) return 1;}
+	return 0;
+}
 
+void next_frame_tree_fires() {t_trees.next_fire_frame();}
+void draw_tree_fires(shader_t &s) {t_trees.draw_fire(s);}
+bool any_trees_on_fire() {return t_trees.has_any_fire();}
+
+tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_) : branches(branches_), tree_center(tree_center_), has_fire(0) {
+
+	timer_t timer("Gen Tree Fires");
 	rand_gen_t rgen;
 	unsigned num(branches.size());
 
 	for (vector<draw_cylin>::const_iterator i = branches.begin(); i != branches.end(); ++i) {
-		if (i->level > 2) {num = i - branches.begin(); break;} // end when we reach branches of a high enough level
+		if (i->level > MAX_BRANCH_BURN_LEVEL) {num = i - branches.begin(); break;} // end when we reach branches of a high enough level
 	}
 	fires.resize(num);
 
 	for (unsigned i = 0; i < num; ++i) { // gen random params
-		fires[i].fuel = rgen.rand_uniform(100.0, 150.0)*branches[i].get_volume();
-		fires[i].hp   = rgen.rand_uniform( 50.0, 100.0)*branches[i].get_avg_radius();
+		fires[i].fuel = 4.0E6*rgen.rand_uniform(1.0, 1.5)*branches[i].get_volume(); // 500 for trunks, 0.01 for tiny branches
+		fires[i].hp   = min(100.0, 1.0E4*rgen.rand_uniform(0.5, 1.0)*branches[i].get_avg_radius()); // 300 for trunks, 2.0 for tiny branches
+		//cout << "fuel: " << fires[i].fuel << ", hp: " << fires[i].hp << endl;
 	}
 	has_fire = 0;
 }
@@ -2341,20 +2367,25 @@ tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_) : branches(branche
 void tree_fire_t::next_frame() {
 
 	if (!has_fire) return;
+	timer_t timer("Tree Fire Next Frame");
 	assert(fires.size() <= branches.size());
 	float const burn_rate(fire_elem_t::get_burn_rate());
 	//float const spread_rate(2.5*fticks*burn_rate*min(2.5, max(0.0, (1.0 + 0.5*dot_product(wind, dir)))));
-	float const spread_rate(2.5*fticks*burn_rate);
+	float const spread_rate(1.0*fticks*burn_rate);
 	has_fire = 0;
 	rand_gen_t rgen;
 
 	for (unsigned i = 0; i < fires.size(); ++i) {
 		fire_elem_t &elem(fires[i]);
-		if (elem.burn_amt == 0.0) continue;
-		elem.next_frame(burn_rate*branches[i].get_avg_radius());
+		if (elem.burn_amt == 0.0) continue; // optimization
+		//cout << "burn_amt: " << elem.burn_amt << ", fuel: " << elem.fuel << ", hp: " << elem.hp << ", burn_rate: " << burn_rate << endl;
+		elem.next_frame(4.0*burn_rate, 1.0*branches[i].get_surface_area());
+		if (elem.burn_amt == 0.0) continue; // burned out
 		has_fire = 1;
-		// WRITE - spread
-		//add_fire(pos + rand, radius, spread_rate*elem.burn_amt);
+		float const radius(elem.burn_amt*HALF_DXY*rgen.rand_uniform(0.8, 1.3));
+		// FIXME: update every N frames as an optimization?
+		point const pos(elem.pos + rgen.signed_rand_vector(radius)); // signed_rand_vector_norm()?
+		//add_fire(pos, radius, spread_rate*elem.burn_amt);
 	}
 }
 
@@ -2364,28 +2395,57 @@ void tree_fire_t::add_fire(point const &pos, float radius, float val) {
 	if (val == 0.0 || radius == 0.0) return; // no fire
 	assert(radius > 0.0);
 	assert(fires.size() <= branches.size());
-	unsigned min_hp_ix(0);
-	float min_hp(0.0);
+	point const rel_pos(pos - tree_center); // translate to tree local coords
+	unsigned best_ix(0);
+	float min_val(0.0);
 
-	for (unsigned i = 0; i < fires.size(); ++i) {
-		float const hp(fires[i].hp);
-		if (hp <= 0.0) continue; // already burning/burned
+	// FIXME: skip value with random/rolling start pos as an optimization?
+	for (unsigned i = 0; i < fires.size(); ++i) { // iterate over branches
+		if (fires[i].hp <= 0.0) continue; // already burning/burned
 		draw_cylin const &cylin(branches[i]);
+		//float const val(fires[i].hp); // min HP
+		float const val(p2p_dist_sq(cylin.get_center(), rel_pos)); // min distance
 		
-		if ((min_hp == 0.0 || hp < min_hp) && sphere_intersect_cylinder(pos, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2)) {
-			min_hp_ix = i;
-			min_hp    = hp; // choose to burn the branch with min HP
+		if ((min_val == 0.0 || val < min_val) && sphere_intersect_cylinder(rel_pos, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2)) {
+			best_ix = i;
+			min_val = val; // choose to burn the branch with min HP
 		}
 	} // for i
-	if (min_hp > 0.0) {has_fire |= fires[min_hp_ix].burn(val);} // a fire was started
+	//cout << TXT(radius) << TXT(val) << TXT(min_hp) << TXT(best_ix) << endl;
+
+	if (min_val > 0.0) { // a fire was started
+		fire_elem_t &elem(fires[best_ix]);
+		// FIXME: align to cylinder surface
+		//elem.pos = pos;
+		elem.pos = branches[best_ix].get_center() + tree_center;
+		has_fire |= elem.burn(val);
+		//cout << TXT(elem.hp) << TXT(elem.fuel) << TXT(elem.burn_amt) << endl;
+	}
 }
 
-void tree_fire_t::draw(shader_t &s) const {
+void tree_fire_t::draw(shader_t &s) const { // FIXME: pos only in tree fire derived type
 
 	if (!has_fire) return;
-	// FIXME: factor out pre_draw()/post_draw() functions for fires
+	timer_t timer("Draw Tree Fire");
+	rand_gen_t rgen;
+	fire_drawer_t fire_drawer;
 
 	for (vector<fire_elem_t>::const_iterator i = fires.begin(); i != fires.end(); ++i) {
-		// WRITE
+		if (i->burn_amt == 0.0) continue; // not burning
+		if (!camera_pdu.sphere_visible_test(i->pos, 2.0*HALF_DXY)) continue; // VFC
+#if 0
+		float const radius(0.4*HALF_DXY*i->burn_amt);
+		fire_drawer.add_fire((i->pos + vector3d(0.0, 0.0, 1.0*radius)), radius, rgen.rand());
+#else
+		rgen.set_state(845631*(i - fires.begin()), 123);
+		unsigned const num((rgen.rand()%int(1.0 + 1.5*i->burn_amt)) + 1);
+
+		for (unsigned n = 0; n < num; ++n) {
+			float const radius(0.4*HALF_DXY*i->burn_amt*rgen.rand_uniform(0.8, 1.3));
+			point const pos(i->pos + rgen.signed_rand_vector(0.5*HALF_DXY) + vector3d(0.0, 0.0, 1.0*radius)); // shift up
+			fire_drawer.add_fire(pos, radius, rgen.rand());
+		}
+#endif
 	}
+	fire_drawer.draw(s);
 }

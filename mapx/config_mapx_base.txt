@@ -14,7 +14,6 @@ disable_inf_terrain 1
 fast_water_reflect 1
 disable_water 0
 disable_scenery 1
-#enable_grass_fire 1
 read_landscape 0
 read_heightmap 0
 start_maximized 1
