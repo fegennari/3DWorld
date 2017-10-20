@@ -17,6 +17,7 @@ struct blastr; // forward reference
 struct tree_type;
 class tree_data_t;
 class cobj_bvh_tree;
+class tree;
 
 // small tree classes
 enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
@@ -259,15 +260,18 @@ public:
 
 class tree_fire_t {
 
+	struct tree_fire_elem_t : public fire_elem_t {
+		point pos;
+	};
 	vector<draw_cylin> const &branches;
-	vector<fire_elem_t> fires; // active fires, one per branch
+	vector<tree_fire_elem_t> fires; // active fires, one per branch
 	point tree_center;
 	bool has_fire;
 
 public:
 	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_);
-	void next_frame();
-	void add_fire(point const &pos, float radius, float val);
+	void next_frame(tree &t);
+	bool add_fire(point const &pos, float radius, float val);
 	void draw(shader_t &s) const;
 	bool get_has_fire() const {return has_fire;}
 };
@@ -304,7 +308,7 @@ class tree {
 	void lightning_damage(point const &ltpos);
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
-	bool damage_leaf(unsigned i, float damage_done);
+	bool damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen);
 	void update_leaf_cobj_color(unsigned i);
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
@@ -337,6 +341,7 @@ public:
 	void check_render_textures() {tdata().check_render_textures();}
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
+	void burn_leaves_within_radius(point const &bpos, float bradius, float damage);
 	void write_to_cobj_file(std::ostream &out) const;
 	// fires
 	void next_fire_frame();

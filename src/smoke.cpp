@@ -408,8 +408,8 @@ void fire_elem_t::next_frame(float burn_rate, float consume_rate) {
 	return v;
 }
 
-void fire_drawer_t::add_fire(point const &pos, float radius, int frame_ix) {
-	colorRGBA const color(1.0, 0.5, 0.5, 0.45); // red tint, partially transparent
+void fire_drawer_t::add_fire(point const &pos, float radius, int frame_ix, float alpha) {
+	colorRGBA const color(1.0, 0.5, 0.5, alpha); // red tint, partially transparent
 	qbd.add_animated_billboard(pos, get_camera_pos(), up_vector, color, radius, radius, ((int(tfticks) + frame_ix)&15)/16.0);
 }
 void fire_drawer_t::draw(shader_t &s) {
@@ -536,7 +536,7 @@ public:
 					pos2.x += 0.5*DX_VAL*rgen.signed_rand_float();
 					pos2.y += 0.5*DY_VAL*rgen.signed_rand_float();
 					pos2.z  = interpolate_mesh_zval(pos2.x, pos2.y, 0.0, 0, 1) + 0.5*radius;
-					fire_drawer.add_fire(pos2, radius, rgen.rand());
+					fire_drawer.add_fire(pos2, radius, rgen.rand(), 0.45);
 				}
 			} // for x
 		} // for y
