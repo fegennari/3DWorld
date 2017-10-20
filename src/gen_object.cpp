@@ -425,7 +425,7 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_x
 
 template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_norm(float scale) {
 	// FIXME: this is more correct (more uniform), but changes universe mode generated content
-	//return signed_rand_vector_spherical(scale).get_norm();
+	//return scale*signed_rand_vector_spherical().get_norm();
 	assert(scale > 0.0);
 
 	while (1) {
