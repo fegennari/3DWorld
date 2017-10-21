@@ -424,6 +424,13 @@ void fire_drawer_t::draw(shader_t &s) {
 	disable_blend();
 }
 
+void update_dist_to_fire(point const &pos, float dist_mult) {
+	point camera_pos(get_camera_pos());
+	camera_pos.z -= 0.5*camera_zh; // average/center of camera
+	float const dist_sq(dist_mult*p2p_dist_sq(camera_pos, pos)); // quarter distance for this type of fire, for a stronger effect
+	dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
+}
+
 class ground_fire_manager_t {
 	
 	vector<fire_elem_t> grid;
@@ -467,8 +474,6 @@ public:
 		rand_gen_t rgen;
 		rgen.set_state(frame_counter, 123);
 		has_fire = 0; // reset for next frame
-		point camera_pos(get_camera_pos());
-		camera_pos.z -= 0.5*camera_zh; // average/center of camera
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			float const yval(get_yval(y) + 0.5*DY_VAL);
@@ -482,8 +487,7 @@ public:
 				// Note: assumes the mesh is continuous and connected so that fire can spread in X and Y
 				burn_elem((x + dx), (y + dy), elem.burn_amt*spread_rate); // try to burn a neighbor
 				point pos((get_xval(x) + 0.5*DX_VAL), yval, mesh_height[y][x]);
-				float const dist_sq(0.25*p2p_dist_sq(camera_pos, pos)); // half distance for this type of fire, for a stronger effect
-				dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
+				update_dist_to_fire(pos, 0.25);
 				int const val(rgen.rand()&31);
 				if (val == 4) {fire_damage_cobjs(x, y);}
 				if (val > 3) continue;

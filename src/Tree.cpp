@@ -2355,6 +2355,11 @@ void next_frame_tree_fires() {t_trees.next_fire_frame();}
 void draw_tree_fires(shader_t &s) {t_trees.draw_fire(s);}
 bool any_trees_on_fire() {return t_trees.has_any_fire();}
 
+// TODO:
+// optimize for many leaves case
+// spread to/from ground fire
+// ignite by regular fires
+
 tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_) : branches(branches_), tree_center(tree_center_), has_fire(0) {
 
 	rand_gen_t rgen;
@@ -2372,10 +2377,12 @@ tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_
 	has_fire = 0;
 }
 
+void update_dist_to_fire(point const &pos, float dist_mult);
+
 void tree_fire_t::next_frame(tree &t) {
 
 	if (!has_fire) return;
-	timer_t timer("Tree Fire Next Frame");
+	//timer_t timer("Tree Fire Next Frame");
 	assert(fires.size() <= branches.size());
 	float const burn_rate(fire_elem_t::get_burn_rate()), spread_rate(1.0*fticks*burn_rate);
 	has_fire = 0;
@@ -2387,13 +2394,15 @@ void tree_fire_t::next_frame(tree &t) {
 		elem.next_frame(4.0*burn_rate, branches[i].get_surface_area());
 		if (elem.burn_amt == 0.0) continue; // burned out
 		has_fire = 1;
-		float const radius(elem.burn_amt*HALF_DXY*rgen.rand_uniform(0.8, 1.3));
+		update_dist_to_fire(elem.pos, 1.0);
 		int const counter(i + frame_counter);
 		if ((counter&3) != 0) continue; // update every 4 frames as an optimization
+		float const radius(elem.burn_amt*HALF_DXY*rgen.rand_uniform(0.8, 1.3));
 		vector3d const dir(rgen.signed_rand_vector_spherical().get_norm() + 0.2*wind + vector3d(0, 0, 0.5)); // add minor wind influence; spread is biased upward
 		point const pos(elem.pos + radius*dir);
 		add_fire(pos, radius, spread_rate*elem.burn_amt);
-		if ((counter&7) == 0) {t.burn_leaves_within_radius(pos, radius, 0.004*fticks*elem.burn_amt);} // update every 8frames as an optimization
+		if ((counter&7  ) == 0) {t.burn_leaves_within_radius(pos, radius, 0.004*fticks*elem.burn_amt);} // update every 8frames as an optimization
+		if ((counter&511) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.5), 1);} // no_lighting=1
 	} // for i
 }
 
