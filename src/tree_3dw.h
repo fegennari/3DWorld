@@ -401,6 +401,7 @@ public:
 	void check_render_textures();
 	void apply_exp_damage(point const &epos, float damage, float bradius, int type);
 	// fires
+	void apply_fire(point const &pos, float radius, float val);
 	void next_fire_frame();
 	void draw_fire(shader_t &s) const;
 	bool has_any_fire() const;

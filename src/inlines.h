@@ -295,11 +295,11 @@ inline bool sphere_int_cylinder_sides(point const &sc, float sr, point const &cp
 	return sphere_int_cylinder_pretest(sc, sr, cp1, cp2, r1, r2, 0, v1, v2, t, rad);
 }
 
-inline bool sphere_intersect_cylinder(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2) {
+inline bool sphere_intersect_cylinder(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2, bool check_ends=1) {
 
 	point p_int; // unused
 	vector3d norm; // unused
-	return sphere_intersect_cylinder_ipt(sc, sr, cp1, cp2, r1, r2, 1, p_int, norm, 0);
+	return sphere_intersect_cylinder_ipt(sc, sr, cp1, cp2, r1, r2, check_ends, p_int, norm, 0);
 }
 
 inline bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro) {

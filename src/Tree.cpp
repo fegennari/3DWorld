@@ -2339,6 +2339,11 @@ void tree::draw_fire(shader_t &s) const {
 	if (tree_fire != nullptr && is_visible_to_camera()) {tree_fire->draw(s);}
 }
 
+
+void tree_cont_t::apply_fire(point const &pos, float radius, float val) {
+	for (iterator i = begin(); i != end(); ++i) {i->add_fire(pos, radius, val);}
+}
+
 void tree_cont_t::next_fire_frame() {
 	for (iterator i = begin(); i != end(); ++i) {i->next_fire_frame();}
 }
@@ -2351,14 +2356,14 @@ bool tree_cont_t::has_any_fire() const {
 	return 0;
 }
 
+void apply_tree_fire(point const &pos, float radius, float val) {t_trees.apply_fire(pos, radius, val);}
 void next_frame_tree_fires() {t_trees.next_fire_frame();}
 void draw_tree_fires(shader_t &s) {t_trees.draw_fire(s);}
 bool any_trees_on_fire() {return t_trees.has_any_fire();}
 
 // TODO:
 // optimize for many leaves case
-// spread to/from ground fire
-// ignite by regular fires
+// spreads up too quickly? check_ends
 
 tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_) : branches(branches_), tree_center(tree_center_), has_fire(0) {
 
@@ -2403,6 +2408,7 @@ void tree_fire_t::next_frame(tree &t) {
 		add_fire(pos, radius, spread_rate*elem.burn_amt);
 		if ((counter&7  ) == 0) {t.burn_leaves_within_radius(pos, radius, 0.004*fticks*elem.burn_amt);} // update every 8frames as an optimization
 		if ((counter&511) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.5), 1);} // no_lighting=1
+		if (branches[i].level == 0) {add_ground_fire(elem.pos, radius, 20.0);} // trunk only
 	} // for i
 }
 
@@ -2424,11 +2430,11 @@ bool tree_fire_t::add_fire(point const &pos, float radius, float val) {
 		if (hp <= 0.0) continue; // already burning/burned
 		draw_cylin const &cylin(branches[i]);
 		point const center(cylin.get_center());
-		if (dist_less_than(rel_pos, center, radius)) {hp -= min(heat_amt, 0.5f*hp);} // apply heat damage to nearby branches
+		if (hp > 1.0 && dist_less_than(rel_pos, center, radius)) {hp -= min(heat_amt, 0.5f*hp);} // apply heat damage to nearby branches
 		if (hp > val) continue; // not enough heat to burn, skip
 		float const val(p2p_dist_sq(center, rel_pos)); // min distance
 		
-		if ((min_val == 0.0 || val < min_val) && sphere_intersect_cylinder(rel_pos, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2)) {
+		if ((min_val == 0.0 || val < min_val) && sphere_intersect_cylinder(rel_pos, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1)) { // check_ends=1
 			best_ix = i;
 			min_val = val; // choose to burn the branch with min HP
 		}

@@ -489,15 +489,17 @@ public:
 				point pos((get_xval(x) + 0.5*DX_VAL), yval, mesh_height[y][x]);
 				update_dist_to_fire(pos, 0.25);
 				int const val(rgen.rand()&31);
-				if (val == 4) {fire_damage_cobjs(x, y);}
-				if (val > 3) continue;
+				if (val == 5) {fire_damage_cobjs(x, y);}
+				if (val > 4) continue;
+				float const radius(HALF_DXY*elem.burn_amt);
 				pos.x += 0.5*DX_VAL*rgen.signed_rand_float();
 				pos.y += 0.5*DY_VAL*rgen.signed_rand_float();
-				if      (val == 0) {modify_grass_at(pos, 0.5*HALF_DXY*elem.burn_amt, 0, 2);} // sharp burn, only update every 31 frames
-				//else if (val == 1) {add_color_to_landscape_texture(BLACK, pos.x, pos.y, 0.5*HALF_DXY*elem.burn_amt);}
-				else if (val == 1 && (rgen.rand()&1) == 0) {add_crater_to_landscape_texture(pos.x, pos.y, 2.0*HALF_DXY*elem.burn_amt);}
+				if      (val == 0) {modify_grass_at(pos, 0.5*radius, 0, 2);} // sharp burn, only update every 31 frames
+				//else if (val == 1) {add_color_to_landscape_texture(BLACK, pos.x, pos.y, 0.5*radius);}
+				else if (val == 1 && (rgen.rand()&1) == 0) {add_crater_to_landscape_texture(pos.x, pos.y, 2.0*radius);}
 				else if (val == 2) {surface_damage[y][x] += 0.05*elem.burn_amt;}
 				else if (val == 3 && (rgen.rand()&15) == 0) {gen_smoke(pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.25), 1);} // no_lighting=1
+				else if (val == 4) {apply_tree_fire(pos, 0.5*radius, 200.0);}
 			} // for x
 		} // for y
 	}
