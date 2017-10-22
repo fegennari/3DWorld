@@ -61,7 +61,7 @@ tree_cont_t t_trees(tree_data_manager);
 tree_cont_t *cur_tile_trees(nullptr);
 
 
-extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion;
+extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire;
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
@@ -2332,7 +2332,7 @@ unsigned const MAX_BRANCH_BURN_LEVEL = 3;
 void tree::add_fire(point const &pos, float radius, float val) {
 
 	if (val < 100.0) return; // too small optimization
-	if (!physics_enabled()) return;
+	if (!enable_grass_fire || !physics_enabled()) return;
 	if (!dist_less_than(pos, sphere_center(), (radius + get_radius()))) return; // not within tree bounding sphere
 	//make_private_tdata_copy(); // required if branches and/or leaves are modified (burned)
 	if (tree_fire == nullptr) {tree_fire.reset(new tree_fire_t(tdata().get_all_cylins(), tree_center, tdata().base_radius));} // create if needed
@@ -2412,14 +2412,15 @@ void tree_fire_t::next_frame(tree &t) {
 		update_dist_to_fire(elem.pos, 1.0);
 		int const counter(i + frame_counter);
 		if ((counter&3) != 0) continue; // update every 4 frames as an optimization
+		bool const trunk(branches[i].level == 0); // trunk fire spreads more quickly
 		float const radius(elem.burn_amt*fire_radius*rgen.rand_uniform(0.8, 1.3));
 		vector3d const dir(rgen.signed_rand_vector_spherical().get_norm() + 0.2*wind + vector3d(0, 0, 0.5)); // add minor wind influence; spread is biased upward
 		point const pos(elem.pos + radius*dir);
-		add_fire(pos, (radius + elem.branch_bradius), spread_rate*elem.burn_amt); // expand fire to cover the entire branch
+		add_fire(pos, (radius + elem.branch_bradius)*(trunk ? 1.5 : 1.0), spread_rate*elem.burn_amt*(trunk ? 2.0 : 1.0)); // expand fire to cover the entire branch
 		if ((counter&7   ) == 0) {t.burn_leaves_within_radius(pos, 1.5*radius, 0.004*fticks*elem.burn_amt, 4);} // update every 8 frames with skip_val=4 as an optimization
-		if ((counter&1023) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.5), 1);} // no_lighting=1
+		if ((counter&1023) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.4), 1);} // no_lighting=1
 
-		if (branches[i].level == 0 || (branches[i].level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
+		if (trunk || (branches[i].level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
 			add_ground_fire(elem.pos, radius, 20.0);
 		}
 	} // for i
