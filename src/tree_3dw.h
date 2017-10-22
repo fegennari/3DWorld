@@ -267,12 +267,13 @@ class tree_fire_t {
 	};
 	vector<draw_cylin> const &branches;
 	vector<tree_fire_elem_t> fires; // active fires, one per branch
-	point tree_center;
+	point const &tree_center; // by reference, so that it gets update if the tree is moved
 	float fire_radius;
 	bool has_fire;
 
 public:
 	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius);
+	void shift(vector3d const &vd);
 	void next_frame(tree &t);
 	bool add_fire(point const &pos, float radius, float val);
 	void draw(shader_t &s) const;
@@ -328,7 +329,7 @@ public:
 	float calc_size_scale(point const &draw_pos) const;
 	void draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc);
 	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc, int tex0_loc);
-	void shift_tree(vector3d const &vd) {tree_center += vd;}
+	void shift_tree(vector3d const &vd);
 	void add_bounds_to_bcube(cube_t &bcube) const;
 	void clear_context();
 	int delete_tree();

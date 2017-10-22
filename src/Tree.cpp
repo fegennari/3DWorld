@@ -712,7 +712,7 @@ void tree::burn_leaves_within_radius(point const &bpos, float bradius, float dam
 	unsigned nleaves(tdata().get_leaves().size());
 	point const rel_pos(bpos - tree_center);
 	rand_gen_t rgen;
-	rgen.set_state(frame_counter, 123);
+	rgen.set_state(frame_counter, nleaves);
 
 	for (unsigned i = (frame_counter % skipval); i < nleaves; i += skipval) {
 		tree_leaf const &l(tdata().get_leaves()[i]);
@@ -790,6 +790,11 @@ bool tree::is_visible_to_camera(vector3d const &xlate) const {
 void tree::add_bounds_to_bcube(cube_t &bcube) const {
 	bcube.assign_or_union_with_cube(tdata().branches_bcube + tree_center);
 	bcube.union_with_cube(tdata().leaves_bcube + tree_center);
+}
+
+void tree::shift_tree(vector3d const &vd) {
+	tree_center += vd;
+	if (tree_fire) {tree_fire->shift(vd);}
 }
 
 void tree_data_t::check_render_textures() {
@@ -1145,7 +1150,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	vector<tree_leaf> const &leaves(td.get_leaves());
 	bool const heal_pass((rand()&7) == 0); // only update healed color every 8 frames
 	rand_gen_t rgen;
-	rgen.set_state(frame_counter, 123);
+	rgen.set_state(frame_counter, leaves.size());
 
 	#pragma omp parallel for num_threads(2) schedule(static) firstprivate(last_xpos, last_ypos, local_wind) if (leaf_cobjs.empty())
 	for (int i = 0; i < (int)leaves.size(); i++) { // process leaf wind and collisions
@@ -2381,6 +2386,10 @@ tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_
 		fires[i].branch_bradius = branches[i].get_bounding_radius();
 	}
 	fire_radius = max(0.5*HALF_DXY, 3.0*tree_base_radius); // scale to tree size
+}
+
+void tree_fire_t::shift(vector3d const &vd) {
+	for (auto i = fires.begin(); i != fires.end(); ++i) {i->pos += vd;}
 }
 
 void update_dist_to_fire(point const &pos, float dist_mult);
