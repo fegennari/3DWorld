@@ -764,20 +764,18 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 		++npos;
 	}
 	if (check_ends) {
-		for (unsigned d = 0; d < 2; ++d) {
-			float const t_clamped(CLIP_TO_01(t)), tv(d ? (1.0f - t) : t), tv_clamped(d ? (1.0f - t_clamped) : t_clamped);
+		bool const d(t > 0.5); // which end is closer
+		float const t_clamped(CLIP_TO_01(t)), tv(d ? (1.0f - t) : t), tv_clamped(d ? (1.0f - t_clamped) : t_clamped);
 
-			if (((d ? r2 : r1) > 0.0) && (fabs(tv_clamped)*len < min(sr, rdist))) { // collision with p1/p2
+		if (((d ? r2 : r1) > 0.0) && (fabs(tv_clamped)*len < min(sr, rdist))) { // collision with p1/p2
+			float const adj((len > TOLERANCE) ? (tv + (sr + toler)/len) : 0.0);
+
+			if (adj >= 0.0) { // otherwise not a real intersection (due to fp error, etc.)
 				if (!calc_int) return 1;
 				cpos[npos]  = sc;
 				norms[npos] = v1;
 				if (d) {norms[npos].negate();}
-				
-				if (len > TOLERANCE) {
-					float const adj(tv + (sr + toler)/len);
-					if (adj < 0.0) continue; // not a real intersection (due to fp error, etc.)
-					cpos[npos] += norms[npos]*adj;
-				}
+				if (len > TOLERANCE) {cpos[npos] += norms[npos]*adj;}
 				++npos;
 			}
 		}
@@ -925,7 +923,8 @@ void cylinder_3dw::calc_bcube(cube_t &bcube) const {
 		bcube.d[i][1] = max((p1[i] + ni*r1), (p2[i] + ni*r2));
 	}
 }
-float cylinder_3dw::get_surface_area() const {return PI*(r1 + r2)*sqrt((r1 + r2)*(r1 + r2) + p2p_dist_sq(p1, p2));}
+float cylinder_3dw::get_surface_area   () const {return PI*(r1 + r2)*sqrt((r1 + r2)*(r1 + r2) + p2p_dist_sq(p1, p2));}
+float cylinder_3dw::get_bounding_radius() const {return sqrt(0.25*p2p_dist_sq(p1, p2) + 2.0*max(r1, r2)*max(r1, r2));}
 
 
 // Note: assumes a planar convex polygon, and assumes the cylinder is closed

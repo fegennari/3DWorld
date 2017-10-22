@@ -612,6 +612,7 @@ struct cylinder_3dw : public line_3dw { // size = 32
 	float get_surface_area() const;
 	point get_center() const {return 0.5*(p1 + p2);}
 	float get_avg_radius() const {return 0.5*(r1 + r2);}
+	float get_bounding_radius() const;
 };
 
 
