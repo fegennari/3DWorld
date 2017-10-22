@@ -262,14 +262,17 @@ class tree_fire_t {
 
 	struct tree_fire_elem_t : public fire_elem_t {
 		point pos;
+		float branch_bradius;
+		tree_fire_elem_t () : pos(all_zeros), branch_bradius(0.0) {}
 	};
 	vector<draw_cylin> const &branches;
 	vector<tree_fire_elem_t> fires; // active fires, one per branch
 	point tree_center;
+	float fire_radius;
 	bool has_fire;
 
 public:
-	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_);
+	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius);
 	void next_frame(tree &t);
 	bool add_fire(point const &pos, float radius, float val);
 	void draw(shader_t &s) const;
@@ -341,7 +344,7 @@ public:
 	void check_render_textures() {tdata().check_render_textures();}
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
-	void burn_leaves_within_radius(point const &bpos, float bradius, float damage);
+	void burn_leaves_within_radius(point const &bpos, float bradius, float damage, unsigned skipval=1);
 	void write_to_cobj_file(std::ostream &out) const;
 	// fires
 	void next_fire_frame();
