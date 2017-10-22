@@ -672,7 +672,7 @@ bool tree::damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen) {
 	if (damage_done > 4.0 || (lcolor == 0.0 && (damage_done > 0.4 || (rgen.rand()&31) == 0))) {
 		if (lcolor > 0.0) {damage += damage_scale;}
 		lcolor = -1.0;
-		if ((rgen.rand()&3) == 0) {create_leaf_obj(i);} // 50/50 chance of the burned leaf falling
+		if ((rgen.rand()&3) == 0) {tdata().update_leaf_color(i); create_leaf_obj(i);} // 25% chance of the burned leaf falling
 		
 		if (has_leaf_data()) { // remove leaf i
 			remove_leaf(i, 1);
@@ -705,17 +705,19 @@ void tree::blast_damage(blastr const *const blast_radius) {
 void tree::burn_leaves_within_radius(point const &bpos, float bradius, float damage, unsigned skipval) {
 
 	if (damage == 0.0) return;
-	//timer_t timer("Burn Leaves"); //skipval = 1; // testing
 	assert(skipval > 0);
 	float const bradius_sq(bradius*bradius);
+	make_private_tdata_copy(); // copy before taking leaves reference, assuming we're going to modify the tree
 	vector<tree_leaf> const &leaves(tdata().get_leaves());
 	unsigned nleaves(leaves.size());
 	point const rel_pos(bpos - tree_center);
 	rand_gen_t rgen;
-	rgen.set_state(frame_counter, nleaves);
+	rgen.set_state(leaf_burn_ix, nleaves);
+	unsigned const block_ix((leaf_burn_ix++)%skipval), block_sz(1+nleaves/skipval), start(block_ix*block_sz), end(min(nleaves, (block_ix+1)*block_sz));
 
-	for (unsigned i = (frame_counter % skipval); i < nleaves; i += skipval) {
+	for (unsigned i = start; i < min(end, nleaves); ++i) {
 		tree_leaf const &l(leaves[i]);
+		if (fabs(rel_pos.z - l.pts[0].z) > bradius_sq) continue; // test z dist first
 		if (l.color < 0.0) continue;
 		float const dist_sq(p2p_dist_sq(rel_pos, l.pts[0]));
 		if (dist_sq > bradius_sq || dist_sq < TOLERANCE) continue;
@@ -2370,8 +2372,9 @@ bool any_trees_on_fire() {return t_trees.has_any_fire();}
 // TODO:
 // optimize for many leaves case
 
-tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius) : branches(branches_), tree_center(tree_center_), has_fire(0) {
-
+tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius) :
+	branches(branches_), tree_center(tree_center_), update_ix(0), has_fire(0)
+{
 	rand_gen_t rgen;
 	unsigned num(branches.size());
 
@@ -2381,7 +2384,7 @@ tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_
 	fires.resize(num);
 
 	for (unsigned i = 0; i < num; ++i) { // gen random params
-		fires[i].fuel = 1.0E6*rgen.rand_uniform(1.0, 1.5)*branches[i].get_volume(); // ~500 for trunks, 0.01 for tiny branches
+		fires[i].fuel = 1.0E6*rgen.rand_uniform(1.0, 1.5)*branches[i].get_volume() + 0.01; // ~500 for trunks, 0.01 for tiny branches
 		fires[i].hp   = min(100.0, 1.0E4*rgen.rand_uniform(0.5, 1.0)*branches[i].get_avg_radius()); // ~300 for trunks, 2.0 for tiny branches
 		fires[i].branch_bradius = branches[i].get_bounding_radius();
 	}
@@ -2414,11 +2417,11 @@ void tree_fire_t::next_frame(tree &t) {
 		int const counter(i + frame_counter);
 		if ((counter&3) != 0) continue; // update every 4 frames as an optimization
 		bool const trunk(branches[i].level == 0); // trunk fire spreads more quickly
-		float const radius(elem.burn_amt*fire_radius*rgen.rand_uniform(0.8, 1.3));
+		float const radius(elem.burn_amt*fire_radius*rgen.rand_uniform(0.8, 1.3)), burn_radius(radius + elem.branch_bradius);
 		vector3d const dir(rgen.signed_rand_vector_spherical().get_norm() + 0.2*wind + vector3d(0, 0, 0.5)); // add minor wind influence; spread is biased upward
 		point const pos(elem.pos + radius*dir);
-		add_fire(pos, (radius + elem.branch_bradius)*(trunk ? 1.5 : 1.0), spread_rate*elem.burn_amt*(trunk ? 2.0 : 1.0)); // expand fire to cover the entire branch
-		if ((counter&7   ) == 0) {t.burn_leaves_within_radius(pos, 1.5*radius, 0.004*fticks*elem.burn_amt, 4);} // update every 8 frames with skip_val=4 as an optimization
+		add_fire(pos, burn_radius*(trunk ? 1.5 : 1.0), spread_rate*elem.burn_amt*(trunk ? 2.0 : 1.0)); // expand fire to cover the entire branch
+		if ((counter&7   ) == 0) {t.burn_leaves_within_radius(pos, 1.5*burn_radius, 0.005*fticks*elem.burn_amt, 4);} // update every 8 frames with skip_val=4 as an optimization
 		if ((counter&1023) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.4), 1);} // no_lighting=1
 
 		if (trunk || (branches[i].level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
@@ -2435,10 +2438,11 @@ bool tree_fire_t::add_fire(point const &pos, float radius, float val) {
 	point const rel_pos(pos - tree_center); // translate to tree local coords
 	float const heat_amt(0.5*val), radius_sq(radius*radius);
 	unsigned const skipval((val > 50.0) ? 1 : 2); // optimization
-	unsigned const start_ix(frame_counter%skipval), num_fires(fires.size());
+	unsigned const start_ix(update_ix%skipval), num_fires(fires.size());
 	unsigned best_ix(0);
 	float dmin_sq(0.0);
 	assert(num_fires <= branches.size());
+	++update_ix;
 
 	for (unsigned i = start_ix; i < num_fires; i += skipval) { // iterate over branches
 		float &hp(fires[i].hp);
@@ -2461,7 +2465,7 @@ bool tree_fire_t::add_fire(point const &pos, float radius, float val) {
 	//cout << TXT(radius) << TXT(val) << TXT(dmin_sq) << TXT(best_ix) << TXT(elem.hp) << TXT(elem.fuel);
 	if (!elem.burn(val)) return 0;
 	rand_gen_t rgen;
-	rgen.set_state(best_ix, frame_counter);
+	rgen.set_state(best_ix, update_ix);
 	draw_cylin const &branch(branches[best_ix]);
 	float const t(rgen.rand_float()), branch_radius(branch.r1 + (branch.r2 - branch.r1)*t);
 	vector3d const branch_dir(branch.p2 - branch.p1);

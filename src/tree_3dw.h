@@ -269,6 +269,7 @@ class tree_fire_t {
 	vector<tree_fire_elem_t> fires; // active fires, one per branch
 	point const &tree_center; // by reference, so that it gets update if the tree is moved
 	float fire_radius;
+	unsigned update_ix;
 	bool has_fire;
 
 public:
@@ -291,6 +292,7 @@ class tree {
 	bool td_is_private() const {return (tree_data == NULL);}
 
 	int type, created; // should type be a member of tree_data_t?
+	unsigned leaf_burn_ix;
 	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind, use_clip_cube;
 	point tree_center;
 	float damage, damage_scale, last_size_scale, tree_nl_scale;
@@ -317,7 +319,7 @@ class tree {
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
 public:
-	tree(bool en_lw=1) : type(-1), tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
+	tree(bool en_lw=1) : type(-1), tree_data(NULL), created(0), leaf_burn_ix(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
 		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0), last_size_scale(0.0), tree_nl_scale(1.0) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
