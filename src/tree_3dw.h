@@ -61,14 +61,14 @@ public:
 };
 
 
-struct tree_leaf { // size = 66 (68)
+struct tree_leaf { // size = 64
 
-	float color;
+	short lcolor; // -1000 to 1000
 	unsigned char lred, lgreen;
 	vector3d norm;
 	point pts[4];
 
-	tree_leaf() : color(0.0), lred(0), lgreen(0) {}
+	tree_leaf() : lcolor(0), lred(0), lgreen(0) {}
 	void create_init_color(bool deterministic);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
 	point get_center() const {return 0.25*(pts[0] + pts[1] + pts[2] + pts[3]);} // average of all 4 leaf points

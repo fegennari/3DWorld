@@ -17,7 +17,7 @@ float const BURN_RADIUS      = 0.2;
 float const BURN_DAMAGE      = 80.0;
 float const BEAM_DAMAGE      = 0.06;
 float const LEAF_DAM_SCALE   = 0.0001;
-float const LEAF_HEAL_RATE   = 0.00005;
+int   const LEAF_HEAL_RATE   = 25; // Note: in units of 1000; only applied every 64 frames
 float const TREE_SIZE        = 0.005;
 int   const LEAF_GEN_RAND1   = 16;
 int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
@@ -516,7 +516,7 @@ void tree_data_t::gen_leaf_color() {leaf_color = get_leaf_base_color(tree_type)*
 
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
 
-	float const ilch((1.0 - leaf_color_coherence)/255.0); // scale by 255 to convert uchar to 0-1 range
+	float const color(lcolor/1000.0), ilch((1.0 - leaf_color_coherence)/255.0); // scale by 255 to convert uchar to 0-1 range
 	return colorRGB(max(0.0f, (color*(leaf_color.R + ilch*lred  ) + base_color.R*tree_color_coherence)),
 		            max(0.0f, (color*(leaf_color.G + ilch*lgreen) + base_color.G*tree_color_coherence)), 0.0);
 }
@@ -630,15 +630,16 @@ void tree::burn_leaves() {
 	float const max_t(get_max_t(LEAF));
 	if (temperature < max_t || leaves.empty()) return;
 	float const burn_amt(0.25*((td_is_private() || t_trees.empty()) ? 1.0 : float(tree_data_manager.size())/float(t_trees.size())));
+	int const burn_amt_scaled(1000*burn_amt);
 	unsigned const num_burn(max(1U, min(5U, unsigned(5*(temperature - max_t)/max_t))));
 	damage += ((1.0 - damage)*num_burn)/leaves.size();
 
 	for (unsigned i = 0; i < num_burn && !leaves.empty(); ++i) {
 		unsigned const index(rand()%leaves.size());
-		leaves[index].color = max(0.0f, (leaves[index].color - burn_amt));
+		leaves[index].lcolor = max(0, (leaves[index].lcolor - burn_amt_scaled));
 		copy_color(index);
 		if (rand()&1) {gen_smoke(leaves[index].pts[0] + tree_center);}
-		if (td_is_private() && leaves[index].color <= 0.0) {remove_leaf(index, 1);} // Note: if we modify shared data, leaves.size() must be dynamic
+		if (td_is_private() && leaves[index].lcolor <= 0) {remove_leaf(index, 1);} // Note: if we modify shared data, leaves.size() must be dynamic
 	}
 }
 
@@ -667,11 +668,11 @@ bool tree::damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen) {
 	make_private_tdata_copy();
 	vector<tree_leaf> &leaves(tdata().get_leaves());
 	assert(i < leaves.size());
-	float &lcolor(leaves[i].color);
+	short &lcolor(leaves[i].lcolor);
 
-	if (damage_done > 4.0 || (lcolor == 0.0 && (damage_done > 0.4 || (rgen.rand()&31) == 0))) {
-		if (lcolor > 0.0) {damage += damage_scale;}
-		lcolor = -1.0;
+	if (damage_done > 4.0 || (lcolor == 0 && (damage_done > 0.4 || (rgen.rand()&31) == 0))) {
+		if (lcolor > 0) {damage += damage_scale;}
+		lcolor = -1000; // tag as destroyed
 		if ((rgen.rand()&3) == 0) {tdata().update_leaf_color(i); create_leaf_obj(i);} // 25% chance of the burned leaf falling
 		
 		if (has_leaf_data()) { // remove leaf i
@@ -680,9 +681,9 @@ bool tree::damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen) {
 		}
 	}
 	else {
-		float const llc(lcolor);
-		lcolor = max(0.0, (lcolor - 0.3*damage_done));
-		if (lcolor == 0.0 && llc > 0.0) {damage += damage_scale;}
+		short const llc(lcolor);
+		lcolor = max(0, (lcolor - int(300.0*damage_done)));
+		if (lcolor == 0 && llc > 0) {damage += damage_scale;} // turned pure black
 		copy_color(i);
 	}
 	return 0;
@@ -718,7 +719,7 @@ void tree::burn_leaves_within_radius(point const &bpos, float bradius, float dam
 	for (unsigned i = start; i < min(end, nleaves); ++i) {
 		tree_leaf const &l(leaves[i]);
 		if (fabs(rel_pos.z - l.pts[0].z) > bradius_sq) continue; // test z dist first
-		if (l.color < 0.0) continue;
+		if (l.lcolor < 0) continue; // destroyed
 		float const dist_sq(p2p_dist_sq(rel_pos, l.pts[0]));
 		if (dist_sq > bradius_sq || dist_sq < TOLERANCE) continue;
 		if (damage_leaf(i, damage*InvSqrt(dist_sq), rgen)) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
@@ -1205,11 +1206,11 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			float const angle(PI_TWO*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
 			td.bend_leaf(i, angle); // do we want to update collision objects as well?
 		}
-		if (heal_pass && LEAF_HEAL_RATE > 0.0 && do_update && priv_data && world_mode == WMODE_GROUND) { // leaf heal
-			float &lcolor(td.get_leaves()[i].color);
+		if (heal_pass && LEAF_HEAL_RATE > 0 && do_update && priv_data && world_mode == WMODE_GROUND && (rgen.rand()&63) == 0) { // leaf heals every 64 frames
+			short &lcolor(td.get_leaves()[i].lcolor);
 
-			if (lcolor > 0.0 && lcolor < 1.0) {
-				lcolor = min(1.0, (lcolor + 8.0*LEAF_HEAL_RATE*fticks));
+			if (lcolor > 0 && lcolor < 1000) { // partially damaged
+				lcolor = min(1000, (lcolor + int(LEAF_HEAL_RATE*fticks)));
 				copy_color(i);
 			}
 		}
@@ -1937,7 +1938,7 @@ void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, f
 
 void tree_leaf::create_init_color(bool deterministic) {
 
-	color  = 1.0;
+	lcolor = 1000;
 	lred   = (deterministic ? rand2() : rand()) & 255;
 	lgreen = (deterministic ? rand2() : rand()) & 255;
 }
@@ -2369,8 +2370,6 @@ void next_frame_tree_fires() {t_trees.next_fire_frame();}
 void draw_tree_fires(shader_t &s) {t_trees.draw_fire(s);}
 bool any_trees_on_fire() {return t_trees.has_any_fire();}
 
-// TODO:
-// optimize for many leaves case
 
 tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius) :
 	branches(branches_), tree_center(tree_center_), update_ix(0), has_fire(0)
@@ -2422,7 +2421,7 @@ void tree_fire_t::next_frame(tree &t) {
 		point const pos(elem.pos + radius*dir);
 		add_fire(pos, burn_radius*(trunk ? 1.5 : 1.0), spread_rate*elem.burn_amt*(trunk ? 2.0 : 1.0)); // expand fire to cover the entire branch
 		if ((counter&7   ) == 0) {t.burn_leaves_within_radius(pos, 1.5*burn_radius, 0.005*fticks*elem.burn_amt, 4);} // update every 8 frames with skip_val=4 as an optimization
-		if ((counter&1023) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.2, 0.2, 0.2, 0.4), 1);} // no_lighting=1
+		if ((counter&1023) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.3, 0.3, 0.3, 0.4), 1);} // no_lighting=1
 
 		if (trunk || (branches[i].level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
 			add_ground_fire(elem.pos, radius, 20.0);
