@@ -976,9 +976,10 @@ public:
 		if (!(crush || burn || remove) || empty()) return; // nothing to modify
 		if (get_grass_density(pos) == 0.0) return; // optimization - if there's no grass, there are no flowers
 		float const radius_sq(radius*radius), y_start(pos.y - radius), y_end(pos.y + radius + DY_VAL);
-		unsigned mod_start(flowers.size()), mod_end(0);
+		unsigned const num_flowers(flowers.size());
+		unsigned mod_start(num_flowers), mod_end(0);
 
-		for (unsigned i = 0; i < flowers.size(); ++i) {
+		for (unsigned i = 0; i < num_flowers; ++i) {
 			flower_t &flower(flowers[i]);
 			if (flower.pos.y < y_start) continue;
 			if (flower.pos.y > y_end) break; // since flowers are created in blocks increasing in y, we can early terminate when y is large enough

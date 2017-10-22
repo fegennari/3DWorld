@@ -512,9 +512,7 @@ void tree_data_t::mark_leaf_changed(unsigned ix) {
 }
 
 
-void tree_data_t::gen_leaf_color() {
-	leaf_color = get_leaf_base_color(tree_type) * leaf_color_coherence;
-}
+void tree_data_t::gen_leaf_color() {leaf_color = get_leaf_base_color(tree_type)*leaf_color_coherence;}
 
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
 
@@ -666,7 +664,6 @@ void tree::create_leaf_obj(unsigned ix) const {
 
 bool tree::damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen) {
 
-	if (damage_done == 0.0) return 0;
 	make_private_tdata_copy();
 	vector<tree_leaf> &leaves(tdata().get_leaves());
 	assert(i < leaves.size());
@@ -707,15 +704,18 @@ void tree::blast_damage(blastr const *const blast_radius) {
 
 void tree::burn_leaves_within_radius(point const &bpos, float bradius, float damage, unsigned skipval) {
 
+	if (damage == 0.0) return;
+	//timer_t timer("Burn Leaves"); //skipval = 1; // testing
 	assert(skipval > 0);
 	float const bradius_sq(bradius*bradius);
-	unsigned nleaves(tdata().get_leaves().size());
+	vector<tree_leaf> const &leaves(tdata().get_leaves());
+	unsigned nleaves(leaves.size());
 	point const rel_pos(bpos - tree_center);
 	rand_gen_t rgen;
 	rgen.set_state(frame_counter, nleaves);
 
 	for (unsigned i = (frame_counter % skipval); i < nleaves; i += skipval) {
-		tree_leaf const &l(tdata().get_leaves()[i]);
+		tree_leaf const &l(leaves[i]);
 		if (l.color < 0.0) continue;
 		float const dist_sq(p2p_dist_sq(rel_pos, l.pts[0]));
 		if (dist_sq > bradius_sq || dist_sq < TOLERANCE) continue;
@@ -2398,12 +2398,13 @@ void tree_fire_t::next_frame(tree &t) {
 
 	if (!has_fire) return;
 	//timer_t timer("Tree Fire Next Frame");
-	assert(fires.size() <= branches.size());
 	float const burn_rate(fire_elem_t::get_burn_rate()), spread_rate(1.2*fticks*burn_rate);
+	unsigned const num_fires(fires.size());
+	assert(num_fires <= branches.size());
 	has_fire = 0;
 	rand_gen_t rgen;
 
-	for (unsigned i = 0; i < fires.size(); ++i) {
+	for (unsigned i = 0; i < num_fires; ++i) {
 		tree_fire_elem_t &elem(fires[i]);
 		if (elem.burn_amt == 0.0) continue; // optimization
 		elem.next_frame(4.0*burn_rate, branches[i].get_surface_area());
@@ -2431,22 +2432,22 @@ bool tree_fire_t::add_fire(point const &pos, float radius, float val) {
 	if (!animate2) return 0;
 	if (val == 0.0 || radius == 0.0) return 0; // no fire
 	assert(radius > 0.0);
-	assert(fires.size() <= branches.size());
 	point const rel_pos(pos - tree_center); // translate to tree local coords
-	float const heat_amt(0.5*val);
+	float const heat_amt(0.5*val), radius_sq(radius*radius);
 	unsigned const skipval((val > 50.0) ? 1 : 2); // optimization
-	unsigned const start_ix(frame_counter%skipval);
+	unsigned const start_ix(frame_counter%skipval), num_fires(fires.size());
 	unsigned best_ix(0);
 	float dmin_sq(0.0);
+	assert(num_fires <= branches.size());
 
-	for (unsigned i = start_ix; i < fires.size(); i += skipval) { // iterate over branches
+	for (unsigned i = start_ix; i < num_fires; i += skipval) { // iterate over branches
 		float &hp(fires[i].hp);
 		if (hp <= 0.0 || fires[i].fuel == 0.0) continue; // already burning/burned
 		draw_cylin const &cylin(branches[i]);
 		point const center(cylin.get_center());
-		if (dist_less_than(rel_pos, center, radius)) {hp -= min(heat_amt, 0.5f*hp);} // apply heat damage to nearby branches
-		if (hp > val) continue; // not enough heat to burn, skip
 		float const dist_sq(p2p_dist_sq(center, rel_pos)); // min distance
+		if (dist_sq < radius_sq) {hp -= min(heat_amt, 0.5f*hp);} // apply heat damage to nearby branches
+		if (hp > val) continue; // not enough heat to burn, skip
 		float const sep_dist(radius + fires[i].branch_bradius);
 		if (dist_sq > sep_dist*sep_dist) continue; // bounding sphere test
 		
@@ -2488,3 +2489,4 @@ void tree_fire_t::draw(shader_t &s) const {
 	}
 	fire_drawer.draw(s);
 }
+
