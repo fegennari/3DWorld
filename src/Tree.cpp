@@ -2332,9 +2332,10 @@ void clear_tree_context() {
 
 unsigned const MAX_BRANCH_BURN_LEVEL = 3;
 
-void tree::add_fire(point const &pos, float radius, float val) {
+void tree::add_fire(point const &pos, float radius, float val, bool spread_mode) {
 
-	if (val < 100.0) return; // too small optimization
+	if (spread_mode && tree_fire != nullptr && tree_fire->is_burning()) return; // this tree is already on fire
+	if (val < 100.0 && !spread_mode) return; // too small optimization
 	if (!enable_grass_fire || !physics_enabled()) return;
 	if (!dist_less_than(pos, sphere_center(), (radius + get_radius()))) return; // not within tree bounding sphere
 	//make_private_tdata_copy(); // required if branches and/or leaves are modified (burned)
@@ -2349,8 +2350,8 @@ void tree::draw_fire(shader_t &s) const {
 }
 
 
-void tree_cont_t::apply_fire(point const &pos, float radius, float val) {
-	for (iterator i = begin(); i != end(); ++i) {i->add_fire(pos, radius, val);}
+void tree_cont_t::apply_fire(point const &pos, float radius, float val, bool spread_mode) {
+	for (iterator i = begin(); i != end(); ++i) {i->add_fire(pos, radius, val, spread_mode);}
 }
 
 void tree_cont_t::next_fire_frame() {
@@ -2365,7 +2366,7 @@ bool tree_cont_t::has_any_fire() const {
 	return 0;
 }
 
-void apply_tree_fire(point const &pos, float radius, float val) {t_trees.apply_fire(pos, radius, val);}
+void apply_tree_fire(point const &pos, float radius, float val, bool spread_mode) {t_trees.apply_fire(pos, radius, val, spread_mode);}
 void next_frame_tree_fires() {t_trees.next_fire_frame();}
 void draw_tree_fires(shader_t &s) {t_trees.draw_fire(s);}
 bool any_trees_on_fire() {return t_trees.has_any_fire();}
@@ -2426,6 +2427,7 @@ void tree_fire_t::next_frame(tree &t) {
 		if (trunk || (branches[i].level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
 			add_ground_fire(elem.pos, radius, 20.0);
 		}
+		if ((counter&127) == 0) {apply_tree_fire(elem.pos, radius, 100.0*spread_rate*elem.burn_amt, 1);} // occasionally spread to other trees
 	} // for i
 }
 

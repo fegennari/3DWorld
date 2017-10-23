@@ -274,6 +274,7 @@ class tree_fire_t {
 
 public:
 	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius);
+	bool is_burning() const {return has_fire;}
 	void shift(vector3d const &vd);
 	void next_frame(tree &t);
 	bool add_fire(point const &pos, float radius, float val);
@@ -351,7 +352,7 @@ public:
 	void write_to_cobj_file(std::ostream &out) const;
 	// fires
 	void next_fire_frame();
-	void add_fire(point const &pos, float radius, float val);
+	void add_fire(point const &pos, float radius, float val, bool spread_mode=0);
 	void draw_fire(shader_t &s) const;
 	bool is_on_fire() const {return (tree_fire != nullptr && tree_fire->get_has_fire());}
 };
@@ -407,7 +408,7 @@ public:
 	void check_render_textures();
 	void apply_exp_damage(point const &epos, float damage, float bradius, int type);
 	// fires
-	void apply_fire(point const &pos, float radius, float val);
+	void apply_fire(point const &pos, float radius, float val, bool spread_mode=0);
 	void next_fire_frame();
 	void draw_fire(shader_t &s) const;
 	bool has_any_fire() const;
