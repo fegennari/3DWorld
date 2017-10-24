@@ -1339,7 +1339,7 @@ struct fire_elem_t {
 
 	fire_elem_t() : hp(0.0), fuel(0.0), burn_amt(0.0) {}
 	bool burn(float val);
-	void next_frame(float burn_rate, float consume_rate);
+	void next_frame(float burn_rate, float consume_rate, float die_rate=1.0);
 	static float get_burn_rate();
 };
 

@@ -391,9 +391,9 @@ bool fire_elem_t::burn(float val) {
 	burn_amt = min(1.0f, (burn_amt + 0.1f*val));
 	return 1;
 }
-void fire_elem_t::next_frame(float burn_rate, float consume_rate) {
+void fire_elem_t::next_frame(float burn_rate, float consume_rate, float die_rate) {
 	if (burn_amt == 0.0) return; // not burning
-	if (fuel == 0.0 || precip_mode != 0) {burn_amt = max(0.0, (burn_amt - 0.015*fticks)); return;} // no fuel or raining/snowing, slowly die down
+	if (fuel == 0.0 || precip_mode != 0) {burn_amt = max(0.0, (burn_amt - 0.015*fticks*die_rate)); return;} // no fuel or raining/snowing, slowly die down
 	float const prev_amt(burn_amt);
 	burn_amt = min(1.0, (burn_amt + 0.001*fticks*burn_rate)); // increase burn level, max is 1.0
 	float consumed(consume_rate*fticks*(burn_amt + prev_amt)); // average of prev/next frames

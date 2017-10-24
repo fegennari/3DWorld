@@ -2410,10 +2410,11 @@ void tree_fire_t::next_frame(tree &t) {
 	for (unsigned i = 0; i < num_fires; ++i) {
 		tree_fire_elem_t &elem(fires[i]);
 		if (elem.burn_amt == 0.0) continue; // optimization
-		elem.next_frame(4.0*burn_rate, branches[i].get_surface_area());
+		elem.next_frame(4.0*burn_rate, branches[i].get_surface_area(), 0.25);
 		if (elem.burn_amt == 0.0) continue; // burned out
 		has_fire = 1;
 		update_dist_to_fire(elem.pos, 1.0);
+		if (elem.burn_amt < 0.5) continue; // not large enough to spread or do damage
 		int const counter(i + frame_counter);
 		if ((counter&3) != 0) continue; // update every 4 frames as an optimization
 		bool const trunk(branches[i].level == 0); // trunk fire spreads more quickly
