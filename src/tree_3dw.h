@@ -263,7 +263,8 @@ class tree_fire_t {
 	struct tree_fire_elem_t : public fire_elem_t {
 		point pos;
 		float branch_bradius;
-		tree_fire_elem_t () : pos(all_zeros), branch_bradius(0.0) {}
+		unsigned sleep_time;
+		tree_fire_elem_t () : pos(all_zeros), branch_bradius(0.0), sleep_time(0) {}
 	};
 	vector<draw_cylin> const &branches;
 	vector<tree_fire_elem_t> fires; // active fires, one per branch
@@ -277,7 +278,7 @@ public:
 	bool is_burning() const {return has_fire;}
 	void shift(vector3d const &vd);
 	void next_frame(tree &t);
-	bool add_fire(point const &pos, float radius, float val);
+	int add_fire(point const &pos, float radius, float val);
 	void draw(shader_t &s) const;
 	bool get_has_fire() const {return has_fire;}
 };
