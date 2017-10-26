@@ -922,11 +922,6 @@ void s_plant::remove_cobjs() {
 }
 
 
-bool leafy_plant_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-	// FIXME
-	return 1;
-}
-
 int leafy_plant::create(int x, int y, int use_xy, float minz, unsigned plant_ix_) {
 	
 	vbo_mgr_ix = -1;
@@ -979,6 +974,14 @@ void leafy_plant::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, leafy_plant_collision, plant_ix, get_tid()));
 }
 
+void leafy_plant::obj_collision(float energy) {
+	if (energy > 1.0) {motion_amt = min(5.0, 1.0*energy);} // increase wind effect to make leaves move
+}
+void leafy_plant::next_frame() {
+	plant_base::next_frame();
+	motion_amt = max(0.0, (motion_amt - 0.25*fticks)); // decay to zero
+}
+
 bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
 	
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
@@ -992,7 +995,7 @@ int leafy_plant::get_tid() const {
 	return tids[type];
 }
 
-void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, vbo_vnt_block_manager_t &vbo_manager) const {
+void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, s_plant::shader_state_t &state, vbo_vnt_block_manager_t &vbo_manager) const {
 	
 	if (burn_amt == 1.0) return;
 	if (!is_visible(shadow_only, radius, xlate))  return;
@@ -1004,7 +1007,9 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	select_texture(get_tid());
 	assert(vbo_mgr_ix >= 0);
 	if (delta_z != 0.0) {fgPushMatrix(); fgTranslate(0, 0, delta_z);} // not the cleanest or most efficient solution, but much simpler than updating the VBO data
+	if (motion_amt > 0.0) {state.set_wind_scale(s, motion_amt+0.25);}
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	if (motion_amt > 0.0) {state.set_wind_scale(s, 0.25);} // restore orig value
 	if (delta_z != 0.0) {fgPopMatrix();}
 }
 
@@ -1293,7 +1298,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 		for (unsigned i = 0; i < leafy_plants.size(); ++i) {
 			if (!shadow_only && !reflection_pass) {leafy_plants[i].next_frame();}
-			leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate, leafy_vbo_manager);
+			leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate, state, leafy_vbo_manager);
 		}
 		leafy_vbo_manager.end_render();
 		s.add_uniform_float("tex_coord_weight", 0.0); // reset
@@ -1378,6 +1383,11 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	}
 }
 
+void scenery_group::leafy_plant_coll(unsigned plant_ix, float energy) {
+	assert(plant_ix < leafy_plants.size());
+	leafy_plants[plant_ix].obj_collision(energy);
+}
+
 
 scenery_group all_scenery;
 
@@ -1421,6 +1431,11 @@ void clear_scenery_vbos() {all_scenery.clear_vbos();}
 
 void do_rock_damage(point const &pos, float radius, float damage) {
 	all_scenery.do_rock_damage(pos, radius, damage);
+}
+
+bool leafy_plant_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+	all_scenery.leafy_plant_coll(index, energy);
+	return 1;
 }
 
 

@@ -195,19 +195,21 @@ class leafy_plant : public plant_base {
 
 	int vbo_mgr_ix;
 	unsigned plant_ix;
-	float delta_z;
+	float delta_z, motion_amt;
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 public:
-	leafy_plant() : vbo_mgr_ix(-1), plant_ix(0), delta_z(0.0) {}
+	leafy_plant() : vbo_mgr_ix(-1), plant_ix(0), delta_z(0.0), motion_amt(0.0) {}
 	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
 	unsigned num_leaves() const {return leaves.size();}
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
 	void add_cobjs();
+	void obj_collision(float energy);
+	void next_frame();
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager);
 	int get_tid() const;
-	void draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, vbo_vnt_block_manager_t &vbo_manager) const;
+	void draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, s_plant::shader_state_t &state, vbo_vnt_block_manager_t &vbo_manager) const;
 };
 
 
@@ -245,6 +247,7 @@ public:
 	void draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	bool setup_voxel_rocks_shader(shader_t &vrs, bool shadow_only) const;
 	void draw(bool shadow_only, vector3d const &xlate=zero_vector);
+	void leafy_plant_coll(unsigned plant_ix, float energy);
 	void write_plants_to_cobj_file(std::ostream &out) const;
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };
