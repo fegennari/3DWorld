@@ -2412,12 +2412,14 @@ void tree_fire_t::next_frame(tree &t) {
 		if (elem.burn_amt == 0.0) continue; // optimization
 		elem.next_frame(4.0*burn_rate, branches[i].get_surface_area(), 0.25);
 		if (elem.burn_amt == 0.0) continue; // burned out
+		draw_cylin const &cylin(branches[i]);
+		if (is_underwater(cylin.p1 + tree_center)) {elem.burn_amt = 0.0; continue;} // skip roots that are underwater
 		has_fire = 1;
 		update_dist_to_fire(elem.pos, 1.0);
 		if (elem.burn_amt < 0.5) continue; // not large enough to spread or do damage
 		int const counter(i + frame_counter);
 		if ((counter&3) != 0) continue; // update every 4 frames as an optimization
-		bool const trunk(branches[i].level == 0); // trunk fire spreads more quickly
+		bool const trunk(cylin.level == 0); // trunk fire spreads more quickly
 		float const radius(elem.burn_amt*fire_radius*rgen.rand_uniform(0.8, 1.3)), burn_radius(radius + elem.branch_bradius);
 		vector3d const dir(rgen.signed_rand_vector_spherical().get_norm() + 0.2*wind + vector3d(0, 0, 0.5)); // add minor wind influence; spread is biased upward
 		point const pos(elem.pos + radius*dir);
@@ -2430,7 +2432,7 @@ void tree_fire_t::next_frame(tree &t) {
 		if ((counter&15  ) == 0) {t.burn_leaves_within_radius(pos, 1.5*burn_radius, 0.01*fticks*elem.burn_amt, 4);} // update every 16 frames with skip_val=4 as an optimization
 		if ((counter&1023) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.3, 0.3, 0.3, 0.4), 1);} // no_lighting=1
 
-		if (trunk || (branches[i].level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
+		if (trunk || (cylin.level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
 			add_ground_fire(elem.pos, radius, 20.0);
 		}
 		if ((counter&127) == 0) {apply_tree_fire(elem.pos, radius, 100.0*spread_rate*elem.burn_amt, 1);} // occasionally spread to other trees
