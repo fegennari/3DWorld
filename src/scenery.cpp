@@ -755,11 +755,11 @@ void s_plant::add_cobjs() {
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
 	bpos.z  -= 0.1*height;
+	coll_id  = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
 	coll_id2 = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX)); // trunk
-	if (!no_leaves) {coll_id = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid));} // leaves
 }
 
-bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // used in tiled terrain mode, ignores no_leaves
+bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // used in tiled terrain mode
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
@@ -792,7 +792,6 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 	create_leaf_points(pts);
 	assert(!pts.empty());
 	vbo_mgr_ix = vbo_manager.add_points_with_offset(pts, pltype[type].leafc);
-	no_leaves  = 0;
 
 	if (pltype[type].berryc.A != 0.0) { // create berries
 		rand_gen_t rgen;
@@ -824,11 +823,7 @@ bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager
 	float orig_z(pos.z);
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	for (vector<vert_wrap_t>::iterator i = berries.begin(); i != berries.end(); ++i) {i->v.z += (pos.z - orig_z);}
-
-	if (vbo_mgr_ix >= 0) { // leaf pos changed - VBO data needs to be updated
-		//disable_leaves(); // remove the leaves (simpler and more efficient)
-		update_points_vbo(vbo_manager); // regenerate leaf points and re-upload VBO sub-data (slower)
-	}
+	if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);} // leaf pos changed, regenerate leaf points and re-upload VBO sub-data
 	return 1;
 }
 
@@ -883,7 +878,7 @@ void s_plant::shader_state_t::set_wind_scale(shader_t &s, float wscale) {
 
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
-	if (no_leaves || burn_amt == 1.0) return;
+	if (burn_amt == 1.0) return;
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
 	if (world_mode == WMODE_INF_TERRAIN && is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));

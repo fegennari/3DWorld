@@ -156,7 +156,6 @@ struct plant_base : public scenery_obj { // size = 28
 
 class s_plant : public plant_base { // size = 56
 
-	bool no_leaves;
 	int coll_id2, vbo_mgr_ix;
 	float height;
 	vector<vert_wrap_t> berries;
@@ -173,8 +172,7 @@ public:
 		void set_wind_scale(shader_t &s, float wscale);
 	};
 
-	s_plant() : no_leaves(0), coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
-	void disable_leaves() {no_leaves = 1;}
+	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);
