@@ -40,7 +40,7 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 
 
 extern bool underwater, has_snow;
-extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER;
+extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER, animate2;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern voxel_params_t global_voxel_params;
@@ -713,6 +713,17 @@ int plant_base::create(int x, int y, int use_xy, float minz) {
 	return 1; // land plant
 }
 
+void plant_base::next_frame() {
+	if (!animate2 || world_mode != WMODE_GROUND) return;
+	if (burn_amt == 1.0) {remove_cobjs(); return;} // remove leaves, but keep stem for plant
+	float const fire_amt(get_ground_fire_intensity(pos, 2.0*radius));
+	if (fire_amt > 0.0) {burn_amt = min(1.0, (burn_amt + 0.003*fticks*fire_amt));}
+}
+colorRGBA plant_base::get_plant_color(vector3d const &xlate) const {
+	return get_atten_color(blend_color(BLACK, WHITE, burn_amt, 0), xlate);
+}
+
+
 int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager) {
 
 	vbo_mgr_ix = -1;
@@ -744,8 +755,8 @@ void s_plant::add_cobjs() {
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
 	bpos.z  -= 0.1*height;
-	coll_id  = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX)); // trunk
-	if (!no_leaves) {coll_id2 = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid));} // leaves
+	coll_id2 = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX)); // trunk
+	if (!no_leaves) {coll_id = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid));} // leaves
 }
 
 bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // used in tiled terrain mode, ignores no_leaves
@@ -829,7 +840,7 @@ bool s_plant::is_shadowed() const {
 	for (unsigned i = 0; i < 3; ++i) {
 		point p(pos);
 		p.z += 0.5*i*height;
-		if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) return 0;
+		if (is_visible_to_light_cobj(p, light, (radius + height), coll_id2, 0)) return 0;
 	}
 	return 1;
 }
@@ -872,27 +883,27 @@ void s_plant::shader_state_t::set_wind_scale(shader_t &s, float wscale) {
 
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
-	if (no_leaves) return;
+	if (no_leaves || burn_amt == 1.0) return;
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
 	if (world_mode == WMODE_INF_TERRAIN && is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, 0.5*(height + radius), pos2)) return;
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
 	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
-	
-	if (is_water_plant && !shadow_only) {state.set_color_scale(s, get_atten_color(WHITE, xlate));}
+	bool const set_color(!shadow_only && (is_water_plant || burn_amt > 0.0));
+	if (set_color) {state.set_color_scale(s, get_plant_color(xlate));}
 	if (shadowed) {state.set_normal_scale(s, 0.0);}
 	state.set_wind_scale(s, wind_scale);
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-	if (is_water_plant && !shadow_only) {state.set_color_scale(s, WHITE);}
+	if (set_color) {state.set_color_scale(s, WHITE);}
 	if (shadowed) {state.set_normal_scale(s, 1.0);}
 }
 
 void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 
-	if (berries.empty()) return;
+	if (berries.empty() || burn_amt > 0.5) return;
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!sphere_in_camera_view(pos2, 0.5*(height + radius), 2)) return;
 	float const size_scale(get_pt_line_thresh()*radius/distance_to_camera(pos2));
@@ -916,9 +927,15 @@ void s_plant::remove_cobjs() {
 }
 
 
-int leafy_plant::create(int x, int y, int use_xy, float minz) {
+bool leafy_plant_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+	// FIXME
+	return 1;
+}
+
+int leafy_plant::create(int x, int y, int use_xy, float minz, unsigned plant_ix_) {
 	
 	vbo_mgr_ix = -1;
+	plant_ix   = plant_ix_;
 	int const ret(plant_base::create(x, y, use_xy, minz));
 	if (ret == 0) return 0;
 	if (ret == 2) {type = 0;} // underwater
@@ -964,7 +981,7 @@ void leafy_plant::gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_n
 }
 
 void leafy_plant::add_cobjs() {
-	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, nullptr, 0, get_tid()));
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, leafy_plant_collision, plant_ix, get_tid()));
 }
 
 bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
@@ -982,11 +999,11 @@ int leafy_plant::get_tid() const {
 
 void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, vbo_vnt_block_manager_t &vbo_manager) const {
 	
-	//if (display_mode & 0x10) return; // TESTING
+	if (burn_amt == 1.0) return;
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	float const dist(distance_to_camera(pos+xlate));
-	(shadow_only ? WHITE : get_atten_color(WHITE, xlate)).set_for_cur_shader(); // no underwater case yet
+	(shadow_only ? WHITE : get_plant_color(xlate)).set_for_cur_shader(); // no underwater case yet
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	select_texture(get_tid());
@@ -1194,7 +1211,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			
 			if (val >= 100) { // +50% leafy plants
 				leafy_plant plant;
-				if (veg && plant.create(j, i, 1, min_plant_z)) {
+				if (veg && plant.create(j, i, 1, min_plant_z, leafy_plants.size())) {
 					if (check_buildings_sphere_coll(plant.get_pos(), plant.get_radius(), 1, 1)) continue;
 					leafy_plants.push_back(plant);
 					num_lp_leaves += plant.num_leaves();
@@ -1268,6 +1285,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		plant_vbo_manager.begin_render();
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
+			if (!shadow_only && !reflection_pass) {plants[i].next_frame();}
 			plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate, state);
 		}
 		plant_vbo_manager.end_render();
@@ -1277,7 +1295,11 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		s.add_uniform_float("tex_coord_weight", 2.0); // using tex coords, not texgen from vert ID
 		leafy_vbo_manager.upload();
 		leafy_vbo_manager.begin_render();
-		for (unsigned i = 0; i < leafy_plants.size(); ++i) {leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate, leafy_vbo_manager);}
+
+		for (unsigned i = 0; i < leafy_plants.size(); ++i) {
+			if (!shadow_only && !reflection_pass) {leafy_plants[i].next_frame();}
+			leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate, leafy_vbo_manager);
+		}
 		leafy_vbo_manager.end_render();
 		s.add_uniform_float("tex_coord_weight", 0.0); // reset
 	}

@@ -597,6 +597,7 @@ bool mat_sphere_collision(int index, int obj_index, vector3d const &velocity, po
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool sawblade_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool translocator_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool leafy_plant_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 
 void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bool freeze=0);
 void gen_landmine_scorch(point const &pos);

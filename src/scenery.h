@@ -144,7 +144,13 @@ public:
 
 
 struct plant_base : public scenery_obj { // size = 28
+
+	float burn_amt;
+
+	plant_base() : burn_amt(0.0) {}
 	int create(int x, int y, int use_xy, float minz);
+	void next_frame();
+	colorRGBA get_plant_color(vector3d const &xlate) const;
 };
 
 
@@ -190,13 +196,14 @@ public:
 class leafy_plant : public plant_base {
 
 	int vbo_mgr_ix;
+	unsigned plant_ix;
 	float delta_z;
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 public:
-	leafy_plant() : vbo_mgr_ix(-1), delta_z(0.0) {}
-	int create(int x, int y, int use_xy, float minz);
+	leafy_plant() : vbo_mgr_ix(-1), plant_ix(0), delta_z(0.0) {}
+	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
 	unsigned num_leaves() const {return leaves.size();}
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
 	void add_cobjs();

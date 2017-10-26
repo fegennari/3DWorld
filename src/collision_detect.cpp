@@ -1267,6 +1267,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 
 	coll_obj const &cobj(coll_objects[index]);
 	if (skip_movable && cobj.is_movable()) return;
+	if (obj.type == GRASS && cobj.cp.coll_func == leafy_plant_collision) return; // no grass collision with leafy plants (can coexist with grass)
 	
 	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
 		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
