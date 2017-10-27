@@ -491,7 +491,7 @@ public:
 
 	bool place_obj_on_grass(point &pos, float radius) const {
 		int x1, y1, x2, y2;
-		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
+		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2)), rad_sq(rad*rad);
 		if (rad == 0.0) return 0;
 		bool updated(0);
 
@@ -504,8 +504,7 @@ public:
 
 				for (unsigned i = start; i < end; ++i) {
 					if (grass[i].dir == zero_vector) continue; // removed
-					float const dsq(p2p_dist_xy_sq(pos, grass[i].p));
-					if (dsq > rad*rad) continue; // too far away
+					if (p2p_dist_xy_sq(pos, grass[i].p) > rad_sq) continue; // too far away
 					pos.z   = max(pos.z, (grass[i].p.z + grass[i].dir.z + radius));
 					updated = 1;
 				}
