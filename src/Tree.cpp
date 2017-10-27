@@ -335,8 +335,8 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 
 
 float get_plant_leaf_wind_mag(bool shadow_only) {
-	//if (shadow_only) return 0.0; // faster, but looks odd
-	return ((has_snow || !animate2) ? 0.0 : 0.001*min(2.0f, wind.mag())/tree_scale);
+	//if (shadow_only || animate2) return 0.0; // faster, but looks odd
+	return (has_snow ? 0.0 : 0.001*min(2.0f, wind.mag())/tree_scale); // Note: animate2 is 0 for shadow pass, so can't check it
 }
 
 void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
@@ -2410,7 +2410,7 @@ void tree_fire_t::next_frame(tree &t) {
 	for (unsigned i = 0; i < num_fires; ++i) {
 		tree_fire_elem_t &elem(fires[i]);
 		if (elem.burn_amt == 0.0) continue; // optimization
-		elem.next_frame(4.0*burn_rate, branches[i].get_surface_area(), 0.25);
+		elem.next_frame(4.0*burn_rate, branches[i].get_surface_area(), 0.2);
 		if (elem.burn_amt == 0.0) continue; // burned out
 		draw_cylin const &cylin(branches[i]);
 		if (is_underwater(cylin.p1 + tree_center)) {elem.burn_amt = 0.0; continue;} // skip roots that are underwater
