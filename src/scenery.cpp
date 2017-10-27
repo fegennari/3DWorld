@@ -875,6 +875,10 @@ void s_plant::shader_state_t::set_wind_scale(shader_t &s, float wscale) {
 	s.set_uniform_float(wind_scale_loc, wscale);
 	wind_scale = wscale;
 }
+void s_plant::shader_state_t::set_wind_add(shader_t &s, float w_add) {
+	s.ensure_uniform_loc(wind_add_loc, "wind_add");
+	s.set_uniform_float(wind_add_loc, w_add);
+}
 
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
@@ -974,12 +978,16 @@ void leafy_plant::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.5, WHITE, 0, 0, leafy_plant_collision, plant_ix, get_tid()));
 }
 
-void leafy_plant::obj_collision(float energy) {
-	if (energy > 1.0) {motion_amt = min(5.0, 1.0*energy);} // increase wind effect to make leaves move
-}
 void leafy_plant::next_frame() {
+
 	plant_base::next_frame();
-	motion_amt = max(0.0, (motion_amt - 0.25*fticks)); // decay to zero
+	float const delta_energy(abs(cur_motion_energy - prev_motion_energy));
+	if (delta_energy > 1.0) {motion_amt = min(1.0, (motion_amt + 0.05*delta_energy));} // increase wind effect to make leaves move
+	prev_motion_energy = cur_motion_energy;
+	cur_motion_energy  = 0.0;
+	if (motion_amt == 0.0) return;
+	motion_amt *= pow(2.0, -0.3*fticks); // exponential decay
+	if (motion_amt < 0.01) {motion_amt = 0.0;} // done
 }
 
 bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
@@ -1007,9 +1015,9 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	select_texture(get_tid());
 	assert(vbo_mgr_ix >= 0);
 	if (delta_z != 0.0) {fgPushMatrix(); fgTranslate(0, 0, delta_z);} // not the cleanest or most efficient solution, but much simpler than updating the VBO data
-	if (motion_amt > 0.0) {state.set_wind_scale(s, motion_amt+0.25);}
+	if (motion_amt > 0.0) {state.set_wind_add(s, 0.005*motion_amt);}
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-	if (motion_amt > 0.0) {state.set_wind_scale(s, 0.25);} // restore orig value
+	if (motion_amt > 0.0) {state.set_wind_add(s, 0.0);} // restore orig value
 	if (delta_z != 0.0) {fgPopMatrix();}
 }
 
@@ -1377,7 +1385,7 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	s.end_shader();
 
 	if (!(plants.empty() && leafy_plants.empty())) { // draw leaves
-		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, ENABLE_PLANT_SHADOWS, 1);
+		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, (ENABLE_PLANT_SHADOWS && !shadow_only), 1);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
 	}

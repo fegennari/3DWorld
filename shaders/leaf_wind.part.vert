@@ -1,6 +1,7 @@
 uniform float wind_time  = 0.0;
 uniform float wind_mag   = 0.0;
 uniform float wind_scale = 1.0; // used as 0/1 toggle
+uniform float wind_add   = 0.0;
 uniform float wind_freq  = 1.0;
 uniform float wind_zscale= 1.0;
 //uniform float tex_coord_weight; // from leaf_wind.part
@@ -9,7 +10,7 @@ void add_leaf_wind(inout vec4 vpos) {
 #ifdef ENABLE_WIND
 	int tc_table_ix = (gl_VertexID + tc_start_ix) & 3;
 	if (tex_coord_weight == 0.0 && tc_table_ix >= 2) return; // only move the tip verts (not the end verts)
-	float wmag = wind_mag * wind_scale; // * (1.0 - fg_TexCoord.t);
+	float wmag = wind_mag * wind_scale + wind_add; // * (1.0 - fg_TexCoord.t);
 
 	if (wmag > 0.0) { // only move the tip verts (not the end verts)
 		float t   = wind_time;

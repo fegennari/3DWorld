@@ -164,12 +164,13 @@ class s_plant : public plant_base { // size = 56
 
 public:
 	struct shader_state_t {
-		int color_scale_loc, normal_scale_loc, wind_scale_loc;
+		int color_scale_loc, normal_scale_loc, wind_scale_loc, wind_add_loc;
 		float wind_scale;
-		shader_state_t() : color_scale_loc(-1), normal_scale_loc(-1), wind_scale_loc(-1), wind_scale(1.0) {}
+		shader_state_t() : color_scale_loc(-1), normal_scale_loc(-1), wind_scale_loc(-1), wind_add_loc(-1), wind_scale(1.0) {}
 		void set_color_scale(shader_t &s, colorRGBA const &color);
 		void set_normal_scale(shader_t &s, float normal_scale);
 		void set_wind_scale(shader_t &s, float wscale);
+		void set_wind_add(shader_t &s, float w_add);
 	};
 
 	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
@@ -195,17 +196,17 @@ class leafy_plant : public plant_base {
 
 	int vbo_mgr_ix;
 	unsigned plant_ix;
-	float delta_z, motion_amt;
+	float delta_z, motion_amt, cur_motion_energy, prev_motion_energy;
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 public:
-	leafy_plant() : vbo_mgr_ix(-1), plant_ix(0), delta_z(0.0), motion_amt(0.0) {}
+	leafy_plant() : vbo_mgr_ix(-1), plant_ix(0), delta_z(0.0), motion_amt(0.0), cur_motion_energy(0.0), prev_motion_energy(0.0) {}
 	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
 	unsigned num_leaves() const {return leaves.size();}
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
 	void add_cobjs();
-	void obj_collision(float energy);
+	void obj_collision(float energy) {cur_motion_energy += energy;}
 	void next_frame();
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager);
 	int get_tid() const;
