@@ -703,10 +703,9 @@ void tree::blast_damage(blastr const *const blast_radius) {
 	add_fire(bpos, 0.25*bradius, blast_radius->damage);
 }
 
-void tree::burn_leaves_within_radius(point const &bpos, float bradius, float damage, unsigned skipval) {
+void tree::burn_leaves_within_radius(point const &bpos, float bradius, float damage) {
 
 	if (damage == 0.0) return;
-	assert(skipval > 0);
 	float const bradius_sq(bradius*bradius);
 	make_private_tdata_copy(); // copy before taking leaves reference, assuming we're going to modify the tree
 	vector<tree_leaf> const &leaves(tdata().get_leaves());
@@ -714,15 +713,44 @@ void tree::burn_leaves_within_radius(point const &bpos, float bradius, float dam
 	point const rel_pos(bpos - tree_center);
 	rand_gen_t rgen;
 	rgen.set_state(leaf_burn_ix, nleaves);
-	unsigned const block_ix((leaf_burn_ix++)%skipval), block_sz(1+nleaves/skipval), start(block_ix*block_sz), end(min(nleaves, (block_ix+1)*block_sz));
 
-	for (unsigned i = start; i < min(end, nleaves); ++i) {
+	for (unsigned i = 0; i < nleaves; ++i) {
 		tree_leaf const &l(leaves[i]);
-		if (fabs(rel_pos.z - l.pts[0].z) > bradius_sq) continue; // test z dist first
-		if (l.lcolor < 0) continue; // destroyed
+		if (fabs(rel_pos.z - l.pts[0].z) > bradius) continue; // test z dist first
+		if (l.lcolor < 0) continue; // already black
 		float const dist_sq(p2p_dist_sq(rel_pos, l.pts[0]));
 		if (dist_sq > bradius_sq || dist_sq < TOLERANCE) continue;
 		if (damage_leaf(i, damage*InvSqrt(dist_sq), rgen)) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
+	}
+	damage = min(1.0f, damage);
+}
+
+void tree::apply_fire_damage(vector<fire_damage_t> const &fire_damage, unsigned skipval) {
+
+	if (fire_damage.empty()) return;
+	assert(skipval > 0);
+	vector<tree_leaf> const &leaves(tdata().get_leaves());
+	unsigned nleaves(leaves.size());
+	cube_t bcube;
+	bcube.set_from_sphere(fire_damage.front());
+	for (auto f = fire_damage.begin()+1; f != fire_damage.end(); ++f) {bcube.union_with_sphere(*f);}
+	unsigned const block_ix((leaf_burn_ix++)%skipval), block_sz(1+nleaves/skipval), start(block_ix*block_sz), end(min(nleaves, (block_ix+1)*block_sz));
+	rand_gen_t rgen;
+	rgen.set_state(leaf_burn_ix, nleaves);
+
+	for (unsigned i = start; i < min(end, nleaves); ++i) {
+		tree_leaf const &l(leaves[i]);
+		if (l.lcolor < 0) continue; // already black
+		point const lpos(l.pts[0] + tree_center);
+		if (!bcube.contains_pt(lpos)) continue;
+		float damage(0.0);
+
+		for (auto f = fire_damage.begin(); f != fire_damage.end(); ++f) {
+			if (fabs(lpos.z - f->pos.z) > f->radius) continue; // test z dist first
+			float const dist_sq(p2p_dist_sq(lpos, f->pos));
+			if (dist_sq < f->radius*f->radius && dist_sq > TOLERANCE) {damage += f->damage*InvSqrt(dist_sq);}
+		}
+		if (damage > 0.0 && damage_leaf(i, damage, rgen)) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
 	}
 	damage = min(1.0f, damage);
 }
@@ -2429,7 +2457,7 @@ void tree_fire_t::next_frame(tree &t) {
 			int const ret(add_fire(pos, burn_radius*(trunk ? 1.5 : 1.0), spread_rate*elem.burn_amt*(trunk ? 2.0 : 1.0))); // expand fire to cover the entire branch
 			if (ret == 0) {elem.sleep_time = 8;} // sleep for 8 frames
 		}
-		if ((counter&15  ) == 0) {t.burn_leaves_within_radius(pos, 1.5*burn_radius, 0.01*fticks*elem.burn_amt, 4);} // update every 16 frames with skip_val=4 as an optimization
+		if ((counter&15  ) == 0) {fire_damage.emplace_back(pos, 1.5*burn_radius, 0.01*fticks*elem.burn_amt);} // update every 16 frames as an optimization
 		if ((counter&1023) == 0) {gen_smoke(elem.pos, 1.0, 1.0, colorRGBA(0.3, 0.3, 0.3, 0.4), 1);} // no_lighting=1
 
 		if (trunk || (cylin.level == 1 && elem.pos.z < interpolate_mesh_zval(elem.pos.x, elem.pos.y, 0.0, 0, 1))) { // trunk or below the mesh
@@ -2437,6 +2465,8 @@ void tree_fire_t::next_frame(tree &t) {
 		}
 		if ((counter&127) == 0) {apply_tree_fire(elem.pos, radius, 100.0*spread_rate*elem.burn_amt, 1);} // occasionally spread to other trees
 	} // for i
+	t.apply_fire_damage(fire_damage, 4); // skipval=4
+	fire_damage.clear();
 }
 
 int tree_fire_t::add_fire(point const &pos, float radius, float val) { // returns: 0=no change, 1=damage only, 2=create fire

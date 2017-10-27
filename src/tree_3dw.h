@@ -258,6 +258,12 @@ public:
 };
 
 
+struct fire_damage_t : public sphere_t {
+	float damage;
+	fire_damage_t() : damage(0.0) {}
+	fire_damage_t(point const &pos_, float radius_, float damage_) : sphere_t(pos_, radius_), damage(damage_) {}
+};
+
 class tree_fire_t {
 
 	struct tree_fire_elem_t : public fire_elem_t {
@@ -268,6 +274,7 @@ class tree_fire_t {
 	};
 	vector<draw_cylin> const &branches;
 	vector<tree_fire_elem_t> fires; // active fires, one per branch
+	vector<fire_damage_t> fire_damage; // reused across update calls
 	point const &tree_center; // by reference, so that it gets update if the tree is moved
 	float fire_radius;
 	unsigned update_ix;
@@ -349,7 +356,8 @@ public:
 	void check_render_textures() {tdata().check_render_textures();}
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
-	void burn_leaves_within_radius(point const &bpos, float bradius, float damage, unsigned skipval=1);
+	void burn_leaves_within_radius(point const &bpos, float bradius, float damage);
+	void apply_fire_damage(vector<fire_damage_t> const &fire_damage, unsigned skipval);
 	void write_to_cobj_file(std::ostream &out) const;
 	// fires
 	void next_fire_frame();
