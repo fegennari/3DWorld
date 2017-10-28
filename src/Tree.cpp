@@ -66,7 +66,7 @@ extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
-extern double tfticks;
+extern double sim_ticks;
 extern vector3d wind;
 extern lightning l_strike;
 extern coll_obj_group coll_objects;
@@ -344,7 +344,7 @@ void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
 	if (wind_mag == 0.0) return;
 	s.add_uniform_float("wind_mag",   wind_mag);
 	s.add_uniform_float("wind_scale", 1.0);
-	s.add_uniform_float("wind_time",  (underwater ? 0.025 : 0.1)*tfticks); // lower frequency movement for underwater seaweed (but applies to all plants)
+	s.add_uniform_float("wind_time",  (underwater ? 0.025 : 0.1)*sim_ticks); // lower frequency movement for underwater seaweed (but applies to all plants)
 	s.add_uniform_float("wind_freq",  80.0*tree_scale);
 }
 

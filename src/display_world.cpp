@@ -38,7 +38,7 @@ bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned enabled_lights(0); // 8 bit flags
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
-double tfticks(0.0);
+double tfticks(0.0), sim_ticks(0.0);
 upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
 
@@ -734,6 +734,7 @@ void display(void) {
 			tticks += iticks;
 			carry   = ftick - (double)iticks;
 			ftick   = min(ftick, 20.0);
+			if (animate2) {sim_ticks = tfticks;}
 		}
 		fticks = max(TOLERANCE, float(0.9*fticks + 0.1*(ftick - carry))); // slow averaging filter
 		assert(fticks >  0.0 && fticks < 1.0E12);

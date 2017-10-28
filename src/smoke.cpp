@@ -33,7 +33,7 @@ extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
 extern int animate2, display_mode, scrolling, game_mode, frame_counter, precip_mode;
 extern float czmin0, rain_wetness, fticks, dist_to_fire_sq;
-extern double tfticks, camera_zh;
+extern double sim_ticks, camera_zh;
 extern vector3d wind;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
@@ -410,7 +410,7 @@ void fire_elem_t::next_frame(float burn_rate, float consume_rate, float die_rate
 
 void fire_drawer_t::add_fire(point const &pos, float radius, int frame_ix, float alpha) {
 	colorRGBA const color(1.0, 0.5, 0.5, alpha); // red tint, partially transparent
-	qbd.add_animated_billboard(pos, get_camera_pos(), up_vector, color, radius, radius, ((int(tfticks) + frame_ix)&15)/16.0);
+	qbd.add_animated_billboard(pos, get_camera_pos(), up_vector, color, radius, radius, ((int(sim_ticks) + frame_ix)&15)/16.0);
 }
 void fire_drawer_t::draw(shader_t &s) {
 	s.add_uniform_float("depth_trans_bias", 0.05);
