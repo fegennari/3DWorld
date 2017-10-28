@@ -120,7 +120,7 @@ void create_object_groups() {
 	coll_id[CGRENADE] = create_group(CGRENADE, 20,    0, 0, 0, 0, 0);
 	coll_id[SHRAPNEL] = create_group(SHRAPNEL, 8000,  0, 0, 0, 1, 0);
 	coll_id[SHELLC]   = create_group(SHELLC,   4*object_types[SHELLC].lifetime, 0, 0, 0, 1, 0);
-	coll_id[LEAF]     = create_group(LEAF,     2000,  0, 0, 1, 1, 0);
+	coll_id[LEAF]     = create_group(LEAF,     2500,  0, 0, 1, 1, 0);
 	coll_id[HEALTH]   = create_group(HEALTH,   init_item_counts[0], 0, 1, 0, 0, 0);
 	coll_id[SHIELD]   = create_group(SHIELD,   init_item_counts[1], 0, 1, 0, 0, 0);
 	coll_id[POWERUP]  = create_group(POWERUP,  init_item_counts[2], 0, 1, 0, 0, 0);

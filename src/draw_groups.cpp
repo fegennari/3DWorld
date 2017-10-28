@@ -507,7 +507,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 					last_tid = tid;
 				}
 				point pos(obj.pos);
-				if (place_obj_on_grass(pos, leaf_scale)) {pos.z = 0.5*(obj.pos.z + pos.z-leaf_scale);} // leaf is partially on grass
+				if (place_obj_on_grass(pos, leaf_scale)) {pos.z = 0.25*obj.pos.z + 0.75*pos.z-leaf_scale;} // leaf is partially on grass
 				float const t(((float)obj.time)/((float)otype.lifetime));
 				colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
 				colorRGBA leaf_color(WHITE);

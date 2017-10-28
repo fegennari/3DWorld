@@ -473,10 +473,10 @@ public:
 			float const height(pos.z - (mh + grass_length));
 			if (height > 0.0) {radius = sqrt(max(1.0E-6f, (radius*radius - height*height)));}
 		}
-		x1 = get_xpos(pos.x - radius) - 1;
-		x2 = get_xpos(pos.x + radius);
-		y1 = get_ypos(pos.y - radius) - 1;
-		y2 = get_ypos(pos.y + radius);
+		x1 = int(floor((pos.x - radius + X_SCENE_SIZE)*DX_VAL_INV));
+		x2 = int(ceil ((pos.x + radius + X_SCENE_SIZE)*DX_VAL_INV));
+		y1 = int(floor((pos.y - radius + Y_SCENE_SIZE)*DY_VAL_INV));
+		y2 = int(ceil ((pos.y + radius + Y_SCENE_SIZE)*DY_VAL_INV));
 		return radius;
 	}
 
@@ -493,7 +493,7 @@ public:
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2)), rad_sq(rad*rad);
 		if (rad == 0.0) return 0;
-		bool updated(0);
+		float const xa(pos.x - radius), xb(pos.x + radius), ya(pos.y - radius), yb(pos.y + radius);
 
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
@@ -503,14 +503,14 @@ public:
 				if (start == end) continue; // no grass at this location
 
 				for (unsigned i = start; i < end; ++i) {
-					if (grass[i].dir == zero_vector) continue; // removed
 					if (p2p_dist_xy_sq(pos, grass[i].p) > rad_sq) continue; // too far away
-					pos.z   = max(pos.z, (grass[i].p.z + grass[i].dir.z + radius));
-					updated = 1;
+					if (grass[i].dir == zero_vector) continue; // removed
+					pos.z = max(pos.z, (grass[i].p.z + grass[i].dir.z + radius));
+					return 1; // early terminate at first grass blade
 				}
 			}
 		}
-		return updated;
+		return 0;
 	}
 
 	float get_grass_density(int x, int y) {
