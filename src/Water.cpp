@@ -501,9 +501,9 @@ void draw_water(bool no_update, bool draw_fast) {
 		unsigned const num_updates(max(1, XY_MULT_SIZE/256));
 
 		for (unsigned n = 0; n < num_updates; ++n) {
-			int const i(rgen.rand()%MESH_Y_SIZE), j(rgen.rand()%MESH_X_SIZE);; // select a random mesh element
+			int const i(rgen.rand()%MESH_Y_SIZE), j(rgen.rand()%MESH_X_SIZE); // select a random mesh element
 
-			if (wminside[i][j] == 1 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
+			if (wminside[i][j] == 1 && get_water_enabled(j, i) && !is_mesh_disabled(j, i) && mesh_height[i][j] < water_matrix[i][j]) {
 				modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 1); // check underwater
 			}
 		}

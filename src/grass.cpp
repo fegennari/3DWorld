@@ -697,7 +697,7 @@ public:
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+1]) continue; // empty section
 				point const mpos(get_mesh_xyz_pos(x, y));
 				bool visible(1);
-				if (dot_product((camera - mpos), cview_dir) > 0.0 && !dist_less_than(camera, mpos, cube_sz)) {visible = 0;} // behind the camera
+				if (!no_clip && dot_product((camera - mpos), cview_dir) > 0.0 && !dist_less_than(camera, mpos, cube_sz)) {visible = 0;} // behind the camera
 				else if (x+1 < MESH_X_SIZE && y+1 < MESH_Y_SIZE &&
 					dot_product(surface_normals[y  ][x  ], (adj_camera - mpos                      )) < 0.0 &&
 					dot_product(surface_normals[y  ][x+1], (adj_camera - get_mesh_xyz_pos(x+1, y  ))) < 0.0 &&
