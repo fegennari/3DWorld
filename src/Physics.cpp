@@ -644,7 +644,7 @@ vector3d get_local_wind(int xpos, int ypos, float zval, bool no_use_mesh) {
 	// calculate wind intensity
 	float const tx((xpos + xoff2 - total_wind.x/TWO_XSS)/MESH_X_SIZE);
 	float const ty((ypos + yoff2 - total_wind.y/TWO_YSS)/MESH_Y_SIZE);
-	float const wind_intensity(CLIP_TO_01(1.0f - 2.0f*get_texture_component(WIND_TEX, tx, ty, 0))); // roughly (0.0, 0.5)
+	float const wind_intensity(CLIP_TO_01(1.0f - 2.0f*get_texture_component_grayscale_pow2(WIND_TEX, tx, ty))); // roughly (0.0, 0.5)
 	return local_wind*(pressure*(hval*wind_intensity + (1.0 - hval)));
 }
 

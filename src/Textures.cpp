@@ -1805,12 +1805,9 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 unsigned texture_t::get_texel_ix(float u, float v) const {
 
 	u -= 1.0E-6f; v -= 1.0E-6f; // make 1.0 equal width-1 | height-1
-	//int tx(int(width *u) & (width -1));
-	//int ty(int(height*v) & (height-1)); // assumes width and height are a power of 2
-	int tx(int(width *u) % width ); // width and height can be any nonzero value
-	int ty(int(height*v) % height);
-	if (tx < 0) tx += width;
-	if (ty < 0) ty += height;
+	int tx(int(width*u) % width), ty(int(height*v) % height); // width and height can be any nonzero value
+	if (tx < 0) {tx += width;}
+	if (ty < 0) {ty += height;}
 	assert(tx >= 0 && ty >= 0 && tx < width && ty < height);
 	return (width*ty + tx);
 }
@@ -1844,6 +1841,10 @@ float texture_t::get_component(float u, float v, int comp) const {
 float get_texture_component(unsigned tid, float u, float v, int comp) {
 	assert(tid < textures.size());
 	return textures[tid].get_component(u, v, comp);
+}
+float get_texture_component_grayscale_pow2(unsigned tid, float u, float v) {
+	assert(tid < textures.size());
+	return textures[tid].get_component_grayscale_pow2(u, v);
 }
 
 colorRGBA get_texture_color(unsigned tid, float u, float v) {

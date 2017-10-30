@@ -1287,9 +1287,12 @@ public:
 	int write_to_bmp(std::string const &fn) const;
 	int write_to_png(std::string const &fn) const;
 	unsigned get_texel_ix(float u, float v) const;
+	// assumes width and height are a power of 2
+	unsigned get_texel_ix_fast_pow2(float u, float v) const {return (width*(int(height*v) & (height-1)) + (int(width*u) & (width-1)));}
 	colorRGBA get_texel(unsigned ix) const;
 	colorRGBA get_texel(float u, float v) const {return get_texel(get_texel_ix(u, v));}
 	float get_component(float u, float v, int comp) const;
+	float get_component_grayscale_pow2(float u, float v) const {return data[get_texel_ix_fast_pow2(u, v)]/255.0;}
 	void check_init(bool free_after_upload=0) {if (tid == 0) do_gl_init(free_after_upload);}
 	unsigned num_pixels() const {return unsigned(width*height);}
 	unsigned num_bytes()  const {return ncolors*num_pixels();}

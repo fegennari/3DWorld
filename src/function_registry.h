@@ -571,6 +571,7 @@ void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]);
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy, shader_t &shader, int mode);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
 float get_texture_component(unsigned tid, float u, float v, int comp);
+float get_texture_component_grayscale_pow2(unsigned tid, float u, float v);
 colorRGBA get_texture_color(unsigned tid, float u, float v);
 vector2d get_billboard_texture_uv(point const *const points, point const &pos);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
