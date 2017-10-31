@@ -325,11 +325,15 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 		sorted.resize(size());
 		for (unsigned i = 0; i < size(); ++i) {sorted[i] = make_pair(distance_to_camera(operator[](i).sphere_center() + xlate), i);}
 		sort(sorted.begin(), sorted.end()); // sort front to back for better early z culling
+		to_update_leaves.clear();
 
 		for (auto i = sorted.begin(); i != sorted.end(); ++i) {
-			operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, tex0_loc);
+			operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, tex0_loc, to_update_leaves);
 		}
 		tree_data_t::post_leaf_draw();
+		int const num_to_update(to_update_leaves.size());
+#pragma omp parallel for num_threads(max(1, min(4, num_to_update))) schedule(static) if (num_to_update > 1)
+		for (int i = 0; i < num_to_update; ++i) {to_update_leaves[i]->update_leaf_orients_wind();}
 	}
 }
 
@@ -935,8 +939,9 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 }
 
 
-void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc, int tex0_off) {
-
+void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate,
+	int wsoff_loc, int tex0_off, vector<tree *> &to_update_leaves)
+{
 	if (!created) return;
 	tree_data_t &td(tdata());
 	td.gen_leaf_color();
@@ -985,7 +990,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
 	}
 	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && wind_enabled && !reflection_pass), gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
-	if (!gen_arrays && leaf_dynamic_en && size_scale*td.get_size_scale_mult() > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients_wind(); update_leaf_orients_coll();}
+	if (!gen_arrays && leaf_dynamic_en && size_scale*td.get_size_scale_mult() > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients_all(to_update_leaves);}
 
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
@@ -1174,7 +1179,6 @@ bool tree_data_t::check_if_needs_updated() {
 void tree::update_leaf_orients_wind() { // leaves move in wind (somewhat slow)
 
 	tree_data_t &td(tdata());
-	if (!td.check_if_needs_updated() && leaf_orients_valid) return;
 	vector<tree_leaf> const &leaves(td.get_leaves());
 	rand_gen_t rgen;
 	rgen.set_state(frame_counter, leaves.size());
@@ -1183,8 +1187,7 @@ void tree::update_leaf_orients_wind() { // leaves move in wind (somewhat slow)
 	int last_xpos(0), last_ypos(0);
 	vector3d local_wind(zero_vector);
 
-#pragma omp parallel for num_threads(2) schedule(static) firstprivate(last_xpos, last_ypos, local_wind)
-	for (int i = 0; i < (int)leaves.size(); i++) { // process leaf wind and collisions
+	for (unsigned i = 0; i < leaves.size(); ++i) { // process leaf wind and collisions
 		point p0(leaves[i].pts[0]);
 		if (priv_data) {p0 += tree_center;}
 		int const xpos(get_xpos(p0.x)), ypos(get_ypos(p0.y));
@@ -1211,10 +1214,12 @@ void tree::update_leaf_orients_wind() { // leaves move in wind (somewhat slow)
 	leaf_orients_valid = 1;
 }
 
-void tree::update_leaf_orients_coll() { // leaves move when struck by an object
+void tree::update_leaf_orients_all(vector<tree *> &to_update_leaves) {
 
-	if (!has_any_billboard_coll || leaf_cobjs.empty()) return;
 	tree_data_t &td(tdata());
+	if (td.check_if_needs_updated() || !leaf_orients_valid) {to_update_leaves.push_back(this);}
+	if (!has_any_billboard_coll || leaf_cobjs.empty()) return; // no coll movement
+	// leaves move when struck by an object
 	vector<tree_leaf> const &leaves(td.get_leaves());
 	rand_gen_t rgen;
 	rgen.set_state(frame_counter, leaves.size());

@@ -311,8 +311,7 @@ class tree {
 	std::shared_ptr<tree_fire_t> tree_fire;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
-	void update_leaf_orients_wind();
-	void update_leaf_orients_coll();
+	void update_leaf_orients_all(vector<tree *> &to_update_leaves);
 	bool has_leaf_data()   const {return tdata().leaf_data_allocated();}
 	bool physics_enabled() const;
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
@@ -339,8 +338,10 @@ public:
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
 	float calc_size_scale(point const &draw_pos) const;
+	void update_leaf_orients_wind();
 	void draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc);
-	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc, int tex0_loc);
+	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate,
+		int wsoff_loc, int tex0_loc, vector<tree *> &to_update_leaves);
 	void shift_tree(vector3d const &vd);
 	void add_bounds_to_bcube(cube_t &bcube) const;
 	void clear_context();
@@ -386,6 +387,7 @@ class tree_cont_t : public vector<tree> {
 
 	tree_data_manager_t &shared_tree_data;
 	vector<pair<float, unsigned>> sorted;
+	vector<tree *> to_update_leaves;
 	cube_t all_bcube;
 	bool generated;
 
