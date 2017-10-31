@@ -1,4 +1,5 @@
 uniform sampler2D frame_buffer_tex;
+uniform sampler2D noise_tex;
 uniform float time      = 0.0;
 uniform float intensity = 1.0;
 
@@ -15,7 +16,9 @@ float hash(vec3 p) {
 
 void main() {
 	vec2 pos     = tc;
-	pos.x       += 0.01*intensity*sin(124.0*pos.x + 437.0*pos.y - 0.1*time) * (0.5 - abs(tc.x - 0.5)) * (0.5 - abs(tc.y - 0.5));
+	//pos.x       += 0.01*intensity*sin(124.0*pos.x + 437.0*pos.y - 0.1*time) * (0.5 - abs(tc.x - 0.5)) * (0.5 - abs(tc.y - 0.5));
+	vec2 offset  = vec2(0.002*time, 0.0);
+	pos         += 0.03*intensity*(texture(noise_tex, (tc + offset)).r, texture(noise_tex, (1.23*tc + 1.07*offset)).r);
 	vec3 color   = texture(frame_buffer_tex, pos).rgb;
 	//color.rgb = color.brg;
 	//color *= 10.0;

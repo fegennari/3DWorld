@@ -115,6 +115,8 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0) {
 	s.add_uniform_float("intensity", intensity);
 	s.add_uniform_int("frame_buffer_tex", 0);
 	s.add_uniform_float("time", time); // may not be used
+	select_multitex(NOISE_TEX, 1);
+	s.add_uniform_int("noise_tex", 1); // Note: used for heat waves effect, could be used for others
 	set_xy_step(s); // may not be used
 	draw_white_quad_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
