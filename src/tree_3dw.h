@@ -311,7 +311,8 @@ class tree {
 	std::shared_ptr<tree_fire_t> tree_fire;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
-	void update_leaf_orients();
+	void update_leaf_orients_wind();
+	void update_leaf_orients_coll();
 	bool has_leaf_data()   const {return tdata().leaf_data_allocated();}
 	bool physics_enabled() const;
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;

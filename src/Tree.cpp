@@ -985,7 +985,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
 	}
 	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && wind_enabled && !reflection_pass), gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
-	if (!gen_arrays && leaf_dynamic_en && size_scale*td.get_size_scale_mult() > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
+	if (!gen_arrays && leaf_dynamic_en && size_scale*td.get_size_scale_mult() > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients_wind(); update_leaf_orients_coll();}
 
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
@@ -1171,72 +1171,77 @@ bool tree_data_t::check_if_needs_updated() {
 }
 
 
-void tree::update_leaf_orients() { // leaves move in wind or when struck by an object (somewhat slow)
+void tree::update_leaf_orients_wind() { // leaves move in wind (somewhat slow)
 
+	tree_data_t &td(tdata());
+	if (!td.check_if_needs_updated() && leaf_orients_valid) return;
+	vector<tree_leaf> const &leaves(td.get_leaves());
+	rand_gen_t rgen;
+	rgen.set_state(frame_counter, leaves.size());
+	bool const priv_data(td_is_private());
+	bool const heal_pass(priv_data && LEAF_HEAL_RATE > 0 && world_mode == WMODE_GROUND && (rgen.rand()&7) == 0); // only update healed color every 8 frames
+	int last_xpos(0), last_ypos(0);
+	vector3d local_wind(zero_vector);
+
+#pragma omp parallel for num_threads(2) schedule(static) firstprivate(last_xpos, last_ypos, local_wind)
+	for (int i = 0; i < (int)leaves.size(); i++) { // process leaf wind and collisions
+		point p0(leaves[i].pts[0]);
+		if (priv_data) {p0 += tree_center;}
+		int const xpos(get_xpos(p0.x)), ypos(get_ypos(p0.y));
+			
+		// Note: should check for similar z-value, but z is usually similar within the leaves of a single tree
+		if (i == 0 || xpos != last_xpos || ypos != last_ypos) {
+			local_wind = get_local_wind(xpos, ypos, p0.z, !priv_data); // slow
+			last_xpos  = xpos;
+			last_ypos  = ypos;
+		}
+		if (local_wind != zero_vector) {
+			float const angle(PI_TWO*max(-1.0f, min(1.0f, dot_product(local_wind, leaves[i].norm)))); // not physically correct, but it looks good
+			td.bend_leaf(i, angle);
+		}
+		if (heal_pass && (rgen.rand()&63) == 0) { // leaf heals every 64 frames
+			short &lcolor(td.get_leaves()[i].lcolor);
+
+			if (lcolor > 0 && lcolor < 1000) { // partially damaged
+				lcolor = min(1000, (lcolor + int(LEAF_HEAL_RATE*fticks)));
+				copy_color(i);
+			}
+		}
+	} // for i
+	leaf_orients_valid = 1;
+}
+
+void tree::update_leaf_orients_coll() { // leaves move when struck by an object
+
+	if (!has_any_billboard_coll || leaf_cobjs.empty()) return;
 	tree_data_t &td(tdata());
 	vector<tree_leaf> const &leaves(td.get_leaves());
 	rand_gen_t rgen;
 	rgen.set_state(frame_counter, leaves.size());
+	unsigned num(min(leaves.size(), leaf_cobjs.size())); // should be the same size
 
-	if (td.check_if_needs_updated() || !leaf_orients_valid) {
-		bool const priv_data(td_is_private());
-		bool const heal_pass(priv_data && LEAF_HEAL_RATE > 0 && world_mode == WMODE_GROUND && (rgen.rand()&7) == 0); // only update healed color every 8 frames
-		int last_xpos(0), last_ypos(0);
-		vector3d local_wind(zero_vector);
-
-#pragma omp parallel for num_threads(2) schedule(static) firstprivate(last_xpos, last_ypos, local_wind)
-		for (int i = 0; i < (int)leaves.size(); i++) { // process leaf wind and collisions
-			point p0(leaves[i].pts[0]);
-			if (priv_data) {p0 += tree_center;}
-			int const xpos(get_xpos(p0.x)), ypos(get_ypos(p0.y));
-			
-			// Note: should check for similar z-value, but z is usually similar within the leaves of a single tree
-			if (i == 0 || xpos != last_xpos || ypos != last_ypos) {
-				local_wind = get_local_wind(xpos, ypos, p0.z, !priv_data); // slow
-				last_xpos  = xpos;
-				last_ypos  = ypos;
-			}
-			if (local_wind != zero_vector) {
-				float const angle(PI_TWO*max(-1.0f, min(1.0f, dot_product(local_wind, leaves[i].norm)))); // not physically correct, but it looks good
-				td.bend_leaf(i, angle);
-			}
-			if (heal_pass && (rgen.rand()&63) == 0) { // leaf heals every 64 frames
-				short &lcolor(td.get_leaves()[i].lcolor);
-
-				if (lcolor > 0 && lcolor < 1000) { // partially damaged
-					lcolor = min(1000, (lcolor + int(LEAF_HEAL_RATE*fticks)));
-					copy_color(i);
+	for (unsigned i = 0; i < num; ++i) {
+		coll_obj &cobj(get_leaf_cobj(i));
+		if (cobj.last_coll == 0) continue; // no collision
+		bool removed(0);
+		float hit_angle(0.0);
+		if (cobj.coll_type == BEAM) {removed = damage_leaf(i, BEAM_DAMAGE, rgen);} // do burn damage
+		else {
+			if (cobj.coll_type == PROJECTILE) {
+				if ((rand()&3) == 0) { // shoot off leaf
+					create_leaf_obj(i);
+					remove_leaf(i, 1);
+					removed = 1;
 				}
+				cobj.coll_type = IMPACT; // reset to impact after first hit
 			}
-		} // for i
-	} // end do_update
-	if (has_any_billboard_coll) { // handle object collisions that move/rotate leaves (after wind)
-		unsigned num(min(leaves.size(), leaf_cobjs.size())); // should be the same or zero
-
-		for (unsigned i = 0; i < num; ++i) {
-			float hit_angle(0.0);
-			coll_obj &cobj(get_leaf_cobj(i));
-			if (cobj.last_coll == 0) continue; // no collision
-			bool removed(0);
-			if (cobj.coll_type == BEAM) {removed = damage_leaf(i, BEAM_DAMAGE, rgen);} // do burn damage
-			else {
-				if (cobj.coll_type == PROJECTILE) {
-					if ((rand()&3) == 0) { // shoot off leaf
-						create_leaf_obj(i);
-						remove_leaf(i, 1);
-						removed = 1;
-					}
-					cobj.coll_type = IMPACT; // reset to impact after first hit
-				}
-				hit_angle += PI_TWO*cobj.last_coll/TICKS_PER_SECOND; // 90 degree max rotate
-			}
-			if (removed) {--i; --num; continue;}
-			cobj.last_coll = ((hit_angle == 0.0 || cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
-			if (cobj.last_coll) {next_has_any_billboard_coll = 1;}
-			if (hit_angle != 0.0) {td.bend_leaf(i, hit_angle);} // do we want to update collision objects as well?
-		} // for i
-	} // end has_any_billboard_coll
-	leaf_orients_valid = 1;
+			hit_angle += PI_TWO*cobj.last_coll/TICKS_PER_SECOND; // 90 degree max rotate
+		}
+		if (removed) {--i; --num; continue;}
+		cobj.last_coll = ((hit_angle == 0.0 || cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
+		if (cobj.last_coll) {next_has_any_billboard_coll = 1;}
+		if (hit_angle != 0.0) {td.bend_leaf(i, hit_angle);} // do we want to update collision objects as well?
+	} // for i
 }
 
 
