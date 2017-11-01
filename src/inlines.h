@@ -440,6 +440,9 @@ inline bool sphere_in_camera_view(point const &pos, float radius, int max_level)
 inline bool univ_sphere_vis(point const &pos, float radius) {
 	return player_pdu.sphere_visible_test(pos, radius);
 }
+inline bool univ_sphere_vis_no_inside_test(point const &pos, float radius) {
+	return player_pdu.sphere_visible_test_no_inside_test(pos, radius);
+}
 
 template<typename T> inline pointT<T> make_pt_global(pointT<T> const &pos) {
 	return ((cur_origin == all_zeros) ? pos : (pos - cur_origin));

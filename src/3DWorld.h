@@ -588,6 +588,7 @@ struct pos_dir_up { // defines a view frustum
 	void orthogonalize_up_dir();
 	bool point_visible_test(point const &pos_) const;
 	bool sphere_visible_test(point const &pos_, float radius) const;
+	bool sphere_visible_test_no_inside_test(point const &pos_, float radius) const;
 	bool sphere_completely_visible_test(point const &pos_, float radius) const {return sphere_visible_test(pos_, -radius);}
 	template<unsigned N> bool pt_set_visible(point const *const pts) const;
 	bool cube_visible(cube_t const &cube) const;

@@ -117,6 +117,17 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 	return ((dist + radius) > near_ && (dist - radius) < far_); // Note: approximate/conservative but fast
 }
 
+bool pos_dir_up::sphere_visible_test_no_inside_test(point const &pos_, float radius) const {
+
+	if (!valid) return (radius >= 0.0); // invalid - the only reasonable thing to do is return true for safety
+	vector3d const pv(pos_, pos);
+	if (dot_product(dir, pv) < 0.0) return 0; // sphere behind - optimization
+	float const dist(pv.mag());
+	if (fabs(dot_product(upv_, pv)) > (dist*  sterm + radius)) return 0; // y-direction (up)
+	if (fabs(dot_product(cp,   pv)) > (dist*x_sterm + radius)) return 0; // x-direction
+	return ((dist + radius) > near_ && (dist - radius) < far_); // Note: approximate/conservative but fast
+}
+
 template<unsigned N> bool check_clip_plane(point const *const pts, point const &pos, vector3d const &v, float aa, unsigned d) {
 	for (unsigned i = 0; i < N; ++i) {
 		vector3d const pv(pts[i], pos);

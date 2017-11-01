@@ -1455,7 +1455,7 @@ void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_typ
 void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const {
 
 	point_d const apos(pos_ + pos);
-	if (!univ_sphere_vis(apos, radius)) return;
+	if (!univ_sphere_vis_no_inside_test(apos, radius)) return;
 	if (sphere_size_less_than(apos, camera, radius, 1.0)) return; // too small/far away
 	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s, pld);
 }
