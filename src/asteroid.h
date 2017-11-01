@@ -146,7 +146,7 @@ class uasteroid_belt_system : public uasteroid_belt {
 	vector<sphere_t> colliders;
 
 	virtual void gen_asteroid_placements();
-	bool is_potential_collider(uobject const &uobj) const;
+	void add_potential_collider(point const &cpos, float cradius);
 	bool might_cast_shadow(uobject const &uobj) const;
 	void calc_colliders();
 	void calc_shadowers();

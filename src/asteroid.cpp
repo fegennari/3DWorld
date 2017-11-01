@@ -38,6 +38,7 @@ extern int animate2, display_mode, frame_counter, window_width, window_height;
 extern float fticks;
 extern double tfticks;
 extern colorRGBA sun_color;
+extern vector<cached_obj> all_ships;
 extern vector<us_weapon> us_weapons;
 extern usw_ray_group trail_rays;
 
@@ -1172,13 +1173,14 @@ void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point con
 }
 
 
-bool uasteroid_belt_system::is_potential_collider(uobject const &uobj) const {
 
-	if (!dist_less_than(uobj.pos, get_camera_pos(), 250*max_asteroid_radius)) return 0; // too far away to notice
-	if (!univ_sphere_vis(uobj.pos, 2.0*(uobj.radius + max_asteroid_radius)))  return 0; // expand radius somewhat
-	return sphere_might_intersect(uobj.pos, uobj.radius);
+void uasteroid_belt_system::add_potential_collider(point const &cpos, float cradius) {
+
+	if (!dist_less_than(cpos, get_camera_pos(), 250*max_asteroid_radius)) return; // too far away to notice
+	if (!univ_sphere_vis(cpos, 2.0*(cradius + max_asteroid_radius)))      return; // expand radius somewhat
+	if (!sphere_might_intersect(cpos, cradius)) return;
+	colliders.push_back(sphere_t(cpos, cradius));
 }
-
 
 void uasteroid_belt_system::calc_colliders() {
 
@@ -1186,12 +1188,13 @@ void uasteroid_belt_system::calc_colliders() {
 	if (!animate2 || !system) return;
 
 	for (vector<uplanet>::const_iterator p = system->planets.begin(); p != system->planets.end(); ++p) {
-		if (is_potential_collider(*p)) {colliders.push_back(sphere_t(p->pos, p->radius));}
-
-		for (vector<umoon>::const_iterator m = p->moons.begin(); m != p->moons.end(); ++m) {
-			if (is_potential_collider(*m)) {colliders.push_back(sphere_t(m->pos, m->radius));}
-		}
+		add_potential_collider(p->pos, p->radius);
+		for (vector<umoon>::const_iterator m = p->moons.begin(); m != p->moons.end(); ++m) {add_potential_collider(m->pos, m->radius);}
 	}
+	for (auto i = all_ships.begin(); i != all_ships.end(); ++i) {
+		if (i->radius > 0.004) {add_potential_collider(i->pos, i->radius);} // large ships
+	}
+	//add_potential_collider(player_ship().pos, player_ship().get_c_radius());
 }
 
 

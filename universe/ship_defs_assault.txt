@@ -8,6 +8,7 @@ $INCLUDE universe/ship_defs.txt
 # FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
 $FLEET "defenders" 1 RED    AI_ATT_ENEMY  TARGET_CLOSEST  0.12   0.0  0.0  0.0
   0   0   0   0   0   0   0   0   0   0   0   30  8   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   8   0   0   0   0   8   0   0   0   0   0   0
+#$FLEET "attackers" 1 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  0.03   -0.3 -0.45 -0.8 # attack through the asteroid belt
 $FLEET "attackers" 1 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  0.24   1.5  1.5  1.5
   4   24  20  16  8   8   5   0   3   3   2   0   0   0   0   0   0   0   0   4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   0   0   0   0   0
   
