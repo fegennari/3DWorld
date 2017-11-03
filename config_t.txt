@@ -10,6 +10,7 @@ tree_coll_level 3
 # enable these for dense tree coverage
 #ntrees 500
 #tree_density_thresh 0.9
+#unlimited_weapons 1
 
 show_map_view_mandelbrot 0
 
