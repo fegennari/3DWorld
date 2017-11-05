@@ -1030,7 +1030,7 @@ string read_filename(FILE *fp, unsigned &line_num) {
 
 	while (1) {
 		int const c(getc(fp));
-		if (c == '\0' || c == EOF) {return str;} // end of file
+		if (is_EOF(c)) {return str;} // end of file
 		else if (c == '"') {in_quote ^= 1;} // quote
 		else if (isspace(c)) { // whitespace character
 			if (c == '\n') {++line_num;}
@@ -1149,8 +1149,21 @@ unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c) {
 	return 6;
 }
 
+bool read_block_comment(FILE *fp) {
 
-bool is_end_of_string(int v) {return (v == '#' || v == EOF || v == 0 || isspace(v));}
+	while (1) {
+		int c(getc(fp));
+		if (is_EOF(c)) return 0; // early EOF, unterminated block comment
+		if (c != '*' ) continue; // not end of block comment
+		while (1) {
+			c = getc(fp);
+			if (is_EOF(c)) return 0; // early EOF, unterminated block comment
+			if (c == '/' ) return 1; // done/success
+			if (c != '*' ) break; // not a block comment end, exit to outer loop and look for another '*'
+		}
+	}
+	return 0; // never gets here
+}
 
 
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
@@ -1183,6 +1196,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		if (!is_end_of_string(letter)) {
 			int const next_letter(getc(fp));
 
+			if (letter == '/' && next_letter == '*') { // start of block comment
+				if (!read_block_comment(fp)) {return read_error(fp, "block_comment", coll_obj_file);}
+				continue; // next loop
+			}
 			if (!is_end_of_string(next_letter)) { // multi-character keyword
 				string keyword;
 				keyword.push_back(letter);

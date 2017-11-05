@@ -170,7 +170,7 @@ class material_file_parser_t {
 	void read_to_newline() {
 		while (1) {
 			int const c(in.get());
-			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
+			if (c == '\n' || is_EOF(c)) break; // end of file or line
 		}
 		return;
 	}

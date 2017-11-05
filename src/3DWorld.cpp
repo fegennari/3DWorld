@@ -1777,7 +1777,10 @@ int load_config(string const &config_file) {
 		if (kwmf.maybe_set_from_fp(str, fp)) continue;
 		if (kwms.maybe_set_from_fp(str, fp)) continue;
 
-		if (str[0] == '#') { // comment
+		if (str.size() >= 2 && str[0] == '/' && str[1] == '*') { // start of block comment
+			if (!read_block_comment(fp)) {cfg_err("block_comment", error);}
+		}
+		else if (str[0] == '#') { // comment
 			int letter(getc(fp));
 			while (letter != '\n' && letter != EOF && letter != 0) letter = getc(fp);
 		}

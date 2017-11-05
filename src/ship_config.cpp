@@ -5,6 +5,7 @@
 #include "ship.h"
 #include "ship_util.h"
 #include "explosion.h"
+#include "file_utils.h"
 
 
 bool const SHOW_SHIP_RATINGS = 0;
@@ -765,7 +766,7 @@ bool ship_defs_file_reader::read_string(ifstream &in, string &str) { // can be c
 		int const c(in.get());
 		if (c == '"') break;
 		
-		if (c == 0 || c == EOF) {
+		if (is_EOF(c)) {
 			cerr << "Error: Unterminated string." << endl;
 			return 0;
 		}
@@ -819,7 +820,7 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 		if (str[0] == '#') { // comment
 			while (1) {
 				int const c(cfg.get());
-				if (c == '\n' || c == 0 || c == EOF) break;
+				if (c == '\n' || is_EOF(c)) break;
 			}
 		}
 		else if (str == "$INCLUDE") {

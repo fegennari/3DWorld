@@ -8,6 +8,10 @@
 #include <fstream>
 #include "3DWorld.h"
 
+inline bool is_EOF(int v) {return (v == EOF || v == '\0');}
+inline bool is_end_of_string(int v) {return (v == '#' || isspace(v) || is_EOF(v));}
+bool read_block_comment(FILE *fp);
+
 inline bool read_int  (FILE *fp, int      &val) {return (fscanf(fp, "%i", &val) == 1);}
 inline bool read_uint (FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1);}
 inline bool read_nonzero_uint(FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1 && val > 0);}
