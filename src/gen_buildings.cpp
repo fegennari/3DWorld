@@ -83,7 +83,7 @@ struct building_mat_t : public building_tex_params_t {
 
 struct building_params_t {
 
-	bool flatten_mesh, has_normal_map;
+	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y;
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor;
 	vector3d range_translate; // used as a temporary to add to material pos_range
@@ -91,8 +91,9 @@ struct building_params_t {
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), range_translate(zero_vector) {}
-	
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0),
+		num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), range_translate(zero_vector) {}
+	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
 		for (unsigned n = 0; n < cur_prob; ++n) {mat_gen_ix.push_back(mat_ix);} // add more references to this mat for higher probability
@@ -209,6 +210,12 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_float(fp, global_building_params.cur_mat.max_alt)) {buildings_file_err(str, error);}
 	}
 	// material textures
+	else if (str == "texture_mirror") {
+		if (!read_bool(fp, global_building_params.tex_mirror)) {buildings_file_err(str, error);}
+	}
+	else if (str == "texture_inv_y") {
+		if (!read_bool(fp, global_building_params.tex_inv_y)) {buildings_file_err(str, error);}
+	}
 	else if (str == "side_tscale") {
 		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale)) {buildings_file_err(str, error);}
 	}
@@ -217,19 +224,19 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "side_tid") {
 		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.side_tex.tid = get_texture_by_name(std::string(strc));
+		global_building_params.cur_mat.side_tex.tid = get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
 	}
 	else if (str == "side_nm_tid") {
 		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.side_tex.nm_tid = get_texture_by_name(std::string(strc), 1);
+		global_building_params.cur_mat.side_tex.nm_tid = get_texture_by_name(std::string(strc), 1, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
 	}
 	else if (str == "roof_tid") {
 		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.roof_tex.tid = get_texture_by_name(std::string(strc));
+		global_building_params.cur_mat.roof_tex.tid = get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
 	}
 	else if (str == "roof_nm_tid") {
 		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.roof_tex.nm_tid = get_texture_by_name(std::string(strc), 1);
+		global_building_params.cur_mat.roof_tex.nm_tid = get_texture_by_name(std::string(strc), 1, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
 	}
 	// material colors
 	else if (str == "side_color") {

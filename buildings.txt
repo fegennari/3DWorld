@@ -148,8 +148,10 @@ buildings roof_nm_tid -1
 buildings side_color 1.0 0.8 0.6 1.0
 buildings add_material
 
+buildings texture_mirror 1 # mirror rather than wrap to fix misalignment
 buildings side_tid buildings/office_windows.jpg # nice but misaligned
 buildings side_nm_tid buildings/office_windows_NRM.jpg
+buildings texture_mirror 0 # revert to wrap mode
 buildings side_color 0.5 0.5 0.5 1.0
 buildings side_color_grayscale_rand 0.25
 buildings roof_tscale 8.0
