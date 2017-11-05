@@ -947,6 +947,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	if (!shadow_only && !dist_less_than(camera, pos, dmax)) return; // dist clipping
 	if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
 	building_mat_t const &mat(get_material());
+	bool const is_close(dist_less_than(camera, pos, 0.1*far_clip));
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
 	if (immediate_mode) {bdraw.begin_immediate_building();}
 	vector3d view_dir(zero_vector);
@@ -963,6 +964,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		}
 		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
+		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
