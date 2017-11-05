@@ -939,8 +939,8 @@ bool check_tile_smap(bool shadow_only) {
 
 void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
 
-	if (!is_valid()) return; // invalid building
 	if (draw_ix == cur_draw_ix) return; // already drawn this pass
+	if (!is_valid()) return; // invalid building
 	cur_draw_ix = draw_ix;
 	point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
 	float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
