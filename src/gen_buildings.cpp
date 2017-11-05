@@ -22,11 +22,11 @@ extern float shadow_map_pcf_offset, cobj_z_bias;
 struct tid_nm_pair_t {
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
-	float tscale; // tscale_x vs. tscale_y?
+	float tscale_x, tscale_y;
 
-	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale(1.0) {}
+	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
-	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale == t.tscale);}
+	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
 
 	void set_gl() const {
@@ -216,11 +216,19 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "texture_inv_y") {
 		if (!read_bool(fp, global_building_params.tex_inv_y)) {buildings_file_err(str, error);}
 	}
-	else if (str == "side_tscale") {
-		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale)) {buildings_file_err(str, error);}
+	else if (str == "side_tscale") { // both X and Y
+		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_x)) {buildings_file_err(str, error);}
+		global_building_params.cur_mat.side_tex.tscale_y = global_building_params.cur_mat.side_tex.tscale_x; // uniform
 	}
-	else if (str == "roof_tscale") {
-		if (!read_float(fp, global_building_params.cur_mat.roof_tex.tscale)) {buildings_file_err(str, error);}
+	else if (str == "side_tscale_x") {
+		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_x)) {buildings_file_err(str, error);}
+	}
+	else if (str == "side_tscale_y") {
+		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_y)) {buildings_file_err(str, error);}
+	}
+	else if (str == "roof_tscale") { // both X and Y
+		if (!read_float(fp, global_building_params.cur_mat.roof_tex.tscale_x)) {buildings_file_err(str, error);}
+		global_building_params.cur_mat.roof_tex.tscale_y = global_building_params.cur_mat.roof_tex.tscale_x; // uniform
 	}
 	else if (str == "side_tid") {
 		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
@@ -332,8 +340,8 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 
 #define EMIT_VERTEX() \
 	vert.v = pt*sz + llc; \
-	vert.t[ st] = texture_scale*vert.v[d]; \
-	vert.t[!st] = texture_scale*vert.v[i]; \
+	vert.t[ st] = tscale[ st]*vert.v[d]; \
+	vert.t[!st] = tscale[!st]*vert.v[i]; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
 	if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
@@ -426,7 +434,7 @@ public:
 			float const dist(max(p2p_dist(cur_camera_pos, (pos + xlate)), 0.001f));
 			ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U); // LOD if not flat sides: use at least 3 sides
 		}
-		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
+		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), tscale_x(2.0*tex.tscale_x), tscale_y(2.0*tex.tscale_y); // adjust for local vs. global space change
 		bool const apply_ao(!shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
@@ -471,7 +479,7 @@ public:
 
 					for (unsigned d = 0; d < 2; ++d) {
 						vector3d const &n(d ? n2 : n1);
-						vert.t[0] = texture_scale*cur_perim[d]*tot_perim_inv; // texture_scale should be a multiple of 1.0
+						vert.t[0] = tscale_x*cur_perim[d]*tot_perim_inv; // texture_scale should be a multiple of 1.0
 					
 						if (smooth_normals) {
 							vector3d normal(n); normal.x *= ry; normal.y *= rx; // scale normal by radius (swapped)
@@ -483,7 +491,7 @@ public:
 
 						for (unsigned e = 0; e < 2; ++e) {
 							vert.v.z = ((d^e) ? z_top : pos.z);
-							vert.t[1] = texture_scale*tex_pos[d^e];
+							vert.t[1] = tscale_y*tex_pos[d^e];
 							if (apply_ao) {vert.copy_color(cw[d^e]);}
 							verts.push_back(vert);
 						}
@@ -491,7 +499,7 @@ public:
 				} // for S
 			}
 		} // end draw sides
-		if (dim_mask & 4) { // draw end(s)
+		if (dim_mask & 4) { // draw end(s) / roof
 			auto &tri_verts(get_verts(tex, 1));
 			
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
@@ -512,7 +520,7 @@ public:
 						if (S > 0 && e == 0) {tri_verts.push_back(tri_verts[tri_verts.size()-2]); continue;} // reuse prev vertex
 						vector3d const &n(normals[(S+e)%ndiv]);
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), center.v.z);
-						if (!shadow_only) {UNROLL_2X(vert.t[i_] = texture_scale*n[i_];)}
+						if (!shadow_only) {vert.t[0] = tscale_x*n[0]; vert.t[1] = tscale_y*n[1];}
 						if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
 						tri_verts.push_back(vert);
 					}
@@ -562,7 +570,7 @@ public:
 			} // for i
 			return;
 		}
-		float const texture_scale(2.0*tex.tscale); // adjust for local vs. global space change
+		float const tscale[2] = {2.0f*tex.tscale_x, 2.0f*tex.tscale_y}; // adjust for local vs. global space change
 		bool const apply_ao(global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, cube.d[2][0], cube.d[2][1], cw, vert);

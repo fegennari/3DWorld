@@ -109,7 +109,8 @@ buildings add_material
 
 buildings side_tid buildings/metal_building.jpg
 buildings side_nm_tid buildings/metal_building_NRM.jpg
-buildings side_tscale 4.0
+buildings side_tscale_x 4.0
+buildings side_tscale_y 5.0
 buildings side_nm_tid -1
 buildings side_color 1.0 1.0 1.0 1.0
 buildings probability 2 # twice as likely as other materials
@@ -121,7 +122,6 @@ buildings min_levels 1
 buildings max_levels 8
 buildings split_prob 0.50 # 50%
 buildings size_range 0.5 1.0  0.5 1.0  1.0 4.0
-buildings side_tscale 2.0
 buildings side_nm_tid -1
 buildings roof_color 0.2 0.2 0.2 1.0
 buildings roof_color_grayscale_rand 0.25
@@ -142,6 +142,8 @@ buildings alt_step_factor_prob 0.3
 
 buildings side_tid buildings/apartment_windows.jpg # high quality
 buildings side_nm_tid buildings/apartment_windows_NRM.jpg
+buildings side_tscale_x 2.0
+buildings side_tscale_y 1.4
 buildings roof_tscale 2.0
 buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
@@ -154,6 +156,8 @@ buildings side_nm_tid buildings/office_windows_NRM.jpg
 buildings texture_mirror 0 # revert to wrap mode
 buildings side_color 0.5 0.5 0.5 1.0
 buildings side_color_grayscale_rand 0.25
+buildings side_tscale_x 1.8
+buildings side_tscale_y 2.7
 buildings roof_tscale 8.0
 buildings roof_tid stucco.jpg
 buildings roof_nm_tid normal_maps/stucco_NRM.jpg
@@ -163,12 +167,23 @@ buildings side_tid buildings/office_windows2.jpg # looks a bit odd
 buildings side_nm_tid buildings/office_windows2_NRM.jpg
 buildings side_color 0.5 0.5 0.5 1.0
 buildings side_color_grayscale_rand 0.25
+buildings side_tscale_x 2.0
+buildings side_tscale_y 3.0
 buildings add_material
 
 buildings side_tid buildings/office_windows3.jpg # high quality
 buildings side_nm_tid buildings/office_windows3_NRM.jpg
 buildings side_color 1.0 0.9 0.8 1.0
+buildings side_tscale_x 2.0
+buildings side_tscale_y 2.3
 buildings add_material
+
+#buildings side_tid buildings/skyscraper1.jpg
+#buildings side_nm_tid buildings/skyscraper1_NRM.jpg
+#buildings side_color 1.0 1.0 1.0 1.0
+#buildings side_tscale_x 1.5
+#buildings side_tscale_y 0.5
+#buildings add_material
 
 #buildings side_tid buildings/pixelcity_windows.jpg # for fun
 #buildings side_nm_tid buildings/pixelcity_windows_NRM.jpg
