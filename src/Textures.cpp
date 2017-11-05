@@ -37,7 +37,7 @@ texture_t def_textures[NUM_PREDEF_TEXTURES] = { // 4 colors without wrap sometim
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generate (not loaded from file), 10: DDS
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL, 4 = custom alpha OpenGL using average texture color for transparent pixels
-// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
+// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 //texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
 texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png", 0, 1, LS_TEX_ANISO), // mipmap for small trees?
 //texture_t(0, 5, 0,    0,    1, 3, 2, "grass_new.jpg", 0, 1, LS_TEX_ANISO), // 1024x1024; has texture seams, not as bright as other grass
@@ -172,7 +172,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/rocks3.jpg", 0, 0, 2.0, 1.0, 1
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/dirt_normal.jpg", 0, 0, 2.0, 1.0, 1),
 texture_t(0, 6, 16,   16,   1, 3, 0, "cyan.png"), // for normal maps
 texture_t(0, 6, 16,   16,   1, 3, 0, "red.png"), // for TT default sand weights texture
-// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
+// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 };
 
 vector<texture_t> textures;
@@ -311,7 +311,7 @@ int texture_lookup(string const &name) {
 }
 
 
-int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y) {
+int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, int wrap_mir) {
 
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
@@ -320,8 +320,8 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y) {
 	if (tid >= 0) {assert((unsigned)tid < textures.size()); return tid;}
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
 	tid = textures.size();
-	// type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
-	texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, invert_y, (def_tex_compress && !is_normal_map), def_tex_aniso, 1.0, is_normal_map);
+	// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
+	texture_t new_tex(0, 7, 0, 0, wrap_mir, 3, 1, name, invert_y, (def_tex_compress && !is_normal_map), def_tex_aniso, 1.0, is_normal_map);
 
 	if (textures_inited) {
 		new_tex.load(tid);

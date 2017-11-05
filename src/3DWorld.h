@@ -1242,8 +1242,8 @@ public:
 		is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(0), width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1),
 		anisotropy(1.0), mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
-	texture_t(char t, char f, int w, int h, bool wra, int nc, char um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
-		: type(t), format(f), use_mipmaps(um), defer_load_type(DEFER_TYPE_NONE), wrap(wra), mirror(0), invert_y(inv), do_compress(do_comp),
+	texture_t(char t, char f, int w, int h, int wrap_mir, int nc, char um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
+		: type(t), format(f), use_mipmaps(um), defer_load_type(DEFER_TYPE_NONE), wrap(wrap_mir != 0), mirror(wrap_mir == 2), invert_y(inv), do_compress(do_comp),
 		has_binary_alpha(0), is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(nm), width(w), height(h), ncolors(nc), bump_tid(-1),
 		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();

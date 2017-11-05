@@ -534,7 +534,7 @@ void compute_volume_matrix();
 void load_texture_names();
 void load_textures();
 int texture_lookup(std::string const &name);
-int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0);
+int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1);
 bool select_texture(int id);
 void update_player_bbb_texture(float extra_blood, bool recreate);
 float get_tex_ar(int id);
