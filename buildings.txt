@@ -150,6 +150,11 @@ buildings roof_nm_tid -1
 buildings side_color 1.0 0.8 0.6 1.0
 buildings add_material
 
+buildings roof_tscale 8.0
+buildings roof_tid stucco.jpg
+buildings roof_nm_tid normal_maps/stucco_NRM.jpg
+
+/*
 buildings texture_mirror 1 # mirror rather than wrap to fix misalignment
 buildings side_tid buildings/office_windows.jpg # nice but misaligned
 buildings side_nm_tid buildings/office_windows_NRM.jpg
@@ -158,10 +163,8 @@ buildings side_color 0.5 0.5 0.5 1.0
 buildings side_color_grayscale_rand 0.25
 buildings side_tscale_x 1.8
 buildings side_tscale_y 2.7
-buildings roof_tscale 8.0
-buildings roof_tid stucco.jpg
-buildings roof_nm_tid normal_maps/stucco_NRM.jpg
 buildings add_material
+*/
 
 buildings side_tid buildings/office_windows2.jpg # looks a bit odd
 buildings side_nm_tid buildings/office_windows2_NRM.jpg
@@ -178,15 +181,61 @@ buildings side_tscale_x 2.0
 buildings side_tscale_y 2.3
 buildings add_material
 
-#buildings side_tid buildings/skyscraper1.jpg
-#buildings side_nm_tid buildings/skyscraper1_NRM.jpg
-#buildings side_color 1.0 1.0 1.0 1.0
-#buildings side_tscale_x 1.5
-#buildings side_tscale_y 0.5
-#buildings add_material
+# skyscraper textures (tall and thin aspect ratio)
+buildings side_color 1.0 1.0 1.0 1.0
 
-#buildings side_tid buildings/pixelcity_windows.jpg # for fun
-#buildings side_nm_tid buildings/pixelcity_windows_NRM.jpg
-#buildings side_color 1.0 1.0 1.0 1.0
-#buildings side_tscale 0.5
-#buildings add_material
+buildings side_tscale_x 0.75
+buildings side_tscale_y 0.25
+buildings side_tid buildings/skyscraper1.jpg
+buildings side_nm_tid buildings/skyscraper1_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.75
+buildings side_tscale_y 0.5
+buildings side_tid buildings/skyscraper2.jpg
+buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.75
+buildings side_tscale_y 0.5
+buildings side_tid buildings/skyscraper3.jpg
+buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.5
+buildings side_tscale_y 0.5
+buildings side_tid buildings/skyscraper4.jpg
+buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.0
+buildings side_tscale_y 0.3
+buildings side_tid buildings/skyscraper5.jpg
+buildings side_nm_tid buildings/skyscraper5_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.65
+buildings side_tscale_y 0.5
+buildings side_tid buildings/skyscraper6.jpg
+buildings side_nm_tid buildings/skyscraper6_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 0.87
+buildings side_tscale_y 0.25
+buildings side_tid buildings/skyscraper7.jpg
+buildings side_nm_tid buildings/skyscraper7_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 0.87
+buildings side_tscale_y 0.25
+buildings side_tid buildings/skyscraper8.jpg
+buildings side_nm_tid buildings/skyscraper8_NRM.jpg
+buildings add_material
+
+/*
+buildings side_tid buildings/pixelcity_windows.jpg # for fun
+buildings side_nm_tid buildings/pixelcity_windows_NRM.jpg
+buildings side_color 1.0 1.0 1.0 1.0
+buildings side_tscale 0.5
+buildings add_material
+*/
