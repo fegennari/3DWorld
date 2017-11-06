@@ -441,11 +441,8 @@ public:
 		setup_ao_color(color, bcube, pos.z, z_top, cw, vert);
 		float tex_pos[2] = {0.0, 1.0};
 		calc_normals(bg, normals, ndiv);
+		if (!shadow_only) {UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcube.d[2][0]);)}
 
-		if (!shadow_only) {
-			float const dz_inv(1.0/bcube.get_dz());
-			UNROLL_2X(tex_pos[i_] = dz_inv*((i_ ? z_top : pos.z) - bcube.d[2][0]);)
-		}
 		if (dim_mask & 3) { // draw sides
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
 
@@ -464,9 +461,9 @@ public:
 				} // for S
 			}
 			else {
-				float tot_perim(0.0), tot_perim_inv(0.0), cur_perim[2] = {0.0, 0.0};
+				float tot_perim(0.0), cur_perim[2] = {0.0, 0.0};
 				for (unsigned S = 0; S < ndiv; ++S) {tot_perim += p2p_dist(normals[S], normals[(S+1)%ndiv]);}
-				tot_perim_inv = 1.0/tot_perim;
+				float const tscale_mult(TWO_PI*sqrt((rx*rx + ry*ry)/2.0)/tot_perim);
 				
 				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
 					vector3d const &n1(normals[S]), &n2(normals[(S+1)%ndiv]);
@@ -479,7 +476,7 @@ public:
 
 					for (unsigned d = 0; d < 2; ++d) {
 						vector3d const &n(d ? n2 : n1);
-						vert.t[0] = tscale_x*cur_perim[d]*tot_perim_inv; // texture_scale should be a multiple of 1.0
+						vert.t[0] = tscale_x*cur_perim[d]*tscale_mult; // Note: could try harder to ensure an integer multiple to fix seams, but not a problem in practice
 					
 						if (smooth_normals) {
 							vector3d normal(n); normal.x *= ry; normal.y *= rx; // scale normal by radius (swapped)
