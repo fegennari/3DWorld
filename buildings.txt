@@ -196,8 +196,8 @@ buildings side_tid buildings/skyscraper2.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
 buildings add_material
 
-buildings side_tscale_x 1.75
-buildings side_tscale_y 0.5
+buildings side_tscale_x 1.4
+buildings side_tscale_y 0.4
 buildings side_tid buildings/skyscraper3.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
 buildings add_material
