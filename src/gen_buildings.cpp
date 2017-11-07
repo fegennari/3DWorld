@@ -679,19 +679,23 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
 	
 	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
-		point pts[5];
+		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
 		pts[0] = p1->get_cube_center();
 		cube_t c_exp(*p1);
 		c_exp.expand_by(expand*p1->get_size());
 
-		for (unsigned i = 0; i < 4; ++i) {
+		for (unsigned i = 0; i < 4; ++i) { // {00, 10, 01, 11}
 			pts[i+1].assign(c_exp.d[0][i&1], c_exp.d[1][i>>1], 0.0); // XY only
 			do_xy_rotate(b.rot_sin, b.rot_cos, center1, pts[i+1]); // rotate into global space (pts[0] doesn't change)
 		}
 		for (unsigned i = 0; i < 5; ++i) {do_xy_rotate(-rot_sin, rot_cos, center2, pts[i]);} // inverse rotate into local coord space - negate the sine term
+		pts[5] = 0.5*(pts[1] + pts[3]); // x0 edge center
+		pts[6] = 0.5*(pts[2] + pts[4]); // x1 edge center
+		pts[7] = 0.5*(pts[1] + pts[2]); // y0 edge center
+		pts[8] = 0.5*(pts[3] + pts[4]); // y1 edge center
 		
 		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
-			for (unsigned i = 0; i < 5; ++i) {if (p2->contains_pt_xy(pts[i])) return 1;}
+			for (unsigned i = 0; i < 9; ++i) {if (p2->contains_pt_xy(pts[i])) return 1;}
 		}
 	}
 	return 0;
@@ -1086,7 +1090,6 @@ public:
 				float const expand(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by(expand*b.bcube.get_size());
-				sphere_t const bsphere(test_bc.get_bcylin()); // only care about XY radius
 				bool overlaps(0);
 				unsigned ixr[2][2];
 				get_grid_range(b.bcube, ixr);
