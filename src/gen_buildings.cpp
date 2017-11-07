@@ -10,6 +10,7 @@
 
 using std::string;
 
+bool const DEBUG_BCUBES = 0;
 unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
@@ -971,6 +972,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	}
+	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, view_dir, 7);}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
 
@@ -1172,6 +1174,7 @@ public:
 		fgPushMatrix();
 		translate_to(xlate);
 		if (!shadow_only) {building_draw.init_draw_frame();}
+		if (DEBUG_BCUBES && !shadow_only) {enable_blend();}
 
 		if (use_tt_smap) { // pre-pass to render buildings in nearby tiles that have shadow maps
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
@@ -1191,6 +1194,7 @@ public:
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		}
 		building_draw.draw_and_clear(shadow_only);
+		if (DEBUG_BCUBES && !shadow_only) {disable_blend();}
 		s.end_shader();
 		fgPopMatrix();
 	}
