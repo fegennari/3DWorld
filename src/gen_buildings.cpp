@@ -295,15 +295,16 @@ struct building_geom_t { // describes the physical shape of a building
 	float rot_sin, rot_cos, flat_side_amt, alt_step_factor; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
 
-	building_geom_t() : num_sides(4), half_offset(0), rot_sin(0.0), rot_cos(1.0), flat_side_amt(0.0), alt_step_factor(0.0) {}
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0) {}
 };
 
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
-	colorRGBA side_color, roof_color;
+	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
 	vector<cube_t> parts;
+	vector<cube_t> details; // cubes on the roof - antennas, AC units, etc.
 	mutable unsigned cur_draw_ix;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
@@ -325,6 +326,7 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only=0) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const;
 	void gen_geometry(unsigned ix);
+	void gen_details(rand_gen_t &rgen);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
@@ -668,7 +670,7 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	for (unsigned i = 0; i < 4; ++i) {
 		point corner(bc.d[0][i&1], bc.d[1][i>>1], bc.d[2][i&1]);
 		do_xy_rotate(rot_sin, rot_cos, center, corner);
-		if (i == 0) {bcube.set_from_point(corner);} else {bcube.union_with_pt(corner);}
+		if (i == 0) {bcube.set_from_point(corner);} else {bcube.union_with_pt(corner);} // Note: detail cubes are excluded
 	}
 }
 
@@ -716,7 +718,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate(-rot_sin, rot_cos, center, pos2); // inverse rotate - negate the sine term
 		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
 	}
-	for (auto i = parts.begin(); i != parts.end(); ++i) {
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // FIXME: detail cubes are excluded
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
 
 		if (use_cylinder_coll()) {
@@ -794,7 +796,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 	float const pzmin(min(p1r.z, p2r.z)), pzmax(max(p1r.z, p2r.z));
 	bool const vert(p1r.x == p2r.x && p1r.y == p2r.y);
 
-	for (auto i = parts.begin(); i != parts.end(); ++i) {
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // FIXME: detail cubes are excluded
 		if (pzmin > i->d[2][1] || pzmax < i->d[2][0]) continue; // no overlap in z
 		bool hit(0);
 
@@ -853,6 +855,7 @@ void building_t::gen_geometry(unsigned ix) {
 	if (!is_valid()) return; // invalid building
 	cube_t const base(parts.empty() ? bcube : parts.back());
 	parts.clear(); // just in case
+	details.clear(); // just in case
 	building_mat_t const &mat(get_material());
 	rand_gen_t rgen;
 	rgen.set_state(123+ix, 345*ix);
@@ -884,7 +887,10 @@ void building_t::gen_geometry(unsigned ix) {
 
 	if (num_levels == 1) { // single level
 		if (do_split) {split_in_xy(base, rgen);} // generate L, T, or U shape
-		else {parts.push_back(base);} // single part, entire cube
+		else { // single part, entire cube/cylinder
+			parts.push_back(base);
+			gen_details(rgen);
+		}
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
@@ -941,6 +947,36 @@ void building_t::gen_geometry(unsigned ix) {
 		parts.pop_back();
 		split_in_xy(split_cube, rgen);
 	}
+	else if (num_levels <= 3) {gen_details(rgen);}
+}
+
+void building_t::gen_details(rand_gen_t &rgen) { // for the roof
+
+	unsigned num_blocks(0);
+
+	if (parts.size() == 1 && is_cube()) { // for now, we only handle simple cube buildings
+		//num_blocks = (rgen.rand() % 5); // 0-4
+	}
+	bool const add_antenna(rgen.rand() & 1);
+	details.resize(num_blocks + add_antenna);
+	assert(!parts.empty());
+	cube_t const &top(parts.back()); // top/last part
+
+	for (unsigned i = 0; i < num_blocks; ++i) {
+		// FIXME: WRITE
+	}
+	if (add_antenna) { // add antenna
+		float const radius(0.002*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
+		float const height(rgen.rand_uniform(0.1, 0.5)*top.get_dz());
+		cube_t &antenna(details.back());
+		antenna.set_from_point(top.get_cube_center());
+		antenna.expand_by(vector3d(radius, radius, 0.0));
+		antenna.d[2][0] = top.d[2][1]; // z1
+		antenna.d[2][1] = top.d[2][1] + height; // z2
+	}
+	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.d[2][1], i->d[2][1]);} // extend bcube z2 to contain details
+	float const cscale(rgen.rand_uniform(0.2, 0.8));
+	detail_color = colorRGBA(cscale, cscale, cscale, 1.0); // grayscale
 }
 
 bool check_tile_smap(bool shadow_only) {
@@ -975,6 +1011,17 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 		}
 		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
+	} // for i
+	if (shadow_only || dist_less_than(camera, pos, 0.25*far_clip)) { // draw roof details
+		for (auto i = details.begin(); i != details.end(); ++i) {
+			if (!shadow_only) {
+				point ccenter(i->get_cube_center());
+				if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
+				view_dir = (ccenter + xlate - camera);
+			}
+			building_geom_t const bg(4, rot_sin, rot_cos); // cube
+			bdraw.add_section(bg, *i, xlate, bcube, tid_nm_pair_t(), detail_color, shadow_only, view_dir, 7); // all dims
+		} // for i
 	}
 	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, view_dir, 7);}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
