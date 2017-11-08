@@ -453,6 +453,10 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (cube.d[i_][0] < d[i_][0] || cube.d[i_][1] > d[i_][1]) return 0;)
 		return 1;
 	}
+	bool contains_cube_xy(const cube_t &cube) const {
+		UNROLL_2X(if (cube.d[i_][0] < d[i_][0] || cube.d[i_][1] > d[i_][1]) return 0;)
+		return 1;
+	}
 	bool contains_pt(point const &pt) const {
 		UNROLL_3X(if (pt[i_] < d[i_][0] || pt[i_] > d[i_][1]) return 0;)
 		return 1;

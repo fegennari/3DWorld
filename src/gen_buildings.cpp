@@ -307,7 +307,7 @@ struct building_t : public building_geom_t {
 	vector<cube_t> details; // cubes on the roof - antennas, AC units, etc.
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid  () const {return !bcube.is_all_zeros();}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
@@ -953,17 +953,37 @@ void building_t::gen_geometry(unsigned ix) {
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	unsigned num_blocks(0);
-
-	if (parts.size() == 1 && is_cube()) { // for now, we only handle simple cube buildings
-		//num_blocks = (rgen.rand() % 5); // 0-4
-	}
+	if (flat_side_amt == 0.0) {num_blocks = (rgen.rand() % 6);} // 0-5, skip if has a flat side
 	bool const add_antenna(rgen.rand() & 1);
 	details.resize(num_blocks + add_antenna);
 	assert(!parts.empty());
+	if (details.empty()) return; // nothing to do
 	cube_t const &top(parts.back()); // top/last part
 
-	for (unsigned i = 0; i < num_blocks; ++i) {
-		// FIXME: WRITE
+	if (num_blocks > 0) {
+		vector3d const top_sz(top.get_size());
+		float const xy_sz(top_sz.xy_mag()), border(is_cube() ? 0.0 : ((num_sides == 3) ? 0.3 : 0.2));
+		cube_t rbc(top);
+		
+		if (!is_cube()) { // shrink to fit within cylinder, etc.
+			for (unsigned d = 0; d < 2; ++d) {rbc.d[d][0] += border*top_sz[d]; rbc.d[d][1] -= border*top_sz[d];}
+		}
+		for (unsigned i = 0; i < num_blocks; ++i) {
+			cube_t &c(details[i]);
+			float const height(0.01*rgen.rand_uniform(1.0, 4.0)*top.get_dz());
+
+			while (1) {
+				c.set_from_point(point(rgen.rand_uniform(rbc.d[0][0], rbc.d[0][1]), rgen.rand_uniform(rbc.d[1][0], rbc.d[1][1]), 0.0));
+				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.06), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
+				if (!rbc.contains_cube_xy(c)) continue; // not contained
+				if (!is_cube()) {
+					// FIXME: check cylinder/ellipse
+				}
+				break;
+			}
+			c.d[2][0] = top.d[2][1]; // z1
+			c.d[2][1] = top.d[2][1] + height; // z2
+		}
 	}
 	if (add_antenna) { // add antenna
 		float const radius(0.002*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
@@ -975,7 +995,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		antenna.d[2][1] = top.d[2][1] + height; // z2
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.d[2][1], i->d[2][1]);} // extend bcube z2 to contain details
-	float const cscale(rgen.rand_uniform(0.2, 0.8));
+	float const cscale(rgen.rand_uniform(0.2, 0.6));
 	detail_color = colorRGBA(cscale, cscale, cscale, 1.0); // grayscale
 }
 
