@@ -296,6 +296,10 @@ struct building_geom_t { // describes the physical shape of a building
 	//float roof_recess;
 
 	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0) {}
+	bool is_rotated() const {return (rot_sin != 0.0);}
+	bool is_cube()    const {return (num_sides == 4);}
+	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
+	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
 };
 
 struct building_t : public building_geom_t {
@@ -308,23 +312,21 @@ struct building_t : public building_geom_t {
 	mutable unsigned cur_draw_ix;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), cur_draw_ix(0) {bcube.set_to_zeros();}
-	bool is_valid  () const {return !bcube.is_all_zeros();}
-	bool is_rotated() const {return (rot_sin != 0.0);}
-	bool is_cube()    const {return (num_sides == 4);}
-	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
+	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color() const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color() const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
+	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
 	bool check_bcube_overlap_xy(building_t const &b, float expand) const {
 		return (check_bcube_overlap_xy_one_dir(b, expand) || b.check_bcube_overlap_xy_one_dir(*this, expand));
 	}
-	bool check_sphere_coll(point const &pos, float radius, bool xy_only=0) const {
+	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points) const {
 		point pos2(pos);
-		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only);
+		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only=0) const;
-	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const;
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points) const;
+	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
 	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
@@ -383,7 +385,6 @@ class building_draw_t {
 		} else {vert.set_c4(color);} // color is shared across all verts
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
-	vector<point> points; // reused across calc_poly_pts() calls
 	point cur_camera_pos;
 
 public:
@@ -418,12 +419,12 @@ public:
 			cos_s = c*cos_ds[d] - s*sin_ds[d];
 		}
 	}
-	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, unsigned ndiv, float expand=0.0) {
-		calc_normals(bg, pts, ndiv);
+	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, float expand=0.0) {
+		calc_normals(bg, pts, bg.num_sides);
 		vector3d const sz(bcube.get_size());
 		point const cc(bcube.get_cube_center());
 		float const rscale(0.5), rx(rscale*sz.x + expand), ry(rscale*sz.y + expand); // expand polygon by sphere radius
-		for (unsigned i = 0; i < ndiv; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
+		for (unsigned i = 0; i < bg.num_sides; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
 	}
 
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
@@ -674,11 +675,21 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	}
 }
 
+// Note: only checks for point (x,y) value contained in one cube/N-gon/cylinder; assumes pt has already been rotated into local coordinate frame
+bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const {
+
+	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
+	if (is_simple_cube()) return 1; // that's it
+	building_draw.calc_poly_pts(*this, part, points);
+	return point_in_polygon_2d(pt.x, pt.y, &points.front(), points.size(), 0, 1); // 2D x/y containment
+}
+
 bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const { // can be called before levels/splits are created
 
 	if (expand == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
+	vector<point> points; // reused across calls
 	
 	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
 		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
@@ -697,13 +708,16 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 		pts[8] = 0.5*(pts[3] + pts[4]); // y1 edge center
 		
 		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
-			for (unsigned i = 0; i < 9; ++i) {if (p2->contains_pt_xy(pts[i])) return 1;}
+			for (unsigned i = 0; i < 9; ++i) {
+				if (check_part_contains_pt_xy(*p2, pts[i], points)) return 1; // Note: building geometry is likely not yet generated, below check should be sufficient
+				//if (p2->contains_pt_xy(pts[i])) return 1;
+			}
 		}
 	}
 	return 0;
 }
 
-bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only) const {
+bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points) const {
 
 	if (!is_valid()) return 0; // invalid building
 	point p_int;
@@ -743,8 +757,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 #endif
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			vector<point> points;
-			building_draw.calc_poly_pts(*this, (*i + xlate), points, num_sides); // without the expand
+			building_draw.calc_poly_pts(*this, (*i + xlate), points); // without the expand
 			float const dist(p2p_dist(p_last2, pos2));
 			point quad_pts[4]; // quads
 			bool updated(0);
@@ -780,7 +793,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	return had_coll;
 }
 
-unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t) const {
+unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points) const {
 
 	if (!check_line_clip(p1-xlate, p2-xlate, bcube.d)) return 0; // no intersection
 	point p1r(p1), p2r(p2);
@@ -819,8 +832,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			}
 		}
 		else if (num_sides != 4) {
-			vector<point> points;
-			building_draw.calc_poly_pts(*this, (*i + xlate), points, num_sides);
+			building_draw.calc_poly_pts(*this, (*i + xlate), points);
 			float const tz((i->d[2][1] - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 			float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
 
@@ -952,8 +964,7 @@ void building_t::gen_geometry(unsigned ix) {
 
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
-	unsigned num_blocks(0);
-	if (flat_side_amt == 0.0) {num_blocks = (rgen.rand() % 6);} // 0-5, skip if has a flat side
+	unsigned const num_blocks(rgen.rand() % 9); // 0-8
 	bool const add_antenna(rgen.rand() & 1);
 	details.resize(num_blocks + add_antenna);
 	assert(!parts.empty());
@@ -961,29 +972,30 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 	cube_t const &top(parts.back()); // top/last part
 
 	if (num_blocks > 0) {
-		vector3d const top_sz(top.get_size());
-		float const xy_sz(top_sz.xy_mag()), border(is_cube() ? 0.0 : ((num_sides == 3) ? 0.3 : 0.2));
+		float const xy_sz(top.get_size().xy_mag());
 		cube_t rbc(top);
+		vector<point> points; // reused across calls
 		
-		if (!is_cube()) { // shrink to fit within cylinder, etc.
-			for (unsigned d = 0; d < 2; ++d) {rbc.d[d][0] += border*top_sz[d]; rbc.d[d][1] -= border*top_sz[d];}
-		}
 		for (unsigned i = 0; i < num_blocks; ++i) {
 			cube_t &c(details[i]);
 			float const height(0.01*rgen.rand_uniform(1.0, 4.0)*top.get_dz());
 
 			while (1) {
 				c.set_from_point(point(rgen.rand_uniform(rbc.d[0][0], rbc.d[0][1]), rgen.rand_uniform(rbc.d[1][0], rbc.d[1][1]), 0.0));
-				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.06), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
+				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.08), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
 				if (!rbc.contains_cube_xy(c)) continue; // not contained
-				if (!is_cube()) {
-					// FIXME: check cylinder/ellipse
+				if (is_simple_cube()) break; // success/done
+				bool contained(1);
+
+				for (unsigned i = 0; i < 4; ++i) { // check cylinder/ellipse
+					point const pt(c.d[0][i&1], c.d[1][i>>1], 0.0); // XY only
+					if (!check_part_contains_pt_xy(rbc, pt, points)) {contained = 0; break;}
 				}
-				break;
-			}
+				if (contained) break; // success/done
+			} // end while
 			c.d[2][0] = top.d[2][1]; // z1
 			c.d[2][1] = top.d[2][1] + height; // z2
-		}
+		} // for i
 	}
 	if (add_antenna) { // add antenna
 		float const radius(0.002*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
@@ -1276,6 +1288,7 @@ public:
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		float const dist(p2p_dist(pos, p_last));
+		vector<point> points; // reused across calls
 
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
@@ -1284,7 +1297,7 @@ public:
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-					if (get_building(*b).check_sphere_coll(pos, p_last, xlate, radius, xy_only)) return 1;
+					if (get_building(*b).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points)) return 1;
 				} // for g
 			} // for x
 		} // for y
@@ -1300,6 +1313,7 @@ public:
 		get_grid_range(bcube, ixr);
 		point end_pos(p2);
 		unsigned coll(0); // 0=none, 1=side, 2=roof
+		vector<point> points; // reused across calls
 		t = 1.0; // start at end point
 
 		// for now, just do a slow iteration over every grid element within the line's bbox in XY
@@ -1313,7 +1327,7 @@ public:
 					building_t const &building(get_building(*b));
 					if (!building.bcube.intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(building.check_line_coll(p1, p2, xlate, t_new));
+					unsigned const ret(building.check_line_coll(p1, p2, xlate, t_new, points));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
 						t       = t_new;
