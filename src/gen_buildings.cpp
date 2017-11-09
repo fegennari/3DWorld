@@ -26,9 +26,11 @@ struct tid_nm_pair_t {
 	float tscale_x, tscale_y;
 
 	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0) {}
+	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
+	tid_nm_pair_t get_scaled_version(float scale) const {return tid_nm_pair_t(tid, nm_tid, scale*tscale_x, scale*tscale_y);}
 
 	void set_gl() const {
 		select_texture(tid);
@@ -1052,7 +1054,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 				view_dir = (ccenter + xlate - camera);
 			}
 			building_geom_t const bg(4, rot_sin, rot_cos); // cube
-			bdraw.add_section(bg, *i, xlate, bcube, tid_nm_pair_t(), detail_color, shadow_only, view_dir, 7); // all dims
+			bdraw.add_section(bg, *i, xlate, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, shadow_only, view_dir, 7); // all dims
 		} // for i
 	}
 	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, view_dir, 7);}
