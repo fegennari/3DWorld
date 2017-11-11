@@ -335,6 +335,7 @@ struct building_t : public building_geom_t {
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
+	bool test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points) const;
 };
 
 
@@ -425,7 +426,7 @@ public:
 		calc_normals(bg, pts, bg.num_sides);
 		vector3d const sz(bcube.get_size());
 		point const cc(bcube.get_cube_center());
-		float const rscale(0.5), rx(rscale*sz.x + expand), ry(rscale*sz.y + expand); // expand polygon by sphere radius
+		float const rx(0.5*sz.x + expand), ry(0.5*sz.y + expand); // expand polygon by sphere radius
 		for (unsigned i = 0; i < bg.num_sides; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
 	}
 
@@ -719,6 +720,36 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	return 0;
 }
 
+bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points) const {
+
+	building_draw.calc_poly_pts(*this, (part + xlate), points); // without the expand
+	float const dist(p2p_dist(p_last, pos));
+	point quad_pts[4]; // quads
+	bool updated(0);
+
+	// FIXME: if the player is moving too quickly, the intersection with a side polygon may be missed,
+	// which allows the player to travel through the building, but using a line intersection test from p_past2 to pos has other problems
+	for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
+		for (unsigned d = 0, ix = 0; d < 2; ++d) {
+			point const &p(points[(S+d)%num_sides]);
+			for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, part.d[2][d^e]);}
+		}
+		vector3d const normal(get_poly_norm(quad_pts));
+		float const rdist(dot_product_ptv(normal, pos, quad_pts[0]));
+		if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
+		if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
+		pos += normal*min(rdist, dist); // calculate intersection point, adjust outward by min of distance and step size (FIXME: jittery)
+		updated = 1;
+	} // for S
+	if (updated) return 1;
+	
+	if (point_in_polygon_2d(pos.x, pos.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
+		pos.z = p_last.z; // assume falling/z coll
+		return 1;
+	}
+	return 0;
+}
+
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points) const {
 
 	if (!is_valid()) return 0; // invalid building
@@ -736,53 +767,29 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // FIXME: detail cubes are excluded
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
+		if ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z)) continue; // test z overlap
 
 		if (use_cylinder_coll()) {
-			if ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z)) continue; // test z overlap
 			point const cc(i->get_cube_center() + xlate);
-			vector3d const csz(i->get_size());
-#if 0 // unstable
-			float const dx(pos2.x - cc.x), dy(pos2.y - cc.y), rx(0.5*csz.x + radius), ry(0.5*csz.y + radius);
-			if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // approximate ellipse test
-			float const mag(sqrt(dx*dx + dy*dy));
-			pos2.x = cc.x + dx*rx/mag;
-			pos2.y = cc.y + dy*ry/mag;
-			had_coll = 1;
-#else // conservative
-			float const r_sum(radius + 0.5*max(csz.x, csz.y));
+			float const crx(0.5*i->get_dx()), cry(0.5*i->get_dy()), r_sum(radius + max(crx, cry));
+			if (!dist_xy_less_than(pos2, cc, r_sum)) continue; // no intersection
 
-			if (dist_xy_less_than(pos2, cc, r_sum)) { // FIXME: conservative for ellipse case
-				vector3d const dir(vector3d(pos2.x-cc.x, pos2.y-cc.y, 0.0).get_norm()); // xy dir
-				UNROLL_2X(pos2[i_] = cc[i_] + dir[i_]*r_sum;)
+			if (fabs(crx - cry) < radius) { // close to a circle
+				if (p_last2.z > i->d[2][1] + xlate.z && dist_xy_less_than(pos2, cc, max(crx, cry))) {
+					pos2.z = p_last2.z; // assume falling/z coll
+				}
+				else { // side coll
+					vector2d const d((pos2.x - cc.x), (pos2.y - cc.y));
+					float const mult(r_sum/d.mag());
+					pos2.x = cc.x + mult*d.x;
+					pos2.y = cc.y + mult*d.y;
+				}
 				had_coll = 1;
 			}
-#endif
+			else {had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points);} // use polygon collision test
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			building_draw.calc_poly_pts(*this, (*i + xlate), points); // without the expand
-			float const dist(p2p_dist(p_last2, pos2));
-			point quad_pts[4]; // quads
-			bool updated(0);
-
-			// FIXME: if the player is moving too quickly, the intersection with a side polygon may be missed,
-			// which allows the player to travel through the building, but using a line intersection test from p_past2 to pos2 has other problems
-			for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
-				for (unsigned d = 0, ix = 0; d < 2; ++d) {
-					point const &p(points[(S+d)%num_sides]);
-					for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, i->d[2][d^e]);}
-				}
-				vector3d const normal(get_poly_norm(quad_pts));
-				float const rdist(dot_product_ptv(normal, pos2, quad_pts[0]));
-				if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
-				if (!sphere_poly_intersect(quad_pts, 4, pos2, normal, rdist, radius)) continue;
-				pos2 += normal*min(rdist, dist); // calculate intersection point, adjust outward by min of distance and step size (FIXME: jittery)
-				updated = 1;
-			} // for S
-			if (updated) {had_coll = 1;}
-			else if (point_in_polygon_2d(pos2.x, pos2.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
-				pos2.z = p_last2.z; // assume falling/z coll
-				had_coll = 1;
-			}
+			had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points);
 		}
 		else if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
 			pos2 = p_int; // update current pos
