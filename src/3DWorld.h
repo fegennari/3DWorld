@@ -163,6 +163,19 @@ template<typename T> struct point2d { // size = 8
 	T mag_sq() const {return (x*x + y*y);}
 	T mag()    const {return sqrt(mag_sq());}
 	T cp_mag(point2d const &p) const {return (x*p.y - y*p.x);}
+	void operator+=(point2d const &p) {x += p.x; y += p.y;}
+	void operator-=(point2d const &p) {x -= p.x; y -= p.y;}
+	void operator*=(point2d const &p) {x *= p.x; y *= p.y;} // component multiply
+	void operator+=(T const &v)      {x += v; y += v;}
+	void operator-=(T const &v)      {x -= v; y -= v;}
+	void operator*=(T m)             {x *= m; y *= m;}
+	point2d operator+(point2d const &p) const {return point2d((x+p.x), (y+p.y));}
+	point2d operator-(point2d const &p) const {return point2d((x-p.x), (y-p.y));}
+	point2d operator+(T const &v)       const {return point2d((x+v), (y+v));}
+	point2d operator-(T const &v)       const {return point2d((x-v), (y-v));}
+	point2d operator*(T      const val) const {return point2d(x*val, y*val);}
+	point2d operator*(point2d const &p) const {return point2d(x*p.x, y*p.y);} // component multiply
+	point2d operator-()                 const {return point2d(-x, -y, -z);}
 
 	const T &operator[](unsigned i) const {
 		switch(i) {
@@ -180,9 +193,14 @@ template<typename T> struct point2d { // size = 8
 		}
 		return x; // never gets here
 	}
+	void negate() {x = -x; y = -y;}
 	void normalize() {
 		T const d(mag());
 		if (d >= TOLERANCE) {x /= d; y /= d;}
+	}
+	point2d get_norm() const {
+		T const vmag(mag());
+		return ((vmag < TOLERANCE) ? *this : point2d(x/vmag, y/vmag));
 	}
 };
 
@@ -229,9 +247,9 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	void operator*=(pointT const &p) {x *= p.x; y *= p.y; z *= p.z;} // component multiply
 	void operator+=(T const &v)      {x += v; y += v; z += v;}
 	void operator-=(T const &v)      {x -= v; y -= v; z -= v;}
-	void operator*=(double m)        {x *= m; y *= m; z *= m;}
+	void operator*=(T m)             {x *= m; y *= m; z *= m;}
 
-	void operator/=(double d) {
+	void operator/=(T d) {
 		assert(d != 0.0);
 		T const m(1.0/d);
 		x *= m; y *= m; z *= m;
