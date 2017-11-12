@@ -222,6 +222,7 @@ void clear_context() {
 	free_animal_context();
 	reflective_cobjs.free_textures();
 	clear_landscape_vbo_now();
+	clear_building_vbos();
 }
 
 

@@ -10,7 +10,8 @@
 
 using std::string;
 
-bool const DEBUG_BCUBES = 0;
+bool const DEBUG_BCUBES        = 0;
+bool const USE_BULIDING_VBOS   = 1;
 unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
@@ -331,7 +332,8 @@ struct building_t : public building_geom_t {
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
-	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
+	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
+	void get_all_drawn_verts(building_draw_t &bdraw) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
@@ -357,19 +359,62 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 class building_draw_t {
 
 	struct draw_block_t {
+		bool use_vbos;
+		unsigned num_qv, num_tv;
+		vbo_wrap_t qvbo, tvbo;
 		tid_nm_pair_t tex;
 		vector<vert_norm_comp_tc_color> quad_verts, tri_verts;
+
+		draw_block_t() : use_vbos(0), num_qv(0), num_tv(0) {}
 
 		void draw_geom(bool shadow_only, int force_tid=-1) {
 			if (empty()) return;
 			if (force_tid >= 0) {select_texture(force_tid); select_multitex(FLAT_NMAP_TEX, 5);} // no normal map
 			else if (!shadow_only) {tex.set_gl();}
-			draw_quad_verts_as_tris(quad_verts);
-			draw_verts(tri_verts, GL_TRIANGLES);
+			
+			if (use_vbos) { // use VBO rendering
+				ensure_vbos();
+
+				if (qvbo.vbo_valid()) {
+					qvbo.pre_render();
+					vert_norm_comp_tc_color::set_vbo_arrays();
+					draw_quads_as_tris(num_qv);
+				}
+				if (tvbo.vbo_valid()) {
+					tvbo.pre_render();
+					vert_norm_comp_tc_color::set_vbo_arrays();
+					glDrawArrays(GL_TRIANGLES, 0, num_tv);
+				}
+				vbo_wrap_t::post_render();
+			}
+			else {
+				draw_quad_verts_as_tris(quad_verts);
+				draw_verts(tri_verts, GL_TRIANGLES);
+			}
 		}
-		void draw_and_clear(bool shadow_only, int force_tid=-1) {draw_geom(shadow_only, force_tid); clear();}
-		void clear() {quad_verts.clear(); tri_verts.clear();}
-		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
+		void ensure_vbos() {
+			num_qv = quad_verts.size();
+			num_tv = tri_verts.size();
+			assert((num_qv%4) == 0);
+			assert((num_tv%3) == 0);
+			if (!quad_verts.empty()) {qvbo.create_and_upload(quad_verts, 0, 1);}
+			if (! tri_verts.empty()) {tvbo.create_and_upload( tri_verts, 0, 1);}
+		}
+		void upload_to_vbos() {
+			use_vbos = 1;
+			ensure_vbos();
+			//clear_cont(quad_verts); // no longer needed - unless VBO needs to be recreated
+			//clear_cont(tri_verts);
+		}
+		void draw_and_clear(bool shadow_only, int force_tid=-1) {
+			draw_geom(shadow_only, force_tid);
+			clear_verts();
+		}
+		void clear_verts() {quad_verts.clear(); tri_verts.clear(); num_qv = num_tv = 0;}
+		void clear_vbos() {qvbo.clear(); tvbo.clear();}
+		void clear() {clear_vbos(); clear_verts();}
+		bool empty() const {return (quad_verts.empty() && tri_verts.empty() && num_qv == 0 && num_tv == 0);}
+		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
 	};
 	vector<draw_block_t> to_draw, pend_draw; // one per texture, assumes tids are dense
 
@@ -437,7 +482,7 @@ public:
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
 		
-		if (ndiv > 4 && bg.flat_side_amt == 0.0 && bg.alt_step_factor == 0.0) {
+		if (view_dir != nullptr && ndiv > 4 && bg.flat_side_amt == 0.0 && bg.alt_step_factor == 0.0) {
 			float const dist(max(p2p_dist(cur_camera_pos, (pos + xlate)), 0.001f));
 			ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U); // LOD if not flat sides: use at least 3 sides
 		}
@@ -614,9 +659,16 @@ public:
 			} // for j
 		} // for i
 	}
-	void draw_and_clear(bool shadow_only) {
-		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}
+	unsigned num_verts() const {
+		unsigned num(0);
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_verts();}
+		return num;
 	}
+	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
+	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
+	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
+	void draw_and_clear(bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}}
+	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom(shadow_only);}}
 	void begin_immediate_building() { // to be called before any add_section() calls
 		pend_draw.swap(to_draw); // move current draw queue to pending queue
 	}
@@ -627,7 +679,7 @@ public:
 	}
 };
 
-building_draw_t building_draw;
+building_draw_t building_draw, building_draw_vbo;
 
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
@@ -1024,7 +1076,7 @@ bool check_tile_smap(bool shadow_only) {
 	return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 }
 
-void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
+void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const {
 
 	if (draw_ix == cur_draw_ix) return; // already drawn this pass
 	if (!is_valid()) return; // invalid building
@@ -1033,9 +1085,10 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
 	if (!shadow_only && !dist_less_than(camera, pos, dmax)) return; // dist clipping
 	if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
-	building_mat_t const &mat(get_material());
-	bool const is_close(dist_less_than(camera, pos, 0.1*far_clip));
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
+	if (immediate_only && !immediate_mode) return; // not drawn in this pass
+	bool const is_close(dist_less_than(camera, pos, 0.1*far_clip));
+	building_mat_t const &mat(get_material());
 	if (immediate_mode) {bdraw.begin_immediate_building();}
 	vector3d view_dir(zero_vector);
 
@@ -1066,6 +1119,21 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 	}
 	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7);}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
+}
+
+void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
+
+	if (!is_valid()) return; // invalid building
+	building_mat_t const &mat(get_material());
+
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
+		bdraw.add_section(*this, *i, zero_vector, bcube, mat.side_tex, side_color, 0, nullptr, 3); // XY
+		bdraw.add_section(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0, nullptr, 4); // only Z dim
+	}
+	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
+		building_geom_t const bg(4, rot_sin, rot_cos); // cube
+		bdraw.add_section(bg, *i, zero_vector, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, 0, nullptr, 7); // all dims
+	}
 }
 
 
@@ -1244,13 +1312,14 @@ public:
 				for (auto i = grid.begin(); i != grid.end(); ++i) {i->bcube.d[2][0] = def_water_level;}
 			}
 		} // if flatten_mesh
-
-		timer_t timer2("Gen Building Geometry");
+		{ // open a scope
+			timer_t timer2("Gen Building Geometry");
 #pragma omp parallel for schedule(static,1)
-		for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
-
+			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
+		} // close the scope
 		cout << "WM: " << world_mode << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 			 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
+		if (USE_BULIDING_VBOS) {create_vbos();}
 	}
 
 	void draw(bool shadow_only, vector3d const &xlate) const {
@@ -1267,27 +1336,45 @@ public:
 		if (!shadow_only) {building_draw.init_draw_frame();}
 		if (DEBUG_BCUBES && !shadow_only) {enable_blend();}
 
-		if (use_tt_smap) { // pre-pass to render buildings in nearby tiles that have shadow maps
+		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
+		if (use_tt_smap) {
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 			s.add_uniform_float("z_bias", cobj_z_bias);
 			s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 		}
-		for (auto g = grid.begin(); g != grid.end(); ++g) {
-			point const pos(g->bcube.get_cube_center() + xlate);
-			if (!shadow_only && !dist_less_than(camera, pos, (far_clip + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
-			if (!camera_pdu.sphere_visible_test(pos, g->bcube.get_bsphere_radius())) continue; // VFC
-			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, xlate, building_draw, draw_ix);}
+		if (!USE_BULIDING_VBOS || use_tt_smap) {
+			for (auto g = grid.begin(); g != grid.end(); ++g) {
+				point const pos(g->bcube.get_cube_center() + xlate);
+				if (!shadow_only && !dist_less_than(camera, pos, (far_clip + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
+				if (!camera_pdu.sphere_visible_test(pos, g->bcube.get_bsphere_radius())) continue; // VFC
+				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, xlate, building_draw, draw_ix, USE_BULIDING_VBOS);}
+			}
 		}
 		if (use_tt_smap) {s.end_shader();}
+
+		// main/batched draw pass
 		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
-		else { // main/batched draw pass
+		else {
 			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		}
-		building_draw.draw_and_clear(shadow_only);
+		if (USE_BULIDING_VBOS) {building_draw_vbo.draw(shadow_only);} // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
+		else {building_draw.draw_and_clear(shadow_only);}
 		if (DEBUG_BCUBES && !shadow_only) {disable_blend();}
 		s.end_shader();
 		fgPopMatrix();
+	}
+
+	void get_all_drawn_verts() const {
+		building_draw_vbo.clear();
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_verts(building_draw_vbo);}
+	}
+	void create_vbos() const {
+		timer_t timer("Create Building VBOs");
+		get_all_drawn_verts();
+		unsigned const num_verts(building_draw_vbo.num_verts());
+		cout << "Building verts: " << num_verts << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;
+		building_draw_vbo.upload_to_vbos();
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0) const {
@@ -1307,7 +1394,7 @@ public:
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
 					if (get_building(*b).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points)) return 1;
-				} // for g
+				}
 			} // for x
 		} // for y
 		return 0;
@@ -1383,5 +1470,6 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	return 1;
 }
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
+void clear_building_vbos() {building_draw_vbo.clear_vbos();}
 
 

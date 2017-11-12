@@ -909,6 +909,7 @@ bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, b
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
 vector3d const &get_buildings_max_extent();
+void clear_building_vbos();
 
 #include "inlines.h"
 
