@@ -431,7 +431,7 @@ public:
 	}
 
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
-		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
+		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask)
 	{
 		unsigned ndiv(bg.num_sides);
 		assert(ndiv >= 3);
@@ -478,7 +478,7 @@ public:
 					cur_perim[1] += p2p_dist(n1, n2);
 					vector3d normal(n1 + n2); normal.x *= ry; normal.y *= rx; // average the two vertex normals for the flat face normal
 					if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
-					if (view_dir.x*normal.x + view_dir.y*normal.y > 0.0) continue; // back facing
+					if (view_dir != nullptr && (view_dir->x*normal.x + view_dir->y*normal.y) > 0.0) continue; // back facing
 					if (!smooth_normals) {vert.set_norm(normal.get_norm());}
 
 					for (unsigned d = 0; d < 2; ++d) {
@@ -507,7 +507,7 @@ public:
 			auto &tri_verts(get_verts(tex, 1));
 			
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
-				if ((view_dir.z < 0.0) ^ d) continue; // back facing
+				if (view_dir != nullptr && ((view_dir->z < 0.0) ^ d)) continue; // back facing
 				float const zval(d ? z_top : pos.z);
 				vert.set_norm(d ? plus_z : -plus_z);
 				if (apply_ao) {vert.copy_color(cw[d]);}
@@ -534,7 +534,7 @@ public:
 	}
 
 	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube,
-		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const &view_dir, unsigned dim_mask)
+		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center((bg.rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -590,11 +590,11 @@ public:
 					vector3d norm; norm.z = 0.0;
 					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
 					else        {norm.x = -bg.rot_sin; norm.y = bg.rot_cos;} // Y
-					if ((view_dir.x*norm.x + view_dir.y*norm.y < 0.0) ^ j) continue; // back facing
+					if (view_dir != nullptr && ((view_dir->x*norm.x + view_dir->y*norm.y < 0.0) ^ j)) continue; // back facing
 					vert.set_norm(j ? norm : -norm);
 				}
 				else {
-					if ((view_dir[n] < 0.0) ^ j) continue; // back facing
+					if (view_dir != nullptr && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
 					vert.n[i] = 0;
 					vert.n[d] = 0;
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
@@ -1045,12 +1045,12 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, mat.side_tex, side_color, shadow_only, view_dir, 3); // XY
+		bdraw.add_section(*this, *i, xlate, bcube, mat.side_tex, side_color, shadow_only, &view_dir, 3); // XY
 		
 		if (num_sides == 4 && i->d[2][0] > bcube.d[2][0] && camera.z < i->d[2][1]) { // stacked cubes viewed from below; cur corners can have overhangs
 			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, view_dir, 4); // only Z dim
+		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, &view_dir, 4); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	} // for i
 	if (shadow_only || dist_less_than(camera, pos, 0.25*far_clip)) { // draw roof details
@@ -1061,10 +1061,10 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d co
 				view_dir = (ccenter + xlate - camera);
 			}
 			building_geom_t const bg(4, rot_sin, rot_cos); // cube
-			bdraw.add_section(bg, *i, xlate, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, shadow_only, view_dir, 7); // all dims
+			bdraw.add_section(bg, *i, xlate, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, shadow_only, &view_dir, 7); // all dims
 		} // for i
 	}
-	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, view_dir, 7);}
+	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7);}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
 
