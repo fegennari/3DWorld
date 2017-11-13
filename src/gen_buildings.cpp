@@ -413,6 +413,7 @@ class building_draw_t {
 		void clear_verts() {quad_verts.clear(); tri_verts.clear(); num_qv = num_tv = 0;}
 		void clear_vbos() {qvbo.clear(); tvbo.clear();}
 		void clear() {clear_vbos(); clear_verts();}
+		void resize_to_cap() {remove_excess_cap(quad_verts); remove_excess_cap(tri_verts);}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty() && num_qv == 0 && num_tv == 0);}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
 		unsigned num_tris () const {return (quad_verts.size()/2 + tri_verts.size()/3);} // Note: 1 quad = 4 verts = 2 triangles
@@ -675,6 +676,7 @@ public:
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
 	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
+	void resize_to_cap () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->resize_to_cap();}}
 	void draw_and_clear(bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}}
 	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom(shadow_only);}}
 	void begin_immediate_building() { // to be called before any add_section() calls
@@ -1378,6 +1380,7 @@ public:
 	void get_all_drawn_verts() const {
 		building_draw_vbo.clear();
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_verts(building_draw_vbo);}
+		building_draw_vbo.resize_to_cap();
 	}
 	void create_vbos() const {
 		timer_t timer("Create Building VBOs");
