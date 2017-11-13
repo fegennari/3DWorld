@@ -78,6 +78,7 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
+float get_tile_smap_dist  () {return SMAP_NEW_THRESH*smap_thresh_scale*get_tile_width();}
 float get_grass_thresh    () {return GRASS_THRESH*get_tile_width();}
 float get_grass_thresh_pad() {return (get_grass_thresh() + 1.0/GRASS_DIST_SLOPE);}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}

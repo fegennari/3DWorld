@@ -71,7 +71,6 @@ extern vector3d wind;
 extern lightning l_strike;
 extern coll_obj_group coll_objects;
 
-float get_draw_tile_dist();
 void set_indir_color(shader_t &s);
 
 

@@ -332,7 +332,7 @@ struct building_t : public building_geom_t {
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
-	void draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
+	void draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
@@ -1086,13 +1086,13 @@ bool check_tile_smap(bool shadow_only) {
 	return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 }
 
-void building_t::draw(shader_t &s, bool shadow_only, float far_clip, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const {
+void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const {
 
 	if (draw_ix == cur_draw_ix) return; // already drawn this pass
 	if (!is_valid()) return; // invalid building
 	cur_draw_ix = draw_ix;
 	point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
-	float const dmax(far_clip + 0.5*bcube.get_size().get_max_val());
+	float const dmax(draw_dist + 0.5*bcube.get_size().get_max_val());
 	if (!shadow_only && !dist_less_than(camera, pos, dmax)) return; // dist clipping
 	if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
@@ -1355,11 +1355,13 @@ public:
 			s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 		}
 		if (!USE_BULIDING_VBOS || use_tt_smap) {
+			float const draw_dist(USE_BULIDING_VBOS ? (get_tile_smap_dist() + X_SCENE_SIZE + Y_SCENE_SIZE) : far_clip);
+
 			for (auto g = grid.begin(); g != grid.end(); ++g) {
 				point const pos(g->bcube.get_cube_center() + xlate);
-				if (!shadow_only && !dist_less_than(camera, pos, (far_clip + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
+				if (!shadow_only && !dist_less_than(camera, pos, (draw_dist + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
 				if (!camera_pdu.sphere_visible_test(pos, g->bcube.get_bsphere_radius())) continue; // VFC
-				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, xlate, building_draw, draw_ix, USE_BULIDING_VBOS);}
+				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, USE_BULIDING_VBOS);}
 			}
 		}
 		if (use_tt_smap) {s.end_shader();}
