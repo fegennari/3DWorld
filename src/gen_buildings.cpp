@@ -485,7 +485,7 @@ public:
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
 		
-		if (view_dir != nullptr && ndiv > 4 && bg.flat_side_amt == 0.0 && bg.alt_step_factor == 0.0) {
+		if (!USE_BULIDING_VBOS && view_dir != nullptr && ndiv > 4 && bg.flat_side_amt == 0.0 && bg.alt_step_factor == 0.0) {
 			float const dist(max(p2p_dist(cur_camera_pos, (pos + xlate)), 0.001f));
 			ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U); // LOD if not flat sides: use at least 3 sides
 		}
