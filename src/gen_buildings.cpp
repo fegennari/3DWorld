@@ -316,8 +316,9 @@ struct building_t : public building_geom_t {
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
-	colorRGBA get_avg_side_color() const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
-	colorRGBA get_avg_roof_color() const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
+	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
+	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
+	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
@@ -880,7 +881,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 	float const pzmin(min(p1r.z, p2r.z)), pzmax(max(p1r.z, p2r.z));
 	bool const vert(p1r.x == p2r.x && p1r.y == p2r.y);
 
-	for (auto i = parts.begin(); i != parts.end(); ++i) { // FIXME: detail cubes are excluded
+	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (pzmin > i->d[2][1] || pzmax < i->d[2][0]) continue; // no overlap in z
 		bool hit(0);
 
@@ -923,13 +924,16 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 				} // for S
 			}
 		}
-		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; hit = 1;}
+		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; hit = 1;} // cube
 
 		if (hit) {
 			float const zval(p1.z + t*(p2.z - p1.z));
 			coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->get_dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
 		}
 	} // for i
+	for (auto i = details.begin(); i != details.end(); ++i) {
+		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;}
+	}
 	return coll;
 }
 
@@ -1481,7 +1485,12 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	unsigned const ret(check_buildings_line_coll(p1, p2, t, hit_bix, 1)); // apply_tt_xlate=1; 0=no hit, 1=hit side, 2=hit roof
 	if (ret == 0) return 0;
 	building_t const &b(building_creator.get_building(hit_bix));
-	color = ((ret == 2) ? b.get_avg_roof_color() : b.get_avg_side_color());
+	switch (ret) {
+	case 1: color = b.get_avg_side_color  (); break;
+	case 2: color = b.get_avg_roof_color  (); break;
+	case 3: color = b.get_avg_detail_color(); break;
+	default: assert(0);
+	}
 	return 1;
 }
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
