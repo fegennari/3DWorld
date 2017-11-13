@@ -78,7 +78,6 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
-float get_tile_smap_dist  () {return SMAP_NEW_THRESH*smap_thresh_scale*get_tile_width();}
 float get_grass_thresh    () {return GRASS_THRESH*get_tile_width();}
 float get_grass_thresh_pad() {return (get_grass_thresh() + 1.0/GRASS_DIST_SLOPE);}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
@@ -100,6 +99,7 @@ float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zm
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
 float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile_width();}
+float get_tile_smap_dist  () {return get_smap_atten_val();}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 vector3d get_tiled_terrain_model_xlate() {return model3d_offset.get_xlate();}
@@ -1601,7 +1601,7 @@ void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
 }
 bool tile_t::try_bind_shadow_map(shader_t &s) const {
 	if (!shadow_map_enabled() || smap_data.empty()) return 0;
-	if (get_dist_to_camera_in_tiles(1) > smap_thresh_scale) return 0; // too far to need smap, even if it exists
+	if (get_dist_to_camera_in_tiles(1) > SMAP_NEW_THRESH*smap_thresh_scale) return 0; // too far to need smap, even if it exists
 	smap_data.set_for_all_lights(s, nullptr);
 	return 1;
 }

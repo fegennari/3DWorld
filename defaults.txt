@@ -1,7 +1,7 @@
 #universe/config_universe.txt
 #house/config_house.txt
 #house/config_house_winter.txt
-mapx/config_mapx.txt
+#mapx/config_mapx.txt
 #mapx/config_mapx_voxels.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
@@ -30,5 +30,5 @@ mapx/config_mapx.txt
 #config_museum.txt
 #config_museum_tt_model.txt
 #config_puzzle.txt
-#config_buildings.txt
+config_buildings.txt
 
