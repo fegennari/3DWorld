@@ -415,6 +415,7 @@ class building_draw_t {
 		void clear() {clear_vbos(); clear_verts();}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty() && num_qv == 0 && num_tv == 0);}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
+		unsigned num_tris () const {return (quad_verts.size()/2 + tri_verts.size()/3);} // Note: 1 quad = 4 verts = 2 triangles
 	};
 	vector<draw_block_t> to_draw, pend_draw; // one per texture, assumes tids are dense
 
@@ -664,6 +665,11 @@ public:
 	unsigned num_verts() const {
 		unsigned num(0);
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_verts();}
+		return num;
+	}
+	unsigned num_tris() const {
+		unsigned num(0);
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_tris();}
 		return num;
 	}
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
@@ -1376,8 +1382,8 @@ public:
 	void create_vbos() const {
 		timer_t timer("Create Building VBOs");
 		get_all_drawn_verts();
-		unsigned const num_verts(building_draw_vbo.num_verts());
-		cout << "Building verts: " << num_verts << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;
+		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
+		cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;
 		building_draw_vbo.upload_to_vbos();
 	}
 
