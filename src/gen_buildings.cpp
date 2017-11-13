@@ -828,7 +828,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate(-rot_sin, rot_cos, center, pos2); // inverse rotate - negate the sine term
 		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
 	}
-	for (auto i = parts.begin(); i != parts.end(); ++i) { // FIXME: detail cubes are excluded
+	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
 		if ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z)) continue; // test z overlap
 
@@ -854,11 +854,17 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
 			had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points);
 		}
-		else if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) {
+		else if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) { // cube
 			pos2 = p_int; // update current pos
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 		}
 	} // for i
+	for (auto i = details.begin(); i != details.end(); ++i) {
+		if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) { // cube
+			pos2 = p_int; // update current pos
+			had_coll = 1; // flag as colliding
+		}
+	}
 	if (!had_coll) return 0;
 	if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, pos2);} // rotate back
 	pos = pos2;
@@ -932,7 +938,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 		}
 	} // for i
 	for (auto i = details.begin(); i != details.end(); ++i) {
-		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;}
+		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // cube
 	}
 	return coll;
 }
