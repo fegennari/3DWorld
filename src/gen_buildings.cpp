@@ -1365,7 +1365,7 @@ public:
 			s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 		}
 		if (!USE_BULIDING_VBOS || use_tt_smap) {
-			float const draw_dist(USE_BULIDING_VBOS ? get_tile_smap_dist() : far_clip);
+			float const draw_dist(USE_BULIDING_VBOS ? (get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE)) : far_clip);
 
 			for (auto g = grid.begin(); g != grid.end(); ++g) {
 				point const pos(g->bcube.get_cube_center() + xlate);

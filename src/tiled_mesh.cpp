@@ -1601,7 +1601,7 @@ void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
 }
 bool tile_t::try_bind_shadow_map(shader_t &s) const {
 	if (!shadow_map_enabled() || smap_data.empty()) return 0;
-	if (get_dist_to_camera_in_tiles(1) > SMAP_NEW_THRESH*smap_thresh_scale) return 0; // too far to need smap, even if it exists
+	if (get_dist_to_camera_in_tiles(1) > SMAP_FADE_THRESH*smap_thresh_scale) return 0; // too far to need smap, even if it exists
 	smap_data.set_for_all_lights(s, nullptr);
 	return 1;
 }
