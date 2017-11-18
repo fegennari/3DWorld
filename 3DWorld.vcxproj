@@ -430,6 +430,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="src\glflare.cpp" />
     <ClCompile Include="src\gl_ext_arb.cpp" />
     <ClCompile Include="src\grass.cpp" />
     <ClCompile Include="src\heightmap.cpp" />
@@ -602,7 +603,6 @@
     <ClCompile Include="src\Water.cpp" />
     <ClCompile Include="src\waypoints.cpp" />
     <ClCompile Include="src\weapon_draw.cpp" />
-    <ClCompile Include="src\Glflare.cpp" />
     <ClCompile Include="src\intersect.cpp" />
     <ClCompile Include="src\loadlum.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>

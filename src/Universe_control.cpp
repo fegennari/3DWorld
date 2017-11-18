@@ -303,7 +303,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	check_shift_universe();
 	disable_light(get_universe_ambient_light(1)); // for universe draw
 	enable_light(0);
-	//draw_universe_sun_flare(); // doesn't look right
+	draw_universe_sun_flare(); // looks a bit odd, maybe it should be changed
 	inited = 1;
 	if (TIMETEST) PRINT_TIME(" Final Universe");
 }
@@ -574,7 +574,9 @@ void draw_universe_sun_flare() {
 
 	if (clobj0.type < UTYPE_SYSTEM) return; // no star
 	ustar const &sun(clobj0.get_star());
-	if (!sun.is_ok() || !univ_sphere_vis((sun.pos + clobj0.get_ucell().rel_center), sun.radius)) return;
+	if (!sun.is_ok()) return;
+	point const offset(clobj0.get_ucell().rel_center);
+	if (!univ_sphere_vis((sun.pos + offset), sun.radius)) return;
 	float intensity(1.0);
 	u_ship const &ps(player_ship());
 	point const viewer(ps.get_pos());
@@ -586,13 +588,13 @@ void draw_universe_sun_flare() {
 	for (unsigned i = 0; i < npts; ++i) {
 		if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
 		point const pos(sun.pos + pts[i]*sun.radius);
-		if (!universe_ray_intersect(viewer, pos, OBJ_TYPE_ALL, &sun, &ps)) {++nvis;}
+		if (univ_sphere_vis((pos + offset), 0.0) && !universe_ray_intersect(viewer, pos, OBJ_TYPE_ALL, &sun, &ps)) {++nvis;}
 	}
 	pts_valid = 1;
 	if (nvis == 0) return;
 	intensity = 0.1 + 0.9*float(nvis)/float(npts);
 	point const gv(make_pt_global(viewer));
-	DoFlares(gv, (gv + player_ship().get_dir()), make_pt_global(sun.pos), 0.01, 0.02, intensity, 4); // draw only some flares
+	DoFlares(gv, (gv + player_ship().get_dir()), make_pt_global(sun.pos), 0.01, 0.02, 0.5*intensity, 4); // draw only some flares with half intensity
 }
 
 
