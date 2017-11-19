@@ -64,7 +64,7 @@ void main()
 
 #ifdef GAS_GIANT
 	float tc_adj = tc.t;
-	float noise  = gen_cloud_alpha_static_non_norm(5.0*vertex);
+	float noise  = gen_cloud_alpha_non_norm(5.0*vertex, 0.35); // slowly moving over time
 	vec3 dir     = normalize(vertex); // world space normal
 	tc_adj      += 0.2*sin(20.0*dir.z + 1.0*noise);
 	//tc_adj      += 0.04*(noise - 0.5);
