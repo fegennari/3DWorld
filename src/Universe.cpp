@@ -306,7 +306,7 @@ public:
 		float const cf_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : UNIV_NCLIP_SCALE);
 		// increase cloud frequency in z to add a coriolis effect
 		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(1.2, 1.2, 6.0) : vector3d(1.0, 1.0, 2.0)));
-		set_planet_uniforms((body.gas_giant ? 0.5 : 1.0)*body.atmos, svars, use_light2);
+		set_planet_uniforms(body.cloud_density*body.atmos, svars, use_light2);
 		setup_planet_star_noise_tex();
 		return 1;
 	}
@@ -1674,6 +1674,8 @@ void uplanet::process() {
 		rot_rate = ROT_RATE_CONST/(10.0*TICKS_PER_SECOND*sqrt(T_sq));
 	}
 	num_satellites = (unsigned short)moons.size();
+	// gas giants have atmosphere=1.0, but can have variable cloud density
+	if (gas_giant) {cloud_density = max(0.0f, rand_uniform2(-0.25, 0.75));} // Note: computed here to avoid altering the random number generator in create()
 	gen = 1;
 }
 

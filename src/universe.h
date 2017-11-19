@@ -213,13 +213,13 @@ public:
 	bool gas_giant; // planets only?
 	int owner;
 	unsigned orbiting_refs, tid, tsize;
-	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale, wr_scale, snow_thresh, population;
+	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_density, cloud_scale, wr_scale, snow_thresh, population;
 	vector3d rev_axis, v_orbit, orbit_scale;
 	std::shared_ptr<upsurface> surface;
 	string comment;
 
-	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0),
-		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0), orbit_scale(all_ones) {}
+	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0), rev_rate(0.0),
+		atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_density(1.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0), orbit_scale(all_ones) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
