@@ -258,7 +258,12 @@ void draw_overhead_map() {
 					float height(min(1.0f, hscale*(mh + zmax2))); // can be negative
 
 					if (!map_color) { // grayscale
-						rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow
+						float const val(pow(height, glaciate_exp_inv)); // un-glaciate: slow
+						//rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val);
+						// http://c0de517e.blogspot.com/2017/11/coder-color-palettes-for-data.html
+						rgb[0] = (unsigned char)(255.0*(-0.121 + 0.893 * val + 0.276 * sin (1.94 - 5.69 * val)));
+						rgb[1] = (unsigned char)(255.0*(0.07 + 0.947 * val));
+						rgb[2] = (unsigned char)(255.0*(0.107 + (1.5 - 1.22 * val) * val));
 					}
 					else {
 						height += relh_adj_tex;
