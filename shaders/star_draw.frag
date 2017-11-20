@@ -1,4 +1,5 @@
-uniform float radius = 1.0;
+uniform float radius    = 1.0;
+uniform float intensity = 1.0;
 uniform sampler2D tex0;
 uniform vec4 colorA, colorB;
 
@@ -15,5 +16,5 @@ void main()
 	float time2  = (tsaw - 0.005*sign(ttri)*dist + 6.0); // add constant offset + radius offset
 	vec3 ftime   = 0.02*vec3(fract_smooth(tv.x*time2), fract_smooth(tv.y*time2), fract_smooth(tv.z*time2));
 	fg_FragColor = texture(tex0, tc) * mix(colorA, colorB, gen_cloud_alpha_time(0.18*spos, ftime));
-	fg_FragColor.a *= 1.8;
+	fg_FragColor.a *= intensity;
 }

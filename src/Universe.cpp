@@ -247,7 +247,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
+	void enable_planet(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
 		if (!is_setup()) {
 			bool proc_detail_vs(0);
 
@@ -307,14 +307,13 @@ public:
 		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(1.2, 1.2, 6.0) : vector3d(1.0, 1.0, 2.0)));
 		set_planet_uniforms(body.cloud_density*body.atmos, svars, use_light2);
 		setup_planet_star_noise_tex();
-		return 1;
 	}
 	void disable_planet() {
 		using_tess_shader = 0; // may or may not have been set to 1
 		if (is_setup()) {clear_specular(); disable();}
 	}
 
-	bool enable_star(colorRGBA const &colorA, colorRGBA const &colorB, float radius) { // no lighting
+	void enable_star(colorRGBA const &colorA, colorRGBA const &colorB, float radius) { // no lighting
 		if (!is_setup()) {
 			set_prefix("#define NUM_OCTAVES 8", 1); // FS
 			set_vert_shader("star_draw");
@@ -331,13 +330,12 @@ public:
 		set_uniform_color(get_loc("colorB"), colorB);
 		set_uniform_float(get_loc("radius"), radius);
 		setup_planet_star_noise_tex();
-		return 1;
 	}
 	void disable_star() {
 		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring(uplanet const &planet, point const &planet_pos, float back_face_mult, bool a2c) {	
+	void enable_ring(uplanet const &planet, point const &planet_pos, float back_face_mult, bool a2c) {	
 		if (!is_setup()) {
 			set_vert_shader("planet_draw");
 			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+planet_rings");
@@ -360,7 +358,6 @@ public:
 		set_uniform_float(get_loc("bf_draw_sign"),  back_face_mult);
 		set_uniform_float(get_loc("alpha_scale"),   (a2c ?  1.0 : 0.6));
 		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
-		return 1;
 	}
 	void disable_ring() {
 		if (is_setup()) {clear_specular(); disable();}
@@ -406,14 +403,18 @@ public:
 	icosphere_manager_t *planet_manager;
 
 	ushader_group(icosphere_manager_t *pm=nullptr) : planet_manager(pm) {}
-	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
-		return get_planet_shader(body, svars).enable_planet(body, svars, use_light2);
+	void enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
+		get_planet_shader(body, svars).enable_planet(body, svars, use_light2);
 	}
 	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
-	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius) {return star_shader.enable_star(colorA, colorB, radius);}
+	void enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius, float intensity=1.0) {
+		star_shader.enable_star(colorA, colorB, radius);
+		set_star_intensity(intensity);
+	}
+	void set_star_intensity(float intensity) {star_shader.add_uniform_float("intensity", intensity);}
 	void disable_star_shader() {star_shader.disable_star();}
-	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, float back_face_mult, bool a2c) {
-		return ring_shader.enable_ring(planet, planet_pos, back_face_mult, a2c);
+	void enable_ring_shader(uplanet const &planet, point const &planet_pos, float back_face_mult, bool a2c) {
+		ring_shader.enable_ring(planet, planet_pos, back_face_mult, a2c);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
 	void enable_atmospheric_shader(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
@@ -2384,7 +2385,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 			float const cfr(max(1.0, 60.0/size)), alpha(flare_intensity*CLIP_TO_01(0.5f*(size - 4.0f)));
 			colorRGBA ca(colorA), cb(colorB);
 			ca.A *= alpha; cb.A *= alpha;
-			usg.enable_star_shader(ca, cb, radius);
+			usg.enable_star_shader(ca, cb, radius, 1.0);
 			enable_blend();
 			set_additive_blend_mode();
 			static quad_batch_draw qbd; // probably doesn't need to be static
@@ -2394,13 +2395,17 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 				qbd.draw_as_flares_and_clear(FLARE1_TEX);
 				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 0.5, cfr);
 				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, cfr, 0.5);
+				qbd.draw_as_flares_and_clear(BLUR_TEX);
 			}
-			if (size > 6.0) {qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 4.0, 4.0);}
-			qbd.draw_as_flares_and_clear(BLUR_TEX);
+			if (size > 6.0) {
+				usg.set_star_intensity(min(1.8f, 0.1f*size)); // variable intensity from 0.6 to 1.8
+				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 4.0, 4.0);
+				qbd.draw_as_flares_and_clear(BLUR_TEX);
+			}
 			set_std_blend_mode();
 			disable_blend();
 		}
-		usg.enable_star_shader(colorA, colorB, radius);
+		usg.enable_star_shader(colorA, colorB, radius, 1.0);
 		select_texture(WHITE_TEX);
 		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // use vbo if ndiv is small enough
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {select_texture(BLUR_TEX); draw_flares(ndiv, 1);}
