@@ -254,7 +254,6 @@ public:
 			if (body.gas_giant) {
 				set_prefix("#define GAS_GIANT",    1); // FS
 				set_prefix("#define RIDGED_NOISE", 1); // FS
-				if (!(display_mode & 0x20)) {set_prefix("#define ANIMATE_STORMS", 1);} // FS
 			}
 			else if (body.use_procedural_shader()) {
 				set_prefix("#define PROCEDURAL_DETAIL", 1); // FS
