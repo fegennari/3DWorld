@@ -1,4 +1,5 @@
 #include <fresnel.part>
+//#include <noise_2d_3d.part> // needed for new gas giant storm code
 
 // Note: Light 0 is the sun (A+D+S point light), light 1 is universe ambient (constant A), light 2 is planet reflection (D point light)
 uniform float atmosphere = 1.0; // technically not needed for gas giants since assumed to be 1.0
@@ -68,11 +69,21 @@ void main()
 	vec3 dir     = normalize(vertex); // world space normal
 	tc_adj      += 0.2*sin(20.0*dir.z + 1.0*noise);
 	//tc_adj      += 0.04*(noise - 0.5);
+
+#if 0 // new approach: https://www.seedofandromeda.com/blogs/49-procedural-gas-giant-rendering-with-gpu-noise
+	dir += vec3(time, time, 0.0);
+	float s = 0.6; // Get the three threshold samples
+	float t1 = simplex(dir * 2.0) - s;
+	float t2 = simplex((dir + 800.0) * 2.0) - s;
+	float t3 = simplex((dir + 1600.0) * 2.0) - s;
+	float threshold = max(t1 * t2 * t3, 0.0); // Intersect them and get rid of negatives
+	tc_adj += 20.0 * simplex(dir * 0.1) * threshold;
+#else // old approach
 	float v0     = 1.0; // using a variable here is slow
 
 	for (int i = 0; i < 60; ++i) { // Note: inefficient, but fast enough for a single gas giant render
 		vec3 center = vec3(1.0, 1.0, 0.5)*rand_vec3(v0);
-#ifdef ANIMATE_STORMS // slow but neat
+#ifdef ANIMATE_STORMS // slower but neat
 		float angle = 50.0*time*rand_pm1(v0+2.5);
 		float st    = sin(angle);
 		float ct    = cos(angle);
@@ -82,6 +93,7 @@ void main()
 		tc_adj     += 1.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;
 	}
+#endif // old approach
 	vec4 texel = texture(tex0, tc_adj);
 #else // not GAS_GIANT
 
