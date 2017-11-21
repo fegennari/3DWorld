@@ -568,7 +568,15 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color, bool glow) cons
 	draw_sphere_vbo_raw(min(ndiv, N_SPHERE_DIV/2), 0);
 	
 	if (glow && ndiv >= 5) { // optimized version of setup_colors_draw_flare(pos, all_zeros, 3.0, 3.0, color);
-		qbd.add_xlated_billboard(pos, all_zeros, get_camera_pos(), up_vector, BLACK, 3.2, 3.2);
+		point const camera(get_camera_pos());
+
+		if (fabs(dot_product((camera - pos).get_norm(), dir)) < 0.999) { // not viewing on-end (such as fired from player ship), draw with elongated tail
+			qbd.add_xlated_billboard(pos, all_zeros, camera, dir, BLACK, 2.5, 12.8, tex_range_t(0.0, 0.0, 1.0, 0.5, 1)); // clip quad y2
+			qbd.add_xlated_billboard(pos, all_zeros, camera, dir, BLACK, 2.5,  2.5, tex_range_t(0.0, 0.5, 1.0, 1.0, 1)); // clip quad y1
+		}
+		else {
+			qbd.add_xlated_billboard(pos, all_zeros, camera, up_vector, BLACK, 3.2, 3.2); // sphere
+		}
 		set_additive_blend_mode();
 		qbd.draw_as_flares_and_clear(BLUR_TEX);
 		end_ship_texture();

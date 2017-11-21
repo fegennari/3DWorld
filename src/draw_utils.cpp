@@ -362,8 +362,15 @@ void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vecto
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
 	colorRGBA const &c, vector3d const &n, tex_range_t const &tr)
 {
-	point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
-	add_quad_pts(pts, c, n, tr);
+	if (tr.clip_quad) { // clip point to tex coords
+		vector3d const dx1((1.0 - 2.0*tr.x1)*dx), dy1((1.0 - 2.0*tr.y1)*dy), dx2((-1.0 + 2.0*tr.x2)*dx), dy2((-1.0 + 2.0*tr.y2)*dy);
+		point const pts[4] = {(pos - dx1 - dy1), (pos + dx2 - dy1), (pos + dx2 + dy2), (pos - dx1 + dy2)};
+		add_quad_pts(pts, c, n, tr);
+	}
+	else {
+		point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
+		add_quad_pts(pts, c, n, tr);
+	}
 }
 
 // unused
