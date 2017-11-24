@@ -166,6 +166,11 @@ void apply_one_exp(query_data &qdata, unsigned ix) {
 	}
 	float const dmag(dist.mag()), damage(qdata.damage*ip.dscale*calc_damage_scale(dmag, rtot, qdata.radius));
 	if (damage <= 0.0) return;
+
+	if (dmag > 0.003 && obj->is_ship()) { // further than MOON_MIN_SIZE
+		float coll_dist(0.0); // unused
+		if (line_intersect_universe(qdata.pos, dist/dmag, dmag, 0.0, coll_dist) != nullptr) return; // intersection, universe object blocks the damage
+	}
 	vector3d velocity(dist);
 	if (dmag > TOLERANCE) {velocity *= (0.00025/dmag);}
 
