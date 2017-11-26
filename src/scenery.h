@@ -98,7 +98,16 @@ public:
 };
 
 
-class wood_scenery_obj : public scenery_obj {
+class burnable_scenery_obj : public scenery_obj {
+protected:
+	float burn_amt;
+public:
+	burnable_scenery_obj() : burn_amt(0.0) {}
+	void next_frame();
+};
+
+
+class wood_scenery_obj : public burnable_scenery_obj {
 protected:
 	mutable int closest_bark_tid;
 	wood_scenery_obj() : closest_bark_tid(-1) {}
@@ -143,11 +152,8 @@ public:
 };
 
 
-struct plant_base : public scenery_obj { // size = 28
+struct plant_base : public burnable_scenery_obj { // size = 28
 
-	float burn_amt;
-
-	plant_base() : burn_amt(0.0) {}
 	int create(int x, int y, int use_xy, float minz);
 	void next_frame();
 	colorRGBA get_plant_color(vector3d const &xlate) const;

@@ -551,6 +551,13 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 }
 
 
+void burnable_scenery_obj::next_frame() {
+	if (!animate2 || world_mode != WMODE_GROUND || burn_amt == 1.0) return;
+	float const fire_amt(get_ground_fire_intensity(pos, 2.0*radius));
+	if (fire_amt > 0.0) {burn_amt = min(1.0, (burn_amt + 0.003*fticks*fire_amt));}
+}
+
+
 void wood_scenery_obj::calc_type() {type = (char)get_tree_type_from_height(pos.z, global_rand_gen, 1);}
 
 int get_closest_tree_bark_tid(point const &pos);
@@ -569,7 +576,8 @@ int wood_scenery_obj::get_tid() const {
 	return closest_bark_tid;
 }
 colorRGBA wood_scenery_obj::get_bark_color(vector3d const &xlate) const {
-	return get_atten_color((is_from_large_trees() ? get_closest_tree_bark_color(pos) : get_tree_trunk_color(type, 0)), xlate);
+	colorRGBA const base_color((is_from_large_trees() ? get_closest_tree_bark_color(pos) : get_tree_trunk_color(type, 0)));
+	return get_atten_color(blend_color(BLACK, base_color, burn_amt, 0), xlate);
 }
 
 
@@ -714,10 +722,8 @@ int plant_base::create(int x, int y, int use_xy, float minz) {
 }
 
 void plant_base::next_frame() {
-	if (!animate2 || world_mode != WMODE_GROUND) return;
-	if (burn_amt == 1.0) {remove_cobjs(); return;} // remove leaves, but keep stem for plant
-	float const fire_amt(get_ground_fire_intensity(pos, 2.0*radius));
-	if (fire_amt > 0.0) {burn_amt = min(1.0, (burn_amt + 0.003*fticks*fire_amt));}
+	burnable_scenery_obj::next_frame();
+	if (burn_amt == 1.0) {remove_cobjs();} // remove leaves, but keep stem for plant
 }
 colorRGBA plant_base::get_plant_color(vector3d const &xlate) const {
 	return get_atten_color(blend_color(BLACK, WHITE, burn_amt, 0), xlate);
@@ -1284,6 +1290,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass) {
 
 	if (plants.empty() && leafy_plants.empty()) return; // nothing to draw
+	bool const do_update(!shadow_only && !reflection_pass);
 	s.set_specular(0.25, 20.0); // a small amount of specular
 	s.add_uniform_float("wind_zscale", 2.0);
 	s_plant::shader_state_t state;
@@ -1293,7 +1300,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		plant_vbo_manager.begin_render();
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
-			if (!shadow_only && !reflection_pass) {plants[i].next_frame();}
+			if (do_update) {plants[i].next_frame();}
 			plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate, state);
 		}
 		plant_vbo_manager.end_render();
@@ -1305,7 +1312,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		leafy_vbo_manager.begin_render();
 
 		for (unsigned i = 0; i < leafy_plants.size(); ++i) {
-			if (!shadow_only && !reflection_pass) {leafy_plants[i].next_frame();}
+			if (do_update) {leafy_plants[i].next_frame();}
 			leafy_plants[i].draw_leaves(s, shadow_only, reflection_pass, xlate, state, leafy_vbo_manager);
 		}
 		leafy_vbo_manager.end_render();
@@ -1317,11 +1324,12 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val, bool reflection_pass) {
 
-	select_texture(DARK_ROCK_TEX);
-
-	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-		rock_shapes[i].draw(shadow_only, reflection_pass, xlate);
+	if (!shadow_only && !reflection_pass) { // apply burn
+		for (auto i = logs.begin()  ; i != logs.end()  ; ++i) {i->next_frame();}
+		for (auto i = stumps.begin(); i != stumps.end(); ++i) {i->next_frame();}
 	}
+	select_texture(DARK_ROCK_TEX);
+	for (unsigned i = 0; i < rock_shapes.size(); ++i) {rock_shapes[i].draw(shadow_only, reflection_pass, xlate);}
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
 	rock_vbo_manager.begin_render();
@@ -1335,10 +1343,8 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 	draw_scenery_vector(logs,   sscale, shadow_only, reflection_pass, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
+	for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_stem(sscale, shadow_only, reflection_pass, xlate);}
 
-	for (unsigned i = 0; i < plants.size(); ++i) {
-		plants[i].draw_stem(sscale, shadow_only, reflection_pass, xlate);
-	}
 	if (!shadow_only && !plants.empty()) { // no berry shadows
 		select_texture(WHITE_TEX); // berries are untextured
 		s.set_specular(0.9, 80.0);
