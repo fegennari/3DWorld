@@ -300,7 +300,10 @@ public:
 		if (!peek) {inc_cur_avail();}
 		return chosen;
 	}
-
+	bool choose_element_not_newer_than(int min_time, unsigned &chosen) {
+		chosen = choose_element(0);
+		return (!(*this)[chosen].enabled() || (*this)[chosen].get_replace_age() >= min_time);
+	}
 	void choose_elements(vector<unsigned> &ixs, unsigned num) {
 		assert(num <= size());
 		assert(cur_avail < size());

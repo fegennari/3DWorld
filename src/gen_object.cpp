@@ -238,14 +238,16 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv, fl
 {
 	if (!animate2 || is_underwater(pos) || is_under_mesh(pos)) return 0;
 	// Note: we scale by 0.62 since we're using BLUR_CENT_TEX rather than BLUR_TEX to draw smoke (to reduce fill rate)
-	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as, 1, no_lighting, spread);
+	unsigned ix(0);
+	if (!part_clouds.choose_element_not_newer_than(1.0*TICKS_PER_SECOND, ix)) return 0; // no available smoke slots, and none older than 1s
+	part_clouds[ix].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as, 1, no_lighting, spread);
 	return 1;
 }
 
 
-void gen_smoke(point const &pos, float zvel_scale, float radius_scale, colorRGBA const &color, bool no_lighting) {
+bool gen_smoke(point const &pos, float zvel_scale, float radius_scale, colorRGBA const &color, bool no_lighting) {
 
-	gen_arb_smoke(pos, color, vector3d(0.0, 0.0, SMOKE_ZVEL*zvel_scale),
+	return gen_arb_smoke(pos, color, vector3d(0.0, 0.0, SMOKE_ZVEL*zvel_scale),
 		radius_scale*rand_uniform(0.01, 0.025), rand_uniform(0.7, 0.9), rand_uniform(0.75, 0.95), 0.0, NO_SOURCE, SMOKE, 1, 1.0, no_lighting);
 }
 
