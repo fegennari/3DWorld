@@ -2433,6 +2433,7 @@ void tree_fire_t::next_frame(tree &t) {
 	//timer_t timer("Tree Fire Next Frame");
 	float const burn_rate(fire_elem_t::get_burn_rate()), spread_rate(1.2*fticks*burn_rate);
 	unsigned const num_fires(fires.size());
+	unsigned const counter_offset(frame_counter + uintptr_t(this)/sizeof(void *)); // make offset unique per tree
 	assert(num_fires <= branches.size());
 	has_fire = 0;
 	rand_gen_t rgen;
@@ -2447,7 +2448,7 @@ void tree_fire_t::next_frame(tree &t) {
 		has_fire = 1;
 		update_dist_to_fire(elem.pos, 1.0);
 		if (elem.burn_amt < 0.5) continue; // not large enough to spread or do damage
-		int const counter(i + frame_counter);
+		int const counter(i + counter_offset);
 		if ((counter&3) != 0) continue; // update every 4 frames as an optimization
 		bool const trunk(cylin.level == 0); // trunk fire spreads more quickly
 		float const radius(elem.burn_amt*fire_radius*rgen.rand_uniform(0.8, 1.3)), burn_radius(radius + elem.branch_bradius);
