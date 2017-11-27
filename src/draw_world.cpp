@@ -1555,6 +1555,7 @@ void draw_smoke_and_fires() {
 	if (use_depth_trans) {setup_depth_trans_texture(s, depth_tid);}
 	draw_ground_fires(s);
 	draw_tree_fires(s);
+	draw_scenery_fires(s);
 	if (use_depth_trans) {s.add_uniform_float("depth_trans_bias", 0.1);} // for part clouds and explosions
 	draw_blasts(s);
 	if (have_part_clouds) {draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);} // smoke: slow when a lot of smoke is up close

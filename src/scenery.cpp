@@ -40,7 +40,7 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 
 
 extern bool underwater, has_snow;
-extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER, animate2;
+extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER, animate2, frame_counter;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern voxel_params_t global_voxel_params;
@@ -553,8 +553,13 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 
 void burnable_scenery_obj::next_frame() {
 	if (!animate2 || world_mode != WMODE_GROUND || burn_amt == 1.0) return;
-	float const fire_amt(get_ground_fire_intensity(pos, 2.0*radius));
+	fire_amt = get_ground_fire_intensity(pos, 2.0*radius);
 	if (fire_amt > 0.0) {burn_amt = min(1.0, (burn_amt + 0.003*fticks*fire_amt));}
+}
+void burnable_scenery_obj::draw_fire(fire_drawer_t &fire_drawer, float rscale, unsigned ix) const {
+	if (fire_amt == 0.0 || burn_amt >= 1.0) return; // no fire, or all burned out
+	float const fire_radius(rscale*get_bsphere_radius());
+	fire_drawer.add_fire((get_center() + vector3d(0.0, 0.0, 0.75*fire_radius)), fire_radius, ((animate2 ? frame_counter : 0) + ix)); // one flame
 }
 
 
@@ -1035,6 +1040,10 @@ template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool s
 	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val);}
 }
 
+template<typename T> void draw_scenery_vector_fires(vector<T> const &v, fire_drawer_t &fire_drawer, float rscale) {
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw_fire(fire_drawer, rscale, i);}
+}
+
 template<typename T> void add_scenery_vector_cobjs(vector<T> &v) {
 	for (unsigned i = 0; i < v.size(); ++i) {
 		if (is_over_mesh(v[i].get_pos())) {v[i].add_cobjs();}
@@ -1290,7 +1299,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass) {
 
 	if (plants.empty() && leafy_plants.empty()) return; // nothing to draw
-	bool const do_update(!shadow_only && !reflection_pass);
+	bool const do_update(!shadow_only && !reflection_pass && world_mode == WMODE_GROUND);
 	s.set_specular(0.25, 20.0); // a small amount of specular
 	s.add_uniform_float("wind_zscale", 2.0);
 	s_plant::shader_state_t state;
@@ -1324,7 +1333,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val, bool reflection_pass) {
 
-	if (!shadow_only && !reflection_pass) { // apply burn
+	if (!shadow_only && !reflection_pass && world_mode == WMODE_GROUND) { // apply burn
 		for (auto i = logs.begin()  ; i != logs.end()  ; ++i) {i->next_frame();}
 		for (auto i = stumps.begin(); i != stumps.end(); ++i) {i->next_frame();}
 	}
@@ -1397,6 +1406,16 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	}
 }
 
+void scenery_group::draw_fires(shader_t &s) const {
+	
+	fire_drawer_t fire_drawer;
+	draw_scenery_vector_fires(logs,   fire_drawer, 1.8);
+	draw_scenery_vector_fires(stumps, fire_drawer, 1.8);
+	draw_scenery_vector_fires(plants, fire_drawer, 1.5);
+	draw_scenery_vector_fires(leafy_plants, fire_drawer, 1.8);
+	fire_drawer.draw(s);
+}
+
 void scenery_group::leafy_plant_coll(unsigned plant_ix, float energy) {
 	assert(plant_ix < leafy_plants.size());
 	leafy_plants[plant_ix].obj_collision(energy);
@@ -1426,6 +1445,9 @@ void add_plant(point const &pos, float height, float radius, int type, int calc_
 
 void draw_scenery(bool shadow_only) {
 	if (has_scenery || has_scenery2) {all_scenery.draw(shadow_only);}
+}
+void draw_scenery_fires(shader_t &s) {
+	if (has_scenery || has_scenery2) {all_scenery.draw_fires(s);}
 }
 
 void add_scenery_cobjs() {all_scenery.add_cobjs();}

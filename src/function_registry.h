@@ -658,6 +658,7 @@ void draw_universe_blasts();
 // function prototypes - scenery
 void gen_scenery();
 void draw_scenery(bool shadow_only=0);
+void draw_scenery_fires(shader_t &s);
 bool update_scenery_zvals(int x1, int y1, int x2, int y2);
 void free_scenery_cobjs();
 void do_rock_damage(point const &pos, float radius, float damage);

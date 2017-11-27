@@ -100,10 +100,13 @@ public:
 
 class burnable_scenery_obj : public scenery_obj {
 protected:
-	float burn_amt;
+	float fire_amt, burn_amt;
+	virtual float get_bsphere_radius() const = 0;
+	virtual point get_center() const = 0;
 public:
-	burnable_scenery_obj() : burn_amt(0.0) {}
+	burnable_scenery_obj() : fire_amt(0.0), burn_amt(0.0) {}
 	void next_frame();
+	void draw_fire(fire_drawer_t &fire_drawer, float rscale, unsigned ix) const;
 };
 
 
@@ -126,13 +129,14 @@ class s_log : public wood_scenery_obj { // size = 57 (60)
 
 public:
 	s_log() : length(0.0), radius2(0.0) {}
+	virtual point get_center() const {return ((pos + pt2)*0.5);}
 	bool check_sphere_coll(point &center, float sphere_radius) const {return 0;} // no collisions
 	void shift_by(vector3d const &vd);
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
-	float get_bsphere_radius() const {return max(length, max(radius, radius2));}
+	virtual float get_bsphere_radius() const {return max(length, max(radius, radius2));}
 	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
 };
 
@@ -143,11 +147,12 @@ class s_stump : public wood_scenery_obj { // size = 29 (32)
 
 public:
 	s_stump() : radius2(0.0), height(0.0) {}
+	virtual point get_center() const {return (pos + point(0.0, 0.0, 0.5*height));}
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
-	float get_bsphere_radius() const {return max(height, max(radius, radius2));}
+	virtual float get_bsphere_radius() const {return max(height, max(radius, radius2));}
 	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
 };
 
@@ -157,6 +162,7 @@ struct plant_base : public burnable_scenery_obj { // size = 28
 	int create(int x, int y, int use_xy, float minz);
 	void next_frame();
 	colorRGBA get_plant_color(vector3d const &xlate) const;
+	virtual point get_center() const {return pos;}
 };
 
 
@@ -180,6 +186,7 @@ public:
 	};
 
 	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
+	virtual float get_bsphere_radius() const {return 0.5*(height + radius);}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);
@@ -208,6 +215,7 @@ class leafy_plant : public plant_base {
 
 public:
 	leafy_plant() : vbo_mgr_ix(-1), plant_ix(0), delta_z(0.0), motion_amt(0.0), cur_motion_energy(0.0), prev_motion_energy(0.0) {}
+	virtual float get_bsphere_radius() const {return radius;}
 	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
 	unsigned num_leaves() const {return leaves.size();}
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
@@ -254,6 +262,7 @@ public:
 	void draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	bool setup_voxel_rocks_shader(shader_t &vrs, bool shadow_only) const;
 	void draw(bool shadow_only, vector3d const &xlate=zero_vector);
+	void draw_fires(shader_t &s) const;
 	void leafy_plant_coll(unsigned plant_ix, float energy);
 	void write_plants_to_cobj_file(std::ostream &out) const;
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
