@@ -1741,6 +1741,12 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 					energy += ENERGY_XFER_EFF*damage_done*(4.0f/max(4.0f, fticks)); // scale to reasonable values for slow framerate
 				}
 			}
+			if (weapon_id == UWEAP_PBEAM || weapon_id == UWEAP_FUSCUT || weapon_id == UWEAP_ESTEAL || weapon_id == UWEAP_LITNING) {
+				if ((rand()&3) == 0 && distance_to_camera(p2) < 2000.0*beamwidth && fobj->is_ship() && (weap.ignores_shields || !fobj->has_shields())) { // hit a ship's armor
+					vector3d const vel(signed_rand_vector(2.5E-5));
+					gen_particle(PTYPE_GLOW, bwp.beamc[1], colorRGBA(bwp.beamc[1], 0.0), 1.5*TICKS_PER_SECOND, p2, vel, 0.25*beamwidth, 0.0, alignment, 0);
+				}
+			}
 		}
 		if (weap.force > 0.0 && weap.f_inv > 0.0) { // inverse force applied to the shooter (like recoil)
 			coll_physics(p2, vcoll*-weap.f_inv, weap.f_inv*weap.mass, weap.radius, NULL, 1.0);
