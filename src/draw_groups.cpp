@@ -42,7 +42,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
 					  bool do_texture, shader_t &shader, int is_chunky=0);
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader, lt_atten_manager_t &lt_atten_manager);
-void draw_smiley_part(point const &pos, vector3d const &orient, int type, int use_orient, int ndiv, shader_t &shader, float scale=1.0);
+void draw_smiley_part(point const &pos, vector3d const &orient, int type, int smiley_id, int use_orient, int ndiv, shader_t &shader, float scale=1.0, float alpha=1.0);
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, mesh2d const *const mesh, shader_t &shader);
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader, lt_atten_manager_t &lt_atten_manager);
@@ -336,7 +336,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		}
 		break;
 	case SFPART:
-		draw_smiley_part(pos, obj.orientation, obj.direction, 1, ndiv, shader);
+		draw_smiley_part(pos, obj.orientation, obj.direction, obj.source, 1, ndiv, shader);
 		break;
 	case CHUNK:
 		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv, shader);
@@ -930,12 +930,12 @@ inline void rotate_to_dir(vector3d const &dir) { // normalized to +y (for smiley
 }
 
 
-void draw_smiley_part(point const &pos, vector3d const &orient, int type, int use_orient, int ndiv, shader_t &shader, float scale) {
+void draw_smiley_part(point const &pos, vector3d const &orient, int type, int smiley_id, int use_orient, int ndiv, shader_t &shader, float scale, float alpha) {
 
 	assert(type < NUM_SMILEY_PARTS);
 	float const radius(scale*object_types[SFPART].radius);
-	colorRGBA const sf_color[NUM_SMILEY_PARTS] = {BLACK, RED, PINK};
-	shader.set_cur_color(sf_color[type]);
+	colorRGBA const sf_color[NUM_SMILEY_PARTS] = {BLACK, RED, PINK, get_smiley_team_color(smiley_id)};
+	shader.set_cur_color(mult_alpha(sf_color[type], alpha));
 
 	switch (type) {
 	case SF_EYE:
@@ -947,9 +947,16 @@ void draw_smiley_part(point const &pos, vector3d const &orient, int type, int us
 	case SF_TONGUE:
 		fgPushMatrix();
 		translate_to(pos);
-		if (use_orient) rotate_to_dir(orient);
+		if (use_orient) {rotate_to_dir(orient);}
 		fgScale(1.5*radius, 3.0*radius, 0.375*radius);
 		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0);
+		fgPopMatrix();
+		break;
+	case SF_HEADBAND:
+		fgPushMatrix();
+		translate_to(pos);
+		fgScale(1.0, 1.0, 0.5);
+		draw_sphere_vbo(all_zeros, 0.94*(6.0*radius), ndiv, 0);
 		fgPopMatrix();
 		break;
 	default: assert(0);
@@ -973,7 +980,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		if (health > 10.0) {
 			float const scale((powerup == PU_SPEED) ? 1.5 : 1.0);
 			point const pos3 ((powerup == PU_SPEED) ? (pos2 + point(0.0, 0.2*radius, 0.0)) : pos2);
-			draw_smiley_part(pos3, orient, SF_EYE, 0, ndiv2, shader, scale); // eyes
+			draw_smiley_part(pos3, orient, SF_EYE, id, 0, ndiv2, shader, scale); // eyes
 		}
 		else {
 			shader.set_cur_color(BLACK);
@@ -989,8 +996,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 	// draw nose
 	if (powerup != PU_INVISIBILITY || same_team(id, -1)) { // show nose even if invisible if same team as player
-		point pos3(0.0, 1.1*radius, 0.0);
-		draw_smiley_part(pos3, orient, SF_NOSE, 0, ndiv2, shader); // nose
+		draw_smiley_part(point(0.0, 1.1*radius, 0.0), orient, SF_NOSE, id, 0, ndiv2, shader); // nose
 	}
 	float alpha(1.0);
 
@@ -1013,7 +1019,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			break;
 
 		case PU_SPEED:
-			if (animate2 && !(rand()&3)) gen_smoke(pos);
+			if (animate2 && !(rand()&3)) {gen_smoke(pos);}
 			break;
 
 		case PU_FLIGHT: // propeller or wings?
@@ -1067,11 +1073,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	select_no_texture();
 
 	if (teams > 1) { // draw team headband
-		shader.set_cur_color(mult_alpha(get_smiley_team_color(id), alpha));
-		fgPushMatrix();
-		fgScale(1.0, 1.0, 0.5);
-		draw_sphere_vbo(point(0.0, 0.0, 0.9*radius), 0.94*radius, ndiv, 0);
-		fgPopMatrix();
+		draw_smiley_part(point(0.0, 0.0, 0.45*radius), orient, SF_HEADBAND, id, 0, ndiv, shader, 1.0, alpha);
 	}
 
 	// draw unique identifier
@@ -1093,7 +1095,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	// draw tongue
 	if (game_mode && (sstates[id].kill_time < int(2*TICKS_PER_SECOND) || powerup == PU_DAMAGE)) { // stick tongue out at a dead enemy
 		point pos4(0.0, 0.8*radius, -0.4*radius);
-		draw_smiley_part(pos4, orient, SF_TONGUE, 0, ndiv2, shader);
+		draw_smiley_part(pos4, orient, SF_TONGUE, id, 0, ndiv2, shader);
 	}
 	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
 		select_texture(select_dodgeball_texture(id));

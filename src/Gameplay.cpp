@@ -226,7 +226,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 {
 	// eyes, nose, and tongue
 	int const pcid(coll_id[SFPART]), offset(4*(target+1));
-	int end_p_loop(3);
+	int end_p_loop(4);
 	float part_v(5.0 + 0.5*sqrt(energy)), chunk_v(7.5 + 0.2*sqrt(energy));
 	vector3d orient(0.0, 0.0, 0.0);
 	player_state &sstate(sstates[target]);
@@ -242,14 +242,16 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		++end_p_loop; // tongue out
 	}
 	assert(unsigned(offset + end_p_loop) <= obj_groups[pcid].max_objs);
+	unsigned const part_ids[5] = {SF_EYE, SF_EYE, SF_NOSE, SF_HEADBAND, SF_TONGUE};
 
-	for (int i = 0; i < end_p_loop; ++i) { // {eye, eye, nose, [tongue]}
+	for (int i = 0; i < end_p_loop; ++i) { // {eye, eye, nose, headband, [tongue]}
 		obj_groups[pcid].create_object_at((i+offset), pos);
 		dwobject &obj(obj_groups[pcid].get_obj(i+offset));
 		obj.pos += gen_rand_vector(radius*rand_uniform(0.7, 1.3), 1.0, PI);
-		obj.direction = (i <= 1 ? 0 : i-1);
+		obj.direction = part_ids[i];
+		obj.source = target;
 		gen_blood_velocity(obj.velocity, velocity, coll_dir, part_v, 0.3, 0.2, damage_type, health);
-		if (i == 3) obj.orientation = orient; // tongue
+		if (part_ids[i] == SF_TONGUE) {obj.orientation = orient;} // tongue
 	}
 
 	// chunks

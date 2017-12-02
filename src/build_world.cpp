@@ -107,7 +107,7 @@ void create_object_groups() {
 	coll_id[ROCK]     = create_group(ROCK,     500,   0, 0, 0, 1, 0);
 	coll_id[BLOOD]    = create_group(BLOOD,    BLOOD_PER_SMILEY*num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[CHARRED]  = create_group(CHARRED,  BLOOD_PER_SMILEY*num_player_blocks, 0, 0, 0, 0, 0);
-	coll_id[SFPART]   = create_group(SFPART,   4*num_player_blocks, 0, 0, 0, 0, 0); // 2 eyes, 1 nose, 1 tongue
+	coll_id[SFPART]   = create_group(SFPART,   5*num_player_blocks, 0, 0, 0, 0, 0); // 2 eyes, 1 nose, 1 headband, and maybe 1 tongue
 	coll_id[CHUNK]    = create_group(CHUNK,    SMILEY_NCHUNKS*NUM_CHUNK_BLOCKS*num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[SKULL]    = create_group(SKULL,    num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[BALL]     = create_group(BALL,     num_dodgeballs, 0, 1, 0, 0, 0);
