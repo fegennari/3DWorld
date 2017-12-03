@@ -955,8 +955,14 @@ void draw_smiley_part(point const &pos, vector3d const &orient, int type, int sm
 	case SF_HEADBAND:
 		fgPushMatrix();
 		translate_to(pos);
-		fgScale(1.0, 1.0, 0.5);
-		draw_sphere_vbo(all_zeros, 0.94*(6.0*radius), ndiv, 0);
+
+		if (teams > 1) { // draw team headband
+			fgScale(1.0, 1.0, 0.5);
+			draw_sphere_vbo(all_zeros, 0.94*(6.0*radius), ndiv, 0);
+		}
+		shader.set_cur_color(mult_alpha(get_smiley_team_color(smiley_id+1, 1), alpha)); // ignore teams and use max_colors
+		fgScale(1.0, 1.0, ((teams > 1) ? 0.6 : 0.3)); // undo teams scale
+		draw_sphere_vbo(point(0.0, 0.0, 7.0*radius), 0.65*(6.0*radius), ndiv, 0); // draw unique identifier
 		fgPopMatrix();
 		break;
 	default: assert(0);
@@ -1071,17 +1077,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		draw_sphere_vbo(all_zeros, radius, ndiv, 1);
 	}
 	select_no_texture();
-
-	if (teams > 1) { // draw team headband
-		draw_smiley_part(point(0.0, 0.0, 0.45*radius), orient, SF_HEADBAND, id, 0, ndiv, shader, 1.0, alpha);
-	}
-
-	// draw unique identifier
-	shader.set_cur_color(mult_alpha(get_smiley_team_color(id+1, 1), alpha)); // ignore teams and use max_colors
-	fgPushMatrix();
-	fgScale(1.0, 1.0, 0.3);
-	draw_sphere_vbo(point(0.0, 0.0, (0.8/0.3)*radius), 0.65*radius, ndiv, 0);
-	fgPopMatrix();
+	draw_smiley_part(point(0.0, 0.0, 0.45*radius), orient, SF_HEADBAND, id, 0, ndiv, shader, 1.0, alpha);
 	
 	// draw mouth
 	float const hval(0.004*(100.0 - min(160.0f, health)));
