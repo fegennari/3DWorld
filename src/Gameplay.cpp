@@ -55,7 +55,7 @@ vector<bbox> team_starts;
 extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil, enable_translocator;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
-extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
+extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing, player_dodgeball_id;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape, spheres_mode, flashlight_color_id;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, czmax, fticks, crater_depth, crater_radius;
@@ -1663,6 +1663,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		if (weapon == W_BBBAT)   switch_weapon(1, 1);
 		if (weapon == W_UNARMED) switch_weapon(1, 1);
 	}
+	player_dodgeball_id = -1; // reset
 }
 
 

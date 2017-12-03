@@ -8,6 +8,7 @@
 #include "draw_utils.h"
 
 
+int player_dodgeball_id(-1);
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
@@ -284,8 +285,9 @@ void update_weapon_cobjs() { // and update cblade and lighting
 
 int select_dodgeball_texture(int shooter) {
 
-	if (UNLIMITED_WEAPONS && game_mode == 2 && !obj_groups[coll_id[BALL]].reorderable) { // can change when other players throw a ball 
-		return dodgeball_tids[obj_groups[coll_id[BALL]].choose_object(1) % NUM_DB_TIDS]; // peek=1
+	if (UNLIMITED_WEAPONS && game_mode == 2 && !obj_groups[coll_id[BALL]].reorderable) { // can change when other players throw a ball
+		if (player_dodgeball_id < 0) {player_dodgeball_id = (obj_groups[coll_id[BALL]].choose_object(1) % NUM_DB_TIDS);} // peek=1
+		return dodgeball_tids[player_dodgeball_id]; // choose once and don't change - may throw a ball of a different color
 	}
 	bool const default_tex(sstates == NULL || shooter == NO_SOURCE || sstates[shooter].balls.empty());
 	assert(shooter >= CAMERA_ID && shooter < num_smileys);
