@@ -172,19 +172,25 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	if (target_visible != 1 && (weapon != W_LANDMINE || (player_rgen.rand()&3) != 0)) return;
 	assert(target >= CAMERA_ID && target < num_smileys);
 	int const last_weapon(weapon);
+	int switched(0);
 	
 	if (weapon == W_UNARMED || !can_fire_weapon()) {
 		if (weapon == W_XLOCATOR) {use_translocator(smiley_id); return;}
 		else {
 			check_switch_weapon(smiley_id); // out of ammo, switch weapons
 			if (weapon != last_weapon) {fire_frame = 0;}
+			switched = 1;
 		}
 	}
 	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && (weapons[weapon].self_damage & (1<<(wmode&1)))) { // can damage self
 		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
 			check_switch_weapon(smiley_id); // switch weapons to avoid suicide
 			if (weapon != last_weapon) {fire_frame = 0;}
+			switched = 2;
 		}
+	}
+	if (no_weap_or_ammo()) {
+		cout << TXT(smiley_id) << TXT(weapon) << TXT(last_weapon) << TXT(no_weap()) << TXT(no_ammo()) << TXT(switched) << TXT(fire_frame) << endl;
 	}
 	assert(!no_weap_or_ammo());
 	if (weapon == W_BALL && !UNLIMITED_WEAPONS && (player_rgen.rand()&15) != 0) return; // wait to throw
@@ -1282,6 +1288,7 @@ void player_state::check_switch_weapon(int smiley_id) { // called by smileys
 	weapon     = chosen_weap;
 	//weapon     = W_LASER; // set to force this as weapon choice (if available)
 	if (weapon == W_PLASMA && wmode == 1 && (player_rgen.rand()%4) != 0) {plasma_loaded = 1;} // fire it up!
+	if (weapon == W_XLOCATOR) {wmode = 0;} // smileys don't use translocator secondary fire mode
 }
 
 
