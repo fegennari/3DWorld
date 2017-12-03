@@ -172,27 +172,25 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	if (target_visible != 1 && (weapon != W_LANDMINE || (player_rgen.rand()&3) != 0)) return;
 	assert(target >= CAMERA_ID && target < num_smileys);
 	int const last_weapon(weapon);
-	int switched(0);
 	
 	if (weapon == W_UNARMED || !can_fire_weapon()) {
 		if (weapon == W_XLOCATOR) {use_translocator(smiley_id); return;}
 		else {
 			check_switch_weapon(smiley_id); // out of ammo, switch weapons
 			if (weapon != last_weapon) {fire_frame = 0;}
-			switched = 1;
 		}
 	}
 	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && (weapons[weapon].self_damage & (1<<(wmode&1)))) { // can damage self
 		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
 			check_switch_weapon(smiley_id); // switch weapons to avoid suicide
 			if (weapon != last_weapon) {fire_frame = 0;}
-			switched = 2;
 		}
 	}
 	if (no_weap_or_ammo()) {
-		cout << TXT(smiley_id) << TXT(weapon) << TXT(last_weapon) << TXT(no_weap()) << TXT(no_ammo()) << TXT(switched) << TXT(fire_frame) << endl;
+		if (weapon == W_XLOCATOR) {use_translocator(smiley_id); return;}
+		cout << TXT(smiley_id) << TXT(weapon) << TXT(last_weapon) << TXT(no_weap()) << TXT(no_ammo()) << TXT(fire_frame) << endl;
+		assert(0);
 	}
-	assert(!no_weap_or_ammo());
 	if (weapon == W_BALL && !UNLIMITED_WEAPONS && (player_rgen.rand()&15) != 0) return; // wait to throw
 	point pos(smiley.pos);
 	bool const underwater(is_underwater(pos));
