@@ -33,7 +33,7 @@ void main() {
 	vertex     -= delta;
 	float dist  = length(delta);
 	vec3 dir    = normalize(cross(delta, (vertex_ES[0] - vertex_ES[1]))); // direction of bend motion
-	float mval  = clamp((2.0 - length(epos.xyz)), 0.0, 1.0)*(0.6 - pow(tc[0], 0.4)); // more curvature at the tip and near the camera
+	float mval  = clamp((2.0 - length(epos.xyz)), 0.0, 1.0)*(0.6 - pow(tc[0], 0.4)); // more curvature at the tip and near the camera (tip=0.6 to base=-0.4)
 	delta       = mix(delta, dist*dir, mval);
 	delta      *= dist/length(delta); // renormalize to original length
 	vertex     += delta;
@@ -42,7 +42,9 @@ void main() {
 
 #ifdef INCLUDE_NORMALS
 	vertex_from_vs = vertex;
-	normal   = interpolate3D(normal_ES  [0], normal_ES  [1], normal_ES  [2]); // FIXME: update based on new vertex?
-	eye_norm = interpolate3D(eye_norm_ES[0], eye_norm_ES[1], eye_norm_ES[2]); // FIXME: calculate from normal?
+	normal   = interpolate3D(normal_ES[0], normal_ES[1], normal_ES[2]);
+	//normal   = mix(normal, vec3(0,0,1), 0.5*(1.0 - tc[0])); // point normal more upward for tip of grass - may be more physically correct, but causes lighting to change over distance
+	eye_norm = interpolate3D(eye_norm_ES[0], eye_norm_ES[1], eye_norm_ES[2]); // no measurable difference from line below
+	//eye_norm = normalize(fg_NormalMatrix * normal); // no measurable difference from line above
 #endif
 }
