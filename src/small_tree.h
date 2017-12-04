@@ -27,6 +27,7 @@ class small_tree { // size = 112
 		vector<vert_norm_comp_color> v;
 		vector<int> coll_id;
 		mutable vbo_wrap_t vbo; // created dynamically during drawing
+		unsigned get_gpu_mem() const {return v.size()*sizeof(vert_norm_comp_color);}
 	};
 	std::shared_ptr<palm_verts_t> palm_verts; // for palm trees only
 
@@ -38,6 +39,7 @@ public:
 	void setup_rotation(rand_gen_t &rgen);
 	vector3d get_rot_dir() const;
 	cylinder_3dw get_trunk_cylin() const;
+	unsigned get_palm_mem() const {return (palm_verts ? palm_verts->get_gpu_mem() : 0);}
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
 	void add_bounds_to_bcube(cube_t &bcube) const;
@@ -90,7 +92,7 @@ struct small_tree_group : public vector<small_tree> {
 	vector<point> inst_pts;
 	rand_gen_t rgen;
 	bool generated, instanced;
-	unsigned num_pine_trees, num_palm_trees, num_trunk_pts;
+	unsigned num_pine_trees, num_palm_trees, num_trunk_pts, palm_vbo_mem;
 	float max_tree_radius;
 	point last_cpos;
 	cube_t all_bcube;
@@ -104,7 +106,8 @@ struct small_tree_group : public vector<small_tree> {
 	};
 	vector<tree_inst_t> tree_insts[2]; // pine trees, palm trees
 	
-	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), num_trunk_pts(0), max_tree_radius(0.0), last_cpos(all_zeros) {all_bcube.set_to_zeros();}
+	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), num_trunk_pts(0), palm_vbo_mem(0), max_tree_radius(0.0), last_cpos(all_zeros)
+	{all_bcube.set_to_zeros();}
 	void enable_instanced() {instanced |= ((num_pine_trees + num_palm_trees) == size());} // only if all are pine/palm trees
 	void sort_by_type() {stable_sort(begin(), end());}
 	void sort_by_dist_to_camera();
@@ -136,7 +139,7 @@ struct small_tree_group : public vector<small_tree> {
 	void maybe_add_tree(int i, int j, float zpos_in, float tsize, int skip_val, bool check_hmap_normal);
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
 	void gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square);
-	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());} // FIXME_TREES: excludes palm trees
+	unsigned get_gpu_mem() const {return (palm_vbo_mem + vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}
 	void update_zmax(float &tzmax) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);

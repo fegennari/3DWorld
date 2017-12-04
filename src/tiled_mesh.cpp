@@ -70,7 +70,7 @@ extern tree_cont_t *cur_tile_trees;
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 void set_water_plane_uniforms(shader_t &s);
 void create_pine_tree_instances();
-unsigned get_pine_tree_inst_gpu_mem();
+unsigned get_tree_inst_gpu_mem();
 void setup_detail_normal_map(shader_t &s, float tscale);
 void draw_distant_mesh_bottom(float terrain_zmin);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
@@ -2450,7 +2450,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 		draw_tiles(reflection_pass, 0); // non-shadow map pass
 	}
 	if (DEBUG_TILES) {
-		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_pine_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
+		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size()
 			 << ", trees drawn: " << num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem)
 			 << ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;

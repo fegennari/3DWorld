@@ -67,7 +67,7 @@ colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 }
 
 
-unsigned get_pine_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
+unsigned get_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
 
 
 void small_tree_group::add_tree(small_tree const &st) {
@@ -81,6 +81,7 @@ void small_tree_group::add_tree(small_tree const &st) {
 
 void small_tree_group::finalize(bool low_detail) {
 
+	palm_vbo_mem = 0;
 	if (empty()) return;
 	assert(!is_uploaded(low_detail));
 	vbo_vnc_block_manager_t &vbo_mgr(vbo_manager[low_detail]);
@@ -88,8 +89,9 @@ void small_tree_group::finalize(bool low_detail) {
 	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : PINE_TREE_NPTS));
 	if (!low_detail) {vbo_mgr.reserve_offsets(num_pine_trees);}
 	//if (!low_detail) {for (auto i = begin(); i != end(); ++i) {i->alloc_pine_tree_pts(vbo_mgr);}} // correct, but doesn't seem to help
-	#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
+#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_mgr, low_detail);}
+	for (const_iterator i = begin(); i != end(); ++i) {palm_vbo_mem += i->get_palm_mem();}
 }
 
 
