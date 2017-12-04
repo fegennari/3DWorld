@@ -686,7 +686,7 @@ public:
 		bool last_visible(0);
 		unsigned beg_ix(0);
 		point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
-		float const cube_sz(vector3d(DX_VAL, DY_VAL, grass_length).mag());
+		float const close_dist(2.0*vector3d(DX_VAL, DY_VAL, grass_length).mag());
 		float const scene_size(vector3d(X_SCENE_SIZE, Y_SCENE_SIZE, (ztop - zbottom)).mag());
 		bool const no_clip(camera_pdu.sphere_visible_test(point(0.0, 0.0, 0.5*(ztop + zbottom)), -0.5*scene_size)); // scene mostly visible
 		vector<unsigned> nearby_ixs;
@@ -697,7 +697,8 @@ public:
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+1]) continue; // empty section
 				point const mpos(get_mesh_xyz_pos(x, y));
 				bool visible(1);
-				if (!no_clip && dot_product((camera - mpos), cview_dir) > 0.0 && !dist_less_than(camera, mpos, cube_sz)) {visible = 0;} // behind the camera
+				if (dist_less_than(camera, mpos, close_dist)) {} // close, always visible
+				else if (!no_clip && dot_product((camera - mpos), cview_dir) > 0.0) {visible = 0;} // behind the camera
 				else if (x+1 < MESH_X_SIZE && y+1 < MESH_Y_SIZE &&
 					dot_product(surface_normals[y  ][x  ], (adj_camera - mpos                      )) < 0.0 &&
 					dot_product(surface_normals[y  ][x+1], (adj_camera - get_mesh_xyz_pos(x+1, y  ))) < 0.0 &&
