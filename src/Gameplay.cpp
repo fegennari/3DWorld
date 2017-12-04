@@ -1235,9 +1235,16 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	assert(damage >= 0.0 && size >= 0.0);
 	assert(type != SMILEY);
 	if (!game_mode || damage < TOLERANCE || size < TOLERANCE) return;
-	float bradius;
 	//RESET_TIME;
-	
+	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+	float bradius(0.0), depth(0.0);
+	bool const underwater(is_underwater((pos + vector3d(0.0, 0.0, -0.5*size)), 0, &depth));
+
+	if (underwater) {
+		depth = min(0.25f, max(depth, 0.01f));
+		assert(damage >= 0.0);
+		add_splash(pos, xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
+	}
 	if (type == FREEZE_BOMB) {
 		damage  = 0.0;
 		bradius = 1.2*size;
@@ -1251,7 +1258,6 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			if (display_mode & 0x01) {add_color_to_landscape_texture(color, pos.x, pos.y, 0.3*bradius);}
 			if (display_mode & 0x02) {modify_grass_at(pos, 1.0*bradius, 0, 0, 0, 1, 1, 0, color);}
 		}
-		// FIXME: water splash?
 		return; // no other effects
 	}
 	else if (type == GRENADE || type == CGRENADE) {
@@ -1269,17 +1275,6 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	exp_damage_groups(pos, shooter, chain_level, damage, size, type, cview);
 	exp_damage_trees(pos, damage, bradius, type);
 
-	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-	float depth(0.0);
-	point pos_zr(pos);
-	pos_zr.z -= 0.5*size;
-	bool const underwater(is_underwater(pos_zr, 0, &depth));
-
-	if (underwater) {
-		depth = min(0.25f, max(depth, 0.01f));
-		assert(damage >= 0.0);
-		add_splash(pos, xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
-	}
 	if (damage > 500.0 || is_rocket_type(type)) { // everything except for plasma
 		gen_delayed_from_player_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
 		float const blast_force(size/distance_to_camera(pos));
