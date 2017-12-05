@@ -12,7 +12,6 @@
 
 bool const MAP_VIEW_LIGHTING = 1;
 bool const MAP_VIEW_SHADOWS  = 1;
-bool const ADD_RIVERS        = 0; // slow and noisy
 
 int map_drag_x(0), map_drag_y(0);
 float map_zoom(0.0);
@@ -182,9 +181,6 @@ void draw_overhead_map() {
 		point const lpos(get_light_pos());
 		vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
 
-		vector<float> heights;
-		if (ADD_RIVERS) {heights.resize(tot_sz, 0.0);}
-
 #pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < ny; ++i) {
 			int const inx(i*nx);
@@ -254,7 +250,6 @@ void draw_overhead_map() {
 						continue;
 					}
 					if (!mh_set) {mh = get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j);} // calculate mesh height here if not yet set
-					if (ADD_RIVERS) {heights[inx + j] = mh;}
 					float height(min(1.0f, hscale*(mh + zmax2))); // can be negative
 
 					if (!map_color) { // grayscale
@@ -301,68 +296,6 @@ void draw_overhead_map() {
 				}
 			} // for j
 		} // for i
-		if (ADD_RIVERS) {
-			RESET_TIME;
-			// compute next index array
-			vector<unsigned> next_ix(tot_sz, 0);
-
-			for (int y = 0; y < ny; ++y) {
-				for (int x = 0; x < nx; ++x) {
-					unsigned const ix(y*nx + x);
-					next_ix[ix] = ix; // start at init pos
-					if (x == 0 || y == 0 || x == nx-1 || y == ny-1) continue; // at the edge of the mesh
-					if (heights[ix] < water_plane_z) continue; // below the water line
-					float const h0(heights[ix]);
-					float max_dh(0.0);
-
-					for (int yy = y-1; yy <= y+1; ++yy) {
-						for (int xx = x-1; xx <= x+1; ++xx) {
-							unsigned const ix2(yy*nx + xx);
-							float const h(heights[ix2]);
-							if (h >= h0) continue;
-							float const dh(((yy == y || xx == x) ? 1.0 : SQRTOFTWOINV)*(h0 - h));
-							if (dh > max_dh) {max_dh = dh; next_ix[ix] = ix2;} // new lowest point
-						}
-					}
-				} // for x
-			} // for y
-
-			// compute accumulation
-			vector<unsigned> accum(tot_sz, 0);
-			vector<uint8_t> seen(tot_sz, 0), is_minima(tot_sz, 0);
-
-//#pragma omp parallel for schedule(static,1)
-			for (int y = 0; y < ny; ++y) { // FIXME: better algorithm
-				for (int x = 0; x < nx; ++x) {
-					unsigned ix(y*nx + x); // place one drop of rain at (x,y) and trace its path to the local minima or the edge of the terrain
-					if (seen[ix]) continue; // already processed
-					unsigned weight(1);
-
-					while (1) {
-						if (next_ix[ix] == ix) break; // local minima or edge, done
-						ix = next_ix[ix];
-						if (!seen[ix]) {seen[ix] = 1; ++weight;} // add weight of new point and mark it seen
-						accum[ix] += weight;
-					}
-					is_minima[ix] = 1;
-				} // for x
-			} // for y
-
-			// render rivers to the image data
-			unsigned num_minima(0);
-			for (auto i = is_minima.begin(); i != is_minima.end(); ++i) {if (*i) {++num_minima;}}
-			unsigned const thresh(2*tot_sz/num_minima);
-
-			for (int y = 0; y < ny; ++y) {
-				for (int x = 0; x < nx; ++x) {
-					unsigned const ix(y*nx + x);
-					if (accum[ix] < thresh) continue; // threshold for a river
-					unsigned char *rgb(&buf[3*ix]);
-					rgb[0] = 0; rgb[1] = 0; rgb[2] = 255; // make all blue
-				} // for x
-			} // for y
-			PRINT_TIME("Rivers");
-		}
 		if (begin_motion && obj_groups[coll_id[SMILEY]].enabled) { // game_mode?
 			float const camx((world_mode == WMODE_GROUND) ? camera.x : 0.0), camy((world_mode == WMODE_GROUND) ? camera.y : 0.0);
 
