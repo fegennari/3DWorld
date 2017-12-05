@@ -759,7 +759,7 @@ public:
 					poly[p] = vert_norm_tc(v[V.vix], normal, tcoord.x, tcoord.y);
 					if (!colors.empty()) {assert(V.vix < colors.size()); poly.color += colors[V.vix];}
 				} // for p
-				if (!colors.empty()) {poly.color = poly.color*j->npts; poly.color.A = 1.0;} // FIXME: uses average vertex color for each face/polygon
+				if (!colors.empty()) {poly.color = poly.color/j->npts; poly.color.A = 1.0;} // FIXME: uses average vertex color for each face/polygon
 				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id);
 				pix += j->npts;
 			} // for j
