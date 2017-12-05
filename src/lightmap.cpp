@@ -170,7 +170,7 @@ void r_profile::clear_within(float const c[2]) {
 	copy(pend.begin(), pend.end(), back_inserter(rects));
 	pend.resize(0);
 	if (removed) filled = 0;
-	//avg_alpha = 1.0; // FIXME
+	//avg_alpha = 1.0; // FIXME: recalculate?
 }
 
 

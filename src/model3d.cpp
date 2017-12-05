@@ -565,7 +565,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		create_and_upload(*this, indices);
 	}
 	pre_render();
-	// FIXME: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
+	// Note: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
 	T::set_vbo_arrays(); // calls check_mvm_update()
 
 	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
@@ -1583,6 +1583,7 @@ void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: R
 	assert(scale != 0.0);
 	pdu.translate(-tv);
 	//pdu.rotate(axis, -angle); // FIXME: incorrect - we want to rotate about the model's origin, not the frustum/camera origin
+	assert(scale != 0.0);
 	pdu.scale(1.0/fabs(scale)); // FIXME: what to do about negative scales?
 	if (angle != 0.0) {pdu.valid = 0;} // since we can't transform the pdu correctly, we give up and disable using it for VFC
 }
@@ -1669,7 +1670,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	assert(trans_op_mask > 0 && trans_op_mask <= 3);
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	
-	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) { // FIXME: move out of transform loop?
+	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
 		if (model_indir_tid == 0) {create_indir_texture();}
 		if (model_indir_tid != 0) {
 			set_3d_texture_as_current(model_indir_tid, 1); // indir texture uses TU_ID=1
@@ -1795,7 +1796,7 @@ void model3d::create_indir_texture() {
 	unsigned const xsize(sky_lighting_sz[0]), ysize(sky_lighting_sz[1]), zsize(sky_lighting_sz[2]), tot_sz(xsize*ysize*zsize), ncomp(4);
 	assert(tot_sz > 0);
 	if (tot_sz == 0) return; // nothing to do
-	lmap_manager_t local_lmap_manager; // FIXME: store in the model3d and cache for reuse on context change?
+	lmap_manager_t local_lmap_manager; // FIXME: store in the model3d and cache for reuse on context change (at the cost of more CPU memory usage)?
 	lmcell init_lmcell;
 	unsigned char **need_lmcell = nullptr; // not used - dense mode
 	local_lmap_manager.alloc(tot_sz, xsize, ysize, zsize, need_lmcell, init_lmcell);
