@@ -580,21 +580,24 @@ void draw_universe_sun_flare() {
 	float intensity(1.0);
 	u_ship const &ps(player_ship());
 	point const viewer(ps.get_pos());
-	unsigned const npts = 16;
-	static point pts[npts];
-	static bool pts_valid(0);
-	unsigned nvis(0);
+
+	if (universe_ray_intersect(viewer, sun.pos, OBJ_TYPE_ALL, &sun, &ps)) { // center not visible, do detailed ray query
+		unsigned const npts = 32;
+		static point pts[npts];
+		static bool pts_valid(0);
+		unsigned nvis(0);
 	
-	for (unsigned i = 0; i < npts; ++i) {
-		if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
-		point const pos(sun.pos + pts[i]*sun.radius);
-		if (univ_sphere_vis((pos + offset), 0.0) && !universe_ray_intersect(viewer, pos, OBJ_TYPE_ALL, &sun, &ps)) {++nvis;}
+		for (unsigned i = 0; i < npts; ++i) {
+			if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
+			point const pos(sun.pos + pts[i]*sun.radius);
+			if (univ_sphere_vis((pos + offset), 0.0) && !universe_ray_intersect(viewer, pos, OBJ_TYPE_ALL, &sun, &ps)) {++nvis;}
+		}
+		pts_valid = 1;
+		if (nvis == 0) return;
+		intensity = 0.1 + 0.9*min(1.0, (2.0*nvis))/float(npts); // intensity starts to fall off when > 50% occluded
 	}
-	pts_valid = 1;
-	if (nvis == 0) return;
-	intensity = 0.1 + 0.9*float(nvis)/float(npts);
 	point const gv(make_pt_global(viewer));
-	DoFlares(gv, (gv + player_ship().get_dir()), make_pt_global(sun.pos), 0.01, 0.02, 0.5*intensity, 4); // draw only some flares with half intensity
+	DoFlares(gv, (gv + ps.get_dir()), make_pt_global(sun.pos), 0.01, 0.02, 0.5*intensity, 4); // draw only some flares with half intensity
 }
 
 
