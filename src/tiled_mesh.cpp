@@ -1694,7 +1694,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 		for (unsigned dir = 0; dir < 2; ++dir) { // lo, hi
 			int dx(0), dy(0);
 			(dim ? dy : dx) += (dir ? 1 : -1);
-			tile_t *adj(get_adj_tile(dx, dy)); // FIXME: handle (is_distant != adj->is_distant)
+			tile_t *adj(get_adj_tile(dx, dy)); // need to handle (is_distant != adj->is_distant) when distant tiles are implemented
 			if (adj == NULL) continue; // no adjacent tile
 			//if (!adj->is_visible() || adj->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue;
 			ix_sz_pair const &ixsz(crack_ibuf.lookup(crack_ibuf.get_index(dim, dir, lod_level, adj->get_lod_level(reflection_pass))));

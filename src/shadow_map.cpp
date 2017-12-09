@@ -317,7 +317,7 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	}
 	else {
 		char str[20] = {0};
-		sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id (FIXME)
+		sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id
 		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
 		assert(mat_ret);
 	}
@@ -329,7 +329,7 @@ bool smap_data_t::bind_smap_texture(bool light_valid) const {
 
 	set_active_texture(tu_id);
 
-	// FIXME: the is_allocate() check shouldn't be required, but can happen in tiled terrain mode when switching between combined_gu mode
+	// Note: the is_allocated() check shouldn't be required, but can happen in tiled terrain mode when switching between combined_gu mode (safe and conservative)
 	// due to some disagreement between the update pass and draw pass during reflection drawing
 	if (light_valid && is_allocated()) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
 		bind_2d_texture(get_tid(), is_arrayed());

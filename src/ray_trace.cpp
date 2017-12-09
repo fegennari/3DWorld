@@ -382,7 +382,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	}
 	else if (model_coll) {
 		weight  *= model_color.get_luminance();
-		color    = color.modulate_with(model_color); // FIXME: model texture coords?
+		color    = color.modulate_with(model_color); // Note: model texture coords not available here - use average color
 		// FIXME: get this from the model?
 		// requires storing material id in each coll_tquad and calculating approx specular component from specular color and textures
 		specular = 0.0;
@@ -657,8 +657,8 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
 	float proj_area[3] = {0}, tot_area(0.0);
 
-	for (unsigned i = 0; i < 3; ++i) { // FIXME: adjust the number or weight of rays based on sun/moon position?
-		if (disabled_edges & EFLAGS[i][ldir[i] < 0.0]) continue; // should this be here, or should we just skip them later
+	for (unsigned i = 0; i < 3; ++i) { // adjust the number or weight of rays based on sun/moon position, or simply modify color scale?
+		if (disabled_edges & EFLAGS[i][ldir[i] < 0.0]) continue; // should this be here, or should we just skip them later?
 		unsigned const d0((i+1)%3), d1((i+2)%3);
 		vector3d norm(0.0, 0.0, 0.0);
 		norm[i]      = 1.0;

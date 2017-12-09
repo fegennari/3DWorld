@@ -421,7 +421,12 @@ void platform::write_to_cobj_file(std::ostream &out) const {
 	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0 [update_light=0]]]
 	out << "Q 1 " << fspeed*TICKS_PER_SECOND << " " << rspeed*TICKS_PER_SECOND << " " << sdelay/TICKS_PER_SECOND << " " << rdelay/TICKS_PER_SECOND << " " << ext_dist << " " << act_dist
 		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << endl; // always enabled
-	for (auto i = lights.begin(); i != lights.end(); ++i) {} // FIXME: see 'L' command - need to output lights bound to this platform here
+	
+	for (auto i = lights.begin(); i != lights.end(); ++i) {
+		assert(*i < light_sources_d.size());
+		light_source_trig const &ls(light_sources_d[*i]);
+		// FIXME: see 'L' command - need to output lights bound to this platform here
+	}
 	sensor.write_end_sensor_to_cobj_file(out);
 	triggers.write_end_triggers_cobj_file(out);
 }

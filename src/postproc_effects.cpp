@@ -126,8 +126,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0) {
 void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 
 	if (intensity == 0.0) return;
-	static float time(0.0);
-	if (animate2) {time += fticks;}
+	//static float time(0.0); if (animate2) {time += fticks;}
 	point const center(world_space_to_screen_space(sphere.pos));
 	bind_frame_buffer_RGB();
 	shader_t s;
@@ -135,7 +134,7 @@ void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 	s.set_frag_shader("sphere_refract_screen");
 	s.begin_shader();
 	s.add_uniform_int("frame_buffer_tex", 0);
-	s.add_uniform_float("time", time); // FIXME: placeholder
+	//s.add_uniform_float("time", time); // unused in shader
 	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
 	s.add_uniform_float("intensity", CLIP_TO_01(intensity)); // 1.0 at T=0, 0.0 at T=1
 	s.add_uniform_float("radius", sphere.radius/p2p_dist(get_camera_pos(), sphere.pos)); // divide distance/depth to convert to screen space radius

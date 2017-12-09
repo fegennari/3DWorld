@@ -308,8 +308,8 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				// instead, we create a temporary material, fill it in, then look it up by name and overwrite the material in the model with cur_mat
 				material_t cur_mat("", filename);
 				if (!read_material(chunk_len, cur_mat)) {cerr << "Error reading material " << cur_mat.name << endl; return 0;}
-				int const cur_mat_id(model.get_material_ix(cur_mat.name, filename, 0)); // FIXME: okay_if_exists???
-				model.get_material(cur_mat_id) = cur_mat;
+				int const cur_mat_id(model.get_material_ix(cur_mat.name, filename, 0)); // okay if exists
+				model.get_material(cur_mat_id) = cur_mat; // overwrite if needed (or should this be an error?)
 				return 1; // handled
 			}
 		} // end switch
