@@ -688,7 +688,9 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 		platform const &pf(platforms.get_cobj_platform(cobj));
 
 		if (pf.is_rotation()) {
-			// FIXME: unclear how to calculate this; use bounding sphere? case split on primitive type and sweep over all possible rotations?
+			if (pf.get_rot_dir().z == 0.0) { // rotating around x/y axes, will go up and down
+				// FIXME: unclear how to calculate this; use bounding sphere? case split on primitive type and sweep over all possible rotations (calling rotate_about())?
+			}
 		}
 		else { // translation
 			vector3d const range(pf.get_range());

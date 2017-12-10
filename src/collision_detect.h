@@ -504,6 +504,7 @@ public:
 	bool get_update_light()    const {return update_light;}
 	vector3d get_delta()       const {return (pos - origin);}
 	vector3d get_range()       const {return (is_rot ? zero_vector : dir*ext_dist);}
+	vector3d get_rot_dir()     const {assert(is_rot); return dir;}
 	vector3d get_last_delta()  const {return delta;}
 	vector3d get_velocity()    const;
 	void clear_last_delta() {delta = all_zeros;}

@@ -1584,7 +1584,8 @@ void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: R
 	pdu.translate(-tv);
 	//pdu.rotate(axis, -angle); // FIXME: incorrect - we want to rotate about the model's origin, not the frustum/camera origin
 	assert(scale != 0.0);
-	pdu.scale(1.0/fabs(scale)); // FIXME: what to do about negative scales?
+	//assert(scale > 0.0); // FIXME: what to do about negative scales?
+	pdu.scale(1.0/fabs(scale));
 	if (angle != 0.0) {pdu.valid = 0;} // since we can't transform the pdu correctly, we give up and disable using it for VFC
 }
 
@@ -1857,7 +1858,10 @@ cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {
 	cube_t bcube_xf(bcube + xlate);
 
 	if (!transforms.empty()) {
-		assert(transforms.size() == 1); // FIXME: instancing not supported with a single cube map reflection texture
+		if (transforms.size() > 1) { // instancing not supported with a single cube map reflection texture
+			cerr << "Error: Instanced models cannot be used with reflection cube maps" << endl;
+			exit(1);
+		}
 		bcube_xf = transforms[0].get_xformed_cube(bcube_xf);
 	}
 	return bcube_xf;

@@ -1140,7 +1140,7 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 			 << " does not equal the expected size of " << vldata_alloc.size() << ". Ignoring file." << endl;
 		return 0;
 	}
-	unsigned const sz(lmcell::get_dsz(ltype));
+	unsigned const sz = lmcell::get_dsz(ltype);
 	vector<float> data(data_size*sz);
 	unsigned pos(0);
 

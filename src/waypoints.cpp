@@ -221,7 +221,7 @@ class waypoint_builder {
 		if (min(x2-x1, y2-y1) < size_thresh) return; // too small to stand on
 		point const center(0.5*(x1+x2), 0.5*(y1+y2), z+radius);
 		add_if_valid(center, coll_id, connect);
-		// FIXME: try more points?
+		// try more points if a large rectangle?
 	}
 
 	void add_waypoint_circle(point const &p, float r, int coll_id, bool connect) {

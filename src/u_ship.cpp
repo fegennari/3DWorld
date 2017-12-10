@@ -2404,7 +2404,7 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	armor       = 0.0;
 	assert(is_kill);
 	if (attack) {register_destruction(source);}
-	// FIXME: we may need to increment kills here, which means that source can't be const, so we have to cast it to const; is it better to make kills mutable?
+	// Note: we may need to increment kills and tot_kills here, which means that source can't be const, so we have to cast it to const; is it better to make kills mutable?
 	if (source) {const_cast<free_obj *>(source)->acknowledge_kill();}
 	acknowledge_death();
 	destroy_ship(val);
