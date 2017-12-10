@@ -1434,7 +1434,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 		}
 		else if (FORCE_TREE_TYPE) {
 			type = ttype;
-			// Note: we could relax this restruction and let type be different, which gives us more tree variation,
+			// Note: we could relax this restriction and let type be different, which gives us more tree variation,
 			// but then the leaf and branch sizes/colors couldn't be different per tree
 			assert(type == td_type); // up to the caller to ensure this
 		}
@@ -2143,12 +2143,12 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 				if (ttype >= 0) {
 					unsigned const num_per_type(max(1U, shared_tree_data.size()/NUM_TREE_TYPES));
 					tree_id = min(unsigned((((rgen.rseed1 >> 7) + rgen.rseed2) % num_per_type) + ttype*num_per_type), shared_tree_data.size()-1);
-					if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
 				}
 				else {
 					tree_id = (rgen.rseed2 % shared_tree_data.size());
 					ttype   = tree_id % NUM_TREE_TYPES;
 				}
+				if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
 				//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << " type " << ttype << endl;
 			}
 			push_back(tree());
