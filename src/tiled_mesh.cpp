@@ -3215,6 +3215,7 @@ void tile_t::register_tree_change(tile_shadow_map_manager &smap_manager) {
 	clear_shadow_map(&smap_manager);
 	tree_map.clear(); // regenerate tree AO shadows
 	clear_shadows();
+	recalc_tree_grass_weights = 1; // force recreation of tile texture, even if there's no grass
 }
 
 bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
