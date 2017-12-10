@@ -273,6 +273,7 @@ public:
 	void clear_shadows();
 	void clear_shadow_map(tile_shadow_map_manager *smap_manager);
 	void clear_vbo_tid(tile_shadow_map_manager *smap_manager);
+	void clear_pine_tree_vbos() {pine_trees.clear_vbos();}
 	void invalidate_shadows() {shadows_invalid = 1;}
 	bool create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait);
 	float get_zval_at(float x, float y, bool in_global_space) const;

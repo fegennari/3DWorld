@@ -3181,7 +3181,9 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 	cube_t update_bcube(all_zeros);
 	vector<tile_t *> near_tiles;
 
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // FIXME: use openmp?
+	// Note: not suitable for openmp because it modifies shared state (smap_manager, near_tiles, shared_tree_data, VBOs, xoff2, yoff2)
+	// also, many edit operations will affect a single tile anyway, which won't distribute well; and this step is only part of the CPU time
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		if (i->second->add_or_remove_trees_at(pos, radius, add_trees, brush_shape, smap_manager, update_bcube)) {near_tiles.push_back(i->second.get());}
 	}
 	if (update_bcube.is_all_zeros()) return; // no trees updated
@@ -3255,7 +3257,7 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 		if (can_have_decid_trees() && decid_trees.was_generated()) {decid_changed |= add_new_trees(decid_trees, dtree_off, update_bcube, dtzmax, dt_pos, rradius, is_square);}
 	}
 	if (!pine_changed && !decid_changed) return 1; // no trees updated
-	if (pine_changed) {pine_trees.clear_vbos();}
+	if (pine_changed) {clear_pine_tree_vbos();}
 	register_tree_change(smap_manager);
 	return 2; // trees updated
 }
