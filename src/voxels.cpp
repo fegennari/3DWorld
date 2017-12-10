@@ -689,11 +689,22 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool postproc_brush
 	// do something with removed voxels in updated_pts here; drop any objects embedded in these voxels
 
 	if (falling_voxels_shift_down) {
+		static double time_at_drop(0.0);
+		float const levels_per_sec = 40.0;
+		float const elapsed_time((tfticks - time_at_drop)/TICKS_PER_SECOND); // in seconds
+		assert(elapsed_time > 0.0);
+		// Note: only correct to drop one level at a time here; dropping multiple levels requires rerunning this entire function iteratively to determine when the falling voxels stops
+		// however, this could only happen for low framerates anyway
+		int const levels_to_drop(min(int(levels_per_sec*elapsed_time), 1)); // take floor, max is 1
+		if (levels_to_drop < 1) return; // don't drop yet
+		time_at_drop += (levels_to_drop/levels_per_sec)*TICKS_PER_SECOND; // advance levels_to_drop timesteps
+		assert(time_at_drop <= tfticks);
+
 		for (vector<pt_ix_t>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
 			unsigned ix(i->ix);
 			float const val(operator[](ix));
 			make_voxel_outside(ix);
-			assert(ix > 0); --ix; // move down one z step (FIXME: multiple steps depending on fticks?)
+			assert(ix > 0); --ix; // move down one z step
 			operator[](ix) = val;
 			outside[ix]    = (is_under_mesh(i->pt - point(0.0, 0.0, vsz.z)) ? UNDER_MESH_BIT : 0); // make inside or under mesh
 		}
