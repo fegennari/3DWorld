@@ -69,7 +69,7 @@ struct tree_leaf { // size = 64
 	point pts[4];
 
 	tree_leaf() : lcolor(0), lred(0), lgreen(0) {}
-	void create_init_color(bool deterministic);
+	void create_init_color(rand_gen_t &rgen);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
 	point get_center() const {return 0.25*(pts[0] + pts[1] + pts[2] + pts[3]);} // average of all 4 leaf points
 };
@@ -147,6 +147,7 @@ class tree_builder_t : public tree_xform_t {
 	float angle_rotate, branch_min_angle, branch_max_angle, branch_4_length, leaf_acc;
 	float max_2_angle_rotate, max_3_angle_rotate;  //max angle to rotate 3rd order branches around from the 2nd order branch
 	cube_t const *clip_cube;
+	rand_gen_t &rgen;
 
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
@@ -162,7 +163,7 @@ class tree_builder_t : public tree_xform_t {
 	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
 
 public:
-	tree_builder_t(cube_t const *clip_cube_) : branches(NULL), clip_cube(clip_cube_) {branches_34[0] = branches_34[1] = NULL;}
+	tree_builder_t(cube_t const *clip_cube_, rand_gen_t &rgen_) : branches(NULL), clip_cube(clip_cube_), rgen(rgen_) {branches_34[0] = branches_34[1] = NULL;}
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
 		float height_scale, float br_scale, float nl_scale, float bbo_scale, bool has_4th_branches, bool create_bush);
 	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
@@ -215,7 +216,7 @@ public:
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
 	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale,
-		float bbo_scale, bool has_4th_branches_, cube_t const *clip_cube, bool create_bush);
+		float bbo_scale, bool has_4th_branches_, cube_t const *clip_cube, bool create_bush, rand_gen_t &rgen);
 	void mark_leaf_changed(unsigned ix);
 	void gen_leaf_color();
 	void update_all_leaf_colors();
@@ -332,7 +333,7 @@ public:
 		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0), last_size_scale(0.0), tree_nl_scale(1.0) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
-	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
+	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
 		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0);
 	void add_tree_collision_objects();
 	void remove_collision_objects();

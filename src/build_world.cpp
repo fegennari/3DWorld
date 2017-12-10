@@ -1427,7 +1427,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (read_int(fp, ivals[1])) {local_tree_4th_branches = (ivals[1] != 0);}
 				xf.xform_pos(pos);
 				t_trees.push_back(tree(enable_leaf_wind));
-				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, local_tree_4th_branches);
+				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, global_rand_gen,
+					tree_height, tree_br_scale_mult, tree_nl_scale, local_tree_4th_branches);
 				tree_mode |= 1; // enable trees
 			}
 			break;
@@ -1452,7 +1453,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				for (int i = 0; i < ivals[0]; ++i) {
 					t_trees.push_back(tree(enable_leaf_wind));
 					if (use_clip_cube) {t_trees.back().enable_clip_cube(clip_cube);}
-					t_trees.back().gen_tree(cur, max(1, int(fvals[2]*xf.scale)), ivals[1], 1, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, 0); // no 4th branches
+					t_trees.back().gen_tree(cur, max(1, int(fvals[2]*xf.scale)), ivals[1], 1, 0, 1, global_rand_gen,
+						tree_height, tree_br_scale_mult, tree_nl_scale, 0); // no 4th branches
 					cur += delta;
 				}
 				tree_mode |= 1; // enable trees
