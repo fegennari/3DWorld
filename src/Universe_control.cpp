@@ -594,7 +594,7 @@ void draw_universe_sun_flare() {
 		}
 		pts_valid = 1;
 		if (nvis == 0) return;
-		intensity = 0.1 + 0.9*min(1.0, (2.0*nvis))/float(npts); // intensity starts to fall off when > 50% occluded
+		intensity = 0.1 + 0.9*min(1.0, 2.0*nvis/float(npts)); // intensity starts to fall off when > 50% occluded
 	}
 	point const gv(make_pt_global(viewer));
 	DoFlares(gv, (gv + ps.get_dir()), make_pt_global(sun.pos), 0.01, 0.02, 0.5*intensity, 4); // draw only some flares with half intensity
