@@ -1503,7 +1503,7 @@ void draw_cracks_and_decals() {
 				bullet_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
 				bullet_shader.set_prefix("#define ENABLE_PARALLAX_MAP", 1); // FS
 				setup_smoke_shaders(bullet_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0); // bump maps enabled; no rain/snow
-				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
+				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (something backwards?)
 				bullet_shader.add_uniform_float("hole_depth", 0.2);
 				bullet_shader.add_uniform_int("depth_map", 9);
 				select_multitex(BULLET_N_TEX, 5, 0);
