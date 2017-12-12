@@ -25,6 +25,7 @@ int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
 float const TREE_LOD_THRESH   = 6.0;
 float const GEOMORPH_THRESH   = 6.0;
+float const PALM_DIST_SCALE   = 0.75;
 float const SCENERY_THRESH_REF= 2.0;
 float const SCENERY_THRESH    = 5.0;
 float const BCUBE_ZTOLER      = 1.0E-6;
@@ -331,8 +332,10 @@ public:
 	float get_dist_to_camera_in_tiles(bool xy_dist=1) const {return get_rel_dist_to_camera(xy_dist)*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
 	float get_scenery_dist_scale(bool reflection_pass) const {return tree_scale*get_dist_to_camera_in_tiles(0)/get_scenery_thresh(reflection_pass);}
-	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/get_tree_scale_denom();}
-	float get_tree_far_weight (bool force_high_detail) const {return ((ENABLE_TREE_LOD && !force_high_detail) ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
+	float get_tree_dist_scale(bool has_palm=0) const {return (has_palm ? PALM_DIST_SCALE : 1.0f)*get_dist_to_camera_in_tiles()/get_tree_scale_denom();}
+	float get_tree_far_weight(bool force_high_detail, bool has_palm=0) const {
+		return ((ENABLE_TREE_LOD && !force_high_detail) ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale(has_palm) - 1.0f)) : 0.0);
+	}
 	float get_draw_priority() const;
 
 	// *** trees ***

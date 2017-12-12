@@ -1117,7 +1117,7 @@ void tile_t::init_pine_tree_draw() {
 void tile_t::update_pine_tree_state(bool upload_if_needed, bool force_high_detail) {
 
 	if (!pine_trees_enabled() || pine_trees.empty()) return;
-	float const weight(get_tree_far_weight(force_high_detail)); // force high detail trees during the shadow map pass
+	float const weight(get_tree_far_weight(force_high_detail, (pine_trees.num_palm_trees > 0))); // force high detail trees during the shadow map pass
 	float const weights[2] = {1.0f-weight, weight}; // {high, low} detail
 	//timer_t timer("Update Pine Trees");
 
@@ -1163,7 +1163,8 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 		} // else very far, skip branches
 	}
 	if (draw_near_leaves || draw_far_leaves) { // could use reflection_pass as an optimization
-		float const weight(1.0 - get_tree_far_weight(force_high_detail)); // 0 => low detail, 1 => high detail
+		bool const has_palm(pine_trees.num_palm_trees > 0);
+		float const weight(1.0 - get_tree_far_weight(force_high_detail, has_palm)); // 0 => low detail, 1 => high detail
 		
 		if (draw_far_leaves && weight < 1.0) {
 			assert(xlate_loc >= 0);
@@ -1188,7 +1189,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			draw_tree_leaves_lod(s, xlate, (weight == 0.0), xlate_loc);
 		}
-		if (draw_near_leaves && pine_trees.num_palm_trees > 0 && (weight > 0.0 || (pine_trees.instanced && get_tree_dist_scale() < 3.0))) { // draw palm trees
+		if (draw_near_leaves && has_palm && (weight > 0.0 || (pine_trees.instanced && get_tree_dist_scale(has_palm) < 3.0))) { // draw palm trees
 			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			s.add_uniform_int("use_bent_quad_tcs", 1);
 			if (pine_trees.instanced) {pine_trees.draw_palm_insts(s, camera_pdu.sphere_visible_test(get_center(), -0.5*radius), xlate, xlate_loc);}
