@@ -74,6 +74,7 @@ unsigned get_tree_inst_gpu_mem();
 void setup_detail_normal_map(shader_t &s, float tscale);
 void draw_distant_mesh_bottom(float terrain_zmin);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
+void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -426,8 +427,10 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 					zval = BILINEAR_INTERP(params, hoff, xv, yv) + BILINEAR_INTERP(params, hscale, xv, yv)*zval;
 				}
 			}
-		}
-	}
+		} // for x
+	} // for y
+	apply_erosion(&zvals.front(), zvsize, zvsize, zmin);
+
 	for (unsigned yy = 0; yy < 4; ++yy) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
 			unsigned const x_end((xx+1)*block_size), y_end((yy+1)*block_size); // last row/column is skipped because it's not rendered
@@ -448,8 +451,8 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 			}
 			mzmin = min(mzmin, szmin);
 			mzmax = max(mzmax, szmax);
-		}
-	}
+		} // for xx
+	} // for yy
 	assert(mzmin <= mzmax);
 	radius = 0.5*sqrt((deltax*deltax + deltay*deltay)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	ptzmax = dtzmax = mzmin; // no trees yet

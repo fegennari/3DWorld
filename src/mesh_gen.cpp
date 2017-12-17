@@ -387,12 +387,12 @@ void glaciate() {
 
 
 // see http://ranmantaru.com/blog/2011/10/08/water-erosion-on-heightmap-terrain/
-void apply_erosion() {
+void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval) {
 
 	if (erosion_iters == 0) return; // erosion disabled
 	RESET_TIME;
 	float const Kq=10, Kw=0.001f, Kr=0.9f, Kd=0.02f, Ki=0.1f, minSlope=0.05f, g=20, Kg=g*2;
-	int const PAD(4), NX(MESH_X_SIZE+2*PAD), NY(MESH_Y_SIZE+2*PAD);
+	int const PAD(4), NX(xsize+2*PAD), NY(ysize+2*PAD);
 	unsigned const MAX_PATH_LEN(4*NX*NY);
 	vector<vector2d> erosion(NX*NY, vector2d(0.0, 0.0));
 	vector<float> mh_padded(NX*NY);
@@ -400,8 +400,10 @@ void apply_erosion() {
 
 	// pad mesh by 1 unit on each side to create a buffer of trash around the edges that can be discarded
 	for (int y = 0; y < NY; ++y) {
+		int const offset(max(min(y-PAD, ysize-1), 0)*xsize);
+
 		for (int x = 0; x < NX; ++x) {
-			mh_padded[y*NX + x] = mesh_height[max(min(y-PAD, MESH_Y_SIZE-1), 0)][max(min(x-PAD, MESH_X_SIZE-1), 0)];
+			mh_padded[y*NX + x] = heightmap[max(min(x-PAD, xsize-1), 0) + offset];
 		}
 	}
 
@@ -431,8 +433,8 @@ void apply_erosion() {
 }
 
 	for (unsigned iter=0; iter < erosion_iters; ++iter) {
-		int xi = PAD + (rgen.rand()%MESH_X_SIZE);
-		int zi = PAD + (rgen.rand()%MESH_Y_SIZE);
+		int xi = PAD + (rgen.rand()%xsize);
+		int zi = PAD + (rgen.rand()%ysize);
 		float xp=xi, zp=zi, xf=0, zf=0, s=0, v=0, w=1, dx=0, dz=0;
 		float h=HMAP(xi, zi), h00=h, h10=HMAP(xi+1, zi), h01=HMAP(xi, zi+1), h11=HMAP(xi+1, zi+1);
 
@@ -515,10 +517,10 @@ void apply_erosion() {
 		if (numMoves>=MAX_PATH_LEN) {cout << "droplet path is too long: " << iter << endl;}
 	} // for iter
 
-	// remove padding and clamp to zbottom
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			mesh_height[y][x] = max(zbottom, mh_padded[(y+PAD)*NX + x+PAD]);
+	// remove padding and clamp to min_zval
+	for (int y = 0; y < ysize; ++y) {
+		for (int x = 0; x < xsize; ++x) {
+			heightmap[y*xsize + x] = max(min_zval, mh_padded[(y+PAD)*NX + x+PAD]);
 		}
 	}
 	PRINT_TIME("Erosion");
@@ -562,7 +564,7 @@ void gen_terrain_map() {
 		glaciate_exp     = 1.0;
 		glaciate_exp_inv = 1.0;
 	}
-	apply_erosion();
+	apply_erosion(mesh_height[0], MESH_X_SIZE, MESH_Y_SIZE, zbottom);
 }
 
 
