@@ -126,11 +126,7 @@ void heightmap_t::apply_erosion() {
 
 	for (unsigned i = 0; i < vals.size(); ++i) { // convert from heightmap value to pixel
 		assert(vals[i] >= 0.0 && vals[i] < 256.0); // must convert to [0,256) range
-
-		if (ncolors == 2) { // 16-bit
-			data[(i<<1)+1] = unsigned char(vals[i]); // high bits - truncate
-			data[i<<1]     = unsigned char(256.0*(vals[i] - float(data[(i<<1)+1]))); // low bits - remainder
-		}
+		if (ncolors == 2) {write_pixel_16_bits(i, vals[i]);} // 16-bit
 		else {data[i] = unsigned char(vals[i]);} // 8-bit
 	}
 }

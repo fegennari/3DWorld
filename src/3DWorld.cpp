@@ -166,6 +166,8 @@ void free_animal_context();
 
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 
+void write_map_mode_heightmap_image();
+
 
 bool get_gl_error(unsigned loc_id) {
 
@@ -1078,8 +1080,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		cout << "increase precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
 		break;
 
-	case 'H': // save mesh state/modmap/voxel brushes/cobj file/materials
+	case 'H': // save mesh state/modmap/voxel brushes/cobj file/materials/heightmap
 		if (world_mode == WMODE_UNIVERSE) {export_modmap("output.modmap");}
+		else if (map_mode) {write_map_mode_heightmap_image();}
 		else if (world_mode == WMODE_GROUND) {
 			if (voxel_editing) {write_voxel_brushes();}
 			else if (spheres_mode) {

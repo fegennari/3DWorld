@@ -1330,6 +1330,7 @@ public:
 	colorRGBA get_avg_color() const {return color;}
 	unsigned char *get_data() {assert(data); return data;}
 	unsigned char const *get_data() const {assert(data); return data;}
+	void write_pixel_16_bits(unsigned ix, float val);
 };
 
 

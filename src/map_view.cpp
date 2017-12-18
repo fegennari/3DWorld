@@ -324,3 +324,38 @@ void draw_overhead_map() {
 	s.end_shader();
 	//PRINT_TIME("draw map")
 }
+
+
+void write_map_mode_heightmap_image() {
+
+	timer_t timer("Heightmap Write");
+	texture_t texture;
+	texture.width   = window_width;
+	texture.height  = window_height;
+	texture.ncolors = 2; // two bytes per pixel grayscale
+	texture.is_16_bit_gray = 1;
+	texture.alloc();
+	int const nx(texture.width), ny(texture.height), nx2(nx/2), ny2(ny/2);
+	float const window_ar((float(window_width)*ny)/(float(window_height)*nx));
+	float const xscale(2.0*map_zoom*window_ar*HALF_DXY), yscale(2.0*map_zoom*(X_SCENE_SIZE/Y_SCENE_SIZE)*HALF_DXY);
+	float const xstart(map_x + xoff2*DX_VAL - nx2*xscale), ystart(map_y + yoff2*DY_VAL - ny2*yscale);
+	mesh_xy_grid_cache_t height_gen;
+	setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);
+	vector<float> heights(texture.num_pixels());
+	float min_z(FLT_MAX), max_z(FLT_MIN);
+
+#pragma omp parallel for schedule(static,1)
+	for (int i = 0; i < ny; ++i) {
+		for (int j = 0; j < nx; ++j) {
+			float const mh(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j));
+			heights[i*nx + j] = mh;
+			min_eq(min_z, mh);
+			max_eq(max_z, mh);
+		}
+	}
+	float const height_scale(255.0/(max_z - min_z));
+	for (unsigned i = 0; i < heights.size(); ++i) {texture.write_pixel_16_bits(i, (heights[i] - min_z)*height_scale);}
+	string const fn("heightmap.png");
+	cout << "Writing heightmap to image file " << fn << endl;
+	texture.write_to_png(fn);
+}
