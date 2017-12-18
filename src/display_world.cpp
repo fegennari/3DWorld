@@ -227,6 +227,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		if (TIMETEST) PRINT_TIME("S2");
 		draw_transparent_object_groups(reflection_pass);
 		draw_voxel_edit_volume();
+		draw_jump_pads();
 		check_gl_error(25);
 	}
 }

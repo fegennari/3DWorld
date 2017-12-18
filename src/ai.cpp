@@ -42,7 +42,7 @@ extern vector<team_info> teaminfo;
 extern vector<string> avail_smiley_names;
 extern waypoint_vector waypoints;
 extern vector<teleporter> teleporters;
-
+extern vector<jump_pad> jump_pads;
 
 
 // ********** unreachable_pts **********

@@ -74,7 +74,6 @@ unsigned get_tree_inst_gpu_mem();
 void setup_detail_normal_map(shader_t &s, float tscale);
 void draw_distant_mesh_bottom(float terrain_zmin);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
-void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}

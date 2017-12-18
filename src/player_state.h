@@ -269,6 +269,14 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 };
 
 
+struct jump_pad : public sphere_t {
+	
+	vector3d velocity; // should be up
+	jump_pad() : velocity(zero_vector) {}
+	// TODO
+};
+
+
 // function prototypes
 bool check_step_dz(point &cur, point const &lpos, float radius);
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned> const &wps_penalty);

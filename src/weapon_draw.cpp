@@ -24,6 +24,7 @@ extern obj_group obj_groups[];
 extern vector<spark_t> sparks;
 extern vector<beam3d> beams;
 extern vector<teleporter> teleporters;
+extern vector<jump_pad> jump_pads;
 extern int coll_id[];
 extern blood_spot blood_spots[];
 extern player_state *sstates;
@@ -929,6 +930,13 @@ void draw_teleporters() {
 	enable_blend();
 	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->draw(s);}
 	disable_blend();
+}
+
+// not sure where this belongs
+void draw_jump_pads() {
+
+	// WRITE
+	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {}
 }
 
 

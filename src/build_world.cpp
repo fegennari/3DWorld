@@ -43,6 +43,7 @@ vector<user_waypt_t> user_waypoints;
 coll_obj_group fixed_cobjs;
 vector<portal> portals;
 vector<teleporter> teleporters;
+vector<jump_pad> jump_pads;
 vector<obj_draw_group> obj_draw_groups;
 vector<sphere_t> cur_frame_explosions;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
@@ -1220,6 +1221,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "indir_dlight_group") {letter = 'U';}
 				else if (keyword == "movable") {letter = 'd';}
 				else if (keyword == "end") {letter = 'q';}
+				else if (keyword == "teleporter") {letter = 'x';}
 				// long keywords
 				else if (keyword == "density") {
 					if (!read_float(fp, cobj.cp.density)) {return read_error(fp, "density", coll_obj_file);}
@@ -1322,6 +1324,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "outdoor_shadows") {
 					if (!read_bool(fp, outdoor_shadows)) {return read_error(fp, "outdoor_shadows", coll_obj_file);}
+				}
+				else if (keyword == "jump_pad") { // jump_pad xpos ypos zpos radius vx vy vz
+					jump_pad jp;
+					if (fscanf(fp, "%f%f%f%f%f%f%f", &jp.pos.x, &jp.pos.y, &jp.pos.z, &jp.radius, &jp.velocity.x, &jp.velocity.y, &jp.velocity.z) != 7) {
+						return read_error(fp, "jump_pad", coll_obj_file);
+					}
+					xf.xform_pos(jp.pos);
+					jump_pads.push_back(jp);
 				}
 				else {
 					ostringstream oss;
@@ -2165,9 +2175,13 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	}
 	if (!platforms.empty()) {out << "Q 0" << endl << endl;} // end platforms section
 	
-	// add teleporters, portals, and appearance spots
+	// add teleporters, jump pads, portals, and appearance spots
 	for (auto t = teleporters.begin(); t != teleporters.end(); ++t) {
-		out << "x " << t->pos.raw_str() << " " << t->dest.raw_str() << " " << t->radius << endl;
+		out << "teleporter " << t->pos.raw_str() << " " << t->dest.raw_str() << " " << t->radius << endl;
+	}
+	out << endl;
+	for (auto j = jump_pads.begin(); j != jump_pads.end(); ++j) {
+		out << "jump_pad " << j->pos.raw_str() << " " << j->radius << " " << j->velocity.raw_str() << endl;
 	}
 	out << endl;
 	for (auto p = portals.begin(); p != portals.end(); ++p) {
