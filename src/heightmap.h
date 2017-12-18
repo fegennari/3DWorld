@@ -28,6 +28,7 @@ public:
 	unsigned get_pixel_value (unsigned x, unsigned y) const;
 	float get_heightmap_value(unsigned x, unsigned y) const;
 	void modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta);
+	void apply_erosion();
 };
 
 
