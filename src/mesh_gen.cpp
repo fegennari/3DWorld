@@ -394,6 +394,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 	if (num_iters == 0) return; // erosion disabled
 	RESET_TIME;
 	float const Kq=10, Kw=0.001f, Kr=0.9f, Kd=0.02f, Ki=0.1f, minSlope=0.05f, g=20, Kg=g*2;
+	float const erode_amt = 0.1591549430918953f;
 	int const PAD(4), NX(xsize+2*PAD), NY(ysize+2*PAD);
 	unsigned const MAX_PATH_LEN(4*NX*NY);
 	vector<vector2d> erosion(NX*NY, vector2d(0.0, 0.0));
@@ -466,7 +467,8 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 			float nxf=nxp-nxi, nzf=nzp-nzi;
 			float nh00=HMAP(nxi, nzi), nh10=HMAP(nxi+1, nzi), nh01=HMAP(nxi, nzi+1), nh11=HMAP(nxi+1, nzi+1);
 			float nh=(nh00*(1-nxf)+nh10*nxf)*(1-nzf)+(nh01*(1-nxf)+nh11*nxf)*nzf;
-			if (max(max(nh00, nh10), max(nh01, nh11)) < water_plane_z) break; // reached ocean water, stop and ignore sediment
+			// adjust by HALF_DXY = average mesh texel size - this is river depth
+			if (max(max(nh00, nh10), max(nh01, nh11)) < water_plane_z - HALF_DXY) break; // reached ocean water, stop and ignore sediment
 
 			// if higher than current, try to deposit sediment up to neighbour height
 			bool const outside(xi < 0 || zi < 0 || xi >= NX || zi >= NY);
@@ -508,8 +510,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 						float xo=x-xp;
 						float w=1-(xo*xo+zo2)*0.25f;
 						if (w<=0) continue;
-						w*=0.1591549430918953f;
-						ERODE(x, z, w)
+						ERODE(x, z, w*erode_amt)
 					}
 				}
 				dh-=ds;
