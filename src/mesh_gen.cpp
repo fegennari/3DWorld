@@ -55,7 +55,7 @@ extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, c
 extern unsigned erosion_iters;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, custom_glaciate_exp, MESH_HEIGHT, XY_SCENE_SIZE;
-extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
+extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp, erode_amount;
 extern point mesh_origin, surface_pos;
 extern char *mh_filename, *mesh_file;
 
@@ -391,10 +391,9 @@ void glaciate() {
 // see http://ranmantaru.com/blog/2011/10/08/water-erosion-on-heightmap-terrain/
 void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters) {
 
-	if (num_iters == 0) return; // erosion disabled
+	if (num_iters == 0 || erode_amount <= 0.0) return; // erosion disabled
 	RESET_TIME;
 	float const Kq=10, Kw=0.001f, Kr=0.9f, Kd=0.02f, Ki=0.1f, minSlope=0.05f, g=20, Kg=g*2;
-	float const erode_amt = 0.1591549430918953f;
 	int const PAD(4), NX(xsize+2*PAD), NY(ysize+2*PAD);
 	unsigned const MAX_PATH_LEN(4*NX*NY);
 	vector<vector2d> erosion(NX*NY, vector2d(0.0, 0.0));
@@ -413,7 +412,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 #define HMAP(x, y) mh_padded[HMAP_INDEX(x, y)]
 
 #define DEPOSIT_AT(X, Z, W) { \
-	float const delta = ds*(W); \
+	float const delta = ds*erode_amount*(W); \
 	unsigned const ix(HMAP_INDEX((X), (Z))); \
 	erosion[ix].y += delta; \
 	if (!(X < 0 || Z < 0 || X >= NX || Z >= NY)) {mh_padded[ix] += delta;} \
@@ -427,7 +426,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 	(H)+=ds;
 
 #define ERODE(X, Z, W) { \
-	float const delta=ds*(W); \
+	float const delta=ds*erode_amount*(W); \
 	unsigned const ix(HMAP_INDEX((X), (Z))); \
 	mh_padded[ix]-=delta; \
 	vector2d &e=erosion[ix]; \
@@ -510,7 +509,8 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 						float xo=x-xp;
 						float w=1-(xo*xo+zo2)*0.25f;
 						if (w<=0) continue;
-						ERODE(x, z, w*erode_amt)
+						w*=0.1591549430918953f;
+						ERODE(x, z, w)
 					}
 				}
 				dh-=ds;

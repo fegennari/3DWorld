@@ -3,7 +3,8 @@ include config_t.txt
 read_landscape 1
 hmap_filter_width 1
 #erosion_iters 1000000
-erosion_iters_tt 10000000
+erosion_iters_tt 100000000
+erode_amount 0.1
 water_h_off 9.0 0.0
 relh_adj_tex -0.22
 ocean_depth_opacity_mult 8.0
