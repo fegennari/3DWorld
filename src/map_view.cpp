@@ -20,7 +20,7 @@ double map_x(0.0), map_y(0.0);
 extern bool water_is_lava, begin_motion, show_map_view_mandelbrot;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex;
-extern float zmax_est, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature;
+extern float zmax_est, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
@@ -29,6 +29,7 @@ extern coll_obj_group coll_objects;
 bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values, bool no_wait=0);
 bool using_hmap_with_detail();
 void set_temp_clear_color(colorRGBA const &clear_color);
+float get_heightmap_scale();
 
 
 struct complex_num {
@@ -328,34 +329,40 @@ void draw_overhead_map() {
 
 void write_map_mode_heightmap_image() {
 
-	timer_t timer("Heightmap Write");
-	texture_t texture;
-	texture.width   = window_width;
-	texture.height  = window_height;
-	texture.ncolors = 2; // two bytes per pixel grayscale
+	float const window_ar((float(window_width)*window_height)/(float(window_height)*window_width));
+	float const xscale(2.0*map_zoom*window_ar*HALF_DXY), yscale(2.0*map_zoom*(X_SCENE_SIZE/Y_SCENE_SIZE)*HALF_DXY);
+	float const xstart(map_x + xoff2*DX_VAL - (window_width/2)*xscale), ystart(map_y + yoff2*DY_VAL - (window_height/2)*yscale);
+	int const x1(get_xpos(xstart)), y1(get_ypos(ystart)), x2(get_xpos(xstart + window_width*xscale)), y2(get_ypos(ystart + window_height*yscale)), width(x2 - x1), height(y2 - y1);
+	cout << "Heightmap image size: " << width << "x" << height << " = " << width*height/1024 << "K" << endl;
+	if (width > 16384 || height > 16384) {std::cerr << "Error: heightmap image is too large, max size is 16384 pixels" << endl; return;} // fail
+
+	string const fn("heightmap.png");
+	texture_t texture(0, 6, width, height, 0, 2, 0, fn); // two bytes per pixel grayscale
 	texture.is_16_bit_gray = 1;
 	texture.alloc();
-	int const nx(texture.width), ny(texture.height), nx2(nx/2), ny2(ny/2);
-	float const window_ar((float(window_width)*ny)/(float(window_height)*nx));
-	float const xscale(2.0*map_zoom*window_ar*HALF_DXY), yscale(2.0*map_zoom*(X_SCENE_SIZE/Y_SCENE_SIZE)*HALF_DXY);
-	float const xstart(map_x + xoff2*DX_VAL - nx2*xscale), ystart(map_y + yoff2*DY_VAL - ny2*yscale);
-	mesh_xy_grid_cache_t height_gen;
-	setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);
-	vector<float> heights(texture.num_pixels());
-	float min_z(FLT_MAX), max_z(FLT_MIN);
+	{ // open a scope
+		timer_t timer("Heightmap Gen");
+		vector<float> heights(texture.num_pixels());
+		float min_z(FLT_MAX), max_z(-FLT_MAX);
+		mesh_xy_grid_cache_t height_gen;
+		setup_height_gen(height_gen, xstart, ystart, DX_VAL, DY_VAL, width, height, 1);
 
-#pragma omp parallel for schedule(static,1)
-	for (int i = 0; i < ny; ++i) {
-		for (int j = 0; j < nx; ++j) {
-			float const mh(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j));
-			heights[i*nx + j] = mh;
-			min_eq(min_z, mh);
-			max_eq(max_z, mh);
+	#pragma omp parallel for schedule(static,1)
+		for (int i = 0; i < height; ++i) {
+			int const off(width*(height - i - 1)); // invert yval
+			for (int j = 0; j < width; ++j) {
+				heights[off + j] = get_mesh_height(height_gen, xstart, ystart, DX_VAL, DY_VAL, i, j);
+			}
 		}
+		for (unsigned i = 0; i < heights.size(); ++i) {
+			min_eq(min_z, heights[i]);
+			max_eq(max_z, heights[i]);
+		}
+		float const dz(max_z - min_z), height_scale(255.0/dz);
+		cout << "zval range: " << min_z << " to " << max_z << " total: " << dz << " scale: " << dz/(get_heightmap_scale()*mesh_height_scale) << endl;
+		for (unsigned i = 0; i < heights.size(); ++i) {texture.write_pixel_16_bits(i, (heights[i] - min_z)*height_scale);}
 	}
-	float const height_scale(255.0/(max_z - min_z));
-	for (unsigned i = 0; i < heights.size(); ++i) {texture.write_pixel_16_bits(i, (heights[i] - min_z)*height_scale);}
-	string const fn("heightmap.png");
 	cout << "Writing heightmap to image file " << fn << endl;
+	timer_t timer("Heightmap Image Write");
 	texture.write_to_png(fn);
 }
