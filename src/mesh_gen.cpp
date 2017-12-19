@@ -412,9 +412,10 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 #define HMAP(x, y) mh_padded[HMAP_INDEX(x, y)]
 
 #define DEPOSIT_AT(X, Z, W) { \
-	float delta = ds*(W); \
-	erosion[HMAP_INDEX((X), (Z))].y += delta; \
-	if (!(X < 0 || Z < 0 || X >= NX || Z >= NY)) {HMAP(X, Z) += delta;} \
+	float const delta = ds*(W); \
+	unsigned const ix(HMAP_INDEX((X), (Z))); \
+	erosion[ix].y += delta; \
+	if (!(X < 0 || Z < 0 || X >= NX || Z >= NY)) {mh_padded[ix] += delta;} \
 }
 
 #define DEPOSIT(H) \
@@ -425,9 +426,10 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 	(H)+=ds;
 
 #define ERODE(X, Z, W) { \
-	float delta=ds*(W); \
-	HMAP(X, Z)-=delta; \
-	vector2d &e=erosion[HMAP_INDEX((X), (Z))]; \
+	float const delta=ds*(W); \
+	unsigned const ix(HMAP_INDEX((X), (Z))); \
+	mh_padded[ix]-=delta; \
+	vector2d &e=erosion[ix]; \
 	float r=e.x, d=e.y; \
 	if (delta<=d) {d-=delta;} else {r+=delta-d; d=0;} \
 	e.x=r; e.y=d; \
@@ -464,6 +466,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 			float nxf=nxp-nxi, nzf=nzp-nzi;
 			float nh00=HMAP(nxi, nzi), nh10=HMAP(nxi+1, nzi), nh01=HMAP(nxi, nzi+1), nh11=HMAP(nxi+1, nzi+1);
 			float nh=(nh00*(1-nxf)+nh10*nxf)*(1-nzf)+(nh01*(1-nxf)+nh11*nxf)*nzf;
+			if (max(max(nh00, nh10), max(nh01, nh11)) < water_plane_z) break; // reached ocean water, stop and ignore sediment
 
 			// if higher than current, try to deposit sediment up to neighbour height
 			bool const outside(xi < 0 || zi < 0 || xi >= NX || zi >= NY);
