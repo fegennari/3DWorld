@@ -1,0 +1,6 @@
+include config_t.txt
+
+read_landscape 1
+hmap_filter_width 1
+mh_filename heightmap.png 100.0 -16.62 0
+mh_filename_tiled_terrain heightmap.png
