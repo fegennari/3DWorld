@@ -303,7 +303,7 @@ void gen_gauss_rand_arr();
 bool bmp_to_chars(char const *const fname, unsigned char **&data);
 void gen_mesh(int surface_type, int keep_sin_table, int update_zvals);
 float do_glaciate_exp(float value);
-void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval);
+void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters);
 float get_rel_wpz();
 void init_terrain_mesh();
 float eval_mesh_sin_terms(float xv, float yv);

@@ -51,7 +51,7 @@ tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava;
-extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile;
+extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
@@ -428,7 +428,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 			}
 		} // for x
 	} // for y
-	if (!using_hmap) {apply_erosion(&zvals.front(), zvsize, zvsize, zmin);} // heightmap is eroded during load
+	if (!using_hmap) {apply_erosion(&zvals.front(), zvsize, zvsize, zmin, erosion_iters_tt);} // heightmap is eroded during load
 
 	for (unsigned yy = 0; yy < 4; ++yy) {
 		for (unsigned xx = 0; xx < 4; ++xx) {

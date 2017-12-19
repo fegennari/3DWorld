@@ -13,7 +13,7 @@ using namespace std;
 
 unsigned const TEX_EDGE_MODE = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
 
-extern unsigned hmap_filter_width, erosion_iters;
+extern unsigned hmap_filter_width, erosion_iters_tt;
 extern int display_mode;
 extern float mesh_scale, dxdy;
 
@@ -111,6 +111,7 @@ void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool v
 
 void heightmap_t::apply_erosion() {
 
+	if (erosion_iters_tt == 0) return; // no erosion
 	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
 	vector<float> vals(num_pixels());
@@ -122,7 +123,7 @@ void heightmap_t::apply_erosion() {
 		else {vals[i] = data[i];} // 8-bit
 		min_eq(min_zval, vals[i]);
 	}
-	::apply_erosion(&vals.front(), width, height, min_zval);
+	::apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);
 
 	for (unsigned i = 0; i < vals.size(); ++i) { // convert from heightmap value to pixel
 		assert(vals[i] >= 0.0 && vals[i] < 256.0); // must convert to [0,256) range
@@ -267,7 +268,7 @@ void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 	hmap = heightmap_t(0, 7, 0, 0, fn, invert_y);
 	hmap.load(-1, 0, 1, 1);
 	PRINT_TIME("Heightmap Load");
-	if (erosion_iters > 0) {hmap.apply_erosion();} // apply erosion directly after loading, before applying mod brushes
+	hmap.apply_erosion(); // apply erosion directly after loading, before applying mod brushes
 }
 
 bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {

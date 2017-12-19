@@ -35,7 +35,6 @@ int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 // Global Variables
 float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
 int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(MGEN_SINE), mesh_gen_shape(0), mesh_freq_filter(FREQ_FILTER);
-unsigned erosion_iters(0);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
@@ -53,6 +52,7 @@ hmap_params_t hmap_params;
 extern bool combined_gu;
 extern int xoff, yoff, xoff2, yoff2, world_mode, rand_gen_index, mesh_rgen_index, mesh_scale_change, display_mode;
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode, invert_mh_image;
+extern unsigned erosion_iters;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, custom_glaciate_exp, MESH_HEIGHT, XY_SCENE_SIZE;
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
@@ -388,9 +388,9 @@ void glaciate() {
 
 
 // see http://ranmantaru.com/blog/2011/10/08/water-erosion-on-heightmap-terrain/
-void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval) {
+void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters) {
 
-	if (erosion_iters == 0) return; // erosion disabled
+	if (num_iters == 0) return; // erosion disabled
 	RESET_TIME;
 	float const Kq=10, Kw=0.001f, Kr=0.9f, Kd=0.02f, Ki=0.1f, minSlope=0.05f, g=20, Kg=g*2;
 	int const PAD(4), NX(xsize+2*PAD), NY(ysize+2*PAD);
@@ -433,7 +433,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval) {
 }
 
 #pragma omp parallel for schedule(dynamic,1)
-	for (int iter=0; iter < (int)erosion_iters; ++iter) {
+	for (int iter=0; iter < (int)num_iters; ++iter) {
 		rand_gen_t rgen;
 		rgen.set_state(iter+11, 79*iter+121);
 		int xi = PAD + (rgen.rand()%xsize);
@@ -567,7 +567,7 @@ void gen_terrain_map() {
 		glaciate_exp     = 1.0;
 		glaciate_exp_inv = 1.0;
 	}
-	apply_erosion(mesh_height[0], MESH_X_SIZE, MESH_Y_SIZE, zbottom);
+	apply_erosion(mesh_height[0], MESH_X_SIZE, MESH_Y_SIZE, zbottom, erosion_iters);
 }
 
 
