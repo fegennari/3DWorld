@@ -397,7 +397,6 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval) {
 	unsigned const MAX_PATH_LEN(4*NX*NY);
 	vector<vector2d> erosion(NX*NY, vector2d(0.0, 0.0));
 	vector<float> mh_padded(NX*NY);
-	rand_gen_t rgen;
 
 	// pad mesh by 1 unit on each side to create a buffer of trash around the edges that can be discarded
 	for (int y = 0; y < NY; ++y) {
@@ -433,7 +432,10 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval) {
 	e.x=r; e.y=d; \
 }
 
-	for (unsigned iter=0; iter < erosion_iters; ++iter) {
+#pragma omp parallel for schedule(dynamic,1)
+	for (int iter=0; iter < (int)erosion_iters; ++iter) {
+		rand_gen_t rgen;
+		rgen.set_state(iter+11, 79*iter+121);
 		int xi = PAD + (rgen.rand()%xsize);
 		int zi = PAD + (rgen.rand()%ysize);
 		float xp=xi, zp=zi, xf=0, zf=0, s=0, v=0, w=1, dx=0, dz=0;
