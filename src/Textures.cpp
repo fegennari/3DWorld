@@ -1853,8 +1853,8 @@ colorRGBA get_texture_color(unsigned tid, float u, float v) {
 }
 
 void texture_t::write_pixel_16_bits(unsigned ix, float val) { // Note: no error checking
-	data[ix<<1]     = unsigned char(val); // high bits - truncate
-	data[(ix<<1)+1] = unsigned char(256.0*(val - float(data[(ix<<1)+1]))); // low bits - remainder
+	data[(ix<<1)+1] = unsigned char(val); // high bits - truncate
+	data[ix<<1]     = unsigned char(256.0*(val - float(data[(ix<<1)+1]))); // low bits - remainder
 }
 
 

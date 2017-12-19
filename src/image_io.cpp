@@ -594,6 +594,7 @@ int texture_t::write_to_png(string const &fn) const {
 	}
 	png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 	png_write_info(png_ptr, info_ptr);
+	if (is_16_bit_gray) {png_set_swap(png_ptr);} // change big endian to little endian
 
 	// Write image data
 	for (int y = 0; y < height; y++) {png_write_row(png_ptr, (data + y*width*ncolors));}

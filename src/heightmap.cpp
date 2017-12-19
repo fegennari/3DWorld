@@ -267,7 +267,7 @@ void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 	hmap = heightmap_t(0, 7, 0, 0, fn, invert_y);
 	hmap.load(-1, 0, 1, 1);
 	PRINT_TIME("Heightmap Load");
-	if (erosion_iters == 0) {hmap.apply_erosion();} // apply erosion directly after loading, before applying mod brushes
+	if (erosion_iters > 0) {hmap.apply_erosion();} // apply erosion directly after loading, before applying mod brushes
 }
 
 bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
