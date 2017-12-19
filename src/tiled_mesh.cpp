@@ -428,7 +428,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 			}
 		} // for x
 	} // for y
-	apply_erosion(&zvals.front(), zvsize, zvsize, zmin);
+	if (!using_hmap) {apply_erosion(&zvals.front(), zvsize, zvsize, zmin);} // heightmap is eroded during load
 
 	for (unsigned yy = 0; yy < 4; ++yy) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
