@@ -119,16 +119,19 @@ void heightmap_t::apply_erosion() {
 	float min_zval(vals.front());
 
 	for (unsigned i = 0; i < vals.size(); ++i) { // convert from pixel to heightmap value; max value is 255.0
-		if (ncolors == 2) {vals[i] = (data[i<<1]/256.0 + data[(i<<1)+1]);} // 16-bit
-		else {vals[i] = data[i];} // 8-bit
-		min_eq(min_zval, vals[i]);
+		float &v(vals[i]);
+		if (ncolors == 2) {v = (data[i<<1]/256.0 + data[(i<<1)+1]);} // 16-bit
+		else {v = data[i];} // 8-bit
+		v = scale_mh_texture_val(v);
+		min_eq(min_zval, v);
 	}
 	::apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);
 
 	for (unsigned i = 0; i < vals.size(); ++i) { // convert from heightmap value to pixel
-		assert(vals[i] >= 0.0 && vals[i] < 256.0); // must convert to [0,256) range
-		if (ncolors == 2) {write_pixel_16_bits(i, vals[i]);} // 16-bit
-		else {data[i] = unsigned char(vals[i]);} // 8-bit
+		float v(unscale_mh_texture_val(vals[i]));
+		assert(v >= 0.0 && v < 256.0); // must convert to [0,256) range
+		if (ncolors == 2) {write_pixel_16_bits(i, v);} // 16-bit
+		else {data[i] = unsigned char(v);} // 8-bit
 	}
 }
 
