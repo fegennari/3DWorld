@@ -1,6 +1,7 @@
 #include <fresnel.part>
 
 uniform float normal_z = 1.0;
+uniform float depth_opacity_mult = 1.0;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex, shadow_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale, rain_intensity;
@@ -103,7 +104,7 @@ void main() {
 	float cos_view_angle = abs(dot(epos_n, norm));
 	vec4 color           = water_color;
 #ifdef USE_WATER_DEPTH
-	if (!is_lava) {color.a *= mix(1.0, clamp(20.0*depth, 0.0, 1.0), min(1.0, 2.5*cos_view_angle));} // blend to alpha=0 near the shore
+	if (!is_lava) {color.a *= mix(1.0, clamp(20.0*depth_opacity_mult*depth, 0.0, 1.0), min(1.0, 2.5*cos_view_angle));} // blend to alpha=0 near the shore
 #endif
 
 #ifdef ENABLE_WATER_SHADOWS // looks okay for shallow water, but bad for deep water since we get underwater shadows on the water surface

@@ -24,6 +24,8 @@ tt_triplanar_tex 1
 grass_density 120
 grass_size 0.03 0.002
 
+ocean_depth_opacity_mult 2.0
+
 mesh_height 1.0
 mesh_size  128 128 0
 scene_size 4.0 4.0 4.0

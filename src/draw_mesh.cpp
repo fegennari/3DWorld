@@ -40,7 +40,7 @@ extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_c
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt;
-extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, FAR_CLIP, sun_radius;
+extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, FAR_CLIP, sun_radius, ocean_depth_opacity_mult;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
 extern colorRGB mesh_color_scale;
@@ -892,6 +892,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 	}
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, 0, color, rcolor, use_tess); // depth_only=0, use_depth=1
 	s.add_uniform_float("normal_z", (camera_underwater ? -1.0 : 1.0));
+	s.add_uniform_float("depth_opacity_mult", ocean_depth_opacity_mult);
 	s.set_cur_color(WHITE);
 	draw_tiled_terrain_water(s, zval);
 	glDepthFunc(GL_LESS);
