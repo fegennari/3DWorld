@@ -273,7 +273,8 @@ struct jump_pad : public sphere_t {
 	
 	vector3d velocity; // should be up
 	jump_pad() : velocity(zero_vector) {}
-	// TODO
+	void draw(shader_t &s) const;
+	bool maybe_jump(point &opos, float oradius, int player_id);
 };
 
 

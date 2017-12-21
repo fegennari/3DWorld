@@ -32,6 +32,7 @@ extern dwobject def_objects[];
 extern vector<point> app_spots;
 extern coll_obj_group coll_objects;
 extern vector<teleporter> teleporters;
+extern vector<jump_pad> jump_pads;
 
 
 // ********** waypt_used_set **********
@@ -337,12 +338,13 @@ public:
 				has_item_placed = 1;
 			}
 		}
-		for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
+		for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) { // add teleporter waypoints
 			int const six(add_if_valid(i->pos,  -1, 0)); // does this waypoint need any state to be set?
 			int const eix(add_if_valid(i->dest, -1, 0)); // add teleporter destination as well, so that smileys going through the teleporter end on a waypoint
 			//if (six >= 0) {waypoints[six].goal = 1;}
 			if (six >= 0 && eix >= 0) {waypoints[six].connected_to = eix;} // connect them if both are valid
 		}
+		for (vector<jump_pad>::const_iterator i = jump_pads.begin(); i != jump_pads.end(); ++i) {add_if_valid(i->pos, -1, 0);} // add jump pad waypoints
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}
 

@@ -650,6 +650,7 @@ void draw_jump_pads();
 bool maybe_teleport_object(point &opos, float oradius, int player_id);
 void teleport_object(point &opos, point const &src_pos, point const &dest_pos, float oradius, int player_id);
 void player_teleported(point const &pos, int player_id);
+bool maybe_use_jump_pad(point &opos, float oradius, int player_id);
 
 // function prototypes - explosion
 void update_blasts();

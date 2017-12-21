@@ -932,14 +932,6 @@ void draw_teleporters() {
 	disable_blend();
 }
 
-// not sure where this belongs
-void draw_jump_pads() {
-
-	// WRITE
-	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {}
-}
-
-
 void teleporter::draw(vpc_shader_t &s) const {
 
 	float const ACTIVATE_DELAY = 1.0; // in seconds
@@ -991,6 +983,21 @@ void teleporter::draw(vpc_shader_t &s) const {
 		draw_single_colored_sphere(dest, 0.25*radius, N_SPHERE_DIV, BLUE);
 		s.enable();
 	}
+}
+
+
+// not sure where this belongs
+void draw_jump_pads() {
+
+	shader_t s;
+	s.begin_color_only_shader(YELLOW);
+	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {i->draw(s);}
+	s.end_shader();
+}
+
+void jump_pad::draw(shader_t &s) const {
+	if (!camera_pdu.sphere_visible_test(pos, radius)) return;
+	draw_sphere_vbo(pos, radius, N_SPHERE_DIV, 0); // FIXME: placeholder
 }
 
 
