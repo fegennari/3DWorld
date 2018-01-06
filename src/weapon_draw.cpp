@@ -990,14 +990,20 @@ void teleporter::draw(vpc_shader_t &s) const {
 void draw_jump_pads() {
 
 	shader_t s;
-	s.begin_color_only_shader(YELLOW);
+	s.begin_simple_textured_shader(); // no lighting
 	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {i->draw(s);}
 	s.end_shader();
 }
 
 void jump_pad::draw(shader_t &s) const {
+
 	if (!camera_pdu.sphere_visible_test(pos, radius)) return;
-	draw_sphere_vbo(pos, radius, N_SPHERE_DIV, 0); // FIXME: placeholder
+	s.set_cur_color(WHITE);
+	select_texture(HAZARD_TEX);
+	draw_cylinder_at(pos + vector3d(0.0, 0.0, 0.2*radius), 0.2*radius, radius, radius, 32, 1, 0, 0, 0.1);
+	s.set_cur_color(GRAY);
+	select_texture(WHITE_TEX);
+	draw_cylinder_at(pos, 0.2*radius, 0.6*radius, 0.6*radius, 32, 1);
 }
 
 
