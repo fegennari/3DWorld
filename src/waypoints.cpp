@@ -344,7 +344,9 @@ public:
 			//if (six >= 0) {waypoints[six].goal = 1;}
 			if (six >= 0 && eix >= 0) {waypoints[six].connected_to = eix;} // connect them if both are valid
 		}
-		for (vector<jump_pad>::const_iterator i = jump_pads.begin(); i != jump_pads.end(); ++i) {add_if_valid(i->pos, -1, 0);} // add jump pad waypoints
+		for (vector<jump_pad>::const_iterator i = jump_pads.begin(); i != jump_pads.end(); ++i) { // add jump pad waypoints
+			add_if_valid((i->pos + vector3d(0.0, 0.0, radius)), -1, 0); // move up by smiley radius
+		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}
 
