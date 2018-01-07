@@ -983,7 +983,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	}
 	int ohval(set_true_obj_height(obj.pos, opos, C_STEP_HEIGHT, zvel, SMILEY, smiley_id, has_flight, 0));
 
-	if (!has_flight && !recreated && !mesh_scale_change && (obj.pos.z - opos.z) >= step_height) { // stuck, can't step that high
+	if (!has_flight && jump_time == 0 && !recreated && !mesh_scale_change && (obj.pos.z - opos.z) >= step_height) { // stuck, can't step that high
 		obj.pos = opos; // reset to old position
 		ohval   = 3;
 	}
@@ -1627,6 +1627,7 @@ bool jump_pad::maybe_jump(point &opos, float oradius, int player_id) {
 	if (ss.jump_time > 0) return 0; // already jumping, not touching the ground/jump pad
 	ss.jump_time = velocity.z*TICKS_PER_SECOND; // FIXME: only z velocity is used
 	gen_sound(SOUND_BOING, pos, 1.0, 1.0);
+	act_time = 1.0*TICKS_PER_SECOND;
 	// FIXME: WRITE
 	return 1;
 }

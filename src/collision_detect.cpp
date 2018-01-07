@@ -1755,7 +1755,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	point const adj_pos(pos + vector3d(0.0, 0.0, camera_zh));
 	if (temperature > W_FREEZE_POINT && is_underwater(adj_pos, 1) && (rand()&1)) {gen_bubble(adj_pos);}
 
-	if (!cflight && camera_change == 0 && camera_last_pos.z != 0.0 && (pos.z - camera_last_pos.z) > CAMERA_MESH_DZ &&
+	if (!cflight && jump_time == 0 && camera_change == 0 && camera_last_pos.z != 0.0 && (pos.z - camera_last_pos.z) > CAMERA_MESH_DZ &&
 		is_above_mesh(pos) && is_over_mesh(camera_last_pos))
 	{
 		pos = camera_last_pos; // mesh is too steep for camera to climb
