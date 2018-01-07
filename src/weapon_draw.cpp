@@ -998,12 +998,18 @@ void draw_jump_pads() {
 void jump_pad::draw(shader_t &s) const {
 
 	if (!camera_pdu.sphere_visible_test(pos, radius)) return;
+	float const up_time(0.05), down_time(0.4);
+	float const use_time(float(tfticks - last_used_tfticks)/TICKS_PER_SECOND);
+	float z_pos(0.0);
+	if (use_time < up_time) {z_pos = use_time/up_time;} // moving up (firing)
+	else if (use_time < (up_time + down_time)) {z_pos = 1.0 - (use_time - up_time)/down_time;}
+	float const dz((0.2 + 0.8*z_pos)*radius);
 	s.set_cur_color(WHITE);
 	select_texture(HAZARD_TEX);
-	draw_cylinder_at(pos + vector3d(0.0, 0.0, 0.2*radius), 0.2*radius, radius, radius, 32, 1, 0, 0, 0.1);
+	draw_cylinder_at(pos + vector3d(0.0, 0.0, dz), 0.2*radius, radius, radius, 32, 1, 0, 0, 0.1);
 	s.set_cur_color(GRAY);
 	select_texture(WHITE_TEX);
-	draw_cylinder_at(pos, 0.2*radius, 0.6*radius, 0.6*radius, 32, 1);
+	draw_cylinder_at(pos, dz, 0.6*radius, 0.6*radius, 32, 1);
 }
 
 

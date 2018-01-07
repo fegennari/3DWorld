@@ -1627,8 +1627,7 @@ bool jump_pad::maybe_jump(point &opos, float oradius, int player_id) {
 	if (ss.jump_time > 0) return 0; // already jumping, not touching the ground/jump pad
 	ss.jump_time = velocity.z*TICKS_PER_SECOND; // FIXME: only z velocity is used
 	gen_sound(SOUND_BOING, pos, 1.0, 1.0);
-	act_time = 1.0*TICKS_PER_SECOND;
-	// FIXME: WRITE
+	last_used_tfticks = tfticks;
 	return 1;
 }
 

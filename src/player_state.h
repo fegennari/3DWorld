@@ -272,9 +272,9 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 struct jump_pad : public sphere_t {
 	
 	vector3d velocity; // should be up
-	float act_time;
+	double last_used_tfticks;
 
-	jump_pad() : velocity(zero_vector), act_time(0.0) {}
+	jump_pad() : velocity(zero_vector), last_used_tfticks(0.0) {}
 	void draw(shader_t &s) const;
 	bool maybe_jump(point &opos, float oradius, int player_id);
 };
