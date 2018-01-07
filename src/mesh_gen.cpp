@@ -393,6 +393,12 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 
 	if (num_iters == 0 || erode_amount <= 0.0) return; // erosion disabled
 	RESET_TIME;
+	// Kq and minSlope are for soil carry capacity.
+	// Kw is water evaporation speed.
+	// Kr is erosion speed (how fast the soil is removed).
+	// Kd is deposition speed (how fast the extra sediment is dropped).
+	// Ki is direction inertia. Higher values make channel turns smoother.
+	// g is gravity that accelerates the flows.
 	float const Kq=10, Kw=0.001f, Kr=0.9f, Kd=0.02f, Ki=0.1f, minSlope=0.05f, g=20, Kg=g*2;
 	int const PAD(4), NX(xsize+2*PAD), NY(ysize+2*PAD);
 	unsigned const MAX_PATH_LEN(4*NX*NY);
@@ -501,6 +507,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 			else { // erode
 				ds*=-Kr;
 				ds=min(ds, dh*0.99f);
+				ds*=((get_bare_ls_tid(nh) == ROCK_TEX) ? 0.5 : 2.0); // rock erodes slower than dirt/sand
 
 				for (int z=zi-1; z<=zi+2; ++z) {
 					float zo=z-zp, zo2=zo*zo;
