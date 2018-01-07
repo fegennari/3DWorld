@@ -276,7 +276,7 @@ struct jump_pad : public sphere_t {
 
 	jump_pad() : velocity(zero_vector), last_used_tfticks(0.0) {}
 	void draw(shader_t &s) const;
-	bool maybe_jump(point &opos, float oradius, int player_id);
+	bool maybe_jump(point &opos, vector3d &obj_velocity, float oradius, int player_id);
 };
 
 

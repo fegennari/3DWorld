@@ -1080,7 +1080,7 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 		if (last_waypoint >= 0) {mark_waypoint_reached(last_waypoint, smiley_id);} // mark this waypoint as reached
 		last_waypoint = -1;
 	}
-	else {maybe_use_jump_pad(obj.pos, object_types[SMILEY].radius, smiley_id);}
+	else {maybe_use_jump_pad(obj.pos, obj.velocity, object_types[SMILEY].radius, smiley_id);}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
 	next_frame();
@@ -1589,10 +1589,10 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id) {
 	return 0;
 }
 
-bool maybe_use_jump_pad(point &opos, float oradius, int player_id) {
+bool maybe_use_jump_pad(point &opos, vector3d &velocity, float oradius, int player_id) {
 
 	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {
-		if (i->maybe_jump(opos, oradius, player_id)) return 1;
+		if (i->maybe_jump(opos, velocity, oradius, player_id)) return 1;
 	}
 	return 0;
 }
@@ -1619,13 +1619,19 @@ bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id
 }
 
 
-bool jump_pad::maybe_jump(point &opos, float oradius, int player_id) {
+bool jump_pad::maybe_jump(point &opos, vector3d &obj_velocity, float oradius, int player_id) {
 
 	if (!dist_less_than(pos, (opos - vector3d(0.0, 0.0, oradius)), radius+oradius)) return 0; // not close enough
-	assert(player_id >= CAMERA_ID && player_id < num_smileys);
-	player_state &ss(sstates[player_id]);
-	if (ss.jump_time > 0) return 0; // already jumping, not touching the ground/jump pad
-	ss.jump_time = velocity.z*TICKS_PER_SECOND; // FIXME: only z velocity is used
+
+	if (player_id == NO_SOURCE) { // object jump
+		obj_velocity += velocity;
+	}
+	else { // player jump
+		assert(player_id >= CAMERA_ID && player_id < num_smileys);
+		player_state &ss(sstates[player_id]);
+		if (ss.jump_time > 0) return 0; // already jumping, not touching the ground/jump pad
+		ss.jump_time = 0.1*TICKS_PER_SECOND*velocity.z; // FIXME: only z velocity is used
+	}
 	gen_sound(SOUND_BOING, pos, 1.0, 1.0);
 	last_used_tfticks = tfticks;
 	return 1;

@@ -998,7 +998,7 @@ void draw_jump_pads() {
 void jump_pad::draw(shader_t &s) const {
 
 	if (!camera_pdu.sphere_visible_test(pos, radius)) return;
-	float const up_time(0.05), down_time(0.4);
+	float const up_time(0.02), down_time(0.4);
 	float const use_time(float(tfticks - last_used_tfticks)/TICKS_PER_SECOND);
 	float z_pos(0.0);
 	if (use_time < up_time) {z_pos = use_time/up_time;} // moving up (firing)

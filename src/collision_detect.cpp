@@ -1695,7 +1695,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		camera_last_pos = pos;
 		add_camera_filter(colorRGBA(0.5, 0.5, 1.0, 1.0), TICKS_PER_SECOND/4, -1, CAM_FILT_TELEPORT, 1); // a quarter second of fading light blue
 	}
-	else {maybe_use_jump_pad(pos, radius, CAMERA_ID);}
+	else {maybe_use_jump_pad(pos, sstate.velocity, radius, CAMERA_ID);}
 
 	if (!cflight) { // make sure camera is over simulation region
 		camera_in_air = 0;

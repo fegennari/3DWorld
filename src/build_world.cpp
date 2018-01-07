@@ -456,7 +456,10 @@ void process_groups() {
 				if (obj.time >= 0) {
 					if (type == PLASMA && obj.velocity.mag_sq() < 1.0) {obj.disable();} // plasma dies when it stops
 					else {
-						if (large_radius) {maybe_teleport_object(obj.pos, radius, NO_SOURCE);} // teleport!
+						if (large_radius) {
+							maybe_teleport_object(obj.pos, radius, NO_SOURCE); // teleport!
+							maybe_use_jump_pad(obj.pos, obj.velocity, radius, NO_SOURCE);
+						}
 						point const old_pos(pos); // after teleporting
 						unsigned spf(1);
 						int cindex(-1);
