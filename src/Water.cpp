@@ -1317,6 +1317,7 @@ void calc_watershed() {
 				water_matrix[i][j]     = water_plane_z;
 				wminside[i][j]         = 2;
 				wat_vert_normals[i][j] = plus_z;
+				watershed_matrix[i][j].inside8 = 0x1FF; // all outside water
 			}
 		}
 		max_water_height = def_water_level;
@@ -1393,8 +1394,8 @@ void calc_watershed() {
 				i8 |= 0x10;
 				if (j > 0 && wminside[i+1][j-1]) i8 |= 0x40;
 			}
-		}
-	}
+		} // for j
+	} // for i
 }
 
 

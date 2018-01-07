@@ -78,11 +78,13 @@ struct valley { // size = 70
 
 struct valley_w { // size = 8
 	short wsi, x, y, inside8;
+	valley_w() : wsi(0), x(0), y(0), inside8(0) {}
 };
 
 
 struct surf_adv { // size = 4
 	short x, y;
+	surf_adv() : x(0), y(0) {}
 	void assign(int x_, int y_) {x = x_; y = y_;}
 };
 
