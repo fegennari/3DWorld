@@ -4,17 +4,21 @@ metalness 1.0
 a 4 # explodeable
 start_cobj_group # make sure it all explodes together
 destroy_prob 1 # always explodes
+l 0.87 0.45 0.4 0.4 1.0 49 1
 k 0.0 0.0 0.1  0.0 0.0 1.0  0.1 0.1 # capsule
 e 3
 C 0.0 0.0 0.0   0.0 0.0 0.08  0.07 0.07
+l 0.87 1.0 1.0 1.0 1.0 hazard_stripes.jpg 1
 C 0.0 0.0 1.07  0.0 0.0 1.22  0.04 0.04
 e 0
 S 0.0 0.0 1.22  0.04
+Y 0 0 1 # swap x/y
 y 48.0
 l 0.87 1.0 1.0 1.0 1.0 39 1 # Mr. Yuck
 e 3
 C 0.0 0.0 0.5  0.0 0.0 0.7  0.105 0.105
 e 0
+Y 0 0 0 # unswap x/y
 metalness 0.0
 end_cobj_group
 destroy_prob 0 # back to default
