@@ -1550,7 +1550,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			color     = BLOOD_C;
 			sz_scale  = 2.0;
 		}
-		else if (type == CHUNK && !(obj.flags & TYPE_FLAG) && (fabs(obj.velocity.z) > 1.0 || fabs(v0.z) > 1.0)) {
+		else if (type == CHUNK && !(obj.flags & (TYPE_FLAG | FROZEN_FLAG)) && (fabs(obj.velocity.z) > 1.0 || fabs(v0.z) > 1.0)) {
 			blood_tid = BLOOD_SPLAT_TEX; // bloody chunk splat
 			tex_range = tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2); // 2x2 texture atlas
 			color     = WHITE; // color is in the texture
@@ -1563,7 +1563,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 				gen_decal((decal_pos - norm*o_radius), sz, norm, blood_tid, index, color, 0, (blood_tid == BLOOD_SPLAT_TEX), 60*TICKS_PER_SECOND, 1.0, tex_range);
 			}
 		}
-		deform_obj(obj, norm, v0);
+		if (type != CHUNK || !(obj.flags & FROZEN_FLAG)) {deform_obj(obj, norm, v0);} // skip deformation of frozen chunks
 	}
 	if (cnorm != NULL) *cnorm = norm;
 	obj.flags |= OBJ_COLLIDED;

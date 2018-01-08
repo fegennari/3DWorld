@@ -230,6 +230,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 	float part_v(5.0 + 0.5*sqrt(energy)), chunk_v(7.5 + 0.2*sqrt(energy));
 	vector3d orient(0.0, 0.0, 0.0);
 	player_state &sstate(sstates[target]);
+	bool const frozen(!burned && sstate.freeze_time > 0);
 
 	if (target == CAMERA_ID) {
 		orient = cview_dir;
@@ -269,11 +270,12 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		gen_blood_velocity(obj.velocity, velocity, coll_dir, chunk_v, 0.25, 0.22, damage_type, health);
 		float const vmag(obj.velocity.mag());
 		if (vmag > TOLERANCE) obj.pos += obj.velocity*(radius/vmag);
-		if (burned) {obj.flags |= TYPE_FLAG;}
+		if (burned) {obj.flags |= TYPE_FLAG;} // use TYPE_FLAG to encode burned state
+		else if (frozen) {obj.flags |= FROZEN_FLAG;}
 	}
 
 	// skull
-	if (burned || energy < 250.0) {
+	if (burned || energy < 250.0) { // frozen?
 		obj_groups[coll_id[SKULL]].create_object_at(target+1, pos);
 		dwobject &obj(obj_groups[coll_id[SKULL]].get_obj(target+1));
 		obj.orientation = orient;
@@ -284,6 +286,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		gen_fire(pos, 1.0, source);
 		gen_smoke(pos);
 	}
+	else if (frozen) {} // nothing?
 	else { // add blood
 		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(1.5, 0.4*double(sqrt(blood_v)))*radius);
 		modify_grass_at((pos - vector3d(0.0, 0.0, radius)), 1.8*radius, 0, 0, 0, 1, 1, 0, BLOOD_C); // check_uw?

@@ -53,7 +53,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader);
-void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
+void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int frozen, int ndiv, shader_t &shader);
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader);
 void draw_translocator(point const &pos, float radius, int ndiv, int source, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
@@ -339,7 +339,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_smiley_part(pos, obj.orientation, obj.direction, obj.source, 1, ndiv, shader);
 		break;
 	case CHUNK:
-		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv, shader);
+		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), (obj.flags & FROZEN_FLAG), ndiv, shader);
 		break;
 	case SKULL:
 		draw_skull(pos, obj.orientation, radius, obj.status, ndiv, obj.time, shader, (obj.direction == 1));
@@ -1330,10 +1330,14 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 }
 
 
-void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader) {
+void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int frozen, int ndiv, shader_t &shader) {
 
 	fgPushMatrix();
-	draw_low_res_sphere_pair(pos, radius*(0.5 + fabs(v.x)), v, vdeform, &(charred ? BLACK : YELLOW), &(charred ? DK_GRAY : BLOOD_C), ndiv, 0, shader);
+	colorRGBA c1, c2;
+	if (charred) {c1 = BLACK; c2 = DK_GRAY;}
+	else if (frozen) {c1 = colorRGBA(0.7, 0.8, 1.0, 1.0); c2 = colorRGBA(0.4, 0.5, 1.0, 1.0);}
+	else {c1 = YELLOW; c2 = BLOOD_C;}
+	draw_low_res_sphere_pair(pos, radius*(0.5 + fabs(v.x)), v, vdeform, &c1, &c2, ndiv, 0, shader);
 	fgPopMatrix();
 }
 

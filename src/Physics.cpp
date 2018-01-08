@@ -1182,7 +1182,7 @@ void dwobject::surf_collide_obj() const {
 
 	switch (type) {
 	case CHUNK:
-		if (flags & TYPE_FLAG) break; // charred, not blood
+		if (flags & (TYPE_FLAG | FROZEN_FLAG)) break; // charred or ice, not blood
 	case BLOOD:
 		if (snow_height(pos)) { // in the snow
 			add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, ((type == BLOOD) ? 4.0 : 2.2)*get_true_radius());

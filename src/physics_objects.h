@@ -500,7 +500,7 @@ public:
 #define PLATFORM_COLL    0x1000
 #define USER_PLACED      0x2000
 #define WAS_PUSHED       0x4000
-//#define x 0x8000
+#define FROZEN_FLAG      0x8000
 
 unsigned const XYZ_STOPPED(XY_STOPPED | Z_STOPPED);
 unsigned const ALL_COLL_STOPPED(XYZ_STOPPED | STATIC_COBJ_COLL);
