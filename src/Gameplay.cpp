@@ -318,10 +318,10 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 
 
 unsigned create_blood(int index, int amt_denom, point const &pos, float obj_radius, vector3d const &velocity,
-					  vector3d const &coll_dir, float blood_v, int damage_type, float health, bool burned)
+					  vector3d const &coll_dir, float blood_v, int damage_type, float health, bool burned, bool frozen)
 {
 	assert(amt_denom > 0);
-	int const cid(coll_id[burned ? CHARRED : BLOOD]);
+	int const cid(coll_id[burned ? CHARRED : /*(frozen ? WDROPLET : BLOOD)*/BLOOD]);
 	obj_group &objg(obj_groups[cid]);
 	unsigned const blood_amt(objg.max_objs/(obj_groups[coll_id[SMILEY]].max_objs+1));
 	unsigned const start_ix(blood_amt*index);
@@ -481,7 +481,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			print_text_onscreen("You have the ball", GREEN, 1.2, 2*MESSAGE_TIME/3, 1);
 			gen_sound(SOUND_POWERUP, position, 0.5);
 		}
-		else cam_filter_color = RED;
+		else {cam_filter_color = RED;}
 		break;
 
 	case LANDMINE:
@@ -500,6 +500,9 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		print_text_onscreen("Poison Gas Detected", OLIVE, 1.2, MESSAGE_TIME, 1);
 		cam_filter_color = ((frame_counter & 15) ? DK_RED : OLIVE);
 		break;
+	case IMPACT:
+		if (sstate.freeze_time > 0) {energy *= 2.0;} // 2x impact damage when frozen
+		break;
 	default:
 		cam_filter_color = RED;
 	}
@@ -514,7 +517,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	vector3d const coll_dir(get_norm_rand(vector3d(position, camera)));
 	bool const burned(is_burned(type, br_source)), alive(camera_health >= 0.0);
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
-	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned);}
+	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned, (sstate.freeze_time > 0));}
 	if (burned) {sstate.freeze_time = 0;} // thaw
 	else if (type == FREEZE_BOMB) {
 		freeze_player(sstate, energy);
@@ -672,6 +675,9 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	case BLAST_RADIUS:
 		if (br_source == LANDMINE) {damage_type = 1;}
 		break;
+	case IMPACT:
+		if (sstate.freeze_time > 0) {energy *= 2.0;} // 2x impact damage when frozen
+		break;
 	}
 	if (!compute_damage(energy, type, obj_index, source, index)) return 1;
 	dwobject &obji(obj_groups[cid].get_obj(index));
@@ -707,7 +713,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	}
 	if (!burned && !is_area_damage(type)) {
 		unsigned const blood_amt(create_blood(index+1, (alive ? 30 : 1), obj_pos, radius,
-			velocity, coll_dir, blood_v, damage_type, obji.health, burned));
+			velocity, coll_dir, blood_v, damage_type, obji.health, burned, (sstate.freeze_time > 0)));
 		float const cdist(distance_to_camera(obj_pos));
 
 		if (cdist < 4.0*radius && sphere_in_camera_view(obj_pos, radius, 2)) {

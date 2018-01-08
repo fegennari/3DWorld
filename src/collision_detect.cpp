@@ -1431,7 +1431,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	assert(!is_nan(norm));
 	bool is_moving(0);
 	obj_type const &otype(object_types[type]);
-	float const friction(otype.friction_factor);
+	float const friction(otype.friction_factor*((obj.flags & FROZEN_FLAG) ? 0.5 : 1.0)); // frozen objects have half friction
 	bool const is_coll_func_pass(do_coll_funcs && enable_cfs && iter == 0);
 
 	// collision with the top of a cube attached to a platform (on first iteration only)
@@ -1563,7 +1563,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 				gen_decal((decal_pos - norm*o_radius), sz, norm, blood_tid, index, color, 0, (blood_tid == BLOOD_SPLAT_TEX), 60*TICKS_PER_SECOND, 1.0, tex_range);
 			}
 		}
-		if (type != CHUNK || !(obj.flags & FROZEN_FLAG)) {deform_obj(obj, norm, v0);} // skip deformation of frozen chunks
+		if (!(obj.flags & FROZEN_FLAG)) {deform_obj(obj, norm, v0);} // skip deformation of frozen chunks
 	}
 	if (cnorm != NULL) *cnorm = norm;
 	obj.flags |= OBJ_COLLIDED;
