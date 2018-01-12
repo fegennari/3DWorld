@@ -550,7 +550,7 @@ void draw_water(bool no_update, bool draw_fast) {
 				float const z_min(z_min_matrix[i][j]), zval(valleys[wsi].zval), wzval(water_matrix[i][j]), wzmax(max(zval, wzval));
 
 				if (wzmax >= z_min - G_W_STOP_DEPTH) {
-					if (!is_ice && UPDATE_UW_LANDSCAPE && !no_update && (rgen.rand()&63) == 0) {
+					if (!is_ice && UPDATE_UW_LANDSCAPE && !no_update && wzval > zval && (rgen.rand()&63) == 0) {
 						add_hole_in_landscape_texture(j, i, 1.2*fticks*(0.02 + wzmax - z_min));
 					}
 					float delta_area(1.0);
