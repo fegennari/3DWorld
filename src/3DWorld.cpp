@@ -1773,6 +1773,8 @@ int load_config(string const &config_file) {
 	kwmf.add("hmap_sine_mag",    hmap_params.sine_mag);
 	kwmf.add("hmap_sine_freq",   hmap_params.sine_freq);
 	kwmf.add("hmap_sine_bias",   hmap_params.sine_bias);
+	kwmf.add("hmap_volcano_width",  hmap_params.volcano_width);
+	kwmf.add("hmap_volcano_height", hmap_params.volcano_height);
 
 	kw_to_val_map_t<string> kwms(error);
 	kwms.add("cobjs_out_filename", cobjs_out_fn);

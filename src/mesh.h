@@ -93,8 +93,9 @@ float const hmap_large_zval = 1000.0;
 
 struct hmap_params_t {
 	//int mode, shape;
-	float plat_bot, plat_h, plat_s, plat_max, crat_h, crat_s, crack_lo, crack_hi, crack_d, sine_mag, sine_freq, sine_bias;
-	hmap_params_t() : plat_bot(hmap_large_zval), plat_h(0), plat_s(0), plat_max(0), crat_h(hmap_large_zval), crat_s(0), crack_lo(0), crack_hi(0), crack_d(0), sine_mag(0), sine_freq(0), sine_bias(0) {}
+	float plat_bot, plat_h, plat_s, plat_max, crat_h, crat_s, crack_lo, crack_hi, crack_d, sine_mag, sine_freq, sine_bias, volcano_width, volcano_height;
+	hmap_params_t() : plat_bot(hmap_large_zval), plat_h(0), plat_s(0), plat_max(0), crat_h(hmap_large_zval), crat_s(0), crack_lo(0), crack_hi(0), crack_d(0),
+		sine_mag(0), sine_freq(0), sine_bias(0), volcano_width(0), volcano_height(0) {}
 	bool need_postproc() const {return (plat_bot < hmap_large_zval || crat_h < hmap_large_zval || crack_lo < crack_hi);}
 };
 

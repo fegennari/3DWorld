@@ -355,10 +355,20 @@ float do_glaciate_exp(float value) {
 
 float get_rel_wpz() {return CLIP_TO_01(W_PLANE_Z + water_h_off_rel);}
 
+float get_volcano_height(float xi, float yi) {
+	float const freq(mesh_scale/hmap_params.volcano_width), x(freq*xi), y(freq*yi), dist(sqrt(x*x + y*y));
+	if (dist > 2.0) return 0.0; // too far, no effect (optimization)
+	float const val(COSF(x)*COSF(y)), hole(max(0.0, 400.0*(val - 0.999)));
+	//float const peak(150.0*(val - 0.99)); // cos function - discontinuous at the edges, repating for each island
+	float const peak(0.08*val/max(0.04f, dist)); // sinc function - steep with flat top and wide base - only on center island
+	return hmap_params.volcano_height*max(0.0f, (peak - hole))/mesh_scale_z;
+}
+
 void apply_mesh_sine(float &zval, float x, float y) {
 	if (hmap_params.sine_mag > 0.0) { // Note: snow thresh is still off when highly zoomed in
 		float const freq(mesh_scale*hmap_params.sine_freq);
 		zval += (hmap_params.sine_mag*COSF(x*freq)*COSF(y*freq) + hmap_params.sine_bias)/mesh_scale_z;
+		if (hmap_params.volcano_width > 0.0 && hmap_params.volcano_height > 0.0) {zval += get_volcano_height(x, y);}
 	}
 }
 void apply_glaciate(float &zval) {
@@ -927,6 +937,7 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, int min_start_sin
 		if (hmap_params.sine_mag > 0.0) {
 			assert(cur_nx + y < sine_mag_terms.size());
 			zval += sine_mag_terms[x]*sine_mag_terms[cur_nx + y] + sine_offset;
+			if (hmap_params.volcano_width > 0.0 && hmap_params.volcano_height > 0.0) {zval += get_volcano_height((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV);}
 		}
 	}
 	return zval;
