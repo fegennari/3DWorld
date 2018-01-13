@@ -1334,6 +1334,72 @@ void uobj_draw_data::draw_starbase() const {
 }
 
 
+void add_borg_cube_verts(vector<vert_norm_tc> &verts, point const &pos, float size, float texture_scale, vector3d const &texture_offset) {
+
+	point const scale(size, size, size);
+	vector3d const xlate(pos - 0.5*scale); // move origin from center to min corner
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			vector3d norm(zero_vector);
+			point pt;
+			norm[n] = (2.0*j - 1.0); // -1 or 1
+			pt[n]   = j;
+
+			for (unsigned s1 = 0; s1 < 2; ++s1) {
+				pt[d[1]] = s1;
+
+				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+					pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
+					verts.emplace_back((pt*scale + xlate), norm, (texture_scale*pt[d[1]] + texture_offset[d[1]]), (texture_scale*pt[d[0]] + texture_offset[d[0]]));
+				}
+			}
+		} // for j
+	} // for i
+}
+
+vector<vert_norm_tc> borg_cube_verts[2];
+
+void draw_borg_layer(bool is_cube, bool is_small, float scale, int ndiv, vector3d const &view_dir) {
+
+	if (!is_cube) {draw_sphere_vbo(all_zeros, scale, get_ndiv((3*ndiv)/2), 1); return;} // cube mapped sphere?
+	float const cw(2.0*scale);
+	bool const high_detail(!is_small && ndiv > 3);
+	draw_cube(all_zeros, cw, cw, cw, 1, (high_detail ? 4.0 : 1.0), 0, &view_dir);
+
+	if (high_detail) { // add greebles to large nearby Borg cubes
+		//timer_t timer("Draw Borg Cube");
+		vector<vert_norm_tc> &verts(borg_cube_verts[scale < 1.0]);
+
+		if (verts.empty()) { // calculate and cache cube verts
+			unsigned const ndiv(8);
+			float const spacing(2.0/ndiv), width(scale*spacing), sz(1.0 - spacing + width);
+			rand_gen_t rgen;
+
+			for (unsigned d0 = 0; d0 < 3; ++d0) { // dim
+				unsigned const d1((d0+1)%3), d2((d0+2)%3);
+				for (unsigned e = 0; e < 2; ++e) { // dir
+					for (unsigned s = 0; s < ndiv; ++s) {
+						for (unsigned t = 0; t < ndiv; ++t) {
+							point p(all_zeros);
+							float const dist(sz - 0.05*rgen.signed_rand_float());
+							p[d0] = (e ? -dist : dist);
+							p[d1] = spacing*(s + 0.5) - 1.0 + 0.025*rgen.signed_rand_float();
+							p[d2] = spacing*(t + 0.5) - 1.0 + 0.025*rgen.signed_rand_float();
+							add_borg_cube_verts(verts, p, width, 1.0, rgen.rand_vector());
+						} // for t
+					} // for s
+				} // for e
+			} // for d0
+		}
+		glEnable(GL_CULL_FACE);
+		draw_quad_verts_as_tris(verts);
+		glDisable(GL_CULL_FACE);
+	}
+}
+
 void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 
 	vector3d view_dir(pos, get_player_pos());
@@ -1343,15 +1409,13 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		select_texture((is_cube && is_small) ? BCUBE_T_TEX : BCUBE_TEX);
 		enable_normal_map((is_cube && is_small) ? "normal_maps/bcube_tactical_NRM.jpg" : "normal_maps/bcube_NRM.jpg");
 		set_color(color_b);
-		if (is_cube) {draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, 1.0, 0, &view_dir);}
-		else {draw_sphere_vbo(all_zeros, 0.97, get_ndiv((3*ndiv)/2), 1);} // cube mapped sphere?
+		draw_borg_layer(is_cube, is_small, 0.97, ndiv, view_dir);
 		disable_normal_map();
 	}
 	if (phase2) {
 		select_texture(SMOKE_TEX);
 		set_color(color_a*0.5); // outer color
-		if (is_cube) {draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, 1.0, 0, &view_dir);}
-		else {draw_sphere_vbo(all_zeros, 1.0, get_ndiv((3*ndiv)/2), 1);} // cube mapped sphere?
+		draw_borg_layer(is_cube, is_small, 1.0, ndiv, view_dir);
 	}
 	end_ship_texture();
 	
