@@ -296,7 +296,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	if (!gen_only && !static_only) {
 		if (TIMETEST) PRINT_TIME(" Universe Draw");
 		check_gl_error(122);
-		if (!gen_only) {draw_univ_objects();} // draw free objects
+		draw_univ_objects(); // draw free objects
 		check_gl_error(123);
 		if (TIMETEST) PRINT_TIME(" Free Obj Draw");
 	}

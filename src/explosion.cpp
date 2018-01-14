@@ -26,6 +26,7 @@ extern double tfticks;
 extern sphere_t cur_explosion_sphere;
 
 void calc_lit_uobjects();
+void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const &pos, float radius, int ndiv, bool add_halo);
 
 
 // duration color1 color2
@@ -46,6 +47,7 @@ exp_type_params et_params[NUM_ETYPES] = {
 	exp_type_params(1.7, LT_BLUE, WHITE),   // ETYPE_FUSION_ROT
 	exp_type_params(2.0, WHITE,   BLACK),   // ETYPE_PART_CLOUD
 	exp_type_params(2.0, WHITE,   BLACK),   // ETYPE_PC_ICE
+	exp_type_params(3.6, GREEN,   colorRGBA(LT_GREEN, 0.0)), // ETYPE_PBALL
 };
 
 
@@ -252,6 +254,11 @@ bool have_explosions() {
 	return 0;
 }
 
+int get_exp_ndiv(point const &pos, float radius) {
+	float const sscale((world_mode == WMODE_UNIVERSE) ? 0.4/max(sqrt(radius*distance_to_camera(pos)), TOLERANCE) : 1.0);
+	return max(4, min(N_SPHERE_DIV, int(250.0*radius*sscale)));
+}
+
 void draw_blasts(shader_t &s) {
 
 	if (blastrs.empty()) return;
@@ -262,6 +269,7 @@ void draw_blasts(shader_t &s) {
 	enable_blend();
 	select_multitex(WHITE_TEX, 1);
 	vector<ix_type_pair> to_draw;
+	usw_ray_group exp_rays;
 
 	for (unsigned i = 0; i < blastrs.size(); ++i) {
 		blastr const &br(blastrs[i]);
@@ -305,9 +313,7 @@ void draw_blasts(shader_t &s) {
 				// use distance_to_camera() for non-universe mode?
 				//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
 				s.set_cur_color(br.cur_color);
-				float const sscale(universe ? 0.4/max(sqrt(br.cur_size*distance_to_camera(br.pos)), TOLERANCE) : 1.0);
-				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
-				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, ndiv, 1); // cube mapped sphere? too slow?
+				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, get_exp_ndiv(br.pos, br.cur_size), 1); // cube mapped sphere? too slow?
 				if (end_type) {glDisable(GL_CULL_FACE); end_sphere_draw();}
 			}
 			break;
@@ -321,8 +327,7 @@ void draw_blasts(shader_t &s) {
 				global_translate(br.pos);
 				rotate_about(90.0*timescale, br.dir);
 				s.set_cur_color(br.cur_color);
-				float const sscale(universe ? 0.4/max(sqrt(br.cur_size*distance_to_camera(br.pos)), TOLERANCE) : 1.0);
-				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
+				int const ndiv(get_exp_ndiv(br.pos, br.cur_size));
 				uniform_scale(br.cur_size);
 				draw_sphere_vbo_raw(ndiv, 1);
 				//draw_sphere_vbo_back_to_front(all_zeros, br.cur_size, ndiv, 1);
@@ -369,7 +374,23 @@ void draw_blasts(shader_t &s) {
 				s.make_current();
 			}
 			break;
-		
+
+		case ETYPE_PBALL: { // only for universe mode
+			rand_gen_t rgen;
+			rgen.rseed1 = i->ix;
+			unsigned const num(rgen.rand_int(12, 20));
+
+			for (unsigned i = 0; i < num; ++i) { // Note: could use a procedural 1D texture similar to planet rings instead of creating multiple rays
+				point const pos2(br.pos + (br.size/SQRT3)*rgen.signed_rand_vector());
+				exp_rays.push_back(usw_ray(rgen.rand_uniform(0.01, 0.05)*br.size, rgen.rand_uniform(0.2, 0.4)*br.size, br.pos, pos2, br.cur_color, colorRGBA(br.cur_color, 0.0)));
+			}
+			if (begin_type) {glEnable(GL_CULL_FACE); select_texture(WHITE_TEX);} // texture is procedural
+			int const ndiv(get_exp_ndiv(br.pos, br.cur_size));
+			colorRGBA color2(br.cur_color, 0.5*br.cur_color.A);
+			draw_one_star(br.cur_color, color2, make_pt_global(br.pos), 0.5*br.cur_size, ndiv, 0); // slow, but not used often
+			if (end_type) {glDisable(GL_CULL_FACE); exp_rays.draw();}
+			break;
+		}
 		default:
 			assert(0);
 		} // switch
