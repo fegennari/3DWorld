@@ -1559,7 +1559,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			color     = WHITE; // color is in the texture
 			sz_scale  = 4.0;
 		}
-		if (blood_tid >= 0) {
+		if (blood_tid >= 0 && !(obj.flags & OBJ_COLLIDED)) { // only on first collision
 			float const sz(sz_scale*o_radius*rand_uniform(0.6, 1.4));
 			
 			if (decal_contained_in_cobj(cobj, decal_pos, norm, sz, (cdir >> 1))) {

@@ -13,7 +13,7 @@ unsigned const NUM_STARS       = 5000;
 unsigned const MAX_BUBBLES     = 2500;
 unsigned const MAX_PART_CLOUDS = 250;
 unsigned const MAX_FIRES       = 75;
-unsigned const MAX_DECALS      = 3000;
+unsigned const MAX_DECALS      = 5000;
 
 
 // Global Variables
