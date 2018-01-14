@@ -817,7 +817,7 @@ float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, po
 			if (is_underwater(pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
 		}
 	}
-	if (get_ground_fire_intensity(pos, radius) > get_ground_fire_intensity(opos, radius)) return 6.0;
+	if (powerup != PU_SHIELD && get_ground_fire_intensity(pos, radius) > get_ground_fire_intensity(opos, radius)) return 6.0;
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
 	if (avoid_dir != zero_vector) return 5.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
 	if (powerup != PU_FLIGHT && !can_make_progress(pos, opos, !on_waypt_path)) return 4.0; // can't make progress in this direction
