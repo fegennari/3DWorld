@@ -1492,7 +1492,10 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 					float const vmag(obj.velocity.mag());
 					if (vmag > 1.0) {gen_sound(SOUND_BOING, obj.pos, min(1.0, 0.1*vmag));}
 				}
-				else if (type == SAWBLADE) {gen_sound(SOUND_RICOCHET, obj.pos, 1.0, 0.5);}
+				else if (type == SAWBLADE) {
+					gen_sound(SOUND_RICOCHET, obj.pos, 1.0, 0.5);
+					if (cobj.cp.elastic >= 0.5) {gen_particles(obj.pos, (1 + (rand()&3)), 0.5, 1);} // create spark particles
+				}
 				else if (type == SHELLC && obj.direction == 0) {gen_sound(SOUND_SHELLC, obj.pos, 0.1, 1.0);} // M16
 			}
 		}
