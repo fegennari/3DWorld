@@ -511,7 +511,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	float const last_health(camera_health);
 	camera_health -= HEALTH_PER_DAMAGE*energy;
 	camera_health = min(camera_health, ((sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : max(last_h, MAX_HEALTH)));
-	bool const is_blood(energy > 0.0 && !is_area_damage(type) && (type != COLLISION || (rand()&31) == 0));
+	bool const is_blood(energy > 0.0 && !is_area_damage(type) && type != FREEZE_BOMB && (type != COLLISION || (rand()&31) == 0));
 	player_coll(type, obj_index);
 	point const camera(get_camera_pos());
 	vector3d const coll_dir(get_norm_rand(vector3d(position, camera)));
@@ -711,7 +711,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		coll_dir *= -4.0;
 		if (type == FELL) {gen_sound(SOUND_SQUISH, obj_pos, 0.2);}
 	}
-	if (!burned && !is_area_damage(type)) {
+	if (!burned && type != FREEZE_BOMB && !is_area_damage(type)) {
 		unsigned const blood_amt(create_blood(index+1, (alive ? 30 : 1), obj_pos, radius,
 			velocity, coll_dir, blood_v, damage_type, obji.health, burned, (sstate.freeze_time > 0)));
 		float const cdist(distance_to_camera(obj_pos));
