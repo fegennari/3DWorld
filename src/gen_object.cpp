@@ -432,7 +432,8 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_n
 
 	while (1) {
 		vector3d const v(signed_rand_vector(scale));
-		if (v.mag_sq() > scale*TOLERANCE) return v.get_norm();
+		float const mag_sq(v.mag_sq());
+		if (mag_sq > scale*TOLERANCE) return v*(1.0/sqrt(mag_sq));
 	}
 	return zero_vector; // never gets here
 }
