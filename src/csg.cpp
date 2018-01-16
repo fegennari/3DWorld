@@ -18,9 +18,6 @@ int  const REMOVE_T_JUNCTIONS = 1; // fewer hole pixels and better ambient trans
 float const REL_DMAX          = 0.2;
 
 
-extern bool use_waypoints;
-
-
 bool sphere_t::contains_point(point const &p) const {return dist_less_than(pos, p, radius);}
 
 
@@ -588,8 +585,7 @@ bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &
 				prev_outside = cur_outside;
 			} // for p
 			if (!new_poly.empty()) {
-				bool const split_quads(use_waypoints); // FIXME: waypoint issues with split polygons
-				split_polygon_to_cobjs(cobj, new_cobjs, new_poly, split_quads);
+				split_polygon_to_cobjs(cobj, new_cobjs, new_poly);
 				new_poly.clear();
 			}
 			cur.swap(next);
@@ -655,10 +651,7 @@ bool csg_cube::subtract_from_thick_polygon(coll_obj_group &new_cobjs, coll_obj c
 	assert(cobj.type == COLL_POLYGON && cobj.thickness > 0.0);
 	assert(cobj.npoints == 3 || cobj.npoints == 4); // quad or triangle
 	if (contains_cube(cobj)) return 1; // contained - remove the entire cobj
-
-	if (is_axis_aligned(cobj.norm)) { // surprisingly not a common case, considering many axis aligned shapes can be represented with cubes
-		// FIXME: special case where we can be more efficient or do a better job?
-	}
+	//if (is_axis_aligned(cobj.norm)) {} // surprisingly not a common case, considering many axis aligned shapes can be represented with cubes
 	coll_obj polys[6]; // top, bot, and up to 4 sides
 	vector<tquad_t> pts;
 	thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts); // split into 5-6 polygons, one per side

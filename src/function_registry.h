@@ -762,7 +762,7 @@ void shift_light_sources(vector3d const &vd);
 void draw_spotlight_cones();
 
 // function prototypes - tessellate
-void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt, bool split_quads);
+void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt);
 
 // function prototypes - shaders
 char const *append_ix(std::string &s, unsigned i, bool as_array);

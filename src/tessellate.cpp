@@ -196,7 +196,7 @@ template bool split_polygon<polygon_t >(polygon_t const &poly, vector<polygon_t 
 template bool split_polygon<coll_tquad>(polygon_t const &poly, vector<coll_tquad> &ppts, float coplanar_thresh);
 
 
-void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pts, bool split_quads) {
+void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pts) {
 
 	if (poly_pts.size() == 3 && is_poly_valid(&poly_pts.front())) { // optimization
 		split_polygons.push_back(cobj);
