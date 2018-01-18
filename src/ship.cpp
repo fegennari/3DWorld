@@ -210,6 +210,71 @@ void show_stats() {
 }
 
 
+class team_status_tracker_t {
+	struct team_entry_t {
+		bool enabled, started, lost;
+		team_entry_t() : enabled(0), started(0), lost(0) {}
+		void init(bool enabled_) {enabled = enabled_; started = lost = 0;}
+	};
+	team_entry_t team_entries[NUM_ALIGNMENT];
+	bool inited, game_over;
+
+public:
+	team_status_tracker_t() : inited(0), game_over(0) {}
+	void init() { // auto inited on first status check, but can be manually inited for multiple games
+		bool const teams_valid[NUM_ALIGNMENT] = {0, 1, 0, 0, 1, 1, 1, 1};
+		for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {team_entries[i].init(teams_valid[i] && team_credits[i] > 0);}
+		inited    = 1;
+		game_over = 0;
+	}
+	void check_team_status() {
+		if (game_over) return;
+		//timer_t timer("Team Stats");
+		if (!inited) {init();}
+		// Note: we can determine ownership status either by looking at planets+moons or orbiting ships; orbiting ships should be simpler and easier
+		unsigned ntships[NUM_ALIGNMENT] = {0}; // total ships
+		unsigned noships[NUM_ALIGNMENT] = {0}; // orbiting ships
+		unsigned num_left(0), team_left(0);
+
+		for (unsigned i = 0; i < all_ships.size(); ++i) {
+			if (all_ships[i].flags & OBJ_FLAGS_DECY) continue; // decoy flare?
+			assert(all_ships[i].obj != nullptr);
+			unsigned const align(all_ships[i].obj->get_align());
+			assert(align < NUM_ALIGNMENT);
+			++ntships[align];
+			if (all_ships[i].flags & OBJ_FLAGS_ORBT) {++noships[align];}
+		}
+		for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
+			team_entry_t &e(team_entries[i]);
+			//cout << "Team " << align_names[i] << " enabled " << e.enabled << " started " << e.started << " lost " << e.lost << " ts " << ntships[i] << " os " << noships[i] << endl; // TESTING
+			if (!e.enabled || e.lost) continue; // disabled or already lost
+			
+			if (ntships[i] == 0 || (e.started && noships[i] == 0)) { // so ships, or started and no orbiting ships (planets/moons claimed)
+				cout << "*** " << align_names[i] << " Team Lost" << endl;
+				e.lost = 1;
+				continue;
+			}
+			if (!e.started && noships[i] > 0) { // first orbiting ship (planet/moon claimed)
+				cout << "*** " << align_names[i] << " Team Started" << endl;
+				e.started = 1;
+			}
+			++num_left;
+			team_left = i;
+		} // for i
+		if (num_left == 1) {
+			cout << "*** " << align_names[team_left] << " Team Won" << endl;
+			game_over = 1;
+		}
+		else if (num_left == 0) {
+			cout << "*** " << "No Team Won" << endl;
+			game_over = 1;
+		}
+	}
+};
+
+team_status_tracker_t team_status_tracker;
+
+
 // ************ PLAYER INTERFACE, ETC. ************
 
 
@@ -452,6 +517,7 @@ void apply_univ_physics() {
 		player_ship().advance_time(fticks);
 		player_ship().ai_action();
 	}
+	team_status_tracker.check_team_status();
 }
 
 
