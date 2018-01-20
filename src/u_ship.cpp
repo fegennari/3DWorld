@@ -2370,7 +2370,7 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	int const src_sclass(source ? source->get_src_sclass() : SWCLASS_UNDEF);
 	unsigned const src_align(source ? source->get_align()  : NUM_ALIGNMENT);
 	// make sure to report the real damage done (before or after various subtractions?)
-	register_damage(src_sclass, sclass, wc, min(val, hit_points), src_align, get_align(), is_kill);
+	register_damage(src_sclass, sclass, wc, min(val, hit_points), src_align, get_align(), is_kill, (source == this));
 	
 	assert(shields >= 0.0 && armor >= 0.0);
 	damaged = 1;

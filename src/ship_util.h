@@ -247,7 +247,7 @@ uobject *line_intersect_objects(line_int_data &li_data, free_obj *&fobj, int obj
 unsigned check_for_obj_coll(point const &pos, float radius);
 void get_all_close_objects(all_query_data &qdata);
 void register_attack_from(free_obj const *attacker, unsigned target_align);
-void register_damage(int t_sclass, int s_sclass, int wclass, float damage, unsigned s_align, unsigned t_align, bool is_kill);
+void register_damage(int t_sclass, int s_sclass, int wclass, float damage, unsigned s_align, unsigned t_align, bool is_kill, bool is_self=0);
 void change_speed_mode(int val);
 void toggle_player_ship_stop();
 void change_fire_primary();

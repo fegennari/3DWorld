@@ -89,21 +89,21 @@ void register_attack_from(free_obj const *attacker, unsigned target_align) {
 }
 
 
-void register_damage(int s_sclass, int t_sclass, int wclass, float damage, unsigned s_align, unsigned t_align, bool is_kill) {
+void register_damage(int s_sclass, int t_sclass, int wclass, float damage, unsigned s_align, unsigned t_align, bool is_kill, bool is_self) {
 
-	if (s_sclass != SWCLASS_UNDEF) {
+	if (s_sclass != SWCLASS_UNDEF && !is_self) { // register damage done/kills (no suicides)
 		assert(s_sclass != SCLASS_NONSHIP);
 		assert(s_sclass >= 0 && (unsigned)s_sclass < NUM_US_CLASS);
 		ship_damage_done[(unsigned)s_sclass] += damage;
 		if (is_kill) ++ship_kills[(unsigned)s_sclass];
 	}
-	if (t_sclass != SWCLASS_UNDEF) {
+	if (t_sclass != SWCLASS_UNDEF) { // register damage taken/deaths
 		assert(t_sclass != SCLASS_NONSHIP);
 		assert(t_sclass >= 0 && (unsigned)t_sclass < NUM_US_CLASS);
 		ship_damage_taken[(unsigned)t_sclass] += damage;
 		if (is_kill) ++ship_deaths[(unsigned)t_sclass];
 	}
-	if (wclass != SWCLASS_UNDEF) {
+	if (wclass != SWCLASS_UNDEF) { // register weapon stats
 		unsigned ix;
 		switch (wclass) {
 		case WCLASS_COLLISION: ix = NUM_UWEAP+0; break;
@@ -118,14 +118,15 @@ void register_damage(int s_sclass, int t_sclass, int wclass, float damage, unsig
 		if (is_kill) ++weap_kills[ix];
 	}
 	assert(s_align <= NUM_ALIGNMENT && t_align <= NUM_ALIGNMENT);
-	if (s_align != NUM_ALIGNMENT) align_s_damage[s_align] += damage;
-	if (t_align != NUM_ALIGNMENT) align_t_damage[t_align] += damage;
-	if (s_align != NUM_ALIGNMENT && s_align == t_align) friendly_fire[s_align] += damage;
+	bool const is_friendly_fire(s_align != NUM_ALIGNMENT && s_align == t_align && !is_self);
+	if (s_align != NUM_ALIGNMENT && !is_self) {align_s_damage[s_align] += damage;}
+	if (t_align != NUM_ALIGNMENT) {align_t_damage[t_align] += damage;}
+	if (is_friendly_fire) {friendly_fire[s_align] += damage;}
 
 	if (is_kill) {
-		if (s_align != NUM_ALIGNMENT) ++align_s_kills[s_align];
-		if (t_align != NUM_ALIGNMENT) ++align_t_kills[t_align];
-		if (s_align != NUM_ALIGNMENT && s_align == t_align) ++friendly_kills[s_align];
+		if (s_align != NUM_ALIGNMENT && !is_self) {++align_s_kills[s_align];}
+		if (t_align != NUM_ALIGNMENT) {++align_t_kills[t_align];}
+		if (is_friendly_fire) {++friendly_kills[s_align];}
 	}
 }
 
