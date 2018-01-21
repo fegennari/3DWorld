@@ -989,6 +989,7 @@
     <Text Include="mapx\coll_objs_mapx.txt" />
     <Text Include="mapx\coll_objs_spheres.txt" />
     <Text Include="sphere_materials.txt" />
+    <Text Include="universe\ship_defs_colonize_sparse.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
