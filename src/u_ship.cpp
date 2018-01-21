@@ -2920,7 +2920,7 @@ void orbiting_ship::ai_action() {
 		init_credits[alignment] > 0 && (time - last_build_time) > unsigned(2.0*TICKS_PER_SECOND*global_regen))
 	{
 		unsigned const reserve_credits(sclasses[USC_HW_SPORT].cost + 2*(sclasses[USC_DEFSAT].cost + sclasses[USC_ANTI_MISS].cost));
-		vector<unsigned> const &btypes(build_types[alignment]); // hmmm, crashes if just copy btypes...
+		vector<unsigned> const &btypes(build_types[alignment]);
 		bool const excess_credits(have_excess_credits(alignment));
 
 		if (team_credits[alignment] >= reserve_credits &&

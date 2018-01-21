@@ -39,7 +39,7 @@ $FLEET         <string name> <unsigned multiplier> <enum alignment> <enum ai_typ
 $SHIP_ADD_INIT <bool enabled> {$ALIGN}*
 $SHIP_ADD_GEN  <bool enabled> {$ALIGN}*
 $SHIP_ADD_RAND_SPAWN <bool enabled> <float dmax> {$ALIGN}*
-$SHIP_BUILD    <unsigned counts>+
+$SHIP_BUILD    <$ALIGN|ALL> <unsigned counts>+
 $ALIGN         <enum alignment> <unsigned num> <unsigned counts>+
 $SHIP_NAMES    <unsigned num> <string names>*
 $ADD_SHIP      <enum ship_id> <unsigned num> <enum alignment> <enum ai_type> <enum target_type> <bool guardian> <bool kamikaze> [point pos]

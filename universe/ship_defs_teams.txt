@@ -94,7 +94,7 @@ $SHIP_ADD_INIT 0
 # $ALIGN ORANGE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
 # $ALIGN PURPLE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
 
-$SHIP_BUILD           0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+$SHIP_BUILD ALL       0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
 
 
 # $SHIP_NAMES 8 "foo" "bar" "baz" "foozle" "fizzle" "bob" "yomamma" "clown"

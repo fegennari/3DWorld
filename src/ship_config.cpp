@@ -158,7 +158,7 @@ class ship_defs_file_reader {
 		CMD_LAST_PARENT, CMD_PLAYER_SDIST_SCALE, CMD_NO_SHIFT_UNIVERSE, CMD_END};
 
 	ifstream cfg;
-	kw_map command_m, ship_m, weap_m, explosion_m, align_m, ai_m, target_m, asteroid_m;
+	kw_map command_m, ship_m, weap_m, explosion_m, align_m, align_m_all, ai_m, target_m, asteroid_m;
 	string_to_color_map_t string_to_color;
 	u_ship *last_ship;
 	vector<point> weap_pts;
@@ -499,10 +499,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
 					if (!(cfg >> counts[i])) return 0;
 					assert(multiplier*counts[i] < 100000);
-					
-					for (unsigned j = 0; j < multiplier*counts[i]; ++j) {
-						build_types[align].push_back(i);
-					}
+					for (unsigned j = 0; j < multiplier*counts[i]; ++j) {build_types[align].push_back(i);}
 				}
 				if (cfg >> fc_stray_dist) { // optional flagship params
 					if (!read_ship_type(type)) return 0;
@@ -517,14 +514,19 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 			}
 			break;
 
-		case CMD_SHIP_BUILD: // <unsigned counts>+
-			for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
-				unsigned count;
-				if (!(cfg >> count)) return 0;
+		case CMD_SHIP_BUILD: // <$ALIGN|ALL> <unsigned counts>+
+			{
+				unsigned align(0);
+				if (!read_enum(align_m_all, align, "alignment")) return 0;
+				bool const is_all(align == NUM_ALIGNMENT);
+
+				for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
+					unsigned count;
+					if (!(cfg >> count)) return 0;
 				
-				for (unsigned align = 0; align < NUM_ALIGNMENT; ++align) { // common across all alignments
-					for (unsigned j = 0; j < count; ++j) {
-						build_types[align].push_back(i);
+					for (unsigned A = 0; A < NUM_ALIGNMENT; ++A) { // one alignment or all alignments
+						if (!is_all && A != align) continue;
+						for (unsigned j = 0; j < count; ++j) {build_types[A].push_back(i);}
 					}
 				}
 			}
@@ -744,6 +746,9 @@ void ship_defs_file_reader::setup_keywords() {
 	strings_to_map(ai_strs,    ai_m);
 	strings_to_map(targ_strs,  target_m);
 	strings_to_map(ast_strs,   asteroid_m);
+	align_m_all = align_m;
+	align_m_all["ALL"] = NUM_ALIGNMENT; // one past the end
+
 }
 
 
