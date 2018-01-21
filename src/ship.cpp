@@ -51,9 +51,9 @@ unsigned ship_deaths[NUM_US_CLASS]    = {0};
 unsigned team_credits[NUM_ALIGNMENT]  = {0};
 unsigned init_credits[NUM_ALIGNMENT]  = {0};
 unsigned ind_ships_used[NUM_ALIGNMENT]= {0};
-float align_s_kills[NUM_ALIGNMENT]    = {0};
-float align_t_kills[NUM_ALIGNMENT]    = {0};
-float friendly_kills[NUM_ALIGNMENT]   = {0};
+unsigned align_s_kills[NUM_ALIGNMENT] = {0};
+unsigned align_t_kills[NUM_ALIGNMENT] = {0};
+unsigned friendly_kills[NUM_ALIGNMENT]= {0};
 
 
 extern int show_framerate, frame_counter, display_mode, animate2, do_run, show_scores;
@@ -131,10 +131,25 @@ void register_damage(int s_sclass, int t_sclass, int wclass, float damage, unsig
 }
 
 
+unsigned get_num_chars(unsigned v) {
+	unsigned n(1);
+	while (v >= 10) {++n; v /= 10;}
+	return n;
+}
+void write_uint_pad(unsigned v, unsigned min_chars, string const &sep=" ") {
+	assert(min_chars <= 12);
+	cout << v;
+	for (unsigned n = get_num_chars(v); n < min_chars; ++n) {cout.put(' ');} // pad with spaces
+	cout << sep;
+}
+void update_maxvals(unsigned *v, unsigned n) {
+	for (unsigned i = 0; i < n; ++i) {v[i] = get_num_chars(v[i]);}
+}
+
 void show_stats() {
 
 	int const cwidth(18);
-	cout << endl << "weapons:       <damage>     <kills>" << endl;
+	cout << endl << "Weapons:       <Damage>     <Kills>" << endl;
 	
 	for (unsigned i = 0; i < NUM_UWEAP; ++i) {
 		if (us_weapons[i].damage == 0.0 || weap_damage[i] == 0.0) continue;
@@ -174,40 +189,89 @@ void show_stats() {
 		val[align]  += 0.001*off*def;
 		cost[align] += obj->get_cost();
 	}
-	cout << endl << "ships:            <d done>  <d taken> <kills> <deaths> <r> <b> <o> <p> <num>" << endl;
+	unsigned maxvals[4] = {1000000, 1000000, 1000000, 1000000}; // starting values set the min column width
+
+	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
+		max_eq(maxvals[0], (unsigned)ship_damage_done [i]);
+		max_eq(maxvals[1], (unsigned)ship_damage_taken[i]);
+		max_eq(maxvals[2], ship_kills [i]);
+		max_eq(maxvals[3], ship_deaths[i]);
+	}
+	update_maxvals(maxvals, 4);
+	cout << endl << "Ships:             <DDone> <DTake> <Kills> <Death> <R> <B> <O> <P> <Num>" << endl;
 	
 	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
 		if (ship_damage_done[i] == 0.0 && ship_damage_taken[i] == 0.0 && num_ships[i] == 0) continue;
 		cout << sclasses[i].name;
 		print_n_spaces(cwidth - (int)sclasses[i].name.size());
-		cout << ": " << (int)ship_damage_done[i] << "\t" << (int)ship_damage_taken[i] << "\t"
-			 << ship_kills[i] << "\t" << ship_deaths[i] << "\t";
-		
+		cout << ": ";
+		write_uint_pad(ship_damage_done [i], maxvals[0]);
+		write_uint_pad(ship_damage_taken[i], maxvals[1]);
+		write_uint_pad(ship_kills       [i], maxvals[2]);
+		write_uint_pad(ship_deaths      [i], maxvals[3]);
+		//cout << ": " << (int)ship_damage_done[i] << "\t" << (int)ship_damage_taken[i] << "\t" << ship_kills[i] << "\t" << ship_deaths[i] << "\t";
+
 		for (unsigned j = 0; j < NUM_ALIGNMENT; ++j) {
-			if (TEAM_ALIGNED(j) && j != ALIGN_PIRATE && j != ALIGN_PLAYER) cout << num_ships_align[j][i] << "   ";
+			if (TEAM_ALIGNED(j) && j != ALIGN_PIRATE && j != ALIGN_PLAYER) {
+				//cout << num_ships_align[j][i] << "   ";
+				write_uint_pad(num_ships_align[j][i], 3);
+			}
 		}
 		cout << num_ships[i] << endl;
 	}
-	cout << endl << "Ship aligns:     <d done> <d taken> <friend> <kills> <deaths> <tkills> <owned>" << endl;
+	unsigned maxvals2[13] = {1000000, 1000000, 10000000, 1000000, 1000000, 1000000, 1000000,  100000000, 100000000, 10000000, 1000000, 100000000, 1000};
+
+	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
+		max_eq(maxvals2[0 ], (unsigned)align_s_damage[i]);
+		max_eq(maxvals2[1 ], (unsigned)align_t_damage[i]);
+		max_eq(maxvals2[2 ], (unsigned)friendly_fire [i]);
+		max_eq(maxvals2[3 ], align_s_kills [i]);
+		max_eq(maxvals2[4 ], align_t_kills [i]);
+		max_eq(maxvals2[5 ], friendly_kills[i]);
+		max_eq(maxvals2[6 ], owner_counts  [i]);
+		max_eq(maxvals2[7 ], (unsigned)of[i]);
+		max_eq(maxvals2[8 ], (unsigned)de[i]);
+		max_eq(maxvals2[9 ], (unsigned)val[i]);
+		max_eq(maxvals2[10], cost[i]);
+		max_eq(maxvals2[11], team_credits[i]);
+		max_eq(maxvals2[12], (unsigned)resource_counts[i]);
+	}
+	update_maxvals(maxvals2, 13);
+	cout << endl << "Ship aligns:       <DDone> <DTake> <Friend> <Kills> <Death> <TKill> <Owned>" << endl;
 
 	// owned (planets and moons) does not include those read from a modmap file that already have owners
 	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 		cout << align_names[i];
 		print_n_spaces(cwidth - (int)align_names[i].size());
-		cout << ": " << (int)align_s_damage[i] << "\t" << (int)align_t_damage[i] << "\t" << (int)friendly_fire[i] << "\t"
-			 << align_s_kills[i] << "\t" << align_t_kills[i] << "\t" << friendly_kills[i] << "\t" << owner_counts[i] << endl;
+		cout << ": ";
+		write_uint_pad(align_s_damage[i], maxvals2[0]);
+		write_uint_pad(align_t_damage[i], maxvals2[1]);
+		write_uint_pad(friendly_fire [i], maxvals2[2]);
+		write_uint_pad(align_s_kills [i], maxvals2[3]);
+		write_uint_pad(align_t_kills [i], maxvals2[4]);
+		write_uint_pad(friendly_kills[i], maxvals2[5]);
+		write_uint_pad(owner_counts  [i], maxvals2[6]);
+		cout << endl;
+		//cout << ": " << (int)align_s_damage[i] << "\t" << (int)align_t_damage[i] << "\t" << (int)friendly_fire[i] << "\t" << align_s_kills[i] << "\t" << align_t_kills[i] << "\t" << friendly_kills[i] << "\t" << owner_counts[i] << endl;
 	}
-	cout << endl << "Total Ship Ratings: <offense> <defense> <value> <cost> <credits> <resources>" << endl;
+	cout << endl << "Total Ship Ratings: <Offense> <Defense> <Value>  <Cost>  <Credits> <Resources>" << endl;
 
 	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 		cout << align_names[i];
 		print_n_spaces(cwidth - (int)align_names[i].size());
-		cout << ": " << (int)of[i] << "\t" << (int)de[i] << "\t" << (int)val[i] << "\t" << cost[i]
-			 << "\t" << team_credits[i] << "\t" << (int)resource_counts[i] << endl;
+		cout << ":  ";
+		write_uint_pad(of  [i], maxvals2[7 ]);
+		write_uint_pad(de  [i], maxvals2[8 ]);
+		write_uint_pad(val [i], maxvals2[9 ]);
+		write_uint_pad(cost[i], maxvals2[10]);
+		write_uint_pad(team_credits   [i], maxvals2[11]);
+		write_uint_pad(resource_counts[i], maxvals2[12]);
+		cout << endl;
+		//cout << ": " << (int)of[i] << "\t" << (int)de[i] << "\t" << (int)val[i] << "\t" << cost[i] << "\t" << team_credits[i] << "\t" << (int)resource_counts[i] << endl;
 	}
 	print_univ_owner_stats();
-	cout << "alloced: ships: " << alloced_fobjs[0] << " - " << alloced_fobjs[1] << " = " <<
-		(alloced_fobjs[0] - alloced_fobjs[1]) << ", proj+part: " << alloced_fobjs[2] << " (x100)" << endl;
+	cout << "Alloced: Ships: " << alloced_fobjs[0] << " - " << alloced_fobjs[1] << " = " <<
+		(alloced_fobjs[0] - alloced_fobjs[1]) << ", Proj+Part: " << alloced_fobjs[2] << " (x100)" << endl;
 }
 
 
