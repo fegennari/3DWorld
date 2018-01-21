@@ -12,7 +12,7 @@ bool const SHOW_SHIP_RATINGS = 0;
 
 
 bool allow_add_ship(0), allow_spawn_ship(0), regen_uses_credits(0), respawn_req_hw(0), player_enemy(0), build_any(0), no_shift_universe(0);
-float spawn_dist(1.0), global_regen(0.0), hyperspeed_mult(200.0), ship_speed_scale(1.0), player_turn_rate(1.0), rand_spawn_ship_dmax(0.0), player_sensor_dist_mult(1.0);
+float spawn_dist(1.0), global_regen(0.0), ship_build_delay(1.0), hyperspeed_mult(200.0), ship_speed_scale(1.0), player_turn_rate(1.0), rand_spawn_ship_dmax(0.0), player_sensor_dist_mult(1.0);
 unsigned gen_counts  [NUM_ALIGNMENT] = {0};
 point ustart_pos(all_zeros);
 u_ship *player_ship_ptr = NULL; // easiest to just make this global
@@ -150,7 +150,7 @@ struct string_to_color_map_t : public map<string, colorRGBA> {
 
 class ship_defs_file_reader {
 
-	enum {CMD_GLOBAL_REGEN=0, CMD_RAND_SEED, CMD_SPAWN_DIST, CMD_START_POS, CMD_HYPERSPEED, CMD_SPEED_SCALE, CMD_PLAYER_TURN,
+	enum {CMD_GLOBAL_REGEN=0, CMD_SHIP_BUILD_DELAY, CMD_RAND_SEED, CMD_SPAWN_DIST, CMD_START_POS, CMD_HYPERSPEED, CMD_SPEED_SCALE, CMD_PLAYER_TURN,
 		CMD_SPAWN_HWORLD, CMD_PLAYER_ENEMY, CMD_BUILD_ANY, CMD_TEAM_CREDITS, CMD_SHIP, CMD_WEAP, CMD_WBEAM, CMD_SHIP_WEAP,
 		CMD_ADD, CMD_WEAP_PT, CMD_PLAYER_WEAP, CMD_MESH_PARAMS, CMD_SHIP_CYLINDER, CMD_SHIP_CUBE, CMD_SHIP_SPHERE, CMD_SHIP_TORUS,
 		CMD_SHIP_BCYLIN, CMD_SHIP_BCAPSULE, CMD_SHIP_TRIANGLE, CMD_FLEET, CMD_SHIP_ADD_INIT, CMD_SHIP_ADD_GEN, SHIP_ADD_RAND_SPAWN,
@@ -253,6 +253,9 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 		case CMD_GLOBAL_REGEN: // <float regen_time(s)>
 			if (!(cfg >> global_regen)) return 0;
 			break;
+		case CMD_SHIP_BUILD_DELAY: // <float delay_time(s)>
+			if (!(cfg >> ship_build_delay)) return 0;
+			break;
 
 		case CMD_RAND_SEED: // <unsigned seed>
 			{
@@ -265,15 +268,12 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 		case CMD_SPAWN_DIST: // <float dist>
 			if (!(cfg >> spawn_dist)) return 0;
 			break;
-
 		case CMD_SPAWN_HWORLD: // <bool respawn_requires_homeworld>
 			if (!(cfg >> respawn_req_hw)) return 0;
 			break;
-
 		case CMD_PLAYER_ENEMY: // <bool player_is_enemy_team>
 			if (!(cfg >> player_enemy)) return 0;
 			break;
-
 		case CMD_BUILD_ANY: // <bool teams_can_build_any_ships>
 			if (!(cfg >> build_any)) return 0;
 			break;
@@ -288,7 +288,6 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 			if (!(cfg >> hyperspeed_mult)) return 0;
 			assert(hyperspeed_mult > 0.0);
 			break;
-
 		case CMD_SPEED_SCALE: // <float ship_speed_scale>
 			if (!(cfg >> ship_speed_scale)) return 0;
 			assert(ship_speed_scale > 0.0);
@@ -730,7 +729,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 void ship_defs_file_reader::setup_keywords() {
 
-	string const commands  ("$GLOBAL_REGEN $RAND_SEED $SPAWN_DIST $START_POS $HYPERSPEED $SPEED_SCALE $PLAYER_TURN $SPAWN_HWORLD $PLAYER_ENEMY $BUILD_ANY $TEAM_CREDITS $SHIP $WEAP $WBEAM $SHIP_WEAP $ADD $WEAP_PT $PLAYER_WEAP $MESH_PARAMS $SHIP_CYLINDER $SHIP_CUBE $SHIP_SPHERE $SHIP_TORUS $SHIP_BCYLIN $SHIP_BCAPSULE $SHIP_TRIANGLE $FLEET $SHIP_ADD_INIT $SHIP_ADD_GEN $SHIP_ADD_RAND_SPAWN $SHIP_BUILD $ALIGN $SHIP_NAMES $ADD_SHIP $ADD_ASTEROID $ADD_COMETS $BLACK_HOLE $PLAYER $LAST_PARENT $PLAYER_SDIST_SCALE $NO_SHIFT_UNIVERSE $END");
+	string const commands  ("$GLOBAL_REGEN $SHIP_BUILD_DELAY $RAND_SEED $SPAWN_DIST $START_POS $HYPERSPEED $SPEED_SCALE $PLAYER_TURN $SPAWN_HWORLD $PLAYER_ENEMY $BUILD_ANY $TEAM_CREDITS $SHIP $WEAP $WBEAM $SHIP_WEAP $ADD $WEAP_PT $PLAYER_WEAP $MESH_PARAMS $SHIP_CYLINDER $SHIP_CUBE $SHIP_SPHERE $SHIP_TORUS $SHIP_BCYLIN $SHIP_BCAPSULE $SHIP_TRIANGLE $FLEET $SHIP_ADD_INIT $SHIP_ADD_GEN $SHIP_ADD_RAND_SPAWN $SHIP_BUILD $ALIGN $SHIP_NAMES $ADD_SHIP $ADD_ASTEROID $ADD_COMETS $BLACK_HOLE $PLAYER $LAST_PARENT $PLAYER_SDIST_SCALE $NO_SHIFT_UNIVERSE $END");
 	string const ship_strs ("USC_FIGHTER USC_X1EXTREME USC_FRIGATE USC_DESTROYER USC_LCRUISER USC_HCRUISER USC_BCRUISER USC_ENFORCER USC_CARRIER USC_ARMAGEDDON USC_SHADOW USC_DEFSAT USC_STARBASE USC_BCUBE USC_BSPHERE USC_BTCUBE USC_BSPH_SM USC_BSHUTTLE USC_TRACTOR USC_GUNSHIP USC_NIGHTMARE USC_DWCARRIER USC_DWEXTERM USC_WRAITH USC_ABOMIN USC_REAPER USC_DEATH_ORB USC_SUPPLY USC_ANTI_MISS USC_JUGGERNAUT USC_SAUCER USC_SAUCER_V2 USC_MOTHERSHIP USC_HUNTER USC_SEIGE USC_COLONY USC_ARMED_COL USC_HW_COL USC_STARPORT USC_HW_SPORT");
 	string const weap_strs ("UWEAP_NONE UWEAP_TARGET UWEAP_QUERY UWEAP_RENAME UWEAP_DESTROY UWEAP_PBEAM UWEAP_EBEAM UWEAP_REPULSER UWEAP_TRACTORB UWEAP_G_HOOK UWEAP_LRCPA UWEAP_ENERGY UWEAP_ATOMIC UWEAP_ROCKET UWEAP_NUKEDEV UWEAP_TORPEDO UWEAP_EMP UWEAP_PT_DEF UWEAP_DFLARE UWEAP_CHAFF UWEAP_FIGHTER UWEAP_B_BAY UWEAP_CRU_BAY UWEAP_SOD_BAY UWEAP_BOARDING UWEAP_NM_BAY UWEAP_RFIRE UWEAP_FUSCUT UWEAP_SHIELDD UWEAP_THUNDER UWEAP_ESTEAL UWEAP_WRAI_BAY UWEAP_STAR UWEAP_HUNTER UWEAP_DEATHORB UWEAP_LITNING UWEAP_INFERNO UWEAP_PARALYZE UWEAP_MIND_C UWEAP_SAUC_BAY UWEAP_SEIGEC");
 	string const exp_strs  ("ETYPE_NONE ETYPE_FIRE ETYPE_NUCLEAR ETYPE_ENERGY ETYPE_ATOMIC ETYPE_PLASMA ETYPE_EMP ETYPE_STARB ETYPE_FUSION ETYPE_EBURST ETYPE_ESTEAL ETYPE_ANIM_FIRE ETYPE_SIEGE ETYPE_FUSION_ROT ETYPE_PART_CLOUD ETYPE_PC_ICE, ETYPE_PBALL");

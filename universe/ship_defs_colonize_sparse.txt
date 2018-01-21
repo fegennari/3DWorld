@@ -4,6 +4,7 @@
 $INCLUDE universe/ship_defs.txt
 
 $PLAYER_SDIST_SCALE 50.0 # 50*6.5 = 325
+$SHIP_BUILD_DELAY 60.0 # large delay to avoid building all ships at once at the first starport
 
 # credits (in K)
 $TEAM_CREDITS PLAYER 0

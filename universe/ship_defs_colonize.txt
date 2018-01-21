@@ -4,6 +4,7 @@
 $INCLUDE universe/ship_defs.txt
 
 $PLAYER_SDIST_SCALE 50.0 # 50*6.5 = 325
+$SHIP_BUILD_DELAY 10.0
 
 # credits (in K)
 $TEAM_CREDITS PLAYER 1000

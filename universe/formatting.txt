@@ -12,6 +12,7 @@
 <enum ast_model>   {AS_MODEL_SPHERE | AS_MODEL_ROCK1 | AS_MODEL_ROCK2 | AS_MODEL_HMAP | AS_MODEL_VOXEL | AS_MODEL_SHADER}
 <color>            {<float R> <float G> <float B> <float A>} | {<string color_name>}
 $GLOBAL_REGEN  <float regen_time(s)>
+$SHIP_BUILD_DELAY <float build_time(s)>
 $RAND_SEED     <unsigned seed>
 $SPAWN_DIST    <float dist>
 $START_POS     <point start_pos>

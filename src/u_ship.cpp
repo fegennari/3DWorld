@@ -54,7 +54,7 @@ float const SHIP_GMAX          = 10.0*MAX_SOBJ_GRAVITY;
 
 extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any, ctrl_key_pressed, begin_motion;
 extern int frame_counter, iticks, onscreen_display, display_mode, animate2;
-extern float fticks, urm_proj, global_regen, hyperspeed_mult, player_turn_rate, rand_spawn_ship_dmax;
+extern float fticks, urm_proj, global_regen, ship_build_delay, hyperspeed_mult, player_turn_rate, rand_spawn_ship_dmax;
 extern unsigned alloced_fobjs[], team_credits[], init_credits[], ind_ships_used[];
 extern exp_type_params et_params[];
 extern vector<free_obj const *> a_targets, attackers;
@@ -2917,7 +2917,7 @@ void orbiting_ship::ai_action() {
 	assert(sclasses.size() == NUM_US_CLASS);
 
 	if (begin_motion && sobj_liveable && specs().orbiting_dock && !invalid_or_disabled() && !is_player_ship() &&
-		init_credits[alignment] > 0 && (time - last_build_time) > unsigned(2.0*TICKS_PER_SECOND*global_regen))
+		init_credits[alignment] > 0 && (time - last_build_time) > unsigned(TICKS_PER_SECOND*max(ship_build_delay, 2.0f*global_regen)))
 	{
 		unsigned const reserve_credits(sclasses[USC_HW_SPORT].cost + 2*(sclasses[USC_DEFSAT].cost + sclasses[USC_ANTI_MISS].cost));
 		vector<unsigned> const &btypes(build_types[alignment]);
