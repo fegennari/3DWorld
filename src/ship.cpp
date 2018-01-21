@@ -251,7 +251,7 @@ public:
 			if (!e.enabled || e.lost) continue; // disabled or already lost
 			
 			if (ntships[i] == 0 || (e.started && noships[i] == 0)) { // so ships, or started and no orbiting ships (planets/moons claimed)
-				cout << "*** " << align_names[i] << " Team Lost" << endl;
+				cout << "*** " << align_names[i] << " Team Lost (" << (ntships[i] ? "No Colonies" : "No Ships") << ")" << endl;
 				e.lost = 1;
 				continue;
 			}
