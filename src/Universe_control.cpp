@@ -748,7 +748,9 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 	}
 	else if (TEAM_ALIGNED(align) && TEAM_ALIGNED(owner)) { // owned by enemy team
 		owner_val = 2.0;
-		if (have_excess_credits(align)) {value += 0.75*GALAXY_MIN_SIZE;} // excess_credits case - more aggressively go after enemy colonies
+		if (have_excess_credits(align)) { // excess_credits case - more aggressively go after enemy colonies
+			value += 0.5*get_wealthy_value(align)*GALAXY_MIN_SIZE;
+		}
 		else {
 			float tot_resources(0.0);
 			for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {tot_resources += resource_counts[i];}

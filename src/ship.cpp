@@ -277,9 +277,9 @@ void show_stats() {
 
 class team_status_tracker_t {
 	struct team_entry_t {
-		bool enabled, started, lost;
-		team_entry_t() : enabled(0), started(0), lost(0) {}
-		void init(bool enabled_) {enabled = enabled_; started = lost = 0;}
+		bool enabled, started, end_game, lost;
+		team_entry_t() : enabled(0), started(0), end_game(0), lost(0) {}
+		void init(bool enabled_) {enabled = enabled_; started = end_game = lost = 0;}
 	};
 	team_entry_t team_entries[NUM_ALIGNMENT];
 	bool inited, game_over;
@@ -314,6 +314,10 @@ public:
 			//cout << "Team " << align_names[i] << " enabled " << e.enabled << " started " << e.started << " lost " << e.lost << " ts " << ntships[i] << " os " << noships[i] << endl; // TESTING
 			if (!e.enabled || e.lost) continue; // disabled or already lost
 			
+			if (have_excess_credits(i) && !e.end_game) {
+				e.end_game = 1;
+				cout << "*** " << align_names[i] << " End Game Strategy" << endl;
+			}
 			if (ntships[i] == 0 || (e.started && noships[i] == 0)) { // so ships, or started and no orbiting ships (planets/moons claimed)
 				cout << "*** " << align_names[i] << " Team Lost (" << (ntships[i] ? "No Colonies" : "No Ships") << ")" << endl;
 				e.lost = 1;

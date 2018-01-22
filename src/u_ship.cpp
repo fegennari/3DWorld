@@ -2910,6 +2910,7 @@ void multipart_ship::check_size_scale() { // could update c_radius here instead 
 // ************ ORBITING_SHIP ************
 
 bool have_excess_credits(unsigned align) {return (team_credits[align] > init_credits[align]);}
+float get_wealthy_value (unsigned align) {return (init_credits[align] ? float(team_credits[align])/float(init_credits[align]) : 0.0);}
 
 void orbiting_ship::ai_action() {
 
@@ -2923,6 +2924,7 @@ void orbiting_ship::ai_action() {
 		vector<unsigned> const &btypes(build_types[alignment]);
 		bool const excess_credits(have_excess_credits(alignment));
 
+		// limit to 1-2x the number of allocated ships
 		if (team_credits[alignment] >= reserve_credits &&
 			((excess_credits && build_any) || ind_ships_used[alignment] < (excess_credits ? 2 : 1)*btypes.size())) // inefficient, but rarely called
 		{
