@@ -67,11 +67,12 @@ universe_t universe; // the top level universe
 vector<uobject const *> show_info_uobjs;
 
 
-extern bool enable_multisample, using_tess_shader;
+extern bool enable_multisample, using_tess_shader, no_shift_universe;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks, frame_counter;
 extern unsigned enabled_lights;
 extern float fticks;
 extern double tfticks;
+extern point universe_origin;
 extern colorRGBA bkg_color, sunlight_color;
 extern exp_type_params et_params[];
 
@@ -832,6 +833,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		if (!univ_sphere_vis(gpos, galaxy.radius)) continue; // conservative, since galaxies are not spherical
 		current.galaxy = i;
 		galaxy.process(*this);
+		// force planets and moons to be created for ship colonization; test for starting galaxy by looking at proximity to starting point (conservative)
+		bool const gen_all_bodies(no_shift_universe && dist_less_than(gpos, universe_origin, GALAXY_MIN_SIZE));
 
 		if (!gen_only && pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
 			set_universe_ambient_color(galaxy.color);
@@ -845,7 +848,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		}
 		for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
 			point const cpos(pos + galaxy.clusters[c].center);
-			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
+			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds) && !gen_all_bodies) continue;
 			float const max_size(calc_sphere_size(cpos, camera, STAR_MAX_SIZE));
 			ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
 			//set_universe_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
@@ -881,7 +884,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					if (!gen_only && sun_visible && sol_draw_pass == unsigned(sel_s)) {
 						if (!sol.sun.draw(spos, usg, star_pld, star_psd, 0, sel_g)) continue;
 					}
-					if (sol_draw_pass == 0 && planets_visible) sol.process();
+					if (sol_draw_pass == 0 && (planets_visible || gen_all_bodies)) {sol.process();}
 					if (sol.planets.empty()) continue;
 
 					if (planets_visible) { // asteroid fields may also be visible
@@ -920,7 +923,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						bool skip_draw(!planets_visible);
 
 						if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
-							if (!sel_g && sizep < 0.3) planet.free_uobj();
+							if (gen_all_bodies) {planet.process();} // process anyway to ensure moons are generated for ship colonization
+							else if (!sel_g && sizep < 0.3) planet.free_uobj();
 							if (update_pass) {skip_draw = 1;} else {continue;}
 						}
 						current.planet = k;
