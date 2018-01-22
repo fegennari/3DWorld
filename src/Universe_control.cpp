@@ -1249,6 +1249,7 @@ struct owner_stats_t {
 void print_univ_owner_stats() {
 
 	owner_stats_t stats[NUM_ALIGNMENT];
+	unsigned np(0), nm(0);
 
 	for (unsigned i = 0; i < U_BLOCKS; ++i) { // z
 		for (unsigned j = 0; j < U_BLOCKS; ++j) { // y
@@ -1264,6 +1265,7 @@ void print_univ_owner_stats() {
 							uplanet const &planet(system.planets[p]);
 							for (unsigned m = 0; m < planet.moons.size(); ++m) {
 								umoon const &moon(planet.moons[m]);
+								++nm;
 								if (moon.owner < 0) continue;
 								assert(moon.owner < NUM_ALIGNMENT);
 								owner_stats_t &os(stats[moon.owner]);
@@ -1271,6 +1273,7 @@ void print_univ_owner_stats() {
 								os.pop += moon.population;
 								++os.nm;
 							}
+							++np;
 							if (planet.owner < 0) continue;
 							assert(planet.owner < NUM_ALIGNMENT);
 							owner_stats_t &os(stats[planet.owner]);
@@ -1291,7 +1294,8 @@ void print_univ_owner_stats() {
 		max_eq(maxvals[2], (unsigned)stats[i].res);
 	}
 	update_maxvals(maxvals, 3);
-	cout << endl << "Stats:             <planets> <moons> <resources> <population>" << endl;
+	cout << endl << "Total Planets    : " << np << "  Total Moons: " << nm << endl;
+	cout << "Stats            : <planets> <moons> <resources> <population>" << endl;
 
 	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 		owner_stats_t const &os(stats[i]);
