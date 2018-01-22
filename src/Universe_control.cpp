@@ -1283,14 +1283,25 @@ void print_univ_owner_stats() {
 			} // for k
 		} // for j
 	} // for i
-	cout << endl << "Stats:           <planets> <moons> <resources> <population>" << endl;
+	unsigned maxvals[3] = {1000000, 1000000, 1000000}; // starting values set the min column width
+
+	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
+		max_eq(maxvals[0], stats[i].np);
+		max_eq(maxvals[1], stats[i].nm);
+		max_eq(maxvals[2], (unsigned)stats[i].res);
+	}
+	update_maxvals(maxvals, 3);
+	cout << endl << "Stats:             <planets> <moons> <resources> <population>" << endl;
 
 	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 		owner_stats_t const &os(stats[i]);
 		if (os.np == 0 && os.nm == 0) continue; // no resources
 		cout << align_names[i];
 		print_n_spaces(18 - (int)align_names[i].size());
-		cout << ": " << os.np << "\t" << os.nm << "\t" << (int)os.res << "\t";
+		cout << ": ";
+		write_uint_pad(os.np,  maxvals[0], "   ");
+		write_uint_pad(os.nm,  maxvals[1]);
+		write_uint_pad(os.res, maxvals[2], "     ");
 		if (os.pop > 1000) {cout << (int)(os.pop)/1000.0 << " B";} // in billions
 		else {cout << (int)os.pop << " M";} // in millions
 		cout << endl;

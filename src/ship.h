@@ -1408,5 +1408,10 @@ public:
 	virtual bool is_rand_spawn() const {return 1;}
 };
 
+
+unsigned get_num_chars(unsigned v);
+void write_uint_pad(unsigned v, unsigned min_chars, string const &sep=" ");
+void update_maxvals(unsigned *v, unsigned n);
+
 #endif
 

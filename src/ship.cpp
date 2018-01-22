@@ -136,7 +136,7 @@ unsigned get_num_chars(unsigned v) {
 	while (v >= 10) {++n; v /= 10;}
 	return n;
 }
-void write_uint_pad(unsigned v, unsigned min_chars, string const &sep=" ") {
+void write_uint_pad(unsigned v, unsigned min_chars, string const &sep) {
 	assert(min_chars <= 12);
 	cout << v;
 	for (unsigned n = get_num_chars(v); n < min_chars; ++n) {cout.put(' ');} // pad with spaces
@@ -209,13 +209,9 @@ void show_stats() {
 		write_uint_pad(ship_damage_taken[i], maxvals[1]);
 		write_uint_pad(ship_kills       [i], maxvals[2]);
 		write_uint_pad(ship_deaths      [i], maxvals[3]);
-		//cout << ": " << (int)ship_damage_done[i] << "\t" << (int)ship_damage_taken[i] << "\t" << ship_kills[i] << "\t" << ship_deaths[i] << "\t";
 
 		for (unsigned j = 0; j < NUM_ALIGNMENT; ++j) {
-			if (TEAM_ALIGNED(j) && j != ALIGN_PIRATE && j != ALIGN_PLAYER) {
-				//cout << num_ships_align[j][i] << "   ";
-				write_uint_pad(num_ships_align[j][i], 3);
-			}
+			if (TEAM_ALIGNED(j) && j != ALIGN_PIRATE && j != ALIGN_PLAYER) {write_uint_pad(num_ships_align[j][i], 3);}
 		}
 		cout << num_ships[i] << endl;
 	}
@@ -252,7 +248,6 @@ void show_stats() {
 		write_uint_pad(friendly_kills[i], maxvals2[5]);
 		write_uint_pad(owner_counts  [i], maxvals2[6]);
 		cout << endl;
-		//cout << ": " << (int)align_s_damage[i] << "\t" << (int)align_t_damage[i] << "\t" << (int)friendly_fire[i] << "\t" << align_s_kills[i] << "\t" << align_t_kills[i] << "\t" << friendly_kills[i] << "\t" << owner_counts[i] << endl;
 	}
 	cout << endl << "Total Ship Ratings: <Offense> <Defense> <Value>  <Cost>  <Credits> <Resources>" << endl;
 
@@ -267,7 +262,6 @@ void show_stats() {
 		write_uint_pad(team_credits   [i], maxvals2[11]);
 		write_uint_pad(resource_counts[i], maxvals2[12]);
 		cout << endl;
-		//cout << ": " << (int)of[i] << "\t" << (int)de[i] << "\t" << (int)val[i] << "\t" << cost[i] << "\t" << team_credits[i] << "\t" << (int)resource_counts[i] << endl;
 	}
 	print_univ_owner_stats();
 	cout << "Alloced: Ships: " << alloced_fobjs[0] << " - " << alloced_fobjs[1] << " = " <<
