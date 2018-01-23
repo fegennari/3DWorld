@@ -2511,7 +2511,6 @@ void u_ship::do_structure_damage(float val) {
 
 
 float u_ship::get_def_explode_damage() const {
-	
 	return ((specs().exp_type == ETYPE_NONE) ? 0.0 : specs().exp_scale*(0.9f + max(min(0.5f, 0.01f*exp_val), 0.1f)));
 }
 
@@ -2521,7 +2520,8 @@ void u_ship::do_explode() {
 	vector3d edir(dir + gen_rand_vector_uniform(0.25));
 	edir.normalize();
 	int const etype(specs().exp_type);
-	def_explode(get_def_explode_damage(), etype, edir, WCLASS_EXPLODE, alignment, EXP_FLAGS_SHIP, parent); // can we blame a ship's explosion on its parent?
+	free_obj const *exp_parent(specs().kamikaze ? this : parent); // blame a ship's explosion on its parent, or itself if it's kamikaze
+	def_explode(get_def_explode_damage(), etype, edir, WCLASS_EXPLODE, alignment, EXP_FLAGS_SHIP, exp_parent);
 	
 	if (specs().mass >= 10.0) { // medium to large ship
 		float const gain(0.001/max(1E-6f, distance_to_camera(pos)));
@@ -2536,9 +2536,8 @@ void u_ship::do_explode() {
 
 void u_ship::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_) {
 
-	assert(parent == NULL || parent_ == NULL || parent == parent_);
-	uobject::explode(SHIP_EXP_DAM_SCALE*damage, bradius, etype, edir, exp_time, wclass, align,
-		(eflags | EXP_FLAGS_SHIP), parent_); // death may be delayed
+	assert(parent == NULL || parent_ == NULL || parent == parent_ || (specs().kamikaze && parent_ == this));
+	uobject::explode(SHIP_EXP_DAM_SCALE*damage, bradius, etype, edir, exp_time, wclass, align, (eflags | EXP_FLAGS_SHIP), parent_); // death may be delayed
 	fragment(edir, 1.0, 0);
 	surface_mesh.clear();
 	detonate_weapons();
