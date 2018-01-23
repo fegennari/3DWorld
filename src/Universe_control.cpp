@@ -775,39 +775,39 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 
 	// use starting pos rather than ship pos for selecting the closest galaxy, which should return the home galaxy even when the ship is near the edge of an adjacent galaxy
 	point const galaxy_query_pos(universe_origin);
-	s_object result;
 	float const g_expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
+	s_object result;
 	if (!universe.get_closest_object(result, galaxy_query_pos, UTYPE_GALAXY, 0, 1, 4.0, 0, g_expand) || result.type < UTYPE_GALAXY) return nullptr; // choose closest galaxy
 	ugalaxy const &galaxy(result.get_galaxy());
-	unsigned const nsytems(galaxy.sols.size());
-	if (nsytems == 0) return nullptr; // no systems generated (can this happen?)
+	unsigned const nsystems(galaxy.sols.size());
+	if (nsystems == 0) return nullptr; // no systems generated (can this happen?)
 	uobject const *dest = NULL;
-	unsigned const nqueries(8), max_queries(nsytems/2);
+	unsigned const nqueries(8), max_queries(nsystems/2);
 	float max_pvalue(0.0);
+	static rand_gen_t rgen;
 
 	for (unsigned n = 0, ngood = 0; (ngood < nqueries && n < max_queries); ++n) {
-		unsigned const six(rand()%nsytems);
+		unsigned const six(rgen.rand()%nsystems);
 		ussystem const &system(galaxy.sols[six]); // chose a random system
 		float const sradius(system.get_radius());
 		bool sol_good(0);
 
 		for (auto p = system.planets.begin(); p != system.planets.end(); ++p) {
-			bool const planet_acceptable(p->colonizable() && p->get_id() != exclude_id && p->temp < tmax);
-			if (!planet_acceptable && p->moons.empty()) continue;
-			float const pvalue(p->get_land_value(align, pos, sradius));
-			sol_good |= planet_acceptable;
-			if (max_pvalue != 0.0 && pvalue < max_pvalue) continue; // not the best planet so far
+			if (p->colonizable() && p->get_id() != exclude_id && p->temp < tmax) { // planet is acceptable
+				float const pvalue(p->get_land_value(align, pos, sradius));
+				sol_good = 1;
 
-			if (planet_acceptable && !line_intersect_sun(pos, p->pos, system, 2.0)) {
-				max_pvalue = pvalue;
-				dest       = &(*p); // choose this planet as a candidate
+				if ((max_pvalue == 0.0 || pvalue > max_pvalue) && !line_intersect_sun(pos, p->pos, system, 2.0)) { // best planet/moon so far
+					max_pvalue = pvalue;
+					dest       = &(*p); // choose this planet as a candidate
+				}
 			}
 			for (auto m = p->moons.begin(); m != p->moons.end(); ++m) {
 				if (!m->colonizable() || m->get_id() == exclude_id && m->temp < tmax) continue;
 				float const mvalue(m->get_land_value(align, pos, sradius));
 				sol_good = 1;
 
-				if ((max_pvalue == 0.0 || mvalue > max_pvalue) && !line_intersect_sun(pos, m->pos, system, 2.0)) {
+				if ((max_pvalue == 0.0 || mvalue > max_pvalue) && !line_intersect_sun(pos, m->pos, system, 2.0)) { // best planet/moon so far
 					max_pvalue = mvalue;
 					dest       = &(*m); // choose this moon as a candidate
 				}
@@ -815,7 +815,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 		} // for p
 		if (sol_good) {++ngood;}
 	} // for n
-	//if (dest) {cout << dest->get_name() << endl;}
+	//if (dest) {cout << "align: " << align << ", name: " << dest->get_name() << ", value: " << max_pvalue << endl;}
 	if (!dest) {cout << "no dest" << endl;} // testing
 	return dest;
 }
