@@ -753,7 +753,7 @@ bool sobj_manager::update_pos_if_close(uobject const *obj) {
 
 	if (obj == NULL || obj->get_id() != uobj_id) return 0;
 	point const new_pos(obj->get_pos());
-	if (p2p_dist(pos, new_pos) > 0.1*CELL_SIZE)  return 0; // don't update if in a different cell, let shift handle it
+	if (!dist_less_than(pos, new_pos, 0.1*CELL_SIZE)) return 0; // don't update if in a different cell, let shift handle it
 	pos   = new_pos;
 	owner = obj->get_owner();
 	return 1;
@@ -771,27 +771,27 @@ bool u_ship::choose_destination() {
 	if ((is_fighter() && parent != NULL) || is_orbiting()) return 0;
 
 	if (dest_mgr.is_valid()) {
-		float const rad(c_radius + dest_mgr.get_radius());
+		float const rad(c_radius + dest_mgr.get_radius()), dest_dist(p2p_dist(pos, dest_mgr.get_pos()));
 
-		if (powered_priv() && dist_less_than(pos, dest_mgr.get_pos(), 1.6f*rad)) {
+		if (powered_priv() && dest_dist < 1.6f*rad) {
 			claim_world(NULL); // or at least try to
 			dest_mgr.at_dest();
 		}
 		else {
-			bool renew_dest((rand()&15) == 0 && p2p_dist(pos, dest_mgr.get_pos()) > 0.2*CELL_SIZE);
+			bool renew_dest((rand()&15) == 0 && !have_excess_credits(alignment) && dest_dist > 0.25*CELL_SIZE); // if dest is far away, and not end game, consider changing it
 
-			if (!renew_dest && dist_less_than(pos, dest_mgr.get_pos(), specs().sensor_dist) && !(rand()&15)) {
+			if (!renew_dest && dest_dist < specs().sensor_dist && !(rand()&15)) {
 				if (!dest_mgr.update_pos()) { // update every 16 frames in case planet has moved
-					if (dist_less_than(pos, dest_mgr.get_pos(), 5.0f*rad)) renew_dest = 1;
+					if (dest_dist < 5.0f*rad) renew_dest = 1;
 				}
 			}
-			if (!renew_dest) return 1; // already chosen - change it?
+			if (!renew_dest) return 1; // keep orig dest
 		}
 	}
 	dest_mgr.choose_dest(pos, alignment, 1.5*get_max_t()/FOBJ_TEMP_SCALE); // allow higher than tmax, since ships can approach in the shade of the planet/moon
 	
 	if (!dest_mgr.is_valid()) { // delete the ship? move towards the player?
-		if (specs().has_fast_speed) set_max_sf(FAST_SPEED_FACTOR);
+		if (specs().has_fast_speed) {set_max_sf(FAST_SPEED_FACTOR);}
 		thrust(MOVE_FRONT, 1.0, 0); // full speed ahead
 		return 0;
 	}
