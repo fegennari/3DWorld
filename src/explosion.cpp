@@ -186,15 +186,9 @@ bool blastr::next_frame(unsigned i) {
 		assert(time > 0);
 	}
 	if (world_mode == WMODE_UNIVERSE) { // universe mode
-		float const size(4.0*EXP_LIGHT_SCALE*cur_size);
-		float const scale(size*size/distance_to_camera_sq(pos));
-
-		if (scale > 2.5E-5) {
-			if (cur_color.alpha > 0.01 /*&& br.type != ETYPE_NONE*/ && !is_distant(pos, 0.2*size) && univ_sphere_vis(pos, size)) {
-				add_br_light(i, pos, size, parent);
-			}
-			if (animate2) {add_parts_projs(pos, cur_size, dir, cur_color, type, src, parent);}
-		}
+		float const size(4.0*EXP_LIGHT_SCALE*cur_size), scale(size*size/distance_to_camera_sq(pos));
+		if (animate2 && (scale > 2.5E-5 || type == ETYPE_EBURST)) {add_parts_projs(pos, cur_size, dir, cur_color, type, src, parent);}
+		if (cur_color.alpha > 0.01 && !is_distant(pos, 0.2*size) && univ_sphere_vis(pos, size)) {add_br_light(i, pos, size, parent);}
 	}
 	else if (world_mode == WMODE_GROUND && game_mode) {process();}
 	one_frame_seen = 1;

@@ -702,9 +702,8 @@ uparticle *gen_particle(unsigned type, colorRGBA const &c1, colorRGBA const &c2,
 }
 
 
-void add_parts_projs(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, int type, int align,
-					 free_obj const *const parent)
-{
+void add_parts_projs(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, int type, int align,free_obj const *const parent) {
+
 	assert(type < NUM_ETYPES);
 
 	switch (type) {
