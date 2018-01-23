@@ -37,7 +37,7 @@ $FLEET "Test"   0  BLUE  AI_ATT_ENEMY  TARGET_CLOSEST  0.1   0.2  0.0  0.0
 $SHIP_ADD_RAND_SPAWN 1 4.0
 #                 mult FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
   $ALIGN NEUTRAL  4    0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   1   1   0   0   0   0   1   0   4   0   0   0   2   0   1   1   1   0   0   0   0   0   0   0   0
-  $ALIGN GOV      2    0   0   0   0   0   2   2   0   2   0   0   0   1   0   0   0   0   0   0   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   2   0   0   0   0   0
+  $ALIGN GOV      2    0   0   0   0   1   2   2   0   2   0   0   0   0   0   0   0   0   0   0   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   2   0   0   0   0   0
   $ALIGN PIRATE   0    0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   0   0   0   0   0   0   0   0
   $ALIGN RED      0    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0
   $ALIGN BLUE     0    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0
