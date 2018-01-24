@@ -605,7 +605,7 @@ bool u_ship::obstacle_avoid(vector3d &orient, float target_dist, bool sobjs_only
 	//if (obstacle == NULL) obstacle = get_closest_ship(pos, c_radius, target_dist, 0, 1, 0, 0); // dir_pref?
 	
 	if (obstacle != NULL) { // obstacle in the way
-		if (fobj != NULL && fobj->get_parent() == this && fobj->get_target() == this) return 0; // docking fighter
+		if (is_parent_of_docking_fighter(fobj)) return 0; // docking fighter
 		
 		if (velocity != zero_vector) {
 			float const avoid_radius(min(0.95*tdist, (obstacle->get_bounding_radius() + 1.5*c_radius))); // make sure it works if close
@@ -824,7 +824,7 @@ u_ship const *u_ship::try_fighter_pickup() const {
 		u_ship const *const f(*i);
 		assert(f);
 		if (f->invalid_or_disabled()) continue; // disabled ships can't dock anyway, so wait until they become un-disabled
-		if (f->get_parent() != this || f->get_target() != this) continue; // not ready to dock
+		if (!is_parent_of_docking_fighter(f)) continue; // not ready to dock
 		if (f->specs().max_turn > 0.0 && specs().max_speed <= f->specs().max_speed) continue;
 		if (!has_space_for_fighter(f->sclass)) continue; // no space
 		float const fd_sq(p2p_dist_sq(pos, f->get_pos()));
@@ -1961,7 +1961,7 @@ bool u_ship::dock_fighter(u_ship *ship) {
 
 	assert(ship != NULL);
 	if (parent == ship) return ship->dock_fighter(this); // was called backwards
-	if (ship->get_parent() != this || ship->get_target() != this) return 0;
+	if (!is_parent_of_docking_fighter(ship)) return 0;
 	if (invalid_or_disabled() || ship->invalid_or_disabled())     return 0;
 	if (fighters.find(ship) == fighters.end()) add_fighter(ship, this, 0); // rarely happens
 	
@@ -2306,15 +2306,21 @@ bool u_ship::collision(point const &copos, vector3d const &vcoll, float obj_mass
 
 	if (source != NULL) {
 		assert(source != this); // no self-collisions
-		if (source->get_parent() == this && source->get_time() < W_SELF_ARM_T) return 0; // not yet armed
+		if (source->get_parent() == this && source->get_time() < S_SELF_ARM_T) return 0; // not yet armed
 
 		if (source->is_ship()) { // ship, not a projectile
-			if (source->dock_fighter(this) || source->do_boarding(this)) no_damage = 1;
-			if (source->orbital_dock(this)) no_damage = odock = 1;
+			if (source->dock_fighter(this) || source->do_boarding(this)) {no_damage = 1;}
+			if (source->orbital_dock(this)) {no_damage = odock = 1;}
+
+			if (!no_damage) { // not one of the two cases above
+				if (source->get_time() < S_SELF_ARM_T || time < S_SELF_ARM_T || is_parent_of_docking_fighter(source) || source->is_parent_of_docking_fighter(this)) {
+					if (source->get_parent() == this || source == parent || source->get_parent() == parent) {no_damage = 1;}
+				}
+			}
 		}
 	}
 	if (is_orbiting()) return 1; // no collisions
-	if (odock) elastic = 0.0; // no bounce off (stick to the dock?)
+	if (odock) {elastic = 0.0;} // no bounce off (stick to the dock?)
 	float energy(coll_physics(copos, vcoll, obj_mass, obj_radius, source, elastic));
 
 	if (!no_damage && energy > TOLERANCE) {
@@ -2322,7 +2328,7 @@ bool u_ship::collision(point const &copos, vector3d const &vcoll, float obj_mass
 
 		if (energy > 1.0) {
 			float const e_thresh(0.2*MAX_COLL_DAMAGE);
-			if (energy > e_thresh) energy = e_thresh + sqrt(energy - e_thresh);
+			if (energy > e_thresh) {energy = e_thresh + sqrt(energy - e_thresh);}
 
 			if (source != NULL && (is_fighter() || source->is_fighter()) &&
 				(parent == source || source->get_parent() == this || (parent != NULL && source->get_parent() == parent)))

@@ -36,7 +36,8 @@ float const TEMP_FACTOR        = 2.0; // damage temperature factor (ratio of dam
 float const FOBJ_TEMP_SCALE    = 5.0;
 float const NDIV_SCALE_U       = 1200.0;
 
-unsigned const W_SELF_ARM_T      = unsigned(TICKS_PER_SECOND/2); // needed in both free_obj.cpp and u_ship.cpp
+unsigned const W_SELF_ARM_T      = unsigned(TICKS_PER_SECOND/2);
+unsigned const S_SELF_ARM_T      = unsigned(TICKS_PER_SECOND);
 unsigned const FREE_OBJ_MAX_NDIV = 3*N_SPHERE_DIV/2;
 
 
@@ -763,6 +764,7 @@ public:
 	float get_over_temp_factor() const {return max(0.0f, (temperature - TEMP_FACTOR*get_max_t()));}
 	free_obj *get_closest_ship(point const &pos, float min_dist, float max_dist, bool enemy,
 		bool attack_all, bool req_shields=0, bool decoy_tricked=0, bool dir_pref=0) const;
+	bool is_parent_of_docking_fighter(free_obj const *const fobj) const {return (fobj != NULL && fobj->get_parent() == this && fobj->get_target() == this);}
 	unsigned get_obj_id() const {return obj_id;}
 
 	virtual ~free_obj() {verify_status(); invalidate_permanently();}
