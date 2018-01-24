@@ -37,7 +37,7 @@ float const FOBJ_TEMP_SCALE    = 5.0;
 float const NDIV_SCALE_U       = 1200.0;
 
 unsigned const W_SELF_ARM_T      = unsigned(TICKS_PER_SECOND/2);
-unsigned const S_SELF_ARM_T      = unsigned(TICKS_PER_SECOND);
+unsigned const S_SELF_ARM_T      = unsigned(2*TICKS_PER_SECOND);
 unsigned const FREE_OBJ_MAX_NDIV = 3*N_SPHERE_DIV/2;
 
 
