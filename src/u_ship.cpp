@@ -968,7 +968,9 @@ void u_ship::ai_action() {
 		}
 		// Note: docking fighters are allowed to get hotter while attempting to dock with a parent, to handle cases where the parent has a higher temperature tolerance
 		else if ((temperature > 1.6*get_max_t()) || (is_burning() && !is_docking)) { // about to take damage, or high temperature and not docking
-			orthogonalize_dir(dir, (pos - tcent), orient, 0); // fly on a tangent
+			vector3d const safe_dir(pos - tcent);
+			orthogonalize_dir(dir, safe_dir, orient, 1); // fly on a tangent
+			orient += 0.1*safe_dir.get_norm(); // but veer slightly away to avoid danager and break out of orbit
 		}
 		else if (near_b_hole && gvect.mag() > SHIP_GMAX) { // gravity too high
 			orient = -gvect; // fly directly away from black hole
