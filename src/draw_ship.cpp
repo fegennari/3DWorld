@@ -392,7 +392,8 @@ void uobj_draw_data::draw_engine_trail(int eix, point const &offset, float width
 		if (ndiv > 3) {engine_trail_drawer.add_trail_pt(obj, eix, pos2, beamwidth, color, 0.5);}
 	}
 	else {
-		trail_rays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, (pos2 - delta), color, ALPHA0));
+		point const end_pos(pos2 - delta);
+		if (end_pos != pos2) {trail_rays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, end_pos, color, ALPHA0));}
 	}
 }
 
@@ -618,7 +619,7 @@ void uobj_draw_data::draw_usw_emp() const {
 
 void add_lightning_wray(float width, point const &p1, point const &p2) {
 
-	//beam_rays.push_back(usw_ray(width, width, p1, p2, LITN_C, ALPHA0));
+	//if (p1 != p2) {beam_rays.push_back(usw_ray(width, width, p1, p2, LITN_C, ALPHA0));}
 	unsigned const num_segments((rand()&7)+1);
 	float const ns_inv(1.0/num_segments);
 	point cur(p1);
@@ -638,7 +639,7 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 			w[d] = (1.0 - 0.5*(i+d)*ns_inv)*width;
 		}
 		point const next(cur + delta);
-		beam_rays.push_back(usw_ray(w[0], w[1], cur, next, c[0], c[1]));
+		if (cur != next) {beam_rays.push_back(usw_ray(w[0], w[1], cur, next, c[0], c[1]));}
 		cur = next;
 		// create recursive forks?
 	}

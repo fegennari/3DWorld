@@ -1764,6 +1764,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 	float const sscale(is_player_ship() ? 0.2 : 1.0);
 
 	if (!bwp.multi_segment) {
+		assert(p1 != p2);
 		beam_rays.push_back(usw_ray(sscale*beamwidth, bwp.bw_escale*beamwidth, p1, p2, bwp.beamc[0], bwp.beamc[1]));
 	}
 	else {

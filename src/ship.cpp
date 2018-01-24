@@ -815,6 +815,7 @@ class motion_particles_t {
 	}
 public:
 	void update_and_draw(point const &camera, vector3d const &vnorm, float length, float width) {
+		assert(length > 0.0 && width > 0.0);
 		if (pts.empty()) {
 			pts.resize(50); // npts
 			for (unsigned i = 0; i < pts.size(); ++i) {gen_pos(pts[i], camera, vnorm);}
@@ -838,7 +839,7 @@ void maybe_draw_motion_dust() { // if moving, even if unpowered
 	float const pvmag(pvel.mag()), vmax(SLOW_SPEED_FACTOR*pship.specs().max_speed);
 	if (pvmag < 0.8*vmax) return; // too slow
 	float const length(1.0*min(4.0f*vmax, pvmag));
-	motion_particles.update_and_draw(pship.get_pos(), pvel.get_norm(), length, 0.00002);
+	motion_particles.update_and_draw(pship.get_pos(), pvel/pvmag, length, 0.00002);
 }
 
 

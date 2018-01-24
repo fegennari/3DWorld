@@ -376,6 +376,7 @@ void draw_blasts(shader_t &s) {
 
 			for (unsigned i = 0; i < num; ++i) { // Note: could use a procedural 1D texture similar to planet rings instead of creating multiple rays
 				point const pos2(br.pos + (br.size/SQRT3)*rgen.signed_rand_vector());
+				if (pos2 == br.pos) continue; // skip to avoid assertion
 				exp_rays.push_back(usw_ray(rgen.rand_uniform(0.01, 0.05)*br.size, rgen.rand_uniform(0.2, 0.4)*br.size, br.pos, pos2, br.cur_color, colorRGBA(br.cur_color, 0.0)));
 			}
 			if (begin_type) {glEnable(GL_CULL_FACE); select_texture(WHITE_TEX);} // texture is procedural

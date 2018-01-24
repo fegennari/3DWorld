@@ -1663,6 +1663,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 
 				for (unsigned i = 0; i < 10; ++i) { // Note: could use a procedural 1D texture similar to planet rings instead of creating multiple rays
 					vector3d const dir(radius*rgen.signed_rand_vector());
+					if (dir == zero_vector) continue; // unlikely, but no good
 					point const pos2(pos + 30.0*radius*rgen.rand_uniform(0.75, 1.0)*(pos - sun_pos).get_norm() + 2.0*dir);
 					float const width(rgen.rand_uniform(0.5, 1.0));
 					trail_rays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color, color2));
