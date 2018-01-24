@@ -2538,7 +2538,8 @@ void u_ship::do_explode() {
 void u_ship::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_) {
 
 	assert(parent == NULL || parent_ == NULL || parent == parent_ || (specs().kamikaze && parent_ == this));
-	uobject::explode(SHIP_EXP_DAM_SCALE*damage, bradius, etype, edir, exp_time, wclass, align, (eflags | EXP_FLAGS_SHIP), parent_); // death may be delayed
+	// Note: death may be delayed; if parent_ is not set, use self
+	uobject::explode(SHIP_EXP_DAM_SCALE*damage, bradius, etype, edir, exp_time, wclass, align, (eflags | EXP_FLAGS_SHIP), (parent_ ? parent_ : this));
 	fragment(edir, 1.0, 0);
 	surface_mesh.clear();
 	detonate_weapons();
