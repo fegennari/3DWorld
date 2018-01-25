@@ -578,7 +578,7 @@ public:
 
 		// try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails
 		if (!asteroids[ix]->draw_instanced(ndiv)) { // maybe this case shouldn't exist and we can only create instanceable asteroids?
-			uobj_draw_data ddata(asteroids[ix].get(), &s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
+			uobj_draw_data ddata(asteroids[ix].get(), &s, nullptr, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
 			asteroids[ix]->draw_with_texture(ddata, -1, 1);
 		}
 		fgPopMatrix();

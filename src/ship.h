@@ -231,15 +231,16 @@ public:
 	colorRGBA color_a, color_b, engine_color;
 	free_obj const *obj;
 	shader_t *shader;
+	vpc_shader_t *upc_shader;
 	static quad_batch_draw qbd;
 
-	uobj_draw_data(free_obj const *const obj_, shader_t *shader_, int ndiv_, unsigned t, bool power, bool spec_en, float texp,
+	uobj_draw_data(free_obj const *const obj_, shader_t *shader_, vpc_shader_t *upc_shader_, int ndiv_, unsigned t, bool power, bool spec_en, float texp,
 		upos_point_type const &pos_, vector3d const &vel_, vector3d const &dir_, vector3d const &upv_, float dist_,
 		float radius_, float crs_, bool dlights_, bool first, bool final, bool p1, bool p2)
 		: ndiv(ndiv_), time(t), on_time(t), lifetime(0), eflags(0), nengines(0), powered(power), specular_en(spec_en),
 		dlights(dlights_), final_pass(final), first_pass(first), phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_),
 		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir),
-		color_a(WHITE), color_b(WHITE), engine_color(BLACK), obj(obj_), shader(shader_) {}
+		color_a(WHITE), color_b(WHITE), engine_color(BLACK), obj(obj_), shader(shader_), upc_shader(upc_shader_) {}
 
 	inline bool is_moving() const {return (powered && (vel.mag_sq() > TOLERANCE));}
 	bool can_have_engine_lights() const;
@@ -705,8 +706,8 @@ public:
 	void inverse_rotate() const;
 	void draw_shadow_volumes_from(uobject const *sobj, point const &sun_pos, float dscale, int ndiv) const;
 	void transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const;
-	void draw(shader_t &shader) const;
-	void draw_and_reset_lights(shader_t &shader) {draw(shader); reset_lights();}
+	void draw(shader_t &shader, vpc_shader_t &upc_shader) const;
+	void draw_and_reset_lights(shader_t &shader, vpc_shader_t &upc_shader) {draw(shader, upc_shader); reset_lights();}
 
 	void invalidate_permanently() {status = 2;} // status set to anything other than 0 or 1 makes this object invalid
 	void verify_status() const {assert(status == 0 || status == 1);}

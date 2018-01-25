@@ -67,7 +67,6 @@ extern vector<us_weapon> us_weapons;
 
 
 void collision_detect_objects(vector<cached_obj> &objs0, unsigned t);
-void end_part_cloud_draw();
 void draw_and_update_engine_trails(line_tquad_draw_t &drawer);
 void add_nearby_uobj_text(text_drawer_t &text_drawer);
 void print_univ_owner_stats();
@@ -1017,12 +1016,13 @@ void draw_univ_objects() {
 
 	// draw ubojs
 	shader_t s;
+	vpc_shader_t upc_shader;
 	setup_ship_draw_shader(s);
 	disable_exp_lights(&s); // make sure the explosion lights start out cleared
-	for (auto i = unsorted.begin(); i != unsorted.end(); ++i) {(*i)->draw_and_reset_lights(s);}
-	for (auto i = sorted.begin();   i != sorted.end();   ++i) {i->second->draw_and_reset_lights(s);}
+	for (auto i = unsorted.begin(); i != unsorted.end(); ++i) {(*i)->draw_and_reset_lights(s, upc_shader);}
+	for (auto i = sorted.begin();   i != sorted.end();   ++i) {i->second->draw_and_reset_lights(s, upc_shader);}
 	emissive_shader.end_shader();
-	end_part_cloud_draw(); // leaves program==0
+	upc_shader.end_shader(); // leaves program==0
 	disable_exp_lights(); // make sure the explosion lights end cleared
 	enable_blend(); // redundant?
 

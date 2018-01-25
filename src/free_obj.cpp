@@ -605,7 +605,7 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 }
 
 
-void free_obj::draw(shader_t &shader) const { // view culling has already been performed
+void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view culling has already been performed
 
 	if (!is_ok()) return; // dead
 	bool const lg_obj_type(is_ship() || is_stationary());
@@ -659,7 +659,7 @@ void free_obj::draw(shader_t &shader) const { // view culling has already been p
 	calc_rotation_vectors();
 	unsigned const npasses(partial_shadow ? get_num_draw_passes() : 1); // will be slow if > 1
 	bool const specular(!known_shadowed && (light_val == 0 || (!stencil_shadows && light_val == 1))); // less than half shadowed
-	uobj_draw_data udd(this, &shader, ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
+	uobj_draw_data udd(this, &shader, &upc_shader, ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
 		dist, radius, c_radius/radius, (nlights > 0), 1, !partial_shadow, 1, (npasses == 1));
 	
 	if (ndiv > 3) {
@@ -925,11 +925,6 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 // ************ UPARTICLE_CLOUD ************
 
 
-vpc_shader_t upc_shader; // FIXME: some way to pass this through uobj_draw_data so it's not a global?
-
-void end_part_cloud_draw() {upc_shader.end_shader();}
-
-
 void add_uparticle_cloud(point const &pos, float rmin, float rmax, colorRGBA const &ci1, colorRGBA const &co1,
 	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage, float expand_exp, float noise_scale)
 {
@@ -972,7 +967,8 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 	float const lt_scale(get_lt_scale());
 	colorRGBA cur_colors[2]; // {inner, outer}
 	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][1], colors[d][0], lt_scale, 1);}
-	vpc_shader_t &s(upc_shader);
+	assert(ddata.upc_shader != nullptr);
+	vpc_shader_t &s(*ddata.upc_shader);
 	shader_setup(s, 1); // grayscale noise
 	s.enable();
 	s.set_uniform_float(s.ns_loc,  noise_scale);
