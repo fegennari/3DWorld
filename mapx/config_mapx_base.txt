@@ -23,6 +23,7 @@ enable_dlight_shadows 1
 enable_gamma_correction 0
 all_model3d_ref_update 0 # not needed for dragon statue
 use_core_context 0
+rgen_seed 21 # for universe mode
 
 reflect_dodgeballs 0
 dodgeball_metalness 1.0
