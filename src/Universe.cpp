@@ -490,7 +490,7 @@ void invalidate_cached_stars() {++star_cache_ix;}
 
 
 // no_distant: 0: draw everything, 1: draw current cell only, 2: draw current system only
-void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only) {
+void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust) {
 
 	//RESET_TIME;
 	if (animate2) {cloud_time += fticks;}
@@ -520,7 +520,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		for (vector<cell_ixs_t>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 			UNROLL_3X(current.cellxyz[i_] = i->ix[i_] + uxyz[i_];)
 			bool const sel_cell(cur_cix == (i - to_draw.begin()));
-			get_cell(i->ix).draw_systems(usg, clobj, 0, no_move, skip_closest, sel_cell, gen_only); // and asteroids
+			get_cell(i->ix).draw_systems(usg, clobj, 0, no_move, skip_closest, sel_cell, gen_only, no_asteroid_dust); // and asteroids
 		}
 		if (!gen_only) {
 			for (vector<cell_ixs_t>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
@@ -532,7 +532,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
 			UNROLL_3X(current.cellxyz[i_] = clobj.cellxyz[i_] + uxyz[i_];)
 			ucell &cell(get_cell(clobj.cellxyz));
-			if (cell.is_visible()) {cell.draw_systems(usg, clobj, pass, no_move, skip_closest, 1, gen_only);} // and asteroids
+			if (cell.is_visible()) {cell.draw_systems(usg, clobj, pass, no_move, skip_closest, 1, gen_only, no_asteroid_dust);} // and asteroids
 		}
 	}
 	//PRINT_TIME("Draw Cells");
@@ -780,7 +780,7 @@ void find_best_moon_shadower(uplanet const &planet, point_d const &targ_pos, flo
 //  If player's system is none (update: galaxy is none) then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only) {
+void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only, bool no_asteroid_dust) {
 
 	point const &camera(get_player_pos());
 	vector3d const vcp(camera, rel_center);
@@ -1035,11 +1035,11 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					disable_blend();
 
 					for (auto pab = planet_asteroid_belts.begin(); pab != planet_asteroid_belts.end(); ++pab) { // changes lighting, draw last
-						(*pab)->draw_detail(pos, camera, 0, 0.1); // low density, no dust
+						(*pab)->draw_detail(pos, camera, no_asteroid_dust, 0, 0.1); // low density, no dust
 					}
 				} // sol_draw_pass
 				if (draw_asteroid_belt) { // changes lighting, draw last
-					sol.asteroid_belt->draw_detail(pos, camera, 0, 1);
+					sol.asteroid_belt->draw_detail(pos, camera, no_asteroid_dust, 0, 1.0);
 				}
 			} // system j
 		} // cluster cs

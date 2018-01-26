@@ -33,7 +33,6 @@ unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 colorRGBA const ICE_ROCK_COLOR(0.6, 1.2, 1.5);
 
 
-extern bool no_asteroid_dust;
 extern int animate2, display_mode, frame_counter, window_width, window_height;
 extern float fticks;
 extern double tfticks;
@@ -819,7 +818,7 @@ void uasteroid_belt::gen_asteroids() {
 	}
 }
 
-void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool draw_dust, float density) const {
+void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool no_asteroid_dust, bool draw_dust, float density) const {
 
 	point_d const afpos(pos_ + pos);
 	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, nullptr, nullptr));

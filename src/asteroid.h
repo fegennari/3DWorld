@@ -136,7 +136,7 @@ public:
 	float get_line_sphere_int_radius_scale() const;
 	float get_dist_to_boundary(point const &pt) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
-	void draw_detail(point_d const &pos_, point const &camera, bool draw_dust, float density=1.0) const;
+	void draw_detail(point_d const &pos_, point const &camera, bool no_asteroid_dust, bool draw_dust, float density) const;
 };
 
 

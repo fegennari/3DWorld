@@ -469,7 +469,7 @@ public:
 	ucell() : last_bkg_color(BLACK), last_player_pos(all_zeros), last_star_cache_ix(0), cached_stars_valid(0) {}
 	void gen_cell(int const ii[3]);
 	void draw_nebulas(ushader_group &usg) const;
-	void draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only);
+	void draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only, bool no_asteroid_dust);
 	void free_uobj();
 	bool is_visible() const;
 	string get_name() const {return "Universe Cell";}
@@ -565,7 +565,7 @@ public:
 	void init();
 	void shift_cells(int dx, int dy, int dz);
 	void free_context();
-	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only=0);
+	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust);
 	int get_closest_object(s_object &result, point pos, int max_level, bool include_asteroids, bool offset, float expand, bool get_destroyed=0, float g_expand=1.0, float r_add=0.0) const;
 	bool get_trajectory_collisions(line_query_state &lqs, s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius, bool include_asteroids=1) const;
 	float get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const;

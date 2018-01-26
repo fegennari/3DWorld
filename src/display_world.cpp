@@ -34,7 +34,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
+bool mesh_invalidated(1), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned enabled_lights(0); // 8 bit flags
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
@@ -514,9 +514,8 @@ void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { /
 	if (TIMETEST) PRINT_TIME("0.1");
 	bool const camera_above_clouds(world_mode == WMODE_INF_TERRAIN && camera_pos_orig.z > get_tt_cloud_level());
 	bool const no_stars((is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6)) && !camera_above_clouds);
-	no_asteroid_dust = (disable_asteroid_dust || reflection_mode || no_stars); // Note: should really pass this down (5 levels of function calls)
-	draw_universe(1, 1, (no_stars ? 2 : 0)); // could clip by horizon?
-	no_asteroid_dust = 0;
+	bool const no_asteroid_dust(disable_asteroid_dust || reflection_mode || no_stars); // Note: should really pass this down (5 levels of function calls)
+	draw_universe(1, 1, (no_stars ? 2 : 0), 0, no_asteroid_dust); // could clip by horizon?
 	if (TIMETEST) PRINT_TIME("0.2");
 	camera_pos = camera_pos_orig;
 	fgPopMatrix(); // undo universe transform
