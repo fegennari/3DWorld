@@ -1039,7 +1039,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					}
 				} // sol_draw_pass
 				if (draw_asteroid_belt) { // changes lighting, draw last
-					sol.asteroid_belt->draw_detail(pos, camera, no_asteroid_dust, 0, 1.0);
+					sol.asteroid_belt->draw_detail(pos, camera, no_asteroid_dust, 1, 1.0);
 				}
 			} // system j
 		} // cluster cs
