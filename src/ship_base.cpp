@@ -347,7 +347,6 @@ void u_ship_base::reset_ammo() { // used for player "cheat"
 
 
 bool u_ship_base::can_attack() const {
-	
 	return (weapons.empty() || (weapons.size() == 1 && weapons[0].wclass == UWEAP_NONE));
 }
 

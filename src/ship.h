@@ -828,6 +828,7 @@ public:
 	virtual bool regen_enabled()const {return 0;}
 	virtual bool self_shadow()  const {return 0;}
 	virtual bool can_move()     const {return 0;}
+	virtual bool has_seeking_weapons() const {return 0;}
 	virtual float visibility()  const {return 1.0;}
 	virtual float damage_done() const {return 0.0;}
 	virtual float get_state_val()  const {return 1.0;}
@@ -1324,6 +1325,7 @@ public:
 	bool need_blend()   const {return show_shields();}
 	bool self_shadow()  const {return specs().self_shadow;}
 	bool can_move()     const {return specs().can_move();}
+	bool has_seeking_weapons() const;
 	float visibility()  const {return (1.0 - cloaked);}
 	float get_damage_abs()   const {return specs().damage_abs;}
 	bool player_controlled() const;

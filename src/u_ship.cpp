@@ -181,8 +181,16 @@ bool u_ship::regen_enabled() const {
 }
 
 
+bool u_ship::has_seeking_weapons() const {
+
+	for (unsigned i = 0; i < weapons.size(); ++i) {
+		if (us_weapons[weapons[i].wclass].seeking) return 1;
+	}
+	return 0;
+}
+
+
 bool u_ship::player_controlled() const {
-	
 	return (is_player_ship() && !player_autopilot);
 }
 
@@ -1283,7 +1291,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		us_weapon const &uw(sw.get_usw());
 		if (uw.cost == 0) continue; // these are not real weapons
 		if (!uw.is_decoy  && uw.speed > 0.0 && uw.speed < dv)           continue; // can't hit target - weapon is too slow
-		if (uw.is_decoy   && target_obj->disabled())                    continue; // decoy is useless (what about targets with no seeking weapons?)
+		if (uw.is_decoy   && (target_obj->disabled() || !target_obj->has_seeking_weapons()))  continue; // decoy is useless
 		if (uw.is_fighter && sw.min_damage() > 0.3 && cur_damage < 0.8) continue; // fighter(s) are too damaged to release
 		if (uw.is_fighter && sclasses[uw.ammo_type].for_boarding && !target_obj->can_board()) continue;
 		if (!uw.is_beam   && !uw.is_fighter && !uw.is_decoy && uw.damage > 0.0 && uw.damage <= target_obj->get_min_damage()) continue; // can't damage target
