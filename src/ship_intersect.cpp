@@ -573,7 +573,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	}
 }
 
-// could use back face culling, but the glBegin/glEnd dominates so it wouldn't help much
+// could use back face culling, but the driver call inside draw_verts() dominates so it wouldn't help much
 void ushadow_polygon::draw(upos_point_type const &pos) const {
 
 	assert(!invalid);
