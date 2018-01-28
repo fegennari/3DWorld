@@ -45,7 +45,7 @@ public:
 };
 
 
-class uobject_base { // size = 28
+class uobject_base { // size = 32
 
 public:
 	float radius;
@@ -58,7 +58,7 @@ public:
 };
 
 
-class uobject : public uobject_base { // size = 44
+class uobject : public uobject_base { // size = 48
 
 public:
 	char status;

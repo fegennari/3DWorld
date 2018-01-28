@@ -85,7 +85,6 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 void set_light_galaxy_ambient_only(shader_t *shader=NULL);
 void set_universe_ambient_color(colorRGBA const &color, shader_t *shader=NULL);
 void set_universe_lighting_params(bool for_universe_draw);
-void get_point_of_collision(s_object const &result, point const &pos, point &cpos);
 bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3d const &dir, float range, bool include_asteroids);
 
 

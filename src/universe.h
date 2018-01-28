@@ -132,7 +132,7 @@ struct shadow_vars_t {
 };
 
 
-class named_obj { // size = 16
+class named_obj { // size = 24
 
 	string name;
 
@@ -147,7 +147,7 @@ public:
 };
 
 
-class uobj_rgen: public uobject { // size = 56
+class uobj_rgen: public uobject { // size = 64
 
 public:
 	char gen;
@@ -161,7 +161,7 @@ public:
 };
 
 
-class uobj_solid : public uobj_rgen, public named_obj { // size = 176
+class uobj_solid : public uobj_rgen, public named_obj { // size = 160
 
 public:
 	char type;
@@ -188,7 +188,7 @@ public:
 };
 
 
-struct rotated_obj { // size = 44
+struct rotated_obj { // size = 48
 
 	vector3d rot_axis;
 	double rev_ang, rev_ang0, rot_ang, rot_ang0; // Note: rev_ang here to preserve rand() call order
@@ -201,7 +201,7 @@ struct rotated_obj { // size = 44
 };
 
 
-class urev_body : public uobj_solid, public color_gen_class, public rotated_obj { // size = 268
+class urev_body : public uobj_solid, public color_gen_class, public rotated_obj { // size = 360
 
 	// for textures/colors
 	unsigned char a[3], b[3];
@@ -275,7 +275,7 @@ public:
 };
 
 
-class uplanet : public urev_body { // size = 324
+class uplanet : public urev_body { // size = 456
 public:
 	float mosize, ring_ri, ring_ro;
 	colorRGBA ai_color, ao_color; // atmosphere colors
@@ -313,7 +313,7 @@ public:
 };
 
 
-class umoon : public urev_body { // size = 268
+class umoon : public urev_body { // size = 368
 
 public:
 	uplanet *planet;
@@ -332,7 +332,7 @@ public:
 };
 
 
-class ustar : public uobj_solid { // size = 176
+class ustar : public uobj_solid { // size = 184
 
 	struct solar_flare {
 		float length, radius, angle;
@@ -371,7 +371,7 @@ public:
 };
 
 
-class ussystem : public uobj_rgen { // size = 268
+class ussystem : public uobj_rgen { // size = 312
 
 public:
 	unsigned cluster_id;
@@ -395,7 +395,7 @@ public:
 };
 
 
-class unebula : public uobject_base, public volume_part_cloud {
+class unebula : public uobject_base, public volume_part_cloud { // size = 96
 
 	colorRGBA color[3];
 	float noise_exp;
@@ -409,7 +409,7 @@ public:
 };
 
 
-class ugalaxy : public uobj_rgen, public named_obj, public ellipsoid_t { // size = 148 (164)
+class ugalaxy : public uobj_rgen, public named_obj, public ellipsoid_t { // size = 288
 
 	mutable float lrq_rad;
 	mutable point lrq_pos;
@@ -450,7 +450,7 @@ public:
 };
 
 
-class ucell : public uobj_rgen { // size = 84
+class ucell : public uobj_rgen { // size = 216
 
 	pt_line_drawer planet_plds[2]; // {1-pixel, 2-pixel}
 	pt_line_drawer_no_lighting_t star_pld; // 1-pixel
@@ -477,7 +477,7 @@ public:
 };
 
 
-class s_object { // size = 56
+class s_object { // size = 60
 
 public:
 	int cellxyz[3], galaxy, cluster, system, planet, moon, asteroid_field, asteroid, type, val, id;
