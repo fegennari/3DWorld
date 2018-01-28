@@ -2013,7 +2013,7 @@ bool u_ship::orbital_dock(u_ship *ship) { // ship docks with orbital station
 float u_ship::get_crew_strength() const {
 
 	float val(ncrew + specs().mass); // larger, heavier ships have more automated defenses
-	if (specs().for_boarding) val *= 4.0; // better prepared/equipped for battle
+	if (specs().for_boarding) {val *= 5.0;} // better prepared/equipped for battle
 	val *= 0.5 + min(0.5f, get_armor()/max(1.0f, get_max_armor())); // ship is damaged and more difficult to defend
 
 	for (unsigned i = 0; i < weapons.size(); ++i) {
@@ -2051,12 +2051,12 @@ bool u_ship::board_ship(u_ship *ship) { // returns whether or not boarding was a
 	if (ship->captured)   return 0; // not sure what to do with two captures in the same frame
 	if (is_related(ship)) return 0; // boarding a friendly, what else can we do here? transfer crew/ammo/shields?
 	ship->register_attacker(this); // counts as attacking the ship
-	if (ship->shields_up() || ship->get_damage() < 0.5) return 1; // not damaged enough, maybe don't even target it in this case?
+	if (ship->shields_up() || ship->get_damage() < 0.25) return 1; // not damaged enough, maybe don't even target it in this case?
 	//cout << this << " is boarding " << ship << ", strength: " << get_crew_strength() << " vs. " << ship->get_crew_strength() << endl; // testing
 	assert(ncrew > 0);
 	
 	// capture crew and ammo?
-	if (get_crew_strength()*((rand()%100) + 10) > ship->get_crew_strength()*((rand()%100) + 10)) { // at most a factor of 11
+	if (get_crew_strength()*((rand()%100) + 10) > ship->get_crew_strength()*((rand()%100) + 10)) { // at most a factor of 11 in either dir
 		//cout << get_name() << " " << this << " captured " << ship->get_name() << " " << ship << endl; // testing
 		capture_ship(ship, 0); // attackers defeat defenders
 	}
