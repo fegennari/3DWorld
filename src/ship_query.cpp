@@ -240,7 +240,7 @@ void check_for_inc_proj(query_data &qdata, unsigned ix) {
 bool update_min_d(closeness_data &qdata, unsigned ix) { // ships and decoys
 
 	cached_obj const &cobj((*qdata.objs)[ix]);
-	if (fabs(qdata.pos.x - cobj.pos.x) > qdata.dmin)      return 0;
+	if (fabs(qdata.pos.x - cobj.pos.x) > qdata.dmin) return 0;
 	float const dist_sq(p2p_dist_sq(qdata.pos, cobj.pos));
 	if (dist_sq >= qdata.dmin*qdata.dmin || dist_sq <= qdata.min_dist_sq) return 1;
 	assert(cobj.flags & (OBJ_FLAGS_SHIP | OBJ_FLAGS_DECY));

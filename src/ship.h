@@ -526,7 +526,7 @@ public:
 class us_class {
 
 public:
-	bool inited;
+	bool inited, has_pt_def;
 	string name;
 	float radius, cr_scale, mass, cargo, exp_scale, accel, decel, roll_rate, max_speed, max_turn, stability;
 	float max_shields, max_armor, shield_re, armor_re, max_t, hull_str, damage_abs;
@@ -545,11 +545,11 @@ public:
 	vector<triangle> cobj_triangles;
 	vector<ship_weapon> weapons;
 
-	us_class() : inited(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW) {}
+	us_class() : inited(0), has_pt_def(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW) {}
 	void clear_cobjs();
 	bool read_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned sclass_);
-	void add_weapon(ship_weapon const &w) {assert(inited); merge_weapons(weapons, w);}
+	void add_weapon(ship_weapon const &w);
 	void set_mesh_params(bool deform, bool remove, bool expand, bool mu_exp, bool trans);
 	void add_bcube(float x1, float x2, float y1, float y2, float z1, float z2, float dscale);
 	void add_bcylinder(ship_cylinder const &c);

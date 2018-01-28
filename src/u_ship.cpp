@@ -1230,7 +1230,7 @@ void u_ship::ai_action() {
 
 void u_ship::fire_point_defenses() { // point defense weapon - fires at incoming projectiles only
 
-	if (urm_proj == 0.0) return; // no projectiles
+	if (urm_proj == 0.0 || !specs().has_pt_def) return; // no projectiles, or no point defense weapons
 	unsigned const curr(curr_weapon);
 
 	for (unsigned i = 0; i < weapons.size(); ++i) {

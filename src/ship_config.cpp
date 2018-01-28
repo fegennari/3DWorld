@@ -942,6 +942,14 @@ void us_class::setup(unsigned sclass_) {
 }
 
 
+void us_class::add_weapon(ship_weapon const &w) {
+
+	assert(inited);
+	merge_weapons(weapons, w);
+	has_pt_def |= w.get_usw().point_def;
+}
+
+
 void us_class::clear_cobjs() {
 
 	cobjs.clear();
