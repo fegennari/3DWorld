@@ -2729,7 +2729,7 @@ string ustar::get_info() const {
 
 // if not find_largest then find closest
 int universe_t::get_closest_object(s_object &result, point pos, int max_level, bool include_asteroids,
-	bool offset, float expand, bool get_destroyed, float g_expand, float r_add) const
+	bool offset, float expand, bool get_destroyed, float g_expand, float r_add, int galaxy_hint) const
 {
 	float min_gdist(CELL_SIZE);
 	if (offset) offset_pos(pos);
@@ -2752,8 +2752,9 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 	float const planet_thresh(expand*4.0*MAX_PLANET_EXTENT + r_add), moon_thresh(expand*2.0*MAX_PLANET_EXTENT + r_add);
 	float const pt_sq(planet_thresh*planet_thresh), mt_sq(moon_thresh*moon_thresh);
 	static int last_galaxy(-1), last_cluster(-1), last_system(-1);
+	int const first_galaxy_to_try((galaxy_hint >= 0) ? galaxy_hint : last_galaxy);
 	unsigned const ng((unsigned)cell.galaxies->size());
-	unsigned const go((last_galaxy >= 0 && last_galaxy < int(ng)) ? last_galaxy : 0);
+	unsigned const go((first_galaxy_to_try >= 0 && first_galaxy_to_try < int(ng)) ? last_galaxy : 0);
 	bool found_system(0);
 
 	for (unsigned gc_ = 0; gc_ < ng && !found_system; ++gc_) { // find galaxy
@@ -2952,7 +2953,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 	{ // check for start point collision (slow but important)
 		bool const fast_test(1);
 		int const ival(get_closest_object(result, start, (fast_test ? UTYPE_CELL : UTYPE_MOON), !fast_test, 0, 1.0));
-		if (ival == 0 && result.val == 0) {coll.assign(0.0, 0.0, 0.0); return 0;} // not even inside a valid cell (FIXME: is this possible? error?)
+		if (ival == 0 && result.val == 0) {coll.assign(0.0, 0.0, 0.0); return 0;} // not even inside a valid cell (is this possible? error?)
 
 		if (!fast_test && (ival == 2 || (ival == 1 && result.dist <= line_radius))) { // collision at start
 			coll = start;
@@ -3187,10 +3188,9 @@ float get_temp_in_system(s_object const &clobj, point const &pos, point &sun_pos
 
 float universe_t::get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const {
 
-	if (clobj.system >= 0) return get_temp_in_system(clobj, pos, sun_pos); // existing system is valid
+	if (clobj.system >= 0) {return get_temp_in_system(clobj, pos, sun_pos);} // existing system is valid
 	s_object result; // invalid system - expand the search radius and try again
-	// FIXME: if galaxy is set, start there, and if not return 0.0
-	if (!get_closest_object(result, pos, UTYPE_SYSTEM, 0, 1, 4.0) || result.system < 0) return 0.0;
+	if (!get_closest_object(result, pos, UTYPE_SYSTEM, 0, 1, 4.0, 0, 1.0, 0.0, clobj.galaxy) || result.system < 0) return 0.0;
 	return get_temp_in_system(result, pos, sun_pos);
 }
 
