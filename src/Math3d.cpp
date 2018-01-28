@@ -382,7 +382,7 @@ bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc
 	float const dotp(dot_product(v12, vsp));
 	if (dotp < 0.0 && dist > radius) return 0; // pointing away from sphere and not inside it
 	t    = dotp/dist; // t must be <= 1.0, assuming v12 is normalized
-	rad  = sin(safe_acosf(t))*dist; // rad in (-dist, dist)
+	rad = sqrt(1.0 - t*t)*dist; // rad in (-dist, dist): sin(acos(t))*dist
 	return (radius > rad);
 }
 
