@@ -1118,7 +1118,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 
 					for (vector<unsigned short>::const_iterator g = gv.begin(); g != gv.end(); ++g) {
 						uasteroid &j(at(*g));
-						if (j.last_coll_id == (int)ix) continue; // already collided with this object
+						if (j.last_coll_id == (int)ix) continue; // already collided with this object this frame/physics iteration
 						float const dmin(i->radius + j.radius);
 						if (!dist_less_than(i->pos, j.pos, dmin)) continue;
 						vector3d norm_dir(i->pos - j.pos);
@@ -1130,7 +1130,10 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 						vector3d const vin(vi*(mi - mj)*m_sum_inv + vj*2*mj*m_sum_inv);
 						vector3d const vjn(vj*(mj - mi)*m_sum_inv + vi*2*mi*m_sum_inv);
 						i->set_velocity(vin); i->last_coll_id = *g;
-						j.set_velocity (vjn); j.last_coll_id  = ix; // FIXME: move so they don't collide?
+						j.set_velocity (vjn); j.last_coll_id  = ix;
+						// if velocities make the asteroids come together rather than separate, swap the positions to ensure they separate
+						// this may be needed when initial asteroid positions are on top of each other
+						if (dot_product_ptv(norm_dir, vin, vjn) < 0) {std::swap(i->pos, j.pos);}
 					}
 					gv.push_back(ix);
 				}
