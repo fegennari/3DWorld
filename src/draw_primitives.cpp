@@ -1169,7 +1169,8 @@ void bind_draw_sphere_vbo(bool textured, bool normals) {
 
 void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_instances) {
 
-	assert(ndiv >= 3 && ndiv <= MAX_SPHERE_VBO_NDIV);
+	assert(ndiv >= 3);
+	assert(ndiv <= MAX_SPHERE_VBO_NDIV);
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
 	assert(off1 < off2);
 	check_mvm_update();

@@ -2487,7 +2487,9 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	else {
 		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
-	if (using_tess_shader || ndiv > N_SPHERE_DIV) {
+	// Note: when the player approaches the planet very quickly, we can have ndiv > N_SPHERE_DIV, but the texture hasn't been generated yet,
+	// so we must guard the ndiv check to avoid asserting on the next line (very rare)
+	if (using_tess_shader || ((texture || procedural) && ndiv > N_SPHERE_DIV)) {
 		assert(texture || procedural);
 		glEnable(GL_CULL_FACE);
 
@@ -2511,7 +2513,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	else {
 		if (surface != nullptr) {surface->clear_cache();} // only gets here when the object is visible
 		if (!(texture || procedural)) {uniform_scale(radius);} // no push/pop required
-		draw_sphere_vbo_raw(ndiv, texture); // small sphere - use vbo
+		draw_sphere_vbo_raw(min(ndiv, 3*N_SPHERE_DIV/2), texture); // small sphere - use vbo - clamp to MAX_SPHERE_VBO_NDIV
 	}
 	if (texture || procedural) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
 	fgPopMatrix();
