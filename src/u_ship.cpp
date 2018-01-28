@@ -1389,16 +1389,16 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		float line_radius(0.0), tdist(0.0); // tdist is unused
 
 		if (!weap.is_beamlike() && !weap.is_fighter && !weap.no_ffire) {
-			line_radius = weap.radius;
+			line_radius = 1.2*weap.radius;
 			if (weap.armor > 0.0) {line_radius *= 1.2;} // long range armored weapons such as rockets, 129 nukes, torpedos should have more clearance
 		}
 		uobject const *line_of_fire(setup_int_query(fire_dir, target_dist, fobj, tdist, 0, line_radius));
 		assert(line_of_fire == NULL || line_of_fire != target_obj);
 
-		if (!weap.is_fighter && line_of_fire != NULL && (fobj == NULL || fobj->is_stationary() || (!is_enemy(fobj) &&
-			(!(weap.no_ffire && weap.const_dam) || !is_related(fobj)))))
-		{
-			continue; // don't shoot if shot is blocked by a non-enemy or fixed object
+		if (!weap.is_fighter && line_of_fire != NULL) {
+			if (fobj == NULL || fobj->is_stationary() || (!is_enemy(fobj) && (!(weap.no_ffire && weap.const_dam) || !is_related(fobj)))) {
+				continue; // don't shoot if shot is blocked by a non-enemy or fixed object
+			}
 		}
 		//cout << weap.name << " " << target_obj->get_name() << endl; // testing
 		if (target_dist < TOLERANCE || fire_dir.mag() < TOLERANCE) continue; // not sure how we can get here
