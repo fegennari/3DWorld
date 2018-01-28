@@ -848,7 +848,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		}
 		for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
 			point const cpos(pos + galaxy.clusters[c].center);
-			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds) && !gen_all_bodies) continue;
+			if (!gen_all_bodies && !univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
 			float const max_size(calc_sphere_size(cpos, camera, STAR_MAX_SIZE));
 			ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
 			//set_universe_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
