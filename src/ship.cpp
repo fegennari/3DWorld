@@ -292,7 +292,7 @@ public:
 		// Note: we can determine ownership status either by looking at planets+moons or orbiting ships; orbiting ships should be simpler and easier
 		unsigned ntships[NUM_ALIGNMENT] = {0}; // total ships
 		unsigned noships[NUM_ALIGNMENT] = {0}; // orbiting ships
-		unsigned num_left(0), team_left(0);
+		unsigned num_left(0), team_left(0), team_with_most_owned(0);
 
 		for (unsigned i = 0; i < all_ships.size(); ++i) {
 			if (all_ships[i].flags & OBJ_FLAGS_DECY) continue; // decoy flare?
@@ -303,11 +303,14 @@ public:
 			if (all_ships[i].flags & OBJ_FLAGS_ORBT) {++noships[align];}
 		}
 		for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
+			if (noships[i] > noships[team_with_most_owned]) {team_with_most_owned = i;}
+		}
+		for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 			team_entry_t &e(team_entries[i]);
 			//cout << "Team " << align_names[i] << " enabled " << e.enabled << " started " << e.started << " lost " << e.lost << " ts " << ntships[i] << " os " << noships[i] << endl; // TESTING
 			if (!e.enabled || e.lost) continue; // disabled or already lost
 			
-			if (have_excess_credits(i) && !e.end_game) {
+			if (i == team_with_most_owned && have_excess_credits(i) && !e.end_game) {
 				e.end_game = 1;
 				cout << "*** " << align_names[i] << " End Game Strategy" << endl;
 			}
