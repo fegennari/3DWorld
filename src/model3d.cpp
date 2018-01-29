@@ -1047,7 +1047,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
-			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (FIXME: not implemented in the shader; unclear how to interpret map_ns in object files)
+			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (FIXME: unclear how to interpret map_ns in object files)
 		}
 		if (metalness >= 0.0) {shader.add_uniform_float("metalness", metalness);} // set metalness if specified/valid; may or may not be used
 		bool const set_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0);
@@ -1496,7 +1496,8 @@ void model3d::bind_all_used_tids() {
 		if (m->use_spec_map()) {
 			tmgr.ensure_tid_bound(m->s_tid);
 			tmgr.ensure_tid_bound(m->ns_tid);
-			has_spec_maps = 1;
+			has_spec_maps  |= (m->s_tid  >= 0);
+			has_gloss_maps |= (m->ns_tid >= 0);
 		}
 		needs_alpha_test |= m->get_needs_alpha_test();
 	}
@@ -2122,13 +2123,14 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
 	// Note: in ground mode, lighting is global, so transforms are included in vpos with use_mvm=1; in TT mode, lighting is relative to each model instance
 	bool const use_mvm(!tt_mode && has_any_transforms()), v(!tt_mode), use_smap(1 || v);
-	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0);
+	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0), use_gloss_map(0);
 	shader_t s;
 	set_fill_mode();
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
+		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
 		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
 		else                                                                 {any_non_reflective      = 1;}
@@ -2168,7 +2170,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, use_smap, use_bmap, use_spec_map, use_mvm, two_sided_lighting,
-						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside);
+						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside, 1, 0, use_gloss_map);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 					if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}

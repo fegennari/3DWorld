@@ -411,7 +411,7 @@ class model3d {
 	unsigned model_refl_tid, model_refl_tsize, model_indir_tid;
 	int reflective; // reflective: 0=none, 1=planar, 2=cube map
 	int indoors; // 0=no/outdoors, 1=yes/indoors, 2=unknown
-	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps, xform_zvals_set;
+	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps, has_gloss_maps, xform_zvals_set;
 	float metalness; // should be per-material, but not part of the material file and specified per-object instead
 
 	// materials
@@ -452,8 +452,9 @@ public:
 
 	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
-		bcube(all_zeros_cube), bcube_xf(all_zeros), occlusion_cube(all_zeros), model_refl_tid(0), model_refl_tsize(0), model_indir_tid(0), reflective(reflective_), indoors(2), from_model3d_file(0),
-		has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), xform_zvals_set(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_)
+		bcube(all_zeros_cube), bcube_xf(all_zeros), occlusion_cube(all_zeros), model_refl_tid(0), model_refl_tsize(0), model_indir_tid(0), reflective(reflective_),
+		indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), has_gloss_maps(0), xform_zvals_set(0),
+		metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_)
 	{UNROLL_3X(sky_lighting_sz[i_] = 0;)}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
@@ -509,6 +510,7 @@ public:
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
 	bool get_needs_bump_maps () const {return needs_bump_maps;}
 	bool uses_spec_map()        const {return has_spec_maps;}
+	bool uses_gloss_map()       const {return has_gloss_maps;}
 	bool is_planar_reflective() const {return (reflective == 1);}
 	bool is_cube_map_reflective() const {return (reflective == 2);}
 	bool is_reflective()        const {return (reflective != 0);}
