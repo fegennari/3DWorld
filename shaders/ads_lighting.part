@@ -2,8 +2,14 @@ uniform float ambient_scale = 1.0;
 uniform float wet_effect    = 0.0;
 uniform vec3 ambient_tint   = vec3(1);
 uniform vec4 specular_color = vec4(0,0,0,1); // enocded as {color.rgb, shininess}
-float get_shininess() {return specular_color.a;}
 
+float get_shininess() {
+#ifdef USE_GLOSS_MAP
+	return 100.0*get_gloss_val(); // exponent = 0.0 - 100.0
+#else
+	return specular_color.a;
+#endif
+}
 
 struct fg_light_t {
 	vec4 position;
