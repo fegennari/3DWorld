@@ -747,7 +747,7 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 		owner_val = 1.0;
 	}
 	else if (TEAM_ALIGNED(align) && TEAM_ALIGNED(owner)) { // owned by enemy team
-		owner_val = 2.0;
+		if (resource_counts[align] > 100) {owner_val = 2.0;} // only target enemy planets once we have an economy going
 		if (have_excess_credits(align)) { // excess_credits case - more aggressively go after enemy colonies
 			value += 0.5*get_wealthy_value(align)*GALAXY_MIN_SIZE;
 		}
@@ -757,7 +757,7 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 			if (tot_resources > 100.0 && resource_counts[align] > 0.5*tot_resources) {value += 0.25*GALAXY_MIN_SIZE;} // dominant resources case - more aggressive
 		}
 	}
-	value += 1.0*liveable();
+	value += 2.0*liveable(); // bonus for colonies that can build ships
 	value += (0.1*resources + 0.5)*owner_val;
 	value += sradius/PLANET_TO_SUN_MAX_SPACING; // large system bonus
 	value -= 0.5*p2p_dist(cur_pos, pos);
