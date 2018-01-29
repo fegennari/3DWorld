@@ -19,11 +19,11 @@ $NO_SHIFT_UNIVERSE
 # add fleets: name enabled <counts> [<float flagship_child_stray_dist> <enum ship_id>]
 # FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
 $FLEET "Team Human"  2  RED    AI_ATT_ENEMY  TARGET_CLOSEST  5.0   63.0 -50.0 45.0
-  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
 $FLEET "Team DW"     2  BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  5.0   0.0  -70.0 70.0
   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
 $FLEET "Team Borg"   2  ORANGE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   16.0 -25.0 23.0
-  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
 $FLEET "Team Alien"  2  PURPLE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   34.0 -67.0 83.0
   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
   
