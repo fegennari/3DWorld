@@ -2387,14 +2387,14 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 	if (armed && ndiv > 4) { // draw weapon
 		fgPushMatrix();
 		fgTranslate(0.0, 0.0, 1.0);
-		draw_sphere_vbo(all_zeros, 0.15, ndiv2, 0);
+		draw_sphere_vbo(all_zeros, 0.15, ndiv2, 1);
 
 		if (ndiv > 5) {
 			invert_z();
 			vector3d turret_dir(tdir);
 			turret_dir.z = min(0.0f, turret_dir.z);
 			rotate_into_plus_z(turret_dir);
-			draw_cylin_fast((hw ? 0.04 : 0.02), (hw ? 0.032 : 0.016), (hw ? 0.9 : 0.6), ndiv4, 0);
+			draw_cylin_fast((hw ? 0.04 : 0.02), (hw ? 0.032 : 0.016), (hw ? 0.9 : 0.6), ndiv4, 1);
 		}
 		fgPopMatrix();
 	}
