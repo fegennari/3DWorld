@@ -390,7 +390,7 @@ bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc
 // p2 = starting point of the line, p1 = sphere center, v1 = line direction (inverted?), r2sq = square of the sphere radius
 bool sphere_test_comp(point const &p2, point const &p1, vector3d const &v1, float r2sq, float &t) { // line segment/sphere intersection
 
-	vector3d const v2(p2, p1);
+	vector3d const v2(p2, p1); // sphere center to line start
 	if (v2.mag_sq() <= r2sq) {t = 0.0; return 1;} // starting point is inside of the sphere
 	float const dotp(dot_product(v1, v2));
 	if (dotp < 0.0)        return 0; // line is pointing away from sphere

@@ -1051,8 +1051,8 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
 							 vector3d const &axis_, point const &start_pos, float rad, float start_ang, float rate)
 	: u_ship(sclass_, all_zeros, align, (AI_ATT_ENEMY | (guardian ? AI_GUARDIAN : 0)), TARGET_CLOSEST, 0), GSO(rate == 0.0),
-	fixed_pos(start_pos != all_zeros), has_sobj(0), last_build_time(time), system_ix(world_path.system), planet_ix(world_path.planet),
-	moon_ix(world_path.moon), orbit_r(rad), start_angle(start_ang), rot_rate(rate), axis(axis_), rel_pos(start_pos)
+	fixed_pos(start_pos != all_zeros), has_sobj(0), has_decremented_owner(0), last_build_time(time), system_ix(world_path.system),
+	planet_ix(world_path.planet), moon_ix(world_path.moon), orbit_r(rad), start_angle(start_ang), rot_rate(rate), axis(axis_), rel_pos(start_pos)
 {
 	urev_body &world(world_path.get_world());
 	assert(world.type == UTYPE_PLANET || world.type == UTYPE_MOON);
@@ -1073,8 +1073,8 @@ orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_
 	}
 	assert(radius < world.radius); // too strict?
 	assert(orbit_r == 0.0 || orbit_r >= world.radius + c_radius); // too strict?
-	if (orbit_r == 0.0) orbit_r = world.radius + 0.5*radius; // + radius?
-	if (GSO || axis == zero_vector) axis = world.rot_axis; // GEO (orbits along the equator)
+	if (orbit_r == 0.0) {orbit_r = world.radius + 0.65*radius;} // + radius?
+	if (GSO || axis == zero_vector) {axis = world.rot_axis;} // GEO (orbits along the equator)
 
 	if (fixed_pos) {
 		world.rotate_vector(rel_pos); // convert to local object space
@@ -1118,9 +1118,11 @@ void orbiting_ship::update_state() {
 	if (homeworld.update_pos_if_close(world)) { // the object we are orbiting is still there
 		set_pos_from_sobj(world);
 	}
-	// release ownership on explosion, (or on death if we're the last owner?)
-	if (!ORBITAL_REGEN && (exploding_now /*|| (is_exploding() && world->orbiting_refs == 1)*/) && world->get_owner() == (int)alignment) {
-		world->dec_orbiting_refs(result); // will die this frame
+	// release ownership on explosion
+	//if (!ORBITAL_REGEN && exploding_now && world->get_owner() == (int)alignment) {world->dec_orbiting_refs(result);} // will die this frame
+	if (!ORBITAL_REGEN && is_exploding() && !has_decremented_owner && world->get_owner() == (int)alignment) { // when exploding, only once
+		world->dec_orbiting_refs(result);
+		has_decremented_owner = 1;
 	}
 	else if (!is_exploding() && !world->is_owned()) {
 		world->set_owner(result, alignment); // have to reset - world must have been regenerated

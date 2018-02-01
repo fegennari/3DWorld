@@ -1356,7 +1356,7 @@ private:
 class orbiting_ship : public u_ship { // planetary defense, defense sat, antimiss drone
 
 private:
-	bool GSO, fixed_pos, has_sobj, sobj_liveable;
+	bool GSO, fixed_pos, has_sobj, sobj_liveable, has_decremented_owner;
 	unsigned orbiting_type, last_build_time;
 	int system_ix, planet_ix, moon_ix;
 	float orbit_r, rot_rate, start_angle, angle, sobj_radius;
