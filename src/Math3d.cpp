@@ -388,18 +388,22 @@ bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc
 
 
 // p2 = starting point of the line, p1 = sphere center, v1 = line direction (inverted?), r2sq = square of the sphere radius
-bool sphere_test_comp(point const &p2, point const &p1, vector3d const &v1, float r2sq, float &t) { // line segment/sphere intersection
+template<typename T> bool sphere_test_comp(pointT<T> const &p2, pointT<T> const &p1, pointT<T> const &v1, T r2sq, T &t) { // line segment/sphere intersection
 
-	vector3d const v2(p2, p1); // sphere center to line start
+	pointT<T> const v2(p2, p1); // sphere center to line start
 	if (v2.mag_sq() <= r2sq) {t = 0.0; return 1;} // starting point is inside of the sphere
-	float const dotp(dot_product(v1, v2));
+	T const dotp(dot_product(v1, v2));
 	if (dotp < 0.0)        return 0; // line is pointing away from sphere
-	float const denom(v1.mag_sq());
+	T const denom(v1.mag_sq());
 	if (denom < TOLERANCE) return 0; // point/sphere intersect
 	if (dotp  > denom)     return (p2p_dist_sq(v1, v2) <= r2sq); // test to see if the end point is inside of the sphere
 	t = dotp/denom;
 	return ((v2 - v1*t).mag_sq() <= r2sq);
 }
+
+// explicit instantiations
+template bool sphere_test_comp(point const &p2, point const &p1, point const &v1, float r2sq, float &t);
+template bool sphere_test_comp(point_d const &p2, point_d const &p1, point_d const &v1, double r2sq, double &t);
 
 
 // v1 is the line dir, p1 is the line start point, {center, radius} define the sphere, and lsint is the intersect point

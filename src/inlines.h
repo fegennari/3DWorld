@@ -321,19 +321,18 @@ inline bool circle_test_comp(point const &p2, point const &p1, vector3d const &v
 	return (line_int_plane(p2, (v1 + p2), p1, norm, pos, t, 0) && p2p_dist_sq(p1, pos) < r2sq);
 }
 
-inline bool sphere_test_comp(point const &p2, point const &p1, vector3d const &v1, float r2sq) {
-	float t;
+template<typename T> bool sphere_test_comp(pointT<T> const &p2, pointT<T> const &p1, pointT<T> const &v1, T r2sq) {
+	T t;
 	return sphere_test_comp(p2, p1, v1, r2sq, t);
 }
 
-inline bool line_sphere_intersect(point const &p1, point const &p2, point const &c, float r) {
-
-	vector3d const v1(p1, p2);
-	return sphere_test_comp(p1, c, v1, r*r);
+template<typename T> bool line_sphere_intersect(pointT<T> const &p1, pointT<T> const &p2, pointT<T> const &c, T r) {
+	pointT<T> const v1(p1, p2);
+	T t;
+	return sphere_test_comp(p2, c, v1, r*r, t);
 }
 
 inline bool line_sphere_int_cont(point const &p1, point const &p2, point const &c, float r) {
-
 	if (dist_less_than(p1, c, r) || dist_less_than(p2, c, r)) return 1; // p1 or p2 inside sphere (c, r)
 	return line_sphere_intersect(p1, p2, c, r);
 }

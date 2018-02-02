@@ -1384,7 +1384,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			fire_dir = predict_target_dir(pos, target_obj, weapon_id);
 			if (fire_dir == zero_vector) continue;
 		}
-		if (!weap.is_fighter && !maybe_has_line_of_sight(pos + fire_dir*target_dist)) continue; // no LOS for orbiting ship
+		if (!weap.is_fighter && !maybe_has_line_of_sight(pos + (upos_point_type)fire_dir*(double)target_dist)) continue; // no LOS for orbiting ship
 		free_obj *fobj;
 		float line_radius(0.0), tdist(0.0); // tdist is unused
 
@@ -1412,7 +1412,7 @@ bool u_ship::test_self_intersect(point const &fpos, point const &tpos, vector3d 
 
 	if (!specs().dynamic_cobjs && !weap_turret(get_weapon_id())) return 0; // fixed weapons can't self intersect unless dynamic cobjs
 
-	if (line_sphere_intersect(fpos, tpos, pos, c_radius)) {
+	if (line_sphere_intersect((upos_point_type)fpos, (upos_point_type)tpos, pos, (double)c_radius)) {
 		point const f_start(fpos + fdir*((custom_wpt() ? 0.05 : 0.2)*radius)); // not sure about this 0.2
 		point const f_end  (fpos + fdir*target_dist);
 		if (line_int_obj(f_start, f_end)) return 1;
@@ -2983,8 +2983,8 @@ void orbiting_ship::ai_action() {
 	u_ship::ai_action();
 }
 
-bool orbiting_ship::maybe_has_line_of_sight(point const &to_pos) const {
-	return !line_sphere_intersect(pos, to_pos, sobj_pos, sobj_radius);
+bool orbiting_ship::maybe_has_line_of_sight(upos_point_type const &to_pos) const {
+	return !line_sphere_intersect(pos, to_pos, (upos_point_type)sobj_pos, (double)sobj_radius);
 }
 
 

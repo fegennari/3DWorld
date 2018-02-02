@@ -503,7 +503,7 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 	// reduce nsides if sphere_r is small?
 	vector3d_d const shadow_dir((sphere_pos - sun_pos).get_norm());
 
-	if (!sphere_test_comp(sun_pos, cur_pos, -shadow_dir, (cur_radius + sphere_r)*(cur_radius + sphere_r))) { // self shadow test?
+	if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, double(cur_radius + sphere_r)*(cur_radius + sphere_r))) { // self shadow test?
 		invalid = 1;
 		return;
 	}
@@ -553,7 +553,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	if (!dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
 		vector3d_d const shadow_dir((center - sun_pos).get_norm());
 		
-		if (!sphere_test_comp(sun_pos, cur_pos, -shadow_dir, (cur_radius + radius)*(cur_radius + radius))) {
+		if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, double(cur_radius + radius)*(cur_radius + radius))) {
 			invalid = 1;
 			return;
 		}

@@ -767,7 +767,7 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 
 bool line_intersect_sun(point const &p1, point const &p2, ussystem const &system, float halo) {
 	// avoid choosing a destination that requires flying through a star
-	return (system.sun.is_ok() && line_sphere_intersect(p1, p2, system.sun.pos, halo*system.sun.radius));
+	return (system.sun.is_ok() && line_sphere_intersect(p1, p2, (point)system.sun.pos, halo*system.sun.radius));
 }
 
 

@@ -80,7 +80,7 @@ void line_intersect_fo_vector(line_int_data &li_data, vector<cached_obj> const &
 			if (!obj.obj->line_int_obj(li_data.start, li_data.end)) continue; // skip this check for thick lines
 		}
 		else { // thick lines, used for shadow calculations
-			vector3d_d const test_dir((li_data.lpos - pos).get_norm());
+			vector3d const test_dir((li_data.lpos - pos).get_norm());
 			if (!sphere_test_comp(li_data.lpos, li_data.start, test_dir, radius*radius, t_val)) continue; // thick lines
 			if (li_data.curr && sobjs != NULL && p2p_dist_sq(pos, li_data.lpos) >= (p2p_dist_sq(li_data.start, li_data.lpos) +
 				max(0.0f, (li_data.curr->get_radius() - obj.obj->get_radius())))) continue;

@@ -1040,7 +1040,7 @@ void uasteroid_belt::xform_from_local_torus_coord_space(point &pt) const { // un
 bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int) const {
 
 	if (empty()) return 0;
-	if (!line_sphere_intersect(p1, p2, pos, (radius + line_radius))) return 0; // optional optimization, may not be useful
+	if (!line_sphere_intersect(p1, p2, (point)pos, (radius + line_radius))) return 0; // optional optimization, may not be useful
 	
 	if (sphere_might_intersect(p1, line_radius)) { // first point inside torus
 		if (p_int) {*p_int = p1;}
