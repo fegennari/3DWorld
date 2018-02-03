@@ -2912,7 +2912,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 	float dist, float line_radius, bool include_asteroids) const
 {
 	int cell_status(1), cs[3];
-	float rdist, ldist, t(0.0);
+	float rdist(0.0), ldist(0.0), t(0.0);
 	vector3d c1, c2, val, tv, step;
 
 	// check for simple point
@@ -3050,7 +3050,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 			}
 			float asteroid_dist(ctest.dist);
 
-			// systems
+			// clusters
 			for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
 				ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
 				if (!dist_less_than(curr, cl.center, (cl.bounds + dist))) continue;
@@ -3072,6 +3072,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 			std::sort(sv.begin(), sv.end());
 			result.galaxy = gv[gc].index;
 
+			// systems
 			for (unsigned sc = 0; sc < sv.size(); ++sc) {
 				ussystem &system(galaxy.sols[sv[sc].index]);
 				
