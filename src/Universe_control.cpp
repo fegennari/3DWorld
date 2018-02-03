@@ -589,7 +589,7 @@ void draw_universe_sun_flare() {
 	
 		for (unsigned i = 0; i < npts; ++i) {
 			if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
-			point const pos(sun.pos + pts[i]*sun.radius);
+			point const pos(sun.pos + pts[i]*(1.1*sun.radius)); // move slightly away from the sun so that it doesn't intersect
 			if (univ_sphere_vis((pos + offset), 0.0) && !universe_ray_intersect(viewer, pos, OBJ_TYPE_ALL, &sun, &ps)) {++nvis;}
 		}
 		pts_valid = 1;
