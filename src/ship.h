@@ -1231,6 +1231,7 @@ public:
 	virtual void ai_action();
 	void fire_point_defenses();
 	bool find_coll_enemy_proj(float dmax, point &p_int) const;
+	bool has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist);
 	void ai_fire(vector3d const &targ_dir, float target_dist, float min_dist, int move_dir);
 	void get_fighter_target(u_ship const *ship);
 	void set_temp(float temp, point const &tcenter, free_obj const *source);
