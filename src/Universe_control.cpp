@@ -1001,7 +1001,7 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 			}
 		}
 	}
-	else if (world.get_owner() == NO_OWNER && world.colonizable() && // or last orbiting ship is exploding?
+	else if (world.get_owner() == NO_OWNER && world.colonizable() && can_colonize() && // or last orbiting ship is exploding?
 		!is_fighter() && !is_orbiting() && !is_rand_spawn() && can_move() && have_resources_to_colonize(alignment))
 	{
 		float const odist_sq(p2p_dist_sq(pos, world.get_pos()));

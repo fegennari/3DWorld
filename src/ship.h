@@ -1182,6 +1182,7 @@ protected:
 	bool powered_priv()      const {return (free_obj::powered_priv() && !disabled_priv() &&
 		(specs().nengines == 0 || eflags < unsigned(1<<specs().nengines)-1));}
 	void partial_uncloak(float val) {cloaked = min(val, cloaked);}
+	bool can_colonize() const;
 	vector3d const &get_last_hit_dir() const {return ((last_hit > 0) ? hit_dir : zero_vector);}
 
 public:

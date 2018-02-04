@@ -808,8 +808,14 @@ bool u_ship::choose_destination() {
 }
 
 
+bool u_ship::can_colonize() const {
+	if (init_credits[alignment] == 0 && (alignment == ALIGN_GOV || alignment == ALIGN_NEUTRAL)) return 0; // gov and neutral don't claim free planets
+	return 1;
+}
+
 bool u_ship::claim_world(uobject const *uobj) { // doesn't do a whole lot yet
 
+	if (!can_colonize()) return 0;
 	if (!is_player_ship() && !dest_mgr.claim_object(this, !has_homeworld())) return 0; // already claimed
 
 	if (!has_homeworld()) { // make this our homeworld
