@@ -102,6 +102,12 @@ void do_univ_init() {
 
 bool player_near_system() {return (clobj0.system >= 0);}
 
+bool player_inside_system() {
+	if (!player_near_system()) return 0;
+	ussystem const &system(clobj0.get_system());
+	return (dist_less_than(player_ship().pos, system.pos, system.radius));
+}
+
 
 void setup_current_system(float sun_intensity) { // called in ground mode
 	

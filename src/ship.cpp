@@ -835,8 +835,9 @@ motion_particles_t motion_particles;
 void maybe_draw_motion_dust() { // if moving, even if unpowered
 
 	// draw particles around ship showing motion
-	if (!animate2 || !player_near_system() || do_run == 2) return; // not in hyperspeed
+	if (!animate2 || !player_near_system()) return;
 	u_ship const &pship(player_ship());
+	if (do_run == 2 && !player_inside_system()) return; // hyperspeed: only draw dust when inside the system
 	vector3d const &pvel(pship.get_velocity());
 	float const pvmag(pvel.mag()), vmax(SLOW_SPEED_FACTOR*pship.specs().max_speed);
 	if (pvmag < 0.8*vmax) return; // too slow
