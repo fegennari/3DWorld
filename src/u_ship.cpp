@@ -1102,8 +1102,9 @@ void u_ship::ai_action() {
 		cloaked = 0.0;
 		if (cur_targ == NULL) return;
 	}
-	if (sc.has_cloak && has_target && (has_strayed || !targ_friend)) {
-		cloaked = min(1.0f, (old_cloaked + fticks*CLOAK_RATE));
+	if (sc.has_cloak) {
+		if (has_target && (has_strayed || !targ_friend)) {cloaked = min(1.0f, (old_cloaked + fticks*CLOAK_RATE));} // gradually cloak
+		else                                             {cloaked = max(0.0f, (old_cloaked - fticks*CLOAK_RATE));} // gradually uncloak
 	}
 
 	// determine target_dir
