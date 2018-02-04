@@ -448,7 +448,7 @@ bool sphere_ext_poly_int_base(point const &pt, vector3d const &norm, point const
 							  float thickness, float &thick, float &rdist);
 bool sphere_ext_poly_intersect(point const *const points, unsigned npoints, vector3d const &norm,
 							   point const &pos, float radius, float thickness, float t_adj);
-template<typename T> bool sphere_test_comp(pointT<T> const &p2, pointT<T> const &p1, pointT<T> const &v1, T r2sq, T &t);
+template<typename T> bool sphere_test_comp(pointT<T> const &pl, pointT<T> const &sc, pointT<T> const &v1, T r2sq, T &t);
 bool circle_test_comp(point const &p2, point const &p1, vector3d const &v1, vector3d norm, float r2sq, float &t);
 void dir_to_sphere_s_t(vector3d const &dir, vector3d const &sdir, double &s, double &t);
 bool line_sphere_intersect_s_t(point const &p1, point const &p2, point const &sc, float radius,
