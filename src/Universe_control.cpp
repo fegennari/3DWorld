@@ -30,6 +30,7 @@ extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, 
 extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
 extern float water_h_off_rel, init_temperature, camera_shake;
+extern double tfticks;
 extern unsigned char **water_enabled;
 extern unsigned team_credits[];
 extern point universe_origin;
@@ -603,13 +604,13 @@ void draw_universe_sun_flare() {
 
 void send_warning_message(string const &msg) {
 
-	static int last_warning_frame(0);
+	static int last_warning_tfticks(0);
 	
-	if ((frame_counter - last_warning_frame) > 5.0*TICKS_PER_SECOND) {
-		print_text_onscreen(msg.c_str(), RED, 1.0, TICKS_PER_SECOND, 1);
+	if ((tfticks - last_warning_tfticks) > 5.0*TICKS_PER_SECOND) {
+		print_text_onscreen(msg.c_str(), RED, 1.0, 1.0*TICKS_PER_SECOND, 1);
 		gen_sound(SOUND_ALERT, get_player_pos2(), 0.75);
+		last_warning_tfticks = tfticks;
 	}
-	last_warning_frame = frame_counter;
 }
 
 
