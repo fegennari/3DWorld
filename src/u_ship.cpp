@@ -1280,6 +1280,10 @@ bool u_ship::find_coll_enemy_proj(float dmax, point &p_int) const {
 bool u_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) {
 
 	if (weap.is_fighter) return 1; // fighters are always okay
+
+	if (target_obj != NULL && target_obj != parent && target_obj->is_orbiting()) { // targeting an orbiting ship that's not our parent
+		if (!target_obj->maybe_has_line_of_sight(pos)) return 0; // do detailed intersection test with planet/moon
+	}
 	float line_radius(0.0);
 
 	if (!weap.is_beamlike() && !weap.is_fighter && !weap.no_ffire) {
@@ -1412,7 +1416,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			unsigned const modval(unsigned(mmult*weap.fire_delay/wcount));
 			if (modval > 1 && (rand() % modval) != 0) continue;
 		}
-		if (!s_turret && !has_clear_line_of_fire(weap, targ_dir, target_dist)) continue; // aim and fire weapon - check for line of sight to target
+		if (!s_turret && targ_dir != dir && !has_clear_line_of_fire(weap, targ_dir, target_dist)) continue; // aim and fire weapon - check for line of sight to target
 		vector3d fire_dir(s_turret ? targ_dir : dir);
 
 		if (PREDICT_TARGETS && s_turret && !weap.is_beam && weap.speed > 0.0) {

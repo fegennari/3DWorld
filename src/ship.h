@@ -836,6 +836,7 @@ public:
 	virtual unsigned get_ncrew()   const {return 0;}
 	virtual float get_damage()     const {return 0.0;}
 	virtual bool has_detailed_coll(free_obj const *const other_obj) const {return 0;}
+	virtual bool maybe_has_line_of_sight(upos_point_type const &to_pos) const {return 1;} // only orbiting_ship can return 0
 	virtual string get_name()   const = 0;
 	virtual string get_info()   const {return "";}
 	virtual bool rename(std::string const &name_) {return 0;} // do nothing
@@ -1336,7 +1337,6 @@ public:
 	bool rename(string const &name_) {name = name_; return 1;}
 	vector3d predict_target_dir(point const &fpos, free_obj const *targ, unsigned wclass=UWEAP_NONE) const;
 	u_ship_base const *get_ship_base() const {return this;}
-	virtual bool maybe_has_line_of_sight(upos_point_type const &to_pos) const {return 1;} // only orbiting_ship can return 0
 
 	bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const;
 	bool sphere_int_obj(point const &c, float r, intersect_params &ip=def_int_params) const;
