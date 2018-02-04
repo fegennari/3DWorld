@@ -50,6 +50,7 @@ float const ENERGY_XFER_EFF    = 0.5;
 float const ORBITING_RD_SCALE  = 2.0;
 float const FAST_TARG_DIST     = 1.0; // fast speed if target dist > this value
 float const SHIP_GMAX          = 10.0*MAX_SOBJ_GRAVITY;
+float const MAX_LEAD_SHOT_DOTP = 0.4; // ~21 degrees
 
 
 extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any, ctrl_key_pressed, begin_motion;
@@ -809,7 +810,7 @@ bool u_ship::choose_destination() {
 
 bool u_ship::claim_world(uobject const *uobj) { // doesn't do a whole lot yet
 
-	if (!is_player_ship() && !dest_mgr.claim_object(this, !has_homeworld())) {return 0;} // already claimed
+	if (!is_player_ship() && !dest_mgr.claim_object(this, !has_homeworld())) return 0; // already claimed
 
 	if (!has_homeworld()) { // make this our homeworld
 		if (uobj == NULL) {
@@ -942,6 +943,10 @@ void u_ship::fire_at_target(free_obj const *const targ_obj, float min_dist) {
 	target_obj = orig_tobj; // restore original value
 }
 
+
+bool is_valid_fire_dir(vector3d const &target_dir, vector3d const &fire_dir, bool is_close=0) {
+	return (fire_dir != zero_vector && (is_close || get_angle(target_dir, fire_dir) < MAX_LEAD_SHOT_DOTP)); // check dir if not close
+}
 
 void u_ship::ai_action() {
 
@@ -1110,7 +1115,7 @@ void u_ship::ai_action() {
 	if (PREDICT_TARGETS2 && cur_targ != NULL && move_dir == 1 && max_turn > TOLERANCE && !last_od) {
 		if (boarding || targ_friend || kamikaze) { // want a collision
 			vector3d const tdir(predict_target_dir(pos, cur_targ));
-			if (tdir != zero_vector) target_dir = tdir;
+			if (tdir != zero_vector) {target_dir = tdir;}
 		}
 		else if (has_target) {
 			bool lead_shot(can_lead_shot_with(curr_weapon));
@@ -1127,9 +1132,9 @@ void u_ship::ai_action() {
 				bool const s_turret(weap_turret(wid)); // curr_weapon can change
 				vector3d const tdir(predict_target_dir(pos, cur_targ, (s_turret ? UWEAP_NONE : wid)));
 				
-				if (tdir != zero_vector && get_angle(target_dir, tdir) < 0.4) { // only lead shot if in a similar direction
+				if (is_valid_fire_dir(target_dir, tdir)) { // only lead shot if in a similar direction
 					target_dir = tdir; // can catch the target
-					if (!s_turret) fire_dir = target_dir;
+					if (!s_turret) {fire_dir = target_dir;}
 				}
 			}
 		}
@@ -1382,7 +1387,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 
 		if (PREDICT_TARGETS && s_turret && !weap.is_beam && weap.speed > 0.0) {
 			fire_dir = predict_target_dir(pos, target_obj, weapon_id);
-			if (fire_dir == zero_vector) continue;
+			if (!is_valid_fire_dir(target_dir, fire_dir, dist_less_than(pos, target_obj->pos, 8.0*radius))) continue;
 		}
 		if (!weap.is_fighter && !maybe_has_line_of_sight(pos + (upos_point_type)fire_dir*(double)target_dist)) continue; // no LOS for orbiting ship
 		free_obj *fobj;
@@ -1539,7 +1544,8 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 
 			if (PREDICT_TARGETS && multi_target && !weap.is_beam && weap.speed > 0.0) {
 				vector3d const new_fdir(predict_target_dir(fpos, tobj, weapon_id));
-				if (new_fdir != zero_vector) fdir = new_fdir;
+				if (!is_valid_fire_dir(fdir, new_fdir, dist_less_than(fpos, tobj->pos, 8.0*radius))) continue; // bad fire dir, don't fire the weapon
+				fdir = new_fdir; // have new fire dir due to target prediction
 			}
 			if (!weap.is_fighter && test_self_intersect(fpos, tpos, fdir, cur_target_dist)) {
 				if (used_ammo >= nshots) used_ammo -= nshots; else used_ammo = 0; // not quite correct?
