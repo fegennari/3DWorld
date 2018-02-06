@@ -3182,8 +3182,8 @@ float get_temp_in_system(s_object const &clobj, point const &pos, point &sun_pos
 	sun_pos = sun.pos;
 	point pos2(pos);
 	offset_pos(pos2);
-	float const sr(sun.radius), rdist(p2p_dist((pos2 - clobj.get_ucell().pos), system.pos));
-	return ((rdist < sr) ? 4.0 : 1.0)*sun.get_energy()*min(1.0/(rdist*rdist), 10.0/(sr*sr));
+	float const sr(sun.radius), rdist_sq(p2p_dist_sq((pos2 - clobj.get_ucell().pos), system.pos));
+	return ((rdist_sq < sr*sr) ? 4.0 : 1.0)*sun.get_energy()*min(1.0/rdist_sq, 10.0/(sr*sr)); // Note: same as sun.get_temperature_at_pt(pos), unless inside the sun
 }
 
 
