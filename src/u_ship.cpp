@@ -1277,7 +1277,7 @@ bool u_ship::find_coll_enemy_proj(float dmax, point &p_int) const {
 }
 
 
-bool u_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) {
+bool u_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) const {
 
 	if (weap.is_fighter) return 1; // fighters are always okay
 
@@ -1300,6 +1300,15 @@ bool u_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_
 		return 0; // blocked by a non-enemy or fixed object
 	}
 	return 1;
+}
+
+bool orbiting_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) const {
+
+	if (!u_ship::has_clear_line_of_fire(weap, fire_dir, target_dist)) return 0;
+	if (sun_pos == all_zeros) return 1; // sun not set?
+	point const closest_pt(get_closest_pt_on_line(sun_pos, pos, (pos + fire_dir*target_dist)));
+	float const close_temp(FOBJ_TEMP_SCALE*sun_energy/p2p_dist_sq(sun_pos, closest_pt));
+	return (close_temp < TEMP_FACTOR*weap.max_t);
 }
 
 

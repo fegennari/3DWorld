@@ -1232,7 +1232,7 @@ public:
 	virtual void ai_action();
 	void fire_point_defenses();
 	bool find_coll_enemy_proj(float dmax, point &p_int) const;
-	bool has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist);
+	virtual bool has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) const;
 	void ai_fire(vector3d const &targ_dir, float target_dist, float min_dist, int move_dir);
 	void get_fighter_target(u_ship const *ship);
 	void set_temp(float temp, point const &tcenter, free_obj const *source);
@@ -1361,9 +1361,9 @@ private:
 	bool GSO, fixed_pos, has_sobj, sobj_liveable, has_decremented_owner;
 	unsigned orbiting_type, last_build_time;
 	int system_ix, planet_ix, moon_ix;
-	float orbit_r, rot_rate, start_angle, angle, sobj_radius;
+	float orbit_r, rot_rate, start_angle, angle, sobj_radius, sun_energy;
 	vector3d axis;
-	point rel_pos, sobj_pos;
+	point rel_pos, sobj_pos, sun_pos;
 
 public:
 	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
@@ -1376,6 +1376,7 @@ public:
 	void advance_time(float timestep) {} // empty
 	bool regen_enabled() const;
 	bool maybe_has_line_of_sight(upos_point_type const &to_pos) const;
+	bool has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) const;
 };
 
 

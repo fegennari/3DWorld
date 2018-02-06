@@ -1065,6 +1065,7 @@ orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_
 	assert(world.type == UTYPE_PLANET || world.type == UTYPE_MOON);
 	assert(system_ix >= 0 && planet_ix >= 0);
 	if (world.type == UTYPE_MOON) {assert(moon_ix >= 0);}
+	ustar const &sun(world_path.get_system().sun);
 	sobj_liveable = world.liveable();
 	orbiting_type = world.type;
 	assert(!can_move());
@@ -1089,6 +1090,8 @@ orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_
 	}
 	set_pos_from_sobj(&world);
 	sobj_radius = world.radius;
+	sun_pos     = sun.pos;
+	sun_energy  = sun.get_energy();
 }
 
 
