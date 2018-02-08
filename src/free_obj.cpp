@@ -1198,5 +1198,21 @@ void us_projectile::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 	}
 }
 
+void us_projectile::draw_flares_only() const {
+
+	colorRGBA color;
+	switch (wclass) { // Note: not all projectile types are drawn
+	case UWEAP_ROCKET:  color = ORANGE;  break;
+	case UWEAP_NUKEDEV: color = BLUE;    break;
+	case UWEAP_TORPEDO: color = GREEN;   break;
+	case UWEAP_DFLARE:  color = LT_BLUE; break;
+	case UWEAP_THUNDER: color = colorRGBA(0.1, 0.75, 0.75, 1.0); break;
+	case UWEAP_STAR:    color = WHITE;   break;
+	case UWEAP_SEIGEC:  color = PURPLE;  break;
+	default: return; // not drawn
+	}
+	glow_psd.add_pt(sized_vert_t<vert_color>(vert_color(make_pt_global(pos), color), 3.0*radius));
+}
+
 
 

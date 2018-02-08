@@ -983,8 +983,14 @@ void draw_univ_objects() {
 		assert(co.obj != nullptr);
 		bool const is_bad((co.flags & OBJ_FLAGS_BAD_) != 0);
 		float const radius_scaled(co.obj->get_draw_radius()), max_radius(max(radius_scaled, co.radius));
-
-		if (!is_bad && !is_distant(co.pos, radius_scaled) && univ_sphere_vis(co.pos, max_radius)) { // Note: VFC must be conservative, so use larger radius
+		bool draw_obj(0);
+		if (is_bad) {} // not drawn
+		else if (is_distant(co.pos, radius_scaled)) { // distant
+			if ((co.flags & OBJ_FLAGS_PROJ) && !is_distant(co.pos, 10.0*radius_scaled) && univ_sphere_vis(co.pos, max_radius)) {
+				co.obj->draw_flares_only(); // visible projectile, distant but not too distant - draw flares only
+			}
+		}
+		else if (univ_sphere_vis(co.pos, max_radius)) { // Note: VFC must be conservative, so use larger radius
 			// make static objects (such as asteroids) have a large distance so that they're drawn first;
 			// this is okay as they should be opaque, and will make good occluders
 			if (co.flags & OBJ_FLAGS_STAT) { // add other cases (sphere/tri particles, etc.)?
@@ -993,10 +999,10 @@ void draw_univ_objects() {
 			else {
 				sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));
 			}
+			draw_obj = 1;
 		}
-		else if (co.obj->has_lights()) {
-			co.obj->reset_lights(); // reset for next frame
-		}
+		if (!draw_obj && co.obj->has_lights()) {co.obj->reset_lights();} // reset for next frame
+		
 		if ((onscreen_display || show_scores) && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(co.pos, max_radius) && !co.obj->is_player_ship()) {		
 			if ((!(co.flags & OBJ_FLAGS_DIST) || dist_less_than(co.pos, camera, ch_dist)) && co.obj->visibility() > 0.1 && co.obj->get_time() > 0) {
 				colorRGBA const &color(alignment_colors[co.obj->get_align()]);
@@ -1008,7 +1014,7 @@ void draw_univ_objects() {
 				}
 			}
 		}
-	}
+	} // for i
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	//PRINT_TIME("Sort");
 	select_texture(WHITE_TEX); // always textured (see end_texture())

@@ -785,6 +785,7 @@ public:
 	virtual bool collision(point const &copos, vector3d const &vcoll, float obj_mass, float obj_radius, free_obj *source, float elastic) {return 0;}
 	virtual float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
 	virtual void draw_obj(uobj_draw_data &ddata) const = 0;
+	virtual void draw_flares_only() const {assert(0);}
 	virtual void set_temp(float temp, point const &tcenter, free_obj const *source=NULL);
 	virtual void ai_action() {} // default: no AI
 	virtual void first_frame_hook() {}
@@ -1046,6 +1047,7 @@ public:
 	unsigned get_ai_type() const {return (specs().seeking ? AI_SEEKING : AI_NONE);}
 	float get_damage()  const {return ((specs().armor > 0.0) ? (1.0 - armor/specs().armor) : 0.0);}
 	void draw_obj(uobj_draw_data &ddata) const;
+	void draw_flares_only() const;
 	int auto_orient()   const {return  specs().auto_orient;}
 	bool calc_rvs()     const {return !specs().symmetric;}
 	bool need_blend()   const {return 0;} // should fix this eventually
