@@ -929,7 +929,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						current.planet = k;
 						bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET), skip_planet_draw(skip_closest && sel_planet);
 						bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
-						if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // don't really have to do this if planet is not visible
+						if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // Note: update even when not visible so that ship colonization and population are correct
 						if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
 						bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
 						shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0, planet.rscale, planet.ring_ri, planet.ring_ro);
@@ -1697,11 +1697,14 @@ point_d uplanet::do_update(point_d const &p0, bool update_rev, bool update_rot) 
 	if (ok && has_sun && is_owned() && colonizable()) {
 		float const pop_rate((population == 0) ? 1.0 : 0.0001); // init + growth
 		float const pop_scale(2.0E6*(liveable() ? 1.0 : 0.25)*radius*radius*(1.1 - water)*((water > 0.05) ? 1.0 : 0.1)*(atmos + 0.1)); // based on land area
-		population += pop_scale*pop_rate; // Note: for now, planet population only increases when the planet is visible
+		population += pop_scale*pop_rate;
+		population  = max(population, 0.5f*prev_pop); // keep at least half of the population from when previously owned
 		population  = min(population, 5.0f*pop_scale);
+		prev_pop    = 0.0;
 	}
-	else {
-		population = 0;
+	else if (population > 0.0) {
+		prev_pop   = population;
+		population = 0.0;
 	}
 	return planet_pos;
 }
