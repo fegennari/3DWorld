@@ -411,6 +411,7 @@
     </ClCompile>
     <ClCompile Include="src\dynamic_particle.cpp" />
     <ClCompile Include="src\edit_ui.cpp" />
+    <ClCompile Include="src\erosion.cpp" />
     <ClCompile Include="src\explosion.cpp" />
     <ClCompile Include="src\Gameplay.cpp" />
     <ClCompile Include="src\gen_buildings.cpp" />
