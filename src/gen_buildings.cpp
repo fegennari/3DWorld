@@ -834,7 +834,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
-		if ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z)) continue; // test z overlap
+		if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
 
 		if (use_cylinder_coll()) {
 			point const cc(i->get_cube_center() + xlate);
