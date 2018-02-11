@@ -1235,7 +1235,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			if (val >= 100) { // +50% leafy plants
 				leafy_plant plant;
 				if (veg && plant.create(j, i, 1, min_plant_z, leafy_plants.size())) {
-					if (check_buildings_sphere_coll(plant.get_pos(), plant.get_radius(), 1, 1)) continue;
+					if (!check_valid_scenery_pos(plant.get_pos(), plant.get_radius())) continue;
 					leafy_plants.push_back(plant);
 					num_lp_leaves += plant.num_leaves();
 				}
@@ -1243,7 +1243,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			else if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
 				s_plant plant; // 35%
 				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {
-					if (check_buildings_sphere_coll(plant.get_pos(), plant.get_radius(), 1, 1)) continue;
+					if (!check_valid_scenery_pos(plant.get_pos(), plant.get_radius())) continue;
 					plants.push_back(plant);
 					plant.add_bounds_to_bcube(all_bcube);
 				}

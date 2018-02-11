@@ -408,7 +408,7 @@ void small_tree_group::maybe_add_tree(int i, int j, float zpos_in, float tsize, 
 		if (point_inside_voxel_terrain(pos)) return; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
 		tree = small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1); // allow_rotation=1
 	}
-	if (check_buildings_sphere_coll(tree.get_pos(), 2.0*tree.get_radius(), 1, 1)) return; // conservative bsphere, apply TT xlate
+	if (!check_valid_scenery_pos(tree.get_pos(), 2.0*tree.get_radius())) return; // conservative bsphere
 	add_tree(tree);
 }
 

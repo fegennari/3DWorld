@@ -34,6 +34,7 @@ protected:
 	int last_rgi;
 	rand_gen_t rgen;
 	vector<rect_t> used;
+	vector<cube_t> plots; // same size as used
 
 	bool is_valid_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
 		return (x1 < x2 && y1 < y2 && x2 <= xsize && y2 <= ysize);
@@ -43,8 +44,18 @@ protected:
 		for (vector<rect_t>::const_iterator i = used.begin(); i != used.end(); ++i) {if (i->has_overlap(cur)) return 1;} // simple linear iteration
 		return 0;
 	}
-	void mark_used(unsigned x1, unsigned y1, unsigned x2, unsigned y2) {used.emplace_back(x1, y1, x2, y2);}
-
+	cube_t add_plot(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float elevation) {
+		cube_t bcube;
+		int const dx(-int(xsize)/2), dy(-int(ysize)/2); // convert from center to LLC
+		bcube.d[0][0] = get_xval(x1 + dx);
+		bcube.d[0][1] = get_xval(x2 + dx);
+		bcube.d[1][0] = get_yval(y1 + dy);
+		bcube.d[1][1] = get_yval(y2 + dy);
+		bcube.d[2][0] = bcube.d[2][1] = elevation;
+		plots.push_back(bcube);
+		used.emplace_back(x1, y1, x2, y2);
+		return bcube;
+	}
 	float any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
 		assert(is_valid_region(x1, y1, x2, y2));
 
@@ -82,6 +93,9 @@ protected:
 		}
 		return diff;
 	}
+	vector3d const get_query_xlate() const {
+		return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
+	}
 public:
 	city_plot_gen_t() : heightmap(nullptr), xsize(0), ysize(0), last_rgi(0) {}
 
@@ -111,10 +125,9 @@ public:
 		} // for n
 		if (num_cands == 0) return 0;
 		cout << "cands: " << num_cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
-		mark_used(x_llc, y_llc, x_llc+width, y_llc+height);
 		return 1; // success
 	}
-	void flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float const *const height=nullptr) {
+	float flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float const *const height=nullptr) {
 		assert(is_valid_region(x1, y1, x2, y2));
 		float const delta_h = 0.0; // for debugging in map view
 		float const h(height ? *height : (get_avg_height(x1, y1, x2, y2) + delta_h));
@@ -122,6 +135,16 @@ public:
 		for (unsigned y = y1; y < y2; ++y) {
 			for (unsigned x = x1; x < x2; ++x) {heightmap[y*xsize + x] = h;}
 		}
+		return h;
+	}
+	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
+		if (plots.empty()) return 0;
+		point const sc(pos - get_query_xlate());
+
+		for (auto i = plots.begin(); i != plots.end(); ++i) {
+			if (xy_only ? sphere_cube_intersect_xy(sc, radius, *i) : sphere_cube_intersect(sc, radius, *i)) return 1;
+		}
+		return 0;
 	}
 };
 
@@ -165,13 +188,8 @@ class city_gen_t : public city_plot_gen_t {
 		unsigned x1(0), y1(0);
 		if (!find_best_city_location(city_size, city_size, border, num_samples, x1, y1)) return 0;
 		unsigned const x2(x1 + city_size), y2(y1 + city_size);
-		flatten_region(x1, y1, x2, y2);
-		cube_t pos_range(all_zeros);
-		int const dx(-int(xsize)/2), dy(-int(ysize)/2); // convert from center to LLC
-		pos_range.d[0][0] = get_xval(x1 + dx);
-		pos_range.d[0][1] = get_xval(x2 + dx);
-		pos_range.d[1][0] = get_yval(y1 + dy);
-		pos_range.d[1][1] = get_yval(y2 + dy);
+		float const elevation(flatten_region(x1, y1, x2, y2));
+		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
 		set_buildings_pos_range(pos_range);
 		return 1;
 	}
@@ -193,5 +211,16 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	if (!have_cities()) return; // nothing to do
 	city_gen.init(heightmap, xsize, ysize); // only need to call once for any given heightmap
 	city_gen.gen_cities(city_params);
+}
+bool check_city_sphere_coll(point const &pos, float radius) {
+	if (!have_cities()) return 0;
+	point center(pos);
+	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
+	return city_gen.check_plot_sphere_coll(center, radius);
+}
+bool check_valid_scenery_pos(point const &pos, float radius) {
+	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0;
+	if (check_city_sphere_coll(pos, radius)) return 0;
+	return 1;
 }
 
