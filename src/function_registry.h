@@ -268,6 +268,7 @@ void change_inf_terrain_fire_mode(int val);
 void inf_terrain_fire_weapon();
 void inf_terrain_undo_hmap_mod();
 void flatten_hmap_region(cube_t const &cube);
+void write_heightmap_png(std::string const &fn);
 void setup_tt_fog_pre(shader_t &s);
 void setup_tt_fog_post(shader_t &s);
 void setup_tile_shader_shadow_map(shader_t &s);
@@ -303,7 +304,6 @@ void gen_gauss_rand_arr();
 bool bmp_to_chars(char const *const fname, unsigned char **&data);
 void gen_mesh(int surface_type, int keep_sin_table, int update_zvals);
 float do_glaciate_exp(float value);
-void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters);
 float get_rel_wpz();
 void init_terrain_mesh();
 float eval_mesh_sin_terms(float xv, float yv);
@@ -318,6 +318,12 @@ bool read_mesh(const char *filename, float zmm=0.0);
 bool write_mesh(const char *filename);
 bool load_state(const char *filename);
 bool save_state(const char *filename);
+
+// function prototypes - erosion
+void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters);
+
+// function prototypes - city_gen
+bool gen_city(float *heightmap, unsigned xsize, unsigned ysize, unsigned city_size, unsigned border=0);
 
 // function prototypes - physics
 float get_max_t(int obj_type);
