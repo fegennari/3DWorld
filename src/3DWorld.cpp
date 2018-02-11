@@ -1805,6 +1805,9 @@ int load_config(string const &config_file) {
 		else if (str == "buildings") { // buildings option
 			if (!parse_buildings_option(fp)) cfg_err("buildings option", error);
 		}
+		else if (str == "city") { // city options
+			if (!parse_city_option(fp)) cfg_err("city option", error);
+		}
 		else if (str == "include") {
 			if (!read_str(fp, include_fname)) cfg_err("include", error);
 			if (!load_config(include_fname )) cfg_err("nested include file", error);

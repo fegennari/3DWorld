@@ -5,7 +5,9 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "heightmap.h"
+#include "file_utils.h"
 
+using std::string;
 
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
 
@@ -89,12 +91,14 @@ public:
 		assert(xsize > 0 && ysize > 0); // any size is okay
 		if (rand_gen_index != last_rgi) {rgen.set_state(rand_gen_index, 12345); last_rgi = rand_gen_index;} // only when rand_gen_index changes
 	}
-	bool find_best_city_location(unsigned width, unsigned height, unsigned border, unsigned num_iters, unsigned &x_llc, unsigned &y_llc) {
+	bool find_best_city_location(unsigned width, unsigned height, unsigned border, unsigned num_samples, unsigned &x_llc, unsigned &y_llc) {
 		cout << TXT(xsize) << TXT(ysize) << TXT(width) << TXT(height) << TXT(border) << endl;
+		assert(num_samples > 0);
 		assert((width + 2*border) < xsize && (height + 2*border) < ysize); // otherwise the city can't fit in the map
+		unsigned const num_iters(100*num_samples); // upper bound
+		unsigned xend(xsize - width - 2*border + 1), yend(ysize - width - 2*border + 1); // max rect LLC, inclusive
+		unsigned num_cands(0);
 		float best_diff(0.0);
-		unsigned xend(xsize - width - 2*border + 1), yend(ysize - width - 2*border + 1), cands(0); // max rect LLC, inclusive
-		bool found(0);
 
 		for (unsigned n = 0; n < num_iters; ++n) { // find min RMS height change across N samples
 			unsigned const x1(border + (rgen.rand()%xend)), y1(border + (rgen.rand()%yend));
@@ -102,14 +106,13 @@ public:
 			if (overlaps_used (x1, y1, x2, y2)) continue; // skip
 			if (any_underwater(x1, y1, x2, y2)) continue; // skip
 			float const diff(get_rms_height_diff(x1, y1, x2, y2));
-			if (!found || diff < best_diff) {x_llc = x1; y_llc = y1; best_diff = diff; found = 1;}
-			++cands;
+			if (num_cands == 0 || diff < best_diff) {x_llc = x1; y_llc = y1; best_diff = diff;}
+			if (++num_cands == num_samples) break; // done
 		} // for n
-		if (found) {
-			cout << "cands: " << cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
-			mark_used(x_llc, y_llc, x_llc+width, y_llc+height);
-		}
-		return found;
+		if (num_cands == 0) return 0;
+		cout << "cands: " << num_cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
+		mark_used(x_llc, y_llc, x_llc+width, y_llc+height);
+		return 1; // success
 	}
 	void flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float const *const height=nullptr) {
 		assert(is_valid_region(x1, y1, x2, y2));
@@ -123,12 +126,44 @@ public:
 };
 
 
+struct city_params_t {
+
+	unsigned num_cities, num_samples, city_size, city_border;
+
+	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0) {}
+	bool enabled() const {return (num_cities > 0 && city_size > 0);}
+	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
+
+	bool read_option(FILE *fp) {
+		char strc[MAX_CHARS] = {0};
+		if (!read_str(fp, strc)) return 0;
+		string const str(strc);
+
+		if (str == "num_cities") {
+			if (!read_uint(fp, num_cities)) {return read_error(str);}
+		}
+		else if (str == "num_samples") {
+			if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
+		}
+		else if (str == "city_size") {
+			if (!read_uint(fp, city_size)) {return read_error(str);}
+		}
+		else if (str == "city_border") {
+			if (!read_uint(fp, city_border)) {return read_error(str);}
+		}
+		else {
+			cout << "Unrecognized city keyword in input file: " << str << endl;
+			return 0;
+		}
+		return 1;
+	}
+};
+
 class city_gen_t : public city_plot_gen_t {
-public:
-	bool gen_city(unsigned city_size, unsigned border) {
+	bool gen_city(unsigned city_size, unsigned border, unsigned num_samples) {
 		timer_t t("Choose City Location");
 		unsigned x1(0), y1(0);
-		if (!find_best_city_location(city_size, city_size, border, 1000, x1, y1)) return 0;
+		if (!find_best_city_location(city_size, city_size, border, num_samples, x1, y1)) return 0;
 		unsigned const x2(x1 + city_size), y2(y1 + city_size);
 		flatten_region(x1, y1, x2, y2);
 		cube_t pos_range(all_zeros);
@@ -140,13 +175,23 @@ public:
 		set_buildings_pos_range(pos_range);
 		return 1;
 	}
+public:
+	void gen_cities(city_params_t const &params) {
+		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params.city_size, params.city_border, params.num_samples);}
+	}
 };
 
+
+city_params_t city_params;
 city_gen_t city_gen;
 
 
-bool gen_city(float *heightmap, unsigned xsize, unsigned ysize, unsigned city_size, unsigned border) {
-	city_gen.init(heightmap, xsize, ysize);
-	return city_gen.gen_city(city_size, border);
+bool parse_city_option(FILE *fp) {return city_params.read_option(fp);}
+bool have_cities() {return city_params.enabled();}
+
+void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
+	if (!have_cities()) return; // nothing to do
+	city_gen.init(heightmap, xsize, ysize); // only need to call once for any given heightmap
+	city_gen.gen_cities(city_params);
 }
 

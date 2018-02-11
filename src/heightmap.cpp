@@ -110,13 +110,9 @@ void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool v
 }
 
 
-unsigned const NUM_CITIES  = 0;
-unsigned const CITY_SIZE   = 384;
-unsigned const CITY_BORDER = 1024;
-
 void heightmap_t::postprocess_height() {
 
-	if (erosion_iters_tt == 0 && CITY_SIZE == 0) return; // no erosion or cities
+	if (erosion_iters_tt == 0 && !have_cities()) return; // no erosion or cities
 	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
 	vector<float> vals(num_pixels());
@@ -131,10 +127,8 @@ void heightmap_t::postprocess_height() {
 		min_eq(min_zval, v);
 	}
 	if (erosion_iters_tt > 0) {apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);}
+	gen_cities(&vals.front(), width, height);
 
-	for (unsigned n = 0; n < NUM_CITIES; ++n) {
-		if (CITY_SIZE > 0) {gen_city(&vals.front(), width, height, CITY_SIZE, CITY_BORDER);}
-	}
 	for (unsigned i = 0; i < vals.size(); ++i) { // convert from heightmap value to pixel
 		float v(unscale_mh_texture_val(vals[i]));
 		assert(v >= 0.0 && v < 256.0); // must convert to [0,256) range

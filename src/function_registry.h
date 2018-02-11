@@ -323,7 +323,9 @@ bool save_state(const char *filename);
 void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters);
 
 // function prototypes - city_gen
-bool gen_city(float *heightmap, unsigned xsize, unsigned ysize, unsigned city_size, unsigned border=0);
+bool parse_city_option(FILE *fp);
+bool have_cities();
+void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);
 
 // function prototypes - physics
 float get_max_t(int obj_type);
