@@ -29,6 +29,7 @@ protected:
 
 	float *heightmap;
 	unsigned xsize, ysize;
+	int last_rgi;
 	rand_gen_t rgen;
 	vector<rect_t> used;
 
@@ -80,20 +81,19 @@ protected:
 		return diff;
 	}
 public:
-	city_plot_gen_t() : heightmap(nullptr), xsize(0), ysize(0) {}
+	city_plot_gen_t() : heightmap(nullptr), xsize(0), ysize(0), last_rgi(0) {}
 
 	void init(float *heightmap_, unsigned xsize_, unsigned ysize_) {
 		heightmap = heightmap_; xsize = xsize_; ysize = ysize_;
 		assert(heightmap != nullptr);
 		assert(xsize > 0 && ysize > 0); // any size is okay
-		rgen.set_state(rand_gen_index, 12345);
+		if (rand_gen_index != last_rgi) {rgen.set_state(rand_gen_index, 12345); last_rgi = rand_gen_index;} // only when rand_gen_index changes
 	}
 	bool find_best_city_location(unsigned width, unsigned height, unsigned border, unsigned num_iters, unsigned &x_llc, unsigned &y_llc) {
 		cout << TXT(xsize) << TXT(ysize) << TXT(width) << TXT(height) << TXT(border) << endl;
-		timer_t t("Find Best City Location");
 		assert((width + 2*border) < xsize && (height + 2*border) < ysize); // otherwise the city can't fit in the map
 		float best_diff(0.0);
-		unsigned xend(xsize - width - 2*border + 1), yend(ysize - width - 2*border + 1); // max rect LLC, inclusive
+		unsigned xend(xsize - width - 2*border + 1), yend(ysize - width - 2*border + 1), cands(0); // max rect LLC, inclusive
 		bool found(0);
 
 		for (unsigned n = 0; n < num_iters; ++n) { // find min RMS height change across N samples
@@ -102,16 +102,16 @@ public:
 			if (overlaps_used (x1, y1, x2, y2)) continue; // skip
 			if (any_underwater(x1, y1, x2, y2)) continue; // skip
 			float const diff(get_rms_height_diff(x1, y1, x2, y2));
-			if (!found || diff < best_diff) {
-				cout << "diff: " << diff << ", prev best: " << best_diff << ", loc: " << x1 << "," << y1 << endl;
-				x_llc = x1; y_llc = y1; best_diff = diff; found = 1;
-			}
+			if (!found || diff < best_diff) {x_llc = x1; y_llc = y1; best_diff = diff; found = 1;}
+			++cands;
 		} // for n
-		if (found) {mark_used(x_llc, y_llc, x_llc+width, y_llc+height);}
+		if (found) {
+			cout << "cands: " << cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
+			mark_used(x_llc, y_llc, x_llc+width, y_llc+height);
+		}
 		return found;
 	}
 	void flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float const *const height=nullptr) {
-		timer_t t("Flatten Heightmap Region");
 		assert(is_valid_region(x1, y1, x2, y2));
 		float const delta_h = 0.0; // for debugging in map view
 		float const h(height ? *height : (get_avg_height(x1, y1, x2, y2) + delta_h));
@@ -126,11 +126,18 @@ public:
 class city_gen_t : public city_plot_gen_t {
 public:
 	bool gen_city(unsigned city_size, unsigned border) {
+		timer_t t("Choose City Location");
 		unsigned x1(0), y1(0);
 		if (!find_best_city_location(city_size, city_size, border, 1000, x1, y1)) return 0;
 		unsigned const x2(x1 + city_size), y2(y1 + city_size);
 		flatten_region(x1, y1, x2, y2);
-		// WRITE
+		cube_t pos_range(all_zeros);
+		int const dx(-int(xsize)/2), dy(-int(ysize)/2); // convert from center to LLC
+		pos_range.d[0][0] = get_xval(x1 + dx);
+		pos_range.d[0][1] = get_xval(x2 + dx);
+		pos_range.d[1][0] = get_yval(y1 + dy);
+		pos_range.d[1][1] = get_yval(y2 + dy);
+		set_buildings_pos_range(pos_range);
 		return 1;
 	}
 };

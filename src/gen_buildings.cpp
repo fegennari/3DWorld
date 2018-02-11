@@ -116,6 +116,10 @@ struct building_params_t {
 		assert(!mat_gen_ix.empty());
 		return mat_gen_ix[rgen.rand()%mat_gen_ix.size()];
 	}
+	void set_pos_range(cube_t const &pos_range) {
+		cur_mat.pos_range = pos_range;
+		for (auto i = materials.begin(); i != materials.end(); ++i) {i->pos_range = pos_range;}
+	}
 };
 
 building_params_t global_building_params;
@@ -1469,6 +1473,7 @@ building_creator_t building_creator;
 
 void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
+void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {
 	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only);

@@ -914,6 +914,7 @@ void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigne
 bool parse_buildings_option(FILE *fp);
 void gen_buildings();
 void draw_buildings(bool shadow_only, vector3d const &xlate=zero_vector);
+void set_buildings_pos_range(cube_t const &pos_range);
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only);
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only);
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only);
