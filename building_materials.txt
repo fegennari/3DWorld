@@ -1,0 +1,227 @@
+# shapes
+buildings min_sides 4 # cubes
+buildings max_sides 4
+buildings round_prob 0.0
+
+
+# brick buildings
+buildings min_levels 1
+buildings max_levels 3
+buildings split_prob 0.70 # 70%
+buildings size_range 0.4 0.8  0.4 0.8  0.3 1.0
+
+buildings side_tscale 2.0
+buildings side_tid bricks_tan.png
+buildings side_nm_tid normal_maps/bricks_tan_norm.png
+buildings roof_tscale 8.0
+buildings roof_tid stucco.jpg
+buildings roof_nm_tid normal_maps/stucco_NRM.jpg
+buildings roof_color 0.1 0.1 0.1 1.0
+buildings roof_color_grayscale_rand 0.4
+
+buildings side_color 0.7 0.7 0.7 1.0
+buildings add_material
+buildings side_color 0.4 0.4 0.4 1.0
+buildings add_material
+buildings side_color 0.6 0.3 0.2 1.0
+buildings add_material
+buildings side_color 0.4 0.2 0.1 1.0
+buildings add_material
+buildings side_color 0.8 0.5 0.2 1.0
+buildings add_material
+
+buildings side_tid brickwork.jpg
+buildings side_nm_tid normal_maps/brickwork_normal.jpg
+buildings roof_tid tile.png
+buildings roof_nm_tid normal_maps/tile_NRM.jpg
+
+buildings side_color 0.7 0.7 0.7 1.0
+buildings add_material
+buildings side_color 0.4 0.4 0.4 1.0
+buildings add_material
+buildings side_color 0.7 0.3 0.2 1.0
+buildings add_material
+buildings side_color 0.4 0.2 0.1 1.0
+buildings add_material
+
+buildings side_tscale 4.0
+buildings side_tid brick1.jpg
+buildings side_nm_tid -1
+buildings roof_tid shingles.jpg
+buildings roof_nm_tid normal_maps/shingles_NRM.jpg
+
+buildings side_color 0.7 0.7 0.7 1.0
+buildings add_material
+buildings side_color 0.4 0.4 0.4 1.0
+buildings add_material
+buildings side_color 0.6 0.3 0.2 1.0
+buildings add_material
+
+
+# concrete and metal buildings - slightly larger
+buildings min_levels 1
+buildings max_levels 5
+buildings split_prob 0.60 # 60%
+buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
+
+buildings side_tscale 8.0
+buildings side_tid cblock.png
+buildings side_nm_tid normal_maps/cblock_NRM.jpg
+buildings roof_tscale 2.0
+buildings roof_tid mossy_rock.jpg
+buildings roof_nm_tid -1
+buildings side_color_min 0.55 0.40 0.30 1.0
+buildings side_color_max 0.60 0.45 0.35 1.0
+buildings add_material
+
+buildings side_color 0.7 0.7 0.7 1.0
+buildings add_material
+buildings side_color 0.4 0.4 0.4 1.0
+buildings add_material
+
+buildings side_tscale 8.0
+buildings side_tid cblock2.jpg
+buildings side_nm_tid normal_maps/cblock2_NRM.jpg
+buildings roof_tscale 6.0
+buildings roof_tid snow2.jpg
+buildings roof_nm_tid -1
+
+buildings side_color 0.55 0.55 0.55 1.0
+buildings add_material
+buildings side_color 0.7 0.7 0.7 1.0
+buildings add_material
+buildings side_color 0.4 0.4 0.4 1.0
+buildings add_material
+
+buildings side_tid buildings/metal_building.jpg
+buildings side_nm_tid buildings/metal_building_NRM.jpg
+buildings side_tscale_x 4.0
+buildings side_tscale_y 5.0
+buildings side_nm_tid -1
+buildings side_color 1.0 1.0 1.0 1.0
+buildings probability 2 # twice as likely as other materials
+buildings add_material
+
+
+# metal/glass buildings - taller
+buildings min_levels 1
+buildings max_levels 8
+buildings split_prob 0.50 # 50%
+buildings size_range 0.5 1.0  0.5 1.0  1.0 4.0
+buildings side_nm_tid -1
+buildings roof_color 0.2 0.2 0.2 1.0
+buildings roof_color_grayscale_rand 0.25
+buildings min_sides 3 # N-gons: triangles - octagons
+buildings max_sides 8
+buildings round_prob 0.25 # 25%
+buildings cube_prob 0.75 # 75% of non-round buildings
+
+buildings probability 4 # was 2
+buildings range_translate -10.0 -10.0
+buildings place_radius 50.0 # city center
+
+buildings min_flat_side_amt -1.0 # rare
+buildings max_flat_side_amt 0.4
+buildings min_alt_step_factor 0.8
+buildings max_alt_step_factor 0.9
+buildings alt_step_factor_prob 0.3
+
+buildings side_tid buildings/apartment_windows.jpg # high quality
+buildings side_nm_tid buildings/apartment_windows_NRM.jpg
+buildings side_tscale_x 2.0
+buildings side_tscale_y 1.4
+buildings roof_tscale 2.0
+buildings roof_tid mossy_rock.jpg
+buildings roof_nm_tid -1
+buildings side_color 1.0 0.8 0.6 1.0
+buildings add_material
+
+buildings roof_tscale 8.0
+buildings roof_tid stucco.jpg
+buildings roof_nm_tid normal_maps/stucco_NRM.jpg
+
+/*
+buildings texture_mirror 1 # mirror rather than wrap to fix misalignment
+buildings side_tid buildings/office_windows.jpg # nice but misaligned
+buildings side_nm_tid buildings/office_windows_NRM.jpg
+buildings texture_mirror 0 # revert to wrap mode
+buildings side_color 0.5 0.5 0.5 1.0
+buildings side_color_grayscale_rand 0.25
+buildings side_tscale_x 1.8
+buildings side_tscale_y 2.7
+buildings add_material
+*/
+
+buildings side_tid buildings/office_windows2.jpg # looks a bit odd
+buildings side_nm_tid buildings/office_windows2_NRM.jpg
+buildings side_color 0.5 0.5 0.5 1.0
+buildings side_color_grayscale_rand 0.25
+buildings side_tscale_x 2.0
+buildings side_tscale_y 3.0
+buildings add_material
+
+buildings side_tid buildings/office_windows3.jpg # high quality
+buildings side_nm_tid buildings/office_windows3_NRM.jpg
+buildings side_color 1.0 0.9 0.8 1.0
+buildings side_tscale_x 2.0
+buildings side_tscale_y 2.3
+buildings add_material
+
+# skyscraper textures (tall and thin aspect ratio)
+buildings side_color 1.0 1.0 1.0 1.0
+
+buildings side_tscale_x 0.75
+buildings side_tscale_y 0.25
+buildings side_tid buildings/skyscraper1.jpg
+buildings side_nm_tid buildings/skyscraper1_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.75
+buildings side_tscale_y 0.5
+buildings side_tid buildings/skyscraper2.jpg
+buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.4
+buildings side_tscale_y 0.4
+buildings side_tid buildings/skyscraper3.jpg
+buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.5
+buildings side_tscale_y 0.5
+buildings side_tid buildings/skyscraper4.jpg
+buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.0
+buildings side_tscale_y 0.3
+buildings side_tid buildings/skyscraper5.jpg
+buildings side_nm_tid buildings/skyscraper5_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 1.65
+buildings side_tscale_y 0.5
+buildings side_tid buildings/skyscraper6.jpg
+buildings side_nm_tid buildings/skyscraper6_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 0.87
+buildings side_tscale_y 0.25
+buildings side_tid buildings/skyscraper7.jpg
+buildings side_nm_tid buildings/skyscraper7_NRM.jpg
+buildings add_material
+
+buildings side_tscale_x 0.87
+buildings side_tscale_y 0.25
+buildings side_tid buildings/skyscraper8.jpg
+buildings side_nm_tid buildings/skyscraper8_NRM.jpg
+buildings add_material
+
+/*
+buildings side_tid buildings/pixelcity_windows.jpg # for fun
+buildings side_nm_tid buildings/pixelcity_windows_NRM.jpg
+buildings side_color 1.0 1.0 1.0 1.0
+buildings side_tscale 0.5
+buildings add_material
+*/

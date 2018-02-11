@@ -966,6 +966,8 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="buildings.txt" />
+    <Text Include="building_materials.txt" />
+    <Text Include="building_params.txt" />
     <Text Include="coll_objs\COLL_OBJS.TXT" />
     <Text Include="coll_objs\COLL_OBJS1.TXT" />
     <Text Include="coll_objs\COLL_OBJS2.TXT" />
