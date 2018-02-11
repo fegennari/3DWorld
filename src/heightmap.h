@@ -29,7 +29,7 @@ public:
 	unsigned get_pixel_value (unsigned x, unsigned y) const;
 	float get_heightmap_value(unsigned x, unsigned y) const;
 	void modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta);
-	void apply_erosion();
+	void postprocess_height();
 };
 
 
@@ -113,6 +113,7 @@ class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 public:
 	void load(char const *const fn, bool invert_y=0);
 	bool maybe_load(char const *const fn, bool invert_y=0);
+	void write_png(std::string const &fn) const;
 	bool clamp_xy(int &x, int &y, float fract_x=0.0, float fract_y=0.0, bool allow_wrap=1) const;
 	bool clamp_no_scale(int &x, int &y, bool allow_wrap=1) const;
 	hmap_val_t get_clamped_pixel_value(int x, int y, bool allow_wrap=1) const;

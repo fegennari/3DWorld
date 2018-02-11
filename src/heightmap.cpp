@@ -16,6 +16,7 @@ unsigned const TEX_EDGE_MODE = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
 extern unsigned hmap_filter_width, erosion_iters_tt;
 extern int display_mode;
 extern float mesh_scale, dxdy;
+extern string hmap_out_fn;
 
 
 void adjust_brush_weight(float &delta, float dval, int shape) {
@@ -109,7 +110,7 @@ void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool v
 }
 
 
-void heightmap_t::apply_erosion() {
+void heightmap_t::postprocess_height() {
 
 	if (erosion_iters_tt == 0) return; // no erosion
 	assert(is_allocated());
@@ -125,7 +126,7 @@ void heightmap_t::apply_erosion() {
 		v = scale_mh_texture_val(v);
 		min_eq(min_zval, v);
 	}
-	::apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);
+	apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);
 
 	for (unsigned i = 0; i < vals.size(); ++i) { // convert from heightmap value to pixel
 		float v(unscale_mh_texture_val(vals[i]));
@@ -271,7 +272,8 @@ void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 	hmap = heightmap_t(0, 7, 0, 0, fn, invert_y);
 	hmap.load(-1, 0, 1, 1);
 	PRINT_TIME("Heightmap Load");
-	hmap.apply_erosion(); // apply erosion directly after loading, before applying mod brushes
+	hmap.postprocess_height(); // apply erosion, etc. directly after loading, before applying mod brushes
+	if (!hmap_out_fn.empty()) {write_png(hmap_out_fn);}
 }
 
 bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
@@ -279,6 +281,11 @@ bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
 	if (fn == NULL || enabled()) return 0;
 	load(fn, invert_y);
 	return 1;
+}
+
+void terrain_hmap_manager_t::write_png(std::string const &fn) const {
+	timer_t timer("Heightmap PNG Write");
+	hmap.write_to_png(fn);
 }
 
 tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::get_clamped_pixel_value(int x, int y, bool allow_wrap) const {

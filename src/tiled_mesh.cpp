@@ -3458,4 +3458,6 @@ void flatten_hmap_region(cube_t const &cube) {
 	if (using_tiled_terrain_hmap_tex()) {terrain_hmap_manager.flatten_region(cube);}
 }
 
+void write_heightmap_png(string const &fn) {terrain_hmap_manager.write_png(fn);}
+
 

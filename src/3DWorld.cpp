@@ -99,7 +99,7 @@ float model_mat_lod_thresh(5.0), clouds_per_tile(0.5), def_atmosphere(1.0), def_
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
-string user_text, cobjs_out_fn, sphere_materials_fn;
+string user_text, cobjs_out_fn, sphere_materials_fn, hmap_out_fn;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color, flower_color(ALPHA0);
 set<unsigned char> keys, keyset;
@@ -1981,6 +1981,9 @@ int load_config(string const &config_file) {
 		else if (str == "mh_filename_tiled_terrain") {
 			alloc_if_req(mh_filename_tt, NULL);
 			if (fscanf(fp, "%255s", mh_filename_tt) != 1) cfg_err("mh_filename_tiled_terrain command", error);
+		}
+		else if (str == "write_heightmap_png") {
+			if (!read_string(fp, hmap_out_fn)) cfg_err("write_heightmap_png command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);
