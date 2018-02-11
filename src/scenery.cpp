@@ -1213,6 +1213,8 @@ void scenery_group::add_plant(point const &pos, float height, float radius, int 
 	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager);
 }
 
+bool check_valid_scenery_pos(scenery_obj const &obj) {return check_valid_scenery_pos(obj.get_pos(), obj.get_radius());}
+
 void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache) {
 
 	//RESET_TIME;
@@ -1243,7 +1245,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			else if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
 				s_plant plant; // 35%
 				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {
-					if (!check_valid_scenery_pos(plant.get_pos(), plant.get_radius())) continue;
+					if (!check_valid_scenery_pos(plant)) continue;
 					plants.push_back(plant);
 					plant.add_bounds_to_bcube(all_bcube);
 				}
@@ -1251,29 +1253,41 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
 				rock_shapes.back().create(j, i, 1);
+				if (!check_valid_scenery_pos(rock_shapes.back())) {rock_shapes.pop_back(); continue;}
 				rock_shapes.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (val < 15) { // 7%
 				surface_rocks.push_back(surface_rock());
 				surface_rocks.back().create(j, i, 1, rock_vbo_manager, fixed_sz_rock_cache);
+				if (!check_valid_scenery_pos(surface_rocks.back())) {surface_rocks.pop_back(); continue;}
 				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (USE_VOXEL_ROCKS == 1 || (USE_VOXEL_ROCKS == 2 && !veg) && val < 35) {
 				voxel_rocks.push_back(voxel_rock());
 				voxel_rocks.back().create(j, i, 1);
+				if (!check_valid_scenery_pos(voxel_rocks.back())) {voxel_rocks.pop_back(); continue;}
 			}
 			else if (val < 50) { // 24.5%
 				rocks.push_back(s_rock());
 				rocks.back().create(j, i, 1);
+				if (!check_valid_scenery_pos(rocks.back())) {rocks.pop_back(); continue;}
 				rocks.back().add_bounds_to_bcube(all_bcube);
 			}
 			else if (veg && val < 85) { // 24.5%
 				s_log log;
-				if (log.create(j, i, 1, min_log_z)) {logs.push_back(log); log.add_bounds_to_bcube(all_bcube);}
+				if (log.create(j, i, 1, min_log_z)) {
+					if (!check_valid_scenery_pos(log)) continue;
+					logs.push_back(log);
+					log.add_bounds_to_bcube(all_bcube);
+				}
 			}
 			else if (veg) { // 10.5%
 				s_stump stump;
-				if (stump.create(j, i, 1, min_stump_z)) {stumps.push_back(stump); stump.add_bounds_to_bcube(all_bcube);}
+				if (stump.create(j, i, 1, min_stump_z)) {
+					if (!check_valid_scenery_pos(stump)) continue;
+					stumps.push_back(stump);
+					stump.add_bounds_to_bcube(all_bcube);
+				}
 			}
 		} // for j
 	} // for i
