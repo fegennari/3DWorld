@@ -919,6 +919,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const steep_mult_snow (1.0/(sthresh[1][1] - sthresh[1][0]));
 		float const steep_mult_rock (1.0/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
+		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
+		bool const check_grass_place(check_city_sphere_coll(point(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0), radius));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
@@ -989,14 +991,19 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					weights[dirt_tex_ix] *= dirt_scale;
 				}
 				if (grass) {
-					float const grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
-
-					if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
+					float grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
+					
+					if (grass_scale > 0.0 && check_grass_place && check_city_sphere_coll(point(get_xval(x + llc_x), get_yval(y + llc_y), 0.0), 0.0)) {
+						weights[dirt_tex_ix] += weights[grass_tex_ix]; // replace grass with dirt
+						weights[grass_tex_ix] = 0.0;
+						grass_scale = 0.0;
+					}
+					else if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
 						float const gscale(CLIP_TO_01(2.5f*(grass_scale - 0.5f) + 0.5f));
 						weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
 						weights[grass_tex_ix] *= gscale;
 					}
-					add_grass_block_at(x, y, mhmin, mhmax, grass_block_dim);
+					if (grass_scale > 0.0) {add_grass_block_at(x, y, mhmin, mhmax, grass_block_dim);}
 				} // end grass
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					mesh_weight_data[off+i] = ((weights[i] <= 0.01) ? 0 : ((weights[i] >= 0.99) ? 255 : (unsigned char)(255.0*weights[i])));

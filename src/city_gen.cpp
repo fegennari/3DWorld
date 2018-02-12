@@ -219,7 +219,7 @@ bool check_city_sphere_coll(point const &pos, float radius) {
 	return city_gen.check_plot_sphere_coll(center, radius);
 }
 bool check_valid_scenery_pos(point const &pos, float radius) {
-	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0;
+	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
 	if (check_city_sphere_coll(pos, radius)) return 0;
 	return 1;
 }
