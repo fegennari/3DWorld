@@ -489,7 +489,7 @@ unsigned voxel_rock_manager_t::gen_model_ix(int rseed) {
 void voxel_rock_manager_t::build_models(unsigned num_lod_levels) {
 
 	if (to_gen.empty()) return;
-	timer_t timer("Gen Voxel Rocks");
+	//timer_t timer("Gen Voxel Rocks");
 	vector<unsigned> const gen_queue(to_gen.begin(), to_gen.end());
 
 //#pragma omp parallel for schedule(dynamic,1) // not needed, gen_voxel_rock() already uses openmp
