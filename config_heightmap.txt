@@ -1,5 +1,19 @@
 include config_t.txt
 
+include building_params.txt
+buildings max_rot_angle 0.0 # no rotated buildings - Manhattan only
+buildings place_radius  0.0 # no radius clipping - place in a square
+buildings max_altitude 6.00 # same for all buildings
+include building_materials.txt
+
+city num_cities 1
+city num_samples 100
+city city_size 400
+city city_border 1000
+city slope_width 50
+city road_width 0.1
+city road_spacing 1.0
+
 read_landscape 1
 hmap_filter_width 1
 #erosion_iters 1000000
