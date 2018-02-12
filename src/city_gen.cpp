@@ -6,6 +6,8 @@
 #include "mesh.h"
 #include "heightmap.h"
 #include "file_utils.h"
+#include "draw_utils.h"
+#include "shaders.h"
 
 using std::string;
 
@@ -152,14 +154,82 @@ public:
 		}
 		return 0;
 	}
-};
+}; // city_plot_gen_t
+
+
+class city_road_gen_t {
+
+	struct road_t {
+		point start, end;
+		vector3d dw;
+		road_t() {}
+		road_t(point const &s, point const &e, float width) : start(s), end(e) {
+			assert(start != end);
+			assert(width > 0.0);
+			dw = 0.5*width*cross_product((end - start), plus_z).get_norm();
+		}
+		void draw(quad_batch_draw &qbd) const {
+			point pts[4] = {(start - dw), (start + dw), (end + dw), (end - dw)};
+			qbd.add_quad_pts(pts, colorRGBA(0.2, 0.2, 0.2, 1.0), plus_z, tex_range_t()); // dark gray, normal in +z
+		}
+	};
+
+	struct road_network_t : public vector<road_t> {
+		cube_t bcube;
+
+		road_network_t(cube_t const &bcube_) : bcube(bcube_) {
+			bcube.d[2][1] += SMALL_NUMBER; // make it nonzero size
+		}
+		void draw(quad_batch_draw &qbd, vector3d const &xlate) const {
+			if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
+			for (const_iterator r = begin(); r != end(); ++r) {r->draw(qbd);}
+		}
+	};
+
+	vector<road_network_t> road_networks;
+	quad_batch_draw qbd;
+
+public:
+	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
+		timer_t timer("Gen Roads");
+		vector3d const size(region.get_size());
+		assert(size.x > 0.0 && size.y > 0.0);
+		float const half_width(0.5*road_width), road_pitch(road_width + road_spacing);
+		float const zval(region.d[2][0] + SMALL_NUMBER);
+		road_networks.push_back(road_network_t(region));
+		road_network_t &roads(road_networks.back());
+		
+		// create a grid, for now; crossing roads will overlap
+		// FIXME: add proper intersections later
+		for (float x = region.d[0][0]+half_width; x < region.d[0][1]-half_width; x += road_pitch) { // shrink to include centerlines
+			roads.emplace_back(point(x, region.d[1][0], zval), point(x, region.d[1][1], zval), road_width);
+		}
+		for (float y = region.d[1][0]+half_width; y < region.d[1][1]-half_width; y += road_pitch) { // shrink to include centerlines
+			roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width);
+		}
+		cout << "Roads: " << roads.size() << endl;
+	}
+	void draw(vector3d const &xlate) { // non-const because qbd is modified
+		shader_t s;
+		s.begin_color_only_shader(); // FIXME: textured?
+		fgPushMatrix();
+		translate_to(xlate);
+		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(qbd, xlate);}
+		qbd.draw_and_clear();
+		glDepthFunc(GL_LESS);
+		s.end_shader();
+		fgPopMatrix();
+	}
+}; // city_road_gen_t
 
 
 struct city_params_t {
 
 	unsigned num_cities, num_samples, city_size, city_border, slope_width;
+	float road_width, road_spacing;
 
-	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0) {}
+	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size > 0);}
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
 
@@ -183,30 +253,45 @@ struct city_params_t {
 		else if (str == "slope_width") {
 			if (!read_uint(fp, slope_width)) {return read_error(str);}
 		}
+		else if (str == "road_width") {
+			if (!read_float(fp, road_width) || road_width < 0.0) {return read_error(str);}
+		}
+		else if (str == "road_spacing") {
+			if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
+		}
 		else {
 			cout << "Unrecognized city keyword in input file: " << str << endl;
 			return 0;
 		}
 		return 1;
 	}
-};
+}; // city_params_t
+
 
 class city_gen_t : public city_plot_gen_t {
-	bool gen_city(unsigned city_size, unsigned border, unsigned num_samples, unsigned slope_width) {
+
+	city_road_gen_t road_gen;
+
+public:
+	bool gen_city(city_params_t const &params) {
 		timer_t t("Choose City Location");
 		unsigned x1(0), y1(0);
-		if (!find_best_city_location(city_size, city_size, border, num_samples, x1, y1)) return 0;
-		unsigned const x2(x1 + city_size), y2(y1 + city_size);
-		float const elevation(flatten_region(x1, y1, x2, y2, slope_width));
+		if (!find_best_city_location(params.city_size, params.city_size, params.city_border, params.num_samples, x1, y1)) return 0;
+		unsigned const x2(x1 + params.city_size), y2(y1 + params.city_size);
+		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
 		set_buildings_pos_range(pos_range);
+		if (params.road_width > 0.0 && params.road_spacing > 0.0) {road_gen.gen_roads(pos_range, params.road_width, params.road_spacing);}
 		return 1;
 	}
-public:
 	void gen_cities(city_params_t const &params) {
-		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params.city_size, params.city_border, params.num_samples, params.slope_width);}
+		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params);}
 	}
-};
+	void draw(bool shadow_only, vector3d const &xlate) { // for now, there are only roads
+		if (!shadow_only) {road_gen.draw(xlate);} // roads don't cast shadows
+		// buildings are drawn through draw_buildings()
+	}
+}; // city_gen_t
 
 
 city_params_t city_params;
@@ -221,6 +306,8 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.init(heightmap, xsize, ysize); // only need to call once for any given heightmap
 	city_gen.gen_cities(city_params);
 }
+void draw_cities(bool shadow_only, vector3d const &xlate) {city_gen.draw(shadow_only, xlate);}
+
 bool check_city_sphere_coll(point const &pos, float radius) {
 	if (!have_cities()) return 0;
 	point center(pos);
