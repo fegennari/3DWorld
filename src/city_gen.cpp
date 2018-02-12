@@ -127,15 +127,21 @@ public:
 		cout << "cands: " << num_cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
 		return 1; // success
 	}
-	float flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float const *const height=nullptr) {
+	float flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned slope_width, float const *const height=nullptr) {
 		assert(is_valid_region(x1, y1, x2, y2));
 		float const delta_h = 0.0; // for debugging in map view
-		float const h(height ? *height : (get_avg_height(x1, y1, x2, y2) + delta_h));
+		float const elevation(height ? *height : (get_avg_height(x1, y1, x2, y2) + delta_h));
 
-		for (unsigned y = y1; y < y2; ++y) {
-			for (unsigned x = x1; x < x2; ++x) {heightmap[y*xsize + x] = h;}
+		for (unsigned y = max((int)y1-(int)slope_width, 0); y < min(y2+slope_width, ysize); ++y) {
+			for (unsigned x = max((int)x1-(int)slope_width, 0); x < min(x2+slope_width, xsize); ++x) {
+				float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
+				float const dy(max(0, max(((int)y1 - (int)y), ((int)y - (int)y2 + 1))));
+				float const mix(sqrt(dx*dx + dy*dy)/slope_width);
+				float &h(heightmap[y*xsize + x]);
+				h = mix*h + (1.0 - mix)*elevation;
+			}
 		}
-		return h;
+		return elevation;
 	}
 	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
 		if (plots.empty()) return 0;
@@ -151,9 +157,9 @@ public:
 
 struct city_params_t {
 
-	unsigned num_cities, num_samples, city_size, city_border;
+	unsigned num_cities, num_samples, city_size, city_border, slope_width;
 
-	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0) {}
+	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size > 0);}
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
 
@@ -174,6 +180,9 @@ struct city_params_t {
 		else if (str == "city_border") {
 			if (!read_uint(fp, city_border)) {return read_error(str);}
 		}
+		else if (str == "slope_width") {
+			if (!read_uint(fp, slope_width)) {return read_error(str);}
+		}
 		else {
 			cout << "Unrecognized city keyword in input file: " << str << endl;
 			return 0;
@@ -183,19 +192,19 @@ struct city_params_t {
 };
 
 class city_gen_t : public city_plot_gen_t {
-	bool gen_city(unsigned city_size, unsigned border, unsigned num_samples) {
+	bool gen_city(unsigned city_size, unsigned border, unsigned num_samples, unsigned slope_width) {
 		timer_t t("Choose City Location");
 		unsigned x1(0), y1(0);
 		if (!find_best_city_location(city_size, city_size, border, num_samples, x1, y1)) return 0;
 		unsigned const x2(x1 + city_size), y2(y1 + city_size);
-		float const elevation(flatten_region(x1, y1, x2, y2));
+		float const elevation(flatten_region(x1, y1, x2, y2, slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
 		set_buildings_pos_range(pos_range);
 		return 1;
 	}
 public:
 	void gen_cities(city_params_t const &params) {
-		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params.city_size, params.city_border, params.num_samples);}
+		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params.city_size, params.city_border, params.num_samples, params.slope_width);}
 	}
 };
 
