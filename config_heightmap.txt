@@ -12,7 +12,7 @@ city city_size 400
 city city_border 1000
 city slope_width 50
 city road_width 0.1
-city road_spacing 1.0
+city road_spacing 1.56
 
 read_landscape 1
 hmap_filter_width 1

@@ -12,6 +12,7 @@
 using std::string;
 
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
+float const ROAD_HEIGHT = 0.001;
 
 
 extern int rand_gen_index, display_mode;
@@ -174,7 +175,7 @@ class city_road_gen_t {
 		}
 		void draw(quad_batch_draw &qbd) const {
 			point const pts[4] = {(start - dw), (start + dw), (end + dw), (end - dw)};
-			qbd.add_quad_pts(pts, colorRGBA(0.2, 0.2, 0.2, 1.0), plus_z, tex_range_t()); // dark gray, normal in +z
+			qbd.add_quad_pts(pts, colorRGBA(0.06, 0.06, 0.06, 1.0), plus_z, tex_range_t()); // dark gray, normal in +z
 		}
 	};
 
@@ -182,14 +183,17 @@ class city_road_gen_t {
 		cube_t bcube;
 
 		road_network_t(cube_t const &bcube_) : bcube(bcube_) {
-			bcube.d[2][1] += SMALL_NUMBER; // make it nonzero size
+			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
 		void get_bcubes(vector<cube_t> &bcubes) const {
 			for (const_iterator r = begin(); r != end(); ++r) {bcubes.push_back(r->get_bcube());}
 		}
 		void draw(quad_batch_draw &qbd, vector3d const &xlate) const {
 			if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
-			for (const_iterator r = begin(); r != end(); ++r) {r->draw(qbd);}
+			float const z(0.5*(bcube.d[2][0] + bcube.d[2][1]));
+			point const pts[4] = {point(bcube.d[0][0], bcube.d[1][0], z), point(bcube.d[0][1], bcube.d[1][0], z), point(bcube.d[0][1], bcube.d[1][1], z), point(bcube.d[0][0], bcube.d[1][1], z)};
+			qbd.add_quad_pts(pts, colorRGBA(0.12, 0.12, 0.12, 1.0), plus_z, tex_range_t()); // city base, drawn first
+			for (const_iterator r = begin(); r != end(); ++r) {r->draw(qbd);} // roads, drawn on top
 		}
 	};
 
@@ -202,7 +206,7 @@ public:
 		vector3d const size(region.get_size());
 		assert(size.x > 0.0 && size.y > 0.0);
 		float const half_width(0.5*road_width), road_pitch(road_width + road_spacing);
-		float const zval(region.d[2][0] + SMALL_NUMBER);
+		float const zval(region.d[2][0] + ROAD_HEIGHT);
 		road_networks.push_back(road_network_t(region));
 		road_network_t &roads(road_networks.back());
 		
@@ -222,6 +226,7 @@ public:
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
 		shader_t s;
 		s.begin_color_only_shader(); // FIXME: textured?
+		//s.begin_untextured_lit_glcolor_shader();
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
