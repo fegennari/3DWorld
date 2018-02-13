@@ -168,8 +168,12 @@ class city_road_gen_t {
 			assert(width > 0.0);
 			dw = 0.5*width*cross_product((end - start), plus_z).get_norm();
 		}
+		cube_t get_bcube() const {
+			point const pts[4] = {(start - dw), (start + dw), (end + dw), (end - dw)};
+			return cube_t(pts, 4);
+		}
 		void draw(quad_batch_draw &qbd) const {
-			point pts[4] = {(start - dw), (start + dw), (end + dw), (end - dw)};
+			point const pts[4] = {(start - dw), (start + dw), (end + dw), (end - dw)};
 			qbd.add_quad_pts(pts, colorRGBA(0.2, 0.2, 0.2, 1.0), plus_z, tex_range_t()); // dark gray, normal in +z
 		}
 	};
@@ -179,6 +183,9 @@ class city_road_gen_t {
 
 		road_network_t(cube_t const &bcube_) : bcube(bcube_) {
 			bcube.d[2][1] += SMALL_NUMBER; // make it nonzero size
+		}
+		void get_bcubes(vector<cube_t> &bcubes) const {
+			for (const_iterator r = begin(); r != end(); ++r) {bcubes.push_back(r->get_bcube());}
 		}
 		void draw(quad_batch_draw &qbd, vector3d const &xlate) const {
 			if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
@@ -208,6 +215,9 @@ public:
 			roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width);
 		}
 		cout << "Roads: " << roads.size() << endl;
+	}
+	void get_all_bcubes(vector<cube_t> &bcubes) const {
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_bcubes(bcubes);}
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
 		shader_t s;
@@ -287,6 +297,8 @@ public:
 	void gen_cities(city_params_t const &params) {
 		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params);}
 	}
+	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_bcubes(bcubes);}
+
 	void draw(bool shadow_only, vector3d const &xlate) { // for now, there are only roads
 		if (!shadow_only) {road_gen.draw(xlate);} // roads don't cast shadows
 		// buildings are drawn through draw_buildings()
@@ -306,6 +318,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.init(heightmap, xsize, ysize); // only need to call once for any given heightmap
 	city_gen.gen_cities(city_params);
 }
+void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
 void draw_cities(bool shadow_only, vector3d const &xlate) {city_gen.draw(shadow_only, xlate);}
 
 bool check_city_sphere_coll(point const &pos, float radius) {

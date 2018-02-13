@@ -1239,6 +1239,8 @@ public:
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
+		vector<cube_t> city_road_bcubes;
+		get_city_road_bcubes(city_road_bcubes);
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			point center(all_zeros);
@@ -1287,6 +1289,11 @@ public:
 						}
 					} // for x
 				} // for y
+				if (!overlaps) { // no overlap yet, check for overlap with city roads
+					for (auto c = city_road_bcubes.begin(); c != city_road_bcubes.end(); ++c) { // Note: quadratic, but there aren't many roads yet
+						if (b.bcube.intersects_xy(*c)) {overlaps = 1; break;}
+					}
+				}
 				if (!overlaps) {
 					mat.side_color.gen_color(b.side_color, rgen);
 					mat.roof_color.gen_color(b.roof_color, rgen);

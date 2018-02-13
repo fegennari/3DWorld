@@ -326,6 +326,7 @@ void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsig
 bool parse_city_option(FILE *fp);
 bool have_cities();
 void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);
+void get_city_road_bcubes(vector<cube_t> &bcubes);
 void draw_cities(bool shadow_only, vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius);
 bool check_valid_scenery_pos(point const &pos, float radius);
