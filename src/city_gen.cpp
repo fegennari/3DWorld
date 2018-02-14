@@ -161,39 +161,74 @@ public:
 class city_road_gen_t {
 
 	struct road_t {
-		point start, end;
-		vector3d dw;
-		road_t() {}
-		road_t(point const &s, point const &e, float width) : start(s), end(e) {
-			assert(start != end);
+		cube_t bcube;
+		bool dir;
+
+		road_t() : dir(0) {}
+		road_t(point const &s, point const &e, float width, bool dir_) : dir(dir_) {
+			assert(s != e);
 			assert(width > 0.0);
-			dw = 0.5*width*cross_product((end - start), plus_z).get_norm();
-		}
-		cube_t get_bcube() const {
-			point const pts[4] = {(start - dw), (start + dw), (end + dw), (end - dw)};
-			return cube_t(pts, 4);
-		}
-		void draw(quad_batch_draw &qbd) const {
-			point const pts[4] = {(start - dw), (start + dw), (end + dw), (end - dw)};
-			qbd.add_quad_pts(pts, colorRGBA(0.06, 0.06, 0.06, 1.0), plus_z, tex_range_t()); // dark gray, normal in +z
+			vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
+			point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
+			bcube = cube_t(pts, 4);
 		}
 	};
 
-	struct road_network_t : public vector<road_t> {
+	struct road_network_t {
+		vector<road_t> roads; // full overlapping roads, for collisions, etc.
+		vector<road_t> segs; // non-overlapping road segments, for drawing with textures
+		vector<cube_t> isects; // for drawing with textures
+		vector<cube_t> plots; // plots of land that can hold buildings
 		cube_t bcube;
 
 		road_network_t(cube_t const &bcube_) : bcube(bcube_) {
 			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
+		void clear() {roads.clear(); segs.clear(); isects.clear(); plots.clear();}
+
+		bool gen_road_grid(cube_t const &region, float road_width, float road_spacing) {
+			vector3d const size(region.get_size());
+			assert(size.x > 0.0 && size.y > 0.0);
+			float const half_width(0.5*road_width), road_pitch(road_width + road_spacing);
+			float const zval(region.d[2][0] + ROAD_HEIGHT);
+
+			// create a grid, for now; crossing roads will overlap
+			for (float x = region.d[0][0]+half_width; x < region.d[0][1]-half_width; x += road_pitch) { // shrink to include centerlines
+				roads.emplace_back(point(x, region.d[1][0], zval), point(x, region.d[1][1], zval), road_width, false);
+			}
+			unsigned const num_x(roads.size());
+
+			for (float y = region.d[1][0]+half_width; y < region.d[1][1]-half_width; y += road_pitch) { // shrink to include centerlines
+				roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width, true);
+			}
+			unsigned const num_y(roads.size() - num_x);
+			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
+
+			// create road segments and intersections
+			isects.resize(num_x*num_y);
+			segs.resize((num_x-1)*(num_y-1));
+
+			for (unsigned x = 0; x < num_x; ++x) {
+				for (unsigned y = num_x; y < roads.size(); ++y) {
+
+				}
+			}
+			return 1;
+		}
 		void get_bcubes(vector<cube_t> &bcubes) const {
-			for (const_iterator r = begin(); r != end(); ++r) {bcubes.push_back(r->get_bcube());}
+			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(r->bcube);}
+		}
+		static void draw_cube_xy_plane(cube_t const &c, quad_batch_draw &qbd, colorRGBA const &color) {
+			float const z(0.5*(c.d[2][0] + c.d[2][1]));
+			point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
+			qbd.add_quad_pts(pts, color, plus_z, tex_range_t());
 		}
 		void draw(quad_batch_draw &qbd, vector3d const &xlate) const {
 			if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
-			float const z(0.5*(bcube.d[2][0] + bcube.d[2][1]));
-			point const pts[4] = {point(bcube.d[0][0], bcube.d[1][0], z), point(bcube.d[0][1], bcube.d[1][0], z), point(bcube.d[0][1], bcube.d[1][1], z), point(bcube.d[0][0], bcube.d[1][1], z)};
-			qbd.add_quad_pts(pts, colorRGBA(0.12, 0.12, 0.12, 1.0), plus_z, tex_range_t()); // city base, drawn first
-			for (const_iterator r = begin(); r != end(); ++r) {r->draw(qbd);} // roads, drawn on top
+			draw_cube_xy_plane(bcube, qbd, colorRGBA(0.12, 0.12, 0.12, 1.0));
+			float const z(0.5*(bcube.d[2][0] + bcube.d[2][1])); // city base, drawn first
+			colorRGBA const road_color(0.06, 0.06, 0.06, 1.0);
+			for (auto r = roads.begin(); r != roads.end(); ++r) {draw_cube_xy_plane(r->bcube, qbd, road_color);} // roads, drawn on top
 		}
 	};
 
@@ -203,22 +238,9 @@ class city_road_gen_t {
 public:
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		timer_t timer("Gen Roads");
-		vector3d const size(region.get_size());
-		assert(size.x > 0.0 && size.y > 0.0);
-		float const half_width(0.5*road_width), road_pitch(road_width + road_spacing);
-		float const zval(region.d[2][0] + ROAD_HEIGHT);
 		road_networks.push_back(road_network_t(region));
-		road_network_t &roads(road_networks.back());
-		
-		// create a grid, for now; crossing roads will overlap
-		// FIXME: add proper intersections later
-		for (float x = region.d[0][0]+half_width; x < region.d[0][1]-half_width; x += road_pitch) { // shrink to include centerlines
-			roads.emplace_back(point(x, region.d[1][0], zval), point(x, region.d[1][1], zval), road_width);
-		}
-		for (float y = region.d[1][0]+half_width; y < region.d[1][1]-half_width; y += road_pitch) { // shrink to include centerlines
-			roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width);
-		}
-		cout << "Roads: " << roads.size() << endl;
+		if (!road_networks.back().gen_road_grid(region, road_width, road_spacing)) {road_networks.pop_back();}
+		else {cout << "Roads: " << road_networks.back().roads.size() << endl;}
 	}
 	void get_all_bcubes(vector<cube_t> &bcubes) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_bcubes(bcubes);}
