@@ -16,7 +16,7 @@ float const ROAD_HEIGHT = 0.001;
 
 
 extern int rand_gen_index, display_mode;
-extern float water_plane_z;
+extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias;
 
 
 class city_plot_gen_t {
@@ -218,22 +218,25 @@ class city_road_gen_t {
 		void get_bcubes(vector<cube_t> &bcubes) const {
 			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(r->bcube);}
 		}
-		static void draw_cube_xy_plane(cube_t const &c, quad_batch_draw &qbd, colorRGBA const &color) {
+		static void draw_cube_xy_plane(cube_t const &c, quad_batch_draw &qbd_batched, quad_batch_draw &qbd_shadow, bool use_smap, vector3d const &xlate, shader_t &s, colorRGBA const &color) {
+			bool const emit_now(use_smap && try_bind_tile_smap_at_point((c.get_cube_center() + xlate), s));
+			quad_batch_draw &qbd(emit_now ? qbd_shadow : qbd_batched);
 			float const z(0.5*(c.d[2][0] + c.d[2][1]));
 			point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
 			qbd.add_quad_pts(pts, color, plus_z, tex_range_t());
+			if (emit_now) {qbd.draw_and_clear();}
 		}
-		void draw(quad_batch_draw &qbd, vector3d const &xlate) const {
+		void draw(quad_batch_draw &qbd_batched, quad_batch_draw &qbd_shadow, bool use_smap, vector3d const &xlate, shader_t &s) const {
 			if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
-			draw_cube_xy_plane(bcube, qbd, colorRGBA(0.12, 0.12, 0.12, 1.0));
+			draw_cube_xy_plane(bcube, qbd_batched, qbd_shadow, use_smap, xlate, s, colorRGBA(0.12, 0.12, 0.12, 1.0));
 			float const z(0.5*(bcube.d[2][0] + bcube.d[2][1])); // city base, drawn first
 			colorRGBA const road_color(0.06, 0.06, 0.06, 1.0);
-			for (auto r = roads.begin(); r != roads.end(); ++r) {draw_cube_xy_plane(r->bcube, qbd, road_color);} // roads, drawn on top
+			for (auto r = roads.begin(); r != roads.end(); ++r) {draw_cube_xy_plane(r->bcube, qbd_batched, qbd_shadow, use_smap, xlate, s, road_color);} // roads, drawn on top
 		}
 	};
 
 	vector<road_network_t> road_networks;
-	quad_batch_draw qbd;
+	quad_batch_draw qbd_batched, qbd_shadow;
 
 public:
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
@@ -246,20 +249,28 @@ public:
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_bcubes(bcubes);}
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
-		shader_t s;
-		// FIXME: textured
-		// FIXME: lighting
-		// FIXME: shadows
-		// FIXME: fog
-		s.begin_color_only_shader();
-		//s.begin_untextured_lit_glcolor_shader();
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(qbd, xlate);}
-		qbd.draw_and_clear();
-		glDepthFunc(GL_LESS);
+		shader_t s;
+		int const use_bmap(0);
+		bool const use_smap(0 && shadow_map_enabled());
+		select_texture(WHITE_TEX); // FIXME: ROAD_TEX
+
+		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
+		if (use_smap) {
+			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+			s.add_uniform_float("z_bias", cobj_z_bias);
+			s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
+		}
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(qbd_batched, qbd_shadow, use_smap, xlate, s);}
+		if (use_smap) {s.end_shader();}
+
+		// main/batched draw pass
+		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+		qbd_batched.draw_and_clear();
 		s.end_shader();
+		glDepthFunc(GL_LESS);
 		fgPopMatrix();
 	}
 }; // city_road_gen_t
