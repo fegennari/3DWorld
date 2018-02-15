@@ -955,8 +955,8 @@ void building_t::gen_geometry(unsigned ix) {
 
 	if (!is_valid()) return; // invalid building
 	cube_t const base(parts.empty() ? bcube : parts.back());
-	parts.clear(); // just in case
-	details.clear(); // just in case
+	parts.clear();
+	details.clear();
 	building_mat_t const &mat(get_material());
 	rand_gen_t rgen;
 	rgen.set_state(123+ix, 345*ix);
@@ -1248,10 +1248,11 @@ public:
 		get_city_road_bcubes(city_road_bcubes);
 		point center(all_zeros);
 		bool zval_set(0);
+		building_t b; // reused temporary
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
-				building_t b(params.choose_rand_mat(rgen)); // set material
+				b.mat_ix = params.choose_rand_mat(rgen); // set material
 				building_mat_t const &mat(b.get_material());
 				point const place_center(mat.pos_range.get_cube_center());
 				bool keep(0);
@@ -1274,15 +1275,21 @@ public:
 				++num_tries;
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
-				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break;
+				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
 				b.gen_rotation(rgen);
 				++num_gen;
 
+				// check building for overlap with city roads
+				bool overlaps(0);
+
+				for (auto c = city_road_bcubes.begin(); c != city_road_bcubes.end(); ++c) { // Note: quadratic, but there aren't many roads yet
+					if (b.bcube.intersects_xy(*c)) {overlaps = 1; break;}
+				}
+				if (overlaps) continue;
 				// check building for overlap with other buildings
 				float const expand(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by(expand*b.bcube.get_size());
-				bool overlaps(0);
 				unsigned ixr[2][2];
 				get_grid_range(b.bcube, ixr);
 
@@ -1297,21 +1304,15 @@ public:
 						}
 					} // for x
 				} // for y
-				if (!overlaps) { // no overlap yet, check for overlap with city roads
-					for (auto c = city_road_bcubes.begin(); c != city_road_bcubes.end(); ++c) { // Note: quadratic, but there aren't many roads yet
-						if (b.bcube.intersects_xy(*c)) {overlaps = 1; break;}
-					}
-				}
-				if (!overlaps) {
-					mat.side_color.gen_color(b.side_color, rgen);
-					mat.roof_color.gen_color(b.roof_color, rgen);
-					add_to_grid(b.bcube, buildings.size());
-					vector3d const sz(b.bcube.get_size());
-					float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
-					UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
-					buildings.push_back(b);
-					break; // done
-				}
+				if (overlaps) continue;
+				mat.side_color.gen_color(b.side_color, rgen);
+				mat.roof_color.gen_color(b.roof_color, rgen);
+				add_to_grid(b.bcube, buildings.size());
+				vector3d const sz(b.bcube.get_size());
+				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
+				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
+				buildings.push_back(b);
+				break; // done
 			} // for n
 		} // for i
 		timer.end();
