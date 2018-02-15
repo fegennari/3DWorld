@@ -87,7 +87,7 @@ struct building_mat_t : public building_tex_params_t {
 
 struct building_params_t {
 
-	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y;
+	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only;
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor;
 	vector3d range_translate; // used as a temporary to add to material pos_range
@@ -95,7 +95,7 @@ struct building_params_t {
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0),
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0),
 		num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	void add_cur_mat() {
@@ -148,6 +148,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "ao_factor") {
 		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
+	}
+	else if (str == "tt_only") {
+		if (!read_bool(fp, global_building_params.tt_only)) {buildings_file_err(str, error);}
 	}
 	// material parameters
 	else if (str == "range_translate") { // x,y only
@@ -1223,6 +1226,7 @@ public:
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 
 	void gen(building_params_t const &params) {
+		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		if (params.materials.empty()) return; // no materials
 		timer_t timer("Gen Buildings");
 		float const def_water_level(get_water_z_height());
