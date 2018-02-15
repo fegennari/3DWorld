@@ -247,7 +247,11 @@ public:
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
 		shader_t s;
-		s.begin_color_only_shader(); // FIXME: textured?
+		// FIXME: textured
+		// FIXME: lighting
+		// FIXME: shadows
+		// FIXME: fog
+		s.begin_color_only_shader();
 		//s.begin_untextured_lit_glcolor_shader();
 		fgPushMatrix();
 		translate_to(xlate);
@@ -317,7 +321,7 @@ public:
 		unsigned const x2(x1 + params.city_size), y2(y1 + params.city_size);
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
-		set_buildings_pos_range(pos_range);
+		set_buildings_pos_range(pos_range, 1); // is_const_zval=1
 		if (params.road_width > 0.0 && params.road_spacing > 0.0) {road_gen.gen_roads(pos_range, params.road_width, params.road_spacing);}
 		return 1;
 	}

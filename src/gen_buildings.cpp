@@ -87,7 +87,7 @@ struct building_mat_t : public building_tex_params_t {
 
 struct building_params_t {
 
-	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only;
+	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only, is_const_zval;
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor;
 	vector3d range_translate; // used as a temporary to add to material pos_range
@@ -95,7 +95,7 @@ struct building_params_t {
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix;
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0),
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0),
 		num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	void add_cur_mat() {
@@ -116,7 +116,8 @@ struct building_params_t {
 		assert(!mat_gen_ix.empty());
 		return mat_gen_ix[rgen.rand()%mat_gen_ix.size()];
 	}
-	void set_pos_range(cube_t const &pos_range) {
+	void set_pos_range(cube_t const &pos_range, bool is_const_zval_) {
+		is_const_zval = is_const_zval_;
 		cur_mat.pos_range = pos_range;
 		for (auto i = materials.begin(); i != materials.end(); ++i) {i->pos_range = pos_range;}
 	}
@@ -1245,10 +1246,10 @@ public:
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
 		vector<cube_t> city_road_bcubes;
 		get_city_road_bcubes(city_road_bcubes);
+		point center(all_zeros);
+		bool zval_set(0);
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
-			point center(all_zeros);
-			
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
 				building_t b(params.choose_rand_mat(rgen)); // set material
 				building_mat_t const &mat(b.get_material());
@@ -1260,8 +1261,11 @@ public:
 					if (mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;}
 				}
 				if (!keep) continue; // placement failed, skip
-				center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
-
+				
+				if (!params.is_const_zval || !zval_set) { // only calculate when needed
+					center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
+					zval_set = 1;
+				}
 				for (unsigned d = 0; d < 3; ++d) { // x,y,z
 					float const sz(0.5*rgen.rand_uniform(mat.sz_range.d[d][0], mat.sz_range.d[d][1]));
 					b.bcube.d[d][0] = center[d] - ((d == 2) ? 0.0 : sz); // only in XY
@@ -1484,7 +1488,7 @@ building_creator_t building_creator;
 
 void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
-void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
+void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);}
 
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {
 	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only);
