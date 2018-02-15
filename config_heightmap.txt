@@ -1,6 +1,8 @@
 include config_t.txt
 
 include building_params.txt
+buildings tt_only 1
+buildings num_place 100000
 buildings max_rot_angle 0.0 # no rotated buildings - Manhattan only
 buildings place_radius  0.0 # no radius clipping - place in a square
 buildings max_altitude 6.00 # same for all buildings
@@ -11,11 +13,12 @@ city num_samples 100
 city city_size 400
 city city_border 1000
 city slope_width 50
-city road_width 0.1
-city road_spacing 1.56
+city road_width 0.12
+city road_spacing 1.535
 
 read_landscape 1
 hmap_filter_width 1
+enable_tt_model_reflect 0 # not needed, since cities are inland
 #erosion_iters 1000000
 #erosion_iters_tt 10000000
 erode_amount 1.0
