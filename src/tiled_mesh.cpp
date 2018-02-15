@@ -828,7 +828,9 @@ void tile_shadow_map_manager::clear_context() {
 
 cube_t tile_t::get_shadow_bcube() const {
 	vector3d const &b_ext(get_buildings_max_extent());
-	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), x_ext(b_ext.x + trmax), y_ext(b_ext.y + trmax);
+	float const road_ext(get_road_max_len());
+	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
+	float const x_ext(max(max(road_ext, b_ext.x), trmax)), y_ext(max(max(road_ext, b_ext.y), trmax));
 	return cube_t(xv1-x_ext, xv1+(x2-x1)*deltax+x_ext, yv1-y_ext, yv1+(y2-y1)*deltay+y_ext, mzmin-BCUBE_ZTOLER, max(get_tile_zmax()+BCUBE_ZTOLER, mzmax+b_ext.z));
 }
 

@@ -2266,7 +2266,7 @@ void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask, vec
 	all_models.render(shadow_pass, reflection_pass, trans_op_mask, xlate);
 	
 	if (trans_op_mask & 1) {
-		draw_cities(shadow_pass, xlate);
+		draw_cities(shadow_pass, reflection_pass, xlate);
 		draw_buildings(shadow_pass, xlate);
 	}
 }
