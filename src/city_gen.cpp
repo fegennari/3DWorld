@@ -202,17 +202,67 @@ class city_road_gen_t {
 		}
 	};
 
-	struct road_network_t {
+	class road_network_t {
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
-		vector<road_t> segs; // non-overlapping road segments, for drawing with textures
-		vector<cube_t> isects; // for drawing with textures
+		vector<cube_t> xsegs, ysegs; // non-overlapping road segments, for drawing with textures
+		vector<cube_t> isecs; // for drawing with textures
 		vector<cube_t> plots; // plots of land that can hold buildings
 		cube_t bcube;
 
-		road_network_t(cube_t const &bcube_) : bcube(bcube_) {
-			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
+		static uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
+
+		struct cmp_by_tile { // not the most efficient solution, but no memory overhead
+			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
+		};
+
+		struct range_pair_t {
+			unsigned s, e; // Note: e is one past the end
+			range_pair_t() : s(0), e(0) {}
+			void update(unsigned v) {
+				if (s == 0 && e == 0) {s = v;} // first insert
+				else {assert(s < e && v >= e);} // v must strictly increase
+				e = v+1; // one past the end
+			}
+		};
+		struct tile_block_t { // collection of road parts for a given tile
+			range_pair_t ranges[4]; // {xsegs, ysegs, isecs, plots}
+			cube_t bcube;
+			tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
+		};
+		vector<tile_block_t> tile_blocks;
+
+		void add_tile_blocks(vector<cube_t> &v, map<uint64_t, unsigned> &tile_to_block_map, unsigned type_ix) {
+			sort(v.begin(), v.end(), cmp_by_tile());
+
+			for (unsigned i = 0; i < v.size(); ++i) {
+				uint64_t const tile_id(get_tile_id_for_cube(v[i]));
+				auto it(tile_to_block_map.find(tile_id));
+				unsigned block_id(0);
+			
+				if (it == tile_to_block_map.end()) { // not found, add new block
+					tile_to_block_map[tile_id] = block_id = tile_blocks.size();
+					tile_blocks.push_back(tile_block_t(v[i]));
+				}
+				else {block_id = it->second;}
+				assert(block_id < tile_blocks.size());
+				tile_blocks[block_id].ranges[type_ix].update(i);
+				tile_blocks[block_id].bcube.union_with_cube(v[i]);
+			} // for i
 		}
-		void clear() {roads.clear(); segs.clear(); isects.clear(); plots.clear();}
+		void gen_tile_blocks() {
+			tile_blocks.clear(); // should already be empty?
+			map<uint64_t, unsigned> tile_to_block_map;
+			add_tile_blocks(xsegs, tile_to_block_map, 0);
+			add_tile_blocks(ysegs, tile_to_block_map, 1);
+			add_tile_blocks(isecs, tile_to_block_map, 2);
+			add_tile_blocks(plots, tile_to_block_map, 3);
+			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
+		}
+
+	public:
+		road_network_t(cube_t const &bcube_) : bcube(bcube_) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
+		unsigned num_roads() const {return roads.size();}
+		void clear() {roads.clear(); xsegs.clear(); ysegs.clear(); isecs.clear(); plots.clear(); tile_blocks.clear();}
 
 		bool gen_road_grid(cube_t const &region, float road_width, float road_spacing) {
 			vector3d const size(region.get_size());
@@ -233,21 +283,22 @@ class city_road_gen_t {
 			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
 
 			// create road segments and intersections
-			isects.reserve(num_x*num_y);
-			segs.reserve(2*(num_x-1)*(num_y-1));
+			xsegs.reserve(num_x*(num_y-1));
+			ysegs.reserve((num_x-1)*num_y);
+			isecs.reserve(num_x*num_y);
 			plots.reserve((num_x-1)*(num_y-1));
 
 			for (unsigned x = 0; x < num_x; ++x) {
 				for (unsigned y = num_x; y < roads.size(); ++y) {
 					cube_t const &rx(roads[x].bcube), &ry(roads[y].bcube);
-					isects.emplace_back(rx.d[0][0], rx.d[0][1], ry.d[1][0], ry.d[1][1], zval, zval); // intersections
+					isecs.emplace_back(rx.d[0][0], rx.d[0][1], ry.d[1][0], ry.d[1][1], zval, zval); // intersections
 					if (x+1 < num_x) { // skip last y segment
 						cube_t const &rxn(roads[x+1].bcube);
-						segs .emplace_back(rx.d[0][1], rxn.d[0][0], ry.d[1][0], ry .d[1][1], zval, zval, true ); // y-segments
+						ysegs.emplace_back(rx.d[0][1], rxn.d[0][0], ry.d[1][0], ry .d[1][1], zval, zval); // y-segments
 					}
 					if (y+1 < roads.size()) { // skip last x segment
 						cube_t const &ryn(roads[y+1].bcube);
-						segs .emplace_back(rx.d[0][0], rx .d[0][1], ry.d[1][1], ryn.d[1][0], zval, zval, false); // x-segments
+						xsegs.emplace_back(rx.d[0][0], rx .d[0][1], ry.d[1][1], ryn.d[1][0], zval, zval); // x-segments
 
 						if (x+1 < num_x) { // skip last y segment
 							cube_t const &rxn(roads[x+1].bcube);
@@ -256,30 +307,37 @@ class city_road_gen_t {
 					}
 				} // for y
 			} // for x
+			gen_tile_blocks();
 			return 1;
 		}
 		void get_bcubes(vector<cube_t> &bcubes) const {
 			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(r->bcube);}
 		}
-		static void draw_cube_xy_plane(cube_t const &c, draw_state_t &dstate, colorRGBA const &color) {
-			quad_batch_draw &qbd(dstate.get_qbd_for_smap(c.get_cube_center()));
-			float const z(0.5*(c.d[2][0] + c.d[2][1]));
-			point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
-			qbd.add_quad_pts(pts, color, plus_z, tex_range_t());
-			if (dstate.emit_now) {qbd.draw_and_clear();}
-		}
 		void draw(draw_state_t &dstate) const {
 			if (!camera_pdu.cube_visible(bcube + dstate.xlate)) return; // VFC
 			colorRGBA const road_color(0.06, 0.06, 0.06, 1.0), int_color(0.06, 0.06, 0.06, 1.0), plot_color(0.12, 0.12, 0.12, 1.0);
-#if 1
-			for (auto i = isects.begin(); i != isects.end(); ++i) {draw_cube_xy_plane(*i,       dstate, int_color );} // intersections
-			for (auto i = segs  .begin(); i != segs  .end(); ++i) {draw_cube_xy_plane(i->bcube, dstate, road_color);} // road segments
-			for (auto i = plots .begin(); i != plots .end(); ++i) {draw_cube_xy_plane(*i,       dstate, plot_color);} // plots
-#else
-			draw_cube_xy_plane(bcube, dstate, plot_color); // city base, drawn first
-			for (auto r = roads.begin(); r != roads.end(); ++r) {draw_cube_xy_plane(r->bcube, dstate, road_color);} // roads, drawn on top
-#endif
+
+			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
+				if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue; // VFC
+				quad_batch_draw &qbd(dstate.get_qbd_for_smap(b->bcube.get_cube_center()));
+				draw_road_region(xsegs, b->ranges[0], qbd, road_color); // x road segments
+				draw_road_region(ysegs, b->ranges[1], qbd, road_color); // y road segments
+				draw_road_region(isecs, b->ranges[2], qbd, int_color ); // intersections
+				draw_road_region(plots, b->ranges[3], qbd, plot_color); // plots
+				if (dstate.emit_now) {qbd.draw_and_clear();}
+			} // for b
 		}
+		private:
+			void draw_road_region(vector<cube_t> const &v, range_pair_t const &rp, quad_batch_draw &qbd, colorRGBA const &color) const {
+				assert(rp.s <= rp.e && rp.e <= v.size());
+				
+				for (unsigned i = rp.s; i < rp.e; ++i) {
+					cube_t const &c(v[i]);
+					float const z(0.5*(c.d[2][0] + c.d[2][1]));
+					point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
+					qbd.add_quad_pts(pts, color, plus_z, tex_range_t());
+				} // for i
+			}
 	};
 
 	vector<road_network_t> road_networks;
@@ -290,12 +348,14 @@ public:
 		timer_t timer("Gen Roads");
 		road_networks.push_back(road_network_t(region));
 		if (!road_networks.back().gen_road_grid(region, road_width, road_spacing)) {road_networks.pop_back();}
-		else {cout << "Roads: " << road_networks.back().roads.size() << endl;}
+		else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
 	}
 	void get_all_bcubes(vector<cube_t> &bcubes) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_bcubes(bcubes);}
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
+		if (road_networks.empty()) return;
+		//timer_t timer("Draw Roads");
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
@@ -376,8 +436,8 @@ public:
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_bcubes(bcubes);}
 
-	void draw(bool shadow_only, bool reflection_pass, vector3d const &xlate) { // for now, there are only roads
-		if (!shadow_only && !reflection_pass) {road_gen.draw(xlate);} // roads don't cast shadows and aren't reflected in water
+	void draw(bool shadow_only, int reflection_pass, vector3d const &xlate) { // for now, there are only roads
+		if (!shadow_only && reflection_pass == 0) {road_gen.draw(xlate);} // roads don't cast shadows and aren't reflected in water
 		// buildings are drawn through draw_buildings()
 	}
 }; // city_gen_t
@@ -397,7 +457,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.gen_cities(city_params);
 }
 void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
-void draw_cities(bool shadow_only, bool reflection_pass, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, xlate);}
+void draw_cities(bool shadow_only, int reflection_pass, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, xlate);}
 
 bool check_city_sphere_coll(point const &pos, float radius) {
 	if (!have_cities()) return 0;

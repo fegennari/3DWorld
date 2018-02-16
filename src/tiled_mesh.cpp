@@ -828,7 +828,7 @@ void tile_shadow_map_manager::clear_context() {
 
 cube_t tile_t::get_shadow_bcube() const {
 	vector3d const &b_ext(get_buildings_max_extent());
-	float const road_ext(get_road_max_len());
+	float const road_ext(0.5*get_road_max_len());
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
 	float const x_ext(max(max(road_ext, b_ext.x), trmax)), y_ext(max(max(road_ext, b_ext.y), trmax));
 	return cube_t(xv1-x_ext, xv1+(x2-x1)*deltax+x_ext, yv1-y_ext, yv1+(y2-y1)*deltay+y_ext, mzmin-BCUBE_ZTOLER, max(get_tile_zmax()+BCUBE_ZTOLER, mzmax+b_ext.z));
@@ -3002,8 +3002,11 @@ tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) const {
 	return ((it != tiles.end()) ? it->second.get() : nullptr);
 }
 tile_t *tile_draw_t::get_tile_containing_point(point const &pos) const {
-	tile_xy_pair const tp(round_fp(0.5*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE));
-	return get_tile_from_xy(tp);
+	return get_tile_from_xy(tile_xy_pair(round_fp(0.5*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE)));
+}
+uint64_t get_tile_id_containing_point_no_xyoff(point const &pos) {
+	tile_xy_pair const tp(round_fp(0.5*pos.x/X_SCENE_SIZE), round_fp(0.5*pos.y/Y_SCENE_SIZE));
+	return (tp.x + (uint64_t(tp.y) << 32));
 }
 
 bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s) const {

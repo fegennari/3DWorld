@@ -260,6 +260,7 @@ void reset_tiled_terrain_state();
 void clear_tiled_terrain_shaders();
 float get_tiled_terrain_water_level();
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s);
+uint64_t get_tile_id_containing_point_no_xyoff(point const &pos);
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(shader_t &s, float zval);
 bool check_player_tiled_terrain_collision();
@@ -328,7 +329,7 @@ bool have_cities();
 float get_road_max_len();
 void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);
 void get_city_road_bcubes(vector<cube_t> &bcubes);
-void draw_cities(bool shadow_only, bool reflection_pass, vector3d const &xlate);
+void draw_cities(bool shadow_only, int reflection_pass, vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius);
 bool check_valid_scenery_pos(point const &pos, float radius);
 
