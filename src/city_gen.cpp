@@ -158,20 +158,45 @@ public:
 }; // city_plot_gen_t
 
 
+struct road_mat_t {
+	unsigned tid;
+	colorRGBA color;
+	road_mat_t(unsigned tid_=0, colorRGBA const &color_=WHITE) : tid(tid_), color(color_) {}
+};
+
+road_mat_t const road_mats[4] = {
+	road_mat_t(WHITE_TEX, colorRGBA(0.06, 0.06, 0.06, 1.0)), // xsegs
+	road_mat_t(WHITE_TEX, colorRGBA(0.06, 0.06, 0.06, 1.0)), // ysegs
+	road_mat_t(TILE_TEX, colorRGBA(0.06, 0.06, 0.06, 1.0)), // isecs
+	road_mat_t(STUCCO_TEX, colorRGBA(0.12, 0.12, 0.12, 1.0)), // plots
+};
+
+
 class city_road_gen_t {
 
 	struct draw_state_t {
-		quad_batch_draw qbd_batched, qbd_shadow;
 		shader_t s;
 		vector3d xlate;
-		bool use_smap, use_bmap, emit_now;
+		bool use_smap, use_bmap;
+	private:
+		quad_batch_draw qbd_batched[4], qbd_shadow[4];
+		unsigned type_ix;
+		bool emit_now;
 
-		draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), emit_now(0) {}
-
-		quad_batch_draw &get_qbd_for_smap(point const &pos) {
-			emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
-			return (emit_now ? qbd_shadow : qbd_batched);
+		quad_batch_draw &get_qbd() {
+			assert(type_ix < 4);
+			return (emit_now ? qbd_shadow[type_ix] : qbd_batched[type_ix]);
 		}
+		void draw_cur_block() {
+			assert(type_ix < 4);
+			select_texture(road_mats[type_ix].tid);
+			get_qbd().draw_and_clear();
+		}
+	public:
+		draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), type_ix(0), emit_now(0) {}
+		void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
+		void begin_block(unsigned type_ix_) {type_ix = type_ix_;}
+
 		void pre_draw() {
 			if (use_smap) {
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
@@ -179,21 +204,29 @@ class city_road_gen_t {
 				s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 			}
 		}
+		void add_cube(cube_t const &c, tex_range_t const &tr) {
+			float const z(0.5*(c.d[2][0] + c.d[2][1]));
+			point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
+			get_qbd().add_quad_pts(pts, road_mats[type_ix].color, plus_z, tr);
+		}
+		void end_block() {
+			if (emit_now) {draw_cur_block();} // only shadow blocks
+		}
 		void post_draw() {
+			emit_now = 0;
 			if (use_smap) {s.end_shader();}
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-			qbd_batched.draw_and_clear();
+			for (unsigned i = 0; i < 4; ++i) {begin_block(i); draw_cur_block();} // only unshadowed blocks
 			s.end_shader();
 		}
 	};
 
 	struct road_t {
 		cube_t bcube;
-		bool dir;
 
-		road_t() : dir(0) {}
-		road_t(float x1, float x2, float y1, float y2, float z1, float z2, bool dir_) : bcube(x1, x2, y1, y2, z1, z2), dir(dir_) {}
-		road_t(point const &s, point const &e, float width, bool dir_) : dir(dir_) {
+		road_t() {}
+		road_t(float x1, float x2, float y1, float y2, float z1, float z2) : bcube(x1, x2, y1, y2, z1, z2) {}
+		road_t(point const &s, point const &e, float width) {
 			assert(s != e);
 			assert(width > 0.0);
 			vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
@@ -232,6 +265,7 @@ class city_road_gen_t {
 		vector<tile_block_t> tile_blocks;
 
 		void add_tile_blocks(vector<cube_t> &v, map<uint64_t, unsigned> &tile_to_block_map, unsigned type_ix) {
+			assert(type_ix < 4);
 			sort(v.begin(), v.end(), cmp_by_tile());
 
 			for (unsigned i = 0; i < v.size(); ++i) {
@@ -272,12 +306,12 @@ class city_road_gen_t {
 
 			// create a grid, for now; crossing roads will overlap
 			for (float x = region.d[0][0]+half_width; x < region.d[0][1]-half_width; x += road_pitch) { // shrink to include centerlines
-				roads.emplace_back(point(x, region.d[1][0], zval), point(x, region.d[1][1], zval), road_width, false);
+				roads.emplace_back(point(x, region.d[1][0], zval), point(x, region.d[1][1], zval), road_width);
 			}
 			unsigned const num_x(roads.size());
 
 			for (float y = region.d[1][0]+half_width; y < region.d[1][1]-half_width; y += road_pitch) { // shrink to include centerlines
-				roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width, true);
+				roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width);
 			}
 			unsigned const num_y(roads.size() - num_x);
 			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
@@ -319,24 +353,19 @@ class city_road_gen_t {
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue; // VFC
-				quad_batch_draw &qbd(dstate.get_qbd_for_smap(b->bcube.get_cube_center()));
-				draw_road_region(xsegs, b->ranges[0], qbd, road_color); // x road segments
-				draw_road_region(ysegs, b->ranges[1], qbd, road_color); // y road segments
-				draw_road_region(isecs, b->ranges[2], qbd, int_color ); // intersections
-				draw_road_region(plots, b->ranges[3], qbd, plot_color); // plots
-				if (dstate.emit_now) {qbd.draw_and_clear();}
+				dstate.begin_tile(b->bcube.get_cube_center());
+				draw_road_region(xsegs, b->ranges[0], dstate, road_color, 0); // x road segments
+				draw_road_region(ysegs, b->ranges[1], dstate, road_color, 1); // y road segments
+				draw_road_region(isecs, b->ranges[2], dstate, int_color,  2); // intersections
+				draw_road_region(plots, b->ranges[3], dstate, plot_color, 3); // plots
 			} // for b
 		}
 		private:
-			void draw_road_region(vector<cube_t> const &v, range_pair_t const &rp, quad_batch_draw &qbd, colorRGBA const &color) const {
+			void draw_road_region(vector<cube_t> const &v, range_pair_t const &rp, draw_state_t &dstate, colorRGBA const &color, unsigned type_ix) const {
 				assert(rp.s <= rp.e && rp.e <= v.size());
-				
-				for (unsigned i = rp.s; i < rp.e; ++i) {
-					cube_t const &c(v[i]);
-					float const z(0.5*(c.d[2][0] + c.d[2][1]));
-					point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
-					qbd.add_quad_pts(pts, color, plus_z, tex_range_t());
-				} // for i
+				dstate.begin_block(type_ix);
+				for (unsigned i = rp.s; i < rp.e; ++i) {dstate.add_cube(v[i], tex_range_t());}
+				dstate.end_block();
 			}
 	};
 
