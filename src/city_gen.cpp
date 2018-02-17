@@ -344,8 +344,11 @@ class city_road_gen_t {
 			gen_tile_blocks();
 			return 1;
 		}
-		void get_bcubes(vector<cube_t> &bcubes) const {
+		void get_road_bcubes(vector<cube_t> &bcubes) const {
 			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(r->bcube);}
+		}
+		void get_plot_bcubes(vector<cube_t> &bcubes) const {
+			for (auto r = plots.begin(); r != plots.end(); ++r) {bcubes.push_back(*r);}
 		}
 		void draw(draw_state_t &dstate) const {
 			if (!camera_pdu.cube_visible(bcube + dstate.xlate)) return; // VFC
@@ -379,8 +382,11 @@ public:
 		if (!road_networks.back().gen_road_grid(region, road_width, road_spacing)) {road_networks.pop_back();}
 		else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
 	}
-	void get_all_bcubes(vector<cube_t> &bcubes) const {
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_bcubes(bcubes);}
+	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
+	}
+	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
 		if (road_networks.empty()) return;
@@ -449,21 +455,26 @@ class city_gen_t : public city_plot_gen_t {
 	city_road_gen_t road_gen;
 
 public:
-	bool gen_city(city_params_t const &params) {
+	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		timer_t t("Choose City Location");
 		unsigned x1(0), y1(0);
 		if (!find_best_city_location(params.city_size, params.city_size, params.city_border, params.num_samples, x1, y1)) return 0;
 		unsigned const x2(x1 + params.city_size), y2(y1 + params.city_size);
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
-		set_buildings_pos_range(pos_range, 1); // is_const_zval=1
+		if (cities_bcube.is_all_zeros()) {cities_bcube = pos_range;} else {cities_bcube.union_with_cube(pos_range);}
 		if (params.road_width > 0.0 && params.road_spacing > 0.0) {road_gen.gen_roads(pos_range, params.road_width, params.road_spacing);}
 		return 1;
 	}
 	void gen_cities(city_params_t const &params) {
-		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params);}
+		if (params.num_cities == 0) return;
+		cube_t cities_bcube(all_zeros);
+		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params, cities_bcube);}
+		bool const is_const_zval(cities_bcube.d[2][0] == cities_bcube.d[2][1]);
+		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube, is_const_zval);}
 	}
-	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_bcubes(bcubes);}
+	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
+	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
 
 	void draw(bool shadow_only, int reflection_pass, vector3d const &xlate) { // for now, there are only roads
 		if (!shadow_only && reflection_pass == 0) {road_gen.draw(xlate);} // roads don't cast shadows and aren't reflected in water
@@ -486,6 +497,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.gen_cities(city_params);
 }
 void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
+void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void draw_cities(bool shadow_only, int reflection_pass, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, xlate);}
 
 bool check_city_sphere_coll(point const &pos, float radius) {

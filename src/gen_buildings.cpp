@@ -1244,8 +1244,9 @@ public:
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
-		vector<cube_t> city_road_bcubes;
-		get_city_road_bcubes(city_road_bcubes);
+		vector<cube_t> city_plot_bcubes;
+		get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
+		bool const use_plots(!city_plot_bcubes.empty());
 		point center(all_zeros);
 		bool zval_set(0);
 		building_t b; // reused temporary
@@ -1254,44 +1255,43 @@ public:
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
 				b.mat_ix = params.choose_rand_mat(rgen); // set material
 				building_mat_t const &mat(b.get_material());
-				point const place_center(mat.pos_range.get_cube_center());
+				cube_t const &pos_range(use_plots ? city_plot_bcubes[rgen.rand()%city_plot_bcubes.size()] : mat.pos_range); // select a random plot, if available
+				point const place_center(pos_range.get_cube_center());
 				bool keep(0);
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
-					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(mat.pos_range.d[d][0], mat.pos_range.d[d][1]);} // x,y
+					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pos_range.d[d][0], pos_range.d[d][1]);} // x,y
 					if (mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;}
 				}
 				if (!keep) continue; // placement failed, skip
 				
+				for (unsigned d = 0; d < 2; ++d) { // x,y
+					float const sz(0.5*rgen.rand_uniform(mat.sz_range.d[d][0], mat.sz_range.d[d][1]));
+					b.bcube.d[d][0] = center[d] - sz;
+					b.bcube.d[d][1] = center[d] + sz;
+				} // for d
+				++num_tries;
+				if (use_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
+
 				if (!params.is_const_zval || !zval_set) { // only calculate when needed
 					center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
 					zval_set = 1;
 				}
-				for (unsigned d = 0; d < 3; ++d) { // x,y,z
-					float const sz(0.5*rgen.rand_uniform(mat.sz_range.d[d][0], mat.sz_range.d[d][1]));
-					b.bcube.d[d][0] = center[d] - ((d == 2) ? 0.0 : sz); // only in XY
-					b.bcube.d[d][1] = center[d] + sz;
-				} // for d
-				++num_tries;
+				b.bcube.d[2][0] = center.z; // zval
+				b.bcube.d[2][1] = center.z + 0.5*rgen.rand_uniform(mat.sz_range.d[2][0], mat.sz_range.d[2][1]);
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
 				b.gen_rotation(rgen);
 				++num_gen;
-
-				// check building for overlap with city roads
-				bool overlaps(0);
-
-				for (auto c = city_road_bcubes.begin(); c != city_road_bcubes.end(); ++c) { // Note: quadratic, but there aren't many roads yet
-					if (b.bcube.intersects_xy(*c)) {overlaps = 1; break;}
-				}
-				if (overlaps) continue;
+				
 				// check building for overlap with other buildings
 				float const expand(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by(expand*b.bcube.get_size());
 				unsigned ixr[2][2];
 				get_grid_range(b.bcube, ixr);
+				bool overlaps(0);
 
 				for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
 					for (unsigned x = ixr[0][0]; x <= ixr[1][0] && !overlaps; ++x) {
