@@ -351,12 +351,23 @@ void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vecto
 
 	color_wrapper cw;
 	cw.set_c4(c); // Note: reversed from quad_to_tris_ixs
-	verts.emplace_back(pts[0], n, tr.x1,tr.y1, cw.c, true);
-	verts.emplace_back(pts[2], n, tr.x2,tr.y2, cw.c, true);
-	verts.emplace_back(pts[1], n, tr.x2,tr.y1, cw.c, true);
-	verts.emplace_back(pts[0], n, tr.x1,tr.y1, cw.c, true);
-	verts.emplace_back(pts[3], n, tr.x1,tr.y2, cw.c, true);
-	verts.emplace_back(pts[2], n, tr.x2,tr.y2, cw.c, true);
+
+	if (tr.swap_xy) {
+		verts.emplace_back(pts[0], n, tr.x1, tr.y2, cw.c, true);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y1, cw.c, true);
+		verts.emplace_back(pts[1], n, tr.x1, tr.y1, cw.c, true);
+		verts.emplace_back(pts[0], n, tr.x1, tr.y2, cw.c, true);
+		verts.emplace_back(pts[3], n, tr.x2, tr.y2, cw.c, true);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y1, cw.c, true);
+	}
+	else {
+		verts.emplace_back(pts[0], n, tr.x1, tr.y1, cw.c, true);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y2, cw.c, true);
+		verts.emplace_back(pts[1], n, tr.x2, tr.y1, cw.c, true);
+		verts.emplace_back(pts[0], n, tr.x1, tr.y1, cw.c, true);
+		verts.emplace_back(pts[3], n, tr.x1, tr.y2, cw.c, true);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y2, cw.c, true);
+	}
 }
 
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
