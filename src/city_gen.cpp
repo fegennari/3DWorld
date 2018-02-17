@@ -19,6 +19,53 @@ extern int rand_gen_index, display_mode;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias;
 
 
+struct city_params_t {
+
+	unsigned num_cities, num_samples, city_size, city_border, slope_width;
+	float road_width, road_spacing;
+
+	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
+	bool enabled() const {return (num_cities > 0 && city_size > 0);}
+	float get_road_ar() const {return road_spacing/road_width;}
+	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
+
+	bool read_option(FILE *fp) {
+		char strc[MAX_CHARS] = {0};
+		if (!read_str(fp, strc)) return 0;
+		string const str(strc);
+
+		if (str == "num_cities") {
+			if (!read_uint(fp, num_cities)) {return read_error(str);}
+		}
+		else if (str == "num_samples") {
+			if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
+		}
+		else if (str == "city_size") {
+			if (!read_uint(fp, city_size)) {return read_error(str);}
+		}
+		else if (str == "city_border") {
+			if (!read_uint(fp, city_border)) {return read_error(str);}
+		}
+		else if (str == "slope_width") {
+			if (!read_uint(fp, slope_width)) {return read_error(str);}
+		}
+		else if (str == "road_width") {
+			if (!read_float(fp, road_width) || road_width < 0.0) {return read_error(str);}
+		}
+		else if (str == "road_spacing") {
+			if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
+		}
+		else {
+			cout << "Unrecognized city keyword in input file: " << str << endl;
+			return 0;
+		}
+		return 1;
+	}
+}; // city_params_t
+
+city_params_t city_params;
+
+
 class city_plot_gen_t {
 
 protected:
@@ -158,18 +205,42 @@ public:
 }; // city_plot_gen_t
 
 
-struct road_mat_t {
-	unsigned tid;
-	colorRGBA color;
-	road_mat_t(unsigned tid_=0, colorRGBA const &color_=WHITE) : tid(tid_), color(color_) {}
+enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_4WAY, TID_3WAY, TID_BEND_90, NUM_RD_TIDS};
+enum {TYPE_XSEG=0, TYPE_YSEG, TYPE_ISEC, TYPE_PLOT, NUM_RD_TYPES};
+
+colorRGBA const road_colors[4] = {WHITE, WHITE, WHITE, WHITE};
+
+class road_mat_mrg_t {
+
+	bool inited;
+	unsigned tids[NUM_RD_TIDS];
+
+public:
+	road_mat_mrg_t() : inited(0) {}
+
+	void ensure_road_textures() {
+		if (inited) return;
+		timer_t timer("Load Road Textures");
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "int_4_way.jpg", "int_3_way.jpg", "bend_90.jpg"};
+		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0};
+		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
+		inited = 1;
+	}
+	unsigned get_tid(unsigned type) const {
+		assert(inited);
+		if (type == TYPE_XSEG || type == TYPE_YSEG) return tids[TID_STRAIGHT]; // FIXME: handle x/y orient
+		if (type == TYPE_ISEC) return tids[TID_4WAY]; // FIXME: {TID_4WAY, TID_3WAY, TID_BEND}
+		if (type == TYPE_PLOT) return tids[TID_SIDEWLAK];
+		assert(0);
+		return 0;
+	}
+	void set_texture(unsigned type) {
+		ensure_road_textures();
+		select_texture(get_tid(type));
+	}
 };
 
-road_mat_t const road_mats[4] = {
-	road_mat_t(WHITE_TEX, colorRGBA(0.06, 0.06, 0.06, 1.0)), // xsegs
-	road_mat_t(WHITE_TEX, colorRGBA(0.06, 0.06, 0.06, 1.0)), // ysegs
-	road_mat_t(TILE_TEX, colorRGBA(0.06, 0.06, 0.06, 1.0)), // isecs
-	road_mat_t(STUCCO_TEX, colorRGBA(0.12, 0.12, 0.12, 1.0)), // plots
-};
+road_mat_mrg_t road_mat_mrg;
 
 
 class city_road_gen_t {
@@ -179,24 +250,34 @@ class city_road_gen_t {
 		vector3d xlate;
 		bool use_smap, use_bmap;
 	private:
-		quad_batch_draw qbd_batched[4], qbd_shadow[4];
+		quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_shadow[NUM_RD_TYPES];
+		tex_range_t tr;
 		unsigned type_ix;
 		bool emit_now;
 
 		quad_batch_draw &get_qbd() {
-			assert(type_ix < 4);
+			assert(type_ix < NUM_RD_TYPES);
 			return (emit_now ? qbd_shadow[type_ix] : qbd_batched[type_ix]);
 		}
 		void draw_cur_block() {
-			assert(type_ix < 4);
-			select_texture(road_mats[type_ix].tid);
+			road_mat_mrg.set_texture(type_ix);
 			get_qbd().draw_and_clear();
 		}
 	public:
 		draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), type_ix(0), emit_now(0) {}
 		void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
-		void begin_block(unsigned type_ix_) {type_ix = type_ix_;}
-
+		
+		void begin_block(unsigned type_ix_) {
+			type_ix = type_ix_;
+			float const ar(city_params.get_road_ar());
+			switch (type_ix) {
+			case TYPE_XSEG: tr = tex_range_t(0.0, 0.0, -ar, -1.0, 0, 1); break; // swap s and t
+			case TYPE_YSEG: tr = tex_range_t(0.0, 0.0, -ar,  1.0, 0, 0); break;
+			case TYPE_ISEC: tr = tex_range_t(0.0, 0.0, 1.0,  1.0); break;
+			case TYPE_PLOT: tr = tex_range_t(0.0, 0.0,  ar,  ar ); break;
+			default: assert(0);
+			}
+		}
 		void pre_draw() {
 			if (use_smap) {
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
@@ -204,10 +285,10 @@ class city_road_gen_t {
 				s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 			}
 		}
-		void add_cube(cube_t const &c, tex_range_t const &tr) {
+		void add_cube(cube_t const &c) {
 			float const z(0.5*(c.d[2][0] + c.d[2][1]));
 			point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
-			get_qbd().add_quad_pts(pts, road_mats[type_ix].color, plus_z, tr);
+			get_qbd().add_quad_pts(pts, road_colors[type_ix], plus_z, tr);
 		}
 		void end_block() {
 			if (emit_now) {draw_cur_block();} // only shadow blocks
@@ -216,7 +297,7 @@ class city_road_gen_t {
 			emit_now = 0;
 			if (use_smap) {s.end_shader();}
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-			for (unsigned i = 0; i < 4; ++i) {begin_block(i); draw_cur_block();} // only unshadowed blocks
+			for (unsigned i = 0; i < NUM_RD_TYPES; ++i) {begin_block(i); draw_cur_block();} // only unshadowed blocks
 			s.end_shader();
 		}
 	};
@@ -258,14 +339,14 @@ class city_road_gen_t {
 			}
 		};
 		struct tile_block_t { // collection of road parts for a given tile
-			range_pair_t ranges[4]; // {xsegs, ysegs, isecs, plots}
+			range_pair_t ranges[NUM_RD_TYPES]; // {xsegs, ysegs, isecs, plots}
 			cube_t bcube;
 			tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
 		};
 		vector<tile_block_t> tile_blocks;
 
 		void add_tile_blocks(vector<cube_t> &v, map<uint64_t, unsigned> &tile_to_block_map, unsigned type_ix) {
-			assert(type_ix < 4);
+			assert(type_ix < NUM_RD_TYPES);
 			sort(v.begin(), v.end(), cmp_by_tile());
 
 			for (unsigned i = 0; i < v.size(); ++i) {
@@ -286,10 +367,10 @@ class city_road_gen_t {
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
 			map<uint64_t, unsigned> tile_to_block_map;
-			add_tile_blocks(xsegs, tile_to_block_map, 0);
-			add_tile_blocks(ysegs, tile_to_block_map, 1);
-			add_tile_blocks(isecs, tile_to_block_map, 2);
-			add_tile_blocks(plots, tile_to_block_map, 3);
+			add_tile_blocks(xsegs, tile_to_block_map, TYPE_XSEG);
+			add_tile_blocks(ysegs, tile_to_block_map, TYPE_YSEG);
+			add_tile_blocks(isecs, tile_to_block_map, TYPE_ISEC);
+			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
 
@@ -354,22 +435,21 @@ class city_road_gen_t {
 			cube_t const bcube_x(bcube + dstate.xlate);
 			if (!camera_pdu.cube_visible(bcube_x)) return; // VFC
 			if (!dist_less_than(camera_pdu.pos, bcube_x.closest_pt(camera_pdu.pos), get_draw_tile_dist())) return; // too far
-			colorRGBA const road_color(0.06, 0.06, 0.06, 1.0), int_color(0.06, 0.06, 0.06, 1.0), plot_color(0.12, 0.12, 0.12, 1.0);
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue; // VFC
 				dstate.begin_tile(b->bcube.get_cube_center());
-				draw_road_region(xsegs, b->ranges[0], dstate, road_color, 0); // x road segments
-				draw_road_region(ysegs, b->ranges[1], dstate, road_color, 1); // y road segments
-				draw_road_region(isecs, b->ranges[2], dstate, int_color,  2); // intersections
-				draw_road_region(plots, b->ranges[3], dstate, plot_color, 3); // plots
+				draw_road_region(xsegs, b->ranges[TYPE_XSEG], dstate, TYPE_XSEG); // x road segments
+				draw_road_region(ysegs, b->ranges[TYPE_YSEG], dstate, TYPE_YSEG); // y road segments
+				draw_road_region(isecs, b->ranges[TYPE_ISEC], dstate, TYPE_ISEC); // intersections
+				draw_road_region(plots, b->ranges[TYPE_PLOT], dstate, TYPE_PLOT); // plots
 			} // for b
 		}
 		private:
-			void draw_road_region(vector<cube_t> const &v, range_pair_t const &rp, draw_state_t &dstate, colorRGBA const &color, unsigned type_ix) const {
+			void draw_road_region(vector<cube_t> const &v, range_pair_t const &rp, draw_state_t &dstate, unsigned type_ix) const {
 				assert(rp.s <= rp.e && rp.e <= v.size());
 				dstate.begin_block(type_ix);
-				for (unsigned i = rp.s; i < rp.e; ++i) {dstate.add_cube(v[i], tex_range_t());}
+				for (unsigned i = rp.s; i < rp.e; ++i) {dstate.add_cube(v[i]);}
 				dstate.end_block();
 			}
 	};
@@ -408,50 +488,6 @@ public:
 }; // city_road_gen_t
 
 
-struct city_params_t {
-
-	unsigned num_cities, num_samples, city_size, city_border, slope_width;
-	float road_width, road_spacing;
-
-	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
-	bool enabled() const {return (num_cities > 0 && city_size > 0);}
-	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
-
-	bool read_option(FILE *fp) {
-		char strc[MAX_CHARS] = {0};
-		if (!read_str(fp, strc)) return 0;
-		string const str(strc);
-
-		if (str == "num_cities") {
-			if (!read_uint(fp, num_cities)) {return read_error(str);}
-		}
-		else if (str == "num_samples") {
-			if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
-		}
-		else if (str == "city_size") {
-			if (!read_uint(fp, city_size)) {return read_error(str);}
-		}
-		else if (str == "city_border") {
-			if (!read_uint(fp, city_border)) {return read_error(str);}
-		}
-		else if (str == "slope_width") {
-			if (!read_uint(fp, slope_width)) {return read_error(str);}
-		}
-		else if (str == "road_width") {
-			if (!read_float(fp, road_width) || road_width < 0.0) {return read_error(str);}
-		}
-		else if (str == "road_spacing") {
-			if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
-		}
-		else {
-			cout << "Unrecognized city keyword in input file: " << str << endl;
-			return 0;
-		}
-		return 1;
-	}
-}; // city_params_t
-
-
 class city_gen_t : public city_plot_gen_t {
 
 	city_road_gen_t road_gen;
@@ -484,8 +520,6 @@ public:
 	}
 }; // city_gen_t
 
-
-city_params_t city_params;
 city_gen_t city_gen;
 
 
