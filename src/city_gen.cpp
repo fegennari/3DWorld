@@ -26,7 +26,7 @@ struct city_params_t {
 
 	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size > 0);}
-	float get_road_ar() const {return road_spacing/road_width;}
+	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
 
 	bool read_option(FILE *fp) {
@@ -156,7 +156,6 @@ public:
 		if (rand_gen_index != last_rgi) {rgen.set_state(rand_gen_index, 12345); last_rgi = rand_gen_index;} // only when rand_gen_index changes
 	}
 	bool find_best_city_location(unsigned width, unsigned height, unsigned border, unsigned num_samples, unsigned &x_llc, unsigned &y_llc) {
-		cout << TXT(xsize) << TXT(ysize) << TXT(width) << TXT(height) << TXT(border) << endl;
 		assert(num_samples > 0);
 		assert((width + 2*border) < xsize && (height + 2*border) < ysize); // otherwise the city can't fit in the map
 		unsigned const num_iters(100*num_samples); // upper bound
@@ -174,7 +173,7 @@ public:
 			if (++num_cands == num_samples) break; // done
 		} // for n
 		if (num_cands == 0) return 0;
-		cout << "cands: " << num_cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
+		cout << "City cands: " << num_cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
 		return 1; // success
 	}
 	float flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned slope_width, float const *const height=nullptr) {
@@ -206,9 +205,9 @@ public:
 
 
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_4WAY, TID_3WAY, TID_BEND_90, NUM_RD_TIDS};
-enum {TYPE_XSEG=0, TYPE_YSEG, TYPE_ISEC, TYPE_PLOT, NUM_RD_TYPES};
+enum {TYPE_RSEG=0, TYPE_ISEC, TYPE_PLOT, NUM_RD_TYPES};
 
-colorRGBA const road_colors[4] = {WHITE, WHITE, WHITE, WHITE};
+colorRGBA const road_color(WHITE); // all road parts are the same color, to make the textures match
 
 class road_mat_mrg_t {
 
@@ -228,7 +227,7 @@ public:
 	}
 	unsigned get_tid(unsigned type) const {
 		assert(inited);
-		if (type == TYPE_XSEG || type == TYPE_YSEG) return tids[TID_STRAIGHT]; // FIXME: handle x/y orient
+		if (type == TYPE_RSEG) return tids[TID_STRAIGHT];
 		if (type == TYPE_ISEC) return tids[TID_4WAY]; // FIXME: {TID_4WAY, TID_3WAY, TID_BEND}
 		if (type == TYPE_PLOT) return tids[TID_SIDEWLAK];
 		assert(0);
@@ -251,9 +250,9 @@ class city_road_gen_t {
 		bool use_smap, use_bmap;
 	private:
 		quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_shadow[NUM_RD_TYPES];
-		tex_range_t tr;
 		unsigned type_ix;
 		bool emit_now;
+		float ar;
 
 		quad_batch_draw &get_qbd() {
 			assert(type_ix < NUM_RD_TYPES);
@@ -264,31 +263,22 @@ class city_road_gen_t {
 			get_qbd().draw_and_clear();
 		}
 	public:
-		draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), type_ix(0), emit_now(0) {}
+		draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), type_ix(0), emit_now(0), ar(1.0) {}
 		void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
-		
-		void begin_block(unsigned type_ix_) {
-			type_ix = type_ix_;
-			float const ar(city_params.get_road_ar());
-			switch (type_ix) {
-			case TYPE_XSEG: tr = tex_range_t(0.0, 0.0, -ar, -1.0, 0, 1); break; // swap s and t
-			case TYPE_YSEG: tr = tex_range_t(0.0, 0.0, -ar,  1.0, 0, 0); break;
-			case TYPE_ISEC: tr = tex_range_t(0.0, 0.0, 1.0,  1.0); break;
-			case TYPE_PLOT: tr = tex_range_t(0.0, 0.0,  ar,  ar ); break;
-			default: assert(0);
-			}
-		}
+		void begin_block(unsigned type_ix_) {type_ix = type_ix_;}
+
 		void pre_draw() {
 			if (use_smap) {
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 				s.add_uniform_float("z_bias", cobj_z_bias);
 				s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 			}
+			ar = city_params.get_road_ar();
 		}
-		void add_cube(cube_t const &c) {
+		template<typename T> void add_cube(T const &c) {
 			float const z(0.5*(c.d[2][0] + c.d[2][1]));
 			point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
-			get_qbd().add_quad_pts(pts, road_colors[type_ix], plus_z, tr);
+			get_qbd().add_quad_pts(pts, road_color, plus_z, c.get_tex_range(ar));
 		}
 		void end_block() {
 			if (emit_now) {draw_cur_block();} // only shadow blocks
@@ -302,25 +292,39 @@ class city_road_gen_t {
 		}
 	};
 
-	struct road_t {
-		cube_t bcube;
-
+	struct road_t : public cube_t {
 		road_t() {}
-		road_t(float x1, float x2, float y1, float y2, float z1, float z2) : bcube(x1, x2, y1, y2, z1, z2) {}
 		road_t(point const &s, point const &e, float width) {
 			assert(s != e);
 			assert(width > 0.0);
 			vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
 			point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
-			bcube = cube_t(pts, 4);
+			set_from_points(pts, 4);
 		}
+	};
+	struct road_seg_t : public cube_t {
+		bool dim;
+		road_seg_t() : dim(0) {}
+		road_seg_t(cube_t const &c, bool dim_) : cube_t(c), dim(dim_) {}
+		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
+	};
+	struct road_isec_t : public cube_t {
+		uint8_t conn; // connected roads in {-x, +x, -y, +y}
+		road_isec_t() : conn(15) {}
+		road_isec_t(cube_t const &c, uint8_t conn_=15) : cube_t(c), conn(conn_) {}
+		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, 1.0, 1.0);} // FIXME: use conn
+	};
+	struct road_plot_t : public cube_t {
+		road_plot_t() {}
+		road_plot_t(cube_t const &c) : cube_t(c) {}
+		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 	};
 
 	class road_network_t {
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
-		vector<cube_t> xsegs, ysegs; // non-overlapping road segments, for drawing with textures
-		vector<cube_t> isecs; // for drawing with textures
-		vector<cube_t> plots; // plots of land that can hold buildings
+		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
+		vector<road_isec_t> isecs; // for drawing with textures
+		vector<road_plot_t> plots; // plots of land that can hold buildings
 		cube_t bcube;
 
 		static uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
@@ -328,7 +332,6 @@ class city_road_gen_t {
 		struct cmp_by_tile { // not the most efficient solution, but no memory overhead
 			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
 		};
-
 		struct range_pair_t {
 			unsigned s, e; // Note: e is one past the end
 			range_pair_t() : s(0), e(0) {}
@@ -345,7 +348,7 @@ class city_road_gen_t {
 		};
 		vector<tile_block_t> tile_blocks;
 
-		void add_tile_blocks(vector<cube_t> &v, map<uint64_t, unsigned> &tile_to_block_map, unsigned type_ix) {
+		template<typename T> void add_tile_blocks(vector<T> &v, map<uint64_t, unsigned> &tile_to_block_map, unsigned type_ix) {
 			assert(type_ix < NUM_RD_TYPES);
 			sort(v.begin(), v.end(), cmp_by_tile());
 
@@ -367,8 +370,7 @@ class city_road_gen_t {
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
 			map<uint64_t, unsigned> tile_to_block_map;
-			add_tile_blocks(xsegs, tile_to_block_map, TYPE_XSEG);
-			add_tile_blocks(ysegs, tile_to_block_map, TYPE_YSEG);
+			add_tile_blocks(segs,  tile_to_block_map, TYPE_RSEG);
 			add_tile_blocks(isecs, tile_to_block_map, TYPE_ISEC);
 			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
@@ -377,7 +379,7 @@ class city_road_gen_t {
 	public:
 		road_network_t(cube_t const &bcube_) : bcube(bcube_) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
 		unsigned num_roads() const {return roads.size();}
-		void clear() {roads.clear(); xsegs.clear(); ysegs.clear(); isecs.clear(); plots.clear(); tile_blocks.clear();}
+		void clear() {roads.clear(); segs.clear(); isecs.clear(); plots.clear(); tile_blocks.clear();}
 
 		bool gen_road_grid(cube_t const &region, float road_width, float road_spacing) {
 			vector3d const size(region.get_size());
@@ -398,26 +400,25 @@ class city_road_gen_t {
 			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
 
 			// create road segments and intersections
-			xsegs.reserve(num_x*(num_y-1));
-			ysegs.reserve((num_x-1)*num_y);
+			segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y); // X + Y segments
 			isecs.reserve(num_x*num_y);
 			plots.reserve((num_x-1)*(num_y-1));
 
 			for (unsigned x = 0; x < num_x; ++x) {
 				for (unsigned y = num_x; y < roads.size(); ++y) {
-					cube_t const &rx(roads[x].bcube), &ry(roads[y].bcube);
-					isecs.emplace_back(rx.d[0][0], rx.d[0][1], ry.d[1][0], ry.d[1][1], zval, zval); // intersections
+					cube_t const &rx(roads[x]), &ry(roads[y]);
+					isecs.push_back(cube_t(rx.d[0][0], rx.d[0][1], ry.d[1][0], ry.d[1][1], zval, zval)); // intersections
 					if (x+1 < num_x) { // skip last y segment
-						cube_t const &rxn(roads[x+1].bcube);
-						ysegs.emplace_back(rx.d[0][1], rxn.d[0][0], ry.d[1][0], ry .d[1][1], zval, zval); // y-segments
+						cube_t const &rxn(roads[x+1]);
+						segs.emplace_back(cube_t(rx.d[0][1], rxn.d[0][0], ry.d[1][0], ry .d[1][1], zval, zval), false); // y-segments
 					}
 					if (y+1 < roads.size()) { // skip last x segment
-						cube_t const &ryn(roads[y+1].bcube);
-						xsegs.emplace_back(rx.d[0][0], rx .d[0][1], ry.d[1][1], ryn.d[1][0], zval, zval); // x-segments
+						cube_t const &ryn(roads[y+1]);
+						segs.emplace_back(cube_t(rx.d[0][0], rx .d[0][1], ry.d[1][1], ryn.d[1][0], zval, zval), true); // x-segments
 
 						if (x+1 < num_x) { // skip last y segment
-							cube_t const &rxn(roads[x+1].bcube);
-							plots.emplace_back(rx.d[0][1], rxn.d[0][0], ry.d[1][1], ryn.d[1][0], zval, zval); // plots between roads
+							cube_t const &rxn(roads[x+1]);
+							plots.push_back(cube_t(rx.d[0][1], rxn.d[0][0], ry.d[1][1], ryn.d[1][0], zval, zval)); // plots between roads
 						}
 					}
 				} // for y
@@ -426,7 +427,7 @@ class city_road_gen_t {
 			return 1;
 		}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {
-			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(r->bcube);}
+			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(*r);}
 		}
 		void get_plot_bcubes(vector<cube_t> &bcubes) const {
 			for (auto r = plots.begin(); r != plots.end(); ++r) {bcubes.push_back(*r);}
@@ -439,14 +440,13 @@ class city_road_gen_t {
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue; // VFC
 				dstate.begin_tile(b->bcube.get_cube_center());
-				draw_road_region(xsegs, b->ranges[TYPE_XSEG], dstate, TYPE_XSEG); // x road segments
-				draw_road_region(ysegs, b->ranges[TYPE_YSEG], dstate, TYPE_YSEG); // y road segments
+				draw_road_region(segs,  b->ranges[TYPE_RSEG], dstate, TYPE_RSEG); // road segments
 				draw_road_region(isecs, b->ranges[TYPE_ISEC], dstate, TYPE_ISEC); // intersections
 				draw_road_region(plots, b->ranges[TYPE_PLOT], dstate, TYPE_PLOT); // plots
 			} // for b
 		}
 		private:
-			void draw_road_region(vector<cube_t> const &v, range_pair_t const &rp, draw_state_t &dstate, unsigned type_ix) const {
+			template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, draw_state_t &dstate, unsigned type_ix) const {
 				assert(rp.s <= rp.e && rp.e <= v.size());
 				dstate.begin_block(type_ix);
 				for (unsigned i = rp.s; i < rp.e; ++i) {dstate.add_cube(v[i]);}
