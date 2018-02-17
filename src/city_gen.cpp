@@ -204,8 +204,8 @@ public:
 }; // city_plot_gen_t
 
 
-enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_4WAY, TID_3WAY, TID_BEND_90, NUM_RD_TIDS};
-enum {TYPE_RSEG=0, TYPE_ISEC, TYPE_PLOT, NUM_RD_TYPES};
+enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   NUM_RD_TIDS };
+enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, NUM_RD_TYPES};
 
 colorRGBA const road_color(WHITE); // all road parts are the same color, to make the textures match
 
@@ -220,22 +220,15 @@ public:
 	void ensure_road_textures() {
 		if (inited) return;
 		timer_t timer("Load Road Textures");
-		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "int_4_way.jpg", "int_3_way.jpg", "bend_90.jpg"};
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg"};
 		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0};
 		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
 		inited = 1;
 	}
-	unsigned get_tid(unsigned type) const {
-		assert(inited);
-		if (type == TYPE_RSEG) return tids[TID_STRAIGHT];
-		if (type == TYPE_ISEC) return tids[TID_4WAY]; // FIXME: {TID_4WAY, TID_3WAY, TID_BEND}
-		if (type == TYPE_PLOT) return tids[TID_SIDEWLAK];
-		assert(0);
-		return 0;
-	}
 	void set_texture(unsigned type) {
+		assert(type < NUM_RD_TYPES);
 		ensure_road_textures();
-		select_texture(get_tid(type));
+		select_texture(tids[type]);
 	}
 };
 
@@ -312,7 +305,21 @@ class city_road_gen_t {
 		uint8_t conn; // connected roads in {-x, +x, -y, +y}
 		road_isec_t() : conn(15) {}
 		road_isec_t(cube_t const &c, uint8_t conn_=15) : cube_t(c), conn(conn_) {}
-		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, 1.0, 1.0);} // FIXME: use conn
+		tex_range_t get_tex_range(float ar) const {
+			switch (conn) {
+			case 5 : return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 0); // 2-way: MX
+			case 6 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 2-way: R0
+			case 9 : return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 2-way: MXMY
+			case 10: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 0); // 2-way: MY
+			case 7 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 3-way: R0
+			case 11: return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 3-way: MY
+			case 13: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 1); // 3-way: R90MY
+			case 14: return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 1); // 3-way: R90MX
+			case 15: return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 4-way: R0
+			default: assert(0);
+			}
+			return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
+		} // FIXME: use conn
 	};
 	struct road_plot_t : public cube_t {
 		road_plot_t() {}
@@ -323,7 +330,7 @@ class city_road_gen_t {
 	class road_network_t {
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
-		vector<road_isec_t> isecs; // for drawing with textures
+		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings
 		cube_t bcube;
 
@@ -371,16 +378,21 @@ class city_road_gen_t {
 			tile_blocks.clear(); // should already be empty?
 			map<uint64_t, unsigned> tile_to_block_map;
 			add_tile_blocks(segs,  tile_to_block_map, TYPE_RSEG);
-			add_tile_blocks(isecs, tile_to_block_map, TYPE_ISEC);
 			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
+			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
 
 	public:
 		road_network_t(cube_t const &bcube_) : bcube(bcube_) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
 		unsigned num_roads() const {return roads.size();}
-		void clear() {roads.clear(); segs.clear(); isecs.clear(); plots.clear(); tile_blocks.clear();}
-
+		void clear() {
+			roads.clear();
+			segs.clear();
+			plots.clear();
+			for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
+			tile_blocks.clear();
+		}
 		bool gen_road_grid(cube_t const &region, float road_width, float road_spacing) {
 			vector3d const size(region.get_size());
 			assert(size.x > 0.0 && size.y > 0.0);
@@ -401,22 +413,31 @@ class city_road_gen_t {
 
 			// create road segments and intersections
 			segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y); // X + Y segments
-			isecs.reserve(num_x*num_y);
 			plots.reserve((num_x-1)*(num_y-1));
 
+			if (num_x > 2 && num_y > 2) {
+				isecs[0].reserve(4);
+				isecs[1].reserve(2*((num_x-2) + (num_y-2)));
+				isecs[2].reserve((num_x-2)*(num_y-2));
+			}
 			for (unsigned x = 0; x < num_x; ++x) {
 				for (unsigned y = num_x; y < roads.size(); ++y) {
+					bool const FX(x == 0), FY(y == num_x), LX(x+1 == num_x), LY(y+1 == roads.size());
 					cube_t const &rx(roads[x]), &ry(roads[y]);
-					isecs.push_back(cube_t(rx.d[0][0], rx.d[0][1], ry.d[1][0], ry.d[1][1], zval, zval)); // intersections
-					if (x+1 < num_x) { // skip last y segment
+					unsigned const num_conn((!FX) + (!LX) + (!FY) + (!LY));
+					if (num_conn < 2) continue; // error?
+					uint8_t const conn(((!FX) << 0) | ((!LX) << 1) | ((!FY) << 2) | ((!LY) << 3)); // 1-15
+					isecs[num_conn - 2].emplace_back(cube_t(rx.d[0][0], rx.d[0][1], ry.d[1][0], ry.d[1][1], zval, zval), conn); // intersections
+					
+					if (!LX) { // skip last y segment
 						cube_t const &rxn(roads[x+1]);
 						segs.emplace_back(cube_t(rx.d[0][1], rxn.d[0][0], ry.d[1][0], ry .d[1][1], zval, zval), false); // y-segments
 					}
-					if (y+1 < roads.size()) { // skip last x segment
+					if (!LY) { // skip last x segment
 						cube_t const &ryn(roads[y+1]);
 						segs.emplace_back(cube_t(rx.d[0][0], rx .d[0][1], ry.d[1][1], ryn.d[1][0], zval, zval), true); // x-segments
 
-						if (x+1 < num_x) { // skip last y segment
+						if (!LX) { // skip last y segment
 							cube_t const &rxn(roads[x+1]);
 							plots.push_back(cube_t(rx.d[0][1], rxn.d[0][0], ry.d[1][1], ryn.d[1][0], zval, zval)); // plots between roads
 						}
@@ -441,8 +462,8 @@ class city_road_gen_t {
 				if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue; // VFC
 				dstate.begin_tile(b->bcube.get_cube_center());
 				draw_road_region(segs,  b->ranges[TYPE_RSEG], dstate, TYPE_RSEG); // road segments
-				draw_road_region(isecs, b->ranges[TYPE_ISEC], dstate, TYPE_ISEC); // intersections
 				draw_road_region(plots, b->ranges[TYPE_PLOT], dstate, TYPE_PLOT); // plots
+				for (unsigned i = 0; i < 3; ++i) {draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], dstate, (TYPE_ISEC2 + i));} // intersections
 			} // for b
 		}
 		private:
@@ -472,7 +493,7 @@ public:
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
 		if (road_networks.empty()) return;
-		//timer_t timer("Draw Roads");
+		timer_t timer("Draw Roads");
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
