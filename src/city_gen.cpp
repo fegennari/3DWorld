@@ -351,7 +351,9 @@ class city_road_gen_t {
 			for (auto r = plots.begin(); r != plots.end(); ++r) {bcubes.push_back(*r);}
 		}
 		void draw(draw_state_t &dstate) const {
-			if (!camera_pdu.cube_visible(bcube + dstate.xlate)) return; // VFC
+			cube_t const bcube_x(bcube + dstate.xlate);
+			if (!camera_pdu.cube_visible(bcube_x)) return; // VFC
+			if (!dist_less_than(camera_pdu.pos, bcube_x.closest_pt(camera_pdu.pos), get_draw_tile_dist())) return; // too far
 			colorRGBA const road_color(0.06, 0.06, 0.06, 1.0), int_color(0.06, 0.06, 0.06, 1.0), plot_color(0.12, 0.12, 0.12, 1.0);
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
