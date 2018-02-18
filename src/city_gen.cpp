@@ -26,6 +26,7 @@ struct city_params_t {
 
 	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size > 0);}
+	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
 
@@ -319,6 +320,7 @@ class city_road_gen_t {
 		uint8_t conn; // connected roads in {-x, +x, -y, +y}
 		road_isec_t() : conn(15) {}
 		road_isec_t(cube_t const &c, uint8_t conn_=15) : cube_t(c), conn(conn_) {}
+		
 		tex_range_t get_tex_range(float ar) const {
 			switch (conn) {
 			case 5 : return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 0); // 2-way: MX
@@ -333,7 +335,7 @@ class city_road_gen_t {
 			default: assert(0);
 			}
 			return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
-		} // FIXME: use conn
+		}
 	};
 	struct road_plot_t : public cube_t {
 		road_plot_t() {}
@@ -347,6 +349,7 @@ class city_road_gen_t {
 		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings
 		cube_t bcube;
+		//string city_name; // future work
 
 		static uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
 
@@ -390,8 +393,13 @@ class city_road_gen_t {
 		}
 
 	public:
+		road_network_t() : bcube(all_zeros) {}
 		road_network_t(cube_t const &bcube_) : bcube(bcube_) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
+		cube_t const &get_bcube() const {return bcube;}
+		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
 		unsigned num_roads() const {return roads.size();}
+		bool empty() const {return roads.empty();}
+
 		void clear() {
 			roads.clear();
 			segs.clear();
@@ -399,7 +407,8 @@ class city_road_gen_t {
 			for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
 			tile_blocks.clear();
 		}
-		bool gen_road_grid(cube_t const &region, float road_width, float road_spacing) {
+		bool gen_road_grid(float road_width, float road_spacing) {
+			cube_t const &region(bcube); // use our bcube as the region to process
 			vector3d const size(region.get_size());
 			assert(size.x > 0.0 && size.y > 0.0);
 			float const half_width(0.5*road_width), road_pitch(road_width + road_spacing);
@@ -460,6 +469,7 @@ class city_road_gen_t {
 			for (auto r = plots.begin(); r != plots.end(); ++r) {bcubes.push_back(*r);}
 		}
 		void draw(draw_state_t &dstate) {
+			if (empty()) return;
 			cube_t const bcube_x(bcube + dstate.xlate);
 			if (!camera_pdu.cube_visible(bcube_x)) return; // VFC
 			if (!dist_less_than(camera_pdu.pos, bcube_x.closest_pt(camera_pdu.pos), get_draw_tile_dist())) return; // too far
@@ -474,33 +484,105 @@ class city_road_gen_t {
 		}
 	};
 
-	vector<road_network_t> road_networks;
+	struct heightmap_query_t {
+		float *hmap;
+		unsigned xsize, ysize;
+
+		heightmap_query_t(float *hmap_, unsigned xsize_, unsigned ysize_) : hmap(hmap_), xsize(xsize_), ysize(ysize_) {}
+
+		bool is_any_underwater(cube_t const &c) const {
+			// FIXME: WRITE
+			return 0;
+		}
+	};
+
+	vector<road_network_t> road_networks; // one per city
+	road_network_t global_rn; // connects cities together; no plots
 	draw_state_t dstate;
 
 public:
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		timer_t timer("Gen Roads");
 		road_networks.push_back(road_network_t(region));
-		if (!road_networks.back().gen_road_grid(region, road_width, road_spacing)) {road_networks.pop_back();}
+		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back();}
 		else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
 	}
+	void connect_two_cities(unsigned city1, unsigned city2, heightmap_query_t const &hq, float road_width) {
+		assert(city1 < road_networks.size() && city2 < road_networks.size());
+		assert(city1 != city2); // check for self reference
+		cout << "Connect city " << city1 << " and " << city2 << endl;
+		cube_t const &bcube1(road_networks[city1].get_bcube()), &bcube2(road_networks[city2].get_bcube());
+		assert(!bcube1.intersects_xy(bcube2));
+		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
+
+		for (unsigned d = 0; d < 2; ++d) {
+			float const shared_min(max(bcube1.d[d][0], bcube2.d[d][0])), shared_max(min(bcube1.d[d][1], bcube2.d[d][1]));
+			
+			if (shared_max - shared_min > road_width) { // can connect with single road segment in dim !d, if the terrain in between is passable
+				cout << "Shared dim " << d << endl;
+				// WRITE
+			}
+		} // for d
+		// WRITE: connect with multiple road segments using jogs
+	}
+	void connect_all_cities(float *heightmap, unsigned xsize, unsigned ysize, float road_width) {
+		unsigned const num_cities(road_networks.size());
+		if (num_cities < 2) return; // not cities to connect
+		timer_t timer("Connect Cities");
+		heightmap_query_t hq(heightmap, xsize, ysize);
+		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected
+		vector<unsigned> connected; // cities that are currently connected
+		unsigned cur_city(0);
+		cube_t all_bcube(road_networks.front().get_bcube());
+		for (auto i = road_networks.begin()+1; i != road_networks.end(); ++i) {all_bcube.union_with_cube(i->get_bcube());}
+		global_rn.set_bcube(all_bcube); // unioned across all cities (FIXME: implies that roads can't go outside of the union bcube?)
+
+		// Note: may want to spatially sort cities to avoid bad connection order
+		while (connected.size() < num_cities) {
+			for (; is_conn[cur_city]; ++cur_city) {assert(cur_city < num_cities);} // find next unconnected city
+			assert(cur_city < num_cities);
+			point const center(road_networks[cur_city].get_bcube().get_cube_center());
+			float dmin_sq(0.0);
+			unsigned closest_conn(0);
+			cout << "Select city " << cur_city << ", connected " << connected.size() << " of " << num_cities << endl;
+			
+			if (connected.empty()) { // first city, find closest other city
+				for (unsigned i = 1; i < num_cities; ++i) {
+					float const dist_sq(p2p_dist_sq(center, road_networks[i].get_bcube().get_cube_center()));
+					if (dmin_sq == 0.0 || dist_sq < dmin_sq) {closest_conn = i; dmin_sq = dist_sq;}
+				}
+			}
+			else { // find closest connected city
+				for (auto i = connected.begin(); i != connected.end(); ++i) {
+					float const dist_sq(p2p_dist_sq(center, road_networks[*i].get_bcube().get_cube_center()));
+					if (dmin_sq == 0.0 || dist_sq < dmin_sq) {closest_conn = *i; dmin_sq = dist_sq;}
+				}
+			}
+			cout << "Closest is " << closest_conn << ", dist " << sqrt(dmin_sq) << endl;
+			connect_two_cities(cur_city, closest_conn, hq, road_width);
+			is_conn[cur_city] = 1;
+			connected.push_back(cur_city);
+			if (!is_conn[closest_conn]) {is_conn[closest_conn] = 1;	connected.push_back(closest_conn);} // first city is also now connected
+		} // end while()
+	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
+		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
 	}
-	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {
+	void get_all_plot_bcubes(vector<cube_t> &bcubes) const { // Note: no global_rn
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
-		if (road_networks.empty()) return;
+		if (road_networks.empty() && global_rn.empty()) return;
 		//timer_t timer("Draw Roads");
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 		dstate.use_smap = shadow_map_enabled();
 		dstate.xlate    = xlate;
-		select_texture(WHITE_TEX); // FIXME: ROAD_TEX
 		dstate.pre_draw();
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate);}
+		global_rn.draw(dstate);
 		dstate.post_draw();
 		glDepthFunc(GL_LESS);
 		fgPopMatrix();
@@ -521,7 +603,7 @@ public:
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
 		if (cities_bcube.is_all_zeros()) {cities_bcube = pos_range;} else {cities_bcube.union_with_cube(pos_range);}
-		if (params.road_width > 0.0 && params.road_spacing > 0.0) {road_gen.gen_roads(pos_range, params.road_width, params.road_spacing);}
+		if (params.roads_enabled()) {road_gen.gen_roads(pos_range, params.road_width, params.road_spacing);}
 		return 1;
 	}
 	void gen_cities(city_params_t const &params) {
@@ -530,6 +612,7 @@ public:
 		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params, cities_bcube);}
 		bool const is_const_zval(cities_bcube.d[2][0] == cities_bcube.d[2][1]);
 		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube, is_const_zval);}
+		road_gen.connect_all_cities(heightmap, xsize, ysize, params.road_width);
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
