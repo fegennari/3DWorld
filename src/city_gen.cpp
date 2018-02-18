@@ -237,28 +237,28 @@ road_mat_mrg_t road_mat_mrg;
 
 class city_road_gen_t {
 
+	struct range_pair_t {
+		unsigned s, e; // Note: e is one past the end
+		range_pair_t() : s(0), e(0) {}
+		void update(unsigned v) {
+			if (s == 0 && e == 0) {s = v;} // first insert
+			else {assert(s < e && v >= e);} // v must strictly increase
+			e = v+1; // one past the end
+		}
+	};
+
 	struct draw_state_t {
 		shader_t s;
 		vector3d xlate;
 		bool use_smap, use_bmap;
 	private:
-		quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_shadow[NUM_RD_TYPES];
-		unsigned type_ix;
+		quad_batch_draw qbd_batched[NUM_RD_TYPES];
 		bool emit_now;
 		float ar;
 
-		quad_batch_draw &get_qbd() {
-			assert(type_ix < NUM_RD_TYPES);
-			return (emit_now ? qbd_shadow[type_ix] : qbd_batched[type_ix]);
-		}
-		void draw_cur_block() {
-			road_mat_mrg.set_texture(type_ix);
-			get_qbd().draw_and_clear();
-		}
 	public:
-		draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), type_ix(0), emit_now(0), ar(1.0) {}
+		draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), emit_now(0), ar(1.0) {}
 		void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
-		void begin_block(unsigned type_ix_) {type_ix = type_ix_;}
 
 		void pre_draw() {
 			if (use_smap) {
@@ -268,20 +268,34 @@ class city_road_gen_t {
 			}
 			ar = city_params.get_road_ar();
 		}
-		template<typename T> void add_cube(T const &c) {
-			float const z(0.5*(c.d[2][0] + c.d[2][1]));
-			point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
-			get_qbd().add_quad_pts(pts, road_color, plus_z, c.get_tex_range(ar));
-		}
-		void end_block() {
-			if (emit_now) {draw_cur_block();} // only shadow blocks
-		}
 		void post_draw() {
 			emit_now = 0;
 			if (use_smap) {s.end_shader();}
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-			for (unsigned i = 0; i < NUM_RD_TYPES; ++i) {begin_block(i); draw_cur_block();} // only unshadowed blocks
+			
+			for (unsigned i = 0; i < NUM_RD_TYPES; ++i) { // only unshadowed blocks
+				road_mat_mrg.set_texture(i);
+				qbd_batched[i].draw_and_clear();
+			}
 			s.end_shader();
+		}
+		template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
+			assert(rp.s <= rp.e && rp.e <= v.size());
+			assert(type_ix < NUM_RD_TYPES);
+			
+			if (cache.empty()) { // generate and cache quads
+				for (unsigned i = rp.s; i < rp.e; ++i) {
+					T const &c(v[i]);
+					float const z(0.5*(c.d[2][0] + c.d[2][1]));
+					point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
+					cache.add_quad_pts(pts, road_color, plus_z, c.get_tex_range(ar));
+				}
+			}
+			if (emit_now) { // draw shadow blocks directly
+				road_mat_mrg.set_texture(type_ix);
+				cache.draw();
+			}
+			else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 		}
 	};
 
@@ -339,17 +353,9 @@ class city_road_gen_t {
 		struct cmp_by_tile { // not the most efficient solution, but no memory overhead
 			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
 		};
-		struct range_pair_t {
-			unsigned s, e; // Note: e is one past the end
-			range_pair_t() : s(0), e(0) {}
-			void update(unsigned v) {
-				if (s == 0 && e == 0) {s = v;} // first insert
-				else {assert(s < e && v >= e);} // v must strictly increase
-				e = v+1; // one past the end
-			}
-		};
 		struct tile_block_t { // collection of road parts for a given tile
 			range_pair_t ranges[NUM_RD_TYPES]; // {xsegs, ysegs, isecs, plots}
+			quad_batch_draw quads[NUM_RD_TYPES];
 			cube_t bcube;
 			tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
 		};
@@ -453,7 +459,7 @@ class city_road_gen_t {
 		void get_plot_bcubes(vector<cube_t> &bcubes) const {
 			for (auto r = plots.begin(); r != plots.end(); ++r) {bcubes.push_back(*r);}
 		}
-		void draw(draw_state_t &dstate) const {
+		void draw(draw_state_t &dstate) {
 			cube_t const bcube_x(bcube + dstate.xlate);
 			if (!camera_pdu.cube_visible(bcube_x)) return; // VFC
 			if (!dist_less_than(camera_pdu.pos, bcube_x.closest_pt(camera_pdu.pos), get_draw_tile_dist())) return; // too far
@@ -461,18 +467,11 @@ class city_road_gen_t {
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue; // VFC
 				dstate.begin_tile(b->bcube.get_cube_center());
-				draw_road_region(segs,  b->ranges[TYPE_RSEG], dstate, TYPE_RSEG); // road segments
-				draw_road_region(plots, b->ranges[TYPE_PLOT], dstate, TYPE_PLOT); // plots
-				for (unsigned i = 0; i < 3; ++i) {draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], dstate, (TYPE_ISEC2 + i));} // intersections
+				dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
+				dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
+				for (unsigned i = 0; i < 3; ++i) {dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));} // intersections
 			} // for b
 		}
-		private:
-			template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, draw_state_t &dstate, unsigned type_ix) const {
-				assert(rp.s <= rp.e && rp.e <= v.size());
-				dstate.begin_block(type_ix);
-				for (unsigned i = rp.s; i < rp.e; ++i) {dstate.add_cube(v[i]);}
-				dstate.end_block();
-			}
 	};
 
 	vector<road_network_t> road_networks;
@@ -493,7 +492,7 @@ public:
 	}
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
 		if (road_networks.empty()) return;
-		timer_t timer("Draw Roads");
+		//timer_t timer("Draw Roads");
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting

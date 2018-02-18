@@ -112,6 +112,7 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 	void draw_and_clear() {draw(); clear();}
 	void draw_and_clear_quads() {draw_quad_verts_as_tris(verts); clear();}
 	void draw_as_flares_and_clear(int flare_tex=BLUR_TEX);
+	void add_quads(quad_batch_draw const &qbd) {verts.insert(verts.end(), qbd.verts.begin(), qbd.verts.end());}
 };
 
 
