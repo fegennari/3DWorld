@@ -67,7 +67,26 @@ struct city_params_t {
 city_params_t city_params;
 
 
-class city_plot_gen_t {
+struct heightmap_query_t {
+	float *heightmap;
+	unsigned xsize, ysize;
+
+	heightmap_query_t() : heightmap(nullptr), xsize(0), ysize(0) {}
+	heightmap_query_t(float *hmap, unsigned xsize_, unsigned ysize_) : heightmap(hmap), xsize(xsize_), ysize(ysize_) {}
+
+	vector3d const get_query_xlate() const {
+		return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
+	}
+	bool is_valid_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
+		return (x1 < x2 && y1 < y2 && x2 <= xsize && y2 <= ysize);
+	}
+	bool is_any_underwater(cube_t const &c) const {
+		// FIXME: WRITE
+		return 0;
+	}
+};
+
+class city_plot_gen_t : public heightmap_query_t {
 
 protected:
 	struct rect_t {
@@ -80,16 +99,11 @@ protected:
 		bool has_overlap(rect_t const &r) const {return (x1 < r.x2 && y1 < r.y2 && r.x1 < x2 && r.y1 < y2);}
 	};
 
-	float *heightmap;
-	unsigned xsize, ysize;
 	int last_rgi;
 	rand_gen_t rgen;
 	vector<rect_t> used;
 	vector<cube_t> plots; // same size as used
 
-	bool is_valid_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
-		return (x1 < x2 && y1 < y2 && x2 <= xsize && y2 <= ysize);
-	}
 	bool overlaps_used(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
 		rect_t const cur(x1, y1, x2, y2);
 		for (vector<rect_t>::const_iterator i = used.begin(); i != used.end(); ++i) {if (i->has_overlap(cur)) return 1;} // simple linear iteration
@@ -144,11 +158,8 @@ protected:
 		}
 		return diff;
 	}
-	vector3d const get_query_xlate() const {
-		return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
-	}
 public:
-	city_plot_gen_t() : heightmap(nullptr), xsize(0), ysize(0), last_rgi(0) {}
+	city_plot_gen_t() : last_rgi(0) {}
 
 	void init(float *heightmap_, unsigned xsize_, unsigned ysize_) {
 		heightmap = heightmap_; xsize = xsize_; ysize = ysize_;
@@ -301,19 +312,20 @@ class city_road_gen_t {
 	};
 
 	struct road_t : public cube_t {
-		road_t() {}
-		road_t(point const &s, point const &e, float width) {
+		bool dim; // dim the road runs in
+		road_t() : dim(0) {}
+		road_t(cube_t const &c, bool dim_) : cube_t(c), dim(dim_) {}
+		road_t(point const &s, point const &e, float width, bool dim_) : dim(dim_) {
 			assert(s != e);
 			assert(width > 0.0);
 			vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
 			point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
 			set_from_points(pts, 4);
 		}
+		float get_length() const {return (d[dim][1] - d[dim][0]);}
 	};
-	struct road_seg_t : public cube_t {
-		bool dim;
-		road_seg_t() : dim(0) {}
-		road_seg_t(cube_t const &c, bool dim_) : cube_t(c), dim(dim_) {}
+	struct road_seg_t : public road_t {
+		road_seg_t(cube_t const &c, bool dim_) : road_t(c, dim_) {}
 		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 	};
 	struct road_isec_t : public cube_t {
@@ -416,12 +428,12 @@ class city_road_gen_t {
 
 			// create a grid, for now; crossing roads will overlap
 			for (float x = region.d[0][0]+half_width; x < region.d[0][1]-half_width; x += road_pitch) { // shrink to include centerlines
-				roads.emplace_back(point(x, region.d[1][0], zval), point(x, region.d[1][1], zval), road_width);
+				roads.emplace_back(point(x, region.d[1][0], zval), point(x, region.d[1][1], zval), road_width, false);
 			}
 			unsigned const num_x(roads.size());
 
 			for (float y = region.d[1][0]+half_width; y < region.d[1][1]-half_width; y += road_pitch) { // shrink to include centerlines
-				roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width);
+				roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width, true);
 			}
 			unsigned const num_y(roads.size() - num_x);
 			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
@@ -462,6 +474,32 @@ class city_road_gen_t {
 			gen_tile_blocks();
 			return 1;
 		}
+		void create_connector_road(cube_t const &bcube1, cube_t const &bcube2, heightmap_query_t const &hq, float road_width, float conn_pos, bool dim) {
+			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
+			point p1, p2;
+			p1.z   = bcube1.d[2][1];
+			p2.z   = bcube2.d[2][1];
+			p1[!dim] = p2[!dim] = conn_pos;
+			p1[ dim] = bcube1.d[dim][ dir];
+			p2[ dim] = bcube2.d[dim][!dir];
+			roads.emplace_back(p1, p2, road_width, dim);
+		}
+		void split_connector_roads(float road_spacing) {
+			// Note: here we use segs, maybe isecs, but not plots
+			for (auto r = roads.begin(); r != roads.end(); ++r) {
+				float const len(r->get_length());
+				unsigned const num_segs(ceil(len/road_spacing));
+				bool const d(r->dim);
+				cube_t c(*r); // start by copying the road's bcube
+				
+				for (unsigned n = 0; n < num_segs; ++n) {
+					c.d[d][1] = min(r->d[d][1], (c.d[d][0] + road_spacing)); // clamp to original road end
+					segs.emplace_back(c, d);
+					c.d[d][0] = c.d[d][1]; // shift segment
+				} // for n
+			} // for r
+			gen_tile_blocks();
+		}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {
 			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(*r);}
 		}
@@ -482,19 +520,7 @@ class city_road_gen_t {
 				for (unsigned i = 0; i < 3; ++i) {dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));} // intersections
 			} // for b
 		}
-	};
-
-	struct heightmap_query_t {
-		float *hmap;
-		unsigned xsize, ysize;
-
-		heightmap_query_t(float *hmap_, unsigned xsize_, unsigned ysize_) : hmap(hmap_), xsize(xsize_), ysize(ysize_) {}
-
-		bool is_any_underwater(cube_t const &c) const {
-			// FIXME: WRITE
-			return 0;
-		}
-	};
+	}; // road_network_t
 
 	vector<road_network_t> road_networks; // one per city
 	road_network_t global_rn; // connects cities together; no plots
@@ -507,12 +533,14 @@ public:
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back();}
 		else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
 	}
-	void connect_two_cities(unsigned city1, unsigned city2, heightmap_query_t const &hq, float road_width) {
+	bool connect_two_cities(unsigned city1, unsigned city2, heightmap_query_t const &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 		cout << "Connect city " << city1 << " and " << city2 << endl;
 		cube_t const &bcube1(road_networks[city1].get_bcube()), &bcube2(road_networks[city2].get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
+		rand_gen_t rgen;
+		rgen.set_state(city1, city2);
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -520,12 +548,18 @@ public:
 			
 			if (shared_max - shared_min > road_width) { // can connect with single road segment in dim !d, if the terrain in between is passable
 				cout << "Shared dim " << d << endl;
-				// WRITE
+				//float const conn_pos(rgen.rand_uniform(shared_min+0.5*road_width, shared_max-0.5*road_width)); // center of connecting segment
+				//float const conn_pos(shared_min + 0.5*road_width + (shared_max - shared_min - road_width)*rgen.rand_float()); // center of connecting segment
+				float const conn_pos(0.5*(shared_min + shared_max));
+				global_rn.create_connector_road(bcube1, bcube2, hq, road_width, conn_pos, !d);
+				return 1; // done
 			}
 		} // for d
 		// WRITE: connect with multiple road segments using jogs
+		return 0;
 	}
-	void connect_all_cities(float *heightmap, unsigned xsize, unsigned ysize, float road_width) {
+	void connect_all_cities(float *heightmap, unsigned xsize, unsigned ysize, float road_width, float road_spacing) {
+		if (road_width == 0.0 || road_spacing == 0.0) return; // no roads
 		unsigned const num_cities(road_networks.size());
 		if (num_cities < 2) return; // not cities to connect
 		timer_t timer("Connect Cities");
@@ -559,11 +593,15 @@ public:
 				}
 			}
 			cout << "Closest is " << closest_conn << ", dist " << sqrt(dmin_sq) << endl;
-			connect_two_cities(cur_city, closest_conn, hq, road_width);
+			
+			if (!connect_two_cities(cur_city, closest_conn, hq, road_width)) {
+				cout << "Unable to connect cities " << cur_city << " and " << closest_conn << endl; // FIXME: still gets marked as connected
+			}
 			is_conn[cur_city] = 1;
 			connected.push_back(cur_city);
 			if (!is_conn[closest_conn]) {is_conn[closest_conn] = 1;	connected.push_back(closest_conn);} // first city is also now connected
 		} // end while()
+		global_rn.split_connector_roads(road_spacing);
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
@@ -612,7 +650,7 @@ public:
 		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params, cities_bcube);}
 		bool const is_const_zval(cities_bcube.d[2][0] == cities_bcube.d[2][1]);
 		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube, is_const_zval);}
-		road_gen.connect_all_cities(heightmap, xsize, ysize, params.road_width);
+		road_gen.connect_all_cities(heightmap, xsize, ysize, params.road_width, params.road_spacing);
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
