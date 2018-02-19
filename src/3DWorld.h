@@ -400,6 +400,18 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (d[i_][1] != c.d[i_][1]) return 0;)
 		return 1;
 	}
+	float x1() const {return d[0][0];}
+	float x2() const {return d[0][1];}
+	float y1() const {return d[1][0];}
+	float y2() const {return d[1][1];}
+	float z1() const {return d[2][0];}
+	float z2() const {return d[2][1];}
+	float &x1() {return d[0][0];}
+	float &x2() {return d[0][1];}
+	float &y1() {return d[1][0];}
+	float &y2() {return d[1][1];}
+	float &z1() {return d[2][0];}
+	float &z2() {return d[2][1];}
 	bool operator!=(cube_t const &c) const {return !operator==(c);}
 	cube_t operator+ (vector3d const &p) const {cube_t c(*this); c += p; return c;}
 	cube_t operator- (vector3d const &p) const {cube_t c(*this); c -= p; return c;}
