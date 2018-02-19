@@ -195,11 +195,15 @@ public:
 
 		for (unsigned y = max((int)y1-(int)slope_width, 0); y < min(y2+slope_width, ysize); ++y) {
 			for (unsigned x = max((int)x1-(int)slope_width, 0); x < min(x2+slope_width, xsize); ++x) {
-				float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
-				float const dy(max(0, max(((int)y1 - (int)y), ((int)y - (int)y2 + 1))));
-				float const mix(sqrt(dx*dx + dy*dy)/slope_width);
 				float &h(heightmap[y*xsize + x]);
-				h = mix*h + (1.0 - mix)*elevation;
+				
+				if (slope_width > 0) {
+					float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
+					float const dy(max(0, max(((int)y1 - (int)y), ((int)y - (int)y2 + 1))));
+					float const mix(min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
+					h = mix*h + (1.0 - mix)*elevation;
+				}
+				else {h = elevation;}
 			}
 		}
 		return elevation;
@@ -540,7 +544,7 @@ public:
 		cube_t const &bcube1(road_networks[city1].get_bcube()), &bcube2(road_networks[city2].get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
 		rand_gen_t rgen;
-		rgen.set_state(city1, city2);
+		rgen.set_state(city1+111, city2+222);
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -548,9 +552,9 @@ public:
 			
 			if (shared_max - shared_min > road_width) { // can connect with single road segment in dim !d, if the terrain in between is passable
 				cout << "Shared dim " << d << endl;
-				//float const conn_pos(rgen.rand_uniform(shared_min+0.5*road_width, shared_max-0.5*road_width)); // center of connecting segment
-				//float const conn_pos(shared_min + 0.5*road_width + (shared_max - shared_min - road_width)*rgen.rand_float()); // center of connecting segment
-				float const conn_pos(0.5*(shared_min + shared_max));
+				float const val1(shared_min+0.5*road_width), val2(shared_max-0.5*road_width);
+				//float const conn_pos(val1 + (val2 - val1)*rgen.rand_float()); // center of connecting segment: use random pos
+				float const conn_pos(0.5*(val1 + val2)); // center of connecting segment: use center of city overlap area
 				global_rn.create_connector_road(bcube1, bcube2, hq, road_width, conn_pos, !d);
 				return 1; // done
 			}
