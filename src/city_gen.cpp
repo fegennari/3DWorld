@@ -317,9 +317,11 @@ class city_road_gen_t {
 
 	struct road_t : public cube_t {
 		bool dim; // dim the road runs in
-		road_t() : dim(0) {}
-		road_t(cube_t const &c, bool dim_) : cube_t(c), dim(dim_) {}
-		road_t(point const &s, point const &e, float width, bool dim_) : dim(dim_) {
+		bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
+
+		road_t() : dim(0), slope(0) {}
+		road_t(cube_t const &c, bool dim_, bool slope_=0) : cube_t(c), dim(dim_), slope(slope_) {}
+		road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0) : dim(dim_), slope(slope_) {
 			assert(s != e);
 			assert(width > 0.0);
 			vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
@@ -327,9 +329,10 @@ class city_road_gen_t {
 			set_from_points(pts, 4);
 		}
 		float get_length() const {return (d[dim][1] - d[dim][0]);}
+		float get_height() const {return (d[2  ][1] - d[2  ][0]);}
 	};
 	struct road_seg_t : public road_t {
-		road_seg_t(cube_t const &c, bool dim_) : road_t(c, dim_) {}
+		road_seg_t(cube_t const &c, bool dim_, bool slope_=0) : road_t(c, dim_, slope_) {}
 		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 	};
 	struct road_isec_t : public cube_t {
@@ -486,20 +489,23 @@ class city_road_gen_t {
 			p1[!dim] = p2[!dim] = conn_pos;
 			p1[ dim] = bcube1.d[dim][ dir];
 			p2[ dim] = bcube2.d[dim][!dir];
-			roads.emplace_back(p1, p2, road_width, dim);
+			bool const slope((p1.z < p2.z) ^ (p1[dim] < p2[dim]));
+			roads.emplace_back(p1, p2, road_width, dim, slope);
 		}
 		void split_connector_roads(float road_spacing) {
 			// Note: here we use segs, maybe isecs, but not plots
 			for (auto r = roads.begin(); r != roads.end(); ++r) {
-				float const len(r->get_length());
+				bool const d(r->dim), slope(r->slope);
+				float const len(r->get_length()), z1(r->d[2][slope]), z2(r->d[2][!slope]);
+				assert(len > 0.0);
 				unsigned const num_segs(ceil(len/road_spacing));
-				bool const d(r->dim);
 				cube_t c(*r); // start by copying the road's bcube
 				
 				for (unsigned n = 0; n < num_segs; ++n) {
 					c.d[d][1] = min(r->d[d][1], (c.d[d][0] + road_spacing)); // clamp to original road end
-					segs.emplace_back(c, d);
-					c.d[d][0] = c.d[d][1]; // shift segment
+					for (unsigned e = 0; e < 2; ++e) {c.d[2][e] = z1 + (z2 - z1)*((c.d[d][e] - r->d[d][0])/len);} // interpolate road height across segments
+					segs.emplace_back(c, d, r->slope);
+					c.d[d][0] = c.d[d][1]; // shift segment end point
 				} // for n
 			} // for r
 			gen_tile_blocks();
