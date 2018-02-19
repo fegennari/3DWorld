@@ -98,7 +98,7 @@ inline vector3d signed_rand_vector2_spherical_noloop(float scale=1.0) {return gl
 
 inline float rand_float()        {return 0.0001*(rand()%10000);} // uniform 0 to 1 (only 16-bit random numbers)
 inline float signed_rand_float() {return 2.0*rand_float() - 1.0;}
-inline float rand_uniform(float val1, float val2) {return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float());}
+inline float rand_uniform(float val1, float val2) {return val1 + (val2 - val1)*rand_float();}
 inline float rgauss() {return gauss_rand_arr[rand ()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
 inline float rand_gaussian(float mean, float std_dev) {return mean + std_dev*rgauss();}
 
