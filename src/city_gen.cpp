@@ -264,6 +264,70 @@ class city_road_gen_t {
 		}
 	};
 
+	template<typename T> static void add_flat_road_quad(T const &r, quad_batch_draw &qbd, float ar) { // z1 == z2
+		//float const z(0.5*(r.d[2][0] + r.d[2][1]));
+		float const z(r.d[2][0]); // z1
+		point const pts[4] = {point(r.d[0][0], r.d[1][0], z), point(r.d[0][1], r.d[1][0], z), point(r.d[0][1], r.d[1][1], z), point(r.d[0][0], r.d[1][1], z)};
+		qbd.add_quad_pts(pts, road_color, plus_z, r.get_tex_range(ar));
+	}
+
+	struct road_t : public cube_t {
+		bool dim; // dim the road runs in
+		bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
+
+		road_t() : dim(0), slope(0) {}
+		road_t(cube_t const &c, bool dim_, bool slope_=0) : cube_t(c), dim(dim_), slope(slope_) {}
+		road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0) : dim(dim_), slope(slope_) {
+			assert(s != e);
+			assert(width > 0.0);
+			vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
+			point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
+			set_from_points(pts, 4);
+		}
+		float get_length() const {return (d[dim][1] - d[dim][0]);}
+		float get_height() const {return (d[2  ][1] - d[2  ][0]);}
+	};
+	struct road_seg_t : public road_t {
+		road_seg_t(cube_t const &c, bool dim_, bool slope_=0) : road_t(c, dim_, slope_) {}
+		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
+
+		void add_road_quad(quad_batch_draw &qbd, float ar) const { // specialized here for sloped roads
+			if (d[2][0] == d[2][1]) {add_flat_road_quad(*this, qbd, ar); return;}
+			bool const s(slope ^ dim);
+			point pts[4] = {point(d[0][0], d[1][0], d[2][!s]), point(d[0][1], d[1][0], d[2][!s]),
+				            point(d[0][1], d[1][1], d[2][ s]), point(d[0][0], d[1][1], d[2][ s])};
+			if (!dim) {swap(pts[0].z, pts[2].z);}
+			vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
+			qbd.add_quad_pts(pts, road_color, normal, get_tex_range(ar));
+		}
+	};
+	struct road_isec_t : public cube_t {
+		uint8_t conn; // connected roads in {-x, +x, -y, +y}
+		road_isec_t() : conn(15) {}
+		road_isec_t(cube_t const &c, uint8_t conn_=15) : cube_t(c), conn(conn_) {}
+
+		tex_range_t get_tex_range(float ar) const {
+			switch (conn) {
+			case 5 : return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 0); // 2-way: MX
+			case 6 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 2-way: R0
+			case 9 : return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 2-way: MXMY
+			case 10: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 0); // 2-way: MY
+			case 7 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 3-way: R0
+			case 11: return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 3-way: MY
+			case 13: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 1); // 3-way: R90MY
+			case 14: return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 1); // 3-way: R90MX
+			case 15: return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 4-way: R0
+			default: assert(0);
+			}
+			return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
+		}
+	};
+	struct road_plot_t : public cube_t {
+		road_plot_t() {}
+		road_plot_t(cube_t const &c) : cube_t(c) {}
+		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
+	};
+
 	struct draw_state_t {
 		shader_t s;
 		vector3d xlate;
@@ -296,17 +360,15 @@ class city_road_gen_t {
 			}
 			s.end_shader();
 		}
+		template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd) const {add_flat_road_quad(r, qbd, ar);} // generic flat road case
+		template<> void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd) const {r.add_road_quad(qbd, ar);}
+
 		template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
 			assert(rp.s <= rp.e && rp.e <= v.size());
 			assert(type_ix < NUM_RD_TYPES);
 			
 			if (cache.empty()) { // generate and cache quads
-				for (unsigned i = rp.s; i < rp.e; ++i) {
-					T const &c(v[i]);
-					float const z(0.5*(c.d[2][0] + c.d[2][1]));
-					point const pts[4] = {point(c.d[0][0], c.d[1][0], z), point(c.d[0][1], c.d[1][0], z), point(c.d[0][1], c.d[1][1], z), point(c.d[0][0], c.d[1][1], z)};
-					cache.add_quad_pts(pts, road_color, plus_z, c.get_tex_range(ar));
-				}
+				for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache);}
 			}
 			if (emit_now) { // draw shadow blocks directly
 				road_mat_mrg.set_texture(type_ix);
@@ -314,53 +376,6 @@ class city_road_gen_t {
 			}
 			else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 		}
-	};
-
-	struct road_t : public cube_t {
-		bool dim; // dim the road runs in
-		bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
-
-		road_t() : dim(0), slope(0) {}
-		road_t(cube_t const &c, bool dim_, bool slope_=0) : cube_t(c), dim(dim_), slope(slope_) {}
-		road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0) : dim(dim_), slope(slope_) {
-			assert(s != e);
-			assert(width > 0.0);
-			vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
-			point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
-			set_from_points(pts, 4);
-		}
-		float get_length() const {return (d[dim][1] - d[dim][0]);}
-		float get_height() const {return (d[2  ][1] - d[2  ][0]);}
-	};
-	struct road_seg_t : public road_t {
-		road_seg_t(cube_t const &c, bool dim_, bool slope_=0) : road_t(c, dim_, slope_) {}
-		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
-	};
-	struct road_isec_t : public cube_t {
-		uint8_t conn; // connected roads in {-x, +x, -y, +y}
-		road_isec_t() : conn(15) {}
-		road_isec_t(cube_t const &c, uint8_t conn_=15) : cube_t(c), conn(conn_) {}
-		
-		tex_range_t get_tex_range(float ar) const {
-			switch (conn) {
-			case 5 : return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 0); // 2-way: MX
-			case 6 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 2-way: R0
-			case 9 : return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 2-way: MXMY
-			case 10: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 0); // 2-way: MY
-			case 7 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 3-way: R0
-			case 11: return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 3-way: MY
-			case 13: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 1); // 3-way: R90MY
-			case 14: return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 1); // 3-way: R90MX
-			case 15: return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 4-way: R0
-			default: assert(0);
-			}
-			return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
-		}
-	};
-	struct road_plot_t : public cube_t {
-		road_plot_t() {}
-		road_plot_t(cube_t const &c) : cube_t(c) {}
-		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 	};
 
 	class road_network_t {
@@ -443,8 +458,12 @@ class city_road_gen_t {
 			for (float y = region.d[1][0]+half_width; y < region.d[1][1]-half_width; y += road_pitch) { // shrink to include centerlines
 				roads.emplace_back(point(region.d[0][0], y, zval), point(region.d[0][1], y, zval), road_width, true);
 			}
-			unsigned const num_y(roads.size() - num_x);
+			unsigned const num_r(roads.size()), num_y(num_r - num_x);
 			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
+			bcube.d[0][0] = roads[0      ].d[0][0]; // actual bcube x1 from first x road
+			bcube.d[0][1] = roads[num_x-1].d[0][1]; // actual bcube x2 from last x road
+			bcube.d[1][0] = roads[num_x  ].d[1][0]; // actual bcube y1 from first y road
+			bcube.d[1][1] = roads[num_r-1].d[1][1]; // actual bcube y2 from last y road
 
 			// create road segments and intersections
 			segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y); // X + Y segments
@@ -456,8 +475,8 @@ class city_road_gen_t {
 				isecs[2].reserve((num_x-2)*(num_y-2));
 			}
 			for (unsigned x = 0; x < num_x; ++x) {
-				for (unsigned y = num_x; y < roads.size(); ++y) {
-					bool const FX(x == 0), FY(y == num_x), LX(x+1 == num_x), LY(y+1 == roads.size());
+				for (unsigned y = num_x; y < num_r; ++y) {
+					bool const FX(x == 0), FY(y == num_x), LX(x+1 == num_x), LY(y+1 == num_r);
 					cube_t const &rx(roads[x]), &ry(roads[y]);
 					unsigned const num_conn((!FX) + (!LX) + (!FY) + (!LY));
 					if (num_conn < 2) continue; // error?
@@ -505,6 +524,8 @@ class city_road_gen_t {
 				for (unsigned n = 0; n < num_segs; ++n) {
 					c.d[d][1] = min(r->d[d][1], (c.d[d][0] + road_spacing)); // clamp to original road end
 					for (unsigned e = 0; e < 2; ++e) {c.d[2][e] = z1 + (z2 - z1)*((c.d[d][e] - r->d[d][0])/len);} // interpolate road height across segments
+					if (c.d[2][1] < c.d[2][0]) swap(c.d[2][0], c.d[2][1]); // swap zvals if needed
+					assert(c.is_normalized());
 					segs.emplace_back(c, d, r->slope);
 					c.d[d][0] = c.d[d][1]; // shift segment end point
 				} // for n
