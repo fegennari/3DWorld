@@ -489,6 +489,11 @@ class city_road_gen_t {
 			} // for x
 			return 1;
 		}
+		void calc_bcube_from_roads() {
+			if (roads.empty()) return; // no roads
+			bcube = roads.front(); // first road
+			for (auto r = roads.begin()+1; r != roads.end(); ++r) {bcube.union_with_cube(*r);} // skip first road
+		}
 	private:
 		int find_conn_int_seg(cube_t const &c, bool dim, bool dir) const {
 			for (unsigned i = 0; i < segs.size(); ++i) {
@@ -629,42 +634,51 @@ public:
 		timer_t timer("Connect Cities");
 		heightmap_query_t hq(heightmap, xsize, ysize);
 		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected
-		vector<unsigned> connected; // cities that are currently connected
+		vector<unsigned> connected, done; // cities that are currently connected
 		unsigned cur_city(0);
-		cube_t all_bcube(road_networks.front().get_bcube());
-		for (auto i = road_networks.begin()+1; i != road_networks.end(); ++i) {all_bcube.union_with_cube(i->get_bcube());}
-		global_rn.set_bcube(all_bcube); // unioned across all cities (FIXME: implies that roads can't go outside of the union bcube?)
+		vector<pair<float, unsigned>> cands;
 
 		// Note: may want to spatially sort cities to avoid bad connection order
-		while (connected.size() < num_cities) {
+		while (done.size() < num_cities) {
 			for (; is_conn[cur_city]; ++cur_city) {assert(cur_city < num_cities);} // find next unconnected city
 			assert(cur_city < num_cities);
 			point const center(road_networks[cur_city].get_bcube().get_cube_center());
-			float dmin_sq(0.0);
-			unsigned closest_conn(0);
-			cout << "Select city " << cur_city << ", connected " << connected.size() << " of " << num_cities << endl;
+			cout << "Select city " << cur_city << ", connected " << connected.size() << " / done " << done.size() << " of " << num_cities << endl;
 			
 			if (connected.empty()) { // first city, find closest other city
 				for (unsigned i = 1; i < num_cities; ++i) {
 					float const dist_sq(p2p_dist_sq(center, road_networks[i].get_bcube().get_cube_center()));
-					if (dmin_sq == 0.0 || dist_sq < dmin_sq) {closest_conn = i; dmin_sq = dist_sq;}
+					cands.push_back(make_pair(dist_sq, i));
 				}
 			}
 			else { // find closest connected city
 				for (auto i = connected.begin(); i != connected.end(); ++i) {
 					float const dist_sq(p2p_dist_sq(center, road_networks[*i].get_bcube().get_cube_center()));
-					if (dmin_sq == 0.0 || dist_sq < dmin_sq) {closest_conn = *i; dmin_sq = dist_sq;}
+					cands.push_back(make_pair(dist_sq, *i));
 				}
 			}
-			cout << "Closest is " << closest_conn << ", dist " << sqrt(dmin_sq) << endl;
+			sort(cands.begin(), cands.end()); // sort smallest to largest distance
+			bool success(0);
+			unsigned chosen(0);
+
+			for (auto c = cands.begin(); c != cands.end(); ++c) {
+				cout << "Trying to connect city " << c->second << ", dist " << sqrt(c->first) << endl;
 			
-			if (!connect_two_cities(cur_city, closest_conn, hq, road_width)) {
-				cout << "Unable to connect cities " << cur_city << " and " << closest_conn << endl; // FIXME: still gets marked as connected
-			}
-			is_conn[cur_city] = 1;
-			connected.push_back(cur_city);
-			if (!is_conn[closest_conn]) {is_conn[closest_conn] = 1;	connected.push_back(closest_conn);} // first city is also now connected
+				if (connect_two_cities(cur_city, c->second, hq, road_width)) {
+					cout << "Connected to city " << c->second << endl;
+					chosen  = c->second;
+					success = 1;
+					break;
+				}
+				else {cout << "Unable to connect to city " << c->second << endl;}
+			} // for c
+			cands.clear();
+			is_conn[cur_city] = 1; // Note: still gets marked as connected even if success == 0
+			done.push_back(cur_city);
+			if (success) {connected.push_back(cur_city);}
+			if (success && !is_conn[chosen]) {is_conn[chosen] = 1; done.push_back(chosen); connected.push_back(chosen);} // first city is also now connected
 		} // end while()
+		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 	}
 	void gen_tile_blocks() {
