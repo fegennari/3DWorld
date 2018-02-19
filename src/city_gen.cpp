@@ -200,7 +200,8 @@ public:
 				if (slope_width > 0) {
 					float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
 					float const dy(max(0, max(((int)y1 - (int)y), ((int)y - (int)y2 + 1))));
-					float const mix(min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
+					float mix(min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
+					mix = mix * mix * (3.0 - 2.0 * mix); // cubic Hermite interoplation (smoothstep)
 					h = mix*h + (1.0 - mix)*elevation;
 				}
 				else {h = elevation;}
