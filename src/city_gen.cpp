@@ -418,14 +418,6 @@ class city_road_gen_t {
 				tile_blocks[block_id].bcube.union_with_cube(v[i]);
 			} // for i
 		}
-		void gen_tile_blocks() {
-			tile_blocks.clear(); // should already be empty?
-			map<uint64_t, unsigned> tile_to_block_map;
-			add_tile_blocks(segs,  tile_to_block_map, TYPE_RSEG);
-			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
-			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
-			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
-		}
 
 	public:
 		road_network_t() : bcube(all_zeros) {}
@@ -466,13 +458,13 @@ class city_road_gen_t {
 			bcube.d[1][1] = roads[num_r-1].d[1][1]; // actual bcube y2 from last y road
 
 			// create road segments and intersections
-			segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y); // X + Y segments
+			segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y + 4); // X + Y segments, allocate one extra per side for connectors
 			plots.reserve((num_x-1)*(num_y-1));
 
 			if (num_x > 2 && num_y > 2) {
-				isecs[0].reserve(4);
-				isecs[1].reserve(2*((num_x-2) + (num_y-2)));
-				isecs[2].reserve((num_x-2)*(num_y-2));
+				isecs[0].reserve(4); // 2-way, always exactly 4 at each corner
+				isecs[1].reserve(2*((num_x-2) + (num_y-2)) + 4); // 3-way, allocate one extra per side for connectors
+				isecs[2].reserve((num_x-2)*(num_y-2)); // 4-way
 			}
 			for (unsigned x = 0; x < num_x; ++x) {
 				for (unsigned y = num_x; y < num_r; ++y) {
@@ -498,10 +490,35 @@ class city_road_gen_t {
 					}
 				} // for y
 			} // for x
-			gen_tile_blocks();
 			return 1;
 		}
-		void create_connector_road(cube_t const &bcube1, cube_t const &bcube2, heightmap_query_t const &hq, float road_width, float conn_pos, bool dim) {
+	private:
+		int find_conn_int_seg(cube_t const &c, bool dim, bool dir) const {
+			for (unsigned i = 0; i < segs.size(); ++i) {
+				road_seg_t const &s(segs[i]);
+				if (s.dim == dim) continue; // not perp dim
+				if (s.d[dim][dir] != bcube.d[dim][dir]) continue; // not on edge of road grid
+				if (s.d[!dim][1] < c.d[!dim][0] || s.d[!dim][0] > c.d[!dim][1]) continue; // no overlap/projection in other dim
+				if (c.d[!dim][0] > s.d[!dim][0] && c.d[!dim][1] < s.d[!dim][1]) return i; // c contained in segment in other dim, this is the one we want
+				return -1; // partial overlap in other dim, can't split, fail
+			} // for i
+			return -1; // not found
+		}
+	public:
+		bool check_valid_conn_intersection(cube_t const &c, bool dim, bool dir) const {return (find_conn_int_seg(c, dim, dir) >= 0);}
+		void insert_conn_intersection(cube_t const &c, bool dim, bool dir) {
+			int const seg_id(find_conn_int_seg(c, dim, dir));
+			assert(seg_id >= 0 && (unsigned)seg_id < segs.size());
+			segs.push_back(segs[seg_id]); // clone the segment first
+			segs[seg_id].d[!dim][1] = c.d[!dim][0]; // low part
+			segs.back() .d[!dim][0] = c.d[!dim][1]; // high part
+			cube_t ibc(segs[seg_id]); // intersection bcube
+			ibc.d[!dim][0] = c.d[!dim][0]; // copy width from c
+			ibc.d[!dim][1] = c.d[!dim][1];
+			uint8_t const conns[4] = {7, 11, 13, 14};
+			isecs[1].emplace_back(ibc, conns[2*(!dim) + dir]);
+		}
+		bool create_connector_road(cube_t const &bcube1, cube_t const &bcube2, road_network_t &rn1, road_network_t &rn2, heightmap_query_t const &hq, float road_width, float conn_pos, bool dim) {
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
 			point p1, p2;
 			p1.z   = bcube1.d[2][1];
@@ -509,8 +526,15 @@ class city_road_gen_t {
 			p1[!dim] = p2[!dim] = conn_pos;
 			p1[ dim] = bcube1.d[dim][ dir];
 			p2[ dim] = bcube2.d[dim][!dir];
-			bool const slope((p1.z < p2.z) ^ (p1[dim] < p2[dim]));
-			roads.emplace_back(p1, p2, road_width, dim, slope);
+			bool const slope((p1.z < p2.z) ^ dir);
+			road_t road(p1, p2, road_width, dim, slope);
+			if (!rn1.check_valid_conn_intersection(road, dim, dir) || !rn2.check_valid_conn_intersection(road, dim, !dir)) return 0; // invalid, don't make any changes
+			// FIXME: use hq to check for water along the path
+			rn1.insert_conn_intersection(road, dim,  dir);
+			rn2.insert_conn_intersection(road, dim, !dir);
+			// FIXME: use hq to modify terrain height around road, or make road follow terrain countour (could do this in split_connector_roads())
+			roads.push_back(road);
+			return 1; // success
 		}
 		void split_connector_roads(float road_spacing) {
 			// Note: here we use segs, maybe isecs, but not plots
@@ -530,7 +554,14 @@ class city_road_gen_t {
 					c.d[d][0] = c.d[d][1]; // shift segment end point
 				} // for n
 			} // for r
-			gen_tile_blocks();
+		}
+		void gen_tile_blocks() {
+			tile_blocks.clear(); // should already be empty?
+			map<uint64_t, unsigned> tile_to_block_map;
+			add_tile_blocks(segs,  tile_to_block_map, TYPE_RSEG);
+			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
+			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
+			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {
 			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(*r);}
@@ -569,7 +600,8 @@ public:
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 		cout << "Connect city " << city1 << " and " << city2 << endl;
-		cube_t const &bcube1(road_networks[city1].get_bcube()), &bcube2(road_networks[city2].get_bcube());
+		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
+		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
 		rand_gen_t rgen;
 		rgen.set_state(city1+111, city2+222);
@@ -581,10 +613,12 @@ public:
 			if (shared_max - shared_min > road_width) { // can connect with single road segment in dim !d, if the terrain in between is passable
 				cout << "Shared dim " << d << endl;
 				float const val1(shared_min+0.5*road_width), val2(shared_max-0.5*road_width);
-				//float const conn_pos(val1 + (val2 - val1)*rgen.rand_float()); // center of connecting segment: use random pos
-				float const conn_pos(0.5*(val1 + val2)); // center of connecting segment: use center of city overlap area
-				global_rn.create_connector_road(bcube1, bcube2, hq, road_width, conn_pos, !d);
-				return 1; // done
+				float conn_pos(0.5*(val1 + val2)); // center of connecting segment: start by using center of city overlap area
+
+				for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts at connecting the cities with a straight line
+					if (global_rn.create_connector_road(bcube1, bcube2, rn1, rn2, hq, road_width, conn_pos, !d)) return 1; // done
+					conn_pos = (val1 + (val2 - val1)*rgen.rand_float()); // chose a random new connection point and try it
+				}
 			}
 		} // for d
 		// WRITE: connect with multiple road segments using jogs
@@ -635,6 +669,10 @@ public:
 		} // end while()
 		global_rn.split_connector_roads(road_spacing);
 	}
+	void gen_tile_blocks() {
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_tile_blocks();}
+		global_rn.gen_tile_blocks();
+	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
@@ -683,6 +721,7 @@ public:
 		bool const is_const_zval(cities_bcube.d[2][0] == cities_bcube.d[2][1]);
 		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube, is_const_zval);}
 		road_gen.connect_all_cities(heightmap, xsize, ysize, params.road_width, params.road_spacing);
+		road_gen.gen_tile_blocks();
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
