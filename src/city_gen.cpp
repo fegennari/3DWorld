@@ -21,10 +21,10 @@ extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias;
 
 struct city_params_t {
 
-	unsigned num_cities, num_samples, city_size, city_border, slope_width;
+	unsigned num_cities, num_samples, city_size, city_border, road_border, slope_width;
 	float road_width, road_spacing;
 
-	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
+	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -46,6 +46,9 @@ struct city_params_t {
 		}
 		else if (str == "city_border") {
 			if (!read_uint(fp, city_border)) {return read_error(str);}
+		}
+		else if (str == "road_border") {
+			if (!read_uint(fp, road_border)) {return read_error(str);}
 		}
 		else if (str == "slope_width") {
 			if (!read_uint(fp, slope_width)) {return read_error(str);}
@@ -82,6 +85,11 @@ template<typename T> void get_all_bcubes(vector<T> const &v, vector<cube_t> &bcu
 	for (auto i = v.begin(); i != v.end(); ++i) {bcubes.push_back(*i);}
 }
 
+float smooth_interp(float a, float b, float mix) {
+	mix = mix * mix * (3.0 - 2.0 * mix); // cubic Hermite interoplation (smoothstep)
+	return mix*a + (1.0 - mix)*b;
+}
+
 class heightmap_query_t {
 protected:
 	float *heightmap;
@@ -114,16 +122,23 @@ public:
 	void flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim) {
 		assert(is_valid_region(x1, y1, x2, y2));
 		float const denom(1.0/(dim ? (y2 - y1) : (x2 - x1))), dz(z2 - z1);
-		int const pad(1);
-		if (dim) {x1 = max((int)x1-pad, 0); x2 = min(x2+pad, xsize);}
-		else     {y1 = max((int)y1-pad, 0); y2 = min(y2+pad, ysize);}
+		unsigned const border(city_params.road_border); // just fish it out of the global params rather than pass it all the way down
+		int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
+		unsigned px1(x1), py1(y1), px2(x2), py2(y2);
+		if (dim) {px1 = max((int)x1-pad, 0); px2 = min(x2+pad, xsize);}
+		else     {py1 = max((int)y1-pad, 0); py2 = min(y2+pad, ysize);}
 
-		for (unsigned y = y1; y < y2; ++y) {
-			for (unsigned x = x1; x < x2; ++x) {
+		for (unsigned y = py1; y < py2; ++y) {
+			for (unsigned x = px1; x < px2; ++x) {
 				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
-				float const road_z(z1 + dz*t);
+				float const road_z(z1 + dz*t - ROAD_HEIGHT);
 				float &h(get_height(x, y));
-				h = road_z - ROAD_HEIGHT; // FIXME: smoothing
+
+				if (border > 0) {
+					unsigned const dist(dim ? max(0, max(((int)x1 - (int)x - 1), ((int)x - (int)x2))) : max(0, max(((int)y1 - (int)y - 1), ((int)y - (int)y2))));
+					h = smooth_interp(h, road_z, float(dist)/float(border));
+				}
+				else {h = road_z;}
 			} // for x
 		} // for y
 	}
@@ -231,9 +246,7 @@ public:
 				if (slope_width > 0) {
 					float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
 					float const dy(max(0, max(((int)y1 - (int)y), ((int)y - (int)y2 + 1))));
-					float mix(min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
-					mix = mix * mix * (3.0 - 2.0 * mix); // cubic Hermite interoplation (smoothstep)
-					h = mix*h + (1.0 - mix)*elevation;
+					h = smooth_interp(h, elevation, min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
 				}
 				else {h = elevation;}
 			}
