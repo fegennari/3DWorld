@@ -112,16 +112,16 @@ public:
 		return 0;
 	}
 	void flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim) {
-		// FIXME: smooth height adjustment
 		assert(is_valid_region(x1, y1, x2, y2));
-		float const denom(1.0/(dim ? (y2 - y1) : (x2 - x1)));
+		float const denom(1.0/(dim ? (y2 - y1) : (x2 - x1))), dz(z2 - z1);
 		int const pad(1);
 		if (dim) {x1 = max((int)x1-pad, 0); x2 = min(x2+pad, xsize);}
 		else     {y1 = max((int)y1-pad, 0); y2 = min(y2+pad, ysize);}
 
-		for (int y = y1; y < y2; ++y) {
-			for (int x = x1; x < x2; ++x) {
-				float const t((dim ? (y - y1) : (x - x1))*denom), road_z(z1 + (z2 - z1)*t);
+		for (unsigned y = y1; y < y2; ++y) {
+			for (unsigned x = x1; x < x2; ++x) {
+				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
+				float const road_z(z1 + dz*t);
 				float &h(get_height(x, y));
 				h = road_z - ROAD_HEIGHT; // FIXME: smoothing
 			} // for x

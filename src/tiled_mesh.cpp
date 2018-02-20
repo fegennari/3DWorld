@@ -995,7 +995,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				if (grass) {
 					float grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
 					
-					if (grass_scale > 0.0 && check_grass_place && check_city_sphere_coll(point(get_xval(x + llc_x), get_yval(y + llc_y), 0.0), 0.0)) {
+					if (grass_scale > 0.0 && check_grass_place && check_city_sphere_coll(point(get_xval(x + llc_x), get_yval(y + llc_y), 0.0), HALF_DXY)) {
 						weights[dirt_tex_ix] += weights[grass_tex_ix]; // replace grass with dirt
 						weights[grass_tex_ix] = 0.0;
 						grass_scale = 0.0;
