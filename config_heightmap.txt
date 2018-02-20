@@ -1,17 +1,18 @@
 include config_t.txt
 
 include building_params.txt
-buildings tt_only 1
 buildings num_place 100000
 buildings max_rot_angle 0.0 # no rotated buildings - Manhattan only
 buildings place_radius  0.0 # no radius clipping - place in a square
 buildings max_altitude 6.00 # same for all buildings
 include building_materials.txt
+buildings tt_only 1
 
-city num_cities 2
+city num_cities 4
 city num_samples 100
 city city_size 400
 city city_border 1000
+city road_border 10
 city slope_width 50
 city road_width 0.265
 city road_spacing 1.5
