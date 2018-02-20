@@ -416,7 +416,7 @@ class city_road_gen_t {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
 		};
 		struct tile_block_t { // collection of road parts for a given tile
-			range_pair_t ranges[NUM_RD_TYPES]; // {xsegs, ysegs, isecs, plots}
+			range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4}
 			quad_batch_draw quads[NUM_RD_TYPES];
 			cube_t bcube;
 			tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
@@ -571,7 +571,7 @@ class city_road_gen_t {
 			return 1; // success
 		}
 		void split_connector_roads(float road_spacing) {
-			// Note: here we use segs, maybe isecs, but not plots
+			// Note: here we use segs, maybe 2-way isecs for bends, but not plots
 			for (auto r = roads.begin(); r != roads.end(); ++r) {
 				bool const d(r->dim), slope(r->slope);
 				float const len(r->get_length()), z1(r->d[2][slope]), z2(r->d[2][!slope]);

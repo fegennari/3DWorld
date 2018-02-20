@@ -2515,8 +2515,9 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	s.end_shader();
 }
 
-void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, point const &recv_cent) { // not const because creates height_tid
+void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const tile) { // not const because creates height_tid
 
+	//timer_t timer("Draw Shadow Pass");
 	shader_t s;
 	s.set_vert_shader("tiled_mesh_shadow");
 	s.set_frag_shader("color_only");
@@ -2527,10 +2528,18 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, point const &recv_ce
 	s.enable_vnct_atribs(1, 0, 0, 0);
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
+	assert(tile != nullptr);
+	float const recv_dist_sq(p2p_dist_xy_sq(lpos, tile->get_center()));
+	cube_t const shadow_bcube(tile->get_shadow_bcube());
+	bool const inc_adj_smap(get_buildings_max_extent() != zero_vector || get_road_max_len() > 0.0);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
-		if (p2p_dist_xy_sq(lpos, to_draw[i].second->get_center()) <= p2p_dist_xy_sq(lpos, recv_cent)) { // this tile is closer to the light than the recv tile
-			to_draw[i].second->draw_shadow_pass(s, *this, ivbo_ixs);
+		tile_t *const t(to_draw[i].second);
+
+		if (p2p_dist_xy_sq(lpos, t->get_center()) <= recv_dist_sq || // check if this tile is closer to the light than the recv tile
+		   (inc_adj_smap && t->get_bcube().intersects_xy(shadow_bcube))) // check for tile overlap when buildings/cities are involved
+		{
+			t->draw_shadow_pass(s, *this, ivbo_ixs);
 		}
 	}
 	bind_vbo(0, 1); // unbind index buffer
@@ -2555,7 +2564,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
 	}
 	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamping so that shadow casters aren't clipped by the shadow frustum
-	draw_tiles_shadow_pass(lpos, tile->get_center());
+	draw_tiles_shadow_pass(lpos, tile);
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
