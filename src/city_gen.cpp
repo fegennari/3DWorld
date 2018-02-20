@@ -67,16 +67,35 @@ struct city_params_t {
 city_params_t city_params;
 
 
-struct heightmap_query_t {
+vector3d const get_query_xlate() {
+	return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
+}
+
+template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only) {
+	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
+		if (xy_only ? sphere_cube_intersect_xy(sc, radius, *i) : sphere_cube_intersect(sc, radius, *i)) return 1;
+	}
+	return 0;
+}
+
+template<typename T> void get_all_bcubes(vector<T> const &v, vector<cube_t> &bcubes) {
+	for (auto i = v.begin(); i != v.end(); ++i) {bcubes.push_back(*i);}
+}
+
+class heightmap_query_t {
+protected:
 	float *heightmap;
 	unsigned xsize, ysize;
 
+public:
 	heightmap_query_t() : heightmap(nullptr), xsize(0), ysize(0) {}
 	heightmap_query_t(float *hmap, unsigned xsize_, unsigned ysize_) : heightmap(hmap), xsize(xsize_), ysize(ysize_) {}
 	float get_x_value(int x) const {return get_xval(x - int(xsize)/2);} // convert from center to LLC
 	float get_y_value(int y) const {return get_yval(y - int(ysize)/2);}
 	int get_x_pos(float x) const {return (get_xpos(x) + int(xsize)/2);}
 	int get_y_pos(float y) const {return (get_ypos(y) + int(ysize)/2);}
+	float  get_height(unsigned x, unsigned y) const {return heightmap[y*xsize + x];} // Note: not bounds checked
+	float &get_height(unsigned x, unsigned y)       {return heightmap[y*xsize + x];} // Note: not bounds checked
 
 	bool is_valid_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
 		return (x1 < x2 && y1 < y2 && x2 <= xsize && y2 <= ysize);
@@ -87,10 +106,26 @@ struct heightmap_query_t {
 		for (unsigned y = y1; y < y2; ++y) {
 			for (unsigned x = x1; x < x2; ++x) {
 				if (check_border && y != y1 && y != y2-1 && x == x1+1) {x = x2-1;} // jump to right edge
-				if (heightmap[y*xsize + x] < water_plane_z) return 1;
+				if (get_height(x, y) < water_plane_z) return 1;
 			}
 		}
 		return 0;
+	}
+	void flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim) {
+		// FIXME: smooth height adjustment
+		assert(is_valid_region(x1, y1, x2, y2));
+		float const denom(1.0/(dim ? (y2 - y1) : (x2 - x1)));
+		int const pad(1);
+		if (dim) {x1 = max((int)x1-pad, 0); x2 = min(x2+pad, xsize);}
+		else     {y1 = max((int)y1-pad, 0); y2 = min(y2+pad, ysize);}
+
+		for (int y = y1; y < y2; ++y) {
+			for (int x = x1; x < x2; ++x) {
+				float const t((dim ? (y - y1) : (x - x1))*denom), road_z(z1 + (z2 - z1)*t);
+				float &h(get_height(x, y));
+				h = road_z - ROAD_HEIGHT; // FIXME: smoothing
+			} // for x
+		} // for y
 	}
 };
 
@@ -135,7 +170,7 @@ protected:
 		for (unsigned y = y1; y < y2; ++y) {
 			for (unsigned x = x1; x < x2; ++x) {
 				if (CHECK_HEIGHT_BORDER_ONLY && y != y1 && y != y2-1 && x == x1+1) {x = x2-1;} // jump to right edge
-				sum   += heightmap[y*xsize + x];
+				sum   += get_height(x, y);
 				denom += 1.0;
 			}
 		}
@@ -148,7 +183,7 @@ protected:
 		for (unsigned y = y1; y < y2; ++y) {
 			for (unsigned x = x1; x < x2; ++x) {
 				if (CHECK_HEIGHT_BORDER_ONLY && y != y1 && y != y2-1 && x == x1+1) {x = x2-1;} // jump to right edge
-				float const delta(heightmap[y*xsize + x] - avg);
+				float const delta(get_height(x, y) - avg);
 				diff += delta*delta; // square the difference
 			}
 		}
@@ -191,7 +226,7 @@ public:
 
 		for (unsigned y = max((int)y1-(int)slope_width, 0); y < min(y2+slope_width, ysize); ++y) {
 			for (unsigned x = max((int)x1-(int)slope_width, 0); x < min(x2+slope_width, xsize); ++x) {
-				float &h(heightmap[y*xsize + x]);
+				float &h(get_height(x, y));
 				
 				if (slope_width > 0) {
 					float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
@@ -205,17 +240,9 @@ public:
 		}
 		return elevation;
 	}
-	vector3d const get_query_xlate() const {
-		return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
-	}
 	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
 		if (plots.empty()) return 0;
-		point const sc(pos - get_query_xlate());
-
-		for (auto i = plots.begin(); i != plots.end(); ++i) {
-			if (xy_only ? sphere_cube_intersect_xy(sc, radius, *i) : sphere_cube_intersect(sc, radius, *i)) return 1;
-		}
-		return 0;
+		return check_bcubes_sphere_coll(plots, (pos - get_query_xlate()), radius, xy_only);
 	}
 }; // city_plot_gen_t
 
@@ -520,7 +547,9 @@ class city_road_gen_t {
 			uint8_t const conns[4] = {7, 11, 13, 14};
 			isecs[1].emplace_back(ibc, conns[2*(!dim) + dir]);
 		}
-		bool create_connector_road(cube_t const &bcube1, cube_t const &bcube2, road_network_t &rn1, road_network_t &rn2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim) {
+		bool create_connector_road(cube_t const &bcube1, cube_t const &bcube2, road_network_t &rn1, road_network_t &rn2, heightmap_query_t &hq,
+			float road_width, float conn_pos, bool dim, bool check_only=0)
+		{
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
 			point p1, p2;
 			p1.z   = bcube1.d[2][1];
@@ -529,13 +558,15 @@ class city_road_gen_t {
 			p1[ dim] = bcube1.d[dim][ dir];
 			p2[ dim] = bcube2.d[dim][!dir];
 			bool const slope((p1.z < p2.z) ^ dir);
-			road_t road(p1, p2, road_width, dim, slope);
+			road_t const road(p1, p2, road_width, dim, slope);
 			if (!rn1.check_valid_conn_intersection(road, dim, dir) || !rn2.check_valid_conn_intersection(road, dim, !dir)) return 0; // invalid, don't make any changes
-			int const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
-			if (hq.any_underwater(x1, y1, x2, y2)) return 0; // underwater
+			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
+			if (hq.any_underwater(x1, y1, x2, y2)) return 0; // underwater (Note: bounds check is done here)
+			if (check_only) return 1; // return without creating the connection
 			rn1.insert_conn_intersection(road, dim,  dir);
 			rn2.insert_conn_intersection(road, dim, !dir);
-			// FIXME: use hq to modify terrain height around road, or make road follow terrain countour (could do this in split_connector_roads())
+			// FIXME: make road follow terrain countour (could do this in split_connector_roads())?
+			hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope], road.d[2][!slope], dim);
 			roads.push_back(road);
 			return 1; // success
 		}
@@ -566,11 +597,12 @@ class city_road_gen_t {
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
-		void get_road_bcubes(vector<cube_t> &bcubes) const {
-			for (auto r = roads.begin(); r != roads.end(); ++r) {bcubes.push_back(*r);}
-		}
-		void get_plot_bcubes(vector<cube_t> &bcubes) const {
-			for (auto r = plots.begin(); r != plots.end(); ++r) {bcubes.push_back(*r);}
+		void get_road_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(roads, bcubes);}
+		void get_plot_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(plots, bcubes);}
+
+		bool check_road_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
+			if (roads.empty()) return 0;
+			return check_bcubes_sphere_coll(roads, (pos - get_query_xlate()), radius, xy_only);
 		}
 		void draw(draw_state_t &dstate) {
 			if (empty()) return;
@@ -692,6 +724,8 @@ public:
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const { // Note: no global_rn
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
+	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only) const {return global_rn.check_road_sphere_coll(pos, radius, xy_only);}
+
 	void draw(vector3d const &xlate) { // non-const because qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
 		//timer_t timer("Draw Roads");
@@ -738,6 +772,10 @@ public:
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
 
+	bool check_city_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
+		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
+		return road_gen.check_road_sphere_coll(pos, radius, xy_only);
+	}
 	void draw(bool shadow_only, int reflection_pass, vector3d const &xlate) { // for now, there are only roads
 		if (!shadow_only && reflection_pass == 0) {road_gen.draw(xlate);} // roads don't cast shadows and aren't reflected in water
 		// buildings are drawn through draw_buildings()
@@ -764,7 +802,7 @@ bool check_city_sphere_coll(point const &pos, float radius) {
 	if (!have_cities()) return 0;
 	point center(pos);
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
-	return city_gen.check_plot_sphere_coll(center, radius);
+	return city_gen.check_city_sphere_coll(center, radius);
 }
 bool check_valid_scenery_pos(point const &pos, float radius) {
 	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
