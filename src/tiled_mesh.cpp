@@ -1982,7 +1982,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		//ostringstream oss; oss << "Gen " << to_gen_zvals.size() << " tiles (wait)"; timer_t timer(oss.str());
 		assert(to_gen_zvals.size() <= height_gens.size());
 
-		for (unsigned i = 0; i < to_gen_zvals.size(); ++i) { // tile were waiting on zval generation (async)
+		for (unsigned i = 0; i < to_gen_zvals.size(); ++i) { // tiles were waiting on zval generation (async)
 			tile_t *tile(to_gen_zvals[i].second);
 			tile->create_zvals(height_gens[i], 0); // wait for zvals to be generated
 			insert_tile(tile); // zvals have been generated
