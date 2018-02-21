@@ -58,7 +58,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
 // Global Variables
-bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0);
+bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0), tiled_terrain_only(0);
 bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0), claim_planet(0), skip_light_vis_test(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1), smoke_dlights(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0), invert_model_nmap_bscale(0);
@@ -1644,6 +1644,7 @@ int load_config(string const &config_file) {
 	kwmb.add("disable_recoil", disable_recoil);
 	kwmb.add("enable_translocator", enable_translocator);
 	kwmb.add("enable_grass_fire", enable_grass_fire);
+	kwmb.add("tiled_terrain_only", tiled_terrain_only);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
@@ -2080,7 +2081,8 @@ int load_config(string const &config_file) {
 	teams          = max(teams,          1);
 	tree_mode      = tree_mode % 4;
 	if (shadow_map_sz > 0 && shadow_map_pcf_offset == 0.0) {shadow_map_pcf_offset = 40.0/shadow_map_sz;}
-	if (universe_only) world_mode = WMODE_UNIVERSE;
+	if (universe_only     ) {world_mode = WMODE_UNIVERSE;}
+	if (tiled_terrain_only) {world_mode = WMODE_INF_TERRAIN;}
 	//if (read_heightmap && dynamic_mesh_scroll) cout << "Warning: read_heightmap and dynamic_mesh_scroll are currently incompatible options as the heightmap does not scroll." << endl;
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation
