@@ -575,7 +575,7 @@ class city_road_gen_t {
 			uint8_t const conns[4] = {7, 11, 13, 14};
 			isecs[1].emplace_back(ibc, conns[2*(!dim) + dir]);
 		}
-		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, road_network_t &rn1, road_network_t &rn2, heightmap_query_t &hq,
+		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<cube_t> &blockers, road_network_t &rn1, road_network_t &rn2, heightmap_query_t &hq,
 			float road_width, float conn_pos, bool dim, bool check_only=0)
 		{
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
@@ -588,14 +588,21 @@ class city_road_gen_t {
 			bool const slope((p1.z < p2.z) ^ dir);
 			road_t const road(p1, p2, road_width, dim, slope);
 			if (!rn1.check_valid_conn_intersection(road, dim, dir) || !rn2.check_valid_conn_intersection(road, dim, !dir)) return -1.0; // invalid, don't make any changes
+
+			for (auto b = blockers.begin(); b != blockers.end(); ++b) {
+				if (b->intersects(bcube1) || b->intersects(bcube2)) continue; // skip current cities
+				if (b->intersects(road)) return -1.0; // bad intersection, fail
+			}
 			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
 			if (hq.any_underwater(x1, y1, x2, y2)) return -1.0; // underwater (Note: bounds check is done here)
-																// FIXME: make road follow terrain countour (could do this in split_connector_roads())?
+			// FIXME: make road follow terrain countour (could do this in split_connector_roads())?
 			float const tot_dz(hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope], road.d[2][!slope], dim, check_only));
 			if (check_only) return tot_dz; // return without creating the connection
 			rn1.insert_conn_intersection(road, dim,  dir);
 			rn2.insert_conn_intersection(road, dim, !dir);
 			roads.push_back(road);
+			blockers.push_back(road);
+			blockers.back().expand_by(road_width); // add extra padding (use road_spacing?)
 			return tot_dz; // success
 		}
 		void split_connector_roads(float road_spacing) {
@@ -659,7 +666,7 @@ public:
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back();}
 		else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
 	}
-	bool connect_two_cities(unsigned city1, unsigned city2, heightmap_query_t &hq, float road_width) {
+	bool connect_two_cities(unsigned city1, unsigned city2, vector<cube_t> &blockers, heightmap_query_t &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 		cout << "Connect city " << city1 << " and " << city2 << endl;
@@ -680,12 +687,12 @@ public:
 				float best_conn_pos(0.0), best_cost(-1.0);
 
 				for (unsigned n = 0; n < 20; ++n) { // make up to 20 attempts at connecting the cities with a straight line
-					float const cost(global_rn.create_connector_road(bcube1, bcube2, rn1, rn2, hq, road_width, conn_pos, !d, 1)); // check_only=1
+					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, rn1, rn2, hq, road_width, conn_pos, !d, 1)); // check_only=1
 					if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost;}
 					conn_pos = (val1 + (val2 - val1)*rgen.rand_float()); // chose a random new connection point and try it
 				}
 				if (best_cost >= 0.0) { // use connector with lowest cost
-					global_rn.create_connector_road(bcube1, bcube2, rn1, rn2, hq, road_width, best_conn_pos, !d, 0); // check_only=0; actually make the change
+					global_rn.create_connector_road(bcube1, bcube2, blockers, rn1, rn2, hq, road_width, best_conn_pos, !d, 0); // check_only=0; actually make the change
 					return 1;
 				}
 			}
@@ -699,51 +706,23 @@ public:
 		if (num_cities < 2) return; // not cities to connect
 		timer_t timer("Connect Cities");
 		heightmap_query_t hq(heightmap, xsize, ysize);
-		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected
-		vector<unsigned> connected, done; // cities that are currently connected
-		unsigned cur_city(0);
+		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected (0=unconnected, 1=connected, 2=done/connect failed
+		unsigned cur_city(0), num_conn(0), num_done(0);
 		vector<pair<float, unsigned>> cands;
+		vector<cube_t> blockers; // existing cities and connector roads that we want to avoid intersecting
 
-		// Note: may want to spatially sort cities to avoid bad connection order
-		while (done.size() < num_cities) {
-			for (; is_conn[cur_city]; ++cur_city) {assert(cur_city < num_cities);} // find next unconnected city
-			assert(cur_city < num_cities);
-			point const center(road_networks[cur_city].get_bcube().get_cube_center());
-			cout << "Select city " << cur_city << ", connected " << connected.size() << " / done " << done.size() << " of " << num_cities << endl;
-			
-			if (connected.empty()) { // first city, find closest other city
-				for (unsigned i = 1; i < num_cities; ++i) {
-					float const dist_sq(p2p_dist_sq(center, road_networks[i].get_bcube().get_cube_center()));
-					cands.push_back(make_pair(dist_sq, i));
-				}
-			}
-			else { // find closest connected city
-				for (auto i = connected.begin(); i != connected.end(); ++i) {
-					float const dist_sq(p2p_dist_sq(center, road_networks[*i].get_bcube().get_cube_center()));
-					cands.push_back(make_pair(dist_sq, *i));
-				}
-			}
-			sort(cands.begin(), cands.end()); // sort smallest to largest distance
-			bool success(0);
-			unsigned chosen(0);
-
-			for (auto c = cands.begin(); c != cands.end(); ++c) {
-				cout << "Trying to connect city " << c->second << ", dist " << sqrt(c->first) << endl;
-			
-				if (connect_two_cities(cur_city, c->second, hq, road_width)) {
-					cout << "Connected to city " << c->second << endl;
-					chosen  = c->second;
-					success = 1;
-					break;
-				}
-				else {cout << "Unable to connect to city " << c->second << endl;}
-			} // for c
-			cands.clear();
-			is_conn[cur_city] = 1; // Note: still gets marked as connected even if success == 0
-			done.push_back(cur_city);
-			if (success) {connected.push_back(cur_city);}
-			if (success && !is_conn[chosen]) {is_conn[chosen] = 1; done.push_back(chosen); connected.push_back(chosen);} // first city is also now connected
-		} // end while()
+		// gather city blockers
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {
+			blockers.push_back(i->get_bcube());
+			blockers.back().expand_by(road_spacing); // separate roads by at least this value
+		}
+		// full cross-product connectivity
+		for (unsigned i = 0; i < num_cities; ++i) {
+			for (unsigned j = i+1; j < num_cities; ++j) {
+				bool const success(connect_two_cities(i, j, blockers, hq, road_width));
+				cout << "Trying to connect city " << i << " to city " << j << ": " << success << endl;
+			} // for j
+		} // for i
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 	}
