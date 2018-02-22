@@ -510,16 +510,19 @@ class city_road_gen_t {
 			cube_t const &region(bcube); // use our bcube as the region to process
 			vector3d const size(region.get_size());
 			assert(size.x > 0.0 && size.y > 0.0);
-			float const half_width(0.5*road_width), road_pitch(road_width + road_spacing);
-			float const zval(region.d[2][0] + ROAD_HEIGHT);
+			float const half_width(0.5*road_width), zval(region.d[2][0] + ROAD_HEIGHT);
+			float const rx1(region.x1() + half_width), rx2(region.x2() - half_width), ry1(region.y1() + half_width), ry2(region.y2() - half_width); // shrink to include centerlines
+			float road_pitch(road_width + road_spacing);
+			int const num_x_roads((rx2 - rx1)/road_pitch);
+			road_pitch = 0.9999*(rx2 - rx1)/num_x_roads; // auto-calculate, round down slightly to avoid FP error
 
 			// create a grid, for now; crossing roads will overlap
-			for (float x = region.x1()+half_width; x < region.x2()-half_width; x += road_pitch) { // shrink to include centerlines
+			for (float x = rx1; x < rx2; x += road_pitch) {
 				roads.emplace_back(point(x, region.y1(), zval), point(x, region.y2(), zval), road_width, false);
 			}
 			unsigned const num_x(roads.size());
 
-			for (float y = region.y1()+half_width; y < region.y2()-half_width; y += road_pitch) { // shrink to include centerlines
+			for (float y = ry1; y < ry2; y += road_pitch) {
 				roads.emplace_back(point(region.x1(), y, zval), point(region.x2(), y, zval), road_width, true);
 			}
 			unsigned const num_r(roads.size()), num_y(num_r - num_x);
