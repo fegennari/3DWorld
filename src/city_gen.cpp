@@ -691,6 +691,7 @@ class city_road_gen_t {
 	vector<road_network_t> road_networks; // one per city
 	road_network_t global_rn; // connects cities together; no plots
 	draw_state_t dstate;
+	rand_gen_t rgen;
 
 	static float rgen_uniform(float val1, float val2, rand_gen_t &rgen) {return (val1 + (val2 - val1)*rgen.rand_float());}
 
@@ -708,8 +709,6 @@ public:
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
-		rand_gen_t rgen;
-		rgen.set_state(123*city1+111, 456*city2+222);
 		float const min_edge_dist(1.1*road_width), min_jog(2.0*road_width), half_width(0.5*road_width);
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
 
@@ -719,13 +718,12 @@ public:
 			if (shared_max - shared_min > min_edge_dist) { // can connect with single road segment in dim !d, if the terrain in between is passable
 				cout << "Shared dim " << d << endl;
 				float const val1(shared_min+0.5*road_width), val2(shared_max-0.5*road_width);
-				float conn_pos(0.5*(val1 + val2)); // center of connecting segment: start by using center of city overlap area
 				float best_conn_pos(0.0), best_cost(-1.0);
 
 				for (unsigned n = 0; n < 20; ++n) { // make up to 20 attempts at connecting the cities with a straight line
+					float const conn_pos(rgen_uniform(val1, val2, rgen)); // chose a random new connection point and try it
 					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, hq, road_width, conn_pos, !d, 1)); // check_only=1
 					if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost;}
-					conn_pos = rgen_uniform(val1, val2, rgen); // chose a random new connection point and try it
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					cout << "Single segment cost: " << best_cost << endl;
@@ -740,7 +738,7 @@ public:
 		
 		// FIXME: make this work with partial overlap case
 		if ((bc[dx].x1() - bc[!dx].x2() > min_jog) && (bc[dy].y1() - bc[!dy].y2() > min_jog)) { // connect with two road segments using a jog
-			bool const inv_dim(rgen.rand()&1); // FIXME: not random enough
+			bool const inv_dim(rgen.rand()&1);
 			cout << "Try connect using jog in dim " << inv_dim << endl;
 
 			for (unsigned d = 0; d < 2; ++d) { // x-then-y vs. y-then-x
@@ -765,8 +763,7 @@ public:
 						if (b->intersects_xy(int_cube)) {has_int = 1; break;} // bad intersection, fail
 					}
 					//cout << TXT(dx) << TXT(dy) << TXT(slope) << TXT(fdim) << TXT(range_dir1) << TXT(range_dir2) << TXT(xval) << TXT(yval) << TXT(height) << TXT(has_int) << endl;
-					if (has_int) continue;
-					// FIXME: need a different variant of create_connector_road()
+					if (has_int) continue; // bad intersection, fail
 					float const cost1(global_rn.create_connector_road(bcube1, int_cube, blockers, &rn1, nullptr, hq, road_width, (fdim ? xval : yval),  fdim, 1)); // check_only=1
 					if (cost1 < 0.0) continue; // bad segment
 					if (best_cost > 0.0 && cost1 > best_cost) continue; // bound - early terminate
@@ -778,7 +775,7 @@ public:
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					cout << "Double segment cost: " << best_cost << endl;
 					//cout << TXT(best_xval) << TXT(best_yval) << TXT(fdim) << ", int_cube: " << best_int_cube.str() << endl;
-					global_rn.create_connector_bend(best_int_cube, range_dir1, range_dir2, hq); // do this first to improve flattening
+					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), hq); // do this first to improve flattening
 					global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0); // check_only=0
 					global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0); // check_only=0
 					return 1;
