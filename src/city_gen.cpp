@@ -75,9 +75,12 @@ vector3d const get_query_xlate() {
 	return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
 }
 
+bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
+	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
+}
 template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only) {
 	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
-		if (xy_only ? sphere_cube_intersect_xy(sc, radius, *i) : sphere_cube_intersect(sc, radius, *i)) return 1;
+		if (check_bcube_sphere_coll(*i, sc, radius, xy_only)) return 1;
 	}
 	return 0;
 }
@@ -199,6 +202,7 @@ protected:
 	rand_gen_t rgen;
 	vector<rect_t> used;
 	vector<cube_t> plots; // same size as used
+	cube_t bcube;
 
 	bool overlaps_used(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
 		rect_t const cur(x1, y1, x2, y2);
@@ -206,15 +210,16 @@ protected:
 		return 0;
 	}
 	cube_t add_plot(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float elevation) {
-		cube_t bcube;
-		bcube.x1() = get_x_value(x1);
-		bcube.x2() = get_x_value(x2);
-		bcube.y1() = get_y_value(y1);
-		bcube.y2() = get_y_value(y2);
-		bcube.z1() = bcube.z2() = elevation;
-		plots.push_back(bcube);
+		cube_t c;
+		c.x1() = get_x_value(x1);
+		c.x2() = get_x_value(x2);
+		c.y1() = get_y_value(y1);
+		c.y2() = get_y_value(y2);
+		c.z1() = c.z2() = elevation;
+		if (plots.empty()) {bcube = c;} else {bcube.union_with_cube(c);}
+		plots.push_back(c);
 		used.emplace_back(x1, y1, x2, y2);
-		return bcube;
+		return c;
 	}
 	float get_avg_height(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
 		assert(is_valid_region(x1, y1, x2, y2));
@@ -243,7 +248,7 @@ protected:
 		return diff;
 	}
 public:
-	city_plot_gen_t() : last_rgi(0) {}
+	city_plot_gen_t() : last_rgi(0), bcube(all_zeros) {}
 
 	void init(float *heightmap_, unsigned xsize_, unsigned ysize_) {
 		heightmap = heightmap_; xsize = xsize_; ysize = ysize_;
@@ -279,7 +284,9 @@ public:
 	}
 	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
 		if (plots.empty()) return 0;
-		return check_bcubes_sphere_coll(plots, (pos - get_query_xlate()), radius, xy_only);
+		point const query_pos(pos - get_query_xlate());
+		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
+		return check_bcubes_sphere_coll(plots, query_pos, radius, xy_only);
 	}
 }; // city_plot_gen_t
 
@@ -618,7 +625,7 @@ class city_road_gen_t {
 			if (check_only) return tot_dz; // return without creating the connection
 			if (rn1) {rn1->insert_conn_intersection(road, dim,  dir);}
 			if (rn2) {rn2->insert_conn_intersection(road, dim, !dir);}
-			float const blocker_padding(max(road_width, city_params.road_border*max(DX_VAL, DY_VAL))); // use road_spacing?
+			float const blocker_padding(max(city_params.road_spacing, 2.0f*city_params.road_border*max(DX_VAL, DY_VAL))); // use road_spacing?
 			roads.push_back(road);
 			blockers.emplace_back(road, false);
 			blockers.back().expand_by(blocker_padding); // add extra padding
@@ -663,6 +670,7 @@ class city_road_gen_t {
 		bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only=1) const {
 			if (roads.empty()) return 0;
 			point const query_pos(pos - get_query_xlate());
+			if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 			if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) return 1;
 
 			if (include_intersections) { // used for global road network
