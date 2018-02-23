@@ -128,15 +128,16 @@ public:
 		}
 		return 0;
 	}
-	void flatten_region_to(cube_t const c, unsigned slope_width) {
-		flatten_region_to(get_x_pos(c.x1()), get_y_pos(c.y1()), get_x_pos(c.x2()), get_y_pos(c.y2()), slope_width, (c.z1() - ROAD_HEIGHT));
+	void flatten_region_to(cube_t const c, unsigned slope_width, bool decrease_only=0) {
+		flatten_region_to(get_x_pos(c.x1()), get_y_pos(c.y1()), get_x_pos(c.x2()), get_y_pos(c.y2()), slope_width, (c.z1() - ROAD_HEIGHT), decrease_only);
 	}
-	void flatten_region_to(unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned slope_width, float elevation) {
+	void flatten_region_to(unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned slope_width, float elevation, bool decrease_only=0) {
 		assert(is_valid_region(x1, y1, x2, y2));
 
 		for (unsigned y = max((int)y1-(int)slope_width, 0); y < min(y2+slope_width, ysize); ++y) {
 			for (unsigned x = max((int)x1-(int)slope_width, 0); x < min(x2+slope_width, xsize); ++x) {
 				float &h(get_height(x, y));
+				if (decrease_only && h < elevation) continue; // don't increase
 
 				if (slope_width > 0) {
 					float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
@@ -646,10 +647,11 @@ class city_road_gen_t {
 				float const len(r->get_length()), z1(r->d[2][slope]), z2(r->d[2][!slope]);
 				assert(len > 0.0);
 				unsigned const num_segs(ceil(len/road_spacing));
+				float const seg_len(len/num_segs); // use fixed-length segments
 				cube_t c(*r); // start by copying the road's bcube
 				
 				for (unsigned n = 0; n < num_segs; ++n) {
-					c.d[d][1] = min(r->d[d][1], (c.d[d][0] + road_spacing)); // clamp to original road end
+					c.d[d][1] = c.d[d][0] + seg_len;
 					for (unsigned e = 0; e < 2; ++e) {c.d[2][e] = z1 + (z2 - z1)*((c.d[d][e] - r->d[d][0])/len);} // interpolate road height across segments
 					if (c.d[2][1] < c.d[2][0]) {swap(c.d[2][0], c.d[2][1]);} // swap zvals if needed
 					assert(c.is_normalized());
@@ -743,22 +745,27 @@ public:
 			}
 		} // for d
 		point const center1(bcube1.get_cube_center()), center2(bcube2.get_cube_center());
-		bool const dx(center1.x < center2.x), dy(center1.y < center2.y), slope(dx ^ dy); // dx=1, dy=1
+		bool const dx(center1.x < center2.x), dy(center1.y < center2.y), slope(dx ^ dy);
 		cube_t const bc[2] = {bcube1, bcube2};
 		
-		// FIXME: make this work with partial overlap case
-		if ((bc[dx].x1() - bc[!dx].x2() > min_jog) && (bc[dy].y1() - bc[!dy].y2() > min_jog)) { // connect with two road segments using a jog
+		if ((bc[dx].x1() - bc[!dx].x1() > min_jog) && (bc[dy].y1() - bc[!dy].y1() > min_jog)) {
+			// connect with two road segments using a jog: Note: assumes cities are all the same size
 			bool const inv_dim(rgen.rand()&1);
 			cout << "Try connect using jog in dim " << inv_dim << endl;
+			cube_t bc1_conn(bcube1), bc2_conn(bcube2);
+			bc1_conn.d[0][ dx] = bcube2.d[0][!dx];
+			bc2_conn.d[0][!dx] = bcube1.d[0][ dx];
+			bc1_conn.d[1][ dy] = bcube2.d[1][!dy];
+			bc2_conn.d[1][!dy] = bcube1.d[1][ dy];
 
 			for (unsigned d = 0; d < 2; ++d) { // x-then-y vs. y-then-x
-				bool const fdim((d != 0) ^ inv_dim); // first segment dim: 0=x first, 1=y first (== 0)
-				bool const range_dir1(fdim ? dy : dx), range_dir2(fdim ? dx : dy); // 1/1
-				cube_t region1(bcube1), region2(bcube2);
-				region1.d[ fdim][!range_dir1] = region1.d[ fdim][ range_dir1];
-				region2.d[!fdim][ range_dir2] = region2.d[!fdim][!range_dir2];
-				region1.d[!fdim][0] += min_edge_dist; region1.d[!fdim][1] -= min_edge_dist;
-				region2.d[ fdim][0] += min_edge_dist; region1.d[ fdim][1] -= min_edge_dist;
+				bool const fdim((d != 0) ^ inv_dim); // first segment dim: 0=x first, 1=y first
+				bool const range_dir1(fdim ? dy : dx), range_dir2(fdim ? dx : dy);
+				cube_t region1(bc1_conn), region2(bc2_conn); // regions of valid jog connectors
+				region1.d[ fdim][!range_dir1] = region1.d[ fdim][ range_dir1]; // fixed edge
+				region2.d[!fdim][ range_dir2] = region2.d[!fdim][!range_dir2]; // fixed edge
+				region1.d[!fdim][0] += min_edge_dist; region1.d[!fdim][1] -= min_edge_dist; // variable edges
+				region2.d[ fdim][0] += min_edge_dist; region1.d[ fdim][1] -= min_edge_dist; // variable edges
 				float const xmin(region1.d[!fdim][0]), xmax(region1.d[!fdim][1]), ymin(region2.d[fdim][0]), ymax(region2.d[fdim][1]);
 				float best_xval(0.0), best_yval(0.0), best_cost(-1.0);
 				cube_t best_int_cube;
