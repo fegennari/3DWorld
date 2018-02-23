@@ -22,11 +22,11 @@ extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias;
 
 struct city_params_t {
 
-	unsigned num_cities, num_samples, city_size, city_border, road_border, slope_width;
+	unsigned num_cities, num_samples, city_size_min, city_size_max, city_border, road_border, slope_width;
 	float road_width, road_spacing;
 
-	city_params_t() : num_cities(0), num_samples(100), city_size(0), city_border(0), road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
-	bool enabled() const {return (num_cities > 0 && city_size > 0);}
+	city_params_t() : num_cities(0), num_samples(100), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
+	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
@@ -42,8 +42,15 @@ struct city_params_t {
 		else if (str == "num_samples") {
 			if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
 		}
-		else if (str == "city_size") {
-			if (!read_uint(fp, city_size)) {return read_error(str);}
+		else if (str == "city_size_min") {
+			if (!read_uint(fp, city_size_min)) {return read_error(str);}
+			if (city_size_max == 0) {city_size_max = city_size_min;}
+			if (city_size_max < city_size_min) {return read_error(str);}
+		}
+		else if (str == "city_size_max") {
+			if (!read_uint(fp, city_size_max)) {return read_error(str);}
+			if (city_size_min == 0) {city_size_min = city_size_max;}
+			if (city_size_max < city_size_min) {return read_error(str);}
 		}
 		else if (str == "city_border") {
 			if (!read_uint(fp, city_border)) {return read_error(str);}
@@ -259,25 +266,28 @@ public:
 		assert(xsize > 0 && ysize > 0); // any size is okay
 		if (rand_gen_index != last_rgi) {rgen.set_state(rand_gen_index, 12345); last_rgi = rand_gen_index;} // only when rand_gen_index changes
 	}
-	bool find_best_city_location(unsigned width, unsigned height, unsigned border, unsigned slope_width, unsigned num_samples, unsigned &x_llc, unsigned &y_llc) {
+	bool find_best_city_location(unsigned wmin, unsigned hmin, unsigned wmax, unsigned hmax, unsigned border, unsigned slope_width, unsigned num_samples,
+		unsigned &cx1, unsigned &cy1, unsigned &cx2, unsigned &cy2)
+	{
 		assert(num_samples > 0);
-		assert((width + 2*border) < xsize && (height + 2*border) < ysize); // otherwise the city can't fit in the map
+		assert((wmax + 2*border) < xsize && (hmax + 2*border) < ysize); // otherwise the city can't fit in the map
 		unsigned const num_iters(100*num_samples); // upper bound
-		unsigned xend(xsize - width - 2*border + 1), yend(ysize - width - 2*border + 1); // max rect LLC, inclusive
+		unsigned xend(xsize - wmax - 2*border + 1), yend(ysize - hmax - 2*border + 1); // max rect LLC, inclusive
 		unsigned num_cands(0);
 		float best_diff(0.0);
 
 		for (unsigned n = 0; n < num_iters; ++n) { // find min RMS height change across N samples
 			unsigned const x1(border + (rgen.rand()%xend)), y1(border + (rgen.rand()%yend));
-			unsigned const x2(x1 + width), y2(y1 + height);
+			unsigned const x2(x1 + ((wmin == wmax) ? wmin : rgen.rand_int(wmin, wmax)));
+			unsigned const y2(y1 + ((hmin == hmax) ? hmin : rgen.rand_int(hmin, hmax)));
 			if (overlaps_used (x1-slope_width, y1-slope_width, x2+slope_width, y2+slope_width)) continue; // skip if plot expanded by slope_width overlaps an existing city
 			if (any_underwater(x1, y1, x2, y2, CHECK_HEIGHT_BORDER_ONLY))   continue; // skip
 			float const diff(get_rms_height_diff(x1, y1, x2, y2));
-			if (num_cands == 0 || diff < best_diff) {x_llc = x1; y_llc = y1; best_diff = diff;}
+			if (num_cands == 0 || diff < best_diff) {cx1 = x1; cy1 = y1; cx2 = x2; cy2 = y2; best_diff = diff;}
 			if (++num_cands == num_samples) break; // done
 		} // for n
 		if (num_cands == 0) return 0;
-		cout << "City cands: " << num_cands << ", diff: " << best_diff << ", loc: " << x_llc << "," << y_llc << endl;
+		cout << "City cands: " << num_cands << ", diff: " << best_diff << ", loc: " << (cx1+cx2)/2 << "," << (cy1+cy2)/2 << endl;
 		return 1; // success
 	}
 	float flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned slope_width, float const *const height=nullptr) {
@@ -511,17 +521,18 @@ class city_road_gen_t {
 			assert(size.x > 0.0 && size.y > 0.0);
 			float const half_width(0.5*road_width), zval(region.d[2][0] + ROAD_HEIGHT);
 			float const rx1(region.x1() + half_width), rx2(region.x2() - half_width), ry1(region.y1() + half_width), ry2(region.y2() - half_width); // shrink to include centerlines
-			float road_pitch(road_width + road_spacing);
-			int const num_x_roads((rx2 - rx1)/road_pitch);
-			road_pitch = 0.9999*(rx2 - rx1)/num_x_roads; // auto-calculate, round down slightly to avoid FP error
+			float road_pitch_x(road_width + road_spacing), road_pitch_y(road_pitch_x);
+			int const num_x_roads((rx2 - rx1)/road_pitch_x), num_y_roads((ry2 - ry1)/road_pitch_y);
+			road_pitch_x = 0.9999*(rx2 - rx1)/num_x_roads; // auto-calculate, round down slightly to avoid FP error
+			road_pitch_y = 0.9999*(ry2 - ry1)/num_y_roads;
 
 			// create a grid, for now; crossing roads will overlap
-			for (float x = rx1; x < rx2; x += road_pitch) {
+			for (float x = rx1; x < rx2; x += road_pitch_x) {
 				roads.emplace_back(point(x, region.y1(), zval), point(x, region.y2(), zval), road_width, false);
 			}
 			unsigned const num_x(roads.size());
 
-			for (float y = ry1; y < ry2; y += road_pitch) {
+			for (float y = ry1; y < ry2; y += road_pitch_y) {
 				roads.emplace_back(point(region.x1(), y, zval), point(region.x2(), y, zval), road_width, true);
 			}
 			unsigned const num_r(roads.size()), num_y(num_r - num_x);
@@ -867,9 +878,9 @@ class city_gen_t : public city_plot_gen_t {
 public:
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		timer_t t("Choose City Location");
-		unsigned x1(0), y1(0);
-		if (!find_best_city_location(params.city_size, params.city_size, params.city_border, params.slope_width, params.num_samples, x1, y1)) return 0;
-		unsigned const x2(x1 + params.city_size), y2(y1 + params.city_size);
+		unsigned x1(0), y1(0), x2(0), y2(0);
+		if (!find_best_city_location(params.city_size_min, params.city_size_min, params.city_size_max, params.city_size_max,
+			params.city_border, params.slope_width, params.num_samples, x1, y1, x2, y2)) return 0;
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
 		if (cities_bcube.is_all_zeros()) {cities_bcube = pos_range;} else {cities_bcube.union_with_cube(pos_range);}
