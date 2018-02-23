@@ -108,7 +108,8 @@ public:
 	int get_y_pos(float y) const {return (get_ypos(y) + int(ysize)/2);}
 	float  get_height(unsigned x, unsigned y) const {return heightmap[y*xsize + x];} // Note: not bounds checked
 	float &get_height(unsigned x, unsigned y)       {return heightmap[y*xsize + x];} // Note: not bounds checked
-	bool is_valid_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {return (x1 < x2 && y1 < y2 && x2 <= xsize && y2 <= ysize);}
+	bool is_normalized_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {return (x1 <  x2 && y1 <  y2 && x2 <= xsize && y2 <= ysize);}
+	bool is_valid_region     (unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {return (x1 <= x2 && y1 <= y2 && x2 <= xsize && y2 <= ysize);}
 	bool is_inside_terrain(int x, int y) const {return (x >= 0 && y >= 0 && x < (int)xsize && y < (int)ysize);}
 	
 	float get_height_at(float xval, float yval) const {
@@ -116,6 +117,7 @@ public:
 		return (is_inside_terrain(x, y) ? get_height(x, y) : OUTSIDE_TERRAIN_HEIGHT);
 	}
 	float any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border=0) const {
+		min_eq(x2, xsize); min_eq(y2, ysize); // clamp upper bound
 		assert(is_valid_region(x1, y1, x2, y2));
 
 		for (unsigned y = y1; y < y2; ++y) {
@@ -147,6 +149,7 @@ public:
 	}
 	float flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim, bool stats_only=0) {
 		assert(is_valid_region(x1, y1, x2, y2));
+		if (x1 == x2 || y1 == y2) return 0.0; // zero area
 		float const run_len(dim ? (y2 - y1) : (x2 - x1)), denom(1.0f/max(run_len, 1.0f)), dz(z2 - z1);
 		unsigned const border(city_params.road_border); // just fish it out of the global params rather than pass it all the way down
 		int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
@@ -222,7 +225,7 @@ protected:
 		return c;
 	}
 	float get_avg_height(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
-		assert(is_valid_region(x1, y1, x2, y2));
+		assert(is_normalized_region(x1, y1, x2, y2));
 		float sum(0.0), denom(0.0);
 
 		for (unsigned y = y1; y < y2; ++y) {
@@ -256,7 +259,7 @@ public:
 		assert(xsize > 0 && ysize > 0); // any size is okay
 		if (rand_gen_index != last_rgi) {rgen.set_state(rand_gen_index, 12345); last_rgi = rand_gen_index;} // only when rand_gen_index changes
 	}
-	bool find_best_city_location(unsigned width, unsigned height, unsigned border, unsigned num_samples, unsigned &x_llc, unsigned &y_llc) {
+	bool find_best_city_location(unsigned width, unsigned height, unsigned border, unsigned slope_width, unsigned num_samples, unsigned &x_llc, unsigned &y_llc) {
 		assert(num_samples > 0);
 		assert((width + 2*border) < xsize && (height + 2*border) < ysize); // otherwise the city can't fit in the map
 		unsigned const num_iters(100*num_samples); // upper bound
@@ -267,8 +270,8 @@ public:
 		for (unsigned n = 0; n < num_iters; ++n) { // find min RMS height change across N samples
 			unsigned const x1(border + (rgen.rand()%xend)), y1(border + (rgen.rand()%yend));
 			unsigned const x2(x1 + width), y2(y1 + height);
-			if (overlaps_used (x1, y1, x2, y2)) continue; // skip
-			if (any_underwater(x1, y1, x2, y2, CHECK_HEIGHT_BORDER_ONLY)) continue; // skip
+			if (overlaps_used (x1-slope_width, y1-slope_width, x2+slope_width, y2+slope_width)) continue; // skip if plot expanded by slope_width overlaps an existing city
+			if (any_underwater(x1, y1, x2, y2, CHECK_HEIGHT_BORDER_ONLY))   continue; // skip
 			float const diff(get_rms_height_diff(x1, y1, x2, y2));
 			if (num_cands == 0 || diff < best_diff) {x_llc = x1; y_llc = y1; best_diff = diff;}
 			if (++num_cands == num_samples) break; // done
@@ -394,10 +397,6 @@ class city_road_gen_t {
 		road_plot_t() {}
 		road_plot_t(cube_t const &c) : cube_t(c) {}
 		tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
-	};
-	struct blocker_t : public cube_t {
-		bool is_city;
-		blocker_t(cube_t const &c, bool is_city_) :cube_t(c), is_city(is_city_) {}
 	};
 
 	struct draw_state_t {
@@ -598,7 +597,7 @@ class city_road_gen_t {
 			uint8_t const conns[4] = {7, 11, 13, 14};
 			isecs[1].emplace_back(ibc, conns[2*(!dim) + dir]);
 		}
-		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<blocker_t> &blockers, road_network_t *rn1, road_network_t *rn2, heightmap_query_t &hq,
+		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<cube_t> &blockers, road_network_t *rn1, road_network_t *rn2, heightmap_query_t &hq,
 			float road_width, float conn_pos, bool dim, bool check_only=0)
 		{
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
@@ -617,11 +616,11 @@ class city_road_gen_t {
 				if (rn2 && !rn2->check_valid_conn_intersection(road, dim, !dir)) return -1.0;
 
 				for (auto b = blockers.begin(); b != blockers.end(); ++b) {
-					if (b->is_city && ((rn1 && b->intersects_xy(bcube1)) || (rn2 && b->intersects_xy(bcube2)))) continue; // skip current cities
+					if ((rn1 && b->contains_cube(bcube1)) || (rn2 && b->contains_cube(bcube2))) continue; // skip current cities
 					// create an intersection if blocker is a road, and happens to be the same elevation?
 					if (b->intersects_xy(road)) return -1.0; // bad intersection, fail
 				}
-				if (hq.any_underwater(x1, y1, x2, y2)) return -1.0; // underwater (Note: bounds check is done here)
+				if (hq.any_underwater(x1, y1, x2+1, y2+1)) return -1.0; // underwater (Note: bounds check is done here)
 			}
 			// FIXME: make road follow terrain countour (could do this in split_connector_roads())?
 			float const tot_dz(hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope], road.d[2][!slope], dim, check_only));
@@ -630,7 +629,7 @@ class city_road_gen_t {
 			if (rn2) {rn2->insert_conn_intersection(road, dim, !dir);}
 			float const blocker_padding(max(city_params.road_spacing, 2.0f*city_params.road_border*max(DX_VAL, DY_VAL))); // use road_spacing?
 			roads.push_back(road);
-			blockers.emplace_back(road, false);
+			blockers.push_back(road);
 			blockers.back().expand_by(blocker_padding); // add extra padding
 			return tot_dz; // success
 		}
@@ -638,7 +637,7 @@ class city_road_gen_t {
 			hq.flatten_region_to(int_bcube, city_params.road_border);
 			uint8_t const conns[4] = {6, 5, 10, 9};
 			isecs[0].emplace_back(int_bcube, conns[2*dy + dx]);
-			//blockers.emplace_back(int_bcube, false); // ???
+			//blockers.push_back(int_bcube); // ???
 		}
 		void split_connector_roads(float road_spacing) {
 			// Note: here we use segs, maybe 2-way isecs for bends, but not plots
@@ -713,7 +712,7 @@ public:
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back();}
 		else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
 	}
-	bool connect_two_cities(unsigned city1, unsigned city2, vector<blocker_t> &blockers, heightmap_query_t &hq, float road_width) {
+	bool connect_two_cities(unsigned city1, unsigned city2, vector<cube_t> &blockers, heightmap_query_t &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 		cout << "Connect city " << city1 << " and " << city2 << endl;
@@ -760,14 +759,15 @@ public:
 				region2.d[!fdim][ range_dir2] = region2.d[!fdim][!range_dir2];
 				region1.d[!fdim][0] += min_edge_dist; region1.d[!fdim][1] -= min_edge_dist;
 				region2.d[ fdim][0] += min_edge_dist; region1.d[ fdim][1] -= min_edge_dist;
+				float const xmin(region1.d[!fdim][0]), xmax(region1.d[!fdim][1]), ymin(region2.d[fdim][0]), ymax(region2.d[fdim][1]);
 				float best_xval(0.0), best_yval(0.0), best_cost(-1.0);
 				cube_t best_int_cube;
 
 				for (unsigned n = 0; n < 20; ++n) { // make up to 20 attempts at connecting the cities with a single jog
-					float xval(rgen_uniform(region1.d[!fdim][0], region1.d[!fdim][1], rgen)), yval(rgen_uniform(region2.d[fdim][0], region2.d[fdim][1], rgen));
+					float xval(rgen_uniform(xmin, xmax, rgen)), yval(rgen_uniform(ymin, ymax, rgen));
 					if (!fdim) {swap(xval, yval);}
-					float const height(hq.get_height_at(xval, yval));
-					cube_t const int_cube(xval-half_width, xval+half_width, yval-half_width, yval+half_width, height, height+ROAD_HEIGHT); // the candidate intersection point
+					float const height(hq.get_height_at(xval, yval) + ROAD_HEIGHT);
+					cube_t const int_cube(xval-half_width, xval+half_width, yval-half_width, yval+half_width, height, height); // the candidate intersection point
 					bool has_int(0);
 
 					for (auto b = blockers.begin(); b != blockers.end(); ++b) {
@@ -804,11 +804,11 @@ public:
 		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected (0=unconnected, 1=connected, 2=done/connect failed
 		unsigned cur_city(0), num_conn(0), num_done(0);
 		vector<pair<float, unsigned>> cands;
-		vector<blocker_t> blockers; // existing cities and connector roads that we want to avoid intersecting
+		vector<cube_t> blockers; // existing cities and connector roads that we want to avoid intersecting
 
 		// gather city blockers
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {
-			blockers.emplace_back(i->get_bcube(), true);
+			blockers.push_back(i->get_bcube());
 			blockers.back().expand_by(road_spacing); // separate roads by at least this value
 		}
 		// full cross-product connectivity
@@ -860,7 +860,7 @@ public:
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		timer_t t("Choose City Location");
 		unsigned x1(0), y1(0);
-		if (!find_best_city_location(params.city_size, params.city_size, params.city_border, params.num_samples, x1, y1)) return 0;
+		if (!find_best_city_location(params.city_size, params.city_size, params.city_border, params.slope_width, params.num_samples, x1, y1)) return 0;
 		unsigned const x2(x1 + params.city_size), y2(y1 + params.city_size);
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
