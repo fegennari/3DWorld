@@ -22,10 +22,11 @@ extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias;
 
 struct city_params_t {
 
-	unsigned num_cities, num_samples, city_size_min, city_size_max, city_border, road_border, slope_width;
+	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width;
 	float road_width, road_spacing;
 
-	city_params_t() : num_cities(0), num_samples(100), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
+	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0),
+		road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -41,6 +42,9 @@ struct city_params_t {
 		}
 		else if (str == "num_samples") {
 			if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
+		}
+		else if (str == "num_conn_tries") {
+			if (!read_uint(fp, num_conn_tries) || num_conn_tries == 0) {return read_error(str);}
 		}
 		else if (str == "city_size_min") {
 			if (!read_uint(fp, city_size_min)) {return read_error(str);}
@@ -170,8 +174,7 @@ public:
 					float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
 					float const dy(max(0, max(((int)y1 - (int)y), ((int)y - (int)y2 + 1))));
 					h = smooth_interp(h, elevation, min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
-				}
-				else {h = elevation;}
+				} else {h = elevation;}
 			} // for x
 		} // for y
 	}
@@ -207,8 +210,7 @@ public:
 				if (border > 0) {
 					unsigned const dist(dim ? max(0, max(((int)x1 - (int)x - 1), ((int)x - (int)x2))) : max(0, max(((int)y1 - (int)y - 1), ((int)y - (int)y2))));
 					new_h = smooth_interp(h, road_z, dist*border_inv);
-				}
-				else {new_h = road_z;}
+				} else {new_h = road_z;}
 				tot_dz += fabs(h - new_h);
 				if (!stats_only) {h = new_h;} // apply the height change
 			} // for x
@@ -745,24 +747,22 @@ public:
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
 		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width), half_width(0.5*road_width);
-		unsigned const num_tries = 50;
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
 
 		for (unsigned d = 0; d < 2; ++d) { // try for single segment
 			float const shared_min(max(bcube1.d[d][0], bcube2.d[d][0])), shared_max(min(bcube1.d[d][1], bcube2.d[d][1]));
 			
 			if (shared_max - shared_min > min_edge_dist) { // can connect with single road segment in dim !d, if the terrain in between is passable
-				//cout << "Shared dim " << d << endl;
 				float const val1(shared_min + 0.5*min_edge_dist), val2(shared_max - 0.5*min_edge_dist);
 				float best_conn_pos(0.0), best_cost(-1.0);
 
-				for (unsigned n = 0; n < num_tries; ++n) { // make up to num_tries attempts at connecting the cities with a straight line
+				for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a straight line
 					float const conn_pos(rgen_uniform(val1, val2, rgen)); // chose a random new connection point and try it
 					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, hq, road_width, conn_pos, !d, 1)); // check_only=1
 					if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost;}
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
-					//cout << "Single segment cost: " << best_cost << endl;
+					//cout << "Single segment dim: << "d " << cost: " << best_cost << endl;
 					global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, hq, road_width, best_conn_pos, !d, 0); // check_only=0; actually make the change
 					return 1;
 				}
@@ -794,7 +794,7 @@ public:
 				float best_xval(0.0), best_yval(0.0), best_cost(-1.0);
 				cube_t best_int_cube;
 
-				for (unsigned n = 0; n < num_tries; ++n) { // make up to num_tries attempts at connecting the cities with a single jog
+				for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a single jog
 					float xval(rgen_uniform(xmin, xmax, rgen)), yval(rgen_uniform(ymin, ymax, rgen));
 					if (!fdim) {swap(xval, yval);}
 					float const height(hq.get_height_at(xval, yval) + ROAD_HEIGHT);
