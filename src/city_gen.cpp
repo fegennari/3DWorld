@@ -101,12 +101,32 @@ float smooth_interp(float a, float b, float mix) {
 	return mix*a + (1.0 - mix)*b;
 }
 
+struct rect_t {
+	unsigned x1, y1, x2, y2;
+	rect_t() : x1(0), y1(0), x2(0), y2(0) {}
+	rect_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_) : x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
+	bool is_valid() const {return (x1 < x2 && y1 < y2);}
+	unsigned get_area() const {return (x2 - x1)*(y2 - y1);}
+	bool operator== (rect_t const &r) const {return (x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2);}
+	bool has_overlap(rect_t const &r) const {return (x1 < r.x2 && y1 < r.y2 && r.x1 < x2 && r.y1 < y2);}
+};
+struct flatten_op_t : public rect_t {
+	float z1, z2;
+	bool dim;
+	unsigned border;
+	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0) {}
+	flatten_op_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_, float z1_, float z2_, bool dim_, unsigned border_) :
+		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_) {}
+};
+
 class heightmap_query_t {
 protected:
 	float *heightmap;
 	unsigned xsize, ysize;
 
 public:
+	flatten_op_t last_flatten_op;
+
 	heightmap_query_t() : heightmap(nullptr), xsize(0), ysize(0) {}
 	heightmap_query_t(float *hmap, unsigned xsize_, unsigned ysize_) : heightmap(hmap), xsize(xsize_), ysize(ysize_) {}
 	float get_x_value(int x) const {return get_xval(x - int(xsize)/2);} // convert from center to LLC
@@ -152,10 +172,11 @@ public:
 					h = smooth_interp(h, elevation, min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
 				}
 				else {h = elevation;}
-			}
-		}
+			} // for x
+		} // for y
 	}
-	float flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim, unsigned border, bool stats_only=0) {
+	float flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim, unsigned border, bool stats_only=0, bool decrease_only=0) {
+		if (!stats_only) {last_flatten_op = flatten_op_t(x1, y1, x2, y2, z1, z2, dim, border);} // cache for later replay
 		assert(is_valid_region(x1, y1, x2, y2));
 		if (x1 == x2 || y1 == y2) return 0.0; // zero area
 		float const run_len(dim ? (y2 - y1) : (x2 - x1)), denom(1.0f/max(run_len, 1.0f)), dz(z2 - z1), border_inv(1.0/border);
@@ -180,6 +201,7 @@ public:
 				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
 				float const road_z(z1 + dz*t - ROAD_HEIGHT);
 				float &h(get_height(x, y));
+				if (decrease_only && h < road_z) continue; // don't increase
 				float new_h;
 
 				if (border > 0) {
@@ -198,16 +220,6 @@ public:
 class city_plot_gen_t : public heightmap_query_t {
 
 protected:
-	struct rect_t {
-		unsigned x1, y1, x2, y2;
-		rect_t() : x1(0), y1(0), x2(0), y2(0) {}
-		rect_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_) : x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
-		bool is_valid() const {return (x1 < x2 && y1 < y2);}
-		unsigned get_area() const {return (x2 - x1)*(y2 - y1);}
-		bool operator== (rect_t const &r) const {return (x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2);}
-		bool has_overlap(rect_t const &r) const {return (x1 < r.x2 && y1 < r.y2 && r.x1 < x2 && r.y1 < y2);}
-	};
-
 	int last_rgi;
 	rand_gen_t rgen;
 	vector<rect_t> used;
@@ -806,7 +818,9 @@ public:
 					//cout << "Double segment cost: " << best_cost << " " << TXT(best_xval) << TXT(best_yval) << TXT(fdim) << ", int_cube: " << best_int_cube.str() << endl;
 					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), hq); // do this first to improve flattening
 					global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0); // check_only=0
+					flatten_op_t const fop(hq.last_flatten_op); // cache for reuse later during decrease_only pass
 					global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0); // check_only=0
+					hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, 0, 1); // decrease_only=1; remove any dirt that the prev road added
 					hq.flatten_region_to(best_int_cube, city_params.road_border, 1); // one more pass to fix mesh that was raised above the intersection by a sloped road segment
 					return 1;
 				}
