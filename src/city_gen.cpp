@@ -513,7 +513,6 @@ class city_road_gen_t {
 				tile_blocks[block_id].bcube.union_with_cube(v[i]);
 			} // for i
 		}
-
 	public:
 		road_network_t() : bcube(all_zeros) {}
 		road_network_t(cube_t const &bcube_) : bcube(bcube_) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
@@ -608,6 +607,20 @@ class city_road_gen_t {
 			} // for i
 			return -1; // not found
 		}
+		int find_conn_intersection(cube_t const &c, bool dim, bool dir, unsigned num_conn) const {
+			assert(num_conn == 2 || num_conn == 3); // 2 or 3 way intersections; 4 way can't have more connections
+			vector<road_isec_t> const &v(isecs[num_conn-2]);
+			for (unsigned i = 0; i < v.size(); ++i) {if (c.intersects_xy(v[i])) return i;}
+			return -1; // not found
+		}
+		void make_4way_int(unsigned int3_ix) { // turn a 3-way intersection into a 4-way intersection for a connector road
+			assert(int3_ix < isecs[1].size());
+			road_isec_t &isec(isecs[1][int3_ix]); // bbox doesn't change, only conn changes
+			isec.conn = 15; // all connected
+			isecs[2].push_back(isec); // add as 4-way intersection
+			isecs[1][int3_ix] = isecs[1].back(); // remove original 3-way intersection
+			isecs[1].pop_back();
+		}
 	public:
 		bool check_valid_conn_intersection(cube_t const &c, bool dim, bool dir) const {return (find_conn_int_seg(c, dim, dir) >= 0);}
 		void insert_conn_intersection(cube_t const &c, bool dim, bool dir) {
@@ -627,8 +640,8 @@ class city_road_gen_t {
 		{
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
 			point p1, p2;
-			p1.z   = bcube1.d[2][1];
-			p2.z   = bcube2.d[2][1];
+			p1.z = bcube1.d[2][1];
+			p2.z = bcube2.d[2][1];
 			p1[!dim] = p2[!dim] = conn_pos;
 			p1[ dim] = bcube1.d[dim][ dir];
 			p2[ dim] = bcube2.d[dim][!dir];
@@ -637,6 +650,7 @@ class city_road_gen_t {
 			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
 
 			if (check_only) { // only need to do these checks in this case
+				// FIXME: use find_conn_intersection(4)/make_4way_int() to create a new 4-way intersection on one city if one of these fails?
 				if (rn1 && !rn1->check_valid_conn_intersection(road, dim,  dir)) return -1.0; // invalid, don't make any changes
 				if (rn2 && !rn2->check_valid_conn_intersection(road, dim, !dir)) return -1.0;
 
