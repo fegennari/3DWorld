@@ -27,10 +27,10 @@ extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias;
 struct city_params_t {
 
 	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width;
-	float road_width, road_spacing;
+	float road_width, road_spacing, conn_road_seg_len;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0),
-		road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0) {}
+		road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -74,6 +74,9 @@ struct city_params_t {
 		}
 		else if (str == "road_spacing") {
 			if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
+		}
+		else if (str == "conn_road_seg_len") {
+			if (!read_float(fp, conn_road_seg_len) || conn_road_seg_len <= 0.0) {return read_error(str);}
 		}
 		else {
 			cout << "Unrecognized city keyword in input file: " << str << endl;
@@ -673,8 +676,42 @@ class city_road_gen_t {
 				blockers.push_back(road);
 				blockers.back().expand_by(blocker_padding); // add extra padding
 			}
-			if (!check_only) {roads.push_back(road);}
-			return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, check_only);
+			float const road_len(fabs(p2[dim] - p1[dim]));
+
+			if (road_len <= city_params.conn_road_seg_len) { // simple single road segment case
+				if (!check_only) {roads.push_back(road);}
+				return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, check_only);
+			}
+			unsigned const num_segs(ceil(road_len/city_params.conn_road_seg_len));
+			assert(num_segs > 0 && num_segs < 1000); // sanity check
+			float const seg_len(road_len/num_segs);
+			assert(seg_len <= city_params.conn_road_seg_len);
+			road_t rs(road); // keep d[!dim][0], d[!dim][1] and dim
+			rs.z1() = road.d[2][slope];
+			segments.clear();
+			float tot_dz(0.0);
+
+			for (unsigned n = 0; n < num_segs; ++n) {
+				rs.d[dim][1] = rs.d[dim][0] + seg_len;
+				point pos;
+				pos[ dim] = rs.d[dim][1];
+				pos[!dim] = conn_pos;
+				rs.z2()   = hq.get_height_at(pos.x, pos.y) + ROAD_HEIGHT; // terrain height at end of segment
+				// FIXME: max slope check
+				rs.slope  = (rs.z2() < rs.z1());
+				segments.push_back(rs);
+				rs.d[dim][0] = rs.d[dim][1]; rs.z1() = rs.z2(); // shift segment end point
+			} // for n
+			for (auto s = segments.begin(); s != segments.end(); ++s) {
+				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
+				assert(s->is_normalized());
+				tot_dz += hq.flatten_for_road(*s, dim, city_params.road_border, check_only);
+				if (!check_only) {roads.push_back(*s);}
+			}
+			if (!check_only) { // post-flatten pass to fix up dirt at road joints - doesn't help much
+				for (auto s = segments.begin(); s != segments.end(); ++s) {hq.flatten_for_road(*s, dim, city_params.road_border, 0, 1);} // decrease_only=1
+			}
+			return tot_dz; // success
 		}
 		void create_connector_bend(cube_t const &int_bcube, bool dx, bool dy, heightmap_query_t &hq) {
 			hq.flatten_region_to(int_bcube, city_params.road_border);
