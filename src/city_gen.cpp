@@ -290,9 +290,10 @@ public:
 		} // for y
 		return tot_dz;
 	}
-	float flatten_for_road(road_t const &road, bool dim, unsigned border, bool stats_only=0, bool decrease_only=0) {
+	float flatten_for_road(road_t const &road, unsigned border, bool stats_only=0, bool decrease_only=0) {
+		float const z_adj(ROAD_HEIGHT + 0.5*road.get_slope_val()*(road.dim ? DY_VAL : DX_VAL)); // account for a half texel of error for sloped roads
 		unsigned const rx1(get_x_pos(road.x1())), ry1(get_y_pos(road.y1())), rx2(get_x_pos(road.x2())), ry2(get_y_pos(road.y2()));
-		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-ROAD_HEIGHT, road.d[2][!road.slope]-ROAD_HEIGHT, dim, border, stats_only, decrease_only);
+		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, stats_only, decrease_only);
 	}
 };
 
@@ -713,11 +714,11 @@ class city_road_gen_t {
 			for (auto s = segments.begin(); s != segments.end(); ++s) {
 				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
 				assert(s->is_normalized());
-				tot_dz += hq.flatten_for_road(*s, dim, city_params.road_border, check_only);
+				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only);
 				if (!check_only) {roads.push_back(*s);}
 			}
 			if (!check_only) { // post-flatten pass to fix up dirt at road joints - doesn't help much
-				for (auto s = segments.begin(); s != segments.end(); ++s) {hq.flatten_for_road(*s, dim, city_params.road_border, 0, 1);} // decrease_only=1
+				for (auto s = segments.begin(); s != segments.end(); ++s) {hq.flatten_for_road(*s, city_params.road_border, 0, 1);} // decrease_only=1
 			}
 			return tot_dz; // success
 		}
