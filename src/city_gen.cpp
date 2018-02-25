@@ -774,14 +774,16 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
+		bool check_cube_visible(cube_t const &bc, float draw_dist) const {
+			return (camera_pdu.cube_visible(bc) && dist_less_than(camera_pdu.pos, bc.closest_pt(camera_pdu.pos), draw_dist));
+		}
 		void draw(draw_state_t &dstate) {
 			if (empty()) return;
-			cube_t const bcube_x(bcube + dstate.xlate);
-			if (!camera_pdu.cube_visible(bcube_x)) return; // VFC
-			if (!dist_less_than(camera_pdu.pos, bcube_x.closest_pt(camera_pdu.pos), get_draw_tile_dist())) return; // too far
+			float const draw_dist(get_draw_tile_dist());
+			if (!check_cube_visible((bcube + dstate.xlate), draw_dist)) return; // VFC/too far
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
-				if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue; // VFC
+				if (!check_cube_visible((b->bcube + dstate.xlate), draw_dist)) continue; // VFC/too far
 				dstate.begin_tile(b->bcube.get_cube_center());
 				dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
 				dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
