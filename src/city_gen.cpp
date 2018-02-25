@@ -27,10 +27,10 @@ extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias;
 struct city_params_t {
 
 	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width;
-	float road_width, road_spacing, conn_road_seg_len;
+	float road_width, road_spacing, conn_road_seg_len, max_road_slope;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0),
-		road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0) {}
+		road_border(0), slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -77,6 +77,9 @@ struct city_params_t {
 		}
 		else if (str == "conn_road_seg_len") {
 			if (!read_float(fp, conn_road_seg_len) || conn_road_seg_len <= 0.0) {return read_error(str);}
+		}
+		else if (str == "max_road_slope") {
+			if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
 		}
 		else {
 			cout << "Unrecognized city keyword in input file: " << str << endl;
@@ -149,8 +152,8 @@ struct road_t : public cube_t {
 		point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
 		set_from_points(pts, 4);
 	}
-	float get_length() const {return (d[dim][1] - d[dim][0]);}
-	float get_height() const {return (d[2  ][1] - d[2  ][0]);}
+	float get_length   () const {return (d[dim][1] - d[dim][0]);}
+	float get_slope_val() const {return get_dz()/get_length();}
 };
 struct road_seg_t : public road_t {
 	road_seg_t(road_t const &r) : road_t(r) {}
@@ -655,6 +658,9 @@ class city_road_gen_t {
 			p2[ dim] = bcube2.d[dim][!dir];
 			bool const slope((p1.z < p2.z) ^ dir);
 			road_t const road(p1, p2, road_width, dim, slope);
+			float const road_len(road.get_length()), delta_z(road.get_dz()), max_slope(city_params.max_road_slope);
+			assert(road_len > 0.0 && delta_z >= 0.0);
+			if (delta_z/road_len > max_slope) return -1.0; // slope is too high (split segments will have even higher slopes)
 			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
 
 			if (check_only) { // only need to do these checks in this case
@@ -676,8 +682,6 @@ class city_road_gen_t {
 				blockers.push_back(road);
 				blockers.back().expand_by(blocker_padding); // add extra padding
 			}
-			float const road_len(fabs(p2[dim] - p1[dim]));
-
 			if (road_len <= city_params.conn_road_seg_len) { // simple single road segment case
 				if (!check_only) {roads.push_back(road);}
 				return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, check_only);
@@ -697,8 +701,12 @@ class city_road_gen_t {
 				pos[ dim] = rs.d[dim][1];
 				pos[!dim] = conn_pos;
 				rs.z2()   = hq.get_height_at(pos.x, pos.y) + ROAD_HEIGHT; // terrain height at end of segment
-				// FIXME: max slope check
 				rs.slope  = (rs.z2() < rs.z1());
+				
+				if (fabs(rs.get_slope_val()) > max_slope) { // slope is too high, clamp z2 to max allowed value
+					if (n+1 == num_segs) return -1.0;
+					rs.z2() = rs.z1() + seg_len*max_slope*SIGN(rs.get_dz());
+				}
 				segments.push_back(rs);
 				rs.d[dim][0] = rs.d[dim][1]; rs.z1() = rs.z2(); // shift segment end point
 			} // for n
