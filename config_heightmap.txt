@@ -11,6 +11,7 @@ buildings tt_only 1
 
 city num_cities 8
 city num_samples 100
+city num_conn_tries 50
 city city_size_min 200
 city city_size_max 400
 city city_border 1000
@@ -18,6 +19,8 @@ city road_border 10
 city slope_width 50
 city road_width 0.265
 city road_spacing 1.5
+city conn_road_seg_len 6.0
+city max_road_slope 0.3
 
 #tiled_terrain_only 1
 read_landscape 1
