@@ -1125,7 +1125,8 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	apply_camera_offsets(camera);
 	compute_brightness();
 	set_global_state();
-	if (b2down) fire_weapon();
+	next_city_frame();
+	if (b2down) {fire_weapon();}
 
 	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);
 	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_DISTANCE);

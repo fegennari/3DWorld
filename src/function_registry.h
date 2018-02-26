@@ -330,6 +330,7 @@ float get_road_max_len();
 void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);
 void get_city_road_bcubes(vector<cube_t> &bcubes);
 void get_city_plot_bcubes(vector<cube_t> &bcubes);
+void next_city_frame();
 void draw_cities(bool shadow_only, int reflection_pass, vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius);
 bool check_valid_scenery_pos(point const &pos, float radius);
