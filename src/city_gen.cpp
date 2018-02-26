@@ -491,6 +491,8 @@ class city_road_gen_t {
 		vector<road_plot_t> plots; // plots of land that can hold buildings
 		cube_t bcube;
 		vector<road_t> segments; // reused temporary
+		set<unsigned> connected_to; // vector?
+		unsigned cluster_id;
 		//string city_name; // future work
 
 		static uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
@@ -526,12 +528,15 @@ class city_road_gen_t {
 			} // for i
 		}
 	public:
-		road_network_t() : bcube(all_zeros) {}
-		road_network_t(cube_t const &bcube_) : bcube(bcube_) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
+		road_network_t() : bcube(all_zeros), cluster_id(0) {}
+		road_network_t(cube_t const &bcube_) : bcube(bcube_), cluster_id(0) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
 		cube_t const &get_bcube() const {return bcube;}
 		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
 		unsigned num_roads() const {return roads.size();}
 		bool empty() const {return roads.empty();}
+		void set_cluster(unsigned id) {cluster_id = id;}
+		void register_connected_city(unsigned id) {connected_to.insert(id);}
+		set<unsigned> const &get_connected() const {return connected_to;}
 
 		void clear() {
 			roads.clear();
@@ -799,6 +804,32 @@ class city_road_gen_t {
 
 	static float rgen_uniform(float val1, float val2, rand_gen_t &rgen) {return (val1 + (val2 - val1)*rgen.rand_float());}
 
+	void assign_city_clusters() {
+		vector<unsigned char> used(road_networks.size(), 0);
+		vector<unsigned> pend;
+		unsigned cluster_id(0);
+
+		for (unsigned i = 0; i < used.size(); ++i) {
+			if (used[i]) continue; // already used
+			pend.push_back(i);
+
+			while (!pend.empty()) {
+				unsigned const id(pend.back());
+				pend.pop_back();
+				road_networks[id].set_cluster(cluster_id);
+				used[id] = 1;
+				set<unsigned> const &conn(road_networks[id].get_connected());
+
+				for (auto c = conn.begin(); c != conn.end(); ++c) {
+					assert(*c < used.size());
+					if (!used[*c]) {pend.push_back(*c);}
+				}
+			} // while
+			++cluster_id;
+		} // for i
+		cout << "City clusters: " << cluster_id << endl;
+	}
+
 public:
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
@@ -916,8 +947,12 @@ public:
 			for (unsigned j = i+1; j < num_cities; ++j) {
 				bool const success(connect_two_cities(i, j, blockers, hq, road_width));
 				cout << "Trying to connect city " << i << " to city " << j << ": " << success << endl;
+				if (!success) continue;
+				road_networks[i].register_connected_city(j);
+				road_networks[j].register_connected_city(i);
 			} // for j
 		} // for i
+		assign_city_clusters();
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 	}
