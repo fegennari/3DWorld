@@ -379,7 +379,7 @@ public:
 			if (++num_cands == num_samples) break; // done
 		} // for n
 		if (num_cands == 0) return 0;
-		cout << "City cands: " << num_cands << ", diff: " << best_diff << ", loc: " << (cx1+cx2)/2 << "," << (cy1+cy2)/2 << endl;
+		//cout << "City cands: " << num_cands << ", diff: " << best_diff << ", loc: " << (cx1+cx2)/2 << "," << (cy1+cy2)/2 << endl;
 		return 1; // success
 	}
 	float flatten_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned slope_width, float const *const height=nullptr) {
@@ -835,12 +835,12 @@ public:
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region));
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back();}
-		else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
+		//else {cout << "Roads: " << road_networks.back().num_roads() << endl;}
 	}
 	bool connect_two_cities(unsigned city1, unsigned city2, vector<cube_t> &blockers, heightmap_query_t &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
-		cout << "Connect city " << city1 << " and " << city2 << endl;
+		//cout << "Connect city " << city1 << " and " << city2 << endl;
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
@@ -946,7 +946,7 @@ public:
 		for (unsigned i = 0; i < num_cities; ++i) {
 			for (unsigned j = i+1; j < num_cities; ++j) {
 				bool const success(connect_two_cities(i, j, blockers, hq, road_width));
-				cout << "Trying to connect city " << i << " to city " << j << ": " << success << endl;
+				//cout << "Trying to connect city " << i << " to city " << j << ": " << success << endl;
 				if (!success) continue;
 				road_networks[i].register_connected_city(j);
 				road_networks[j].register_connected_city(i);
@@ -993,7 +993,6 @@ class city_gen_t : public city_plot_gen_t {
 
 public:
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
-		timer_t t("Choose City Location");
 		unsigned x1(0), y1(0), x2(0), y2(0);
 		if (!find_best_city_location(params.city_size_min, params.city_size_min, params.city_size_max, params.city_size_max,
 			params.city_border, params.slope_width, params.num_samples, x1, y1, x2, y2)) return 0;
@@ -1006,7 +1005,10 @@ public:
 	void gen_cities(city_params_t const &params) {
 		if (params.num_cities == 0) return;
 		cube_t cities_bcube(all_zeros);
-		for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params, cities_bcube);}
+		{ // open a scope
+			timer_t t("Choose City Location");
+			for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params, cities_bcube);}
+		}
 		bool const is_const_zval(cities_bcube.z1() == cities_bcube.z2());
 		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube, is_const_zval);}
 		road_gen.connect_all_cities(heightmap, xsize, ysize, params.road_width, params.road_spacing);
