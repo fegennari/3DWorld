@@ -207,10 +207,13 @@ struct road_plot_t : public cube_t {
 
 struct car_t {
 	cube_t bcube;
-	bool dim, dir, slope;
-	unsigned cur_city, cur_road, cur_seg, cur_road_type; // Note: can probably be uint8_t or uint16_t
-	car_t() : bcube(all_zeros), dim(0), dir(0), slope(0), cur_city(0), cur_road(0), cur_seg(0), cur_road_type(0) {}
-	void init(cube_t const &bc, bool dim_, bool dir_, bool slope_) {bcube = bc; dim = dim_; dir = dir_; slope = slope_;}
+	bool dim, dir;
+	unsigned char cur_road_type, color_id;
+	unsigned short cur_city, cur_road, cur_seg;
+	float dz;
+	car_t() : bcube(all_zeros), dim(0), dir(0), cur_road_type(0), color_id(0), cur_city(0), cur_road(0), cur_seg(0), dz(0.0) {}
+	bool is_valid() const {return !bcube.is_all_zeros();}
+	point get_center() const {return bcube.get_cube_center();}
 };
 
 class heightmap_query_t {
@@ -451,7 +454,9 @@ public:
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
 
-	void pre_draw() {
+	void pre_draw(vector3d const &xlate_) {
+		xlate = xlate_;
+		use_smap = shadow_map_enabled();
 		if (!use_smap) return;
 		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		s.add_uniform_float("z_bias", cobj_z_bias);
@@ -463,6 +468,10 @@ public:
 		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		draw_unshadowed();
 		s.end_shader();
+	}
+	bool check_cube_visible(cube_t const &bc) const {
+		cube_t const bcx(bc + xlate);
+		return (camera_pdu.cube_visible(bcx) && dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), get_draw_tile_dist()));
 	}
 }; // draw_state_t
 
@@ -486,8 +495,8 @@ class city_road_gen_t {
 	public:
 		road_draw_state_t() : ar(1.0) {}
 
-		void pre_draw() {
-			draw_state_t::pre_draw();
+		void pre_draw(vector3d const &xlate_) {
+			draw_state_t::pre_draw(xlate_);
 			ar = city_params.get_road_ar();
 		}
 		virtual void draw_unshadowed() {
@@ -808,16 +817,12 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
-		bool check_cube_visible(cube_t const &bc, float draw_dist) const {
-			return (camera_pdu.cube_visible(bc) && dist_less_than(camera_pdu.pos, bc.closest_pt(camera_pdu.pos), draw_dist));
-		}
 		void draw(road_draw_state_t &dstate) {
 			if (empty()) return;
-			float const draw_dist(get_draw_tile_dist());
-			if (!check_cube_visible((bcube + dstate.xlate), draw_dist)) return; // VFC/too far
+			if (!dstate.check_cube_visible(bcube)) return; // VFC/too far
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
-				if (!check_cube_visible((b->bcube + dstate.xlate), draw_dist)) continue; // VFC/too far
+				if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 				dstate.begin_tile(b->bcube.get_cube_center());
 				dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
 				dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
@@ -827,11 +832,27 @@ class city_road_gen_t {
 
 		// cars
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
-			// WRITE
-			return 0;
+			if (segs.empty()) return 0; // no segments to place car on
+			unsigned const seg_ix(rgen.rand()%segs.size());
+			road_seg_t const &seg(segs[seg_ix]); // chose a random segment
+			car.dim   = seg.dim;
+			car.dir   = (rgen.rand()&1);
+			car.dz    = 0.0; // flat
+			car.cur_road = 0; // FIXME
+			car.cur_seg  = seg_ix;
+			car.cur_road_type = TYPE_RSEG;
+			vector3d car_sz(vector3d(0.5*rgen.rand_uniform(0.9, 1.1), 0.18*rgen.rand_uniform(0.9, 1.1), 0.1*rgen.rand_uniform(0.9, 1.1))*city_params.road_width); // {length, width, height}
+			point pos(seg.get_cube_center());
+			pos[!seg.dim] += (car.dir ? -1.0 : 1.0)*(0.15*city_params.road_width); // place in right lane
+			pos.z += 0.5*car_sz.z; // place above road surface
+			if (seg.dim) {swap(car_sz.x, car_sz.y);}
+			car.bcube.set_from_point(pos);
+			car.bcube.expand_by(0.5*car_sz);
+			return 1;
 		}
 		void update_car(car_t &car, float speed, rand_gen_t &rgen) const {
-
+			// WRITE: move
+			// WRITE: collision detection
 		}
 	}; // road_network_t
 
@@ -1013,9 +1034,7 @@ public:
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-		dstate.use_smap = shadow_map_enabled();
-		dstate.xlate    = xlate;
-		dstate.pre_draw();
+		dstate.pre_draw(xlate);
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate);}
 		global_rn.draw(dstate);
 		dstate.post_draw();
@@ -1036,17 +1055,49 @@ public:
 }; // city_road_gen_t
 
 
+unsigned const NUM_CAR_COLORS = 8;
+colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, BLACK, DK_GRAY, RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
+
 class car_manager_t {
 
 	class car_draw_state_t : public draw_state_t {
-		quad_batch_draw qbd;
+		quad_batch_draw qbds[2]; // unshadowed, shadowed
 	public:
 		car_draw_state_t() {}
-		//void pre_draw() {draw_state_t::pre_draw();}
-		virtual void draw_unshadowed() {qbd.draw_and_clear();}
 
-		void draw_car(car_t const &car) {
-			// WRITE
+		void pre_draw(vector3d const &xlate_) {
+			draw_state_t::pre_draw(xlate_);
+			select_texture(WHITE_TEX);
+		}
+		virtual void draw_unshadowed() {qbds[0].draw_and_clear();}
+
+		void draw_car(car_t const &car) { // Note: all quads, CCW
+			if (!check_cube_visible(car.bcube)) return;
+			begin_tile(car.get_center()); // enable shadows
+			quad_batch_draw &qbd(qbds[emit_now]);
+			assert(car.color_id < NUM_CAR_COLORS);
+			colorRGBA const &color(car_colors[car.color_id]);
+			cube_t const &c(car.bcube);
+			bool const d(car.dim), D(car.dir);
+			float fz1, fz2, bz1, bz2; // front/back top/bottom
+			if (car.dz > 0.0) {fz1 = c.z1() + car.dz; fz2 = c.z2(); bz1 = c.z1(); bz2 = c.z2() - car.dz;} // going uphill
+			else              {fz1 = c.z1(); fz2 = c.z2() + car.dz; bz1 = c.z1() - car.dz; bz2 = c.z2();} // going downhill or level
+			point p[8];
+			p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = fz1; p[4].z = fz2; // front right
+			p[1][!d] = p[5][!d] = c.d[!d][0]; p[1][d] = p[5][d] = c.d[d][ D]; p[1].z = fz1; p[5].z = fz2; // front left
+			p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = bz1; p[6].z = bz2; // back left
+			p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = bz1; p[7].z = bz2; // back right
+			float const sign((d^D) ? -1.0 : 1.0);
+			vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1])).get_norm()*sign);
+			vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1])).get_norm()*sign);
+			vector3d right_n(all_zeros); right_n[!d] = -1.0;
+			//qbd.add_quad_pts(p+0, color, -top_n); // bottom - not actually drawn
+			qbd.add_quad_pts(p+4, color,  top_n); // top
+			{point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, color,  front_n);} // front
+			{point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, color, -front_n);} // back
+			{point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
+			{point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, color, -right_n);} // left
+			if (emit_now) {qbds[1].draw_and_clear();} // shadowed
 		}
 	}; // car_draw_state_t
 
@@ -1060,12 +1111,19 @@ public:
 	void clear() {cars.clear();}
 
 	void init_cars(unsigned num) {
+		timer_t timer("Init Cars");
 		cars.reserve(num);
 		
-		for (auto i = cars.begin(); i != cars.end(); ++i) {
+		for (unsigned n = 0; n < num; ++n) {
 			car_t car;
-			if (road_gen.add_car(*i, rgen)) {cars.push_back(car);}
-		}
+			
+			if (road_gen.add_car(car, rgen)) {
+				car.color_id = rgen.rand() % NUM_CAR_COLORS;
+				assert(car.is_valid());
+				cars.push_back(car);
+			}
+		} // for i
+		cout << "Cars: " << cars.size() << endl;
 	}
 	void next_frame(float car_speed) {
 		float const speed(car_speed*fticks);
@@ -1074,9 +1132,10 @@ public:
 	void draw(vector3d const &xlate) {
 		if (cars.empty()) return;
 		//timer_t timer("Draw Cars");
+		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
-		dstate.pre_draw();
+		dstate.pre_draw(xlate);
 		for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.draw_car(*i);}
 		dstate.post_draw();
 		fgPopMatrix();
