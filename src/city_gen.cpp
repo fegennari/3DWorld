@@ -20,7 +20,7 @@ enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   NUM_RD_
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, NUM_RD_TYPES};
 
 
-extern int rand_gen_index, display_mode;
+extern int rand_gen_index, display_mode, animate2;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 
 
@@ -234,22 +234,23 @@ struct car_t {
 		bcube += delta;
 	}
 	bool check_collision(car_t &c) {
-		float const sep_dist(0.5*((bcube.d[dir][1] - bcube.d[dir][0]) + (c.bcube.d[dir][1] - c.bcube.d[dir][0]))); // average length of the two cars
-		float const test_dist(0.9*sep_dist); // slightly smaller than separation distance
+		//if (dim != c.dim || dir != c.dir) return 0;
+		float const sep_dist(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
+		float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 		cube_t bcube_ext(bcube);
-		bcube_ext.d[dim][0] -= 0.5*test_dist; bcube_ext.d[dim][1] += 0.5*test_dist; // expand by test_dist distance
+		bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
 		if (!bcube_ext.intersects(c.bcube)) return 0;
 		assert(c.dim == dim); // FIXME: not valid when using intersections
 		assert(c.dir == dir); // otherwise should be on different sides of the road
-		cout << "Collision between " << str() << " and " << c.str() << endl;
 		float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
 		bool const move_c((front < c_front) ^ dir); // move the car that's behind
 		// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
 		car_t &cmove(move_c ? c : *this); // the car that will be moved
 		car_t const &cstay(move_c ? *this : c); // the car that won't be moved
+		//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
 		float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
 		point delta(all_zeros);
-		delta[dim]  += dist + ((dist < 0.0) ? -sep_dist : sep_dist); // force separation between cars
+		delta[dim]  += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
 		cmove.bcube += delta; // move the car
 		return 1;
 	}
@@ -873,27 +874,31 @@ class city_road_gen_t {
 		// cars
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
-			unsigned const seg_ix(rgen.rand()%segs.size());
-			road_seg_t const &seg(segs[seg_ix]); // chose a random segment
-			car.dim   = seg.dim;
-			car.dir   = (rgen.rand()&1);
-			car.dz    = 0.0; // flat
-			car.speed = rgen.rand_uniform(0.66, 1.0); // add some speed variation
-			car.cur_road = seg.road_ix;
-			car.cur_seg  = seg_ix;
-			car.cur_road_type = TYPE_RSEG;
-			vector3d car_sz(vector3d(0.5*rgen.rand_uniform(0.9, 1.1), 0.18*rgen.rand_uniform(0.9, 1.1), 0.1*rgen.rand_uniform(0.9, 1.1))*city_params.road_width); // {length, width, height}
-			point pos;
-			float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
-			if (val1 >= val2) return 0; // failed (connector road junction?)
-			pos[!seg.dim]  = 0.5*(seg.d[!seg.dim][0] + seg.d[!seg.dim][1]); // center of road
-			pos[!seg.dim] += (car.dir ? -1.0 : 1.0)*(0.15*city_params.road_width); // place in right lane
-			pos[ seg.dim] = rgen.rand_uniform(val1, val2); // place at random pos in segment
-			pos.z = seg.d[2][1] + 0.5*car_sz.z; // place above road surface
-			if (seg.dim) {swap(car_sz.x, car_sz.y);}
-			car.bcube.set_from_point(pos);
-			car.bcube.expand_by(0.5*car_sz);
-			return 1;
+
+			for (unsigned n = 0; n < 10; ++n) { // make 10 tries
+				unsigned const seg_ix(rgen.rand()%segs.size());
+				road_seg_t const &seg(segs[seg_ix]); // chose a random segment
+				car.dim   = seg.dim;
+				car.dir   = (rgen.rand()&1);
+				car.dz    = 0.0; // flat
+				car.speed = rgen.rand_uniform(0.66, 1.0); // add some speed variation
+				car.cur_road = seg.road_ix;
+				car.cur_seg  = seg_ix;
+				car.cur_road_type = TYPE_RSEG;
+				vector3d car_sz(vector3d(0.5*rgen.rand_uniform(0.9, 1.1), 0.18*rgen.rand_uniform(0.9, 1.1), 0.1*rgen.rand_uniform(0.9, 1.1))*city_params.road_width); // {length, width, height}
+				point pos;
+				float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
+				if (val1 >= val2) continue; // failed, try again (connector road junction?)
+				pos[!seg.dim]  = 0.5*(seg.d[!seg.dim][0] + seg.d[!seg.dim][1]); // center of road
+				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*(0.15*city_params.road_width); // place in right lane
+				pos[ seg.dim] = rgen.rand_uniform(val1, val2); // place at random pos in segment
+				pos.z = seg.d[2][1] + 0.5*car_sz.z; // place above road surface
+				if (seg.dim) {swap(car_sz.x, car_sz.y);}
+				car.bcube.set_from_point(pos);
+				car.bcube.expand_by(0.5*car_sz);
+				return 1; // success
+			} // for n
+			return 0; // failed
 		}
 		void update_car(car_t &car, float speed_mult, rand_gen_t &rgen) const {
 			car.move(speed_mult);
@@ -1097,7 +1102,8 @@ public:
 		return road_networks[city].add_car(car, rgen);
 	}
 	void update_car(car_t &car, float speed, rand_gen_t &rgen) const {
-
+		car.move(speed);
+		// FIXME: random turn, etc
 	}
 }; // city_road_gen_t
 
@@ -1178,13 +1184,13 @@ public:
 		if (cars.empty()) return;
 		//timer_t timer("Update Cars");
 		sort(cars.begin(), cars.end()); // sort by city/road/segment; is this a good idea?
-		float const speed(car_speed*fticks);
+		float const speed(0.001*car_speed*fticks);
 		
 		for (auto i = cars.begin(); i != cars.end(); ++i) {
 			for (auto j = i+1; j != cars.end(); ++j) {
 				if (i->cur_city == j->cur_city && i->cur_seg == j->cur_seg) {i->check_collision(*j);} else {break;}
 			}
-			road_gen.update_car(*i, speed, rgen);
+			if (animate2) {road_gen.update_car(*i, speed, rgen);}
 		}
 	}
 	void draw(vector3d const &xlate) {
