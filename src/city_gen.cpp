@@ -15,9 +15,11 @@ bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edg
 float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 colorRGBA const road_color          = WHITE; // all road parts are the same color, to make the textures match
+unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   NUM_RD_TIDS };
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, NUM_RD_TYPES};
+unsigned const CONN_TYPE_NONE = 0;
 
 
 extern int rand_gen_index, display_mode, animate2;
@@ -149,12 +151,13 @@ struct flatten_op_t : public rect_t {
 };
 
 struct road_t : public cube_t {
+	unsigned road_ix;
 	bool dim; // dim the road runs in
 	bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
 
-	road_t() : dim(0), slope(0) {}
-	road_t(cube_t const &c, bool dim_, bool slope_=0) : cube_t(c), dim(dim_), slope(slope_) {}
-	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0) : dim(dim_), slope(slope_) {
+	road_t() : road_ix(0), dim(0), slope(0) {}
+	road_t(cube_t const &c, bool dim_, bool slope_=0, unsigned road_ix_=0) : cube_t(c), road_ix(road_ix_), dim(dim_), slope(slope_) {}
+	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0, unsigned road_ix_=0) : road_ix(road_ix_), dim(dim_), slope(slope_) {
 		assert(s != e);
 		assert(width > 0.0);
 		vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
@@ -164,10 +167,12 @@ struct road_t : public cube_t {
 	float get_length   () const {return (d[dim][1] - d[dim][0]);}
 	float get_slope_val() const {return get_dz()/get_length();}
 };
+
 struct road_seg_t : public road_t {
-	unsigned road_ix;
-	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix) {}
-	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {}
+	unsigned short road_ix, conn_ix[2], conn_type[2];
+	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
+	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix) {init_ixs();}
+	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {init_ixs();}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 
 	void add_road_quad(quad_batch_draw &qbd, float ar) const { // specialized here for sloped roads
@@ -179,10 +184,12 @@ struct road_seg_t : public road_t {
 		qbd.add_quad_pts(pts, road_color, normal, get_tex_range(ar));
 	}
 };
+
 struct road_isec_t : public cube_t {
 	uint8_t conn; // connected roads in {-x, +x, -y, +y}
+	short rix_xy[2], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
 	road_isec_t() : conn(15) {}
-	road_isec_t(cube_t const &c, uint8_t conn_=15) : cube_t(c), conn(conn_) {}
+	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_) : cube_t(c), conn(conn_) {rix_xy[0] = rx; rix_xy[1] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;}
 
 	tex_range_t get_tex_range(float ar) const {
 		switch (conn) {
@@ -200,6 +207,7 @@ struct road_isec_t : public cube_t {
 		return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
 	}
 };
+
 struct road_plot_t : public cube_t {
 	road_plot_t() {}
 	road_plot_t(cube_t const &c) : cube_t(c) {}
@@ -636,12 +644,12 @@ class city_road_gen_t {
 
 			// create a grid, for now; crossing roads will overlap
 			for (float x = rx1; x < rx2; x += road_pitch_x) {
-				roads.emplace_back(point(x, region.y1(), zval), point(x, region.y2(), zval), road_width, false);
+				roads.emplace_back(point(x, region.y1(), zval), point(x, region.y2(), zval), road_width, true);
 			}
 			unsigned const num_x(roads.size());
 
 			for (float y = ry1; y < ry2; y += road_pitch_y) {
-				roads.emplace_back(point(region.x1(), y, zval), point(region.x2(), y, zval), road_width, true);
+				roads.emplace_back(point(region.x1(), y, zval), point(region.x2(), y, zval), road_width, false);
 			}
 			unsigned const num_r(roads.size()), num_y(num_r - num_x);
 			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
@@ -666,7 +674,7 @@ class city_road_gen_t {
 					unsigned const num_conn((!FX) + (!LX) + (!FY) + (!LY));
 					if (num_conn < 2) continue; // error?
 					uint8_t const conn(((!FX) << 0) | ((!LX) << 1) | ((!FY) << 2) | ((!LY) << 3)); // 1-15
-					isecs[num_conn - 2].emplace_back(cube_t(rx.x1(), rx.x2(), ry.y1(), ry.y2(), zval, zval), conn); // intersections
+					isecs[num_conn - 2].emplace_back(cube_t(rx.x1(), rx.x2(), ry.y1(), ry.y2(), zval, zval), y, x, conn); // intersections
 					
 					if (!LX) { // skip last y segment
 						cube_t const &rxn(roads[x+1]);
@@ -716,19 +724,100 @@ class city_road_gen_t {
 			isecs[1][int3_ix] = isecs[1].back(); // remove original 3-way intersection
 			isecs[1].pop_back();
 		}
+
+		struct road_ixs_t {
+			vector<unsigned> seg_ixs, isec_ixs[3][2]; // {2-way, 3-way, 4-way} x {X, Y}
+		};
+		template<typename T> int search_for_adj(vector<T> const &v, vector<unsigned> const &ixs, cube_t const &bcube, bool dim, bool dir, bool debug=0) const {
+			if (debug) {cout << "bcube: " << bcube.str() << endl;}
+			for (auto i = ixs.begin(); i != ixs.end(); ++i) {
+				assert(*i < v.size());
+				cube_t const &c(v[*i]);
+				if (debug) {cout << "c[" << *i << "]: " << c.str() << " " << (c.d[dim][!dir]==bcube.d[dim][dir]) << (c.d[!dim][0]==bcube.d[!dim][0]) << (c.d[!dim][1]==bcube.d[!dim][1]) << endl;}
+				if (c.d[dim][!dir] != bcube.d[dim][dir]) continue; // no shared edge
+				if (c.d[!dim][0] != bcube.d[!dim][0] || c.d[!dim][1] != bcube.d[!dim][1]) continue; // no shared edge in other dim
+				return *i; // there can be only one
+			} // for i
+			return -1; // not found
+		}
+		void calc_ix_values(bool is_global_rn) {
+			// now that the segments and intersections are in order, we can fill in the IDs; first, create a mapping from road to segments and intersections
+			vector<road_ixs_t> by_ix(roads.size()); // maps road_ix to list of seg_ix values
+			
+			for (unsigned i = 0; i < segs.size(); ++i) {
+				unsigned const ix(segs[i].road_ix);
+				assert(ix < by_ix.size());
+				assert(roads[ix].dim == segs[i].dim);
+				by_ix[ix].seg_ixs.push_back(i);
+			}
+			for (unsigned n = 0; n < 3; ++n) { // {2-way, 3-way, 4-way}
+				for (unsigned i = 0; i < isecs[n].size(); ++i) {
+					for (unsigned d = 0; d < 2; ++d) { // {x, y}
+						int const ix(isecs[n][i].rix_xy[d]);
+						//cout << TXT(n) << TXT(i) << TXT(d) << TXT(ix) << endl;
+						if (ix < 0) {} // FIXME: global connector road
+						else {
+							assert((unsigned)ix < by_ix.size());
+							assert(roads[ix].dim == (d != 0));
+							by_ix[ix].isec_ixs[n][d].push_back(i);
+						}
+					} // for d
+				} // for i
+			} // for n
+
+			// next, connect segments and intersections together by index, using roads as an acceleration structure
+			for (unsigned i = 0; i < segs.size(); ++i) {
+				road_seg_t &seg(segs[i]);
+				road_ixs_t const &rix(by_ix[seg.road_ix]);
+
+				for (unsigned dir = 0; dir < 2; ++dir) { // dir
+					bool found(0);
+					int const seg_ix(search_for_adj(segs, rix.seg_ixs, seg, seg.dim, (dir != 0)));
+					//cout << TXT(i) << TXT(seg.road_ix) << TXT(dir) << TXT(seg.dim) << TXT(seg_ix) << "sz: " << rix.seg_ixs.size() << endl;
+					if (seg_ix >= 0) {assert(seg_ix != i); seg.conn_ix[dir] = seg_ix; seg.conn_type[dir] = TYPE_RSEG; found = 1;} // found segment
+
+					for (unsigned n = 0; n < 3; ++n) { // 2-way, 3-way, 4-way
+						int const isec_ix(search_for_adj(isecs[n], rix.isec_ixs[n][seg.dim], seg, seg.dim, (dir != 0)));
+						//cout << TXT(n) << TXT(isec_ix) << "sz: " << rix.isec_ixs[n][seg.dim].size() << endl;
+						if (isec_ix >= 0) {assert(!found); seg.conn_ix[dir] = isec_ix; seg.conn_type[dir] = (TYPE_ISEC2 + n); found = 1;} // found intersection
+					}
+					if (is_global_rn && !found) {continue;} // FIXME: connect to a city
+					assert(found);
+				} // for dir
+			} // for i
+			for (unsigned n = 0; n < 3; ++n) { // 2-way, 3-way, 4-way
+				for (unsigned i = 0; i < isecs[n].size(); ++i) {
+					road_isec_t &isec(isecs[n][i]);
+
+					for (unsigned d = 0; d < 4; ++d) { // {-x, +x, -y, +y}
+						if (!(isec.conn & (1<<d))) continue; // no connection in this position
+						unsigned const dim(d>>1), dir(d&1);
+						int const ix(isec.rix_xy[dim]);
+						if (ix < 0) continue; // FIXME: global connector road
+						int const seg_ix(search_for_adj(segs, by_ix[ix].seg_ixs, isec, (dim != 0), (dir != 0))); // always connects to a road segment
+						//cout << TXT(n) << TXT(i) << TXT(d) << TXT(dim) << TXT(dir) << TXT(ix) << TXT(seg_ix) << "sz " << by_ix[ix].seg_ixs.size() << endl;
+						assert(seg_ix >= 0); // must be found
+						isec.conn_ix[d] = seg_ix;
+					} // for d
+				} // for i
+			} // for n
+		}
 	public:
 		bool check_valid_conn_intersection(cube_t const &c, bool dim, bool dir) const {return (find_conn_int_seg(c, dim, dir) >= 0);}
-		void insert_conn_intersection(cube_t const &c, bool dim, bool dir) {
+		void insert_conn_intersection(cube_t const &c, bool dim, bool dir, unsigned grn_rix) { // Note: dim is the dimension of the connector road
 			int const seg_id(find_conn_int_seg(c, dim, dir));
 			assert(seg_id >= 0 && (unsigned)seg_id < segs.size());
 			segs.push_back(segs[seg_id]); // clone the segment first
-			segs[seg_id].d[!dim][1] = c.d[!dim][0]; // low part
-			segs.back() .d[!dim][0] = c.d[!dim][1]; // high part
-			cube_t ibc(segs[seg_id]); // intersection bcube
+			road_seg_t &seg(segs[seg_id]);
+			assert(seg.road_ix < roads.size() && roads[seg.road_ix].dim != dim); // sanity check
+			seg        .d[!dim][1] = c.d[!dim][0]; // low part
+			segs.back().d[!dim][0] = c.d[!dim][1]; // high part
+			cube_t ibc(seg); // intersection bcube
 			ibc.d[!dim][0] = c.d[!dim][0]; // copy width from c
 			ibc.d[!dim][1] = c.d[!dim][1];
 			uint8_t const conns[4] = {7, 11, 13, 14};
-			isecs[1].emplace_back(ibc, conns[2*(!dim) + dir]);
+			int const other_rix(-int(grn_rix) - 1); // make negative
+			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir]);
 		}
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<cube_t> &blockers, road_network_t *rn1, road_network_t *rn2, heightmap_query_t &hq,
 			float road_width, float conn_pos, bool dim, bool check_only=0)
@@ -741,10 +830,10 @@ class city_road_gen_t {
 			p1[ dim] = bcube1.d[dim][ dir];
 			p2[ dim] = bcube2.d[dim][!dir];
 			bool const slope((p1.z < p2.z) ^ dir);
-			road_t const road(p1, p2, road_width, dim, slope);
+			road_t const road(p1, p2, road_width, dim, slope, roads.size());
 			float const road_len(road.get_length()), delta_z(road.get_dz()), max_slope(city_params.max_road_slope);
 			assert(road_len > 0.0 && delta_z >= 0.0);
-			if (delta_z/road_len > max_slope) return -1.0; // slope is too high (split segments will have even higher slopes)
+			if (delta_z/road_len > max_slope) {assert(check_only); return -1.0;} // slope is too high (split segments will have even higher slopes)
 			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
 
 			if (check_only) { // only need to do these checks in this case
@@ -760,8 +849,9 @@ class city_road_gen_t {
 				if (hq.any_underwater(x1, y1, x2+1, y2+1)) return -1.0; // underwater (Note: bounds check is done here)
 			}
 			if (!check_only) { // create intersections and add blocker
-				if (rn1) {rn1->insert_conn_intersection(road, dim,  dir);}
-				if (rn2) {rn2->insert_conn_intersection(road, dim, !dir);}
+				unsigned const grn_rix(roads.size()); // FIXME: may be wrong end of connector
+				if (rn1) {rn1->insert_conn_intersection(road, dim,  dir, grn_rix);}
+				if (rn2) {rn2->insert_conn_intersection(road, dim, !dir, grn_rix);}
 				float const blocker_padding(max(city_params.road_spacing, 2.0f*city_params.road_border*max(DX_VAL, DY_VAL))); // use road_spacing?
 				blockers.push_back(road);
 				blockers.back().expand_by(blocker_padding); // add extra padding
@@ -774,13 +864,13 @@ class city_road_gen_t {
 			assert(num_segs > 0 && num_segs < 1000); // sanity check
 			float const seg_len(road_len/num_segs);
 			assert(seg_len <= city_params.conn_road_seg_len);
-			road_t rs(road); // keep d[!dim][0], d[!dim][1] and dim
+			road_t rs(road); // keep d[!dim][0], d[!dim][1], dim, and road_ix
 			rs.z1() = road.d[2][slope];
 			segments.clear();
 			float tot_dz(0.0);
 
 			for (unsigned n = 0; n < num_segs; ++n) {
-				rs.d[dim][1] = rs.d[dim][0] + seg_len;
+				rs.d[dim][1] = ((n+1 == num_segs) ? road.d[dim][1] : (rs.d[dim][0] + seg_len)); // make sure it ends exactly at the correct location
 				point pos;
 				pos[ dim] = rs.d[dim][1];
 				pos[!dim] = conn_pos;
@@ -805,10 +895,9 @@ class city_road_gen_t {
 			}
 			return tot_dz; // success
 		}
-		void create_connector_bend(cube_t const &int_bcube, bool dx, bool dy, heightmap_query_t &hq) {
-			hq.flatten_region_to(int_bcube, city_params.road_border);
+		void create_connector_bend(cube_t const &int_bcube, bool dx, bool dy, unsigned road_ix_x, unsigned road_ix_y) {
 			uint8_t const conns[4] = {6, 5, 10, 9};
-			isecs[0].emplace_back(int_bcube, conns[2*dy + dx]);
+			isecs[0].emplace_back(int_bcube, road_ix_x, road_ix_y, conns[2*dy + dx]);
 			//blockers.push_back(int_bcube); // ???
 		}
 		void split_connector_roads(float road_spacing) {
@@ -816,7 +905,7 @@ class city_road_gen_t {
 			for (auto r = roads.begin(); r != roads.end(); ++r) {
 				bool const d(r->dim), slope(r->slope);
 				float const len(r->get_length());
-				unsigned const rix(r - roads.begin());
+				unsigned const rix(r->road_ix); // not (r - roads.begin())
 				if (len <= road_spacing) {segs.emplace_back(*r, rix); continue;} // single segment road
 				assert(len > 0.0);
 				unsigned const num_segs(ceil(len/road_spacing));
@@ -825,7 +914,7 @@ class city_road_gen_t {
 				cube_t c(*r); // start by copying the road's bcube
 				
 				for (unsigned n = 0; n < num_segs; ++n) {
-					c.d[d][1] = c.d[d][0] + seg_len;
+					c.d[d][1] = ((n+1 == num_segs) ? r->d[d][1] : (c.d[d][0] + seg_len)); // make sure it ends exactly at the correct location
 					for (unsigned e = 0; e < 2; ++e) {c.d[2][e] = z1 + (z2 - z1)*((c.d[d][e] - r->d[d][0])/len);} // interpolate road height across segments
 					if (c.z2() < c.z1()) {swap(c.z2(), c.z1());} // swap zvals if needed
 					assert(c.is_normalized());
@@ -834,13 +923,14 @@ class city_road_gen_t {
 				} // for n
 			} // for r
 		}
-		void gen_tile_blocks() {
+		void gen_tile_blocks(bool is_global_rn) {
 			tile_blocks.clear(); // should already be empty?
 			map<uint64_t, unsigned> tile_to_block_map;
 			add_tile_blocks(segs,  tile_to_block_map, TYPE_RSEG);
 			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
+			calc_ix_values(is_global_rn);
 		}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(roads, bcubes);}
 		void get_plot_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(plots, bcubes);}
@@ -852,7 +942,7 @@ class city_road_gen_t {
 			if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) return 1;
 
 			if (include_intersections) { // used for global road network
-				for (unsigned i = 0; i < 3; ++i) {
+				for (unsigned i = 0; i < 3; ++i) { // {2-way, 3-way, 4-way}
 					if (check_bcubes_sphere_coll(isecs[i], query_pos, radius, xy_only)) return 1;
 				}
 			}
@@ -1025,10 +1115,14 @@ public:
 				} // for n
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					//cout << "Double segment cost: " << best_cost << " " << TXT(best_xval) << TXT(best_yval) << TXT(fdim) << ", int_cube: " << best_int_cube.str() << endl;
-					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), hq); // do this first to improve flattening
+					hq.flatten_region_to(best_int_cube, city_params.road_border); // do this first to improve flattening
+					unsigned road_ix[2];
+					road_ix[ fdim] = global_rn.num_roads();
 					global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0); // check_only=0
 					flatten_op_t const fop(hq.last_flatten_op); // cache for reuse later during decrease_only pass
+					road_ix[!fdim] = global_rn.num_roads();
 					global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0); // check_only=0
+					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), road_ix[0], road_ix[1]);
 					hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, 0, 1); // decrease_only=1; remove any dirt that the prev road added
 					hq.flatten_region_to(best_int_cube, city_params.road_border, 1); // one more pass to fix mesh that was raised above the intersection by a sloped road segment
 					return 1;
@@ -1068,8 +1162,9 @@ public:
 		global_rn.split_connector_roads(road_spacing);
 	}
 	void gen_tile_blocks() {
-		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_tile_blocks();}
-		global_rn.gen_tile_blocks();
+		timer_t timer("Gen Tile Blocks");
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_tile_blocks(0);}
+		global_rn.gen_tile_blocks(1);
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
