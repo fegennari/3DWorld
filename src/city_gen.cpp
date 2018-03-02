@@ -991,10 +991,25 @@ class city_road_gen_t {
 			return 0; // failed
 		}
 		void update_car(car_t &car, float speed_mult, rand_gen_t &rgen) const {
-			car.move(speed_mult);
-			// FIXME: turn at intersections
-			// FIXME: path finding
-			// FIXME: set car.dz when on connector roads
+			cube_t const bcube(get_road_bcube_for_car(car));
+			//cout << "car  : " << car.bcube.str() << endl << "bcube: " << bcube.str() << endl;
+			if (bcube.contains_pt_xy(car.bcube.get_cube_center())) {car.move(speed_mult);} // car still assigned to this bcube
+
+			if (!bcube.contains_cube_xy(car.bcube)) { // car crossing the border of this bcube, update state
+				// FIXME: turn at intersections
+				// FIXME: path finding
+				// FIXME: set car.dz when on connector roads
+			}
+		}
+		cube_t get_road_bcube_for_car(car_t const &car) const {
+			if (car.cur_road_type == TYPE_RSEG) {
+				assert(car.cur_seg < segs.size());
+				return segs[car.cur_seg];
+			}
+			assert(car.cur_road_type >= TYPE_ISEC2 && car.cur_road_type <= TYPE_ISEC4);
+			auto const &iv(isecs[car.cur_road_type - TYPE_ISEC2]);
+			assert(car.cur_seg < iv.size());
+			return iv[car.cur_seg];
 		}
 	}; // road_network_t
 
@@ -1196,10 +1211,13 @@ public:
 		car.cur_city = city;
 		return road_networks[city].add_car(car, rgen);
 	}
-	void update_car(car_t &car, float speed, rand_gen_t &rgen) const {
-		car.move(speed);
-		// FIXME: random turn, etc
+	road_network_t const &get_car_rn(car_t const &car) const {
+		if (car.cur_city == CONN_CITY_IX) {return global_rn;}
+		assert(car.cur_city < road_networks.size());
+		return road_networks[car.cur_city];
 	}
+	void update_car(car_t &car, float speed, rand_gen_t &rgen) const {get_car_rn(car).update_car(car, speed, rgen);}
+	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 }; // city_road_gen_t
 
 
