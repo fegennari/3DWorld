@@ -132,6 +132,8 @@ float smooth_interp(float a, float b, float mix) {
 	return mix*a + (1.0 - mix)*b;
 }
 
+bool is_isect(unsigned type) {return (type >= TYPE_ISEC2 && type <= TYPE_ISEC4);}
+
 struct rect_t {
 	unsigned x1, y1, x2, y2;
 	rect_t() : x1(0), y1(0), x2(0), y2(0) {}
@@ -169,7 +171,7 @@ struct road_t : public cube_t {
 };
 
 struct road_seg_t : public road_t {
-	unsigned short road_ix, conn_ix[2], conn_type[2];
+	unsigned short road_ix, conn_ix[2], conn_type[2]; // {dim=0, dim=1}
 	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
 	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix) {init_ixs();}
 	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {init_ixs();}
@@ -214,6 +216,8 @@ struct road_plot_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
+class city_road_gen_t;
+
 struct car_t {
 	cube_t bcube;
 	bool dim, dir;
@@ -224,16 +228,20 @@ struct car_t {
 	car_t() : bcube(all_zeros), dim(0), dir(0), cur_road_type(0), color_id(0), cur_city(0), cur_road(0), cur_seg(0), dz(0.0), speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
+	bool is_stopped() const {return (speed == 0.0);}
+	void stop() {speed = 0.0;}
 
 	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
 		if (cur_city != c.cur_city) return (cur_city < c.cur_city);
 		if (cur_road != c.cur_road) return (cur_road < c.cur_road);
+		if (cur_road_type != c.cur_road_type) return (cur_road_type < c.cur_road_type);
 		if (cur_seg  != c.cur_seg ) return (cur_seg  < c.cur_seg );
 		return (bcube.get_cube_center() < c.bcube.get_cube_center());
 	}
 	string str() const {
 		std::ostringstream oss;
-		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << "color=" << unsigned(color_id);
+		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz)
+			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
 		return oss.str();
 	}
 	void move(float speed_mult) {
@@ -241,27 +249,7 @@ struct car_t {
 		delta[dim] += (dir ? 1.0 : -1.0)*speed*speed_mult;
 		bcube += delta;
 	}
-	bool check_collision(car_t &c) {
-		//if (dim != c.dim || dir != c.dir) return 0;
-		float const sep_dist(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
-		float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
-		cube_t bcube_ext(bcube);
-		bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
-		if (!bcube_ext.intersects(c.bcube)) return 0;
-		assert(c.dim == dim); // FIXME: not valid when using intersections
-		assert(c.dir == dir); // otherwise should be on different sides of the road
-		float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
-		bool const move_c((front < c_front) ^ dir); // move the car that's behind
-		// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
-		car_t &cmove(move_c ? c : *this); // the car that will be moved
-		car_t const &cstay(move_c ? *this : c); // the car that won't be moved
-		//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
-		float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
-		point delta(all_zeros);
-		delta[dim]  += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
-		cmove.bcube += delta; // move the car
-		return 1;
-	}
+	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
 
 class heightmap_query_t {
@@ -975,7 +963,7 @@ class city_road_gen_t {
 				car.cur_road = seg.road_ix;
 				car.cur_seg  = seg_ix;
 				car.cur_road_type = TYPE_RSEG;
-				vector3d car_sz(vector3d(0.5*rgen.rand_uniform(0.9, 1.1), 0.18*rgen.rand_uniform(0.9, 1.1), 0.1*rgen.rand_uniform(0.9, 1.1))*city_params.road_width); // {length, width, height}
+				vector3d car_sz(vector3d(0.45*rgen.rand_uniform(0.9, 1.1), 0.18*rgen.rand_uniform(0.9, 1.1), 0.1*rgen.rand_uniform(0.9, 1.1))*city_params.road_width); // {length, width, height}
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
 				if (val1 >= val2) continue; // failed, try again (connector road junction?)
@@ -986,19 +974,62 @@ class city_road_gen_t {
 				if (seg.dim) {swap(car_sz.x, car_sz.y);}
 				car.bcube.set_from_point(pos);
 				car.bcube.expand_by(0.5*car_sz);
+				assert(get_road_bcube_for_car(car).contains_cube_xy(car.bcube)); // sanity check
 				return 1; // success
 			} // for n
 			return 0; // failed
 		}
+		bool find_car_next_seg(car_t &car) const {
+			if (car.cur_road_type == TYPE_RSEG) {
+				assert(car.cur_seg < segs.size());
+				road_seg_t const &seg(segs[car.cur_seg]);
+				//cout << "before: " << car.str() << endl << "before road bcube: " << get_road_bcube_for_car(car).str() << endl;
+				car.cur_road_type = seg.conn_type[car.dir];
+				car.cur_road      = seg.road_ix;
+				car.cur_seg       = seg.conn_ix[car.dir];
+				//cout << "after : " << car.str() << endl << "after  road bcube: " << get_road_bcube_for_car(car).str() << endl;
+				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
+				return 1; // always within same city, no city update
+			}
+			assert(is_isect(car.cur_road_type));
+			auto const &iv(isecs[car.cur_road_type - TYPE_ISEC2]);
+			assert(car.cur_seg < iv.size());
+			road_isec_t const &isec(iv[car.cur_seg]); // conn_ix: {-x, +x, -y, +y}
+			unsigned const orient(2*car.dim + car.dir);
+			if (!(isec.conn & (1<<orient))) return 0; // no connection; FIXME: make this an error when turning is implemented
+			int const conn_ix(isec.conn_ix[orient]);
+			if (conn_ix < 0) return 0; // FIXME: handle city connector road case
+			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
+			car.cur_road      = isec.rix_xy[car.dim];
+			car.cur_seg       = (unsigned)conn_ix;
+			assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
+			return 1; // done
+		}
 		void update_car(car_t &car, float speed_mult, rand_gen_t &rgen) const {
+			if (car.is_stopped()) return; // stopped, no update (for now)
 			cube_t const bcube(get_road_bcube_for_car(car));
-			//cout << "car  : " << car.bcube.str() << endl << "bcube: " << bcube.str() << endl;
-			if (bcube.contains_pt_xy(car.bcube.get_cube_center())) {car.move(speed_mult);} // car still assigned to this bcube
+			assert(bcube.intersects_xy(car.bcube)); // sanity check
+			car.move(speed_mult);
 
-			if (!bcube.contains_cube_xy(car.bcube)) { // car crossing the border of this bcube, update state
-				// FIXME: turn at intersections
-				// FIXME: path finding
+			if (car.cur_road_type == TYPE_RSEG && bcube.get_dz() != 0.0) {
 				// FIXME: set car.dz when on connector roads
+			}
+			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
+				if (is_isect(car.cur_road_type)) {
+					if (car.cur_road_type == TYPE_ISEC3) {
+
+					}
+					else if (car.cur_road_type == TYPE_ISEC4) {
+						// FIXME: else if next is a 3 or 4 way intersection, apply traffic light/stop sign logic
+					}
+					// FIXME: turn when at center of intersection
+				}
+				return; // done
+			}
+			// car crossing the border of this bcube, update state
+			if (!bcube.contains_pt_xy(car.bcube.get_cube_center())) { // move to another road seg/int
+				// FIXME: path finding update
+				if (!find_car_next_seg(car)) {car.stop(); return;} // update failed, stop car (for now)
 			}
 		}
 		cube_t get_road_bcube_for_car(car_t const &car) const {
@@ -1006,7 +1037,7 @@ class city_road_gen_t {
 				assert(car.cur_seg < segs.size());
 				return segs[car.cur_seg];
 			}
-			assert(car.cur_road_type >= TYPE_ISEC2 && car.cur_road_type <= TYPE_ISEC4);
+			assert(is_isect(car.cur_road_type));
 			auto const &iv(isecs[car.cur_road_type - TYPE_ISEC2]);
 			assert(car.cur_seg < iv.size());
 			return iv[car.cur_seg];
@@ -1221,6 +1252,33 @@ public:
 }; // city_road_gen_t
 
 
+bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
+
+	//if (dim != c.dim || dir != c.dir) return 0;
+	float const sep_dist(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
+	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
+	cube_t bcube_ext(bcube);
+	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
+	if (!bcube_ext.intersects(c.bcube)) return 0;
+	assert(c.dim == dim); // FIXME: not valid when using intersections
+	assert(c.dir == dir); // otherwise should be on different sides of the road
+	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
+	bool const move_c((front < c_front) ^ dir); // move the car that's behind
+	// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
+	car_t &cmove(move_c ? c : *this); // the car that will be moved
+	car_t const &cstay(move_c ? *this : c); // the car that won't be moved
+	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
+	float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
+	point delta(all_zeros);
+	delta[dim]  += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
+	cube_t const &bcube(road_gen.get_road_bcube_for_car(cmove));
+	if (cmove.dir) {max_eq(delta[dim], min(0.0f, (bcube.d[cmove.dim][0] - cmove.bcube.d[cmove.dim][0])));} // keep the car from moving outside its current segment
+	else           {min_eq(delta[dim], max(0.0f, (bcube.d[cmove.dim][1] - cmove.bcube.d[cmove.dim][1])));}
+	cmove.bcube += delta;
+	return 1;
+}
+
+
 unsigned const NUM_CAR_COLORS = 8;
 colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, BLACK, DK_GRAY, RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
@@ -1301,7 +1359,10 @@ public:
 		
 		for (auto i = cars.begin(); i != cars.end(); ++i) {
 			for (auto j = i+1; j != cars.end(); ++j) {
-				if (i->cur_city == j->cur_city && i->cur_seg == j->cur_seg) {i->check_collision(*j);} else {break;}
+				if (i->cur_city == j->cur_city && i->cur_road_type == j->cur_road_type && i->cur_seg == j->cur_seg) {
+					i->check_collision(*j, road_gen); // collided, ensure car is still within its 
+				}
+				else {break;}
 			}
 			if (animate2) {road_gen.update_car(*i, speed, rgen);}
 		}
