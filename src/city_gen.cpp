@@ -218,16 +218,19 @@ struct road_plot_t : public cube_t {
 
 class city_road_gen_t;
 
+enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT};
+
 struct car_t {
 	cube_t bcube;
 	bool dim, dir;
-	unsigned char cur_road_type, color_id;
+	unsigned char cur_road_type, color_id, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
 	float dz, speed;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), cur_road_type(0), color_id(0), cur_city(0), cur_road(0), cur_seg(0), dz(0.0), speed(0.0) {}
+	car_t() : bcube(all_zeros), dim(0), dir(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), dz(0.0), speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
+	unsigned get_orient() const {return (2*dim + dir);}
 	bool is_stopped() const {return (speed == 0.0);}
 	void stop() {speed = 0.0;}
 
@@ -963,6 +966,7 @@ class city_road_gen_t {
 				car.cur_road = seg.road_ix;
 				car.cur_seg  = seg_ix;
 				car.cur_road_type = TYPE_RSEG;
+				car.turn_dir = TURN_NONE;
 				vector3d car_sz(vector3d(0.45*rgen.rand_uniform(0.9, 1.1), 0.18*rgen.rand_uniform(0.9, 1.1), 0.1*rgen.rand_uniform(0.9, 1.1))*city_params.road_width); // {length, width, height}
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
@@ -981,8 +985,7 @@ class city_road_gen_t {
 		}
 		bool find_car_next_seg(car_t &car) const {
 			if (car.cur_road_type == TYPE_RSEG) {
-				assert(car.cur_seg < segs.size());
-				road_seg_t const &seg(segs[car.cur_seg]);
+				road_seg_t const &seg(get_car_seg(car));
 				//cout << "before: " << car.str() << endl << "before road bcube: " << get_road_bcube_for_car(car).str() << endl;
 				car.cur_road_type = seg.conn_type[car.dir];
 				car.cur_road      = seg.road_ix;
@@ -991,11 +994,8 @@ class city_road_gen_t {
 				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 				return 1; // always within same city, no city update
 			}
-			assert(is_isect(car.cur_road_type));
-			auto const &iv(isecs[car.cur_road_type - TYPE_ISEC2]);
-			assert(car.cur_seg < iv.size());
-			road_isec_t const &isec(iv[car.cur_seg]); // conn_ix: {-x, +x, -y, +y}
-			unsigned const orient(2*car.dim + car.dir);
+			road_isec_t const &isec(get_car_isec(car)); // conn_ix: {-x, +x, -y, +y}
+			unsigned const orient(car.get_orient());
 			if (!(isec.conn & (1<<orient))) return 0; // no connection; FIXME: make this an error when turning is implemented
 			int const conn_ix(isec.conn_ix[orient]);
 			if (conn_ix < 0) return 0; // FIXME: handle city connector road case
@@ -1009,38 +1009,76 @@ class city_road_gen_t {
 			if (car.is_stopped()) return; // stopped, no update (for now)
 			cube_t const bcube(get_road_bcube_for_car(car));
 			assert(bcube.intersects_xy(car.bcube)); // sanity check
+			cube_t const prev_bcube(car.bcube);
 			car.move(speed_mult);
+			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 			if (car.cur_road_type == TYPE_RSEG && bcube.get_dz() != 0.0) {
 				// FIXME: set car.dz when on connector roads
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
-				if (is_isect(car.cur_road_type)) {
-					if (car.cur_road_type == TYPE_ISEC3) {
+				if (car.turn_dir != TURN_NONE) {
+					assert(is_isect(car.cur_road_type));
+
+					if (car.turn_dir == TURN_LEFT) {
 
 					}
-					else if (car.cur_road_type == TYPE_ISEC4) {
-						// FIXME: else if next is a 3 or 4 way intersection, apply traffic light/stop sign logic
+					else { // TURN_RIGHT
+						
 					}
 					// FIXME: turn when at center of intersection
+					car.turn_dir = TURN_NONE; // FIXME: remove when turning is implemented above
 				}
 				return; // done
 			}
 			// car crossing the border of this bcube, update state
 			if (!bcube.contains_pt_xy(car.bcube.get_cube_center())) { // move to another road seg/int
-				// FIXME: path finding update
 				if (!find_car_next_seg(car)) {car.stop(); return;} // update failed, stop car (for now)
+
+				if (is_isect(car.cur_road_type)) { // moved into an intersection, choose direction
+					road_isec_t const &isec(get_car_isec(car));
+					unsigned const orient_in(2*car.dim + (!car.dir)); // invert dir (incoming, not outgoing)
+					assert(isec.conn & (1<<orient_in)); // car must come from an enabled orient
+					unsigned orients[3]; // {straight, left, right}
+					orients[TURN_NONE ] = car.get_orient(); // straight
+					orients[TURN_LEFT ] = conn_left [orient_in];
+					orients[TURN_RIGHT] = conn_right[orient_in];
+					
+					// FIXME: path finding update - use A*?
+					while (1) {
+						unsigned new_turn_dir(0);
+						int const rval(rand()%4);
+						if      (rval == 0) {new_turn_dir = TURN_LEFT ;} // 25%
+						else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
+						else                {new_turn_dir = TURN_NONE ;} // 50%
+						if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;}
+					} // end while
+					//cout << TXT(orient_in) << TXT(car.get_orient()) << "turn_dir=" << unsigned(car.turn_dir) << " conn=" << unsigned(isec.conn) << endl;
+					assert(isec.conn & (1<<orients[car.turn_dir]));
+
+					if (car.cur_road_type == TYPE_ISEC3) {
+						// FIXME: apply 3-way traffic light/stop sign logic
+					}
+					else if (car.cur_road_type == TYPE_ISEC4) {
+						// FIXME: apply 4-way traffic light/stop sign logic
+					}
+				}
 			}
 		}
-		cube_t get_road_bcube_for_car(car_t const &car) const {
-			if (car.cur_road_type == TYPE_RSEG) {
-				assert(car.cur_seg < segs.size());
-				return segs[car.cur_seg];
-			}
+		road_seg_t const &get_car_seg(car_t const &car) const {
+			assert(car.cur_road_type == TYPE_RSEG);
+			assert(car.cur_seg < segs.size());
+			return segs[car.cur_seg];
+		}
+		road_isec_t const &get_car_isec(car_t const &car) const {
 			assert(is_isect(car.cur_road_type));
 			auto const &iv(isecs[car.cur_road_type - TYPE_ISEC2]);
 			assert(car.cur_seg < iv.size());
 			return iv[car.cur_seg];
+		}
+		cube_t get_road_bcube_for_car(car_t const &car) const {
+			if (car.cur_road_type == TYPE_RSEG) {return get_car_seg(car);}
+			return get_car_isec(car);
 		}
 	}; // road_network_t
 
