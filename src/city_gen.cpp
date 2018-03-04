@@ -247,11 +247,13 @@ struct car_t {
 			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
 		return oss.str();
 	}
-	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	void move(float speed_mult) {
 		prev_bcube = bcube;
-		move_by((dir ? 1.0 : -1.0)*speed*speed_mult);
+		float dist(speed*speed_mult);
+		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
+		move_by((dir ? 1.0 : -1.0)*dist);
 	}
+	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
 
@@ -1008,7 +1010,7 @@ class city_road_gen_t {
 		void update_car(car_t &car, rand_gen_t &rgen) const {
 			if (car.is_stopped()) return; // stopped, no update (for now)
 			cube_t const bcube(get_road_bcube_for_car(car));
-			assert(bcube.intersects_xy(car.bcube)); // sanity check
+			assert(bcube.intersects_xy(car.prev_bcube)); // sanity check
 			cube_t const prev_bcube(car.bcube);
 			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
