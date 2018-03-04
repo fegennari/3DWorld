@@ -494,6 +494,9 @@ struct cube_t { // size = 24
 	bool contains_pt_xy(point const &pt) const {
 		return (pt.x > d[0][0] && pt.x < d[0][1] && pt.y > d[1][0] && pt.y < d[1][1]);
 	}
+	bool contains_pt_xy_inc_low_edge(point const &pt) const {
+		return (pt.x >= d[0][0] && pt.x < d[0][1] && pt.y >= d[1][0] && pt.y < d[1][1]);
+	}
 	bool quick_intersect_test(const cube_t &cube) const {
 		UNROLL_3X(if (cube.d[i_][0] >= d[i_][1] || cube.d[i_][1] <= d[i_][0]) return 0;)
 		return 1;

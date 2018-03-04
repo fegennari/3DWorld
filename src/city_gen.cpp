@@ -144,14 +144,15 @@ struct car_t {
 	bool dim, dir, stopped_at_light;
 	unsigned char cur_road_type, color_id, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
-	float dz, speed;
+	float dz, cur_speed, max_speed;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), dz(0.0), speed(0.0) {}
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
+		cur_city(0), cur_road(0), cur_seg(0), dz(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
-	bool is_stopped() const {return (speed == 0.0);}
-	void stop() {speed = 0.0;}
+	bool is_parked() const {return (max_speed == 0.0);}
+	void park() {cur_speed = max_speed = 0.0;}
 
 	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
 		if (cur_city != c.cur_city) return (cur_city < c.cur_city);
@@ -162,17 +163,20 @@ struct car_t {
 	}
 	string str() const {
 		std::ostringstream oss;
-		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz)
+		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << TXT(max_speed) << TXT(cur_speed)
 			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
 		return oss.str();
 	}
 	void move(float speed_mult) {
-		if (stopped_at_light || speed == 0.0) return;
 		prev_bcube = bcube;
-		float dist(speed*speed_mult);
+		if (cur_speed == 0.0) return;
+		assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= max_speed);
+		float dist(cur_speed*speed_mult);
 		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 		move_by((dir ? 1.0 : -1.0)*dist);
 	}
+	void accelerate() {cur_speed = min(max_speed, (cur_speed + 0.02f*fticks*max_speed));}
+	void decelerate() {cur_speed = max(0.0f, (cur_speed - 10.0f*fticks*max_speed));} // Note: large decel to avoid stopping in an intersection
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
@@ -1053,9 +1057,10 @@ class city_road_gen_t {
 				car.dim   = seg.dim;
 				car.dir   = (rgen.rand()&1);
 				car.dz    = 0.0; // flat
-				car.speed = rgen.rand_uniform(0.66, 1.0); // add some speed variation
-				car.cur_road = seg.road_ix;
-				car.cur_seg  = seg_ix;
+				car.max_speed = rgen.rand_uniform(0.66, 1.0); // add some speed variation
+				car.cur_speed = 0.0;
+				car.cur_road  = seg.road_ix;
+				car.cur_seg   = seg_ix;
 				car.cur_road_type = TYPE_RSEG;
 				car.turn_dir = TURN_NONE;
 				vector3d car_sz; // {length, width, height}
@@ -1094,22 +1099,24 @@ class city_road_gen_t {
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
 			car.cur_road      = isec.rix_xy[car.dim];
 			car.cur_seg       = (unsigned)conn_ix;
-			if (!get_road_bcube_for_car(car).intersects_xy(car.bcube)) { // FIXME: temp debugging
+			
+			if (!get_road_bcube_for_car(car).intersects_xy(car.bcube)) { // sanity check
 				cout << "bad intersection:" << endl << car.str() << endl << get_road_bcube_for_car(car).str() << endl;
+				assert(0);
 			}
-			assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 			return 1; // done
 		}
 		void update_car(car_t &car, rand_gen_t &rgen) const {
-			if (car.is_stopped()) return; // stopped, no update (for now)
+			if (car.is_parked()) return; // stopped, no update (for now)
 
-			if (car.stopped_at_light /*&& is_isect(car.cur_road_type)*/) {
-				if (!get_car_isec(car).red_light(car)) {car.stopped_at_light = 0;} // can go now
-				return;
-			}
+			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
+				bool const was_stopped(car.cur_speed == 0.0);
+				if (!is_isect(car.cur_road_type) || !get_car_isec(car).red_light(car)) {car.stopped_at_light = 0;} // can go now
+				else {car.decelerate();}
+				if (was_stopped) return; // no update needed
+			} else {car.accelerate();}
 			cube_t const bcube(get_road_bcube_for_car(car));
-			assert(bcube.intersects_xy(car.prev_bcube)); // sanity check
-			cube_t const prev_bcube(car.bcube);
+			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << bcube.str() << endl; assert(0);} // sanity check
 			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 			if (car.cur_road_type == TYPE_RSEG && bcube.get_dz() != 0.0) {
@@ -1127,11 +1134,12 @@ class city_road_gen_t {
 					}
 					// FIXME: turn when at center of intersection
 				}
+				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 				return; // done
 			}
 			// car crossing the border of this bcube, update state
-			if (!bcube.contains_pt_xy(car.bcube.get_cube_center())) { // move to another road seg/int
-				if (!find_car_next_seg(car)) {car.stop(); return;} // update failed, stop car (for now)
+			if (!bcube.contains_pt_xy_inc_low_edge(car.bcube.get_cube_center())) { // move to another road seg/int
+				if (!find_car_next_seg(car)) {car.park(); return;} // update failed, park/stop car (for now)
 
 				if (is_isect(car.cur_road_type)) { // moved into an intersection, choose direction
 					road_isec_t const &isec(get_car_isec(car));
@@ -1155,8 +1163,10 @@ class city_road_gen_t {
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.turn_dir = TURN_NONE; // FIXME: remove when turning is implemented above
 					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection
+					if (car.stopped_at_light) {car.decelerate();}
 				}
 			}
+			assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 		}
 		void next_frame() {
 			for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped
@@ -1509,13 +1519,13 @@ public:
 		float const speed(0.001*car_speed*fticks);
 		for (auto i = cars.begin(); i != cars.end(); ++i) {i->move(speed);} // move cars
 
-		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection and update logic
+		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
 				if (i->cur_city == j->cur_city && i->cur_road == j->cur_road) {i->check_collision(*j, road_gen);}
 				else {break;}
 			}
-			road_gen.update_car(*i, rgen);
 		} // for i
+		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
 	}
 	void draw(vector3d const &xlate) {
 		if (cars.empty()) return;
