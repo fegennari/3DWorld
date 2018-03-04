@@ -9,3 +9,4 @@ Load/display model3d models in tiled terrain mode
 
 TT Projectile and object collision detection
 Place mapx objects (weapons, ammo, powerups)
+Smiley capes - cloth simulation?
