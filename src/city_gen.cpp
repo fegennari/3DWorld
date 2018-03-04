@@ -14,11 +14,14 @@ using std::string;
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
 float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
+float const CAR_LANE_OFFSET         = 0.15; // in units of road width
+vector3d const CAR_SIZE(0.28, 0.13, 0.07); // {length, width, height} in units of road width
 colorRGBA const road_color          = WHITE; // all road parts are the same color, to make the textures match
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   NUM_RD_TIDS };
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, NUM_RD_TYPES};
+enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT};
 unsigned const CONN_TYPE_NONE = 0;
 
 
@@ -134,6 +137,46 @@ float smooth_interp(float a, float b, float mix) {
 
 bool is_isect(unsigned type) {return (type >= TYPE_ISEC2 && type <= TYPE_ISEC4);}
 
+class city_road_gen_t;
+
+struct car_t {
+	cube_t bcube, prev_bcube;
+	bool dim, dir, stopped_at_light;
+	unsigned char cur_road_type, color_id, turn_dir;
+	unsigned short cur_city, cur_road, cur_seg;
+	float dz, speed;
+
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), dz(0.0), speed(0.0) {}
+	bool is_valid() const {return !bcube.is_all_zeros();}
+	point get_center() const {return bcube.get_cube_center();}
+	unsigned get_orient() const {return (2*dim + dir);}
+	bool is_stopped() const {return (speed == 0.0);}
+	void stop() {speed = 0.0;}
+
+	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
+		if (cur_city != c.cur_city) return (cur_city < c.cur_city);
+		if (cur_road != c.cur_road) return (cur_road < c.cur_road);
+		if (cur_road_type != c.cur_road_type) return (cur_road_type < c.cur_road_type);
+		if (cur_seg  != c.cur_seg ) return (cur_seg  < c.cur_seg );
+		return (bcube.get_cube_center() < c.bcube.get_cube_center());
+	}
+	string str() const {
+		std::ostringstream oss;
+		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz)
+			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
+		return oss.str();
+	}
+	void move(float speed_mult) {
+		if (stopped_at_light || speed == 0.0) return;
+		prev_bcube = bcube;
+		float dist(speed*speed_mult);
+		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
+		move_by((dir ? 1.0 : -1.0)*dist);
+	}
+	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
+	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
+};
+
 struct rect_t {
 	unsigned x1, y1, x2, y2;
 	rect_t() : x1(0), y1(0), x2(0), y2(0) {}
@@ -187,12 +230,78 @@ struct road_seg_t : public road_t {
 	}
 };
 
-struct road_isec_t : public cube_t {
-	uint8_t conn; // connected roads in {-x, +x, -y, +y}
-	short rix_xy[2], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
-	road_isec_t() : conn(15) {}
-	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_) : cube_t(c), conn(conn_) {rix_xy[0] = rx; rix_xy[1] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;}
+namespace stoplight_ns {
 
+	enum {RED=0, GREEN=1, YELLOW=2}; // colors, unused (only have stop and go states anyway)
+	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
+	float const state_times[NUM_STATE] = {4.0, 6.0, 4.0, 4.0, 6.0, 4.0}; // in seconds
+	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
+	unsigned const left_orient_masks[NUM_STATE] = {2, 0, 1, 8, 0,  4}; // {W=1, E=2, S=4, N=8}, for left turns only
+
+	rand_gen_t stoplight_rgen;
+
+	class stoplight_t {
+		bool always_go;
+		uint8_t cur_state;
+		float cur_state_ticks;
+
+		void next_state() {
+			++cur_state;
+			if (cur_state == NUM_STATE) {cur_state = 0;} // wraparound
+		}
+	public:
+		stoplight_t() : always_go(0) {
+			cur_state = stoplight_rgen.rand() % NUM_STATE; // start at a random state; state may not be valid for 3-way intersections, but should be updated in next_frame()
+			cur_state_ticks = TICKS_PER_SECOND*state_times[cur_state]*stoplight_rgen.rand_float(); // start at a random time within this state
+		}
+		void next_frame(uint8_t num_conn, uint8_t conn) {
+			always_go = (num_conn == 2);
+			if (always_go) return; // nothing else to do
+			assert(cur_state < NUM_STATE);
+			cur_state_ticks += fticks;
+			if (cur_state_ticks < TICKS_PER_SECOND*state_times[cur_state]) return; // keep existing state
+			if (num_conn == 4) {next_state();} // all states are valid for 4-way intersections
+			else { // 3-way intersection
+				assert(num_conn == 3);
+				while (1) {
+					next_state();
+					bool valid(0);
+					switch (conn) {
+					case 7 : {bool const allow[6] = {0,1,1,1,0,0}; valid = allow[cur_state]; break;} // no +y
+					case 11: {bool const allow[6] = {1,1,0,1,0,0}; valid = allow[cur_state]; break;} // no -y
+					case 13: {bool const allow[6] = {1,0,0,1,1,0}; valid = allow[cur_state]; break;} // no +x
+					case 14: {bool const allow[6] = {0,0,1,0,1,1}; valid = allow[cur_state]; break;} // no -x
+					default: assert(0);
+					}
+					if (valid) break;
+				} // end while
+			}
+			cur_state_ticks = 0.0; // reset for this state
+		}
+		bool red_light(bool dim, bool dir, unsigned turn) const {
+			assert(cur_state < NUM_STATE);
+			assert(turn == TURN_LEFT || turn == TURN_RIGHT || turn == TURN_NONE);
+			if (always_go) return 0; // 2-way intersection, no cross traffic
+			unsigned const mask(((turn == TURN_LEFT) ? left_orient_masks : st_r_orient_masks)[cur_state]);
+			unsigned const orient(2*dim + dir); // {W, E, S, N}
+			return (((1<<orient) & mask) == 0);
+		}
+	};
+} // end stoplight_ns
+
+struct road_isec_t : public cube_t {
+	uint8_t num_conn, conn; // connected roads in {-x, +x, -y, +y}
+	short rix_xy[2], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
+	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
+
+	road_isec_t() : conn(15) {}
+	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_) : cube_t(c), conn(conn_) {
+		rix_xy[0] = rx; rix_xy[1] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
+		if (conn == 15) {num_conn = 4;} // 4-way
+		else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
+		else if (conn == 5 || conn == 6  || conn == 9  || conn == 10) {num_conn = 2;} // 2-way
+		else {assert(0);}
+	}
 	tex_range_t get_tex_range(float ar) const {
 		switch (conn) {
 		case 5 : return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 0); // 2-way: MX
@@ -208,53 +317,15 @@ struct road_isec_t : public cube_t {
 		}
 		return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
 	}
+	void make_4way() {num_conn = 4; conn = 15;}
+	void next_frame() {stoplight.next_frame(num_conn, conn);}
+	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
 };
 
 struct road_plot_t : public cube_t {
 	road_plot_t() {}
 	road_plot_t(cube_t const &c) : cube_t(c) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
-};
-
-class city_road_gen_t;
-
-enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT};
-
-struct car_t {
-	cube_t bcube, prev_bcube;
-	bool dim, dir;
-	unsigned char cur_road_type, color_id, turn_dir;
-	unsigned short cur_city, cur_road, cur_seg;
-	float dz, speed;
-
-	car_t() : bcube(all_zeros), dim(0), dir(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), dz(0.0), speed(0.0) {}
-	bool is_valid() const {return !bcube.is_all_zeros();}
-	point get_center() const {return bcube.get_cube_center();}
-	unsigned get_orient() const {return (2*dim + dir);}
-	bool is_stopped() const {return (speed == 0.0);}
-	void stop() {speed = 0.0;}
-
-	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
-		if (cur_city != c.cur_city) return (cur_city < c.cur_city);
-		if (cur_road != c.cur_road) return (cur_road < c.cur_road);
-		if (cur_road_type != c.cur_road_type) return (cur_road_type < c.cur_road_type);
-		if (cur_seg  != c.cur_seg ) return (cur_seg  < c.cur_seg );
-		return (bcube.get_cube_center() < c.bcube.get_cube_center());
-	}
-	string str() const {
-		std::ostringstream oss;
-		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz)
-			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
-		return oss.str();
-	}
-	void move(float speed_mult) {
-		prev_bcube = bcube;
-		float dist(speed*speed_mult);
-		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
-		move_by((dir ? 1.0 : -1.0)*dist);
-	}
-	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
-	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
 
 class heightmap_query_t {
@@ -712,7 +783,7 @@ class city_road_gen_t {
 		void make_4way_int(unsigned int3_ix) { // turn a 3-way intersection into a 4-way intersection for a connector road
 			assert(int3_ix < isecs[1].size());
 			road_isec_t &isec(isecs[1][int3_ix]); // bbox doesn't change, only conn changes
-			isec.conn = 15; // all connected
+			isec.make_4way(); // all connected
 			isecs[2].push_back(isec); // add as 4-way intersection
 			isecs[1][int3_ix] = isecs[1].back(); // remove original 3-way intersection
 			isecs[1].pop_back();
@@ -969,12 +1040,13 @@ class city_road_gen_t {
 				car.cur_seg  = seg_ix;
 				car.cur_road_type = TYPE_RSEG;
 				car.turn_dir = TURN_NONE;
-				vector3d car_sz(vector3d(0.45*rgen.rand_uniform(0.9, 1.1), 0.18*rgen.rand_uniform(0.9, 1.1), 0.1*rgen.rand_uniform(0.9, 1.1))*city_params.road_width); // {length, width, height}
+				vector3d car_sz; // {length, width, height}
+				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*rgen.rand_uniform(0.9, 1.1)*city_params.road_width;}
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
 				if (val1 >= val2) continue; // failed, try again (connector road junction?)
 				pos[!seg.dim]  = 0.5*(seg.d[!seg.dim][0] + seg.d[!seg.dim][1]); // center of road
-				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*(0.15*city_params.road_width); // place in right lane
+				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*(CAR_LANE_OFFSET*city_params.road_width); // place in right lane
 				pos[ seg.dim] = rgen.rand_uniform(val1, val2); // place at random pos in segment
 				pos.z = seg.d[2][1] + 0.5*car_sz.z; // place above road surface
 				if (seg.dim) {swap(car_sz.x, car_sz.y);}
@@ -1009,6 +1081,11 @@ class city_road_gen_t {
 		}
 		void update_car(car_t &car, rand_gen_t &rgen) const {
 			if (car.is_stopped()) return; // stopped, no update (for now)
+
+			if (car.stopped_at_light /*&& is_isect(car.cur_road_type)*/) {
+				if (!get_car_isec(car).red_light(car)) {car.stopped_at_light = 0;} // can go now
+				return;
+			}
 			cube_t const bcube(get_road_bcube_for_car(car));
 			assert(bcube.intersects_xy(car.prev_bcube)); // sanity check
 			cube_t const prev_bcube(car.bcube);
@@ -1028,7 +1105,6 @@ class city_road_gen_t {
 						
 					}
 					// FIXME: turn when at center of intersection
-					car.turn_dir = TURN_NONE; // FIXME: remove when turning is implemented above
 				}
 				return; // done
 			}
@@ -1056,14 +1132,14 @@ class city_road_gen_t {
 					} // end while
 					//cout << TXT(orient_in) << TXT(car.get_orient()) << "turn_dir=" << unsigned(car.turn_dir) << " conn=" << unsigned(isec.conn) << endl;
 					assert(isec.conn & (1<<orients[car.turn_dir]));
-
-					if (car.cur_road_type == TYPE_ISEC3) {
-						// FIXME: apply 3-way traffic light/stop sign logic
-					}
-					else if (car.cur_road_type == TYPE_ISEC4) {
-						// FIXME: apply 4-way traffic light/stop sign logic
-					}
+					car.turn_dir = TURN_NONE; // FIXME: remove when turning is implemented above
+					car.stopped_at_light = isec.red_light(car); // FIXME: check this earlier, before the car is in the intersection
 				}
+			}
+		}
+		void next_frame() {
+			for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped
+				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {i->next_frame();} // update stoplight state
 			}
 		}
 		road_seg_t const &get_car_seg(car_t const &car) const {
@@ -1275,6 +1351,11 @@ public:
 	}
 
 	// cars
+	void next_frame() {
+		//timer_t timer("Update Stoplights");
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->next_frame();}
+		global_rn.next_frame(); // not needed since there are no 3/4-way intersections/stoplights?
+	}
 	bool add_car(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) return 0; // no cities to add cars to
 		unsigned const city(rgen.rand()%road_networks.size());
@@ -1467,8 +1548,10 @@ public:
 		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
 		return road_gen.check_road_sphere_coll(pos, radius, xy_only);
 	}
-	void next_frame() {car_manager.next_frame(city_params.car_speed);}
-
+	void next_frame() {
+		road_gen.next_frame(); // update stoplights
+		car_manager.next_frame(city_params.car_speed);
+	}
 	void draw(bool shadow_only, int reflection_pass, vector3d const &xlate) { // for now, there are only roads
 		if (!shadow_only && reflection_pass == 0) {road_gen.draw(xlate);} // roads don't cast shadows and aren't reflected in water
 		car_manager.draw(xlate);
