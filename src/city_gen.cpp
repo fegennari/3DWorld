@@ -241,25 +241,14 @@ namespace stoplight_ns {
 	rand_gen_t stoplight_rgen;
 
 	class stoplight_t {
-		bool always_go;
-		uint8_t cur_state;
+		uint8_t num_conn, conn, cur_state;
 		float cur_state_ticks;
 
 		void next_state() {
 			++cur_state;
 			if (cur_state == NUM_STATE) {cur_state = 0;} // wraparound
 		}
-	public:
-		stoplight_t() : always_go(0) {
-			cur_state = stoplight_rgen.rand() % NUM_STATE; // start at a random state; state may not be valid for 3-way intersections, but should be updated in next_frame()
-			cur_state_ticks = TICKS_PER_SECOND*state_times[cur_state]*stoplight_rgen.rand_float(); // start at a random time within this state
-		}
-		void next_frame(uint8_t num_conn, uint8_t conn) {
-			always_go = (num_conn == 2);
-			if (always_go) return; // nothing else to do
-			assert(cur_state < NUM_STATE);
-			cur_state_ticks += fticks;
-			if (cur_state_ticks < TICKS_PER_SECOND*state_times[cur_state]) return; // keep existing state
+		void advance_state() {
 			if (num_conn == 4) {next_state();} // all states are valid for 4-way intersections
 			else { // 3-way intersection
 				assert(num_conn == 3);
@@ -268,7 +257,7 @@ namespace stoplight_ns {
 					bool valid(0);
 					switch (conn) {
 					case 7 : {bool const allow[6] = {0,1,1,1,0,0}; valid = allow[cur_state]; break;} // no +y
-					case 11: {bool const allow[6] = {1,1,0,1,0,0}; valid = allow[cur_state]; break;} // no -y
+					case 11: {bool const allow[6] = {1,1,0,0,0,1}; valid = allow[cur_state]; break;} // no -y
 					case 13: {bool const allow[6] = {1,0,0,1,1,0}; valid = allow[cur_state]; break;} // no +x
 					case 14: {bool const allow[6] = {0,0,1,0,1,1}; valid = allow[cur_state]; break;} // no -x
 					default: assert(0);
@@ -278,13 +267,41 @@ namespace stoplight_ns {
 			}
 			cur_state_ticks = 0.0; // reset for this state
 		}
+		void run_update_logic() {
+			assert(cur_state < NUM_STATE);
+			if (cur_state_ticks < TICKS_PER_SECOND*state_times[cur_state]) return; // keep existing state
+			advance_state();
+		}
+	public:
+		stoplight_t() : num_conn(0), conn(0), cur_state(0), cur_state_ticks(0.0) {}
+		void init(uint8_t num_conn_, uint8_t conn_) {
+			num_conn = num_conn_; conn = conn_;
+			if (num_conn == 2) return; // nothing else to do
+			cur_state = stoplight_rgen.rand() % NUM_STATE; // start at a random state
+			advance_state(); // make sure cur_state is valid
+			cur_state_ticks = TICKS_PER_SECOND*state_times[cur_state]*stoplight_rgen.rand_float(); // start at a random time within this state
+		}
+		void next_frame() {
+			if (num_conn == 2) return; // nothing else to do
+			cur_state_ticks += fticks;
+			run_update_logic();
+		}
 		bool red_light(bool dim, bool dir, unsigned turn) const {
 			assert(cur_state < NUM_STATE);
 			assert(turn == TURN_LEFT || turn == TURN_RIGHT || turn == TURN_NONE);
-			if (always_go) return 0; // 2-way intersection, no cross traffic
+			if (num_conn == 2) return 0; // 2-way intersection, no cross traffic
 			unsigned const mask(((turn == TURN_LEFT) ? left_orient_masks : st_r_orient_masks)[cur_state]);
 			unsigned const orient(2*dim + dir); // {W, E, S, N}
 			return (((1<<orient) & mask) == 0);
+		}
+		bool red_or_yellow_light(bool dim, bool dir, unsigned turn) const {
+			if (red_light(dim, dir, turn)) return 1;
+			if (num_conn == 2) return 0;
+			stoplight_t future_self(*this);
+			float const yellow_light_time(2.0);
+			future_self.cur_state_ticks += TICKS_PER_SECOND*yellow_light_time;
+			future_self.run_update_logic();
+			return future_self.red_light(dim, dir, turn);
 		}
 	};
 } // end stoplight_ns
@@ -294,13 +311,13 @@ struct road_isec_t : public cube_t {
 	short rix_xy[2], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
 
-	road_isec_t() : conn(15) {}
 	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_) : cube_t(c), conn(conn_) {
 		rix_xy[0] = rx; rix_xy[1] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
 		if (conn == 15) {num_conn = 4;} // 4-way
 		else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
 		else if (conn == 5 || conn == 6  || conn == 9  || conn == 10) {num_conn = 2;} // 2-way
 		else {assert(0);}
+		stoplight.init(num_conn, conn);
 	}
 	tex_range_t get_tex_range(float ar) const {
 		switch (conn) {
@@ -318,8 +335,9 @@ struct road_isec_t : public cube_t {
 		return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
 	}
 	void make_4way() {num_conn = 4; conn = 15;}
-	void next_frame() {stoplight.next_frame(num_conn, conn);}
+	void next_frame() {stoplight.next_frame();}
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
+	bool red_or_yellow_light(car_t const &car) const {return stoplight.red_or_yellow_light(car.dim, car.dir, car.turn_dir);}
 };
 
 struct road_plot_t : public cube_t {
@@ -1076,6 +1094,9 @@ class city_road_gen_t {
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
 			car.cur_road      = isec.rix_xy[car.dim];
 			car.cur_seg       = (unsigned)conn_ix;
+			if (!get_road_bcube_for_car(car).intersects_xy(car.bcube)) { // FIXME: temp debugging
+				cout << "bad intersection:" << endl << car.str() << endl << get_road_bcube_for_car(car).str() << endl;
+			}
 			assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 			return 1; // done
 		}
@@ -1133,7 +1154,7 @@ class city_road_gen_t {
 					//cout << TXT(orient_in) << TXT(car.get_orient()) << "turn_dir=" << unsigned(car.turn_dir) << " conn=" << unsigned(isec.conn) << endl;
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.turn_dir = TURN_NONE; // FIXME: remove when turning is implemented above
-					car.stopped_at_light = isec.red_light(car); // FIXME: check this earlier, before the car is in the intersection
+					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection
 				}
 			}
 		}
