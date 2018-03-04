@@ -814,12 +814,10 @@ class city_road_gen_t {
 		struct road_ixs_t {
 			vector<unsigned> seg_ixs, isec_ixs[3][2]; // {2-way, 3-way, 4-way} x {X, Y}
 		};
-		template<typename T> int search_for_adj(vector<T> const &v, vector<unsigned> const &ixs, cube_t const &bcube, bool dim, bool dir, bool debug=0) const {
-			if (debug) {cout << "bcube: " << bcube.str() << endl;}
+		template<typename T> int search_for_adj(vector<T> const &v, vector<unsigned> const &ixs, cube_t const &bcube, bool dim, bool dir) const {
 			for (auto i = ixs.begin(); i != ixs.end(); ++i) {
 				assert(*i < v.size());
 				cube_t const &c(v[*i]);
-				if (debug) {cout << "c[" << *i << "]: " << c.str() << " " << (c.d[dim][!dir]==bcube.d[dim][dir]) << (c.d[!dim][0]==bcube.d[!dim][0]) << (c.d[!dim][1]==bcube.d[!dim][1]) << endl;}
 				if (c.d[dim][!dir] != bcube.d[dim][dir]) continue; // no shared edge
 				if (c.d[!dim][0] != bcube.d[!dim][0] || c.d[!dim][1] != bcube.d[!dim][1]) continue; // no shared edge in other dim
 				return *i; // there can be only one
@@ -923,7 +921,7 @@ class city_road_gen_t {
 			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
 
 			if (check_only) { // only need to do these checks in this case
-				// FIXME: use find_conn_intersection(4)/make_4way_int() to create a new 4-way intersection on one city if one of these fails?
+				// use find_conn_intersection(4)/make_4way_int() to create a new 4-way intersection on one city if one of these fails?
 				if (rn1 && !rn1->check_valid_conn_intersection(road, dim,  dir)) return -1.0; // invalid, don't make any changes
 				if (rn2 && !rn2->check_valid_conn_intersection(road, dim, !dir)) return -1.0;
 
@@ -1080,7 +1078,7 @@ class city_road_gen_t {
 			} // for n
 			return 0; // failed
 		}
-		bool find_car_next_seg(car_t &car) const {
+		bool find_car_next_seg(car_t &car, road_network_t const &global_rn) const {
 			if (car.cur_road_type == TYPE_RSEG) {
 				road_seg_t const &seg(get_car_seg(car));
 				//cout << "before: " << car.str() << endl << "before road bcube: " << get_road_bcube_for_car(car).str() << endl;
@@ -1095,7 +1093,7 @@ class city_road_gen_t {
 			unsigned const orient(car.get_orient());
 			if (!(isec.conn & (1<<orient))) return 0; // no connection; FIXME: make this an error when turning is implemented
 			int const conn_ix(isec.conn_ix[orient]);
-			if (conn_ix < 0) return 0; // FIXME: handle city connector road case
+			if (conn_ix < 0) return 0; // FIXME: handle city connector road case, use global_rn
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
 			car.cur_road      = isec.rix_xy[car.dim];
 			car.cur_seg       = (unsigned)conn_ix;
@@ -1106,7 +1104,7 @@ class city_road_gen_t {
 			}
 			return 1; // done
 		}
-		void update_car(car_t &car, rand_gen_t &rgen) const {
+		void update_car(car_t &car, rand_gen_t &rgen, road_network_t const &global_rn) const {
 			if (car.is_parked()) return; // stopped, no update (for now)
 
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
@@ -1120,6 +1118,7 @@ class city_road_gen_t {
 			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 			if (car.cur_road_type == TYPE_RSEG && bcube.get_dz() != 0.0) {
+				assert(car.cur_city == CONN_CITY_IX);
 				// FIXME: set car.dz when on connector roads
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
@@ -1139,7 +1138,7 @@ class city_road_gen_t {
 			}
 			// car crossing the border of this bcube, update state
 			if (!bcube.contains_pt_xy_inc_low_edge(car.bcube.get_cube_center())) { // move to another road seg/int
-				if (!find_car_next_seg(car)) {car.park(); return;} // update failed, park/stop car (for now)
+				if (!find_car_next_seg(car, global_rn)) {car.park(); return;} // update failed, park/stop car (for now)
 
 				if (is_isect(car.cur_road_type)) { // moved into an intersection, choose direction
 					road_isec_t const &isec(get_car_isec(car));
@@ -1150,7 +1149,7 @@ class city_road_gen_t {
 					orients[TURN_LEFT ] = conn_left [orient_in];
 					orients[TURN_RIGHT] = conn_right[orient_in];
 					
-					// FIXME: path finding update - use A*?
+					// TODO: path finding update - use A*?
 					while (1) {
 						unsigned new_turn_dir(0);
 						int const rval(rand()%4);
@@ -1162,7 +1161,7 @@ class city_road_gen_t {
 					//cout << TXT(orient_in) << TXT(car.get_orient()) << "turn_dir=" << unsigned(car.turn_dir) << " conn=" << unsigned(isec.conn) << endl;
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.turn_dir = TURN_NONE; // FIXME: remove when turning is implemented above
-					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection
+					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
 					if (car.stopped_at_light) {car.decelerate();}
 				}
 			}
@@ -1398,7 +1397,7 @@ public:
 		assert(car.cur_city < road_networks.size());
 		return road_networks[car.cur_city];
 	}
-	void update_car(car_t &car, rand_gen_t &rgen) const {get_car_rn(car).update_car(car, rgen);}
+	void update_car(car_t &car, rand_gen_t &rgen) const {get_car_rn(car).update_car(car, rgen, global_rn);}
 	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 }; // city_road_gen_t
 
@@ -1411,7 +1410,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
 	if (!bcube_ext.intersects(c.bcube)) return 0;
-	assert(c.dim == dim); // FIXME: not valid when using intersections
+	assert(c.dim == dim); // Note: not valid when using intersections, but as long as we use stoplights intersection collisions shouldn't happen, so we don't need to check for them
 	assert(c.dir == dir); // otherwise should be on different sides of the road
 	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
 	bool const move_c((front < c_front) ^ dir); // move the car that's behind
@@ -1465,7 +1464,7 @@ class car_manager_t {
 			cube_t const &c(car.bcube);
 			bool const d(car.dim), D(car.dir);
 			float fz1, fz2, bz1, bz2; // front/back top/bottom
-			if (car.dz == 0.0) {} // FIXME: optimization for level car case (within city)
+			if (car.dz == 0.0) {} // FIXME: optimization for level car case (within city)?
 			if (car.dz > 0.0) {fz1 = c.z1() + car.dz; fz2 = c.z2(); bz1 = c.z1(); bz2 = c.z2() - car.dz;} // going uphill
 			else              {fz1 = c.z1(); fz2 = c.z2() + car.dz; bz1 = c.z1() - car.dz; bz2 = c.z2();} // going downhill or level
 			point p[8];
