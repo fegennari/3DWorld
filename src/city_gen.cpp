@@ -221,7 +221,7 @@ class city_road_gen_t;
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT};
 
 struct car_t {
-	cube_t bcube;
+	cube_t bcube, prev_bcube;
 	bool dim, dir;
 	unsigned char cur_road_type, color_id, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
@@ -247,10 +247,10 @@ struct car_t {
 			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
 		return oss.str();
 	}
+	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	void move(float speed_mult) {
-		vector3d delta(zero_vector);
-		delta[dim] += (dir ? 1.0 : -1.0)*speed*speed_mult;
-		bcube += delta;
+		prev_bcube = bcube;
+		move_by((dir ? 1.0 : -1.0)*speed*speed_mult);
 	}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
@@ -1005,12 +1005,11 @@ class city_road_gen_t {
 			assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 			return 1; // done
 		}
-		void update_car(car_t &car, float speed_mult, rand_gen_t &rgen) const {
+		void update_car(car_t &car, rand_gen_t &rgen) const {
 			if (car.is_stopped()) return; // stopped, no update (for now)
 			cube_t const bcube(get_road_bcube_for_car(car));
 			assert(bcube.intersects_xy(car.bcube)); // sanity check
 			cube_t const prev_bcube(car.bcube);
-			car.move(speed_mult);
 			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 			if (car.cur_road_type == TYPE_RSEG && bcube.get_dz() != 0.0) {
@@ -1285,7 +1284,7 @@ public:
 		assert(car.cur_city < road_networks.size());
 		return road_networks[car.cur_city];
 	}
-	void update_car(car_t &car, float speed, rand_gen_t &rgen) const {get_car_rn(car).update_car(car, speed, rgen);}
+	void update_car(car_t &car, rand_gen_t &rgen) const {get_car_rn(car).update_car(car, rgen);}
 	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 }; // city_road_gen_t
 
@@ -1308,10 +1307,20 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
 	float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
 	point delta(all_zeros);
-	delta[dim]  += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
+	delta[dim] += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
 	cube_t const &bcube(road_gen.get_road_bcube_for_car(cmove));
-	if (cmove.dir) {max_eq(delta[dim], min(0.0f, (bcube.d[cmove.dim][0] - cmove.bcube.d[cmove.dim][0])));} // keep the car from moving outside its current segment
-	else           {min_eq(delta[dim], max(0.0f, (bcube.d[cmove.dim][1] - cmove.bcube.d[cmove.dim][1])));}
+
+	if (!bcube.contains_cube_xy(cmove.bcube + delta)) { // moved outside its current road segment bcube
+		//if (cmove.bcube == cmove.prev_bcube) {return 1;} // collided, but not safe to move the car (init pos or second collision)
+		if (cmove.bcube != cmove.prev_bcube) { // try resetting to last frame's position
+			cmove.bcube  = cmove.prev_bcube; // restore prev frame's pos
+			return 1; // done
+		}
+		else { // keep the car from moving outside its current segment (init collision case)
+			if (cmove.dir) {max_eq(delta[dim], min(0.0f, 0.999f*(bcube.d[cmove.dim][0] - cmove.bcube.d[cmove.dim][0])));}
+			else           {min_eq(delta[dim], max(0.0f, 0.999f*(bcube.d[cmove.dim][1] - cmove.bcube.d[cmove.dim][1])));}
+		}
+	}
 	cmove.bcube += delta;
 	return 1;
 }
@@ -1390,20 +1399,19 @@ public:
 		cout << "Cars: " << cars.size() << endl;
 	}
 	void next_frame(float car_speed) {
-		if (cars.empty()) return;
+		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars");
 		sort(cars.begin(), cars.end()); // sort by city/road/segment; is this a good idea?
 		float const speed(0.001*car_speed*fticks);
-		
-		for (auto i = cars.begin(); i != cars.end(); ++i) {
-			for (auto j = i+1; j != cars.end(); ++j) {
-				if (i->cur_city == j->cur_city && i->cur_road_type == j->cur_road_type && i->cur_seg == j->cur_seg) {
-					i->check_collision(*j, road_gen); // collided, ensure car is still within its 
-				}
+		for (auto i = cars.begin(); i != cars.end(); ++i) {i->move(speed);} // move cars
+
+		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection and update logic
+			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
+				if (i->cur_city == j->cur_city && i->cur_road == j->cur_road) {i->check_collision(*j, road_gen);}
 				else {break;}
 			}
-			if (animate2) {road_gen.update_car(*i, speed, rgen);}
-		}
+			road_gen.update_car(*i, rgen);
+		} // for i
 	}
 	void draw(vector3d const &xlate) {
 		if (cars.empty()) return;
