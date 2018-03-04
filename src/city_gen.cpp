@@ -877,7 +877,7 @@ class city_road_gen_t {
 						if (!(isec.conn & (1<<d))) continue; // no connection in this position
 						unsigned const dim(d>>1), dir(d&1);
 						int const ix(isec.rix_xy[dim]);
-						if (ix < 0) continue; // FIXME: global connector road
+						if (ix < 0) {isec.conn_ix[d] = -1; continue;} // FIXME: global connector road
 						int const seg_ix(search_for_adj(segs, by_ix[ix].seg_ixs, isec, (dim != 0), (dir != 0))); // always connects to a road segment
 						//cout << TXT(n) << TXT(i) << TXT(d) << TXT(dim) << TXT(dir) << TXT(ix) << TXT(seg_ix) << "sz " << by_ix[ix].seg_ixs.size() << endl;
 						assert(seg_ix >= 0); // must be found
@@ -1046,6 +1046,8 @@ class city_road_gen_t {
 		}
 
 		// cars
+		static float get_car_lane_offset() {return CAR_LANE_OFFSET*city_params.road_width;}
+
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
 
@@ -1067,7 +1069,7 @@ class city_road_gen_t {
 				float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
 				if (val1 >= val2) continue; // failed, try again (connector road junction?)
 				pos[!seg.dim]  = 0.5*(seg.d[!seg.dim][0] + seg.d[!seg.dim][1]); // center of road
-				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*(CAR_LANE_OFFSET*city_params.road_width); // place in right lane
+				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*get_car_lane_offset(); // place in right lane
 				pos[ seg.dim] = rgen.rand_uniform(val1, val2); // place at random pos in segment
 				pos.z = seg.d[2][1] + 0.5*car_sz.z; // place above road surface
 				if (seg.dim) {swap(car_sz.x, car_sz.y);}
@@ -1091,11 +1093,13 @@ class city_road_gen_t {
 			}
 			road_isec_t const &isec(get_car_isec(car)); // conn_ix: {-x, +x, -y, +y}
 			unsigned const orient(car.get_orient());
-			if (!(isec.conn & (1<<orient))) return 0; // no connection; FIXME: make this an error when turning is implemented
+			assert(isec.conn & (1<<orient));
 			int const conn_ix(isec.conn_ix[orient]);
 			if (conn_ix < 0) return 0; // FIXME: handle city connector road case, use global_rn
+			int const rix(isec.rix_xy[car.dim]);
+			assert(rix >= 0); // connector road, use global_rn
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
-			car.cur_road      = isec.rix_xy[car.dim];
+			car.cur_road      = (unsigned)rix;
 			car.cur_seg       = (unsigned)conn_ix;
 			
 			if (!get_road_bcube_for_car(car).intersects_xy(car.bcube)) { // sanity check
@@ -1124,14 +1128,22 @@ class city_road_gen_t {
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
 				if (car.turn_dir != TURN_NONE) {
 					assert(is_isect(car.cur_road_type));
-
-					if (car.turn_dir == TURN_LEFT) {
-
+					bool const dim(car.dim);
+					float const car_lane_offset(get_car_lane_offset()), isec_center(bcube.get_cube_center()[dim]);
+					float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
+					float const prev_val(car.prev_bcube.get_cube_center()[dim]), cur_val(car.bcube.get_cube_center()[dim]);
+					
+					if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
+						car.move_by(centerline - cur_val); // align to lane centerline
+						vector3d const car_sz(car.bcube.get_size());
+						float const size_adj(0.5*(car_sz[dim] - car_sz[!dim]));
+						vector3d expand(zero_vector);
+						expand[dim] -= size_adj; expand[!dim] += size_adj;
+						car.bcube.expand_by(expand); // fix aspect ratio
+						if ((dim == 0) ^ (car.turn_dir == TURN_LEFT)) {car.dir ^= 1;}
+						car.dim ^= 1;
+						car.turn_dir = TURN_NONE; // turn completed
 					}
-					else { // TURN_RIGHT
-						
-					}
-					// FIXME: turn when at center of intersection
 				}
 				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 				return; // done
@@ -1160,7 +1172,6 @@ class city_road_gen_t {
 					} // end while
 					//cout << TXT(orient_in) << TXT(car.get_orient()) << "turn_dir=" << unsigned(car.turn_dir) << " conn=" << unsigned(isec.conn) << endl;
 					assert(isec.conn & (1<<orients[car.turn_dir]));
-					car.turn_dir = TURN_NONE; // FIXME: remove when turning is implemented above
 					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
 					if (car.stopped_at_light) {car.decelerate();}
 				}
@@ -1184,6 +1195,7 @@ class city_road_gen_t {
 			return iv[car.cur_seg];
 		}
 		cube_t get_road_bcube_for_car(car_t const &car) const {
+			assert(car.cur_road < roads.size());
 			if (car.cur_road_type == TYPE_RSEG) {return get_car_seg(car);}
 			return get_car_isec(car);
 		}
@@ -1410,7 +1422,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
 	if (!bcube_ext.intersects(c.bcube)) return 0;
-	assert(c.dim == dim); // Note: not valid when using intersections, but as long as we use stoplights intersection collisions shouldn't happen, so we don't need to check for them
+	if (c.dim != dim) return 0; // turning in an intersection
 	assert(c.dir == dir); // otherwise should be on different sides of the road
 	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
 	bool const move_c((front < c_front) ^ dir); // move the car that's behind
