@@ -175,8 +175,9 @@ struct car_t {
 		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 		move_by((dir ? 1.0 : -1.0)*dist);
 	}
-	void accelerate() {cur_speed = min(max_speed, (cur_speed + 0.02f*fticks*max_speed));}
-	void decelerate() {cur_speed = max(0.0f, (cur_speed - 10.0f*fticks*max_speed));} // Note: large decel to avoid stopping in an intersection
+	void accelerate(float mult=0.02) {cur_speed = min(max_speed, (cur_speed + mult*fticks*max_speed));}
+	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
+	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
@@ -1114,7 +1115,7 @@ class city_road_gen_t {
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.cur_speed == 0.0);
 				if (!is_isect(car.cur_road_type) || !get_car_isec(car).red_light(car)) {car.stopped_at_light = 0;} // can go now
-				else {car.decelerate();}
+				else {car.decelerate_fast();}
 				if (was_stopped) return; // no update needed
 			} else {car.accelerate();}
 			cube_t const bcube(get_road_bcube_for_car(car));
@@ -1173,7 +1174,7 @@ class city_road_gen_t {
 					//cout << TXT(orient_in) << TXT(car.get_orient()) << "turn_dir=" << unsigned(car.turn_dir) << " conn=" << unsigned(isec.conn) << endl;
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
-					if (car.stopped_at_light) {car.decelerate();}
+					if (car.stopped_at_light) {car.decelerate_fast();}
 				}
 			}
 			assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
@@ -1417,7 +1418,9 @@ public:
 bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 
 	//if (dim != c.dim || dir != c.dir) return 0;
-	float const sep_dist(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
+	float const avg_len(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
+	float const avg_speed(0.5*(cur_speed + c.cur_speed)); // relative to max speed of 1.0
+	float const sep_dist(avg_len*(0.25 + 1.0*avg_speed)); // 25% to 125% car length, depending on speed
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
@@ -1430,6 +1433,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	car_t &cmove(move_c ? c : *this); // the car that will be moved
 	car_t const &cstay(move_c ? *this : c); // the car that won't be moved
 	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
+	cmove.decelerate();
 	float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
 	point delta(all_zeros);
 	delta[dim] += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
