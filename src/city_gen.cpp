@@ -151,7 +151,8 @@ struct car_t {
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
-	bool is_parked() const {return (max_speed == 0.0);}
+	bool is_stopped() const {return (cur_speed == 0.0);}
+	bool is_parked () const {return (max_speed == 0.0);}
 	void park() {cur_speed = max_speed = 0.0;}
 
 	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
@@ -1433,7 +1434,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	car_t &cmove(move_c ? c : *this); // the car that will be moved
 	car_t const &cstay(move_c ? *this : c); // the car that won't be moved
 	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
-	cmove.decelerate();
+	if (cstay.is_stopped()) {cmove.decelerate_fast();} else {cmove.decelerate();}
 	float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
 	point delta(all_zeros);
 	delta[dim] += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
