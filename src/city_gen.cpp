@@ -864,7 +864,7 @@ class city_road_gen_t {
 						if (ix < 0) { // global connector road
 							ix = decode_neg_ix(ix);
 							assert((unsigned)ix < global_rn.roads.size());
-							continue; // FIXME: connector road
+							continue; // connector road, nothing else to do here?
 						}
 						else {
 							assert((unsigned)ix < roads.size());
@@ -1129,7 +1129,7 @@ class city_road_gen_t {
 				pos[!seg.dim]  = 0.5*(seg.d[!seg.dim][0] + seg.d[!seg.dim][1]); // center of road
 				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*get_car_lane_offset(); // place in right lane
 				pos[ seg.dim] = rgen.rand_uniform(val1, val2); // place at random pos in segment
-				pos.z = seg.d[2][1] + 0.5*car_sz.z; // place above road surface
+				pos.z = seg.z2() + 0.5*car_sz.z; // place above road surface
 				if (seg.dim) {swap(car_sz.x, car_sz.y);}
 				car.bcube.set_from_point(pos);
 				car.bcube.expand_by(0.5*car_sz);
@@ -1145,6 +1145,7 @@ class city_road_gen_t {
 				car.cur_road_type = seg.conn_type[car.dir];
 				car.cur_road      = seg.road_ix;
 				car.cur_seg       = seg.conn_ix[car.dir];
+				//car.cur_city = ?; // FIXME: transition from global road network back to local city roads
 				//cout << "after : " << car.str() << endl << "after  road bcube: " << get_road_bcube_for_car(car).str() << endl;
 				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 				return 1; // always within same city, no city update
@@ -1152,19 +1153,25 @@ class city_road_gen_t {
 			road_isec_t const &isec(get_car_isec(car)); // conn_ix: {-x, +x, -y, +y}
 			unsigned const orient(car.get_orient());
 			assert(isec.conn & (1<<orient));
-			int const conn_ix(isec.conn_ix[orient]);
+			int conn_ix(isec.conn_ix[orient]), rix(isec.rix_xy[car.dim]);
 
-			if (conn_ix < 0) { // FIXME: handle city connector road case, use global_rn
-				return 0;
+			if (conn_ix < 0) { // city connector road case, use global_rn
+				assert(rix < 0);
+				conn_ix = decode_neg_ix(conn_ix);
+				assert((unsigned)conn_ix < global_rn.segs.size());
+				rix = global_rn.segs[conn_ix].road_ix;
+				car.cur_city = CONN_CITY_IX; // move to global road network
 			}
-			int const rix(isec.rix_xy[car.dim]);
-			assert(rix >= 0); // connector road, use global_rn
+			else {
+				assert(rix >= 0); // local road
+			}
+			car.cur_road = (unsigned)rix;
+			car.cur_seg  = (unsigned)conn_ix;
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
-			car.cur_road      = (unsigned)rix;
-			car.cur_seg       = (unsigned)conn_ix;
-			
-			if (!get_road_bcube_for_car(car).intersects_xy(car.bcube)) { // sanity check
-				cout << "bad intersection:" << endl << car.str() << endl << get_road_bcube_for_car(car).str() << endl;
+			cube_t const bcube(get_road_bcube_for_car(car, global_rn));
+
+			if (!bcube.intersects_xy(car.bcube)) { // sanity check
+				cout << "bad intersection:" << endl << car.str() << endl << bcube.str() << endl;
 				assert(0);
 			}
 			return 1; // done
@@ -1181,15 +1188,24 @@ class city_road_gen_t {
 			cube_t const bcube(get_road_bcube_for_car(car));
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << bcube.str() << endl; assert(0);} // sanity check
 			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
+			bool const dim(car.dim);
+			float const road_dz(bcube.get_dz());
 
-			if (car.cur_road_type == TYPE_RSEG && bcube.get_dz() != 0.0) {
+			if (car.cur_road_type == TYPE_RSEG && road_dz != 0.0) {
 				assert(car.cur_city == CONN_CITY_IX);
-				// FIXME: set car.dz when on connector roads
+				bool const slope(get_car_seg(car).slope);
+				float const car_pos(0.5*(car.bcube.d[dim][0] + car.bcube.d[dim][1])); // center of car in dim
+				float const road_len(bcube.d[dim][1] - bcube.d[dim][0]);
+				float const t((car_pos - bcube.d[dim][0])/road_len); // car pos along road in (0.0, 1.0)
+				float const road_z(bcube.d[2][slope] + t*(bcube.d[2][!slope] - bcube.d[2][slope]));
+				float const car_height(car.bcube.get_dz()), car_len(car.bcube.d[dim][1] - car.bcube.d[dim][0]);
+				car.bcube.z1() = road_z;
+				car.bcube.z2() = road_z + car_height;
+				car.dz = ((slope ^ car.dir) ? 1.0 : -1.0)*road_dz*(car_len/road_len);
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
 				if (car.turn_dir != TURN_NONE) {
 					assert(is_isect(car.cur_road_type));
-					bool const dim(car.dim);
 					float const car_lane_offset(get_car_lane_offset()), isec_center(bcube.get_cube_center()[dim]);
 					float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
 					float const prev_val(car.prev_bcube.get_cube_center()[dim]), cur_val(car.bcube.get_cube_center()[dim]);
@@ -1237,7 +1253,7 @@ class city_road_gen_t {
 					if (car.stopped_at_light) {car.decelerate_fast();}
 				}
 			}
-			assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
+			assert(get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
 		}
 		void next_frame() {
 			for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped
@@ -1259,6 +1275,11 @@ class city_road_gen_t {
 			assert(car.cur_road < roads.size());
 			if (car.cur_road_type == TYPE_RSEG) {return get_car_seg(car);}
 			return get_car_isec(car);
+		}
+		cube_t get_road_bcube_for_car(car_t const &car, road_network_t const &global_rn) const { // function variant that works with both global and local roads
+			if (car.cur_city == city_id) {return get_road_bcube_for_car(car);}
+			else if (car.cur_city == CONN_CITY_IX) {return global_rn.get_road_bcube_for_car(car);}
+			else {assert(0); return cube_t();}
 		}
 	}; // road_network_t
 
