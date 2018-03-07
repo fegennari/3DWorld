@@ -1500,8 +1500,8 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 
 	//if (dim != c.dim || dir != c.dir) return 0;
 	float const avg_len(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
-	float const avg_speed(0.5*(cur_speed + c.cur_speed)); // relative to max speed of 1.0
-	float const sep_dist(avg_len*(0.25 + 1.0*avg_speed)); // 25% to 125% car length, depending on speed
+	float const min_speed(min(cur_speed, c.cur_speed)); // relative to max speed of 1.0
+	float const sep_dist(avg_len*(0.25 + 1.0*min_speed)); // 25% to 125% car length, depending on speed
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
