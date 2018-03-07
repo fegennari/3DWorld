@@ -146,15 +146,16 @@ struct car_t {
 	bool dim, dir, stopped_at_light;
 	unsigned char cur_road_type, color_id, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
-	float dz, cur_speed, max_speed;
+	float dz, height, cur_speed, max_speed;
 
 	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
-		cur_city(0), cur_road(0), cur_seg(0), dz(0.0), cur_speed(0.0), max_speed(0.0) {}
+		cur_city(0), cur_road(0), cur_seg(0), dz(0.0), height(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
-	bool is_stopped() const {return (cur_speed == 0.0);}
-	bool is_parked () const {return (max_speed == 0.0);}
+	float get_length() const {return (bcube.d[dim][1] - bcube.d[dim][0]);}
+	bool is_stopped () const {return (cur_speed == 0.0);}
+	bool is_parked  () const {return (max_speed == 0.0);}
 	void park() {cur_speed = max_speed = 0.0;}
 
 	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
@@ -1123,6 +1124,7 @@ class city_road_gen_t {
 				car.turn_dir = TURN_NONE;
 				vector3d car_sz; // {length, width, height}
 				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*rgen.rand_uniform(0.9, 1.1)*city_params.road_width;}
+				car.height = car_sz.z;
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
 				if (val1 >= val2) continue; // failed, try again (connector road junction?)
@@ -1198,10 +1200,10 @@ class city_road_gen_t {
 				float const road_len(bcube.d[dim][1] - bcube.d[dim][0]);
 				float const t((car_pos - bcube.d[dim][0])/road_len); // car pos along road in (0.0, 1.0)
 				float const road_z(bcube.d[2][slope] + t*(bcube.d[2][!slope] - bcube.d[2][slope]));
-				float const car_height(car.bcube.get_dz()), car_len(car.bcube.d[dim][1] - car.bcube.d[dim][0]);
-				car.bcube.z1() = road_z;
-				car.bcube.z2() = road_z + car_height;
+				float const car_len(car.get_length());
 				car.dz = ((slope ^ car.dir) ? 1.0 : -1.0)*road_dz*(car_len/road_len);
+				car.bcube.z1() = road_z - 0.5*fabs(car.dz);
+				car.bcube.z2() = road_z + 0.5*fabs(car.dz) + car.height;
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
 				if (car.turn_dir != TURN_NONE) {
@@ -1560,10 +1562,11 @@ class car_manager_t {
 			colorRGBA const &color(car_colors[car.color_id]);
 			cube_t const &c(car.bcube);
 			bool const d(car.dim), D(car.dir);
+			float const dz(car.dz);//, dx(dz*car.height/car.get_length());
 			float fz1, fz2, bz1, bz2; // front/back top/bottom
-			if (car.dz == 0.0) {} // FIXME: optimization for level car case (within city)?
-			if (car.dz > 0.0) {fz1 = c.z1() + car.dz; fz2 = c.z2(); bz1 = c.z1(); bz2 = c.z2() - car.dz;} // going uphill
-			else              {fz1 = c.z1(); fz2 = c.z2() + car.dz; bz1 = c.z1() - car.dz; bz2 = c.z2();} // going downhill or level
+			if (dz == 0.0) {} // FIXME: optimization for level car case (within city)?
+			if (dz > 0.0) {fz1 = c.z1() + dz; fz2 = c.z2(); bz1 = c.z1(); bz2 = c.z2() - dz;} // going uphill
+			else          {fz1 = c.z1(); fz2 = c.z2() + dz; bz1 = c.z1() - dz; bz2 = c.z2();} // going downhill or level
 			point p[8];
 			p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = fz1; p[4].z = fz2; // front right
 			p[1][!d] = p[5][!d] = c.d[!d][0]; p[1][d] = p[5][d] = c.d[d][ D]; p[1].z = fz1; p[5].z = fz2; // front left
