@@ -143,12 +143,12 @@ class city_road_gen_t;
 
 struct car_t {
 	cube_t bcube, prev_bcube;
-	bool dim, dir, stopped_at_light;
+	bool dim, dir, stopped_at_light, entering_city;
 	unsigned char cur_road_type, color_id, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
 	float height, dz, rot_z, cur_speed, max_speed;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
 		cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
@@ -1156,6 +1156,7 @@ class city_road_gen_t {
 						assert(car.cur_seg  < isecs.size());
 						car.cur_road = isecs[car.cur_seg].rix_xy[!car.dim]; // use the road in the other dim, since it must be within the new city
 						assert(car.cur_road < rn.roads.size());
+						car.entering_city = 1; // flag so that collision detection works
 					}
 				}
 				assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
@@ -1179,6 +1180,7 @@ class city_road_gen_t {
 			car.cur_road = (unsigned)rix;
 			car.cur_seg  = (unsigned)conn_ix;
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
+			car.entering_city = 0;
 			cube_t const bcube(get_road_bcube_for_car(car, global_rn));
 
 			if (!bcube.intersects_xy(car.bcube)) { // sanity check
@@ -1238,6 +1240,7 @@ class city_road_gen_t {
 					if ((dim == 0) ^ (car.turn_dir == TURN_LEFT)) {car.dir ^= 1;}
 					car.dim ^= 1;
 					car.turn_dir = TURN_NONE; // turn completed
+					car.entering_city = 0;
 				}
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
@@ -1295,7 +1298,7 @@ class city_road_gen_t {
 			return iv[car.cur_seg];
 		}
 		cube_t get_road_bcube_for_car(car_t const &car) const {
-			assert(car.cur_road < roads.size());
+			assert(car.cur_road < roads.size()); // Note: generally holds, but not required
 			if (car.cur_road_type == TYPE_RSEG) {return get_car_seg(car);}
 			return get_car_isec(car);
 		}
@@ -1619,6 +1622,7 @@ class car_manager_t {
 	vector<car_t> cars;
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
+	vector<unsigned> entering_city;
 
 public:
 	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
@@ -1644,14 +1648,20 @@ public:
 		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars");
 		sort(cars.begin(), cars.end()); // sort by city/road/segment; is this a good idea?
+		entering_city.clear();
 		float const speed(0.001*car_speed*fticks);
-		for (auto i = cars.begin(); i != cars.end(); ++i) {i->move(speed);} // move cars
-
+		
+		for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
+			i->move(speed);
+			if (i->entering_city) {entering_city.push_back(i - cars.begin());} // record for use in collision detection
+		}
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
-			// FIXME: doesn't work when back car is on connector road and front car is in connector<=>city intersection
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
 				if (i->cur_city == j->cur_city && i->cur_road == j->cur_road) {i->check_collision(*j, road_gen);}
 				else {break;}
+			}
+			for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
+				if (*ix != (i - cars.begin())) {i->check_collision(cars[*ix], road_gen);}
 			}
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
