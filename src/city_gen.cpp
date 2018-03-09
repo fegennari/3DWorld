@@ -825,12 +825,10 @@ class city_road_gen_t {
 		struct road_ixs_t {
 			vector<unsigned> seg_ixs, isec_ixs[3][2]; // {2-way, 3-way, 4-way} x {X, Y}
 		};
-		template<typename T> int search_for_adj(vector<T> const &v, vector<unsigned> const &ixs, cube_t const &bcube, bool dim, bool dir, bool debug=0) const {
-			if (debug) {cout << "bcube: " << bcube.str() << " " << TXT(dim) << TXT(dir) << TXT(ixs.size()) << endl;}
+		template<typename T> int search_for_adj(vector<T> const &v, vector<unsigned> const &ixs, cube_t const &bcube, bool dim, bool dir) const {
 			for (auto i = ixs.begin(); i != ixs.end(); ++i) {
 				assert(*i < v.size());
 				cube_t const &c(v[*i]);
-				if (debug) {cout << "c[" << *i << "]: " << c.str() << " " << (c.d[dim][!dir]==bcube.d[dim][dir]) << (c.d[!dim][0]==bcube.d[!dim][0]) << (c.d[!dim][1]==bcube.d[!dim][1]) << endl;}
 				if (c.d[dim][!dir] != bcube.d[dim][dir]) continue; // no shared edge
 				if (c.d[!dim][0] != bcube.d[!dim][0] || c.d[!dim][1] != bcube.d[!dim][1]) continue; // no shared edge in other dim
 				return *i; // there can be only one
@@ -865,7 +863,6 @@ class city_road_gen_t {
 				for (unsigned i = 0; i < isecs[n].size(); ++i) {
 					for (unsigned d = 0; d < 2; ++d) { // {x, y}
 						int ix(isecs[n][i].rix_xy[d]);
-						//cout << TXT(n) << TXT(i) << TXT(d) << TXT(ix) << endl;
 
 						if (ix < 0) { // global connector road
 							ix = decode_neg_ix(ix);
@@ -889,12 +886,10 @@ class city_road_gen_t {
 				for (unsigned dir = 0; dir < 2; ++dir) { // dir
 					bool found(0);
 					int const seg_ix(search_for_adj(segs, rix.seg_ixs, seg, seg.dim, (dir != 0)));
-					//cout << TXT(i) << TXT(seg.road_ix) << TXT(dir) << TXT(seg.dim) << TXT(seg_ix) << "sz: " << rix.seg_ixs.size() << endl;
 					if (seg_ix >= 0) {assert(seg_ix != i); seg.conn_ix[dir] = seg_ix; seg.conn_type[dir] = TYPE_RSEG; found = 1;} // found segment
 
 					for (unsigned n = 0; n < 3; ++n) { // 2-way, 3-way, 4-way
 						int const isec_ix(search_for_adj(isecs[n], rix.isec_ixs[n][seg.dim], seg, seg.dim, (dir != 0)));
-						//cout << TXT(n) << TXT(isec_ix) << "sz: " << rix.isec_ixs[n][seg.dim].size() << endl;
 						if (isec_ix >= 0) {assert(!found); seg.conn_ix[dir] = isec_ix; seg.conn_type[dir] = (TYPE_ISEC2 + n); found = 1;} // found intersection
 					}
 					if (is_global_rn && !found) { // connection to a city
@@ -926,7 +921,6 @@ class city_road_gen_t {
 						int const ix(isec.rix_xy[dim]);
 
 						if (ix < 0) { // global connector road
-									  //cout << TXT(ix) << TXT(city_id) << endl;
 							vector<unsigned> const &seg_ids(global_rn.get_segs_connecting_to_city(city_id));
 							assert(!seg_ids.empty());
 							int const seg_ix(global_rn.search_for_adj(global_rn.segs, seg_ids, isec, (dim != 0), (dir != 0))); // global conn segment
@@ -935,7 +929,6 @@ class city_road_gen_t {
 						}
 						else { // local segment
 							int const seg_ix(search_for_adj(segs, by_ix[ix].seg_ixs, isec, (dim != 0), (dir != 0))); // always connects to a road segment
-																													 //cout << TXT(n) << TXT(i) << TXT(d) << TXT(dim) << TXT(dir) << TXT(ix) << TXT(seg_ix) << "sz " << by_ix[ix].seg_ixs.size() << endl;
 							assert(seg_ix >= 0); // must be found
 							isec.conn_ix[d] = seg_ix;
 						}
@@ -1171,7 +1164,6 @@ class city_road_gen_t {
 			road_isec_t const &isec(get_car_isec(car)); // conn_ix: {-x, +x, -y, +y}
 			unsigned const orient(car.get_orient());
 			int conn_ix(isec.conn_ix[orient]), rix(isec.rix_xy[car.dim]);
-			if ((isec.conn & (1<<orient)) == 0) {cout << TXT(conn_ix) << TXT(unsigned(isec.conn)) << TXT(orient) << TXT(rix) << TXT(car.dim) << TXT(car.dir) << endl;}
 			assert(isec.conn & (1<<orient));
 
 			if (conn_ix < 0) { // city connector road case, use global_rn
@@ -1274,7 +1266,6 @@ class city_road_gen_t {
 						else                {new_turn_dir = TURN_NONE ;} // 50%
 						if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;}
 					} // end while
-					//cout << TXT(orient_in) << TXT(car.get_orient()) << "turn_dir=" << unsigned(car.turn_dir) << " conn=" << unsigned(isec.conn) << endl;
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
 					if (car.stopped_at_light) {car.decelerate_fast();}
