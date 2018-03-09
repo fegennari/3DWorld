@@ -15,7 +15,7 @@ bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edg
 float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
-vector3d const CAR_SIZE(0.28, 0.13, 0.07); // {length, width, height} in units of road width
+vector3d const CAR_SIZE(0.30, 0.13, 0.10); // {length, width, height} in units of road width
 colorRGBA const road_color          = WHITE; // all road parts are the same color, to make the textures match
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -1576,44 +1576,57 @@ class car_manager_t {
 		}
 		virtual void draw_unshadowed() {qbds[0].draw_and_clear();}
 
-		void draw_car(car_t const &car) { // Note: all quads
-			if (!check_cube_visible(car.bcube)) return;
-			begin_tile(car.get_center()); // enable shadows
-			quad_batch_draw &qbd(qbds[emit_now]);
-			assert(car.color_id < NUM_CAR_COLORS);
-			colorRGBA const &color(car_colors[car.color_id]);
-			cube_t const &c(car.bcube);
-			bool const d(car.dim), D(car.dir);
-			point const center(c.get_cube_center());
-			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height); // bottom/top
-			point p[8];
+		static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {
 			p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = z1; p[4].z = z2; // front right
 			p[1][!d] = p[5][!d] = c.d[!d][0]; p[1][d] = p[5][d] = c.d[d][ D]; p[1].z = z1; p[5].z = z2; // front left
 			p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = z1; p[6].z = z2; // back  left
 			p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = z1; p[7].z = z2; // back  right
-			
-			if (car.dz != 0.0) { // rotate all points about dim !d
-				float const sine_val((D ? 1.0 : -1.0)*car.dz/car.get_length()), cos_val(sqrt(1.0 - sine_val*sine_val));
-
-				for (unsigned i = 0; i < 8; ++i) {
-					point &v(p[i]); // rotate p[i]
-					v -= center; // translate to origin
-					float const xy(v[d]*cos_val - v.z*sine_val), z(v.z*cos_val + v[d]*sine_val);
-					v[d] = xy; v.z = z; // rotate
-					v += center; // translate back
-				}
+		}
+		static void rotate_pts(point const &center, float sine_val, float cos_val, bool d, point p[8]) {
+			for (unsigned i = 0; i < 8; ++i) {
+				point &v(p[i]); // rotate p[i]
+				v -= center; // translate to origin
+				float const xy(v[d]*cos_val - v.z*sine_val), z(v.z*cos_val + v[d]*sine_val);
+				v[d] = xy; v.z = z; // rotate
+				v += center; // translate back
 			}
-			if (car.rot_z != 0.0) {} // FIXME: implement turning about the z-axis
+		}
+		void draw_cube(bool d, bool D, colorRGBA const &color, point const p[8]) {
 			float const sign((d^D) ? -1.0 : 1.0);
 			vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1])).get_norm()*sign);
 			vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1])).get_norm()*sign);
 			vector3d right_n(all_zeros); right_n[!d] = -1.0;
 			//qbd.add_quad_pts(p+0, color, -top_n); // bottom - not actually drawn
-			qbd.add_quad_pts(p+4, color,  top_n); // top
+			quad_batch_draw &qbd(qbds[emit_now]);
+			qbd.add_quad_pts(p+4, color, top_n); // top
 			{point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, color,  front_n);} // front
 			{point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, color, -front_n);} // back
 			{point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
 			{point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, color, -right_n);} // left
+		}
+		void draw_car(car_t const &car) { // Note: all quads
+			if (!check_cube_visible(car.bcube)) return;
+			begin_tile(car.get_center()); // enable shadows
+			assert(car.color_id < NUM_CAR_COLORS);
+			colorRGBA const &color(car_colors[car.color_id]);
+			cube_t const &c(car.bcube);
+			point const center(c.get_cube_center());
+			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), length(car.get_length());
+			point pb[8], pt[8]; // bottom and top sections
+			cube_t top_part(c);
+			top_part.d[car.dim][0] += (car.dir ? 0.25 : 0.30)*length; // back
+			top_part.d[car.dim][1] -= (car.dir ? 0.30 : 0.25)*length; // front
+			set_cube_pts(c,        z1, center.z, car.dim, car.dir, pb); // bottom
+			set_cube_pts(top_part, center.z, z2, car.dim, car.dir, pt); // top
+			
+			if (car.dz != 0.0) { // rotate all points about dim !d
+				float const sine_val((car.dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
+				rotate_pts(center, sine_val, cos_val, car.dim, pb);
+				rotate_pts(center, sine_val, cos_val, car.dim, pt);
+			}
+			if (car.rot_z != 0.0) {} // FIXME: implement turning about the z-axis
+			draw_cube(car.dim, car.dir, color, pb);
+			draw_cube(car.dim, car.dir, color, pt);
 			if (emit_now) {qbds[1].draw_and_clear();} // shadowed (FIXME: only when tile changes)
 		}
 	}; // car_draw_state_t
