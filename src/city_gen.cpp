@@ -1673,8 +1673,10 @@ public:
 				if (i->cur_city == j->cur_city && i->cur_road == j->cur_road) {i->check_collision(*j, road_gen);}
 				else {break;}
 			}
-			for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
-				if (*ix != (i - cars.begin())) {i->check_collision(cars[*ix], road_gen);}
+			if (i->cur_city == CONN_CITY_IX) { // on connector road, check before entering intersection to a city
+				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
+					if (*ix != (i - cars.begin())) {i->check_collision(cars[*ix], road_gen);}
+				}
 			}
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
