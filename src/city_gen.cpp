@@ -1130,7 +1130,7 @@ class city_road_gen_t {
 				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*rgen.rand_uniform(0.9, 1.1)*city_params.road_width;}
 				car.height = car_sz.z;
 				point pos;
-				float val1(seg.d[seg.dim][0] + 0.5*car_sz.x), val2(seg.d[seg.dim][1] - 0.5*car_sz.x);
+				float val1(seg.d[seg.dim][0] + 0.6*car_sz.x), val2(seg.d[seg.dim][1] - 0.6*car_sz.x);
 				if (val1 >= val2) continue; // failed, try again (connector road junction?)
 				pos[!seg.dim]  = 0.5*(seg.d[!seg.dim][0] + seg.d[!seg.dim][1]); // center of road
 				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*get_car_lane_offset(); // place in right lane
@@ -1144,7 +1144,7 @@ class city_road_gen_t {
 			} // for n
 			return 0; // failed
 		}
-		bool find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
+		void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			if (car.cur_road_type == TYPE_RSEG) {
 				road_seg_t const &seg(get_car_seg(car));
 				car.cur_road_type = seg.conn_type[car.dir];
@@ -1166,7 +1166,7 @@ class city_road_gen_t {
 					}
 				}
 				assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
-				return 1; // always within same city, no city update
+				return; // always within same city, no city update
 			}
 			road_isec_t const &isec(get_car_isec(car)); // conn_ix: {-x, +x, -y, +y}
 			unsigned const orient(car.get_orient());
@@ -1193,7 +1193,6 @@ class city_road_gen_t {
 				cout << "bad intersection:" << endl << car.str() << endl << bcube.str() << endl;
 				assert(0);
 			}
-			return 1; // done
 		}
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
@@ -1230,32 +1229,32 @@ class city_road_gen_t {
 				car.bcube.z1() = road_z;
 				car.bcube.z2() = road_z + car.height;
 			}
-			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
-				if (car.turn_dir != TURN_NONE) {
-					assert(is_isect(car.cur_road_type));
-					float const car_lane_offset(get_car_lane_offset()), isec_center(bcube.get_cube_center()[dim]);
-					float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
-					float const prev_val(car.prev_bcube.get_cube_center()[dim]), cur_val(car.bcube.get_cube_center()[dim]);
-					// FIXME: set car.rot_z while turning
-					
-					if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
-						car.move_by(centerline - cur_val); // align to lane centerline
-						vector3d const car_sz(car.bcube.get_size());
-						float const size_adj(0.5*(car_sz[dim] - car_sz[!dim]));
-						vector3d expand(zero_vector);
-						expand[dim] -= size_adj; expand[!dim] += size_adj;
-						car.bcube.expand_by(expand); // fix aspect ratio
-						if ((dim == 0) ^ (car.turn_dir == TURN_LEFT)) {car.dir ^= 1;}
-						car.dim ^= 1;
-						car.turn_dir = TURN_NONE; // turn completed
-					}
+			if (car.turn_dir != TURN_NONE) {
+				assert(is_isect(car.cur_road_type));
+				float const car_lane_offset(get_car_lane_offset()), isec_center(bcube.get_cube_center()[dim]);
+				float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
+				float const prev_val(car.prev_bcube.get_cube_center()[dim]), cur_val(car.bcube.get_cube_center()[dim]);
+				// FIXME: set car.rot_z while turning
+
+				if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
+					car.move_by(centerline - cur_val); // align to lane centerline
+					vector3d const car_sz(car.bcube.get_size());
+					float const size_adj(0.5*(car_sz[dim] - car_sz[!dim]));
+					vector3d expand(zero_vector);
+					expand[dim] -= size_adj; expand[!dim] += size_adj;
+					car.bcube.expand_by(expand); // fix aspect ratio
+					if ((dim == 0) ^ (car.turn_dir == TURN_LEFT)) {car.dir ^= 1;}
+					car.dim ^= 1;
+					car.turn_dir = TURN_NONE; // turn completed
 				}
+			}
+			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
 				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 				return; // done
 			}
 			// car crossing the border of this bcube, update state
 			if (!bcube.contains_pt_xy_inc_low_edge(car.bcube.get_cube_center())) { // move to another road seg/int
-				if (!find_car_next_seg(car, road_networks, global_rn)) {car.park(); return;} // update failed, park/stop car (for now)
+				find_car_next_seg(car, road_networks, global_rn);
 
 				if (is_isect(car.cur_road_type)) { // moved into an intersection, choose direction
 					road_isec_t const &isec(get_car_rn(car, road_networks, global_rn).get_car_isec(car)); // Note: either == city_id, or just moved from global to a new city
