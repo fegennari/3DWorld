@@ -344,6 +344,7 @@ struct road_isec_t : public cube_t {
 	}
 	void make_4way() {num_conn = 4; conn = 15;}
 	void next_frame() {stoplight.next_frame();}
+	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0);}
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
 	bool red_or_yellow_light(car_t const &car) const {return stoplight.red_or_yellow_light(car.dim, car.dir, car.turn_dir);}
 };
@@ -1263,7 +1264,7 @@ class city_road_gen_t {
 					// TODO: path finding update - use A*?
 					while (1) {
 						unsigned new_turn_dir(0);
-						int const rval(rand()%4);
+						int const rval(rand()%(isec.is_global_conn_int() ? 2 : 4)); // force turn on global conn road to get more cars traveling between cities
 						if      (rval == 0) {new_turn_dir = TURN_LEFT ;} // 25%
 						else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
 						else                {new_turn_dir = TURN_NONE ;} // 50%
