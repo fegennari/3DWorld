@@ -1227,18 +1227,26 @@ class city_road_gen_t {
 			}
 			if (car.turn_dir != TURN_NONE) {
 				assert(is_isect(car.cur_road_type));
-				point const car_center(car.bcube.get_cube_center());
-				float const car_lane_offset(get_car_lane_offset()), turn_radius(0.25*city_params.road_width), isec_center(bcube.get_cube_center()[dim]);
+				bool const turn_dir(car.turn_dir == TURN_RIGHT); // 0=left, 1=right
+				point const car_center(car.bcube.get_cube_center()), prev_center(car.prev_bcube.get_cube_center());
+				float const car_lane_offset(get_car_lane_offset());
+				float const turn_radius((turn_dir ? 0.15 : 0.25)*city_params.road_width); // right turn has smaller radius
+				float const isec_center(bcube.get_cube_center()[dim]);
 				float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
-				float const prev_val(car.prev_bcube.get_cube_center()[dim]), cur_val(car_center[dim]);
+				float const prev_val(prev_center[dim]), cur_val(car_center[dim]);
 				float const dist_to_turn(fabs(cur_val - centerline));
 
 				if (dist_to_turn < turn_radius) { // turn radius; Note: cars turn around their center points, not their front wheels, which looks odd
-					bool const turn_dir(car.turn_dir == TURN_RIGHT);
-					float const dev(turn_radius - dist_to_turn), new_center(car.turn_val + dev*((turn_dir^car.dir^dim) ? 1.0 : -1.0)), adj(new_center - car_center[!dim]);
-					//cout << TXT(turn_dir) << TXT(turn_radius) << TXT(dist_to_turn) << TXT(dev) << TXT(new_center) << TXT(car_center[!dim]) << TXT(car.dim) << TXT(car.dir) << TXT(adj) << endl;
+					float const dist_from_turn_start(turn_radius - dist_to_turn);
+					float const dev(turn_radius - sqrt(turn_radius*turn_radius - dist_from_turn_start*dist_from_turn_start));
+					float const new_center(car.turn_val + dev*((turn_dir^car.dir^dim) ? 1.0 : -1.0));
+					float const adj(new_center - car_center[!dim]);
+					float const frame_dist(p2p_dist_xy(car_center, prev_center)); // total XY distance the car is allowed to move
 					car.rot_z = (turn_dir ? -1.0 : 1.0)*(1.0 - CLIP_TO_01(dist_to_turn/turn_radius));
 					car.bcube.d[!dim][0] += adj; car.bcube.d[!dim][1] += adj;
+					vector3d const move_dir(car.bcube.get_cube_center() - prev_center); // total movement from car + turn
+					vector3d const delta(move_dir*(frame_dist/move_dir.mag() - 1.0)); // overshoot value due to turn
+					car.bcube += delta;
 				}
 				if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
 					car.move_by(centerline - cur_val); // align to lane centerline
@@ -1609,7 +1617,7 @@ class car_manager_t {
 			float const sign((d^D) ? -1.0 : 1.0);
 			vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1])).get_norm()*sign);
 			vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1])).get_norm()*sign);
-			vector3d right_n(all_zeros); right_n[!d] = -1.0;
+			vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2])).get_norm()*sign);
 			//qbd.add_quad_pts(p+0, color, -top_n); // bottom - not actually drawn
 			quad_batch_draw &qbd(qbds[emit_now]);
 			qbd.add_quad_pts(p+4, color, top_n); // top
