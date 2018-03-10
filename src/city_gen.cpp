@@ -146,10 +146,10 @@ struct car_t {
 	bool dim, dir, stopped_at_light, entering_city;
 	unsigned char cur_road_type, color_id, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
-	float height, dz, rot_z, cur_speed, max_speed;
+	float height, dz, rot_z, turn_val, cur_speed, max_speed;
 
 	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
-		cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), cur_speed(0.0), max_speed(0.0) {}
+		cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
@@ -157,6 +157,7 @@ struct car_t {
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
 	void park() {cur_speed = max_speed = 0.0;}
+	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 
 	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
 		if (cur_city != c.cur_city) return (cur_city < c.cur_city);
@@ -1113,7 +1114,7 @@ class city_road_gen_t {
 				road_seg_t const &seg(segs[seg_ix]); // chose a random segment
 				car.dim   = seg.dim;
 				car.dir   = (rgen.rand()&1);
-				car.dz    = car.rot_z = 0.0; // flat/level
+				car.dz    = car.rot_z = car.turn_val = 0.0; // flat/level
 				car.max_speed = rgen.rand_uniform(0.66, 1.0); // add some speed variation
 				car.cur_speed = 0.0;
 				car.cur_road  = seg.road_ix;
@@ -1226,11 +1227,13 @@ class city_road_gen_t {
 			}
 			if (car.turn_dir != TURN_NONE) {
 				assert(is_isect(car.cur_road_type));
+				point const car_center(car.prev_bcube.get_cube_center());
 				float const car_lane_offset(get_car_lane_offset()), isec_center(bcube.get_cube_center()[dim]);
 				float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
-				float const prev_val(car.prev_bcube.get_cube_center()[dim]), cur_val(car.bcube.get_cube_center()[dim]);
-				// FIXME: set car.rot_z while turning
+				float const prev_val(car_center[dim]), cur_val(car.bcube.get_cube_center()[dim]);
+				car.rot_z = ((car.turn_dir == TURN_RIGHT) ? -1.0 : 1.0)*car.get_turn_rot_z(cur_val - centerline);
 
+				// FIXME: move in a smooth arc rather than right angle
 				if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
 					car.move_by(centerline - cur_val); // align to lane centerline
 					vector3d const car_sz(car.bcube.get_size());
@@ -1240,9 +1243,14 @@ class city_road_gen_t {
 					car.bcube.expand_by(expand); // fix aspect ratio
 					if ((dim == 0) ^ (car.turn_dir == TURN_LEFT)) {car.dir ^= 1;}
 					car.dim ^= 1;
+					car.rot_z   *= -1.0; // reverse turn dir, since orient changed
+					car.turn_val = car_center[!dim]; // capture car center in the other dim, which we'll use later for completing the turn
 					car.turn_dir = TURN_NONE; // turn completed
 					car.entering_city = 0;
 				}
+			}
+			else if (car.rot_z != 0.0) { // completing a turn
+				car.rot_z = SIGN(car.rot_z)*car.get_turn_rot_z(car.prev_bcube.get_cube_center()[dim] - car.turn_val);
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
 				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
@@ -1561,8 +1569,8 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 }
 
 
-unsigned const NUM_CAR_COLORS = 8;
-colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, BLACK, DK_GRAY, RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
+unsigned const NUM_CAR_COLORS = 10;
+colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, LT_GRAY, DK_GRAY, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
 class car_manager_t {
 
@@ -1583,12 +1591,12 @@ class car_manager_t {
 			p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = z1; p[6].z = z2; // back  left
 			p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = z1; p[7].z = z2; // back  right
 		}
-		static void rotate_pts(point const &center, float sine_val, float cos_val, bool d, point p[8]) {
+		static void rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]) {
 			for (unsigned i = 0; i < 8; ++i) {
 				point &v(p[i]); // rotate p[i]
 				v -= center; // translate to origin
-				float const xy(v[d]*cos_val - v.z*sine_val), z(v.z*cos_val + v[d]*sine_val);
-				v[d] = xy; v.z = z; // rotate
+				float const a(v[d]*cos_val - v[e]*sine_val), b(v[e]*cos_val + v[d]*sine_val);
+				v[d] = a; v[e] = b; // rotate
 				v += center; // translate back
 			}
 		}
@@ -1612,20 +1620,24 @@ class car_manager_t {
 			colorRGBA const &color(car_colors[car.color_id]);
 			cube_t const &c(car.bcube);
 			point const center(c.get_cube_center());
-			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), length(car.get_length());
+			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
 			point pb[8], pt[8]; // bottom and top sections
 			cube_t top_part(c);
 			top_part.d[car.dim][0] += (car.dir ? 0.25 : 0.30)*length; // back
 			top_part.d[car.dim][1] -= (car.dir ? 0.30 : 0.25)*length; // front
-			set_cube_pts(c,        z1, center.z, car.dim, car.dir, pb); // bottom
-			set_cube_pts(top_part, center.z, z2, car.dim, car.dir, pt); // top
+			set_cube_pts(c,        z1, zmid, car.dim, car.dir, pb); // bottom
+			set_cube_pts(top_part, zmid, z2, car.dim, car.dir, pt); // top
 			
 			if (car.dz != 0.0) { // rotate all points about dim !d
 				float const sine_val((car.dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
-				rotate_pts(center, sine_val, cos_val, car.dim, pb);
-				rotate_pts(center, sine_val, cos_val, car.dim, pt);
+				rotate_pts(center, sine_val, cos_val, car.dim, 2, pb);
+				rotate_pts(center, sine_val, cos_val, car.dim, 2, pt);
 			}
-			if (car.rot_z != 0.0) {} // FIXME: implement turning about the z-axis
+			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/4=45 degrees]
+				float const sine_val(sinf(0.25*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
+				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
+				rotate_pts(center, sine_val, cos_val, 0, 1, pt);
+			}
 			draw_cube(car.dim, car.dir, color, pb);
 			draw_cube(car.dim, car.dir, color, pt);
 			if (emit_now) {qbds[1].draw_and_clear();} // shadowed (FIXME: only when tile changes)
