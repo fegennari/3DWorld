@@ -1227,13 +1227,19 @@ class city_road_gen_t {
 			}
 			if (car.turn_dir != TURN_NONE) {
 				assert(is_isect(car.cur_road_type));
-				point const car_center(car.prev_bcube.get_cube_center());
-				float const car_lane_offset(get_car_lane_offset()), isec_center(bcube.get_cube_center()[dim]);
+				point const car_center(car.bcube.get_cube_center());
+				float const car_lane_offset(get_car_lane_offset()), turn_radius(0.25*city_params.road_width), isec_center(bcube.get_cube_center()[dim]);
 				float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
-				float const prev_val(car_center[dim]), cur_val(car.bcube.get_cube_center()[dim]);
-				car.rot_z = ((car.turn_dir == TURN_RIGHT) ? -1.0 : 1.0)*car.get_turn_rot_z(cur_val - centerline);
+				float const prev_val(car.prev_bcube.get_cube_center()[dim]), cur_val(car_center[dim]);
+				float const dist_to_turn(fabs(cur_val - centerline));
 
-				// FIXME: move in a smooth arc rather than right angle
+				if (dist_to_turn < turn_radius) { // turn radius; Note: cars turn around their center points, not their front wheels, which looks odd
+					bool const turn_dir(car.turn_dir == TURN_RIGHT);
+					float const dev(turn_radius - dist_to_turn), new_center(car.turn_val + dev*((turn_dir^car.dir^dim) ? 1.0 : -1.0)), adj(new_center - car_center[!dim]);
+					//cout << TXT(turn_dir) << TXT(turn_radius) << TXT(dist_to_turn) << TXT(dev) << TXT(new_center) << TXT(car_center[!dim]) << TXT(car.dim) << TXT(car.dir) << TXT(adj) << endl;
+					car.rot_z = (turn_dir ? -1.0 : 1.0)*(1.0 - CLIP_TO_01(dist_to_turn/turn_radius));
+					car.bcube.d[!dim][0] += adj; car.bcube.d[!dim][1] += adj;
+				}
 				if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
 					car.move_by(centerline - cur_val); // align to lane centerline
 					vector3d const car_sz(car.bcube.get_size());
@@ -1242,15 +1248,12 @@ class city_road_gen_t {
 					expand[dim] -= size_adj; expand[!dim] += size_adj;
 					car.bcube.expand_by(expand); // fix aspect ratio
 					if ((dim == 0) ^ (car.turn_dir == TURN_LEFT)) {car.dir ^= 1;}
-					car.dim ^= 1;
-					car.rot_z   *= -1.0; // reverse turn dir, since orient changed
-					car.turn_val = car_center[!dim]; // capture car center in the other dim, which we'll use later for completing the turn
+					car.dim     ^= 1;
+					car.rot_z    = 0.0;
+					car.turn_val = 0.0; // reset
 					car.turn_dir = TURN_NONE; // turn completed
 					car.entering_city = 0;
 				}
-			}
-			else if (car.rot_z != 0.0) { // completing a turn
-				car.rot_z = SIGN(car.rot_z)*car.get_turn_rot_z(car.prev_bcube.get_cube_center()[dim] - car.turn_val);
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
 				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
@@ -1281,6 +1284,7 @@ class city_road_gen_t {
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
 					if (car.stopped_at_light) {car.decelerate_fast();}
+					if (car.turn_dir != TURN_NONE) {car.turn_val = car.bcube.get_cube_center()[!dim];} // capture car centerline before the turn
 				}
 			}
 			assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
@@ -1540,7 +1544,8 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
 	if (!bcube_ext.intersects(c.bcube)) return 0;
 	if (c.dim != dim) return 0; // turning in an intersection
-	assert(c.dir == dir); // otherwise should be on different sides of the road
+	//assert(c.dir == dir); // otherwise should be on different sides of the road
+	if (c.dir != dir) return 0; // can happen if cars are turning and too slow
 	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
 	bool const move_c((front < c_front) ^ dir); // move the car that's behind
 	// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
@@ -1633,8 +1638,8 @@ class car_manager_t {
 				rotate_pts(center, sine_val, cos_val, car.dim, 2, pb);
 				rotate_pts(center, sine_val, cos_val, car.dim, 2, pt);
 			}
-			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/4=45 degrees]
-				float const sine_val(sinf(0.25*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
+			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
+				float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
 				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
 				rotate_pts(center, sine_val, cos_val, 0, 1, pt);
 			}
