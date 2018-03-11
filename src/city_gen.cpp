@@ -23,7 +23,7 @@ enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   NUM_RD_
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const stoplight_colors[3] = {GREEN, RED, YELLOW};
+colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
 
 
 extern int rand_gen_index, display_mode, animate2;
@@ -139,6 +139,36 @@ float smooth_interp(float a, float b, float mix) {
 bool is_isect(unsigned type) {return (type >= TYPE_ISEC2 && type <= TYPE_ISEC4);}
 int encode_neg_ix(unsigned ix) {return -(int(ix)+1);}
 unsigned decode_neg_ix(int ix) {assert(ix < 0); return -(ix+1);}
+
+class road_mat_mgr_t {
+
+	bool inited;
+	unsigned tids[NUM_RD_TIDS], sl_tid;
+
+public:
+	road_mat_mgr_t() : inited(0), sl_tid(0) {}
+
+	void ensure_road_textures() {
+		if (inited) return;
+		timer_t timer("Load Road Textures");
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg"};
+		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0};
+		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
+		sl_tid = get_texture_by_name("roads/traffic_light.png");
+		inited = 1;
+	}
+	void set_texture(unsigned type) {
+		assert(type < NUM_RD_TYPES);
+		ensure_road_textures();
+		select_texture(tids[type]);
+	}
+	void set_stoplight_texture() {
+		ensure_road_textures();
+		select_texture(sl_tid);
+	}
+};
+
+road_mat_mgr_t road_mat_mgr;
 
 struct draw_state_t {
 	shader_t s;
@@ -302,7 +332,7 @@ struct road_seg_t : public road_t {
 
 namespace stoplight_ns {
 
-	enum {GREEN_LIGHT=0, RED_LIGHT=1, YELLOW_LIGHT=2}; // colors, unused (only have stop and go states anyway)
+	enum {GREEN_LIGHT=0, YELLOW_LIGHT, RED_LIGHT}; // colors, unused (only have stop and go states anyway)
 	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
 	float const state_times[NUM_STATE] = {5.0, 6.0, 5.0, 5.0, 6.0, 5.0}; // in seconds
 	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
@@ -343,7 +373,7 @@ namespace stoplight_ns {
 			advance_state();
 		}
 	public:
-		stoplight_t() : num_conn(0), conn(0), cur_state(0), cur_state_ticks(0.0) {}
+		stoplight_t() : num_conn(0), conn(0), cur_state(RED_LIGHT), cur_state_ticks(0.0) {}
 		void init(uint8_t num_conn_, uint8_t conn_) {
 			num_conn = num_conn_; conn = conn_;
 			if (num_conn == 2) return; // nothing else to do
@@ -411,49 +441,59 @@ struct road_isec_t : public cube_t {
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
 	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
 
+	bool has_left_turn_signal(unsigned orient) const {
+		if (num_conn == 2) return 0; // never
+		if (num_conn == 4) return 1; // always
+		assert(num_conn == 3);
+		switch (conn) {
+		case 7 : return (orient == 1 || orient == 2);
+		case 11: return (orient == 0 || orient == 3);
+		case 13: return (orient == 0 || orient == 2);
+		case 14: return (orient == 1 || orient == 3);
+		default: assert(0);
+		}
+		return 0;
+	}
+
+	void draw_sl_block(quad_batch_draw &qbd, point p[4], float h, unsigned state, bool draw_unlit, vector3d const &n, tex_range_t const &tr) const {
+		for (unsigned j = 0; j < 3; ++j) {
+			if (draw_unlit || j == state) {qbd.add_quad_pts(p, stoplight_colors[j]*((j == state) ? 1.0 : 0.1), n, tr);}
+			for (unsigned e = 0; e < 4; ++e) {p[e].z += 1.2*h;}
+		}
+	}
 	void draw_stoplights(quad_batch_draw &qbd, draw_state_t const &dstate) const {
 		if (num_conn == 2) return; // no stoplights
 		if (!dstate.check_cube_visible(*this, 0.25)) return; // dist_scale=0.25
-		float const sz(0.03*city_params.road_width), h(1.5*sz);
+		float const sz(0.03*city_params.road_width), h(1.0*sz);
 
 		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 			if (!(conn & (1<<n))) continue; // no road in this dir
 			bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-			vector3d normal(zero_vector);
-			normal[dim] = (dir ? 1.0 : -1.0);
-			float const zbot(z1() + 2.0*h), ztop(zbot + h);
+			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
+			float const zbot(z1() + 2.0*h);
 			float const pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
 			float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
+			// draw straight/line turn light
+			vector3d normal(zero_vector);
+			normal[dim] = (dir ? 1.0 : -1.0); // FIXME: BFC
+			point p[4];
+			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = pos;
+			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
+			p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
+			bool const draw_unlit(1);
+			draw_sl_block(qbd, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_unlit, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
+			// draw left turn light (upper light section)
+			if (has_left_turn_signal(n)) {draw_sl_block(qbd, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_unlit, normal, tex_range_t(1.0, 0.0, 0.5, 1.0));}
 			// draw base
 			if (1) {
 				point pts[8];
 				cube_t c;
-				c.z1() = z1(); c.z2() = (ztop + 1.75*h);
+				c.z1() = z1(); c.z2() = p[0].z;
 				c.d[dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
 				c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
 				dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
 				dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts);
 			}
-			// draw straight/line turn light
-			point p[4];
-			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = pos;
-			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
-			p[0].z = p[1].z = zbot; p[2].z = p[3].z = ztop;
-			qbd.add_quad_pts(p, stoplight.get_stoplight_color(dim, dir, TURN_NONE), normal);
-			// draw left turn light
-			if (num_conn == 3) {
-				bool has_left_turn(0);
-				switch (conn) {
-				case 7 : has_left_turn = (n == 1 || n == 2); break;
-				case 11: has_left_turn = (n == 0 || n == 3); break;
-				case 13: has_left_turn = (n == 0 || n == 2); break;
-				case 14: has_left_turn = (n == 1 || n == 3); break;
-				default: assert(0);
-				}
-				if (!has_left_turn) continue;
-			}
-			for (unsigned e = 0; e < 4; ++e) {p[e].z += 1.5*h;} // upper light section
-			qbd.add_quad_pts(p, stoplight.get_stoplight_color(dim, dir, TURN_LEFT), normal);
 		} // for n
 	}
 };
@@ -663,32 +703,6 @@ public:
 }; // city_plot_gen_t
 
 
-class road_mat_mrg_t {
-
-	bool inited;
-	unsigned tids[NUM_RD_TIDS];
-
-public:
-	road_mat_mrg_t() : inited(0) {}
-
-	void ensure_road_textures() {
-		if (inited) return;
-		timer_t timer("Load Road Textures");
-		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg"};
-		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0};
-		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
-		inited = 1;
-	}
-	void set_texture(unsigned type) {
-		assert(type < NUM_RD_TYPES);
-		ensure_road_textures();
-		select_texture(tids[type]);
-	}
-};
-
-road_mat_mrg_t road_mat_mrg;
-
-
 class city_road_gen_t {
 
 	struct range_pair_t {
@@ -714,7 +728,7 @@ class city_road_gen_t {
 		}
 		virtual void draw_unshadowed() {
 			for (unsigned i = 0; i < NUM_RD_TYPES; ++i) { // only unshadowed blocks
-				road_mat_mrg.set_texture(i);
+				road_mat_mgr.set_texture(i);
 				qbd_batched[i].draw_and_clear();
 			}
 		}
@@ -723,8 +737,8 @@ class city_road_gen_t {
 			if (qbd_sl.empty()) return; // no stoplights to draw
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 			shader_t s;
-			s.begin_color_only_shader();
-			select_texture(WHITE_TEX);
+			s.begin_simple_textured_shader(); // Note: no lighting
+			road_mat_mgr.set_stoplight_texture();
 			qbd_sl.draw_and_clear();
 			s.end_shader();
 			glDepthFunc(GL_LESS);
@@ -740,7 +754,7 @@ class city_road_gen_t {
 				for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache);}
 			}
 			if (emit_now) { // draw shadow blocks directly
-				road_mat_mrg.set_texture(type_ix);
+				road_mat_mgr.set_texture(type_ix);
 				cache.draw();
 			} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 		}
