@@ -418,7 +418,7 @@ struct road_isec_t : public cube_t {
 
 		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 			if (!(conn & (1<<n))) continue; // no road in this dir
-			bool const dim((n>>1) != 0), dir((n&1) != 0), side((dir^dim^1) != 0);
+			bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
 			vector3d normal(zero_vector);
 			normal[dim] = (dir ? 1.0 : -1.0);
 			float const zbot(z1() + 2.0*h), ztop(zbot + h);
@@ -429,7 +429,7 @@ struct road_isec_t : public cube_t {
 				point pts[8];
 				cube_t c;
 				c.z1() = z1(); c.z2() = (ztop + 1.75*h);
-				c.d[dim][0] = pos - (dir ? -0.01 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.01)*sz;
+				c.d[dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
 				c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
 				dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
 				dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts);
@@ -440,9 +440,9 @@ struct road_isec_t : public cube_t {
 			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
 			p[0].z = p[1].z = zbot; p[2].z = p[3].z = ztop;
 			qbd.add_quad_pts(p, stoplight.get_stoplight_color(dim, dir, TURN_NONE), normal);
-			bool has_left_turn(num_conn == 4);
 			// draw left turn light
 			if (num_conn == 3) {
+				bool has_left_turn(0);
 				switch (conn) {
 				case 7 : has_left_turn = (n == 1 || n == 2); break;
 				case 11: has_left_turn = (n == 0 || n == 3); break;
@@ -450,8 +450,8 @@ struct road_isec_t : public cube_t {
 				case 14: has_left_turn = (n == 1 || n == 3); break;
 				default: assert(0);
 				}
+				if (!has_left_turn) continue;
 			}
-			if (!has_left_turn) return;
 			for (unsigned e = 0; e < 4; ++e) {p[e].z += 1.5*h;} // upper light section
 			qbd.add_quad_pts(p, stoplight.get_stoplight_color(dim, dir, TURN_LEFT), normal);
 		} // for n
