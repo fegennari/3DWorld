@@ -609,9 +609,9 @@ public:
 		draw_unshadowed();
 		s.end_shader();
 	}
-	bool check_cube_visible(cube_t const &bc) const {
+	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0) const {
 		cube_t const bcx(bc + xlate);
-		return (camera_pdu.cube_visible(bcx) && dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), get_draw_tile_dist()));
+		return (camera_pdu.cube_visible(bcx) && dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dist_scale*get_draw_tile_dist()));
 	}
 }; // draw_state_t
 
@@ -1615,47 +1615,49 @@ class car_manager_t {
 				v += center; // translate back
 			}
 		}
-		void draw_cube(bool d, bool D, colorRGBA const &color, point const p[8]) {
+		void draw_cube(bool d, bool D, colorRGBA const &color, point const &center, point const p[8]) {
+			vector3d const cview_dir((camera_pdu.pos - xlate) - center);
 			float const sign((d^D) ? -1.0 : 1.0);
-			vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1])).get_norm()*sign);
-			vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1])).get_norm()*sign);
-			vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2])).get_norm()*sign);
-			//qbd.add_quad_pts(p+0, color, -top_n); // bottom - not actually drawn
+			vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
+			vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
+			vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2]))*sign);
 			quad_batch_draw &qbd(qbds[emit_now]);
-			qbd.add_quad_pts(p+4, color, top_n); // top
-			{point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, color,  front_n);} // front
-			{point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, color, -front_n);} // back
-			{point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
-			{point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, color, -right_n);} // left
+			if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, color,  top_n);} // top
+			//else                                   {qbd.add_quad_pts(p+0, color, -top_n);} // bottom - not actually drawn
+			if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, color,  front_n);} // front
+			else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, color, -front_n);} // back
+			if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
+			else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, color, -right_n);} // left
 		}
 		void draw_car(car_t const &car) { // Note: all quads
-			if (!check_cube_visible(car.bcube)) return;
-			begin_tile(car.get_center()); // enable shadows
+			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
+			point const center(car.get_center());
+			begin_tile(center); // enable shadows
 			assert(car.color_id < NUM_CAR_COLORS);
 			colorRGBA const &color(car_colors[car.color_id]);
 			cube_t const &c(car.bcube);
-			point const center(c.get_cube_center());
 			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
+			bool const draw_top(dist_less_than(camera_pdu.pos, (center + xlate), 0.25*get_draw_tile_dist()));
 			point pb[8], pt[8]; // bottom and top sections
 			cube_t top_part(c);
 			top_part.d[car.dim][0] += (car.dir ? 0.25 : 0.30)*length; // back
 			top_part.d[car.dim][1] -= (car.dir ? 0.30 : 0.25)*length; // front
-			set_cube_pts(c,        z1, zmid, car.dim, car.dir, pb); // bottom
-			set_cube_pts(top_part, zmid, z2, car.dim, car.dir, pt); // top
+			set_cube_pts(c, z1, zmid, car.dim, car.dir, pb); // bottom
+			if (draw_top) {set_cube_pts(top_part, zmid, z2, car.dim, car.dir, pt);} // top
 			
 			if (car.dz != 0.0) { // rotate all points about dim !d
 				float const sine_val((car.dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
 				rotate_pts(center, sine_val, cos_val, car.dim, 2, pb);
-				rotate_pts(center, sine_val, cos_val, car.dim, 2, pt);
+				if (draw_top) {rotate_pts(center, sine_val, cos_val, car.dim, 2, pt);}
 			}
 			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
 				float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
 				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
-				rotate_pts(center, sine_val, cos_val, 0, 1, pt);
+				if (draw_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
 			}
-			draw_cube(car.dim, car.dir, color, pb);
-			draw_cube(car.dim, car.dir, color, pt);
-			if (emit_now) {qbds[1].draw_and_clear();} // shadowed (FIXME: only when tile changes)
+			draw_cube(car.dim, car.dir, color, center, pb); // bottom
+			if (draw_top) {draw_cube(car.dim, car.dir, color, center, pt);} // top
+			if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 		}
 	}; // car_draw_state_t
 
@@ -1712,7 +1714,7 @@ public:
 	}
 	void draw(vector3d const &xlate) {
 		if (cars.empty()) return;
-		//timer_t timer("Draw Cars"); // 10K cars = 3.8ms (2.9ms default) / 2K cars = 0.95ms (0.61ms default)
+		//timer_t timer("Draw Cars"); // 10K cars = 1.5ms / 2K cars = 0.33ms
 		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
