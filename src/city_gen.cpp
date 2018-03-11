@@ -21,8 +21,9 @@ unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   NUM_RD_TIDS };
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, NUM_RD_TYPES};
-enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT};
+enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 unsigned const CONN_TYPE_NONE = 0;
+colorRGBA const stoplight_colors[3] = {GREEN, RED, YELLOW};
 
 
 extern int rand_gen_index, display_mode, animate2;
@@ -144,11 +145,11 @@ class city_road_gen_t;
 struct car_t {
 	cube_t bcube, prev_bcube;
 	bool dim, dir, stopped_at_light, entering_city;
-	unsigned char cur_road_type, color_id, turn_dir;
+	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
 	float height, dz, rot_z, turn_val, cur_speed, max_speed;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC),
 		cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
@@ -177,6 +178,7 @@ struct car_t {
 		if (cur_speed == 0.0) return;
 		assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= max_speed);
 		float dist(cur_speed*speed_mult);
+		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
 		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 		move_by((dir ? 1.0 : -1.0)*dist);
 	}
@@ -241,7 +243,7 @@ struct road_seg_t : public road_t {
 
 namespace stoplight_ns {
 
-	enum {RED=0, GREEN=1, YELLOW=2}; // colors, unused (only have stop and go states anyway)
+	enum {GREEN_LIGHT=0, RED_LIGHT=1, YELLOW_LIGHT=2}; // colors, unused (only have stop and go states anyway)
 	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
 	float const state_times[NUM_STATE] = {4.0, 6.0, 4.0, 4.0, 6.0, 4.0}; // in seconds
 	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
@@ -303,15 +305,16 @@ namespace stoplight_ns {
 			unsigned const orient(2*dim + dir); // {W, E, S, N}
 			return (((1<<orient) & mask) == 0);
 		}
-		bool red_or_yellow_light(bool dim, bool dir, unsigned turn) const {
-			if (red_light(dim, dir, turn)) return 1;
-			if (num_conn == 2) return 0;
+		unsigned get_light_state(bool dim, bool dir, unsigned turn) const { // 0=green, 1=yellow, 2=red
+			if (red_light(dim, dir, turn)) return RED_LIGHT;
+			if (num_conn == 2) return GREEN_LIGHT;
 			stoplight_t future_self(*this);
 			float const yellow_light_time(2.0);
 			future_self.cur_state_ticks += TICKS_PER_SECOND*yellow_light_time;
 			future_self.run_update_logic();
-			return future_self.red_light(dim, dir, turn);
+			return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : RED_LIGHT);
 		}
+		colorRGBA get_stolight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
 	};
 } // end stoplight_ns
 
@@ -347,7 +350,7 @@ struct road_isec_t : public cube_t {
 	void next_frame() {stoplight.next_frame();}
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0);}
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
-	bool red_or_yellow_light(car_t const &car) const {return stoplight.red_or_yellow_light(car.dim, car.dir, car.turn_dir);}
+	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
 };
 
 struct road_plot_t : public cube_t {
@@ -1120,7 +1123,7 @@ class city_road_gen_t {
 				car.cur_road  = seg.road_ix;
 				car.cur_seg   = seg_ix;
 				car.cur_road_type = TYPE_RSEG;
-				car.turn_dir = TURN_NONE;
+				car.turn_dir  = TURN_NONE;
 				vector3d car_sz; // {length, width, height}
 				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*rgen.rand_uniform(0.9, 1.1)*city_params.road_width;}
 				car.height = car_sz.z;
@@ -1287,10 +1290,12 @@ class city_road_gen_t {
 						if      (rval == 0) {new_turn_dir = TURN_LEFT ;} // 25%
 						else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
 						else                {new_turn_dir = TURN_NONE ;} // 50%
-						if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;}
+						if (new_turn_dir == car.front_car_turn_dir && (rand()%4) != 0) continue; // car in front is too slow, don't turn the same way as it
+						if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;} // success
 					} // end while
 					assert(isec.conn & (1<<orients[car.turn_dir]));
-					car.stopped_at_light = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
+					car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
+					car.stopped_at_light   = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
 					if (car.stopped_at_light) {car.decelerate_fast();}
 					if (car.turn_dir != TURN_NONE) {car.turn_val = car.bcube.get_cube_center()[!dim];} // capture car centerline before the turn
 				}
@@ -1565,6 +1570,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	point delta(all_zeros);
 	delta[dim] += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
 	cube_t const &bcube(road_gen.get_road_bcube_for_car(cmove));
+	if (cstay.max_speed < cmove.max_speed) {cmove.front_car_turn_dir = cstay.turn_dir;} // record the turn dir of this slow car in front of us so we can turn a different way
 
 	if (!bcube.contains_cube_xy(cmove.bcube + delta)) { // moved outside its current road segment bcube
 		//if (cmove.bcube == cmove.prev_bcube) {return 1;} // collided, but not safe to move the car (init pos or second collision)
