@@ -163,9 +163,7 @@ struct car_t {
 	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
 		if (cur_city != c.cur_city) return (cur_city < c.cur_city);
 		if (cur_road != c.cur_road) return (cur_road < c.cur_road);
-		if (cur_road_type != c.cur_road_type) return (cur_road_type < c.cur_road_type);
-		if (cur_seg  != c.cur_seg ) return (cur_seg  < c.cur_seg );
-		return (bcube.get_cube_center() < c.bcube.get_cube_center());
+		return (bcube.d[dim][dir] < c.bcube.d[c.dim][c.dir]); // compare front end of car
 	}
 	string str() const {
 		std::ostringstream oss;
@@ -1548,17 +1546,15 @@ public:
 
 bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 
-	//if (dim != c.dim || dir != c.dir) return 0;
+	if (dir != c.dir) return 0; // traveling on opposite sides of the road
+	if (c.dim != dim) return 0; // turning in an intersection, etc.
 	float const avg_len(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
 	float const min_speed(min(cur_speed, c.cur_speed)); // relative to max speed of 1.0
 	float const sep_dist(avg_len*(0.25 + 1.0*min_speed)); // 25% to 125% car length, depending on speed
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
-	if (!bcube_ext.intersects(c.bcube)) return 0;
-	if (c.dim != dim) return 0; // turning in an intersection
-	//assert(c.dir == dir); // otherwise should be on different sides of the road
-	if (c.dir != dir) return 0; // can happen if cars are turning and too slow
+	if (!bcube_ext.intersects_xy(c.bcube)) return 0;
 	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
 	bool const move_c((front < c_front) ^ dir); // move the car that's behind
 	// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
@@ -1691,8 +1687,8 @@ public:
 	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
-		//timer_t timer("Update Cars");
-		sort(cars.begin(), cars.end()); // sort by city/road/segment; is this a good idea?
+		//timer_t timer("Update Cars"); // 10K cars = 1.5ms / 2K cars = 0.2ms
+		sort(cars.begin(), cars.end()); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		float const speed(0.001*car_speed*fticks);
 		
@@ -1702,8 +1698,9 @@ public:
 		}
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
-				if (i->cur_city == j->cur_city && i->cur_road == j->cur_road) {i->check_collision(*j, road_gen);}
-				else {break;}
+				if (i->cur_city != j->cur_city || i->cur_road != j->cur_road) break; // different cities or roads
+				if (i->cur_road_type == j->cur_road_type && i->cur_seg != j->cur_seg) break; // different road segments or different intersections
+				i->check_collision(*j, road_gen);
 			}
 			if (i->cur_city == CONN_CITY_IX) { // on connector road, check before entering intersection to a city
 				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
@@ -1715,7 +1712,7 @@ public:
 	}
 	void draw(vector3d const &xlate) {
 		if (cars.empty()) return;
-		//timer_t timer("Draw Cars");
+		//timer_t timer("Draw Cars"); // 10K cars = 3.8ms (2.9ms default) / 2K cars = 0.95ms (0.61ms default)
 		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
