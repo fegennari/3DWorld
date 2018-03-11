@@ -243,7 +243,7 @@ namespace stoplight_ns {
 
 	enum {GREEN_LIGHT=0, RED_LIGHT=1, YELLOW_LIGHT=2}; // colors, unused (only have stop and go states anyway)
 	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
-	float const state_times[NUM_STATE] = {4.0, 6.0, 4.0, 4.0, 6.0, 4.0}; // in seconds
+	float const state_times[NUM_STATE] = {5.0, 6.0, 5.0, 5.0, 6.0, 5.0}; // in seconds
 	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
 	unsigned const left_orient_masks[NUM_STATE] = {2, 0, 1, 8, 0,  4}; // {W=1, E=2, S=4, N=8}, for left turns only
 
@@ -1201,6 +1201,7 @@ class city_road_gen_t {
 				else {car.decelerate_fast();}
 				if (was_stopped) return; // no update needed
 			} else {car.accelerate();}
+
 			cube_t const bcube(get_road_bcube_for_car(car));
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << bcube.str() << endl; assert(0);} // sanity check
 			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
@@ -1229,7 +1230,7 @@ class city_road_gen_t {
 			if (car.turn_dir != TURN_NONE) {
 				assert(is_isect(car.cur_road_type));
 				bool const turn_dir(car.turn_dir == TURN_RIGHT); // 0=left, 1=right
-				point const car_center(car.bcube.get_cube_center()), prev_center(car.prev_bcube.get_cube_center());
+				point const car_center(car.get_center()), prev_center(car.prev_bcube.get_cube_center());
 				float const car_lane_offset(get_car_lane_offset());
 				float const turn_radius((turn_dir ? 0.15 : 0.25)*city_params.road_width); // right turn has smaller radius
 				float const isec_center(bcube.get_cube_center()[dim]);
@@ -1245,7 +1246,7 @@ class city_road_gen_t {
 					float const frame_dist(p2p_dist_xy(car_center, prev_center)); // total XY distance the car is allowed to move
 					car.rot_z = (turn_dir ? -1.0 : 1.0)*(1.0 - CLIP_TO_01(dist_to_turn/turn_radius));
 					car.bcube.d[!dim][0] += adj; car.bcube.d[!dim][1] += adj;
-					vector3d const move_dir(car.bcube.get_cube_center() - prev_center); // total movement from car + turn
+					vector3d const move_dir(car.get_center() - prev_center); // total movement from car + turn
 					vector3d const delta(move_dir*(frame_dist/move_dir.mag() - 1.0)); // overshoot value due to turn
 					car.bcube += delta;
 				}
@@ -1269,7 +1270,7 @@ class city_road_gen_t {
 				return; // done
 			}
 			// car crossing the border of this bcube, update state
-			if (!bcube.contains_pt_xy_inc_low_edge(car.bcube.get_cube_center())) { // move to another road seg/int
+			if (!bcube.contains_pt_xy_inc_low_edge(car.get_center())) { // move to another road seg/int
 				find_car_next_seg(car, road_networks, global_rn);
 
 				if (is_isect(car.cur_road_type)) { // moved into an intersection, choose direction
@@ -1295,7 +1296,7 @@ class city_road_gen_t {
 					car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
 					car.stopped_at_light   = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
 					if (car.stopped_at_light) {car.decelerate_fast();}
-					if (car.turn_dir != TURN_NONE) {car.turn_val = car.bcube.get_cube_center()[!dim];} // capture car centerline before the turn
+					if (car.turn_dir != TURN_NONE) {car.turn_val = car.get_center()[!dim];} // capture car centerline before the turn
 				}
 			}
 			assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
@@ -1549,8 +1550,8 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
 	if (c.dim != dim) return 0; // turning in an intersection, etc.
 	float const avg_len(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
-	float const min_speed(min(cur_speed, c.cur_speed)); // relative to max speed of 1.0
-	float const sep_dist(avg_len*(0.25 + 1.0*min_speed)); // 25% to 125% car length, depending on speed
+	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
+	float const sep_dist(avg_len*(0.25 + 1.11*min_speed)); // 25% to 125% car length, depending on speed
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
@@ -1699,6 +1700,8 @@ public:
 			if (i->entering_city) {entering_city.push_back(i - cars.begin());} // record for use in collision detection
 		}
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
+			if (i->is_parked()) continue;
+
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
 				if (i->cur_city != j->cur_city || i->cur_road != j->cur_road) break; // different cities or roads
 				if (i->cur_road_type == j->cur_road_type && i->cur_seg != j->cur_seg) break; // different road segments or different intersections
