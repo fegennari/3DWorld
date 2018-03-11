@@ -726,8 +726,8 @@ class city_road_gen_t {
 			s.begin_color_only_shader();
 			select_texture(WHITE_TEX);
 			qbd_sl.draw_and_clear();
-			glDepthFunc(GL_LESS);
 			s.end_shader();
+			glDepthFunc(GL_LESS);
 		}
 		template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd) {add_flat_road_quad(r, qbd, ar);} // generic flat road case (plot)
 		template<> void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd) {r.add_road_quad(qbd, ar);} // road segment
@@ -1684,6 +1684,7 @@ class car_manager_t {
 
 	class car_draw_state_t : public draw_state_t {
 		quad_batch_draw qbds[2]; // unshadowed, shadowed
+		point_sprite_drawer_sized car_light_psd; // for car lights
 	public:
 		car_draw_state_t() {}
 
@@ -1693,6 +1694,14 @@ class car_manager_t {
 		}
 		virtual void draw_unshadowed() {qbds[0].draw_and_clear();}
 
+		virtual void post_draw() {
+			draw_state_t::post_draw();
+			if (car_light_psd.empty()) return; // no stoplights to draw
+			shader_t s;
+			s.begin_color_only_shader();
+			car_light_psd.draw_and_clear(BLUR_TEX);
+			s.end_shader();
+		}
 		void draw_car(car_t const &car) { // Note: all quads
 			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
 			point const center(car.get_center());
@@ -1723,6 +1732,17 @@ class car_manager_t {
 			draw_cube(qbd, car.dim, car.dir, color, center, pb); // bottom
 			if (draw_top) {draw_cube(qbd, car.dim, car.dir, color, center, pt);} // top
 			if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
+
+			if (light_factor < 0.4) { // night time
+				// FIXME: add headlights
+				//car_light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, color), radius));
+			}
+			if (car.is_stopped() || car.stopped_at_light) {
+				// FIXME: add brake lights
+			}
+			if (car.turn_dir != TURN_NONE) {
+				// FIXME: add turn signals
+			}
 		}
 	}; // car_draw_state_t
 
@@ -1838,7 +1858,7 @@ public:
 	void draw(bool shadow_only, int reflection_pass, vector3d const &xlate) { // for now, there are only roads
 		if (!shadow_only && reflection_pass == 0) {road_gen.draw(xlate);} // roads don't cast shadows and aren't reflected in water
 		car_manager.draw(xlate);
-		// buildings are drawn through draw_buildings()
+		// Note: buildings are drawn through draw_buildings()
 	}
 }; // city_gen_t
 
