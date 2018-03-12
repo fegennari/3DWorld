@@ -294,41 +294,45 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::sort_back_t
 	sort(points.begin(), points.end(), cmp_back_to_front());
 }
 
-template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting) const {
+template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting, bool use_geom_shader) const {
 
 	if (empty()) return;
 	shader_t s;
 	bool const textured(tid >= 0), indir_lighting(using_lightmap && have_indir_smoke_tex);
-#if 1 // point sprite variant
-	if (const_point_size) {s.set_prefix("#define CONSTANT_PT_SIZE", 0);} // VS
 
-	if (enable_lighting) {
-		s.setup_enabled_lights(2, 1); // sun and moon VS lighting
-		set_dlights_booleans(s, 1, 0); // VS
-		s.set_prefix(make_shader_bool_prefix("use_shadow_map", shadow_map_enabled()), 0); // VS
-		s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting),       0); // VS
-		s.set_prefix("#define ENABLE_LIGHTING", 0); // VS
-		s.set_vert_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+point_sprite"); // no fog
-	}
-	else {
-		s.set_vert_shader("point_sprite");
-	}
-	s.set_frag_shader(textured ? "point_sprite_texture" : "point_sprite_circle");
-	s.begin_shader();
-	s.add_uniform_float("point_scale", 2.0*(const_point_size ? const_point_size : window_height)); // diameter = 2*radius
+	if (!use_geom_shader) { // point sprite variant
+		if (const_point_size) {s.set_prefix("#define CONSTANT_PT_SIZE", 0);} // VS
 
-	if (enable_lighting) {
-		if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
-		set_indir_lighting_block(s, 0, indir_lighting);
-		setup_dlight_textures(s);
+		if (enable_lighting) {
+			s.setup_enabled_lights(2, 1); // sun and moon VS lighting
+			set_dlights_booleans(s, 1, 0); // VS
+			s.set_prefix(make_shader_bool_prefix("use_shadow_map", shadow_map_enabled()), 0); // VS
+			s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting),       0); // VS
+			s.set_prefix("#define ENABLE_LIGHTING", 0); // VS
+			s.set_vert_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+point_sprite"); // no fog
+		}
+		else {
+			s.set_vert_shader("point_sprite");
+		}
+		s.set_frag_shader(textured ? "point_sprite_texture" : "point_sprite_circle");
+		s.begin_shader();
+		s.add_uniform_float("point_scale", 2.0*(const_point_size ? const_point_size : window_height)); // diameter = 2*radius
+
+		if (enable_lighting) {
+			if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
+			set_indir_lighting_block(s, 0, indir_lighting);
+			setup_dlight_textures(s);
+		}
 	}
-#else // geometry shader variant - doesn't support const_point_size or lighting
-	s.set_prefix("#define SIZE_FROM_ATTRIB", 2); // GS
-	s.set_vert_shader("particle_draw");
-	s.set_frag_shader("simple_texture");
-	s.set_geom_shader("pt_billboard_tri"); // point => 1 triangle
-	s.begin_shader();
-#endif
+	else { // geometry shader variant - doesn't support const_point_size or lighting
+		assert(const_point_size == 0.0);
+		assert(!enable_lighting);
+		s.set_prefix("#define SIZE_FROM_ATTRIB", 2); // GS
+		s.set_vert_shader("particle_draw");
+		s.set_frag_shader("simple_texture");
+		s.set_geom_shader("pt_billboard_tri"); // point => 1 triangle
+		s.begin_shader();
+	}
 	if (textured) {
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_float("min_alpha", 0.0);
