@@ -176,6 +176,7 @@ struct draw_state_t {
 	bool use_smap, use_bmap;
 protected:
 	bool emit_now;
+	point_sprite_drawer_sized light_psd; // for car/traffic lights
 
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), emit_now(0) {}
@@ -196,6 +197,12 @@ public:
 		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		draw_unshadowed();
 		s.end_shader();
+	}
+	void draw_and_clear_light_flares() {
+		if (light_psd.empty()) return; // no lights to draw
+		enable_blend();
+		light_psd.draw_and_clear(BLUR_TEX, 0.0, 0, 1); // use geometry shader for unlimited point size
+		disable_blend();
 	}
 	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0) const {
 		cube_t const bcx(bc + xlate);
@@ -228,6 +235,13 @@ public:
 		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, color, -front_n);} // back
 		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
 		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, color, -right_n);} // left
+	}
+	void add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
+		point pos(xlate + flare_pos);
+		vector3d const view_dir((camera_pdu.pos - pos).get_norm());
+		float dp(dot_product(n, view_dir));
+		pos += 0.75*radius*view_dir; // move toward the camera, away from the stoplight, to prevent clipping
+		if (dp > 0.05) {light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, colorRGBA(color, dp*alpha)), radius));}
 	}
 }; // draw_state_t
 
@@ -455,14 +469,21 @@ struct road_isec_t : public cube_t {
 		return 0;
 	}
 
-	void draw_sl_block(quad_batch_draw &qbd, point p[4], float h, unsigned state, bool draw_unlit, vector3d const &n, tex_range_t const &tr) const {
+	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const {
 		for (unsigned j = 0; j < 3; ++j) {
-			if (j == state)      {qbd.add_quad_pts(p, stoplight_colors[j], n, tr);}
-			else if (draw_unlit) {qbd.add_quad_pts(p, (stoplight_colors[j] + WHITE)*0.05, n, tr);}
+			colorRGBA const &color(stoplight_colors[j]);
+
+			if (j == state) {
+				qbd.add_quad_pts(p, color, n, tr);
+				if (flare_alpha > 0.0) {dstate.add_light_flare(0.25*(p[0] + p[1] + p[2] + p[3]), n, color, flare_alpha, 2.0*h);}
+			}
+			else if (draw_unlit) {
+				qbd.add_quad_pts(p, (color + WHITE)*0.05, n, tr);
+			}
 			for (unsigned e = 0; e < 4; ++e) {p[e].z += 1.2*h;}
 		}
 	}
-	void draw_stoplights(quad_batch_draw &qbd, draw_state_t const &dstate) const {
+	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate) const {
 		if (num_conn == 2) return; // no stoplights
 		if (!dstate.check_cube_visible(*this, 0.2)) return; // dist_scale=0.2
 		point const center(get_cube_center() + dstate.xlate);
@@ -484,7 +505,7 @@ struct road_isec_t : public cube_t {
 			c.d[dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
 			c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
 			dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
-			dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts);
+			dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts); // Note: uses traffic light texture, but color is back so it's all black anyway
 			if (dist_val > 0.1) continue; // too far away
 			vector3d normal(zero_vector);
 			normal[dim] = (dir ? -1.0 : 1.0);
@@ -494,10 +515,12 @@ struct road_isec_t : public cube_t {
 			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = pos;
 			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
 			p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
-			bool const draw_unlit(dist_val < 0.05); // only when very close
-			draw_sl_block(qbd, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_unlit, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
+			bool const draw_detail(dist_val < 0.05); // only when very close
+			draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
 			// draw left turn light (upper light section)
-			if (has_left_turn_signal(n)) {draw_sl_block(qbd, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_unlit, normal, tex_range_t(1.0, 0.0, 0.5, 1.0));}
+			if (has_left_turn_signal(n)) {
+				draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.0, 0.5, 1.0));
+			}
 		} // for n
 	}
 };
@@ -1622,18 +1645,22 @@ public:
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only) const {return global_rn.check_road_sphere_coll(pos, radius, xy_only);}
 
-	void draw(vector3d const &xlate) { // non-const because qbd is modified
+	void draw(int trans_op_mask, vector3d const &xlate) { // non-const because qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
-		//timer_t timer("Draw Roads");
-		fgPushMatrix();
-		translate_to(xlate);
-		glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-		dstate.pre_draw(xlate);
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate);}
-		global_rn.draw(dstate);
-		dstate.post_draw();
-		glDepthFunc(GL_LESS);
-		fgPopMatrix();
+
+		if (trans_op_mask & 1) { // opaque pass, should be first
+			//timer_t timer("Draw Roads");
+			fgPushMatrix();
+			translate_to(xlate);
+			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
+			dstate.pre_draw(xlate);
+			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate);}
+			global_rn.draw(dstate);
+			dstate.post_draw();
+			glDepthFunc(GL_LESS);
+			fgPopMatrix();
+		}
+		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
 
 	// cars
@@ -1702,7 +1729,6 @@ class car_manager_t {
 
 	class car_draw_state_t : public draw_state_t {
 		quad_batch_draw qbds[2]; // unshadowed, shadowed
-		point_sprite_drawer_sized car_light_psd; // for car lights
 	public:
 		car_draw_state_t() {}
 
@@ -1712,14 +1738,6 @@ class car_manager_t {
 		}
 		virtual void draw_unshadowed() {qbds[0].draw_and_clear();}
 
-		virtual void post_draw() {
-			draw_state_t::post_draw();
-			if (car_light_psd.empty()) return; // no stoplights to draw
-			shader_t s;
-			s.begin_color_only_shader();
-			car_light_psd.draw_and_clear(BLUR_TEX);
-			s.end_shader();
-		}
 		void draw_car(car_t const &car) { // Note: all quads
 			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
 			point const center(car.get_center());
@@ -1817,16 +1835,20 @@ public:
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
 	}
-	void draw(vector3d const &xlate) {
+	void draw(int trans_op_mask, vector3d const &xlate) {
 		if (cars.empty()) return;
-		//timer_t timer("Draw Cars"); // 10K cars = 1.5ms / 2K cars = 0.33ms
-		dstate.xlate = xlate;
-		fgPushMatrix();
-		translate_to(xlate);
-		dstate.pre_draw(xlate);
-		for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.draw_car(*i);}
-		dstate.post_draw();
-		fgPopMatrix();
+
+		if (trans_op_mask & 1) { // opaque pass, should be first
+			//timer_t timer("Draw Cars"); // 10K cars = 1.5ms / 2K cars = 0.33ms
+			dstate.xlate = xlate;
+			fgPushMatrix();
+			translate_to(xlate);
+			dstate.pre_draw(xlate);
+			for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.draw_car(*i);}
+			dstate.post_draw();
+			fgPopMatrix();
+		}
+		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
 };
 
@@ -1873,9 +1895,9 @@ public:
 		road_gen.next_frame(); // update stoplights
 		car_manager.next_frame(city_params.car_speed);
 	}
-	void draw(bool shadow_only, int reflection_pass, vector3d const &xlate) { // for now, there are only roads
-		if (!shadow_only && reflection_pass == 0) {road_gen.draw(xlate);} // roads don't cast shadows and aren't reflected in water
-		car_manager.draw(xlate);
+	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
+		if (!shadow_only) {car_manager.draw(trans_op_mask, xlate);} // cars don't cast shadows because they move
+		if (!shadow_only && reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate);} // roads don't cast shadows and aren't reflected in water
 		// Note: buildings are drawn through draw_buildings()
 	}
 }; // city_gen_t
@@ -1895,7 +1917,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
 void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame() {city_gen.next_frame();}
-void draw_cities(bool shadow_only, int reflection_pass, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, xlate);}
+void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 
 bool check_city_sphere_coll(point const &pos, float radius) {
 	if (!have_cities()) return 0;
