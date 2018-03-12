@@ -457,43 +457,47 @@ struct road_isec_t : public cube_t {
 
 	void draw_sl_block(quad_batch_draw &qbd, point p[4], float h, unsigned state, bool draw_unlit, vector3d const &n, tex_range_t const &tr) const {
 		for (unsigned j = 0; j < 3; ++j) {
-			if (draw_unlit || j == state) {qbd.add_quad_pts(p, stoplight_colors[j]*((j == state) ? 1.0 : 0.1), n, tr);}
+			if (j == state)      {qbd.add_quad_pts(p, stoplight_colors[j], n, tr);}
+			else if (draw_unlit) {qbd.add_quad_pts(p, (stoplight_colors[j] + WHITE)*0.05, n, tr);}
 			for (unsigned e = 0; e < 4; ++e) {p[e].z += 1.2*h;}
 		}
 	}
 	void draw_stoplights(quad_batch_draw &qbd, draw_state_t const &dstate) const {
 		if (num_conn == 2) return; // no stoplights
-		if (!dstate.check_cube_visible(*this, 0.25)) return; // dist_scale=0.25
+		if (!dstate.check_cube_visible(*this, 0.2)) return; // dist_scale=0.2
+		point const center(get_cube_center() + dstate.xlate);
+		float const dist_val(p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
+		vector3d const cview_dir(camera_pdu.pos - center);
 		float const sz(0.03*city_params.road_width), h(1.0*sz);
 
 		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 			if (!(conn & (1<<n))) continue; // no road in this dir
 			bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
 			float const zbot(z1() + 2.0*h);
 			float const pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
 			float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
-			// draw straight/line turn light
+			// draw base
+			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
+			point pts[8];
+			cube_t c;
+			c.z1() = z1(); c.z2() = zbot + 1.2*h*num_segs;
+			c.d[dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
+			c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
+			dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
+			dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts);
+			if (dist_val > 0.1) continue; // too far away
 			vector3d normal(zero_vector);
-			normal[dim] = (dir ? 1.0 : -1.0); // FIXME: BFC
+			normal[dim] = (dir ? -1.0 : 1.0);
+			if (dot_product(normal, cview_dir) < 0.0) continue; // back facing, don't draw the lights
+			// draw straight/line turn light
 			point p[4];
 			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = pos;
 			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
 			p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
-			bool const draw_unlit(1);
+			bool const draw_unlit(dist_val < 0.05); // only when very close
 			draw_sl_block(qbd, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_unlit, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
 			// draw left turn light (upper light section)
 			if (has_left_turn_signal(n)) {draw_sl_block(qbd, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_unlit, normal, tex_range_t(1.0, 0.0, 0.5, 1.0));}
-			// draw base
-			if (1) {
-				point pts[8];
-				cube_t c;
-				c.z1() = z1(); c.z2() = p[0].z;
-				c.d[dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
-				c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
-				dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
-				dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts);
-			}
 		} // for n
 	}
 };
