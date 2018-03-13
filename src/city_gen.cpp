@@ -28,6 +28,7 @@ colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
 
 extern int rand_gen_index, display_mode, animate2;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
+extern double tfticks;
 
 
 struct city_params_t {
@@ -230,7 +231,7 @@ public:
 		vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
 		vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2]))*sign);
 		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, color,  top_n);} // top
-																					   //else                                   {qbd.add_quad_pts(p+0, color, -top_n);} // bottom - not actually drawn
+		//else                                   {qbd.add_quad_pts(p+0, color, -top_n);} // bottom - not actually drawn
 		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, color,  front_n);} // front
 		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, color, -front_n);} // back
 		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
@@ -260,6 +261,7 @@ struct car_t {
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
 	float get_length() const {return (bcube.d[dim][1] - bcube.d[dim][0]);}
+	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
 	void park() {cur_speed = max_speed = 0.0;}
@@ -1746,7 +1748,8 @@ class car_manager_t {
 			colorRGBA const &color(car_colors[car.color_id]);
 			cube_t const &c(car.bcube);
 			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
-			bool const draw_top(dist_less_than(camera_pdu.pos, (center + xlate), 0.25*get_draw_tile_dist()));
+			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
+			bool const draw_top(dist_val < 0.25);
 			point pb[8], pt[8]; // bottom and top sections
 			cube_t top_part(c);
 			top_part.d[car.dim][0] += (car.dir ? 0.25 : 0.30)*length; // back
@@ -1768,16 +1771,35 @@ class car_manager_t {
 			draw_cube(qbd, car.dim, car.dir, color, center, pb); // bottom
 			if (draw_top) {draw_cube(qbd, car.dim, car.dir, color, center, pt);} // top
 			if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
+			if (dist_val > 0.3) return; // no lights to draw
+			float const sign((car.dim^car.dir) ? -1.0 : 1.0);
+			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 
-			if (light_factor < 0.4) { // night time
-				// FIXME: add headlights
-				//car_light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, color), radius));
+			if (light_factor < 0.4 && dist_val < 0.3) { // night time headlights
+				for (unsigned d = 0; d < 2; ++d) { // L, R
+					point const pos((d ? 0.1 : 0.9)*(0.3*pb[0] + 0.7*pb[4]) + (d ? 0.9 : 0.1)*(0.3*pb[1] + 0.7*pb[5]));
+					add_light_flare(pos, front_n, WHITE, 2.0, 0.75*car.height); // pb 0,1,4,5
+				}
 			}
-			if (car.is_stopped() || car.stopped_at_light) {
-				// FIXME: add brake lights
+			if ((car.is_almost_stopped() || car.stopped_at_light) && dist_val < 0.2) { // brake lights
+				for (unsigned d = 0; d < 2; ++d) { // L, R
+					point const pos((d ? 0.1 : 0.9)*(0.3*pb[2] + 0.7*pb[6]) + (d ? 0.9 : 0.1)*(0.3*pb[3] + 0.7*pb[7]));
+					add_light_flare(pos, -front_n, RED, 1.0, 0.5*car.height); // pb 2,3,6,7
+				}
 			}
-			if (car.turn_dir != TURN_NONE) {
-				// FIXME: add turn signals
+			if (car.turn_dir != TURN_NONE && dist_val < 0.1) { // turn signals
+				float const ts_period = 1.5; // in seconds
+				double const time(fract((tfticks + 1000.0*car.height)/(ts_period*TICKS_PER_SECOND))); // use car height as seed to offset time base
+				
+				if (time > 0.5) { // flash on and off
+					bool const tdir((car.turn_dir == TURN_LEFT) ^ car.dim ^ car.dir); // R=1,2,5,6 or L=0,3,4,7
+					vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
+
+					for (unsigned d = 0; d < 2; ++d) { // B, F
+						point const pos(0.3*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + 0.7*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
+						add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.4*car.height); // normal points out 45 degrees
+					}
+				}
 			}
 		}
 	}; // car_draw_state_t

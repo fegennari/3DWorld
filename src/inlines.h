@@ -28,12 +28,14 @@ template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 // ***************** MATH FUNCTIONS ********************
 
 
-inline float SIGN(float v) {return (v < 0.0) ? -1.0 : 1.0;}
+inline float SIGN(float const v) {return (v < 0.0) ? -1.0 : 1.0;}
 
-inline float safe_acosf(float val) {return acos(max(-1.0f, min(1.0f, val)));}
+inline float safe_acosf(float const val) {return acos(max(-1.0f, min(1.0f, val)));}
 
 double const LOG_2 = log(2.0);
 template<typename T> T log2(T const v) {return log(v)/LOG_2;}
+
+template<typename T> T fract(T const v) {return v - floor(v);}
 
 // fast 1/sqrt(x), accurate to ~0.17% error
 inline float InvSqrt(float x) {
