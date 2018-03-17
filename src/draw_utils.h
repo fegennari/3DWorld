@@ -81,8 +81,10 @@ public:
 	void reserve_pts(unsigned sz) {points.reserve(sz);}
 	void add_pt(vert_type_t const &v) {points.push_back(v);}
 	void sort_back_to_front();
-	void draw(int tid, float const_point_size=0.0, bool enable_lighting=0, bool use_geom_shader=0) const;
-	void draw_and_clear(int tid, float const_point_size=0.0, bool enable_lighting=0, bool use_geom_shader=0) {draw(tid, const_point_size, enable_lighting, use_geom_shader); clear();}
+	void draw(int tid, float const_point_size=0.0, bool enable_lighting=0, bool use_geom_shader=0, float min_alpha=0.0) const;
+	void draw_and_clear(int tid, float const_point_size=0.0, bool enable_lighting=0, bool use_geom_shader=0, float min_alpha=0.0) {
+		draw(tid, const_point_size, enable_lighting, use_geom_shader, min_alpha); clear();
+	}
 	bool empty() const {return points.empty();}
 };
 

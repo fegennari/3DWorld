@@ -203,7 +203,9 @@ public:
 	void draw_and_clear_light_flares() {
 		if (light_psd.empty()) return; // no lights to draw
 		enable_blend();
-		light_psd.draw_and_clear(BLUR_TEX, 0.0, 0, 1); // use geometry shader for unlimited point size
+		set_additive_blend_mode();
+		light_psd.draw_and_clear(BLUR_TEX, 0.0, 0, 1, 0.005); // use geometry shader for unlimited point size
+		set_std_blend_mode();
 		disable_blend();
 	}
 	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0) const {
@@ -1789,19 +1791,19 @@ class car_manager_t {
 			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
 			cube_t const &c(car.bcube);
 			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
-			bool const draw_top(dist_val < 0.25);
+			bool const draw_top(dist_val < 0.25), dim(car.dim), dir(car.dir);
 			point pb[8], pt[8]; // bottom and top sections
 			cube_t top_part(c);
-			top_part.d[car.dim][0] += (car.dir ? 0.25 : 0.30)*length; // back
-			top_part.d[car.dim][1] -= (car.dir ? 0.30 : 0.25)*length; // front
-			set_cube_pts(c, z1, zmid, car.dim, car.dir, pb); // bottom
-			if (draw_top) {set_cube_pts(top_part, zmid, z2, car.dim, car.dir, pt);} // top
-			float const sign((car.dim^car.dir) ? -1.0 : 1.0);
+			top_part.d[dim][0] += (dir ? 0.25 : 0.30)*length; // back
+			top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
+			set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
+			if (draw_top) {set_cube_pts(top_part, zmid, z2, dim, dir, pt);} // top
+			float const sign((dim^dir) ? -1.0 : 1.0);
 
 			if (car.dz != 0.0) { // rotate all points about dim !d
-				float const sine_val((car.dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
-				rotate_pts(center, sine_val, cos_val, car.dim, 2, pb);
-				if (draw_top) {rotate_pts(center, sine_val, cos_val, car.dim, 2, pt);}
+				float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
+				rotate_pts(center, sine_val, cos_val, dim, 2, pb);
+				if (draw_top) {rotate_pts(center, sine_val, cos_val, dim, 2, pt);}
 			}
 			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
 				float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
@@ -1814,22 +1816,25 @@ class car_manager_t {
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
-				draw_cube(qbd, car.dim, car.dir, color, center, pb); // bottom
-				if (draw_top) {draw_cube(qbd, car.dim, car.dir, color, center, pt);} // top
+				draw_cube(qbd, dim, dir, color, center, pb); // bottom
+				if (draw_top) {draw_cube(qbd, dim, dir, color, center, pt);} // top
 				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 			}
 			if (dist_val > 0.3) return; // no lights to draw
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
+			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 
 			if (light_factor < 0.4 && dist_val < 0.3) { // night time headlights
 				for (unsigned d = 0; d < 2; ++d) { // L, R
-					point const pos((d ? 0.1 : 0.9)*(0.3*pb[0] + 0.7*pb[4]) + (d ? 0.9 : 0.1)*(0.3*pb[1] + 0.7*pb[5]));
+					unsigned const lr(d ^ lr_xor ^ 1);
+					point const pos((lr ? 0.1 : 0.9)*(0.3*pb[0] + 0.7*pb[4]) + (lr ? 0.9 : 0.1)*(0.3*pb[1] + 0.7*pb[5]));
 					add_light_flare(pos, front_n, WHITE, 2.0, 0.75*car.height); // pb 0,1,4,5
 				}
 			}
 			if ((car.is_almost_stopped() || car.stopped_at_light) && dist_val < 0.2) { // brake lights
 				for (unsigned d = 0; d < 2; ++d) { // L, R
-					point const pos((d ? 0.1 : 0.9)*(0.3*pb[2] + 0.7*pb[6]) + (d ? 0.9 : 0.1)*(0.3*pb[3] + 0.7*pb[7]));
+					unsigned const lr(d ^ lr_xor);
+					point const pos((lr ? 0.1 : 0.9)*(0.3*pb[2] + 0.7*pb[6]) + (lr ? 0.9 : 0.1)*(0.3*pb[3] + 0.7*pb[7]));
 					add_light_flare(pos, -front_n, RED, 1.0, 0.5*car.height); // pb 2,3,6,7
 				}
 			}
@@ -1838,7 +1843,7 @@ class car_manager_t {
 				double const time(fract((tfticks + 1000.0*car.height)/(ts_period*TICKS_PER_SECOND))); // use car height as seed to offset time base
 				
 				if (time > 0.5) { // flash on and off
-					bool const tdir((car.turn_dir == TURN_LEFT) ^ car.dim ^ car.dir); // R=1,2,5,6 or L=0,3,4,7
+					bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir); // R=1,2,5,6 or L=0,3,4,7
 					vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
 
 					for (unsigned d = 0; d < 2; ++d) { // B, F

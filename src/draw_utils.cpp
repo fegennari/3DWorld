@@ -294,7 +294,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::sort_back_t
 	sort(points.begin(), points.end(), cmp_back_to_front());
 }
 
-template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting, bool use_geom_shader) const {
+template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting, bool use_geom_shader, float min_alpha) const {
 
 	if (empty()) return;
 	shader_t s;
@@ -335,7 +335,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 	}
 	if (textured) {
 		s.add_uniform_int("tex0", 0);
-		s.add_uniform_float("min_alpha", 0.0);
+		s.add_uniform_float("min_alpha", min_alpha);
 		select_texture(tid);
 	}
 	set_point_sprite_mode(1);
