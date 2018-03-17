@@ -334,6 +334,7 @@ void next_city_frame();
 void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius);
 bool check_valid_scenery_pos(point const &pos, float radius);
+void free_city_context();
 
 // function prototypes - physics
 float get_max_t(int obj_type);

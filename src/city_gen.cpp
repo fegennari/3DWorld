@@ -8,6 +8,7 @@
 #include "file_utils.h"
 #include "draw_utils.h"
 #include "shaders.h"
+#include "model3d.h"
 
 using std::string;
 
@@ -260,7 +261,8 @@ struct car_t {
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
-	float get_length() const {return (bcube.d[dim][1] - bcube.d[dim][0]);}
+	float get_length() const {return (bcube.d[ dim][1] - bcube.d[ dim][0]);}
+	float get_width () const {return (bcube.d[!dim][1] - bcube.d[!dim][0]);}
 	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
@@ -289,7 +291,7 @@ struct car_t {
 	}
 	void accelerate(float mult=0.02) {cur_speed = min(max_speed, (cur_speed + mult*fticks*max_speed));}
 	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
-	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
+	void decelerate_fast() {decelerate(20.0);} // Note: large decel to avoid stopping in an intersection
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
@@ -1729,10 +1731,48 @@ colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, LT_GRAY, DK_GRA
 
 class car_manager_t {
 
+	class car_model_loader_t : public model3ds {
+	public:
+		void load_car_model() {
+			bool const recalc_normals = 1;
+			string const fn("../models/sports_car/sportsCar.obj");
+
+			if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
+				cerr << "Error: Failed to read model file '" << fn << "'" << endl;
+				exit(1);
+			}
+		}
+		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color=WHITE, bool is_shadow_pass=0) {
+			if (empty()) {load_car_model();}
+			assert(!empty());
+			bool const camera_pdu_valid(camera_pdu.valid);
+			camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
+			s.add_uniform_color("color_modulate", color);
+			model3d &model(front());
+			model.bind_all_used_tids();
+			cube_t const &bcube(model.get_bcube());
+			fgPushMatrix();
+			translate_to(pos);
+			if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
+			else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
+			fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);
+			fgRotate(90.0, 0.0, 0.0, 1.0);
+			fgRotate(90.0, 1.0, 0.0, 0.0);
+			uniform_scale(sz / (0.5*bcube.max_len()));
+			translate_to(-bcube.get_cube_center()); // cancel out model local translate
+			model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
+			fgPopMatrix();
+			camera_pdu.valid = camera_pdu_valid;
+		}
+	};
+
+	car_model_loader_t car_model_loader;
+
 	class car_draw_state_t : public draw_state_t {
 		quad_batch_draw qbds[2]; // unshadowed, shadowed
+		car_model_loader_t &car_model_loader;
 	public:
-		car_draw_state_t() {}
+		car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_) {}
 
 		void pre_draw(vector3d const &xlate_) {
 			draw_state_t::pre_draw(xlate_);
@@ -1746,9 +1786,9 @@ class car_manager_t {
 			begin_tile(center); // enable shadows
 			assert(car.color_id < NUM_CAR_COLORS);
 			colorRGBA const &color(car_colors[car.color_id]);
+			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
 			cube_t const &c(car.bcube);
 			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
-			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
 			bool const draw_top(dist_val < 0.25);
 			point pb[8], pt[8]; // bottom and top sections
 			cube_t top_part(c);
@@ -1756,7 +1796,8 @@ class car_manager_t {
 			top_part.d[car.dim][1] -= (car.dir ? 0.30 : 0.25)*length; // front
 			set_cube_pts(c, z1, zmid, car.dim, car.dir, pb); // bottom
 			if (draw_top) {set_cube_pts(top_part, zmid, z2, car.dim, car.dir, pt);} // top
-			
+			float const sign((car.dim^car.dir) ? -1.0 : 1.0);
+
 			if (car.dz != 0.0) { // rotate all points about dim !d
 				float const sine_val((car.dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
 				rotate_pts(center, sine_val, cos_val, car.dim, 2, pb);
@@ -1767,12 +1808,17 @@ class car_manager_t {
 				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
 				if (draw_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
 			}
-			quad_batch_draw &qbd(qbds[emit_now]);
-			draw_cube(qbd, car.dim, car.dir, color, center, pb); // bottom
-			if (draw_top) {draw_cube(qbd, car.dim, car.dir, color, center, pt);} // top
-			if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
+			if (0 && dist_val < 0.05) {
+				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
+				car_model_loader.draw_car(s, center, 1.2*car.get_width(), front_n, color, 0);
+			}
+			else { // draw simple 1-2 cube model
+				quad_batch_draw &qbd(qbds[emit_now]);
+				draw_cube(qbd, car.dim, car.dir, color, center, pb); // bottom
+				if (draw_top) {draw_cube(qbd, car.dim, car.dir, color, center, pt);} // top
+				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
+			}
 			if (dist_val > 0.3) return; // no lights to draw
-			float const sign((car.dim^car.dir) ? -1.0 : 1.0);
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 
 			if (light_factor < 0.4 && dist_val < 0.3) { // night time headlights
@@ -1811,7 +1857,7 @@ class car_manager_t {
 	vector<unsigned> entering_city;
 
 public:
-	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
+	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader) {}
 	void clear() {cars.clear();}
 
 	void init_cars(unsigned num) {
@@ -1872,6 +1918,7 @@ public:
 		}
 		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
+	void free_context() {car_model_loader.free_context();}
 };
 
 
@@ -1922,6 +1969,7 @@ public:
 		if (!shadow_only && reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate);} // roads don't cast shadows and aren't reflected in water
 		// Note: buildings are drawn through draw_buildings()
 	}
+	void free_context() {car_manager.free_context();}
 }; // city_gen_t
 
 city_gen_t city_gen;
@@ -1952,4 +2000,5 @@ bool check_valid_scenery_pos(point const &pos, float radius) {
 	if (check_city_sphere_coll(pos, radius)) return 0;
 	return 1;
 }
+void free_city_context() {city_gen.free_context();}
 
