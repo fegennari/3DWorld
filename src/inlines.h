@@ -584,6 +584,9 @@ inline void rotate_from_v2v(vector3d const &v1, vector3d const &v2) {
 	rotate_about(TO_DEG*get_norm_angle(v1, v2), cross_product(v2, v1));
 }
 
+inline void rotate_to_plus_x(vector3d const &dir) {
+	rotate_about(TO_DEG*safe_acosf(dir.get_norm().x), vector3d(0.0, 0.0, dir.y));
+}
 inline void rotate_into_plus_z(vector3d const &v) {
 	rotate_about(TO_DEG*safe_acosf(v.z/v.mag()), vector3d(-v.y, v.x, 0.0)); // rotate_from_v2v(v, plus_z)
 }

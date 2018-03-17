@@ -19,10 +19,6 @@ extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height;
 extern colorRGBA cur_fog_color;
 
 
-void rotate_to_plus_x(vector3d const &dir) {
-	rotate_about(TO_DEG*get_norm_angle(dir, plus_x), vector3d(0.0, 0.0, dir.y));
-}
-
 bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe the sun is out
 
 
@@ -49,7 +45,7 @@ public:
 		s.add_uniform_color("color_modulate", color);
 		model3d &model(operator[](id-1));
 		model.bind_all_used_tids();
-		cube_t const bcube(model.get_bcube());
+		cube_t const &bcube(model.get_bcube());
 		fgPushMatrix();
 		translate_to(pos);
 		rotate_to_plus_x(dir);
