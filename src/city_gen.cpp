@@ -936,12 +936,15 @@ class city_road_gen_t {
 		}
 	private:
 		int find_conn_int_seg(cube_t const &c, bool dim, bool dir) const {
+			float const min_seg_len(1.0*city_params.road_width);
+
 			for (unsigned i = 0; i < segs.size(); ++i) {
 				road_seg_t const &s(segs[i]);
 				if (s.dim == dim) continue; // not perp dim
 				if (s.d[dim][dir] != bcube.d[dim][dir]) continue; // not on edge of road grid
 				if (s.d[!dim][1] < c.d[!dim][0] || s.d[!dim][0] > c.d[!dim][1]) continue; // no overlap/projection in other dim
-				if (c.d[!dim][0] > s.d[!dim][0] && c.d[!dim][1] < s.d[!dim][1]) return i; // c contained in segment in other dim, this is the one we want
+				// c contained in segment in other dim with enough padding (min road length) on each side
+				if (c.d[!dim][0] > s.d[!dim][0]+min_seg_len && c.d[!dim][1] < s.d[!dim][1]-min_seg_len) return i; // this is the one we want
 				return -1; // partial overlap in other dim, can't split, fail
 			} // for i
 			return -1; // not found
@@ -1017,7 +1020,7 @@ class city_road_gen_t {
 				} // for i
 			} // for n
 
-			  // next, connect segments and intersections together by index, using roads as an acceleration structure
+			// next, connect segments and intersections together by index, using roads as an acceleration structure
 			for (unsigned i = 0; i < segs.size(); ++i) {
 				road_seg_t &seg(segs[i]);
 				road_ixs_t const &rix(by_ix[seg.road_ix]);
