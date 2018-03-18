@@ -1990,8 +1990,8 @@ public:
 		car_manager.next_frame(city_params.car_speed);
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
-		if (!shadow_only) {car_manager.draw(trans_op_mask, xlate);} // cars don't cast shadows because they move
 		if (!shadow_only && reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate);} // roads don't cast shadows and aren't reflected in water
+		if (!shadow_only) {car_manager.draw(trans_op_mask, xlate);} // cars don't cast shadows because they move
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void free_context() {car_manager.free_context();}
