@@ -30,6 +30,7 @@ buildings add_material
 buildings side_color 0.8 0.5 0.2 1.0
 buildings add_material
 
+buildings side_tscale 3.0
 buildings side_tid brickwork.jpg
 buildings side_nm_tid normal_maps/brickwork_normal.jpg
 buildings roof_tid tile.png
@@ -44,7 +45,7 @@ buildings add_material
 buildings side_color 0.4 0.2 0.1 1.0
 buildings add_material
 
-buildings side_tscale 4.0
+buildings side_tscale 8.0
 buildings side_tid brick1.jpg
 buildings side_nm_tid -1
 buildings roof_tid shingles.jpg
