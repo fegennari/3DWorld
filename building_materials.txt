@@ -10,6 +10,7 @@ buildings max_levels 3
 buildings split_prob 0.70 # 70%
 buildings size_range 0.4 0.8  0.4 0.8  0.3 1.0
 
+buildings texture_inv_y 1 # bricks have inverted normal maps, so invert the textures
 buildings side_tscale 2.0
 buildings side_tid bricks_tan.png
 buildings side_nm_tid normal_maps/bricks_tan_norm.png
@@ -45,6 +46,7 @@ buildings add_material
 buildings side_color 0.4 0.2 0.1 1.0
 buildings add_material
 
+buildings texture_inv_y 0 # back to non-inverted normal maps
 buildings side_tscale 8.0
 buildings side_tid brick1.jpg
 buildings side_nm_tid -1
