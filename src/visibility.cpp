@@ -152,11 +152,12 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 	return 1;
 }
 
-bool pos_dir_up::cube_visible(cube_t const &cube) const {
+bool pos_dir_up::cube_visible(cube_t const &c) const {
 
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
-	point cube_pts[8];
-	cube.get_points(cube_pts);
+	point const cube_pts[8] = {
+		point(c.d[0][0], c.d[1][0], c.d[2][0]), point(c.d[0][0], c.d[1][0], c.d[2][1]), point(c.d[0][0], c.d[1][1], c.d[2][0]), point(c.d[0][0], c.d[1][1], c.d[2][1]),
+		point(c.d[0][1], c.d[1][0], c.d[2][0]), point(c.d[0][1], c.d[1][0], c.d[2][1]), point(c.d[0][1], c.d[1][1], c.d[2][0]), point(c.d[0][1], c.d[1][1], c.d[2][1])};
 	return pt_set_visible<8>(cube_pts);
 	// Note: if the above call returns true, we could perform a further check for the frustum (all points) to the outside of each plane of the cube
 }
