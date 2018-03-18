@@ -16,7 +16,7 @@ bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edg
 float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
-vector3d const CAR_SIZE(0.30, 0.13, 0.10); // {length, width, height} in units of road width
+vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 colorRGBA const road_color          = WHITE; // all road parts are the same color, to make the textures match
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -1261,7 +1261,7 @@ class city_road_gen_t {
 				car.cur_road_type = TYPE_RSEG;
 				car.turn_dir  = TURN_NONE;
 				vector3d car_sz; // {length, width, height}
-				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*rgen.rand_uniform(0.9, 1.1)*city_params.road_width;}
+				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*city_params.road_width/*rgen.rand_uniform(0.9, 1.1)*/;} // Note: sportscar models should all be the same size
 				car.height = car_sz.z;
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.6*car_sz.x), val2(seg.d[seg.dim][1] - 0.6*car_sz.x);
@@ -1744,16 +1744,18 @@ class car_manager_t {
 				exit(1);
 			}
 		}
-		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color, bool is_shadow_pass=0) {
+		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color, point const &xlate, bool is_shadow_pass=0) {
 			if (empty()) {load_car_model();}
 			assert(!empty());
-			bool const camera_pdu_valid(camera_pdu.valid);
-			camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 			model3d &model(front());
 			material_t &body_mat(model.get_material(22));
 			body_mat.ka = body_mat.kd = color;
 			model.bind_all_used_tids();
 			cube_t const &bcube(model.get_bcube());
+			point const orig_camera_pos(camera_pdu.pos);
+			camera_pdu.pos += bcube.get_cube_center() - pos - xlate; // required for distance based LOD
+			bool const camera_pdu_valid(camera_pdu.valid);
+			camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 			fgPushMatrix();
 			translate_to(pos);
 			if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
@@ -1766,6 +1768,7 @@ class car_manager_t {
 			model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
 			fgPopMatrix();
 			camera_pdu.valid = camera_pdu_valid;
+			camera_pdu.pos   = orig_camera_pos;
 		}
 	};
 
@@ -1813,7 +1816,7 @@ class car_manager_t {
 			}
 			if (dist_val < 0.05) {
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-				car_model_loader.draw_car(s, center, 1.25*car.get_width(), front_n, color, 0);
+				car_model_loader.draw_car(s, center, 1.25*car.get_width(), front_n, color, xlate, 0);
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);

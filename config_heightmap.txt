@@ -22,8 +22,10 @@ city road_spacing 1.5
 city conn_road_seg_len 6.0
 city max_road_slope 0.3
 
-city num_cars 1000
-city car_speed 3.0
+city num_cars 4000
+city car_speed 10.0
+use_model_lod_blocks 0 # doesn't really work on car model
+model_mat_lod_thresh 0.008
 
 #tiled_terrain_only 1
 read_landscape 1
