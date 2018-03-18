@@ -75,10 +75,10 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 	if (angle == 0.0) {angle = 0.5*TO_RADIANS*PERSP_ANGLE*((do_zoom && !no_zoom) ? 1.0/ZOOM_FACTOR : 1.0);} // not yet cacluated
 	tterm = tanf(angle);
 	sterm = sinf(angle);
-	assert(tterm > 0.0); // angle < 90
 
 	if (A == 1.0) {x_sterm = sterm;} // common/simple case
 	else {
+		assert(tterm > 0.0); // angle < 90
 		float atan_val(atanf(A*tterm));
 		if (atan_val < 0.0) {atan_val += PI;}
 		x_sterm = (atan_val/angle)*sterm; // ratio of X-angle to Y-angle

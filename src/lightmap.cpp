@@ -1085,6 +1085,8 @@ void add_dynamic_lights_ground() {
 	bool first(1);
 	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
 	point const dlight_shift(-0.5*DX_VAL, -0.5*DY_VAL, 0.0);
+	float const grid_dx(DX_VAL*(1 << DL_GRID_BS)), grid_dy(DY_VAL*(1 << DL_GRID_BS));
+	float const z1(min(czmin, zbottom)), z2(max(czmax, ztop));
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		light_source &ls(dl_sources[i]);
@@ -1104,7 +1106,17 @@ void add_dynamic_lights_ground() {
 		int const radius(((int(ls.get_radius()*max(DX_VAL_INV, DY_VAL_INV)) + 1) >> DL_GRID_BS) + 1), rsq(radius*radius);
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
 		for (unsigned d = 0; d < 4; ++d) {bnds[d>>1][d&1] >>= DL_GRID_BS;}
+		pos_dir_up pdu;
 
+		if (!line_light && ls.is_very_directional()) { // spotlight
+			cylinder_3dw const cylin(ls.calc_bounding_cylin());
+			vector3d const dir(cylin.p2 - cylin.p1);
+
+			if (dir.x != 0.0 || dir.y != 0.0) { // not vertical
+				float const len(dir.mag());
+				pdu = pos_dir_up(cylin.p1, dir/len, plus_z, tan(cylin.r2/len), 0.0, ls_radius, 1.0, 1);
+			}
+		}
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
 			int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
 
@@ -1114,6 +1126,11 @@ void add_dynamic_lights_ground() {
 					float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
 					if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) {continue;}
 				} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
+
+				if (pdu.valid) {
+					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS));
+					if (!pdu.cube_visible(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, z1, z2))) continue; // tile not in spotlight cylinder
+				}
 				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
 			} // for x
 		} // for y
