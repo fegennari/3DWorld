@@ -1290,7 +1290,7 @@ class city_road_gen_t {
 				car.cur_road      = seg.road_ix;
 				car.cur_seg       = seg.conn_ix[car.dir];
 
-				if (!road_to_city.empty()) {
+				if (!road_to_city.empty()) { // on connector road
 					assert(car.cur_road < road_to_city.size());
 					unsigned const city_ix(road_to_city[car.cur_road].id[car.dir]);
 					
@@ -1330,7 +1330,7 @@ class city_road_gen_t {
 			cube_t const bcube(get_road_bcube_for_car(car, global_rn));
 
 			if (!bcube.intersects_xy(car.bcube)) { // sanity check
-				cout << "bad intersection:" << endl << car.str() << endl << bcube.str() << endl;
+				cout << "bad intersection:" << endl << car.str() << endl << "bcube: " << bcube.str() << endl;
 				assert(0);
 			}
 		}
@@ -1347,7 +1347,6 @@ class city_road_gen_t {
 
 			cube_t const bcube(get_road_bcube_for_car(car));
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << bcube.str() << endl; assert(0);} // sanity check
-			unsigned conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 			bool const dim(car.dim);
 			float const road_dz(bcube.get_dz());
 
@@ -1412,32 +1411,36 @@ class city_road_gen_t {
 				assert(get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 				return; // done
 			}
-			// car crossing the border of this bcube, update state
-			if (!bcube.contains_pt_xy_inc_low_edge(car.get_center())) { // move to another road seg/int
-				find_car_next_seg(car, road_networks, global_rn);
+			point car_front(car.get_center());
+			car_front[dim] += (car.dir ? 0.375 : -0.375)*car.get_length(); // near the front, so that we can stop at the intersection
 
+			// car crossing the border of this bcube, update state
+			if (!bcube.contains_pt_xy_inc_low_edge(car_front)) { // move to another road seg/int
+				find_car_next_seg(car, road_networks, global_rn);
+				
 				if (is_isect(car.cur_road_type)) { // moved into an intersection, choose direction
 					road_isec_t const &isec(get_car_rn(car, road_networks, global_rn).get_car_isec(car)); // Note: either == city_id, or just moved from global to a new city
 					unsigned const orient_in(2*car.dim + (!car.dir)); // invert dir (incoming, not outgoing)
 					assert(isec.conn & (1<<orient_in)); // car must come from an enabled orient
 					unsigned orients[3]; // {straight, left, right}
+					unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 					orients[TURN_NONE ] = car.get_orient(); // straight
 					orients[TURN_LEFT ] = conn_left [orient_in];
 					orients[TURN_RIGHT] = conn_right[orient_in];
-					
+
 					// TODO: path finding update - use A*?
 					while (1) {
 						unsigned new_turn_dir(0);
-						int const rval(rand()%(isec.is_global_conn_int() ? 2 : 4)); // force turn on global conn road to get more cars traveling between cities
+						int const rval(rgen.rand()%(isec.is_global_conn_int() ? 2 : 4)); // force turn on global conn road to get more cars traveling between cities
 						if      (rval == 0) {new_turn_dir = TURN_LEFT ;} // 25%
 						else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
 						else                {new_turn_dir = TURN_NONE ;} // 50%
-						if (new_turn_dir == car.front_car_turn_dir && (rand()%4) != 0) continue; // car in front is too slow, don't turn the same way as it
+						if (new_turn_dir == car.front_car_turn_dir && (rgen.rand()%4) != 0) continue; // car in front is too slow, don't turn the same way as it
 						if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;} // success
 					} // end while
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
-					car.stopped_at_light   = isec.red_or_yellow_light(car); // FIXME: check this earlier, before the car is in the intersection?
+					car.stopped_at_light   = isec.red_or_yellow_light(car);
 					if (car.stopped_at_light) {car.decelerate_fast();}
 					if (car.turn_dir != TURN_NONE) {car.turn_val = car.get_center()[!dim];} // capture car centerline before the turn
 				}
