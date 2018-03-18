@@ -255,12 +255,12 @@ class city_road_gen_t;
 struct car_t {
 	cube_t bcube, prev_bcube;
 	bool dim, dir, stopped_at_light, entering_city;
-	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir;
+	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
 	unsigned short cur_city, cur_road, cur_seg;
 	float height, dz, rot_z, turn_val, cur_speed, max_speed;
 
 	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC),
-		cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
+		model_id(0), cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
@@ -1736,23 +1736,32 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 unsigned const NUM_CAR_COLORS = 10;
 colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, LT_GRAY, DK_GRAY, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
+namespace car_models {
+	unsigned const NUM_MODELS = 1;
+	string const model_files[NUM_MODELS] = {"../models/sports_car/sportsCar.obj"};
+};
+
 class car_manager_t {
 
 	class car_model_loader_t : public model3ds {
 	public:
-		void load_car_model() {
-			bool const recalc_normals = 1;
-			string const fn("../models/sports_car/sportsCar.obj");
+		static unsigned num_models() {return car_models::NUM_MODELS;}
+		void load_car_models() {
+			for (unsigned i = 0; i < num_models(); ++i) {
+				string const &fn(car_models::model_files[i]);
+				bool const recalc_normals = 1;
 
-			if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
-				cerr << "Error: Failed to read model file '" << fn << "'" << endl;
-				exit(1);
-			}
+				if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
+					cerr << "Error: Failed to read model file '" << fn << "'" << endl;
+					exit(1);
+				}
+			} // for i
 		}
-		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color, point const &xlate, bool is_shadow_pass=0) {
-			if (empty()) {load_car_model();}
-			assert(!empty());
-			model3d &model(front());
+		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color, point const &xlate, unsigned model_id, bool is_shadow_pass=0) {
+			if (empty()) {load_car_models();}
+			assert(size() == num_models());
+			assert(model_id < size());
+			model3d &model(at(model_id));
 			material_t &body_mat(model.get_material(22));
 			body_mat.ka = body_mat.kd = color;
 			model.bind_all_used_tids();
@@ -1821,7 +1830,7 @@ class car_manager_t {
 			}
 			if (dist_val < 0.05) {
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-				car_model_loader.draw_car(s, center, 1.25*car.get_width(), front_n, color, xlate, 0);
+				car_model_loader.draw_car(s, center, 1.25*car.get_width(), front_n, color, xlate, car.model_id);
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
@@ -1877,6 +1886,7 @@ public:
 	void init_cars(unsigned num) {
 		if (num == 0) return;
 		timer_t timer("Init Cars");
+		unsigned const num_models(car_model_loader.num_models());
 		cars.reserve(num);
 		
 		for (unsigned n = 0; n < num; ++n) {
@@ -1884,6 +1894,7 @@ public:
 			
 			if (road_gen.add_car(car, rgen)) {
 				car.color_id = rgen.rand() % NUM_CAR_COLORS;
+				car.model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);
 				assert(car.is_valid());
 				cars.push_back(car);
 			}
