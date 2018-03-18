@@ -16,6 +16,7 @@ bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edg
 float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
+float const CONN_ROAD_SPEED_MULT    = 2.0; // twice the speed limit on connector roads
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 colorRGBA const road_color          = WHITE; // all road parts are the same color, to make the textures match
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
@@ -263,6 +264,7 @@ struct car_t {
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
+	float get_max_speed() const {return ((cur_city == CONN_CITY_IX) ? CONN_ROAD_SPEED_MULT : 1.0)*max_speed;}
 	float get_length() const {return (bcube.d[ dim][1] - bcube.d[ dim][0]);}
 	float get_width () const {return (bcube.d[!dim][1] - bcube.d[!dim][0]);}
 	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
@@ -285,15 +287,15 @@ struct car_t {
 	void move(float speed_mult) {
 		prev_bcube = bcube;
 		if (is_stopped()) return;
-		assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= max_speed);
+		assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= CONN_ROAD_SPEED_MULT*max_speed); // Note: must be valid for connector road => city transitions
 		float dist(cur_speed*speed_mult);
 		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
 		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 		move_by((dir ? 1.0 : -1.0)*dist);
 	}
-	void accelerate(float mult=0.02) {cur_speed = min(max_speed, (cur_speed + mult*fticks*max_speed));}
+	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
 	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
-	void decelerate_fast() {decelerate(20.0);} // Note: large decel to avoid stopping in an intersection
+	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
