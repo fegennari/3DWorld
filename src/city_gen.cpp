@@ -1744,13 +1744,14 @@ class car_manager_t {
 				exit(1);
 			}
 		}
-		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color=WHITE, bool is_shadow_pass=0) {
+		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color, bool is_shadow_pass=0) {
 			if (empty()) {load_car_model();}
 			assert(!empty());
 			bool const camera_pdu_valid(camera_pdu.valid);
 			camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
-			s.add_uniform_color("color_modulate", color);
 			model3d &model(front());
+			material_t &body_mat(model.get_material(22));
+			body_mat.ka = body_mat.kd = color;
 			model.bind_all_used_tids();
 			cube_t const &bcube(model.get_bcube());
 			fgPushMatrix();
@@ -1810,9 +1811,9 @@ class car_manager_t {
 				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
 				if (draw_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
 			}
-			if (0 && dist_val < 0.05) {
+			if (dist_val < 0.05) {
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-				car_model_loader.draw_car(s, center, 1.2*car.get_width(), front_n, color, 0);
+				car_model_loader.draw_car(s, center, 1.25*car.get_width(), front_n, color, 0);
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
@@ -1824,7 +1825,7 @@ class car_manager_t {
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 
-			if (light_factor < 0.4 && dist_val < 0.3) { // night time headlights
+			if (light_factor < 0.5 && dist_val < 0.3) { // night time headlights
 				for (unsigned d = 0; d < 2; ++d) { // L, R
 					unsigned const lr(d ^ lr_xor ^ 1);
 					point const pos((lr ? 0.1 : 0.9)*(0.3*pb[0] + 0.7*pb[4]) + (lr ? 0.9 : 0.1)*(0.3*pb[1] + 0.7*pb[5]));
@@ -1848,7 +1849,7 @@ class car_manager_t {
 
 					for (unsigned d = 0; d < 2; ++d) { // B, F
 						point const pos(0.3*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + 0.7*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
-						add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.4*car.height); // normal points out 45 degrees
+						add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.3*car.height); // normal points out 45 degrees
 					}
 				}
 			}
