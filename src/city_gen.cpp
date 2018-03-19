@@ -1906,7 +1906,7 @@ public:
 	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
-		//timer_t timer("Update Cars"); // 10K cars = 1.5ms / 2K cars = 0.2ms
+		//timer_t timer("Update Cars"); // 10K cars = 1.7ms / 2K cars = 0.2ms
 		sort(cars.begin(), cars.end()); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		float const speed(0.001*car_speed*fticks);
@@ -1917,13 +1917,14 @@ public:
 		}
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			if (i->is_parked()) continue;
+			bool const on_conn_road(i->cur_city == CONN_CITY_IX);
 
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
 				if (i->cur_city != j->cur_city || i->cur_road != j->cur_road) break; // different cities or roads
-				if (i->cur_road_type == j->cur_road_type && i->cur_seg != j->cur_seg) break; // different road segments or different intersections
+				if (!on_conn_road && i->cur_road_type == j->cur_road_type && abs((int)i->cur_seg - (int)j->cur_seg) > (on_conn_road ? 1 : 0)) break; // diff road segs or diff isects
 				i->check_collision(*j, road_gen);
 			}
-			if (i->cur_city == CONN_CITY_IX) { // on connector road, check before entering intersection to a city
+			if (on_conn_road) { // on connector road, check before entering intersection to a city
 				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
 					if (*ix != (i - cars.begin())) {i->check_collision(cars[*ix], road_gen);}
 				}

@@ -246,7 +246,7 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
 		global_building_params.cur_mat.side_tex.tid = get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
 	}
-	else if (str == "side_nm_tid") {
+	else if (str == "side_nm_tid") { // Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
 		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
 		global_building_params.cur_mat.side_tex.nm_tid = get_texture_by_name(std::string(strc), 1, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
 	}
