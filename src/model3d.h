@@ -274,6 +274,7 @@ public:
 	float get_prim_area(unsigned i, unsigned npts) const;
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
+	void invert_tcy();
 	void write(ostream &out) const;
 	void read(istream &in);
 	bool indexing_enabled() const {return !indices.empty();}
@@ -293,6 +294,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)size(); stats.verts += num_unique_verts();}
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
+	void invert_tcy();
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };
@@ -311,8 +313,9 @@ template<typename T> struct geometry_t {
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
 	void get_polygons(get_polygon_args_t &args) const;
 	cube_t get_bcube() const;
-	void finalize()  {triangles.finalize(3); quads.finalize(4);}
-	void free_vbos() {triangles.free_vbos(); quads.free_vbos();}
+	void invert_tcy() {triangles.invert_tcy(); quads.invert_tcy();}
+	void finalize  () {triangles.finalize(3); quads.finalize(4);}
+	void free_vbos () {triangles.free_vbos(); quads.free_vbos();}
 	void clear();
 	void get_stats(model3d_stats_t &stats) const;
 	void calc_area(float &area, unsigned &ntris);
@@ -335,9 +338,9 @@ public:
 	void clear();
 	void free_tids();
 	void free_textures();
-	void ensure_texture_loaded(texture_t &t, int tid, bool is_bump);
+	bool ensure_texture_loaded(texture_t &t, int tid, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
-	void ensure_tid_loaded(int tid, bool is_bump) {if (tid >= 0) {ensure_texture_loaded(get_texture(tid), tid, is_bump);}}
+	bool ensure_tid_loaded(int tid, bool is_bump) {return ((tid >= 0) ? ensure_texture_loaded(get_texture(tid), tid, is_bump) : 0);}
 	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init(free_after_upload);}} // if allocated
 	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
 	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
@@ -362,7 +365,7 @@ struct material_params_t {
 
 struct material_t : public material_params_t {
 
-	bool might_have_alpha_comp;
+	bool might_have_alpha_comp, tcs_checked;
 	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid;
 	float draw_order_score, avg_area_per_tri;
 	float metalness; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
@@ -372,7 +375,7 @@ struct material_t : public material_params_t {
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
 	material_t(string const &name_=string(), string const &fn=string())
-		: might_have_alpha_comp(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
+		: might_have_alpha_comp(0), tcs_checked(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
 		draw_order_score(0.0), avg_area_per_tri(0.0), metalness(-1.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
@@ -386,6 +389,7 @@ struct material_t : public material_params_t {
 	void compute_area_per_tri();
 	void ensure_textures_loaded(texture_manager &tmgr);
 	void init_textures(texture_manager &tmgr);
+	void check_for_tc_invert_y(texture_manager &tmgr);
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;

@@ -60,10 +60,11 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
 	bool const use_mipmaps(use_model2d_tex_mipmaps && !is_alpha_mask);
+	bool const invert_y = 0;
 	unsigned ncolors((is_alpha_mask || force_grayscale) ? 1 : 3);
 	// type=read_from_file format=auto width height wrap_mir ncolors use_mipmaps name [do_compress]
 	// always RGB wrapped+mipmap (normal map flag set later)
-	textures.push_back(texture_t(0, 7, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, 0, compress, model3d_texture_anisotropy));
+	textures.push_back(texture_t(0, 7, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, invert_y, compress, model3d_texture_anisotropy));
 	textures.back().invert_alpha = invert_alpha;
 	return tid; // can't fail
 }
@@ -82,9 +83,9 @@ void texture_manager::free_textures() {
 	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->free_data();}
 }
 
-void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
+bool texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
 
-	if (t.is_loaded()) return;
+	if (t.is_loaded()) return 0;
 	//if (is_bump) {t.do_compress = 0;} // don't compress normal maps
 	if (use_model2d_tex_mipmaps && enable_model3d_custom_mipmaps && t.has_alpha()) {t.use_mipmaps = 4;}
 	t.load(-1);
@@ -96,6 +97,7 @@ void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump)
 	if (is_bump) {t.make_normal_map();}
 	t.init(); // must be after alpha copy
 	assert(t.is_loaded());
+	return 1;
 }
 
 void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
@@ -714,6 +716,12 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_
 	}
 }
 
+template<typename T> void invert_vert_tcy(T &vert) {vert.t[1] = 1.0 - vert.t[1];}
+void invert_vert_tcy(vert_norm &v) {} // do nothing (no tcs)
+
+template<typename T> void indexed_vntc_vect_t<T>::invert_tcy() {
+	for (auto i = begin(); i != end(); ++i) {invert_vert_tcy(*i);}
+}
 
 template<typename T> void indexed_vntc_vect_t<T>::write(ostream &out) const {
 	vntc_vect_t<T>::write(out);
@@ -839,6 +847,9 @@ template<typename T> void vntc_vect_block_t<T>::get_polygons(get_polygon_args_t 
 	for (const_iterator i = begin(); i != end(); ++i) {i->get_polygons(args, npts);}
 }
 
+template<typename T> void vntc_vect_block_t<T>::invert_tcy() {
+	for (iterator i = begin(); i != end(); ++i) {i->invert_tcy();}
+}
 
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
@@ -846,7 +857,6 @@ template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 	for (const_iterator i = begin(); i != end(); ++i) {i->write(out);}
 	return 1;
 }
-
 
 template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 
@@ -990,6 +1000,21 @@ void material_t::init_textures(texture_manager &tmgr) {
 		if (use_spec_map()) {maybe_upload_and_free(tmgr, s_tid);}
 		if (use_spec_map()) {maybe_upload_and_free(tmgr, ns_tid);}
 	}
+}
+
+void material_t::check_for_tc_invert_y(texture_manager &tmgr) {
+
+	if (tcs_checked) return; // already done
+	int const tid(get_render_texture());
+	if (tid < 0) return; // no texture
+	texture_t &texture(tmgr.get_texture(tid));
+
+	if (texture.is_inverted_y_type() && !texture.invert_y) { // compressed DDS texture, need to invert tex coord in Y
+		geom.invert_tcy();
+		geom_tan.invert_tcy();
+		texture.invert_y ^= 1; // already inverted, don't try to invert again (FIXME: doesn't work if used in multiple materials)
+	}
+	tcs_checked = 1;
 }
 
 
@@ -1480,6 +1505,7 @@ void model3d::bind_all_used_tids() {
 		
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->mat_is_used()) continue;
+		m->check_for_tc_invert_y(tmgr);
 		tmgr.ensure_tid_bound(m->get_render_texture()); // only one tid for now
 		
 		if (m->use_bump_map()) {

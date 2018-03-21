@@ -1284,6 +1284,7 @@ public:
 		: type(t), format(f), use_mipmaps(um), defer_load_type(DEFER_TYPE_NONE), wrap(wrap_mir != 0), mirror(wrap_mir == 2), invert_y(inv), do_compress(do_comp),
 		has_binary_alpha(0), is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(nm), width(w), height(h), ncolors(nc), bump_tid(-1),
 		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+	bool is_inverted_y_type() const {return (defer_load_type == DEFER_TYPE_DDS);}
 	void init();
 	void do_gl_init(bool free_after_upload=0);
 	GLenum calc_internal_format() const;
