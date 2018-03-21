@@ -1739,19 +1739,29 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 unsigned const NUM_CAR_COLORS = 10;
 colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, LT_GRAY, DK_GRAY, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
-namespace car_models {
-	unsigned const NUM_MODELS = 1;
-	string const model_files[NUM_MODELS] = {"../models/sports_car/sportsCar.obj"};
+
+struct car_model_t {
+	string fn;
+	unsigned body_mat_id;
+	car_model_t(string const &fn_, unsigned body_mat_id_=0) : fn(fn_), body_mat_id(body_mat_id_) {}
+};
+unsigned const NUM_CAR_MODELS = 2;
+
+car_model_t const car_model_files[NUM_CAR_MODELS] = {
+	car_model_t("../models/cars/sports_car/sportsCar.obj", 22),
+	car_model_t("../models/cars/natla_car/natla_car.obj",   1),
 };
 
 class car_manager_t {
 
 	class car_model_loader_t : public model3ds {
 	public:
-		static unsigned num_models() {return car_models::NUM_MODELS;}
+		static unsigned num_models() {return NUM_CAR_MODELS;}
+		car_model_t const &get_model(unsigned id) const {assert(id < NUM_CAR_MODELS); return car_model_files[id];}
+
 		void load_car_models() {
 			for (unsigned i = 0; i < num_models(); ++i) {
-				string const &fn(car_models::model_files[i]);
+				string const &fn(get_model(i).fn);
 				bool const recalc_normals = 1;
 
 				if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
@@ -1764,8 +1774,9 @@ class car_manager_t {
 			if (empty()) {load_car_models();}
 			assert(size() == num_models());
 			assert(model_id < size());
+			car_model_t const &model_file(get_model(model_id));
 			model3d &model(at(model_id));
-			material_t &body_mat(model.get_material(22));
+			material_t &body_mat(model.get_material(model_file.body_mat_id));
 			body_mat.ka = body_mat.kd = color;
 			model.bind_all_used_tids();
 			cube_t const &bcube(model.get_bcube());

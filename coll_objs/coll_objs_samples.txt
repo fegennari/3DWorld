@@ -42,7 +42,7 @@ metalness 0.0 # can set to 1.0 for metallic objects
 #t 1.0 0 1.5  s 1 2  M 0  m 0.05  O ../models/-Stahlberg-LC-Challenge-/exportedOBJ.obj 3 1 0
 #t 0 0 0.0  s 1 2  M 0  m 0.04  O ../models/teapot/teapot.obj 4 1 0
 #t 0 0 0.0  s 1 2  M 0  m 0.5  O ../models/test_object/testObj.obj 4 1 0
-#t 0 0 0.0  s 1 2  M 0  m 1.0  O ../models/sports_car/sportsCar.obj 4 1 0
+#t 0 0 0.0  s 1 2  M 0  m 1.0  O ../models/cars/sports_car/sportsCar.obj 4 1 0
 #t 0 0 0.0  s 1 2  M 0  m 1.0  O "D:\Frank\Desktop\Open Source SW Code\tinyobjloader-master\models\mtllib-multiple-files-issue-112.obj" 4 1 0
 #t 0 0 0.0  s 1 2  M 0  m 0.5  O ../models/house/models/Mesh121.obj 4 1 0
 
@@ -58,7 +58,8 @@ l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = 
 #t 0 0.0 0.5  s 1 2  M 0  m 0.05  O "..\models\fish\rudd\Rudd-Fish.obj" 3 1 0
 #t 0.0 0.0 -0.3  s 1 2  M 0  m 0.001  O "..\models\bistro\interior.obj" 4 0 0  O "..\models\bistro\exterior.obj" 4 0 0
 #t 0 0.0 0.5  m 0.25  O "..\models\gallery\gallery.obj" 4 1 0
-t 0 0.0 0.5  m 0.025  O "..\models\chestnut\AL05a.obj" 4 1 0
+#t 0 0.0 0.5  m 0.025  O "..\models\chestnut\AL05a.obj" 4 1 0
+t 0 0.0 0.0  m 1.0  O "..\models\cars\natla_car\natla_car.obj" 4 1 0
 
 cube_map_ref 0
 metalness 0.0
