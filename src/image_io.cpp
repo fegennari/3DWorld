@@ -124,7 +124,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		// defer this check until we actually need to access the data, in case we want to actually do the load on the fly later
 		//assert(is_allocated());
 		assert(is_loaded());
-		if (invert_y) {do_invert_y();} // upside down
+		if (invert_y && format != 10) {do_invert_y();} // upside down (not DDS)
 		if (want_alpha_channel && ncolors < 4) {add_alpha_channel();}
 		else if (want_luminance && ncolors == 3) {try_compact_to_lum();}
 		//if (want_alpha_channel) {fill_transparent_with_avg_color();}
@@ -710,7 +710,7 @@ void texture_t::deferred_load_and_bind() {
 			gli::texture2D Texture(gli::load_dds(name.c_str()));
 			bool const compressed(gli::is_compressed(Texture.format()));
 			// here we assume the texture is upside down and flip it, if it's uncompressed and flippable
-			if (!compressed) {Texture = flip(Texture);}
+			if (!compressed && !invert_y) {Texture = flip(Texture);}
 			assert(!Texture.empty());
 			width   = Texture.dimensions().x;
 			height  = Texture.dimensions().y;
