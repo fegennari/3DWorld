@@ -1737,19 +1737,19 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 
 
 unsigned const NUM_CAR_COLORS = 10;
-colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, LT_GRAY, DK_GRAY, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
-
+colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
 struct car_model_t {
 	string fn;
-	unsigned body_mat_id;
-	car_model_t(string const &fn_, unsigned body_mat_id_=0) : fn(fn_), body_mat_id(body_mat_id_) {}
+	int body_mat_id, fixed_color_id;
+	float dz;
+	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float dz_=0.0) : fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), dz(dz_) {}
 };
 unsigned const NUM_CAR_MODELS = 2;
 
 car_model_t const car_model_files[NUM_CAR_MODELS] = {
-	car_model_t("../models/cars/sports_car/sportsCar.obj", 22),
-	car_model_t("../models/cars/natla_car/natla_car.obj",   1),
+	car_model_t("../models/cars/sports_car/sportsCar.obj", 22, -1, 0.00),
+	car_model_t("../models/cars/natla_car/natla_car.obj",  -1,  2, 0.06), // always GRAY
 };
 
 class car_manager_t {
@@ -1770,33 +1770,39 @@ class car_manager_t {
 				}
 			} // for i
 		}
-		void draw_car(shader_t &s, vector3d const &pos, float sz, vector3d const &dir, colorRGBA const &color, point const &xlate, unsigned model_id, bool is_shadow_pass=0) {
+		void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color, point const &xlate, unsigned model_id, bool is_shadow_pass=0) {
 			if (empty()) {load_car_models();}
 			assert(size() == num_models());
 			assert(model_id < size());
 			car_model_t const &model_file(get_model(model_id));
 			model3d &model(at(model_id));
-			material_t &body_mat(model.get_material(model_file.body_mat_id));
-			body_mat.ka = body_mat.kd = color;
+
+			if (model_file.body_mat_id >= 0) { // use custom color for body material
+				material_t &body_mat(model.get_material(model_file.body_mat_id));
+				body_mat.ka = body_mat.kd = color;
+			}
 			model.bind_all_used_tids();
 			cube_t const &bcube(model.get_bcube());
 			point const orig_camera_pos(camera_pdu.pos);
 			camera_pdu.pos += bcube.get_cube_center() - pos - xlate; // required for distance based LOD
 			bool const camera_pdu_valid(camera_pdu.valid);
 			camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
+			// Note: in model space, front-back=z, left-right=x, top-bot=y
+			float const sz_scale((car_bcube.get_dx() + car_bcube.get_dy() + car_bcube.get_dz()) / (bcube.get_dx() + bcube.get_dy() + bcube.get_dz()));
 			fgPushMatrix();
-			translate_to(pos);
+			translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
 			if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
 			else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 			fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);
 			fgRotate(90.0, 0.0, 0.0, 1.0);
 			fgRotate(90.0, 1.0, 0.0, 0.0);
-			uniform_scale(sz / (0.5*bcube.max_len()));
+			uniform_scale(sz_scale);
 			translate_to(-bcube.get_cube_center()); // cancel out model local translate
 			model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
 			fgPopMatrix();
 			camera_pdu.valid = camera_pdu_valid;
 			camera_pdu.pos   = orig_camera_pos;
+			select_texture(WHITE_TEX); // reset back to default/untextured
 		}
 	};
 
@@ -1844,7 +1850,7 @@ class car_manager_t {
 			}
 			if (dist_val < 0.05) {
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-				car_model_loader.draw_car(s, center, 1.25*car.get_width(), front_n, color, xlate, car.model_id);
+				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id);
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
@@ -1859,20 +1865,20 @@ class car_manager_t {
 			if (light_factor < 0.5 && dist_val < 0.3) { // night time headlights
 				for (unsigned d = 0; d < 2; ++d) { // L, R
 					unsigned const lr(d ^ lr_xor ^ 1);
-					point const pos((lr ? 0.1 : 0.9)*(0.3*pb[0] + 0.7*pb[4]) + (lr ? 0.9 : 0.1)*(0.3*pb[1] + 0.7*pb[5]));
-					add_light_flare(pos, front_n, WHITE, 2.0, 0.75*car.height); // pb 0,1,4,5
+					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (lr ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
+					add_light_flare(pos, front_n, WHITE, 2.0, 0.65*car.height); // pb 0,1,4,5
 				}
 			}
 			if ((car.is_almost_stopped() || car.stopped_at_light) && dist_val < 0.2) { // brake lights
 				for (unsigned d = 0; d < 2; ++d) { // L, R
 					unsigned const lr(d ^ lr_xor);
-					point const pos((lr ? 0.1 : 0.9)*(0.3*pb[2] + 0.7*pb[6]) + (lr ? 0.9 : 0.1)*(0.3*pb[3] + 0.7*pb[7]));
+					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[2] + 0.8*pb[6]) + (lr ? 0.8 : 0.2)*(0.2*pb[3] + 0.8*pb[7]));
 					add_light_flare(pos, -front_n, RED, 1.0, 0.5*car.height); // pb 2,3,6,7
 				}
 			}
 			if (car.turn_dir != TURN_NONE && dist_val < 0.1) { // turn signals
 				float const ts_period = 1.5; // in seconds
-				double const time(fract((tfticks + 1000.0*car.height)/(ts_period*TICKS_PER_SECOND))); // use car height as seed to offset time base
+				double const time(fract((tfticks + 1000.0*car.max_speed)/(ts_period*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
 				
 				if (time > 0.5) { // flash on and off
 					bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir); // R=1,2,5,6 or L=0,3,4,7
@@ -1905,14 +1911,17 @@ public:
 		
 		for (unsigned n = 0; n < num; ++n) {
 			car_t car;
-			
-			if (road_gen.add_car(car, rgen)) {
-				car.color_id = rgen.rand() % NUM_CAR_COLORS;
+			if (!road_gen.add_car(car, rgen)) continue;
+			int fixed_color(-1);
+
+			if (num_models > 0) {
 				car.model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);
-				assert(car.is_valid());
-				cars.push_back(car);
+				fixed_color  = car_model_loader.get_model(car.model_id).fixed_color_id;
 			}
-		} // for i
+			car.color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
+			assert(car.is_valid());
+			cars.push_back(car);
+		} // for n
 		cout << "Cars: " << cars.size() << endl;
 	}
 	void next_frame(float car_speed) {
