@@ -1742,14 +1742,17 @@ colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, R
 struct car_model_t {
 	string fn;
 	int body_mat_id, fixed_color_id;
-	float dz;
-	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float dz_=0.0) : fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), dz(dz_) {}
+	float xy_rot, dz; // xy_rot in degrees
+	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float rot=0.0, float dz_=0.0) : fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_) {}
 };
-unsigned const NUM_CAR_MODELS = 2;
+unsigned const NUM_CAR_MODELS = 5;
 
 car_model_t const car_model_files[NUM_CAR_MODELS] = {
-	car_model_t("../models/cars/sports_car/sportsCar.obj", 22, -1, 0.00),
-	car_model_t("../models/cars/natla_car/natla_car.obj",  -1,  2, 0.06), // always GRAY
+	car_model_t("../models/cars/sports_car/sportsCar.obj",   22, -1, 90,  0.00),
+	car_model_t("../models/cars/natla_car/natla_car.obj",    -1,  2, 90,  0.06), // always GRAY
+	car_model_t("../models/cars/speedCar/speedCar.obj",      -1,  6, 0,   0.12), // always DK_BLUE
+	car_model_t("../models/cars/Lamborghini/Lamborghini.obj", 2, -1, 180, 0.00),
+	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1, 1, 90, 0.16), // always GRAY_BLACK
 };
 
 class car_manager_t {
@@ -1794,7 +1797,7 @@ class car_manager_t {
 			if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
 			else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 			fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);
-			fgRotate(90.0, 0.0, 0.0, 1.0);
+			if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);}
 			fgRotate(90.0, 1.0, 0.0, 0.0);
 			uniform_scale(sz_scale);
 			translate_to(-bcube.get_cube_center()); // cancel out model local translate
@@ -1815,6 +1818,7 @@ class car_manager_t {
 		car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_) {}
 
 		void pre_draw(vector3d const &xlate_) {
+			//use_bmap = 1; // used only for some car models
 			draw_state_t::pre_draw(xlate_);
 			select_texture(WHITE_TEX);
 		}
