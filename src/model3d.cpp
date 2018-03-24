@@ -1200,7 +1200,7 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 			materials[mat_id].add_poly(*i, vmap, vmap_tan, obj_id);
 		}
 	}
-	update_bbox(poly);
+	if (mat_id < 0 || !materials[mat_id].skip) {update_bbox(poly);} // don't include skipped materials in the bbox
 	return (unsigned)split_polygons_buffer.size();
 }
 
@@ -1218,7 +1218,7 @@ void model3d::add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id, u
 		materials[mat_id].geom.add_poly_to_polys(tri, materials[mat_id].geom.triangles, vmap, obj_id);
 		materials[mat_id].mark_as_used();
 	}
-	update_bbox(tri);
+	if (mat_id < 0 || !materials[mat_id].skip) {update_bbox(tri);} // don't include skipped materials in the bbox
 }
 
 
