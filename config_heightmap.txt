@@ -11,7 +11,7 @@ buildings tt_only 1
 
 city num_cities 8
 city num_samples 100
-city num_conn_tries 50
+city num_conn_tries 100
 city city_size_min 200
 city city_size_max 400
 city city_border 1000
@@ -26,6 +26,8 @@ city num_cars 4000
 city car_speed 10.0
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
+
+shadow_map_sz 4096
 
 #tiled_terrain_only 1
 read_landscape 1
