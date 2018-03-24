@@ -176,19 +176,20 @@ road_mat_mgr_t road_mat_mgr;
 struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
-	bool use_smap, use_bmap;
+	bool use_smap, use_bmap, shadow_only;
 protected:
 	bool emit_now;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
 
 public:
-	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), emit_now(0) {}
+	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), emit_now(0) {}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
 
-	void pre_draw(vector3d const &xlate_) {
-		xlate = xlate_;
-		use_smap = shadow_map_enabled();
+	void pre_draw(vector3d const &xlate_, bool shadow_only_) {
+		xlate       = xlate_;
+		shadow_only = shadow_only_;
+		use_smap    = (!shadow_only && shadow_map_enabled());
 		if (!use_smap) return;
 		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		s.add_uniform_float("z_bias", cobj_z_bias);
@@ -197,7 +198,8 @@ public:
 	virtual void post_draw() {
 		emit_now = 0;
 		if (use_smap) {s.end_shader();}
-		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+		if (shadow_only) {s.begin_color_only_shader();}
+		else {setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1);} // is_outside=1
 		draw_unshadowed();
 		s.end_shader();
 	}
@@ -491,9 +493,9 @@ struct road_isec_t : public cube_t {
 			for (unsigned e = 0; e < 4; ++e) {p[e].z += 1.2*h;}
 		}
 	}
-	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate) const {
+	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
 		if (num_conn == 2) return; // no stoplights
-		if (!dstate.check_cube_visible(*this, 0.2)) return; // dist_scale=0.2
+		if (!shadow_only && !dstate.check_cube_visible(*this, 0.2)) return; // dist_scale=0.2
 		point const center(get_cube_center() + dstate.xlate);
 		float const dist_val(p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		vector3d const cview_dir(camera_pdu.pos - center);
@@ -514,6 +516,7 @@ struct road_isec_t : public cube_t {
 			c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
 			dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
 			dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts); // Note: uses traffic light texture, but color is back so it's all black anyway
+			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
 			vector3d normal(zero_vector);
 			normal[dim] = (dir ? -1.0 : 1.0);
@@ -757,8 +760,8 @@ class city_road_gen_t {
 	public:
 		road_draw_state_t() : ar(1.0) {}
 
-		void pre_draw(vector3d const &xlate_) {
-			draw_state_t::pre_draw(xlate_);
+		void pre_draw(vector3d const &xlate_, bool shadow_only) {
+			draw_state_t::pre_draw(xlate_, shadow_only);
 			ar = city_params.get_road_ar();
 		}
 		virtual void draw_unshadowed() {
@@ -793,8 +796,8 @@ class city_road_gen_t {
 				cache.draw();
 			} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 		}
-		void draw_stoplights(vector<road_isec_t> const &isecs) {
-			for (auto i = isecs.begin(); i != isecs.end(); ++i) {i->draw_stoplights(qbd_sl, *this);}
+		void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
+			for (auto i = isecs.begin(); i != isecs.end(); ++i) {i->draw_stoplights(qbd_sl, *this, shadow_only);}
 		}
 	}; // road_draw_state_t
 
@@ -1230,8 +1233,18 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
-		void draw(road_draw_state_t &dstate) {
+		void draw(road_draw_state_t &dstate, bool shadow_only) {
 			if (empty()) return;
+
+			if (shadow_only) {
+				if (!camera_pdu.cube_visible(bcube + dstate.xlate)) return;
+
+				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
+					if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue;
+					for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections (3-way, 4-way)
+				}
+				return; // done
+			}
 			if (!dstate.check_cube_visible(bcube)) return; // VFC/too far
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
@@ -1242,7 +1255,7 @@ class city_road_gen_t {
 				
 				for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 					dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
-					if (i > 0) {dstate.draw_stoplights(isecs[i]);}
+					if (i > 0) {dstate.draw_stoplights(isecs[i], 0);}
 				}
 			} // for b
 		}
@@ -1659,7 +1672,7 @@ public:
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only) const {return global_rn.check_road_sphere_coll(pos, radius, xy_only);}
 
-	void draw(int trans_op_mask, vector3d const &xlate) { // non-const because qbd is modified
+	void draw(int trans_op_mask, vector3d const &xlate, bool shadow_only) { // non-const because qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
@@ -1667,9 +1680,9 @@ public:
 			fgPushMatrix();
 			translate_to(xlate);
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-			dstate.pre_draw(xlate);
-			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate);}
-			global_rn.draw(dstate);
+			dstate.pre_draw(xlate, shadow_only);
+			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only);}
+			if (!shadow_only) {global_rn.draw(dstate, shadow_only);} // no stoplights for connector road
 			dstate.post_draw();
 			glDepthFunc(GL_LESS);
 			fgPopMatrix();
@@ -1818,9 +1831,9 @@ class car_manager_t {
 	public:
 		car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_) {}
 
-		void pre_draw(vector3d const &xlate_) {
+		void pre_draw(vector3d const &xlate_, bool shadow_only) {
 			//use_bmap = 1; // used only for some car models
-			draw_state_t::pre_draw(xlate_);
+			draw_state_t::pre_draw(xlate_, shadow_only);
 			select_texture(WHITE_TEX);
 		}
 		virtual void draw_unshadowed() {qbds[0].draw_and_clear();}
@@ -1957,7 +1970,7 @@ public:
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
 	}
-	void draw(int trans_op_mask, vector3d const &xlate) {
+	void draw(int trans_op_mask, vector3d const &xlate, bool shadow_only) {
 		if (cars.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
@@ -1965,7 +1978,7 @@ public:
 			dstate.xlate = xlate;
 			fgPushMatrix();
 			translate_to(xlate);
-			dstate.pre_draw(xlate);
+			dstate.pre_draw(xlate, shadow_only);
 			for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.draw_car(*i);}
 			dstate.post_draw();
 			fgPopMatrix();
@@ -2019,8 +2032,8 @@ public:
 		car_manager.next_frame(city_params.car_speed);
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
-		if (!shadow_only && reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate);} // roads don't cast shadows and aren't reflected in water
-		if (!shadow_only) {car_manager.draw(trans_op_mask, xlate);} // cars don't cast shadows because they move
+		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
+		if (!shadow_only) {car_manager.draw(trans_op_mask, xlate, shadow_only);} // cars don't cast shadows because they move
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void free_context() {car_manager.free_context();}
