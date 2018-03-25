@@ -494,8 +494,9 @@ struct road_isec_t : public cube_t {
 	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
 
 	bool can_go_now(car_t const &car) const {
-		if (red_or_yellow_light(car)) {return stoplight.can_turn_right_on_red(car);} // stopped at light
-		return stoplight.check_int_clear(car);
+		if (!stoplight.check_int_clear(car)) return 0; // intersection not clear
+		if (!red_or_yellow_light(car)) return 1; // green light
+		return stoplight.can_turn_right_on_red(car); // stopped at light
 	}
 	bool has_left_turn_signal(unsigned orient) const {
 		if (num_conn == 2) return 0; // never
