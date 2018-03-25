@@ -371,6 +371,7 @@ namespace stoplight_ns {
 
 	class stoplight_t {
 		uint8_t num_conn, conn, cur_state;
+		bool at_conn_road; // longer light times in this case
 		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits; mutable because it's set during car update logic, where roads are supposed to be const
 		float cur_state_ticks;
 
@@ -399,11 +400,11 @@ namespace stoplight_ns {
 		}
 		void run_update_logic() {
 			assert(cur_state < NUM_STATE);
-			if (cur_state_ticks < TICKS_PER_SECOND*state_times[cur_state]) return; // keep existing state
-			advance_state();
+			if (cur_state_ticks > get_cur_state_time_secs()) {advance_state();} // time to update to next state
 		}
+		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
 	public:
-		stoplight_t() : num_conn(0), conn(0), cur_state(RED_LIGHT), cur_state_ticks(0.0) {blocked[0] = blocked[1] = blocked[2] = blocked[3] = 0;}
+		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0) {UNROLL_4X(blocked[i_] = 0;)}
 		void mark_blocked(bool dim, bool dir) const {blocked[2*dim + dir] = 1;} // Note: not actually const, but blocked is mutable
 		bool is_blocked(bool dim, bool dir) const {return (blocked[2*dim + dir] != 0);}
 
@@ -412,7 +413,7 @@ namespace stoplight_ns {
 			if (num_conn == 2) return; // nothing else to do
 			cur_state = stoplight_rgen.rand() % NUM_STATE; // start at a random state
 			advance_state(); // make sure cur_state is valid
-			cur_state_ticks = TICKS_PER_SECOND*state_times[cur_state]*stoplight_rgen.rand_float(); // start at a random time within this state
+			cur_state_ticks = get_cur_state_time_secs()*stoplight_rgen.rand_float(); // start at a random time within this state
 		}
 		void next_frame() {
 			UNROLL_4X(blocked[i_] = 0;)
@@ -463,7 +464,7 @@ struct road_isec_t : public cube_t {
 	short rix_xy[2], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
 
-	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_) : cube_t(c), conn(conn_) {
+	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_, bool at_conn_road) : cube_t(c), conn(conn_), stoplight(at_conn_road) {
 		rix_xy[0] = rx; rix_xy[1] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
 		if (conn == 15) {num_conn = 4;} // 4-way
 		else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
@@ -944,7 +945,7 @@ class city_road_gen_t {
 					unsigned const num_conn((!FX) + (!LX) + (!FY) + (!LY));
 					if (num_conn < 2) continue; // error?
 					uint8_t const conn(((!FX) << 0) | ((!LX) << 1) | ((!FY) << 2) | ((!LY) << 3)); // 1-15
-					isecs[num_conn - 2].emplace_back(cube_t(rx.x1(), rx.x2(), ry.y1(), ry.y2(), zval, zval), y, x, conn); // intersections
+					isecs[num_conn - 2].emplace_back(cube_t(rx.x1(), rx.x2(), ry.y1(), ry.y2(), zval, zval), y, x, conn, false); // intersections
 					
 					if (!LX) { // skip last y segment
 						cube_t const &rxn(roads[x+1]);
@@ -1126,7 +1127,7 @@ class city_road_gen_t {
 			ibc.d[!dim][1] = c.d[!dim][1];
 			uint8_t const conns[4] = {7, 11, 13, 14};
 			int const other_rix(encode_neg_ix(grn_rix)); // make negative
-			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir]);
+			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true);
 		}
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<cube_t> &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
 			heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only=0)
@@ -1214,7 +1215,7 @@ class city_road_gen_t {
 		}
 		void create_connector_bend(cube_t const &int_bcube, bool dx, bool dy, unsigned road_ix_x, unsigned road_ix_y) {
 			uint8_t const conns[4] = {6, 5, 10, 9};
-			isecs[0].emplace_back(int_bcube, road_ix_x, road_ix_y, conns[2*dy + dx]);
+			isecs[0].emplace_back(int_bcube, road_ix_x, road_ix_y, conns[2*dy + dx], true);
 			//blockers.push_back(int_bcube); // ???
 		}
 		void split_connector_roads(float road_spacing) {
