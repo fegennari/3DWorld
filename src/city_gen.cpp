@@ -272,6 +272,7 @@ struct car_t {
 	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
+	bool in_isect   () const {return is_isect(cur_road_type);}
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 
@@ -298,6 +299,7 @@ struct car_t {
 	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
 	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
 	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
+	void stop() {cur_speed = 0.0;} // immediate stop
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 };
@@ -366,6 +368,7 @@ namespace stoplight_ns {
 
 	class stoplight_t {
 		uint8_t num_conn, conn, cur_state;
+		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits; mutable because it's set during car update logic, where roads are supposed to be const
 		float cur_state_ticks;
 
 		void next_state() {
@@ -397,7 +400,10 @@ namespace stoplight_ns {
 			advance_state();
 		}
 	public:
-		stoplight_t() : num_conn(0), conn(0), cur_state(RED_LIGHT), cur_state_ticks(0.0) {}
+		stoplight_t() : num_conn(0), conn(0), cur_state(RED_LIGHT), cur_state_ticks(0.0) {blocked[0] = blocked[1] = blocked[2] = blocked[3] = 0;}
+		void mark_blocked(bool dim, bool dir) const {blocked[2*dim + dir] = 1;} // Note: not actually const, but blocked is mutable
+		bool is_blocked(bool dim, bool dir) const {return (blocked[2*dim + dir] != 0);}
+
 		void init(uint8_t num_conn_, uint8_t conn_) {
 			num_conn = num_conn_; conn = conn_;
 			if (num_conn == 2) return; // nothing else to do
@@ -406,6 +412,7 @@ namespace stoplight_ns {
 			cur_state_ticks = TICKS_PER_SECOND*state_times[cur_state]*stoplight_rgen.rand_float(); // start at a random time within this state
 		}
 		void next_frame() {
+			UNROLL_4X(blocked[i_] = 0;)
 			if (num_conn == 2) return; // nothing else to do
 			cur_state_ticks += fticks;
 			run_update_logic();
@@ -426,6 +433,19 @@ namespace stoplight_ns {
 			future_self.cur_state_ticks += TICKS_PER_SECOND*yellow_light_time;
 			future_self.run_update_logic();
 			return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : GREEN_LIGHT);
+		}
+		bool check_int_clear(car_t const &car) const { // check for cars on other lanes blocking the intersection
+			unsigned const to_right  [4] = {3, 2, 0, 1}; // {N, S, W, E}
+			unsigned const to_left   [4] = {2, 3, 1, 0}; // {S, N, E, W}
+			unsigned const other_lane[4] = {1, 0, 3, 2}; // {E, W, N, S}
+			unsigned const orient(2*car.dim + car.dir);  // {W, E, S, N}
+
+			switch (car.turn_dir) {
+			case TURN_NONE:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]]); // straight
+			case TURN_LEFT:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]] && !blocked[other_lane[orient]]);
+			case TURN_RIGHT: return (!blocked[to_right[orient]]);
+			}
+			return 1;
 		}
 		colorRGBA get_stoplight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
 	};
@@ -465,6 +485,10 @@ struct road_isec_t : public cube_t {
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
 	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
 
+	bool can_go_now(car_t const &car) const {
+		if (red_or_yellow_light(car)) return 0; // stopped at light
+		return stoplight.check_int_clear(car);
+	}
 	bool has_left_turn_signal(unsigned orient) const {
 		if (num_conn == 2) return 0; // never
 		if (num_conn == 4) return 1; // always
@@ -1307,7 +1331,7 @@ class city_road_gen_t {
 					assert(car.cur_road < road_to_city.size());
 					unsigned const city_ix(road_to_city[car.cur_road].id[car.dir]);
 					
-					if (is_isect(car.cur_road_type) && city_ix != CONN_CITY_IX) {
+					if (car.in_isect() && city_ix != CONN_CITY_IX) {
 						road_network_t const &rn(road_networks[city_ix]);
 						vector<road_isec_t> const &isecs(rn.isecs[1]);
 						car.cur_city = city_ix;
@@ -1353,7 +1377,7 @@ class city_road_gen_t {
 
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
-				if (!is_isect(car.cur_road_type) || !get_car_isec(car).red_or_yellow_light(car)) {car.stopped_at_light = 0;} // can go now
+				if (!car.in_isect() || get_car_isec(car).can_go_now(car)) {car.stopped_at_light = 0;} // can go now
 				else {car.decelerate_fast();}
 				if (was_stopped) return; // no update needed
 			} else {car.accelerate();}
@@ -1383,7 +1407,7 @@ class city_road_gen_t {
 				car.bcube.z2() = road_z + car.height;
 			}
 			if (car.turn_dir != TURN_NONE) {
-				assert(is_isect(car.cur_road_type));
+				assert(car.in_isect());
 				bool const turn_dir(car.turn_dir == TURN_RIGHT); // 0=left, 1=right
 				point const car_center(car.get_center()), prev_center(car.prev_bcube.get_cube_center());
 				float const car_lane_offset(get_car_lane_offset());
@@ -1431,7 +1455,7 @@ class city_road_gen_t {
 			if (!bcube.contains_pt_xy_inc_low_edge(car_front)) { // move to another road seg/int
 				find_car_next_seg(car, road_networks, global_rn);
 				
-				if (is_isect(car.cur_road_type)) { // moved into an intersection, choose direction
+				if (car.in_isect()) { // moved into an intersection, choose direction
 					road_isec_t const &isec(get_car_rn(car, road_networks, global_rn).get_car_isec(car)); // Note: either == city_id, or just moved from global to a new city
 					unsigned const orient_in(2*car.dim + (!car.dir)); // invert dir (incoming, not outgoing)
 					assert(isec.conn & (1<<orient_in)); // car must come from an enabled orient
@@ -1476,7 +1500,7 @@ class city_road_gen_t {
 			return segs[car.cur_seg];
 		}
 		road_isec_t const &get_car_isec(car_t const &car) const {
-			assert(is_isect(car.cur_road_type));
+			assert(car.in_isect());
 			auto const &iv(isecs[car.cur_road_type - TYPE_ISEC2]);
 			assert(car.cur_seg < iv.size());
 			return iv[car.cur_seg];
@@ -1706,6 +1730,7 @@ public:
 	road_network_t const &get_car_rn(car_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
 	void update_car(car_t &car, rand_gen_t &rgen) const {get_car_rn(car).update_car(car, rgen, road_networks, global_rn);}
 	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
+	road_isec_t const &get_car_isec(car_t const &car) const {return get_car_rn(car).get_car_isec(car);}
 }; // city_road_gen_t
 
 
@@ -1948,10 +1973,12 @@ public:
 		sort(cars.begin(), cars.end()); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		float const speed(0.001*car_speed*fticks);
+		//unsigned num_on_conn_road(0);
 		
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
 			i->move(speed);
 			if (i->entering_city) {entering_city.push_back(i - cars.begin());} // record for use in collision detection
+			if (!i->stopped_at_light && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		}
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			if (i->is_parked()) continue;
@@ -1966,9 +1993,11 @@ public:
 				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
 					if (*ix != (i - cars.begin())) {i->check_collision(cars[*ix], road_gen);}
 				}
+				//++num_on_conn_road;
 			}
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
+		//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
 	}
 	void draw(int trans_op_mask, vector3d const &xlate, bool shadow_only) {
 		if (cars.empty()) return;
