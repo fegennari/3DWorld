@@ -1310,7 +1310,7 @@ class city_road_gen_t {
 				car.cur_road_type = TYPE_RSEG;
 				car.turn_dir  = TURN_NONE;
 				vector3d car_sz; // {length, width, height}
-				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*city_params.road_width/*rgen.rand_uniform(0.9, 1.1)*/;} // Note: sportscar models should all be the same size
+				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*city_params.road_width/*rgen.rand_uniform(0.9, 1.1)*/;} // Note: car models should all be the same size
 				car.height = car_sz.z;
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.6*car_sz.x), val2(seg.d[seg.dim][1] - 0.6*car_sz.x);
@@ -1400,6 +1400,7 @@ class city_road_gen_t {
 				bool const slope(get_car_seg(car).slope);
 				float const car_pos(0.5*(car.bcube.d[dim][0] + car.bcube.d[dim][1])); // center of car in dim
 				float const road_len(bcube.d[dim][1] - bcube.d[dim][0]);
+				assert(road_len > TOLERANCE);
 				float const t((car_pos - bcube.d[dim][0])/road_len); // car pos along road in (0.0, 1.0)
 				float const road_z(bcube.d[2][slope] + t*(bcube.d[2][!slope] - bcube.d[2][slope]));
 				float const car_len(car.get_length());
@@ -1433,8 +1434,12 @@ class city_road_gen_t {
 					car.rot_z = (turn_dir ? -1.0 : 1.0)*(1.0 - CLIP_TO_01(dist_to_turn/turn_radius));
 					car.bcube.d[!dim][0] += adj; car.bcube.d[!dim][1] += adj;
 					vector3d const move_dir(car.get_center() - prev_center); // total movement from car + turn
-					vector3d const delta(move_dir*(frame_dist/move_dir.mag() - 1.0)); // overshoot value due to turn
-					car.bcube += delta;
+					float const move_dist(move_dir.mag());
+					
+					if (move_dist > TOLERANCE) { // avoid division by zero
+						vector3d const delta(move_dir*(frame_dist/move_dist - 1.0)); // overshoot value due to turn
+						car.bcube += delta;
+					}
 				}
 				if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
 					car.move_by(centerline - cur_val); // align to lane centerline
