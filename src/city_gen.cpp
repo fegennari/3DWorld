@@ -363,6 +363,9 @@ namespace stoplight_ns {
 	float const state_times[NUM_STATE] = {5.0, 6.0, 5.0, 5.0, 6.0, 5.0}; // in seconds
 	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
 	unsigned const left_orient_masks[NUM_STATE] = {2, 0, 1, 8, 0,  4}; // {W=1, E=2, S=4, N=8}, for left turns only
+	unsigned const to_right  [4] = {3, 2, 0, 1}; // {N, S, W, E}
+	unsigned const to_left   [4] = {2, 3, 1, 0}; // {S, N, E, W}
+	unsigned const other_lane[4] = {1, 0, 3, 2}; // {E, W, N, S}
 
 	rand_gen_t stoplight_rgen;
 
@@ -435,17 +438,21 @@ namespace stoplight_ns {
 			return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : GREEN_LIGHT);
 		}
 		bool check_int_clear(car_t const &car) const { // check for cars on other lanes blocking the intersection
-			unsigned const to_right  [4] = {3, 2, 0, 1}; // {N, S, W, E}
-			unsigned const to_left   [4] = {2, 3, 1, 0}; // {S, N, E, W}
-			unsigned const other_lane[4] = {1, 0, 3, 2}; // {E, W, N, S}
-			unsigned const orient(2*car.dim + car.dir);  // {W, E, S, N}
-
+			unsigned const orient(car.get_orient());  // {W, E, S, N}
 			switch (car.turn_dir) {
 			case TURN_NONE:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]]); // straight
 			case TURN_LEFT:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]] && !blocked[other_lane[orient]]);
 			case TURN_RIGHT: return (!blocked[to_right[orient]]);
 			}
 			return 1;
+		}
+		bool can_turn_right_on_red(car_t const &car) const { // check for legal right on red (no other lanes turning into the road to our right)
+			if (car.turn_dir != TURN_RIGHT) return 0;
+			unsigned const orient(car.get_orient());  // {W, E, S, N}
+			if (!red_light(!car.dim, (to_right  [orient] & 1), TURN_NONE)) return 0; // traffic to our left has a green or yellow light for going straight
+			if (!red_light( car.dim, (other_lane[orient] & 1), TURN_LEFT)) return 0; // opposing traffic has a green or yellow light for turning left
+			// Note: there are no U-turns, so we don't need to worry about 
+			return 1; // can turn right on red to_left[orient]
 		}
 		colorRGBA get_stoplight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
 	};
@@ -486,7 +493,7 @@ struct road_isec_t : public cube_t {
 	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
 
 	bool can_go_now(car_t const &car) const {
-		if (red_or_yellow_light(car)) return 0; // stopped at light
+		if (red_or_yellow_light(car)) {return stoplight.can_turn_right_on_red(car);} // stopped at light
 		return stoplight.check_int_clear(car);
 	}
 	bool has_left_turn_signal(unsigned orient) const {
