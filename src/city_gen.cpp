@@ -1917,7 +1917,8 @@ class car_manager_t {
 				if (draw_top) {draw_cube(qbd, dim, dir, color, center, pt);} // top
 				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 			}
-			if (dist_val > 0.3) return; // no lights to draw
+			if (dist_val > 0.3)  return; // to far - no lights to draw
+			if (car.is_parked()) return; // no lights when parked
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 
@@ -1979,6 +1980,7 @@ public:
 			}
 			car.color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
 			assert(car.is_valid());
+			//car.park();
 			cars.push_back(car);
 		} // for n
 		cout << "Cars: " << cars.size() << endl;
@@ -1992,12 +1994,13 @@ public:
 		//unsigned num_on_conn_road(0);
 		
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
+			if (i->is_parked()) continue; // no update for parked cars
 			i->move(speed);
 			if (i->entering_city) {entering_city.push_back(i - cars.begin());} // record for use in collision detection
 			if (!i->stopped_at_light && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		}
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
-			if (i->is_parked()) continue;
+			if (i->is_parked()) continue; // no collisions for parked cars
 			bool const on_conn_road(i->cur_city == CONN_CITY_IX);
 
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
