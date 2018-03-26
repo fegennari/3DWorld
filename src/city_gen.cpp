@@ -1456,6 +1456,8 @@ class city_road_gen_t {
 					car.turn_val = 0.0; // reset
 					car.turn_dir = TURN_NONE; // turn completed
 					car.entering_city = 0;
+					road_isec_t const &isec(get_car_isec(car));
+					if (isec.conn_ix[car.get_orient()] >= 0) {car.cur_road = isec.rix_xy[car.dim];} // switch to using road_ix in new dim
 				}
 			}
 			if (bcube.contains_cube_xy(car.bcube)) { // in same road seg/int
