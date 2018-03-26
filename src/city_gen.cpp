@@ -243,12 +243,14 @@ public:
 		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
 		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, color, -right_n);} // left
 	}
-	void add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
+	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 		point pos(xlate + flare_pos);
 		vector3d const view_dir((camera_pdu.pos - pos).get_norm());
 		float dp(dot_product(n, view_dir));
 		pos += 0.75*radius*view_dir; // move toward the camera, away from the stoplight, to prevent clipping
-		if (dp > 0.05) {light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, colorRGBA(color, dp*alpha)), radius));}
+		if (dp < 0.05) return 0; // back facing, skip
+		light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, colorRGBA(color, dp*alpha)), radius));
+		return 1;
 	}
 }; // draw_state_t
 
@@ -1867,7 +1869,7 @@ class car_manager_t {
 	car_model_loader_t car_model_loader;
 
 	class car_draw_state_t : public draw_state_t {
-		quad_batch_draw qbds[2]; // unshadowed, shadowed
+		quad_batch_draw qbds[3]; // unshadowed, shadowed, AO
 		car_model_loader_t &car_model_loader;
 	public:
 		car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_) {}
@@ -1877,8 +1879,15 @@ class car_manager_t {
 			draw_state_t::pre_draw(xlate_, shadow_only);
 			select_texture(WHITE_TEX);
 		}
-		virtual void draw_unshadowed() {qbds[0].draw_and_clear();}
-
+		virtual void draw_unshadowed() {
+			qbds[0].draw_and_clear();
+			if (qbds[2].empty()) return;
+			enable_blend();
+			select_texture(BLUR_CENT_TEX);
+			qbds[2].draw_and_clear();
+			select_texture(WHITE_TEX); // reset back to default/untextured
+			disable_blend();
+		}
 		void draw_car(car_t const &car) { // Note: all quads
 			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
 			point const center(car.get_center());
@@ -1917,6 +1926,19 @@ class car_manager_t {
 				if (draw_top) {draw_cube(qbd, dim, dir, color, center, pt);} // top
 				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 			}
+			if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
+				point pao[4];
+				
+				for (unsigned i = 0; i < 4; ++i) {
+					point &v(pao[i]);
+					v = pb[i] - center;
+					v[ dim] += 0.1*length*SIGN(v[ dim]); // increase length slightly
+					v[!dim] += 0.1*length*SIGN(v[!dim]); // increase width  slightly
+					v   += center;
+					v.z += 0.02*car.height; // shift up slightly to avoid z-fighting
+				}
+				qbds[2].add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
+			}
 			if (dist_val > 0.3)  return; // to far - no lights to draw
 			if (car.is_parked()) return; // no lights when parked
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
@@ -1928,6 +1950,7 @@ class car_manager_t {
 					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (lr ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
 					add_light_flare(pos, front_n, WHITE, 2.0, 0.65*car.height); // pb 0,1,4,5
 				}
+				// TODO: add lighting from headlight beams to road
 			}
 			if ((car.is_almost_stopped() || car.stopped_at_light) && dist_val < 0.2) { // brake lights
 				for (unsigned d = 0; d < 2; ++d) { // L, R
