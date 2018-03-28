@@ -1138,6 +1138,48 @@ void add_dynamic_lights_ground() {
 }
 
 
+void add_dynamic_lights_city(cube_t const &scene_bcube) {
+
+	//RESET_TIME;
+	assert(DL_GRID_BS == 0); // not supported
+	unsigned const ndl((unsigned)dl_sources.size()), gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
+	has_dl_sources     = (ndl > 0);
+	dlight_add_thresh *= 0.99;
+	assert(!scene_bcube.is_zero_area());
+	point const scene_llc(scene_bcube.get_llc());
+	vector3d const scene_sz(scene_bcube.get_size());
+	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
+	float const grid_dx(scene_sz.x/gbx), grid_dy(scene_sz.y/gby), grid_dx_inv(1.0/grid_dx), grid_dy_inv(1.0/grid_dy);
+
+	for (unsigned ix = 0; ix < ndl; ++ix) {
+		light_source const &ls(dl_sources[ix]);
+		//if (!ls.is_visible()) continue; // view culling (done by caller?)
+		point const &lpos(ls.get_pos());
+		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5);
+		int bnds[2][2];
+		cube_t const bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh)); // FIXME: pad is incorrect
+
+		for (unsigned e = 0; e < 2; ++e) {
+			//UNROLL_2X(bnds[d][i_] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bcube.d[d][i_] + bounds_offset[d]), d)));)
+			bnds[0][e] = max(0, min((int)gbx-1, int((bcube.d[0][e] - scene_llc.x)*grid_dx_inv)));
+			bnds[1][e] = max(0, min((int)gby-1, int((bcube.d[1][e] - scene_llc.y)*grid_dy_inv)));
+		}
+		int const radius(ls.get_radius()*max(grid_dx_inv, grid_dy_inv) + 2), rsq(radius*radius);
+		// Note: no spotlight optimization yet
+
+		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
+			int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
+
+			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
+				if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
+				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
+			} // for x
+		} // for y
+	} // for ix (light index)
+	  //PRINT_TIME("Dynamic Light Add");
+}
+
+
 bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj, int skip_dynamic) {
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (is_visible_to_light_cobj(pos, l, radius, cobj, skip_dynamic)) return 1;
