@@ -1080,7 +1080,7 @@ void add_dynamic_lights_ground() {
 	// Note: do we want to sort by y/x position to minimize cache misses?
 	stable_sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(get_grid_xsize()), gby(get_grid_ysize());
-	has_dl_sources = (ndl > 0);
+	has_dl_sources     = (ndl > 0);
 	dlight_add_thresh *= 0.99;
 	bool first(1);
 	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
@@ -1088,24 +1088,23 @@ void add_dynamic_lights_ground() {
 	float const grid_dx(DX_VAL*(1 << DL_GRID_BS)), grid_dy(DY_VAL*(1 << DL_GRID_BS));
 	float const z1(min(czmin, zbottom)), z2(max(czmax, ztop));
 
-	for (unsigned i = 0; i < ndl; ++i) {
-		light_source &ls(dl_sources[i]);
+	for (unsigned ix = 0; ix < ndl; ++ix) {
+		light_source const &ls(dl_sources[ix]);
 		if (!ls.is_user_placed() && !ls.is_visible()) continue; // view culling (user placed lights are culled above as light_sources_d)
 		float const ls_radius(ls.get_radius());
 		if ((min(ls.get_pos().z, ls.get_pos2().z) - ls_radius) > max(ztop, czmax)) continue; // above everything, rarely occurs
 		point const &lpos(ls.get_pos()), &lpos2(ls.get_pos2());
 		bool const line_light(ls.is_line_light());
 		int const xcent(get_xpos(lpos.x) >> DL_GRID_BS), ycent(get_ypos(lpos.y) >> DL_GRID_BS);
-		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby && !ldynamic[ycent*gbx + xcent].check_add_light(i)) continue;
+		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby && !ldynamic[ycent*gbx + xcent].check_add_light(ix)) continue;
 		cube_t bcube;
 		int bnds[3][2];
-		unsigned const ix(i);
 		ls.get_bounds(bcube, bnds, sqrt_dlight_add_thresh, dlight_shift);
 		if (first) {dlight_bcube = bcube;} else {dlight_bcube.union_with_cube(bcube);}
 		first = 0;
-		int const radius(((int(ls.get_radius()*max(DX_VAL_INV, DY_VAL_INV)) + 1) >> DL_GRID_BS) + 1), rsq(radius*radius);
+		int const radius(((int(ls_radius*max(DX_VAL_INV, DY_VAL_INV)) + 1) >> DL_GRID_BS) + 1), rsq(radius*radius);
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
-		for (unsigned d = 0; d < 4; ++d) {bnds[d>>1][d&1] >>= DL_GRID_BS;}
+		if (DL_GRID_BS> 0) {for (unsigned d = 0; d < 4; ++d) {bnds[d>>1][d&1] >>= DL_GRID_BS;}}
 		pos_dir_up pdu;
 
 		if (!line_light && ls.is_very_directional()) { // spotlight
@@ -1124,8 +1123,8 @@ void add_dynamic_lights_ground() {
 				if (line_light) {
 					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS)), lx(lpos2.x - lpos.x), ly(lpos2.y - lpos.y);
 					float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
-					if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) {continue;}
-				} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
+					if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
+				} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
 
 				if (pdu.valid) {
 					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS));
@@ -1134,7 +1133,7 @@ void add_dynamic_lights_ground() {
 				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
 			} // for x
 		} // for y
-	} // for i (light index)
+	} // for ix (light index)
 	//PRINT_TIME("Dynamic Light Add");
 }
 
