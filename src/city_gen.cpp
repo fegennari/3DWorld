@@ -1886,7 +1886,8 @@ class car_manager_t {
 		struct headlight_t {
 			point pos;
 			vector3d dir;
-			headlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
+			colorRGBA color;
+			headlight_t(point const &pos_, vector3d const &dir_, colorRGBA const &color_) : pos(pos_), dir(dir_), color(color_) {}
 		};
 		vector<headlight_t> headlights;
 		cube_t lights_bcube;
@@ -1914,7 +1915,6 @@ class car_manager_t {
 			if (headlights.empty() && !prev_frame_hls) return;
 			float const beamwidth = 0.1;
 			float const headlight_dist(4.0*city_params.road_width);
-			colorRGBA const color(WHITE); // Note: could make per-light
 			float zmin(FLT_MAX), zmax(-FLT_MAX);
 			lights_bcube = cube_t(camera_pdu.pos);
 			lights_bcube.expand_by(1.0*get_tile_smap_dist()); // FIXME: snap to a texel grid
@@ -1924,7 +1924,7 @@ class car_manager_t {
 				if (!lights_bcube.contains_pt_xy(i->pos)) continue; // not within the local lighting bounds
 				min_eq(zmin, (i->pos.z - headlight_dist));
 				max_eq(zmax, (i->pos.z + headlight_dist));
-				dl_sources.push_back(light_source(headlight_dist, i->pos, i->pos, color, 1, i->dir, beamwidth)); // FIXME: point slightly down toward the road
+				dl_sources.push_back(light_source(headlight_dist, i->pos, i->pos, i->color, 1, i->dir, beamwidth));
 			} // for i
 			lights_bcube.z1() = zmin;
 			lights_bcube.z2() = zmax;
@@ -1991,11 +1991,17 @@ class car_manager_t {
 			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 
 			if (light_factor < 0.5 && dist_val < 0.3) { // night time headlights
+				bool const add_lights(dist_val < 0.1);
+				colorRGBA hl_color(WHITE);
+				hl_color.B += 0.8*(fract(1000.0*car.max_speed) - 0.5); // slight yellow-blue tinting using max_speed as a hash
+				vector3d hl_dir;
+				if (add_lights) {hl_dir = (0.75*front_n.get_norm() - 0.25*plus_z).get_norm();} // point slightly down
+
 				for (unsigned d = 0; d < 2; ++d) { // L, R
 					unsigned const lr(d ^ lr_xor ^ 1);
 					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (lr ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
-					add_light_flare(pos, front_n, WHITE, 2.0, 0.65*car.height); // pb 0,1,4,5
-					if (dist_val < 0.1) {headlights.emplace_back(pos, front_n);} // Note: can probably merge left and right into a single headlight per car
+					add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
+					if (add_lights) {headlights.emplace_back(pos, hl_dir, hl_color);} // Note: can probably merge left and right into a single headlight per car
 				}
 			}
 			if ((car.is_almost_stopped() || car.stopped_at_light) && dist_val < 0.2) { // brake lights
