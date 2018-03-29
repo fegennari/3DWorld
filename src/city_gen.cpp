@@ -191,6 +191,7 @@ protected:
 		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
 		s.add_uniform_vector3d("scene_scale", lights_bcube.get_size());
+		s.add_uniform_float("LT_DIR_FALLOFF", 0.1); // smooth falloff for car headlights
 	}
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), en_dlights(0), emit_now(0) {}
@@ -1895,7 +1896,12 @@ class car_manager_t {
 	public:
 		car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_), lights_bcube(all_zeros), prev_frame_hls(0) {}
 		cube_t get_lights_bcube() const {return lights_bcube;}
+		static bool is_night() {return (light_factor < 0.5);} // for car headlights
+		static float get_headlight_dist() {return 4.0*city_params.road_width;}
 
+		colorRGBA get_headlight_color(car_t const &car) const {
+			return colorRGBA(1.0, 1.0, (1.0 + 0.8*(fract(1000.0*car.max_speed) - 0.5)), 1.0); // slight yellow-blue tinting using max_speed as a hash
+		}
 		void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool shadow_only) {
 			//use_bmap = 1; // used only for some car models
 			draw_state_t::pre_draw(xlate_, lights_bcube_, shadow_only);
@@ -1910,14 +1916,14 @@ class car_manager_t {
 			select_texture(WHITE_TEX); // reset back to default/untextured
 			disable_blend();
 		}
-		void proc_headlights() { // FIXME: add headlights for cars outside the view frustum
+		void proc_headlights() {
 			lights_bcube.set_from_point(all_zeros); // init to empty
 			if (headlights.empty() && !prev_frame_hls) return;
 			float const beamwidth = 0.1;
-			float const headlight_dist(4.0*city_params.road_width);
+			float const headlight_dist(get_headlight_dist());
 			float zmin(FLT_MAX), zmax(-FLT_MAX);
 			lights_bcube = cube_t(camera_pdu.pos);
-			lights_bcube.expand_by(1.0*get_tile_smap_dist()); // FIXME: snap to a texel grid
+			lights_bcube.expand_by(1.0*get_tile_smap_dist());
 			clear_dynamic_lights();
 
 			for (auto i = headlights.begin(); i != headlights.end(); ++i) {
@@ -1934,6 +1940,29 @@ class car_manager_t {
 			prev_frame_hls = !headlights.empty(); // cache so that we can get here one last time when headlights become empty
 			headlights.clear();
 		}
+		void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const {
+			point const center(car.get_center());
+			cube_t const &c(car.bcube);
+			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
+			bool const dim(car.dim), dir(car.dir);
+			cube_t top_part(c);
+			top_part.d[dim][0] += (dir ? 0.25 : 0.30)*length; // back
+			top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
+			set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
+			if (include_top) {set_cube_pts(top_part, zmid, z2, dim, dir, pt);} // top
+			float const sign((dim^dir) ? -1.0 : 1.0);
+
+			if (car.dz != 0.0) { // rotate all points about dim !d
+				float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
+				rotate_pts(center, sine_val, cos_val, dim, 2, pb);
+				if (include_top) {rotate_pts(center, sine_val, cos_val, dim, 2, pt);}
+			}
+			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
+				float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
+				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
+				if (include_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
+			}
+		}
 		void draw_car(car_t const &car) { // Note: all quads
 			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
 			point const center(car.get_center());
@@ -1941,27 +1970,11 @@ class car_manager_t {
 			assert(car.color_id < NUM_CAR_COLORS);
 			colorRGBA const &color(car_colors[car.color_id]);
 			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
-			cube_t const &c(car.bcube);
-			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
 			bool const draw_top(dist_val < 0.25), dim(car.dim), dir(car.dir);
-			point pb[8], pt[8]; // bottom and top sections
-			cube_t top_part(c);
-			top_part.d[dim][0] += (dir ? 0.25 : 0.30)*length; // back
-			top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
-			set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
-			if (draw_top) {set_cube_pts(top_part, zmid, z2, dim, dir, pt);} // top
 			float const sign((dim^dir) ? -1.0 : 1.0);
+			point pb[8], pt[8]; // bottom and top sections
+			gen_car_pts(car, draw_top, pb, pt);
 
-			if (car.dz != 0.0) { // rotate all points about dim !d
-				float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
-				rotate_pts(center, sine_val, cos_val, dim, 2, pb);
-				if (draw_top) {rotate_pts(center, sine_val, cos_val, dim, 2, pt);}
-			}
-			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
-				float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
-				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
-				if (draw_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
-			}
 			if (dist_val < 0.05) {
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id);
@@ -1973,6 +1986,7 @@ class car_manager_t {
 				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 			}
 			if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
+				float const length(car.get_length());
 				point pao[4];
 				
 				for (unsigned i = 0; i < 4; ++i) {
@@ -1990,18 +2004,13 @@ class car_manager_t {
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 
-			if (light_factor < 0.5 && dist_val < 0.3) { // night time headlights
-				bool const add_lights(dist_val < 0.1);
-				colorRGBA hl_color(WHITE);
-				hl_color.B += 0.8*(fract(1000.0*car.max_speed) - 0.5); // slight yellow-blue tinting using max_speed as a hash
-				vector3d hl_dir;
-				if (add_lights) {hl_dir = (0.75*front_n.get_norm() - 0.25*plus_z).get_norm();} // point slightly down
+			if (is_night() && dist_val < 0.3) { // night time headlights
+				colorRGBA const hl_color(get_headlight_color(car));
 
 				for (unsigned d = 0; d < 2; ++d) { // L, R
 					unsigned const lr(d ^ lr_xor ^ 1);
 					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (lr ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
 					add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
-					if (add_lights) {headlights.emplace_back(pos, hl_dir, hl_color);} // Note: can probably merge left and right into a single headlight per car
 				}
 			}
 			if ((car.is_almost_stopped() || car.stopped_at_light) && dist_val < 0.2) { // brake lights
@@ -2024,6 +2033,23 @@ class car_manager_t {
 						add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.3*car.height); // normal points out 45 degrees
 					}
 				}
+			}
+		}
+		void add_car_headlights(car_t const &car) {
+			if (!is_night()) return; // only have headlights at night
+			cube_t bcube(car.bcube);
+			bcube.expand_by(get_headlight_dist());
+			if (!check_cube_visible(bcube, 0.1)) return; // dist_scale=0.1
+			float const sign((car.dim^car.dir) ? -1.0 : 1.0);
+			point pb[8], pt[8]; // bottom and top sections
+			gen_car_pts(car, 0, pb, pt); // draw_top=0
+			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
+			vector3d const hl_dir((0.75*front_n - 0.25*plus_z).get_norm()); // point slightly down
+			colorRGBA const hl_color(get_headlight_color(car));
+
+			for (unsigned d = 0; d < 2; ++d) { // L, R
+				point const pos((d ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (d ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
+				headlights.emplace_back(pos, hl_dir, hl_color);
 			}
 		}
 	}; // car_draw_state_t
@@ -2108,8 +2134,11 @@ public:
 		}
 		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
+	void add_car_headlights() {
+		for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.add_car_headlights(*i);}
+		dstate.proc_headlights();
+	}
 	cube_t get_lights_bcube() const {return dstate.get_lights_bcube();}
-	void setup_lights() {dstate.proc_headlights();}
 	void free_context() {car_model_loader.free_context();}
 }; // car_manager_t
 
@@ -2157,10 +2186,10 @@ public:
 		car_manager.next_frame(city_params.car_speed);
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
+		if (!shadow_only && (trans_op_mask & 1)) {car_manager.add_car_headlights();} // setup lights on first (opaque) non-shadow pass
 		cube_t const lights_bcube(car_manager.get_lights_bcube());
-		if (!shadow_only && (trans_op_mask & 1)) {car_manager.setup_lights();} // setup lights on first (opaque) non-shadow pass
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, lights_bcube, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
-		if (!shadow_only) {car_manager.draw(trans_op_mask, xlate, lights_bcube, shadow_only);} // cars don't cast shadows because they move
+		if (!shadow_only)      {car_manager.draw(trans_op_mask, xlate, lights_bcube, shadow_only);} // cars don't cast shadows because they move
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void free_context() {car_manager.free_context();}
