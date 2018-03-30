@@ -1145,9 +1145,9 @@ void add_dynamic_lights_city(cube_t const &scene_bcube) {
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
 	has_dl_sources     = (ndl > 0);
 	dlight_add_thresh *= 0.99;
-	assert(!scene_bcube.is_zero_area());
-	point const scene_llc(scene_bcube.get_llc());
-	vector3d const scene_sz(scene_bcube.get_size());
+	assert(scene_bcube.get_dx() > 0.0 && scene_bcube.get_dy() > 0.0);
+	point const scene_llc(scene_bcube.get_llc()); // Note: zval ignored
+	vector3d const scene_sz(scene_bcube.get_size()); // Note: zval ignored
 	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
 	float const grid_dx(scene_sz.x/gbx), grid_dy(scene_sz.y/gby), grid_dx_inv(1.0/grid_dx), grid_dy_inv(1.0/grid_dy);
 
