@@ -178,6 +178,18 @@ public:
 
 road_mat_mgr_t road_mat_mgr;
 
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap) {
+
+	use_dlights &= !lights_bcube.is_zero_area();
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+
+	if (use_dlights) {
+		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
+		s.add_uniform_vector3d("scene_scale", lights_bcube.get_size());
+		s.add_uniform_float("LT_DIR_FALLOFF", 0.2); // smooth falloff for car headlights
+	}
+}
+
 struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
@@ -185,16 +197,6 @@ protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
 	cube_t lights_bcube;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
-
-	void shader_setup(cube_t const &lights_bcube, bool use_smap) {
-		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-
-		if (use_dlights) {
-			s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
-			s.add_uniform_vector3d("scene_scale", lights_bcube.get_size());
-			s.add_uniform_float("LT_DIR_FALLOFF", 0.2); // smooth falloff for car headlights
-		}
-	}
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
 	virtual void draw_unshadowed() {}
@@ -207,14 +209,14 @@ public:
 		use_dlights  = use_dlights_;
 		use_smap     = (!shadow_only && shadow_map_enabled());
 		if (!use_smap) return;
-		shader_setup(lights_bcube, 1);
+		city_shader_setup(s, lights_bcube, use_dlights, 1, use_bmap);
 		s.add_uniform_float("z_bias", cobj_z_bias);
 		s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 	}
 	virtual void post_draw() {
 		emit_now = 0;
 		if (use_smap) {s.end_shader();}
-		if (shadow_only) {s.begin_color_only_shader();} else {shader_setup(lights_bcube, 0);} // no smap
+		if (shadow_only) {s.begin_color_only_shader();} else {city_shader_setup(s, lights_bcube, use_dlights, 0, use_bmap);} // no smap
 		draw_unshadowed();
 		s.end_shader();
 	}
@@ -1913,7 +1915,7 @@ class car_manager_t {
 			select_texture(WHITE_TEX); // reset back to default/untextured
 			disable_blend();
 		}
-		void pre_headlight_draw(vector3d const &xlate_) {
+		cube_t add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_) {
 			xlate = xlate_; // needed earlier in the flow
 			lights_bcube = cube_t(camera_pdu.pos - xlate);
 			lights_bcube.expand_by(get_headlight_draw_dist());
@@ -1921,11 +1923,12 @@ class car_manager_t {
 			lights_bcube.z2() = -FLT_MAX;
 			have_headlights = 0;
 			clear_dynamic_lights();
-		}
-		void proc_headlights() {
+			if (cars.empty()) return cube_t(all_zeros);
+			for (auto i = cars.begin(); i != cars.end(); ++i) {add_car_headlights(*i);}
 			//cout << "headlights: " << headlights.size() << ", dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
 			add_dynamic_lights_city(lights_bcube);
 			upload_dlights_textures(lights_bcube);
+			return (headlights_enabled() ? get_lights_bcube() : cube_t(all_zeros));
 		}
 		void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const {
 			point const center(car.get_center());
@@ -2127,11 +2130,7 @@ public:
 		}
 		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
-	void add_car_headlights(vector3d const &xlate) {
-		dstate.pre_headlight_draw(xlate);
-		for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.add_car_headlights(*i);}
-		dstate.proc_headlights();
-	}
+	cube_t add_car_headlights(vector3d const &xlate) {return dstate.add_car_headlights(cars, xlate);}
 	bool headlights_enabled() const {return dstate.headlights_enabled();}
 	cube_t get_lights_bcube() const {return dstate.get_lights_bcube();}
 	void free_context() {car_model_loader.free_context();}
@@ -2181,13 +2180,13 @@ public:
 		car_manager.next_frame(city_params.car_speed);
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
-		if (!shadow_only && (trans_op_mask & 1)) {car_manager.add_car_headlights(xlate);} // setup lights on first (opaque) non-shadow pass
 		bool const use_dlights(car_manager.headlights_enabled());
 		cube_t const lights_bcube(car_manager.get_lights_bcube());
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		if (!shadow_only)      {car_manager.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);} // cars don't cast shadows because they move
 		// Note: buildings are drawn through draw_buildings()
 	}
+	cube_t setup_city_lights(vector3d const &xlate) {return car_manager.add_car_headlights(xlate);}
 	void free_context() {car_manager.free_context();}
 }; // city_gen_t
 
@@ -2207,6 +2206,7 @@ void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(
 void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame() {city_gen.next_frame();}
 void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
+cube_t setup_city_lights(vector3d const &xlate) {return city_gen.setup_city_lights(xlate);}
 
 bool check_city_sphere_coll(point const &pos, float radius) {
 	if (!have_cities()) return 0;

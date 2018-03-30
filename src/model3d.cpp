@@ -2293,8 +2293,10 @@ void free_model_context() {
 	all_models.free_context();
 }
 void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) {
+	cube_t lights_bcube(all_zeros);
+	if (!shadow_pass && !reflection_pass && (trans_op_mask & 1)) {lights_bcube = setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 	all_models.render(shadow_pass, reflection_pass, trans_op_mask, xlate);
-	if (trans_op_mask & 1) {draw_buildings(shadow_pass, xlate);} // opaque pass
+	if (trans_op_mask & 1) {draw_buildings(shadow_pass, xlate, lights_bcube);} // opaque pass
 	draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);
 }
 void ensure_model_reflection_cube_maps() {

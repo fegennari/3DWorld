@@ -1364,7 +1364,7 @@ public:
 		if (USE_BULIDING_VBOS) {create_vbos();}
 	}
 
-	void draw(bool shadow_only, vector3d const &xlate) const {
+	void draw(bool shadow_only, vector3d const &xlate, cube_t const &lights_bcube) const {
 		if (empty()) return;
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 1.7ms, 2.3ms with shadow maps, 2.8ms with AO, 3.3s with rotations (currently 2.5)
 		float const far_clip(get_inf_terrain_fog_dist());
@@ -1380,7 +1380,7 @@ public:
 
 		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
 		if (use_tt_smap) {
-			setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 1, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+			city_shader_setup(s, lights_bcube, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			s.add_uniform_float("z_bias", cobj_z_bias);
 			s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 		}
@@ -1488,7 +1488,7 @@ public:
 building_creator_t building_creator;
 
 void gen_buildings() {building_creator.gen(global_building_params);}
-void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
+void draw_buildings(bool shadow_only, vector3d const &xlate, cube_t const &lights_bcube) {building_creator.draw(shadow_only, xlate, lights_bcube);}
 void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);}
 
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {

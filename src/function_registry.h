@@ -331,7 +331,9 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);
 void get_city_road_bcubes(vector<cube_t> &bcubes);
 void get_city_plot_bcubes(vector<cube_t> &bcubes);
 void next_city_frame();
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap);
 void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
+cube_t setup_city_lights(vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius);
 bool check_valid_scenery_pos(point const &pos, float radius);
 void free_city_context();
@@ -925,7 +927,7 @@ void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigne
 // function prototypes - gen_buildings
 bool parse_buildings_option(FILE *fp);
 void gen_buildings();
-void draw_buildings(bool shadow_only, vector3d const &xlate=zero_vector);
+void draw_buildings(bool shadow_only, vector3d const &xlate, cube_t const &lights_bcube);
 void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval);
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only);
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only);
