@@ -939,7 +939,7 @@ void add_waves() { // add waves due to wind
 	wave_time += fticks_clamped;
 	if (wave_time > 4000.0) {wave_time = 0.0;} // reset at 4000 ticks (2 min. or so) to avoid FP error
 	
-#pragma omp parallel for schedule(static,8) num_threads(4)
+#pragma omp parallel for schedule(static,8) num_threads(2)
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			if (!wminside[y][x] || !get_water_enabled(x, y)) continue; // only in water
