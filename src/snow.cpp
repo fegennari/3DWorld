@@ -496,7 +496,6 @@ void create_snow_map(voxel_map &vmap) {
 	int const num_per_dim(1024*(unsigned)sqrt((float)num_snowflakes)); // in M, so sqrt div by 1024
 	float const zval(max(ztop, czmax)), zv_scale(1.0/(zval - zbottom));
 	float const xscale(2.0*X_SCENE_SIZE/num_per_dim), yscale(2.0*Y_SCENE_SIZE/num_per_dim);
-	unsigned progress(0);
 	all_models.build_cobj_trees(1);
 	cout << "Snow accumulation progress (out of " << num_per_dim << "):     0";
 
