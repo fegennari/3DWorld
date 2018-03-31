@@ -1923,7 +1923,7 @@ class car_manager_t {
 			lights_bcube.z2() = -FLT_MAX;
 			have_headlights = 0;
 			clear_dynamic_lights();
-			if (cars.empty()) return cube_t(all_zeros);
+			if (cars.empty() || !is_night()) return cube_t(all_zeros);// only have headlights at night) 
 			for (auto i = cars.begin(); i != cars.end(); ++i) {add_car_headlights(*i);}
 			//cout << "headlights: " << headlights.size() << ", dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
 			add_dynamic_lights_city(lights_bcube);
@@ -2026,7 +2026,6 @@ class car_manager_t {
 			}
 		}
 		void add_car_headlights(car_t const &car) {
-			if (!is_night()) return; // only have headlights at night
 			cube_t bcube(car.bcube);
 			bcube.expand_by(get_headlight_dist());
 			if (!lights_bcube.contains_cube_xy(bcube))   return; // not contained within the light volume
