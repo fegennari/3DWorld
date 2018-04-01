@@ -1895,7 +1895,7 @@ class car_manager_t {
 		bool headlights_enabled() const {return have_headlights;}
 		cube_t get_lights_bcube() const {return lights_bcube;}
 		static bool is_night() {return (light_factor < 0.5);} // for car headlights
-		static float get_headlight_dist     () {return 4.0*city_params.road_width;} // distance headlights will shine
+		static float get_headlight_dist     () {return 3.5*city_params.road_width;} // distance headlights will shine
 		static float get_headlight_draw_dist() {return 1.0*get_tile_smap_dist();} // distnace from the camera where headlights are drawn
 
 		colorRGBA get_headlight_color(car_t const &car) const {
@@ -2034,9 +2034,9 @@ class car_manager_t {
 			point pb[8], pt[8]; // bottom and top sections
 			gen_car_pts(car, 0, pb, pt); // draw_top=0
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-			vector3d const dir((0.75*front_n - 0.25*plus_z).get_norm()); // point slightly down
+			vector3d const dir((0.5*front_n - 0.5*plus_z).get_norm()); // point slightly down
 			colorRGBA const color(get_headlight_color(car));
-			float const beamwidth = 0.1;
+			float const beamwidth = 0.08;
 			float const headlight_dist(get_headlight_dist());
 			min_eq(lights_bcube.z1(), bcube.z1()); // Note: may not need to set these
 			max_eq(lights_bcube.z2(), bcube.z2());
