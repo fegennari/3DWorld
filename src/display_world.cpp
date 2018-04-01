@@ -49,7 +49,7 @@ extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
-extern float def_atmosphere, def_vegetation, clip_plane_z;
+extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale;
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
@@ -427,6 +427,7 @@ void setup_lighting() {
 		}
 		diffuse[i] -= 0.12*cloud_cover;
 		ambient[i] -= 0.05*cloud_cover;
+		ambient[i] *= ambient_scale;
 	}
 	if (light_factor <= 0.4) { // moon
 		calc_moon_atten(ambient, diffuse, mlf);

@@ -410,12 +410,12 @@ public:
 // ************ Physics and Weather ************
 
 extern int temp_change, def_cube_map_reflect_mipmap_level;
-extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP, player_speed, def_atmosphere, def_vegetation;
+extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP, player_speed, def_atmosphere, def_vegetation, ambient_scale;
 extern vector3d wind;
 
-enum {PW_SPEED=0, PW_GRAVITY, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, CM_MIP_BIAS, NUM_PW_CONT};
+enum {PW_SPEED=0, PW_GRAVITY, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PM_AMB_SCALE, PW_TIMESTEP, PW_WVEL, CM_MIP_BIAS, NUM_PW_CONT};
 string const phys_weather_names[NUM_PW_CONT] = {"Player Speed", "Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation",
-												"Wind X", "Wind Y", "Sun Angle", "Moon Angle", "Physics Timestep", "Weapon Velocity", "Cube Map Mipmap Bias"};
+												"Wind X", "Wind Y", "Sun Angle", "Moon Angle", "Ambient Light Scale", "Physics Timestep", "Weapon Velocity", "Cube Map Mipmap Bias"};
 
 class phys_weather_kbd_menu_t : public keyboard_menu_t {
 
@@ -474,6 +474,10 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 		case PW_MOON_POS:
 			value << moon_rot;
 			spos = moon_rot/TWO_PI; // 0 to 2*PI
+			break;
+		case PM_AMB_SCALE:
+			value << ambient_scale;
+			spos = 0.5*ambient_scale; // 0.0 to 2.0
 			break;
 		case PW_TIMESTEP:
 			value << 100.0*TIMESTEP;
@@ -546,6 +550,9 @@ public:
 			moon_rot += LIGHT_ROT_AMT*delta; // -PI to PI in steps of 0.05
 			if (moon_rot < 0.0) {moon_rot += TWO_PI;} else if (moon_rot > TWO_PI) {moon_rot -= TWO_PI;}
 			calc_visibility(MOON_SHADOW);
+			break;
+		case PM_AMB_SCALE:
+			ambient_scale = max(0.0f, (ambient_scale + 0.1f*delta)); // 0.0 to 2.0+ in steps of 0.1
 			break;
 		case PW_TIMESTEP:
 			change_timestep((delta > 0.0) ? 1.5 : 1.0/1.5);
