@@ -121,8 +121,9 @@ void draw_overhead_map() {
 		double const y_scale(10.0*map_zoom), x_scale(window_ar*y_scale);
 		double const i_scale(2.0*y_scale/ny), j_scale(2.0*x_scale/nx);
 		double const x_off(-x_scale + 0.05*map_x), y_off(-y_scale + 0.05*map_y);
+		//timer_t timer("Mandelbrot");
 
-#pragma omp parallel for schedule(static,1)
+#pragma omp parallel for schedule(dynamic,1)
 		for (int i = 0; i < ny; ++i) {
 			double const my(i_scale*i + y_off);
 
