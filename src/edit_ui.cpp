@@ -429,7 +429,7 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 		switch (control_ix) {
 		case PW_SPEED:
 			value << player_speed;
-			spos = base_gravity/4.0; // 0.0 to 4.0
+			spos = player_speed/4.0; // 0.0 to 4.0
 			break;
 		case PW_GRAVITY:
 			value << base_gravity;
