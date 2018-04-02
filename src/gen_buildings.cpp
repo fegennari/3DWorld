@@ -1482,10 +1482,25 @@ public:
 		} // for y
 		return coll;
 	}
-};
+
+	void get_overlapping_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) const { // Note: called on init, don't need to use get_query_xlate()
+		if (empty()) return; // nothing to do
+		unsigned ixr[2][2];
+		get_grid_range(xy_range, ixr);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (xy_range.intersects_xy(ge.bcube)) {bcubes.push_back(ge.bcube);}
+			} // for x
+		} // for y
+	}
+}; // building_creator_t
 
 
 building_creator_t building_creator;
+
+vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);}
 
 void gen_buildings() {building_creator.gen(global_building_params);}
 void draw_buildings(bool shadow_only, vector3d const &xlate, cube_t const &lights_bcube) {building_creator.draw(shadow_only, xlate, lights_bcube);}
@@ -1496,16 +1511,18 @@ bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_o
 }
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only) {
 	point center(pos);
-	if (apply_tt_xlate && world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects - not the camera
+	if (apply_tt_xlate) {center += get_tt_xlate_val();} // apply xlate for all static objects - not the camera
 	return building_creator.check_sphere_coll(center, pos, radius, xy_only);
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only) {
 	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only);
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate) {
-	vector3d const xlate((apply_tt_xlate && world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);
+	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
 	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix);
 }
+void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
+
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
 	float t(0.0); // unused
 	unsigned hit_bix(0);
