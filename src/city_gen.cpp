@@ -110,6 +110,7 @@ struct city_params_t {
 		}
 		return 1;
 	}
+	vector3d get_car_size() const {return CAR_SIZE*road_width;}
 }; // city_params_t
 
 city_params_t city_params;
@@ -593,6 +594,12 @@ struct road_plot_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
+struct parking_lot_t : public cube_t {
+	bool dim, dir;
+	unsigned short row_sz, num_rows;
+	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : cube_t(c), dim(dim_), dir(dir_), row_sz(row_sz_), num_rows(num_rows_) {}
+};
+
 class heightmap_query_t {
 protected:
 	float *heightmap;
@@ -853,11 +860,123 @@ class city_road_gen_t {
 		}
 	}; // road_draw_state_t
 
+	class parking_lot_manager_t {
+		vector<parking_lot_t> parks;
+
+		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
+			cube_t tc(bcube);
+			tc.expand_by(pad_dist);
+
+			for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
+				if (c->intersects_xy(tc)) return 1; // intersection
+			}
+			return 0;
+		}
+	public:
+		void clear() {parks.clear();}
+
+		void gen_parking(vector<road_plot_t> const &plots, vector<car_t> &cars, unsigned city_id) {
+			timer_t timer("Gen Parking Lots");
+			unsigned const min_cars_wide = 12; // Note: with default params, can be up to 28
+			unsigned const min_cars_long = 1; // Note: with default params, can be up to 9
+			vector3d const nom_car_size(city_params.get_car_size()); // {length, width, height}
+			float const space_width(2.0*nom_car_size.y); // add 50% extra space between cars
+			float const space_len  (1.8*nom_car_size.x); // space for car + gap for cars to drive through
+			float const pad_dist   (1.0*nom_car_size.x); // one car length
+			vector<cube_t> bcubes; // reused across calls
+			rand_gen_t rgen;
+			unsigned num_spaces(0), filled_spaces(0);
+			parks.clear();
+			// cars
+			car_t car;
+			car.park();
+			car.cur_city = city_id;
+			car.cur_road_type = TYPE_PLOT;
+
+			// generate 0-4 parking lots per plot, starting at the corners
+			for (auto i = plots.begin(); i != plots.end(); ++i) {
+				cube_t plot(*i);
+				plot.expand_by(-pad_dist);
+				bcubes.clear();
+				get_building_bcubes(plot, bcubes);
+				if (bcubes.empty()) continue; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
+				unsigned const first_corner(rgen.rand()&3); // 0-3
+				bool const car_dim(rgen.rand() & 1); // 0=cars face in X; 1=cars face in Y
+				bool const car_dir(rgen.rand() & 1);
+				float const xsz(car_dim ? space_width : space_len), ysz(car_dim ? space_len : space_width);
+				//cout << "max_row_sz: " << floor(plot.get_size()[!car_dim]/space_width) << ", max_num_rows: " << floor(plot.get_size()[car_dim]/space_len) << endl;
+				
+				for (unsigned c = 0; c < 4; ++c) { // 4 corners, in random order
+					unsigned const cix((first_corner + c) & 3), xdir(cix & 1), ydir(cix >> 1), wdir(car_dim ? xdir : ydir), rdir(car_dim ? ydir : xdir);
+					float const dx(xdir ? -xsz : xsz), dy(ydir ? -ysz : ysz), dw(car_dim ? dx : dy), dr(car_dim ? dy : dx); // delta-wdith and delta-row
+					point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], plot.z1());
+					assert(dw != 0.0 && dr != 0.0);
+					parking_lot_t cand(cube_t(corner_pos, corner_pos), car_dim, car_dir, min_cars_wide, min_cars_long); // start as min size at the corner
+					cand.d[!car_dim][!wdir] += cand.row_sz*dw;
+					cand.d[ car_dim][!rdir] += cand.num_rows*dr;
+					//cout << "plot: " << plot.str() << endl << "cand: " << cand.str() << "int : " << has_bcube_int_xy(cand, bcubes, pad_dist) << endl;
+					if (!plot.contains_cube_xy(cand)) {assert(0); continue;} // can't fit a min size parking lot in this plot (FIXME: what to do?)
+					if (has_bcube_int_xy(cand, bcubes, pad_dist)) continue; // intersects a building - skip (can't fit min size parking lot)
+					cand.z2() = plot.z2(); // probably unnecessary
+					parking_lot_t park(cand);
+					
+					// try to add more parking spaces in a row
+					for (; plot.contains_cube_xy(cand); ++cand.row_sz, cand.d[!car_dim][!wdir] += dw) {
+						if (has_bcube_int_xy(cand, bcubes, pad_dist)) break; // intersects a building - done
+						park = cand; // success: increase parking lot to this size
+					}
+					cand = park;
+					// try to add more rows of parking spaces
+					for (; plot.contains_cube_xy(cand); ++cand.num_rows, cand.d[car_dim][!rdir] += dr) {
+						if (has_bcube_int_xy(cand, bcubes, pad_dist)) break; // intersects a building - done
+						park = cand; // success: increase parking lot to this size
+					}
+					assert(park.row_sz >= min_cars_wide && park.num_rows >= min_cars_long);
+					assert(park.get_dx() > 0.0 && park.get_dy() > 0.0);
+					parks.push_back(park);
+					bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
+					num_spaces += park.row_sz*park.num_rows;
+
+					// fill the parking lot with cars
+					vector3d car_sz(nom_car_size);
+					car.dim = car_dim;
+					car.dir = car_dir;
+					car.height = car_sz.z;
+					if (car.dim) {swap(car_sz.x, car_sz.y);}
+					point pos(corner_pos.x, corner_pos.y, (i->z2() + 0.5*car_sz.z));
+					pos[car_dim] += 0.5*dr; // half offset for centerline
+					float const car_density(rgen.rand_float());
+
+					for (unsigned row = 0; row < park.num_rows; ++row) {
+						pos[!car_dim] = corner_pos[!car_dim] + 0.5*dw; // half offset for centerline
+
+						for (unsigned col = 0; col < park.row_sz; ++col) {
+							if (rgen.rand_float() < car_density) { // only half the spaces are filled on average
+								car.bcube.set_from_point(pos);
+								car.bcube.expand_by(0.5*car_sz);
+								cars.push_back(car);
+								++filled_spaces;
+							}
+							pos[!car_dim] += dw;
+						} // for col
+						pos[car_dim] += dr;
+					} // for row
+					//cout << "plot: " << (i-plots.begin()) << ", b: " << bcubes.size() << ", dim: " << car_dim << ", dir: " << car_dir << ", row: " << park.row_sz << ", rows: " << park.num_rows << endl;
+				} // for c
+			} // for i
+			cout << "parking lots: " << parks.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;
+		}
+		void draw(road_draw_state_t &dstate) const {
+			// WRITE
+		}
+	}; // parking_lot_manager_t
+
 	class road_network_t {
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
 		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings
+		parking_lot_manager_t parking_lot_mgr;
 		cube_t bcube;
 		vector<road_t> segments; // reused temporary
 		set<unsigned> connected_to; // vector?
@@ -921,6 +1040,7 @@ class city_road_gen_t {
 			plots.clear();
 			for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
 			tile_blocks.clear();
+			parking_lot_mgr.clear();
 		}
 		bool gen_road_grid(float road_width, float road_spacing) {
 			cube_t const &region(bcube); // use our bcube as the region to process
@@ -1269,6 +1389,7 @@ class city_road_gen_t {
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
+		void gen_parking_lots(vector<car_t> &cars) {parking_lot_mgr.gen_parking(plots, cars, city_id);}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(roads, bcubes);}
 		void get_plot_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(plots, bcubes);}
 
@@ -1310,6 +1431,7 @@ class city_road_gen_t {
 					if (i > 0) {dstate.draw_stoplights(isecs[i], 0);}
 				}
 			} // for b
+			if (!shadow_only) {parking_lot_mgr.draw(dstate);}
 		}
 
 		// cars
@@ -1317,21 +1439,18 @@ class city_road_gen_t {
 
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
+			vector3d const nom_car_size(city_params.get_car_size());
 
 			for (unsigned n = 0; n < 10; ++n) { // make 10 tries
 				unsigned const seg_ix(rgen.rand()%segs.size());
 				road_seg_t const &seg(segs[seg_ix]); // chose a random segment
 				car.dim   = seg.dim;
 				car.dir   = (rgen.rand()&1);
-				car.dz    = car.rot_z = car.turn_val = 0.0; // flat/level
 				car.max_speed = rgen.rand_uniform(0.66, 1.0); // add some speed variation
-				car.cur_speed = 0.0;
 				car.cur_road  = seg.road_ix;
 				car.cur_seg   = seg_ix;
 				car.cur_road_type = TYPE_RSEG;
-				car.turn_dir  = TURN_NONE;
-				vector3d car_sz; // {length, width, height}
-				for (unsigned d = 0; d < 3; ++d) {car_sz[d] = CAR_SIZE[d]*city_params.road_width/*rgen.rand_uniform(0.9, 1.1)*/;} // Note: car models should all be the same size
+				vector3d car_sz(nom_car_size); // {length, width, height} // Note: car models should all be the same size
 				car.height = car_sz.z;
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.6*car_sz.x), val2(seg.d[seg.dim][1] - 0.6*car_sz.x);
@@ -1586,6 +1705,8 @@ class city_road_gen_t {
 	}
 
 public:
+	bool empty() const {return road_networks.empty();}
+
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region, road_networks.size()));
@@ -1721,6 +1842,9 @@ public:
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_tile_blocks();}
 		global_rn.calc_ix_values(road_networks, global_rn);
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->calc_ix_values(road_networks, global_rn);}
+	}
+	void gen_parking_lots(vector<car_t> &cars) {
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots(cars);}
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
@@ -2026,6 +2150,7 @@ class car_manager_t {
 			}
 		}
 		void add_car_headlights(car_t const &car) {
+			if (car.is_parked()) return; // no lights when parked
 			cube_t bcube(car.bcube);
 			bcube.expand_by(get_headlight_dist());
 			if (!lights_bcube.contains_cube_xy(bcube))   return; // not contained within the light volume
@@ -2057,29 +2182,38 @@ class car_manager_t {
 
 public:
 	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader) {}
+	bool empty() const {return cars.empty();}
 	void clear() {cars.clear();}
 
 	void init_cars(unsigned num) {
 		if (num == 0) return;
 		timer_t timer("Init Cars");
-		unsigned const num_models(car_model_loader.num_models());
 		cars.reserve(num);
 		
 		for (unsigned n = 0; n < num; ++n) {
 			car_t car;
 			if (!road_gen.add_car(car, rgen)) continue;
+			cars.push_back(car);
+		} // for n
+		cout << "Dynamic Cars: " << cars.size() << endl;
+	}
+	void add_parked_cars(vector<car_t> const &new_cars) {
+		cars.insert(cars.end(), new_cars.begin(), new_cars.end());
+	}
+	void finalize_cars() {
+		unsigned const num_models(car_model_loader.num_models());
+
+		for (auto i = cars.begin(); i != cars.end(); ++i) {
 			int fixed_color(-1);
 
 			if (num_models > 0) {
-				car.model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);
-				fixed_color  = car_model_loader.get_model(car.model_id).fixed_color_id;
+				i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);
+				fixed_color  = car_model_loader.get_model(i->model_id).fixed_color_id;
 			}
-			car.color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
-			assert(car.is_valid());
-			//car.park();
-			cars.push_back(car);
-		} // for n
-		cout << "Cars: " << cars.size() << endl;
+			i->color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
+			assert(i->is_valid());
+		} // for i
+		cout << "Total Cars: " << cars.size() << endl;
 	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
@@ -2167,6 +2301,14 @@ public:
 		road_gen.gen_tile_blocks();
 		car_manager.init_cars(city_params.num_cars);
 	}
+	void gen_details() {
+		if (road_gen.empty() || car_manager.empty()) return; // nothing to do - no roads or cars
+		// generate parking lots
+		vector<car_t> parked_cars;
+		road_gen.gen_parking_lots(parked_cars);
+		car_manager.add_parked_cars(parked_cars);
+		car_manager.finalize_cars();
+	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
 
@@ -2201,6 +2343,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.init(heightmap, xsize, ysize); // only need to call once for any given heightmap
 	city_gen.gen_cities(city_params);
 }
+void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
 void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame() {city_gen.next_frame();}

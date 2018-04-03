@@ -1963,7 +1963,12 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	unsigned const max_defer_tiles        = 8; // 0 = disable
 	if (height_gens.empty()) {height_gens.resize(max(max_defer_tiles, 1U));}
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
-	if (!buildings_valid) {gen_buildings(); buildings_valid = 1;}
+	
+	if (!buildings_valid) {
+		gen_buildings();
+		gen_city_details(); // after building generation
+		buildings_valid = 1;
+	}
 	auto_calc_model_zvals(); // must be done after heightmap loading but before any tiles are created
 	to_draw.clear();
 	terrain_zmin = FAR_DISTANCE;

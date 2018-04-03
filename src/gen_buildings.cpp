@@ -1491,7 +1491,12 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (xy_range.intersects_xy(ge.bcube)) {bcubes.push_back(ge.bcube);}
+				if (!xy_range.intersects_xy(ge.bcube)) continue;
+
+				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
+					building_t const &building(get_building(*b));
+					if (xy_range.intersects_xy(building.bcube)) {bcubes.push_back(building.bcube);}
+				}
 			} // for x
 		} // for y
 	}
