@@ -19,14 +19,14 @@ float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CONN_ROAD_SPEED_MULT    = 2.0; // twice the speed limit on connector roads
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
-colorRGBA const road_color          = WHITE; // all road parts are the same color, to make the textures match
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
-enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   NUM_RD_TIDS };
-enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, NUM_RD_TYPES};
+enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  NUM_RD_TIDS };
+enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 unsigned const CONN_TYPE_NONE = 0;
 colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, GRAY}; // parking lots are darker than roads
 
 
 extern int rand_gen_index, display_mode, animate2;
@@ -152,10 +152,10 @@ template<typename T> void get_all_bcubes(vector<T> const &v, vector<cube_t> &bcu
 	for (auto i = v.begin(); i != v.end(); ++i) {bcubes.push_back(*i);}
 }
 
-template<typename T> static void add_flat_road_quad(T const &r, quad_batch_draw &qbd, float ar) { // z1 == z2
-	float const z(r.z1()); // z1
+template<typename T> static void add_flat_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2
+	float const z(r.z1());
 	point const pts[4] = {point(r.x1(), r.y1(), z), point(r.x2(), r.y1(), z), point(r.x2(), r.y2(), z), point(r.x1(), r.y2(), z)};
-	qbd.add_quad_pts(pts, road_color, plus_z, r.get_tex_range(ar));
+	qbd.add_quad_pts(pts, color, plus_z, r.get_tex_range(ar));
 }
 
 float smooth_interp(float a, float b, float mix) {
@@ -178,8 +178,8 @@ public:
 	void ensure_road_textures() {
 		if (inited) return;
 		timer_t timer("Load Road Textures");
-		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg"};
-		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0};
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "asphalt.jpg"};
+		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0};
 		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
 		sl_tid = get_texture_by_name("roads/traffic_light.png");
 		inited = 1;
@@ -384,13 +384,13 @@ struct road_seg_t : public road_t {
 	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {init_ixs();}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 
-	void add_road_quad(quad_batch_draw &qbd, float ar) const { // specialized here for sloped roads
-		if (z1() == z2()) {add_flat_road_quad(*this, qbd, ar); return;}
+	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const { // specialized here for sloped roads
+		if (z1() == z2()) {add_flat_road_quad(*this, qbd, color, ar); return;}
 		bool const s(slope ^ dim);
 		point pts[4] = {point(x1(), y1(), d[2][!s]), point(x2(), y1(), d[2][!s]), point(x2(), y2(), d[2][ s]), point(x1(), y2(), d[2][ s])};
 		if (!dim) {swap(pts[0].z, pts[2].z);}
 		vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
-		qbd.add_quad_pts(pts, road_color, normal, get_tex_range(ar));
+		qbd.add_quad_pts(pts, color, normal, get_tex_range(ar));
 	}
 };
 
@@ -616,6 +616,7 @@ struct parking_lot_t : public cube_t {
 	bool dim, dir;
 	unsigned short row_sz, num_rows;
 	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : cube_t(c), dim(dim_), dir(dir_), row_sz(row_sz_), num_rows(num_rows_) {}
+	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, 16.0*(dim ? get_dy() : get_dx()), 16.0*(dim ? get_dx() : get_dy()), 0, dim);}
 };
 
 class heightmap_query_t {
@@ -822,7 +823,7 @@ class city_road_gen_t {
 
 	struct range_pair_t {
 		unsigned s, e; // Note: e is one past the end
-		range_pair_t() : s(0), e(0) {}
+		range_pair_t(unsigned s_=0, unsigned e_=0) : s(s_), e(e_) {}
 		void update(unsigned v) {
 			if (s == 0 && e == 0) {s = v;} // first insert
 			else {assert(s < e && v >= e);} // v must strictly increase
@@ -858,15 +859,16 @@ class city_road_gen_t {
 			s.end_shader();
 			glDepthFunc(GL_LESS);
 		}
-		template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd) {add_flat_road_quad(r, qbd, ar);} // generic flat road case (plot)
-		template<> void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd) {r.add_road_quad(qbd, ar);} // road segment
+		template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case (plot/park)
+		template<> void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
 		
 		template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
 			assert(rp.s <= rp.e && rp.e <= v.size());
 			assert(type_ix < NUM_RD_TYPES);
+			colorRGBA const color(road_colors[type_ix]);
 			
 			if (cache.empty()) { // generate and cache quads
-				for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache);}
+				for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache, color);}
 			}
 			if (emit_now) { // draw shadow blocks directly
 				road_mat_mgr.set_texture(type_ix);
@@ -879,7 +881,9 @@ class city_road_gen_t {
 	}; // road_draw_state_t
 
 	class parking_lot_manager_t {
-		vector<parking_lot_t> parks;
+		vector<parking_lot_t> parks; // no, not really parks, but parking lots (the name "plots" was already taken)
+		quad_batch_draw park_quads;
+		cube_t parks_bcube;
 
 		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
 			cube_t tc(bcube);
@@ -904,6 +908,7 @@ class city_road_gen_t {
 			rand_gen_t rgen;
 			unsigned num_spaces(0), filled_spaces(0);
 			parks.clear();
+			parks_bcube.set_to_zeros();
 			// cars
 			car_t car;
 			car.park();
@@ -913,7 +918,7 @@ class city_road_gen_t {
 			// generate 0-4 parking lots per plot, starting at the corners
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				cube_t plot(*i);
-				plot.expand_by(-pad_dist);
+				plot.expand_by_xy(-pad_dist);
 				bcubes.clear();
 				get_building_bcubes(plot, bcubes);
 				if (bcubes.empty()) continue; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
@@ -926,14 +931,14 @@ class city_road_gen_t {
 				for (unsigned c = 0; c < 4; ++c) { // 4 corners, in random order
 					unsigned const cix((first_corner + c) & 3), xdir(cix & 1), ydir(cix >> 1), wdir(car_dim ? xdir : ydir), rdir(car_dim ? ydir : xdir);
 					float const dx(xdir ? -xsz : xsz), dy(ydir ? -ysz : ysz), dw(car_dim ? dx : dy), dr(car_dim ? dy : dx); // delta-wdith and delta-row
-					point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], plot.z1());
+					point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], (plot.z1() + 0.1*ROAD_HEIGHT)); // shift up slightly to avoid z-fighting
 					assert(dw != 0.0 && dr != 0.0);
 					parking_lot_t cand(cube_t(corner_pos, corner_pos), car_dim, car_dir, city_params.min_park_spaces, city_params.min_park_rows); // start as min size at the corner
 					cand.d[!car_dim][!wdir] += cand.row_sz*dw;
 					cand.d[ car_dim][!rdir] += cand.num_rows*dr;
 					if (!plot.contains_cube_xy(cand)) {continue;} // can't fit a min size parking lot in this plot, so skip it (shouldn't happen)
 					if (has_bcube_int_xy(cand, bcubes, pad_dist)) continue; // intersects a building - skip (can't fit min size parking lot)
-					cand.z2() = plot.z2(); // probably unnecessary
+					cand.z2() += plot.get_dz(); // probably unnecessary
 					parking_lot_t park(cand);
 					
 					// try to add more parking spaces in a row
@@ -949,14 +954,15 @@ class city_road_gen_t {
 					}
 					assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 					assert(park.get_dx() > 0.0 && park.get_dy() > 0.0);
+					if (parks.empty()) {parks_bcube = park;} else {parks_bcube.union_with_cube(park);}
 					parks.push_back(park);
 					bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
 					num_spaces += park.row_sz*park.num_rows;
 
 					// fill the parking lot with cars
 					vector3d car_sz(nom_car_size);
-					car.dim = car_dim;
-					car.dir = car_dir;
+					car.dim    = car_dim;
+					car.dir    = car_dir;
 					car.height = car_sz.z;
 					if (car.dim) {swap(car_sz.x, car_sz.y);}
 					point pos(corner_pos.x, corner_pos.y, (i->z2() + 0.5*car_sz.z));
@@ -982,8 +988,16 @@ class city_road_gen_t {
 			} // for i
 			cout << "parking lots: " << parks.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;
 		}
-		void draw(road_draw_state_t &dstate) const {
-			// WRITE
+		void draw(road_draw_state_t &dstate) {
+			if (parks.empty() || !dstate.check_cube_visible(parks_bcube)) return;
+			dstate.draw_road_region(parks, city_road_gen_t::range_pair_t(0, parks.size()), park_quads, TYPE_PARK_LOT); return;
+			
+			for (auto i = parks.begin(); i != parks.end(); ++i) {
+				if (!dstate.check_cube_visible(*i)) continue; // FIXME: is this needed?
+				dstate.begin_tile(i->get_cube_center());
+				//dstate.draw_road_region(parks, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT);
+				// WRITE
+			}
 		}
 	}; // parking_lot_manager_t
 
@@ -1013,7 +1027,7 @@ class city_road_gen_t {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
 		};
 		struct tile_block_t { // collection of road parts for a given tile
-			range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4}
+			range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot}
 			quad_batch_draw quads[NUM_RD_TYPES];
 			cube_t bcube;
 			tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
