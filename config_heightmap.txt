@@ -21,6 +21,10 @@ city road_width 0.265
 city road_spacing 1.5
 city conn_road_seg_len 6.0
 city max_road_slope 0.3
+city min_park_spaces 12
+city min_park_rows 1
+city min_park_density 0.0
+city max_park_density 1.0
 
 city num_cars 4000
 city car_speed 10.0
@@ -28,6 +32,10 @@ use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 
 shadow_map_sz 4096
+
+#sun_rot 2.0
+#moon_rot 2.0
+ambient_scale 0.5
 
 #tiled_terrain_only 1
 read_landscape 1

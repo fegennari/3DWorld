@@ -45,9 +45,13 @@ struct city_params_t {
 	// cars
 	unsigned num_cars;
 	float car_speed;
+	// parking lots
+	unsigned min_park_spaces, min_park_rows;
+	float min_park_density, max_park_density;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0),
-		slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), num_cars(0), car_speed(0.0) {}
+		slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), num_cars(0), car_speed(0.0),
+		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -98,11 +102,25 @@ struct city_params_t {
 		else if (str == "max_road_slope") {
 			if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
 		}
+		// cars
 		else if (str == "num_cars") {
 			if (!read_uint(fp, num_cars)) {return read_error(str);}
 		}
 		else if (str == "car_speed") {
 			if (!read_float(fp, car_speed) || car_speed < 0.0) {return read_error(str);}
+		}
+		// parking lots
+		else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
+			if (!read_uint(fp, min_park_spaces)) {return read_error(str);}
+		}
+		else if (str == "min_park_rows") { // with default road parameters, can be up to 8
+			if (!read_uint(fp, min_park_rows)) {return read_error(str);}
+		}
+		else if (str == "min_park_density") {
+			if (!read_float(fp, min_park_density)) {return read_error(str);}
+		}
+		else if (str == "max_park_density") {
+			if (!read_float(fp, max_park_density) || max_park_density < 0.0) {return read_error(str);}
 		}
 		else {
 			cout << "Unrecognized city keyword in input file: " << str << endl;
@@ -876,9 +894,8 @@ class city_road_gen_t {
 		void clear() {parks.clear();}
 
 		void gen_parking(vector<road_plot_t> const &plots, vector<car_t> &cars, unsigned city_id) {
+			if (city_params.min_park_spaces == 0 || city_params.min_park_rows == 0) return; // disable parking lots
 			timer_t timer("Gen Parking Lots");
-			unsigned const min_cars_wide = 12; // Note: with default params, can be up to 28
-			unsigned const min_cars_long = 1; // Note: with default params, can be up to 9
 			vector3d const nom_car_size(city_params.get_car_size()); // {length, width, height}
 			float const space_width(2.0*nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (1.8*nom_car_size.x); // space for car + gap for cars to drive through
@@ -911,11 +928,10 @@ class city_road_gen_t {
 					float const dx(xdir ? -xsz : xsz), dy(ydir ? -ysz : ysz), dw(car_dim ? dx : dy), dr(car_dim ? dy : dx); // delta-wdith and delta-row
 					point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], plot.z1());
 					assert(dw != 0.0 && dr != 0.0);
-					parking_lot_t cand(cube_t(corner_pos, corner_pos), car_dim, car_dir, min_cars_wide, min_cars_long); // start as min size at the corner
+					parking_lot_t cand(cube_t(corner_pos, corner_pos), car_dim, car_dir, city_params.min_park_spaces, city_params.min_park_rows); // start as min size at the corner
 					cand.d[!car_dim][!wdir] += cand.row_sz*dw;
 					cand.d[ car_dim][!rdir] += cand.num_rows*dr;
-					//cout << "plot: " << plot.str() << endl << "cand: " << cand.str() << "int : " << has_bcube_int_xy(cand, bcubes, pad_dist) << endl;
-					if (!plot.contains_cube_xy(cand)) {assert(0); continue;} // can't fit a min size parking lot in this plot (FIXME: what to do?)
+					if (!plot.contains_cube_xy(cand)) {continue;} // can't fit a min size parking lot in this plot, so skip it (shouldn't happen)
 					if (has_bcube_int_xy(cand, bcubes, pad_dist)) continue; // intersects a building - skip (can't fit min size parking lot)
 					cand.z2() = plot.z2(); // probably unnecessary
 					parking_lot_t park(cand);
@@ -931,7 +947,7 @@ class city_road_gen_t {
 						if (has_bcube_int_xy(cand, bcubes, pad_dist)) break; // intersects a building - done
 						park = cand; // success: increase parking lot to this size
 					}
-					assert(park.row_sz >= min_cars_wide && park.num_rows >= min_cars_long);
+					assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 					assert(park.get_dx() > 0.0 && park.get_dy() > 0.0);
 					parks.push_back(park);
 					bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
@@ -945,7 +961,7 @@ class city_road_gen_t {
 					if (car.dim) {swap(car_sz.x, car_sz.y);}
 					point pos(corner_pos.x, corner_pos.y, (i->z2() + 0.5*car_sz.z));
 					pos[car_dim] += 0.5*dr; // half offset for centerline
-					float const car_density(rgen.rand_float());
+					float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
 
 					for (unsigned row = 0; row < park.num_rows; ++row) {
 						pos[!car_dim] = corner_pos[!car_dim] + 0.5*dw; // half offset for centerline
