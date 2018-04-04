@@ -881,10 +881,9 @@ class city_road_gen_t {
 	}; // road_draw_state_t
 
 	class parking_lot_manager_t {
+	public: // need access to parks for drawing
 		vector<parking_lot_t> parks; // no, not really parks, but parking lots (the name "plots" was already taken)
-		quad_batch_draw park_quads;
-		cube_t parks_bcube;
-
+	private:
 		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
 			cube_t tc(bcube);
 			tc.expand_by(pad_dist);
@@ -908,7 +907,6 @@ class city_road_gen_t {
 			rand_gen_t rgen;
 			unsigned num_spaces(0), filled_spaces(0);
 			parks.clear();
-			parks_bcube.set_to_zeros();
 			// cars
 			car_t car;
 			car.park();
@@ -954,7 +952,6 @@ class city_road_gen_t {
 					}
 					assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 					assert(park.get_dx() > 0.0 && park.get_dy() > 0.0);
-					if (parks.empty()) {parks_bcube = park;} else {parks_bcube.union_with_cube(park);}
 					parks.push_back(park);
 					bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
 					num_spaces += park.row_sz*park.num_rows;
@@ -988,17 +985,6 @@ class city_road_gen_t {
 			} // for i
 			cout << "parking lots: " << parks.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;
 		}
-		void draw(road_draw_state_t &dstate) {
-			if (parks.empty() || !dstate.check_cube_visible(parks_bcube)) return;
-			dstate.draw_road_region(parks, city_road_gen_t::range_pair_t(0, parks.size()), park_quads, TYPE_PARK_LOT); return;
-			
-			for (auto i = parks.begin(); i != parks.end(); ++i) {
-				if (!dstate.check_cube_visible(*i)) continue; // FIXME: is this needed?
-				dstate.begin_tile(i->get_cube_center());
-				//dstate.draw_road_region(parks, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT);
-				// WRITE
-			}
-		}
 	}; // parking_lot_manager_t
 
 	class road_network_t {
@@ -1010,6 +996,7 @@ class city_road_gen_t {
 		cube_t bcube;
 		vector<road_t> segments; // reused temporary
 		set<unsigned> connected_to; // vector?
+		map<uint64_t, unsigned> tile_to_block_map;
 		unsigned city_id, cluster_id;
 		//string city_name; // future work
 
@@ -1413,13 +1400,17 @@ class city_road_gen_t {
 		}
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
-			map<uint64_t, unsigned> tile_to_block_map;
+			tile_to_block_map.clear();
 			add_tile_blocks(segs,  tile_to_block_map, TYPE_RSEG);
 			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
-		void gen_parking_lots(vector<car_t> &cars) {parking_lot_mgr.gen_parking(plots, cars, city_id);}
+		void gen_parking_lots(vector<car_t> &cars) {
+			parking_lot_mgr.gen_parking(plots, cars, city_id);
+			add_tile_blocks(parking_lot_mgr.parks, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
+			tile_to_block_map.clear(); // no longer needed
+		}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(roads, bcubes);}
 		void get_plot_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(plots, bcubes);}
 
@@ -1455,13 +1446,13 @@ class city_road_gen_t {
 				dstate.begin_tile(b->bcube.get_cube_center());
 				dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
 				dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
+				dstate.draw_road_region(parking_lot_mgr.parks, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 				
 				for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 					dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
 					if (i > 0) {dstate.draw_stoplights(isecs[i], 0);}
 				}
 			} // for b
-			if (!shadow_only) {parking_lot_mgr.draw(dstate);}
 		}
 
 		// cars
