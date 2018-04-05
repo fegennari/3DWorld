@@ -18,6 +18,8 @@ float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CONN_ROAD_SPEED_MULT    = 2.0; // twice the speed limit on connector roads
+float const PARK_SPACE_WIDTH        = 1.6;
+float const PARK_SPACE_LENGTH       = 1.8;
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -26,7 +28,7 @@ enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PA
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 unsigned const CONN_TYPE_NONE = 0;
 colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, GRAY}; // parking lots are darker than roads
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
 
 
 extern int rand_gen_index, display_mode, animate2;
@@ -178,7 +180,7 @@ public:
 	void ensure_road_textures() {
 		if (inited) return;
 		timer_t timer("Load Road Textures");
-		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "asphalt.jpg"};
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", /*"asphalt.jpg"*/"parking_lot.png"};
 		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0};
 		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
 		sl_tid = get_texture_by_name("roads/traffic_light.png");
@@ -616,7 +618,14 @@ struct parking_lot_t : public cube_t {
 	bool dim, dir;
 	unsigned short row_sz, num_rows;
 	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : cube_t(c), dim(dim_), dir(dir_), row_sz(row_sz_), num_rows(num_rows_) {}
-	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, 16.0*(dim ? get_dy() : get_dx()), 16.0*(dim ? get_dx() : get_dy()), 0, dim);}
+	
+	tex_range_t get_tex_range(float ar) const {
+		bool const d(!dim); // Note: R90
+		float const xscale(1.0/(2.0*PARK_SPACE_WIDTH *city_params.get_car_size().y));
+		float const yscale(1.0/(1.0*PARK_SPACE_LENGTH*city_params.get_car_size().x));
+		float const dx(get_dx()), dy(get_dy()), tx(0.24), ty(0.0); // x=cols, y=rows
+		return tex_range_t(tx, ty, (xscale*(d ? dy : dx) + tx), (yscale*(d ? dx : dy) + ty), 0, d);
+	}
 };
 
 class heightmap_query_t {
@@ -900,8 +909,8 @@ class city_road_gen_t {
 			if (city_params.min_park_spaces == 0 || city_params.min_park_rows == 0) return; // disable parking lots
 			timer_t timer("Gen Parking Lots");
 			vector3d const nom_car_size(city_params.get_car_size()); // {length, width, height}
-			float const space_width(2.0*nom_car_size.y); // add 50% extra space between cars
-			float const space_len  (1.8*nom_car_size.x); // space for car + gap for cars to drive through
+			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
+			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
 			float const pad_dist   (1.0*nom_car_size.x); // one car length
 			vector<cube_t> bcubes; // reused across calls
 			rand_gen_t rgen;
@@ -953,6 +962,7 @@ class city_road_gen_t {
 					assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 					assert(park.get_dx() > 0.0 && park.get_dy() > 0.0);
 					parks.push_back(park);
+					//parks.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 					bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
 					num_spaces += park.row_sz*park.num_rows;
 
@@ -963,7 +973,7 @@ class city_road_gen_t {
 					car.height = car_sz.z;
 					if (car.dim) {swap(car_sz.x, car_sz.y);}
 					point pos(corner_pos.x, corner_pos.y, (i->z2() + 0.5*car_sz.z));
-					pos[car_dim] += 0.5*dr; // half offset for centerline
+					pos[car_dim] += 0.5*dr + (car_dim ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
 					float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
 
 					for (unsigned row = 0; row < park.num_rows; ++row) {
