@@ -7,6 +7,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "file_utils.h"
+#include "buildings.h"
 
 using std::string;
 
@@ -1390,7 +1391,7 @@ public:
 			for (auto g = grid.begin(); g != grid.end(); ++g) {
 				point const pos(g->bcube.get_cube_center() + xlate);
 				if (!shadow_only && !dist_less_than(camera, pos, (draw_dist + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
-				if (!camera_pdu.sphere_visible_test(pos, g->bcube.get_bsphere_radius())) continue; // VFC
+				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, USE_BULIDING_VBOS);}
 			}
 		}
@@ -1500,6 +1501,32 @@ public:
 			} // for x
 		} // for y
 	}
+
+	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
+		state.init(pdu.pos, ((world_mode == WMODE_INF_TERRAIN) ? get_tiled_terrain_model_xlate() : zero_vector));
+		
+		for (auto g = grid.begin(); g != grid.end(); ++g) {
+			point const pos(g->bcube.get_cube_center() + state.xlate);
+			if (!pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + state.xlate))) continue; // VFC
+			
+			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {
+				if (pdu.cube_visible(buildings[*i].bcube + state.xlate)) {state.building_ids.push_back(*i);}
+			}
+		}
+	}
+	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const {
+		for (vector<unsigned>::const_iterator b = state.building_ids.begin(); b != state.building_ids.end(); ++b) {
+			building_t const &building(get_building(*b));
+			bool occluded(1);
+
+			for (unsigned i = 0; i < npts; ++i) {
+				float t(1.0); // start at end of line
+				if (!building.check_line_coll(state.pos, pts[i], state.xlate, t, state.temp_points)) {occluded = 0; break;}
+			}
+			if (occluded) return 1;
+		} // for b
+		return 0;
+	}
 }; // building_creator_t
 
 
@@ -1544,5 +1571,7 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 }
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
 void clear_building_vbos() {building_draw_vbo.clear_vbos();}
+void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator.get_occluders(pdu, state);}
+bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator.check_pts_occluded(pts, npts, state);}
 
 

@@ -643,6 +643,7 @@
     <ClInclude Include="src\animals.h" />
     <ClInclude Include="src\asteroid.h" />
     <ClInclude Include="src\binary_file_io.h" />
+    <ClInclude Include="src\buildings.h" />
     <ClInclude Include="src\cobj_bsp_tree.h" />
     <ClInclude Include="src\collision_detect.h" />
     <ClInclude Include="src\csg.h" />

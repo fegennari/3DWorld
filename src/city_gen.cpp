@@ -10,6 +10,7 @@
 #include "shaders.h"
 #include "model3d.h"
 #include "lightmap.h"
+#include "buildings.h"
 
 using std::string;
 
@@ -2040,9 +2041,33 @@ class car_manager_t {
 
 	car_model_loader_t car_model_loader;
 
+	class occlusion_checker_t {
+		building_occlusion_state_t state;
+	public:
+		void set_camera(pos_dir_up const &pdu) {
+			if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
+			pos_dir_up near_pdu(pdu);
+			near_pdu.far_ = 1.0*city_params.road_spacing; // set far clipping plane to one city block
+			get_building_occluders(near_pdu, state);
+			//cout << "occluders: " << state.building_ids.size() << endl;
+		}
+		bool is_occluded(cube_t const &c, bool top_pts_only) {
+			if (state.building_ids.empty()) return 0;
+			point corners[8];
+			unsigned npts(get_cube_corners(c.d, corners)); // npts=8
+
+			if (top_pts_only) { // skip bottom points
+				for (unsigned i = 1, o = 0; i < npts; i += 2, ++o) {corners[o] = corners[i];} // compact: keep odd numbered corners 1,3,5,7
+				npts /= 2;
+			}
+			return check_pts_occluded(corners, npts, state);
+		}
+	};
+
 	class car_draw_state_t : public draw_state_t {
 		quad_batch_draw qbds[3]; // unshadowed, shadowed, AO
 		car_model_loader_t &car_model_loader;
+		occlusion_checker_t occlusion_checker;
 		cube_t lights_bcube;
 		bool have_headlights;
 	public:
@@ -2060,6 +2085,7 @@ class car_manager_t {
 			//use_bmap = 1; // used only for some car models
 			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only);
 			select_texture(WHITE_TEX);
+			occlusion_checker.set_camera(camera_pdu);
 		}
 		virtual void draw_unshadowed() {
 			qbds[0].draw_and_clear();
@@ -2121,6 +2147,7 @@ class car_manager_t {
 			gen_car_pts(car, draw_top, pb, pt);
 
 			if (dist_val < 0.05) {
+				if (occlusion_checker.is_occluded((car.bcube + xlate), 1)) return; // only check occlusion for expensive car models
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id);
 			}
