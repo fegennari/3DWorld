@@ -1056,10 +1056,7 @@ template<typename T> pointT<T> get_center_arb(pointT<T> const *const pts, int np
 
 	assert(pts != NULL && npts > 0);
 	point pos(pts[0]);
-
-	for (int i = 1; i < npts; ++i) {
-		pos += pts[i]; // average to get the center
-	}
+	for (int i = 1; i < npts; ++i) {pos += pts[i];} // average to get the center
 	return pos/(float)npts;
 }
 
@@ -1070,10 +1067,10 @@ template point_d get_center_arb(point_d const *const pts, int npts);
 // only_vis_outline => 6 corners, otherwise 8
 unsigned get_cube_corners(float const d[3][2], point corners[8], point const &viewed_from, bool all_corners) {
 
-	for (unsigned i = 0; i < 2; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
+	for (unsigned i = 0; i < 2; ++i) { // x
+		for (unsigned j = 0; j < 2; ++j) { // y
 			for (unsigned k = 0; k < 2; ++k) {
-				unsigned const ix((((i<<1)+j)<<1)+k);
+				unsigned const ix((((i<<1)+j)<<1)+k); // z
 				corners[ix][0] = d[0][i];
 				corners[ix][1] = d[1][j];
 				corners[ix][2] = d[2][k];
