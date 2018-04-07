@@ -317,11 +317,6 @@ struct car_t {
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 
-	bool operator<(car_t const &c) const { // sort spatially for collision detection and drawing
-		if (cur_city != c.cur_city) return (cur_city < c.cur_city);
-		if (cur_road != c.cur_road) return (cur_road < c.cur_road);
-		return (bcube.d[dim][dir] < c.bcube.d[c.dim][c.dir]); // compare front end of car
-	}
 	string str() const {
 		std::ostringstream oss;
 		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << TXT(max_speed) << TXT(cur_speed)
@@ -343,6 +338,19 @@ struct car_t {
 	void stop() {cur_speed = 0.0;} // immediate stop
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
+};
+
+struct comp_car_road_then_pos {
+	vector3d const &xlate;
+	comp_car_road_then_pos(vector3d const &xlate_) : xlate(xlate_) {}
+
+	bool operator()(car_t const &c1, car_t const &c2) const { // sort spatially for collision detection and drawing
+		if (c1.cur_city != c2.cur_city) return (c1.cur_city < c2.cur_city);
+		if (c1.cur_road != c2.cur_road) return (c1.cur_road < c2.cur_road);
+		if (c1.bcube.d[c1.dim][c1.dir] != c2.bcube.d[c2.dim][c2.dir]) {return (c1.bcube.d[c1.dim][c1.dir] < c2.bcube.d[c2.dim][c2.dir]);} // compare front end of car (used for collisions)
+		// sort parked cars back to front relative to camera so that alpha blending works
+		return (p2p_dist_sq((c1.bcube.get_cube_center() + xlate), camera_pdu.pos) > p2p_dist_sq((c2.bcube.get_cube_center() + xlate), camera_pdu.pos));
+	}
 };
 
 struct rect_t {
@@ -2271,7 +2279,7 @@ public:
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars"); // 10K cars = 1.7ms / 2K cars = 0.2ms
-		sort(cars.begin(), cars.end()); // sort by city/road/position for intersection tests and tile shadow map binds
+		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		float const speed(0.001*car_speed*fticks);
 		//unsigned num_on_conn_road(0);
