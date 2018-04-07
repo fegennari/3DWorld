@@ -1113,7 +1113,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 	point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
 	float const dmax(draw_dist + 0.5*bcube.get_size().get_max_val());
 	if (!shadow_only && !dist_less_than(camera, pos, dmax)) return; // dist clipping
-	if (!camera_pdu.sphere_visible_test(pos, bcube.get_bsphere_radius())) return; // VFC
+	if (!camera_pdu.sphere_and_cube_visible_test(pos, bcube.get_bsphere_radius(), (bcube + xlate))) return; // VFC
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
 	if (immediate_only && !immediate_mode) return; // not drawn in this pass
 	bool const is_close(dist_less_than(camera, pos, 0.1*far_clip));
