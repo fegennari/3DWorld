@@ -10,3 +10,10 @@ Load/display model3d models in tiled terrain mode
 TT Projectile and object collision detection
 Place mapx objects (weapons, ammo, powerups)
 Smiley capes - cloth simulation?
+Top-down approximation for sky lighting, similar to rain/snow map
+
+Cities:
+- Trucks and other vehicles
+- Car collisions in intersections when both turning
+- Car shadows
+
