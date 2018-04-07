@@ -2047,20 +2047,15 @@ class car_manager_t {
 		void set_camera(pos_dir_up const &pdu) {
 			if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
 			pos_dir_up near_pdu(pdu);
-			near_pdu.far_ = 1.0*city_params.road_spacing; // set far clipping plane to one city block
+			near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block
 			get_building_occluders(near_pdu, state);
 			//cout << "occluders: " << state.building_ids.size() << endl;
 		}
-		bool is_occluded(cube_t const &c, bool top_pts_only) {
+		bool is_occluded(cube_t const &c) {
 			if (state.building_ids.empty()) return 0;
-			point corners[8];
-			unsigned npts(get_cube_corners(c.d, corners)); // npts=8
-
-			if (top_pts_only) { // skip bottom points
-				for (unsigned i = 1, o = 0; i < npts; i += 2, ++o) {corners[o] = corners[i];} // compact: keep odd numbered corners 1,3,5,7
-				npts /= 2;
-			}
-			return check_pts_occluded(corners, npts, state);
+			float const z(c.z2()); // top edge
+			point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
+			return check_pts_occluded(corners, 4, state);
 		}
 	};
 
@@ -2147,7 +2142,7 @@ class car_manager_t {
 			gen_car_pts(car, draw_top, pb, pt);
 
 			if (dist_val < 0.05) {
-				if (occlusion_checker.is_occluded((car.bcube + xlate), 1)) return; // only check occlusion for expensive car models
+				if (occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id);
 			}

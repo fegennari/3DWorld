@@ -339,7 +339,7 @@ struct building_t : public building_geom_t {
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points);
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points) const;
-	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points) const;
+	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
 	void draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
@@ -880,12 +880,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	return had_coll;
 }
 
-unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points) const {
+unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only) const {
 
 	if (!check_line_clip(p1-xlate, p2-xlate, bcube.d)) return 0; // no intersection
 	point p1r(p1), p2r(p2);
 	float tmin(0.0), tmax(1.0);
-	unsigned coll(0); // 0=none, 1=side, 2=roof
+	unsigned coll(0); // 0=none, 1=side, 2=roof, 3=details
 
 	if (is_rotated()) {
 		point const center(bcube.get_cube_center() + xlate);
@@ -942,10 +942,13 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; hit = 1;} // cube
 
 		if (hit) {
+			if (occlusion_only) return 1; // early exit
 			float const zval(p1.z + t*(p2.z - p1.z));
 			coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->get_dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
 		}
 	} // for i
+	if (occlusion_only) return 0;
+
 	for (auto i = details.begin(); i != details.end(); ++i) {
 		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // cube
 	}
@@ -1521,7 +1524,7 @@ public:
 
 			for (unsigned i = 0; i < npts; ++i) {
 				float t(1.0); // start at end of line
-				if (!building.check_line_coll(state.pos, pts[i], state.xlate, t, state.temp_points)) {occluded = 0; break;}
+				if (!building.check_line_coll(state.pos, pts[i], state.xlate, t, state.temp_points, 1)) {occluded = 0; break;}
 			}
 			if (occluded) return 1;
 		} // for b
