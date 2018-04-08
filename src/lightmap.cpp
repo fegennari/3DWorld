@@ -834,6 +834,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 	//unsigned const floats_per_light      = base_floats_per_light + dl_smap_enabled;
 	unsigned const ysz((max_floats_per_light+3)/4); // round up
 	float dl_data[max_dlights*(4*ysz)] = {0.0}; // use max possible size
+	if (dl_sources.size() > max_dlights) {cerr << "Warning: Exceeded max lights of " << max_dlights << endl;}
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
 	float const radius_scale(1.0/(0.5*bounds.get_dx())); // bounds x radius inverted
 	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
