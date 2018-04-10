@@ -25,24 +25,34 @@ I've included source code, config files, textures, sounds, small models, lightin
 This repo does not contain the dependencies or large model files, you'll have to download these separately.
 This means that some of the scene config files won't work because they can't find their referenced data.
 The current list of dependencies is:
-* OpenGL 4.4
-* OpenAL
-* freeglut-2.8.1
-* freealut-1.1.0
-* zlib-1.2.1
-* glew-2.2.0
-* gli-0.5.1.0
-* glm-0.9.5.2
-* libjpeg-9a
-* libpng-1.2.20
-* libtiff-4.0.3
-* libtarga
+* OpenGL 4.4 (Should come with Windows 7/8/10 latest graphics drivers)
+* OpenAL 1.1 (System Install: https://www.openal.org/downloads/)
+* freeglut-2.8.1 (Current 3.0 version probably works: https://sourceforge.net/projects/freeglut/)
+* freealut-1.1.0 (One version is here: https://github.com/vancegroup/freealut)
+* zlib-1.2.1 (You can download a newer version from here: https://zlib.net/)
+* glew-2.0.0 (2.1.0 probably works as well: http://glew.sourceforge.net/)
+* gli-0.5.1.0 (Latest version: https://github.com/g-truc/gli)
+* glm-0.9.5.2 (Latest version: https://glm.g-truc.net/0.9.8/index.html My version: https://glm.g-truc.net/0.9.5/index.html)
+* libjpeg-9a (My version is old; Latest version: http://www.ijg.org/)
+* libpng-1.2.20 (My version is very old; Latest version: https://libpng.sourceforge.io/index.html)
+* libtiff-4.0.3 (Latest version: http://www.simplesystems.org/libtiff/)
+* libtarga (source included)
 
 Note that many of these dependencies are old and could be replaced with newer libraries. I've been concentrating on adding content and I'm not too interested in this.
 Freeglut should probably be replaced with SDL, the last 4 image libraries with DevIL, and maybe assimp can be used for model loading.
 
 If you want to build 3DWorld, you'll need to download and build these dependencies somewhere and change the project settings to use them.
 I just copy these into the current directory and have these files ignored by git/svn.
+I currently use a 32-bit build target for 3DWorld.
+It should compile in 64-bit mode, but I couldn't find compatible 64-bit debug libraries for OpenAL,
+and a few of the other dependencies didn't build cleanly in 64-bit mode.
+
+System requirements:
+* Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10)
+* Microsoft Visual Studio 2015 (or newer?). The professional version is needed for OpenMP support.
+* A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
+* At least 4GB system memory for the larger scenes
+* At least 2GB GPU memory for the larger scenes
 
 I currently have this repo up for educational purposes under the GPL license.
 It's not meant as a commercial tool and I'm not trying to make money here.
