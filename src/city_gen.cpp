@@ -2396,6 +2396,19 @@ public:
 }; // car_manager_t
 
 
+struct cmp_light_source_sz_dist {
+	point const &camera_pos;
+	cmp_light_source_sz_dist(point const &p) : camera_pos(p) {}
+	float get_value(light_source const &s) const {return s.get_beamwidth()*s.get_radius()*s.get_radius()/p2p_dist_sq(s.get_pos(), camera_pos);}
+	bool operator()(light_source const &a, light_source const &b) const {return (get_value(a) > get_value(b));} // sort largest/closest to smallest/furthest
+};
+
+void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point const &camera_pos) {
+	if (lights.size() <= max_num) return;
+	stable_sort(lights.begin(), lights.end(), cmp_light_source_sz_dist(camera_pos));
+	lights.resize(max_num); // remove lowest scoring lights
+}
+
 class city_gen_t : public city_plot_gen_t {
 
 	city_road_gen_t road_gen;
@@ -2460,20 +2473,24 @@ public:
 		lights_bcube.set_to_zeros();
 		if (!is_night() && !prev_had_lights) return lights_bcube; // only have lights at night
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
-		lights_bcube = cube_t(camera_pdu.pos - xlate);
+		point const camera_pos(camera_pdu.pos - xlate);
+		lights_bcube = cube_t(camera_pos);
 		lights_bcube.expand_by(light_radius);
 		lights_bcube.z1() =  FLT_MAX;
 		lights_bcube.z2() = -FLT_MAX;
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
 		//cout << "dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
+
+		if (dl_sources.size() > 1024) {
+			if (dl_sources.size() > 4096) { // too many lights, reduce light radius for next frame
+				light_radius_scale *= 0.95;
+				cout << "Too many city lights: " << dl_sources.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
+			}
+			filter_dlights_to(dl_sources, 1024, camera_pos);
+		}
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
-
-		if (dl_sources.size() > 1024) { // too many lights, reduce light radius for next frame
-			light_radius_scale *= 0.95;
-			cout << "Too many city lights: " << dl_sources.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
-		}
 		return lights_bcube;
 	}
 	void free_context() {car_manager.free_context();}
