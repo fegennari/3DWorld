@@ -828,20 +828,20 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 	model3d &cur_model(models.back());
 
 	if (ext == "3ds") {
-		if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) return 0; // recalc_normals is always true
+		if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) {models.pop_back(); return 0;} // recalc_normals is always true
 	}
 	else { // object/model3d file
 		object_file_reader_model reader(filename, cur_model);
 
 		if (ext == "model3d") {
 			//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
-			if (!reader.load_from_model3d_file(verbose)) return 0;
+			if (!reader.load_from_model3d_file(verbose)) {models.pop_back(); return 0;}
 		}
 		else {
 			check_obj_file_ext(filename, ext);
 			test_tiny_obj_loader(filename);
-			if (!reader.read(xf, recalc_normals, verbose)) return 0;
-			if (write_file && !write_model3d_file(filename, cur_model)) return 0;
+			if (!reader.read(xf, recalc_normals, verbose)) {models.pop_back(); return 0;}
+			if (write_file && !write_model3d_file(filename, cur_model)) return 0; // don't need to pop the model
 		}
 	}
 	if (model_mat_lod_thresh > 0.0) {cur_model.compute_area_per_tri();} // used for TT LOD/distance culling

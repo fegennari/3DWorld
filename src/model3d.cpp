@@ -2408,8 +2408,10 @@ void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) { 
 	PRINT_TIME("Create Model3d Cubes");
 }
 
-void add_transform_for_cur_model(model3d_xform_t const &xf) {
+bool add_transform_for_cur_model(model3d_xform_t const &xf) {
+	if (all_models.empty()) {cerr << "Error: No model to add transform to" << endl; return 0;}
 	get_cur_model("transform").add_transform(xf);
+	return 1;
 }
 void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[3]) {
 	get_cur_model("sky_lighting_file").set_sky_lighting_file(fn, weight, sz);
@@ -2417,6 +2419,7 @@ void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[
 void set_occlusion_cube_for_cur_model(cube_t const &cube) {
 	get_cur_model("model_occlusion_cube").set_occlusion_cube(cube);
 }
+bool have_cur_model() {return (!all_models.empty());}
 
 cube_t get_all_models_bcube(bool only_reflective) {return all_models.get_bcube(only_reflective);}
 
