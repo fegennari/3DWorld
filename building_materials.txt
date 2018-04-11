@@ -170,6 +170,8 @@ buildings add_material
 
 # skyscraper textures (tall and thin aspect ratio)
 buildings side_color 1.0 1.0 1.0 1.0
+buildings roof_tid roads/asphalt.jpg
+buildings roof_nm_tid -1
 
 buildings side_tscale_x 0.75
 buildings side_tscale_y 0.25
