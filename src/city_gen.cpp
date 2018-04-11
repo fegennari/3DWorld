@@ -2081,25 +2081,40 @@ car_model_t const car_model_files[NUM_CAR_MODELS] = {
 class car_manager_t {
 
 	class car_model_loader_t : public model3ds {
+		vector<int> models_valid;
+		void ensure_models_loaded() {if (empty()) {load_car_models();}}
 	public:
 		static unsigned num_models() {return NUM_CAR_MODELS;}
-		car_model_t const &get_model(unsigned id) const {assert(id < NUM_CAR_MODELS); return car_model_files[id];}
 
+		bool is_model_valid(unsigned id) {
+			assert(id < NUM_CAR_MODELS);
+			ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
+			assert(id < models_valid.size());
+			return (models_valid[id] != 0);
+		}
+		car_model_t const &get_model(unsigned id) const {
+			assert(id < NUM_CAR_MODELS);
+			return car_model_files[id];
+		}
 		void load_car_models() {
+			models_valid.resize(num_models(), 1); // assume valid
+
 			for (unsigned i = 0; i < num_models(); ++i) {
 				string const &fn(get_model(i).fn);
 				bool const recalc_normals = 1;
 
 				if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
-					cerr << "Error: Failed to read model file '" << fn << "'" << endl;
-					exit(1);
+					cerr << "Error: Failed to read model file '" << fn << "'; Skipping this model (will use default box model)." << endl;
+					push_back(model3d(fn, tmgr)); // add a placeholder dummy model
+					models_valid[i] = 0;
 				}
 			} // for i
 		}
 		void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color, point const &xlate, unsigned model_id, bool is_shadow_pass=0) {
-			if (empty()) {load_car_models();}
+			ensure_models_loaded();
 			assert(size() == num_models());
 			assert(model_id < size());
+			assert(is_model_valid(model_id));
 			car_model_t const &model_file(get_model(model_id));
 			model3d &model(at(model_id));
 
@@ -2217,7 +2232,7 @@ class car_manager_t {
 			point pb[8], pt[8]; // bottom and top sections
 			gen_car_pts(car, draw_top, pb, pt);
 
-			if (dist_val < 0.05) {
+			if (dist_val < 0.05 && car_model_loader.is_model_valid(car.model_id)) {
 				if (occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id);
