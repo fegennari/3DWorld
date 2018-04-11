@@ -19,6 +19,7 @@ Most of the code is written in C++, with GLSL for shaders.
 This is intended to be a cross-platform project.
 Microsoft Visual Studio 2015 project files are included.
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
+I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
 
 Be warned, this is a large repository, currently 770MB.
 I've included source code, config files, textures, sounds, small models, lighting files, scene data, heightmaps, and project files.
@@ -43,13 +44,19 @@ Freeglut should probably be replaced with SDL, the last 4 image libraries with D
 
 If you want to build 3DWorld, you'll need to download and build these dependencies somewhere and change the project settings to use them.
 I just copy these into the current directory and have these files ignored by git/svn.
-I currently use a 32-bit build target for 3DWorld.
+I currently use a 32-bit MS Visual Studio build target for 3DWorld.
 It should compile in 64-bit mode, but I couldn't find compatible 64-bit debug libraries for OpenAL,
 and a few of the other dependencies didn't build cleanly in 64-bit mode.
 
+3DWorld takes a config filename on the command line. If not found, it reads defaults.txt and uses any config file(s) listed there.
+Some of these congig files include models such as the Sponza Atrium, Stanford Dragon, sportscar, etc.
+These files are too large to store in the git repo.
+Many of the larger models can be found at the McGuire Computer Graphics Archive:
+http://casual-effects.com/data/
+
 System requirements:
-* Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10)
-* Microsoft Visual Studio 2015 (or newer?). The professional version is needed for OpenMP support.
+* Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux if you create a makefile for gcc.
+* Microsoft Visual Studio 2015 (or newer?). The professional version is needed for OpenMP support. You can also try to use gcc.
 * A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
 * At least 4GB system memory for the larger scenes
 * At least 2GB GPU memory for the larger scenes
