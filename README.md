@@ -1,4 +1,4 @@
-3DWorld is an OpenGL-based 3D Game engine that I've been working on since I took a computer graphics course at UC Berkeley in 2001.
+3DWorld is an OpenGL-based 3D Game engine that I've been working on since I took the CS184 computer graphics course at UC Berkeley in 2001.
 It has the following features:
 * 3D graphics functions, classes, and wrappers around OpenGL
 * Shader generator/processor with hot reload
@@ -6,7 +6,10 @@ It has the following features:
 * Procedural universe generator with galaxies, stars, planets, moons, etc.
 * Procedural voxel 3D terrain generation with realtime user editing
 * Terrain generator including various noise functions, erosion, realtime user editing, heightmap read/write
-* Physics simulation for primitive object types and others
+* Physics simulation for primitive object types and others (> 10K dynamic objects)
+* Realtime day/night cycle with weather (rain, snow, hail, wind, lightning)
+* Physically based materials with reflection and refraction
+* Dynamic shadows, ambient occlusion, up to 1024 dynamic light sources, postprocessing effects
 * Built-in first person shooter game "smiley killer"
 * Build-in spaceship + planet colonization game
 * Computer AI for players in the FPS game and ships in the universe game
@@ -27,7 +30,7 @@ This repo does not contain the dependencies or large model files, you'll have to
 This means that some of the scene config files won't work because they can't find their referenced data.
 The current list of dependencies is:
 * OpenGL 4.4 (Should come with Windows 7/8/10 latest graphics drivers)
-* OpenAL 1.1 (System Install: https://www.openal.org/downloads/)
+* OpenAL 1.1 (System Install: https://www.openal.org/downloads/ or you can try the newer openal-soft: https://github.com/kcat/openal-soft)
 * freeglut-2.8.1 (Current 3.0 version probably works: https://sourceforge.net/projects/freeglut/)
 * freealut-1.1.0 (One version is here: https://github.com/vancegroup/freealut)
 * zlib-1.2.1 (You can download a newer version from here: https://zlib.net/)
@@ -50,7 +53,7 @@ and a few of the other dependencies didn't build cleanly in 64-bit mode.
 
 3DWorld takes a config filename on the command line. If not found, it reads defaults.txt and uses any config file(s) listed there.
 Some of these congig files include models such as the Sponza Atrium, Stanford Dragon, sportscar, etc.
-These files are too large to store in the git repo.
+These files are too large to store in the git repo. I've attempted to have 3DWorld generate nonfatal errors if the models can't be found.
 Many of the larger models can be found at the McGuire Computer Graphics Archive:
 http://casual-effects.com/data/
 
