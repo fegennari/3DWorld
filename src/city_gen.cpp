@@ -347,9 +347,12 @@ struct comp_car_road_then_pos {
 	bool operator()(car_t const &c1, car_t const &c2) const { // sort spatially for collision detection and drawing
 		if (c1.cur_city != c2.cur_city) return (c1.cur_city < c2.cur_city);
 		if (c1.cur_road != c2.cur_road) return (c1.cur_road < c2.cur_road);
-		if (c1.bcube.d[c1.dim][c1.dir] != c2.bcube.d[c2.dim][c2.dir]) {return (c1.bcube.d[c1.dim][c1.dir] < c2.bcube.d[c2.dim][c2.dir]);} // compare front end of car (used for collisions)
-		// sort parked cars back to front relative to camera so that alpha blending works
-		return (p2p_dist_sq((c1.bcube.get_cube_center() + xlate), camera_pdu.pos) > p2p_dist_sq((c2.bcube.get_cube_center() + xlate), camera_pdu.pos));
+		if (c1.is_parked() != c2.is_parked()) {return c2.is_parked();} // parked cars last
+		
+		if (c1.is_parked()) { // sort parked cars back to front relative to camera so that alpha blending works
+			return (p2p_dist_sq((c1.bcube.get_cube_center() + xlate), camera_pdu.pos) > p2p_dist_sq((c2.bcube.get_cube_center() + xlate), camera_pdu.pos));
+		}
+		return (c1.bcube.d[c1.dim][c1.dir] < c2.bcube.d[c2.dim][c2.dir]); // compare front end of car (used for collisions)
 	}
 };
 
