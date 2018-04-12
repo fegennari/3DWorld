@@ -5,6 +5,7 @@ buildings round_prob 0.0
 
 
 # brick buildings
+buildings no_city 1 # not used in cities
 buildings min_levels 1
 buildings max_levels 3
 buildings split_prob 0.70 # 70%
@@ -62,6 +63,7 @@ buildings add_material
 
 
 # concrete and metal buildings - slightly larger
+buildings no_city 1 # not used in cities
 buildings min_levels 1
 buildings max_levels 5
 buildings split_prob 0.60 # 60%
@@ -96,6 +98,7 @@ buildings add_material
 buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
 
+buildings no_city 0 # used in cities
 buildings side_tid buildings/metal_building.jpg
 buildings side_nm_tid buildings/metal_building_NRM.jpg
 buildings side_tscale_x 4.0
@@ -106,6 +109,7 @@ buildings add_material
 
 
 # metal/glass buildings - taller
+buildings no_city 0 # used in cities
 buildings min_levels 1
 buildings max_levels 8
 buildings split_prob 0.50 # 50%

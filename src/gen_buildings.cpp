@@ -62,13 +62,14 @@ struct color_range_t {
 
 struct building_mat_t : public building_tex_params_t {
 
+	bool no_city;
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf;
 	cube_t pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 
-	building_mat_t() : min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0), max_rot_angle(0.0),
+	building_mat_t() : no_city(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0), max_rot_angle(0.0),
 		min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
 		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
@@ -94,14 +95,19 @@ struct building_params_t {
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
-	vector<unsigned> mat_gen_ix;
+	vector<unsigned> mat_gen_ix, mat_gen_ix_city; // {any, city_only}
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0),
 		num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
+	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
-		for (unsigned n = 0; n < cur_prob; ++n) {mat_gen_ix.push_back(mat_ix);} // add more references to this mat for higher probability
+		
+		for (unsigned n = 0; n < cur_prob; ++n) { // add more references to this mat for higher probability
+			mat_gen_ix.push_back(mat_ix);
+			if (!cur_mat.no_city) {mat_gen_ix_city.push_back(mat_ix);}
+		}
 		materials.push_back(cur_mat);
 		materials.back().update_range(range_translate);
 		has_normal_map |= cur_mat.has_normal_map();
@@ -113,9 +119,10 @@ struct building_params_t {
 		assert(mat_ix < materials.size());
 		return materials[mat_ix];
 	}
-	unsigned choose_rand_mat(rand_gen_t &rgen) const {
-		assert(!mat_gen_ix.empty());
-		return mat_gen_ix[rgen.rand()%mat_gen_ix.size()];
+	unsigned choose_rand_mat(rand_gen_t &rgen, bool for_city=0) const {
+		vector<unsigned> const &mat_ix_list(for_city ? mat_gen_ix_city : mat_gen_ix);
+		assert(!mat_ix_list.empty());
+		return mat_ix_list[rgen.rand()%mat_ix_list.size()];
 	}
 	void set_pos_range(cube_t const &pos_range, bool is_const_zval_) {
 		is_const_zval = is_const_zval_;
@@ -221,6 +228,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "max_altitude") {
 		if (!read_float(fp, global_building_params.cur_mat.max_alt)) {buildings_file_err(str, error);}
+	}
+	else if (str == "no_city") {
+		if (!read_bool(fp, global_building_params.cur_mat.no_city)) {buildings_file_err(str, error);}
 	}
 	// material textures
 	else if (str == "texture_mirror") {
@@ -1267,7 +1277,7 @@ public:
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
-				b.mat_ix = params.choose_rand_mat(rgen); // set material
+				b.mat_ix = params.choose_rand_mat(rgen, use_plots); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t const &pos_range(use_plots ? city_plot_bcubes[rgen.rand()%city_plot_bcubes.size()] : mat.pos_range); // select a random plot, if available
 				point const place_center(pos_range.get_cube_center());
