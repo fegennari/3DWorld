@@ -704,16 +704,17 @@ building_draw_t building_draw, building_draw_vbo;
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
-	// generate L, T, or U shape
+	// generate L, T, U, or H shape
 	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
 	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // {x,y}, {neg,pos}
-	int const shape(rand()%7); // 0-6
-	float const div(rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
+	int const shape(rand()%8); // 0-7
+	bool const is_h(shape >= 7);
+	float const div(is_h ? rgen.rand_uniform(0.2, 0.4) : rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
 	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
-	unsigned const start(parts.size()), num((shape == 6) ? 3 : 2);
+	unsigned const start(parts.size()), num((shape >= 6) ? 3 : 2);
 	parts.resize(start+num, seed_cube);
-	parts[start].d[dim][dir] = dpos; // full width part
-	for (unsigned n = 1; n < num; ++n) {parts[start+n].d[dim][!dir] = dpos;} // partial width parts
+	parts[start+0].d[dim][ dir] = dpos; // full width part
+	parts[start+1].d[dim][!dir] = dpos; // partial width part
 
 	switch (shape) {
 	case 0: case 1: case 2: case 3: // L
@@ -724,9 +725,18 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 		parts[start+1].d[!dim][1] = spos2;
 		break;
 	case 6: // U
-		parts[start+1].d[!dim][1] = spos1;
-		parts[start+2].d[!dim][0] = spos2;
+		parts[start+2].d[ dim][!dir] = dpos; // partial width part
+		parts[start+1].d[!dim][1  ] = spos1;
+		parts[start+2].d[!dim][0  ] = spos2;
 		break;
+	case 7: { // H
+		float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end
+		parts[start+1].d[ dim][ dir] = dpos2;
+		parts[start+1].d[!dim][ 0  ] = spos1;
+		parts[start+1].d[!dim][ 1  ] = spos2;
+		parts[start+2].d[ dim][!dir] = dpos2; // full width part
+		break;
+	}
 	default: assert(0);
 	}
 }
