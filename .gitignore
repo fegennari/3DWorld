@@ -25,3 +25,6 @@ tiff-4.0.3/
 zlib-1.2.1/
 zlib/
 *.dll
+screenshot*.jpg
+positions.log.txt
+state.txt
