@@ -24,7 +24,7 @@ city max_road_slope 0.3
 city min_park_spaces 12
 city min_park_rows 1
 city min_park_density 0.0
-city max_park_density 0.75
+city max_park_density 0.8
 
 city num_cars 4000
 city car_speed 10.0

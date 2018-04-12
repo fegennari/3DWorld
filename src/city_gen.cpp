@@ -181,7 +181,7 @@ public:
 	void ensure_road_textures() {
 		if (inited) return;
 		timer_t timer("Load Road Textures");
-		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", /*"asphalt.jpg"*/"parking_lot.png"};
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "parking_lot.png"};
 		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0};
 		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
 		sl_tid = get_texture_by_name("roads/traffic_light.png");
@@ -958,7 +958,7 @@ class city_road_gen_t {
 	}; // road_draw_state_t
 
 	class parking_lot_manager_t {
-	public: // need access to parks for drawing
+	public: // road network needs access to parks for drawing
 		vector<parking_lot_t> parks; // no, not really parks, but parking lots (the name "plots" was already taken)
 	private:
 		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
@@ -984,6 +984,7 @@ class city_road_gen_t {
 			rand_gen_t rgen;
 			unsigned num_spaces(0), filled_spaces(0);
 			parks.clear();
+			rgen.set_state(city_id, 123);
 			// cars
 			car_t car;
 			car.park();
@@ -1041,17 +1042,28 @@ class city_road_gen_t {
 					car.height = car_sz.z;
 					if (car.dim) {swap(car_sz.x, car_sz.y);}
 					point pos(corner_pos.x, corner_pos.y, (i->z2() + 0.5*car_sz.z));
-					pos[car_dim] += 0.5*dr + (car_dim ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
+					pos[ car_dim] += 0.5*dr + (car_dim ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
 					float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
 
 					for (unsigned row = 0; row < park.num_rows; ++row) {
 						pos[!car_dim] = corner_pos[!car_dim] + 0.5*dw; // half offset for centerline
+						bool prev_was_bad(0);
 
 						for (unsigned col = 0; col < park.row_sz; ++col) {
-							if (rgen.rand_float() < car_density) { // only half the spaces are filled on average
-								car.bcube.set_from_point(pos);
+							if (prev_was_bad) {prev_was_bad = 0;} // previous car did a bad parking job, leave this space empty
+							else if (rgen.rand_float() < car_density) { // only half the spaces are filled on average
+								point cpos(pos);
+								cpos[ car_dim] += 0.05*dr*rgen.rand_uniform(-1.0, 1.0); // randomness of front amount
+								cpos[!car_dim] += 0.12*dw*rgen.rand_uniform(-1.0, 1.0); // randomness of side  amount
+								
+								if (col+1 != park.row_sz && (rgen.rand()&15) == 0) {// occasional bad parking job
+									cpos[!car_dim] += dw*rgen.rand_uniform(0.3, 0.35);
+									prev_was_bad = 1;
+								} 
+								car.bcube.set_from_point(cpos);
 								car.bcube.expand_by(0.5*car_sz);
 								cars.push_back(car);
+								if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // pack backwards 1/8 of the time
 								++filled_spaces;
 							}
 							pos[!car_dim] += dw;
