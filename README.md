@@ -73,3 +73,59 @@ If you would like to use something here for your project, please let me know.
 There is no further documentation for 3DWorld.
 However, I do have a blog that includes descriptions of the algorithms and lots of screenshots:
 https://3dworldgen.blogspot.com/
+
+Here are some screenshots linked from my blog:
+
+![alt text](https://1.bp.blogspot.com/-H3QY3vua23s/WovTmQk8I6I/AAAAAAAABRE/KSFYKSdDRAAVPA7NcZEQXCpKJJaUY9hWQCLcBGAs/s640/connected_cities_trees.jpg)
+
+![alt text](https://1.bp.blogspot.com/-4PWdGiTpsfw/WrdOCFbjxnI/AAAAAAAABWo/O0pT-TfRxMMaCNDnxs0UdSayEpU3y-XWACLcBGAs/s640/city_cars3.jpg)
+
+![alt text](https://1.bp.blogspot.com/-orCzK6w5xEM/WjmW-0kXVXI/AAAAAAAABN8/Sa73QhiUnvwC0CqC_ZSAPnT1KX8miu85gCLcBGAs/s640/erosion_from_above.jpg)
+
+![alt text](https://4.bp.blogspot.com/-_yqljuQRYFA/WjN0WlQXxyI/AAAAAAAABMo/VLQbV8HF9nMlh0yoqUS57vxr6uer2RrswCEwYBhgL/s640/river.jpg)
+
+![alt text](https://4.bp.blogspot.com/-ZqmYa0act0w/We1_2z6l1VI/AAAAAAAABKU/uXNawQ9xwnAqD0E8pCdz7MouyXVYEdczgCEwYBhgL/s640/fires3.jpg)
+
+![alt text](https://2.bp.blogspot.com/-h9eUV4FiM28/WZKe4pr7YpI/AAAAAAAABGE/pXBPNL0OJi48ErNDS6RH0IprW7V_W5XtACLcBGAs/s640/nebula_rings_asteroids.jpg)
+
+![alt text](https://4.bp.blogspot.com/-5dr80n928lw/WT9t81moCVI/AAAAAAAAA_s/YldLPL_Y__gB4q4QtrVrAflmhl2X17qEgCLcB/s640/sponza2.jpg)
+
+![alt text](https://4.bp.blogspot.com/-kY8qCSsE0ck/WQbOLeCBVtI/AAAAAAAAA9E/SYUEjT1YGEgllNZiaf-bU3JWg5lta0pNACEw/s640/museums_120.jpg)
+
+![alt text](https://2.bp.blogspot.com/-MSjc6z9NjRc/WQYkxjOEOuI/AAAAAAAAA74/mrXX01ljwZMkkx1kwlGP4sztMKv7dMTmwCEw/s640/sponza.jpg)
+
+![alt text](https://3.bp.blogspot.com/-Ys37EWGm-PU/WKv1nh2y6tI/AAAAAAAAA5A/X4zcAp2f-Y8UD5vIT7-n7AJMwTUjZQSBACEw/s640/many_objects.jpg)
+
+![alt text](https://4.bp.blogspot.com/-TktxFf1hZ_o/WI14nt33o_I/AAAAAAAAA3Y/DhkJmBlRzuECI4lRdBGDgrikGlarUA_WQCLcB/s640/snow_mask_hr.jpg)
+
+![alt text](https://1.bp.blogspot.com/-g8X-SATTjbM/WHKTPJ3EURI/AAAAAAAAA2E/18Nf3oK0ZkUoPh_H6_VBzqssbsjdIhLKwCLcB/s640/bright1.jpg)
+
+![alt text](https://4.bp.blogspot.com/-uxrpc3f1IEY/WCgqzNFqCvI/AAAAAAAAAzs/6lmvfaEJ_dU5MSPpdZgwVyo2EgmIWH0kgCLcB/s640/all_pine_trees.jpg)
+
+![alt text](https://4.bp.blogspot.com/-yP383fqlaRk/V_8JfWkjyWI/AAAAAAAAAxY/2eH5WnWktgwyFUwhRRYGAnT9trfjkFRswCEw/s640/cubes_10k.jpg)
+
+![alt text](https://3.bp.blogspot.com/-8CIw4xIUMdk/V8KKax0v7GI/AAAAAAAAAvc/_PtkZvOaY5IiptMUGgKa4fVKsJKs1kOWwCLcB/s640/ringed_planet.jpg)
+
+![alt text](https://3.bp.blogspot.com/-jWcp7MUFoeU/V4czYLPtHVI/AAAAAAAAAsw/B8x0U9QaGiEnKNcDDoEQRcy4WYCbIermQCEw/s640/asteroid_belt_inside.jpg)
+
+![alt text](https://2.bp.blogspot.com/-lEunlK-ZyT8/V1EkIeSttaI/AAAAAAAAArQ/X7G170MT_6IfDd74WSyY_biN_dIQEzCsQCLcB/s640/trees_above.jpg)
+
+![alt text](https://3.bp.blogspot.com/-1kFHDCXg65Y/VzgfWd1phkI/AAAAAAAAAqA/7rrUIxsVH-Ea2p_NkbRYuyeUZuuj0cejgCKgB/s640/vfog_smoke_rays.jpg)
+
+![alt text](https://4.bp.blogspot.com/-mk9EA7i_3LU/VuoVYWaz4oI/AAAAAAAAAnw/DHnb2yr_v0scME_D8DRdIsiyl6a8AMOyA/s640/sponza_metal_floor3.jpg)
+
+![alt text](https://3.bp.blogspot.com/-lCw93zflw0k/Vt6EOqYZUZI/AAAAAAAAAlY/yvfndWb5Okw/s1600/reflective_objects_front.jpg)
+
+![alt text](https://4.bp.blogspot.com/-TueDAN3BGEw/VsbLtNP0dwI/AAAAAAAAAjg/-kBjm4EQDd0/s640/museum2.jpg)
+
+![alt text](https://1.bp.blogspot.com/-2AzAKVCUhvw/VpGvWG6uQwI/AAAAAAAAAgM/3QLnzeiaeCw/s1600/snow_scene.jpg)
+
+![alt text](https://1.bp.blogspot.com/-2LlXIzcVDnA/VmUt8R4cwGI/AAAAAAAAAeY/Mx_xy30eVCQ/s640/house_rain.jpg)
+
+![alt text](https://3.bp.blogspot.com/-PaceyCZ6W6M/VcmIQAHy8gI/AAAAAAAAARU/DnDUnSyewVs/s1600/dir_plus_indir.jpg)
+
+![alt text](https://3.bp.blogspot.com/-kzdVvau1pM4/VP6DGtZZg9I/AAAAAAAAALM/xxxIH2H_byM/s1600/waves.jpg)
+
+![alt text](https://4.bp.blogspot.com/-iQt6mdroDTY/VMQIqQ2PiJI/AAAAAAAAAJE/0TVtUzsvdqM/s1600/voxel_snow_ao.jpg)
+
+![alt text](https://3.bp.blogspot.com/-nyVNDhCQKvo/VKnl-TOYsrI/AAAAAAAAAGs/UDBBNEQGRBk/s1600/terran_planet.jpg)
