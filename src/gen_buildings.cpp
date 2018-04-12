@@ -1301,8 +1301,13 @@ public:
 					center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
 					zval_set = 1;
 				}
+				float const hmin(use_plots ? pos_range.z1() : 0.0), hmax(use_plots ? pos_range.z2() : 1.0);
+				assert(hmin <= hmax);
+				float const height_range(mat.sz_range.d[2][1] - mat.sz_range.d[2][0]);
+				assert(height_range >= 0.0);
+				float const height_val(mat.sz_range.d[2][0] + height_range*rgen.rand_uniform(hmin, hmax));
 				b.bcube.d[2][0] = center.z; // zval
-				b.bcube.d[2][1] = center.z + 0.5*rgen.rand_uniform(mat.sz_range.d[2][0], mat.sz_range.d[2][1]);
+				b.bcube.d[2][1] = center.z + 0.5*height_val;
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement

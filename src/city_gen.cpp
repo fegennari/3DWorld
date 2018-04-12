@@ -1500,8 +1500,23 @@ class city_road_gen_t {
 			}
 		}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(roads, bcubes);}
-		void get_plot_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(plots, bcubes);}
 
+		void get_plot_bcubes(vector<cube_t> &bcubes) const { // Note: z-values of cubes indicate building height ranges
+			if (plots.empty()) return; // connector road city
+			unsigned const start(bcubes.size());
+			get_all_bcubes(plots, bcubes);
+			vector3d const city_radius(0.5*bcube.get_size());
+			point const city_center(bcube.get_cube_center());
+
+			for (auto i = bcubes.begin()+start; i != bcubes.end(); ++i) { // set zvals to control building height range, higher in city center
+				point const center(i->get_cube_center());
+				float const dx(fabs(center.x - city_center.x)/city_radius.x); // 0 at city center, 1 at city perimeter
+				float const dy(fabs(center.y - city_center.y)/city_radius.y); // 0 at city center, 1 at city perimeter
+				float const hval(1.0 - max(dx*dx, dy*dy)); // square to give higher weight to larger height ranges
+				i->z1() = max(0.0, (hval - 0.25)); // bottom of height range
+				i->z2() = min(1.0, (hval + 0.25)); // bottom of height range
+			} // for i
+		}
 		bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only=1) const {
 			if (roads.empty()) return 0;
 			point const query_pos(pos - get_query_xlate());
