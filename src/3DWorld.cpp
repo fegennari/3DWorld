@@ -1,4 +1,4 @@
-// 3D World - OpenGL CS184 Computer Graphics Project
+// 3D World - Main function, glut callbacks, mouse and keyboard processing, window management, config file variable handling, etc.
 // by Frank Gennari
 // 3/10/02
 
@@ -57,7 +57,10 @@ char *mh_filename(NULL), *mh_filename_tt(NULL), *mesh_diffuse_tex_fn(NULL), *shi
 char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
-// Global Variables
+// Global Variables - most of these are set by the config file reader and used in other files.
+// I decided to use global variables here rather than a global config class to avoid frequent recompile of all code
+// every time a config option is added/changed, because almost every file would need to include the class definition/header.
+// Note that these are all the default values when no config variable is specified.
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0), tiled_terrain_only(0);
 bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0), claim_planet(0), skip_light_vis_test(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1), smoke_dlights(0);
@@ -140,7 +143,7 @@ extern hmap_params_t hmap_params;
 extern reflect_plane_selector reflect_planes;
 extern reflective_cobjs_t reflective_cobjs;
 
-
+// init and cleanup functions exported from other systems that are called at the beginning and end of main()
 void init_keyset();
 int load_config(string const &config_file);
 void init_lights();
@@ -149,8 +152,6 @@ bool export_modmap(string const &filename);
 void reset_planet_defaults();
 void invalidate_cached_stars();
 void clear_default_vao();
-
-void verify_wmode(player_state &sstate);
 
 void create_sin_table();
 
@@ -169,7 +170,7 @@ void setup_linear_fog(colorRGBA const &color, float fog_end);
 
 void write_map_mode_heightmap_image();
 
-
+// all OpenGL error handling goes through these functions
 bool get_gl_error(unsigned loc_id) {
 
 	bool had_error(0);
@@ -199,7 +200,7 @@ void display_window_resized() {invalidate_cached_stars();}
 void post_window_redisplay () {glutPostWindowRedisplay(curr_window);} // Schedule a new display event
 
 
-void clear_context() {
+void clear_context() { // free all textures, shaders, VBOs, etc.; used on context switch between windowed and fullscreen mode and at shutdown
 
 	reset_textures();
 	free_universe_context();
@@ -237,7 +238,7 @@ void init_context() {
 }
 
 
-void quit_3dworld() {
+void quit_3dworld() { // called once at the end for proper cleanup
 
 	cout << "quitting" << endl;
 	kill_current_raytrace_threads();
@@ -258,7 +259,7 @@ void quit_3dworld() {
 
 void set_vsync() {wglSwapIntervalEXT((vsync_enabled || is_video_recording()) ? 1 : 0);}
 
-void init_window() {
+void init_window() { // register all glut callbacks
 
 	set_vsync();
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
@@ -285,7 +286,7 @@ void init_window() {
 }
 
 
-void maximize() {
+void maximize() { // fullscreen
 
 	assert(!maximized);
 	//glutHideWindow();
@@ -304,7 +305,7 @@ void maximize() {
 }
 
 
-void un_maximize() {
+void un_maximize() { // windowed
 
 	assert(maximized);
 	//glutShowWindow();
@@ -320,14 +321,11 @@ void un_maximize() {
 
 
 void enable_blend() {
-
 	glEnable(GL_BLEND);
 	//glEnable(GL_LINE_SMOOTH);
 }
 
-
 void disable_blend() {
-
 	glDisable(GL_BLEND);
 	//glDisable(GL_LINE_SMOOTH);
 }
@@ -450,7 +448,7 @@ void move_camera_pos(vector3d const &v, float dist) { // remember that dist is n
 }
 
 
-void advance_camera(int dir) {
+void advance_camera(int dir) { // player movement processing
 
 	advanced = 1;
 
@@ -567,6 +565,7 @@ void switch_weapon(bool prev) {
 	if (world_mode == WMODE_UNIVERSE) {player_ship().switch_weapon(prev);} else {switch_player_weapon(prev ? -1 : 1);}
 }
 
+// *** Begin glut callback functions ***
 
 // This function is called whenever the window is resized. 
 // Parameters are the new dimentions of the window
@@ -776,7 +775,7 @@ void toggle_camera_mode() {
 
 // This function is called whenever there is a keyboard input
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127)
-// x and y are the location of the mouse
+// x and y are the location of the mouse, which generally aren't used but are part of the callback function
 void keyboard_proc(unsigned char key, int x, int y) {
 
 	int mtime2;
@@ -1282,7 +1281,7 @@ public:
 keyboard_remap_t kbd_remap;
 
 
-void keyboard2(int key, int x, int y) {
+void keyboard2(int key, int x, int y) { // handling of special keys
 
 	if (ui_intercept_keyboard(key, 1))   return; // already handled
 	if (!kbd_remap.remap_key(key, 1, 0)) return;
@@ -1519,13 +1518,11 @@ bool open_file(FILE *&fp, char const *const fn, string const &file_type, char co
 
 
 void alloc_if_req(char *&fn, const char *def_fn=NULL) {
-
 	if (fn == def_fn) {fn = new char[MAX_CHARS];}
 }
 
 
 void cfg_err(string const &str, int &error) {
-
 	cout << "Error reading " << str << " from config file." << endl;
 	error = 1;
 }
@@ -1568,8 +1565,6 @@ bool bmp_file_to_binary_array(char const *const fn, unsigned char **&data) {
 }
 
 
-// should be moved to another file eventually...
-// should use a hashtable here
 int load_config(string const &config_file) {
 
 	FILE *fp;
@@ -1577,6 +1572,7 @@ int load_config(string const &config_file) {
 	int gms_set(0), error(0);
 	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
 
+	// Note: all of these maps bind variable addresses into the config file system by name
 	kw_to_val_map_t<bool> kwmb(error);
 	kwmb.add("gen_tree_roots", gen_tree_roots);
 	kwmb.add("no_smoke_over_mesh", no_smoke_over_mesh);
@@ -1782,7 +1778,7 @@ int load_config(string const &config_file) {
 	kw_to_val_map_t<string> kwms(error);
 	kwms.add("cobjs_out_filename", cobjs_out_fn);
 
-	while (read_str(fp, strc)) { // slow but should be OK
+	while (read_str(fp, strc)) { // slow but should be OK: these ones require special handling
 		string const str(strc);
 		if (kwmb.maybe_set_from_fp(str, fp)) continue;
 		if (kwmi.maybe_set_from_fp(str, fp)) continue;
