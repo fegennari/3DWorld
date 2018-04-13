@@ -970,7 +970,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 	if (occlusion_only) return 0;
 
 	for (auto i = details.begin(); i != details.end(); ++i) {
-		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // cube
+		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // details cube
 	}
 	return coll;
 }
@@ -1106,8 +1106,8 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 				}
 				if (contained) break; // success/done
 			} // end while
-			c.d[2][0] = top.d[2][1]; // z1
-			c.d[2][1] = top.d[2][1] + height; // z2
+			c.z1() = top.z2(); // z1
+			c.z2() = top.z2() + height; // z2
 		} // for i
 	}
 	if (add_antenna) { // add antenna
@@ -1116,10 +1116,10 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		cube_t &antenna(details.back());
 		antenna.set_from_point(top.get_cube_center());
 		antenna.expand_by(vector3d(radius, radius, 0.0));
-		antenna.d[2][0] = top.d[2][1]; // z1
-		antenna.d[2][1] = top.d[2][1] + height; // z2
+		antenna.z1() = top.z2(); // z1
+		antenna.z2() = top.z2() + height; // z2
 	}
-	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.d[2][1], i->d[2][1]);} // extend bcube z2 to contain details
+	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	float const cscale(rgen.rand_uniform(0.2, 0.6));
 	detail_color = colorRGBA(cscale, cscale, cscale, 1.0); // grayscale
 }
@@ -1159,7 +1159,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, &view_dir, 4, is_stacked); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	} // for i
-	if (shadow_only || dist_less_than(camera, pos, 0.25*far_clip)) { // draw roof details
+	if (!details.empty() && (shadow_only || dist_less_than(camera, pos, 0.25*far_clip))) { // draw roof details
+		tid_nm_pair_t const tex(mat.roof_tex.get_scaled_version(0.5));
+
 		for (auto i = details.begin(); i != details.end(); ++i) {
 			if (!shadow_only) {
 				point ccenter(i->get_cube_center());
@@ -1167,7 +1169,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 				view_dir = (ccenter + xlate - camera);
 			}
 			building_geom_t const bg(4, rot_sin, rot_cos); // cube
-			bdraw.add_section(bg, *i, xlate, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, shadow_only, &view_dir, 7, 1); // all dims
+			bdraw.add_section(bg, *i, xlate, bcube, tex, detail_color, shadow_only, &view_dir, 7, 1); // all dims
 		} // for i
 	}
 	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1);}
