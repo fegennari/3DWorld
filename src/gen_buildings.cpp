@@ -1091,12 +1091,15 @@ void building_t::gen_geometry(unsigned ix) {
 		else {
 			cube_t const &prev(parts[i-1]);
 			for (unsigned d = 0; d < 2; ++d) {
-				float const len(prev.d[d][1] - prev.d[d][0]);
-				for (unsigned e = 0; e < 2; ++e) {
+				float const len(prev.d[d][1] - prev.d[d][0]), bc_len(bcube.d[d][1] - bcube.d[d][0]);
+				bool const inv(rgen.rand()&1);
+
+				for (unsigned E = 0; E < 2; ++E) {
+					bool const e((E != 0) ^ inv); // no dir favoritism for 20% check
 					float delta(0.0);
 					if (rgen.rand()&3) {delta = rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
 					bc.d[d][e] = prev.d[d][e] + (e ? -delta : delta)*len;
-					if (bc.d[d][1] - bc.d[d][0] < 0.2*(bcube.d[d][1] - bcube.d[d][0])) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
+					if (bc.d[d][1] - bc.d[d][0] < 0.2*bc_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
 				}
 			}
 			bc.d[2][0] = prev.d[2][1]; // z1
