@@ -1379,8 +1379,10 @@ public:
 				b.mat_ix = params.choose_rand_mat(rgen, use_plots); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t const &pos_range(use_plots ? city_plot_bcubes[rgen.rand()%city_plot_bcubes.size()] : mat.pos_range); // select a random plot, if available
+				vector3d const pos_range_sz(pos_range.get_size());
 				point const place_center(pos_range.get_cube_center());
 				bool keep(0);
+				++num_tries;
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
 					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pos_range.d[d][0], pos_range.d[d][1]);} // x,y
@@ -1389,11 +1391,11 @@ public:
 				if (!keep) continue; // placement failed, skip
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y
-					float const sz(0.5*rgen.rand_uniform(mat.sz_range.d[d][0], mat.sz_range.d[d][1]));
+					float const sz(0.5*rgen.rand_uniform(min(mat.sz_range.d[d][0], 0.3f*pos_range_sz[d]),
+						                                 min(mat.sz_range.d[d][1], 0.5f*pos_range_sz[d]))); // use pos range size for max
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
-				} // for d
-				++num_tries;
+				}
 				if (use_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
 
 				if (!params.is_const_zval || !zval_set) { // only calculate when needed
