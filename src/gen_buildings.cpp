@@ -366,6 +366,11 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 	pos.x = x*rot_cos - y*rot_sin + center.x;
 	pos.y = y*rot_cos + x*rot_sin + center.y;
 }
+void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
+	float const x(n.x), y(n.y);
+	n.x = x*rot_cos - y*rot_sin;
+	n.y = y*rot_cos + x*rot_sin;
+}
 
 
 #define EMIT_VERTEX() \
@@ -544,7 +549,7 @@ public:
 					cur_perim[0]  = cur_perim[1];
 					cur_perim[1] += p2p_dist(n1, n2);
 					vector3d normal(n1 + n2); normal.x *= ry; normal.y *= rx; // average the two vertex normals for the flat face normal
-					if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
+					if (bg.rot_sin != 0.0) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
 					if (view_dir != nullptr && (view_dir->x*normal.x + view_dir->y*normal.y) > 0.0) continue; // back facing
 					if (!smooth_normals) {vert.set_norm(normal.get_norm());}
 
@@ -554,7 +559,7 @@ public:
 					
 						if (smooth_normals) {
 							vector3d normal(n); normal.x *= ry; normal.y *= rx; // scale normal by radius (swapped)
-							if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, all_zeros, normal);}
+							if (bg.rot_sin != 0.0) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
 							vert.set_norm(normal.get_norm());
 						}
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
@@ -1027,9 +1032,9 @@ void building_t::gen_geometry(unsigned ix) {
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels
 			cube_t &bc(parts[i]);
-			bc.d[2][0] = base.d[2][0]; // z1
-			bc.d[2][1] = base.d[2][0] + (i+1)*dz; // z2
-			if (i > 0) {bc.d[2][1] += dz*rgen.rand_uniform(-0.5, 0.5); bc.d[2][1] = min(bc.d[2][1], base.d[2][1]);}
+			bc.z1() = base.z1(); // z1
+			bc.z2() = base.z1() + (i+1)*dz; // z2
+			if (i > 0) {bc.z2() += dz*rgen.rand_uniform(-0.5, 0.5); bc.z2() = min(bc.z2(), base.z2());}
 
 			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to generate a cube that doesn't contain any existing cubes (can occasionally still fail)
 				for (unsigned d = 0; d < 2; ++d) { // x,y
@@ -1162,6 +1167,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 	} // for i
 	if (!details.empty() && (shadow_only || dist_less_than(camera, pos, 0.25*far_clip))) { // draw roof details
 		tid_nm_pair_t const tex(mat.roof_tex.get_scaled_version(0.5));
+		building_geom_t const bg(4, rot_sin, rot_cos); // cube
 
 		for (auto i = details.begin(); i != details.end(); ++i) {
 			if (!shadow_only) {
@@ -1169,11 +1175,12 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 				if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 				view_dir = (ccenter + xlate - camera);
 			}
-			building_geom_t const bg(4, rot_sin, rot_cos); // cube
 			bdraw.add_section(bg, *i, xlate, bcube, tex, detail_color, shadow_only, &view_dir, 7, 1); // all dims
 		} // for i
 	}
-	if (DEBUG_BCUBES && !shadow_only) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1);}
+	if (DEBUG_BCUBES && !shadow_only) {
+		bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1);
+	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
 
