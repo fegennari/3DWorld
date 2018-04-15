@@ -1354,6 +1354,13 @@ class building_creator_t {
 	vector3d const get_query_xlate() const {
 		return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
 	}
+	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand) const {
+		for (auto i = ixs.begin(); i != ixs.end(); ++i) {
+			building_t const &ob(get_building(*i));
+			if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand)) return 1;
+		}
+		return 0;
+	}
 
 public:
 	building_creator_t() : max_extent(zero_vector) {}
@@ -1386,6 +1393,8 @@ public:
 		bool const use_plots(!city_plot_bcubes.empty());
 		point center(all_zeros);
 		bool zval_set(0);
+		vector<vector<unsigned>> bix_by_plot;
+		bix_by_plot.resize(city_plot_bcubes.size());
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
@@ -1393,8 +1402,15 @@ public:
 				b.mat_ix = params.choose_rand_mat(rgen, use_plots); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
-				if (use_plots) {pos_range = city_plot_bcubes[rgen.rand()%city_plot_bcubes.size()];} // select a random plot, if available
-				else {pos_range = mat.pos_range + delta_range;}
+				unsigned plot_ix(0);
+				
+				if (use_plots) { // select a random plot, if available
+					plot_ix   = rgen.rand()%city_plot_bcubes.size();
+					pos_range = city_plot_bcubes[plot_ix];
+				}
+				else {
+					pos_range = mat.pos_range + delta_range;
+				}
 				vector3d const pos_range_sz(pos_range.get_size());
 				point const place_center(pos_range.get_cube_center());
 				bool keep(0);
@@ -1435,22 +1451,27 @@ public:
 				float const expand(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by(expand*b.bcube.get_size());
-				unsigned ixr[2][2];
-				get_grid_range(b.bcube, ixr);
-				bool overlaps(0);
 
-				for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
-					for (unsigned x = ixr[0][0]; x <= ixr[1][0] && !overlaps; ++x) {
-						grid_elem_t const &ge(get_grid_elem(x, y));
-						if (!test_bc.intersects_xy(ge.bcube)) continue;
+				if (use_plots) {
+					assert(plot_ix < bix_by_plot.size());
+					vector<unsigned> &ixs(bix_by_plot[plot_ix]);
+					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand)) continue;
+					bix_by_plot[plot_ix].push_back(buildings.size());
+				}
+				else {
+					unsigned ixr[2][2];
+					get_grid_range(b.bcube, ixr);
+					bool overlaps(0);
 
-						for (auto g = ge.ixs.begin(); g != ge.ixs.end(); ++g) {
-							building_t const &ob(get_building(*g));
-							if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand)) {overlaps = 1; break;}
-						}
-					} // for x
-				} // for y
-				if (overlaps) continue;
+					for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
+						for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+							grid_elem_t const &ge(get_grid_elem(x, y));
+							if (!test_bc.intersects_xy(ge.bcube)) continue;
+							if (check_for_overlaps(ge.ixs, test_bc, b, expand)) {overlaps = 1; break;}
+						} // for x
+					} // for y
+					if (overlaps) continue;
+				}
 				mat.side_color.gen_color(b.side_color, rgen);
 				mat.roof_color.gen_color(b.roof_color, rgen);
 				add_to_grid(b.bcube, buildings.size());
