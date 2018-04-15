@@ -32,7 +32,9 @@ colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
 colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
 
 
+extern bool enable_dlight_shadows, dl_smap_enabled;
 extern int rand_gen_index, display_mode, animate2;
+extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern double tfticks;
 extern vector<light_source> dl_sources;
@@ -2448,16 +2450,47 @@ struct cmp_light_source_sz_dist {
 	bool operator()(light_source const &a, light_source const &b) const {return (get_value(a) > get_value(b));} // sort largest/closest to smallest/furthest
 };
 
+void sort_lights_by_dist_size(vector<light_source> &lights) {
+	stable_sort(lights.begin(), lights.end(), cmp_light_source_sz_dist(camera_pos));
+}
+
 void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point const &camera_pos) {
 	if (lights.size() <= max_num) return;
-	stable_sort(lights.begin(), lights.end(), cmp_light_source_sz_dist(camera_pos));
+	sort_lights_by_dist_size(lights);
 	lights.resize(max_num); // remove lowest scoring lights
 }
+
+class city_smap_manager_t {
+	vector<unsigned> enabled_dls;
+
+public:
+	void setup_shadow_maps(vector<light_source> &light_sources) {
+		unsigned const max_smaps = 0;
+		unsigned const num_smaps(min(light_sources.size(), min(max_smaps, MAX_DLIGHT_SMAPS)));
+		dl_smap_enabled = 0;
+		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
+		sort_lights_by_dist_size(light_sources);
+		enabled_dls.clear();
+		
+		// FIXME: probably incorrect, or at least inefficient, when the same light is assigned a different index
+		// FIXME: streetlights should have smaller bwidth (<= MAX_SMAP_FOV = 0.8)
+		// FIXME: larger value for LT_DIR_FALLOFF
+		for (auto i = light_sources.begin(); i != light_sources.end(); ++i) {
+			if (enabled_dls.size() < num_smaps && !i->is_dynamic() && i->is_directional()) {enabled_dls.push_back(i - light_sources.begin());}  // static spotlights (streetlights)
+			else {i->release_smap();} // Note: must release old light smaps before creating new ones
+		}
+		for (auto i = enabled_dls.begin(); i != enabled_dls.end(); ++i) {
+			light_source &ls(light_sources[*i]);
+			dl_smap_enabled |= ls.setup_shadow_map(); // see local_smap_manager_t, setup_and_bind_smap_texture(), local_smap_data_t
+		} // for i
+	}
+};
 
 class city_gen_t : public city_plot_gen_t {
 
 	city_road_gen_t road_gen;
 	car_manager_t car_manager;
+	city_smap_manager_t city_smap_manager;
 	cube_t lights_bcube;
 	float light_radius_scale;
 
@@ -2526,16 +2559,18 @@ public:
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
 		//cout << "dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
+		unsigned const max_dlights = 1024; // Note: should be <= the value used in upload_dlights_textures()
 
-		if (dl_sources.size() > 1024) {
-			if (dl_sources.size() > 4096) { // too many lights, reduce light radius for next frame
+		if (dl_sources.size() > max_dlights) {
+			if (dl_sources.size() > 4*max_dlights) { // too many lights, reduce light radius for next frame
 				light_radius_scale *= 0.95;
 				cout << "Too many city lights: " << dl_sources.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
 			}
-			filter_dlights_to(dl_sources, 1024, camera_pos);
+			filter_dlights_to(dl_sources, max_dlights, camera_pos);
 		}
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
+		city_smap_manager.setup_shadow_maps(dl_sources);
 		return lights_bcube;
 	}
 	void free_context() {car_manager.free_context();}

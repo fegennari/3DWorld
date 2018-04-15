@@ -570,18 +570,25 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	
 	point const camera_pos_(camera_pos);
 	camera_pos = lpos;
-	unsigned const fixed_ndiv = 24;
-	// Note: using the global cobjs here may be less efficient for smap generation since we can't VFC (due to caching/sharing with other shadow maps)
-	// however, it's simpler and more efficient for memory usage since there is only one buffer shared across all smaps, plus dlight smaps aren't generated each frame
-	// Note: don't use fixed_ndiv in this call: since this may be shared with the global smap, both control flow paths should generate the same cobjs geometry;
-	// it likely doesn't matter, since cobj geometry will generally be cached during the global smap pass (which is run first)
 	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);} // no depth clamping (due to light fixtures in front of the near clip plane)
-	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
-	smap_vertex_cache.render();
-	render_models(1, 0);
-	// high back_face_thresh of 0.75 to avoid shadow artifacts for close cubes (should be at least 1/sqrt(2) for 90 deg FOV, and < 1.0)
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir, 0.75);
-	if (outdoor_shadows) {draw_outdoor_shadow_pass(lpos, smap_sz);}
+
+	if (world_mode == WMODE_GROUND) {
+		// Note: using the global cobjs here may be less efficient for smap generation since we can't VFC (due to caching/sharing with other shadow maps)
+		// however, it's simpler and more efficient for memory usage since there is only one buffer shared across all smaps, plus dlight smaps aren't generated each frame
+		// Note: don't use fixed_ndiv in this call: since this may be shared with the global smap, both control flow paths should generate the same cobjs geometry;
+		// it likely doesn't matter, since cobj geometry will generally be cached during the global smap pass (which is run first)
+		smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
+		smap_vertex_cache.render();
+		render_models(1, 0);
+		unsigned const fixed_ndiv = 24;
+		// high back_face_thresh of 0.75 to avoid shadow artifacts for close cubes (should be at least 1/sqrt(2) for 90 deg FOV, and < 1.0)
+		smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir, 0.75);
+		if (outdoor_shadows) {draw_outdoor_shadow_pass(lpos, smap_sz);}
+	}
+	else if (world_mode == WMODE_INF_TERRAIN) { // Note: not really a clean case split; should pass this in somehow, or use a different class in tiled terrain mode (cities)
+		render_models(1, 0, 3, get_tiled_terrain_model_xlate());
+	}
+	else {assert(0);} // not supported in universe mode
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 	camera_pos = camera_pos_;
 }

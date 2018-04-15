@@ -23,6 +23,4 @@ struct building_occlusion_state_t {
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 
-vector3d get_tiled_terrain_model_xlate();
-
 #endif // _BUILDING_H_

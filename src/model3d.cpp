@@ -41,7 +41,6 @@ bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
 string texture_str(int tid);
-vector3d get_tiled_terrain_model_xlate();
 
 
 // ************ texture_manager ************
