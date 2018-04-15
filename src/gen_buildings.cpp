@@ -928,8 +928,16 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			had_coll = 1; // flag as colliding
 		}
 	}
-	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-		// FIXME: WRITE
+	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // Note: doesn't really work with a pointed roof
+		point const pos_xlate(pos2 - xlate);
+		vector3d const normal(i->get_norm());
+		float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+
+		if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
+			pos2 += normal*(radius - rdist); // update current pos
+			had_coll = 1; // flag as colliding
+			break; // only use first colliding tquad
+		}
 	}
 	if (!had_coll) return 0;
 	if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, pos2);} // rotate back
@@ -1200,7 +1208,7 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supp
 		point const center((1.0 - d1)*pts[4]);
 		point pts2[8];
 		for (unsigned n = 0; n < 4; ++n) {pts2[n] = pts[n]; pts2[n+4] = d1*pts[n] + center;}
-		unsigned const ixs[5][4] = {{0,4,5,1}, {3,2,6,7}, {0,3,7,4}, {2,1,5,6}, {4,7,6,5}};
+		unsigned const ixs[5][4] = {{4,7,6,5}, {0,4,5,1}, {3,2,6,7}, {0,3,7,4}, {2,1,5,6}}; // add the flat quad first, which works better for sphere intersections
 		roof_tquads.resize(5);
 
 		for (unsigned n = 0; n < 5; ++n) {
