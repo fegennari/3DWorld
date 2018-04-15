@@ -445,7 +445,7 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face) const {
 	if (near_clip > 0.0) {
 		nclip = max(nclip, near_clip);
 	}
-	else if (check_point_contained_tree(pos, cindex, dynamic_cobj)) {
+	else if (world_mode == WMODE_GROUND && check_point_contained_tree(pos, cindex, dynamic_cobj)) {
 		// if light is inside a light fixture, move the near clip plane so that the light fixture cobj is outside the view frustum
 		assert(cindex >= 0);
 		point const start_pos(pos + dir*radius);
@@ -499,7 +499,12 @@ bool light_source_trig::check_shadow_map() {
 
 	if (!is_shadow_map_enabled()) return 0;
 	if (!is_enabled())            return 0; // disabled or destroyed
-	
+	bool const force_update(rot_rate != 0.0); // force shadow map update if rotating
+	return setup_shadow_map(dynamic_cobj, outdoor_shadows, force_update);
+}
+
+bool light_source::setup_shadow_map(bool dynamic_cobj, bool outdoor_shadows, bool force_update) {
+
 	if (smap_index == 0) {
 		smap_index = local_smap_manager.new_smap();
 		if (smap_index == 0) return 0; // allocation failed (at max)
@@ -514,12 +519,11 @@ bool light_source_trig::check_shadow_map() {
 		smap.pdu.draw_frustum();
 		shader.end_shader();
 	}
-	bool const force_update(rot_rate != 0.0); // force shadow map update if rotating
 	smap.create_shadow_map_for_light(pos, nullptr, 1, 0, force_update); // no bcube, in world space, no texture array (layer=nullptr)
 	return 1;
 }
 
-void light_source_trig::release_smap() {
+void light_source::release_smap() {
 	if (smap_index > 0) {local_smap_manager.free_smap(smap_index); smap_index = 0;}
 }
 

@@ -207,6 +207,8 @@ public:
 	void setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const;
 	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
 	void draw_light_cone(shader_t &shader, float alpha) const;
+	bool setup_shadow_map(bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0);
+	void release_smap();
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };
@@ -262,7 +264,6 @@ public:
 	void move_to(point const &new_pos) {shift_by(new_pos - pos);}
 	bool is_shadow_map_enabled() const;
 	bool check_shadow_map();
-	void release_smap();
 	unsigned get_indir_dlight_ix() const {return indir_dlight_ix;}
 	bool need_update_indir(); // Note: modifies last_pos/last_dir, not const
 	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
