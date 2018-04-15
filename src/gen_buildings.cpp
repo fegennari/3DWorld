@@ -1369,9 +1369,10 @@ public:
 		float const def_water_level(get_water_z_height());
 		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
+		vector3d const delta_range((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
 		range = params.materials.front().pos_range; // range is union over all material ranges
 		for (auto i = params.materials.begin()+1; i != params.materials.end(); ++i) {range.union_with_cube(i->pos_range);}
-		range     += ((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
+		range     += delta_range;
 		range_sz   = range.get_size(); // Note: place_radius is relative to range cube center
 		max_extent = zero_vector;
 		UNROLL_3X(range_sz_inv[i_] = 1.0/range_sz[i_];)
@@ -1391,7 +1392,9 @@ public:
 				building_t b;
 				b.mat_ix = params.choose_rand_mat(rgen, use_plots); // set material
 				building_mat_t const &mat(b.get_material());
-				cube_t const &pos_range(use_plots ? city_plot_bcubes[rgen.rand()%city_plot_bcubes.size()] : mat.pos_range); // select a random plot, if available
+				cube_t pos_range;
+				if (use_plots) {pos_range = city_plot_bcubes[rgen.rand()%city_plot_bcubes.size()];} // select a random plot, if available
+				else {pos_range = mat.pos_range + delta_range;}
 				vector3d const pos_range_sz(pos_range.get_size());
 				point const place_center(pos_range.get_cube_center());
 				bool keep(0);
