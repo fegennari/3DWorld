@@ -314,10 +314,10 @@ class building_draw_t;
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
 	bool half_offset;
-	float rot_sin, rot_cos, flat_side_amt, alt_step_factor; // rotation in XY plane, around Z (up) axis
+	float rot_sin, rot_cos, flat_side_amt, alt_step_factor, start_angle; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
 
-	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0) {}
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0) {}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
 	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
@@ -484,8 +484,9 @@ public:
 			sin_ds[0] = sin_ds[1] = sin(css);
 			cos_ds[0] = cos_ds[1] = cos(css);
 		}
-		float sin_s(0.0), cos_s(1.0); // start at 0 - more efficient
-		if (bg.half_offset) {sin_s = sin(0.5*css); cos_s = cos(0.5*css);} // for cube
+		float sin_s(0.0), cos_s(1.0), angle0(bg.start_angle); // start at 0.0
+		if (bg.half_offset) {angle0 = 0.5*css;} // for cube
+		if (angle0 != 0.0) {sin_s = sin(angle0); cos_s = cos(angle0);} // uncommon case
 		nv.resize(ndiv);
 
 		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
@@ -1036,6 +1037,7 @@ void building_t::gen_geometry(unsigned ix) {
 
 	if (num_sides >= 6 && mat.max_fsa > 0.0) { // at least 6 sides
 		flat_side_amt = max(0.0f, min(0.45f, rgen.rand_uniform(mat.min_fsa, mat.max_fsa)));
+		if (flat_side_amt > 0.0 && rot_sin == 0.0) {start_angle = rgen.rand_uniform(0.0, TWO_PI);} // flat side, not rotated: add random start angle to break up uniformity
 	}
 	if ((num_sides == 3 || num_sides == 4 || num_sides == 6) && mat.max_asf > 0.0 && rgen.rand_probability(mat.asf_prob)) { // triangles/cubes/hexagons
 		alt_step_factor = max(0.0f, min(0.99f, rgen.rand_uniform(mat.min_asf, mat.max_asf)));
