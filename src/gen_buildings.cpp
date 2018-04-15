@@ -1331,17 +1331,16 @@ class building_creator_t {
 		assert(gx < grid_sz && gy < grid_sz);
 		return grid[gy*grid_sz + gx];
 	}
-	void get_grid_pos(point pos, unsigned ixp[2]) const { // {x,y}
-		range.clamp_pt(pos);
-		for (unsigned d = 0; d < 2; ++d) {
-			float const v((pos[d] - range.d[d][0])*range_sz_inv[d]);
-			ixp[d] = unsigned(v*(grid_sz-1));
-			assert(ixp[d] < grid_sz);
-		}
-	}
 	void get_grid_range(cube_t const &bcube, unsigned ixr[2][2]) const { // {lo,hi}x{x,y}
-		get_grid_pos(bcube.get_llc(), ixr[0]);
-		get_grid_pos(bcube.get_urc(), ixr[1]);
+		point llc(bcube.get_llc()), urc(bcube.get_urc());
+		range.clamp_pt(llc);
+		range.clamp_pt(urc);
+		for (unsigned d = 0; d < 2; ++d) {
+			float const v1((llc[d] - range.d[d][0])*range_sz_inv[d]), v2((urc[d] - range.d[d][0])*range_sz_inv[d]);
+			ixr[0][d] = unsigned(v1*(grid_sz-1));
+			ixr[1][d] = unsigned(v2*(grid_sz-1));
+			assert(ixr[0][d] < grid_sz && ixr[1][d] < grid_sz);
+		}
 	}
 	void add_to_grid(cube_t const &bcube, unsigned bix) {
 		unsigned ixr[2][2];
