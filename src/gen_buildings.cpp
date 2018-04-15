@@ -377,8 +377,8 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 
 #define EMIT_VERTEX() \
 	vert.v = pt*sz + llc; \
-	vert.t[ st] = tscale[ st]*vert.v[d]; \
-	vert.t[!st] = tscale[!st]*vert.v[i]; \
+	vert.t[ st] = tscale[ st]*(vert.v[d] + tex_vert_off[d]); \
+	vert.t[!st] = tscale[!st]*(vert.v[i] + tex_vert_off[i]); \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
 	if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
@@ -679,6 +679,7 @@ public:
 		bool const apply_ao(global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, cube.d[2][0], cube.d[2][1], cw, vert);
+		vector3d const tex_vert_off((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0));
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3);
