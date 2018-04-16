@@ -692,7 +692,7 @@ namespace streetlight_ns {
 			if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) return; // VFC
 			float const beamwidth = 0.25;
 			min_eq(lights_bcube.z1(), (lpos.z - ldist));
-			max_eq(lights_bcube.z2(), (lpos.z - ldist));
+			max_eq(lights_bcube.z2(), (lpos.z + ldist));
 			dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, beamwidth)); // points down
 		}
 	};
