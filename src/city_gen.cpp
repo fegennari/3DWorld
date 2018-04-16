@@ -22,6 +22,7 @@ float const CONN_ROAD_SPEED_MULT    = 2.0; // twice the speed limit on connector
 float const PARK_SPACE_WIDTH        = 1.6;
 float const PARK_SPACE_LENGTH       = 1.8;
 float const STREETLIGHT_BEAMWIDTH   = 0.25;
+float const CITY_LIGHT_FALLOFF      = 0.2;
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -211,7 +212,12 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	if (use_dlights) {
 		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
 		s.add_uniform_vector3d("scene_scale", lights_bcube.get_size());
-		s.add_uniform_float("LT_DIR_FALLOFF", 0.2); // smooth falloff for car headlights
+		s.add_uniform_float("LT_DIR_FALLOFF", CITY_LIGHT_FALLOFF); // smooth falloff for car headlights and streetlights
+	}
+	if (use_smap) {
+		s.add_uniform_float("z_bias", cobj_z_bias);
+		s.add_uniform_float("pcf_offset", 8.0*shadow_map_pcf_offset);
+		s.add_uniform_float("dlight_pcf_offset", 0.0005);
 	}
 }
 
@@ -235,8 +241,6 @@ public:
 		use_smap     = (!shadow_only && shadow_map_enabled());
 		if (!use_smap) return;
 		city_shader_setup(s, lights_bcube, use_dlights, 1, use_bmap);
-		s.add_uniform_float("z_bias", cobj_z_bias);
-		s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 	}
 	virtual void post_draw() {
 		emit_now = 0;

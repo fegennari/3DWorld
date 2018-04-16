@@ -16,7 +16,6 @@ bool const USE_BULIDING_VBOS   = 1;
 unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
-extern float shadow_map_pcf_offset, cobj_z_bias;
 
 // TODO:
 // Multilevel cylinders and N-gons shapes?
@@ -1548,8 +1547,6 @@ public:
 		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
 		if (use_tt_smap) {
 			city_shader_setup(s, lights_bcube, 1, 1, use_bmap); // use_smap=1, use_dlights=1
-			s.add_uniform_float("z_bias", cobj_z_bias);
-			s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 		}
 		if (!USE_BULIDING_VBOS || use_tt_smap) {
 			float const draw_dist(USE_BULIDING_VBOS ? (get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE)) : far_clip);
