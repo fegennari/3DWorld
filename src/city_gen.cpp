@@ -2444,19 +2444,19 @@ public:
 
 
 struct cmp_light_source_sz_dist {
-	point const &camera_pos;
-	cmp_light_source_sz_dist(point const &p) : camera_pos(p) {}
-	float get_value(light_source const &s) const {return s.get_beamwidth()*s.get_radius()*s.get_radius()/p2p_dist_sq(s.get_pos(), camera_pos);}
+	point const &cpos;
+	cmp_light_source_sz_dist(point const &p) : cpos(p) {}
+	float get_value(light_source const &s) const {return s.get_beamwidth()*s.get_radius()*s.get_radius()/p2p_dist_sq(s.get_pos(), cpos);}
 	bool operator()(light_source const &a, light_source const &b) const {return (get_value(a) > get_value(b));} // sort largest/closest to smallest/furthest
 };
 
-void sort_lights_by_dist_size(vector<light_source> &lights) {
-	stable_sort(lights.begin(), lights.end(), cmp_light_source_sz_dist(camera_pos));
+void sort_lights_by_dist_size(vector<light_source> &lights, point const &cpos) {
+	stable_sort(lights.begin(), lights.end(), cmp_light_source_sz_dist(cpos));
 }
 
-void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point const &camera_pos) {
+void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point const &cpos) {
 	if (lights.size() <= max_num) return;
-	sort_lights_by_dist_size(lights);
+	sort_lights_by_dist_size(lights, cpos);
 	lights.resize(max_num); // remove lowest scoring lights
 }
 
@@ -2464,12 +2464,12 @@ class city_smap_manager_t {
 	vector<unsigned> enabled_dls;
 
 public:
-	void setup_shadow_maps(vector<light_source> &light_sources) {
+	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
 		unsigned const max_smaps = 0;
 		unsigned const num_smaps(min(light_sources.size(), min(max_smaps, MAX_DLIGHT_SMAPS)));
 		dl_smap_enabled = 0;
 		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
-		sort_lights_by_dist_size(light_sources);
+		sort_lights_by_dist_size(light_sources, cpos);
 		enabled_dls.clear();
 		
 		// FIXME: probably incorrect, or at least inefficient, when the same light is assigned a different index
@@ -2551,8 +2551,8 @@ public:
 		lights_bcube.set_to_zeros();
 		if (!is_night() && !prev_had_lights) return lights_bcube; // only have lights at night
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
-		point const camera_pos(camera_pdu.pos - xlate);
-		lights_bcube = cube_t(camera_pos);
+		point const cpos(camera_pdu.pos - xlate);
+		lights_bcube = cube_t(cpos);
 		lights_bcube.expand_by(light_radius);
 		lights_bcube.z1() =  FLT_MAX;
 		lights_bcube.z2() = -FLT_MAX;
@@ -2566,11 +2566,11 @@ public:
 				light_radius_scale *= 0.95;
 				cout << "Too many city lights: " << dl_sources.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
 			}
-			filter_dlights_to(dl_sources, max_dlights, camera_pos);
+			filter_dlights_to(dl_sources, max_dlights, cpos);
 		}
+		city_smap_manager.setup_shadow_maps(dl_sources, cpos);
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
-		city_smap_manager.setup_shadow_maps(dl_sources);
 		return lights_bcube;
 	}
 	void free_context() {car_manager.free_context();}
