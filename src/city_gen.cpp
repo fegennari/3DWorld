@@ -233,14 +233,14 @@ public:
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
 
-	void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool use_dlights_, bool shadow_only_) {
+	void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool use_dlights_, bool shadow_only_, bool always_setup_shader) {
 		xlate        = xlate_;
 		shadow_only  = shadow_only_;
 		lights_bcube = lights_bcube_;
 		use_dlights  = (use_dlights_ && !shadow_only);
 		use_smap     = (!shadow_only && shadow_map_enabled());
-		if (!use_smap) return;
-		city_shader_setup(s, lights_bcube, use_dlights, 1, use_bmap);
+		if (!use_smap && !always_setup_shader) return;
+		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only));
 	}
 	virtual void post_draw() {
 		emit_now = 0;
@@ -926,7 +926,7 @@ class city_road_gen_t {
 		road_draw_state_t() : ar(1.0) {}
 
 		void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool use_dlights_, bool shadow_only) {
-			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only);
+			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only, 0); // always_setup_shader=0
 			ar = city_params.get_road_ar();
 		}
 		virtual void draw_unshadowed() {
@@ -2217,7 +2217,7 @@ class car_manager_t {
 		}
 		void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool use_dlights_, bool shadow_only) {
 			//use_bmap = 1; // used only for some car models
-			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only);
+			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
 			select_texture(WHITE_TEX);
 			occlusion_checker.set_camera(camera_pdu);
 		}
@@ -2257,9 +2257,16 @@ class car_manager_t {
 				if (include_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
 			}
 		}
-		void draw_car(car_t const &car) { // Note: all quads
+		void draw_car(car_t const &car, bool shadow_only) { // Note: all quads
 			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
 			point const center(car.get_center());
+			
+			if (shadow_only) {
+				cube_t bcube(car.bcube);
+				bcube.expand_by(0.1*car.height);
+				if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
+				if (!dist_less_than(camera_pdu.pos, center, camera_pdu.far_)) return;
+			}
 			begin_tile(center); // enable shadows
 			assert(car.color_id < NUM_CAR_COLORS);
 			colorRGBA const &color(car_colors[car.color_id]);
@@ -2269,10 +2276,10 @@ class car_manager_t {
 			point pb[8], pt[8]; // bottom and top sections
 			gen_car_pts(car, draw_top, pb, pt);
 
-			if (dist_val < 0.05 && car_model_loader.is_model_valid(car.model_id)) {
+			if (!shadow_only && dist_val < 0.05 && car_model_loader.is_model_valid(car.model_id)) {
 				if (occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id);
+				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only);
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
@@ -2437,11 +2444,11 @@ public:
 			fgPushMatrix();
 			translate_to(xlate);
 			dstate.pre_draw(xlate, lights_bcube, use_dlights, shadow_only);
-			for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.draw_car(*i);}
+			for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.draw_car(*i, shadow_only);}
 			dstate.post_draw();
 			fgPopMatrix();
 		}
-		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
+		if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context();}
