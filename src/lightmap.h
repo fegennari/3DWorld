@@ -185,7 +185,7 @@ public:
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
 	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0) const;
 	cylinder_3dw calc_bounding_cylin(float sqrt_thresh=0.0) const;
-	pos_dir_up calc_pdu(bool dynamic_cobj, bool is_cube_face) const;
+	pos_dir_up calc_pdu(bool dynamic_cobj, bool is_cube_face, float falloff) const;
 	unsigned get_cube_eflags() const {return cube_eflags;}
 	unsigned get_num_rays()    const {return num_dlight_rays;}
 	bool is_visible()     const;
@@ -207,7 +207,7 @@ public:
 	void setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const;
 	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
 	void draw_light_cone(shader_t &shader, float alpha) const;
-	bool setup_shadow_map(bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0);
+	bool setup_shadow_map(float falloff, bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0);
 	void release_smap();
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius

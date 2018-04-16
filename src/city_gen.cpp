@@ -683,8 +683,9 @@ namespace streetlight_ns {
 			s.set_cur_color(pole_color);
 			draw_cylinder_at(pos, height, pradius, 0.7*pradius, min(ndiv, 24), 0); // vertical post, no ends
 			if (dist_val < 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
+			if (shadow_only && dist_less_than(camera_pdu.pos, (get_lpos() + xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
 			if (!is_night() && dist_val > 0.15) return; // too far
-			if (is_night()) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
+			if (!shadow_only && is_night()) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
 			fgPushMatrix();
 			translate_to(lpos);
 			scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
@@ -2465,8 +2466,6 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 }
 
 class city_smap_manager_t {
-	vector<unsigned> enabled_dls;
-
 public:
 	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
 		unsigned const max_smaps = 0;
@@ -2474,19 +2473,18 @@ public:
 		dl_smap_enabled = 0;
 		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
 		sort_lights_by_dist_size(light_sources, cpos);
-		enabled_dls.clear();
+		unsigned num_used(0);
 		
-		// FIXME: probably incorrect, or at least inefficient, when the same light is assigned a different index
-		// FIXME: streetlights should have smaller bwidth (<= MAX_SMAP_FOV = 0.8)
-		// FIXME: larger value for LT_DIR_FALLOFF
-		for (auto i = light_sources.begin(); i != light_sources.end(); ++i) {
-			if (enabled_dls.size() < num_smaps && !i->is_dynamic() && i->is_directional()) {enabled_dls.push_back(i - light_sources.begin());}  // static spotlights (streetlights)
-			else {i->release_smap();} // Note: must release old light smaps before creating new ones
+		// FIXME: inefficient to recreate shadow maps every frame
+		for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
+			if (num_smaps && i->is_very_directional() /*&& !i->is_dynamic()*/) { // static spotlights (streetlights)
+				dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF); // see local_smap_manager_t, setup_and_bind_smap_texture(), local_smap_data_t
+				++num_used;
+			}
 		}
-		for (auto i = enabled_dls.begin(); i != enabled_dls.end(); ++i) {
-			light_source &ls(light_sources[*i]);
-			dl_smap_enabled |= ls.setup_shadow_map(); // see local_smap_manager_t, setup_and_bind_smap_texture(), local_smap_data_t
-		} // for i
+	}
+	void clear_all_smaps(vector<light_source> &light_sources) {
+		for (auto i = light_sources.begin(); i != light_sources.end(); ++i) {i->release_smap();}
 	}
 };
 
@@ -2551,6 +2549,7 @@ public:
 	}
 	cube_t setup_city_lights(vector3d const &xlate) {
 		bool const prev_had_lights(!dl_sources.empty());
+		city_smap_manager.clear_all_smaps(dl_sources); // FIXME: works, but inefficient
 		clear_dynamic_lights();
 		lights_bcube.set_to_zeros();
 		if (!is_night() && !prev_had_lights) return lights_bcube; // only have lights at night

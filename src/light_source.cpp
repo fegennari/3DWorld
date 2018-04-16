@@ -428,9 +428,9 @@ void light_source::setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) c
 	if (smap_index > 0) {local_smap_manager.get(smap_index).set_smap_shader_for_light(s, arr_tex_set);}
 }
 
-pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face) const {
+pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face, float falloff) const {
 
-	float const cos_theta(1.0 - min((is_cube_face ? 0.35f : MAX_SMAP_FOV), 2.0f*(bwidth + LT_DIR_FALLOFF))); // Note: cube face is 49.5 degrees (must be > 45)
+	float const cos_theta(1.0 - min((is_cube_face ? 0.35f : MAX_SMAP_FOV), 2.0f*(bwidth + falloff))); // Note: cube face is 49.5 degrees (must be > 45)
 	float const angle(acosf(cos_theta)); // half FOV
 	int const dim(get_min_dim(dir));
 	vector3d temp(zero_vector), up_dir;
@@ -500,17 +500,17 @@ bool light_source_trig::check_shadow_map() {
 	if (!is_shadow_map_enabled()) return 0;
 	if (!is_enabled())            return 0; // disabled or destroyed
 	bool const force_update(rot_rate != 0.0); // force shadow map update if rotating
-	return setup_shadow_map(dynamic_cobj, outdoor_shadows, force_update);
+	return setup_shadow_map(LT_DIR_FALLOFF, dynamic_cobj, outdoor_shadows, force_update);
 }
 
-bool light_source::setup_shadow_map(bool dynamic_cobj, bool outdoor_shadows, bool force_update) {
+bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdoor_shadows, bool force_update) {
 
 	if (smap_index == 0) {
 		smap_index = local_smap_manager.new_smap();
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
-	smap.pdu = calc_pdu(dynamic_cobj, is_cube_face); // Note: could cache this in the light source for static lights
+	smap.pdu = calc_pdu(dynamic_cobj, is_cube_face, falloff); // Note: could cache this in the light source for static lights
 	smap.outdoor_shadows = outdoor_shadows;
 
 	if (0 && (display_mode & 0x10)) { // draw light/shadow frustum for debugging
