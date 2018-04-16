@@ -21,6 +21,7 @@ float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CONN_ROAD_SPEED_MULT    = 2.0; // twice the speed limit on connector roads
 float const PARK_SPACE_WIDTH        = 1.6;
 float const PARK_SPACE_LENGTH       = 1.8;
+float const STREETLIGHT_BEAMWIDTH   = 0.25;
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -230,7 +231,7 @@ public:
 		xlate        = xlate_;
 		shadow_only  = shadow_only_;
 		lights_bcube = lights_bcube_;
-		use_dlights  = use_dlights_;
+		use_dlights  = (use_dlights_ && !shadow_only);
 		use_smap     = (!shadow_only && shadow_map_enabled());
 		if (!use_smap) return;
 		city_shader_setup(s, lights_bcube, use_dlights, 1, use_bmap);
@@ -252,9 +253,11 @@ public:
 		set_std_blend_mode();
 		disable_blend();
 	}
-	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0) const {
+	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0, bool shadow_only=0) const {
 		cube_t const bcx(bc + xlate);
-		return (camera_pdu.cube_visible(bcx) && dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dist_scale*get_draw_tile_dist()));
+		float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
+		if (!dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dmax)) return 0;
+		return camera_pdu.cube_visible(bcx);
 	}
 	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {
 		p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = z1; p[4].z = z2; // front right
@@ -582,7 +585,7 @@ struct road_isec_t : public cube_t {
 	}
 	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
 		if (num_conn == 2) return; // no stoplights
-		if (!shadow_only && !dstate.check_cube_visible(*this, 0.2)) return; // dist_scale=0.2
+		if (!dstate.check_cube_visible(*this, 0.2, shadow_only)) return; // dist_scale=0.2
 		point const center(get_cube_center() + dstate.xlate);
 		float const dist_val(p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		vector3d const cview_dir(camera_pdu.pos - center);
@@ -663,11 +666,12 @@ namespace streetlight_ns {
 			float const height(light_height*city_params.road_width);
 			return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
 		}
-		void draw(shader_t &s, vector3d const &xlate) const { // Note: translate has already been applied as a transform
+		void draw(shader_t &s, vector3d const &xlate, bool shadow_only) const { // Note: translate has already been applied as a transform
 			float const height(light_height*city_params.road_width), pradius(pole_radius*city_params.road_width), lradius(light_radius*city_params.road_width);
 			point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
 			if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
-			float const dist_val(p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
+			if (shadow_only && !dist_less_than(camera_pdu.pos, center, camera_pdu.far_)) return;
+			float const dist_val(shadow_only ? 0.05 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 			if (dist_val > 0.2) return; // too far
 			if (!s.is_setup()) {s.begin_color_only_shader();} // likely only needed for shadow pass, could do better with this
 			int const ndiv(max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
@@ -690,10 +694,9 @@ namespace streetlight_ns {
 			float const height(light_height*city_params.road_width);
 			point const lpos(get_lpos());
 			if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) return; // VFC
-			float const beamwidth = 0.25;
 			min_eq(lights_bcube.z1(), (lpos.z - ldist));
 			max_eq(lights_bcube.z2(), (lpos.z + ldist));
-			dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, beamwidth)); // points down
+			dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH)); // points down
 		}
 	};
 } // streetlight_ns
@@ -1549,38 +1552,35 @@ class city_road_gen_t {
 		}
 		void draw(road_draw_state_t &dstate, bool shadow_only) {
 			if (empty()) return;
+			if (!dstate.check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 
 			if (shadow_only) {
-				if (!camera_pdu.cube_visible(bcube + dstate.xlate)) return;
-
 				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
-					if (!camera_pdu.cube_visible(b->bcube + dstate.xlate)) continue;
+					if (!dstate.check_cube_visible(b->bcube, 1.0, shadow_only)) continue; // VFC/too far
 					for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections (3-way, 4-way)
 				}
-				draw_streetlights(dstate);
-				return; // done
 			}
-			if (!dstate.check_cube_visible(bcube)) return; // VFC/too far
-
-			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
-				if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
-				dstate.begin_tile(b->bcube.get_cube_center());
-				dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
-				dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
-				dstate.draw_road_region(parking_lot_mgr.parks, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
+			else {
+				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
+					if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
+					dstate.begin_tile(b->bcube.get_cube_center());
+					dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
+					dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
+					dstate.draw_road_region(parking_lot_mgr.parks, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 				
-				for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
-					dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
-					if (i > 0) {dstate.draw_stoplights(isecs[i], 0);}
-				}
-			} // for b
-			draw_streetlights(dstate);
+					for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
+						dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
+						if (i > 0) {dstate.draw_stoplights(isecs[i], 0);}
+					}
+				} // for b
+			}
+			draw_streetlights(dstate, shadow_only);
 		}
-		void draw_streetlights(road_draw_state_t &dstate) const {
+		void draw_streetlights(road_draw_state_t &dstate, bool shadow_only) const {
 			if (streetlights.empty()) return;
 			//timer_t t("Draw Streetlights");
 			select_texture(WHITE_TEX);
-			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate.s, dstate.xlate);}
+			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate.s, dstate.xlate, shadow_only);}
 		}
 		void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube);}

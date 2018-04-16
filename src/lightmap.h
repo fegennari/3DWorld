@@ -154,7 +154,7 @@ public:
 
 struct local_smap_data_t;
 
-class light_source { // size = 68
+class light_source { // size = 92
 
 protected:
 	bool dynamic, enabled, user_placed, is_cube_face, is_cube_light;
