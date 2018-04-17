@@ -1883,6 +1883,11 @@ class city_road_gen_t {
 public:
 	bool empty() const {return road_networks.empty();}
 
+	cube_t const &get_city_bcube(unsigned city_ix) const {
+		if (city_ix == CONN_CITY_IX) {return global_rn.get_bcube();}
+		assert(city_ix < road_networks.size());
+		return road_networks[city_ix].get_bcube();
+	}
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region, road_networks.size()));
@@ -2280,15 +2285,14 @@ class car_manager_t {
 			}
 		}
 		void draw_car(car_t const &car, bool shadow_only) { // Note: all quads
-			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
-			point const center(car.get_center());
-			
 			if (shadow_only) {
+				if (!dist_less_than(camera_pdu.pos, car.get_center(), camera_pdu.far_)) return;
 				cube_t bcube(car.bcube);
 				bcube.expand_by(0.1*car.height);
 				if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
-				if (!dist_less_than(camera_pdu.pos, center, camera_pdu.far_)) return;
 			}
+			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
+			point const center(car.get_center());
 			begin_tile(center); // enable shadows
 			assert(car.color_id < NUM_CAR_COLORS);
 			colorRGBA const &color(car_colors[car.color_id]);
@@ -2466,7 +2470,20 @@ public:
 			fgPushMatrix();
 			translate_to(xlate);
 			dstate.pre_draw(xlate, lights_bcube, use_dlights, shadow_only);
-			for (auto i = cars.begin(); i != cars.end(); ++i) {dstate.draw_car(*i, shadow_only);}
+			int cur_city(-1);
+			
+			for (auto i = cars.begin(); i != cars.end(); ++i) {
+				if (i->cur_city != cur_city) { // new city
+					cur_city = i->cur_city;
+					cube_t const &city_bcube(road_gen.get_city_bcube(i->cur_city));
+					
+					if (!camera_pdu.cube_visible(city_bcube + xlate)) { // city not visible - skip all cars in this city
+						for (; i < cars.end() && i->cur_city == cur_city; ++i) {}
+						if (i == cars.end()) break;
+					}
+				}
+				dstate.draw_car(*i, shadow_only);
+			}
 			dstate.post_draw();
 			fgPopMatrix();
 		}
