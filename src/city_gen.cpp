@@ -55,10 +55,13 @@ struct city_params_t {
 	// parking lots
 	unsigned min_park_spaces, min_park_rows;
 	float min_park_density, max_park_density;
+	// lighting
+	bool car_shadows;
+	unsigned max_lights, max_shadow_maps;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0),
 		slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), num_cars(0), car_speed(0.0),
-		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0) {}
+		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -128,6 +131,16 @@ struct city_params_t {
 		}
 		else if (str == "max_park_density") {
 			if (!read_float(fp, max_park_density) || max_park_density < 0.0) {return read_error(str);}
+		}
+		// lighting
+		else if (str == "max_lights") {
+			if (!read_uint(fp, max_lights)) {return read_error(str);}
+		}
+		else if (str == "max_shadow_maps") {
+			if (!read_uint(fp, max_shadow_maps)) {return read_error(str);}
+		}
+		else if (str == "car_shadows") {
+			if (!read_bool(fp, car_shadows)) {return read_error(str);}
 		}
 		else {
 			cout << "Unrecognized city keyword in input file: " << str << endl;
@@ -2155,7 +2168,7 @@ class car_manager_t {
 			car_model_t const &model_file(get_model(model_id));
 			model3d &model(at(model_id));
 
-			if (model_file.body_mat_id >= 0) { // use custom color for body material
+			if (!is_shadow_pass && model_file.body_mat_id >= 0) { // use custom color for body material
 				material_t &body_mat(model.get_material(model_file.body_mat_id));
 				body_mat.ka = body_mat.kd = color;
 			}
@@ -2176,7 +2189,10 @@ class car_manager_t {
 			fgRotate(90.0, 1.0, 0.0, 0.0);
 			uniform_scale(sz_scale);
 			translate_to(-bcube.get_cube_center()); // cancel out model local translate
-			model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
+
+			for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
+				model.render_materials(s, is_shadow_pass, 0, 0, (sam_pass == 1), 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
+			}
 			fgPopMatrix();
 			camera_pdu.valid = camera_pdu_valid;
 			camera_pdu.pos   = orig_camera_pos;
@@ -2219,7 +2235,7 @@ class car_manager_t {
 			//use_bmap = 1; // used only for some car models
 			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
 			select_texture(WHITE_TEX);
-			occlusion_checker.set_camera(camera_pdu);
+			if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
 		}
 		virtual void draw_unshadowed() {
 			qbds[0].draw_and_clear();
@@ -2276,8 +2292,8 @@ class car_manager_t {
 			point pb[8], pt[8]; // bottom and top sections
 			gen_car_pts(car, draw_top, pb, pt);
 
-			if (!shadow_only && dist_val < 0.05 && car_model_loader.is_model_valid(car.model_id)) {
-				if (occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
+			if (dist_val < 0.05 && car_model_loader.is_model_valid(car.model_id)) {
+				if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only);
 			}
@@ -2475,8 +2491,7 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 class city_smap_manager_t {
 public:
 	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
-		unsigned const max_smaps = 0;
-		unsigned const num_smaps(min(light_sources.size(), min(max_smaps, MAX_DLIGHT_SMAPS)));
+		unsigned const num_smaps(min(light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
 		dl_smap_enabled = 0;
 		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
 		sort_lights_by_dist_size(light_sources, cpos);
@@ -2550,8 +2565,11 @@ public:
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
 		bool const use_dlights(is_night());
+		bool const is_dlight_shadows(xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
-		if (!shadow_only)      {car_manager.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);} // cars don't cast shadows because they move
+		if (!shadow_only || (is_dlight_shadows && city_params.car_shadows)) { // cars don't cast sun/moon shadows because they move
+			car_manager.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);
+		}
 		// Note: buildings are drawn through draw_buildings()
 	}
 	cube_t setup_city_lights(vector3d const &xlate) {
@@ -2569,7 +2587,7 @@ public:
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
 		//cout << "dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
-		unsigned const max_dlights = 1024; // Note: should be <= the value used in upload_dlights_textures()
+		unsigned const max_dlights(min(1024U, city_params.max_lights)); // Note: should be <= the value used in upload_dlights_textures()
 
 		if (dl_sources.size() > max_dlights) {
 			if (dl_sources.size() > 4*max_dlights) { // too many lights, reduce light radius for next frame
