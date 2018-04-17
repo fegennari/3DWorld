@@ -315,6 +315,13 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
 		assert(mat_ret);
 	}
+	else if (layer_id <= 99) {
+		char str[19] = "smap_matrix_dl[??]";
+		str[15] = char('0' + (layer_id / 10));
+		str[16] = char('0' + (layer_id % 10));
+		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
+		assert(mat_ret);
+	}
 	else {
 		char str[20] = {0};
 		sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id

@@ -251,7 +251,7 @@ public:
 		shadow_only  = shadow_only_;
 		lights_bcube = lights_bcube_;
 		use_dlights  = (use_dlights_ && !shadow_only);
-		use_smap     = (!shadow_only && shadow_map_enabled());
+		use_smap     = (shadow_map_enabled() && !shadow_only);
 		if (!use_smap && !always_setup_shader) return;
 		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only));
 	}
@@ -604,7 +604,7 @@ struct road_isec_t : public cube_t {
 		if (num_conn == 2) return; // no stoplights
 		if (!dstate.check_cube_visible(*this, 0.2, shadow_only)) return; // dist_scale=0.2
 		point const center(get_cube_center() + dstate.xlate);
-		float const dist_val(p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
+		float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		vector3d const cview_dir(camera_pdu.pos - center);
 		float const sz(0.03*city_params.road_width), h(1.0*sz);
 
@@ -684,27 +684,33 @@ namespace streetlight_ns {
 			return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
 		}
 		void draw(shader_t &s, vector3d const &xlate, bool shadow_only) const { // Note: translate has already been applied as a transform
-			float const height(light_height*city_params.road_width), pradius(pole_radius*city_params.road_width), lradius(light_radius*city_params.road_width);
+			float const height(light_height*city_params.road_width);
 			point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
-			if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
 			if (shadow_only && !dist_less_than(camera_pdu.pos, center, camera_pdu.far_)) return;
-			float const dist_val(shadow_only ? 0.05 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
+			if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
+			float const dist_val(shadow_only ? 0.06 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 			if (dist_val > 0.2) return; // too far
 			if (!s.is_setup()) {s.begin_color_only_shader();} // likely only needed for shadow pass, could do better with this
+			float const pradius(pole_radius*city_params.road_width), lradius(light_radius*city_params.road_width);
 			int const ndiv(max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
 			point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
-			s.set_cur_color(pole_color);
+			if (!shadow_only) {s.set_cur_color(pole_color);}
 			draw_cylinder_at(pos, height, pradius, 0.7*pradius, min(ndiv, 24), 0); // vertical post, no ends
 			if (dist_val < 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
-			if (shadow_only && dist_less_than(camera_pdu.pos, (get_lpos() + xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
-			if (!is_night() && dist_val > 0.15) return; // too far
-			if (!shadow_only && is_night()) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
+			
+			if (shadow_only) {
+				if (dist_less_than(camera_pdu.pos, (get_lpos() + xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
+			}
+			else {
+				if (!is_night() && dist_val > 0.15) return; // too far
+				if (is_night()) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
+			}
 			fgPushMatrix();
 			translate_to(lpos);
 			scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
 			draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
 			fgPopMatrix();
-			if (is_night()) {s.clear_color_e();}
+			if (!shadow_only && is_night()) {s.clear_color_e();}
 		}
 		void add_dlight(vector3d const &xlate, cube_t &lights_bcube) const {
 			float const ldist(light_dist*city_params.road_width);
@@ -2499,11 +2505,11 @@ public:
 		
 		// FIXME: inefficient to recreate shadow maps every frame
 		for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
-			if (num_smaps && i->is_very_directional() /*&& !i->is_dynamic()*/) { // static spotlights (streetlights)
+			if (i->is_very_directional() /*&& !i->is_dynamic()*/) { // static spotlights (streetlights)
 				dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF); // see local_smap_manager_t, setup_and_bind_smap_texture(), local_smap_data_t
 				++num_used;
 			}
-		}
+		} // for i
 	}
 	void clear_all_smaps(vector<light_source> &light_sources) {
 		for (auto i = light_sources.begin(); i != light_sources.end(); ++i) {i->release_smap();}
