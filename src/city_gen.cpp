@@ -686,7 +686,7 @@ namespace streetlight_ns {
 		void draw(shader_t &s, vector3d const &xlate, bool shadow_only) const { // Note: translate has already been applied as a transform
 			float const height(light_height*city_params.road_width);
 			point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
-			if (shadow_only && !dist_less_than(camera_pdu.pos, center, camera_pdu.far_)) return;
+			if (shadow_only && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
 			if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
 			float const dist_val(shadow_only ? 0.06 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 			if (dist_val > 0.2) return; // too far
@@ -2289,7 +2289,7 @@ class car_manager_t {
 		}
 		void draw_car(car_t const &car, bool shadow_only) { // Note: all quads
 			if (shadow_only) {
-				if (!dist_less_than(camera_pdu.pos, car.get_center(), camera_pdu.far_)) return;
+				if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.7*camera_pdu.far_)) return;
 				cube_t bcube(car.bcube);
 				bcube.expand_by(0.1*car.height);
 				if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
