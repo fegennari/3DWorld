@@ -40,6 +40,7 @@ shadow_map_sz 4096
 #moon_rot 2.0
 ambient_scale 0.5
 
+fast_water_reflect 1
 #tiled_terrain_only 1
 read_landscape 1
 hmap_filter_width 1
