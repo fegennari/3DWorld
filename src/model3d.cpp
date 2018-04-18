@@ -1533,8 +1533,9 @@ void set_def_spec_map() {
 	if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 }
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-	int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm)
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
+	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
@@ -1556,15 +1557,16 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		if (is_normal_pass || !enable_alpha_mask) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask pass
 		if (is_normal_pass) {shader.clear_specular();}
 	}
-	bool check_lod(0);
+	bool check_lod(force_lod);
 	point center(all_zeros);
 	float max_area_per_tri(0.0);
+	float const lod_thresh(1.0E6*model_mat_lod_thresh*model_lod_mult);
 
 	if ((world_mode == WMODE_INF_TERRAIN || use_model_lod_blocks) && !is_shadow_pass) { // setup LOD/distance culling
 		point pts[2] = {bcube.get_llc(), bcube.get_urc()};
 		rot.rotate_point(pts[0], -1.0); rot.rotate_point(pts[1], -1.0);
 		cube_t const bcube_rot(pts[0], pts[1]);
-		check_lod = (!bcube_rot.contains_pt(camera_pdu.pos));
+		check_lod |= !bcube_rot.contains_pt(camera_pdu.pos);
 		if (check_lod) {center = bcube_rot.get_cube_center();}
 	}
 	if (check_lod) {
@@ -1579,7 +1581,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 
 			if (mat.is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(mat.use_bump_map())))) {
 				if (check_lod && mat.avg_area_per_tri > 0.0 && mat.avg_area_per_tri < max_area_per_tri) { // don't cull the material with the largest triangle area
-					if (p2p_dist(camera_pdu.pos, center) > 1.0E6*model_mat_lod_thresh*mat.avg_area_per_tri) continue; // LOD/distance culling
+					if ((fixed_lod_dist ? fixed_lod_dist : p2p_dist(camera_pdu.pos, center)) > lod_thresh*mat.avg_area_per_tri) continue; // LOD/dist culling
 				}
 				to_draw.push_back(make_pair(mat.draw_order_score, i));
 			}

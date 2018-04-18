@@ -2125,18 +2125,19 @@ colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, R
 struct car_model_t {
 	string fn;
 	int body_mat_id, fixed_color_id;
-	float xy_rot, dz; // xy_rot in degrees
-	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float rot=0.0, float dz_=0.0) : fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_) {}
+	float xy_rot, dz, lod_mult; // xy_rot in degrees
+	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float rot=0.0, float dz_=0.0, float lm=1.0) :
+		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm) {}
 };
 unsigned const NUM_CAR_MODELS = 6;
 
 car_model_t const car_model_files[NUM_CAR_MODELS] = {
-	car_model_t("../models/cars/sports_car/sportsCar.model3d",        22, -1, 90,  -0.02),
-	car_model_t("../models/cars/natla_car/natla_car.obj",             -1,  2, 90,   0.06), // always GRAY
-	car_model_t("../models/cars/speedCar/speedCar.obj",               -1,  6, 0,    0.12), // always DK_BLUE
-	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02),
-	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18), // always GRAY_BLACK
-	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08),
+	car_model_t("../models/cars/sports_car/sportsCar.model3d",        22, -1, 90,  -0.02, 1.0),
+	car_model_t("../models/cars/natla_car/natla_car.obj",             -1,  2, 90,   0.06, 0.5), // always GRAY
+	car_model_t("../models/cars/speedCar/speedCar.obj",               -1,  6, 0,    0.12, 0.5), // always DK_BLUE
+	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5),
+	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2), // always GRAY_BLACK
+	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 4.0),
 };
 
 class car_manager_t {
@@ -2200,9 +2201,11 @@ class car_manager_t {
 			fgRotate(90.0, 1.0, 0.0, 0.0);
 			uniform_scale(sz_scale);
 			translate_to(-bcube.get_cube_center()); // cancel out model local translate
+			auto const &unbound_mat(model.get_unbound_material());
 
 			for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
-				model.render_materials(s, is_shadow_pass, 0, 0, (sam_pass == 1), 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
+				model.render_materials(s, is_shadow_pass, 0, 0, (sam_pass == 1), 3, 3, unbound_mat, rotation_t(),
+					nullptr, nullptr, is_shadow_pass, model_file.lod_mult, (is_shadow_pass ? 10.0 : 0.0));
 			}
 			fgPopMatrix();
 			camera_pdu.valid = camera_pdu_valid;

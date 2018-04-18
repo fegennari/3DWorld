@@ -496,7 +496,8 @@ public:
 		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, unbound_mat, rotation_t(), xlate, mvm);
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-		int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm=nullptr);
+		int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate=nullptr, xform_matrix const *const mvm=nullptr,
+		bool force_lod=0, float model_lod_mult=1.0, float fixed_lod_dist=0.0);
 	void render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
 		int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask);
 	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
