@@ -2328,7 +2328,7 @@ class car_manager_t {
 				qbds[2].add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
 			}
 			if (dist_val > 0.3)  return; // to far - no lights to draw
-			if (car.is_parked()) return; // no lights when parked
+			if (shadow_only || car.is_parked()) return; // no lights when parked, or in shadow pass
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 
