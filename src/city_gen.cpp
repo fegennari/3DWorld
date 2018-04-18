@@ -2387,8 +2387,14 @@ class car_manager_t {
 		}
 	}; // car_draw_state_t
 
+	struct car_block_t {
+		unsigned start, cur_city;
+		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c) {}
+	};
+
 	city_road_gen_t const &road_gen;
 	vector<car_t> cars;
+	vector<car_block_t> car_blocks;
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
 	vector<unsigned> entering_city;
@@ -2433,15 +2439,19 @@ public:
 		//timer_t timer("Update Cars"); // 10K cars = 1.7ms / 2K cars = 0.2ms
 		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
+		car_blocks.clear();
 		float const speed(0.001*car_speed*fticks);
 		//unsigned num_on_conn_road(0);
 		
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
+			if (car_blocks.empty() || i->cur_city != car_blocks.back().cur_city) {car_blocks.emplace_back((i - cars.begin()), i->cur_city);}
 			if (i->is_parked()) continue; // no update for parked cars
 			i->move(speed);
 			if (i->entering_city) {entering_city.push_back(i - cars.begin());} // record for use in collision detection
 			if (!i->stopped_at_light && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		}
+		car_blocks.emplace_back(cars.size(), 0); // add terminator
+
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			if (i->is_parked()) continue; // no collisions for parked cars
 			bool const on_conn_road(i->cur_city == CONN_CITY_IX);
@@ -2470,19 +2480,12 @@ public:
 			fgPushMatrix();
 			translate_to(xlate);
 			dstate.pre_draw(xlate, lights_bcube, use_dlights, shadow_only);
-			int cur_city(-1);
-			
-			for (auto i = cars.begin(); i != cars.end(); ++i) {
-				if (i->cur_city != cur_city) { // new city
-					cur_city = i->cur_city;
-					cube_t const &city_bcube(road_gen.get_city_bcube(i->cur_city));
-					
-					if (!camera_pdu.cube_visible(city_bcube + xlate)) { // city not visible - skip all cars in this city
-						for (; i < cars.end() && i->cur_city == cur_city; ++i) {}
-						if (i == cars.end()) break;
-					}
-				}
-				dstate.draw_car(*i, shadow_only);
+
+			for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+				if (!camera_pdu.cube_visible(road_gen.get_city_bcube(cb->cur_city) + xlate)) continue; // city not visible - skip
+				unsigned const end((cb+1)->start);
+				assert(end <= cars.size());
+				for (unsigned c = cb->start; c != end; ++c) {dstate.draw_car(cars[c], shadow_only);}
 			}
 			dstate.post_draw();
 			fgPopMatrix();
