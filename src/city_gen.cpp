@@ -2295,7 +2295,7 @@ class car_manager_t {
 		}
 		void draw_car(car_t const &car, bool shadow_only) { // Note: all quads
 			if (shadow_only) {
-				if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.7*camera_pdu.far_)) return;
+				if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.6*camera_pdu.far_)) return;
 				cube_t bcube(car.bcube);
 				bcube.expand_by(0.1*car.height);
 				if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
