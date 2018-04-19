@@ -200,7 +200,10 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 
 void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 
-	if (draw_uw) {draw_bubbles();}
+	if (draw_uw) {
+		draw_bubbles();
+		draw_underwater_particles();
+	}
 	else { // camera above water
 		draw_splashes();
 		draw_snow();
@@ -1174,6 +1177,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (show_lightning) {end_tiled_terrain_lightning();}
 	if (!underwater) {draw_tiled_terrain_clouds(0);}
 	if (!underwater) {draw_local_precipitation();}
+	if ( underwater) {draw_underwater_particles();}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	draw_game_elements(timer1);
 	if (camera_surf_collide) {play_camera_footstep_sound();}

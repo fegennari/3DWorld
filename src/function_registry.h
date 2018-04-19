@@ -277,6 +277,7 @@ void setup_tile_shader_shadow_map(shader_t &s);
 
 // function prototypes - precipitation
 void draw_local_precipitation(bool no_update=0);
+void draw_underwater_particles();
 
 // function prototypes - map_view
 void draw_overhead_map();

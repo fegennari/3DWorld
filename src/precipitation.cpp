@@ -242,3 +242,9 @@ void draw_local_precipitation(bool no_update) {
 	}
 }
 
+
+void draw_underwater_particles() {
+
+	// WRITE
+}
+
