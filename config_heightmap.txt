@@ -32,8 +32,8 @@ use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 
 city max_lights 1024
-city max_shadow_maps 0
-city car_shadows 0
+city max_shadow_maps 40
+city car_shadows 1
 shadow_map_sz 4096
 
 #sun_rot 2.0
