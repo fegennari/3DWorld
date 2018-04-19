@@ -2129,15 +2129,20 @@ struct car_model_t {
 	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float rot=0.0, float dz_=0.0, float lm=1.0) :
 		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm) {}
 };
-unsigned const NUM_CAR_MODELS = 6;
+unsigned const NUM_CAR_MODELS = 10;
 
-car_model_t const car_model_files[NUM_CAR_MODELS] = {
+car_model_t const car_model_files[NUM_CAR_MODELS] = { // filename, body_material_id, fixed_color_id, xy_rot_angle, delta_z, lod_mult
 	car_model_t("../models/cars/sports_car/sportsCar.model3d",        22, -1, 90,  -0.02, 1.0),
 	car_model_t("../models/cars/natla_car/natla_car.obj",             -1,  2, 90,   0.06, 0.5), // always GRAY
 	car_model_t("../models/cars/speedCar/speedCar.obj",               -1,  6, 0,    0.12, 0.5), // always DK_BLUE
 	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5),
 	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2), // always GRAY_BLACK
 	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 4.0),
+	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.obj",      0, -1, 180,  1.00, 0.5),
+	car_model_t("../models/cars/Rio/rio.obj",                          5, -1, 270,  4.00, 0.5),
+	car_model_t("../models/cars/Soarer/soarer.obj",                    2, -1, 90,  2.00, 0.5),
+	car_model_t("../models/cars/Camaro/camaro2.obj",                  -1,  4,  90,  0.10, 0.5), // always red - TODO: figure out what material ID the body is
+	//car_model_t("../models/cars/Bentley/Bentley.obj",                  1, -1, 90,  0.50, 0.5),
 };
 
 class car_manager_t {
@@ -2183,6 +2188,7 @@ class car_manager_t {
 			if (!is_shadow_pass && model_file.body_mat_id >= 0) { // use custom color for body material
 				material_t &body_mat(model.get_material(model_file.body_mat_id));
 				body_mat.ka = body_mat.kd = color;
+				//if (model_id == 5) {cout << body_mat.name << endl;}
 			}
 			model.bind_all_used_tids();
 			cube_t const &bcube(model.get_bcube());
