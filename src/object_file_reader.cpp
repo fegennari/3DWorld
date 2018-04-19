@@ -535,7 +535,7 @@ public:
 		tc.push_back(point2d<float>(0.0, 0.0)); // default tex coords
 		n.push_back(zero_vector); // default normal
 		unsigned approx_line(0);
-		bool is_textured(0);
+		bool is_textured(0), had_npts_error(0);
 
 		while (read_string(s, MAX_CHARS)) {
 			++approx_line;
@@ -561,7 +561,7 @@ public:
 				poly_data_block &pb(pblocks.back());
 				pb.polys.push_back(poly_header_t(cur_mat_id, obj_group_id));
 				unsigned &npts(pb.polys.back().npts);
-				unsigned const pix((unsigned)pb.pts.size());
+				unsigned const pix((unsigned)pb.pts.size()), pts_start(pb.pts.size());
 				int vix(0), tix(0), nix(0);
 
 				while (read_int(vix)) { // read vertex index
@@ -588,7 +588,12 @@ public:
 					pb.pts.push_back(vntc_ix);
 					++npts;
 				} // end while vertex
-				assert(npts >= 3);
+				if (npts < 3) {
+					if (!had_npts_error) {cerr << "Error near line " << approx_line << ": face has only " << npts << " vertices." << endl; had_npts_error = 1;}
+					pb.pts.resize(pts_start);
+					pb.polys.pop_back(); // remove pts and polygon
+					continue; // skip it
+				}
 				vector3d &normal(pb.polys.back().n);
 				
 				for (unsigned i = pix; i < pix+npts-2; ++i) { // find a nonzero normal
