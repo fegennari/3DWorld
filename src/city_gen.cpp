@@ -2138,11 +2138,11 @@ car_model_t const car_model_files[NUM_CAR_MODELS] = { // filename, body_material
 	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5),
 	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2), // always GRAY_BLACK
 	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 4.0),
-	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.obj",      0, -1, 180,  1.00, 0.5),
-	car_model_t("../models/cars/Rio/rio.obj",                          5, -1, 270,  4.00, 0.5),
-	car_model_t("../models/cars/Soarer/soarer.obj",                    2, -1, 90,  2.00, 0.5),
-	car_model_t("../models/cars/Camaro/camaro2.obj",                  -1,  4,  90,  0.10, 0.5), // always red - TODO: figure out what material ID the body is
-	//car_model_t("../models/cars/Bentley/Bentley.obj",                  1, -1, 90,  0.50, 0.5),
+	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.model3d",  0, -1, 180,  1.00, 0.5),
+	car_model_t("../models/cars/Rio/rio.model3d",                      5, -1, 270,  4.00, 0.5),
+	car_model_t("../models/cars/Soarer/soarer.model3d",                2, -1, 90,   2.00, 0.5),
+	car_model_t("../models/cars/Camaro/camaro2.model3d",              24, -1, 90,   0.10, 0.5),
+	//car_model_t("../models/cars/Bentley/Bentley.model3d",              1, -1, 90,   0.50, 0.5),
 };
 
 class car_manager_t {
