@@ -1601,6 +1601,11 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 }
 
+void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate) {
+	assert(mat_id < materials.size());
+	materials[mat_id].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, xlate);
+}
+
 
 bool geom_xform_t::operator==(geom_xform_t const &x) const {
 	if (tv != x.tv || scale != x.scale) return 0;

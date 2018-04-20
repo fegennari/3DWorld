@@ -2126,23 +2126,25 @@ struct car_model_t {
 	string fn;
 	int body_mat_id, fixed_color_id;
 	float xy_rot, dz, lod_mult; // xy_rot in degrees
-	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float rot=0.0, float dz_=0.0, float lm=1.0) :
-		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm) {}
+	vector<unsigned> shadow_mat_ids;
+	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float rot=0.0, float dz_=0.0, float lm=1.0, vector<unsigned> const &smids=vector<unsigned>()) :
+		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm), shadow_mat_ids(smids) {}
 };
 unsigned const NUM_CAR_MODELS = 10;
+int      const FORCE_MODEL_ID = -1; // -1 disables
 
 car_model_t const car_model_files[NUM_CAR_MODELS] = { // filename, body_material_id, fixed_color_id, xy_rot_angle, delta_z, lod_mult
-	car_model_t("../models/cars/sports_car/sportsCar.model3d",        22, -1, 90,  -0.02, 1.0),
-	car_model_t("../models/cars/natla_car/natla_car.obj",             -1,  2, 90,   0.06, 0.5), // always GRAY
-	car_model_t("../models/cars/speedCar/speedCar.obj",               -1,  6, 0,    0.12, 0.5), // always DK_BLUE
-	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5),
-	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2), // always GRAY_BLACK
-	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 4.0),
-	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.model3d",  0, -1, 180,  1.00, 0.5),
-	car_model_t("../models/cars/Rio/rio.model3d",                      5, -1, 270,  4.00, 0.5),
-	car_model_t("../models/cars/Soarer/soarer.model3d",                2, -1, 90,   2.00, 0.5),
-	car_model_t("../models/cars/Camaro/camaro2.model3d",              24, -1, 90,   0.10, 0.5),
-	//car_model_t("../models/cars/Bentley/Bentley.model3d",              1, -1, 90,   0.50, 0.5),
+	car_model_t("../models/cars/sports_car/sportsCar.model3d",        22, -1, 90,  -0.02, 1.0, {20, 22}),
+	car_model_t("../models/cars/natla_car/natla_car.obj",             -1,  2, 90,   0.06, 0.5, {1}), // always GRAY
+	car_model_t("../models/cars/speedCar/speedCar.obj",               -1,  6, 0,    0.12, 0.5, {4, 5}), // always DK_BLUE
+	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5, {2, 3}),
+	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2, {0}), // always GRAY_BLACK
+	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 4.0, {0, 4}), // Note: underside disabled for shadows, model is already too many triangles
+	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.model3d",  0, -1, 180,  1.00, 0.5, {0, 6}),
+	car_model_t("../models/cars/Rio/rio.model3d",                      5, -1, 270,  4.00, 0.5, {1, 5}), // Note: shadow material 1 may be optional
+	car_model_t("../models/cars/Soarer/soarer.model3d",                2, -1, 90,   2.00, 0.5, {2, 5}),
+	car_model_t("../models/cars/Camaro/camaro2.model3d",              24, -1, 90,   0.10, 0.5, {9, 24}),
+	//car_model_t("../models/cars/Bentley/Bentley.model3d",              1, -1, 90,   0.50, 0.5, {1}),
 };
 
 class car_manager_t {
@@ -2207,11 +2209,17 @@ class car_manager_t {
 			fgRotate(90.0, 1.0, 0.0, 0.0);
 			uniform_scale(sz_scale);
 			translate_to(-bcube.get_cube_center()); // cancel out model local translate
-			auto const &unbound_mat(model.get_unbound_material());
 
-			for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
-				model.render_materials(s, is_shadow_pass, 0, 0, (sam_pass == 1), 3, 3, unbound_mat, rotation_t(),
-					nullptr, nullptr, is_shadow_pass, model_file.lod_mult, (is_shadow_pass ? 10.0 : 0.0));
+			if (is_shadow_pass && !model_file.shadow_mat_ids.empty()) {
+				for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass);}
+			}
+			else {
+				auto const &unbound_mat(model.get_unbound_material());
+
+				for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
+					model.render_materials(s, is_shadow_pass, 0, 0, (sam_pass == 1), 3, 3, unbound_mat, rotation_t(),
+						nullptr, nullptr, is_shadow_pass, model_file.lod_mult, (is_shadow_pass ? 10.0 : 0.0));
+				}
 			}
 			fgPopMatrix();
 			camera_pdu.valid = camera_pdu_valid;
@@ -2435,8 +2443,9 @@ public:
 			int fixed_color(-1);
 
 			if (num_models > 0) {
-				i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);
-				fixed_color  = car_model_loader.get_model(i->model_id).fixed_color_id;
+				if (FORCE_MODEL_ID >= 0) {i->model_id = FORCE_MODEL_ID;}
+				else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
+				fixed_color = car_model_loader.get_model(i->model_id).fixed_color_id;
 			}
 			i->color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
 			assert(i->is_valid());
