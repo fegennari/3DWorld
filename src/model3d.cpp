@@ -1427,7 +1427,9 @@ int model3d::find_material(string const &material_name) {
 
 	if (it == mat_map.end()) {
 		if (undef_materials.find(material_name) == undef_materials.end()) {
-			cerr << "Error: Material " << material_name << " not found in any included material libraries" << endl;
+			if (material_name != "null" && material_name != "<null>") {
+				cerr << "Error: Material " << material_name << " not found in any included material libraries" << endl;
+			}
 			undef_materials.insert(material_name);
 		}
 		return -1; // return -1 on failure
