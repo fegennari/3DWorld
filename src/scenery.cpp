@@ -1262,7 +1262,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				if (!check_valid_scenery_pos(surface_rocks.back())) {surface_rocks.pop_back(); continue;}
 				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
-			else if (USE_VOXEL_ROCKS == 1 || (USE_VOXEL_ROCKS == 2 && !veg) && val < 35) {
+			else if (USE_VOXEL_ROCKS == 1 || (USE_VOXEL_ROCKS == 2 && vegetation == 0.0) && val < 35) {
 				voxel_rocks.push_back(voxel_rock());
 				voxel_rocks.back().create(j, i, 1);
 				if (!check_valid_scenery_pos(voxel_rocks.back())) {voxel_rocks.pop_back(); continue;}
