@@ -8,12 +8,13 @@ Load/display model3d models in tiled terrain mode
 	- Shadows between different models
 
 TT Projectile and object collision detection
-Place mapx objects (weapons, ammo, powerups)
-Smiley capes - cloth simulation?
 Top-down approximation for sky lighting, similar to rain/snow map
+Slower/closer planet approach in universe mode
 
 Cities:
-- Trucks and other vehicles
+- Trucks and other vehicles of different sizes
 - Car collisions in intersections when both turning
-- Car shadows
+- Wider connector roads/intersections
+- Lights in city windows at night
+- Windows in brick/block buildings
 
