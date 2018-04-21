@@ -19,6 +19,7 @@ unsigned const VOX_ROCK_NUM_LOD = 1;
 unsigned const NUM_VROCK_MODELS = 100;
 float    const SHADOW_VAL       = 0.5;
 float    const PT_LINE_THRESH   = 800.0;
+float    const LEAFY_PLANT_WIND = 0.25; // less wind than regular plants
 
 
 colorRGBA const stem_c(0.4, 0.6, 0.2, 1.0);
@@ -899,7 +900,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, 0.5*(height + radius), pos2)) return;
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
-	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
+	float const wind_scale(berries.empty() ? (is_water_plant ? 5.0 : 1.0) : 0.0); // no wind if this plant type has berries
 	bool const set_color(!shadow_only && (is_water_plant || burn_amt > 0.0));
 	if (set_color) {state.set_color_scale(s, get_plant_color(xlate));}
 	if (shadowed) {state.set_normal_scale(s, 0.0);}
@@ -1023,12 +1024,15 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	(shadow_only ? WHITE : get_plant_color(xlate)).set_for_cur_shader(); // no underwater case yet
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
+	bool const is_underwater(pos.z < water_plane_z);
 	select_texture(get_tid());
 	assert(vbo_mgr_ix >= 0);
 	if (delta_z != 0.0) {fgPushMatrix(); fgTranslate(0, 0, delta_z);} // not the cleanest or most efficient solution, but much simpler than updating the VBO data
 	if (motion_amt > 0.0) {state.set_wind_add(s, 0.005*motion_amt);}
+	if (is_underwater) {state.set_wind_scale(s, 5.0*LEAFY_PLANT_WIND);}
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 	if (motion_amt > 0.0) {state.set_wind_add(s, 0.0);} // restore orig value
+	if (is_underwater) {state.set_wind_scale(s, LEAFY_PLANT_WIND);}
 	if (delta_z != 0.0) {fgPopMatrix();}
 }
 
@@ -1329,7 +1333,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		plant_vbo_manager.end_render();
 	}
 	if (!leafy_plants.empty()) {
-		state.set_wind_scale(s, 0.25); // less wind
+		state.set_wind_scale(s, LEAFY_PLANT_WIND);
 		s.add_uniform_float("tex_coord_weight", 2.0); // using tex coords, not texgen from vert ID
 		leafy_vbo_manager.upload();
 		leafy_vbo_manager.begin_render();
