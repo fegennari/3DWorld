@@ -2342,6 +2342,11 @@ class car_manager_t {
 					v   += center;
 					v.z += 0.02*car.height; // shift up slightly to avoid z-fighting
 				}
+				/*if (!is_night()) { // daytime, adjust shadow to match sun pos
+					vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
+					vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
+					for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
+				}*/
 				qbds[2].add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
 			}
 			if (dist_val > 0.3)  return; // to far - no lights to draw
