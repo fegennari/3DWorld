@@ -9,6 +9,7 @@ disable_universe 1
 read_landscape 1
 read_heightmap 0
 ground_effects_level 0
+inf_terrain_scenery 0
 
 gravity 1.0
 mesh_height 1.0
