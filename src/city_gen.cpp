@@ -272,8 +272,11 @@ public:
 	}
 	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0, bool shadow_only=0) const {
 		cube_t const bcx(bc + xlate);
-		float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
-		if (!dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dmax)) return 0;
+
+		if (dist_scale > 0.0) {
+			float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
+			if (!dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dmax)) return 0;
+		}
 		return camera_pdu.cube_visible(bcx);
 	}
 	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {
@@ -2301,14 +2304,14 @@ class car_manager_t {
 				if (include_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
 			}
 		}
-		void draw_car(car_t const &car, bool shadow_only) { // Note: all quads
-			if (shadow_only) {
+		void draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
+			if (is_dlight_shadows) {
 				if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.6*camera_pdu.far_)) return;
 				cube_t bcube(car.bcube);
 				bcube.expand_by(0.1*car.height);
 				if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
 			}
-			if (!check_cube_visible(car.bcube, 0.75)) return; // dist_scale=0.75
+			if (!check_cube_visible(car.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
 			point const center(car.get_center());
 			begin_tile(center); // enable shadows
 			assert(car.color_id < NUM_CAR_COLORS);
@@ -2319,7 +2322,7 @@ class car_manager_t {
 			point pb[8], pt[8]; // bottom and top sections
 			gen_car_pts(car, draw_top, pb, pt);
 
-			if (dist_val < 0.05 && car_model_loader.is_model_valid(car.model_id)) {
+			if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
 				if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only);
@@ -2498,6 +2501,9 @@ public:
 		if (cars.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
+			bool const is_dlight_shadows(shadow_only && xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
+			if (is_dlight_shadows && !city_params.car_shadows) return;
+			bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
 			//timer_t timer("Draw Cars"); // 10K cars = 1.5ms / 2K cars = 0.33ms
 			dstate.xlate = xlate;
 			fgPushMatrix();
@@ -2508,8 +2514,12 @@ public:
 				if (!camera_pdu.cube_visible(road_gen.get_city_bcube(cb->cur_city) + xlate)) continue; // city not visible - skip
 				unsigned const end((cb+1)->start);
 				assert(end <= cars.size());
-				for (unsigned c = cb->start; c != end; ++c) {dstate.draw_car(cars[c], shadow_only);}
-			}
+				
+				for (unsigned c = cb->start; c != end; ++c) {
+					if (only_parked && !cars[c].is_parked()) continue; // skip non-parked cars
+					dstate.draw_car(cars[c], shadow_only, is_dlight_shadows);
+				}
+			} // for cb
 			dstate.post_draw();
 			fgPopMatrix();
 		}
@@ -2614,11 +2624,8 @@ public:
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
 		bool const use_dlights(is_night());
-		bool const is_dlight_shadows(xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
-		if (!shadow_only || (is_dlight_shadows && city_params.car_shadows)) { // cars don't cast sun/moon shadows because they move
-			car_manager.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);
-		}
+		car_manager.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);
 		// Note: buildings are drawn through draw_buildings()
 	}
 	cube_t setup_city_lights(vector3d const &xlate) {
