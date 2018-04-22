@@ -202,7 +202,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 
 	if (draw_uw) {
 		draw_bubbles();
-		draw_underwater_particles();
+		if (underwater) {draw_underwater_particles(min(zmin, zbottom));}
 	}
 	else { // camera above water
 		draw_splashes();
@@ -1177,7 +1177,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (show_lightning) {end_tiled_terrain_lightning();}
 	if (!underwater) {draw_tiled_terrain_clouds(0);}
 	if (!underwater) {draw_local_precipitation();}
-	if ( underwater) {draw_underwater_particles();}
+	if ( underwater) {draw_underwater_particles(terrain_zmin);}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	draw_game_elements(timer1);
 	if (camera_surf_collide) {play_camera_footstep_sound();}

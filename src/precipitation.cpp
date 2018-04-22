@@ -8,7 +8,8 @@
 #include "mesh.h"
 
 
-float const TT_PRECIP_DIST = 20.0;
+float const TT_PRECIP_DIST  = 20.0;
+float const WATER_PART_DIST = 1.0;
 
 extern bool begin_motion;
 extern int animate2, display_mode, camera_coll_id, precip_mode, DISABLE_WATER;
@@ -24,21 +25,25 @@ protected:
 	vector<vert_type_t> verts;
 	rand_gen_t rgen;
 	float prev_zmin, cur_zmin, prev_zmax, cur_zmax, precip_dist;
+	bool check_water_coll, check_mesh_coll, check_cobj_coll;
 
 public:
-	precip_manager_t() : prev_zmin(get_zmin()), cur_zmin(prev_zmin), prev_zmax(get_zmax()), cur_zmax(prev_zmax) {}
+	precip_manager_t() : prev_zmin(get_zmin()), cur_zmin(prev_zmin), prev_zmax(get_zmax()), cur_zmax(prev_zmax),
+		check_water_coll(1), check_mesh_coll(1), check_cobj_coll(1) {}
+	virtual ~precip_manager_t() {}
 	void clear () {verts.clear();}
 	bool empty () const {return verts.empty();}
 	size_t size() const {return verts.size();}
-	float get_zmin() const {return ((world_mode == WMODE_GROUND) ? zbottom : get_tiled_terrain_water_level());}
-	float get_zmax() const {return get_cloud_zmax();}
-	size_t get_num_precip() {return 700*get_precip_rate();} // similar to precip max objects
+	virtual float get_zmin() const {return ((world_mode == WMODE_GROUND) ? zbottom : get_tiled_terrain_water_level());}
+	virtual float get_zmax() const {return get_cloud_zmax();}
+	virtual size_t get_num_precip() {return 700*get_precip_rate();} // similar to precip max objects
 	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), precip_dist);}
 	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
 	
 	void pre_update() {
 		cur_zmin = get_zmin();
 		cur_zmax = get_zmax();
+		if (cur_zmin >= cur_zmax) {clear(); return;} // invalid range (water particles with no water?)
 
 		// if zmin or zmax changes by more than some amount, then clear and regen point z-values so that rain/snow stays uniformly spaced in z
 		if (fabs(prev_zmin - cur_zmin) > 0.05*(get_zmax() - cur_zmin) || fabs(prev_zmax - cur_zmax) > 0.25*(get_zmax() - cur_zmin)) {
@@ -77,15 +82,15 @@ public:
 		int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
 		if (point_outside_mesh(x, y))   return 1;
 			
-		if (!DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
+		if (check_water_coll && !DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
 			if (splashes != nullptr && (rgen.rand() & 1)) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], *splashes, x, y, 1);} // 50% of the time
 			return 0;
 		}
-		else if (pos.z < mesh_height[y][x]) { // mesh collision
+		else if (check_mesh_coll && pos.z < mesh_height[y][x]) { // mesh collision
 			if (splashes != nullptr) {maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], *splashes, x, y, 0);} // line_intersect_mesh(pos, bot_pos, cpos);
 			return 0;
 		}
-		else if (bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
+		else if (check_cobj_coll && bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
 			if (splashes != nullptr && check_splash_dist(bot_pos)) {
 				point cpos;
 				vector3d cnorm;
@@ -213,9 +218,56 @@ public:
 		}
 		gen_draw_data();
 	}
-	void render() const {
+	void render() const {psd.draw(WHITE_TEX, 1.0);} // unblended pixels
+	void clear() {precip_manager_t<1>::clear(); psd.clear();}
+};
+
+
+class uw_particle_manager_t : public precip_manager_t<1> { // underwater particles
+	float terrain_zmin;
+	point_sprite_drawer psd;
+	vector<vector3d> velocity;
+
+	void gen_draw_data() {
+		psd.clear();
+		psd.reserve_pts(size());
+		float const cscale(1.0/WATER_PART_DIST);
+		point const camera(get_camera_pos());
+		colorRGBA base_color(WHITE);
+		water_color_atten_at_pos(base_color, camera);
+
+		for (vector<vert_type_t>::iterator i = verts.begin(); i != verts.end(); ++i) {
+			colorRGBA color(base_color);
+			color.A -= cscale*p2p_dist(camera, i->v);
+			if (color.A <= 0.0) {i->v = gen_pt(i->v.z); continue;} // note: should be in check_pos()
+			psd.add_pt(vert_color(i->v, color));
+		}
+	}
+	virtual float get_zmin() const  {return max(terrain_zmin,  (get_camera_pos().z - WATER_PART_DIST));}
+	virtual float get_zmax() const  {return min(water_plane_z, (get_camera_pos().z + WATER_PART_DIST));}
+	virtual size_t get_num_precip() {return 150*get_precip_rate();}
+public:
+	uw_particle_manager_t() : terrain_zmin(0.0) {check_water_coll = 0;}
+
+	void update(float terrain_zmin_) {
+		terrain_zmin = terrain_zmin_;
+		pre_update();
+		precip_dist = WATER_PART_DIST;
+		unsigned const vsz(velocity.size());
+		velocity.resize(verts.size());
+		for (unsigned i = vsz; i < velocity.size(); ++i) {velocity[i] = rgen.signed_rand_vector(0.0002);} // generate velocities if needed
+
+		for (unsigned i = 0; i < verts.size(); ++i) {
+			check_pos(verts[i].v, verts[i].v);
+			if (animate2) {verts[i].v += fticks*velocity[i];}
+		}
+		gen_draw_data();
+	}
+	void render() const { // partially transparent
 		if (empty()) return;
-		psd.draw(WHITE_TEX, 1.0); // unblended pixels
+		enable_blend();
+		psd.draw(BLUR_TEX, 2.0);
+		disable_blend();
 	}
 	void clear() {precip_manager_t<1>::clear(); psd.clear();}
 };
@@ -223,6 +275,7 @@ public:
 
 rain_manager_t rain_manager;
 snow_manager_t snow_manager;
+uw_particle_manager_t uw_part_manager;
 
 
 void draw_local_precipitation(bool no_update) {
@@ -243,8 +296,11 @@ void draw_local_precipitation(bool no_update) {
 }
 
 
-void draw_underwater_particles() {
+void draw_underwater_particles(float terrain_zmin) {
 
-	// WRITE
+	if (temperature <= W_FREEZE_POINT) {uw_part_manager.clear(); return;} // frozen, no particles
+	//timer_t timer("UW Particles");
+	uw_part_manager.update(terrain_zmin);
+	uw_part_manager.render();
 }
 
