@@ -2146,7 +2146,7 @@ car_model_t const car_model_files[NUM_CAR_MODELS] = { // filename, body_material
 	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.model3d",  0, -1, 180,  1.00, 0.5, {0, 6, 7}),
 	car_model_t("../models/cars/Rio/rio.model3d",                      5, -1, 270,  4.00, 0.5, {1, 5}), // Note: shadow material 1 may be optional
 	car_model_t("../models/cars/Soarer/soarer.model3d",                2, -1, 90,   2.00, 0.5, {2, 5, 8}),
-	car_model_t("../models/cars/Camaro/camaro2.model3d",              24, -1, 90,   0.10, 0.5, {9, 24}),
+	car_model_t("../models/cars/Camaro/camaro2.model3d",              24, -1, 90,   0.10, 0.5, {9, 21, 24}),
 	//car_model_t("../models/cars/Bentley/Bentley.model3d",              1, -1, 90,   0.50, 0.5, {1}),
 };
 
@@ -2182,7 +2182,9 @@ class car_manager_t {
 				}
 			} // for i
 		}
-		void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color, point const &xlate, unsigned model_id, bool is_shadow_pass=0) {
+		void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color, point const &xlate,
+			unsigned model_id, bool is_shadow_pass, bool low_detail)
+		{
 			ensure_models_loaded();
 			assert(size() == num_models());
 			assert(model_id < size());
@@ -2213,7 +2215,7 @@ class car_manager_t {
 			uniform_scale(sz_scale);
 			translate_to(-bcube.get_cube_center()); // cancel out model local translate
 
-			if (is_shadow_pass && !model_file.shadow_mat_ids.empty()) {
+			if ((low_detail || is_shadow_pass) && !model_file.shadow_mat_ids.empty()) {
 				for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass);}
 			}
 			else {
@@ -2325,7 +2327,7 @@ class car_manager_t {
 			if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
 				if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only);
+				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
