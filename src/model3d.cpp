@@ -298,13 +298,16 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 	if (!empty()) {ensure_bounding_volumes();}
 	if (indices.empty() || finalized) return; // nothing to do
 
-	bool const do_simplify = 0; // TESTING, maybe this doesn't really go here
-	if (do_simplify && npts == 3) {
-		for (unsigned n = 0; n < 1; ++n) {
+	unsigned const simplify_steps = 0; // TESTING, maybe this doesn't really go here
+	if (simplify_steps > 0 && npts == 3) { // Note: triangles only
+		cout << "*** SIMPLIFY: input=" << indices.size() << " ";
+		for (unsigned n = 0; n < simplify_steps; ++n) {
 			vector<unsigned> v;
 			simplify(v, 0.5);
+			if (v.size() == indices.size()) break; // no change, done
 			indices.swap(v);
 		}
+		cout << " output=" << indices.size() << endl;
 	}
 	finalized = 1;
 	assert((num_verts() % npts) == 0); // triangles or quads
