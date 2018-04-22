@@ -2137,12 +2137,12 @@ car_model_t const car_model_files[NUM_CAR_MODELS] = { // filename, body_material
 	car_model_t("../models/cars/sports_car/sportsCar.model3d",        22, -1, 90,  -0.02, 1.0, {20, 22}),
 	car_model_t("../models/cars/natla_car/natla_car.obj",             -1,  2, 90,   0.06, 0.5, {1}), // always GRAY
 	car_model_t("../models/cars/speedCar/speedCar.obj",               -1,  6, 0,    0.12, 0.5, {4, 5}), // always DK_BLUE
-	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5, {2, 3}),
-	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2, {0}), // always GRAY_BLACK
-	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 4.0, {0, 4}), // Note: underside disabled for shadows, model is already too many triangles
-	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.model3d",  0, -1, 180,  1.00, 0.5, {0, 6}),
+	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5, {2, 3, 4}),
+	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2, {0, 1}), // always GRAY_BLACK
+	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 2.0, {0, 4}), // Note: underside disabled for shadows, model is already too many triangles
+	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.model3d",  0, -1, 180,  1.00, 0.5, {0, 6, 7}),
 	car_model_t("../models/cars/Rio/rio.model3d",                      5, -1, 270,  4.00, 0.5, {1, 5}), // Note: shadow material 1 may be optional
-	car_model_t("../models/cars/Soarer/soarer.model3d",                2, -1, 90,   2.00, 0.5, {2, 5}),
+	car_model_t("../models/cars/Soarer/soarer.model3d",                2, -1, 90,   2.00, 0.5, {2, 5, 8}),
 	car_model_t("../models/cars/Camaro/camaro2.model3d",              24, -1, 90,   0.10, 0.5, {9, 24}),
 	//car_model_t("../models/cars/Bentley/Bentley.model3d",              1, -1, 90,   0.50, 0.5, {1}),
 };
