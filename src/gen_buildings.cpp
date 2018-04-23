@@ -1308,7 +1308,7 @@ unsigned const grid_sz = 32;
 class building_creator_t {
 
 	vector3d range_sz, range_sz_inv, max_extent;
-	cube_t range;
+	cube_t range, buildings_bcube;
 	rand_gen_t rgen;
 	vector<building_t> buildings;
 
@@ -1477,6 +1477,7 @@ public:
 				vector3d const sz(b.bcube.get_size());
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
 				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
+				if (buildings.empty()) {buildings_bcube = b.bcube;} else {buildings_bcube.union_with_cube(b.bcube);}
 				buildings.push_back(b);
 				break; // done
 			} // for n
@@ -1532,6 +1533,7 @@ public:
 
 	void draw(bool shadow_only, vector3d const &xlate, cube_t const &lights_bcube) const {
 		if (empty()) return;
+		if (!camera_pdu.cube_visible(buildings_bcube + xlate)) return; // no buildings visible
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 1.7ms, 2.3ms with shadow maps, 2.8ms with AO, 3.3s with rotations (currently 2.5)
 		float const far_clip(get_inf_terrain_fog_dist());
 		point const camera(get_camera_pos());
