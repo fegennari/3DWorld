@@ -1943,7 +1943,7 @@ void tile_draw_t::clear(bool no_regen_buildings) {
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
 	tiles.clear();
-	if (!no_regen_buildings) {buildings_valid = 0;}
+	if (!no_regen_buildings && !have_cities()) {buildings_valid = 0;} // can't regenerate buildings after cities and cars have been placed
 }
 
 void tile_draw_t::insert_tile(tile_t *tile) {

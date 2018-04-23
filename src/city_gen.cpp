@@ -972,7 +972,8 @@ class city_road_gen_t {
 		template<> void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
 		
 		template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
-			assert(rp.s <= rp.e && rp.e <= v.size());
+			assert(rp.s <= rp.e);
+			assert(rp.e <= v.size());
 			assert(type_ix < NUM_RD_TYPES);
 			colorRGBA const color(road_colors[type_ix]);
 			
@@ -1179,8 +1180,9 @@ class city_road_gen_t {
 			segs.clear();
 			plots.clear();
 			for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
-			tile_blocks.clear();
+			streetlights.clear();
 			parking_lot_mgr.clear();
+			tile_blocks.clear();
 		}
 		bool gen_road_grid(float road_width, float road_spacing) {
 			cube_t const &region(bcube); // use our bcube as the region to process
@@ -2429,8 +2431,11 @@ class car_manager_t {
 public:
 	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader) {}
 	bool empty() const {return cars.empty();}
-	void clear() {cars.clear();}
-
+	
+	void clear() {
+		cars.clear();
+		car_blocks.clear();
+	}
 	void init_cars(unsigned num) {
 		if (num == 0) return;
 		timer_t timer("Init Cars");
@@ -2506,7 +2511,7 @@ public:
 			bool const is_dlight_shadows(shadow_only && xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
 			if (is_dlight_shadows && !city_params.car_shadows) return;
 			bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
-			//timer_t timer("Draw Cars"); // 10K cars = 1.5ms / 2K cars = 0.33ms
+			//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
 			dstate.xlate = xlate;
 			fgPushMatrix();
 			translate_to(xlate);
