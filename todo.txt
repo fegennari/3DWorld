@@ -9,11 +9,9 @@ Load/display model3d models in tiled terrain mode
 
 TT Projectile and object collision detection
 Top-down approximation for sky lighting, similar to rain/snow map
-Slower/closer planet approach in universe mode
 
 Cities:
 - Trucks and other vehicles of different sizes
-- Car collisions in intersections when both turning
 - Wider connector roads/intersections
 - Lights in city windows at night
 - Windows in brick/block buildings
