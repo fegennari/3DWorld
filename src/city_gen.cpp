@@ -2555,8 +2555,7 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 	lights.resize(max_num); // remove lowest scoring lights
 }
 
-class city_smap_manager_t {
-public:
+struct city_smap_manager_t {
 	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
 		unsigned const num_smaps(min(light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
 		dl_smap_enabled = 0;
@@ -2564,12 +2563,12 @@ public:
 		sort_lights_by_dist_size(light_sources, cpos);
 		unsigned num_used(0);
 		
-		// FIXME: inefficient to recreate shadow maps every frame
+		// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
 		for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
-			if (i->is_very_directional() /*&& !i->is_dynamic()*/) { // static spotlights (streetlights)
-				dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF); // see local_smap_manager_t, setup_and_bind_smap_texture(), local_smap_data_t
-				++num_used;
-			}
+			if (!i->is_very_directional()) continue; // not a spotlight
+			//if (!city_params.car_shadows && i->is_dynamic()) continue; // skip headlights (optimization)
+			dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF);
+			++num_used;
 		} // for i
 	}
 	void clear_all_smaps(vector<light_source> &light_sources) {
@@ -2638,7 +2637,7 @@ public:
 	}
 	cube_t setup_city_lights(vector3d const &xlate) {
 		bool const prev_had_lights(!dl_sources.empty());
-		city_smap_manager.clear_all_smaps(dl_sources); // FIXME: works, but inefficient
+		city_smap_manager.clear_all_smaps(dl_sources);
 		clear_dynamic_lights();
 		lights_bcube.set_to_zeros();
 		if (!is_night() && !prev_had_lights) return lights_bcube; // only have lights at night
