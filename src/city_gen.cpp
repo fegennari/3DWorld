@@ -1800,10 +1800,11 @@ class city_road_gen_t {
 					orients[TURN_LEFT ] = conn_left [orient_in];
 					orients[TURN_RIGHT] = conn_right[orient_in];
 
-					// TODO: path finding update - use A*?
+					// Note: Could use A* path finding, but it's unlikely to make a visual difference to the casual observer
 					while (1) {
-						unsigned new_turn_dir(0);
-						int const rval(rgen.rand()%(isec.is_global_conn_int() ? 2 : 4)); // force turn on global conn road to get more cars traveling between cities
+						unsigned new_turn_dir(0); // force turn on global conn road 75% of the time to get more cars traveling between cities
+						bool const force_turn(isec.is_global_conn_int() && (rgen.rand()&3) != 0);
+						int const rval(rgen.rand()%(force_turn ? 2 : 4));
 						if      (rval == 0) {new_turn_dir = TURN_LEFT ;} // 25%
 						else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
 						else                {new_turn_dir = TURN_NONE ;} // 50%
