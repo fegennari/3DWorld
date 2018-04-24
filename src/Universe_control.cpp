@@ -14,6 +14,7 @@
 bool const TIMETEST           = (GLOBAL_TIMETEST || 0);
 bool const ORBITAL_REGEN      = 0;
 bool const PRINT_OWNERSHIP    = 0;
+bool const PLAYER_SLOW_PLANET_APPROACH = 1;
 unsigned const GRAV_CHECK_MOD = 4; // must be a multiple of 2
 
 
@@ -337,7 +338,7 @@ void process_univ_objects() {
 		if (uobj->is_stationary()) continue;
 		bool const is_ship(uobj->is_ship()), orbiting(uobj->is_orbiting());
 		bool const calc_gravity(((uobj->get_time() + (unsigned(uobj)>>8)) & (GRAV_CHECK_MOD-1)) == 0);
-		bool const lod_coll(0 && is_ship && uobj->is_player_ship()); // unused - enable if we want to do close planet flyby
+		bool const lod_coll(PLAYER_SLOW_PLANET_APPROACH && is_ship && uobj->is_player_ship()); // enable if we want to do close planet flyby
 		float const radius(uobj->get_c_radius()*(no_coll ? 0.5 : 1.0));
 		upos_point_type const &obj_pos(uobj->get_pos());
 		vector3d gravity(zero_vector); // sum of gravity from sun, planets, possibly some moons, and possibly asteroids
@@ -347,7 +348,7 @@ void process_univ_objects() {
 		s_object clobj; // closest object
 		bool const include_asteroids(!particle); // disable particle-asteroid collisions because they're too slow
 		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos, include_asteroids, 1.0, (no_coll ? 0.0 : radius)));
-		bool temp_known(0);
+		bool temp_known(0), has_rings(0);
 		float limit_speed_dist(clobj.dist);
 
 		if (found_close) {
@@ -423,7 +424,8 @@ void process_univ_objects() {
 				if (clobj.type == UTYPE_PLANET) {
 					// when near a planet with rings, use the dist to the outer rings to limit speed so that we don't fly through the rings too quickly
 					uplanet const &planet(clobj.get_planet());
-					if (planet.ring_ro > 0.0) {limit_speed_dist = clobj.dist - (planet.ring_ro - planet.radius);} // can be negative
+					has_rings = (planet.ring_ro > 0.0);
+					if (has_rings) {limit_speed_dist = clobj.dist - (planet.ring_ro - planet.radius);} // can be negative
 				}
 			}
 		} // found_close
@@ -464,7 +466,12 @@ void process_univ_objects() {
 			}
 			if (!orbiting) {
 				float speed_factor(uobj->get_max_sf()), speed_factor2(1.0);
-				if (clobj.val > 0) {speed_factor2 = max((lod_coll ? 0.002f : 0.01f), min(1.0f, 0.7f*limit_speed_dist));} // clip to [0.01, 1.0]
+				
+				if (clobj.val > 0) {
+					float min_sf(0.01);
+					if (lod_coll && dot_product_ptv(upos_point_type(uobj->get_velocity()), obj_pos, clobj.object->get_pos()) < 0.0) {min_sf = (has_rings ? 0.0025 : 0.001);} // only on approach
+					speed_factor2 = max(min_sf, min(1.0f, 0.7f*limit_speed_dist)); // clip to [0.01, 1.0]
+				}
 				uobj->set_speed_factor(min(speed_factor, speed_factor2));
 			}
 		}
