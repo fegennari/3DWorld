@@ -1586,15 +1586,12 @@ public:
 		shader_t s;
 		fgPushMatrix();
 		translate_to(xlate);
-		building_draw_windows.check_windows_texture();
 		if (!shadow_only) {building_draw.init_draw_frame();}
 		if (DEBUG_BCUBES && !shadow_only) {enable_blend();}
 
 		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
 		if (use_tt_smap) {
 			city_shader_setup(s, lights_bcube, 1, 1, use_bmap); // use_smap=1, use_dlights=1
-		}
-		if (use_tt_smap) {
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 			for (auto g = grid.begin(); g != grid.end(); ++g) {
@@ -1603,9 +1600,8 @@ public:
 				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, 1);}
 			}
+			s.end_shader();
 		}
-		if (use_tt_smap) {s.end_shader();}
-
 		// main/batched draw pass
 		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
 		else {
@@ -1638,6 +1634,7 @@ public:
 		building_draw_windows.resize_to_cap();
 	}
 	void create_vbos() const {
+		building_draw_windows.check_windows_texture();
 		timer_t timer("Create Building VBOs");
 		get_all_drawn_verts();
 		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());

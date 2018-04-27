@@ -14,5 +14,3 @@ Cities:
 - Trucks and other vehicles of different sizes
 - Wider connector roads/intersections
 - Lights in city windows at night
-- Windows in brick/block buildings
-

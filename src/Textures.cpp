@@ -1201,7 +1201,7 @@ void gen_wind_texture() {
 }
 
 
-void gen_building_window_texture(float width_frac, float height_frac) {
+void gen_building_window_texture(float width_frac, float height_frac) { // Note: generated when needed, not during load
 
 	texture_t &tex(textures[BLDG_WINDOW_TEX]);
 	assert(textures[BLDG_WINDOW_TEX].ncolors == 4); // or 2 color grayscale + alpha?
