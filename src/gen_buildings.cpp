@@ -12,7 +12,6 @@
 using std::string;
 
 bool const DEBUG_BCUBES        = 0;
-bool const USE_BULIDING_VBOS   = 1;
 unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
@@ -526,14 +525,9 @@ public:
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
 		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask)
 	{
-		unsigned ndiv(bg.num_sides);
+		unsigned const ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
-		
-		if (!USE_BULIDING_VBOS && view_dir != nullptr && ndiv > 4 && bg.flat_side_amt == 0.0 && bg.alt_step_factor == 0.0) {
-			float const dist(max(p2p_dist(cur_camera_pos, (pos + xlate)), 0.001f));
-			ndiv = max(min(ndiv, unsigned(1000.0*max(rx, ry)/dist)), 3U); // LOD if not flat sides: use at least 3 sides
-		}
 		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), tscale_x(2.0*tex.tscale_x), tscale_y(2.0*tex.tscale_y); // adjust for local vs. global space change
 		bool const apply_ao(!shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
@@ -1556,7 +1550,7 @@ public:
 		} // close the scope
 		cout << "WM: " << world_mode << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 			 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
-		if (USE_BULIDING_VBOS) {create_vbos();}
+		create_vbos();
 	}
 
 	void draw(bool shadow_only, vector3d const &xlate, cube_t const &lights_bcube) const {
@@ -1579,14 +1573,14 @@ public:
 		if (use_tt_smap) {
 			city_shader_setup(s, lights_bcube, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 		}
-		if (!USE_BULIDING_VBOS || use_tt_smap) {
-			float const draw_dist(USE_BULIDING_VBOS ? (get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE)) : far_clip);
+		if (use_tt_smap) {
+			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 			for (auto g = grid.begin(); g != grid.end(); ++g) {
 				point const pos(g->bcube.get_cube_center() + xlate);
 				if (!shadow_only && !dist_less_than(camera, pos, (draw_dist + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
 				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, USE_BULIDING_VBOS);}
+				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, 1);}
 			}
 		}
 		if (use_tt_smap) {s.end_shader();}
@@ -1597,8 +1591,7 @@ public:
 			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		}
-		if (USE_BULIDING_VBOS) {building_draw_vbo.draw(shadow_only);} // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
-		else {building_draw.draw_and_clear(shadow_only);}
+		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
 		if (DEBUG_BCUBES && !shadow_only) {disable_blend();}
 		s.end_shader();
 		fgPopMatrix();
