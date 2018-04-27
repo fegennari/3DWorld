@@ -3,9 +3,16 @@ buildings min_sides 4 # cubes
 buildings max_sides 4
 buildings round_prob 0.0
 
+# windows
+buildings window_width  0.07
+buildings window_height 0.05
+buildings window_xspace 0.09
+buildings window_yspace 0.04
+
 
 # brick buildings
 buildings no_city 1 # not used in cities
+buildings add_windows 1 # brick/block buildings need windows
 buildings min_levels 1
 buildings max_levels 3
 buildings split_prob 0.70 # 70%
@@ -99,6 +106,7 @@ buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
 
 buildings no_city 0 # used in cities
+buildings add_windows 0 # metal/glass/concrete/skyscraper buildings already have windows
 buildings side_tid buildings/metal_building.jpg
 buildings side_nm_tid buildings/metal_building_NRM.jpg
 buildings side_tscale_x 4.0

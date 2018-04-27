@@ -100,6 +100,10 @@ struct building_params_t {
 		num_tries(10), cur_prob(1), ao_factor(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled() const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
+	float get_window_width_fract () const {assert(windows_enabled()); return window_width /(window_width  + window_xspace);}
+	float get_window_height_fract() const {assert(windows_enabled()); return window_height/(window_height + window_yspace);}
+	float get_window_tx() const {assert(windows_enabled()); return 1.0/(window_width  + window_xspace);}
+	float get_window_ty() const {assert(windows_enabled()); return 1.0/(window_height + window_yspace);}
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
@@ -137,6 +141,7 @@ void buildings_file_err(string const &str, int &error) {
 	cout << "Error reading buildings config option " << str << "." << endl;
 	error = 1;
 }
+bool check_01(float v) {return (v >= 0.0 && v <= 1.0);}
 
 bool parse_buildings_option(FILE *fp) {
 
@@ -298,16 +303,16 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	// windows
 	else if (str == "window_width") {
-		if (!read_float(fp, global_building_params.window_width) || global_building_params.window_width < 0.0) {buildings_file_err(str, error);}
+		if (!read_float(fp, global_building_params.window_width) || !check_01(global_building_params.window_width)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_height") {
-		if (!read_float(fp, global_building_params.window_height) || global_building_params.window_height < 0.0) {buildings_file_err(str, error);}
+		if (!read_float(fp, global_building_params.window_height) || !check_01(global_building_params.window_height)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_xspace") {
-		if (!read_float(fp, global_building_params.window_xspace) || global_building_params.window_xspace < 0.0) {buildings_file_err(str, error);}
+		if (!read_float(fp, global_building_params.window_xspace) || !check_01(global_building_params.window_xspace)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_yspace") {
-		if (!read_float(fp, global_building_params.window_yspace) || global_building_params.window_yspace < 0.0) {buildings_file_err(str, error);}
+		if (!read_float(fp, global_building_params.window_yspace) || !check_01(global_building_params.window_yspace)) {buildings_file_err(str, error);}
 	}
 	else if (str == "add_windows") { // per-material
 		if (!read_bool(fp, global_building_params.cur_mat.add_windows)) {buildings_file_err(str, error);}
@@ -352,6 +357,7 @@ struct building_t : public building_geom_t {
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
+	bool windows_enabled() const {return (global_building_params.windows_enabled() && get_material().add_windows);}
 	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -372,6 +378,7 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
+	void get_all_drawn_window_verts(building_draw_t &bdraw) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
@@ -479,11 +486,13 @@ class building_draw_t {
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
 	point cur_camera_pos;
-	unsigned window_tid;
+	int window_tid;
 
 public:
-	building_draw_t() : cur_camera_pos(zero_vector), window_tid(0) {}
+	building_draw_t() : cur_camera_pos(zero_vector), window_tid(-1) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
+	bool empty() const {return to_draw.empty();}
+	int get_window_tid() const {return window_tid;}
 
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
@@ -740,15 +749,13 @@ public:
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_tris();}
 		return num;
 	}
-	void clear_vbos    () {
-		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}
-		free_texture(window_tid);
-	}
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
+	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
 	void resize_to_cap () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->resize_to_cap();}}
 	void draw_and_clear(bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}}
 	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom(shadow_only);}}
+	
 	void begin_immediate_building() { // to be called before any add_section() calls
 		pend_draw.swap(to_draw); // move current draw queue to pending queue
 	}
@@ -759,8 +766,9 @@ public:
 	}
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
-		if (window_tid = 0) return 1; // already generated
-		// WRITE
+		if (window_tid >= 0) return 1; // already generated
+		gen_building_window_texture(global_building_params.get_window_width_fract(), global_building_params.get_window_height_fract());
+		window_tid = BLDG_WINDOW_TEX;
 		return 1;
 	}
 };
@@ -1310,9 +1318,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	building_mat_t const &mat(get_material());
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
 		bdraw.add_section(*this, *i, zero_vector, bcube, mat.side_tex, side_color, 0, nullptr, 3, 0); // XY
 		if (!roof_tquads.empty() && (i+1 == parts.end())) continue; // don't add the flat roof for the top part in this case
+		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
 		bdraw.add_section(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked); // only Z dim
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
@@ -1321,6 +1329,19 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 		building_geom_t const bg(4, rot_sin, rot_cos); // cube
 		bdraw.add_section(bg, *i, zero_vector, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, 0, nullptr, 7, 1); // all dims
+	}
+}
+
+void building_t::get_all_drawn_window_verts(building_draw_t &bdraw) const {
+
+	if (!is_valid() || !windows_enabled()) return; // invalid building or no windows
+	int const window_tid(bdraw.get_window_tid());
+	if (window_tid < 0) return; // not allocated - error?
+	tid_nm_pair_t tex(window_tid, -1, global_building_params.get_window_tx(), global_building_params.get_window_ty());
+	colorRGBA const window_color(DK_GRAY); // FIXME: config file option? Emissive at night? Add random variation?
+
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
+		bdraw.add_section(*this, *i, zero_vector, bcube, tex, window_color, 0, nullptr, 3, 0); // XY
 	}
 }
 
@@ -1592,6 +1613,14 @@ public:
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		}
 		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
+		
+		if (!shadow_only && !building_draw_windows.empty()) {
+			enable_blend();
+			glDepthFunc(GL_LEQUAL);
+			building_draw_windows.draw(0); // draw windows on top of other buildings
+			glDepthFunc(GL_LESS);
+			disable_blend();
+		}
 		if (DEBUG_BCUBES && !shadow_only) {disable_blend();}
 		s.end_shader();
 		fgPopMatrix();
@@ -1599,8 +1628,14 @@ public:
 
 	void get_all_drawn_verts() const {
 		building_draw_vbo.clear();
-		for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_verts(building_draw_vbo);}
+		building_draw_windows.clear();
+
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+			b->get_all_drawn_verts(building_draw_vbo);
+			b->get_all_drawn_window_verts(building_draw_windows);
+		}
 		building_draw_vbo.resize_to_cap();
+		building_draw_windows.resize_to_cap();
 	}
 	void create_vbos() const {
 		timer_t timer("Create Building VBOs");
@@ -1608,6 +1643,7 @@ public:
 		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
 		cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;
 		building_draw_vbo.upload_to_vbos();
+		building_draw_windows.upload_to_vbos();
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0) const {
