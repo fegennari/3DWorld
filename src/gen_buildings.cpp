@@ -61,15 +61,15 @@ struct color_range_t {
 
 struct building_mat_t : public building_tex_params_t {
 
-	bool no_city;
+	bool no_city, add_windows;
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf;
 	cube_t pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 
-	building_mat_t() : no_city(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0), max_rot_angle(0.0),
-		min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
+	building_mat_t() : no_city(0), add_windows(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0),
+		max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
 		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 
@@ -91,14 +91,16 @@ struct building_params_t {
 	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only, is_const_zval;
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor;
+	float window_width, window_height, window_xspace, window_yspace; // windows
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city; // {any, city_only}
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0),
-		num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), range_translate(zero_vector) {}
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0), num_place(num),
+		num_tries(10), cur_prob(1), ao_factor(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
+	bool windows_enabled() const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
@@ -295,6 +297,22 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "roof_color_grayscale_rand") {
 		if (!read_float(fp, global_building_params.cur_mat.roof_color.grayscale_rand)) {buildings_file_err(str, error);}
 	}
+	// windows
+	else if (str == "window_width") {
+		if (!read_float(fp, global_building_params.window_width) || global_building_params.window_width < 0.0) {buildings_file_err(str, error);}
+	}
+	else if (str == "window_height") {
+		if (!read_float(fp, global_building_params.window_height) || global_building_params.window_height < 0.0) {buildings_file_err(str, error);}
+	}
+	else if (str == "window_xspace") {
+		if (!read_float(fp, global_building_params.window_xspace) || global_building_params.window_xspace < 0.0) {buildings_file_err(str, error);}
+	}
+	else if (str == "window_yspace") {
+		if (!read_float(fp, global_building_params.window_yspace) || global_building_params.window_yspace < 0.0) {buildings_file_err(str, error);}
+	}
+	else if (str == "add_windows") { // per-material
+		if (!read_bool(fp, global_building_params.cur_mat.add_windows)) {buildings_file_err(str, error);}
+	}
 	// special commands
 	else if (str == "probability") {
 		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
@@ -462,9 +480,10 @@ class building_draw_t {
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
 	point cur_camera_pos;
+	unsigned window_tid;
 
 public:
-	building_draw_t() : cur_camera_pos(zero_vector) {}
+	building_draw_t() : cur_camera_pos(zero_vector), window_tid(0) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
@@ -727,8 +746,11 @@ public:
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_tris();}
 		return num;
 	}
+	void clear_vbos    () {
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}
+		free_texture(window_tid);
+	}
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
-	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
 	void resize_to_cap () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->resize_to_cap();}}
 	void draw_and_clear(bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}}
@@ -741,9 +763,15 @@ public:
 		draw_and_clear(shadow_only); // draw current building - sparse iteration?
 		pend_draw.swap(to_draw); // restore draw queue
 	}
+	bool check_windows_texture() {
+		if (!global_building_params.windows_enabled()) return 0;
+		if (window_tid = 0) return 1; // already generated
+		// WRITE
+		return 1;
+	}
 };
 
-building_draw_t building_draw, building_draw_vbo;
+building_draw_t building_draw, building_draw_vbo, building_draw_windows;
 
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
@@ -1543,6 +1571,7 @@ public:
 		shader_t s;
 		fgPushMatrix();
 		translate_to(xlate);
+		building_draw_windows.check_windows_texture();
 		if (!shadow_only) {building_draw.init_draw_frame();}
 		if (DEBUG_BCUBES && !shadow_only) {enable_blend();}
 
@@ -1735,8 +1764,13 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	return 1;
 }
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
-void clear_building_vbos() {building_draw_vbo.clear_vbos();}
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator.get_occluders(pdu, state);}
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator.check_pts_occluded(pts, npts, state);}
+
+void clear_building_vbos() {
+	building_draw.clear_vbos();
+	building_draw_vbo.clear_vbos();
+	building_draw_windows.clear_vbos();
+}
 
 
