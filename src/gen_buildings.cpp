@@ -16,6 +16,8 @@ unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
 
+extern bool is_night();
+
 // TODO:
 // Multilevel cylinders and N-gons shapes?
 // Texture alignment for windows
@@ -1614,6 +1616,16 @@ public:
 			enable_blend();
 			glDepthFunc(GL_LEQUAL);
 			building_draw_windows.draw(0); // draw windows on top of other buildings
+
+			if (is_night()) { // add night time random lights in windows
+				s.end_shader();
+				s.set_vert_shader("window_lights");
+				s.set_frag_shader("window_lights");
+				s.begin_shader();
+				set_additive_blend_mode();
+				building_draw_windows.draw(0); // blur?
+				set_std_blend_mode();
+			}
 			glDepthFunc(GL_LESS);
 			disable_blend();
 		}
