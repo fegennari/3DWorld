@@ -20,7 +20,8 @@ void main() {
 	if (texel.a <= min_alpha) discard; // transparent part
 	// use integer component of window texture as hash to select random lit vs. dark windows
 	float rand_val = rand_v2(vec2(floor(tc.s), floor(tc.y)));
-	if (rand_val < 0.67) discard; // 67% of windows are dark
+	float lit_thresh = fract(5.67*sin(12.3*gl_Color.b)); // use per-building color as hash for lit percentage
+	if (rand_val < (0.5 + 0.4*lit_thresh)) discard; // 50% - 90% of windows are dark
 	float alpha     = 1.0 - 2.0*(texel.r - 0.5); // mask off window border (white), keep window pane (gray)
 	float rgb_scale = 1.0/max(gl_Color.r, max(gl_Color.g, gl_Color.b)); // normalize largest color component to 1.0
 	fg_FragColor    = vec4(rgb_scale*gl_Color.rgb, alpha*texel.a);
