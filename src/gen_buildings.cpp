@@ -1656,9 +1656,7 @@ public:
 				s.set_vert_shader("window_lights");
 				s.set_frag_shader("window_lights");
 				s.begin_shader();
-				set_additive_blend_mode();
 				building_draw_wind_lights.draw(0); // add bloom?
-				set_std_blend_mode();
 			}
 			glDepthFunc(GL_LESS);
 			disable_blend();
