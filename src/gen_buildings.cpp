@@ -1347,7 +1347,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw) const {
 	if (window_tid < 0) return; // not allocated - error?
 	building_mat_t const &mat(get_material());
 	tid_nm_pair_t tex(window_tid, -1, mat.wind_xscale*global_building_params.get_window_tx(), mat.wind_yscale*global_building_params.get_window_ty());
-	colorRGBA const window_color(GRAY); // FIXME: Config file option? Add random variation?
+	float const tint(0.2*fract(100.0*(bcube.x1() + bcube.y1()))); // slight yellow-blue tinting using bcube x1/y1 as a hash
+	float const lum = 0.6;
+	colorRGBA const window_color(lum*(1.0-tint), lum*(1.0-tint), lum*(0.8+tint), 1.0);
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		bdraw.add_section(*this, *i, zero_vector, bcube, tex, window_color, 0, nullptr, 3, 0); // XY
