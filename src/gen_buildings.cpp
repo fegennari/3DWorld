@@ -62,14 +62,14 @@ struct color_range_t {
 
 struct building_mat_t : public building_tex_params_t {
 
-	bool no_city, add_windows;
+	bool no_city, add_windows, add_wind_lights;
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale;
 	cube_t pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 
-	building_mat_t() : no_city(0), add_windows(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0),
+	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0),
 		max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
 		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
@@ -325,6 +325,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "add_windows") { // per-material
 		if (!read_bool(fp, global_building_params.cur_mat.add_windows)) {buildings_file_err(str, error);}
 	}
+	else if (str == "add_window_lights") { // per-material
+		if (!read_bool(fp, global_building_params.cur_mat.add_wind_lights)) {buildings_file_err(str, error);}
+	}
 	// special commands
 	else if (str == "probability") {
 		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
@@ -365,7 +368,6 @@ struct building_t : public building_geom_t {
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
-	bool windows_enabled() const {return (global_building_params.windows_enabled() && get_material().add_windows);}
 	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -386,7 +388,7 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
-	void get_all_drawn_window_verts(building_draw_t &bdraw) const;
+	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
@@ -404,6 +406,23 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 	n.x = x*rot_cos - y*rot_sin;
 	n.y = y*rot_cos + x*rot_sin;
 }
+
+
+class building_window_gen_t {
+	int window_tid;
+public:
+	building_window_gen_t() : window_tid(-1) {}
+	int get_window_tid() const {return window_tid;}
+
+	bool check_windows_texture() {
+		if (!global_building_params.windows_enabled()) return 0;
+		if (window_tid >= 0) return 1; // already generated
+		gen_building_window_texture(global_building_params.get_window_width_fract(), global_building_params.get_window_height_fract());
+		window_tid = BLDG_WINDOW_TEX;
+		return 1;
+	}
+};
+building_window_gen_t building_window_gen;
 
 
 #define EMIT_VERTEX() \
@@ -494,13 +513,11 @@ class building_draw_t {
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
 	point cur_camera_pos;
-	int window_tid;
 
 public:
-	building_draw_t() : cur_camera_pos(zero_vector), window_tid(-1) {}
+	building_draw_t() : cur_camera_pos(zero_vector) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
-	int get_window_tid() const {return window_tid;}
 
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
@@ -772,16 +789,9 @@ public:
 		draw_and_clear(shadow_only); // draw current building - sparse iteration?
 		pend_draw.swap(to_draw); // restore draw queue
 	}
-	bool check_windows_texture() {
-		if (!global_building_params.windows_enabled()) return 0;
-		if (window_tid >= 0) return 1; // already generated
-		gen_building_window_texture(global_building_params.get_window_width_fract(), global_building_params.get_window_height_fract());
-		window_tid = BLDG_WINDOW_TEX;
-		return 1;
-	}
 };
 
-building_draw_t building_draw, building_draw_vbo, building_draw_windows;
+building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights;
 
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
@@ -1340,16 +1350,22 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	}
 }
 
-void building_t::get_all_drawn_window_verts(building_draw_t &bdraw) const {
+void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const {
 
-	if (!is_valid() || !windows_enabled()) return; // invalid building or no windows
-	int const window_tid(bdraw.get_window_tid());
-	if (window_tid < 0) return; // not allocated - error?
+	if (!is_valid() || !global_building_params.windows_enabled()) return; // invalid building or no windows
 	building_mat_t const &mat(get_material());
+	if (lights_pass ? !mat.add_wind_lights : !mat.add_windows) return; // no windows for this material
+	int const window_tid(building_window_gen.get_window_tid());
+	if (window_tid < 0) return; // not allocated - error?
+	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
 	tid_nm_pair_t tex(window_tid, -1, mat.wind_xscale*global_building_params.get_window_tx(), mat.wind_yscale*global_building_params.get_window_ty());
-	float const tint(0.2*fract(100.0*(bcube.x1() + bcube.y1()))); // slight yellow-blue tinting using bcube x1/y1 as a hash
-	float const lum = 0.6;
-	colorRGBA const window_color(lum*(1.0-tint), lum*(1.0-tint), lum*(0.8+tint), 1.0);
+	colorRGBA window_color;
+
+	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
+		float const tint(0.2*fract(100.0*(bcube.x1() + bcube.y1())));
+		window_color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
+	}
+	else {window_color = GRAY;} // FIXME: per-building material
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		bdraw.add_section(*this, *i, zero_vector, bcube, tex, window_color, 0, nullptr, 3, 0, 1); // XY, no_ao=1
@@ -1621,7 +1637,7 @@ public:
 		}
 		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
 		
-		if (!shadow_only && !building_draw_windows.empty()) {
+		if (!shadow_only && (!building_draw_windows.empty() || (is_night() && !building_draw_wind_lights.empty()))) {
 			enable_blend();
 			glDepthFunc(GL_LEQUAL);
 			building_draw_windows.draw(0); // draw windows on top of other buildings
@@ -1632,7 +1648,7 @@ public:
 				s.set_frag_shader("window_lights");
 				s.begin_shader();
 				set_additive_blend_mode();
-				building_draw_windows.draw(0); // blur?
+				building_draw_wind_lights.draw(0); // add bloom?
 				set_std_blend_mode();
 			}
 			glDepthFunc(GL_LESS);
@@ -1646,22 +1662,26 @@ public:
 	void get_all_drawn_verts() const {
 		building_draw_vbo.clear();
 		building_draw_windows.clear();
+		building_draw_wind_lights.clear();
 
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 			b->get_all_drawn_verts(building_draw_vbo);
-			b->get_all_drawn_window_verts(building_draw_windows);
+			b->get_all_drawn_window_verts(building_draw_windows,     0); // lights_pass=0
+			b->get_all_drawn_window_verts(building_draw_wind_lights, 1); // lights_pass=1
 		}
 		building_draw_vbo.resize_to_cap();
 		building_draw_windows.resize_to_cap();
+		building_draw_wind_lights.resize_to_cap();
 	}
 	void create_vbos() const {
-		building_draw_windows.check_windows_texture();
+		building_window_gen.check_windows_texture();
 		timer_t timer("Create Building VBOs");
 		get_all_drawn_verts();
 		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
 		cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;
 		building_draw_vbo.upload_to_vbos();
 		building_draw_windows.upload_to_vbos();
+		building_draw_wind_lights.upload_to_vbos();
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0) const {
@@ -1818,6 +1838,7 @@ void clear_building_vbos() {
 	building_draw.clear_vbos();
 	building_draw_vbo.clear_vbos();
 	building_draw_windows.clear_vbos();
+	building_draw_wind_lights.clear_vbos();
 }
 
 

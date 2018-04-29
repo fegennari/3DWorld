@@ -4,17 +4,18 @@ buildings max_sides 4
 buildings round_prob 0.0
 
 # windows
-buildings window_width  0.7
-buildings window_height 0.5
-buildings window_xspace 0.9
-buildings window_yspace 0.4
+buildings window_width  0.44
+buildings window_height 0.55
+buildings window_xspace 0.56
+buildings window_yspace 0.45
 
 
 # brick buildings
 buildings no_city 1 # not used in cities
 buildings add_windows 1 # brick/block buildings need windows
-buildings window_xscale 12.0
-buildings window_yscale 10.0
+buildings add_window_lights 1
+buildings window_xscale 7.5
+buildings window_yscale 11.0
 buildings min_levels 1
 buildings max_levels 3
 buildings split_prob 0.70 # 70%
@@ -73,7 +74,7 @@ buildings add_material
 
 # concrete and metal buildings - slightly larger
 buildings no_city 1 # not used in cities
-buildings window_xscale 8.0
+buildings window_xscale 5.0
 buildings min_levels 1
 buildings max_levels 5
 buildings split_prob 0.60 # 60%
@@ -110,6 +111,7 @@ buildings add_material
 
 buildings no_city 0 # used in cities
 buildings add_windows 0 # metal/glass/concrete/skyscraper buildings already have windows
+buildings add_window_lights 0
 buildings side_tid buildings/metal_building.jpg
 buildings side_nm_tid buildings/metal_building_NRM.jpg
 buildings side_tscale_x 4.0
