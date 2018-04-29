@@ -25,10 +25,10 @@ extern bool is_night();
 struct tid_nm_pair_t {
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
-	float tscale_x, tscale_y;
+	float tscale_x, tscale_y, txoff, tyoff;
 
-	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0) {}
-	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty) {}
+	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0) {}
+	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
@@ -65,13 +65,13 @@ struct building_mat_t : public building_tex_params_t {
 	bool no_city, add_windows, add_wind_lights;
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
-	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale;
+	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
 	cube_t pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0),
 		max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
-		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
+		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 
 	void update_range(vector3d const &range_translate) {
@@ -322,6 +322,13 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "window_yscale") {
 		if (!read_float(fp, global_building_params.cur_mat.wind_yscale) || global_building_params.cur_mat.wind_yscale < 0.0) {buildings_file_err(str, error);}
 	}
+	else if (str == "window_xoff") {
+		if (!read_float(fp, global_building_params.cur_mat.wind_xoff)) {buildings_file_err(str, error);}
+	}
+	else if (str == "window_yoff") {
+		if (!read_float(fp, global_building_params.cur_mat.wind_yoff)) {buildings_file_err(str, error);}
+		global_building_params.cur_mat.wind_yoff *= -1.0; // invert Y
+	}
 	else if (str == "add_windows") { // per-material
 		if (!read_bool(fp, global_building_params.cur_mat.add_windows)) {buildings_file_err(str, error);}
 	}
@@ -429,6 +436,8 @@ building_window_gen_t building_window_gen;
 	vert.v = pt*sz + llc; \
 	vert.t[ st] = tscale[ st]*(vert.v[d] + tex_vert_off[d]); \
 	vert.t[!st] = tscale[!st]*(vert.v[i] + tex_vert_off[i]); \
+	vert.t[0] += tex.txoff; \
+	vert.t[1] += tex.tyoff; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
 	if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
@@ -604,7 +613,7 @@ public:
 
 					for (unsigned d = 0; d < 2; ++d) {
 						vector3d const &n(d ? n2 : n1);
-						vert.t[0] = tscale_x*cur_perim[d]*tscale_mult; // Note: could try harder to ensure an integer multiple to fix seams, but not a problem in practice
+						vert.t[0] = tscale_x*cur_perim[d]*tscale_mult + tex.txoff; // Note: could try harder to ensure an integer multiple to fix seams, but not a problem in practice
 					
 						if (smooth_normals) {
 							vector3d normal(n); normal.x *= ry; normal.y *= rx; // scale normal by radius (swapped)
@@ -616,7 +625,7 @@ public:
 
 						for (unsigned e = 0; e < 2; ++e) {
 							vert.v.z = ((d^e) ? z_top : pos.z);
-							vert.t[1] = tscale_y*tex_pos[d^e];
+							vert.t[1] = tscale_y*tex_pos[d^e] + tex.tyoff;
 							if (apply_ao) {vert.copy_color(cw[d^e]);}
 							verts.push_back(vert);
 						}
@@ -725,7 +734,7 @@ public:
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, cube.d[2][0], cube.d[2][1], cw, vert, no_ao);
-		vector3d const tex_vert_off((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0));
+		vector3d const tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3);
@@ -1358,7 +1367,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const window_tid(building_window_gen.get_window_tid());
 	if (window_tid < 0) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
-	tid_nm_pair_t tex(window_tid, -1, mat.wind_xscale*global_building_params.get_window_tx(), mat.wind_yscale*global_building_params.get_window_ty());
+	tid_nm_pair_t tex(window_tid, -1, mat.wind_xscale*global_building_params.get_window_tx(), mat.wind_yscale*global_building_params.get_window_ty(), mat.wind_xoff, mat.wind_yoff);
 	colorRGBA window_color;
 
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
