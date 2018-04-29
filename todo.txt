@@ -13,4 +13,4 @@ Top-down approximation for sky lighting, similar to rain/snow map
 Cities:
 - Trucks and other vehicles of different sizes
 - Wider connector roads/intersections
-- Lights in city windows at night
+- Lights in city office building windows at night
