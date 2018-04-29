@@ -351,12 +351,9 @@ template class point_sprite_drawer_t<vert_norm_color>;
 template class point_sprite_drawer_t<sized_vert_t<vert_norm_color>>;
 
 
-void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, tex_range_t const &tr) {
+void quad_batch_draw::add_quad_pts(point const pts[4], color_wrapper const &cw, vector3d const &n, tex_range_t const &tr) {
 
-	color_wrapper cw;
-	cw.set_c4(c); // Note: reversed from quad_to_tris_ixs
-
-	if (tr.swap_xy) {
+	if (tr.swap_xy) { // Note: reversed from quad_to_tris_ixs
 		verts.emplace_back(pts[0], n, tr.x1, tr.y2, cw.c, true);
 		verts.emplace_back(pts[2], n, tr.x2, tr.y1, cw.c, true);
 		verts.emplace_back(pts[1], n, tr.x1, tr.y1, cw.c, true);
@@ -377,14 +374,16 @@ void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vecto
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
 	colorRGBA const &c, vector3d const &n, tex_range_t const &tr)
 {
+	color_wrapper cw; cw.set_c4(c);
+
 	if (tr.clip_quad) { // clip point to tex coords
 		vector3d const dx1((1.0 - 2.0*tr.x1)*dx), dy1((1.0 - 2.0*tr.y1)*dy), dx2((-1.0 + 2.0*tr.x2)*dx), dy2((-1.0 + 2.0*tr.y2)*dy);
 		point const pts[4] = {(pos - dx1 - dy1), (pos + dx2 - dy1), (pos + dx2 + dy2), (pos - dx1 + dy2)};
-		add_quad_pts(pts, c, n, tr);
+		add_quad_pts(pts, cw, n, tr);
 	}
 	else {
 		point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
-		add_quad_pts(pts, c, n, tr);
+		add_quad_pts(pts, cw, n, tr);
 	}
 }
 

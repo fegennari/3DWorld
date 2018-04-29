@@ -294,18 +294,18 @@ public:
 			v += center; // translate back
 		}
 	}
-	void draw_cube(quad_batch_draw &qbd, bool d, bool D, colorRGBA const &color, point const &center, point const p[8]) const {
+	void draw_cube(quad_batch_draw &qbd, bool d, bool D, color_wrapper const &cw, point const &center, point const p[8]) const {
 		vector3d const cview_dir((camera_pdu.pos - xlate) - center);
 		float const sign((d^D) ? -1.0 : 1.0);
 		vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
 		vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
 		vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2]))*sign);
-		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, color,  top_n);} // top
-		//else                                   {qbd.add_quad_pts(p+0, color, -top_n);} // bottom - not actually drawn
-		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, color,  front_n);} // front
-		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, color, -front_n);} // back
-		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, color,  right_n);} // right
-		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, color, -right_n);} // left
+		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n);} // top
+		//else                                   {qbd.add_quad_pts(p+0, cw, -top_n);} // bottom - not actually drawn
+		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n);} // front
+		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n);} // back
+		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n);} // right
+		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n);} // left
 	}
 	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 		point pos(xlate + flare_pos);
@@ -610,6 +610,7 @@ struct road_isec_t : public cube_t {
 		float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		vector3d const cview_dir(camera_pdu.pos - center);
 		float const sz(0.03*city_params.road_width), h(1.0*sz);
+		color_wrapper cw; cw.set_c4(BLACK);
 
 		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 			if (!(conn & (1<<n))) continue; // no road in this dir
@@ -625,7 +626,7 @@ struct road_isec_t : public cube_t {
 			c.d[dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
 			c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
 			dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
-			dstate.draw_cube(qbd, dim, dir, BLACK, c.get_cube_center(), pts); // Note: uses traffic light texture, but color is back so it's all black anyway
+			dstate.draw_cube(qbd, dim, dir, cw, c.get_cube_center(), pts); // Note: uses traffic light texture, but color is back so it's all black anyway
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
 			vector3d normal(zero_vector);
@@ -2334,8 +2335,9 @@ class car_manager_t {
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
-				draw_cube(qbd, dim, dir, color, center, pb); // bottom
-				if (draw_top) {draw_cube(qbd, dim, dir, color, center, pt);} // top
+				color_wrapper cw; cw.set_c4(color);
+				draw_cube(qbd, dim, dir, cw, center, pb); // bottom
+				if (draw_top) {draw_cube(qbd, dim, dir, cw, center, pt);} // top
 				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 			}
 			if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
