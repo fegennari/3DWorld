@@ -486,8 +486,8 @@ class building_draw_t {
 		else {assert(block.tex.nm_tid == tex.nm_tid);} // else normal maps must agree
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
-	static void setup_ao_color(colorRGBA const &color, cube_t const &bcube, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert) {
-		if (global_building_params.ao_factor > 0.0) {
+	static void setup_ao_color(colorRGBA const &color, cube_t const &bcube, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
+		if (!no_ao && global_building_params.ao_factor > 0.0) {
 			float const dz_mult(global_building_params.ao_factor/bcube.get_dz());
 			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcube.d[2][0])));)
 		} else {vert.set_c4(color);} // color is shared across all verts
@@ -540,16 +540,16 @@ public:
 	}
 
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
-		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask)
+		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool no_ao)
 	{
 		unsigned const ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
 		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), tscale_x(2.0*tex.tscale_x), tscale_y(2.0*tex.tscale_y); // adjust for local vs. global space change
-		bool const apply_ao(!shadow_only && global_building_params.ao_factor > 0.0);
+		bool const apply_ao(!no_ao && !shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
-		setup_ao_color(color, bcube, pos.z, z_top, cw, vert);
+		setup_ao_color(color, bcube, pos.z, z_top, cw, vert, no_ao);
 		float tex_pos[2] = {0.0, 1.0};
 		calc_normals(bg, normals, ndiv);
 		if (!shadow_only) {UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcube.d[2][0]);)}
@@ -663,8 +663,8 @@ public:
 		}
 	}
 
-	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube,
-		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool skip_bottom)
+	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube, tid_nm_pair_t const &tex,
+		colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool skip_bottom, bool no_ao=0)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center((bg.rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -675,7 +675,7 @@ public:
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.d[2][0]);
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, xlate, bcube, tex, color, shadow_only, view_dir, dim_mask);
+			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, xlate, bcube, tex, color, shadow_only, view_dir, dim_mask, no_ao);
 			return;
 		}
 		// else draw as a cube (optimized flow)
@@ -705,9 +705,9 @@ public:
 			return;
 		}
 		float const tscale[2] = {2.0f*tex.tscale_x, 2.0f*tex.tscale_y}; // adjust for local vs. global space change
-		bool const apply_ao(global_building_params.ao_factor > 0.0);
+		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
-		setup_ao_color(color, bcube, cube.d[2][0], cube.d[2][1], cw, vert);
+		setup_ao_color(color, bcube, cube.d[2][0], cube.d[2][1], cw, vert, no_ao);
 		vector3d const tex_vert_off((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0));
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
@@ -1352,7 +1352,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw) const {
 	colorRGBA const window_color(lum*(1.0-tint), lum*(1.0-tint), lum*(0.8+tint), 1.0);
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, tex, window_color, 0, nullptr, 3, 0); // XY
+		bdraw.add_section(*this, *i, zero_vector, bcube, tex, window_color, 0, nullptr, 3, 0, 1); // XY, no_ao=1
 	}
 }
 
