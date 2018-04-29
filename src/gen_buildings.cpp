@@ -1659,8 +1659,11 @@ public:
 			if (is_night()) { // add night time random lights in windows
 				s.end_shader();
 				s.set_vert_shader("window_lights");
-				s.set_frag_shader("window_lights");
+				s.set_frag_shader("linear_fog.part+window_lights");
+				s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);
+				setup_tt_fog_pre(s);
 				s.begin_shader();
+				setup_tt_fog_post(s);
 				building_draw_wind_lights.draw(0); // add bloom?
 			}
 			glDepthFunc(GL_LESS);

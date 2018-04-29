@@ -2,6 +2,7 @@ uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 
 in vec2 tc;
+in vec4 epos;
 
 float rand(vec2 co) {
    return fract(sin(dot(co.xy,vec2(12.9898,78.233))) * 43758.5453);
@@ -24,5 +25,6 @@ void main() {
 	if (rand_val < (0.5 + 0.4*lit_thresh)) discard; // 50% - 90% of windows are dark
 	float alpha     = 1.0 - 2.0*(texel.r - 0.5); // mask off window border (white), keep window pane (gray)
 	float rgb_scale = 1.0/max(gl_Color.r, max(gl_Color.g, gl_Color.b)); // normalize largest color component to 1.0
-	fg_FragColor    = vec4(rgb_scale*gl_Color.rgb, alpha*texel.a);
+	fg_FragColor    = apply_fog_epos(vec4(rgb_scale*gl_Color.rgb, 1.0), epos);
+	fg_FragColor.a *= alpha*texel.a; // keep orig alpha value
 }
