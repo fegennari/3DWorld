@@ -605,7 +605,7 @@ struct road_isec_t : public cube_t {
 	}
 	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
 		if (num_conn == 2) return; // no stoplights
-		if (!dstate.check_cube_visible(*this, 0.2, shadow_only)) return; // dist_scale=0.2
+		if (!dstate.check_cube_visible(*this, 0.16, shadow_only)) return; // dist_scale=0.12
 		point const center(get_cube_center() + dstate.xlate);
 		float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		vector3d const cview_dir(camera_pdu.pos - center);
@@ -620,13 +620,26 @@ struct road_isec_t : public cube_t {
 			float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
 			// draw base
 			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
-			point pts[8];
-			cube_t c;
-			c.z1() = z1(); c.z2() = zbot + 1.2*h*num_segs;
-			c.d[dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
-			c.d[!dim][0] = min(v1, v2) - 0.25*sz; c.d[!dim][1] = max(v1, v2) + 0.25*sz;
-			dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
-			dstate.draw_cube(qbd, dim, dir, cw, c.get_cube_center(), pts); // Note: uses traffic light texture, but color is back so it's all black anyway
+			float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
+
+			if (dist_val > 0.06) { // draw front face only
+				point pts[4];
+				pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = pos;
+				pts[0][!dim] = pts[3][!dim] = sl_lo;
+				pts[1][!dim] = pts[2][!dim] = sl_hi;
+				pts[0].z = pts[1].z = z1();
+				pts[2].z = pts[3].z = sl_top;
+				qbd.add_quad_pts(pts, cw,  (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
+			}
+			else {
+				cube_t c;
+				c.z1() = z1(); c.z2() = sl_top;
+				c.d[ dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
+				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
+				point pts[8];
+				dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
+				dstate.draw_cube(qbd, dim, dir, cw, c.get_cube_center(), pts); // Note: uses traffic light texture, but color is back so it's all black anyway
+			}
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
 			vector3d normal(zero_vector);
@@ -1597,10 +1610,11 @@ class city_road_gen_t {
 					dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
 					dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
 					dstate.draw_road_region(parking_lot_mgr.parks, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
+					bool const draw_stoplights(dstate.check_cube_visible(b->bcube, 0.16)); // use smaller dist_scale
 				
 					for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 						dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
-						if (i > 0) {dstate.draw_stoplights(isecs[i], 0);}
+						if (draw_stoplights && i > 0) {dstate.draw_stoplights(isecs[i], 0);}
 					}
 				} // for b
 			}
