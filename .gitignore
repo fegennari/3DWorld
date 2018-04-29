@@ -28,3 +28,4 @@ zlib/
 screenshot*.jpg
 positions.log.txt
 state.txt
+shaders/generated/*
