@@ -16,10 +16,11 @@ highp float rand_v2(vec2 co) { // from http://byteblacksmith.com/improvements-to
 }
 
 void main() {
-	vec4 color = texture(tex0, tc);
-	if (color.a <= min_alpha) discard;
+	vec4 texel = texture(tex0, tc);
+	if (texel.a <= min_alpha) discard; // transparent part
 	// use integer component of window texture as hash to select random lit vs. dark windows
 	float rand_val = rand_v2(vec2(floor(tc.s), floor(tc.y)));
 	if (rand_val < 0.67) discard; // 67% of windows are dark
-	fg_FragColor = color;
+	float lum = 1.0 - 2.0*(texel.r - 0.5); // mask off window border (white), keep window pane (gray)
+	fg_FragColor = vec4(1.0, 1.0, 1.0, lum*texel.a);
 }

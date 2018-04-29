@@ -1210,12 +1210,14 @@ void gen_building_window_texture(float width_frac, float height_frac) { // Note:
 	assert(height_frac > 0.0 && height_frac < 1.0);
 	float const xspace(0.5*(1.0 - width_frac)), yspace(0.5*(1.0 - height_frac));
 	int const w1(round_fp(xspace*tex.width)), w2(round_fp((1.0 - xspace)*tex.width)), h1(round_fp(yspace*tex.height)), h2(round_fp((1.0 - yspace)*tex.height));
+	int const border(8), w1b(w1 - border), w2b(w2 + border), h1b(h1 - border), h2b(h2 + border); // window borders
 
 	for (int i = 0; i < tex.height; ++i) {
 		for (int j = 0; j < tex.width; ++j) {
 			int const offset(4*(i*tex.width + j));
-			UNROLL_3X(tex_data[offset+i_] = 255;) // white
-			tex_data[offset+3] = ((i > h1 && i <= h2 && j > w1 && j <= w2) ? 255 : 0); // opaque inside window, transparent outside
+			unsigned char luminance((i > h1 && i <= h2 && j > w1 && j <= w2) ? 128 : 255); // gray for window, white for border
+			UNROLL_3X(tex_data[offset+i_] = luminance;) // white
+			tex_data[offset+3] = ((i > h1b && i <= h2b && j > w1b && j <= w2b) ? 255 : 0); // opaque inside window and border, transparent outside
 		}
 	}
 }

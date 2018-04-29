@@ -1340,7 +1340,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw) const {
 	int const window_tid(bdraw.get_window_tid());
 	if (window_tid < 0) return; // not allocated - error?
 	tid_nm_pair_t tex(window_tid, -1, global_building_params.get_window_tx(), global_building_params.get_window_ty());
-	colorRGBA const window_color(DK_GRAY); // FIXME: config file option? Emissive at night? Add random variation?
+	colorRGBA const window_color(GRAY); // FIXME: Config file option? Add random variation?
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		bdraw.add_section(*this, *i, zero_vector, bcube, tex, window_color, 0, nullptr, 3, 0); // XY
