@@ -65,13 +65,13 @@ struct building_mat_t : public building_tex_params_t {
 	bool no_city, add_windows;
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
-	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf;
+	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale;
 	cube_t pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 
 	building_mat_t() : no_city(0), add_windows(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0),
 		max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
-		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
+		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 
 	void update_range(vector3d const &range_translate) {
@@ -315,6 +315,12 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "window_yspace") {
 		if (!read_float(fp, global_building_params.window_yspace) || !check_01(global_building_params.window_yspace)) {buildings_file_err(str, error);}
+	}
+	else if (str == "window_xscale") {
+		if (!read_float(fp, global_building_params.cur_mat.wind_xscale) || global_building_params.cur_mat.wind_xscale < 0.0) {buildings_file_err(str, error);}
+	}
+	else if (str == "window_yscale") {
+		if (!read_float(fp, global_building_params.cur_mat.wind_yscale) || global_building_params.cur_mat.wind_yscale < 0.0) {buildings_file_err(str, error);}
 	}
 	else if (str == "add_windows") { // per-material
 		if (!read_bool(fp, global_building_params.cur_mat.add_windows)) {buildings_file_err(str, error);}
@@ -1339,7 +1345,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw) const {
 	if (!is_valid() || !windows_enabled()) return; // invalid building or no windows
 	int const window_tid(bdraw.get_window_tid());
 	if (window_tid < 0) return; // not allocated - error?
-	tid_nm_pair_t tex(window_tid, -1, global_building_params.get_window_tx(), global_building_params.get_window_ty());
+	building_mat_t const &mat(get_material());
+	tid_nm_pair_t tex(window_tid, -1, mat.wind_xscale*global_building_params.get_window_tx(), mat.wind_yscale*global_building_params.get_window_ty());
 	colorRGBA const window_color(GRAY); // FIXME: Config file option? Add random variation?
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
