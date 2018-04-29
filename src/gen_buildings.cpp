@@ -68,10 +68,12 @@ struct building_mat_t : public building_tex_params_t {
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
 	cube_t pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
+	colorRGBA window_color;
 
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0),
 		max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
-		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
+		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0),
+		pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1), window_color(GRAY) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 
 	void update_range(vector3d const &range_translate) {
@@ -334,6 +336,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "add_window_lights") { // per-material
 		if (!read_bool(fp, global_building_params.cur_mat.add_wind_lights)) {buildings_file_err(str, error);}
+	}
+	else if (str == "window_color") { // per-material
+		if (!read_color(fp, global_building_params.cur_mat.window_color)) {buildings_file_err(str, error);}
 	}
 	// special commands
 	else if (str == "probability") {
@@ -1368,16 +1373,16 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (window_tid < 0) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
 	tid_nm_pair_t tex(window_tid, -1, mat.wind_xscale*global_building_params.get_window_tx(), mat.wind_yscale*global_building_params.get_window_ty(), mat.wind_xoff, mat.wind_yoff);
-	colorRGBA window_color;
+	colorRGBA color;
 
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
 		float const tint(0.2*fract(100.0*(bcube.x1() + bcube.y1())));
-		window_color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
+		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
 	}
-	else {window_color = GRAY;} // FIXME: per-building material
+	else {color = mat.window_color;}
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, tex, window_color, 0, nullptr, 3, 0, 1); // XY, no_ao=1
+		bdraw.add_section(*this, *i, zero_vector, bcube, tex, color, 0, nullptr, 3, 0, 1); // XY, no_ao=1
 	}
 }
 

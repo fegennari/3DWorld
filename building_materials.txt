@@ -8,6 +8,7 @@ buildings window_width  0.44
 buildings window_height 0.55
 buildings window_xspace 0.56
 buildings window_yspace 0.45
+buildings window_color 0.5 0.5 0.5 1.0 # gray
 
 
 # brick buildings
@@ -83,6 +84,7 @@ buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
 buildings side_tscale 8.0
 buildings side_tid cblock.png
 buildings side_nm_tid normal_maps/cblock_NRM.jpg
+buildings window_color 0.3 0.3 0.3 1.0 # dark gray for higher contrast
 buildings roof_tscale 2.0
 buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
@@ -98,6 +100,7 @@ buildings add_material
 buildings side_tscale 8.0
 buildings side_tid cblock2.jpg
 buildings side_nm_tid normal_maps/cblock2_NRM.jpg
+buildings window_color 0.7 0.7 0.7 1.0 # light gray for higher contrast
 buildings roof_tscale 6.0
 buildings roof_tid snow2.jpg
 buildings roof_nm_tid -1
@@ -108,6 +111,7 @@ buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
 buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
+buildings window_color 0.5 0.5 0.5 1.0 # gray
 
 buildings no_city 0 # used in cities
 buildings add_windows 0 # metal/glass/concrete/skyscraper buildings already have windows
