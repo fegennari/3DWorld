@@ -326,6 +326,7 @@ bool save_state(const char *filename);
 void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters);
 
 // function prototypes - city_gen
+bool is_night();
 bool parse_city_option(FILE *fp);
 bool have_cities();
 float get_road_max_len();
@@ -939,6 +940,7 @@ bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, b
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate);
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
+bool have_buildings();
 vector3d const &get_buildings_max_extent();
 void clear_building_vbos();
 

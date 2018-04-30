@@ -238,8 +238,10 @@ void run_postproc_effects() {
 		add_depth_of_field(focus_depth, dof_val);
 	}
 	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater && !is_rain_enabled()) {add_god_rays();}
-	if ((display_mode & 0x20) && !camera_underwater && world_mode != WMODE_INF_TERRAIN) {add_bloom();} // add bloom last
-
+	
+	if ((display_mode & 0x20) && !camera_underwater && (world_mode != WMODE_INF_TERRAIN || (have_buildings() && is_night()))) { // allow bloom for building windows at night in TT mode
+		add_bloom(); // add bloom last
+	}
 	if (0) { // capture matrices from this frame for use with next frame (if needed in the future)
 		prev_mvm = fgGetMVM();
 		prev_pjm = fgGetPJM();

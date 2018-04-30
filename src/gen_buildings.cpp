@@ -16,8 +16,6 @@ unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
 
-extern bool is_night();
-
 // TODO:
 // Multilevel cylinders and N-gons shapes?
 // Texture alignment for windows
@@ -1845,6 +1843,7 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	}
 	return 1;
 }
+bool have_buildings() {return !building_creator.empty();}
 vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator.get_occluders(pdu, state);}
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator.check_pts_occluded(pts, npts, state);}
