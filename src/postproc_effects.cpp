@@ -199,6 +199,19 @@ void add_bloom() {
 	}
 }
 
+void add_2d_bloom() {
+
+	bind_frame_buffer_RGB();
+	shader_t s;
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("postproc_bloom_2d");
+	s.begin_shader();
+	s.add_uniform_int("frame_buffer_tex", 0);
+	set_xy_step(s);
+	draw_white_quad_and_end_shader(s);
+	color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
+}
+
 void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
@@ -239,8 +252,9 @@ void run_postproc_effects() {
 	}
 	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater && !is_rain_enabled()) {add_god_rays();}
 	
-	if ((display_mode & 0x20) && !camera_underwater && (world_mode != WMODE_INF_TERRAIN || (have_buildings() && is_night()))) { // allow bloom for building windows at night in TT mode
-		add_bloom(); // add bloom last
+	if ((display_mode & 0x20) && !camera_underwater) { // add bloom last
+		if (world_mode != WMODE_INF_TERRAIN) {add_bloom();}
+		else if (have_buildings() && is_night()) {add_2d_bloom();} // allow bloom for building windows at night in TT mode
 	}
 	if (0) { // capture matrices from this frame for use with next frame (if needed in the future)
 		prev_mvm = fgGetMVM();
