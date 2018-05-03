@@ -406,6 +406,7 @@ public:
 	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
 	void post_scroll_remove();
 	void gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_);
+	void add_new_tree(rand_gen_t &rgen, int &ttype);
 	void gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square=0, float vegetation_=1.0, bool use_density=0);
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
@@ -425,6 +426,18 @@ public:
 	void next_fire_frame();
 	void draw_fire(shader_t &s) const;
 	bool has_any_fire() const;
+};
+
+
+struct tree_placer_t {
+	struct tree_ref {
+		point pos;
+		float size;
+		int type;
+		tree_ref(point const &p, float sz, int t) : pos(p), size(sz), type(t) {}
+	};
+	vector<tree_ref> trees;
+	void add(point const &pos, float size, int type) {trees.emplace_back(pos, size, type);}
 };
 
 

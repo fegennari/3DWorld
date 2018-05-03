@@ -59,6 +59,7 @@ colorRGBA leaf_base_color(BLACK);
 tree_data_manager_t tree_data_manager;
 tree_cont_t t_trees(tree_data_manager);
 tree_cont_t *cur_tile_trees(nullptr);
+tree_placer_t tree_placer;
 
 
 extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire;
@@ -2075,6 +2076,25 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
+void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
+
+	push_back(tree());
+	if (shared_tree_data.empty()) return; // no fixed ID
+	int tree_id(-1);
+
+	if (ttype >= 0) {
+		unsigned const num_per_type(max(1U, shared_tree_data.size()/NUM_TREE_TYPES));
+		tree_id = min(unsigned((((rgen.rseed1 >> 7) + rgen.rseed2) % num_per_type) + ttype*num_per_type), shared_tree_data.size()-1);
+	}
+	else {
+		tree_id = (rgen.rseed2 % shared_tree_data.size());
+		ttype   = tree_id % NUM_TREE_TYPES;
+	}
+	if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
+	//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << " type " << ttype << endl;
+	if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
+}
+
 void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square, float vegetation_, bool use_density) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
@@ -2124,7 +2144,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 			if (tree_mode == 3 && get_tree_class_from_height(pos.z, 0) != TREE_CLASS_DECID) continue; // use a pine tree here (or no tree)
 			if (point_inside_voxel_terrain(pos)) continue; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
-			int ttype(-1), tree_id(-1);
+			int ttype(-1);
 
 			if (NONUNIFORM_TREE_DEN) {
 				if (use_density && density_gen[0].eval_index(j-x1, i-y1) > height_thresh) continue; // density function test
@@ -2138,23 +2158,20 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 				}
 			}
 			if (!check_valid_scenery_pos((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale)) continue; // approximate bsphere
-
-			if (!shared_tree_data.empty()) {
-				if (ttype >= 0) {
-					unsigned const num_per_type(max(1U, shared_tree_data.size()/NUM_TREE_TYPES));
-					tree_id = min(unsigned((((rgen.rseed1 >> 7) + rgen.rseed2) % num_per_type) + ttype*num_per_type), shared_tree_data.size()-1);
-				}
-				else {
-					tree_id = (rgen.rseed2 % shared_tree_data.size());
-					ttype   = tree_id % NUM_TREE_TYPES;
-				}
-				if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
-				//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << " type " << ttype << endl;
-			}
-			push_back(tree());
-			if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
+			add_new_tree(rgen, ttype);
 			back().gen_tree(pos, 0, ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches);
-		}
+		} // for j
+	} // for i
+
+	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.trees.empty()) { // now add pre-placed trees within the city (TT mode)
+		cube_t bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), min_tree_h, max_tree_h); // Note: zvals are unused
+
+		for (auto t = tree_placer.trees.begin(); t != tree_placer.trees.end(); ++t) { // FIXME: use grid acceleration to avoid slow linear iteration for large city?
+			if (!bounds.contains_pt_xy(t->pos)) continue; // tree not within this tile
+			int ttype(t->type);
+			add_new_tree(rgen, ttype);
+			back().gen_tree(t->pos, max(1, int(t->size)), ttype, 1, 1, 1, rgen, 1.0, 1.0, 1.0, tree_4th_branches);
+		} // for t
 	}
 }
 

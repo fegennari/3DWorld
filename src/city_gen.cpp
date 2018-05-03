@@ -11,6 +11,7 @@
 #include "model3d.h"
 #include "lightmap.h"
 #include "buildings.h"
+#include "tree_3dw.h"
 
 using std::string;
 
@@ -40,6 +41,7 @@ extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern double tfticks;
 extern vector<light_source> dl_sources;
+extern tree_placer_t tree_placer;
 
 
 void add_dynamic_lights_city(cube_t const &scene_bcube);
@@ -841,7 +843,8 @@ public:
 		unsigned const rx1(get_x_pos(road.x1())), ry1(get_y_pos(road.y1())), rx2(get_x_pos(road.x2())), ry2(get_y_pos(road.y2()));
 		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, stats_only, decrease_only);
 	}
-};
+}; // heightmap_query_t
+
 
 class city_plot_gen_t : public heightmap_query_t {
 
@@ -1119,8 +1122,14 @@ class city_road_gen_t {
 					} // for row
 					//cout << "plot: " << (i-plots.begin()) << ", b: " << bcubes.size() << ", dim: " << car_dim << ", dir: " << car_dir << ", row: " << park.row_sz << ", rows: " << park.num_rows << endl;
 				} // for c
+				gen_trees(plot, bcubes, rgen);
 			} // for i
 			cout << "parking lots: " << parks.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;
+		}
+
+		// FIXME: doesn't really belong here - but convenient to do since we have the building and parking lot locations for this plot - maybe this class should be detail_gen_t?
+		static void gen_trees(cube_t const &plot, vector<cube_t> const &blockers, rand_gen_t &rgen) {
+			// FIXME: tree_placer.add(pos, size, type);
 		}
 	}; // parking_lot_manager_t
 
