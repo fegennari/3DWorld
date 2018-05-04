@@ -1,4 +1,4 @@
-include config_t.txt
+include config.txt
 
 include building_params.txt
 buildings num_place 100000
@@ -39,6 +39,11 @@ shadow_map_sz 4096
 #sun_rot 2.0
 #moon_rot 2.0
 ambient_scale 0.5
+
+ntrees 1 # set to a small number so that most of the trees are generated city trees
+tree_size 0.2
+tree_4th_branches 1
+nleaves_scale 1.0
 
 fast_water_reflect 1
 #tiled_terrain_only 1

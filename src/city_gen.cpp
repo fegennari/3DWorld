@@ -1128,8 +1128,24 @@ class city_road_gen_t {
 		}
 
 		// FIXME: doesn't really belong here - but convenient to do since we have the building and parking lot locations for this plot - maybe this class should be detail_gen_t?
-		static void gen_trees(cube_t const &plot, vector<cube_t> const &blockers, rand_gen_t &rgen) {
-			// FIXME: tree_placer.add(pos, size, type);
+		static void gen_trees(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
+			unsigned const num = 10; // FIXME: config file option
+			float const radius(1.0*city_params.get_car_size().x); // one car length (arbitrary) FIXME: tree_radius config option?
+			vector3d const plot_sz(plot.get_size());
+			if (min(plot_sz.x, plot_sz.y) < 4.0*radius) return; // plot is too small for trees of this size
+
+			for (unsigned n = 0; n < num; ++n) {
+				for (unsigned t = 0; t < 10; ++t) { // tries
+					point const pos(rgen.rand_uniform(plot.x1()+radius, plot.x2()-radius), rgen.rand_uniform(plot.y1()+radius, plot.y2()-radius), plot.z1());
+					cube_t bc(pos);
+					bc.expand_by_xy(radius);
+					if (has_bcube_int_xy(bc, blockers, radius)) continue; // intersects a building or parking lot - skip
+					int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
+					tree_placer.add(pos, 0, ttype); // size is randomly selected
+					blockers.push_back(bc); // prevent trees from being too close to each other
+					break; // success
+				} // for t
+			} // for n
 		}
 	}; // parking_lot_manager_t
 

@@ -334,7 +334,7 @@ public:
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
-		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0);
+		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0, bool allow_bushes=1);
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;

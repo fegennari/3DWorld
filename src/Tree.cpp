@@ -1414,7 +1414,7 @@ float get_default_tree_depth() {return TREE_DEPTH*(0.5 + 0.5/tree_scale);}
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
-	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches)
+	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches, bool allow_bushes)
 {
 	assert(calc_z || user_placed);
 	tree_center      = pos;
@@ -1427,7 +1427,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	if (td.is_created()) { // pre-allocated, shared tree
 		assert(!td_is_private());
 		assert(!user_placed);
-		assert(size <= 0); // too strong?
+		//assert(size <= 0); // too strong, but note that size is only used when creating new trees
 		int const td_type(tdata().get_tree_type());
 		
 		if (ttype < 0) {
@@ -1443,7 +1443,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	}
 	else {
 		type = ((ttype < 0) ? rgen.rand() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
-		bool const create_bush(rgen.rand_probability(tree_types[type].bush_prob));
+		bool const create_bush(allow_bushes && rgen.rand_probability(tree_types[type].bush_prob));
 		if (create_bush) {type = (type + 1) % NUM_TREE_TYPES;} // mix up the tree types so that bushes stand out from trees
 		tree_type const &treetype(tree_types[type]);
 		UNROLL_3X(tree_color[i_] = 1.0 + treetype.branch_color_var*color_var[i_];)
@@ -2099,15 +2099,32 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
-	generated = 1;
-	if (mod_num_trees == 0) return; // no trees
 	float const min_tree_h(water_plane_z + 0.01*zmax_est), max_tree_h(1.8*zmax_est);
+	rand_gen_t rgen;
+	generated = 1;
+
+	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.trees.empty()) { // now add pre-placed trees within the city (TT mode)
+		shared_tree_data.ensure_init();
+		vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
+		cube_t bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), min_tree_h, max_tree_h); // Note: zvals are unused
+		//cout << "placed trees: " << tree_placer.trees.size() << endl; // testing
+		//timer_t timer("Place Trees");
+
+		for (auto t = tree_placer.trees.begin(); t != tree_placer.trees.end(); ++t) { // FIXME: use grid acceleration to avoid slow linear iteration for large city?
+			point const pos(t->pos + xlate);
+			if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
+			int ttype(t->type);
+			if (ttype >= 0) {ttype %= NUM_TREE_TYPES;} // make sure it maps to a valid tree type if specified
+			add_new_tree(rgen, ttype);
+			back().gen_tree(pos, int(t->size), ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 0); // Note: can't be user placed + instanced; no bushes
+		} // for t
+	}
+	if (mod_num_trees == 0) return; // no trees
 	float const height_thresh(get_median_height(tree_density_thresh));
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
 	unsigned const skip_val(max(1, int(1.0/tree_scale))); // similar to deterministic gen in scenery.cpp
 	shared_tree_data.ensure_init();
 	mesh_xy_grid_cache_t density_gen[NUM_TREE_TYPES+1];
-	rand_gen_t rgen;
 
 	if (NONUNIFORM_TREE_DEN) { // i==0 is the coverage density map, i>0 are the per-tree type coverage maps
 #pragma omp parallel for schedule(dynamic) num_threads(2)
@@ -2159,20 +2176,9 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			}
 			if (!check_valid_scenery_pos((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale)) continue; // approximate bsphere
 			add_new_tree(rgen, ttype);
-			back().gen_tree(pos, 0, ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches);
+			back().gen_tree(pos, 0, ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
 		} // for j
 	} // for i
-
-	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.trees.empty()) { // now add pre-placed trees within the city (TT mode)
-		cube_t bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), min_tree_h, max_tree_h); // Note: zvals are unused
-
-		for (auto t = tree_placer.trees.begin(); t != tree_placer.trees.end(); ++t) { // FIXME: use grid acceleration to avoid slow linear iteration for large city?
-			if (!bounds.contains_pt_xy(t->pos)) continue; // tree not within this tile
-			int ttype(t->type);
-			add_new_tree(rgen, ttype);
-			back().gen_tree(t->pos, max(1, int(t->size)), ttype, 1, 1, 1, rgen, 1.0, 1.0, 1.0, tree_4th_branches);
-		} // for t
-	}
 }
 
 
