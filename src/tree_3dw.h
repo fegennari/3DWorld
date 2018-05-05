@@ -430,14 +430,22 @@ public:
 
 
 struct tree_placer_t {
+
 	struct tree_ref {
 		point pos;
 		float size;
 		int type;
 		tree_ref(point const &p, float sz, int t) : pos(p), size(sz), type(t) {}
 	};
-	vector<tree_ref> trees;
-	void add(point const &pos, float size, int type) {trees.emplace_back(pos, size, type);}
+	struct tree_block {
+		vector<tree_ref> trees;
+		cube_t bcube;
+	};
+	vector<tree_block> blocks;
+
+	void begin_block() {blocks.push_back(tree_block());}
+	void add(point const &pos, float size, int type);
+	void clear() {blocks.clear();}
 };
 
 

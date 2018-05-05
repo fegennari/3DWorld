@@ -44,7 +44,7 @@ ntrees 1 # set to a small number so that most of the trees are generated city tr
 tree_size 0.2
 tree_4th_branches 1
 nleaves_scale 1.0
-city num_trees_per_plot 20
+city max_trees_per_plot 20
 city tree_spacing 1.0
 
 fast_water_reflect 1

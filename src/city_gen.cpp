@@ -61,13 +61,13 @@ struct city_params_t {
 	bool car_shadows;
 	unsigned max_lights, max_shadow_maps;
 	// trees
-	unsigned num_trees_per_plot;
+	unsigned max_trees_per_plot;
 	float tree_spacing;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0),
 		slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), num_cars(0), car_speed(0.0),
 		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0),
-		num_trees_per_plot(0), tree_spacing(1.0) {}
+		max_trees_per_plot(0), tree_spacing(1.0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -149,8 +149,8 @@ struct city_params_t {
 			if (!read_bool(fp, car_shadows)) {return read_error(str);}
 		}
 		// trees
-		else if (str == "num_trees_per_plot") {
-			if (!read_uint(fp, num_trees_per_plot)) {return read_error(str);}
+		else if (str == "max_trees_per_plot") {
+			if (!read_uint(fp, max_trees_per_plot)) {return read_error(str);}
 		}
 		else if (str == "tree_spacing") {
 			if (!read_float(fp, tree_spacing) || tree_spacing <= 0.0) {return read_error(str);}
@@ -1046,12 +1046,13 @@ class city_road_gen_t {
 			unsigned num_spaces(0), filled_spaces(0);
 			parks.clear();
 			rgen.set_state(city_id, 123);
-			tree_rgen.set_state(city_id, 456);
+			tree_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 			// cars
 			car_t car;
 			car.park();
 			car.cur_city = city_id;
 			car.cur_road_type = TYPE_PLOT;
+			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block();}
 
 			// generate 0-4 parking lots per plot, starting at the corners
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
@@ -1141,19 +1142,19 @@ class city_road_gen_t {
 
 		// doesn't really belong here - but convenient to do since we have the building and parking lot locations for this plot - maybe this class should be detail_gen_t?
 		static void gen_trees(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
-			if (city_params.num_trees_per_plot == 0) return;
+			if (city_params.max_trees_per_plot == 0) return;
 			float const radius(city_params.tree_spacing*city_params.get_car_size().x); // in multiples of car length
 			vector3d const plot_sz(plot.get_size());
 			if (min(plot_sz.x, plot_sz.y) < 4.0*radius) return; // plot is too small for trees of this size
 
-			for (unsigned n = 0; n < city_params.num_trees_per_plot; ++n) {
+			for (unsigned n = 0; n < city_params.max_trees_per_plot; ++n) {
 				for (unsigned t = 0; t < 10; ++t) { // 10 tries per tree
 					point const pos(rgen.rand_uniform(plot.x1()+radius, plot.x2()-radius), rgen.rand_uniform(plot.y1()+radius, plot.y2()-radius), plot.z1());
 					cube_t bc(pos);
-					bc.expand_by_xy(radius);
 					if (has_bcube_int_xy(bc, blockers, radius)) continue; // intersects a building or parking lot - skip
 					int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
 					tree_placer.add(pos, 0, ttype); // size is randomly selected by the tree generator using default values
+					bc.expand_by_xy(radius);
 					blockers.push_back(bc); // prevent trees from being too close to each other
 					break; // success
 				} // for t

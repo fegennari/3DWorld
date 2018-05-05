@@ -2095,6 +2095,13 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 	if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
 }
 
+void tree_placer_t::add(point const &pos, float size, int type) {
+	assert(!blocks.empty());
+	tree_block &block(blocks.back());
+	if (block.trees.empty()) {block.bcube.set_from_point(pos);} else {block.bcube.union_with_pt(pos);}
+	block.trees.emplace_back(pos, size, type);
+}
+
 void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square, float vegetation_, bool use_density) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
@@ -2103,21 +2110,23 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 	rand_gen_t rgen;
 	generated = 1;
 
-	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.trees.empty()) { // now add pre-placed trees within the city (TT mode)
+	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.blocks.empty()) { // now add pre-placed trees within the city (TT mode)
 		shared_tree_data.ensure_init();
 		vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		cube_t bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), min_tree_h, max_tree_h); // Note: zvals are unused
-		//cout << "placed trees: " << tree_placer.trees.size() << endl; // testing
-		//timer_t timer("Place Trees");
 
-		for (auto t = tree_placer.trees.begin(); t != tree_placer.trees.end(); ++t) { // FIXME: use grid acceleration to avoid slow linear iteration for large city?
-			point const pos(t->pos + xlate);
-			if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
-			int ttype(t->type);
-			if (ttype >= 0) {ttype %= NUM_TREE_TYPES;} // make sure it maps to a valid tree type if specified
-			add_new_tree(rgen, ttype);
-			back().gen_tree(pos, int(t->size), ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 0); // Note: can't be user placed + instanced; no bushes
-		} // for t
+		for (auto b = tree_placer.blocks.begin(); b != tree_placer.blocks.end(); ++b) {
+			if (!bounds.intersects_xy(b->bcube + xlate)) continue;
+
+			for (auto t = b->trees.begin(); t != b->trees.end(); ++t) {
+				point const pos(t->pos + xlate);
+				if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
+				int ttype(t->type);
+				if (ttype >= 0) {ttype %= NUM_TREE_TYPES;} // make sure it maps to a valid tree type if specified
+				add_new_tree(rgen, ttype);
+				back().gen_tree(pos, int(t->size), ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 0); // Note: can't be user placed + instanced; no bushes
+			} // for t
+		} // for b
 	}
 	if (mod_num_trees == 0) return; // no trees
 	float const height_thresh(get_median_height(tree_density_thresh));
