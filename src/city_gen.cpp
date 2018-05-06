@@ -1051,10 +1051,17 @@ class city_road_gen_t {
 	}; // road_draw_state_t
 
 
+	struct bench_t {
+		point pos;
+		float scale, rot;
+		bench_t(point const &pos_, float scale_, float rot_) : pos(pos_), scale(scale_), rot(rot_) {}
+	};
+
 	class city_obj_placer_t {
 	public: // road network needs access to parking lots for drawing
 		vector<parking_lot_t> parking_lots;
 	private:
+		vector<bench_t> benches;
 		unsigned num_spaces, filled_spaces;
 
 		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
@@ -1160,17 +1167,18 @@ class city_road_gen_t {
 			if (city_params.min_park_spaces == 0 || city_params.min_park_rows == 0) return; // disable parking lots
 			timer_t timer("Gen Parking Lots and Place Objects");
 			vector<cube_t> bcubes; // reused across calls
-			rand_gen_t rgen, tree_rgen;
+			rand_gen_t rgen, detail_rgen;
 			parking_lots.clear();
 			rgen.set_state(city_id, 123);
-			tree_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
+			detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 			clear();
 			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block();}
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				bcubes.clear();
 				gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);
-				place_trees_in_plot(*i, bcubes, tree_rgen);
+				place_trees_in_plot (*i, bcubes, detail_rgen);
+				place_detail_objects(*i, bcubes, detail_rgen);
 			} // for i
 			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;
 		}
@@ -1192,6 +1200,14 @@ class city_road_gen_t {
 					break; // success
 				} // for t
 			} // for n
+		}
+		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
+			// TODO: place benches, etc.
+		}
+		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) const {
+			if (!benches.empty()) {
+				for (auto i = benches.begin(); i != benches.end(); ++i) {} // TODO: draw benches, etc.
+			}
 		}
 	}; // parking_lot_manager_t
 
@@ -1690,6 +1706,7 @@ class city_road_gen_t {
 				} // for b
 			}
 			draw_streetlights(dstate, shadow_only);
+			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}
 		void draw_streetlights(road_draw_state_t &dstate, bool shadow_only) const {
 			if (streetlights.empty()) return;
