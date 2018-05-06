@@ -6,7 +6,7 @@ uniform float atmosphere = 1.0; // technically not needed for gas giants since a
 uniform vec3 cloud_freq  = vec3(1.0);
 uniform vec3 light_scale = vec3(1.0);
 uniform vec4 emission    = vec4(0,0,0,1);
-uniform vec3 sun_pos, ss_pos, rscale;
+uniform vec3 sun_pos, ss_pos, rscale, rim_color;
 uniform float obj_radius, sun_radius, ss_radius, ring_ri, ring_ro, population;
 uniform mat4 fg_ViewMatrix;
 uniform sampler1D ring_tex;
@@ -278,7 +278,12 @@ void main()
 	}
 	vec3 color = (texel.rgb * (ambient + diffuse*(1.0 - cloud_shadow))); // add light cloud shadows
 
-#ifndef GAS_GIANT
+#ifdef GAS_GIANT
+	// add rim lighting
+	vec3 frag_normal = normalize(normal);
+	float rim_light_scale = pow((1.0 - dot(eye_dir, frag_normal)), 3.0);
+	color += rim_color * rim_light_scale * smoothstep(0.0, 0.4, dot(frag_normal, ldir0));
+#else
 	float specval  = get_spec_intensity(norm, ldir0, eye_dir);
 	specval       *= min(1.0, 20.0*get_fresnel_reflection(eye_dir, norm, 1.0, 1.333)); // water/ice fresnel reflection (heavily biased)
 	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * spec_mag * sscale;

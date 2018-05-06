@@ -269,6 +269,7 @@ public:
 	virtual bool colonizable_int() const = 0;
 	virtual float get_vegetation() const = 0;
 	virtual string get_atmos_string() const = 0;
+	virtual colorRGBA get_rim_color() const {return BLACK;}
 	virtual point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
 	virtual void free_texture();
 	virtual void free_uobj();
@@ -308,6 +309,7 @@ public:
 	void free_uobj();
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}
 	float get_ring_rscale() const {return max(rscale.x, rscale.y)*ring_ro/radius;}
+	virtual colorRGBA get_rim_color() const {return (ai_color + ao_color)*0.5;}
 	string get_atmos_string() const;
 	string get_name() const {return "Planet " + getname();}
 };

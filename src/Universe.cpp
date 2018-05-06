@@ -295,6 +295,7 @@ public:
 		set_uniform_float(get_loc("ring_ro"),     svars.ring_ro);
 		set_uniform_float(get_loc("noise_scale"), 4.0*body.cloud_scale); // clouds / gas giant noise
 		set_uniform_float(get_loc("population"),  ((body.population >= 10.0) ? 1.0 : 0.0));
+		set_uniform_color(get_loc("rim_color"),   (colorRGB)body.get_rim_color());
 		if (using_tess_shader) {set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));}
 		
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
