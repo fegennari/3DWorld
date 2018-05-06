@@ -47,6 +47,32 @@ extern tree_placer_t tree_placer;
 void add_dynamic_lights_city(cube_t const &scene_bcube);
 
 
+struct car_model_t {
+
+	string fn;
+	int body_mat_id, fixed_color_id;
+	float xy_rot, dz, lod_mult; // xy_rot in degrees
+	vector<unsigned> shadow_mat_ids;
+
+	car_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), dz(0.0), lod_mult(1.0) {}
+	car_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
+		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm), shadow_mat_ids(smids) {}
+
+	bool read(FILE *fp) { // filename body_material_id fixed_color_id xy_rot dz lod_mult shadow_mat_ids
+		assert(fp);
+		if (!read_string(fp, fn)) return 0;
+		if (!read_int(fp, body_mat_id)) return 0;
+		if (!read_int(fp, fixed_color_id)) return 0;
+		if (!read_float(fp, xy_rot)) return 0;
+		if (!read_float(fp, dz)) return 0;
+		if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
+		unsigned shadow_mat_id;
+		while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
+		return 1;
+	}
+};
+
+
 struct city_params_t {
 
 	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width;
@@ -54,6 +80,7 @@ struct city_params_t {
 	// cars
 	unsigned num_cars;
 	float car_speed;
+	vector<car_model_t> car_model_files;
 	// parking lots
 	unsigned min_park_spaces, min_park_rows;
 	float min_park_density, max_park_density;
@@ -124,6 +151,11 @@ struct city_params_t {
 		}
 		else if (str == "car_speed") {
 			if (!read_float(fp, car_speed) || car_speed < 0.0) {return read_error(str);}
+		}
+		else if (str == "car_model") {
+			car_model_t car_model;
+			if (!car_model.read(fp)) {return read_error(str);}
+			car_model_files.push_back(car_model);
 		}
 		// parking lots
 		else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
@@ -2178,33 +2210,9 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 }
 
 
-unsigned const NUM_CAR_COLORS = 10;
+int       const FORCE_MODEL_ID = -1; // -1 disables
+unsigned  const NUM_CAR_COLORS = 10;
 colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
-
-struct car_model_t {
-	string fn;
-	int body_mat_id, fixed_color_id;
-	float xy_rot, dz, lod_mult; // xy_rot in degrees
-	vector<unsigned> shadow_mat_ids;
-	car_model_t(string const &fn_, int bmid=-1, int fcid=-1, float rot=0.0, float dz_=0.0, float lm=1.0, vector<unsigned> const &smids=vector<unsigned>()) :
-		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm), shadow_mat_ids(smids) {}
-};
-unsigned const NUM_CAR_MODELS = 10;
-int      const FORCE_MODEL_ID = -1; // -1 disables
-
-car_model_t const car_model_files[NUM_CAR_MODELS] = { // filename, body_material_id, fixed_color_id, xy_rot_angle, delta_z, lod_mult
-	car_model_t("../models/cars/sports_car/sportsCar.model3d",        22, -1, 90,  -0.02, 1.0, {20, 22}),
-	car_model_t("../models/cars/natla_car/natla_car.obj",             -1,  2, 90,   0.06, 0.5, {1}), // always GRAY
-	car_model_t("../models/cars/speedCar/speedCar.obj",               -1,  6, 0,    0.12, 0.5, {4, 5}), // always DK_BLUE
-	car_model_t("../models/cars/Lamborghini/Lamborghini.model3d",      2, -1, 180, -0.02, 0.5, {2, 3, 4}),
-	car_model_t("../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj", -1,  1, 90,   0.18, 0.2, {0, 1}), // always GRAY_BLACK
-	car_model_t("../models/cars/bugatti/bugatti.model3d",              0, -1, 80,  -0.08, 2.0, {0, 4}), // Note: underside disabled for shadows, model is already too many triangles
-	car_model_t("../models/cars/Mercedes_Benz/Mercedes-Benz.model3d",  0, -1, 180,  1.00, 0.5, {0, 6, 7}),
-	car_model_t("../models/cars/Rio/rio.model3d",                      5, -1, 270,  4.00, 0.5, {1, 5}), // Note: shadow material 1 may be optional
-	car_model_t("../models/cars/Soarer/soarer.model3d",                2, -1, 90,   2.00, 0.5, {2, 5, 8}),
-	car_model_t("../models/cars/Camaro/camaro2.model3d",              24, -1, 90,   0.10, 0.5, {9, 21, 24}),
-	//car_model_t("../models/cars/Bentley/Bentley.model3d",              1, -1, 90,   0.50, 0.5, {1}),
-};
 
 class car_manager_t {
 
@@ -2212,17 +2220,17 @@ class car_manager_t {
 		vector<int> models_valid;
 		void ensure_models_loaded() {if (empty()) {load_car_models();}}
 	public:
-		static unsigned num_models() {return NUM_CAR_MODELS;}
+		static unsigned num_models() {return city_params.car_model_files.size();}
 
 		bool is_model_valid(unsigned id) {
-			assert(id < NUM_CAR_MODELS);
+			assert(id < num_models());
 			ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
 			assert(id < models_valid.size());
 			return (models_valid[id] != 0);
 		}
 		car_model_t const &get_model(unsigned id) const {
-			assert(id < NUM_CAR_MODELS);
-			return car_model_files[id];
+			assert(id < num_models());
+			return city_params.car_model_files[id];
 		}
 		void load_car_models() {
 			models_valid.resize(num_models(), 1); // assume valid
