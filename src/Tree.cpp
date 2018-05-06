@@ -289,7 +289,7 @@ void tree_cont_t::remove_cobjs() {
 bool tree::check_sphere_coll(point &center, float radius) const {
 
 	float const trunk_radius(0.9*tdata().br_scale*tdata().base_radius);
-	float const trunk_height(tdata().sphere_center_zoff); // very approximate
+	float const trunk_height(max(tdata().sphere_radius, tdata().sphere_center_zoff)); // very approximate
 	cylinder_3dw const cylin(tree_center, tree_center+vector3d(0.0, 0.0, trunk_height), trunk_radius, trunk_radius);
 	return sphere_vert_cylin_intersect(center, radius, cylin);
 }
