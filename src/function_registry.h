@@ -340,6 +340,8 @@ void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vecto
 cube_t setup_city_lights(vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius);
 bool check_valid_scenery_pos(point const &pos, float radius);
+void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap);
+cube_t get_city_lights_bcube();
 void free_city_context();
 
 // function prototypes - physics

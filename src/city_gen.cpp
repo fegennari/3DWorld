@@ -268,10 +268,7 @@ public:
 
 road_mat_mgr_t road_mat_mgr;
 
-void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap) {
-
-	use_dlights &= !lights_bcube.is_zero_area();
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap) {
 
 	if (use_dlights) {
 		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
@@ -283,6 +280,13 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 		s.add_uniform_float("pcf_offset", 8.0*shadow_map_pcf_offset);
 		s.add_uniform_float("dlight_pcf_offset", 0.0005);
 	}
+}
+
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap) {
+
+	use_dlights &= !lights_bcube.is_zero_area();
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, use_bmap);
 }
 
 struct draw_state_t {
@@ -2780,6 +2784,7 @@ public:
 		return lights_bcube;
 	}
 	void free_context() {car_manager.free_context();}
+	cube_t get_lights_bcube() const {return lights_bcube;}
 }; // city_gen_t
 
 city_gen_t city_gen;
@@ -2812,5 +2817,6 @@ bool check_valid_scenery_pos(point const &pos, float radius) {
 	if (check_city_sphere_coll(pos, radius)) return 0;
 	return 1;
 }
+cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
 void free_city_context() {city_gen.free_context();}
 
