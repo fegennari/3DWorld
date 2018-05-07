@@ -349,8 +349,13 @@ void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
 void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag,
 	bool underwater, bool use_fs_smap, bool enable_smap, bool enable_tex_coord_weight)
 {
+	cube_t lights_bcube(all_zeros);
+
 	if (world_mode == WMODE_INF_TERRAIN) {
-		no_dlights = 1;
+		if (!no_dlights) {
+			lights_bcube = get_city_lights_bcube();
+			if (lights_bcube.is_all_zeros()) {no_dlights = 1;}
+		}
 		setup_tt_fog_pre(s); // FS
 	}
 	int const shader_type(use_fs_smap ? 1 : 0); // VS/FS (for lighting)
@@ -378,11 +383,12 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 		s.set_vert_shader("texture_gen.part+leaf_wind.part+tree_leaves_ppl");
 	}
 	s.begin_shader();
-	s.setup_scene_bounds();
+	s.setup_scene_bounds(); // also sets camera_pos
 	if (world_mode == WMODE_GROUND && use_smap) {set_smap_shader_for_all_lights(s);}
 	if (!no_dlights) {setup_dlight_textures(s, 0);} // no dlight smap
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
 	if (enable_tex_coord_weight) {s.add_uniform_float("tex_coord_weight", 0.0);}
+	if (!lights_bcube.is_all_zeros()) {set_city_lighting_shader_opts(s, lights_bcube, !no_dlights, use_smap, 0);} // will reset some values
 	s.add_uniform_float("water_depth", water_depth);
 	s.add_uniform_float("min_alpha",   min_alpha);
 	set_active_texture(0);
@@ -403,14 +409,14 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 // Note: this doesn't really work - leaves are antialiased, but have bright speckles, bright borders, and transparent lines between leaves, and it's slower
 bool use_leaf_trans() {return 0/*((display_mode & 0x10) != 0)*/;}
 
-void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only, bool use_fs_smap, bool enable_smap) {
+void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only, bool use_fs_smap, bool enable_smap, bool enable_dlights) {
 	
 	if (shader.is_setup()) {shader.enable();}
 	else { // Note: disabling leaf wind when shadow_only is faster but looks odd
 		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		if (enable_smap) {shader.set_prefix("#define NO_SHADOW_PCF", (use_fs_smap ? 1 : 0));} // faster shadows
 		if (use_leaf_trans()) {shader.set_prefix("#define ENABLE_ALPHA_TO_COVERAGE", 1);} // FS
-		set_leaf_shader(shader, (use_leaf_trans() ? 0.05 : 0.75), 3, enable_opacity, shadow_only, wind_mag, 0, use_fs_smap, enable_smap, 0); // no underwater trees
+		set_leaf_shader(shader, (use_leaf_trans() ? 0.05 : 0.75), 3, enable_opacity, (shadow_only || !enable_dlights), wind_mag, 0, use_fs_smap, enable_smap, 0); // no underwater trees
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);}
 	}
 	shader.set_specular(0.2, 20.0); // small amount of specular
@@ -989,7 +995,9 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
-	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && ground_mode) {s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate));}
+	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && (ground_mode || !get_city_lights_bcube().is_all_zeros())) {
+		s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate - get_camera_coord_space_xlate()));
+	}
 	s.set_uniform_int(tex0_off, TLEAF_START_TUID+type); // what about texture color mod?
 	fgPushMatrix();
 	translate_to(tree_center + xlate);
