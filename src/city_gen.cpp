@@ -278,8 +278,9 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	}
 }
 
-void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap) {
+void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap) {
 
+	cube_t const lights_bcube(get_city_lights_bcube());
 	use_dlights &= !lights_bcube.is_zero_area();
 	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, use_bmap);
@@ -290,26 +291,24 @@ struct draw_state_t {
 	vector3d xlate;
 protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
-	cube_t lights_bcube;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
 
-	void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool use_dlights_, bool shadow_only_, bool always_setup_shader) {
-		xlate        = xlate_;
-		shadow_only  = shadow_only_;
-		lights_bcube = lights_bcube_;
-		use_dlights  = (use_dlights_ && !shadow_only);
-		use_smap     = (shadow_map_enabled() && !shadow_only);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader) {
+		xlate       = xlate_;
+		shadow_only = shadow_only_;
+		use_dlights = (use_dlights_ && !shadow_only);
+		use_smap    = (shadow_map_enabled() && !shadow_only);
 		if (!use_smap && !always_setup_shader) return;
-		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only));
+		city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only));
 	}
 	virtual void post_draw() {
 		emit_now = 0;
 		if (use_smap) {s.end_shader();}
-		if (shadow_only) {s.begin_color_only_shader();} else {city_shader_setup(s, lights_bcube, use_dlights, 0, use_bmap);} // no smap
+		if (shadow_only) {s.begin_color_only_shader();} else {city_shader_setup(s, use_dlights, 0, use_bmap);} // no smap
 		draw_unshadowed();
 		s.end_shader();
 	}
@@ -1014,8 +1013,8 @@ class city_road_gen_t {
 	public:
 		road_draw_state_t() : ar(1.0) {}
 
-		void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool use_dlights_, bool shadow_only) {
-			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only, 0); // always_setup_shader=0
+		void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
+			draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 0); // always_setup_shader=0
 			ar = city_params.get_road_ar();
 		}
 		virtual void draw_unshadowed() {
@@ -2185,7 +2184,7 @@ public:
 		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, not needed?
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->add_city_lights(xlate, lights_bcube);}
 	}
-	void draw(int trans_op_mask, vector3d const &xlate, cube_t const &lights_bcube, bool use_dlights, bool shadow_only) { // non-const because qbd is modified
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) { // non-const because qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
@@ -2193,7 +2192,7 @@ public:
 			fgPushMatrix();
 			translate_to(xlate);
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-			dstate.pre_draw(xlate, lights_bcube, use_dlights, shadow_only);
+			dstate.pre_draw(xlate, use_dlights, shadow_only);
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only);}
 			if (!shadow_only) {global_rn.draw(dstate, shadow_only);} // no stoplights for connector road
 			dstate.post_draw();
@@ -2381,9 +2380,9 @@ class car_manager_t {
 		colorRGBA get_headlight_color(car_t const &car) const {
 			return colorRGBA(1.0, 1.0, (1.0 + 0.8*(fract(1000.0*car.max_speed) - 0.5)), 1.0); // slight yellow-blue tinting using max_speed as a hash
 		}
-		void pre_draw(vector3d const &xlate_, cube_t const &lights_bcube_, bool use_dlights_, bool shadow_only) {
+		void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
 			//use_bmap = 1; // used only for some car models
-			draw_state_t::pre_draw(xlate_, lights_bcube_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
+			draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
 			select_texture(WHITE_TEX);
 			if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
 		}
@@ -2620,7 +2619,7 @@ public:
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
 		//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
 	}
-	void draw(int trans_op_mask, vector3d const &xlate, cube_t const &lights_bcube, bool use_dlights, bool shadow_only) {
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) {
 		if (cars.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
@@ -2631,7 +2630,7 @@ public:
 			dstate.xlate = xlate;
 			fgPushMatrix();
 			translate_to(xlate);
-			dstate.pre_draw(xlate, lights_bcube, use_dlights, shadow_only);
+			dstate.pre_draw(xlate, use_dlights, shadow_only);
 
 			for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 				if (!camera_pdu.cube_visible(road_gen.get_city_bcube(cb->cur_city) + xlate)) continue; // city not visible - skip
@@ -2746,16 +2745,16 @@ public:
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
 		bool const use_dlights(is_night());
-		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
-		car_manager.draw(trans_op_mask, xlate, lights_bcube, use_dlights, shadow_only);
+		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
+		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only);
 		// Note: buildings are drawn through draw_buildings()
 	}
-	cube_t setup_city_lights(vector3d const &xlate) {
+	void setup_city_lights(vector3d const &xlate) {
 		bool const prev_had_lights(!dl_sources.empty());
 		city_smap_manager.clear_all_smaps(dl_sources);
 		clear_dynamic_lights();
 		lights_bcube.set_to_zeros();
-		if (!is_night() && !prev_had_lights) return lights_bcube; // only have lights at night
+		if (!is_night() && !prev_had_lights) return; // only have lights at night
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
 		point const cpos(camera_pdu.pos - xlate);
 		lights_bcube = cube_t(cpos);
@@ -2777,7 +2776,6 @@ public:
 		city_smap_manager.setup_shadow_maps(dl_sources, cpos);
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
-		return lights_bcube;
 	}
 	void free_context() {car_manager.free_context();}
 	cube_t get_lights_bcube() const {return lights_bcube;}
@@ -2800,7 +2798,7 @@ void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(
 void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame() {city_gen.next_frame();}
 void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
-cube_t setup_city_lights(vector3d const &xlate) {return city_gen.setup_city_lights(xlate);}
+void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
 bool check_city_sphere_coll(point const &pos, float radius) {
 	if (!have_cities()) return 0;

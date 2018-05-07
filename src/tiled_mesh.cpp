@@ -3131,7 +3131,9 @@ void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, 
 void render_tt_models(bool reflection_pass, bool transparent_pass) {
 
 	if (reflection_pass && !enable_tt_model_reflect) return;
-	render_models(0, reflection_pass, (transparent_pass ? 2 : 1), model3d_offset.get_xlate());
+	vector3d const xlate(model3d_offset.get_xlate());
+	if (!reflection_pass && !transparent_pass) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
+	render_models(0, reflection_pass, (transparent_pass ? 2 : 1), xlate);
 }
 
 void draw_tiled_terrain(bool reflection_pass) {

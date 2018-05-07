@@ -2305,9 +2305,7 @@ void free_model_context() {
 }
 void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) {
 	all_models.render(shadow_pass, reflection_pass, trans_op_mask, xlate);
-	cube_t lights_bcube(all_zeros);
-	if (!shadow_pass && !reflection_pass && (trans_op_mask & 1) && world_mode == WMODE_INF_TERRAIN) {lights_bcube = setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
-	if (trans_op_mask & 1) {draw_buildings(shadow_pass, xlate, lights_bcube);} // opaque pass
+	if (trans_op_mask & 1) {draw_buildings(shadow_pass, xlate);} // opaque pass
 	if (world_mode == WMODE_INF_TERRAIN) {draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);}
 }
 void ensure_model_reflection_cube_maps() {
