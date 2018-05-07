@@ -103,6 +103,7 @@ float get_tile_smap_dist  () {return get_smap_atten_val();}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 vector3d get_tiled_terrain_model_xlate() {return model3d_offset.get_xlate();}
+vector3d get_camera_coord_space_xlate () {return vector3d((world_mode == WMODE_INF_TERRAIN) ? get_tiled_terrain_model_xlate() : zero_vector);}
 
 bool enable_instanced_pine_trees() {
 	if (use_instanced_pine_trees) return 1;
@@ -1472,14 +1473,10 @@ void tile_cloud_manager_t::move_by_wind(tile_t const &tile) {
 	} // for i
 }
 
-/*static*/ vector3d tile_cloud_manager_t::get_camera_xlate() {
-	return vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0);
-}
-
 void tile_cloud_manager_t::get_draw_list(cloud_draw_list_t &clouds_to_draw, float mesh_zmin, float mesh_zmax) const {
 
 	if (empty()) return;
-	vector3d const xlate(get_camera_xlate());
+	vector3d const xlate(get_tiled_terrain_model_xlate());
 
 	for (auto i = begin(); i != end(); ++i) {
 		point const pt(i->pos + xlate);
@@ -1974,7 +1971,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	terrain_zmin = FAR_DISTANCE;
 	grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 	assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
-	point const cpos(get_camera_pos()), camera(cpos - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
+	point const cpos(get_camera_pos()), camera(cpos - get_tiled_terrain_model_xlate());
 	int const tile_radius(int(CREATE_DIST_TILES*TILE_RADIUS) + 1);
 	int const toffx(int(0.5*camera.x/X_SCENE_SIZE)), toffy(int(0.5*camera.y/Y_SCENE_SIZE));
 	int const x1(-tile_radius + toffx), y1(-tile_radius + toffy);
@@ -2985,7 +2982,7 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
 	set_multisample(0);
-	vector3d const xlate(tile_cloud_manager_t::get_camera_xlate());
+	vector3d const xlate(get_tiled_terrain_model_xlate());
 	for (auto i = to_draw_clouds.begin(); i != to_draw_clouds.end(); ++i) {i->cloud->draw(s, xlate, i->alpha);}
 	set_multisample(1);
 	glDepthMask(GL_TRUE);

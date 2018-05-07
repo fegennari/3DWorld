@@ -185,8 +185,7 @@ int animal_t::get_ndiv(point const &pos_) const {
 	return min(N_SPHERE_DIV, max(3, int(4.0*sqrt(radius*window_width/distance_to_camera(pos_)))));
 }
 
-vector3d get_pos_offset() {return vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0);}
-point animal_t::get_draw_pos() const {return (pos + get_pos_offset());}
+point animal_t::get_draw_pos() const {return (pos + get_camera_coord_space_xlate());}
 
 void fish_t::draw(shader_t &s) const {
 
@@ -301,7 +300,7 @@ template<typename A> void animal_group_t<A>::remove_disabled() {
 }
 
 template<typename A> void animal_group_t<A>::draw_animals(shader_t &s) const {
-	if (empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_pos_offset())) return;
+	if (empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
 	for (const_iterator i = begin(); i != end(); ++i) {i->draw(s);}
 }
 

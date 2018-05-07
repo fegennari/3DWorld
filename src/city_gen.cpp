@@ -205,10 +205,6 @@ struct city_params_t {
 city_params_t city_params;
 
 
-vector3d const get_query_xlate() {
-	return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
-}
-
 bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
 	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
 }
@@ -992,7 +988,7 @@ public:
 	}
 	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
 		if (plots.empty()) return 0;
-		point const query_pos(pos - get_query_xlate());
+		point const query_pos(pos - get_camera_coord_space_xlate());
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 		return check_bcubes_sphere_coll(plots, query_pos, radius, xy_only);
 	}
@@ -1708,7 +1704,7 @@ class city_road_gen_t {
 		}
 		bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only=1) const {
 			if (roads.empty()) return 0;
-			point const query_pos(pos - get_query_xlate());
+			point const query_pos(pos - get_camera_coord_space_xlate());
 			if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 			if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) return 1;
 

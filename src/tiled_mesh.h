@@ -143,7 +143,6 @@ class tile_cloud_manager_t : public vector<tile_cloud_t> {
 	void choose_num_clouds();
 public:
 	tile_cloud_manager_t() : generated(0), num_clouds(0), cur_move_dist(0.0) {}
-	static vector3d get_camera_xlate();
 	void gen_new_cloud();
 	void gen(int x1, int y1, int x2, int y2);
 	void move_by_wind(tile_t const &tile);

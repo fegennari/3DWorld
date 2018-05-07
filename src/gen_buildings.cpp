@@ -1432,9 +1432,6 @@ class building_creator_t {
 			}
 		}
 	}
-	vector3d const get_query_xlate() const {
-		return vector3d((world_mode == WMODE_INF_TERRAIN) ? vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0) : zero_vector);
-	}
 	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand) const {
 		for (auto i = ixs.begin(); i != ixs.end(); ++i) {
 			building_t const &ob(get_building(*i));
@@ -1699,7 +1696,7 @@ public:
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0) const {
 		if (empty()) return 0;
-		vector3d const xlate(get_query_xlate());
+		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
@@ -1723,7 +1720,7 @@ public:
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix) const {
 		if (empty()) return 0;
 		bool const vertical(p1.x == p2.x && p1.y == p2.y);
-		vector3d const xlate(get_query_xlate());
+		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube(p1-xlate, p2-xlate);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
@@ -1758,7 +1755,7 @@ public:
 		return coll;
 	}
 
-	void get_overlapping_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) const { // Note: called on init, don't need to use get_query_xlate()
+	void get_overlapping_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
 		get_grid_range(xy_range, ixr);
@@ -1777,7 +1774,7 @@ public:
 	}
 
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
-		state.init(pdu.pos, ((world_mode == WMODE_INF_TERRAIN) ? get_tiled_terrain_model_xlate() : zero_vector));
+		state.init(pdu.pos, get_camera_coord_space_xlate());
 		
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
 			point const pos(g->bcube.get_cube_center() + state.xlate);
