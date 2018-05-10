@@ -83,7 +83,7 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 		if (atan_val < 0.0) {atan_val += PI;}
 		x_sterm = (atan_val/angle)*sterm; // ratio of X-angle to Y-angle
 	}
-	tterm_sq2_inv = 2.0/(tterm*tterm*(1.0 + A*A));
+	tterm_sq2_inv = max(1.0, 2.0/(tterm*tterm*(1.0 + A*A))); // clamp to at least 1.0 for very wide spotlight frustums
 	orthogonalize_up_dir();
 }
 
