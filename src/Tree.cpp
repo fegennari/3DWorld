@@ -316,8 +316,15 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 	}
 	else { // draw_leaves
 		tree_data_t::pre_leaf_draw(s);
-		sorted.resize(size());
-		for (unsigned i = 0; i < size(); ++i) {sorted[i] = make_pair(distance_to_camera(operator[](i).sphere_center() + xlate), i);}
+		sorted.clear();
+		
+		for (unsigned i = 0; i < size(); ++i) {
+			tree const &t(operator[](i));
+			point const center(t.sphere_center() + xlate);
+			// still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene
+			if (world_mode == WMODE_INF_TERRAIN && shadow_only && !camera_pdu.sphere_visible_test(center, 1.1*t.get_radius())) continue;
+			sorted.emplace_back(distance_to_camera(center), i);
+		}
 		sort(sorted.begin(), sorted.end()); // sort front to back for better early z culling
 		to_update_leaves.clear();
 
@@ -949,11 +956,6 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
-		
-		if (!ground_mode) { // still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene
-			not_visible = !is_visible_to_camera(xlate); // first pass only
-			if (not_visible) return;
-		}
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
 		td.leaf_draw_setup(1);
