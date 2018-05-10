@@ -435,6 +435,7 @@ public:
 	void clear(bool no_regen_buildings);
 	void free_compute_shader();
 	float update(float &min_camera_dist);
+private:
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id);
 	static void add_texture_colors(shader_t &s, unsigned start_tu_id);
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
@@ -442,14 +443,16 @@ public:
 	void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const;
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix);
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set);
+public:
 	void pre_draw(bool reflection_pass);
 	void draw(bool reflection_pass);
+	void draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_trees_only=0);
+	void draw_decid_tree_shadows() {draw_shadow_pass(camera_pdu.pos, nullptr, 1);}
+	void draw_water(shader_t &s, float zval) const;
+private:
 	void draw_tiles(bool reflection_pass, bool enable_shadow_map) const;
 	void draw_tiles_shadow_pass(point const &lpos, tile_t const *const tile);
-	void draw_shadow_pass(point const &lpos, tile_t *tile);
 	bool find_and_bind_any_valid_shadow_map(shader_t &s) const;
-	void draw_water(shader_t &s, float zval) const;
-	void end_lightning() const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_pine_tree_shader(shader_t &s, string const &vs, bool use_texgen=1);
@@ -464,8 +467,10 @@ public:
 	static void setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult);
 	void draw_grass(bool reflection_pass);
 	void draw_animals(bool reflection_pass);
+public:
 	void draw_tile_clouds(bool reflection_pass);
 	void update_lightning(bool reflection_pass);
+	void end_lightning() const;
 	void clear_vbos_tids();
 	void clear_flowers();
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp) const;

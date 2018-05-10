@@ -2553,9 +2553,10 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const 
 }
 
 
-void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
+void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_trees_only) {
 
 	//RESET_TIME;
+	if (decid_trees_only && !decid_trees_enabled()) return;
 	float const orig_near_plane(camera_pdu.near_);
 	bool const orig_fog_enabled(fog_enabled);
 	camera_pdu.near_ = 0.0; // move the near clipping plane to zero to prevent clipping of tiles that are between the light and the target but not in the shadow frustum
@@ -2564,17 +2565,23 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		if (!i->second->is_visible()) continue;
-		i->second->update_pine_tree_state(1, 1); // force high detail trees
+		if (!decid_trees_only) {i->second->update_pine_tree_state(1, 1);} // force high detail trees
 		//i->second->update_decid_trees(); // not legal
 		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
 	}
 	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamping so that shadow casters aren't clipped by the shadow frustum
-	draw_tiles_shadow_pass(lpos, tile);
-	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
+
+	if (!decid_trees_only) {
+		draw_tiles_shadow_pass(lpos, tile);
+
+		if (pine_trees_enabled()) {
+			draw_pine_trees(0, 1);
+			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail
+		}
+		if (scenery_enabled()) {draw_scenery(0, 1);}
+		render_models(1, 0, 3, model3d_offset.get_xlate()); // both transparent and opaque; VFC should work here (somewhat?) for models
+	}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
-	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
-	render_models(1, 0, 3, model3d_offset.get_xlate()); // both transparent and opaque; VFC should work here (somewhat?) for models
-	for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
 	camera_pdu.near_ = orig_near_plane;
@@ -3189,6 +3196,7 @@ void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.updat
 void end_tiled_terrain_lightning() {terrain_tile_draw.end_lightning();}
 void clear_tiled_terrain(bool no_regen_buildings) {terrain_tile_draw.clear(no_regen_buildings);}
 void draw_tiled_terrain_clouds(bool reflection_pass) {terrain_tile_draw.draw_tile_clouds(reflection_pass);}
+void draw_tiled_terrain_decid_tree_shadows() {terrain_tile_draw.draw_decid_tree_shadows();}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}
 void clear_tiled_terrain_shaders() {terrain_tile_draw.free_compute_shader();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
