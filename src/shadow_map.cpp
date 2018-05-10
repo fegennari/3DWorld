@@ -594,6 +594,13 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	}
 	else if (world_mode == WMODE_INF_TERRAIN) { // Note: not really a clean case split; should pass this in somehow, or use a different class in tiled terrain mode (cities)
 		render_models(1, 0, 1); // opaque only
+		vector3d const xlate(get_tiled_terrain_model_xlate());
+		camera_pdu.pos += xlate;
+		fgPushMatrix();
+		translate_to(-xlate);
+		draw_tiled_terrain_decid_tree_shadows();
+		fgPopMatrix();
+		camera_pdu.pos -= xlate;
 	}
 	else {assert(0);} // not supported in universe mode
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
