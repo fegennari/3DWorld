@@ -1048,7 +1048,7 @@ bool dls_cell::check_add_light(unsigned ix) const {
 }
 
 
-void clear_dynamic_lights() { // slow for large lights
+void clear_dynamic_lights() {
 
 	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
