@@ -617,7 +617,7 @@ struct pos_dir_up { // defines a view frustum
 
 	point pos;
 	vector3d dir, upv, upv_, cp;
-	float angle, tterm, sterm, x_sterm, tterm_sq2_inv, near_, far_;
+	float angle, tterm, sterm, x_sterm, behind_sphere_mult, near_, far_;
 	double A; // aspect ratio x/y
 	bool valid;
 

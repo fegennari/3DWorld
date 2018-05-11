@@ -83,7 +83,7 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 		if (atan_val < 0.0) {atan_val += PI;}
 		x_sterm = (atan_val/angle)*sterm; // ratio of X-angle to Y-angle
 	}
-	tterm_sq2_inv = max(1.0, 2.0/(tterm*tterm*(1.0 + A*A))); // clamp to at least 1.0 for very wide spotlight frustums
+	behind_sphere_mult = max(1.0, A*A)*max(1.0, 2.0/(tterm*tterm*(1.0 + A*A))); // clamp to at least 1.0 for very wide spotlight frustums
 	orthogonalize_up_dir();
 }
 
@@ -110,7 +110,7 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 
 	if (!valid) return (radius >= 0.0); // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
-	if (dot_product(dir, pv) < 0.0) return (radius > 0.0 && pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // sphere behind - optimization (approximate/conservative)
+	if (dot_product(dir, pv) < 0.0) return (radius > 0.0 && pv.mag_sq() < radius*radius*behind_sphere_mult); // sphere behind - optimization (approximate/conservative)
 	float const dist(pv.mag());
 	if (fabs(dot_product(upv_, pv)) > (dist*  sterm + radius)) return 0; // y-direction (up)
 	if (fabs(dot_product(cp,   pv)) > (dist*x_sterm + radius)) return 0; // x-direction
