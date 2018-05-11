@@ -110,7 +110,7 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 
 	if (!valid) return (radius >= 0.0); // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
-	if (dot_product(dir, pv) < 0.0) return (radius > 0.0 && pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // sphere behind - optimization
+	if (dot_product(dir, pv) < 0.0) return (radius > 0.0 && pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // sphere behind - optimization (approximate/conservative)
 	float const dist(pv.mag());
 	if (fabs(dot_product(upv_, pv)) > (dist*  sterm + radius)) return 0; // y-direction (up)
 	if (fabs(dot_product(cp,   pv)) > (dist*x_sterm + radius)) return 0; // x-direction
@@ -158,7 +158,8 @@ bool pos_dir_up::cube_visible(cube_t const &c) const {
 	point const cube_pts[8] = {
 		point(c.d[0][0], c.d[1][0], c.d[2][0]), point(c.d[0][0], c.d[1][0], c.d[2][1]), point(c.d[0][0], c.d[1][1], c.d[2][0]), point(c.d[0][0], c.d[1][1], c.d[2][1]),
 		point(c.d[0][1], c.d[1][0], c.d[2][0]), point(c.d[0][1], c.d[1][0], c.d[2][1]), point(c.d[0][1], c.d[1][1], c.d[2][0]), point(c.d[0][1], c.d[1][1], c.d[2][1])};
-	return pt_set_visible<8>(cube_pts);
+	if (!pt_set_visible<8>(cube_pts)) return 0;
+	return dist_less_than(pos, c.closest_pt(pos), far_); // extra check for far clipping plane - useful for short range lights and faraway objects
 	// Note: if the above call returns true, we could perform a further check for the frustum (all points) to the outside of each plane of the cube
 }
 
