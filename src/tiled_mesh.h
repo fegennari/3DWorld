@@ -461,7 +461,7 @@ private:
 	void draw_pine_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	static void billboard_tree_shader_setup(shader_t &s);
-	static void tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity);
+	static void tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only);
 	void draw_decid_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_scenery(bool reflection_pass, bool shadow_pass=0);
 	static void setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult);

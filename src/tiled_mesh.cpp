@@ -2706,7 +2706,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	s.end_shader();
 
 	// near trunks
-	tree_branch_shader_setup(s, enable_smap, 0); // enable_opacity=0
+	tree_branch_shader_setup(s, enable_smap, 0, shadow_pass); // enable_opacity=0
 	s.add_uniform_float("tex_scale_t", 5.0);
 	draw_pine_tree_bl(s, 1, 0, 0, shadow_pass, reflection_pass, enable_smap, -1); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
@@ -2755,21 +2755,24 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 }
 
 
-void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity) {
+void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only) {
 
 	if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", 1);} // FS
 	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
-	setup_tt_fog_pre(s);
+	if (!shadow_only) {setup_tt_fog_pre(s);}
 	set_smap_enable_for_shader(s, enable_shadow_maps, 1); // FS
 	s.set_vert_shader("per_pixel_lighting");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+tiled_tree_branches");
 	s.begin_shader();
-	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
 	//s.add_uniform_int("shadow_tex", 6);
-	s.add_uniform_color("ambient_tint", colorRGB(WHITE));
-	s.add_uniform_color("color_scale", get_color_scale());
-	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
+
+	if (!shadow_only) {
+		setup_tt_fog_post(s);
+		s.add_uniform_color("ambient_tint", colorRGB(WHITE));
+		s.add_uniform_color("color_scale", get_color_scale());
+		if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
+	}
 }
 
 
@@ -2799,7 +2802,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	{ // draw branches
 		shader_t bs;
-		tree_branch_shader_setup(bs, enable_shadow_maps, 1); // enable_opacity=1
+		tree_branch_shader_setup(bs, enable_shadow_maps, 1, shadow_pass); // enable_opacity=1
 		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
 		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
@@ -2846,7 +2849,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
 	// draw opaque objects
 	// rocks, stumps, and logs are close enough to tree branches that we can reuse the shader
-	tree_branch_shader_setup(s, enable_shadow_maps, 0); // no opacity
+	tree_branch_shader_setup(s, enable_shadow_maps, 0, shadow_pass); // no opacity
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
@@ -2856,7 +2859,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
 	// draw leaves
 	if (enable_shadow_maps) {s.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
-	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps, 1);
+	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps, 1, shadow_pass);
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 	s.add_uniform_color("color_scale", get_color_scale(1.0, 0.5));
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, vrs, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);}

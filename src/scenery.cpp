@@ -1418,7 +1418,7 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	s.end_shader();
 
 	if (!(plants.empty() && leafy_plants.empty())) { // draw leaves
-		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, (ENABLE_PLANT_SHADOWS && !shadow_only), 1);
+		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, (ENABLE_PLANT_SHADOWS && !shadow_only), 1, shadow_only);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
 	}
