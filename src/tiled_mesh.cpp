@@ -2564,6 +2564,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	to_draw.clear();
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		if (decid_trees_only && i->second->num_decid_trees() == 0) continue; // no decid trees to draw, don't bother checking visibility
 		if (!i->second->is_visible()) continue;
 		if (!decid_trees_only) {i->second->update_pine_tree_state(1, 1);} // force high detail trees
 		//i->second->update_decid_trees(); // not legal
@@ -2774,6 +2775,7 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
+	if (to_draw.empty()) return; // nothing to do
 	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 	lod_renderer.resize_zero();
