@@ -570,6 +570,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	pre_render();
 	// Note: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
+	//if (is_shadow_pass) {T::set_vbo_arrays_shadow(0);} else
 	T::set_vbo_arrays(); // calls check_mvm_update()
 
 	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range

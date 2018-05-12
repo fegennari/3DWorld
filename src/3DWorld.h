@@ -811,6 +811,7 @@ struct vert_norm { // size = 24
 	bool operator< (vert_norm const &p) const {return ((v == p.v) ? (n < p.n) : (v < p.v));}
 	bool operator==(vert_norm const &p) const {return (v == p.v && n == p.n);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	static void set_vbo_arrays_shadow(bool include_tcs);
 	static void unset_attrs() {}
 };
 
@@ -902,6 +903,7 @@ struct vert_norm_tc : public vert_norm { // size = 32
 	}
 	bool operator==(vert_norm_tc const &p) const {return (v == p.v && n == p.n && t[0] == p.t[0] && t[1] == p.t[1]);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	static void set_vbo_arrays_shadow(bool include_tcs);
 };
 
 
@@ -927,6 +929,7 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 	}
 	//bool operator==(vert_norm_tc_tan const &p) const {}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	static void set_vbo_arrays_shadow(bool include_tcs);
 	static void unset_attrs();
 };
 
