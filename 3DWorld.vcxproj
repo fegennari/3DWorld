@@ -769,6 +769,7 @@
     <None Include="shaders\black_body_burn.part.frag" />
     <None Include="shaders\bump_map.part.frag" />
     <None Include="shaders\bump_map.part.vert" />
+    <None Include="shaders\circular_portal.frag" />
     <None Include="shaders\clouds.frag" />
     <None Include="shaders\clouds.vert" />
     <None Include="shaders\cloud_billboard.frag" />
