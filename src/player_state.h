@@ -259,13 +259,18 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 
 	point dest;
 	double last_used_tfticks;
+	unsigned tid;
+	bool transparent;
 
-	teleporter() : last_used_tfticks(0.0) {}
+	teleporter() : dest(all_zeros), last_used_tfticks(0.0), tid(0), transparent(0) {}
 	float get_draw_radius  () const {return 1.5*radius;}
 	float get_teleport_dist() const {return p2p_dist(pos, dest);}
+	bool do_portal_draw() const;
 	void setup() {gen_pts(get_draw_radius());}
-	void draw(vpc_shader_t &s) const; // maybe should be static and applied to all teleporters
+	void create_portal_texture();
+	void draw(vpc_shader_t &s);
 	bool maybe_teleport_object(point &opos, float oradius, int player_id);
+	void free_context() {free_texture(tid);}
 };
 
 

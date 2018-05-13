@@ -137,7 +137,7 @@ struct face_draw_params_t {
 
 	face_draw_params_t(pos_dir_up const &pdu_, unsigned face_id_) : pdu(pdu_), face_id(face_id_), to_draw(coll_objects.get_draw_stream(face_id)) {}
 
-	void draw_scene(unsigned tid, unsigned tex_size, int cobj_id, bool is_indoors) const {
+	void draw_scene(unsigned tid, unsigned tex_size, int cobj_id, bool is_indoors, bool is_cube_map) const {
 		cview_dir  = pdu.dir;
 		up_vector  = pdu.upv;
 		camera_pdu = pdu;
@@ -149,7 +149,8 @@ struct face_draw_params_t {
 		setup_sun_moon_light_pos();
 		bool const inc_mesh(cview_dir != plus_z), inc_grass_water(inc_mesh && !is_indoors);
 		draw_scene_from_custom_frustum(camera_pdu, cobj_id, 2, inc_mesh, inc_grass_water, inc_grass_water); // reflection_pass=2 (cube map)
-		render_to_texture_cube_map(tid, tex_size, face_id); // render reflection to texture
+		if (is_cube_map) {render_to_texture_cube_map(tid, tex_size, face_id);} // render reflection to texture
+		else {render_to_texture(tid, tex_size, tex_size);}
 	}
 };
 
@@ -185,6 +186,45 @@ void create_cobj_draw_streams(vector<face_draw_params_t> const &faces) { // refl
 	}
 }
 
+void set_custom_viewport(unsigned tex_size, float fov_angle, float near_plane, float far_plane) {
+
+	glViewport(0, 0, tex_size, tex_size);
+	fgMatrixMode(FG_PROJECTION);
+	fgPushMatrix();
+	perspective_fovy = fov_angle;
+	set_perspective_near_far(near_plane, far_plane, 1.0); // AR = 1.0
+}
+void restore_scene_state() {
+
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
+	setup_viewport_and_proj_matrix(window_width, window_height); // restore
+	update_shadow_matrices(); // restore
+	setup_sun_moon_light_pos();
+}
+
+void create_camera_view_texture(unsigned tid, unsigned tex_size, pos_dir_up const &pdu, bool is_indoors) {
+
+	//RESET_TIME;
+	assert(tid);
+	pre_ref_cview_dir  = cview_dir;
+	pre_ref_camera_pos = camera_pdu.pos;
+	pos_dir_up const prev_camera_pdu(camera_pdu);
+	vector3d const prev_up_vector(up_vector);
+	set_custom_viewport(tex_size, 2.0*pdu.angle/TO_RADIANS, pdu.near_, pdu.far_);
+	vector<face_draw_params_t> faces;
+	faces.push_back(face_draw_params_t(pdu, 0));
+	create_cobj_draw_streams(faces);
+	faces[0].draw_scene(tid, tex_size, -1, is_indoors, 0);
+	if (ENABLE_CUBE_MAP_MIPMAPS) {gen_mipmaps(2);}
+	camera_pdu = prev_camera_pdu;
+	up_vector  = prev_up_vector;
+	cview_dir  = pre_ref_cview_dir;
+	restore_scene_state();
+	//PRINT_TIME("Create Reflection Cube Map");
+}
+
 unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id, point const &center,
 	float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask)
 {
@@ -196,11 +236,7 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 	pre_ref_camera_pos = camera_pdu.pos;
 	pos_dir_up const prev_camera_pdu(camera_pdu);
 	vector3d const prev_up_vector(up_vector);
-	glViewport(0, 0, tex_size, tex_size);
-	fgMatrixMode(FG_PROJECTION);
-	fgPushMatrix();
-	perspective_fovy = 90.0;
-	set_perspective_near_far(near_plane, far_plane, 1.0); // AR = 1.0
+	set_custom_viewport(tex_size, 90.0, near_plane, far_plane); // 90 degree FOV
 	unsigned faces_drawn(0);
 	vector<face_draw_params_t> faces;
 
@@ -218,18 +254,13 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 		} // for dir
 	} // for dim
 	create_cobj_draw_streams(faces);
-	for (int i = 0; i < (int)faces.size(); ++i) {faces[i].draw_scene(tid, tex_size, cobj_id, is_indoors);}
+	for (int i = 0; i < (int)faces.size(); ++i) {faces[i].draw_scene(tid, tex_size, cobj_id, is_indoors, 1);}
 	coll_objects.cur_draw_stream_id = 0; // restore to default value
 	if (ENABLE_CUBE_MAP_MIPMAPS) {gen_mipmaps(6);}
 	camera_pdu = prev_camera_pdu;
 	up_vector  = prev_up_vector;
 	cview_dir  = pre_ref_cview_dir;
-	fgMatrixMode(FG_PROJECTION);
-	fgPopMatrix();
-	fgMatrixMode(FG_MODELVIEW);
-	setup_viewport_and_proj_matrix(window_width, window_height); // restore
-	update_shadow_matrices(); // restore
-	setup_sun_moon_light_pos();
+	restore_scene_state();
 	check_gl_error(531);
 	//PRINT_TIME("Create Reflection Cube Map");
 	return faces_drawn;

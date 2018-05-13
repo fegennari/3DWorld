@@ -696,6 +696,13 @@ void draw_sky_and_clouds(bool camera_side, bool no_update=0) {
 	draw_puffy_clouds(camera_side, no_update);
 }
 
+void create_reflection_and_portal_textures() {
+	if (enable_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
+	ensure_model_reflection_cube_maps();
+	reflective_cobjs.create_textures();
+	create_portal_textures();
+}
+
 
 // The display function. It is called whenever the window needs
 // redrawing (ie: overlapping window moves, resize, maximize)
@@ -906,10 +913,7 @@ void display(void) {
 			create_shadow_map(); // where should this go? must be after draw_universe_bkg()
 			if (TIMETEST) PRINT_TIME("G");
 
-			// create all reflection textures
-			if (enable_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
-			ensure_model_reflection_cube_maps();
-			reflective_cobjs.create_textures();
+			create_reflection_and_portal_textures();
 
 			// draw background
 			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background

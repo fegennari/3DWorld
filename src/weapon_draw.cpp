@@ -15,7 +15,7 @@ set<int> scheduled_weapons;
 extern bool keep_beams, have_indir_smoke_tex, begin_motion;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
 extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2;
-extern float fticks;
+extern float fticks, NEAR_CLIP, FAR_CLIP;
 extern double tfticks;
 extern vector3d pre_ref_cview_dir;
 extern point pre_ref_camera_pos;
@@ -920,6 +920,9 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 
 
 // not sure where this belongs
+void create_portal_textures() {
+	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->create_portal_texture();}
+}
 void draw_teleporters() {
 
 	vpc_shader_t s;
@@ -931,8 +934,27 @@ void draw_teleporters() {
 	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->draw(s);}
 	disable_blend();
 }
+void free_teleporter_textures() {
+	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->free_context();}
+}
 
-void teleporter::draw(vpc_shader_t &s) const {
+bool teleporter::do_portal_draw() const {return (transparent && distance_to_camera(pos) < 100.0*radius);} // transparent, and not too far away
+
+void teleporter::create_portal_texture() {
+
+	if (!do_portal_draw()) return;
+	if (!sphere_in_camera_view(pos, get_draw_radius(), 2)) return;
+	unsigned const tex_size = 512; // shouldn't need to be too high
+	
+	if (tid == 0) { // allocate tid if needed
+		setup_texture(tid, 0, 0, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tex_size, tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+	}
+	pos_dir_up const pdu(dest, cview_dir, plus_z, 0.5*TO_RADIANS*PERSP_ANGLE, NEAR_CLIP, FAR_CLIP); // same as camera, but 1:1 AR and at teleporter destination
+	create_camera_view_texture(tid, tex_size, pdu, 0); // not sure about is_indoors, set to 0 for safety
+}
+
+void teleporter::draw(vpc_shader_t &s) { // Note: not const or static because of tid caching for transparent case
 
 	float const ACTIVATE_DELAY = 1.0; // in seconds
 	float const use_scale(CLIP_TO_01(ACTIVATE_DELAY - float(tfticks - last_used_tfticks)/TICKS_PER_SECOND));
@@ -978,10 +1000,27 @@ void teleporter::draw(vpc_shader_t &s) const {
 			glDisable(GL_CULL_FACE);
 			s.enable();
 		}
+		// Note: tid may not be allocated if teleporter is visible in the view from the destination point
+		if (tid && do_portal_draw()) { // transparent, and not too far away
+			//frame_buffer_RGB_to_texture(tid); // FIXME
+			assert(tid); // must have been setup in create_portal_texture()
+			bind_2d_texture(tid);
+			quad_batch_draw qbd;
+			qbd.add_billboard(pos, camera_pdu.pos, plus_z, WHITE, radius, radius, tex_range_t(1.0, 0.0, 0.0, 1.0)); // swap X tex coords (something backwards?)
+			shader_t ts;
+			ts.set_vert_shader("no_lighting_tex_coord");
+			ts.set_frag_shader("circular_portal");
+			ts.begin_shader();
+			ts.add_uniform_float("min_alpha", 0.0);
+			ts.add_uniform_int("tex0", 0);
+			qbd.draw();
+			ts.end_shader(); // not actually needed, but added for clarity
+			s.enable(); // back to the main shader
+		}
 	}
 	if (0 && camera_pdu.sphere_visible_test(dest, 0.25*radius)) { // draw dest (debugging)
 		draw_single_colored_sphere(dest, 0.25*radius, N_SPHERE_DIV, BLUE);
-		s.enable();
+		s.enable(); // back to the main shader
 	}
 }
 
