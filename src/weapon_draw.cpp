@@ -938,7 +938,7 @@ void free_teleporter_textures() {
 	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->free_context();}
 }
 
-bool teleporter::do_portal_draw() const {return (is_portal && distance_to_camera(pos) < 100.0*radius);} // transparent, and not too far away
+bool teleporter::do_portal_draw() const {return (is_portal && distance_to_camera(pos) < 60.0*radius);} // transparent, and not too far away
 
 void teleporter::create_portal_texture() {
 
