@@ -1825,13 +1825,15 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'x': // teleporter sx sy sz  dx dy dz  radius
+		case 'x': // teleporter sx sy sz  dx dy dz  radius [is_portal [is_indoors]]
 			{
 				teleporter tp;
-				tp.transparent = 1; // FIXME: config file option, always transparent, or dynamic?
-				if (fscanf(fp, "%f%f%f%f%f%f%f", &tp.pos.x, &tp.pos.y, &tp.pos.z, &tp.dest.x, &tp.dest.y, &tp.dest.z, &tp.radius) != 7) {
+				int is_portal(0), is_indoors(0);
+				if (fscanf(fp, "%f%f%f%f%f%f%f%i%i", &tp.pos.x, &tp.pos.y, &tp.pos.z, &tp.dest.x, &tp.dest.y, &tp.dest.z, &tp.radius, &is_portal, &is_indoors) < 7) {
 					return read_error(fp, "teleporter", coll_obj_file);
 				}
+				tp.is_portal  = (is_portal  != 0);
+				tp.is_indoors = (is_indoors != 0);
 				xf.xform_pos(tp.pos);
 				xf.xform_pos(tp.dest);
 				tp.setup();
@@ -2143,6 +2145,10 @@ void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 	prev = *this; // update previous cobj
 }
 
+void teleporter::write_to_cobj_file(ostream &out) const {
+	out << "teleporter " << pos.raw_str() << " " << dest.raw_str() << " " << radius << " " << is_portal << " " << is_indoors << endl;
+}
+
 bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { // call on fixed_cobjs
 
 	ofstream out(fn);
@@ -2185,9 +2191,7 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	if (!platforms.empty()) {out << "Q 0" << endl << endl;} // end platforms section
 	
 	// add teleporters, jump pads, portals, and appearance spots
-	for (auto t = teleporters.begin(); t != teleporters.end(); ++t) {
-		out << "teleporter " << t->pos.raw_str() << " " << t->dest.raw_str() << " " << t->radius << endl;
-	}
+	for (auto t = teleporters.begin(); t != teleporters.end(); ++t) {t->write_to_cobj_file(out);}
 	out << endl;
 	for (auto j = jump_pads.begin(); j != jump_pads.end(); ++j) {
 		out << "jump_pad " << j->pos.raw_str() << " " << j->radius << " " << j->velocity.raw_str() << endl;

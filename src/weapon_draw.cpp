@@ -938,7 +938,7 @@ void free_teleporter_textures() {
 	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->free_context();}
 }
 
-bool teleporter::do_portal_draw() const {return (transparent && distance_to_camera(pos) < 100.0*radius);} // transparent, and not too far away
+bool teleporter::do_portal_draw() const {return (is_portal && distance_to_camera(pos) < 100.0*radius);} // transparent, and not too far away
 
 void teleporter::create_portal_texture() {
 
@@ -951,7 +951,7 @@ void teleporter::create_portal_texture() {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tex_size, tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	}
 	pos_dir_up const pdu(dest, cview_dir, plus_z, 0.5*TO_RADIANS*PERSP_ANGLE, NEAR_CLIP, FAR_CLIP); // same as camera, but 1:1 AR and at teleporter destination
-	create_camera_view_texture(tid, tex_size, pdu, 0); // not sure about is_indoors, set to 0 for safety
+	create_camera_view_texture(tid, tex_size, pdu, is_indoors);
 }
 
 void teleporter::draw(vpc_shader_t &s) { // Note: not const or static because of tid caching for transparent case
@@ -1002,7 +1002,6 @@ void teleporter::draw(vpc_shader_t &s) { // Note: not const or static because of
 		}
 		// Note: tid may not be allocated if teleporter is visible in the view from the destination point
 		if (tid && do_portal_draw()) { // transparent, and not too far away
-			//frame_buffer_RGB_to_texture(tid); // FIXME
 			assert(tid); // must have been setup in create_portal_texture()
 			bind_2d_texture(tid);
 			quad_batch_draw qbd;
