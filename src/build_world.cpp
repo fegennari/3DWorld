@@ -460,6 +460,9 @@ void process_groups() {
 							maybe_teleport_object(obj.pos, radius, NO_SOURCE); // teleport!
 							maybe_use_jump_pad(obj.pos, obj.velocity, radius, NO_SOURCE);
 						}
+						else if (type == BLOOD || type == CHARRED || type == SHRAPNEL) {
+							maybe_teleport_object(obj.pos, radius, NO_SOURCE, 1);
+						}
 						point const old_pos(pos); // after teleporting
 						unsigned spf(1);
 						int cindex(-1);

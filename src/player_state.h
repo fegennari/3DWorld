@@ -270,7 +270,7 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 	void write_to_cobj_file(std::ostream &out) const;
 	void create_portal_texture();
 	void draw(vpc_shader_t &s);
-	bool maybe_teleport_object(point &opos, float oradius, int player_id);
+	bool maybe_teleport_object(point &opos, float oradius, int player_id, bool small_object);
 	void free_context() {free_texture(tid);}
 };
 

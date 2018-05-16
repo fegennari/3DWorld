@@ -1581,10 +1581,10 @@ void player_state::verify_wmode() {
 }
 
 
-bool maybe_teleport_object(point &opos, float oradius, int player_id) {
+bool maybe_teleport_object(point &opos, float oradius, int player_id, bool small_object) {
 
 	for (vector<teleporter>::iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
-		if (i->maybe_teleport_object(opos, oradius, player_id)) return 1; // we don't support collisions with multiple teleporters at the same time
+		if (i->maybe_teleport_object(opos, oradius, player_id, small_object)) return 1; // we don't support collisions with multiple teleporters at the same time
 	}
 	return 0;
 }
@@ -1610,9 +1610,10 @@ void teleport_object(point &opos, point const &src_pos, point const &dest_pos, f
 }
 
 
-bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id) {
+bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id, bool small_object) {
 
 	if (!dist_less_than(pos, opos, radius+oradius)) return 0; // not close enough
+	if (small_object) {opos += (dest - pos); return 1;} // no effects
 	teleport_object(opos, pos, dest, oradius, player_id);
 	last_used_tfticks = tfticks;
 	return 1;
