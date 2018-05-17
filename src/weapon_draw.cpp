@@ -926,6 +926,7 @@ void create_portal_textures() {
 }
 void draw_teleporters() {
 
+	if (teleporters.empty()) return; // FIXME: teleporter objects not drawn in this case
 	vpc_shader_t s;
 	teleporter::shader_setup(s, 4); // RGBA noise
 	s.enable();
@@ -933,6 +934,22 @@ void draw_teleporters() {
 	s.set_cur_color(WHITE);
 	enable_blend();
 	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->draw(s);}
+	int const group(coll_id[TELEPORTER]);
+	
+	if (group >= 0) { // draw teleporter objects
+		obj_group const &objg(obj_groups[group]);
+		
+		if (objg.is_enabled()) {
+			for (unsigned i = 0; i < objg.end_id; ++i) { // check dynamic teleporter objects
+				dwobject const &obj(objg.get_obj(i));
+				if (obj.disabled()) continue;
+				teleporter tp(teleporters.front()); // deep copy to get texture and other data
+				tp.is_portal = 0;
+				tp.pos = obj.pos;
+				tp.draw(s);
+			} // for i
+		}
+	}
 	disable_blend();
 }
 void free_teleporter_textures() {

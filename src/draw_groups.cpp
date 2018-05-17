@@ -458,6 +458,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 	int const type(objg.get_ptype());
 	if (reflect_dodgeballs && type == BALL && enable_all_reflections()) return; // drawn as a cobj
 	if (type == MAT_SPHERE) return; // drawn as a cobj
+	if (type == TELEPORTER) return; // drawn as a teleporter
 	obj_type const &otype(object_types[type]);
 	int tid(otype.tid);
 	float const radius(otype.radius), cd_scale(NDIV_SCALE*radius*window_width);
