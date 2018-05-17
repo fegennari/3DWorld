@@ -106,7 +106,7 @@ int const obj_weapons[NUM_TOT_OBJS] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, W_SAWBLADE, -1, -1, W_RAPTOR,
+	-1, -1, -1, -1, -1, W_TELEPORTER, W_SAWBLADE, -1, -1, W_RAPTOR,
 	W_RAPTOR, W_XLOCATOR, W_XLOCATOR, -1
 };
 

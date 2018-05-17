@@ -829,7 +829,7 @@ int damage_done(int type, int index) {
 
 	int const cid(coll_id[type]);
 
-	if (cid >= 0 && index >= 0 && !(type >= HEALTH && type <= WA_PACK)) { // skip pickup items because they're not object-dependent
+	if (cid >= 0 && index >= 0 && !(type >= HEALTH && type <= WA_PACK) && obj_groups[cid].is_enabled()) { // skip pickup items because they're not object-dependent
 		dwobject &obj(obj_groups[cid].get_obj(index));
 		if ((obj.flags & (WAS_PUSHED | FLOATING)) && (type != BALL || game_mode != 2)) return 0; // floating on the water or pushed after stopping, can no longer do damage
 
@@ -2601,6 +2601,7 @@ int get_damage_source(int type, int index, int questioner) {
 			}
 		}
 		if (cid >= 0 && cid < num_groups && (unsigned)index < obj_groups[cid].max_objects()) {
+			assert(obj_groups[cid].is_enabled());
 			int const source(obj_groups[cid].get_obj(index).source);
 			if (source == NO_SOURCE) return questioner;
 			assert(source >= CAMERA_ID);
