@@ -76,7 +76,7 @@ float const CBLADE_EXT(0.5*CBLADE_EXT_PT*CBFD);
 
 
 // self_damage use_underwater need_weapon need_ammo def_ammo max_ammo obj_id fire_delay nshots nfragments v_mult v_add blast_damage blast_radius firing_error range1 range2 recoil name
-weapon_t const weapons[NUM_WEAPONS+2] = {
+weapon_t const weapons[NUM_TOT_WEAPONS] = {
 	weapon_t(0, 1, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  0.0,  0.00, "Unarmed"         ),
 	weapon_t(0, 1, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, 0.25, 0.00, "Baseball Bat"    ),
 	weapon_t(0, 0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.0,   3.0,  3.0,  0.08, "Dodgeball"       ),
@@ -96,7 +96,8 @@ weapon_t const weapons[NUM_WEAPONS+2] = {
 	weapon_t(0, 1, 0, 1, 1,   1,   XLOCATOR, 20,  1,  1,   2.0,  4.0, 0.0,    0.0,  0.0,   0.0,  0.0,  0.03, "Translocator"    ),
 	/* non-selectable */
 	weapon_t(1, 0, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.6,  1.6,  0.04, "Cluster Grenade" ),
-	weapon_t(0, 1, 1, 1, 1,   10,  SAWBLADE, CBFD,1,  1,   2.0,  4.0, 0.0,    0.0,  0.01,  0.0,  0.0,  0.03, "Saw Blade")
+	weapon_t(0, 1, 1, 1, 1,   10,  SAWBLADE, CBFD,1,  1,   2.0,  4.0, 0.0,    0.0,  0.01,  0.0,  0.0,  0.03, "Saw Blade"),
+	weapon_t(1, 0, 0, 1, 1,   10,  TELEPORTER,50, 1,  1,   0.7,  1.5, 0.0,    0.0,  0.0,   0.0,  0.0,  0.00, "Teleporter"),
 };
 
 int const obj_weapons[NUM_TOT_OBJS] = {

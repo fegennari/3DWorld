@@ -135,7 +135,8 @@ void create_object_groups() {
 	coll_id[FREEZE_BOMB]=create_group(FREEZE_BOMB,200,0, 0, 0, 0, 0);
 	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 0, 0); // Note: create plasma group last since it uses a special shader during drawing
 	coll_id[XLOCATOR] = create_group(XLOCATOR, num_player_blocks, 0, 0, 0, 0, 0);
-	coll_id[MAT_SPHERE]= create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 0, 0);
+	coll_id[TELEPORTER]=create_group(TELEPORTER, num_player_blocks, 0, 0, 0, 0, 0);
+	coll_id[MAT_SPHERE]=create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 0, 0);
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
 }
 
@@ -457,11 +458,11 @@ void process_groups() {
 					if (type == PLASMA && obj.velocity.mag_sq() < 1.0) {obj.disable();} // plasma dies when it stops
 					else {
 						if (large_radius) {
-							maybe_teleport_object(obj.pos, radius, NO_SOURCE); // teleport!
+							maybe_teleport_object(obj.pos, radius, NO_SOURCE, type); // teleport!
 							maybe_use_jump_pad(obj.pos, obj.velocity, radius, NO_SOURCE);
 						}
 						else if (type == BLOOD || type == CHARRED || type == SHRAPNEL) {
-							maybe_teleport_object(obj.pos, radius, NO_SOURCE, 1);
+							maybe_teleport_object(obj.pos, radius, NO_SOURCE, type, 1);
 						}
 						point const old_pos(pos); // after teleporting
 						unsigned spf(1);

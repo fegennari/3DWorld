@@ -355,6 +355,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_BALL:
+			if (wmode & 1) {do_texture = 0;} // FIXME: better graphics
 		case W_SBALL:
 		case W_LANDMINE:
 		case W_GRENADE: // draw_grenade()?

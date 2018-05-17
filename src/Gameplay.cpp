@@ -1765,8 +1765,12 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	float damage_scale(1.0), range(0.0);
 	assert(can_fire_weapon());
 	int weapon_id(weapon);
-	if (weapon == W_GRENADE && (wmode&1)) {weapon_id = W_CGRENADE;}
-	if (weapon == W_BLADE   && (wmode&1)) {weapon_id = W_SAWBLADE;}
+
+	if (wmode&1) { // secondary fire projectiles
+		if (weapon == W_GRENADE) {weapon_id = W_CGRENADE;}
+		if (weapon == W_BLADE  ) {weapon_id = W_SAWBLADE;}
+		if (weapon == W_BALL   ) {weapon_id = W_TELEPORTER;}
+	}
 	int const dtime(get_prev_fire_time_in_ticks());
 	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1)), is_player(shooter == CAMERA_ID);
 	weapon_t const &w(weapons[weapon_id]);
@@ -1926,18 +1930,20 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		gen_sound(SOUND_ROCKET, fpos, 0.5, 1.8);
 		break;
 
+	case W_XLOCATOR: gen_sound(SOUND_BOING,  fpos, 1.0, 1.5);
+		fpos += dir*(0.25*radius); // fire from in front of shooter
+		break;
+
 	case W_BLADE:    gen_sound(SOUND_DRILL,  fpos, 0.5, 0.8); break;
 	case W_SAWBLADE: gen_sound(SOUND_DRILL,  fpos, 0.5, 0.8); break; // bounce?
 	case W_ROCKET:   gen_sound(SOUND_ROCKET, fpos, 1.0, 1.2); break;
 	case W_BALL:     gen_sound(SOUND_SWING,  fpos, 0.7, 1.4); break;
+	case W_TELEPORTER:gen_sound(SOUND_SWING, fpos, 1.2, 2.0); break;
 	case W_SBALL:    gen_sound(SOUND_SWING,  fpos, 0.4, 1.5); break;
 	case W_GRENADE:  gen_sound(SOUND_SWING,  fpos, 0.5, 1.3); break;
 	case W_CGRENADE: gen_sound(SOUND_SWING,  fpos, 0.6, 1.2); break;
 	case W_STAR5:    gen_sound(SOUND_SWING,  fpos, 0.3, 2.0); break;
 	case W_LANDMINE: gen_sound(SOUND_ALERT,  fpos, 0.3, 2.5); break;
-	case W_XLOCATOR: gen_sound(SOUND_BOING,  fpos, 1.0, 1.5);
-		fpos += dir*(0.25*radius); // fire from in front of shooter
-		break;
 	}
 	if (type < 0) return 3;
 	int const cid(coll_id[type]);
@@ -2125,7 +2131,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		obj_group const &objg(obj_groups[g]);
 		int const type(objg.type);
 		obj_type const &otype(object_types[type]);
-		if (!objg.enabled || !objg.large_radius() || type == PLASMA) continue;
+		if (!objg.enabled || !objg.large_radius() || type == PLASMA || type == TELEPORTER) continue;
 		
 		for (unsigned i = 0; i < objg.end_id; ++i) {
 			if (type == SMILEY && (int)i == shooter && !laser_m2) continue; // this is the shooter

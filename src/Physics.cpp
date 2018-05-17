@@ -518,6 +518,19 @@ void init_objects() {
 	object_types[XLOCATOR].color           = LT_GRAY;
 	object_types[XLOCATOR].flags           = SPECULAR | SELECTABLE | NO_WATER_DAMAGE | NO_COLL_DAMAGE;
 
+	object_types[TELEPORTER].air_factor          = 0.0;
+	object_types[TELEPORTER].friction_factor     = 0.0;
+	object_types[TELEPORTER].gravity             = 0.1;
+	object_types[TELEPORTER].radius              = 0.05;
+	object_types[TELEPORTER].damage              = 0.0;
+	object_types[TELEPORTER].lifetime            = 300;
+	object_types[TELEPORTER].density             = 0.1;
+	object_types[TELEPORTER].elasticity          = 2.0; // 100% elastic collisions with any surface that has elasticity >= 0.5
+	object_types[TELEPORTER].health              = 10000.0;
+	object_types[TELEPORTER].color               = WHITE;
+	object_types[TELEPORTER].flags               = SELECTABLE | NO_COLL_DAMAGE;
+	object_types[TELEPORTER].tid                 = -1;
+
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;
 		object_types[i].friction_factor = 0.9;

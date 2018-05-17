@@ -507,7 +507,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 					}
 				}
 				oddatav.push_back(od_data(type, i, cost*dmult*p2p_dist_sq(pos, obj.pos)));
-			}
+			} // for i
 		}
 	} // for t
 	if (oddatav.empty()) return min_ic;
@@ -1076,7 +1076,7 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	
 	// reset last waypoint if the smiley teleported;
 	// the teleporter itself was likely the last waypoint, so it has been reached even if the smiley teleported before it was in range of the waypoint
-	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius, smiley_id)) {
+	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius, smiley_id, SMILEY)) {
 		if (last_waypoint >= 0) {mark_waypoint_reached(last_waypoint, smiley_id);} // mark this waypoint as reached
 		last_waypoint = -1;
 	}
@@ -1581,11 +1581,25 @@ void player_state::verify_wmode() {
 }
 
 
-bool maybe_teleport_object(point &opos, float oradius, int player_id, bool small_object) {
+bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, bool small_object) {
 
 	for (vector<teleporter>::iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
 		if (i->maybe_teleport_object(opos, oradius, player_id, small_object)) return 1; // we don't support collisions with multiple teleporters at the same time
 	}
+	if (type == TELEPORTER) return 0; // don't teleport teleporters
+	int const group(coll_id[TELEPORTER]);
+	if (group < 0) return 0;
+	obj_group const &objg(obj_groups[group]);
+	if (!objg.is_enabled()) return 0;
+
+	for (unsigned i = 0; i < objg.end_id; ++i) { // check dynamic teleporter objects
+		dwobject const &obj(objg.get_obj(i));
+		if (obj.disabled()) continue;
+		if (obj.time < 0.25*TICKS_PER_SECOND) continue; // not yet armed (too close to shooter)
+		teleporter tp;
+		tp.from_obj(obj);
+		if (tp.maybe_teleport_object(opos, oradius, player_id, small_object)) return 1;
+	} // for i
 	return 0;
 }
 
@@ -1609,6 +1623,13 @@ void teleport_object(point &opos, point const &src_pos, point const &dest_pos, f
 	if (player_id != CAMERA_ID) {add_blastr(opos, plus_z, 6.0*oradius, 0.0, int(0.5*TICKS_PER_SECOND), NO_SOURCE, WHITE, BLUE, ETYPE_NUCLEAR, nullptr, 1);}
 }
 
+
+void teleporter::from_obj(dwobject const &obj) {
+	pos     = obj.pos;
+	radius  = 2.0*object_types[obj.type].radius; // make it larger so that teleport radius is larger than coll radius
+	dest    = pos;
+	dest.z += 400.0*CAMERA_RADIUS; // large dz
+}
 
 bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id, bool small_object) {
 

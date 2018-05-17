@@ -1520,7 +1520,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			obj.angle       = 90.0;
 		}
 	}
-	if (do_coll_funcs && enable_cfs && cobj.cp.coll_func != NULL) { // call collision function
+	if (do_coll_funcs && enable_cfs && cobj.cp.coll_func != NULL && type != TELEPORTER) { // call collision function
 		float energy_mult(1.0);
 		if (type == PLASMA) {energy_mult *= obj.init_dir.x*obj.init_dir.x;} // size squared
 		float const energy(get_coll_energy(v_old, obj.velocity, otype.mass));
@@ -1694,7 +1694,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	int &jump_time(sstate.jump_time);
 	dwobject camera_obj(def_objects[CAMERA]); // make a fresh copy
 	
-	if (maybe_teleport_object(pos, radius, CAMERA_ID)) {
+	if (maybe_teleport_object(pos, radius, CAMERA_ID, CAMERA)) {
 		camera_last_pos = pos;
 		add_camera_filter(colorRGBA(0.5, 0.5, 1.0, 1.0), TICKS_PER_SECOND/4, -1, CAM_FILT_TELEPORT, 1); // a quarter second of fading light blue
 	}

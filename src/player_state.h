@@ -21,7 +21,7 @@ unsigned const NUM_DB_TIDS(sizeof(dodgeball_tids)/sizeof(int));
 
 // weapons
 enum {W_UNARMED = 0, W_BBBAT, W_BALL, W_SBALL, W_ROCKET, W_LANDMINE, W_SEEK_D, W_STAR5, W_M16, W_SHOTGUN, W_GRENADE,
-	  W_LASER, W_PLASMA, W_BLADE, W_GASSER, W_RAPTOR, W_XLOCATOR, /* non-selectable*/ W_CGRENADE, W_SAWBLADE};
+	  W_LASER, W_PLASMA, W_BLADE, W_GASSER, W_RAPTOR, W_XLOCATOR, /* non-selectable*/ W_CGRENADE, W_SAWBLADE, W_TELEPORTER, NUM_TOT_WEAPONS};
 
 enum {SF_EYE = 0, SF_NOSE, SF_TONGUE, SF_HEADBAND, NUM_SMILEY_PARTS};
 
@@ -263,6 +263,7 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 	bool is_portal, is_indoors;
 
 	teleporter() : dest(all_zeros), last_used_tfticks(0.0), tid(0), is_portal(0), is_indoors(0) {}
+	void from_obj(dwobject const &obj);
 	float get_draw_radius  () const {return 1.5*radius;}
 	float get_teleport_dist() const {return p2p_dist(pos, dest);}
 	bool do_portal_draw() const;

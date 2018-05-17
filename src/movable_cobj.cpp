@@ -1274,7 +1274,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 	point const center(cobj.get_center_pt());
 	point cobj_pos(center + cobj_delta); // post-move pos
 	
-	if (maybe_teleport_object(cobj_pos, 0.5*radius, NO_SOURCE)) { // was teleported
+	if (maybe_teleport_object(cobj_pos, 0.5*radius, NO_SOURCE, COLLISION)) { // was teleported (type is ignored here)
 		cobj_delta = cobj_pos - center + delta.get_norm()*radius; // move radius past the teleport end position so that the player doesn't get stuck on the cobj when going through
 	}
 	if (group != nullptr) { // grouped cobjs
