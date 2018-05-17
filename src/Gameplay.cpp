@@ -2083,7 +2083,8 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	float &range, float intensity, int ignore_cobj, float max_range, vector3d *vcf_used)
 {
 	assert(!is_nan(damage));
-	assert(intensity <= 1.0 && LASER_REFL_ATTEN < 1.0);
+	assert(intensity <= 1.0);
+	assert(LASER_REFL_ATTEN < 1.0);
 	int closest(-1), closest_t(0), coll(0), cindex(-1);
 	point coll_pos(pos);
 	vector3d vcf(vcf_), coll_norm(plus_z);
@@ -2119,7 +2120,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 	if (cindex >= 0) {
 		cobj_params const &cp(coll_objects.get_cobj(cindex).cp);
-		hardness = cp.elastic;
+		hardness = min(cp.elastic, 1.0f); // prevent problems with bouncy objects (sawblade and teleporter)
 
 		if (is_laser) {
 			get_lum_alpha(cp.color, cp.tid, luminance, alpha);
@@ -2127,7 +2128,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			refract_ix = cp.refract_ix;
 		}
 	}
-	for (int g = 0; g < num_groups; ++g) { // collisions with dynamic group objects - this can be slow
+	for (int g = 0; g < num_groups; ++g) { // collisions with dynamic group objects - this can be slow (Note that some of these are already in cobjs test)
 		obj_group const &objg(obj_groups[g]);
 		int const type(objg.type);
 		obj_type const &otype(object_types[type]);
@@ -2150,7 +2151,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					specular = ((otype.flags & SPECULAR) ? 1.0 : ((otype.flags & LOW_SPECULAR) ? 0.5 : 0.0));
 				}
 			}
-		}
+		} // for i
 	}
 	if ((shooter >= 0 || laser_m2) && !spectate) { // check camera/player
 		point const camera(get_camera_pos());
@@ -2312,7 +2313,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					reflect = CLIP_TO_01(alpha*(specular + (1.0f - specular)*luminance)); // could use red component
 				}
 				if (reflect > 0.01) { // reflected light
-					reflect = min(reflect, 0.95f); // prevent stack overflow
+					reflect = min(reflect, LASER_REFL_ATTEN); // prevent stack overflow
 					calc_reflection_angle(vcf, vref, coll_norm);
 					end_pos = projectile_test(coll_pos, vref, 0.0, reflect*damage, shooter, range0, reflect*intensity, -1, max_range);
 				}
