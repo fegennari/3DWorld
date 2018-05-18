@@ -41,7 +41,7 @@ extern player_state *sstates;
 extern vector<team_info> teaminfo;
 extern vector<string> avail_smiley_names;
 extern waypoint_vector waypoints;
-extern vector<teleporter> teleporters;
+extern vector<teleporter> teleporters[2]; // static, dynamic
 extern vector<jump_pad> jump_pads;
 
 
@@ -1583,7 +1583,7 @@ void player_state::verify_wmode() {
 
 bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, bool small_object) {
 
-	for (vector<teleporter>::iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
+	for (vector<teleporter>::iterator i = teleporters[0].begin(); i != teleporters[0].end(); ++i) {
 		if (i->maybe_teleport_object(opos, oradius, player_id, small_object)) return 1; // we don't support collisions with multiple teleporters at the same time
 	}
 	if (type == TELEPORTER) return 0; // don't teleport teleporters
@@ -1596,9 +1596,12 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, 
 		dwobject const &obj(objg.get_obj(i));
 		if (obj.disabled()) continue;
 		if (obj.time < 0.25*TICKS_PER_SECOND) continue; // not yet armed (too close to shooter)
-		teleporter tp;
-		tp.from_obj(obj);
-		if (tp.maybe_teleport_object(opos, oradius, player_id, small_object)) return 1;
+		assert(i < teleporters[1].size());
+
+		if (teleporters[1][i].maybe_teleport_object(opos, oradius, player_id, small_object)) {
+			// FIXME: credit obj.source with kill
+			return 1;
+		}
 	} // for i
 	return 0;
 }
@@ -1609,6 +1612,16 @@ bool maybe_use_jump_pad(point &opos, vector3d &velocity, float oradius, int play
 		if (i->maybe_jump(opos, velocity, oradius, player_id)) return 1;
 	}
 	return 0;
+}
+
+
+void setup_dynamic_teleporters() {
+
+	if (coll_id[TELEPORTER] < 0) return;
+	obj_group const &objg(obj_groups[coll_id[TELEPORTER]]);
+	if (!objg.is_enabled()) {teleporters[1].clear(); return;} // Note: no texture, free_context() doesn't need to be called
+	teleporters[1].resize(objg.end_id);
+	for (unsigned i = 0; i < objg.end_id; ++i) {teleporters[1][i].from_obj(objg.get_obj(i));}
 }
 
 void teleport_object(point &opos, point const &src_pos, point const &dest_pos, float oradius, int player_id) {
@@ -1623,16 +1636,23 @@ void teleport_object(point &opos, point const &src_pos, point const &dest_pos, f
 	if (player_id != CAMERA_ID) {add_blastr(opos, plus_z, 6.0*oradius, 0.0, int(0.5*TICKS_PER_SECOND), NO_SOURCE, WHITE, BLUE, ETYPE_NUCLEAR, nullptr, 1);}
 }
 
-
 void teleporter::from_obj(dwobject const &obj) {
+
+	float const prev_radius(radius);
 	pos     = obj.pos;
 	radius  = 2.0*object_types[obj.type].radius; // make it larger so that teleport radius is larger than coll radius
+	draw_radius_scale = 1.0;
 	dest    = pos;
 	dest.z += 400.0*CAMERA_RADIUS; // large dz
+	source  = obj.source;
+	enabled = obj.enabled();
+	is_portal = 0;
+	if (radius != prev_radius) {setup();} // on radius change
 }
 
 bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id, bool small_object) {
 
+	if (!enabled) return 0;
 	if (!dist_less_than(pos, opos, radius+oradius)) return 0; // not close enough
 	if (small_object) {opos += (dest - pos); return 1;} // no effects
 	teleport_object(opos, pos, dest, oradius, player_id);

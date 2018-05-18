@@ -259,12 +259,14 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 
 	point dest;
 	double last_used_tfticks;
+	float draw_radius_scale;
 	unsigned tid;
-	bool is_portal, is_indoors;
+	int source;
+	bool is_portal, is_indoors, enabled;
 
-	teleporter() : dest(all_zeros), last_used_tfticks(0.0), tid(0), is_portal(0), is_indoors(0) {}
+	teleporter() : dest(all_zeros), last_used_tfticks(0.0), draw_radius_scale(1.5), tid(0), source(NO_SOURCE), is_portal(0), is_indoors(0), enabled(1) {}
 	void from_obj(dwobject const &obj);
-	float get_draw_radius  () const {return 1.5*radius;}
+	float get_draw_radius  () const {return draw_radius_scale*radius;}
 	float get_teleport_dist() const {return p2p_dist(pos, dest);}
 	bool do_portal_draw() const;
 	void setup() {gen_pts(get_draw_radius());}

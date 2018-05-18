@@ -678,6 +678,7 @@ void create_portal_textures();
 void draw_teleporters();
 void free_teleporter_textures();
 void draw_jump_pads();
+void setup_dynamic_teleporters();
 bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, bool small_object=0);
 void teleport_object(point &opos, point const &src_pos, point const &dest_pos, float oradius, int player_id);
 void player_teleported(point const &pos, int player_id);

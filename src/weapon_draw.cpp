@@ -23,7 +23,7 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<spark_t> sparks;
 extern vector<beam3d> beams;
-extern vector<teleporter> teleporters;
+extern vector<teleporter> teleporters[2]; // static, dynamic
 extern vector<jump_pad> jump_pads;
 extern int coll_id[];
 extern blood_spot blood_spots[];
@@ -921,42 +921,32 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 
 
 // not sure where this belongs
-void create_portal_textures() {
-	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->create_portal_texture();}
+void create_portal_textures() { // static teleporters only
+	for (auto i = teleporters[0].begin(); i != teleporters[0].end(); ++i) {i->create_portal_texture();}
 }
 void draw_teleporters() {
 
-	if (teleporters.empty()) return; // FIXME: teleporter objects not drawn in this case
+	if (teleporters[0].empty() && teleporters[1].empty()) return;
 	vpc_shader_t s;
 	teleporter::shader_setup(s, 4); // RGBA noise
 	s.enable();
 	s.add_uniform_float("noise_scale", 1.2);
 	s.set_cur_color(WHITE);
 	enable_blend();
-	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->draw(s);}
-	int const group(coll_id[TELEPORTER]);
 	
-	if (group >= 0) { // draw teleporter objects
-		obj_group const &objg(obj_groups[group]);
-		
-		if (objg.is_enabled()) {
-			for (unsigned i = 0; i < objg.end_id; ++i) { // check dynamic teleporter objects
-				dwobject const &obj(objg.get_obj(i));
-				if (obj.disabled()) continue;
-				teleporter tp(teleporters.front()); // deep copy to get texture and other data
-				tp.is_portal = 0;
-				tp.pos = obj.pos;
-				tp.draw(s);
-			} // for i
-		}
+	// Note: drawn additively with no depth write, doesn't need to be back to front sorted
+	for (unsigned d = 0; d < 2; ++d) { // both static and dynamic teleporters
+		for (auto i = teleporters[d].begin(); i != teleporters[d].end(); ++i) {i->draw(s);}
 	}
 	disable_blend();
 }
 void free_teleporter_textures() {
-	for (auto i = teleporters.begin(); i != teleporters.end(); ++i) {i->free_context();}
+	for (unsigned d = 0; d < 2; ++d) { // both static and dynamic teleporters (though only static should have textures allocated)
+		for (auto i = teleporters[d].begin(); i != teleporters[d].end(); ++i) {i->free_context();}
+	}
 }
 
-bool teleporter::do_portal_draw() const {return (is_portal && distance_to_camera(pos) < 60.0*radius);} // transparent, and not too far away
+bool teleporter::do_portal_draw() const {return (enabled && is_portal && distance_to_camera(pos) < 60.0*radius);} // transparent, and not too far away
 
 void teleporter::create_portal_texture() {
 
@@ -974,6 +964,7 @@ void teleporter::create_portal_texture() {
 
 void teleporter::draw(vpc_shader_t &s) { // Note: not const or static because of tid caching for transparent case
 
+	if (!enabled) return;
 	float const ACTIVATE_DELAY = 1.0; // in seconds
 	float const use_scale(CLIP_TO_01(ACTIVATE_DELAY - float(tfticks - last_used_tfticks)/TICKS_PER_SECOND));
 	float const draw_radius(get_draw_radius()), light_radius(8.0*draw_radius), use_light_radius(2.0*use_scale*light_radius);

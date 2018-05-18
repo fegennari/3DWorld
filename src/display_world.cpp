@@ -898,6 +898,7 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("E");
 			if (b2down) {fire_weapon();}
 			update_weapon_cobjs(); // and update cblade
+			setup_dynamic_teleporters();
 			check_gl_error(6);
 			proc_voxel_updates(); // with the update here, we avoid making the voxels and shadows out of sync
 			if (TIMETEST) PRINT_TIME("F");

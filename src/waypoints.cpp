@@ -31,7 +31,7 @@ extern obj_type object_types[];
 extern dwobject def_objects[];
 extern vector<point> app_spots;
 extern coll_obj_group coll_objects;
-extern vector<teleporter> teleporters;
+extern vector<teleporter> teleporters[2]; // static, dynamic
 extern vector<jump_pad> jump_pads;
 
 
@@ -338,7 +338,7 @@ public:
 				has_item_placed = 1;
 			}
 		}
-		for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) { // add teleporter waypoints
+		for (vector<teleporter>::const_iterator i = teleporters[0].begin(); i != teleporters[0].end(); ++i) { // add static teleporter waypoints
 			int const six(add_if_valid(i->pos,  -1, 0)); // does this waypoint need any state to be set?
 			int const eix(add_if_valid(i->dest, -1, 0)); // add teleporter destination as well, so that smileys going through the teleporter end on a waypoint
 			//if (six >= 0) {waypoints[six].goal = 1;}

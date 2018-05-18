@@ -42,7 +42,7 @@ point star_pts[2*N_STAR_POINTS];
 vector<user_waypt_t> user_waypoints;
 coll_obj_group fixed_cobjs;
 vector<portal> portals;
-vector<teleporter> teleporters;
+vector<teleporter> teleporters[2]; // static, dynamic
 vector<jump_pad> jump_pads;
 vector<obj_draw_group> obj_draw_groups;
 vector<sphere_t> cur_frame_explosions;
@@ -1841,7 +1841,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				xf.xform_pos(tp.pos);
 				xf.xform_pos(tp.dest);
 				tp.setup();
-				teleporters.push_back(tp);
+				teleporters[0].push_back(tp); // static teleporter
 			}
 			break;
 
@@ -2195,7 +2195,7 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	if (!platforms.empty()) {out << "Q 0" << endl << endl;} // end platforms section
 	
 	// add teleporters, jump pads, portals, and appearance spots
-	for (auto t = teleporters.begin(); t != teleporters.end(); ++t) {t->write_to_cobj_file(out);}
+	for (auto t = teleporters[0].begin(); t != teleporters[0].end(); ++t) {t->write_to_cobj_file(out);} // static teleporters
 	out << endl;
 	for (auto j = jump_pads.begin(); j != jump_pads.end(); ++j) {
 		out << "jump_pad " << j->pos.raw_str() << " " << j->radius << " " << j->velocity.raw_str() << endl;
