@@ -31,7 +31,7 @@ extern obj_type object_types[];
 extern dwobject def_objects[];
 extern vector<point> app_spots;
 extern coll_obj_group coll_objects;
-extern vector<teleporter> teleporters[2]; // static, dynamic
+extern vector<teleporter> teleporters[3]; // static, dynamic, in-hand
 extern vector<jump_pad> jump_pads;
 
 

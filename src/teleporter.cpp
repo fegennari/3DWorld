@@ -20,7 +20,7 @@ extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern player_state *sstates;
-extern vector<teleporter> teleporters[2]; // static, dynamic
+extern vector<teleporter> teleporters[3]; // static, dynamic, in-hand
 extern vector<jump_pad> jump_pads;
 
 
@@ -28,7 +28,7 @@ extern vector<jump_pad> jump_pads;
 
 bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, bool small_object) {
 
-	for (vector<teleporter>::iterator i = teleporters[0].begin(); i != teleporters[0].end(); ++i) {
+	for (vector<teleporter>::iterator i = teleporters[0].begin(); i != teleporters[0].end(); ++i) { // static teleporters
 		if (i->maybe_teleport_object(opos, oradius, player_id, small_object)) return 1; // we don't support collisions with multiple teleporters at the same time
 	}
 	if (type == TELEPORTER) return 0; // don't teleport teleporters
@@ -102,7 +102,7 @@ void create_portal_textures() { // static teleporters only
 }
 void draw_teleporters() {
 
-	if (teleporters[0].empty() && teleporters[1].empty()) return;
+	if (teleporters[0].empty() && teleporters[1].empty() && teleporters[2].empty()) return;
 	vpc_shader_t s;
 	teleporter::shader_setup(s, 4); // RGBA noise
 	s.enable();
@@ -111,10 +111,11 @@ void draw_teleporters() {
 	enable_blend();
 
 	// Note: drawn additively with no depth write, doesn't need to be back to front sorted
-	for (unsigned d = 0; d < 2; ++d) { // both static and dynamic teleporters
-		for (auto i = teleporters[d].begin(); i != teleporters[d].end(); ++i) {i->draw(s);}
+	for (unsigned d = 0; d < 3; ++d) { // static, dynamic, and in-hand teleporters
+		for (auto i = teleporters[d].begin(); i != teleporters[d].end(); ++i) {i->draw(s, (d > 0));}
 	}
 	disable_blend();
+	teleporters[2].clear(); // clear in-hand teleporters (there for drawing only)
 }
 void free_teleporter_textures() {
 	for (unsigned d = 0; d < 2; ++d) { // both static and dynamic teleporters (though only static should have textures allocated)
@@ -138,7 +139,7 @@ void teleporter::create_portal_texture() {
 	create_camera_view_texture(tid, tex_size, pdu, is_indoors);
 }
 
-void teleporter::draw(vpc_shader_t &s) { // Note: not const or static because of tid caching for transparent case
+void teleporter::draw(vpc_shader_t &s, bool is_dynamic) { // Note: not const or static because of tid caching for transparent case
 
 	if (!enabled) return;
 	float const ACTIVATE_DELAY = 1.0; // in seconds
@@ -163,7 +164,7 @@ void teleporter::draw(vpc_shader_t &s) { // Note: not const or static because of
 		s.set_uniform_color(s.c3i_loc, c3);
 		s.set_uniform_color(s.c3o_loc, c3);
 		s.set_uniform_float(s.rad_loc, draw_radius);
-		s.set_uniform_float(s.off_loc, (100.0*pos.x + 0.001*tfticks)); // used as a hash
+		s.set_uniform_float(s.off_loc, ((is_dynamic ? 0.0 : 100.0*pos.x) + 0.001*tfticks)); // used as a hash if static
 		s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
 		fgPushMatrix();
 		translate_to(pos);

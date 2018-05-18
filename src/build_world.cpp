@@ -42,7 +42,7 @@ point star_pts[2*N_STAR_POINTS];
 vector<user_waypt_t> user_waypoints;
 coll_obj_group fixed_cobjs;
 vector<portal> portals;
-vector<teleporter> teleporters[2]; // static, dynamic
+vector<teleporter> teleporters[3]; // static, dynamic, in-hand
 vector<jump_pad> jump_pads;
 vector<obj_draw_group> obj_draw_groups;
 vector<sphere_t> cur_frame_explosions;

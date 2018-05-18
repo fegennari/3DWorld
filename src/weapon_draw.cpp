@@ -23,6 +23,7 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<spark_t> sparks;
 extern vector<beam3d> beams;
+extern vector<teleporter> teleporters[3]; // static, dynamic, in-hand
 extern int coll_id[];
 extern blood_spot blood_spots[];
 extern player_state *sstates;
@@ -353,7 +354,14 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_BALL:
-			if (wmode & 1) {do_texture = 0;} // FIXME: better graphics
+			if (wmode & 1) {
+				teleporter tp;
+				tp.pos    = pos0;
+				tp.radius = 0.3*object_types[oid].radius;
+				teleporters[2].push_back(tp); // will be drawn later
+				teleporters[2].back().setup();
+				break;
+			}
 		case W_SBALL:
 		case W_LANDMINE:
 		case W_GRENADE: // draw_grenade()?
