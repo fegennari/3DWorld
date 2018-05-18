@@ -215,6 +215,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		render_models(0, reflection_pass);
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
+		draw_jump_pads();
 		draw_teleporters();
 		
 		if (!underwater && reflection_pass != 1) { // don't draw precip in planar reflections
@@ -230,7 +231,6 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		if (TIMETEST) PRINT_TIME("S2");
 		draw_transparent_object_groups(reflection_pass);
 		draw_voxel_edit_volume();
-		draw_jump_pads();
 		check_gl_error(25);
 	}
 }
