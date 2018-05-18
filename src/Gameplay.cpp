@@ -202,7 +202,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 
 bool self_coll_invalid(int type, int obj_index) {
 
-	if (is_rocket_type(type) || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER || type == XLOCATOR || type == JUMP_PAD) { // || type == SAWBLADE
+	if (is_rocket_type(type) || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEFRAG || type == XLOCATOR || type == JUMP_PAD) { // || type == SAWBLADE
 		return 1;
 	}
 	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL || type == SAWBLADE) &&
@@ -1483,7 +1483,7 @@ void do_area_effect_damage(point const &pos, float effect_radius, float damage, 
 
 
 void player_teleported(point const &pos, int player_id) { // check for telefrags
-	do_area_effect_damage(pos, 2.0*object_types[SMILEY].radius, 10000, -1, player_id, TELEPORTER); // telefrag
+	do_area_effect_damage(pos, 2.0*object_types[SMILEY].radius, 10000, -1, player_id, TELEFRAG); // telefrag
 }
 
 bool remove_player_translocator(int player_id) {
