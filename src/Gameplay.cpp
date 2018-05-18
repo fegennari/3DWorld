@@ -1769,7 +1769,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	if (wmode&1) { // secondary fire projectiles
 		if (weapon == W_GRENADE) {weapon_id = W_CGRENADE;}
 		if (weapon == W_BLADE  ) {weapon_id = W_SAWBLADE;}
-		if (weapon == W_BALL   ) {weapon_id = W_TELEPORTER;}
+		if (weapon == W_BALL && game_mode == 1) {weapon_id = W_TELEPORTER;} // not in dodgeball mode
 	}
 	int const dtime(get_prev_fire_time_in_ticks());
 	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1)), is_player(shooter == CAMERA_ID);
