@@ -44,7 +44,7 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, 
 		assert(i < teleporters[1].size());
 
 		if (teleporters[1][i].maybe_teleport_object(opos, oradius, player_id, small_object)) {
-			// FIXME: credit obj.source with kill
+			if (player_id != NO_SOURCE) {sstates[player_id].last_teleporter = obj.source;} // credit obj.source with any fall damage kill
 			return 1;
 		}
 	} // for i

@@ -1512,6 +1512,7 @@ void player_state::init(bool w_start) {
 	last_zvel     = 0.0;
 	velocity      = zero_vector;
 	kill_time     = 100*TICKS_PER_SECOND;
+	last_teleporter = NO_SOURCE;
 
 	if (game_mode == 1 && enable_init_shields) {
 		shields       = INIT_SHIELDS;

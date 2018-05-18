@@ -736,8 +736,10 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 			int const weapon((type == BLAST_RADIUS ? br_source : ssource.weapon));
 			bool const head_shot(type != BLAST_RADIUS && type != FIRE && type != LANDMINE && !is_area_damage(type));
 			if (game_mode == 2 && type == CAMERA) type2 = BALL; // dodgeball
+			string damage_name(obj_type_names[type2]);
+			if (damage_name == "Fell") {damage_name = "Teleporter";} // can only kill with teleporter
 			string const str(string("You fragged ") + sstates[index].name + " with " + get_weapon_qualifier(type, weapon, source) +
-				" " + obj_type_names[type2] + (head_shot ? "\nHead Shot" : ""));
+				" " + damage_name + (head_shot ? "\nHead Shot" : ""));
 
 			if (same_team(source, index)) { // player killed a teammate
 				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 2);
@@ -770,8 +772,10 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	}
 	else {
 		assert(source < num_smileys && index < num_smileys);
+		string damage_name(obj_type_names[type]);
+		if (damage_name == "Fell") {damage_name = "Teleporter";} // can only kill with teleporter
 		string const str(sstates[index].name + " was fragged by " + sstates[source].name + "'s " +
-			get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + obj_type_names[type]);
+			get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + damage_name);
 		
 		if (same_team(source, index)) { // killed a teammate
 			print_text_onscreen(str, PINK, 1.0, MESSAGE_TIME/2, 0);
@@ -2586,9 +2590,9 @@ int get_damage_source(int type, int index, int questioner) {
 
 	assert(questioner >= CAMERA_ID);
 	if (index == NO_SOURCE) return questioner; // hurt/killed by nature, call it a suicide
-	if (type == DROWNED || type == FELL || type == CRUSHED || type == COLLISION || type == MAT_SPHERE) return questioner; // self damage
+	if (type == DROWNED || type == CRUSHED || type == COLLISION || type == MAT_SPHERE) return questioner; // self damage
 	assert(index >= CAMERA_ID);
-	if (type == SMILEY || type == BURNED || type == FIRE) return index;
+	if (type == SMILEY || type == BURNED || type == FIRE || type == FELL) return index;
 	if (type == CAMERA) return -1;
 	assert(type >= 0);
 	
@@ -2653,7 +2657,9 @@ void player_fall(int id) { // smileys and the player (camera)
 	if (id == CAMERA_ID && -dz > CAMERA_RADIUS) {camera_shake = min(1.0f, -dz/fall_hurt_dist);}
 	if (-dz > 0.75*CAMERA_RADIUS) {gen_sound(SOUND_OBJ_FALL, get_sstate_pos(id), min(1.0, -0.1*dz/CAMERA_RADIUS), 0.7);}
 	if (dz2 < 0.0) return;
-	smiley_collision(id, id, vector3d(0.0, 0.0, -zvel), get_sstate_pos(id), 5.0*vel*vel, FELL);
+	int source(id);
+	if (sstates[id].last_teleporter != NO_SOURCE) {source = sstates[id].last_teleporter;} // give credit for the kill
+	smiley_collision(id, source, vector3d(0.0, 0.0, -zvel), get_sstate_pos(id), 5.0*vel*vel, FELL);
 }
 
 
