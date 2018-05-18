@@ -560,6 +560,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <ClCompile Include="src\spray_paint.cpp" />
+    <ClCompile Include="src\teleporter.cpp" />
     <ClCompile Include="src\tessellate.cpp" />
     <ClCompile Include="src\Textures.cpp" />
     <ClCompile Include="src\tiled_mesh.cpp" />

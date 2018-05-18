@@ -2149,10 +2149,6 @@ void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 	prev = *this; // update previous cobj
 }
 
-void teleporter::write_to_cobj_file(ostream &out) const {
-	out << "teleporter " << pos.raw_str() << " " << dest.raw_str() << " " << radius << " " << is_portal << " " << is_indoors << endl;
-}
-
 bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { // call on fixed_cobjs
 
 	ofstream out(fn);

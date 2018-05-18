@@ -41,8 +41,6 @@ extern player_state *sstates;
 extern vector<team_info> teaminfo;
 extern vector<string> avail_smiley_names;
 extern waypoint_vector waypoints;
-extern vector<teleporter> teleporters[2]; // static, dynamic
-extern vector<jump_pad> jump_pads;
 
 
 // ********** unreachable_pts **********
@@ -1579,104 +1577,4 @@ void player_state::jump(point const &pos) {
 void player_state::verify_wmode() {
 	if (weapon == W_GRENADE && (wmode&1) && p_ammo[weapon] < int(weapons[W_CGRENADE].def_ammo) && !UNLIMITED_WEAPONS) wmode = 0;
 }
-
-
-bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, bool small_object) {
-
-	for (vector<teleporter>::iterator i = teleporters[0].begin(); i != teleporters[0].end(); ++i) {
-		if (i->maybe_teleport_object(opos, oradius, player_id, small_object)) return 1; // we don't support collisions with multiple teleporters at the same time
-	}
-	if (type == TELEPORTER) return 0; // don't teleport teleporters
-	int const group(coll_id[TELEPORTER]);
-	if (group < 0) return 0;
-	obj_group const &objg(obj_groups[group]);
-	if (!objg.is_enabled()) return 0;
-
-	for (unsigned i = 0; i < objg.end_id; ++i) { // check dynamic teleporter objects
-		dwobject const &obj(objg.get_obj(i));
-		if (obj.disabled()) continue;
-		if (obj.time < 0.25*TICKS_PER_SECOND) continue; // not yet armed (too close to shooter)
-		assert(i < teleporters[1].size());
-
-		if (teleporters[1][i].maybe_teleport_object(opos, oradius, player_id, small_object)) {
-			// FIXME: credit obj.source with kill
-			return 1;
-		}
-	} // for i
-	return 0;
-}
-
-bool maybe_use_jump_pad(point &opos, vector3d &velocity, float oradius, int player_id) {
-
-	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {
-		if (i->maybe_jump(opos, velocity, oradius, player_id)) return 1;
-	}
-	return 0;
-}
-
-
-void setup_dynamic_teleporters() {
-
-	if (coll_id[TELEPORTER] < 0) return;
-	obj_group const &objg(obj_groups[coll_id[TELEPORTER]]);
-	if (!objg.is_enabled()) {teleporters[1].clear(); return;} // Note: no texture, free_context() doesn't need to be called
-	teleporters[1].resize(objg.end_id);
-	for (unsigned i = 0; i < objg.end_id; ++i) {teleporters[1][i].from_obj(objg.get_obj(i));}
-}
-
-void teleport_object(point &opos, point const &src_pos, point const &dest_pos, float oradius, int player_id) {
-
-	bool const is_player(player_id != NO_SOURCE);
-	float const gain(is_player ? 1.0 : 0.1), pitch(is_player ? 0.6 : 2.0);
-	gen_sound(SOUND_POWERUP, opos, gain, pitch); // different sound?
-	opos += (dest_pos - src_pos); // maintain relative distance from center (could also use opos = dest)
-	gen_sound(SOUND_POWERUP, opos, gain, pitch); // different sound?
-	if (is_player) {player_teleported(opos, player_id);}
-	add_dynamic_light(12.0*oradius, opos, LT_BLUE);
-	if (player_id != CAMERA_ID) {add_blastr(opos, plus_z, 6.0*oradius, 0.0, int(0.5*TICKS_PER_SECOND), NO_SOURCE, WHITE, BLUE, ETYPE_NUCLEAR, nullptr, 1);}
-}
-
-void teleporter::from_obj(dwobject const &obj) {
-
-	float const prev_radius(radius);
-	pos     = obj.pos;
-	radius  = 2.0*object_types[obj.type].radius; // make it larger so that teleport radius is larger than coll radius
-	draw_radius_scale = 1.0;
-	dest    = pos;
-	dest.z += 400.0*CAMERA_RADIUS; // large dz
-	source  = obj.source;
-	enabled = obj.enabled();
-	is_portal = 0;
-	if (radius != prev_radius) {setup();} // on radius change
-}
-
-bool teleporter::maybe_teleport_object(point &opos, float oradius, int player_id, bool small_object) {
-
-	if (!enabled) return 0;
-	if (!dist_less_than(pos, opos, radius+oradius)) return 0; // not close enough
-	if (small_object) {opos += (dest - pos); return 1;} // no effects
-	teleport_object(opos, pos, dest, oradius, player_id);
-	last_used_tfticks = tfticks;
-	return 1;
-}
-
-
-bool jump_pad::maybe_jump(point &opos, vector3d &obj_velocity, float oradius, int player_id) {
-
-	if (!dist_less_than(pos, (opos - vector3d(0.0, 0.0, oradius)), radius+oradius)) return 0; // not close enough
-
-	if (player_id == NO_SOURCE) { // object jump
-		obj_velocity += velocity;
-	}
-	else { // player jump
-		assert(player_id >= CAMERA_ID && player_id < num_smileys);
-		player_state &ss(sstates[player_id]);
-		if (ss.jump_time > 0) return 0; // already jumping, not touching the ground/jump pad
-		ss.jump_time = 0.1*TICKS_PER_SECOND*velocity.z; // FIXME: only z velocity is used
-	}
-	gen_sound(SOUND_BOING, pos, 1.0, 1.0);
-	last_used_tfticks = tfticks;
-	return 1;
-}
-
 
