@@ -40,7 +40,7 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, 
 	for (unsigned i = 0; i < objg.end_id; ++i) { // check dynamic teleporter objects
 		dwobject const &obj(objg.get_obj(i));
 		if (obj.disabled()) continue;
-		if (obj.time < 0.25*TICKS_PER_SECOND) continue; // not yet armed (too close to shooter)
+		if (obj.time < 0.1*TICKS_PER_SECOND) continue; // not yet armed (too close to shooter)
 		assert(i < teleporters[1].size());
 
 		if (teleporters[1][i].maybe_teleport_object(opos, oradius, player_id, small_object)) {
