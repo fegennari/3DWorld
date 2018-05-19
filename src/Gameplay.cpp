@@ -406,9 +406,13 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 }
 
 void freeze_player(player_state &sstate, float energy) {
-
 	float const freeze_secs(0.4*sqrt(energy)), freeze_ticks(freeze_secs*TICKS_PER_SECOND);
 	sstate.freeze_time = int(sqrt(freeze_ticks*freeze_ticks + sstate.freeze_time*sstate.freeze_time)); // stacks as sqrt()
+}
+
+string get_kill_str(int type) {
+	string damage_name(obj_type_names[type]);
+	return ((damage_name == "Fell") ? "Teleporter" : damage_name); // can only kill with teleporter, not fell
 }
 
 
@@ -577,7 +581,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			string str;
 			if (type == SMILEY) {str = string("Fragged by ") + sstates[source].name;}
 			else if (type == FIRE || type == BURNED) {str = string("BURNED to DEATH by ") + sstates[source].name;}
-			else {str = string("Fragged by ") + sstates[source].name + "'s " + get_weapon_qualifier(type, index, source) + " " + obj_type_names[type];}
+			else {str = string("Fragged by ") + sstates[source].name + "'s " + get_weapon_qualifier(type, index, source) + " " + get_kill_str(type);}
 
 			if (same_team(source, CAMERA_ID)) {
 				sstates[source].register_team_kill();
@@ -736,10 +740,8 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 			int const weapon((type == BLAST_RADIUS ? br_source : ssource.weapon));
 			bool const head_shot(type != BLAST_RADIUS && type != FIRE && type != LANDMINE && !is_area_damage(type));
 			if (game_mode == 2 && type == CAMERA) type2 = BALL; // dodgeball
-			string damage_name(obj_type_names[type2]);
-			if (damage_name == "Fell") {damage_name = "Teleporter";} // can only kill with teleporter
 			string const str(string("You fragged ") + sstates[index].name + " with " + get_weapon_qualifier(type, weapon, source) +
-				" " + damage_name + (head_shot ? "\nHead Shot" : ""));
+				" " + get_kill_str(type2) + (head_shot ? "\nHead Shot" : ""));
 
 			if (same_team(source, index)) { // player killed a teammate
 				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 2);
@@ -772,10 +774,8 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	}
 	else {
 		assert(source < num_smileys && index < num_smileys);
-		string damage_name(obj_type_names[type]);
-		if (damage_name == "Fell") {damage_name = "Teleporter";} // can only kill with teleporter
 		string const str(sstates[index].name + " was fragged by " + sstates[source].name + "'s " +
-			get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + damage_name);
+			get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + get_kill_str(type));
 		
 		if (same_team(source, index)) { // killed a teammate
 			print_text_onscreen(str, PINK, 1.0, MESSAGE_TIME/2, 0);
