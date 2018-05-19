@@ -529,7 +529,7 @@ void process_groups() {
 						float const r2((otype.flags & COLL_DESTROYS) ? 0.25*radius : radius);
 						collision_detect_large_sphere(pos, r2, obj_flags);
 					}
-					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid())) {
+					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid()) && !(otype.flags & OBJ_NON_SOLID)) {
 						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
 						if (type == MAT_SPHERE) {add_cobj_for_mat_sphere(obj, cp);}

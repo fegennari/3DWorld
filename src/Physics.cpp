@@ -383,7 +383,7 @@ void init_objects() {
 	object_types[PLASMA].health            = 0.1;
 	object_types[PLASMA].color             = YELLOW;
 	object_types[PLASMA].color.alpha       = 0.6; // average color
-	object_types[PLASMA].flags             = SELECTABLE | BLEND | SEMI_TRANSPARENT | OBJ_EXPLODES | EXPL_ON_COLL;
+	object_types[PLASMA].flags             = SELECTABLE | BLEND | SEMI_TRANSPARENT | OBJ_EXPLODES | EXPL_ON_COLL; // | OBJ_NON_SOLID;
 	object_types[PLASMA].tid               = PLASMA_TEX;
 
 	object_types[GRENADE].air_factor       = 0.07;
@@ -467,6 +467,7 @@ void init_objects() {
 	object_types[GASSED].min_t             = -1000;
 	object_types[GASSED].max_t             = 1000;
 	object_types[GASSED].density           = 0.01;
+	object_types[GASSED].flags             = OBJ_NON_SOLID;
 
 	object_types[WAYPOINT].radius          = CAMERA_RADIUS;
 
@@ -528,7 +529,7 @@ void init_objects() {
 	object_types[TELEPORTER].elasticity          = 2.0; // 100% elastic collisions with any surface that has elasticity >= 0.5
 	object_types[TELEPORTER].health              = 10000.0;
 	object_types[TELEPORTER].color               = WHITE;
-	object_types[TELEPORTER].flags               = SELECTABLE | NO_COLL_DAMAGE;
+	object_types[TELEPORTER].flags               = SELECTABLE | NO_COLL_DAMAGE | OBJ_NON_SOLID;
 	object_types[TELEPORTER].tid                 = -1;
 
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
