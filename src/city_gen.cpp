@@ -414,6 +414,7 @@ struct car_t {
 	void stop() {cur_speed = 0.0;} // immediate stop
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius) const;
 };
 
 struct comp_car_road_then_pos {
@@ -639,7 +640,17 @@ struct road_isec_t : public cube_t {
 		}
 		return 0;
 	}
-
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const {
+		if (num_conn == 2) return 0; // no stoplights
+		//float const dist(p2p_dist(pos, p_last));
+		if (!sphere_cube_intersect(pos, radius, (*this + xlate))) return 0;
+		
+		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
+			if (!(conn & (1<<n))) continue; // no road in this dir
+			// FIXME: WRITE
+		} // for n
+		return 0;
+	}
 	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const {
 		for (unsigned j = 0; j < 3; ++j) {
 			colorRGBA const &color(stoplight_colors[j]);
@@ -789,6 +800,13 @@ namespace streetlight_ns {
 			min_eq(lights_bcube.z1(), (lpos.z - ldist));
 			max_eq(lights_bcube.z2(), (lpos.z + ldist));
 			dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH)); // points down
+		}
+		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate) const {
+			point const p2(pos + xlate);
+			float const pradius(pole_radius*city_params.road_width);
+			if (!dist_xy_less_than(p2, center, (pradius + radius))) return 0;
+			float const height(light_height*city_params.road_width);
+			return sphere_vert_cylin_intersect(center, radius, cylinder_3dw(p2, (p2 + vector3d(0.0, 0.0, height)), pradius, 0.7*pradius));
 		}
 	};
 } // streetlight_ns
@@ -1714,6 +1732,21 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
+		bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
+			vector3d const xlate(get_camera_coord_space_xlate());
+			float const dist(p2p_dist(pos, p_last));
+			if (!sphere_cube_intersect(pos, (radius + dist), (bcube + xlate))) return 0;
+
+			for (unsigned n = 1; n < 3; ++n) { // intersections (3-way, 4-way)
+				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
+					if (i->proc_sphere_coll(pos, p_last, radius, xlate)) return 1;
+				}
+			}
+			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
+				if (i->proc_sphere_coll(pos, radius, xlate)) return 1;
+			}
+			return 0;
+		}
 		void draw(road_draw_state_t &dstate, bool shadow_only) {
 			if (empty()) return;
 			if (!dstate.check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
@@ -2180,6 +2213,12 @@ public:
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only) const {return global_rn.check_road_sphere_coll(pos, radius, xy_only);}
 
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
+			if (r->proc_sphere_coll(pos, p_last, radius)) return 1;
+		}
+		return global_rn.proc_sphere_coll(pos, p_last, radius); // probably not needed, but okay to call
+	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, not needed?
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->add_city_lights(xlate, lights_bcube);}
@@ -2259,6 +2298,11 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	}
 	cmove.bcube += delta;
 	return 1;
+}
+
+bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius) const {
+	// FIXME: WRITE
+	return 0;
 }
 
 
@@ -2582,6 +2626,12 @@ public:
 		} // for i
 		cout << "Total Cars: " << cars.size() << endl;
 	}
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
+		for (auto i = cars.begin(); i != cars.end(); ++i) {
+			if (i->proc_sphere_coll(pos, p_last, radius)) return 1;
+		}
+		return 0;
+	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars"); // 10K cars = 1.7ms / 2K cars = 0.2ms
@@ -2739,6 +2789,10 @@ public:
 		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
 		return road_gen.check_road_sphere_coll(pos, radius, xy_only);
 	}
+	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius) const {
+		if (road_gen.proc_sphere_coll(pos, p_last, radius)) return 1;
+		return car_manager.proc_sphere_coll(pos, p_last, radius);
+	}
 	void next_frame() {
 		road_gen.next_frame(); // update stoplights
 		car_manager.next_frame(city_params.car_speed);
@@ -2805,6 +2859,10 @@ bool check_city_sphere_coll(point const &pos, float radius) {
 	point center(pos);
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
 	return city_gen.check_city_sphere_coll(center, radius);
+}
+bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only) {
+	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
+	return city_gen.proc_city_sphere_coll(pos, p_last, radius); // Note: no xy_only for cities
 }
 bool check_valid_scenery_pos(point const &pos, float radius) {
 	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
