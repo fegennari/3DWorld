@@ -36,6 +36,7 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, 
 	if (group < 0) return 0;
 	obj_group const &objg(obj_groups[group]);
 	if (!objg.is_enabled()) return 0;
+	point const orig_pos(opos);
 
 	for (unsigned i = 0; i < objg.end_id; ++i) { // check dynamic teleporter objects
 		dwobject const &obj(objg.get_obj(i));
@@ -44,7 +45,11 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, 
 		assert(i < teleporters[1].size());
 
 		if (teleporters[1][i].maybe_teleport_object(opos, oradius, player_id, small_object)) {
-			if (player_id != NO_SOURCE) {sstates[player_id].last_teleporter = obj.source;} // credit obj.source with any fall damage kill
+			if (player_id != NO_SOURCE) {
+				sstates[player_id].last_teleporter = obj.source; // credit obj.source with any fall damage kill
+				if (player_id == CAMERA_ID) {gen_delayed_sound(1.0, SOUND_FALLING, all_zeros, 2.0, 1.0, 1);} // relative to listener
+				else {gen_delayed_sound(1.0, SOUND_FALLING, 0.5*(opos + orig_pos), 2.0);} // halfway down for smiley
+			}
 			return 1;
 		}
 	} // for i

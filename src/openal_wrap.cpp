@@ -127,6 +127,7 @@ public:
 		add_new_sound("snow_step.wav"  ); // SOUND_SNOW_STEP
 		add_new_sound("ice_crack.wav"  ); // SOUND_ICE_CRACK
 		add_new_sound("reload.wav"     ); // SOUND_RELOAD
+		add_new_sound("falling.wav"    ); // SOUND_FALLING
 		cout << endl;
 
 		// create sources
