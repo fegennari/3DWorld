@@ -581,7 +581,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			string str;
 			if (type == SMILEY) {str = string("Fragged by ") + sstates[source].name;}
 			else if (type == FIRE || type == BURNED) {str = string("BURNED to DEATH by ") + sstates[source].name;}
-			else {str = string("Fragged by ") + sstates[source].name + "'s " + get_weapon_qualifier(type, index, source) + " " + get_kill_str(type);}
+			else {str = string("Fragged by ") + sstates[source].name + "'s " + get_weapon_qualifier(type, index, source) + get_kill_str(type);}
 
 			if (same_team(source, CAMERA_ID)) {
 				sstates[source].register_team_kill();
@@ -738,10 +738,11 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		if (camera_mode == 1 && camera_surf_collide) { // playing
 			int type2(type);
 			int const weapon((type == BLAST_RADIUS ? br_source : ssource.weapon));
-			bool const head_shot(type != BLAST_RADIUS && type != FIRE && type != LANDMINE && !is_area_damage(type));
+			bool const head_shot(type != BLAST_RADIUS && type != FIRE && type != LANDMINE && type != TELEPORTER && type != TELEFRAG &&
+				type != FELL && type != CRUSHED && type != XLOCATOR_DEATH && !is_area_damage(type));
 			if (game_mode == 2 && type == CAMERA) type2 = BALL; // dodgeball
 			string const str(string("You fragged ") + sstates[index].name + " with " + get_weapon_qualifier(type, weapon, source) +
-				" " + get_kill_str(type2) + (head_shot ? "\nHead Shot" : ""));
+				get_kill_str(type2) + (head_shot ? "\nHead Shot" : ""));
 
 			if (same_team(source, index)) { // player killed a teammate
 				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 2);
@@ -767,7 +768,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		case SUFFOCATED: str += " Suffocated";           break;
 		case CRUSHED:    str += " was Crushed to Death"; break;
 		case GASSED:     str += " was Gassed to Death";  break;
-		default:         str += " suicided with " + get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + obj_type_names[type];
+		default:         str += " suicided with " + get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + obj_type_names[type];
 		}
 		print_text_onscreen(str, CYAN, 1.0, MESSAGE_TIME/2, 0);
 		ssource.register_suicide();
@@ -775,7 +776,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	else {
 		assert(source < num_smileys && index < num_smileys);
 		string const str(sstates[index].name + " was fragged by " + sstates[source].name + "'s " +
-			get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + get_kill_str(type));
+			get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + get_kill_str(type));
 		
 		if (same_team(source, index)) { // killed a teammate
 			print_text_onscreen(str, PINK, 1.0, MESSAGE_TIME/2, 0);
@@ -810,16 +811,16 @@ int get_smiley_hit(vector3d &hdir, int index) {
 string get_weapon_qualifier(int type, int index, int source) {
 
 	bool const qd(sstates[source].powerup == PU_DAMAGE); // quad damage
-	if (index == CAMERA_ID) index = sstates[CAMERA_ID].weapon; // camera weapon
+	if (index == CAMERA_ID) {index = sstates[CAMERA_ID].weapon;} // camera weapon
 	string qstr;
 	
 	if ((type == IMPACT && index != IMPACT) || (type == PROJECTILE && index != PROJECTILE)) {
 		assert(index >= 0 && index < NUM_WEAPONS);
-		qstr = weapons[index].name;
+		qstr = weapons[index].name + " ";
 	}
 	else if (type == BLAST_RADIUS && index != BLAST_RADIUS) {
 		assert(index >= 0 && index < NUM_TOT_OBJS);
-		qstr = obj_type_names[index];
+		qstr = obj_type_names[index] + " ";
 	}
 	if (qd) return string("quad damage ") + qstr;
 	return qstr;
