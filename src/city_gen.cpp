@@ -414,7 +414,7 @@ struct car_t {
 	void stop() {cur_speed = 0.0;} // immediate stop
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius) const;
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const;
 };
 
 struct comp_car_road_then_pos {
@@ -2315,9 +2315,18 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	return 1;
 }
 
-bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius) const {
-	// FIXME: WRITE
+bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const {
+
+	vector3d cnorm; // unused
+	unsigned cdir(0); // unused
+	point p_int;
+
+	if (sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1)) { // Note: approximate when car is tilted or turning
+		pos = p_int; // update current pos
+		return 1;
+	}
 	return 0;
+	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos);
 }
 
 
@@ -2642,9 +2651,18 @@ public:
 		cout << "Total Cars: " << cars.size() << endl;
 	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
-		for (auto i = cars.begin(); i != cars.end(); ++i) {
-			if (i->proc_sphere_coll(pos, p_last, radius)) return 1;
-		}
+		vector3d const xlate(get_camera_coord_space_xlate());
+		float const dist(p2p_dist(pos, p_last));
+
+		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+			if (!sphere_cube_intersect_xy(pos, (radius + dist), (road_gen.get_city_bcube(cb->cur_city) + xlate))) continue;
+			unsigned const end((cb+1)->start);
+			assert(end <= cars.size());
+
+			for (unsigned c = cb->start; c != end; ++c) {
+				if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate)) return 1;
+			}
+		} // for cb
 		return 0;
 	}
 	void next_frame(float car_speed) {
@@ -2806,7 +2824,8 @@ public:
 	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius) const {
 		if (road_gen.proc_sphere_coll(pos, p_last, radius)) return 1;
-		return car_manager.proc_sphere_coll(pos, p_last, radius);
+		//return car_manager.proc_sphere_coll(pos, p_last, radius); // Note: doesn't really work well, disabled
+		return 0;
 	}
 	void next_frame() {
 		road_gen.next_frame(); // update stoplights
@@ -2876,7 +2895,6 @@ bool check_city_sphere_coll(point const &pos, float radius) {
 	return city_gen.check_city_sphere_coll(center, radius);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only) {
-	//timer_t timer("Proc City Sphere Coll");
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
 	return city_gen.proc_city_sphere_coll(pos, p_last, radius); // Note: no xy_only for cities
 }

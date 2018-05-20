@@ -407,6 +407,7 @@ int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cinde
 bool is_point_interior(point const &pos, float radius);
 bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dim);
 void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dim, colorRGBA const &color=BLACK);
+bool sphere_sphere_int(point const &sc1, point const &sc2, float sr1, float sr2, vector3d &cnorm, point &new_sc);
 
 // function prototypes - movable_cobj
 void register_moving_cobj(unsigned index);
