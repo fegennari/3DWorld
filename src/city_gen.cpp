@@ -640,14 +640,30 @@ struct road_isec_t : public cube_t {
 		}
 		return 0;
 	}
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const {
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist) const {
 		if (num_conn == 2) return 0; // no stoplights
-		//float const dist(p2p_dist(pos, p_last));
-		if (!sphere_cube_intersect(pos, radius, (*this + xlate))) return 0;
+		if (!sphere_cube_intersect(pos, (radius + dist), (*this + xlate))) return 0;
+		float const sz(0.03*city_params.road_width), h(1.0*sz);
 		
-		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
+		for (unsigned n = 0; n < 4; ++n) { // Note: mostly duplicated with draw_stoplights(), but difficult to factor the code out and share it
 			if (!(conn & (1<<n))) continue; // no road in this dir
-			// FIXME: WRITE
+			bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
+			float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
+			float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
+			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
+			float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
+			cube_t c;
+			c.z1() = z1(); c.z2() = sl_top;
+			c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
+			c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
+			point p_int;
+			vector3d cnorm; // unused
+			unsigned cdir(0); // unused
+
+			if (sphere_cube_intersect(pos, radius, (c + xlate), p_last, p_int, cnorm, cdir, 1)) { // cube
+				pos = p_int; // update current pos
+				return 1; // there typically won't be more than one collision, to just return the first one
+			}
 		} // for n
 		return 0;
 	}
@@ -677,8 +693,7 @@ struct road_isec_t : public cube_t {
 		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 			if (!(conn & (1<<n))) continue; // no road in this dir
 			bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-			float const zbot(z1() + 2.0*h);
-			float const pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
+			float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
 			float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
 			// draw base
 			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
@@ -686,7 +701,7 @@ struct road_isec_t : public cube_t {
 
 			if (dist_val > 0.06) { // draw front face only
 				point pts[4];
-				pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = pos;
+				pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = dim_pos;
 				pts[0][!dim] = pts[3][!dim] = sl_lo;
 				pts[1][!dim] = pts[2][!dim] = sl_hi;
 				pts[0].z = pts[1].z = z1();
@@ -696,7 +711,7 @@ struct road_isec_t : public cube_t {
 			else {
 				cube_t c;
 				c.z1() = z1(); c.z2() = sl_top;
-				c.d[ dim][0] = pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = pos + (dir ? 0.5 : -0.04)*sz;
+				c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
 				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
 				point pts[8];
 				dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
@@ -709,7 +724,7 @@ struct road_isec_t : public cube_t {
 			if (dot_product(normal, cview_dir) < 0.0) continue; // back facing, don't draw the lights
 			// draw straight/line turn light
 			point p[4];
-			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = pos;
+			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
 			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
 			p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
 			bool const draw_detail(dist_val < 0.05); // only when very close
@@ -1739,7 +1754,7 @@ class city_road_gen_t {
 
 			for (unsigned n = 1; n < 3; ++n) { // intersections (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
-					if (i->proc_sphere_coll(pos, p_last, radius, xlate)) return 1;
+					if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist)) return 1;
 				}
 			}
 			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
@@ -2861,6 +2876,7 @@ bool check_city_sphere_coll(point const &pos, float radius) {
 	return city_gen.check_city_sphere_coll(center, radius);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only) {
+	//timer_t timer("Proc City Sphere Coll");
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
 	return city_gen.proc_city_sphere_coll(pos, p_last, radius); // Note: no xy_only for cities
 }
