@@ -28,10 +28,10 @@ vec3 get_ftime() {
 	return vec3(fract_smooth(time), fract_smooth(0.95*time), fract_smooth(0.85*time));
 }
 
-float gen_cloud_alpha_non_norm(in vec3 pos, float tscale=1.0) {
+float gen_cloud_alpha_non_norm(in vec3 pos, float tscale) {
 	return gen_cloud_alpha_time(pos, tscale*get_ftime());
 }
-float gen_cloud_alpha(in vec3 pos, float tscale=1.0) {
+float gen_cloud_alpha(in vec3 pos, float tscale) {
 	return clamp(gen_cloud_alpha_non_norm(pos, tscale), 0.0, 1.0);
 }
 float gen_cloud_alpha_static(in vec3 pos) {

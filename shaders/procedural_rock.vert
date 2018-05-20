@@ -4,7 +4,7 @@ out vec4 epos;
 
 void main()
 {
-	float hval   = gen_cloud_alpha(fg_Vertex.xyz);
+	float hval   = gen_cloud_alpha(fg_Vertex.xyz, 1.0);
 	float height = height_scale * hval;
 	vec4 vertex  = fg_Vertex + vec4(height*fg_Normal, 0.0);
 	normal       = normalize(fg_NormalMatrix * fg_Normal);

@@ -33,7 +33,7 @@ in vec2 tc; // not used for procedural planets
 
 
 float calc_cloud_density(in vec3 lv) {
-	float cloud_den = atmosphere*gen_cloud_alpha(lv);
+	float cloud_den = atmosphere*gen_cloud_alpha(lv, 1.0);
 	return pow(clamp(1.4*(cloud_den - 0.1), 0.0, 1.0), 0.7); // increase contrast/sharpen edges
 }
 
@@ -292,7 +292,7 @@ void main()
 		float heat = max(0.0, (texel.r - texel.g - texel.b));
 
 		if (heat > 0.0) { // lava patch
-			heat *= gen_cloud_alpha(2.0*vertex);
+			heat *= gen_cloud_alpha(2.0*vertex, 1.0);
 			//color = mix(color, vec3(1.0, 0.25*heat, 0.0), heat); // add lava
 			color += heat*vec3(1.0, 0.25*heat, 0.0); // add lava
 		}
