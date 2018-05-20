@@ -642,7 +642,7 @@ struct road_isec_t : public cube_t {
 	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist) const {
 		if (num_conn == 2) return 0; // no stoplights
-		if (!sphere_cube_intersect(pos, (radius + dist), (*this + xlate))) return 0;
+		if (!sphere_cube_intersect_xy(pos, (radius + dist), (*this + xlate))) return 0;
 		float const sz(0.03*city_params.road_width), h(1.0*sz);
 		
 		for (unsigned n = 0; n < 4; ++n) { // Note: mostly duplicated with draw_stoplights(), but difficult to factor the code out and share it
@@ -1750,7 +1750,7 @@ class city_road_gen_t {
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
 			float const dist(p2p_dist(pos, p_last));
-			if (!sphere_cube_intersect(pos, (radius + dist), (bcube + xlate))) return 0;
+			if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
 
 			for (unsigned n = 1; n < 3; ++n) { // intersections (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
