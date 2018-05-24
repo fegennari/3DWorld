@@ -611,9 +611,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 		case W_LASER:
 			if (shooter == CAMERA_ID && fire_val > 0.0) {
-				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), RED)); // should probably use this instead
+				colorRGBA const laser_color(get_laser_beam_color(shooter));
+				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), laser_color)); // should probably use this instead
 				fgPushMatrix();
-				set_emissive_only(RED, shader);
+				set_emissive_only(laser_color, shader);
 				fgTranslate(0.0, 0.0, 0.148);
 				fgRotate(30.0, -dir.y, dir.x, 0.0);
 				draw_cylinder_at(point(tx, ty, 0.0), 0.103, 0.0007, 0.0007, ndiv);

@@ -1679,7 +1679,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 void add_laser_beam(beam3d const &beam) {
 
 	beams.push_back(beam);
-	add_line_light(beam.pts[0], beam.pts[1], RED, 0.35, min(1.0f, sqrt(beam.intensity)));
+	add_line_light(beam.pts[0], beam.pts[1], beam.color, 0.35, min(1.0f, sqrt(beam.intensity)));
 	//if (smoke_visible) {} // check for smoke along laser beam path and add glow halo? or just enable smoke dynamic lighting?
 }
 
@@ -1819,7 +1819,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	switch (weapon_id) {
 		case W_M16:     add_dynamic_light(1.0, fpos, YELLOW); break;
 		case W_SHOTGUN: add_dynamic_light(1.3, fpos, YELLOW); break;
-		case W_LASER:   add_dynamic_light(0.6, fpos, RED);    break;
+		case W_LASER:   add_dynamic_light(0.6, fpos, get_laser_beam_color(shooter)); break;
 		case W_PLASMA:  add_dynamic_light(0.9, fpos, ORANGE); break;
 	}
 	switch (weapon_id) {
@@ -1876,7 +1876,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_LASER: { // line of sight damage
 			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
 			if (range > 1.1*radius) {
-				beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
+				beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), get_laser_beam_color(shooter));
 				add_laser_beam(beam); // might not need to actually add laser itself for camera/player
 			}
 		}
@@ -2040,15 +2040,13 @@ int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos) {
 }
 
 
-void add_laser_beam_segment(point const &start_pos, point coll_pos, vector3d const &vref, int coll, bool distant, float intensity) {
+colorRGBA get_laser_beam_color(int shooter) {return get_smiley_team_color(shooter);}
 
-	if (!coll || distant) {
-		coll_pos = start_pos + vref*FAR_CLIP;
-	}
-	else if (start_pos == coll_pos) {
-		return;
-	}
-	add_laser_beam(beam3d(distant, NO_SOURCE, start_pos, coll_pos, RED, intensity));
+void add_laser_beam_segment(point const &start_pos, point coll_pos, vector3d const &vref, colorRGBA const &color, int coll, bool distant, float intensity) {
+
+	if (!coll || distant) {coll_pos = start_pos + vref*FAR_CLIP;}
+	else if (start_pos == coll_pos) return;
+	add_laser_beam(beam3d(distant, NO_SOURCE, start_pos, coll_pos, color, intensity));
 }
 
 
@@ -2098,6 +2096,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	int const wtype(sstate.weapon), wmode(sstate.wmode);
 	float const vcf_mag(vcf.mag()), radius(get_sstate_radius(shooter));
 	bool const is_laser(wtype == W_LASER);
+	colorRGBA const laser_color(is_laser ? get_laser_beam_color(shooter) : BLACK);
 	float MAX_RANGE(min((float)FAR_CLIP, 2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE + Z_SCENE_SIZE)));
 	if (max_range > 0.0) {MAX_RANGE = min(MAX_RANGE, max_range);}
 	range = MAX_RANGE;
@@ -2283,7 +2282,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	}
 	else if ((intersect || coll) && dist_less_than(coll_pos, pos, (X_SCENE_SIZE + Y_SCENE_SIZE))) { // spark
 		if (!no_spark && !is_underwater(coll_pos)) {
-			colorRGBA scolor(is_laser ? RED : colorRGBA(1.0, 0.7, 0.0, 1.0));
+			colorRGBA scolor(is_laser ? laser_color : colorRGBA(1.0, 0.7, 0.0, 1.0));
 			//if (is_laser && coll && cindex >= 0 && closest < 0) {scolor = get_cobj_color_at_point(cindex, coll_pos, coll_norm, 0);} // testing
 			float const ssize((is_laser ? ((wmode&1) ? 0.015 : 0.020)*intensity : 0.025)*((closest_t == CAMERA) ? 0.5 : 1.0));
 			sparks.push_back(spark_t(coll_pos, scolor, ssize));
@@ -2315,7 +2314,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					reflect = get_reflected_weight(get_fresnel_reflection(-vcf, coll_norm, 1.0, refract_ix), alpha);
 				}
 				else { // specular + diffuse reflections
-					reflect = CLIP_TO_01(alpha*(specular + (1.0f - specular)*luminance)); // could use red component
+					reflect = CLIP_TO_01(alpha*(specular + (1.0f - specular)*luminance)); // could use red component for laser
 				}
 				if (reflect > 0.01) { // reflected light
 					reflect = min(reflect, LASER_REFL_ATTEN); // prevent stack overflow
@@ -2332,7 +2331,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 					if (refract > 0.01) {
 						point const cp(projectile_test(coll_pos, vcf, 0.0, refract*damage, shooter, range1, refract*intensity, cindex, max_range));
-						add_laser_beam_segment(coll_pos, cp, vcf, coll, (range1 > 0.9*MAX_RANGE), refract*intensity);
+						add_laser_beam_segment(coll_pos, cp, vcf, laser_color, coll, (range1 > 0.9*MAX_RANGE), refract*intensity);
 					}
 				}
 			}
@@ -2346,7 +2345,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				coll2   = (end_pos != coll_pos);
 			}
 		}
-		if (reflects && atten > 0.0) {add_laser_beam_segment(coll_pos, end_pos, vref, coll2, (range0 > 0.9*MAX_RANGE), atten*intensity);}
+		if (reflects && atten > 0.0) {add_laser_beam_segment(coll_pos, end_pos, vref, laser_color, coll2, (range0 > 0.9*MAX_RANGE), atten*intensity);}
 	}
 
 	// process bullet ricochets for M16
