@@ -1051,8 +1051,8 @@ void draw_univ_objects() {
 	set_additive_blend_mode();
 	maybe_draw_motion_dust();
 	draw_and_update_engine_trails(trail_rays.drawer);
-	trail_rays.draw(0); // draw engine trails
-	beam_rays.draw(1); // draw beam weapons and lightning
+	trail_rays.draw(0.0); // draw engine trails
+	beam_rays.draw(50.0); // draw beam weapons and lightning
 	set_std_blend_mode();
 	add_nearby_uobj_text(text_drawer); // only if show_scores?
 	text_drawer.draw();

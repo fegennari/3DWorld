@@ -133,8 +133,8 @@ public:
 	void reserve_verts(unsigned size) {verts.reserve(size);}
 	void add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 		point const* const prev=NULL, point const *const next=NULL, bool make_global=0, bool use_2d_tex_coords=0);
-	void draw(bool add_noise=0) const;
-	void draw_and_clear(bool add_noise=0) {draw(add_noise); clear();}
+	void draw(float noise_scale=0.0) const;
+	void draw_and_clear(float noise_scale=0.0) {draw(noise_scale); clear();}
 	void draw_tri_verts() const {draw_verts(verts, GL_TRIANGLES);}
 };
 

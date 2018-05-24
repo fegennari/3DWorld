@@ -1005,7 +1005,7 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 }
 
 
-void line_tquad_draw_t::draw(bool add_noise) const { // supports quads and triangles
+void line_tquad_draw_t::draw(float noise_scale) const { // supports quads and triangles
 
 	if (empty()) return;
 	shader_t s;
@@ -1015,10 +1015,10 @@ void line_tquad_draw_t::draw(bool add_noise) const { // supports quads and trian
 		s.set_frag_shader("line_draw_halo");
 		s.begin_shader();
 	}
-	else if (add_noise) {
+	else if (noise_scale > 0.0) {
 		s.set_prefix("#define LINE_MODE", 1); // FS
 		setup_shield_shader(s, 1);
-		s.add_uniform_float("noise_scale", 50.0);
+		s.add_uniform_float("noise_scale", noise_scale);
 		select_texture((draw_model != 0) ? WHITE_TEX : BLUR_TEX);
 	}
 	else { // texture mipmaps perform antialiasing on distant lines, which looks nice

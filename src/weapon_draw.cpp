@@ -52,7 +52,7 @@ void draw_beams(bool clear_at_end) {
 	line_tquad_draw_t drawer;
 	for (unsigned i = 0; i < beams.size(); ++i) {beams[i].draw(drawer);}
 	if (clear_at_end && !keep_beams) {beams.clear();}
-	drawer.draw();
+	drawer.draw(0.0); // noise_scale=0.0
 }
 
 

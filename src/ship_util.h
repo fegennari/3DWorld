@@ -52,7 +52,7 @@ struct usw_ray_group : public vector<usw_ray> {
 	line_tquad_draw_t drawer;
 
 	void add(usw_ray const &ray) {push_back(ray);}
-	void draw(bool add_noise=0);
+	void draw(float noise_scale=0.0);
 };
 
 
