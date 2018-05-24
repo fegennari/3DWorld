@@ -23,13 +23,17 @@ void main() {
 	// use integer component of window texture as hash to select random lit vs. dark windows
 	float rand_val   = rand_v2(vec2(floor(tc.s), floor(tc.y)));
 	float lit_thresh = fract(5.67*sin(12.3*gl_Color.b)); // use per-building color as hash for lit percentage
-	if (rand_val < (0.5 + 0.4*lit_thresh)) discard; // 50% - 90% of windows are dark
 	float dist  = length(epos.xyz);
 	float alpha = 1.0 - 2.0*(texel.r - 0.5); // mask off window border (white), keep window pane (gray)
-	alpha      *= min(1.0, (0.5*dist - 0.25)); // increase alpha when very close to the camera, as nearby windows don't look as good
-	if (dist < 4.0) {alpha *= clamp(3.0*(fract(tc.t) - 0.1), 0.0, 1.0);} // top of window is brighter than bottom  
+	if (dist < 4.0) {alpha *= clamp(3.0*(fract(tc.t) - 0.1), 0.0, 1.0);} // top of window is brighter than bottom
+	if (rand_val < (0.5 + 0.4*lit_thresh)) {alpha *= 0.2*rand_val;} // 50% - 90% of windows are darker
+	float rand_amt = 0.2*(1.0 - alpha) + 0.15;
+	alpha *= min(1.0, (0.5*dist - 0.25)); // increase alpha when very close to the camera, as nearby windows don't look as good
 	if (alpha < 0.01) discard;
 	float rgb_scale = 1.0/max(gl_Color.r, max(gl_Color.g, gl_Color.b)); // normalize largest color component to 1.0
 	fg_FragColor    = apply_fog_epos(vec4(rgb_scale*gl_Color.rgb, 1.0), epos);
 	fg_FragColor.a *= alpha*texel.a; // keep orig alpha value
+	// add some random per-window color variation
+	fg_FragColor.bg *= mix(1.0, fract(13.5*rand_val), rand_amt);
+	fg_FragColor.b  *= mix(1.0, fract(17.3*rand_val), rand_amt);
 }
