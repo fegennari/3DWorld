@@ -2003,7 +2003,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 }
 
 
-int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos) {
+int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos) { // returns: 0=no coll, 1=mesh coll, 2=ice coll
 
 	vector3d const vca(pos + vcf*FAR_CLIP);
 	if (world_mode == WMODE_INF_TERRAIN) {return (line_intersect_tiled_mesh(pos, vca, coll_pos) ? 1 : 0);}
@@ -2121,6 +2121,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	int const proj_type(is_laser ? BEAM : PROJECTILE);
 	range = get_projectile_range(pos, vcf, 0.01*radius, range, coll_pos, coll_norm, coll, cindex, shooter, !is_laser, ignore_cobj);
 	point p_int(pos), lsip(pos);
+	bool is_metal(0);
 
 	if (cindex >= 0) {
 		cobj_params const &cp(coll_objects.get_cobj(cindex).cp);
@@ -2130,6 +2131,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			get_lum_alpha(cp.color, cp.tid, luminance, alpha);
 			specular   = cp.spec_color.get_luminance();
 			refract_ix = cp.refract_ix;
+			is_metal   = (cp.metalness > 0.0);
 		}
 	}
 	for (int g = 0; g < num_groups; ++g) { // collisions with dynamic group objects - this can be slow (Note that some of these are already in cobjs test)
@@ -2296,7 +2298,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	}
 	
 	// process laser reflections
-	bool const reflects((intersect == 2 && !coll && closest == -1) || ((wmode&1) && coll));
+	bool const reflects((intersect == 2 && !coll && closest == -1) || ((wmode&1) && coll) || (is_metal && coll && closest == -1));
 	
 	if (is_laser && ((coll && alpha < 1.0) || reflects) &&
 		closest_t != CAMERA && closest_t != SMILEY && intensity > 0.01)
