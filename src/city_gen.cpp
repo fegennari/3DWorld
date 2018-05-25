@@ -803,8 +803,14 @@ namespace streetlight_ns {
 			translate_to(lpos);
 			scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
 			draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
-			fgPopMatrix();
 			if (!shadow_only && is_night()) {s.clear_color_e();}
+
+			if (!shadow_only && dist_val < 0.12) {
+				fgTranslate(0.0, 0.0, 0.1); // translate up slightly and draw top cap of light
+				s.set_cur_color(pole_color);
+				draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
+			}
+			fgPopMatrix();
 		}
 		void add_dlight(vector3d const &xlate, cube_t &lights_bcube) const {
 			float const ldist(light_dist*city_params.road_width);
