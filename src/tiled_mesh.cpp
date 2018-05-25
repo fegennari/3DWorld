@@ -2755,10 +2755,11 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 }
 
 
-void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only) {
+void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only, bool enable_dlights) {
 
 	if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", 1);} // FS
 	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
+	//set_dlights_booleans(s, enable_dlights, 1, 1); // no_dl_smap=1
 	if (!shadow_only) {setup_tt_fog_pre(s);}
 	set_smap_enable_for_shader(s, enable_shadow_maps, 1); // FS
 	s.set_vert_shader("per_pixel_lighting");
@@ -2802,7 +2803,8 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	{ // draw branches
 		shader_t bs;
-		tree_branch_shader_setup(bs, enable_shadow_maps, 1, shadow_pass); // enable_opacity=1
+		bool const enable_dlights(!shadow_pass && is_night() && have_cities()); // enable for city night lights
+		tree_branch_shader_setup(bs, enable_shadow_maps, 1, shadow_pass, enable_dlights); // enable_opacity=1
 		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
 		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
