@@ -35,7 +35,7 @@ vec3 get_tree_leaf_lighting(in vec4 epos, in vec3 normal, in vec3 vpos, in vec3 
 		if (enable_light0)  {color += add_leaf_light_comp(normal, epos, 0, ambient_scale, 1.0).rgb;}
 		if (enable_light1)  {color += add_leaf_light_comp(normal, epos, 1, ambient_scale, 1.0).rgb;}
 	}
-	if (enable_light2)  {color += add_pt_light_comp  (normalize(normal), epos, 2).rgb;} // lightning
-	if (enable_dlights) {add_dlights(color, vpos, epos, ws_normal, vec3(1.0));}
+	if (enable_light2)  {color += add_pt_light_comp(normalize(normal), epos, 2).rgb;} // lightning
+	if (enable_dlights) {add_dlights(color, vpos, epos, normalize(ws_normal), vec3(1.0));}
 	return color;
 }
