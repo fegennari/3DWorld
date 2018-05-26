@@ -943,7 +943,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	}
 	select_texture(tree_types[type].bark_tex);
 	s.set_cur_color(bcolor);
-	s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate));
+	s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate - get_camera_coord_space_xlate()));
 	fgPushMatrix();
 	translate_to(tree_center + xlate);
 	td.draw_branches(s, size_scale, reflection_pass);
