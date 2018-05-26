@@ -264,7 +264,7 @@ public:
 
 road_mat_mgr_t road_mat_mgr;
 
-void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap) {
+void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap) {
 
 	if (use_dlights) {
 		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
@@ -283,7 +283,7 @@ void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bma
 	cube_t const lights_bcube(get_city_lights_bcube());
 	use_dlights &= !lights_bcube.is_zero_area();
 	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, use_bmap);
+	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
 }
 
 struct draw_state_t {

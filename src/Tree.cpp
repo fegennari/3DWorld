@@ -396,7 +396,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 		if (world_mode == WMODE_GROUND && use_smap) {set_smap_shader_for_all_lights(s);}
 		if (!no_dlights) {setup_dlight_textures(s, 0);} // no dlight smap
 		if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
-		if (!lights_bcube.is_all_zeros()) {set_city_lighting_shader_opts(s, lights_bcube, !no_dlights, use_smap, 0);} // will reset some values
+		if (!lights_bcube.is_all_zeros()) {set_city_lighting_shader_opts(s, lights_bcube, !no_dlights, use_smap);} // will reset some values
 	}
 	if (enable_tex_coord_weight) {s.add_uniform_float("tex_coord_weight", 0.0);}
 	s.add_uniform_float("water_depth", water_depth);
