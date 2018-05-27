@@ -982,6 +982,15 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 	return found;
 }
 
+bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int, bool skip_z) {
+	vector3d cnorm; // unused
+	unsigned cdir(0); // unused
+	point p_int;
+	if (!sphere_cube_intersect(pos, radius, cube, p_last, p_int, cnorm, cdir, 1)) return 0;
+	pos = p_int; // update current pos
+	return 1;
+}
+
 
 #define TEST_CLIP_T(reg, va, vb, vd, vc) \
 	if (region3 & (reg)) { \

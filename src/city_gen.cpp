@@ -656,14 +656,7 @@ struct road_isec_t : public cube_t {
 			c.z1() = z1(); c.z2() = sl_top;
 			c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
 			c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-			point p_int;
-			vector3d cnorm; // unused
-			unsigned cdir(0); // unused
-
-			if (sphere_cube_intersect(pos, radius, (c + xlate), p_last, p_int, cnorm, cdir, 1)) { // cube
-				pos = p_int; // update current pos
-				return 1; // there typically won't be more than one collision, to just return the first one
-			}
+			if (sphere_cube_int_update_pos(pos, radius, (c + xlate), p_last)) return 1; // there typically won't be more than one collision, just return the first one
 		} // for n
 		return 0;
 	}
@@ -2322,16 +2315,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 }
 
 bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const {
-
-	vector3d cnorm; // unused
-	unsigned cdir(0); // unused
-	point p_int;
-
-	if (sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1)) { // Note: approximate when car is tilted or turning
-		pos = p_int; // update current pos
-		return 1;
-	}
-	return 0;
+	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last); // Note: approximate when car is tilted or turning
 	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos);
 }
 

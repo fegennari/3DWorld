@@ -977,16 +977,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
 			had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points);
 		}
-		else if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) { // cube
-			pos2 = p_int; // update current pos
+		else if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only)) { // cube
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 		}
 	} // for i
 	for (auto i = details.begin(); i != details.end(); ++i) {
-		if (sphere_cube_intersect(pos2, radius, (*i + xlate), p_last2, p_int, cnorm, cdir, 1, xy_only)) { // cube
-			pos2 = p_int; // update current pos
-			had_coll = 1; // flag as colliding
-		}
+		if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only)) {had_coll = 1;} // cube, flag as colliding
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // Note: doesn't really work with a pointed roof
 		point const pos_xlate(pos2 - xlate);
