@@ -1090,14 +1090,35 @@ class city_road_gen_t {
 
 
 	struct bench_t : public sphere_t {
-		float rot; // rotation angle in degrees
-		bench_t() : rot(0.0) {}
-		bench_t(point const &pos_, float radius_, float rot_) : sphere_t(pos_, radius_), rot(rot_) {}
-		static void pre_draw (draw_state_t &dstate, bool shadow_only) {if (!shadow_only) {select_texture(FENCE_TEX);}} // normal map?
+		//float rot; // rotation angle in degrees
+		bool dim, dir;
+		cube_t bcube;
+
+		bench_t() : dim(0), dir(0) {}
+		bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : sphere_t(pos_, radius_), dim(dim_), dir(dir_) {
+			bcube.set_from_point(pos);
+			bcube.expand_by(vector3d((dim ? 0.5 : 1.0), (dim ? 1.0 : 0.5), 0.4)*radius);
+		}
+		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
+			if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
+			//dstate.pre_draw() or other shader setup
+		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 
-		void draw(draw_state_t &dstate, bool shadow_only) const {
-			// TODO: WRITE
+		void draw(draw_state_t &dstate, quad_batch_draw &qbd, bool shadow_only) const {
+			if (!dstate.check_cube_visible(bcube, 0.16, shadow_only)) return; // dist_scale=0.16
+#if 0 // incomplete/disabled
+			point const center(pos + dstate.xlate);
+			float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
+			vector3d const cview_dir(camera_pdu.pos - center);
+			cube_t c;
+			point pts[8];
+			dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
+			dstate.draw_cube(qbd, dim, dir, color_wrapper(WHITE), c.get_cube_center(), pts);
+#endif
+		}
+		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate) const {
+			return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last);
 		}
 	};
 
@@ -1235,7 +1256,8 @@ class city_road_gen_t {
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 				if (try_place_obj(plot, blockers, rgen, bench.radius, bench.radius, 1, bench.pos)) { // 1 try
-					bench.rot = 90.0*(rgen.rand()&3); // {0, 90, 180, 270} degrees
+					bench.dim = rgen.rand_bool();
+					bench.dir = rgen.rand_bool();
 					benches.push_back(bench);
 				}
 			} // for n
@@ -1243,10 +1265,12 @@ class city_road_gen_t {
 		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) const {
 			if (objs.empty()) return;
 			T::pre_draw(dstate, shadow_only);
+			quad_batch_draw qbd;
 
 			for (auto i = objs.begin(); i != objs.end(); ++i) {
-				if (dstate.check_sphere_visible(i->pos, i->radius)) {i->draw(dstate, shadow_only);}
+				if (dstate.check_sphere_visible(i->pos, i->radius)) {i->draw(dstate, qbd, shadow_only);}
 			}
+			qbd.draw();
 			T::post_draw(dstate, shadow_only);
 		}
 	public:
@@ -1275,7 +1299,15 @@ class city_road_gen_t {
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) const {
 			draw_objects(benches, dstate, shadow_only);
 		}
-	}; // parking_lot_manager_t
+		bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
+			vector3d const xlate(get_camera_coord_space_xlate());
+
+			for (auto i = benches.begin(); i != benches.end(); ++i) {
+				if (i->proc_sphere_coll(pos, p_last, radius, xlate)) return 1;
+			}
+			return 0;
+		}
+	}; // city_obj_placer_t
 
 	class road_network_t {
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
@@ -1759,6 +1791,7 @@ class city_road_gen_t {
 			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
 				if (i->proc_sphere_coll(pos, radius, xlate)) return 1;
 			}
+			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius)) return 1;
 			return 0;
 		}
 		void draw(road_draw_state_t &dstate, bool shadow_only) {
