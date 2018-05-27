@@ -541,6 +541,7 @@ struct cube_t { // size = 24
 	float get_dy() const {return (d[1][1]-d[1][0]);}
 	float get_dz() const {return (d[2][1]-d[2][0]);}
 	void expand_by(float val) {UNROLL_3X(d[i_][0] -= val; d[i_][1] += val;)}
+	void expand_by(float x, float y, float z) {expand_by(vector3d(x, y, z));}
 	void expand_by(vector3d const &val) {UNROLL_3X(d[i_][0] -= val[i_]; d[i_][1] += val[i_];)}
 	void expand_by_xy(float val) {UNROLL_2X(d[i_][0] -= val; d[i_][1] += val;)}
 	unsigned get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const;
