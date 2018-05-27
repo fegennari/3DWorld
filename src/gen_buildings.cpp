@@ -1129,7 +1129,7 @@ void building_t::gen_geometry(unsigned ix) {
 	parts.resize(num_levels);
 	float const height(base.get_dz()), dz(height/num_levels);
 
-	if ((rgen.rand()&1) && !do_split) {
+	if (rgen.rand_bool() && !do_split) {
 		point const llc(base.get_llc()), sz(base.get_size());
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels
@@ -1158,7 +1158,7 @@ void building_t::gen_geometry(unsigned ix) {
 			cube_t const &prev(parts[i-1]);
 			for (unsigned d = 0; d < 2; ++d) {
 				float const len(prev.d[d][1] - prev.d[d][0]), bc_len(bcube.d[d][1] - bcube.d[d][0]);
-				bool const inv(rgen.rand()&1);
+				bool const inv(rgen.rand_bool());
 
 				for (unsigned E = 0; E < 2; ++E) {
 					bool const e((E != 0) ^ inv); // no dir favoritism for 20% check

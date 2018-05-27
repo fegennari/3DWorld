@@ -676,12 +676,12 @@ struct road_isec_t : public cube_t {
 	}
 	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
 		if (num_conn == 2) return; // no stoplights
-		if (!dstate.check_cube_visible(*this, 0.16, shadow_only)) return; // dist_scale=0.12
+		if (!dstate.check_cube_visible(*this, 0.16, shadow_only)) return; // dist_scale=0.16
 		point const center(get_cube_center() + dstate.xlate);
 		float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		vector3d const cview_dir(camera_pdu.pos - center);
 		float const sz(0.03*city_params.road_width), h(1.0*sz);
-		color_wrapper cw; cw.set_c4(BLACK);
+		color_wrapper cw(BLACK);
 
 		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 			if (!(conn & (1<<n))) continue; // no road in this dir
@@ -1810,7 +1810,7 @@ class city_road_gen_t {
 				unsigned const seg_ix(rgen.rand()%segs.size());
 				road_seg_t const &seg(segs[seg_ix]); // chose a random segment
 				car.dim   = seg.dim;
-				car.dir   = (rgen.rand()&1);
+				car.dir   = rgen.rand_bool();
 				car.max_speed = rgen.rand_uniform(0.66, 1.0); // add some speed variation
 				car.cur_road  = seg.road_ix;
 				car.cur_seg   = seg_ix;
@@ -2120,7 +2120,7 @@ public:
 		
 		if ((bc[dx].x1() - bc[!dx].x1() > min_jog) && (bc[dy].y1() - bc[!dy].y1() > min_jog)) {
 			// connect with two road segments using a jog: Note: assumes cities are all the same size
-			bool const inv_dim(rgen.rand()&1);
+			bool const inv_dim(rgen.rand_bool());
 			//cout << "Try connect using jog in dim " << inv_dim << endl;
 			cube_t bc1_conn(bcube1), bc2_conn(bcube2);
 			bc1_conn.d[0][ dx] = bcube2.d[0][!dx];
@@ -2505,7 +2505,7 @@ class car_manager_t {
 			}
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
-				color_wrapper cw; cw.set_c4(color);
+				color_wrapper cw(color);
 				draw_cube(qbd, dim, dir, cw, center, pb); // bottom
 				if (draw_top) {draw_cube(qbd, dim, dir, cw, center, pt);} // top
 				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
