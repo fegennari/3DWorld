@@ -13,6 +13,7 @@ using namespace std;
 unsigned const MAX_FRAMES_BUFFERED = 128;
 
 extern int window_width, window_height;
+extern unsigned video_framerate; // Note: should probably be either 30 or 60
 
 void write_video();
 
@@ -126,7 +127,8 @@ public:
 		// Note: 0 = max threads; the more threads the lower the frame rate, as video compression competes with 3DWorld for CPU cycles;
 		// however, more threads is less likely to fill the buffer and block, producing heavy lag
 		ostringstream oss;
-		oss << "ffmpeg.exe.lnk -r 60 -f rawvideo -pix_fmt rgba -s " << window_width << "x" << window_height << " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << filename;
+		oss << "ffmpeg.exe.lnk -r " << video_framerate << " -f rawvideo -pix_fmt rgba -s " << window_width << "x" << window_height
+			<< " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << filename;
 		// open pipe to ffmpeg's stdin in binary write mode
 		FILE* ffmpeg = _popen(oss.str().c_str(), "wb");
 		assert(ffmpeg != nullptr);
