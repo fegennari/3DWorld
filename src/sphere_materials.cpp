@@ -275,7 +275,7 @@ string sphere_mat_t::get_name() const {return name + " (" + mode_strs[spheres_mo
 
 void set_cobj_params_from_material(cobj_params &cp, sphere_mat_t const &mat) {
 
-	cp.draw        = 1; // obj is not drawn
+	cp.draw        = 1; // obj is drawn
 	cp.elastic     = mat.hardness; // elastic is misnamed, really it's hardness
 	cp.metalness   = mat.metal;
 	cp.is_emissive = mat.emissive;
@@ -332,7 +332,7 @@ bool throw_sphere(bool mode) {
 	gen_sound(SOUND_SWING, fpos, 0.5, 1.0);
 
 	if (spheres_mode == 3 || spheres_mode == 4) { // static objects
-		cobj_params cp(0.0, BLACK, 1, 0);
+		cobj_params cp(0.0, BLACK, 1, 0); // elastic, color, draw, is_dynamic
 		cp.flags |= COBJ_MOVABLE;
 		set_cobj_params_from_material(cp, mat);
 		int const coll_id(add_cobj_with_material(cp, mat, fpos, base_radius, is_cube, 1));
@@ -418,4 +418,63 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 }
 
 void remove_mat_sphere(unsigned id) {sphere_materials.remove_obj_light(id);}
+
+
+void gen_rand_spheres(unsigned num, point const &center, float place_radius, float min_radius, float max_radius) {
+
+	timer_t timer("Gen Rand Spheres");
+	rand_gen_t rgen;
+	vector<sphere_t> spheres;
+
+	for (unsigned n = 0; n < num; ++n) {
+		float const radius(rgen.rand_uniform(min_radius, max_radius));
+		vector3d v;
+		point pos;
+
+		for (unsigned N = 0; N < 1000; ++N) { // make 100 placement attempts
+			while (1) {
+				v = rgen.signed_rand_vector_xy();
+				if (v.mag_sq() < 1.0) break;
+			}
+			pos = center + place_radius*v + vector3d(0.0, 0.0, radius);
+			bool overlap(0);
+
+			for (auto i = spheres.begin(); i != spheres.end(); ++i) { // check for overlap with previously placed spheres
+				if (dist_less_than(pos, i->pos, (radius + i->radius))) {overlap = 1; break;}
+			}
+			if (!overlap) break;
+		}
+		cobj_params cp(0.0, BLACK, 1, 0); // elastic, color, draw, is_dynamic
+		spheres.emplace_back(pos, radius);
+		sphere_mat_t mat;
+		mat.reflective = ((rgen.rand()%3) == 0);
+		mat.emissive   = (!mat.reflective && ((rgen.rand()%4) == 0));
+		mat.shadows    = (mat.alpha > 0.5);
+		bool const is_metal(mat.reflective && !mat.emissive && rgen.rand_bool());
+		mat.metal      = (is_metal ? 1.0 : 0.0);
+		mat.alpha      = ((mat.emissive || is_metal) ? 1.0 : CLIP_TO_01(rgen.rand_uniform(0.25, 2.0)));
+		mat.spec_mag   = (is_metal ? 1.0 : CLIP_TO_01(rgen.rand_uniform(-0.5, 1.2)));
+		mat.shine      = rgen.rand_uniform(1.0, 10.0)*rgen.rand_uniform(1.0, 10.0);
+		mat.density    = (is_metal ? 2.0 : 1.0)*rgen.rand_uniform(0.5, 4.0);
+		mat.light_atten  = ((mat.alpha < 0.5) ? CLIP_TO_01(rgen.rand_uniform(-20.0, 20.0)) : 0.0);
+		mat.refract_ix   = rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5);
+		mat.light_radius = ((mat.emissive && rgen.rand_bool()) ? rgen.rand_uniform(2.0, 8.0)*radius : 0.0);
+		colorRGBA color;
+		color.alpha = 1.0; // mat.alpha?
+		for (unsigned i = 0; i < 3; ++i) {color[i] = CLIP_TO_01(rgen.rand_uniform(-0.25, 1.5));} // saturate in some cases
+
+		if (is_metal) {
+			mat.diff_c = BLACK;
+			mat.spec_c = color;
+		}
+		else {
+			mat.diff_c = color;
+			mat.spec_c = WHITE;
+		}
+		cp.flags |= COBJ_MOVABLE;
+		set_cobj_params_from_material(cp, mat);
+		cp.tscale = 1.0; // untextured
+		add_cobj_with_material(cp, mat, pos, radius, 0, 1); // is_cube=0, is_static=1
+	} // for n
+}
 

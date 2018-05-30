@@ -891,6 +891,8 @@ int read_error(FILE *fp, const char *param, const char *filename) {
 	fclose(fp);
 	return 0;
 }
+int read_error(FILE *fp, string const &param, const char *filename) {return read_error(fp, param.c_str(), filename);}
+
 int read_error(FILE *fp, const char *param, const char *filename, unsigned line_num) {
 	cout << "*** Error reading " << param << " from file '" << filename << "' on line " << line_num << ". ***" << endl;
 	fclose(fp);
@@ -1341,6 +1343,17 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 					xf.xform_pos(jp.pos);
 					jump_pads.push_back(jp);
+				}
+				else if (keyword == "rand_spheres") { // num center_x center_y center_z place_radius min_radius max_radius
+					unsigned num(0);
+					point center;
+					float place_radius(0.0), min_radius(0.0), max_radius(0.0);
+					
+					if (fscanf(fp, "%u%f%f%f%f%f%f", &num, &center.x, &center.y, &center.z, &place_radius, &min_radius, &max_radius) != 7) {
+						return read_error(fp, keyword, coll_obj_file);
+					}
+					if (place_radius <= 0.0 || min_radius <= 0.0 || max_radius < min_radius) {return read_error(fp, keyword, coll_obj_file);} // check for invalid values
+					gen_rand_spheres(num, center, place_radius, min_radius, max_radius);
 				}
 				else {
 					ostringstream oss;
