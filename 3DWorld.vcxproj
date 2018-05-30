@@ -990,12 +990,14 @@
     <Text Include="coll_objs\coll_objs_san_miguel.txt" />
     <Text Include="coll_objs\COLL_OBJS_Test.TXT" />
     <Text Include="coll_objs\coll_objs_transformed.txt" />
+    <Text Include="coll_objs\white_plane_test.txt" />
     <Text Include="config_buildings.txt" />
     <Text Include="config_heightmap.txt" />
     <Text Include="config_lava_moon.txt" />
     <Text Include="config_museum_tt_model.txt" />
     <Text Include="config_puzzle.txt" />
     <Text Include="config_san_miguel.txt" />
+    <Text Include="config_white_plane.txt" />
     <Text Include="mapx\coll_objs_cubes.txt" />
     <Text Include="mapx\coll_objs_mapx.txt" />
     <Text Include="mapx\coll_objs_spheres.txt" />

@@ -1,0 +1,25 @@
+ntrees 0
+load_coll_objs 1
+disable_universe 1
+disable_water 1
+disable_scenery 1
+read_landscape 0
+read_heightmap 0
+rand_seed 0
+toggle_reflections # reflections enabled by default
+toggle_mesh_enabled # disable mesh draw by default
+
+#sun_rot 2.0
+#moon_rot 2.0
+mesh_height 0.1
+
+mesh_size  128 128 64
+scene_size 4.0 4.0 4.0
+shadow_map_sz 4096
+
+reflect_plane_z -4.0 4.0  -4.0 4.0  -0.01 0.01 # ground plane
+
+include config_resolution.txt
+sphere_materials_fn sphere_materials.txt
+coll_obj_file coll_objs/white_plane_test.txt
+
