@@ -468,10 +468,10 @@ void gen_rand_spheres(unsigned num, point const &center, float place_radius, flo
 		mat.density    = (is_metal ? 2.0 : 1.0)*rgen.rand_uniform(0.5, 4.0);
 		mat.light_atten  = ((mat.alpha < 0.5) ? max(rgen.rand_uniform(-20.0, 20.0), 0.0f) : 0.0);
 		mat.refract_ix   = rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5);
-		mat.light_radius = ((mat.emissive && rgen.rand_bool()) ? rgen.rand_uniform(4.0, 10.0)*radius : 0.0);
+		mat.light_radius = ((mat.emissive && rgen.rand_bool()) ? rgen.rand_uniform(5.0, 10.0)*radius : 0.0);
 		colorRGBA color(WHITE); // mat.alpha?
 
-		if (!is_metal || rgen.rand_bool()) { // 50% chance of making metals white
+		if (!(is_metal || (mat.light_radius > 0.0)) || rgen.rand_bool()) { // 50% chance of making metals and lights white
 			for (unsigned i = 0; i < 3; ++i) {color[i] = CLIP_TO_01(rgen.rand_uniform(-0.25, 1.5));} // saturate in some cases
 		}
 		if (is_metal) {
