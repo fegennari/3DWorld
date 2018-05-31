@@ -451,6 +451,17 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, texture_offset), p2.x, p2.y, p2.z, dot_product(p2, texture_offset), shader, 1);
 }
 
+void draw_subdiv_sphere_back_to_front(point const &pos, float radius, int ndiv, int texture) {
+
+	glEnable(GL_CULL_FACE);
+
+	for (unsigned i = 0; i < 2; ++i) {
+		glCullFace(i ? GL_BACK : GL_FRONT);
+		draw_subdiv_sphere(pos, radius, ndiv, texture, 1);
+	}
+	glDisable(GL_CULL_FACE);
+}
+
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb, int reflection_pass) const {
 
 	assert(!disabled());
@@ -571,8 +582,8 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		// Note: if using textures (and using MVM in the shader), draw_sphere_vbo() is faster and can be used
 		// Note: semi-transparent spheres must not use tex coords because the translate in draw_sphere_vbo() produces the wrong indir lighting vpos;
 		// the transparent pass is sorted back-to-front and not grouped by texgen vs. tex-coord shader
-		if (is_semi_trans() && cp.tid < 0 && !use_tcs && cp.light_atten == 0.0) {draw_sphere_vbo_back_to_front(points[0], radius, ndiv, use_tcs);}
-		else if (use_tcs && !(is_semi_trans() && cp.tid < 0)) {draw_sphere_vbo(points[0], radius, ndiv, use_tcs);}
+		if (use_tcs && !(is_semi_trans() && cp.tid < 0)) {draw_sphere_vbo(points[0], radius, ndiv, use_tcs);}
+		else if (is_semi_trans()) {draw_subdiv_sphere_back_to_front(points[0], radius, ndiv, use_tcs);}
 		else {draw_subdiv_sphere(points[0], radius, ndiv, use_tcs, 1);}
 		if (cp.light_atten > 0.0) {glDisable(GL_CULL_FACE);}
 		break;
