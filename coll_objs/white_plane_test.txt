@@ -1,8 +1,8 @@
 #cube_map_ref 1
 
 l 0.9 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
-r 0.8 60.0 # set specularity
+#r 0.8 60.0 # set specularity
 B -4.0 4.0  -4.0 4.0  -0.7 0.0 # ground plane
 
-rand_spheres 100  0.0 0.0 0.0  2.5  0.05 0.25 # num center_x center_y center_z place_radius min_radius max_radius
+rand_spheres 100  0.0 0.0 0.0  2.5  0.1 0.25 # num center_x center_y center_z place_radius min_radius max_radius
 

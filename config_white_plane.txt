@@ -17,7 +17,7 @@ mesh_size  128 128 64
 scene_size 4.0 4.0 4.0
 shadow_map_sz 4096
 
-reflect_plane_z -4.0 4.0  -4.0 4.0  -0.01 0.01 # ground plane
+#reflect_plane_z -4.0 4.0  -4.0 4.0  -0.01 0.01 # ground plane
 
 include config_resolution.txt
 sphere_materials_fn sphere_materials.txt

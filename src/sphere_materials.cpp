@@ -457,21 +457,22 @@ void gen_rand_spheres(unsigned num, point const &center, float place_radius, flo
 		cobj_params cp(0.0, BLACK, 1, 0); // elastic, color, draw, is_dynamic
 		spheres.emplace_back(pos, radius);
 		sphere_mat_t mat;
-		mat.reflective = ((rgen.rand()%3) == 0);
-		mat.emissive   = (!mat.reflective && ((rgen.rand()%4) == 0));
-		mat.shadows    = (mat.alpha > 0.5);
-		bool const is_metal(mat.reflective && !mat.emissive && rgen.rand_bool());
+		bool const is_metal((rgen.rand()%5) == 0);
 		mat.metal      = (is_metal ? 1.0 : 0.0);
-		mat.alpha      = ((mat.emissive || is_metal) ? 1.0 : min(rgen.rand_uniform(0.25, 2.0), 1.0f));
 		mat.spec_mag   = (is_metal ? 1.0 : CLIP_TO_01(rgen.rand_uniform(-0.5, 1.2)));
-		mat.shine      = rgen.rand_uniform(1.0, 10.0)*rgen.rand_uniform(1.0, 10.0);
+		mat.shine      = rgen.rand_uniform(1.0, 10.0)*rgen.rand_uniform(1.0, 10.0); // or roughness for reflective objects/metals
+		mat.reflective = (mat.spec_mag > 0.75); // metal is always reflective
+		mat.emissive   = (!mat.reflective && ((rgen.rand()%4) == 0));
+		mat.alpha      = ((mat.emissive || is_metal) ? 1.0 : min(rgen.rand_uniform(0.25, 2.0), 1.0f));
+		mat.shadows    = (mat.alpha > 0.5);
 		mat.density    = (is_metal ? 2.0 : 1.0)*rgen.rand_uniform(0.5, 4.0);
 		mat.light_atten  = ((mat.alpha < 0.5) ? max(rgen.rand_uniform(-20.0, 20.0), 0.0f) : 0.0);
 		mat.refract_ix   = rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5);
-		mat.light_radius = ((mat.emissive && rgen.rand_bool()) ? rgen.rand_uniform(5.0, 10.0)*radius : 0.0);
-		colorRGBA color(WHITE); // mat.alpha?
-
-		if (!(is_metal || (mat.light_radius > 0.0)) || rgen.rand_bool()) { // 50% chance of making metals and lights white
+		mat.light_radius = (mat.emissive ? rgen.rand_uniform(5.0, 10.0)*radius : 0.0);
+		colorRGBA color; // mat.alpha?
+		if (is_metal && rgen.rand_bool()) {color = WHITE;} // 33% chance of making metals white
+		else if (mat.light_radius > 0.0 && rgen.rand_bool()) {color = WHITE;} // 50% chance of making lights white
+		else {
 			for (unsigned i = 0; i < 3; ++i) {color[i] = CLIP_TO_01(rgen.rand_uniform(-0.25, 1.5));} // saturate in some cases
 		}
 		if (is_metal) {
