@@ -22,7 +22,7 @@ reflective_cobjs_t reflective_cobjs;
 extern bool combined_gu, show_lightning, begin_motion, use_interior_cube_map_refl;
 extern int display_mode, window_width, window_height, camera_coll_id;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
-extern point cube_map_center;
+extern point cube_map_center, sun_pos, moon_pos;
 extern coll_obj_group coll_objects;
 extern vector<shadow_sphere> shadow_objs;
 
@@ -456,6 +456,14 @@ void reflective_cobjs_t::free_textures() {
 }
 
 bool enable_reflection_dynamic_updates() {
+
+	static point last_sun(sun_pos), last_moon(moon_pos);
+
+	if ((sun_pos != last_sun && light_factor >= 0.4) || (moon_pos != last_moon && light_factor <= 0.6)) { // light source change
+		last_sun  = sun_pos;
+		last_moon = moon_pos;
+		return 1;
+	}
 	// unclear how well this works, and if it even makes sense, considering the player casts shadows and reclections and is always visible in any reflective surface that is visible to the camera
 	if (begin_motion == 0) return 0; // no dynamic objects enabled
 	return (!shadow_objs.empty()); // check if there are any dynamic objects casting a shadow
