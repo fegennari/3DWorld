@@ -21,10 +21,16 @@ void main() {
 	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard; // transparent part
 	// use integer component of window texture as hash to select random lit vs. dark windows
-	float rand_val   = rand_v2(vec2(floor(tc.s), floor(tc.y)));
+	float wind_id_y  = floor(tc.t); // window floor/row index
+	float max_gsz    = 1.0 + 10.0*fract(6.78*sin(45.6*gl_Color.g)); // max window group size, per-building, 1-10
+	max_gsz         *= 0.5 + 0.5*fract(8.91*sin(13.7*wind_id_y)); // modulate 50% by floor
+	float group_sz   = max(1.0, ceil(max_gsz*rand_v2(vec2(wind_id_y, 0.001*gl_Color.g)))); // create lit/dark rows of windows
+	float wind_id_x  = floor(tc.s/group_sz); // window column index
+	float rand_val   = rand_v2(vec2(wind_id_x, wind_id_y));
 	float lit_thresh = fract(5.67*sin(12.3*gl_Color.b)); // use per-building color as hash for lit percentage
-	float dist  = length(epos.xyz);
-	float alpha = 1.0 - 2.0*(texel.r - 0.5); // mask off window border (white), keep window pane (gray)
+	lit_thresh      *= 0.5 + 1.0*fract(8.91*sin(13.7*wind_id_y)); // modulate by floor
+	float dist       = length(epos.xyz);
+	float alpha      = 1.0 - 2.0*(texel.r - 0.5); // mask off window border (white), keep window pane (gray)
 	if (dist < 4.0) {alpha *= clamp(3.0*(fract(tc.t) - 0.1), 0.0, 1.0);} // top of window is brighter than bottom
 	if (rand_val < (0.5 + 0.4*lit_thresh)) {alpha *= 0.2*rand_val;} // 50% - 90% of windows are darker
 	float rand_amt = 0.2*(1.0 - alpha) + 0.15;
