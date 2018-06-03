@@ -32,6 +32,7 @@ extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 extern reflective_cobjs_t reflective_cobjs;
+extern vector<light_source> light_sources_a;
 extern vector<light_source_trig> light_sources_d;
 extern vector<texture_t> textures;
 
@@ -485,6 +486,7 @@ void gen_rand_spheres(unsigned num, point const &center, float place_radius, flo
 		}
 		set_cobj_params_from_material(cp, mat);
 		add_static_material_object(cp, mat, pos, radius, 0); // is_cube=0
+		if (mat.light_radius > MIN_LIGHT_RADIUS) {light_sources_a.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0));} // needed for indir lighting
 	} // for n
 }
 
