@@ -1224,14 +1224,17 @@ class city_road_gen_t {
 				} // for row
 			} // for c
 		}
+		static bool check_pt_and_place_blocker(point const &pos, vector<cube_t> &blockers, float radius, float extra_spacing) {
+			cube_t bc(pos);
+			if (has_bcube_int_xy(bc, blockers, radius)) return 0; // intersects a building or parking lot - skip
+			bc.expand_by_xy(extra_spacing);
+			blockers.push_back(bc); // prevent trees from being too close to each other
+			return 1;
+		}
 		static bool try_place_obj(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen, float radius, float extra_spacing, float num_tries, point &pos) {
 			for (unsigned t = 0; t < num_tries; ++t) {
 				pos = point(rgen.rand_uniform(plot.x1()+radius, plot.x2()-radius), rgen.rand_uniform(plot.y1()+radius, plot.y2()-radius), plot.z1());
-				cube_t bc(pos);
-				if (has_bcube_int_xy(bc, blockers, radius)) continue; // intersects a building or parking lot - skip
-				bc.expand_by_xy(extra_spacing);
-				blockers.push_back(bc); // prevent trees from being too close to each other
-				return 1; // success
+				if (check_pt_and_place_blocker(pos, blockers, radius, extra_spacing)) return 1; // success
 			} // for t
 			return 0;
 		}
@@ -1243,11 +1246,20 @@ class city_road_gen_t {
 
 			for (unsigned n = 0; n < city_params.max_trees_per_plot; ++n) {
 				point pos;
-
-				if (try_place_obj(plot, blockers, rgen, radius, radius, 10, pos)) { // 10 tries per tree
-					int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-					tree_placer.add(pos, 0, ttype); // size is randomly selected by the tree generator using default values
-				}
+				if (!try_place_obj(plot, blockers, rgen, radius, radius, 10, pos)) continue; // 10 tries per tree
+				int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
+				tree_placer.add(pos, 0, ttype); // size is randomly selected by the tree generator using default values
+				// now that we're here, try to place more trees at this same distance from the road in a row
+				bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
+				bool const dir((pos[dim] - plot.d[dim][0]) < (plot.d[dim][1] - pos[dim]));
+				float const step(2.5*radius*(dir ? 1.0 : -1.0)); // positive or negative (must be > 2x radius spacing)
+					
+				for (; n < city_params.max_trees_per_plot; ++n) {
+					pos[dim] += step;
+					if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
+					if (!check_pt_and_place_blocker(pos, blockers, radius, radius)) break; // placement failed
+					tree_placer.add(pos, 0, ttype); // use same tree type
+				} // for n
 			} // for n
 		}
 		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
