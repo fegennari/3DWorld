@@ -28,7 +28,7 @@ unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, gl
 
 extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline, store_cobj_accum_lighting_as_blocked;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
-extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
+extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight[];
 extern char *lighting_file[];
 extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources_a;
@@ -218,7 +218,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 
 	bool const dynamic(is_ltype_dynamic(ltype));
 	if (first_pt && dynamic) return; // since dynamic lights already have a direct lighting component, we skip the first ray here to avoid double counting it
-	if (first_pt && ltype == LIGHTING_GLOBAL) {weight *= first_ray_weight;} // lower weight - handled by direct illumination
+	if (first_pt) {weight *= first_ray_weight[ltype];} // lower weight - handled by direct illumination
 	if (fabs(weight) < TOLERANCE) return;
 	colorRGBA const cw(color*weight);
 	unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)/get_step_size())); // round up (dist can be 0)
