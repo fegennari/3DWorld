@@ -436,9 +436,10 @@ struct gen_sphere_params_t {
 
 	bool enable_reflect, enable_transparent, enable_light_atten, enable_shadows;
 	float metal_prob, emissive_prob, metal_white_prob, emiss_white_prob, max_light_atten, max_light_radius;
+	int rand_seed;
 
 	gen_sphere_params_t() : enable_reflect(1), enable_transparent(1), enable_light_atten(1), enable_shadows(1),
-		metal_prob(0.2), emissive_prob(0.25), metal_white_prob(0.5), emiss_white_prob(0.5), max_light_atten(20.0), max_light_radius(10.0) {}
+		metal_prob(0.2), emissive_prob(0.25), metal_white_prob(0.5), emiss_white_prob(0.5), max_light_atten(20.0), max_light_radius(10.0), rand_seed(0) {}
 	static bool read_error(string const &str) {cout << "Error reading sphere_gen config option " << str << "." << endl; return 0;}
 
 	bool read_option(FILE *fp) {
@@ -476,6 +477,9 @@ struct gen_sphere_params_t {
 		else if (str == "max_light_radius") {
 			if (!read_float(fp, max_light_radius) || max_light_radius < 0.0) {return read_error(str);}
 		}
+		else if (str == "rand_seed") {
+			if (!read_int(fp, rand_seed)) {return read_error(str);}
+		}
 		else {
 			cout << "Unrecognized sphere_gen keyword in input file: " << str << endl;
 			return 0;
@@ -495,6 +499,7 @@ void gen_rand_spheres(unsigned num, point const &center, float place_radius, flo
 	rand_gen_t rgen;
 	vector<sphere_t> spheres;
 	gen_sphere_params_t const &sp(gen_sphere_params);
+	if (sp.rand_seed != 0) {rgen.set_state(sp.rand_seed, 123);}
 
 	for (unsigned n = 0; n < num; ++n) {
 		float const radius(rgen.rand_uniform(min_radius, max_radius));
