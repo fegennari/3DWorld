@@ -1535,7 +1535,7 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
 	alloc_if_req(lighting_file[ltype], NULL);
 	int write_mode(0);
 	if (fscanf(fp, "%255s%i%f", lighting_file[ltype], &write_mode, &light_int_scale[ltype]) != 3) {cfg_err("lighting_file command", error);}
-	fscanf(fp, "%f", &first_ray_weight[ltype]); // ok if fails
+	read_float_reset_pos_on_fail(fp, first_ray_weight[ltype]); // ok if fails
 	(write_mode ? write_light_files[ltype] : read_light_files[ltype]) = 1;
 }
 
