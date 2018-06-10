@@ -979,9 +979,16 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 			}
 		}
 		else { // use a point light source
-			// move r_inner away from the light source
-			// necessary for sources contained in more than one cobj (like the lamps in mapx)
-			start_pt = lpos + dir*r_inner;
+			start_pt = lpos;
+
+			if (r_inner > 0.0) {
+				// move r_inner away from the light source
+				// necessary for sources contained in more than one cobj (like the lamps in mapx)
+				// move in a different dir to simulate emission along the surface and avoid single point radial grid artifacts
+				vector3d const move_dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
+				bool const invert(dot_product(dir, move_dir) < 0);
+				start_pt += move_dir*(invert ? -r_inner : r_inner);
+			}
 			if (line_light) {start_pt += n*delta;} // fixed spacing along the length of the line
 		}
 		point const end_pt(start_pt + dir*line_length);
