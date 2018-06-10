@@ -28,7 +28,7 @@ unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, gl
 
 extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline, store_cobj_accum_lighting_as_blocked;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
-extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight[];
+extern float water_plane_z, temperature, snow_depth, indir_light_exp, ray_step_size_mult, first_ray_weight[];
 extern char *lighting_file[];
 extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources_a;
@@ -192,7 +192,7 @@ cobj_ray_accum_map_t merged_accum_map;
 
 
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
-float get_step_size()    {return 0.3*(DX_VAL + DY_VAL + DZ_VAL);}
+float get_step_size()    {return 0.3*ray_step_size_mult*(DX_VAL + DY_VAL + DZ_VAL);}
 
 void increment_printed_number(unsigned num) {
 
@@ -220,11 +220,13 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 	if (first_pt && dynamic) return; // since dynamic lights already have a direct lighting component, we skip the first ray here to avoid double counting it
 	if (first_pt) {weight *= first_ray_weight[ltype];} // lower weight - handled by direct illumination
 	if (fabs(weight) < TOLERANCE) return;
+	weight *= ray_step_size_mult;
 	colorRGBA const cw(color*weight);
 	unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)/get_step_size())); // round up (dist can be 0)
 	vector3d const step((p2 - p1)/nsteps); // at least two points
 	if (!first_pt) {p1 += step;} // move past the first step so we don't double count
 
+	// FIXME: probably better time vs. quality tradeoff using a proper line drawing algorithm that chooses step size by distance to closest grid boundary and multiplies weigth by segment length
 	if (dynamic) { // it's a local lighting volume
 		light_volume_local &lvol(get_local_light_volume(ltype));
 
