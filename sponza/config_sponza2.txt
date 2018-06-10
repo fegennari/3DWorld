@@ -41,6 +41,7 @@ tree_coll_level 4
 default_ground_tex -1
 mesh_seed 2
 sunlight_intensity 2.0
+#disable_model_textures 1 # for debugging lighting, etc.
 
 #snow_depth 0.05
 snow_random 0.0

@@ -24,7 +24,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
-extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory;
+extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, light_int_scale[];
@@ -1061,7 +1061,10 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	else {
 		bool has_binary_alpha(1);
 		
-		if (tex_id >= 0) {
+		if (disable_model_textures) {
+			select_texture(WHITE_TEX);
+		}
+		else if (tex_id >= 0) {
 			tmgr.bind_texture(tex_id);
 			has_binary_alpha = tmgr.has_binary_alpha(tex_id);
 		}
