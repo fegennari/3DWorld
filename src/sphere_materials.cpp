@@ -432,11 +432,69 @@ void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in) {
 void remove_mat_sphere(unsigned id) {sphere_materials.remove_obj_light(id);}
 
 
+struct gen_sphere_params_t {
+
+	bool enable_reflect, enable_transparent, enable_light_atten, enable_shadows;
+	float metal_prob, emissive_prob, metal_white_prob, emiss_white_prob, max_light_atten, max_light_radius;
+
+	gen_sphere_params_t() : enable_reflect(1), enable_transparent(1), enable_light_atten(1), enable_shadows(1),
+		metal_prob(0.2), emissive_prob(0.25), metal_white_prob(0.5), emiss_white_prob(0.5), max_light_atten(20.0), max_light_radius(10.0) {}
+	static bool read_error(string const &str) {cout << "Error reading sphere_gen config option " << str << "." << endl; return 0;}
+
+	bool read_option(FILE *fp) {
+		char strc[MAX_CHARS] = {0};
+		if (!read_str(fp, strc)) return 0;
+		string const str(strc);
+
+		if (str == "enable_reflect") {
+			if (!read_bool(fp, enable_reflect)) {return read_error(str);}
+		}
+		else if (str == "enable_transparent") {
+			if (!read_bool(fp, enable_transparent)) {return read_error(str);}
+		}
+		else if (str == "enable_light_atten") {
+			if (!read_bool(fp, enable_light_atten)) {return read_error(str);}
+		}
+		else if (str == "enable_shadows") {
+			if (!read_bool(fp, enable_shadows)) {return read_error(str);}
+		}
+		else if (str == "metal_prob") {
+			if (!read_float(fp, metal_prob) || metal_prob < 0.0 || metal_prob > 1.0) {return read_error(str);}
+		}
+		else if (str == "emissive_prob") {
+			if (!read_float(fp, emissive_prob) || emissive_prob < 0.0 || emissive_prob > 1.0) {return read_error(str);}
+		}
+		else if (str == "metal_white_prob") {
+			if (!read_float(fp, metal_white_prob) || metal_white_prob < 0.0 || metal_white_prob > 1.0) {return read_error(str);}
+		}
+		else if (str == "emiss_white_prob") {
+			if (!read_float(fp, emiss_white_prob) || emiss_white_prob < 0.0 || emiss_white_prob > 1.0) {return read_error(str);}
+		}
+		else if (str == "max_light_atten") {
+			if (!read_float(fp, max_light_atten) || max_light_atten < 0.0) {return read_error(str);}
+		}
+		else if (str == "max_light_radius") {
+			if (!read_float(fp, max_light_radius) || max_light_radius < 0.0) {return read_error(str);}
+		}
+		else {
+			cout << "Unrecognized sphere_gen keyword in input file: " << str << endl;
+			return 0;
+		}
+		return 1;
+	}
+};
+
+gen_sphere_params_t gen_sphere_params;
+
+bool parse_sphere_gen_option(FILE *fp) {return gen_sphere_params.read_option(fp);}
+
+
 void gen_rand_spheres(unsigned num, point const &center, float place_radius, float min_radius, float max_radius) {
 
 	timer_t timer("Gen Rand Spheres");
 	rand_gen_t rgen;
 	vector<sphere_t> spheres;
+	gen_sphere_params_t const &sp(gen_sphere_params);
 
 	for (unsigned n = 0; n < num; ++n) {
 		float const radius(rgen.rand_uniform(min_radius, max_radius));
@@ -459,21 +517,21 @@ void gen_rand_spheres(unsigned num, point const &center, float place_radius, flo
 		cobj_params cp(0.0, BLACK, 1, 0); // elastic, color, draw, is_dynamic
 		spheres.emplace_back(pos, radius);
 		sphere_mat_t mat;
-		bool const is_metal((rgen.rand()%5) == 0);
+		bool const is_metal(sp.enable_reflect && rgen.rand_float() < sp.metal_prob);
 		mat.metal      = (is_metal ? 1.0 : 0.0);
 		mat.spec_mag   = (is_metal ? 1.0 : CLIP_TO_01(rgen.rand_uniform(-0.5, 1.2)));
-		mat.shine      = rgen.rand_uniform(1.0, 10.0)*rgen.rand_uniform(1.0, 10.0); // or roughness for reflective objects/metals
-		mat.reflective = (mat.spec_mag > 0.75); // metal is always reflective
-		mat.emissive   = (!mat.reflective && ((rgen.rand()%4) == 0));
-		mat.alpha      = ((mat.emissive || is_metal) ? 1.0 : min(rgen.rand_uniform(0.25, 2.0), 1.0f));
-		mat.shadows    = (mat.alpha > 0.5);
+		mat.shine      = rgen.rand_uniform(1.0, 8.0)*rgen.rand_uniform(1.0, 8.0); // or roughness for reflective objects/metals; 1.0-64.0
+		mat.reflective = (sp.enable_reflect && mat.spec_mag > 0.75); // metal is always reflective
+		mat.emissive   = (!mat.reflective && rgen.rand_float() < sp.emissive_prob);
+		if (!mat.emissive && !is_metal && sp.enable_transparent) {mat.alpha = CLIP_TO_01(rgen.rand_uniform((mat.reflective ? -2.0 : 0.25), 2.0));}
+		mat.shadows    = (sp.enable_shadows && mat.alpha > 0.5);
 		mat.density    = (is_metal ? 2.0 : 1.0)*rgen.rand_uniform(0.5, 4.0);
-		mat.light_atten  = ((mat.alpha < 0.5) ? max(rgen.rand_uniform(-20.0, 20.0), 0.0f) : 0.0);
-		mat.refract_ix   = rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5);
-		mat.light_radius = (mat.emissive ? rgen.rand_uniform(5.0, 10.0)*radius : 0.0);
+		if (sp.max_light_atten > 0.0 && mat.alpha < 0.5) {mat.light_atten = max(rgen.rand_uniform(-sp.max_light_atten, sp.max_light_atten), 0.0f);}
+		mat.refract_ix   = rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5)*rgen.rand_uniform(1.0, 1.5); // 1.0-6.25
+		if (sp.max_light_radius > 0.0 && mat.emissive) {mat.light_radius = rgen.rand_uniform(0.5*sp.max_light_radius, 1.0*sp.max_light_radius)*radius;}
 		colorRGBA color; // mat.alpha?
-		if (is_metal && rgen.rand_bool()) {color = WHITE;} // 33% chance of making metals white
-		else if (mat.light_radius > 0.0 && rgen.rand_bool()) {color = WHITE;} // 50% chance of making lights white
+		if (is_metal && rgen.rand_float() < sp.metal_white_prob) {color = WHITE;} // make some metals white
+		else if (mat.light_radius > 0.0 && rgen.rand_float() < sp.emiss_white_prob) {color = WHITE;} // make some lights white
 		else {
 			for (unsigned i = 0; i < 3; ++i) {color[i] = CLIP_TO_01(rgen.rand_uniform(-0.25, 1.5));} // saturate in some cases
 		}

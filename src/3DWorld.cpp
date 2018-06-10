@@ -1809,6 +1809,9 @@ int load_config(string const &config_file) {
 		else if (str == "city") { // city options
 			if (!parse_city_option(fp)) cfg_err("city option", error);
 		}
+		else if (str == "sphere_gen") { // sphere_gen options
+			if (!parse_sphere_gen_option(fp)) cfg_err("sphere_gen option", error);
+		}
 		else if (str == "include") {
 			if (!read_str(fp, include_fname)) cfg_err("include", error);
 			if (!load_config(include_fname )) cfg_err("nested include file", error);

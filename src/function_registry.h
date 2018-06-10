@@ -886,6 +886,7 @@ float get_mat_sphere_rscale  (dwobject const &obj);
 void sync_mat_sphere_lpos(unsigned id, point const &pos);
 void add_cobj_for_mat_sphere(dwobject &obj, cobj_params const &cp_in);
 void remove_mat_sphere(unsigned id);
+bool parse_sphere_gen_option(FILE *fp);
 void gen_rand_spheres(unsigned num, point const &center, float place_radius, float min_radius, float max_radius);
 
 // function prototypes - edit_ui
