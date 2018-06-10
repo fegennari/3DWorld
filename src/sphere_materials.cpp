@@ -326,20 +326,21 @@ void add_static_material_object(cobj_params &cp, sphere_mat_t const &mat, point 
 	register_moving_cobj(coll_id); // let it fall
 	register_movable_cobj_shadow(coll_id);
 	vector<light_source> lss;
+	float const sphere_radius(base_radius*mat.radius_scale);
 
 	if (has_shadows) { // special case for shadowed point light with cube map
-		float const near_clip(1.01*base_radius*mat.radius_scale);
+		float const near_clip(1.01*sphere_radius);
 
 		for (unsigned ldim = 0; ldim < 3; ++ldim) {
 			vector3d dir(zero_vector);
 			for (unsigned ldir = 0; ldir < 2; ++ldir) {
 				dir[ldim] = (ldir ? 1.0 : -1.0);
-				lss.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0, dir, cube_map_beamwidth, 0.0, 1, near_clip)); // add lights for each cube face
+				lss.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0, dir, cube_map_beamwidth, sphere_radius, 1, near_clip)); // add lights for each cube face
 			}
 		}
 	}
 	else if (mat.light_radius > MIN_LIGHT_RADIUS) {
-		lss.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0));
+		lss.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0, zero_vector, 1.0, sphere_radius));
 	}
 	for (auto ls = lss.begin(); ls != lss.end(); ++ls) {
 		light_sources_d.push_back(light_source_trig(*ls, has_shadows, -1, 0));
@@ -486,7 +487,10 @@ void gen_rand_spheres(unsigned num, point const &center, float place_radius, flo
 		}
 		set_cobj_params_from_material(cp, mat);
 		add_static_material_object(cp, mat, pos, radius, 0); // is_cube=0
-		if (mat.light_radius > MIN_LIGHT_RADIUS) {light_sources_a.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0));} // needed for indir lighting
+		
+		if (mat.light_radius > MIN_LIGHT_RADIUS) { // needed for indir lighting
+			light_sources_a.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0, zero_vector, 1.0, 1.01*radius)); // slightly larger than radius
+		}
 	} // for n
 }
 
