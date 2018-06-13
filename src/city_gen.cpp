@@ -922,17 +922,20 @@ public:
 					
 					if (road_z > h) {
 						added += (road_z - h);
-						min_eq(start, (dim ? y : x));
-						max_eq(end,   (dim ? y : x));
+
+						if (road_z > h + 0.5*city_params.road_width) { // higher than terrain by a significant amount
+							min_eq(start, (dim ? y : x));
+							max_eq(end,   (dim ? y : x));
+						}
 					} else {removed += (h - road_z);}
 					total += 1.0;
 				} // for x
 			} // for y
-			if (added > 2.0*city_params.road_width*total && added > 2.0*removed) {
+			if (start < end && added > 2.0*city_params.road_width*total && added > 2.0*removed) {
 				road_t const &r(bp->bridge); // extract road (default value of bridge)
 				float const sv(dim ? get_y_value(start) : get_x_value(start)), ev(dim ? get_y_value(end) : get_x_value(end)); // start/end pos of bridge in road dim
-				float const dz(r.get_dz()), len(r.get_length());
-				float const ts((sv - (dim ? r.y1() : r.y2()))/len), te((ev - (dim ? r.y1() : r.y2()))/len);
+				float const dz(r.get_dz()), len(r.get_length()), v0(dim ? r.y1() : r.x1());
+				float const ts(CLIP_TO_01((sv - v0)/len)), te(CLIP_TO_01((ev - v0)/len));
 				float const sz(r.z1() + dz*ts), ez(r.z1() + dz*te); // start/end zval of bridge
 				bp->bridge.d[dim][0] = sv;
 				bp->bridge.d[dim][1] = ev;
@@ -1829,12 +1832,14 @@ class city_road_gen_t {
 				i->z2() = min(1.0, (hval + 0.25)); // bottom of height range
 			} // for i
 		}
-		bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only=1) const {
+		bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, bool exclude_bridges) const {
 			if (roads.empty()) return 0;
 			point const query_pos(pos - get_camera_coord_space_xlate());
 			if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
-			if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) return 1;
-
+			
+			if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) { // collision with a road
+				if (!exclude_bridges || !check_bcubes_sphere_coll(bridges, query_pos, radius, xy_only)) return 1; // if exclude_bridges, ignore collisions with bridges
+			}
 			if (include_intersections) { // used for global road network
 				for (unsigned i = 0; i < 3; ++i) { // {2-way, 3-way, 4-way}
 					if (check_bcubes_sphere_coll(isecs[i], query_pos, radius, xy_only)) return 1;
@@ -2324,8 +2329,9 @@ public:
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const { // Note: no global_rn
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
-	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only) const {return global_rn.check_road_sphere_coll(pos, radius, xy_only);}
-
+	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges) const {
+		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges);
+	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			if (r->proc_sphere_coll(pos, p_last, radius)) return 1;
@@ -2907,9 +2913,9 @@ public:
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
 
-	bool check_city_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
+	bool check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges) const {
 		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
-		return road_gen.check_road_sphere_coll(pos, radius, xy_only);
+		return road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges);
 	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius) const {
 		if (road_gen.proc_sphere_coll(pos, p_last, radius)) return 1;
@@ -2977,19 +2983,19 @@ void next_city_frame() {city_gen.next_frame();}
 void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
-bool check_city_sphere_coll(point const &pos, float radius) {
+bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges) {
 	if (!have_cities()) return 0;
 	point center(pos);
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
-	return city_gen.check_city_sphere_coll(center, radius);
+	return city_gen.check_city_sphere_coll(center, radius, 1, exclude_bridges);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
 	return city_gen.proc_city_sphere_coll(pos, p_last, radius); // Note: no xy_only for cities
 }
-bool check_valid_scenery_pos(point const &pos, float radius) {
+bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
-	if (check_city_sphere_coll(pos, radius)) return 0;
+	if (check_city_sphere_coll(pos, radius, !is_tall))  return 0; // exclude bridges if not tall
 	return 1;
 }
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
