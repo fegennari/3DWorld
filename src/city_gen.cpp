@@ -38,7 +38,7 @@ colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, 
 extern bool enable_dlight_shadows, dl_smap_enabled;
 extern int rand_gen_index, display_mode, animate2;
 extern unsigned shadow_map_sz;
-extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
+extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks, FAR_CLIP;
 extern double tfticks;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
@@ -775,10 +775,10 @@ namespace streetlight_ns {
 			float const height(light_height*city_params.road_width);
 			return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
 		}
-		void draw(shader_t &s, vector3d const &xlate, bool shadow_only) const { // Note: translate has already been applied as a transform
+		void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow) const { // Note: translate has already been applied as a transform
 			float const height(light_height*city_params.road_width);
 			point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
-			if (shadow_only && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
+			if (shadow_only && is_local_shadow && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
 			if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
 			float const dist_val(shadow_only ? 0.06 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 			if (dist_val > 0.2) return; // too far
@@ -1906,7 +1906,8 @@ class city_road_gen_t {
 			if (streetlights.empty()) return;
 			//timer_t t("Draw Streetlights");
 			select_texture(WHITE_TEX);
-			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate.s, dstate.xlate, shadow_only);}
+			bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
+			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate.s, dstate.xlate, shadow_only, is_local_shadow);}
 		}
 		void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube);}
