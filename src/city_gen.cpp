@@ -45,6 +45,7 @@ extern tree_placer_t tree_placer;
 
 
 void add_dynamic_lights_city(cube_t const &scene_bcube);
+void disable_shadow_maps(shader_t &s);
 
 
 struct car_model_t {
@@ -1136,8 +1137,12 @@ class city_road_gen_t {
 			cube_t bcube(bridge);
 			bcube.z2() += 2.0*city_params.road_width; // make it higher
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
-			select_texture(WHITE_TEX);
-			begin_tile(bridge.get_cube_center());
+
+			if (!shadow_only) {
+				select_texture(WHITE_TEX);
+				begin_tile(bridge.get_cube_center());
+				if (!emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
+			}
 			// FIXME: temporary - WRITE
 			draw_cube(qbd_bridge, bcube, bridge.dim, 0, color_wrapper(WHITE));
 			qbd_bridge.draw_and_clear();
@@ -1872,14 +1877,16 @@ class city_road_gen_t {
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius)) return 1;
 			return 0;
 		}
-		void draw(road_draw_state_t &dstate, bool shadow_only) {
+		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			if (empty()) return;
 			if (!dstate.check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 
 			if (shadow_only) {
-				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
-					if (!dstate.check_cube_visible(b->bcube, 1.0, shadow_only)) continue; // VFC/too far
-					for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections (3-way, 4-way)
+				if (!is_connector_road) { // connector road has no stoplights to cast shadows
+					for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
+						if (!dstate.check_cube_visible(b->bcube, 1.0, shadow_only)) continue; // VFC/too far
+						for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections (3-way, 4-way)
+					}
 				}
 			}
 			else {
@@ -2361,8 +2368,8 @@ public:
 			translate_to(xlate);
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 			dstate.pre_draw(xlate, use_dlights, shadow_only);
-			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only);}
-			if (!shadow_only) {global_rn.draw(dstate, shadow_only);} // no stoplights for connector road
+			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
+			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
 			dstate.post_draw();
 			glDepthFunc(GL_LESS);
 			fgPopMatrix();
