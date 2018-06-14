@@ -336,6 +336,8 @@ public:
 		p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = z1; p[6].z = z2; // back  left
 		p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = z1; p[7].z = z2; // back  right
 	}
+	static void set_cube_pts(cube_t const &c, bool d, bool D, point p[8]) {set_cube_pts(c, c.z1(), c.z2(), d, D, p);}
+
 	static void rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]) {
 		for (unsigned i = 0; i < 8; ++i) {
 			point &v(p[i]); // rotate p[i]
@@ -357,6 +359,11 @@ public:
 		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n);} // back
 		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n);} // right
 		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n);} // left
+	}
+	void draw_cube(quad_batch_draw &qbd, cube_t const &c, bool dim, bool dir, color_wrapper const &cw) const {
+		point pts[8];
+		set_cube_pts(c, dim, dir, pts);
+		draw_cube(qbd, dim, dir, cw, c.get_cube_center(), pts);
 	}
 	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 		point pos(xlate + flare_pos);
@@ -706,9 +713,7 @@ struct road_isec_t : public cube_t {
 				c.z1() = z1(); c.z2() = sl_top;
 				c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
 				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-				point pts[8];
-				dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
-				dstate.draw_cube(qbd, dim, dir, cw, c.get_cube_center(), pts); // Note: uses traffic light texture, but color is back so it's all black anyway
+				dstate.draw_cube(qbd, c, dim, dir, cw); // Note: uses traffic light texture, but color is back so it's all black anyway
 			}
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
@@ -1083,7 +1088,7 @@ class city_road_gen_t {
 	};
 
 	class road_draw_state_t : public draw_state_t {
-		quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_sl;
+		quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_sl, qbd_bridge;
 		float ar;
 
 	public:
@@ -1127,9 +1132,15 @@ class city_road_gen_t {
 				cache.draw();
 			} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 		}
-		void draw_bridge(road_t const &bridge, bool shadow_only) {
-			if (!check_cube_visible(bridge, 1.0, shadow_only)) return; // VFC/too far
-			// FIXME: WRITE
+		void draw_bridge(road_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
+			cube_t bcube(bridge);
+			bcube.z2() += 2.0*city_params.road_width; // make it higher
+			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
+			select_texture(WHITE_TEX);
+			begin_tile(bridge.get_cube_center());
+			// FIXME: temporary - WRITE
+			draw_cube(qbd_bridge, bcube, bridge.dim, 0, color_wrapper(WHITE));
+			qbd_bridge.draw_and_clear();
 		}
 		void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
 			for (auto i = isecs.begin(); i != isecs.end(); ++i) {i->draw_stoplights(qbd_sl, *this, shadow_only);}
@@ -1159,10 +1170,8 @@ class city_road_gen_t {
 			point const center(pos + dstate.xlate);
 			float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 			vector3d const cview_dir(camera_pdu.pos - center);
-			cube_t c;
-			point pts[8];
-			dstate.set_cube_pts(c, c.z1(), c.z2(), dim, dir, pts);
-			dstate.draw_cube(qbd, dim, dir, color_wrapper(WHITE), c.get_cube_center(), pts);
+			cube_t c; // FIXME: fill in c
+			dstate.draw_cube(qbd, c, dim, dir, color_wrapper(WHITE));
 #endif
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate) const {
@@ -1888,9 +1897,9 @@ class city_road_gen_t {
 					}
 				} // for b
 			}
+			draw_streetlights(dstate, shadow_only);
 			// draw bridges; only in connector road network; bridges are sparse/uncommon, so don't need to be batched by blocks
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {dstate.draw_bridge(*b, shadow_only);}
-			draw_streetlights(dstate, shadow_only);
 			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}
 		void draw_streetlights(road_draw_state_t &dstate, bool shadow_only) const {
