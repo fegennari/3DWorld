@@ -1182,7 +1182,6 @@ class city_road_gen_t {
 					pts[0][d] = pts[3][d] = dvprev;
 					pts[1][d] = pts[2][d] = dv;
 
-					// FIXME: some signs depend on dir and maybe dim
 					for (unsigned e = 0; e < 2; ++e) { // two sides
 						float const ndv(bcube.d[!d][e]);
 						pts[0][!d] = pts[1][!d] = (e ? ndv-w_expand : ndv);
@@ -1192,13 +1191,13 @@ class city_road_gen_t {
 							float const dz(f ? 0.0 : thickness);
 							pts[0].z = pts[3].z = zprev + dz;
 							pts[1].z = pts[2].z = zval  + dz;
-							add_bridge_quad(pts, cw, (f ? -1.0 : 1.0));
+							add_bridge_quad(pts, cw, ((f^d) ? -1.0 : 1.0));
 						}
 						for (unsigned f = 0; f < 2; ++f) { // side surfaces
 							unsigned const i0(f ? 3 : 0), i1(f ? 2 : 1);
 							point pts2[4] = {pts[i0], pts[i1], pts[i1], pts[i0]};
 							pts2[2].z += thickness; pts2[3].z += thickness; // top surface
-							add_bridge_quad(pts2, cw, (f ? -1.0 : 1.0));
+							add_bridge_quad(pts2, cw, ((f^d) ? -1.0 : 1.0));
 						}
 						if (zval > zpos) { // vertical connectors
 							conn_pts[e] = 0.5*(pts[1] + pts[2]);
@@ -1223,17 +1222,18 @@ class city_road_gen_t {
 			point pts[4]; // Note: can't use cube because bridge may be tilted in Z
 			// add bottom surface
 			// FIXME: fill in pts
-			//add_bridge_quad(pts, cw, (e ? -1.0 : 1.0));
+			//add_bridge_quad(pts, cw, ((e^d) ? -1.0 : 1.0));
 
 			// add guardrails
 			for (unsigned e = 0; e < 2; ++e) { // two sides
 				float const ndv(bcube.d[!d][e]), v0(e ? ndv-w_expand : ndv), v1(e ? ndv : ndv+w_expand);
 				// FIXME: fill in pts
-				//add_bridge_quad(pts, cw, (e ? -1.0 : 1.0));
+				//add_bridge_quad(pts, cw, ((e^d) ? -1.0 : 1.0));
 			}
 			qbd_bridge.draw_and_clear();
 		}
 		void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale) {
+			// FIXME: can we get smooth vertex normals? Maybe need add_quad_pts_with_normals()
 			qbd_bridge.add_quad_pts(pts, cw, cross_product((pts[1] - pts[0]), (pts[3] - pts[0])).get_norm()*normal_scale);
 		}
 
