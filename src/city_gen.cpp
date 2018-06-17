@@ -1155,11 +1155,10 @@ class city_road_gen_t {
 			max_eq(bcube.d[d][0], bridge.src_road.d[d][0]); // clamp to orig road segment length
 			min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
-			point const bridge_center(bridge.get_cube_center());
 
 			if (!shadow_only) {
 				select_texture(WHITE_TEX);
-				begin_tile(bridge_center);
+				begin_tile(bridge.get_cube_center());
 				if (!emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
 			}
 			ensure_shader_active(); // needed for use_smap=0 case
@@ -1175,7 +1174,9 @@ class city_road_gen_t {
 			colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(GRAY);
 			color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
 			float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
-			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, (bridge_center + xlate))/get_draw_tile_dist()); // Note: here shadow pass can use lower LOD
+			point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
+			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/get_draw_tile_dist());
+			int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
 			unsigned const num_segs = 33;
 			float zprev(0.0), dvprev(0.0);
 
@@ -1209,12 +1210,12 @@ class city_road_gen_t {
 							conn_pts[e] = 0.5*(pts[1] + pts[2]);
 							conn_pts[e].z += 0.5*thickness;
 
-							if (dist_val < 0.1) { // use high detail vertical cylinders
+							if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
 								s.set_cur_color(cables_color);
 								point const &p(conn_pts[e]);
-								draw_fast_cylinder(point(p.x, p.y, zpos), point(p.x, p.y, zval), cable_thick, cable_thick, 20, 0); // no ends
+								draw_fast_cylinder(point(p.x, p.y, zpos), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
 							}
-							else { // use lower detail cubes
+							else { // use lower detail cubes; okay for shadow pass
 								cube_t c(conn_pts[e]);
 								c.z1() = zpos;
 								c.z2() = zval;
