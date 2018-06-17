@@ -336,12 +336,13 @@ public:
 		}
 		return camera_pdu.cube_visible(bcx);
 	}
-	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {
-		p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = z1; p[4].z = z2; // front right
-		p[1][!d] = p[5][!d] = c.d[!d][0]; p[1][d] = p[5][d] = c.d[d][ D]; p[1].z = z1; p[5].z = z2; // front left
-		p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = z1; p[6].z = z2; // back  left
-		p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = z1; p[7].z = z2; // back  right
+	static void set_cube_pts(cube_t const &c, float z1f, float z1b, float z2f, float z2b, bool d, bool D, point p[8]) {
+		p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = z1f; p[4].z = z2f; // front right
+		p[1][!d] = p[5][!d] = c.d[!d][0]; p[1][d] = p[5][d] = c.d[d][ D]; p[1].z = z1f; p[5].z = z2f; // front left
+		p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = z1b; p[6].z = z2b; // back  left
+		p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = z1b; p[7].z = z2b; // back  right
 	}
+	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {set_cube_pts(c, z1, z1, z2, z2, d, D, p);}
 	static void set_cube_pts(cube_t const &c, bool d, bool D, point p[8]) {set_cube_pts(c, c.z1(), c.z2(), d, D, p);}
 
 	static void rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]) {
@@ -1140,6 +1141,7 @@ class city_road_gen_t {
 		}
 
 		void draw_bridge(road_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
+			//timer_t timer("Draw Bridge"); // 0.05ms - 0.1ms
 			cube_t bcube(bridge);
 			float const scale(1.0*city_params.road_width);
 			bcube.z2() += 2.0*scale; // make it higher
@@ -1151,10 +1153,11 @@ class city_road_gen_t {
 			bcube.d[!d][0] -= w_expand;
 			bcube.d[!d][1] += w_expand;
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
+			point const bridge_center(bridge.get_cube_center());
 
 			if (!shadow_only) {
 				select_texture(WHITE_TEX);
-				begin_tile(bridge.get_cube_center());
+				begin_tile(bridge_center);
 				if (!emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
 			}
 			ensure_shader_active(); // needed for use_smap=0 case
@@ -1166,13 +1169,11 @@ class city_road_gen_t {
 			p1[ d] = bcube.d[d][0];
 			p2[ d] = bcube.d[d][1];
 			vector3d const delta(p2 - p1);
-			// FIXME: LOD?
 			// upper arch
 			colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(GRAY);
 			color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
-			point const center_pt(bridge.get_cube_center() + xlate);
-			float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness);
-			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, center_pt)/get_draw_tile_dist()); // Note: here shadow pass can use lower LOD
+			float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
+			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, (bridge_center + xlate))/get_draw_tile_dist()); // Note: here shadow pass can use lower LOD
 			unsigned const num_segs = 33;
 			float zprev(0.0), dvprev(0.0);
 
@@ -1216,7 +1217,7 @@ class city_road_gen_t {
 								c.z1() = zpos;
 								c.z2() = zval;
 								c.expand_by(cable_thick);
-								draw_cube(qbd_bridge, c, cw_cables, 0); // skip_bottom=0
+								draw_cube(qbd_bridge, c, cw_cables, 1); // skip_bottom=1
 							}
 						}
 					} // for e
@@ -1231,16 +1232,26 @@ class city_road_gen_t {
 				}
 				zprev = zval; dvprev = dv;
 			} // for s
-			point pts[4]; // Note: can't use cube because bridge may be tilted in Z
-			// add bottom surface
-			// FIXME: fill in pts
-			//add_bridge_quad(pts, cw_main, ((e^d) ? -1.0 : 1.0));
+			// bottom surface
+			point pts[8];
+			cube_t bot_bc(bcube);
+			bot_bc.d[!d][0] += 0.4*w_expand;
+			bot_bc.d[!d][1] -= 0.4*w_expand;
+			float const extend_dz(bridge.dz()*(l_expand/(bridge.d[d][1] - bridge.d[d][0])));
+			float const z1(bridge.z1() - extend_dz - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz - 0.25*ROAD_HEIGHT); // move slightly downward
+			point bot_center(bot_bc.get_cube_center());
+			bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
+			set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, (d != 0), bridge.slope, pts);
+			draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0); // skip_bottom=0
 
-			// add guardrails
+			// add guardrails/walls
 			for (unsigned e = 0; e < 2; ++e) { // two sides
-				float const ndv(bcube.d[!d][e]), v0(e ? ndv-w_expand : ndv), v1(e ? ndv : ndv+w_expand);
-				// FIXME: fill in pts
-				//add_bridge_quad(pts, cw_concrete, ((e^d) ? -1.0 : 1.0));
+				cube_t side_bc(bot_bc);
+				side_bc.d[!d][!e] = side_bc.d[!d][e] + (e ? -wall_width : wall_width);
+				point side_center(side_bc.get_cube_center());
+				side_center.z = 0.5*(z1 + z2) + 0.5*wall_height;
+				set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, (d != 0), bridge.slope, pts);
+				draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1); // skip_bottom=1
 			}
 			qbd_bridge.draw_and_clear();
 		}
