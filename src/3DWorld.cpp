@@ -113,7 +113,7 @@ vector<cube_t> smoke_bounds;
 
 // camera variables
 double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF_UPTHETA), camera_y(DEF_CAMY);
-float sun_rot(0.2), moon_rot(-0.2), light_factor, ball_velocity(15.0), cview_radius(1.0), player_speed(1.0);
+float sun_rot(0.2), moon_rot(-0.2), sun_theta(1.2), moon_theta(0.3), light_factor, ball_velocity(15.0), cview_radius(1.0), player_speed(1.0);
 vector3d up_vector(plus_y), cview_dir(all_zeros);
 point camera_origin(all_zeros), surface_pos(all_zeros), cpos2;
 int orig_window, curr_window;
@@ -1712,6 +1712,8 @@ int load_config(string const &config_file) {
 	kwmf.add("tree_dead_prob", tree_dead_prob);
 	kwmf.add("sun_rot", sun_rot);
 	kwmf.add("moon_rot", moon_rot);
+	kwmf.add("sun_theta", sun_theta);
+	kwmf.add("moon_theta", moon_theta);
 	kwmf.add("cobj_z_bias", cobj_z_bias);
 	kwmf.add("indir_vert_offset", indir_vert_offset);
 	kwmf.add("self_damage", self_damage);

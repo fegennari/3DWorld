@@ -6,13 +6,10 @@
 #include "mesh.h"
 
 
-float const SUN_THETA  = 1.2;
-float const MOON_THETA = 0.3;
-
 point light_pos;
 
 extern bool combined_gu;
-extern float sun_rot, moon_rot, zmin, zmax, FAR_CLIP;
+extern float sun_rot, moon_rot, sun_theta, moon_theta, zmin, zmax, FAR_CLIP;
 extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
 
@@ -32,8 +29,8 @@ void update_sun_and_moon() {
 	fix_sun_moon_rot(sun_rot);
 	fix_sun_moon_rot(moon_rot);
 	light_factor = fabs(sun_rot/PI - 1.0);
-	moon_pos     = mesh_origin + rtp_to_xyz(radius, MOON_THETA, moon_rot);
-	sun_pos      = mesh_origin + rtp_to_xyz(radius,  SUN_THETA, sun_rot);
+	moon_pos     = mesh_origin + rtp_to_xyz(radius, moon_theta, moon_rot);
+	sun_pos      = mesh_origin + rtp_to_xyz(radius, sun_theta,  sun_rot);
 	light_pos    = ((light_factor >= 0.5 || combined_gu) ? sun_pos : moon_pos);
 	up_norm      = light_pos.get_norm();
 }
