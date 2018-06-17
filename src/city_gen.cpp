@@ -838,10 +838,10 @@ namespace streetlight_ns {
 } // streetlight_ns
 
 
-struct bridge_params_t {
-	road_t bridge;
+struct bridge_t : public road_t {
+	road_t src_road;
 	bool make_bridge;
-	bridge_params_t(road_t const &road) : bridge(road), make_bridge(0) {}
+	bridge_t(road_t const &road) : road_t(road), src_road(road), make_bridge(0) {}
 };
 
 
@@ -901,7 +901,7 @@ public:
 		} // for y
 	}
 	float flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim, unsigned border,
-		bool stats_only=0, bool decrease_only=0, bridge_params_t *bp=nullptr)
+		bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr)
 	{
 		if (!stats_only) {last_flatten_op = flatten_op_t(x1, y1, x2, y2, z1, z2, dim, border);} // cache for later replay
 		assert(is_valid_region(x1, y1, x2, y2));
@@ -923,7 +923,7 @@ public:
 			px1 = max((int)x1-1, 0);
 			px2 = min(x2+1, xsize);
 		}
-		if (!stats_only && !decrease_only && bp != nullptr && fabs(bp->bridge.get_slope_val()) < 0.1) { // determine if we should add a bridge here
+		if (!stats_only && !decrease_only && bridge != nullptr && fabs(bridge->get_slope_val()) < 0.1) { // determine if we should add a bridge here
 			float added(0.0), removed(0.0), total(0.0);
 			unsigned start(dim ? ysize : xsize), end(0);
 
@@ -944,16 +944,16 @@ public:
 				} // for x
 			} // for y
 			if (start < end && added > 2.0*city_params.road_width*total && added > 2.0*removed) {
-				road_t const &r(bp->bridge); // extract road (default value of bridge)
+				road_t const &r(bridge->src_road); // extract road
 				float const sv(dim ? get_y_value(start) : get_x_value(start)), ev(dim ? get_y_value(end) : get_x_value(end)); // start/end pos of bridge in road dim
 				float const dz(r.get_dz()), len(r.get_length()), v0(dim ? r.y1() : r.x1());
 				float const ts(CLIP_TO_01((sv - v0)/len)), te(CLIP_TO_01((ev - v0)/len));
 				float const sz(r.z1() + dz*ts), ez(r.z1() + dz*te); // start/end zval of bridge
-				bp->bridge.d[dim][0] = sv;
-				bp->bridge.d[dim][1] = ev;
-				bp->bridge.z1() = min(sz, ez);
-				bp->bridge.z2() = max(sz, ez);
-				bp->make_bridge = 1;
+				bridge->d[dim][0] = sv;
+				bridge->d[dim][1] = ev;
+				bridge->z1() = min(sz, ez);
+				bridge->z2() = max(sz, ez);
+				bridge->make_bridge = 1;
 				decrease_only   = 1; // don't add any terrain
 			}
 		}
@@ -975,10 +975,10 @@ public:
 		} // for y
 		return tot_dz;
 	}
-	float flatten_for_road(road_t const &road, unsigned border, bool stats_only=0, bool decrease_only=0, bridge_params_t *bp=nullptr) {
+	float flatten_for_road(road_t const &road, unsigned border, bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr) {
 		float const z_adj(ROAD_HEIGHT + 0.5*road.get_slope_val()*(road.dim ? DY_VAL : DX_VAL)); // account for a half texel of error for sloped roads
 		unsigned const rx1(get_x_pos(road.x1())), ry1(get_y_pos(road.y1())), rx2(get_x_pos(road.x2())), ry2(get_y_pos(road.y2()));
-		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, stats_only, decrease_only, bp);
+		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, stats_only, decrease_only, bridge);
 	}
 }; // heightmap_query_t
 
@@ -1140,7 +1140,7 @@ class city_road_gen_t {
 			} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 		}
 
-		void draw_bridge(road_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
+		void draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
 			//timer_t timer("Draw Bridge"); // 0.05ms - 0.1ms
 			cube_t bcube(bridge);
 			float const scale(1.0*city_params.road_width);
@@ -1152,6 +1152,8 @@ class city_road_gen_t {
 			bcube.d[ d][1] += l_expand;
 			bcube.d[!d][0] -= w_expand;
 			bcube.d[!d][1] += w_expand;
+			max_eq(bcube.d[d][0], bridge.src_road.d[d][0]); // clamp to orig road segment length
+			min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 			point const bridge_center(bridge.get_cube_center());
 
@@ -1233,12 +1235,14 @@ class city_road_gen_t {
 				zprev = zval; dvprev = dv;
 			} // for s
 			// bottom surface
+			//if (!shadow_only) {select_texture(get_texture_by_name("roads/asphalt.jpg"));} // Note: needs texture scale
 			point pts[8];
 			cube_t bot_bc(bcube);
 			bot_bc.d[!d][0] += 0.4*w_expand;
 			bot_bc.d[!d][1] -= 0.4*w_expand;
-			float const extend_dz(bridge.dz()*(l_expand/(bridge.d[d][1] - bridge.d[d][0])));
-			float const z1(bridge.z1() - extend_dz - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz - 0.25*ROAD_HEIGHT); // move slightly downward
+			float const dz_scale(bridge.dz()/(bridge.d[d][1] - bridge.d[d][0]));
+			float const extend_dz1(dz_scale*(bridge.d[d][0] - bcube.d[d][0])), extend_dz2(dz_scale*(bcube.d[d][1] - bridge.d[d][1]));
+			float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
 			point bot_center(bot_bc.get_cube_center());
 			bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
 			set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, (d != 0), bridge.slope, pts);
@@ -1500,7 +1504,7 @@ class city_road_gen_t {
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
 		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings
-		vector<road_t> bridges; // bridge bounding cubes, stored as roads
+		vector<bridge_t> bridges; // bridge bounding cubes, stored as roads
 		vector<streetlight_ns::streetlight_t> streetlights;
 		city_obj_placer_t city_obj_placer;
 		cube_t bcube;
@@ -1870,19 +1874,19 @@ class city_road_gen_t {
 			for (auto s = segments.begin(); s != segments.end(); ++s) {
 				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
 				assert(s->is_normalized());
-				bridge_params_t bp(*s);
-				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, &bp);
+				bridge_t bridge(*s);
+				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, &bridge);
 				
 				if (!check_only) {
 					roads.push_back(*s);
 					road_to_city.emplace_back(city1, city2); // Note: city index is specified even for internal (non-terminal) roads
-					if (bp.make_bridge) {bridges.push_back(bp.bridge);}
+					if (bridge.make_bridge) {bridges.push_back(bridge);}
 				}
 			}
 			if (!check_only) { // post-flatten pass to fix up dirt at road joints - doesn't help much
 				for (auto s = segments.begin(); s != segments.end(); ++s) {
-					bridge_params_t bp(*s); // Note: set but value unused
-					hq.flatten_for_road(*s, city_params.road_border, 0, 1, &bp); // decrease_only=1
+					bridge_t bridge(*s); // Note: set but value unused
+					hq.flatten_for_road(*s, city_params.road_border, 0, 1, &bridge); // decrease_only=1
 				}
 			}
 			return tot_dz; // success
