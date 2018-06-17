@@ -412,6 +412,9 @@ struct cube_t { // size = 24
 	float &y2() {return d[1][1];}
 	float &z1() {return d[2][0];}
 	float &z2() {return d[2][1];}
+	float dx() const {return (x2() - x1());}
+	float dy() const {return (y2() - y1());}
+	float dz() const {return (z2() - z1());}
 	bool operator!=(cube_t const &c) const {return !operator==(c);}
 	cube_t operator+ (vector3d const &p) const {cube_t c(*this); c += p; return c;}
 	cube_t operator- (vector3d const &p) const {cube_t c(*this); c -= p; return c;}
