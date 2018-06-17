@@ -1856,6 +1856,7 @@ class city_road_gen_t {
 			rs.z1() = road.d[2][slope];
 			segments.clear();
 			float tot_dz(0.0);
+			bool last_was_bridge(0);
 
 			for (unsigned n = 0; n < num_segs; ++n) {
 				rs.d[dim][1] = ((n+1 == num_segs) ? road.d[dim][1] : (rs.d[dim][0] + seg_len)); // make sure it ends exactly at the correct location
@@ -1876,18 +1877,22 @@ class city_road_gen_t {
 				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
 				assert(s->is_normalized());
 				bridge_t bridge(*s);
-				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, &bridge);
+				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, (last_was_bridge ? nullptr : &bridge));
 				
 				if (!check_only) {
 					roads.push_back(*s);
 					road_to_city.emplace_back(city1, city2); // Note: city index is specified even for internal (non-terminal) roads
 					if (bridge.make_bridge) {bridges.push_back(bridge);}
 				}
+				last_was_bridge = bridge.make_bridge; // Note: conservative; used to prevent two consecutive bridges with no (or not enough) mesh in between
 			}
 			if (!check_only) { // post-flatten pass to fix up dirt at road joints - doesn't help much
+				last_was_bridge = 0;
+
 				for (auto s = segments.begin(); s != segments.end(); ++s) {
 					bridge_t bridge(*s); // Note: set but value unused
-					hq.flatten_for_road(*s, city_params.road_border, 0, 1, &bridge); // decrease_only=1
+					hq.flatten_for_road(*s, city_params.road_border, 0, 1, (last_was_bridge ? nullptr : &bridge)); // decrease_only=1
+					last_was_bridge = bridge.make_bridge;
 				}
 			}
 			return tot_dz; // success
