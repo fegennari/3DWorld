@@ -353,9 +353,9 @@ public:
 			v += center; // translate back
 		}
 	}
-	void draw_cube(quad_batch_draw &qbd, bool d, bool D, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom) const {
+	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals=0) const {
 		vector3d const cview_dir((camera_pdu.pos - xlate) - center);
-		float const sign((d^D) ? -1.0 : 1.0);
+		float const sign(invert_normals ? -1.0 : 1.0);
 		vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
 		vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
 		vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2]))*sign);
@@ -366,10 +366,10 @@ public:
 		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n);} // right
 		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n);} // left
 	}
-	void draw_cube(quad_batch_draw &qbd, cube_t const &c, bool dim, bool dir, color_wrapper const &cw, bool skip_bottom) const {
+	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom) const {
 		point pts[8];
-		set_cube_pts(c, dim, dir, pts);
-		draw_cube(qbd, dim, dir, cw, c.get_cube_center(), pts, skip_bottom);
+		set_cube_pts(c, 0, 0, pts);
+		draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom);
 	}
 	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 		point pos(xlate + flare_pos);
@@ -719,7 +719,7 @@ struct road_isec_t : public cube_t {
 				c.z1() = z1(); c.z2() = sl_top;
 				c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
 				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-				dstate.draw_cube(qbd, c, dim, dir, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is back so it's all black anyway
+				dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is back so it's all black anyway
 			}
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
@@ -1143,7 +1143,7 @@ class city_road_gen_t {
 			cube_t bcube(bridge);
 			float const scale(1.0*city_params.road_width);
 			bcube.z2() += 2.0*scale; // make it higher
-			bool const d(bridge.dim);
+			unsigned const d(bridge.dim);
 			float const l_expand(2.0*(d ? DY_VAL : DY_VAL)); // slight expand along road dim so that we're sure to cover the entire gap
 			float const w_expand(0.25*scale); // expand width to add space for supports
 			bcube.d[ d][0] -= l_expand;
@@ -1206,7 +1206,7 @@ class city_road_gen_t {
 							c.z1() = zpos;
 							c.z2() = zval;
 							c.expand_by(cable_thick);
-							draw_cube(qbd_bridge, c, 0, 0, cw, 0); // skip_bottom=0
+							draw_cube(qbd_bridge, c, cw, 0); // skip_bottom=0
 						}
 					} // for e
 					if (zval > zpos) { // horizontal connectors
@@ -1214,7 +1214,7 @@ class city_road_gen_t {
 						vector3d exp(zero_vector);
 						exp.z = exp[d] = conn_thick;
 						c.expand_by(exp);
-						draw_cube(qbd_bridge, c, 0, 0, cw, 0); // skip_bottom=0
+						draw_cube(qbd_bridge, c, cw, 0); // skip_bottom=0
 					}
 				}
 				zprev = zval; dvprev = dv;
@@ -1266,7 +1266,7 @@ class city_road_gen_t {
 			float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 			vector3d const cview_dir(camera_pdu.pos - center);
 #endif
-			dstate.draw_cube(qbd, bcube, dim, dir, color_wrapper(WHITE), 1); // skip_bottom=1
+			dstate.draw_cube(qbd, bcube, color_wrapper(WHITE), 1); // skip_bottom=1
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate) const {
 			return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last);
@@ -2717,8 +2717,8 @@ class car_manager_t {
 			else { // draw simple 1-2 cube model
 				quad_batch_draw &qbd(qbds[emit_now]);
 				color_wrapper cw(color);
-				draw_cube(qbd, dim, dir, cw, center, pb, 1); // bottom (skip_bottom=1)
-				if (draw_top) {draw_cube(qbd, dim, dir, cw, center, pt, 1);} // top (skip_bottom=1)
+				draw_cube(qbd, cw, center, pb, 1, (dim^dir)); // bottom (skip_bottom=1)
+				if (draw_top) {draw_cube(qbd, cw, center, pt, 1, (dim^dir));} // top (skip_bottom=1)
 				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 			}
 			if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
