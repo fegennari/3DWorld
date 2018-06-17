@@ -1168,16 +1168,19 @@ class city_road_gen_t {
 			vector3d const delta(p2 - p1);
 			// FIXME: LOD?
 			// upper arch
-			color_wrapper const cw(WHITE);
+			colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(GRAY);
+			color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
+			point const center_pt(bridge.get_cube_center() + xlate);
 			float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness);
+			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, center_pt)/get_draw_tile_dist()); // Note: here shadow pass can use lower LOD
 			unsigned const num_segs = 33;
 			float zprev(0.0), dvprev(0.0);
 
-			for (unsigned s = 0; s <= num_segs; ++s) { // add arch
-				float const t(float(s)/float(num_segs)), v(2.0*fabs(t - 0.5));
+			for (unsigned n = 0; n <= num_segs; ++n) { // add arch
+				float const t(float(n)/float(num_segs)), v(2.0*fabs(t - 0.5));
 				float const zpos(p1.z + delta.z*t), zval(zpos + 0.3*len*(1.0 - v*v) - 0.5*scale), dv(p1[d] + delta[d]*t);
 
-				if (s > 0) { // no segment drawn for first pt
+				if (n > 0) { // no segment drawn for first pt
 					point pts[4], conn_pts[2];
 					pts[0][d] = pts[3][d] = dvprev;
 					pts[1][d] = pts[2][d] = dv;
@@ -1191,30 +1194,39 @@ class city_road_gen_t {
 							float const dz(f ? 0.0 : thickness);
 							pts[0].z = pts[3].z = zprev + dz;
 							pts[1].z = pts[2].z = zval  + dz;
-							add_bridge_quad(pts, cw, ((f^d) ? -1.0 : 1.0));
+							add_bridge_quad(pts, cw_main, ((f^d) ? -1.0 : 1.0));
 						}
 						for (unsigned f = 0; f < 2; ++f) { // side surfaces
 							unsigned const i0(f ? 3 : 0), i1(f ? 2 : 1);
 							point pts2[4] = {pts[i0], pts[i1], pts[i1], pts[i0]};
 							pts2[2].z += thickness; pts2[3].z += thickness; // top surface
-							add_bridge_quad(pts2, cw, ((f^d) ? -1.0 : 1.0));
+							add_bridge_quad(pts2, cw_main, ((f^d) ? -1.0 : 1.0));
 						}
-						if (zval > zpos) { // vertical connectors
+						if (zval > zpos) { // vertical cables
 							conn_pts[e] = 0.5*(pts[1] + pts[2]);
 							conn_pts[e].z += 0.5*thickness;
-							cube_t c(conn_pts[e]);
-							c.z1() = zpos;
-							c.z2() = zval;
-							c.expand_by(cable_thick);
-							draw_cube(qbd_bridge, c, cw, 0); // skip_bottom=0
+
+							if (dist_val < 0.1) { // use high detail vertical cylinders
+								s.set_cur_color(cables_color);
+								point const &p(conn_pts[e]);
+								draw_fast_cylinder(point(p.x, p.y, zpos), point(p.x, p.y, zval), cable_thick, cable_thick, 20, 0); // no ends
+							}
+							else { // use lower detail cubes
+								cube_t c(conn_pts[e]);
+								c.z1() = zpos;
+								c.z2() = zval;
+								c.expand_by(cable_thick);
+								draw_cube(qbd_bridge, c, cw_cables, 0); // skip_bottom=0
+							}
 						}
 					} // for e
 					if (zval > zpos) { // horizontal connectors
 						cube_t c(conn_pts[0], conn_pts[1]);
 						vector3d exp(zero_vector);
-						exp.z = exp[d] = conn_thick;
+						exp.z  = 0.75*conn_thick;
+						exp[d] = conn_thick;
 						c.expand_by(exp);
-						draw_cube(qbd_bridge, c, cw, 0); // skip_bottom=0
+						draw_cube(qbd_bridge, c, cw_main, 0); // skip_bottom=0
 					}
 				}
 				zprev = zval; dvprev = dv;
@@ -1222,13 +1234,13 @@ class city_road_gen_t {
 			point pts[4]; // Note: can't use cube because bridge may be tilted in Z
 			// add bottom surface
 			// FIXME: fill in pts
-			//add_bridge_quad(pts, cw, ((e^d) ? -1.0 : 1.0));
+			//add_bridge_quad(pts, cw_main, ((e^d) ? -1.0 : 1.0));
 
 			// add guardrails
 			for (unsigned e = 0; e < 2; ++e) { // two sides
 				float const ndv(bcube.d[!d][e]), v0(e ? ndv-w_expand : ndv), v1(e ? ndv : ndv+w_expand);
 				// FIXME: fill in pts
-				//add_bridge_quad(pts, cw, ((e^d) ? -1.0 : 1.0));
+				//add_bridge_quad(pts, cw_concrete, ((e^d) ? -1.0 : 1.0));
 			}
 			qbd_bridge.draw_and_clear();
 		}
