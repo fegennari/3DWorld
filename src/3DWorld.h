@@ -500,12 +500,18 @@ struct cube_t { // size = 24
 	bool contains_pt_xy_inc_low_edge(point const &pt) const {
 		return (pt.x >= d[0][0] && pt.x < d[0][1] && pt.y >= d[1][0] && pt.y < d[1][1]);
 	}
+	bool contains_pt_xy_exp(point const &pt, float exp) const {
+		return (pt.x > d[0][0]-exp && pt.x < d[0][1]+exp && pt.y > d[1][0]-exp && pt.y < d[1][1]+exp);
+	}
 	bool quick_intersect_test(const cube_t &cube) const {
 		UNROLL_3X(if (cube.d[i_][0] >= d[i_][1] || cube.d[i_][1] <= d[i_][0]) return 0;)
 		return 1;
 	}
 	void clamp_pt(point &pt) const {
 		UNROLL_3X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)
+	}
+	void clamp_pt_xy(point &pt) const {
+		UNROLL_2X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)
 	}
 	float get_volume() const {
 		return fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]);
