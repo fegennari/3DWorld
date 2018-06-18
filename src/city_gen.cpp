@@ -354,18 +354,25 @@ public:
 			v += center; // translate back
 		}
 	}
-	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals=0) const {
+	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals=0, float tscale=0.0) const {
 		vector3d const cview_dir((camera_pdu.pos - xlate) - center);
 		float const sign(invert_normals ? -1.0 : 1.0);
 		vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
 		vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
 		vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2]))*sign);
-		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n);} // top
-		else if (!skip_bottom)                 {qbd.add_quad_pts(p+0, cw, -top_n);} // bottom - not always drawn
-		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n);} // front
-		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n);} // back
-		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n);} // right
-		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n);} // left
+		tex_range_t tr_top, tr_front, tr_right;
+
+		if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
+			tr_top   = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[2] - p[1]).mag());
+			tr_front = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[5] - p[1]).mag());
+			tr_right = tex_range_t(0.0, 0.0, tscale*(p[1] - p[2]).mag(), tscale*(p[6] - p[2]).mag());
+		}
+		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n, tr_top);} // top
+		else if (!skip_bottom)                 {qbd.add_quad_pts(p+0, cw, -top_n, tr_top);} // bottom - not always drawn
+		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n, tr_front);} // front
+		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n, tr_front);} // back
+		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // right
+		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // left
 	}
 	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom) const {
 		point pts[8];
@@ -1188,7 +1195,7 @@ class city_road_gen_t {
 			p2[ d] = bcube.d[d][1];
 			vector3d const delta(p2 - p1);
 			// upper arch
-			colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(GRAY);
+			colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(LT_GRAY);
 			color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
 			float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
 			point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
@@ -1253,7 +1260,13 @@ class city_road_gen_t {
 				zprev = zval; dvprev = dv;
 			} // for s
 			// bottom surface
-			//if (!shadow_only) {select_texture(get_texture_by_name("roads/asphalt.jpg"));} // Note: needs texture scale
+			float tscale(0.0);
+			
+			if (!shadow_only) {
+				qbd_bridge.draw_and_clear(); // flush before texture change
+				select_texture(get_texture_by_name("roads/asphalt.jpg"));
+				tscale = 1.0/scale; // scale texture to match road width
+			}
 			point pts[8];
 			cube_t bot_bc(bcube);
 			bot_bc.d[!d][0] += 0.4*w_expand;
@@ -1263,8 +1276,8 @@ class city_road_gen_t {
 			float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
 			point bot_center(bot_bc.get_cube_center());
 			bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
-			set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, (d != 0), bridge.slope, pts);
-			draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0); // skip_bottom=0
+			set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, 0, 0, pts);
+			draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0, 0, tscale); // skip_bottom=0
 
 			// add guardrails/walls
 			for (unsigned e = 0; e < 2; ++e) { // two sides
@@ -1272,8 +1285,8 @@ class city_road_gen_t {
 				side_bc.d[!d][!e] = side_bc.d[!d][e] + (e ? -wall_width : wall_width);
 				point side_center(side_bc.get_cube_center());
 				side_center.z = 0.5*(z1 + z2) + 0.5*wall_height;
-				set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, (d != 0), bridge.slope, pts);
-				draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1); // skip_bottom=1
+				set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, 0, 0, pts);
+				draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, 0, tscale); // skip_bottom=1
 			}
 			qbd_bridge.draw_and_clear();
 		}
