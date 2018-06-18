@@ -1141,7 +1141,7 @@ class city_road_gen_t {
 		}
 
 		void draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
-			//timer_t timer("Draw Bridge"); // 0.05ms - 0.1ms
+			//timer_t timer("Draw Bridge"); // 0.04ms - 0.1ms
 			cube_t bcube(bridge);
 			float const scale(1.0*city_params.road_width);
 			bcube.z2() += 2.0*scale; // make it higher
@@ -1262,7 +1262,9 @@ class city_road_gen_t {
 		}
 		void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale) {
 			// FIXME: can we get smooth vertex normals? Maybe need add_quad_pts_with_normals()
-			qbd_bridge.add_quad_pts(pts, cw, cross_product((pts[1] - pts[0]), (pts[3] - pts[0])).get_norm()*normal_scale);
+			vector3d const normal(cross_product((pts[1] - pts[0]), (pts[3] - pts[0]))*normal_scale);
+			if (dot_product(((camera_pdu.pos - xlate) - pts[0]), normal) < 0) return; // BFC
+			qbd_bridge.add_quad_pts(pts, cw, normal.get_norm());
 		}
 
 		void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
