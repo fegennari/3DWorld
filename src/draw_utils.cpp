@@ -376,20 +376,60 @@ template class point_sprite_drawer_t<sized_vert_t<vert_norm_color>>;
 void quad_batch_draw::add_quad_pts(point const pts[4], color_wrapper const &cw, vector3d const &n, tex_range_t const &tr) {
 
 	if (tr.swap_xy) { // Note: reversed from quad_to_tris_ixs
-		verts.emplace_back(pts[0], n, tr.x1, tr.y2, cw.c, true);
-		verts.emplace_back(pts[2], n, tr.x2, tr.y1, cw.c, true);
-		verts.emplace_back(pts[1], n, tr.x1, tr.y1, cw.c, true);
-		verts.emplace_back(pts[0], n, tr.x1, tr.y2, cw.c, true);
-		verts.emplace_back(pts[3], n, tr.x2, tr.y2, cw.c, true);
-		verts.emplace_back(pts[2], n, tr.x2, tr.y1, cw.c, true);
+		verts.emplace_back(pts[0], n, tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y1, cw);
+		verts.emplace_back(pts[1], n, tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[0], n, tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[3], n, tr.x2, tr.y2, cw);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y1, cw);
 	}
 	else {
-		verts.emplace_back(pts[0], n, tr.x1, tr.y1, cw.c, true);
-		verts.emplace_back(pts[2], n, tr.x2, tr.y2, cw.c, true);
-		verts.emplace_back(pts[1], n, tr.x2, tr.y1, cw.c, true);
-		verts.emplace_back(pts[0], n, tr.x1, tr.y1, cw.c, true);
-		verts.emplace_back(pts[3], n, tr.x1, tr.y2, cw.c, true);
-		verts.emplace_back(pts[2], n, tr.x2, tr.y2, cw.c, true);
+		verts.emplace_back(pts[0], n, tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y2, cw);
+		verts.emplace_back(pts[1], n, tr.x2, tr.y1, cw);
+		verts.emplace_back(pts[0], n, tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[3], n, tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[2], n, tr.x2, tr.y2, cw);
+	}
+}
+
+void quad_batch_draw::add_quad_pts_vert_norms(vert_norm const pts[4], color_wrapper const &cw, tex_range_t const &tr) {
+
+	if (tr.swap_xy) { // Note: reversed from quad_to_tris_ixs
+		verts.emplace_back(pts[0], tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[2], tr.x2, tr.y1, cw);
+		verts.emplace_back(pts[1], tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[0], tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[3], tr.x2, tr.y2, cw);
+		verts.emplace_back(pts[2], tr.x2, tr.y1, cw);
+	}
+	else {
+		verts.emplace_back(pts[0], tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[2], tr.x2, tr.y2, cw);
+		verts.emplace_back(pts[1], tr.x2, tr.y1, cw);
+		verts.emplace_back(pts[0], tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[3], tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[2], tr.x2, tr.y2, cw);
+	}
+}
+
+void quad_batch_draw::add_quad_pts_vert_norms(point const pts[4], vector3d const n[4], color_wrapper const &cw, tex_range_t const &tr) {
+
+	if (tr.swap_xy) { // Note: reversed from quad_to_tris_ixs
+		verts.emplace_back(pts[0], n[0], tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[2], n[2], tr.x2, tr.y1, cw);
+		verts.emplace_back(pts[1], n[1], tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[0], n[0], tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[3], n[3], tr.x2, tr.y2, cw);
+		verts.emplace_back(pts[2], n[2], tr.x2, tr.y1, cw);
+	}
+	else {
+		verts.emplace_back(pts[0], n[0], tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[2], n[2], tr.x2, tr.y2, cw);
+		verts.emplace_back(pts[1], n[1], tr.x2, tr.y1, cw);
+		verts.emplace_back(pts[0], n[0], tr.x1, tr.y1, cw);
+		verts.emplace_back(pts[3], n[3], tr.x1, tr.y2, cw);
+		verts.emplace_back(pts[2], n[2], tr.x2, tr.y2, cw);
 	}
 }
 

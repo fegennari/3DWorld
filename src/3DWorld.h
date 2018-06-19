@@ -899,7 +899,7 @@ struct vert_norm_tc : public vert_norm { // size = 32
 	vert_norm_tc() {}
 	vert_norm_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm(v_, n_) {t[0] = ts;    t[1] = tt;   }
 	vert_norm_tc(point const &v_, vector3d const &n_, float const t_[2])  : vert_norm(v_, n_) {t[0] = t_[0]; t[1] = t_[1];}
-	vert_norm_tc(vert_norm const &vn) : vert_norm(vn) {t[0] = t[1] = 0.0;} // tc not set here (required for model3d/voxel code)
+	vert_norm_tc(vert_norm const &vn, float ts=0.0, float tt=1.0) : vert_norm(vn) {t[0] = ts; t[1] = tt;}
 	void assign(point const &v_, vector3d const &n_, float ts, float tt) {v = v_; n = n_; t[0] = ts; t[1] = tt;}
 
 	bool operator<(vert_norm_tc const &p) const {
@@ -1026,8 +1026,11 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 		: vert_norm_tc(v_, n_, ts, tt) {set_c3(c_);}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGBA const &c_)
 		: vert_norm_tc(v_, n_, ts, tt) {set_c4(c_);}
+	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, color_wrapper const &cw)
+		: vert_norm_tc(v_, n_, ts, tt), color_wrapper(cw) {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0)
 		: vert_norm_tc(v_, n_, ts, tt) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = (has_alpha ? c_[3] : 255);}
+	vert_norm_tc_color(vert_norm const &vn, float ts, float tt, color_wrapper const &cw) : vert_norm_tc(vn, ts, tt), color_wrapper(cw) {}
 	vert_norm_tc_color(vert_norm_tc const &vntc, color_wrapper const &cw) : vert_norm_tc(vntc), color_wrapper(cw) {}
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) {
 		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = (has_alpha ? c_[3] : 255);
