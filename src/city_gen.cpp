@@ -847,12 +847,55 @@ namespace streetlight_ns {
 } // streetlight_ns
 
 
-struct bridge_t : public road_t {
+struct streetlights_t {
+
+	vector<streetlight_ns::streetlight_t> streetlights;
+
+	void draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only) const {
+		if (streetlights.empty()) return;
+		//timer_t t("Draw Streetlights");
+		select_texture(WHITE_TEX);
+		bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
+		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(s, xlate, shadow_only, is_local_shadow);}
+	}
+	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube) const {
+		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube);}
+	}
+	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate) const {
+		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
+			if (i->proc_sphere_coll(pos, radius, xlate)) return 1;
+		}
+		return 0;
+	}
+};
+
+
+struct bridge_t : public road_t, public streetlights_t {
+
 	road_t src_road;
 	bool make_bridge;
+
 	bridge_t(road_t const &road) : road_t(road), src_road(road), make_bridge(0) {}
 
+	void add_streetlights() {
+		unsigned const num_per_side = 4;
+		streetlights.reserve(2*num_per_side);
+		float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]);
+		float const za(get_start_z()), zb(get_end_z());
+
+		for (unsigned n = 0; n < num_per_side; ++n) {
+			float const v((n + 0.5)/num_per_side); // 1/8, 3/8, 5/8, 7/8
+			point pos1, pos2;
+			pos1[ dim] = pos2[dim] = d[dim][0] + v*dsz;
+			pos1[!dim] = d[!dim][0] - 0.05*dnsz; pos2[!dim] = d[!dim][1] + 0.05*dnsz;
+			pos1.z = pos2.z = za + v*(zb - za);
+			vector3d dir(zero_vector); dir[!dim] = 1.0;
+			streetlights.emplace_back(pos1,  dir);
+			streetlights.emplace_back(pos2, -dir);
+		} // for n
+	}
 	bool proc_sphere_coll(point &center, point const &prev, float radius, float prev_frame_zval, vector3d const &xlate) const {
+		if (proc_streetlight_sphere_coll(center, radius, xlate)) return 1;
 		float const exp(0.5*radius);
 		bool const prev_int(contains_pt_xy_exp((prev - xlate), exp));
 		if (!prev_int && !src_road.contains_pt_xy_exp((center - xlate), exp)) return 0; // no x/y containment for road segment (cur or prev)
@@ -1542,13 +1585,12 @@ class city_road_gen_t {
 		}
 	}; // city_obj_placer_t
 
-	class road_network_t {
+	class road_network_t : public streetlights_t {
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
 		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings
 		vector<bridge_t> bridges; // bridge bounding cubes, stored as roads
-		vector<streetlight_ns::streetlight_t> streetlights;
 		city_obj_placer_t city_obj_placer;
 		cube_t bcube;
 		vector<road_t> segments; // reused temporary
@@ -1967,6 +2009,9 @@ class city_road_gen_t {
 				} // for n
 			} // for r
 		}
+		void finalize_bridges() {
+			for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlights();}
+		}
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
 			tile_to_block_map.clear();
@@ -2035,12 +2080,10 @@ class city_road_gen_t {
 					if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist)) return 1;
 				}
 			}
-			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-				if (i->proc_sphere_coll(pos, radius, xlate)) return 1;
-			}
 			for (auto i = bridges.begin(); i != bridges.end(); ++i) {
 				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate)) return 1;
 			}
+			if (proc_streetlight_sphere_coll(pos, radius, xlate)) return 1;
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius)) return 1;
 			return 0;
 		}
@@ -2071,20 +2114,18 @@ class city_road_gen_t {
 					}
 				} // for b
 			}
-			draw_streetlights(dstate, shadow_only);
+			draw_streetlights(dstate.s, dstate.xlate, shadow_only);
+			
 			// draw bridges; only in connector road network; bridges are sparse/uncommon, so don't need to be batched by blocks
-			for (auto b = bridges.begin(); b != bridges.end(); ++b) {dstate.draw_bridge(*b, shadow_only);}
+			for (auto b = bridges.begin(); b != bridges.end(); ++b) {
+				dstate.draw_bridge(*b, shadow_only);
+				b->draw_streetlights(dstate.s, dstate.xlate, shadow_only);
+			}
 			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}
-		void draw_streetlights(road_draw_state_t &dstate, bool shadow_only) const {
-			if (streetlights.empty()) return;
-			//timer_t t("Draw Streetlights");
-			select_texture(WHITE_TEX);
-			bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
-			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate.s, dstate.xlate, shadow_only, is_local_shadow);}
-		}
 		void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
-			for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube);}
+			add_streetlight_dlights(xlate, lights_bcube);
+			for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlight_dlights(xlate, lights_bcube);}
 		}
 
 		// cars
@@ -2495,6 +2536,7 @@ public:
 		assign_city_clusters();
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
+		global_rn.finalize_bridges();
 	}
 	void gen_tile_blocks() {
 		timer_t timer("Gen Tile Blocks");
@@ -2523,7 +2565,7 @@ public:
 		return global_rn.proc_sphere_coll(pos, p_last, radius, prev_frame_zval); // needed for bridges
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const {
-		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, not needed?
+		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, but may need to add lights for bridges
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->add_city_lights(xlate, lights_bcube);}
 	}
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) { // non-const because qbd is modified
