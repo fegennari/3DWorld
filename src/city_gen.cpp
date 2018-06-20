@@ -1172,10 +1172,8 @@ class city_road_gen_t {
 			unsigned const d(bridge.dim);
 			float const l_expand(2.0*(d ? DY_VAL : DY_VAL)); // slight expand along road dim so that we're sure to cover the entire gap
 			float const w_expand(0.25*scale); // expand width to add space for supports
-			bcube.d[ d][0] -= l_expand;
-			bcube.d[ d][1] += l_expand;
-			bcube.d[!d][0] -= w_expand;
-			bcube.d[!d][1] += w_expand;
+			bcube.d[ d][0] -= l_expand; bcube.d[ d][1] += l_expand;
+			bcube.d[!d][0] -= w_expand; bcube.d[!d][1] += w_expand;
 			max_eq(bcube.d[d][0], bridge.src_road.d[d][0]); // clamp to orig road segment length
 			min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
@@ -1186,6 +1184,7 @@ class city_road_gen_t {
 				if (!emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
 			}
 			ensure_shader_active(); // needed for use_smap=0 case
+			point const cpos(camera_pdu.pos - xlate);
 			float const width(bcube.d[!d][1] - bcube.d[!d][0]), center(0.5*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
 			point p1, p2; // centerline end points
 			p1.z = bridge.get_start_z();
@@ -1194,7 +1193,6 @@ class city_road_gen_t {
 			p1[ d] = bcube.d[d][0];
 			p2[ d] = bcube.d[d][1];
 			vector3d const delta(p2 - p1);
-			// upper arch
 			colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(LT_GRAY);
 			color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
 			float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
@@ -1202,62 +1200,75 @@ class city_road_gen_t {
 			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/get_draw_tile_dist());
 			int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
 			unsigned const num_segs = 33;
-			float zprev(0.0), dvprev(0.0);
+			float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z);
+			float zvals[num_segs+1], cur_zpos(p1.z), cur_dval(p1[d]);
+			
+			for (unsigned n = 0; n <= num_segs; ++n) { // populate zvals and dvals
+				float const t(n*step_sz), v(2.0*fabs(t - 0.5)), zpos(p1.z + delta.z*t);
+				zvals[n] = zpos + 0.3*len*(1.0 - v*v) - 0.5*scale;
+			}
+			for (unsigned n = 0; n < num_segs; ++n) { // add arches
+				float const zval(zvals[n+1]), next_dval(cur_dval + delta_d);
+				point pts[4], conn_pts[2];
+				pts[0][d] = pts[3][d] = cur_dval;
+				pts[1][d] = pts[2][d] = next_dval;
 
-			for (unsigned n = 0; n <= num_segs; ++n) { // add arch
-				float const t(float(n)/float(num_segs)), v(2.0*fabs(t - 0.5));
-				float const zpos(p1.z + delta.z*t), zval(zpos + 0.3*len*(1.0 - v*v) - 0.5*scale), dv(p1[d] + delta[d]*t);
+				for (unsigned e = 0; e < 2; ++e) { // two sides
+					float const ndv(bcube.d[!d][e]);
+					pts[0][!d] = pts[1][!d] = (e ? ndv-w_expand : ndv);
+					pts[2][!d] = pts[3][!d] = (e ? ndv : ndv+w_expand);
 
-				if (n > 0) { // no segment drawn for first pt
-					point pts[4], conn_pts[2];
-					pts[0][d] = pts[3][d] = dvprev;
-					pts[1][d] = pts[2][d] = dv;
-
-					for (unsigned e = 0; e < 2; ++e) { // two sides
-						float const ndv(bcube.d[!d][e]);
-						pts[0][!d] = pts[1][!d] = (e ? ndv-w_expand : ndv);
-						pts[2][!d] = pts[3][!d] = (e ? ndv : ndv+w_expand);
-
-						for (unsigned f = 0; f < 2; ++f) { // top/bottom surfaces
-							float const dz(f ? 0.0 : thickness);
-							pts[0].z = pts[3].z = zprev + dz;
-							pts[1].z = pts[2].z = zval  + dz;
-							add_bridge_quad(pts, cw_main, ((f^d) ? -1.0 : 1.0));
+					for (unsigned f = 0; f < 2; ++f) { // top/bottom surfaces
+						float const dz(f ? 0.0 : thickness);
+						pts[0].z = pts[3].z = zvals[n] + dz;
+						pts[1].z = pts[2].z = zval + dz;
+						// construct previous and next pts in order to calculate the face normals below
+						point prev_pt(pts[0]); prev_pt[d] -= delta_d; if (n   > 0       ) {prev_pt.z = zvals[n-1] + dz;}
+						point next_pt(pts[1]); next_pt[d] += delta_d; if (n+1 < num_segs) {next_pt.z = zvals[n+2] + dz;}
+						vector3d const v_shared((pts[2] - pts[1])*((f^d) ? -1.0 : 1.0));
+						vector3d const fn(cross_product((pts[1] - pts[0]), v_shared));
+							
+						if (dot_product((cpos - pts[0]), fn) > 0) { // BFC
+							vector3d const fn_prev(cross_product((pts[0] - prev_pt), v_shared)), fn_next(cross_product((next_pt - pts[1]), v_shared));
+							vector3d const vn_prev((fn + fn_prev).get_norm()), vn_next((fn + fn_next).get_norm()); // average of both face normals
+							vector3d const n[4] = {vn_prev, vn_next, vn_next, vn_prev};
+							qbd_bridge.add_quad_pts_vert_norms(pts, n, cw_main);
 						}
-						for (unsigned f = 0; f < 2; ++f) { // side surfaces
-							unsigned const i0(f ? 3 : 0), i1(f ? 2 : 1);
-							point pts2[4] = {pts[i0], pts[i1], pts[i1], pts[i0]};
-							pts2[2].z += thickness; pts2[3].z += thickness; // top surface
-							add_bridge_quad(pts2, cw_main, ((f^d) ? -1.0 : 1.0));
-						}
-						if (zval > zpos) { // vertical cables
-							conn_pts[e] = 0.5*(pts[1] + pts[2]);
-							conn_pts[e].z += 0.5*thickness;
-
-							if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
-								s.set_cur_color(cables_color);
-								point const &p(conn_pts[e]);
-								draw_fast_cylinder(point(p.x, p.y, zpos), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
-							}
-							else { // use lower detail cubes; okay for shadow pass
-								cube_t c(conn_pts[e]);
-								c.z1() = zpos;
-								c.z2() = zval;
-								c.expand_by(cable_thick);
-								draw_cube(qbd_bridge, c, cw_cables, 1); // skip_bottom=1
-							}
-						}
-					} // for e
-					if (zval > zpos) { // horizontal connectors
-						cube_t c(conn_pts[0], conn_pts[1]);
-						vector3d exp(zero_vector);
-						exp.z  = 0.75*conn_thick;
-						exp[d] = conn_thick;
-						c.expand_by(exp);
-						draw_cube(qbd_bridge, c, cw_main, 0); // skip_bottom=0
 					}
+					for (unsigned f = 0; f < 2; ++f) { // side surfaces
+						unsigned const i0(f ? 3 : 0), i1(f ? 2 : 1);
+						point pts2[4] = {pts[i0], pts[i1], pts[i1], pts[i0]};
+						pts2[2].z += thickness; pts2[3].z += thickness; // top surface
+						add_bridge_quad(pts2, cw_main, ((f^d) ? -1.0 : 1.0));
+					}
+					if (zval > cur_zpos) { // vertical cables
+						conn_pts[e] = 0.5*(pts[1] + pts[2]);
+						conn_pts[e].z += 0.5*thickness;
+
+						if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
+							s.set_cur_color(cables_color);
+							point const &p(conn_pts[e]);
+							draw_fast_cylinder(point(p.x, p.y, cur_zpos), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
+						}
+						else { // use lower detail cubes; okay for shadow pass
+							cube_t c(conn_pts[e]);
+							c.z1() = cur_zpos;
+							c.z2() = zval;
+							c.expand_by(cable_thick);
+							draw_cube(qbd_bridge, c, cw_cables, 1); // skip_bottom=1
+						}
+					}
+				} // for e
+				if (zval > cur_zpos) { // horizontal connectors
+					cube_t c(conn_pts[0], conn_pts[1]);
+					vector3d exp(zero_vector);
+					exp.z  = 0.75*conn_thick;
+					exp[d] = conn_thick;
+					c.expand_by(exp);
+					draw_cube(qbd_bridge, c, cw_main, 0); // skip_bottom=0
 				}
-				zprev = zval; dvprev = dv;
+				cur_dval  = next_dval;
+				cur_zpos += delta_z;
 			} // for s
 			// bottom surface
 			float tscale(0.0);
@@ -1291,7 +1302,6 @@ class city_road_gen_t {
 			qbd_bridge.draw_and_clear();
 		}
 		void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale) {
-			// FIXME: can we get smooth vertex normals? Maybe need add_quad_pts_with_normals()
 			vector3d const normal(cross_product((pts[1] - pts[0]), (pts[3] - pts[0]))*normal_scale);
 			if (dot_product(((camera_pdu.pos - xlate) - pts[0]), normal) < 0) return; // BFC
 			qbd_bridge.add_quad_pts(pts, cw, normal.get_norm());
