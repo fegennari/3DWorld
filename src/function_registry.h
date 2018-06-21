@@ -263,6 +263,7 @@ void reset_tiled_terrain_state();
 void clear_tiled_terrain_shaders();
 float get_tiled_terrain_water_level();
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s);
+uint64_t get_tile_id_containing_point(point const &pos);
 uint64_t get_tile_id_containing_point_no_xyoff(point const &pos);
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(shader_t &s, float zval);

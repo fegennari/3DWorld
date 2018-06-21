@@ -296,8 +296,11 @@ protected:
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
 	virtual void draw_unshadowed() {}
-	void begin_tile(point const &pos) {emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));}
-
+	
+	void begin_tile(point const &pos, bool will_emit_now=0) {
+		emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
+		if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
+	}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader) {
 		xlate       = xlate_;
 		shadow_only = shadow_only_;
@@ -880,14 +883,14 @@ struct bridge_t : public road_t, public streetlights_t {
 	void add_streetlights() {
 		unsigned const num_per_side = 4;
 		streetlights.reserve(2*num_per_side);
-		float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]);
+		float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]), dn_shift(0.05*dnsz);
 		float const za(get_start_z()), zb(get_end_z());
 
 		for (unsigned n = 0; n < num_per_side; ++n) {
 			float const v((n + 0.5)/num_per_side); // 1/8, 3/8, 5/8, 7/8
 			point pos1, pos2;
 			pos1[ dim] = pos2[dim] = d[dim][0] + v*dsz;
-			pos1[!dim] = d[!dim][0] - 0.05*dnsz; pos2[!dim] = d[!dim][1] + 0.05*dnsz;
+			pos1[!dim] = d[!dim][0] - dn_shift; pos2[!dim] = d[!dim][1] + dn_shift;
 			pos1.z = pos2.z = za + v*(zb - za);
 			vector3d dir(zero_vector); dir[!dim] = 1.0;
 			streetlights.emplace_back(pos1,  dir);
@@ -1208,7 +1211,7 @@ class city_road_gen_t {
 		}
 
 		void draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
-			//timer_t timer("Draw Bridge"); // 0.04ms - 0.1ms
+			//timer_t timer("Draw Bridge"); // 0.065ms - 0.11ms
 			cube_t bcube(bridge);
 			float const scale(1.0*city_params.road_width);
 			bcube.z2() += 2.0*scale; // make it higher
@@ -1220,13 +1223,6 @@ class city_road_gen_t {
 			max_eq(bcube.d[d][0], bridge.src_road.d[d][0]); // clamp to orig road segment length
 			min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
-
-			if (!shadow_only) {
-				select_texture(WHITE_TEX);
-				begin_tile(bridge.get_cube_center());
-				if (!emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
-			}
-			ensure_shader_active(); // needed for use_smap=0 case
 			point const cpos(camera_pdu.pos - xlate);
 			float const width(bcube.d[!d][1] - bcube.d[!d][0]), center(0.5*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
 			point p1, p2; // centerline end points
@@ -1242,9 +1238,14 @@ class city_road_gen_t {
 			point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
 			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/get_draw_tile_dist());
 			int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
-			unsigned const num_segs = 33;
+			unsigned const num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
 			float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z);
-			float zvals[num_segs+1], cur_zpos(p1.z), cur_dval(p1[d]);
+			float zvals[48+1], cur_zpos(p1.z), cur_dval(p1[d]); // resize zvals based on max num_segs
+			vector<float> sm_split_pos;
+			uint64_t prev_tile_id(0);
+			point query_pt(bridge.get_cube_center());
+			ensure_shader_active(); // needed for use_smap=0 case
+			if (!shadow_only) {select_texture(WHITE_TEX);}
 			
 			for (unsigned n = 0; n <= num_segs; ++n) { // populate zvals and dvals
 				float const t(n*step_sz), v(2.0*fabs(t - 0.5)), zpos(p1.z + delta.z*t);
@@ -1256,6 +1257,17 @@ class city_road_gen_t {
 				pts[0][d] = pts[3][d] = cur_dval;
 				pts[1][d] = pts[2][d] = next_dval;
 
+				if (!shadow_only) {
+					query_pt[d] = 0.5*(cur_dval + next_dval); // center point of this segment
+					uint64_t const tile_id(get_tile_id_containing_point(query_pt + xlate));
+					
+					if (n == 0 || tile_id != prev_tile_id) { // first segment, or new tile for this segment
+						qbd_bridge.draw_and_clear(); // flush
+						begin_tile(query_pt, 1); // will_emit_now=1
+						prev_tile_id = tile_id;
+						if (n > 0) {sm_split_pos.push_back(query_pt[d]);} // record split point for splitting road surface and guardrails
+					}
+				}
 				for (unsigned e = 0; e < 2; ++e) { // two sides
 					float const ndv(bcube.d[!d][e]);
 					pts[0][!d] = pts[1][!d] = (e ? ndv-w_expand : ndv);
@@ -1321,28 +1333,42 @@ class city_road_gen_t {
 				select_texture(get_texture_by_name("roads/asphalt.jpg"));
 				tscale = 1.0/scale; // scale texture to match road width
 			}
-			point pts[8];
-			cube_t bot_bc(bcube);
-			bot_bc.d[!d][0] += 0.4*w_expand;
-			bot_bc.d[!d][1] -= 0.4*w_expand;
 			float const dz_scale(bridge.dz()/(bridge.d[d][1] - bridge.d[d][0]));
-			float const extend_dz1(dz_scale*(bridge.d[d][0] - bcube.d[d][0])), extend_dz2(dz_scale*(bcube.d[d][1] - bridge.d[d][1]));
-			float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
-			point bot_center(bot_bc.get_cube_center());
-			bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
-			set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, 0, 0, pts);
-			draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0, 0, tscale); // skip_bottom=0
+			cur_dval = bcube.d[d][0]; // reset to start
+			point pts[8];
 
-			// add guardrails/walls
-			for (unsigned e = 0; e < 2; ++e) { // two sides
-				cube_t side_bc(bot_bc);
-				side_bc.d[!d][!e] = side_bc.d[!d][e] + (e ? -wall_width : wall_width);
-				point side_center(side_bc.get_cube_center());
-				side_center.z = 0.5*(z1 + z2) + 0.5*wall_height;
-				set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, 0, 0, pts);
-				draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, 0, tscale); // skip_bottom=1
-			}
-			qbd_bridge.draw_and_clear();
+			for (unsigned n = 0; n <= sm_split_pos.size(); ++n) {
+				float const next_dval((n == sm_split_pos.size()) ? bcube.d[d][1] : sm_split_pos[n]);
+				cube_t bot_bc(bcube);
+				bot_bc.d[ d][0]  = cur_dval; // one tile slice
+				bot_bc.d[ d][1]  = next_dval;
+				bot_bc.d[!d][0] += 0.4*w_expand;
+				bot_bc.d[!d][1] -= 0.4*w_expand;
+				float const extend_dz1(dz_scale*(bridge.d[d][0] - bot_bc.d[d][0])), extend_dz2(dz_scale*(bot_bc.d[d][1] - bridge.d[d][1]));
+				float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
+				point bot_center(bot_bc.get_cube_center());
+				bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
+
+				if (!sm_split_pos.empty()) { // multiple tiles, must select a new shadow map set
+					query_pt[d] = cur_dval;
+					begin_tile(query_pt, 1); // will_emit_now=1
+				}
+				// add bottom road/bridge surface
+				set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, 0, 0, pts);
+				draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0, 0, tscale); // skip_bottom=0
+
+				// add guardrails/walls
+				for (unsigned e = 0; e < 2; ++e) { // two sides
+					cube_t side_bc(bot_bc);
+					side_bc.d[!d][!e] = side_bc.d[!d][e] + (e ? -wall_width : wall_width);
+					point side_center(side_bc.get_cube_center());
+					side_center.z = 0.5*(z1 + z2) + 0.5*wall_height;
+					set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, 0, 0, pts);
+					draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, 0, tscale); // skip_bottom=1
+				}
+				qbd_bridge.draw_and_clear(); // flush
+				cur_dval = next_dval;
+			} // for n
 		}
 		void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale) {
 			vector3d const normal(cross_product((pts[1] - pts[0]), (pts[3] - pts[0]))*normal_scale);
