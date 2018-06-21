@@ -3104,16 +3104,19 @@ struct city_smap_manager_t {
 		unsigned const num_smaps(min(light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
 		dl_smap_enabled = 0;
 		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
-		sort_lights_by_dist_size(light_sources, cpos);
+		sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
+		cmp_light_source_sz_dist sz_cmp(cpos);
 		unsigned num_used(0);
 		
 		// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
 		for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
 			if (!i->is_very_directional()) continue; // not a spotlight
 			//if (!city_params.car_shadows && i->is_dynamic()) continue; // skip headlights (optimization)
+			if (sz_cmp.get_value(*i) < 0.002) break; // light influence is too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail
 			dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF);
 			++num_used;
 		} // for i
+		cout << endl;
 	}
 	void clear_all_smaps(vector<light_source> &light_sources) {
 		for (auto i = light_sources.begin(); i != light_sources.end(); ++i) {i->release_smap();}
