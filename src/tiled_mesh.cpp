@@ -923,7 +923,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const steep_mult_rock (1.0/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
-		bool const check_grass_place(check_city_sphere_coll(point(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0), radius));
+		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0);
+		bool const check_grass_place(check_city_sphere_coll(query_pos, radius));
+		bool const check_mesh_mask(check_mesh_disable(query_pos, radius));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
@@ -940,6 +942,12 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			float const yv(float(y)*xy_mult);
 
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
+				unsigned const ix_val(y*tsize + x), off(4*ix_val);
+
+				if (check_mesh_mask && check_mesh_disable(point(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0), HALF_DXY)) {
+					UNROLL_4X(mesh_weight_data[off+i_] = 255;) // set invalid values to flag as transparent
+					continue;
+				}
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
@@ -985,7 +993,6 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				}
 				weights[k2] += weight_scale*t;
 				weights[k1] += weight_scale*(1.0 - t);
-				unsigned const ix_val(y*tsize + x), off(4*ix_val);
 				float const xv(float(x)*xy_mult);
 				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv)); // slow
 
