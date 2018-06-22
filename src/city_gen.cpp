@@ -914,6 +914,24 @@ struct bridge_t : public road_t, public streetlights_t {
 	}
 };
 
+struct tunnel_t {
+
+	cube_t bcube, ends[2];
+	float radius;
+
+	tunnel_t() : radius(0.0) {}
+	
+	tunnel_t(point const &start, point const &end, float radius_) : radius(radius_) {
+		ends[0].set_from_sphere(start, radius);
+		ends[1].set_from_sphere(end,   radius);
+		bcube = ends[0]; bcube.union_with_cube(ends[1]); // bounding cube of both ends
+	}
+	bool check_mesh_disable(cube_t const &query_region) const {
+		return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region)); // check both ends
+	}
+	//bool proc_sphere_coll(point &center, point const &prev, float radius, float prev_frame_zval, vector3d const &xlate) const {return 0;}
+};
+
 
 class heightmap_query_t {
 protected:
@@ -971,7 +989,7 @@ public:
 		} // for y
 	}
 	float flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim, unsigned border,
-		bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr)
+		bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr, tunnel_t *tunnel=nullptr)
 	{
 		if (!stats_only) {last_flatten_op = flatten_op_t(x1, y1, x2, y2, z1, z2, dim, border);} // cache for later replay
 		assert(is_valid_region(x1, y1, x2, y2));
@@ -1027,6 +1045,9 @@ public:
 				decrease_only   = 1; // don't add any terrain
 			}
 		}
+		if (!stats_only && tunnel != nullptr) {
+			// FIXME: maybe add tunnel
+		}
 		for (unsigned y = py1; y < py2; ++y) {
 			for (unsigned x = px1; x < px2; ++x) {
 				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
@@ -1045,10 +1066,10 @@ public:
 		} // for y
 		return tot_dz;
 	}
-	float flatten_for_road(road_t const &road, unsigned border, bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr) {
+	float flatten_for_road(road_t const &road, unsigned border, bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr, tunnel_t *tunnel=nullptr) {
 		float const z_adj(ROAD_HEIGHT + 0.5*road.get_slope_val()*(road.dim ? DY_VAL : DX_VAL)); // account for a half texel of error for sloped roads
 		unsigned const rx1(get_x_pos(road.x1())), ry1(get_y_pos(road.y1())), rx2(get_x_pos(road.x2())), ry2(get_y_pos(road.y2()));
-		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, stats_only, decrease_only, bridge);
+		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, stats_only, decrease_only, bridge, tunnel);
 	}
 }; // heightmap_query_t
 
@@ -1376,6 +1397,10 @@ class city_road_gen_t {
 			qbd_bridge.add_quad_pts(pts, cw, normal.get_norm());
 		}
 
+		void draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
+			// FIXME: WRITE
+		}
+
 		void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
 			for (auto i = isecs.begin(); i != isecs.end(); ++i) {i->draw_stoplights(qbd_sl, *this, shadow_only);}
 		}
@@ -1616,7 +1641,8 @@ class city_road_gen_t {
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
 		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings
-		vector<bridge_t> bridges; // bridge bounding cubes, stored as roads
+		vector<bridge_t> bridges; // bridges, part of global road network
+		vector<tunnel_t> tunnels; // tunnels, part of global road network
 		city_obj_placer_t city_obj_placer;
 		cube_t bcube;
 		vector<road_t> segments; // reused temporary
@@ -1681,6 +1707,7 @@ class city_road_gen_t {
 			segs.clear();
 			plots.clear();
 			bridges.clear();
+			tunnels.clear();
 			for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
 			streetlights.clear();
 			city_obj_placer.clear();
@@ -1966,7 +1993,7 @@ class city_road_gen_t {
 			rs.z1() = road.d[2][slope];
 			segments.clear();
 			float tot_dz(0.0);
-			bool last_was_bridge(0);
+			bool last_was_bridge(0), last_was_tunnel(0);
 
 			for (unsigned n = 0; n < num_segs; ++n) {
 				rs.d[dim][1] = ((n+1 == num_segs) ? road.d[dim][1] : (rs.d[dim][0] + seg_len)); // make sure it ends exactly at the correct location
@@ -1987,22 +2014,27 @@ class city_road_gen_t {
 				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
 				assert(s->is_normalized());
 				bridge_t bridge(*s);
-				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, (last_was_bridge ? nullptr : &bridge));
+				tunnel_t tunnel;
+				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, (last_was_bridge ? nullptr : &bridge), (last_was_tunnel ? nullptr : &tunnel));
 				
 				if (!check_only) {
 					roads.push_back(*s);
 					road_to_city.emplace_back(city1, city2); // Note: city index is specified even for internal (non-terminal) roads
 					if (bridge.make_bridge) {bridges.push_back(bridge);}
+					if (tunnel.radius > 0 ) {tunnels.push_back(tunnel);}
 				}
 				last_was_bridge = bridge.make_bridge; // Note: conservative; used to prevent two consecutive bridges with no (or not enough) mesh in between
+				last_was_tunnel = (tunnel.radius > 0); // same thing for tunnels
 			}
 			if (!check_only) { // post-flatten pass to fix up dirt at road joints - doesn't help much
-				last_was_bridge = 0;
+				last_was_bridge = last_was_tunnel = 0;
 
 				for (auto s = segments.begin(); s != segments.end(); ++s) {
 					bridge_t bridge(*s); // Note: set but value unused
-					hq.flatten_for_road(*s, city_params.road_border, 0, 1, (last_was_bridge ? nullptr : &bridge)); // decrease_only=1
+					tunnel_t tunnel; // Note: set but value unused
+					hq.flatten_for_road(*s, city_params.road_border, 0, 1, (last_was_bridge ? nullptr : &bridge), (last_was_tunnel ? nullptr : &tunnel)); // decrease_only=1
 					last_was_bridge = bridge.make_bridge;
+					last_was_tunnel = (tunnel.radius > 0);
 				}
 			}
 			return tot_dz; // success
@@ -2113,6 +2145,17 @@ class city_road_gen_t {
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius)) return 1;
 			return 0;
 		}
+		bool check_mesh_disable(point const &pos, float radius) const {
+			if (tunnels.empty()) return 0;
+			point const query_pos(pos - get_camera_coord_space_xlate());
+			cube_t query_region; query_region.set_from_sphere(query_pos, radius); // actually a cube, not a sphere
+
+			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
+				if (i->check_mesh_disable(query_region)) return 1;
+			}
+			return 0;
+		}
+
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			if (empty()) return;
 			if (!dstate.check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
@@ -2146,6 +2189,9 @@ class city_road_gen_t {
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {
 				dstate.draw_bridge(*b, shadow_only);
 				b->draw_streetlights(dstate.s, dstate.xlate, shadow_only);
+			}
+			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {
+				dstate.draw_tunnel(*t, shadow_only);
 			}
 			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}
@@ -2584,6 +2630,8 @@ public:
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges) const {
 		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges);
 	}
+	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
+
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			if (r->proc_sphere_coll(pos, p_last, radius, prev_frame_zval)) return 1;
@@ -3177,6 +3225,7 @@ public:
 		//return car_manager.proc_sphere_coll(pos, p_last, radius); // Note: doesn't really work well, disabled
 		return 0;
 	}
+	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
 	void next_frame() {
 		road_gen.next_frame(); // update stoplights
 		car_manager.next_frame(city_params.car_speed);
@@ -3252,6 +3301,12 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
 	if (check_city_sphere_coll(pos, radius, !is_tall))  return 0; // exclude bridges if not tall
 	return 1;
+}
+bool check_mesh_disable(point const &pos, float radius) {
+	if (!have_cities()) return 0;
+	point center(pos);
+	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
+	return city_gen.check_mesh_disable(center, radius);
 }
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
 void free_city_context() {city_gen.free_context();}
