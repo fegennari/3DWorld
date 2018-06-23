@@ -906,17 +906,18 @@ struct bridge_t : public road_t, public streetlights_t {
 	}
 };
 
-struct tunnel_t {
+struct tunnel_t : public road_t {
 
-	cube_t bcube, ends[2];
+	cube_t ends[2];
 	float radius;
 
-	tunnel_t() : radius(0.0) {}
+	tunnel_t(road_t const &road) : road_t(road), radius(0.0) {}
 	
-	tunnel_t(point const &start, point const &end, float radius_) : radius(radius_) {
+	void init(point const &start, point const &end, float radius_) {
+		radius = radius_;
 		ends[0].set_from_sphere(start, radius);
 		ends[1].set_from_sphere(end,   radius);
-		bcube = ends[0]; bcube.union_with_cube(ends[1]); // bounding cube of both ends
+		get_bcube() = ends[0]; get_bcube().union_with_cube(ends[1]); // bounding cube of both ends - overwrite road bcube
 	}
 	bool check_mesh_disable(cube_t const &query_region) const {
 		return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region)); // check both ends
@@ -977,6 +978,15 @@ public:
 		}
 		return 0;
 	}
+	void get_segment_end_pts(road_t const &r, unsigned six, unsigned eix, point &ps, point &pe) const {
+		float const sv(r.dim ? get_y_value(six) : get_x_value(six)), ev(r.dim ? get_y_value(eix) : get_x_value(eix)); // start/end pos of bridge in road dim
+		float const dz(r.get_dz()), len(r.get_length()), v0(r.dim ? r.y1() : r.x1());
+		ps[ r.dim] = sv;
+		pe[ r.dim] = ev;
+		ps[!r.dim] = pe[!r.dim] = 0.5*(r.d[!r.dim][0] + r.d[!r.dim][1]);
+		ps.z = r.z1() + dz*CLIP_TO_01((sv - v0)/len);
+		pe.z = r.z1() + dz*CLIP_TO_01((ev - v0)/len);
+	}
 	void flatten_region_to(cube_t const c, unsigned slope_width, bool decrease_only=0) {
 		flatten_region_to(get_x_pos(c.x1()), get_y_pos(c.y1()), get_x_pos(c.x2()), get_y_pos(c.y2()), slope_width, (c.z1() - ROAD_HEIGHT), decrease_only);
 	}
@@ -1004,7 +1014,7 @@ public:
 		if (x1 == x2 || y1 == y2) return 0.0; // zero area
 		float const run_len(dim ? (y2 - y1) : (x2 - x1)), denom(1.0f/max(run_len, 1.0f)), dz(z2 - z1), border_inv(1.0/border);
 		int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
-		unsigned px1(x1), py1(y1), px2(x2), py2(y2);
+		unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0), skip_six(six), skip_eix(eix);
 		float tot_dz(0.0);
 		
 		if (dim) {
@@ -1021,7 +1031,7 @@ public:
 		}
 		if (!stats_only && !decrease_only && bridge != nullptr && fabs(bridge->get_slope_val()) < 0.1) { // determine if we should add a bridge here
 			float added(0.0), removed(0.0), total(0.0);
-			unsigned start(dim ? ysize : xsize), end(0);
+			bool end_bridge(0);
 
 			for (unsigned y = y1; y < y2; ++y) { // Note: not padded
 				for (unsigned x = x1; x < x2; ++x) {
@@ -1031,30 +1041,65 @@ public:
 					if (road_z > h) {
 						added += (road_z - h);
 
-						if (road_z > h + 0.5*city_params.road_width) { // higher than terrain by a significant amount
-							min_eq(start, (dim ? y : x));
-							max_eq(end,   (dim ? y : x));
+						if (!end_bridge && road_z > h + 0.5*city_params.road_width) { // higher than terrain by a significant amount
+							min_eq(six, (dim ? y : x));
+							max_eq(eix, (dim ? y : x));
 						}
-					} else {removed += (h - road_z);}
+					}
+					else {
+						removed += (h - road_z);
+						if (eix > 0) {end_bridge = 1;} // done with bridge - don't create bridge past high point
+					}
 					total += 1.0;
 				} // for x
 			} // for y
-			if (start < end && added > 2.0*city_params.road_width*total && added > 2.0*removed) {
-				road_t const &r(bridge->src_road); // extract road
-				float const sv(dim ? get_y_value(start) : get_x_value(start)), ev(dim ? get_y_value(end) : get_x_value(end)); // start/end pos of bridge in road dim
-				float const dz(r.get_dz()), len(r.get_length()), v0(dim ? r.y1() : r.x1());
-				float const ts(CLIP_TO_01((sv - v0)/len)), te(CLIP_TO_01((ev - v0)/len));
-				float const sz(r.z1() + dz*ts), ez(r.z1() + dz*te); // start/end zval of bridge
-				bridge->d[dim][0] = sv;
-				bridge->d[dim][1] = ev;
-				bridge->z1() = min(sz, ez);
-				bridge->z2() = max(sz, ez);
+			if (eix > six+4 && added > 2.0*city_params.road_width*total && added > 2.0*removed) {
+				point ps, pe;
+				get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
+				bridge->d[dim][0] = ps[dim];
+				bridge->d[dim][1] = pe[dim];
+				bridge->z1() = min(ps.z, pe.z);
+				bridge->z2() = max(ps.z, pe.z);
 				bridge->make_bridge = 1;
-				decrease_only   = 1; // don't add any terrain
+				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 			}
 		}
-		if (!stats_only && tunnel != nullptr) {
-			// FIXME: maybe add tunnel
+		if (!stats_only && tunnel != nullptr && skip_eix == 0 && fabs(tunnel->get_slope_val()) < 0.2) { // determine if we should add a tunnel here
+			float const radius(1.0*city_params.road_width);
+			float added(0.0), removed(0.0), total(0.0);
+			bool end_tunnel(0);
+
+			for (unsigned y = y1; y < y2; ++y) { // Note: not padded
+				for (unsigned x = x1; x < x2; ++x) {
+					float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
+					float const road_z(z1 + dz*t), h(get_height(x, y));
+
+					if (road_z < h) {
+						removed += (h - road_z);
+
+						if (!end_tunnel && road_z + radius < h) { // below terrain by a significant amount
+							min_eq(six, (dim ? y : x));
+							max_eq(eix, (dim ? y : x));
+						}
+					}
+					else {
+						added += (road_z - h);
+						if (eix > 0) {end_tunnel = 1;} // done with tunnel - don't create tunnel past low point
+					}
+					total += 1.0;
+				} // for x
+			} // for y
+			if (eix > six+4 && removed > 1.0*city_params.road_width*total && removed > 2.0*added) {
+				point ps, pe;
+				get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
+				tunnel->init(ps, pe, radius);
+				//cout << "*** ADD TUNNEL *** " << TXT(six) << TXT(eix) << TXT(x1) << TXT(x2) << TXT(y1) << TXT(y2) << endl;
+				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
+			}
+		}
+		if (!stats_only && skip_six < skip_eix) { // clip last_flatten_op to a partial range
+			//(dim ? last_flatten_op.y1 : last_flatten_op.x1) = skip_eix; // FIXME: use dim to select x2/y2 = skip_six?
+			(dim ? last_flatten_op.y2 : last_flatten_op.x2) = skip_six;
 		}
 		for (unsigned y = py1; y < py2; ++y) {
 			for (unsigned x = px1; x < px2; ++x) {
@@ -1069,6 +1114,8 @@ public:
 					new_h = smooth_interp(h, road_z, dist*border_inv);
 				} else {new_h = road_z;}
 				tot_dz += fabs(h - new_h);
+				unsigned const dv(dim ? y : x);
+				if (dv > skip_six && dv < skip_eix) continue; // don't modify mesh height at bridges or tunnels, but still count it toward the cost
 				if (!stats_only) {h = new_h;} // apply the height change
 			} // for x
 		} // for y
@@ -2022,7 +2069,7 @@ class city_road_gen_t {
 				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
 				assert(s->is_normalized());
 				bridge_t bridge(*s);
-				tunnel_t tunnel;
+				tunnel_t tunnel(*s);
 				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, (last_was_bridge ? nullptr : &bridge), (last_was_tunnel ? nullptr : &tunnel));
 				
 				if (!check_only) {
@@ -2039,7 +2086,7 @@ class city_road_gen_t {
 
 				for (auto s = segments.begin(); s != segments.end(); ++s) {
 					bridge_t bridge(*s); // Note: set but value unused
-					tunnel_t tunnel; // Note: set but value unused
+					tunnel_t tunnel(*s); // Note: set but value unused
 					hq.flatten_for_road(*s, city_params.road_border, 0, 1, (last_was_bridge ? nullptr : &bridge), (last_was_tunnel ? nullptr : &tunnel)); // decrease_only=1
 					last_was_bridge = bridge.make_bridge;
 					last_was_tunnel = (tunnel.radius > 0);
@@ -2121,13 +2168,15 @@ class city_road_gen_t {
 				i->z2() = min(1.0, (hval + 0.25)); // bottom of height range
 			} // for i
 		}
-		bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, bool exclude_bridges) const {
+		bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, bool exclude_bridges_and_tunnels) const {
 			if (roads.empty()) return 0;
 			point const query_pos(pos - get_camera_coord_space_xlate());
 			if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 			
 			if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) { // collision with a road
-				if (!exclude_bridges || !check_bcubes_sphere_coll(bridges, query_pos, radius, xy_only)) return 1; // if exclude_bridges, ignore collisions with bridges
+				if (!exclude_bridges_and_tunnels ||
+					!(check_bcubes_sphere_coll(bridges, query_pos, radius, xy_only) ||
+						check_bcubes_sphere_coll(tunnels, query_pos, radius, xy_only))) return 1; // ignore collisions with bridges and tunnels
 			}
 			if (include_intersections) { // used for global road network
 				for (unsigned i = 0; i < 3; ++i) { // {2-way, 3-way, 4-way}
@@ -2635,8 +2684,8 @@ public:
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const { // Note: no global_rn
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
-	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges) const {
-		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges);
+	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
+		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels);
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 
@@ -3224,9 +3273,9 @@ public:
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
 
-	bool check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges) const {
+	bool check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
 		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
-		return road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges);
+		return road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels);
 	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval)) return 1;
@@ -3295,11 +3344,11 @@ void next_city_frame() {city_gen.next_frame();}
 void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
-bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges) {
+bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels) {
 	if (!have_cities()) return 0;
 	point center(pos);
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
-	return city_gen.check_city_sphere_coll(center, radius, 1, exclude_bridges);
+	return city_gen.check_city_sphere_coll(center, radius, 1, exclude_bridges_and_tunnels);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
