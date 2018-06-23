@@ -206,16 +206,6 @@ struct city_params_t {
 city_params_t city_params;
 
 
-bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
-	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
-}
-template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only) {
-	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
-		if (check_bcube_sphere_coll(*i, sc, radius, xy_only)) return 1;
-	}
-	return 0;
-}
-
 template<typename T> void get_all_bcubes(vector<T> const &v, vector<cube_t> &bcubes) {
 	for (auto i = v.begin(); i != v.end(); ++i) {bcubes.push_back(*i);}
 }
@@ -492,6 +482,8 @@ struct road_t : public cube_t {
 	float get_slope_val() const {return get_dz()/get_length();}
 	float get_start_z  () const {return (slope ? z2() : z1());}
 	float get_end_z    () const {return (slope ? z1() : z2());}
+	cube_t const &get_bcube() const {return *this;}
+	cube_t       &get_bcube()       {return *this;}
 };
 
 struct road_seg_t : public road_t {
@@ -931,6 +923,22 @@ struct tunnel_t {
 	}
 	//bool proc_sphere_coll(point &center, point const &prev, float radius, float prev_frame_zval, vector3d const &xlate) const {return 0;}
 };
+
+bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
+	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
+}
+bool check_bcube_sphere_coll(bridge_t const &bridge, point const &sc, float radius, bool xy_only) {
+	cube_t bcube(bridge);
+	float const shrink(bridge.dim ? DY_VAL : DX_VAL);
+	bcube.d[bridge.dim][0] += shrink; bcube.d[bridge.dim][1] -= shrink;
+	return check_bcube_sphere_coll(bcube, sc, radius, xy_only);
+}
+template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only) {
+	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
+		if (check_bcube_sphere_coll(*i, sc, radius, xy_only)) return 1;
+	}
+	return 0;
+}
 
 
 class heightmap_query_t {
