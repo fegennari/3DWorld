@@ -945,7 +945,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				unsigned const ix_val(y*tsize + x), off(4*ix_val);
 
 				if (check_mesh_mask && check_mesh_disable(point(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0), HALF_DXY)) {
-					UNROLL_4X(mesh_weight_data[off+i_] = 255;) // set invalid values to flag as transparent
+					mesh_weight_data[off+0] = mesh_weight_data[off+1] = 255; // set invalid values to flag as transparent
+					mesh_weight_data[off+2] = mesh_weight_data[off+3] = 0;   // make sure grass is disabled
 					continue;
 				}
 				float weights[NTEX_DIRT] = {0};
