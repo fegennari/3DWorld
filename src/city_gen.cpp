@@ -1453,7 +1453,15 @@ class city_road_gen_t {
 		}
 
 		void draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
+			if (!check_cube_visible(tunnel, 1.0, shadow_only)) return; // VFC/too far
+			ensure_shader_active(); // needed for use_smap=0 case
+			begin_tile(tunnel.get_cube_center(), 1);
+			if (!shadow_only) {select_texture(WHITE_TEX);}
+			quad_batch_draw &qbd(qbd_bridge); // use same qbd as bridges
+			color_wrapper cw_concrete(LT_GRAY);
 			// FIXME: WRITE
+			draw_cube(qbd, tunnel, cw_concrete, 1); // skip_bottom=1
+			qbd.draw_and_clear();
 		}
 
 		void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
