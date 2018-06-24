@@ -930,7 +930,7 @@ bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius,
 }
 bool check_bcube_sphere_coll(bridge_t const &bridge, point const &sc, float radius, bool xy_only) {
 	cube_t bcube(bridge);
-	float const shrink(bridge.dim ? DY_VAL : DX_VAL);
+	float const shrink(2.0*(bridge.dim ? DY_VAL : DX_VAL));
 	bcube.d[bridge.dim][0] += shrink; bcube.d[bridge.dim][1] -= shrink;
 	return check_bcube_sphere_coll(bcube, sc, radius, xy_only);
 }
@@ -1041,7 +1041,7 @@ public:
 					if (road_z > h) {
 						added += (road_z - h);
 
-						if (!end_bridge && road_z > h + 0.5*city_params.road_width) { // higher than terrain by a significant amount
+						if (!end_bridge && road_z > h + 1.0*city_params.road_width) { // higher than terrain by a significant amount
 							min_eq(six, (dim ? y : x));
 							max_eq(eix, (dim ? y : x));
 						}
@@ -1053,7 +1053,7 @@ public:
 					total += 1.0;
 				} // for x
 			} // for y
-			if (eix > six+4 && added > 2.0*city_params.road_width*total && added > 2.0*removed) {
+			if (eix > six+4 && added > 1.5*city_params.road_width*total && added > 2.0*removed) {
 				point ps, pe;
 				get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
 				bridge->d[dim][0] = ps[dim];
@@ -2249,7 +2249,7 @@ class city_road_gen_t {
 			}
 			draw_streetlights(dstate.s, dstate.xlate, shadow_only);
 			
-			// draw bridges; only in connector road network; bridges are sparse/uncommon, so don't need to be batched by blocks
+			// draw bridges and tunnels; only in connector road network; bridgesand tunnels are sparse/uncommon, so don't need to be batched by blocks
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {
 				dstate.draw_bridge(*b, shadow_only);
 				b->draw_streetlights(dstate.s, dstate.xlate, shadow_only);
