@@ -459,10 +459,10 @@ struct rect_t {
 struct flatten_op_t : public rect_t {
 	float z1, z2;
 	bool dim;
-	unsigned border;
+	unsigned border, skip_six, skip_eix;
 	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0) {}
 	flatten_op_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_, float z1_, float z2_, bool dim_, unsigned border_) :
-		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_) {}
+		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_), skip_six(0), skip_eix(0) {}
 };
 
 struct road_t : public cube_t {
@@ -1007,14 +1007,14 @@ public:
 		} // for y
 	}
 	float flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim, unsigned border,
-		bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr, tunnel_t *tunnel=nullptr)
+		unsigned skip_six=0, unsigned skip_eix=0, bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr, tunnel_t *tunnel=nullptr)
 	{
 		if (!stats_only) {last_flatten_op = flatten_op_t(x1, y1, x2, y2, z1, z2, dim, border);} // cache for later replay
 		assert(is_valid_region(x1, y1, x2, y2));
 		if (x1 == x2 || y1 == y2) return 0.0; // zero area
 		float const run_len(dim ? (y2 - y1) : (x2 - x1)), denom(1.0f/max(run_len, 1.0f)), dz(z2 - z1), border_inv(1.0/border);
 		int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
-		unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0), skip_six(six), skip_eix(eix);
+		unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0);
 		float tot_dz(0.0);
 		
 		if (dim) {
@@ -1063,7 +1063,7 @@ public:
 				bridge->make_bridge = 1;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 			}
-		}
+		} // end bridge logic
 		if (!stats_only && tunnel != nullptr && skip_eix == 0 && fabs(tunnel->get_slope_val()) < 0.2) { // determine if we should add a tunnel here
 			float const radius(1.0*city_params.road_width);
 			float added(0.0), removed(0.0), total(0.0);
@@ -1096,11 +1096,9 @@ public:
 				//cout << "*** ADD TUNNEL *** " << TXT(six) << TXT(eix) << TXT(x1) << TXT(x2) << TXT(y1) << TXT(y2) << endl;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 			}
-		}
-		if (!stats_only && skip_six < skip_eix) { // clip last_flatten_op to a partial range
-			//(dim ? last_flatten_op.y1 : last_flatten_op.x1) = skip_eix; // FIXME: use dim to select x2/y2 = skip_six?
-			(dim ? last_flatten_op.y2 : last_flatten_op.x2) = skip_six;
-		}
+		} // end tunnel logic
+		if (!stats_only && skip_six < skip_eix) {last_flatten_op.skip_six = skip_six; last_flatten_op.skip_eix = skip_eix;} // clip to a partial range
+
 		for (unsigned y = py1; y < py2; ++y) {
 			for (unsigned x = px1; x < px2; ++x) {
 				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
@@ -1124,7 +1122,7 @@ public:
 	float flatten_for_road(road_t const &road, unsigned border, bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr, tunnel_t *tunnel=nullptr) {
 		float const z_adj(ROAD_HEIGHT + 0.5*road.get_slope_val()*(road.dim ? DY_VAL : DX_VAL)); // account for a half texel of error for sloped roads
 		unsigned const rx1(get_x_pos(road.x1())), ry1(get_y_pos(road.y1())), rx2(get_x_pos(road.x2())), ry2(get_y_pos(road.y2()));
-		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, stats_only, decrease_only, bridge, tunnel);
+		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, 0, 0, stats_only, decrease_only, bridge, tunnel);
 	}
 }; // heightmap_query_t
 
@@ -2046,7 +2044,7 @@ class city_road_gen_t {
 					roads.push_back(road);
 					road_to_city.emplace_back(city1, city2);
 				} // Note: no bridges here, but could add them
-				return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, check_only);
+				return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, 0, 0, check_only);
 			}
 			unsigned const num_segs(ceil(road_len/city_params.conn_road_seg_len));
 			assert(num_segs > 0 && num_segs < 1000); // sanity check
@@ -2636,7 +2634,8 @@ public:
 					road_ix[!fdim] = global_rn.num_roads();
 					global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2, CONN_CITY_IX, city2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0); // check_only=0
 					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), road_ix[0], road_ix[1]);
-					hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, 0, 1); // decrease_only=1; remove any dirt that the prev road added
+					// decrease_only=1; remove any dirt that the prev road added
+					hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, fop.skip_six, fop.skip_eix, 0, 1);
 					hq.flatten_region_to(best_int_cube, city_params.road_border, 1); // one more pass to fix mesh that was raised above the intersection by a sloped road segment
 					return 1;
 				}
