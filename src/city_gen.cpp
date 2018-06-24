@@ -3251,7 +3251,6 @@ struct city_smap_manager_t {
 			dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF);
 			++num_used;
 		} // for i
-		cout << endl;
 	}
 	void clear_all_smaps(vector<light_source> &light_sources) {
 		for (auto i = light_sources.begin(); i != light_sources.end(); ++i) {i->release_smap();}
