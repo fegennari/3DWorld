@@ -1086,12 +1086,13 @@ void tile_t::create_or_update_weight_tex() {
 void tile_t::calc_avg_mesh_color() {
 
 	// determine average mesh color - doesn't work well due to discontinuities at the tile boundaries, would be better if adjacent tile was known
-	unsigned tot_weights[NTEX_DIRT] = {0};
+	int tot_weights[NTEX_DIRT] = {0}; // use a signed value to avoid wrapping around to const max when there's an error
 	avg_mesh_tex_color = BLACK;
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 
 	for (unsigned i = 0; i < num_texels; ++i) {
 		unsigned const off(4*i);
+		if (weight_data[off+1] == 255 && weight_data[off+1] == 255) continue; // skip disabled mesh sections
 		for (unsigned j = 0; j < 4; ++j) {tot_weights[j] += weight_data[off+j];}
 	}
 	tot_weights[4] += (255*num_texels - tot_weights[0] - tot_weights[1] - tot_weights[2] - tot_weights[3]);
