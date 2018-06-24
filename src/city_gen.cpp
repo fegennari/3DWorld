@@ -1091,9 +1091,8 @@ public:
 			} // for y
 			if (eix > six+4 && removed > 1.0*city_params.road_width*total && removed > 2.0*added) {
 				point ps, pe;
-				get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
+				get_segment_end_pts(*tunnel, six, eix, ps, pe);
 				tunnel->init(ps, pe, radius);
-				//cout << "*** ADD TUNNEL *** " << TXT(six) << TXT(eix) << TXT(x1) << TXT(x2) << TXT(y1) << TXT(y2) << endl;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 			}
 		} // end tunnel logic
