@@ -924,7 +924,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
 		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0);
-		bool const check_grass_place(check_city_sphere_coll(query_pos, radius));
+		bool const check_grass_place(check_city_sphere_coll(query_pos, radius, 0)); // ignore bridges and tunnels for this top-level query
 		bool const check_mesh_mask(check_mesh_disable(query_pos, radius));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
@@ -1005,7 +1005,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					float grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
 					
 					if (grass_scale > 0.0 && check_grass_place &&
-						check_city_sphere_coll(point(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0), HALF_DXY))
+						check_city_sphere_coll(point(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0), HALF_DXY, 1)) // exclude bridges and tunnels here
 					{
 						weights[dirt_tex_ix] += weights[grass_tex_ix]; // replace grass with dirt
 						weights[grass_tex_ix] = 0.0;
