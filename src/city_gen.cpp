@@ -913,10 +913,19 @@ struct tunnel_t : public road_t {
 
 	tunnel_t(road_t const &road) : road_t(road), radius(0.0) {}
 	
-	void init(point const &start, point const &end, float radius_) {
-		radius = radius_;
-		ends[0].set_from_sphere(start, radius);
-		ends[1].set_from_sphere(end,   radius);
+	void init(point const &start, point const &end, float radius_, bool dim) {
+		radius = radius_; // Note: expanded
+		vector3d const dir((end - start).get_norm());
+		point const extend[2] = {(start + dir*radius), (end - dir*radius)};
+		ends[0].set_from_point(start);
+		ends[1].set_from_point(end);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			ends[d].z2() += radius; // height
+			ends[d].d[!dim][0] -= radius; // width
+			ends[d].d[!dim][1] += radius; // width
+			ends[d].union_with_pt(extend[d]); // length
+		}
 		get_bcube() = ends[0]; get_bcube().union_with_cube(ends[1]); // bounding cube of both ends - overwrite road bcube
 	}
 	bool check_mesh_disable(cube_t const &query_region) const {
@@ -1092,7 +1101,7 @@ public:
 			if (eix > six+4 && removed > 1.0*city_params.road_width*total && removed > 2.0*added) {
 				point ps, pe;
 				get_segment_end_pts(*tunnel, six, eix, ps, pe);
-				tunnel->init(ps, pe, radius);
+				tunnel->init(ps, pe, radius, dim);
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 			}
 		} // end tunnel logic
@@ -1458,8 +1467,21 @@ class city_road_gen_t {
 			if (!shadow_only) {select_texture(WHITE_TEX);}
 			quad_batch_draw &qbd(qbd_bridge); // use same qbd as bridges
 			color_wrapper cw_concrete(LT_GRAY);
-			// FIXME: WRITE
-			draw_cube(qbd, tunnel, cw_concrete, 1); // skip_bottom=1
+			bool const d(tunnel.dim);
+			// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
+			//draw_cube(qbd, tunnel, cw_concrete, 1); // for debugging
+			float const wall_thick(0.25*city_params.road_width);
+			float const z1(tunnel.z1()), z2(tunnel.z2()); // FIXME: need to be sloped base on the road: z1a, z1b, z2a, z2b like bridges
+			cube_t cubes[4] = {tunnel, tunnel, tunnel, tunnel}; // bottom, top, left, right
+			cubes[0].z1() = z1 - wall_thick; // bottom cube extends below the road surface
+			cubes[0].z2() = z1 - ROAD_HEIGHT; // top of bottom cube is just below the road surface
+			cubes[1].z1() = z2 - wall_thick; // top cube
+			cubes[1].z2() = z2;
+			cubes[2].z1() = cubes[3].z1() = cubes[0].z2(); // bottom of sides meet bottom cube
+			cubes[2].z2() = cubes[3].z2() = cubes[1].z1(); // top of sides meet top cube
+			cubes[2].d[!d][1] = cubes[2].d[!d][0] + wall_thick; // left side
+			cubes[3].d[!d][0] = cubes[3].d[!d][1] - wall_thick; // right side
+			for (unsigned i = 0; i < 4; ++i) {draw_cube(qbd, cubes[i], cw_concrete, (i != 1));} // skip_bottom=1 for all but the top cube
 			qbd.draw_and_clear();
 		}
 
