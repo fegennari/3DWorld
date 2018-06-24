@@ -909,19 +909,20 @@ struct bridge_t : public road_t, public streetlights_t {
 struct tunnel_t : public road_t {
 
 	cube_t ends[2];
-	float radius;
+	float radius, height;
 
-	tunnel_t(road_t const &road) : road_t(road), radius(0.0) {}
+	tunnel_t(road_t const &road) : road_t(road), radius(0.0), height(0.0) {}
 	
 	void init(point const &start, point const &end, float radius_, bool dim) {
-		radius = radius_; // Note: expanded
+		radius = radius_;
+		height = 1.25*radius;
 		vector3d const dir((end - start).get_norm());
 		point const extend[2] = {(start + dir*radius), (end - dir*radius)};
 		ends[0].set_from_point(start);
 		ends[1].set_from_point(end);
 
 		for (unsigned d = 0; d < 2; ++d) {
-			ends[d].z2() += radius; // height
+			ends[d].z2() += height; // height
 			ends[d].d[!dim][0] -= radius; // width
 			ends[d].d[!dim][1] += radius; // width
 			ends[d].union_with_pt(extend[d]); // length
@@ -989,12 +990,12 @@ public:
 	}
 	void get_segment_end_pts(road_t const &r, unsigned six, unsigned eix, point &ps, point &pe) const {
 		float const sv(r.dim ? get_y_value(six) : get_x_value(six)), ev(r.dim ? get_y_value(eix) : get_x_value(eix)); // start/end pos of bridge in road dim
-		float const dz(r.get_dz()), len(r.get_length()), v0(r.dim ? r.y1() : r.x1());
+		float const z1(r.get_start_z()), z2(r.get_end_z()), dz(z2 - z1), len(r.get_length()), v0(r.dim ? r.y1() : r.x1());
 		ps[ r.dim] = sv;
 		pe[ r.dim] = ev;
 		ps[!r.dim] = pe[!r.dim] = 0.5*(r.d[!r.dim][0] + r.d[!r.dim][1]);
-		ps.z = r.z1() + dz*CLIP_TO_01((sv - v0)/len);
-		pe.z = r.z1() + dz*CLIP_TO_01((ev - v0)/len);
+		ps.z = z1 + dz*CLIP_TO_01((sv - v0)/len);
+		pe.z = z1 + dz*CLIP_TO_01((ev - v0)/len);
 	}
 	void flatten_region_to(cube_t const c, unsigned slope_width, bool decrease_only=0) {
 		flatten_region_to(get_x_pos(c.x1()), get_y_pos(c.y1()), get_x_pos(c.x2()), get_y_pos(c.y2()), slope_width, (c.z1() - ROAD_HEIGHT), decrease_only);
@@ -1464,24 +1465,36 @@ class city_road_gen_t {
 			if (!check_cube_visible(tunnel, 1.0, shadow_only)) return; // VFC/too far
 			ensure_shader_active(); // needed for use_smap=0 case
 			begin_tile(tunnel.get_cube_center(), 1);
-			if (!shadow_only) {select_texture(WHITE_TEX);}
 			quad_batch_draw &qbd(qbd_bridge); // use same qbd as bridges
 			color_wrapper cw_concrete(LT_GRAY);
-			bool const d(tunnel.dim);
+			bool const d(tunnel.dim), dir(0), invert_normals(d ^ dir);
 			// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
-			//draw_cube(qbd, tunnel, cw_concrete, 1); // for debugging
-			float const wall_thick(0.25*city_params.road_width);
-			float const z1(tunnel.z1()), z2(tunnel.z2()); // FIXME: need to be sloped base on the road: z1a, z1b, z2a, z2b like bridges
-			cube_t cubes[4] = {tunnel, tunnel, tunnel, tunnel}; // bottom, top, left, right
-			cubes[0].z1() = z1 - wall_thick; // bottom cube extends below the road surface
-			cubes[0].z2() = z1 - ROAD_HEIGHT; // top of bottom cube is just below the road surface
-			cubes[1].z1() = z2 - wall_thick; // top cube
-			cubes[1].z2() = z2;
+			//draw_cube(qbd, tunnel, color_wrapper(RED), 1); // for debugging
+			//for (unsigned i = 0; i < 2; ++i) {draw_cube(qbd, tunnel.ends[i], color_wrapper(YELLOW), 1);} // for debugging
+			float const scale(1.0*city_params.road_width), wall_thick(0.25*scale);
+			float const zf(tunnel.ends[0].z1()), zb(tunnel.ends[1].z1());
+			cube_t cubes[4] = {tunnel, tunnel, tunnel, tunnel}; // bottom, top, left, right - zval relative to 0.0
+			cubes[0].z1() = -wall_thick; // bottom cube extends below the road surface
+			cubes[0].z2() = -ROAD_HEIGHT; // top of bottom cube is just below the road surface
+			cubes[1].z1() = tunnel.height - wall_thick; // top cube
+			cubes[1].z2() = tunnel.height;
 			cubes[2].z1() = cubes[3].z1() = cubes[0].z2(); // bottom of sides meet bottom cube
 			cubes[2].z2() = cubes[3].z2() = cubes[1].z1(); // top of sides meet top cube
 			cubes[2].d[!d][1] = cubes[2].d[!d][0] + wall_thick; // left side
 			cubes[3].d[!d][0] = cubes[3].d[!d][1] - wall_thick; // right side
-			for (unsigned i = 0; i < 4; ++i) {draw_cube(qbd, cubes[i], cw_concrete, (i != 1));} // skip_bottom=1 for all but the top cube
+			point pts[8];
+			float tscale(0.0);
+
+			if (!shadow_only) {
+				select_texture(get_texture_by_name("roads/asphalt.jpg"));
+				tscale = 1.0/scale; // scale texture to match road width
+			}
+			for (unsigned i = 0; i < 4; ++i) {
+				cube_t const &c(cubes[i]);
+				point const center(c.get_cube_center() + vector3d(0.0, 0.0, 0.5*(zf + zb)));
+				set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, dir, pts);
+				draw_cube(qbd, cw_concrete, center, pts, (i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube
+			}
 			qbd.draw_and_clear();
 		}
 
