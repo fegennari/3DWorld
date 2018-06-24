@@ -1387,7 +1387,7 @@ class city_road_gen_t {
 						}
 					}
 				} // for e
-				if (zval > cur_zpos) { // horizontal connectors
+				if (zval > cur_zpos + 0.5*scale) { // add horizontal connectors if high enough
 					cube_t c(conn_pts[0], conn_pts[1]);
 					vector3d exp(zero_vector);
 					exp.z  = 0.75*conn_thick;
@@ -1406,6 +1406,7 @@ class city_road_gen_t {
 				select_texture(get_texture_by_name("roads/asphalt.jpg"));
 				tscale = 1.0/scale; // scale texture to match road width
 			}
+			bool const dir(bridge.slope), invert_normals((d!=0) ^ dir);
 			float const dz_scale(bridge.dz()/(bridge.d[d][1] - bridge.d[d][0]));
 			cur_dval = bcube.d[d][0]; // reset to start
 			point pts[8];
@@ -1417,7 +1418,8 @@ class city_road_gen_t {
 				bot_bc.d[ d][1]  = next_dval;
 				bot_bc.d[!d][0] += 0.4*w_expand;
 				bot_bc.d[!d][1] -= 0.4*w_expand;
-				float const extend_dz1(dz_scale*(bridge.d[d][0] - bot_bc.d[d][0])), extend_dz2(dz_scale*(bot_bc.d[d][1] - bridge.d[d][1]));
+				float extend_dz1(dz_scale*(bridge.d[d][0] - bot_bc.d[d][0])), extend_dz2(dz_scale*(bot_bc.d[d][1] - bridge.d[d][1]));
+				if (dir) {swap(extend_dz1, extend_dz2);}
 				float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
 				point bot_center(bot_bc.get_cube_center());
 				bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
@@ -1427,8 +1429,8 @@ class city_road_gen_t {
 					begin_tile(query_pt, 1); // will_emit_now=1
 				}
 				// add bottom road/bridge surface
-				set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, 0, 0, pts);
-				draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0, 0, tscale); // skip_bottom=0
+				set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, (d != 0), dir, pts);
+				draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0, invert_normals, tscale); // skip_bottom=0
 
 				// add guardrails/walls
 				for (unsigned e = 0; e < 2; ++e) { // two sides
@@ -1436,8 +1438,8 @@ class city_road_gen_t {
 					side_bc.d[!d][!e] = side_bc.d[!d][e] + (e ? -wall_width : wall_width);
 					point side_center(side_bc.get_cube_center());
 					side_center.z = 0.5*(z1 + z2) + 0.5*wall_height;
-					set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, 0, 0, pts);
-					draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, 0, tscale); // skip_bottom=1
+					set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, (d != 0), dir, pts);
+					draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, invert_normals, tscale); // skip_bottom=1
 				}
 				qbd_bridge.draw_and_clear(); // flush
 				cur_dval = next_dval;
