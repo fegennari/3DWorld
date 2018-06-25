@@ -367,10 +367,10 @@ public:
 		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // right
 		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // left
 	}
-	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom) const {
+	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale=0.0) const {
 		point pts[8];
 		set_cube_pts(c, 0, 0, pts);
-		draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom);
+		draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom, 0, tscale);
 	}
 	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 		point pos(xlate + flare_pos);
@@ -478,7 +478,8 @@ struct road_t : public cube_t {
 		point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
 		set_from_points(pts, 4);
 	}
-	float get_length   () const {return (d[dim][1] - d[dim][0]);}
+	float get_length   () const {return (d[ dim][1] - d[ dim][0]);}
+	float get_width    () const {return (d[!dim][1] - d[!dim][0]);}
 	float get_slope_val() const {return get_dz()/get_length();}
 	float get_start_z  () const {return (slope ? z2() : z1());}
 	float get_end_z    () const {return (slope ? z1() : z2());}
@@ -909,9 +910,10 @@ struct bridge_t : public road_t, public streetlights_t {
 struct tunnel_t : public road_t {
 
 	cube_t ends[2];
-	float radius, height;
+	float radius, height, facade_height[2];
 
 	tunnel_t(road_t const &road) : road_t(road), radius(0.0), height(0.0) {}
+	bool enabled() const {return (radius > 0.0);}
 	
 	void init(point const &start, point const &end, float radius_, bool dim) {
 		radius = radius_;
@@ -926,6 +928,7 @@ struct tunnel_t : public road_t {
 			ends[d].d[!dim][0] -= radius; // width
 			ends[d].d[!dim][1] += radius; // width
 			ends[d].union_with_pt(extend[d]); // length
+			facade_height[d] = 0.0; // TBD
 		}
 		get_bcube() = ends[0]; get_bcube().union_with_cube(ends[1]); // bounding cube of both ends - overwrite road bcube
 	}
@@ -1108,6 +1111,11 @@ public:
 				seg_min_dh = tunnel->height;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 				tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
+				unsigned qpt[2] = {(x1 + x2)/2, (y1 + y2)/2}; // start at center
+				qpt[dim] = six;
+				tunnel->facade_height[0] = get_height(qpt[0], qpt[1]) - ps.z;
+				qpt[dim] = eix;
+				tunnel->facade_height[1] = get_height(qpt[0], qpt[1]) - pe.z;
 			}
 		} // end tunnel logic
 		if (!stats_only && skip_six < skip_eix) {last_flatten_op.skip_six = skip_six; last_flatten_op.skip_eix = skip_eix;} // clip to a partial range
@@ -1119,9 +1127,10 @@ public:
 				float &h(get_height(x, y));
 				if (decrease_only && h < road_z) continue; // don't increase
 				float new_h;
+				unsigned dist(0);
 
 				if (border > 0) {
-					unsigned const dist(dim ? max(0, max(((int)x1 - (int)x - 1), ((int)x - (int)x2))) : max(0, max(((int)y1 - (int)y - 1), ((int)y - (int)y2))));
+					dist = (dim ? max(0, max(((int)x1 - (int)x - 1), ((int)x - (int)x2))) : max(0, max(((int)y1 - (int)y - 1), ((int)y - (int)y2))));
 					new_h = smooth_interp(h, road_z, dist*border_inv);
 				} else {new_h = road_z;}
 				tot_dz += fabs(h - new_h);
@@ -1129,8 +1138,12 @@ public:
 				unsigned const dv(dim ? y : x);
 
 				if (dv > skip_six && dv < skip_eix) { // don't modify mesh height at bridges or tunnels, but still count it toward the cost
-					if (seg_min_dh > 0.0) {max_eq(h, (road_z + seg_min_dh));} // clamp to roof of tunnel (Note: doesn't count toward tot_dz)
-				} else {h = new_h;} // apply the height change
+					if (seg_min_dh > 0.0) { // clamp to roof of tunnel (Note: doesn't count toward tot_dz)
+						float const zmin(road_z + seg_min_dh);
+						if (h < zmin) {h = smooth_interp(h, zmin, dist*border_inv);}
+					}
+				}
+				else {h = new_h;} // apply the height change
 			} // for x
 		} // for y
 		return tot_dz;
@@ -1469,18 +1482,25 @@ class city_road_gen_t {
 		}
 
 		void draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
-			if (!check_cube_visible(tunnel, 1.0, shadow_only)) return; // VFC/too far
+			cube_t bcube(tunnel);
+			bcube.expand_by(vector3d(tunnel.radius, tunnel.radius, 0.0));
+			bcube.z2() += max(tunnel.facade_height[0], tunnel.facade_height[1]); // should be close enough
+			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 			ensure_shader_active(); // needed for use_smap=0 case
 			begin_tile(tunnel.get_cube_center(), 1);
 			quad_batch_draw &qbd(qbd_bridge); // use same qbd as bridges
 			color_wrapper cw_concrete(LT_GRAY);
-			bool const d(tunnel.dim), dir(0), invert_normals(d ^ dir);
+			bool const d(tunnel.dim), invert_normals(d);
 			// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
 			//draw_cube(qbd, tunnel, color_wrapper(RED), 1); // for debugging
 			//for (unsigned i = 0; i < 2; ++i) {draw_cube(qbd, tunnel.ends[i], color_wrapper(YELLOW), 1);} // for debugging
 			float const scale(1.0*city_params.road_width), wall_thick(0.25*scale);
-			float const zf(tunnel.ends[0].z1()), zb(tunnel.ends[1].z1());
-			cube_t cubes[4] = {tunnel, tunnel, tunnel, tunnel}; // bottom, top, left, right - zval relative to 0.0
+			float zf(tunnel.ends[0].z1()), zb(tunnel.ends[1].z1());
+			float const end_ext(2.0*(d ? DY_VAL : DX_VAL)), dz_ext(end_ext*(zb - zf)/tunnel.get_length());
+			zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
+			cube_t tc(tunnel);
+			tc.d[d][0] -= end_ext; tc.d[d][1] += end_ext; // extend to cover the gaps in the mesh
+			cube_t cubes[4] = {tc, tc, tc, tc}; // bottom, top, left, right - zval relative to 0.0
 			cubes[0].z1() = -wall_thick; // bottom cube extends below the road surface
 			cubes[0].z2() = -ROAD_HEIGHT; // top of bottom cube is just below the road surface
 			cubes[1].z1() = tunnel.height - wall_thick; // top cube
@@ -1496,12 +1516,34 @@ class city_road_gen_t {
 				select_texture(get_texture_by_name("roads/asphalt.jpg"));
 				tscale = 1.0/scale; // scale texture to match road width
 			}
-			for (unsigned i = 0; i < 4; ++i) {
+			for (unsigned i = 0; i < 4; ++i) { // add tunnel top, bottom, and sides
 				cube_t const &c(cubes[i]);
 				point const center(c.get_cube_center() + vector3d(0.0, 0.0, 0.5*(zf + zb)));
-				set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, dir, pts);
+				set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, pts); // dir=9 here
 				draw_cube(qbd, cw_concrete, center, pts, (i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube
 			}
+			qbd.draw_and_clear();
+			bool const dir(tunnel.ends[1].d[d][0] > tunnel.ends[0].d[d][0]); // positive
+			float const width(max(0.5*tunnel.get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
+
+			if (!shadow_only) {
+				select_texture(get_texture_by_name("cblock2.jpg"));
+				tscale *= 4.0;
+			}
+			for (unsigned n = 0; n < 2; ++n) { // add tunnel facades
+				// too wide, need extend outward
+				cube_t const &tend(tunnel.ends[n]);
+				cube_t c(tend);
+				c.z1() += tunnel.height; // tunnel ceiling
+				c.z2() += tunnel.facade_height[n]; // high enough to cover the hole in the mesh
+				c.d[d][0] -= end_ext; c.d[d][1] += end_ext; // extend to cover the gaps in the mesh (both dirs)
+				draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0
+				c.z1() = tunnel.ends[n].z1() - wall_thick; // extend to the bottom
+				c.d[!d][0] = tunnel.ends[n].d[!d][0] - width; c.d[!d][1] = tend.d[!d][0]; // left side
+				draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
+				c.d[!d][1] = tunnel.ends[n].d[!d][1] + width; c.d[!d][0] = tend.d[!d][1]; // right side
+				draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
+			} // for n
 			qbd.draw_and_clear();
 		}
 
@@ -2125,10 +2167,10 @@ class city_road_gen_t {
 					roads.push_back(*s);
 					road_to_city.emplace_back(city1, city2); // Note: city index is specified even for internal (non-terminal) roads
 					if (bridge.make_bridge) {bridges.push_back(bridge);}
-					if (tunnel.radius > 0 ) {tunnels.push_back(tunnel);}
+					if (tunnel.enabled()) {tunnels.push_back(tunnel);}
 				}
 				last_was_bridge = bridge.make_bridge; // Note: conservative; used to prevent two consecutive bridges with no (or not enough) mesh in between
-				last_was_tunnel = (tunnel.radius > 0); // same thing for tunnels
+				last_was_tunnel = (tunnel.enabled()); // same thing for tunnels
 			}
 			if (!check_only) { // post-flatten pass to fix up dirt at road joints - doesn't help much
 				last_was_bridge = last_was_tunnel = 0;
@@ -2138,7 +2180,7 @@ class city_road_gen_t {
 					tunnel_t tunnel(*s); // Note: set but value unused
 					hq.flatten_for_road(*s, city_params.road_border, 0, 1, (last_was_bridge ? nullptr : &bridge), (last_was_tunnel ? nullptr : &tunnel)); // decrease_only=1
 					last_was_bridge = bridge.make_bridge;
-					last_was_tunnel = (tunnel.radius > 0);
+					last_was_tunnel = (tunnel.enabled());
 				}
 			}
 			return tot_dz; // success
