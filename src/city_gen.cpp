@@ -1111,11 +1111,19 @@ public:
 				seg_min_dh = tunnel->height;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 				tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
-				unsigned qpt[2] = {(x1 + x2)/2, (y1 + y2)/2}; // start at center
-				qpt[dim] = six;
-				tunnel->facade_height[0] = get_height(qpt[0], qpt[1]) - ps.z;
-				qpt[dim] = eix;
-				tunnel->facade_height[1] = get_height(qpt[0], qpt[1]) - pe.z;
+				int const rwidth(ceil(city_params.road_width/(dim ? DX_VAL : DY_VAL)));
+
+				for (int dxy = -rwidth; dxy <= rwidth; ++dxy) { // shifts in !dim
+					unsigned qpt[2] = {(x1 + x2)/2, (y1 + y2)/2}; // start at center
+					qpt[!dim] += dxy;
+
+					for (unsigned n = 0; n < 4; ++n) { // take several samples and find the peak mesh hieght for the tunnel facades
+						qpt[dim] = six + n;
+						max_eq(tunnel->facade_height[0], (get_height(qpt[0], qpt[1]) - ps.z));
+						qpt[dim] = eix - n;
+						max_eq(tunnel->facade_height[1], (get_height(qpt[0], qpt[1]) - pe.z));
+					} // for n
+				} // for dxy
 			}
 		} // end tunnel logic
 		if (!stats_only && skip_six < skip_eix) {last_flatten_op.skip_six = skip_six; last_flatten_op.skip_eix = skip_eix;} // clip to a partial range
@@ -1487,7 +1495,6 @@ class city_road_gen_t {
 			bcube.z2() += max(tunnel.facade_height[0], tunnel.facade_height[1]); // should be close enough
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 			ensure_shader_active(); // needed for use_smap=0 case
-			begin_tile(tunnel.get_cube_center(), 1);
 			quad_batch_draw &qbd(qbd_bridge); // use same qbd as bridges
 			color_wrapper cw_concrete(LT_GRAY);
 			bool const d(tunnel.dim), invert_normals(d);
@@ -1511,6 +1518,7 @@ class city_road_gen_t {
 			cubes[3].d[!d][0] = cubes[3].d[!d][1] - wall_thick; // right side
 			point pts[8];
 			float tscale(0.0);
+			begin_tile(tunnel.get_cube_center(), 1);
 
 			if (!shadow_only) {
 				select_texture(get_texture_by_name("roads/asphalt.jpg"));
@@ -1531,20 +1539,20 @@ class city_road_gen_t {
 				tscale *= 4.0;
 			}
 			for (unsigned n = 0; n < 2; ++n) { // add tunnel facades
-				// too wide, need extend outward
 				cube_t const &tend(tunnel.ends[n]);
 				cube_t c(tend);
-				c.z1() += tunnel.height; // tunnel ceiling
+				c.z1() += tunnel.height - 0.5*wall_thick; // tunnel ceiling
 				c.z2() += tunnel.facade_height[n]; // high enough to cover the hole in the mesh
-				c.d[d][0] -= end_ext; c.d[d][1] += end_ext; // extend to cover the gaps in the mesh (both dirs)
+				c.d[d][0] -= 0.9*end_ext; c.d[d][1] += 0.9*end_ext; // extend to cover the gaps in the mesh (both dirs) - slightly less than interior so that it sticks out
+				begin_tile(c.get_cube_center(), 1); // required for long tunnels where facade is in a different tile from the tunnel center
 				draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0
 				c.z1() = tunnel.ends[n].z1() - wall_thick; // extend to the bottom
 				c.d[!d][0] = tunnel.ends[n].d[!d][0] - width; c.d[!d][1] = tend.d[!d][0]; // left side
 				draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
 				c.d[!d][1] = tunnel.ends[n].d[!d][1] + width; c.d[!d][0] = tend.d[!d][1]; // right side
 				draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
+				qbd.draw_and_clear();
 			} // for n
-			qbd.draw_and_clear();
 		}
 
 		void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
