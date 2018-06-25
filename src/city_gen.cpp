@@ -1536,7 +1536,7 @@ class city_road_gen_t {
 				cube_t const &c(cubes[i]);
 				point const center(c.get_cube_center() + vector3d(0.0, 0.0, 0.5*(zf + zb)));
 				set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, pts); // dir=9 here
-				draw_cube(qbd, cw_concrete, center, pts, (i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube
+				draw_cube(qbd, cw_concrete, center, pts, (!shadow_only && i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube unless shadowed
 			}
 			qbd.draw_and_clear();
 			bool const dir(tunnel.ends[1].d[d][0] > tunnel.ends[0].d[d][0]); // positive
