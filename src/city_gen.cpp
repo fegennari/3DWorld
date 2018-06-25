@@ -3448,6 +3448,7 @@ bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float 
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
 	if (check_city_sphere_coll(pos, radius, !is_tall))  return 0; // exclude bridges if not tall
+	if (check_mesh_disable(pos, (radius + 2.0*HALF_DXY))) return 0; // check tunnels
 	return 1;
 }
 bool check_mesh_disable(point const &pos, float radius) {
