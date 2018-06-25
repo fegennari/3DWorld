@@ -1026,6 +1026,7 @@ public:
 		int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
 		unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0);
 		float tot_dz(0.0), seg_min_dh(0.0);
+		float const bridge_cost(0.0), bridge_dist_cost(0.0), tunnel_cost(0.0), tunnel_dist_cost(0.0); // Note: currently set to zero, but could be used
 		
 		if (dim) {
 			px1 = max((int)x1-pad, 0);
@@ -1072,6 +1073,7 @@ public:
 				bridge->z2() = max(ps.z, pe.z);
 				bridge->make_bridge = 1;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
+				tot_dz += bridge_cost + bridge_dist_cost*bridge->get_length();
 			}
 		} // end bridge logic
 		if (!stats_only && tunnel != nullptr && skip_eix == 0 && fabs(tunnel->get_slope_val()) < 0.2) { // determine if we should add a tunnel here
@@ -1105,6 +1107,7 @@ public:
 				tunnel->init(ps, pe, radius, dim);
 				seg_min_dh = tunnel->height;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
+				tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
 			}
 		} // end tunnel logic
 		if (!stats_only && skip_six < skip_eix) {last_flatten_op.skip_six = skip_six; last_flatten_op.skip_eix = skip_eix;} // clip to a partial range
