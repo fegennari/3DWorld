@@ -1025,7 +1025,7 @@ public:
 		float const run_len(dim ? (y2 - y1) : (x2 - x1)), denom(1.0f/max(run_len, 1.0f)), dz(z2 - z1), border_inv(1.0/border);
 		int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
 		unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0);
-		float tot_dz(0.0);
+		float tot_dz(0.0), seg_min_dh(0.0);
 		
 		if (dim) {
 			px1 = max((int)x1-pad, 0);
@@ -1103,6 +1103,7 @@ public:
 				point ps, pe;
 				get_segment_end_pts(*tunnel, six, eix, ps, pe);
 				tunnel->init(ps, pe, radius, dim);
+				seg_min_dh = tunnel->height;
 				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 			}
 		} // end tunnel logic
@@ -1121,9 +1122,12 @@ public:
 					new_h = smooth_interp(h, road_z, dist*border_inv);
 				} else {new_h = road_z;}
 				tot_dz += fabs(h - new_h);
+				if (stats_only) continue; // no height update
 				unsigned const dv(dim ? y : x);
-				if (dv > skip_six && dv < skip_eix) continue; // don't modify mesh height at bridges or tunnels, but still count it toward the cost
-				if (!stats_only) {h = new_h;} // apply the height change
+
+				if (dv > skip_six && dv < skip_eix) { // don't modify mesh height at bridges or tunnels, but still count it toward the cost
+					if (seg_min_dh > 0.0) {max_eq(h, (road_z + seg_min_dh));} // clamp to roof of tunnel (Note: doesn't count toward tot_dz)
+				} else {h = new_h;} // apply the height change
 			} // for x
 		} // for y
 		return tot_dz;
