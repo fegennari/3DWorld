@@ -866,18 +866,14 @@ struct streetlights_t {
 };
 
 
-struct bridge_t : public road_t, public streetlights_t {
+struct road_connector_t : public road_t, public streetlights_t {
 
-	road_t src_road;
-	bool make_bridge;
-
-	bridge_t(road_t const &road) : road_t(road), src_road(road), make_bridge(0) {}
-
-	void add_streetlights() {
-		unsigned const num_per_side = 4;
+	road_connector_t(road_t const &road) : road_t(road) {}
+	
+	void add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb) {
 		streetlights.reserve(2*num_per_side);
-		float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]), dn_shift(0.05*dnsz);
-		float const za(get_start_z()), zb(get_end_z());
+		float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]), dn_shift(dn_shift_mult*dnsz);
+		if (staggered) {num_per_side *= 2;}
 
 		for (unsigned n = 0; n < num_per_side; ++n) {
 			float const v((n + 0.5)/num_per_side); // 1/8, 3/8, 5/8, 7/8
@@ -886,10 +882,20 @@ struct bridge_t : public road_t, public streetlights_t {
 			pos1[!dim] = d[!dim][0] - dn_shift; pos2[!dim] = d[!dim][1] + dn_shift;
 			pos1.z = pos2.z = za + v*(zb - za);
 			vector3d dir(zero_vector); dir[!dim] = 1.0;
-			streetlights.emplace_back(pos1,  dir);
-			streetlights.emplace_back(pos2, -dir);
+			if (!staggered || (n&1) == 0) {streetlights.emplace_back(pos1,  dir);}
+			if (!staggered || (n&1) == 1) {streetlights.emplace_back(pos2, -dir);}
 		} // for n
 	}
+};
+
+struct bridge_t : public road_connector_t {
+
+	road_t src_road;
+	bool make_bridge;
+
+	bridge_t(road_t const &road) : road_connector_t(road), src_road(road), make_bridge(0) {}
+	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
+
 	bool proc_sphere_coll(point &center, point const &prev, float radius, float prev_frame_zval, vector3d const &xlate) const {
 		if (proc_streetlight_sphere_coll(center, radius, xlate)) return 1;
 		float const exp(0.5*radius);
@@ -907,12 +913,12 @@ struct bridge_t : public road_t, public streetlights_t {
 	}
 };
 
-struct tunnel_t : public road_t {
+struct tunnel_t : public road_connector_t {
 
 	cube_t ends[2];
 	float radius, height, facade_height[2];
 
-	tunnel_t(road_t const &road) : road_t(road), radius(0.0), height(0.0) {}
+	tunnel_t(road_t const &road) : road_connector_t(road), radius(0.0), height(0.0) {}
 	bool enabled() const {return (radius > 0.0);}
 	
 	void init(point const &start, point const &end, float radius_, bool dim) {
@@ -932,6 +938,8 @@ struct tunnel_t : public road_t {
 		}
 		get_bcube() = ends[0]; get_bcube().union_with_cube(ends[1]); // bounding cube of both ends - overwrite road bcube
 	}
+	void add_streetlights() {road_connector_t::add_streetlights(2, 1, -0.15, ends[0].z1(), ends[1].z1());} // 2 per side, staggered
+
 	bool check_mesh_disable(cube_t const &query_region) const {
 		return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region)); // check both ends
 	}
@@ -2221,8 +2229,9 @@ class city_road_gen_t {
 				} // for n
 			} // for r
 		}
-		void finalize_bridges() {
+		void finalize_bridges_and_tunnels() {
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlights();}
+			for (auto b = tunnels.begin(); b != tunnels.end(); ++b) {b->add_streetlights();}
 		}
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
@@ -2348,12 +2357,14 @@ class city_road_gen_t {
 			}
 			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {
 				dstate.draw_tunnel(*t, shadow_only);
+				t->draw_streetlights(dstate.s, dstate.xlate, shadow_only);
 			}
 			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}
 		void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 			add_streetlight_dlights(xlate, lights_bcube);
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlight_dlights(xlate, lights_bcube);}
+			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {t->add_streetlight_dlights(xlate, lights_bcube);}
 		}
 
 		// cars
@@ -2765,7 +2776,7 @@ public:
 		assign_city_clusters();
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
-		global_rn.finalize_bridges();
+		global_rn.finalize_bridges_and_tunnels();
 	}
 	void gen_tile_blocks() {
 		timer_t timer("Gen Tile Blocks");
