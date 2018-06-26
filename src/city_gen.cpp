@@ -868,7 +868,8 @@ struct streetlights_t {
 
 struct road_connector_t : public road_t, public streetlights_t {
 
-	road_connector_t(road_t const &road) : road_t(road) {}
+	road_t src_road;
+	road_connector_t(road_t const &road) : road_t(road), src_road(road) {}
 	
 	void add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb) {
 		streetlights.reserve(2*num_per_side);
@@ -890,10 +891,9 @@ struct road_connector_t : public road_t, public streetlights_t {
 
 struct bridge_t : public road_connector_t {
 
-	road_t src_road;
 	bool make_bridge;
 
-	bridge_t(road_t const &road) : road_connector_t(road), src_road(road), make_bridge(0) {}
+	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
 	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
 
 	bool proc_sphere_coll(point &center, point const &prev, float radius, float prev_frame_zval, vector3d const &xlate) const {
@@ -943,7 +943,21 @@ struct tunnel_t : public road_connector_t {
 	bool check_mesh_disable(cube_t const &query_region) const {
 		return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region)); // check both ends
 	}
-	//bool proc_sphere_coll(point &center, point const &prev, float radius, float prev_frame_zval, vector3d const &xlate) const {return 0;}
+	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate) const {
+		if (proc_streetlight_sphere_coll(center, sradius, xlate)) return 1;
+		bool const prev_int(contains_pt_xy(prev - xlate));
+		if (!prev_int && !contains_pt_xy(center - xlate)) return 0; // no x/y containment for road segment (cur or prev)
+		cube_t const c(src_road + xlate);
+		float const t((center[dim] - c.d[dim][0])/(c.d[dim][1] - c.d[dim][0]));
+		float const za(slope ? c.z2() : c.z1()), zb(slope ? c.z1() : c.z2()), zval(za + (zb - za)*t); // z-value at x/y location
+		// Note: we need to use prev_frame_zval for camera collisions because center.z will always start at the mesh zval;
+		// we can't just always place the camera on the tunnel because the player may be walking on the ground above the tunnel
+		if (prev_frame_zval - sradius > zval + height) return 0; // completely above the tunnel
+		center.z = zval + sradius - ROAD_HEIGHT; // place exactly on mesh under the road/tunnel surface
+		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere inside the tunnel (approximate)
+		// FIXME: if camera is in tunnel, need to disable mesh occlusion culling, which isn't aware of mesh holes
+		return 1;
+	}
 };
 
 bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
@@ -1507,8 +1521,6 @@ class city_road_gen_t {
 			color_wrapper cw_concrete(LT_GRAY);
 			bool const d(tunnel.dim), invert_normals(d);
 			// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
-			//draw_cube(qbd, tunnel, color_wrapper(RED), 1); // for debugging
-			//for (unsigned i = 0; i < 2; ++i) {draw_cube(qbd, tunnel.ends[i], color_wrapper(YELLOW), 1);} // for debugging
 			float const scale(1.0*city_params.road_width), wall_thick(0.25*scale);
 			float zf(tunnel.ends[0].z1()), zb(tunnel.ends[1].z1());
 			float const end_ext(2.0*(d ? DY_VAL : DX_VAL)), dz_ext(end_ext*(zb - zf)/tunnel.get_length());
@@ -2304,6 +2316,9 @@ class city_road_gen_t {
 				}
 			}
 			for (auto i = bridges.begin(); i != bridges.end(); ++i) {
+				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate)) return 1;
+			}
+			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
 				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate)) return 1;
 			}
 			if (proc_streetlight_sphere_coll(pos, radius, xlate)) return 1;
