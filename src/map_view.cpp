@@ -212,9 +212,9 @@ void draw_overhead_map() {
 				else {
 					float mh(0.0);
 					bool mh_set(0), shadowed(0);
+					float const xval((j - nx2)*xsv + camera.x + map_x), yval((i - ny2)*ysv + camera.y + map_y);
 
 					if (world_mode == WMODE_GROUND) {
-						float const xval((j - nx2)*xsv + camera.x + map_x), yval((i - ny2)*ysv + camera.y + map_y);
 						point p1(xval, yval, czmax);
 						bool const over_mesh(is_over_mesh(p1));
 						colorRGBA building_color;
@@ -245,6 +245,14 @@ void draw_overhead_map() {
 								continue;
 							}
 							if (mh_set) {shadowed = is_shadowed(point(xval, yval, mh), plus_z, lpos, cindex2);}
+						}
+					} // end ground mode
+					else if (world_mode == WMODE_INF_TERRAIN && have_cities()) { // show cities and road networks
+						colorRGBA city_color;
+
+						if (get_city_color_at_xy(xval, yval, city_color)) {
+							unpack_color(rgb, city_color); // no shadows
+							continue;
 						}
 					}
 					if (default_ground_tex >= 0 && map_color) {

@@ -2320,6 +2320,26 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
+		bool get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
+			if (!bcube.contains_pt_xy(pos)) return 0;
+			
+			for (auto i = bridges.begin(); i != bridges.end(); ++i) {
+				if (i->contains_pt_xy_exp(pos, 1.0*city_params.road_width)) {color = WHITE; return 1;}
+			}
+			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
+				if (i->contains_pt_xy(pos)) {color = BROWN; return 1;}
+			}
+			for (auto i = roads.begin(); i != roads.end(); ++i) { // use an acceleration structure?
+				if (i->contains_pt_xy(pos)) {color = GRAY; return 1;}
+			}
+			if (plots.empty()) { // connector road
+				for (auto i = isecs[0].begin(); i != isecs[0].end(); ++i) { // 2-way intersections
+					if (i->contains_pt_xy(pos)) {color = GRAY; return 1;}
+				}
+			}
+			if (!plots.empty()) {color = LT_GRAY; return 1;} // inside a city and not over a road - must be over a plot
+			return 0;
+		}
 
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			if (empty()) return;
@@ -2800,6 +2820,15 @@ public:
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 
+	bool get_color_at_xy(float x, float y, colorRGBA &color) const {
+		point const pos(point(x, y, 0.0) - get_camera_coord_space_xlate());
+		if (global_rn.get_color_at_xy(pos, color)) return 1;
+
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
+			if (r->get_color_at_xy(pos, color)) return 1;
+		}
+		return 0;
+	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			if (r->proc_sphere_coll(pos, p_last, radius, prev_frame_zval)) return 1;
@@ -3392,7 +3421,9 @@ public:
 		//return car_manager.proc_sphere_coll(pos, p_last, radius); // Note: doesn't really work well, disabled
 		return 0;
 	}
-	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
+	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
+	bool get_color_at_xy(float x, float y, colorRGBA &color) const {return road_gen.get_color_at_xy(x, y, color);}
+	
 	void next_frame() {
 		road_gen.next_frame(); // update stoplights
 		car_manager.next_frame(city_params.car_speed);
@@ -3476,6 +3507,7 @@ bool check_mesh_disable(point const &pos, float radius) {
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
 	return city_gen.check_mesh_disable(center, radius);
 }
+bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
 void free_city_context() {city_gen.free_context();}
 

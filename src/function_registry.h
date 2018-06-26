@@ -345,6 +345,7 @@ bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only);
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall=0);
 bool check_mesh_disable(point const &pos, float radius);
+bool get_city_color_at_xy(float x, float y, colorRGBA &color);
 void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap);
 cube_t get_city_lights_bcube();
 void free_city_context();
