@@ -43,7 +43,7 @@ unsigned const AO_RAY_LEN(NUM_AO_STEPS*(NUM_AO_STEPS+1)/2); // 36
 enum {FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS, NUM_FIRE_MODES};
 
 
-bool tt_lightning_enabled(0);
+bool tt_lightning_enabled(0), check_tt_mesh_occlusion(1);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
@@ -2408,7 +2408,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 	// determine potential occluders
 	point const camera(get_camera_pos());
 
-	if ((display_mode & 0x08) && (display_mode & 0x01)) { // check occlusion when occlusion culling and mesh are enabled
+	if ((display_mode & 0x08) && (display_mode & 0x01) && check_tt_mesh_occlusion) { // check occlusion when occlusion culling and mesh are enabled
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			tile_t *const tile(i->second.get());
 			if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;

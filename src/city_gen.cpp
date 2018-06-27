@@ -955,8 +955,7 @@ struct tunnel_t : public road_connector_t {
 		if (prev_frame_zval - sradius > zval + height) return 0; // completely above the tunnel
 		center.z = zval + sradius - ROAD_HEIGHT; // place exactly on mesh under the road/tunnel surface
 		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere inside the tunnel (approximate)
-		// FIXME: if camera is in tunnel, need to disable mesh occlusion culling, which isn't aware of mesh holes
-		return 1;
+		return 1; // Note: will disable mesh occlusion culling
 	}
 };
 

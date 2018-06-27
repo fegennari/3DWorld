@@ -121,7 +121,7 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress;
+extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, check_tt_mesh_occlusion;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -439,6 +439,8 @@ void move_camera_pos_xy(vector3d const &v, float dist) {
 	surface_pos.y += xy_scale*v.y;
 	if (world_mode == WMODE_INF_TERRAIN) {check_legal_movement_using_model_coll(prev, surface_pos, CAMERA_RADIUS);} // collision with models
 	proc_city_sphere_coll(surface_pos, prev, CAMERA_RADIUS, prev_camera_zval, 0); // use prev pos for building collisions
+	// disable tiled terrain occlusion culling if the player is under the mesh, for example in a tunnel
+	if (world_mode == WMODE_INF_TERRAIN) {check_tt_mesh_occlusion = !(surface_pos.z < int_mesh_zval_pt_off(surface_pos, 1, 1) - CAMERA_RADIUS);}
 	prev_camera_zval = surface_pos.z;
 }
 
