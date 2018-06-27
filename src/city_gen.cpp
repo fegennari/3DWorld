@@ -34,6 +34,10 @@ unsigned const CONN_TYPE_NONE = 0;
 colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
 colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
 
+int       const FORCE_MODEL_ID = -1; // -1 disables
+unsigned  const NUM_CAR_COLORS = 10;
+colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
+
 
 extern bool enable_dlight_shadows, dl_smap_enabled;
 extern int rand_gen_index, display_mode, animate2;
@@ -406,6 +410,7 @@ struct car_t {
 	bool in_isect   () const {return is_isect(cur_road_type);}
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
+	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 
 	string str() const {
 		std::ostringstream oss;
@@ -2834,8 +2839,7 @@ public:
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 
-	bool get_color_at_xy(float x, float y, colorRGBA &color) const {
-		point const pos(point(x, y, 0.0) - get_camera_coord_space_xlate());
+	bool get_color_at_xy(point const &pos, colorRGBA &color) const {
 		if (global_rn.get_color_at_xy(pos, color)) return 1;
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
@@ -2935,10 +2939,6 @@ bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vect
 	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos);
 }
 
-
-int       const FORCE_MODEL_ID = -1; // -1 disables
-unsigned  const NUM_CAR_COLORS = 10;
-colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
 class car_manager_t {
 
@@ -3106,8 +3106,7 @@ class car_manager_t {
 			if (!check_cube_visible(car.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
 			point const center(car.get_center());
 			begin_tile(center); // enable shadows
-			assert(car.color_id < NUM_CAR_COLORS);
-			colorRGBA const &color(car_colors[car.color_id]);
+			colorRGBA const &color(car.get_color());
 			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
 			bool const draw_top(dist_val < 0.25), dim(car.dim), dir(car.dir);
 			float const sign((dim^dir) ? -1.0 : 1.0);
@@ -3267,6 +3266,20 @@ public:
 
 			for (unsigned c = cb->start; c != end; ++c) {
 				if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate)) return 1;
+			}
+		} // for cb
+		return 0;
+	}
+	bool get_color_at_xy(point const &pos, colorRGBA &color) const {
+		if (cars.empty()) return 0;
+
+		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+			if (!road_gen.get_city_bcube(cb->cur_city).contains_pt_xy(pos)) continue; // skip
+			unsigned const end((cb+1)->start);
+			assert(end <= cars.size());
+
+			for (unsigned c = cb->start; c != end; ++c) { // Note: slow, could use road as accel structure
+				if (cars[c].bcube.contains_pt_xy(pos)) {color = cars[c].get_color(); return 1;}
 			}
 		} // for cb
 		return 0;
@@ -3436,8 +3449,11 @@ public:
 		return 0;
 	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
-	bool get_color_at_xy(float x, float y, colorRGBA &color) const {return road_gen.get_color_at_xy(x, y, color);}
-	
+
+	bool get_color_at_xy(float x, float y, colorRGBA &color) const {
+		point const pos(point(x, y, 0.0) - get_camera_coord_space_xlate());
+		return (car_manager.get_color_at_xy(pos, color) || road_gen.get_color_at_xy(pos, color)); // check cars first
+	}
 	void next_frame() {
 		road_gen.next_frame(); // update stoplights
 		car_manager.next_frame(city_params.car_speed);
