@@ -488,6 +488,7 @@ struct road_t : public cube_t {
 	float get_slope_val() const {return get_dz()/get_length();}
 	float get_start_z  () const {return (slope ? z2() : z1());}
 	float get_end_z    () const {return (slope ? z1() : z2());}
+	float get_z_adj    () const {return (ROAD_HEIGHT + 0.5*get_slope_val()*(dim ? DY_VAL : DX_VAL));} // account for a half texel of error for sloped roads
 	cube_t const &get_bcube() const {return *this;}
 	cube_t       &get_bcube()       {return *this;}
 };
@@ -876,6 +877,11 @@ struct road_connector_t : public road_t, public streetlights_t {
 	road_t src_road;
 	road_connector_t(road_t const &road) : road_t(road), src_road(road) {}
 	
+	float get_player_zval(point const &center, cube_t const &c) const {
+		float const t((center[dim] - c.d[dim][0])/(c.d[dim][1] - c.d[dim][0]));
+		float const za(slope ? c.z2() : c.z1()), zb(slope ? c.z1() : c.z2()), zval(za + (zb - za)*t); // z-value at x/y location
+		return zval - src_road.get_z_adj() - ROAD_HEIGHT; // place exactly on mesh under the road/bridge/tunnel surface
+	}
 	void add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb) {
 		streetlights.reserve(2*num_per_side);
 		float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]), dn_shift(dn_shift_mult*dnsz);
@@ -901,18 +907,17 @@ struct bridge_t : public road_connector_t {
 	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
 	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
 
-	bool proc_sphere_coll(point &center, point const &prev, float radius, float prev_frame_zval, vector3d const &xlate) const {
-		if (proc_streetlight_sphere_coll(center, radius, xlate)) return 1;
-		float const exp(0.5*radius);
+	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate) const {
+		if (proc_streetlight_sphere_coll(center, sradius, xlate)) return 1;
+		float const exp(0.5*sradius);
 		bool const prev_int(contains_pt_xy_exp((prev - xlate), exp));
 		if (!prev_int && !src_road.contains_pt_xy_exp((center - xlate), exp)) return 0; // no x/y containment for road segment (cur or prev)
-		cube_t const c(*this + xlate);
-		float const t((center[dim] - c.d[dim][0])/(c.d[dim][1] - c.d[dim][0]));
-		float const za(slope ? c.z2() : c.z1()), zb(slope ? c.z1() : c.z2()), zval(za + (zb - za)*t); // z-value at x/y location
+		cube_t const c(src_road + xlate);
+		float const zval(get_player_zval(center, c));
 		// Note: we need to use prev_frame_zval for camera collisions because center.z will always start at the mesh zval;
 		// we can't just always place the camera on the bridge because the player may be walking on the ground under the bridge
-		if (center.z - radius > zval || prev_frame_zval + radius < zval) return 0; // completely above or below the road/bridge
-		center.z = zval + radius; // place exactly on the road/bridge surface
+		if (center.z - sradius > zval || prev_frame_zval + sradius < zval) return 0; // completely above or below the road/bridge
+		center.z = zval + sradius; // place exactly on the road/bridge surface
 		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere from falling off the bridge (approximate; assumes bridge has walls)
 		return 1;
 	}
@@ -953,12 +958,11 @@ struct tunnel_t : public road_connector_t {
 		bool const prev_int(contains_pt_xy(prev - xlate));
 		if (!prev_int && !contains_pt_xy(center - xlate)) return 0; // no x/y containment for road segment (cur or prev)
 		cube_t const c(src_road + xlate);
-		float const t((center[dim] - c.d[dim][0])/(c.d[dim][1] - c.d[dim][0]));
-		float const za(slope ? c.z2() : c.z1()), zb(slope ? c.z1() : c.z2()), zval(za + (zb - za)*t); // z-value at x/y location
+		float const zval(get_player_zval(center, c));
 		// Note: we need to use prev_frame_zval for camera collisions because center.z will always start at the mesh zval;
 		// we can't just always place the camera on the tunnel because the player may be walking on the ground above the tunnel
 		if (prev_frame_zval - sradius > zval + height) return 0; // completely above the tunnel
-		center.z = zval + sradius - ROAD_HEIGHT; // place exactly on mesh under the road/tunnel surface
+		center.z = zval + sradius; // place exactly on mesh under the road/tunnel surface
 		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere inside the tunnel (approximate)
 		return 1; // Note: will disable mesh occlusion culling
 	}
@@ -1183,7 +1187,7 @@ public:
 		return tot_dz;
 	}
 	float flatten_for_road(road_t const &road, unsigned border, bool stats_only=0, bool decrease_only=0, bridge_t *bridge=nullptr, tunnel_t *tunnel=nullptr) {
-		float const z_adj(ROAD_HEIGHT + 0.5*road.get_slope_val()*(road.dim ? DY_VAL : DX_VAL)); // account for a half texel of error for sloped roads
+		float const z_adj(road.get_z_adj());
 		unsigned const rx1(get_x_pos(road.x1())), ry1(get_y_pos(road.y1())), rx2(get_x_pos(road.x2())), ry2(get_y_pos(road.y2()));
 		return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, 0, 0, stats_only, decrease_only, bridge, tunnel);
 	}
