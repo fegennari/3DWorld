@@ -30,6 +30,7 @@ unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  NUM_RD_TIDS };
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
+enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PLOT_PARKING};
 unsigned const CONN_TYPE_NONE = 0;
 colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
 colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
@@ -442,8 +443,8 @@ struct comp_car_road_then_pos {
 
 	bool operator()(car_t const &c1, car_t const &c2) const { // sort spatially for collision detection and drawing
 		if (c1.cur_city != c2.cur_city) return (c1.cur_city < c2.cur_city);
-		if (c1.cur_road != c2.cur_road) return (c1.cur_road < c2.cur_road);
 		if (c1.is_parked() != c2.is_parked()) {return c2.is_parked();} // parked cars last
+		if (c1.cur_road != c2.cur_road) return (c1.cur_road < c2.cur_road);
 		
 		if (c1.is_parked()) { // sort parked cars back to front relative to camera so that alpha blending works
 			return (p2p_dist_sq((c1.bcube.get_cube_center() + xlate), camera_pdu.pos) > p2p_dist_sq((c2.bcube.get_cube_center() + xlate), camera_pdu.pos));
@@ -754,7 +755,8 @@ struct road_isec_t : public cube_t {
 };
 
 struct road_plot_t : public cube_t {
-	road_plot_t(cube_t const &c) : cube_t(c) {}
+	bool has_parking;
+	road_plot_t(cube_t const &c) : cube_t(c), has_parking(0) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
@@ -1635,18 +1637,19 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
-		void gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, rand_gen_t &rgen) {
+		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, rand_gen_t &rgen) {
 			vector3d const nom_car_size(city_params.get_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
 			float const pad_dist   (1.0*nom_car_size.x); // one car length
 			plot.expand_by_xy(-pad_dist);
 			get_building_bcubes(plot, bcubes);
-			if (bcubes.empty()) return; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
+			if (bcubes.empty()) return 0; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
 			unsigned const first_corner(rgen.rand()&3); // 0-3
 			bool const car_dim(rgen.rand() & 1); // 0=cars face in X; 1=cars face in Y
 			bool const car_dir(rgen.rand() & 1);
 			float const xsz(car_dim ? space_width : space_len), ysz(car_dim ? space_len : space_width);
+			bool has_parking(0);
 			//cout << "max_row_sz: " << floor(plot.get_size()[!car_dim]/space_width) << ", max_num_rows: " << floor(plot.get_size()[car_dim]/space_len) << endl;
 			car_t car;
 			car.park();
@@ -1714,12 +1717,14 @@ class city_road_gen_t {
 							cars.push_back(car);
 							if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // pack backwards 1/8 of the time
 							++filled_spaces;
+							has_parking = 1;
 						}
 						pos[!car_dim] += dw;
 					} // for col
 					pos[car_dim] += dr;
 				} // for row
 			} // for c
+			return has_parking;
 		}
 		static bool check_pt_and_place_blocker(point const &pos, vector<cube_t> &blockers, float radius, float extra_spacing) {
 			cube_t bc(pos);
@@ -1786,7 +1791,7 @@ class city_road_gen_t {
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
 		void clear() {parking_lots.clear(); num_spaces = filled_spaces = 0;}
 
-		void gen_parking_and_place_objects(vector<road_plot_t> const &plots, vector<car_t> &cars, unsigned city_id) {
+		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<car_t> &cars, unsigned city_id) { // Note: fills in plots.has_parking
 			if (city_params.min_park_spaces == 0 || city_params.min_park_rows == 0) return; // disable parking lots
 			timer_t timer("Gen Parking Lots and Place Objects");
 			vector<cube_t> bcubes; // reused across calls
@@ -1799,7 +1804,7 @@ class city_road_gen_t {
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				bcubes.clear();
-				gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);
+				i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);
 				place_trees_in_plot (*i, bcubes, detail_rgen);
 				place_detail_objects(*i, bcubes, detail_rgen);
 			} // for i
@@ -2343,25 +2348,26 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
-		bool get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
+		int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 			if (!bcube.contains_pt_xy(pos)) return 0;
 			
 			for (auto i = bridges.begin(); i != bridges.end(); ++i) {
-				if (i->contains_pt_xy_exp(pos, 1.0*city_params.road_width)) {color = WHITE; return 1;}
+				if (i->contains_pt_xy_exp(pos, 1.0*city_params.road_width)) {color = WHITE; return INT_ROAD;}
 			}
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-				if (i->contains_pt_xy(pos)) {color = BROWN; return 1;}
+				if (i->contains_pt_xy(pos)) {color = BROWN; return INT_ROAD;}
 			}
 			for (auto i = roads.begin(); i != roads.end(); ++i) { // use an acceleration structure?
-				if (i->contains_pt_xy(pos)) {color = GRAY; return 1;}
+				if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 			}
 			if (plots.empty()) { // connector road
 				for (auto i = isecs[0].begin(); i != isecs[0].end(); ++i) { // 2-way intersections
-					if (i->contains_pt_xy(pos)) {color = GRAY; return 1;}
+					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 				}
 			}
-			if (!plots.empty()) {color = LT_GRAY; return 1;} // inside a city and not over a road - must be over a plot
-			return 0;
+			// FIXME: check if plot has parking, and skip car check if not
+			if (!plots.empty()) {color = LT_GRAY; return INT_PLOT;} // inside a city and not over a road - must be over a plot
+			return INT_NONE;
 		}
 
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
@@ -2843,13 +2849,15 @@ public:
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 
-	bool get_color_at_xy(point const &pos, colorRGBA &color) const {
-		if (global_rn.get_color_at_xy(pos, color)) return 1;
+	int get_color_at_xy(point const &pos, colorRGBA &color) const {
+		int const ret(global_rn.get_color_at_xy(pos, color));
+		if (ret) return ret;
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (r->get_color_at_xy(pos, color)) return 1;
+			int const ret(r->get_color_at_xy(pos, color));
+			if (ret) return ret;
 		}
-		return 0;
+		return INT_NONE;
 	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
@@ -3209,8 +3217,8 @@ class car_manager_t {
 	}; // car_draw_state_t
 
 	struct car_block_t {
-		unsigned start, cur_city;
-		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c) {}
+		unsigned start, cur_city, first_parked;
+		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c), first_parked(0) {}
 	};
 
 	city_road_gen_t const &road_gen;
@@ -3274,15 +3282,18 @@ public:
 		} // for cb
 		return 0;
 	}
-	bool get_color_at_xy(point const &pos, colorRGBA &color) const {
-		if (cars.empty()) return 0;
+	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const {
+		if (cars.empty() || int_ret == INT_NONE) return 0;
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			if (!road_gen.get_city_bcube(cb->cur_city).contains_pt_xy(pos)) continue; // skip
-			unsigned const end((cb+1)->start);
+			unsigned start(cb->start), end((cb+1)->start);
 			assert(end <= cars.size());
+			if      (int_ret == INT_ROAD) {end   = cb->first_parked;} // moving cars only (beginning of range)
+			else if (int_ret == INT_PLOT) {start = cb->first_parked;} // parked cars only (end of range)
+			assert(start <= end);
 
-			for (unsigned c = cb->start; c != end; ++c) { // Note: slow, could use road as accel structure
+			for (unsigned c = start; c != end; ++c) { // Note: slow, could use road as accel structure
 				if (cars[c].bcube.contains_pt_xy(pos)) {color = cars[c].get_color(); return 1;}
 			}
 		} // for cb
@@ -3295,15 +3306,26 @@ public:
 		entering_city.clear();
 		car_blocks.clear();
 		float const speed(0.001*car_speed*fticks);
+		bool saw_parked(0);
 		//unsigned num_on_conn_road(0);
 		
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
-			if (car_blocks.empty() || i->cur_city != car_blocks.back().cur_city) {car_blocks.emplace_back((i - cars.begin()), i->cur_city);}
-			if (i->is_parked()) continue; // no update for parked cars
+			unsigned const cix(i - cars.begin());
+
+			if (car_blocks.empty() || i->cur_city != car_blocks.back().cur_city) {
+				if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cix;}
+				saw_parked = 0;
+				car_blocks.emplace_back(cix, i->cur_city);
+			}
+			if (i->is_parked()) {
+				if (!saw_parked) {car_blocks.back().first_parked = cix; saw_parked = 1;}
+				continue; // no update for parked cars
+			}
 			i->move(speed);
-			if (i->entering_city) {entering_city.push_back(i - cars.begin());} // record for use in collision detection
+			if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
 			if (!i->stopped_at_light && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
-		}
+		} // for i
+		if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();}
 		car_blocks.emplace_back(cars.size(), 0); // add terminator
 
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
@@ -3456,7 +3478,10 @@ public:
 
 	bool get_color_at_xy(float x, float y, colorRGBA &color) const {
 		point const pos(point(x, y, 0.0) - get_camera_coord_space_xlate());
-		return (car_manager.get_color_at_xy(pos, color) || road_gen.get_color_at_xy(pos, color)); // check cars first
+		int const int_ret(road_gen.get_color_at_xy(pos, color)); // check roads/plots first to determine if we need to check cars
+		if (int_ret == INT_NONE) return 0; // no road/plot intersection - done
+		car_manager.get_color_at_xy(pos, color, int_ret); // check cars next, but override the color
+		return 1;
 	}
 	void next_frame() {
 		road_gen.next_frame(); // update stoplights
