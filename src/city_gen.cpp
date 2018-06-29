@@ -30,7 +30,7 @@ unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  NUM_RD_TIDS };
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
-enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PLOT_PARKING};
+enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING};
 unsigned const CONN_TYPE_NONE = 0;
 colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
 colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
@@ -1821,6 +1821,12 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
+		bool pt_in_parking_lot_xy(point const &pos) const {
+			for (auto p = parking_lots.begin(); p != parking_lots.end(); ++p) {
+				if (p->contains_pt_xy(pos)) return 1;
+			}
+			return 0;
+		}
 	}; // city_obj_placer_t
 
 	class road_network_t : public streetlights_t {
@@ -2365,7 +2371,7 @@ class city_road_gen_t {
 					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 				}
 			}
-			// FIXME: check if plot has parking, and skip car check if not
+			if (city_obj_placer.pt_in_parking_lot_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
 			if (!plots.empty()) {color = LT_GRAY; return INT_PLOT;} // inside a city and not over a road - must be over a plot
 			return INT_NONE;
 		}
@@ -3283,14 +3289,15 @@ public:
 		return 0;
 	}
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const {
-		if (cars.empty() || int_ret == INT_NONE) return 0;
+		if (cars.empty()) return 0;
+		if (int_ret != INT_ROAD && int_ret != INT_PARKING) return 0; // not a road or a parking lot - no car intersections
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			if (!road_gen.get_city_bcube(cb->cur_city).contains_pt_xy(pos)) continue; // skip
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(end <= cars.size());
-			if      (int_ret == INT_ROAD) {end   = cb->first_parked;} // moving cars only (beginning of range)
-			else if (int_ret == INT_PLOT) {start = cb->first_parked;} // parked cars only (end of range)
+			if      (int_ret == INT_ROAD)    {end   = cb->first_parked;} // moving cars only (beginning of range)
+			else if (int_ret == INT_PARKING) {start = cb->first_parked;} // parked cars only (end of range)
 			assert(start <= end);
 
 			for (unsigned c = start; c != end; ++c) { // Note: slow, could use road as accel structure
