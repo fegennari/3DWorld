@@ -20,7 +20,7 @@ double map_x(0.0), map_y(0.0);
 extern bool water_is_lava, begin_motion, show_map_view_mandelbrot;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex;
-extern float zmax_est, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale;
+extern float zmax_est, zmin, zmax, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
@@ -250,10 +250,10 @@ void draw_overhead_map() {
 					else if (world_mode == WMODE_INF_TERRAIN && have_cities()) { // show cities and road networks
 						colorRGBA city_color(BLACK);
 
-						/*if (get_buildings_line_hit_color(point(xval, yval, mh+max_building_dz), point(xval, yval, mh), city_color)) {
+						if (get_buildings_line_hit_color(point(xval, yval, zmin+max_building_dz), point(xval, yval, zmax), city_color)) {
 							unpack_color(rgb, city_color); // no shadows
 							continue;
-						}*/
+						}
 						if (get_city_color_at_xy(xval, yval, city_color)) {
 							unpack_color(rgb, city_color); // no shadows
 							continue;
