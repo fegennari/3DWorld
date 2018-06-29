@@ -1717,7 +1717,8 @@ public:
 		if (empty()) return 0;
 		bool const vertical(p1.x == p2.x && p1.y == p2.y);
 		vector3d const xlate(get_camera_coord_space_xlate());
-		cube_t bcube(p1-xlate, p2-xlate);
+		point const p1x(p1 - xlate);
+		cube_t bcube(p1x, p2-xlate);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		point end_pos(p2);
@@ -1730,7 +1731,8 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (!check_line_clip(p1, end_pos, ge.bcube.d)) continue; // no intersection - skip this grid
+				if (ge.ixs.empty()) continue; // skip empty grid
+				if (!check_line_clip(p1x, (end_pos - xlate), ge.bcube.d)) continue; // no intersection - skip this grid
 
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) { // Note: okay to check the same building more than once
 					building_t const &building(get_building(*b));
