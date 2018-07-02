@@ -164,7 +164,8 @@ private:
 	unsigned weight_tid, height_tid, normal_tid, shadow_tid;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
-	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass, is_distant, no_trees, just_cleared;
+	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
+	bool is_distant, no_trees, just_cleared, has_disabled_area;
 	colorRGB avg_mesh_tex_color;
 	tile_offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
@@ -325,6 +326,7 @@ public:
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
 	}
 	float get_bsphere_radius_inc_water() const;
+	bool use_as_occluder() const;
 	bool mesh_sphere_intersect(point const &pos, float rradius) const;
 	bool update_range(tile_shadow_map_manager &smap_manager);
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), get_bsphere_radius_inc_water(), get_bcube());}
