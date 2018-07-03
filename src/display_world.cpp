@@ -770,6 +770,7 @@ void display(void) {
 			update_cpos();
 			apply_camera_offsets(get_camera_pos());
 			check_xy_offsets();
+			next_city_frame(); // make sure the cars animate
 		}
 		else if (world_mode == WMODE_GROUND) {
 			process_groups();
