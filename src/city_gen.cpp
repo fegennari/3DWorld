@@ -410,6 +410,7 @@ struct car_t {
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
 	bool in_isect   () const {return is_isect(cur_road_type);}
+	bool headlights_on() const {return(!is_parked() && (is_night() /*|| in_tunnel*/));} // no headlights when parked
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
@@ -797,7 +798,7 @@ namespace streetlight_ns {
 			float const height(light_height*city_params.road_width);
 			return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
 		}
-		void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow) const { // Note: translate has already been applied as a transform
+		void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow, bool always_on) const { // Note: translate has already been applied as a transform
 			float const height(light_height*city_params.road_width);
 			point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
 			if (shadow_only && is_local_shadow && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
@@ -811,19 +812,20 @@ namespace streetlight_ns {
 			if (!shadow_only) {s.set_cur_color(pole_color);}
 			draw_cylinder_at(pos, height, pradius, 0.7*pradius, min(ndiv, 24), 0); // vertical post, no ends
 			if (dist_val < 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
+			bool const is_on(always_on || is_night());
 			
 			if (shadow_only) {
 				if (dist_less_than(camera_pdu.pos, (get_lpos() + xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
 			}
 			else {
-				if (!is_night() && dist_val > 0.15) return; // too far
-				if (is_night()) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
+				if (!is_on && dist_val > 0.15) return; // too far
+				if (is_on) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
 			}
 			fgPushMatrix();
 			translate_to(lpos);
 			scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
 			draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
-			if (!shadow_only && is_night()) {s.clear_color_e();}
+			if (!shadow_only && is_on) {s.clear_color_e();}
 
 			if (!shadow_only && dist_val < 0.12) {
 				fgTranslate(0.0, 0.0, 0.1); // translate up slightly and draw top cap of light
@@ -857,14 +859,15 @@ struct streetlights_t {
 
 	vector<streetlight_ns::streetlight_t> streetlights;
 
-	void draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only) const {
+	void draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only, bool always_on) const {
 		if (streetlights.empty()) return;
 		//timer_t t("Draw Streetlights");
 		select_texture(WHITE_TEX);
 		bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
-		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(s, xlate, shadow_only, is_local_shadow);}
+		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(s, xlate, shadow_only, is_local_shadow, always_on);}
 	}
-	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube) const {
+	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {
+		if (!always_on && !is_night()) return; // not on
 		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube);}
 	}
 	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate) const {
@@ -1897,6 +1900,7 @@ class city_road_gen_t {
 		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
 		unsigned num_roads() const {return roads.size();}
 		bool empty() const {return roads.empty();}
+		bool has_tunnels() const {return !tunnels.empty();}
 		void set_cluster(unsigned id) {cluster_id = id;}
 		void register_connected_city(unsigned id) {connected_to.insert(id);}
 		set<unsigned> const &get_connected() const {return connected_to;}
@@ -2423,23 +2427,23 @@ class city_road_gen_t {
 					}
 				} // for b
 			}
-			draw_streetlights(dstate.s, dstate.xlate, shadow_only);
+			draw_streetlights(dstate.s, dstate.xlate, shadow_only, 0);
 			
 			// draw bridges and tunnels; only in connector road network; bridgesand tunnels are sparse/uncommon, so don't need to be batched by blocks
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {
 				dstate.draw_bridge(*b, shadow_only);
-				b->draw_streetlights(dstate.s, dstate.xlate, shadow_only);
+				b->draw_streetlights(dstate.s, dstate.xlate, shadow_only, 0);
 			}
 			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {
 				dstate.draw_tunnel(*t, shadow_only);
-				t->draw_streetlights(dstate.s, dstate.xlate, shadow_only);
+				t->draw_streetlights(dstate.s, dstate.xlate, shadow_only, 1); // always_on=1
 			}
 			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}
 		void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
-			add_streetlight_dlights(xlate, lights_bcube);
-			for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlight_dlights(xlate, lights_bcube);}
-			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {t->add_streetlight_dlights(xlate, lights_bcube);}
+			add_streetlight_dlights(xlate, lights_bcube, 0);
+			for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlight_dlights(xlate, lights_bcube, 0);}
+			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {t->add_streetlight_dlights(xlate, lights_bcube, 1);} // always_on=1
 		}
 
 		// cars
@@ -2715,6 +2719,7 @@ class city_road_gen_t {
 
 public:
 	bool empty() const {return road_networks.empty();}
+	bool has_tunnels() const {return global_rn.has_tunnels();}
 
 	cube_t const &get_city_bcube(unsigned city_ix) const {
 		if (city_ix == CONN_CITY_IX) {return global_rn.get_bcube();}
@@ -3176,7 +3181,7 @@ class car_manager_t {
 					v   += center;
 					v.z += 0.02*car.height; // shift up slightly to avoid z-fighting
 				}
-				/*if (!is_night()) { // daytime, adjust shadow to match sun pos
+				/*if (!car.headlights_on()) { // daytime, adjust shadow to match sun pos
 					vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
 					vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
 					for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
@@ -3188,7 +3193,7 @@ class car_manager_t {
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 
-			if (is_night() && dist_val < 0.3) { // night time headlights
+			if (car.headlights_on() && dist_val < 0.3) { // night time headlights
 				colorRGBA const hl_color(get_headlight_color(car));
 
 				for (unsigned d = 0; d < 2; ++d) { // L, R
@@ -3220,7 +3225,7 @@ class car_manager_t {
 			}
 		}
 		void add_car_headlights(car_t const &car, cube_t &lights_bcube) {
-			if (car.is_parked()) return; // no lights when parked
+			if (!car.headlights_on()) return;
 			float const headlight_dist(get_headlight_dist());
 			cube_t bcube(car.bcube);
 			bcube.expand_by(headlight_dist);
@@ -3516,7 +3521,7 @@ public:
 		car_manager.next_frame(city_params.car_speed);
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
-		bool const use_dlights(is_night());
+		bool const use_dlights(enable_lights());
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only);
 		// Note: buildings are drawn through draw_buildings()
@@ -3526,7 +3531,7 @@ public:
 		city_smap_manager.clear_all_smaps(dl_sources);
 		clear_dynamic_lights();
 		lights_bcube.set_to_zeros();
-		if (!is_night() && !prev_had_lights) return; // only have lights at night
+		if (!enable_lights() && !prev_had_lights) return; // only have lights at night
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
 		point const cpos(camera_pdu.pos - xlate);
 		lights_bcube = cube_t(cpos);
@@ -3549,6 +3554,7 @@ public:
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
 	}
+	bool enable_lights() const {return (is_night() || road_gen.has_tunnels());}
 	void free_context() {car_manager.free_context();}
 	cube_t get_lights_bcube() const {return lights_bcube;}
 }; // city_gen_t
