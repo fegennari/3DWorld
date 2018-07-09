@@ -393,13 +393,13 @@ class city_road_gen_t;
 
 struct car_t {
 	cube_t bcube, prev_bcube;
-	bool dim, dir, stopped_at_light, entering_city;
+	bool dim, dir, stopped_at_light, entering_city, in_tunnel;
 	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
 	unsigned short cur_city, cur_road, cur_seg;
 	float height, dz, rot_z, turn_val, cur_speed, max_speed;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC),
-		model_id(0), cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
+		front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
@@ -410,7 +410,7 @@ struct car_t {
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
 	bool in_isect   () const {return is_isect(cur_road_type);}
-	bool headlights_on() const {return(!is_parked() && (is_night() /*|| in_tunnel*/));} // no headlights when parked
+	bool headlights_on() const {return(!is_parked() && (is_night() || in_tunnel));} // no headlights when parked
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
@@ -2374,6 +2374,12 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
+		bool point_in_tunnel(point const &pos) const {
+			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
+				if (i->contains_pt(pos)) return 1; // Note: checks z-val
+			}
+			return 0;
+		}
 		int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 			if (!bcube.contains_pt_xy(pos)) return 0;
 			
@@ -2545,6 +2551,7 @@ class city_road_gen_t {
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << bcube.str() << endl; assert(0);} // sanity check
 			bool const dim(car.dim);
 			float const road_dz(bcube.get_dz());
+			car.in_tunnel = point_in_tunnel(car.get_center());
 
 			if (road_dz != 0.0) { // car on connector road
 				assert(car.cur_road_type == TYPE_RSEG);
@@ -2720,6 +2727,7 @@ class city_road_gen_t {
 public:
 	bool empty() const {return road_networks.empty();}
 	bool has_tunnels() const {return global_rn.has_tunnels();}
+	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
 
 	cube_t const &get_city_bcube(unsigned city_ix) const {
 		if (city_ix == CONN_CITY_IX) {return global_rn.get_bcube();}
