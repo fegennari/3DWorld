@@ -1074,7 +1074,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // details cube
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-		if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), t) && tmin < t) {t = tmin; coll = 2;} // roof quad
+		if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), tmin) && tmin < t) {t = tmin; coll = 2;} // roof quad
 	}
 	return coll;
 }
