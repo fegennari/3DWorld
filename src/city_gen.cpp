@@ -27,13 +27,14 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
-enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  NUM_RD_TIDS };
-enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, NUM_RD_TYPES};
+enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  NUM_RD_TIDS};
+enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING};
+enum {RTYPE_ROAD=0, RTYPE_TRACKS};
 unsigned const CONN_TYPE_NONE = 0;
 colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
 
 int       const FORCE_MODEL_ID = -1; // -1 disables
 unsigned  const NUM_CAR_COLORS = 10;
@@ -241,8 +242,8 @@ public:
 	void ensure_road_textures() {
 		if (inited) return;
 		timer_t timer("Load Road Textures");
-		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "parking_lot.png"};
-		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0};
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "parking_lot.png", "rail_tracks.jpg"};
+		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
 		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
 		sl_tid = get_texture_by_name("roads/traffic_light.png");
 		inited = 1;
@@ -473,6 +474,7 @@ struct flatten_op_t : public rect_t {
 
 struct road_t : public cube_t {
 	unsigned road_ix;
+	//unsigned char type; // road, railroad, etc. {RTYPE_ROAD, RTYPE_TRACKS}
 	bool dim; // dim the road runs in
 	bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
 
@@ -490,18 +492,11 @@ struct road_t : public cube_t {
 	float get_start_z  () const {return (slope ? z2() : z1());}
 	float get_end_z    () const {return (slope ? z1() : z2());}
 	float get_z_adj    () const {return (ROAD_HEIGHT + 0.5*get_slope_val()*(dim ? DY_VAL : DX_VAL));} // account for a half texel of error for sloped roads
+	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 	cube_t const &get_bcube() const {return *this;}
 	cube_t       &get_bcube()       {return *this;}
-};
 
-struct road_seg_t : public road_t {
-	unsigned short road_ix, conn_ix[2], conn_type[2]; // {dim=0, dim=1}
-	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
-	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix) {init_ixs();}
-	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {init_ixs();}
-	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
-
-	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const { // specialized here for sloped roads
+	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const { // specialized here for sloped roads (road segments and railroad tracks)
 		if (z1() == z2()) {add_flat_road_quad(*this, qbd, color, ar); return;}
 		bool const s(slope ^ dim);
 		point pts[4] = {point(x1(), y1(), d[2][!s]), point(x2(), y1(), d[2][!s]), point(x2(), y2(), d[2][ s]), point(x1(), y2(), d[2][ s])};
@@ -509,6 +504,13 @@ struct road_seg_t : public road_t {
 		vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
 		qbd.add_quad_pts(pts, color, normal, get_tex_range(ar));
 	}
+};
+
+struct road_seg_t : public road_t {
+	unsigned short road_ix, conn_ix[2], conn_type[2]; // {dim=0, dim=1}
+	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
+	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix) {init_ixs();}
+	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {init_ixs();}
 };
 
 namespace stoplight_ns {
@@ -1829,13 +1831,17 @@ class city_road_gen_t {
 		}
 	}; // city_obj_placer_t
 
+
 	class road_network_t : public streetlights_t {
+
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
 		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings
 		vector<bridge_t> bridges; // bridges, part of global road network
 		vector<tunnel_t> tunnels; // tunnels, part of global road network
+		vector<road_t> tracks; // railroad tracks (for global road network)
+		//vector<road_isec_t> track_turns; // for railroad tracks
 		city_obj_placer_t city_obj_placer;
 		cube_t bcube;
 		vector<road_t> segments; // reused temporary
@@ -1858,7 +1864,7 @@ class city_road_gen_t {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
 		};
 		struct tile_block_t { // collection of road parts for a given tile
-			range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot}
+			range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks}
 			quad_batch_draw quads[NUM_RD_TYPES];
 			cube_t bcube;
 			tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
@@ -1901,6 +1907,7 @@ class city_road_gen_t {
 			plots.clear();
 			bridges.clear();
 			tunnels.clear();
+			tracks.clear();
 			for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
 			streetlights.clear();
 			city_obj_placer.clear();
@@ -1968,10 +1975,15 @@ class city_road_gen_t {
 			} // for x
 			return 1;
 		}
+		bool gen_railroad_tracks(float width) {
+			// TODO
+			return 0;
+		}
 		void calc_bcube_from_roads() { // Note: ignores isecs, plots, and bridges, which should be bounded by roads
-			if (roads.empty()) return; // no roads
+			if (roads.empty()) return; // no roads (assumes also no tracks)
 			bcube = roads.front(); // first road
 			for (auto r = roads.begin()+1; r != roads.end(); ++r) {bcube.union_with_cube(*r);} // skip first road
+			for (auto t = tracks.begin(); t != tracks.end(); ++t) {bcube.union_with_cube(*t);}
 		}
 	private:
 		int find_conn_int_seg(cube_t const &c, bool dim, bool dir) const {
@@ -2267,8 +2279,9 @@ class city_road_gen_t {
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
 			tile_to_block_map.clear();
-			add_tile_blocks(segs,  tile_to_block_map, TYPE_RSEG);
-			add_tile_blocks(plots, tile_to_block_map, TYPE_PLOT);
+			add_tile_blocks(segs,   tile_to_block_map, TYPE_RSEG);
+			add_tile_blocks(plots,  tile_to_block_map, TYPE_PLOT);
+			add_tile_blocks(tracks, tile_to_block_map, TYPE_TRACKS);
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
@@ -2289,8 +2302,10 @@ class city_road_gen_t {
 				streetlights.emplace_back(point((0.75*i->x1() + 0.25*i->x2()), (a*i->y2() + b*i->y1()), i->z2()),  plus_y); // top    edge one   quarter  right
 			}
 		}
-		void get_road_bcubes(vector<cube_t> &bcubes) const {get_all_bcubes(roads, bcubes);}
-
+		void get_road_bcubes(vector<cube_t> &bcubes) const {
+			get_all_bcubes(roads,  bcubes);
+			get_all_bcubes(tracks, bcubes);
+		}
 		void get_plot_bcubes(vector<cube_t> &bcubes) const { // Note: z-values of cubes indicate building height ranges
 			if (plots.empty()) return; // connector road city
 			unsigned const start(bcubes.size());
@@ -2322,6 +2337,7 @@ class city_road_gen_t {
 					if (check_bcubes_sphere_coll(isecs[i], query_pos, radius, xy_only)) return 1;
 				}
 			}
+			if (check_bcubes_sphere_coll(tracks, query_pos, radius, xy_only)) return 1; // collision with a track
 			return 0;
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
@@ -2366,6 +2382,9 @@ class city_road_gen_t {
 			for (auto i = roads.begin(); i != roads.end(); ++i) { // use an acceleration structure?
 				if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 			}
+			for (auto i = tracks.begin(); i != tracks.end(); ++i) {
+				if (i->contains_pt_xy(pos)) {color = LT_BROWN; return INT_ROAD;} // counts as road intersection (for now)
+			}
 			if (plots.empty()) { // connector road
 				for (auto i = isecs[0].begin(); i != isecs[0].end(); ++i) { // 2-way intersections
 					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
@@ -2392,8 +2411,9 @@ class city_road_gen_t {
 				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 					if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 					dstate.begin_tile(b->bcube.get_cube_center());
-					dstate.draw_road_region(segs,  b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
-					dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // plots
+					dstate.draw_road_region(segs,   b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
+					dstate.draw_road_region(plots,  b->ranges[TYPE_PLOT  ], b->quads[TYPE_PLOT  ], TYPE_PLOT  ); // plots
+					dstate.draw_road_region(tracks, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
 					dstate.draw_road_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 					bool const draw_stoplights(dstate.check_cube_visible(b->bcube, 0.16)); // use smaller dist_scale
 				
@@ -2829,6 +2849,7 @@ public:
 			} // for j
 		} // for i
 		assign_city_clusters();
+		global_rn.gen_railroad_tracks(1.0*city_params.road_width); // same width as roads
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
