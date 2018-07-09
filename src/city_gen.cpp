@@ -2372,7 +2372,7 @@ class city_road_gen_t {
 				}
 			}
 			if (city_obj_placer.pt_in_parking_lot_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
-			if (!plots.empty()) {color = LT_GRAY; return INT_PLOT;} // inside a city and not over a road - must be over a plot
+			if (!plots.empty()) {color = colorRGBA(0.65, 0.65, 0.65, 1.0); return INT_PLOT;} // inside a city and not over a road - must be over a plot
 			return INT_NONE;
 		}
 
