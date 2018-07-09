@@ -1018,7 +1018,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 	bool const vert(p1r.x == p2r.x && p1r.y == p2r.y);
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
-		if (pzmin > i->d[2][1] || pzmax < i->d[2][0]) continue; // no overlap in z
+		if (pzmin > i->z2() || pzmax < i->z1()) continue; // no overlap in z
 		bool hit(0);
 
 		if (use_cylinder_coll()) {
@@ -1031,7 +1031,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			if (vert) { // vertical cylinder optimization + handling of ellipsoids
 				float const dx(cc.x - p1r.x), dy(cc.y - p1r.y), rx(0.5*csz.x), ry(0.5*csz.y);
 				if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // no intersection (below test should return true as well)
-				tmin = (i->d[2][1] - p1r.z)/(p2r.z - p1r.z);
+				tmin = (i->z2() - p1r.z)/(p2r.z - p1r.z);
 				if (tmin < t) {t = tmin; hit = 1;}
 			}
 			else {
@@ -1040,13 +1040,12 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			}
 		}
 		else if (num_sides != 4) {
-			building_draw.calc_poly_pts(*this, (*i + xlate), points);
-			float const tz((i->d[2][1] - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
-			float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
+			building_draw.calc_poly_pts(*this, *i, points);
+			float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 
-			if (point_in_polygon_2d(xval, yval, &points.front(), num_sides, 0, 1)) { // XY plane test for vertical lines and top surface
-				tmin = (i->d[2][1] - p1r.z)/(p2r.z - p1r.z);
-				if (tmin < t) {t = tmin; hit = 1;}
+			if (tz < t) {
+				float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
+				if (point_in_polygon_2d(xval, yval, &points.front(), points.size(), 0, 1)) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
 			}
 			if (!vert) { // test building sides
 				point quad_pts[4]; // quads
