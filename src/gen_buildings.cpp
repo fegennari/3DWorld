@@ -1826,7 +1826,7 @@ void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {buildi
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
 	float t(0.0); // unused
 	unsigned hit_bix(0);
-	unsigned const ret(check_buildings_line_coll(p1, p2, t, hit_bix, 1)); // apply_tt_xlate=1; 0=no hit, 1=hit side, 2=hit roof
+	unsigned const ret(check_buildings_line_coll(p1, p2, t, hit_bix, 0)); // apply_tt_xlate=0; 0=no hit, 1=hit side, 2=hit roof
 	if (ret == 0) return 0;
 	building_t const &b(building_creator.get_building(hit_bix));
 	switch (ret) {
