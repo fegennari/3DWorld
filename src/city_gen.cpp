@@ -24,6 +24,8 @@ float const PARK_SPACE_WIDTH        = 1.6;
 float const PARK_SPACE_LENGTH       = 1.8;
 float const STREETLIGHT_BEAMWIDTH   = 0.25;
 float const CITY_LIGHT_FALLOFF      = 0.2;
+float const STREETLIGHT_ON_RAND     = 0.05;
+float const HEADLIGHT_ON_RAND       = 0.1;
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -231,6 +233,11 @@ bool is_isect(unsigned type) {return (type >= TYPE_ISEC2 && type <= TYPE_ISEC4);
 int encode_neg_ix(unsigned ix) {return -(int(ix)+1);}
 unsigned decode_neg_ix(int ix) {assert(ix < 0); return -(ix+1);}
 
+bool is_night(float adj) {return (light_factor - adj < 0.5);} // for car headlights and streetlights
+
+float rand_hash(float to_hash) {return fract(12345.6789*to_hash);}
+float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1.0);}
+
 class road_mat_mgr_t {
 
 	bool inited;
@@ -410,7 +417,7 @@ struct car_t {
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
 	bool in_isect   () const {return is_isect(cur_road_type);}
-	bool headlights_on() const {return(!is_parked() && (is_night() || in_tunnel));} // no headlights when parked
+	bool headlights_on() const {return(!is_parked() && (in_tunnel || is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed))));} // no headlights when parked
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
@@ -777,8 +784,6 @@ struct parking_lot_t : public cube_t {
 	}
 };
 
-bool is_night() {return (light_factor < 0.5);} // for car headlights and streetlights
-
 namespace streetlight_ns {
 
 	colorRGBA const pole_color(BLACK); // so we don't have to worry about shadows
@@ -793,6 +798,7 @@ namespace streetlight_ns {
 		vector3d dir;
 
 		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
+		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
 
 		point get_lpos() const {
 			float const height(light_height*city_params.road_width);
@@ -812,7 +818,7 @@ namespace streetlight_ns {
 			if (!shadow_only) {s.set_cur_color(pole_color);}
 			draw_cylinder_at(pos, height, pradius, 0.7*pradius, min(ndiv, 24), 0); // vertical post, no ends
 			if (dist_val < 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
-			bool const is_on(always_on || is_night());
+			bool const is_on(is_lit(always_on));
 			
 			if (shadow_only) {
 				if (dist_less_than(camera_pdu.pos, (get_lpos() + xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
@@ -834,7 +840,8 @@ namespace streetlight_ns {
 			}
 			fgPopMatrix();
 		}
-		void add_dlight(vector3d const &xlate, cube_t &lights_bcube) const {
+		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {
+			if (!is_lit(always_on)) return;
 			float const ldist(light_dist*city_params.road_width);
 			if (!lights_bcube.contains_pt_xy(pos)) return; // not contained within the light volume
 			float const height(light_height*city_params.road_width);
@@ -867,8 +874,8 @@ struct streetlights_t {
 		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(s, xlate, shadow_only, is_local_shadow, always_on);}
 	}
 	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {
-		if (!always_on && !is_night()) return; // not on
-		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube);}
+		if (!always_on && !is_night(STREETLIGHT_ON_RAND)) return; // none of them can be on
+		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube, always_on);}
 	}
 	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate) const {
 		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
@@ -3562,7 +3569,7 @@ public:
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
 	}
-	bool enable_lights() const {return (is_night() || road_gen.has_tunnels());}
+	bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());}
 	void free_context() {car_manager.free_context();}
 	cube_t get_lights_bcube() const {return lights_bcube;}
 }; // city_gen_t

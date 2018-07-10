@@ -329,7 +329,7 @@ bool save_state(const char *filename);
 void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters);
 
 // function prototypes - city_gen
-bool is_night();
+bool is_night(float adj=0.0);
 bool parse_city_option(FILE *fp);
 bool have_cities();
 float get_road_max_len();
