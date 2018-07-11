@@ -542,12 +542,12 @@ public:
 			wind.y = (wind.y + WIND_ADJUST*delta); // -2.0 to 2.0 in steps of 0.2
 			break;
 		case PW_SUN_POS:
-			sun_rot += LIGHT_ROT_AMT*delta; // -PI to PI in steps of 0.05
+			sun_rot += 0.5*LIGHT_ROT_AMT*delta; // -PI to PI in steps of 0.025
 			if (sun_rot < 0.0) {sun_rot += TWO_PI;} else if (sun_rot > TWO_PI) {sun_rot -= TWO_PI;}
 			update_sun_shadows();
 			break;
 		case PW_MOON_POS:
-			moon_rot += LIGHT_ROT_AMT*delta; // -PI to PI in steps of 0.05
+			moon_rot += 0.5*LIGHT_ROT_AMT*delta; // -PI to PI in steps of 0.025
 			if (moon_rot < 0.0) {moon_rot += TWO_PI;} else if (moon_rot > TWO_PI) {moon_rot -= TWO_PI;}
 			calc_visibility(MOON_SHADOW);
 			break;
