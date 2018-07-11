@@ -1,5 +1,6 @@
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
+uniform float lit_thresh_mult = 1.0;
 
 in vec2 tc;
 in vec4 epos;
@@ -29,6 +30,7 @@ void main() {
 	float rand_val   = rand_v2(vec2(wind_id_x, wind_id_y));
 	float lit_thresh = fract(5.67*sin(12.3*gl_Color.b)); // use per-building color as hash for lit percentage
 	lit_thresh      *= 0.5 + 1.0*fract(8.91*sin(13.7*wind_id_y)); // modulate by floor
+	lit_thresh      *= lit_thresh_mult;
 	float dist       = length(epos.xyz);
 	float alpha      = 1.0 - 2.0*(texel.r - 0.5); // mask off window border (white), keep window pane (gray)
 	if (dist < 4.0) {alpha *= clamp(3.0*(fract(tc.t) - 0.1), 0.0, 1.0);} // top of window is brighter than bottom

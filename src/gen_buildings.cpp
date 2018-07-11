@@ -1640,19 +1640,23 @@ public:
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		}
 		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
+		float const WIND_LIGHT_ON_RAND = 0.08;
+		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		
-		if (!shadow_only && (!building_draw_windows.empty() || (is_night() && !building_draw_wind_lights.empty()))) {
+		if (!shadow_only && (!building_draw_windows.empty() || (night && !building_draw_wind_lights.empty()))) {
 			enable_blend();
 			glDepthFunc(GL_LEQUAL);
 			building_draw_windows.draw(0); // draw windows on top of other buildings
 
-			if (is_night()) { // add night time random lights in windows
+			if (night) { // add night time random lights in windows
+				float const low_v(0.5 - WIND_LIGHT_ON_RAND), high_v(0.5 + WIND_LIGHT_ON_RAND), lit_thresh_mult(1.0 + 2.0*CLIP_TO_01((light_factor - low_v)/(high_v - low_v)));
 				s.end_shader();
 				s.set_vert_shader("window_lights");
 				s.set_frag_shader("linear_fog.part+window_lights");
 				s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);
 				setup_tt_fog_pre(s);
 				s.begin_shader();
+				s.add_uniform_float("lit_thresh_mult", lit_thresh_mult); // gradual transition of lit window probability around sunset
 				setup_tt_fog_post(s);
 				building_draw_wind_lights.draw(0); // add bloom?
 			}
