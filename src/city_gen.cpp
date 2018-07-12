@@ -1563,6 +1563,7 @@ class city_road_gen_t {
 			begin_tile(tunnel.get_cube_center(), 1);
 
 			if (!shadow_only) {
+				s.add_uniform_float("hemi_lighting_scale", 0.1); // mostly disable hemispherical lighting, which doesn't work for tunnel interiors
 				select_texture(get_texture_by_name("roads/asphalt.jpg"));
 				tscale = 1.0/scale; // scale texture to match road width
 			}
@@ -1577,6 +1578,7 @@ class city_road_gen_t {
 			float const width(max(0.5*tunnel.get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
 
 			if (!shadow_only) {
+				s.add_uniform_float("hemi_lighting_scale", 0.5); // set back to the default of 0.5
 				select_texture(get_texture_by_name("cblock2.jpg"));
 				tscale *= 4.0;
 			}
