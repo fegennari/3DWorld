@@ -1,0 +1,17 @@
+﻿  pngerror.c
+  png.c
+  pngget.c
+  pngmem.c
+  pngpread.c
+  pngread.c
+  pngrio.c
+  pngrtran.c
+  pngrutil.c
+  pngset.c
+  pngtrans.c
+  pngwio.c
+  pngwrite.c
+  pngwtran.c
+  pngwutil.c
+  Generating Code...
+  libpng.vcxproj -> D:\Frank\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\.\Win32_LIB_Release\libpng.lib

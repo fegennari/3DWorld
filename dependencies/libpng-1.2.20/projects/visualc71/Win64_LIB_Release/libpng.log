@@ -1,0 +1,72 @@
+﻿Build started 2/6/2012 11:30:01 PM.
+     1>Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\libpng.vcxproj" on node 3 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating ".\Win32_LIB_Release\libpng.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         All outputs are up-to-date.
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\CL.exe /c /I..\.. /I"C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\zlib-1.2.1" /Zi /nologo /W3 /WX- /O2 /Ob1 /D PNG_NO_MMX_CODE /D WIN32 /D NDEBUG /D _CRT_SECURE_NO_WARNINGS /D _CRT_SECURE_NO_DEPRECATE /D _VC80_UPGRADE=0x0710 /GF /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Yc"png.h" /Fp".\Win32_LIB_Release\libpng.pch" /Fo".\Win32_LIB_Release\\" /Fd".\Win32_LIB_Release\vc100.pdb" /Gd /TC /errorReport:prompt ..\..\pngerror.c
+         pngerror.c
+         All outputs are up-to-date.
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\CL.exe /c /I..\.. /I"C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\zlib-1.2.1" /Zi /nologo /W3 /WX- /O2 /Ob1 /D PNG_NO_MMX_CODE /D WIN32 /D NDEBUG /D _CRT_SECURE_NO_WARNINGS /D _CRT_SECURE_NO_DEPRECATE /D _VC80_UPGRADE=0x0710 /GF /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\Win32_LIB_Release\\" /Fd".\Win32_LIB_Release\vc100.pdb" /Gd /TC /errorReport:prompt ..\..\png.c
+         png.c
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\CL.exe /c /I..\.. /I"C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\zlib-1.2.1" /Zi /nologo /W3 /WX- /O2 /Ob1 /D PNG_NO_MMX_CODE /D WIN32 /D NDEBUG /D _CRT_SECURE_NO_WARNINGS /D _CRT_SECURE_NO_DEPRECATE /D _VC80_UPGRADE=0x0710 /GF /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Yu"png.h" /Fp".\Win32_LIB_Release\libpng.pch" /Fo".\Win32_LIB_Release\\" /Fd".\Win32_LIB_Release\vc100.pdb" /Gd /TC /errorReport:prompt ..\..\pngget.c ..\..\pngmem.c ..\..\pngpread.c ..\..\pngread.c ..\..\pngrio.c ..\..\pngrtran.c ..\..\pngrutil.c ..\..\pngset.c ..\..\pngtrans.c ..\..\pngwio.c ..\..\pngwrite.c ..\..\pngwtran.c ..\..\pngwutil.c
+         pngget.c
+         pngmem.c
+         pngpread.c
+     1>..\..\pngpread.c(527): warning C4267: '-=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngpread.c(543): warning C4267: '-=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngpread.c(708): warning C4267: '-=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngpread.c(731): warning C4267: '-=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngpread.c(1280): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+         pngread.c
+         pngrio.c
+         pngrtran.c
+         pngrutil.c
+     1>..\..\pngrutil.c(218): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngrutil.c(242): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngrutil.c(308): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngrutil.c(1067): warning C4267: '=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngrutil.c(1160): warning C4267: '=' : conversion from 'size_t' to 'int', possible loss of data
+         pngset.c
+     1>..\..\pngset.c(396): warning C4267: '=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngset.c(412): warning C4267: '=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngset.c(434): warning C4267: '=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngset.c(687): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngset.c(976): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngset.c(1022): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngset.c(1041): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+         pngtrans.c
+         pngwio.c
+     1>..\..\pngwio.c(53): warning C4267: '=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+         pngwrite.c
+         pngwtran.c
+         pngwutil.c
+     1>..\..\pngwutil.c(177): warning C4267: '=' : conversion from 'size_t' to 'int', possible loss of data
+     1>..\..\pngwutil.c(1349): warning C4267: 'function' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+     1>..\..\pngwutil.c(1567): warning C4267: '=' : conversion from 'size_t' to 'png_uint_32', possible loss of data
+         Generating Code...
+       Lib:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\Lib.exe /OUT:".\Win32_LIB_Release\libpng.lib" /NOLOGO .\Win32_LIB_Release\png.obj
+         .\Win32_LIB_Release\pngerror.obj
+         .\Win32_LIB_Release\pngget.obj
+         .\Win32_LIB_Release\pngmem.obj
+         .\Win32_LIB_Release\pngpread.obj
+         .\Win32_LIB_Release\pngread.obj
+         .\Win32_LIB_Release\pngrio.obj
+         .\Win32_LIB_Release\pngrtran.obj
+         .\Win32_LIB_Release\pngrutil.obj
+         .\Win32_LIB_Release\pngset.obj
+         .\Win32_LIB_Release\pngtrans.obj
+         .\Win32_LIB_Release\pngwio.obj
+         .\Win32_LIB_Release\pngwrite.obj
+         .\Win32_LIB_Release\pngwtran.obj
+         .\Win32_LIB_Release\pngwutil.obj
+         libpng.vcxproj -> C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\.\Win32_LIB_Release\libpng.lib
+       FinalizeBuildStatus:
+         Deleting file ".\Win32_LIB_Release\libpng.unsuccessfulbuild".
+         Touching ".\Win32_LIB_Release\libpng.lastbuildstate".
+     1>Done Building Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\libpng.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:01.88

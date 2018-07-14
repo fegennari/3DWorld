@@ -1,0 +1,4 @@
+﻿  glew.c
+     Creating library ..\..\lib\Release\Win32\glew32.lib and object ..\..\lib\Release\Win32\glew32.exp
+  glew_shared.vcxproj -> D:\Frank\Desktop\Frank\CS184\3DWorld\glew-2.0.0\build\vc12\..\..\bin\Release\Win32\glew32.dll
+  glew_shared.vcxproj -> ..\..\bin\Release\Win32\glew32.pdb (Full PDB)

@@ -1,0 +1,36 @@
+﻿Build started 2/6/2012 11:30:39 PM.
+     1>Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\zlib.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Touching ".\Win32_LIB_Release\ZLib\zlib.unsuccessfulbuild".
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\CL.exe /c /I"..\..\..\zlib-1.2.1" /Zi /nologo /W3 /WX- /O2 /Ob1 /D WIN32 /D NDEBUG /D _VC80_UPGRADE=0x0710 /GF /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\Win32_LIB_Release\ZLib\\" /Fd".\Win32_LIB_Release\ZLib\vc100.pdb" /Gd /TC /errorReport:prompt ..\..\..\zlib\adler32.c ..\..\..\zlib\compress.c ..\..\..\zlib\crc32.c ..\..\..\zlib\deflate.c ..\..\..\zlib\gzio.c ..\..\..\zlib\infback.c ..\..\..\zlib\inffast.c ..\..\..\zlib\inflate.c ..\..\..\zlib\inftrees.c ..\..\..\zlib\trees.c ..\..\..\zlib\uncompr.c ..\..\..\zlib\zutil.c
+         adler32.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\adler32.c': No such file or directory
+         compress.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\compress.c': No such file or directory
+         crc32.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\crc32.c': No such file or directory
+         deflate.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\deflate.c': No such file or directory
+         gzio.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\gzio.c': No such file or directory
+         infback.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\infback.c': No such file or directory
+         inffast.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\inffast.c': No such file or directory
+         inflate.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\inflate.c': No such file or directory
+         inftrees.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\inftrees.c': No such file or directory
+         trees.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\trees.c': No such file or directory
+         uncompr.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\uncompr.c': No such file or directory
+         zutil.c
+     1>c1 : fatal error C1083: Cannot open source file: '..\..\..\zlib\zutil.c': No such file or directory
+         Generating Code...
+     1>Done Building Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\zlib.vcxproj" (build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:00.17

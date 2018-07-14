@@ -1,0 +1,107 @@
+﻿Build started 3/24/2014 10:23:22 PM.
+     1>Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\VisualStudio\2010\freeglut.vcxproj" on node 2 (build target(s)).
+     1>PrepareForBuild:
+         Creating directory "..\..\lib\x86\Debug\".
+       InitializeBuildStatus:
+         Creating "build\Debug\Win32_v100\freeglut.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I..\..\include /ZI /nologo /W3 /WX- /Od /Oy- /D _DEBUG /D WIN32 /D _WINDOWS /D _USRDLL /D FREEGLUT_EXPORTS /D _WINDLL /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"build\Debug\Win32_v100\\" /Fd"build\Debug\Win32_v100\vc100.pdb" /Gd /TC /wd4996 /analyze- /errorReport:prompt ..\..\src\freeglut_callbacks.c ..\..\src\freeglut_cursor.c ..\..\src\freeglut_display.c ..\..\src\freeglut_ext.c ..\..\src\freeglut_font.c ..\..\src\freeglut_font_data.c ..\..\src\freeglut_gamemode.c ..\..\src\freeglut_geometry.c ..\..\src\freeglut_glutfont_definitions.c ..\..\src\freeglut_init.c ..\..\src\freeglut_input_devices.c ..\..\src\freeglut_joystick.c ..\..\src\freeglut_main.c ..\..\src\freeglut_menu.c ..\..\src\freeglut_misc.c ..\..\src\freeglut_overlay.c ..\..\src\freeglut_spaceball.c ..\..\src\freeglut_state.c ..\..\src\freeglut_stroke_mono_roman.c ..\..\src\freeglut_stroke_roman.c ..\..\src\freeglut_structure.c ..\..\src\freeglut_teapot.c ..\..\src\freeglut_videoresize.c ..\..\src\freeglut_window.c
+         freeglut_window.c
+         fgSetupPixelFormat(): there is still some work to do here!
+         freeglut_videoresize.c
+         freeglut_teapot.c
+         freeglut_structure.c
+         freeglut_stroke_roman.c
+         freeglut_stroke_mono_roman.c
+         freeglut_state.c
+         freeglut_spaceball.c
+         freeglut_overlay.c
+         freeglut_misc.c
+         freeglut_menu.c
+         freeglut_main.c
+         freeglut_joystick.c
+         freeglut_input_devices.c
+         freeglut_init.c
+         freeglut_glutfont_definitions.c
+         freeglut_geometry.c
+         freeglut_gamemode.c
+         freeglut_font_data.c
+         freeglut_font.c
+         Generating Code...
+         Compiling...
+         freeglut_ext.c
+         freeglut_display.c
+         freeglut_cursor.c
+         freeglut_callbacks.c
+         Generating Code...
+       ResourceCompile:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\rc.exe /D _DEBUG /l"0x0409" /nologo /fo"build\Debug\Win32_v100\freeglut.res" ..\..\freeglut.rc 
+       ManifestResourceCompile:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\rc.exe /nologo /fo"build\Debug\Win32_v100\freeglut.dll.embed.manifest.res" build\Debug\Win32_v100\freeglut_manifest.rc 
+       Link:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"..\..\lib\x86\Debug\freeglut.dll" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /DEF:"..\..\src\freeglutdll.def" /MANIFEST /ManifestFile:"build\Debug\Win32_v100\freeglut.dll.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\lib\x86\Debug\freeglut.pdb" /TLBID:1 /DYNAMICBASE:NO /IMPLIB:"..\..\lib\x86\Debug\freeglut.lib" /MACHINE:X86 /DLL build\Debug\Win32_v100\freeglut.res
+         build\Debug\Win32_v100\freeglut.dll.embed.manifest.res
+         build\Debug\Win32_v100\freeglut_callbacks.obj
+         build\Debug\Win32_v100\freeglut_cursor.obj
+         build\Debug\Win32_v100\freeglut_display.obj
+         build\Debug\Win32_v100\freeglut_ext.obj
+         build\Debug\Win32_v100\freeglut_font.obj
+         build\Debug\Win32_v100\freeglut_font_data.obj
+         build\Debug\Win32_v100\freeglut_gamemode.obj
+         build\Debug\Win32_v100\freeglut_geometry.obj
+         build\Debug\Win32_v100\freeglut_glutfont_definitions.obj
+         build\Debug\Win32_v100\freeglut_init.obj
+         build\Debug\Win32_v100\freeglut_input_devices.obj
+         build\Debug\Win32_v100\freeglut_joystick.obj
+         build\Debug\Win32_v100\freeglut_main.obj
+         build\Debug\Win32_v100\freeglut_menu.obj
+         build\Debug\Win32_v100\freeglut_misc.obj
+         build\Debug\Win32_v100\freeglut_overlay.obj
+         build\Debug\Win32_v100\freeglut_spaceball.obj
+         build\Debug\Win32_v100\freeglut_state.obj
+         build\Debug\Win32_v100\freeglut_stroke_mono_roman.obj
+         build\Debug\Win32_v100\freeglut_stroke_roman.obj
+         build\Debug\Win32_v100\freeglut_structure.obj
+         build\Debug\Win32_v100\freeglut_teapot.obj
+         build\Debug\Win32_v100\freeglut_videoresize.obj
+         build\Debug\Win32_v100\freeglut_window.obj
+            Creating library ..\..\lib\x86\Debug\freeglut.lib and object ..\..\lib\x86\Debug\freeglut.exp
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /out:"build\Debug\Win32_v100\freeglut.dll.embed.manifest" /manifest build\Debug\Win32_v100\freeglut.dll.intermediate.manifest
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\rc.exe /nologo /fo"build\Debug\Win32_v100\freeglut.dll.embed.manifest.res" build\Debug\Win32_v100\freeglut_manifest.rc 
+       LinkEmbedManifest:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"..\..\lib\x86\Debug\freeglut.dll" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /DEF:"..\..\src\freeglutdll.def" /MANIFEST /ManifestFile:"build\Debug\Win32_v100\freeglut.dll.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\lib\x86\Debug\freeglut.pdb" /TLBID:1 /DYNAMICBASE:NO /IMPLIB:"..\..\lib\x86\Debug\freeglut.lib" /MACHINE:X86 /DLL build\Debug\Win32_v100\freeglut.res
+         build\Debug\Win32_v100\freeglut.dll.embed.manifest.res
+         build\Debug\Win32_v100\freeglut_callbacks.obj
+         build\Debug\Win32_v100\freeglut_cursor.obj
+         build\Debug\Win32_v100\freeglut_display.obj
+         build\Debug\Win32_v100\freeglut_ext.obj
+         build\Debug\Win32_v100\freeglut_font.obj
+         build\Debug\Win32_v100\freeglut_font_data.obj
+         build\Debug\Win32_v100\freeglut_gamemode.obj
+         build\Debug\Win32_v100\freeglut_geometry.obj
+         build\Debug\Win32_v100\freeglut_glutfont_definitions.obj
+         build\Debug\Win32_v100\freeglut_init.obj
+         build\Debug\Win32_v100\freeglut_input_devices.obj
+         build\Debug\Win32_v100\freeglut_joystick.obj
+         build\Debug\Win32_v100\freeglut_main.obj
+         build\Debug\Win32_v100\freeglut_menu.obj
+         build\Debug\Win32_v100\freeglut_misc.obj
+         build\Debug\Win32_v100\freeglut_overlay.obj
+         build\Debug\Win32_v100\freeglut_spaceball.obj
+         build\Debug\Win32_v100\freeglut_state.obj
+         build\Debug\Win32_v100\freeglut_stroke_mono_roman.obj
+         build\Debug\Win32_v100\freeglut_stroke_roman.obj
+         build\Debug\Win32_v100\freeglut_structure.obj
+         build\Debug\Win32_v100\freeglut_teapot.obj
+         build\Debug\Win32_v100\freeglut_videoresize.obj
+         build\Debug\Win32_v100\freeglut_window.obj
+         freeglut.vcxproj -> C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\VisualStudio\2010\..\..\lib\x86\Debug\freeglut.dll
+       FinalizeBuildStatus:
+         Deleting file "build\Debug\Win32_v100\freeglut.unsuccessfulbuild".
+         Touching "build\Debug\Win32_v100\freeglut.lastbuildstate".
+     1>Done Building Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\VisualStudio\2010\freeglut.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:07.27

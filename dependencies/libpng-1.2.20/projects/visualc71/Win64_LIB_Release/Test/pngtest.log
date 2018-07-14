@@ -1,0 +1,13 @@
+﻿Build started 2/6/2012 11:30:03 PM.
+     1>Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\pngtest.vcxproj" on node 3 (build target(s)).
+     1>InitializeBuildStatus:
+         Touching ".\Win32_LIB_Release\Test\pngtest.unsuccessfulbuild".
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\CL.exe /c /I..\..\..\zlib /Zi /nologo /W3 /WX- /O2 /Ob1 /D WIN32 /D _DEBUG /D PNG_NO_GLOBAL_ARRAYS /D _VC80_UPGRADE=0x0710 /GF /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\Win32_LIB_Release\Test\\" /Fd".\Win32_LIB_Release\Test\vc100.pdb" /Gd /TC /errorReport:prompt ..\..\pngtest.c
+         pngtest.c
+     1>c:\users\frank e. gennari\desktop\frank\cs184\3dworld\libpng-1.2.20\png.h(408): fatal error C1083: Cannot open include file: 'zlib.h': No such file or directory
+     1>Done Building Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\pngtest.vcxproj" (build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:00.11

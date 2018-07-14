@@ -1,0 +1,22 @@
+﻿Build started 3/24/2014 10:24:20 PM.
+     1>Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\VisualStudio\2010\Resizer\Resizer.vcxproj" on node 6 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "Release\Win32_v100\Resizer.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I..\..\..\include /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\Win32_v100\\" /Fd"Release\Win32_v100\vc100.pdb" /Gd /TC /wd4996 /analyze- /errorReport:prompt ..\..\..\progs\demos\Resizer\Resizer.cpp
+         Resizer.cpp
+       Link:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"..\..\..\progs\demos\x86\release_dll\Resizer.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:..\..\..\lib\x86\ kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release\Win32_v100\Resizer.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /PDB:"C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\progs\demos\x86\release_dll\Resizer.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"..\..\..\progs\demos\x86\release_dll\Resizer.lib" /MACHINE:X86 Release\Win32_v100\Resizer.obj
+         Generating code
+         Finished generating code
+         Resizer.vcxproj -> C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\VisualStudio\2010\Resizer\..\..\..\progs\demos\x86\release_dll\Resizer.exe
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"..\..\..\progs\demos\x86\release_dll\Resizer.exe;#1" /manifest Release\Win32_v100\Resizer.exe.intermediate.manifest
+       FinalizeBuildStatus:
+         Deleting file "Release\Win32_v100\Resizer.unsuccessfulbuild".
+         Touching "Release\Win32_v100\Resizer.lastbuildstate".
+     1>Done Building Project "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freeglut-2.8.1\VisualStudio\2010\Resizer\Resizer.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.48
