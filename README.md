@@ -24,9 +24,9 @@ Microsoft Visual Studio 2015 project files are included.
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
 I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
 
-Be warned, this is a large repository, currently 770MB.
+Be warned, this is a large repository, currently 820MB.
 I've included source code, config files, textures, sounds, small models, lighting files, scene data, heightmaps, and project files.
-This repo does not contain the dependencies or large model files, you'll have to download these separately.
+This repo does not contain the large model files used in some scenes, you'll have to download these separately.
 This means that some of the scene config files won't work because they can't find their referenced data.
 The current list of dependencies is:
 * OpenGL 4.4 (Should come with Windows 7/8/10 latest graphics drivers)
@@ -41,6 +41,8 @@ The current list of dependencies is:
 * libpng-1.2.20 (My version is very old; Latest version: https://libpng.sourceforge.io/index.html)
 * libtiff-4.0.3 (Latest version: http://www.simplesystems.org/libtiff/)
 * libtarga (source included)
+
+I've included stripped down versions of most of these libraries in the dependencies directory. I removed all large files that aren't required by 3DWorld, in some cases even examples/tests/documentation. These have been built with MS Visual Studio 2015 Professional on Windows 10. If you want to use these, you'll need to copy the directories to the root directory and rebuild any libraries needed for other versions of Visual Studio.
 
 Note that many of these dependencies are old and could be replaced with newer libraries. I've been concentrating on adding content and I'm not too interested in this.
 Freeglut should probably be replaced with SDL, the last 4 image libraries with DevIL, and maybe assimp can be used for model loading.
@@ -75,6 +77,8 @@ However, I do have a blog that includes descriptions of the algorithms and lots 
 https://3dworldgen.blogspot.com/
 
 Here are some screenshots linked from my blog:
+
+![alt text](https://1.bp.blogspot.com/-acI3Ly40-Hk/WzSWMckhOiI/AAAAAAAABlg/KvzdEJ9qEjUJPOF7kYvh1RpELBSnnQXtgCEwYBhgL/s640/bridge_night1.jpg)
 
 ![alt text](https://1.bp.blogspot.com/-H3QY3vua23s/WovTmQk8I6I/AAAAAAAABRE/KSFYKSdDRAAVPA7NcZEQXCpKJJaUY9hWQCLcBGAs/s640/connected_cities_trees.jpg)
 
