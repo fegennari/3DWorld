@@ -277,9 +277,11 @@ unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
 	unsigned const ix((unsigned)buffers.size());
 	buffers.push_back(openal_buffer());
 	
-	if (!buffers.back().load_from_file_std_path(fn)) {
-		cerr << "Failed to load sound file: " << fn << endl;
-		exit(1);
+	if (!buffers.back().load_from_file_std_path(fn)) { // check sounds directory first
+		if (!buffers.back().load_from_file(fn)) { // check current directory second
+			cerr << "Failed to load sound file: " << fn << endl;
+			exit(1);
+		}
 	}
 	cout << "."; cout.flush();
 	return ix;
