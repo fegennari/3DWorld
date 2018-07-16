@@ -721,7 +721,7 @@ void display(void) {
 	static point old_spos(0.0, 0.0, 0.0);
 	proc_kbd_events();
 
-	if (!init) {
+	if (!init) { // the first frame
 		init   = 1;
 		fticks = 1.0;
 		time0  = timer1;

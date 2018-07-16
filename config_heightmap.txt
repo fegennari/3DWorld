@@ -1,4 +1,7 @@
 include config.txt
+start_in_inf_terrain 1
+start_maximized 1
+enable_mouse_look 1
 
 include building_params.txt
 buildings num_place 100000
