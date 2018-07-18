@@ -26,6 +26,7 @@ float const STREETLIGHT_BEAMWIDTH   = 0.25;
 float const CITY_LIGHT_FALLOFF      = 0.2;
 float const STREETLIGHT_ON_RAND     = 0.05;
 float const HEADLIGHT_ON_RAND       = 0.1;
+float const TRACKS_WIDTH            = 0.5; // relative to road width
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -84,7 +85,7 @@ struct car_model_t {
 
 struct city_params_t {
 
-	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width;
+	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks;
 	float road_width, road_spacing, conn_road_seg_len, max_road_slope;
 	// cars
 	unsigned num_cars;
@@ -103,7 +104,7 @@ struct city_params_t {
 	unsigned max_benches_per_plot;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0),
-		slope_width(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), num_cars(0), car_speed(0.0),
+		slope_width(0), num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), num_cars(0), car_speed(0.0),
 		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0),
 		max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
@@ -118,6 +119,9 @@ struct city_params_t {
 
 		if (str == "num_cities") {
 			if (!read_uint(fp, num_cities)) {return read_error(str);}
+		}
+		else if (str == "num_rr_tracks") {
+			if (!read_uint(fp, num_rr_tracks)) {return read_error(str);}
 		}
 		else if (str == "num_samples") {
 			if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
@@ -997,6 +1001,12 @@ template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, poin
 	}
 	return 0;
 }
+template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
+	if (cubes.empty()) return cube_t(all_zeros);
+	cube_t bcube(cubes.front()); // first cube
+	for (auto r = cubes.begin()+1; r != cubes.end(); ++r) {bcube.union_with_cube(*r);} // skip first cube
+	return bcube;
+}
 
 
 class heightmap_query_t {
@@ -1018,7 +1028,17 @@ public:
 	bool is_normalized_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {return (x1 <  x2 && y1 <  y2 && x2 <= xsize && y2 <= ysize);}
 	bool is_valid_region     (unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {return (x1 <= x2 && y1 <= y2 && x2 <= xsize && y2 <= ysize);}
 	bool is_inside_terrain(int x, int y) const {return (x >= 0 && y >= 0 && x < (int)xsize && y < (int)ysize);}
+	cube_t get_full_hmap_bcube() const {return get_cube_for_bounds(0, 0, xsize, ysize, 0.0);}
 	
+	cube_t get_cube_for_bounds(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float elevation) const {
+		cube_t c;
+		c.x1() = get_x_value(x1);
+		c.x2() = get_x_value(x2);
+		c.y1() = get_y_value(y1);
+		c.y2() = get_y_value(y2);
+		c.z1() = c.z2() = elevation;
+		return c;
+	}
 	float get_height_at(float xval, float yval) const {
 		int const x(get_x_pos(xval)), y(get_y_pos(yval));
 		return (is_inside_terrain(x, y) ? get_height(x, y) : OUTSIDE_TERRAIN_HEIGHT);
@@ -1223,12 +1243,7 @@ protected:
 		return 0;
 	}
 	cube_t add_plot(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float elevation) {
-		cube_t c;
-		c.x1() = get_x_value(x1);
-		c.x2() = get_x_value(x2);
-		c.y1() = get_y_value(y1);
-		c.y2() = get_y_value(y2);
-		c.z1() = c.z2() = elevation;
+		cube_t const c(get_cube_for_bounds(x1, y1, x2, y2, elevation));
 		if (plots.empty()) {bcube = c;} else {bcube.union_with_cube(c);}
 		plots.push_back(c);
 		used.emplace_back(x1, y1, x2, y2);
@@ -1349,8 +1364,10 @@ class city_road_gen_t {
 		}
 		template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case (plot/park)
 		template<> void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
+		template<> void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
 		
 		template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
+			if (rp.s == rp.e) return; // empty
 			assert(rp.s <= rp.e);
 			assert(rp.e <= v.size());
 			assert(type_ix < NUM_RD_TYPES);
@@ -1642,15 +1659,6 @@ class city_road_gen_t {
 		vector<bench_t> benches;
 		unsigned num_spaces, filled_spaces;
 
-		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
-			cube_t tc(bcube);
-			tc.expand_by(pad_dist);
-
-			for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-				if (c->intersects_xy(tc)) return 1; // intersection
-			}
-			return 0;
-		}
 		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, rand_gen_t &rgen) {
 			vector3d const nom_car_size(city_params.get_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
@@ -1805,6 +1813,15 @@ class city_road_gen_t {
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
 		void clear() {parking_lots.clear(); num_spaces = filled_spaces = 0;}
 
+		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
+			cube_t tc(bcube);
+			tc.expand_by(pad_dist);
+
+			for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
+				if (c->intersects_xy(tc)) return 1; // intersection
+			}
+			return 0;
+		}
 		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<car_t> &cars, unsigned city_id) { // Note: fills in plots.has_parking
 			if (city_params.min_park_spaces == 0 || city_params.min_park_rows == 0) return; // disable parking lots
 			timer_t timer("Gen Parking Lots and Place Objects");
@@ -1988,14 +2005,42 @@ class city_road_gen_t {
 			} // for x
 			return 1;
 		}
-		bool gen_railroad_tracks(float width) {
-			// TODO
-			return 0;
+		void gen_railroad_tracks(float width, unsigned num, cube_t const &region, vector<cube_t> const &city_blockers, vector<cube_t> const &blockers, heightmap_query_t &hq) {
+			rand_gen_t rgen;
+			assert(region.dx() > 0.0 && region.dy() > 0.0);
+			if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
+
+			for (unsigned n = 0; n < num; ++n) {
+				for (unsigned tries = 0; tries < city_params.num_conn_tries; ++tries) {
+					bool const dim(rgen.rand_bool());
+					float const rv(rgen.rand_uniform(0.2, 0.8)); // use center area
+					float const pos(region.d[!dim][0]*(1.0 - rv) + region.d[!dim][1]*rv);
+					float const step_sz(city_params.conn_road_seg_len);
+					float const seg_end(region.d[dim][1]);
+					point p1, p2;
+					p1[!dim] = p2[!dim] = pos;
+					p1[dim]  = region.d[dim][0]; p2[dim] = seg_end; // full segment for blockers check
+					p1.z = p2.z = region.z1();
+					cube_t tracks_bcube(p1, p2);
+					if (city_obj_placer.has_bcube_int_xy(tracks_bcube, city_blockers, width)) continue;
+					p2[dim] = (p1[dim] + step_sz); // back to starting segment
+
+					while (p1[dim] < seg_end) { // split into per-tile segments
+						p1.z = hq.get_height_at(p1.x, p1.y) + ROAD_HEIGHT;
+						p2.z = hq.get_height_at(p2.x, p2.y) + ROAD_HEIGHT;
+						tracks.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n);
+						p1[dim] += step_sz;
+						p2[dim]  = min((p1[dim] + step_sz), seg_end);
+					} // end while
+					// TODO: check for collisions with roads (blockers), flatten mesh, etc.
+					break; // success
+				} // for tries
+			} // for n
+			cout << "track segments: " << tracks.size() << endl;
 		}
 		void calc_bcube_from_roads() { // Note: ignores isecs, plots, and bridges, which should be bounded by roads
 			if (roads.empty()) return; // no roads (assumes also no tracks)
-			bcube = roads.front(); // first road
-			for (auto r = roads.begin()+1; r != roads.end(); ++r) {bcube.union_with_cube(*r);} // skip first road
+			bcube = calc_cubes_bcube(roads);
 			for (auto t = tracks.begin(); t != tracks.end(); ++t) {bcube.union_with_cube(*t);}
 		}
 	private:
@@ -2860,6 +2905,7 @@ public:
 			blockers.push_back(i->get_bcube());
 			blockers.back().expand_by(road_spacing); // separate roads by at least this value
 		}
+		vector<cube_t> const city_blockers(blockers); // cities only, no roads
 		// full cross-product connectivity
 		for (unsigned i = 0; i < num_cities; ++i) {
 			for (unsigned j = i+1; j < num_cities; ++j) {
@@ -2871,7 +2917,9 @@ public:
 			} // for j
 		} // for i
 		assign_city_clusters();
-		global_rn.gen_railroad_tracks(1.0*city_params.road_width); // same width as roads
+		//cube_t const tracks_region(hq.get_full_hmap_bcube());
+		cube_t const tracks_region(calc_cubes_bcube(blockers));
+		global_rn.gen_railroad_tracks(TRACKS_WIDTH*city_params.road_width, city_params.num_rr_tracks, tracks_region, city_blockers, blockers, hq);
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();

@@ -13,6 +13,7 @@ include building_materials.txt
 buildings tt_only 1
 
 city num_cities 8
+city num_rr_tracks 0
 city num_samples 100
 city num_conn_tries 100
 city city_size_min 200
