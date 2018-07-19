@@ -1869,7 +1869,7 @@ class city_road_gen_t {
 		vector<road_plot_t> plots; // plots of land that can hold buildings
 		vector<bridge_t> bridges; // bridges, part of global road network
 		vector<tunnel_t> tunnels; // tunnels, part of global road network
-		vector<road_t> tracks; // railroad tracks (for global road network)
+		vector<road_t> tracks, track_segs; // railroad tracks (for global road network)
 		//vector<road_isec_t> track_turns; // for railroad tracks
 		city_obj_placer_t city_obj_placer;
 		cube_t bcube;
@@ -1938,6 +1938,7 @@ class city_road_gen_t {
 			bridges.clear();
 			tunnels.clear();
 			tracks.clear();
+			track_segs.clear();
 			for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
 			streetlights.clear();
 			city_obj_placer.clear();
@@ -2009,6 +2010,7 @@ class city_road_gen_t {
 			rand_gen_t rgen;
 			assert(region.dx() > 0.0 && region.dy() > 0.0);
 			if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
+			vector<cube_t> dim_tracks[2]; // one in each dim, for collision detection with tracks going in the other dim
 
 			for (unsigned n = 0; n < num; ++n) {
 				for (unsigned tries = 0; tries < city_params.num_conn_tries; ++tries) {
@@ -2022,13 +2024,16 @@ class city_road_gen_t {
 					p1[dim]  = region.d[dim][0]; p2[dim] = seg_end; // full segment for blockers check
 					p1.z = p2.z = region.z1();
 					cube_t tracks_bcube(p1, p2);
-					if (city_obj_placer.has_bcube_int_xy(tracks_bcube, city_blockers, width)) continue;
+					if (city_obj_placer.has_bcube_int_xy(tracks_bcube, city_blockers,   width)) continue; // check cities
+					if (city_obj_placer.has_bcube_int_xy(tracks_bcube, dim_tracks[dim], width)) continue; // check prev placed tracks in same dim
+					dim_tracks[dim].push_back(tracks_bcube);
+					tracks.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n); // Note: zvals are at 0, but should be unused
 					p2[dim] = (p1[dim] + step_sz); // back to starting segment
 
 					while (p1[dim] < seg_end) { // split into per-tile segments
 						p1.z = hq.get_height_at(p1.x, p1.y) + ROAD_HEIGHT;
 						p2.z = hq.get_height_at(p2.x, p2.y) + ROAD_HEIGHT;
-						tracks.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n);
+						track_segs.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n);
 						p1[dim] += step_sz;
 						p2[dim]  = min((p1[dim] + step_sz), seg_end);
 					} // end while
@@ -2036,7 +2041,7 @@ class city_road_gen_t {
 					break; // success
 				} // for tries
 			} // for n
-			cout << "track segments: " << tracks.size() << endl;
+			cout << "track segments: " << track_segs.size() << endl;
 		}
 		void calc_bcube_from_roads() { // Note: ignores isecs, plots, and bridges, which should be bounded by roads
 			if (roads.empty()) return; // no roads (assumes also no tracks)
@@ -2337,9 +2342,9 @@ class city_road_gen_t {
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
 			tile_to_block_map.clear();
-			add_tile_blocks(segs,   tile_to_block_map, TYPE_RSEG);
-			add_tile_blocks(plots,  tile_to_block_map, TYPE_PLOT);
-			add_tile_blocks(tracks, tile_to_block_map, TYPE_TRACKS);
+			add_tile_blocks(segs,       tile_to_block_map, TYPE_RSEG);
+			add_tile_blocks(plots,      tile_to_block_map, TYPE_PLOT);
+			add_tile_blocks(track_segs, tile_to_block_map, TYPE_TRACKS);
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
@@ -2475,9 +2480,9 @@ class city_road_gen_t {
 				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 					if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 					dstate.begin_tile(b->bcube.get_cube_center());
-					dstate.draw_road_region(segs,   b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
-					dstate.draw_road_region(plots,  b->ranges[TYPE_PLOT  ], b->quads[TYPE_PLOT  ], TYPE_PLOT  ); // plots
-					dstate.draw_road_region(tracks, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
+					dstate.draw_road_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
+					dstate.draw_road_region(plots,      b->ranges[TYPE_PLOT  ], b->quads[TYPE_PLOT  ], TYPE_PLOT  ); // plots
+					dstate.draw_road_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
 					dstate.draw_road_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 					bool const draw_stoplights(dstate.check_cube_visible(b->bcube, 0.16)); // use smaller dist_scale
 				
