@@ -5,6 +5,9 @@
 #ifndef _3DWORLD_H_
 #define _3DWORLD_H_
 
+// timer_t is used in types.h on linux, and also in 3DWorld, so we have to typedef it as something else for these includes
+#define timer_t stdlib_timer_t
+
 #include "globals.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +26,9 @@
 #include <sstream>
 #include <iterator>
 #include <memory>
+
+#undef timer_t
+
 using std::vector;
 using std::deque;
 using std::set;

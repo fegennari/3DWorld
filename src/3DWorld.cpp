@@ -17,7 +17,10 @@
 #include "draw_utils.h"
 #include "tree_leaf.h"
 #include <set>
+
+#ifdef _WIN32 // wglew.h seems to be Windows only
 #include <GL/wglew.h> // for wglSwapIntervalEXT
+#endif
 
 using namespace std;
 typedef set<unsigned char>::iterator keyset_it;
@@ -258,7 +261,11 @@ void quit_3dworld() { // called once at the end for proper cleanup
 }
 
 
+#ifdef _WIN32
 void set_vsync() {wglSwapIntervalEXT((vsync_enabled || is_video_recording()) ? 1 : 0);}
+#else
+void set_vsync() {} // unsupported
+#endif
 
 void init_window() { // register all glut callbacks
 

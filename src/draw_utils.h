@@ -6,6 +6,7 @@
 #define _DRAW_UTILS_H_
 
 #include "3DWorld.h"
+#include "gl_ext_arb.h"
 
 
 template<class vert_type_t> struct sized_vert_t : public vert_type_t { // size = 20-32

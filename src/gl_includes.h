@@ -13,10 +13,16 @@
 #else
 #include <GL/glew.h>
 #include <GL/gl.h>
-//#include <GL/glut.h> // standard glut
+
+#ifdef _WIN32
 #include <freeglut.h>
 #undef FAR // undefine conflicting defines picked up from windows headers
+#else // linux
+#include <GL/freeglut.h> // standard glut
+#endif
+
 #include <GL/glu.h>
+
 //#include <GL/glext.h>
 #endif
 
