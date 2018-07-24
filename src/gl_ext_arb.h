@@ -205,7 +205,7 @@ template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_man
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(unsigned ix, vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
 		assert(ix < N);
-		if (vao[ix]) return; // already set
+		if (vaos[ix]) return; // already set
 		ensure_vao_bound(ix);
 		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}

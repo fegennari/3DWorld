@@ -175,7 +175,7 @@ template<typename T> struct point2d { // size = 8
 	point2d operator-(T const &v)       const {return point2d((x-v), (y-v));}
 	point2d operator*(T      const val) const {return point2d(x*val, y*val);}
 	point2d operator*(point2d const &p) const {return point2d(x*p.x, y*p.y);} // component multiply
-	point2d operator-()                 const {return point2d(-x, -y, -z);}
+	point2d operator-()                 const {return point2d(-x, -y);}
 
 	const T &operator[](unsigned i) const {
 		switch(i) {
