@@ -43,7 +43,7 @@ struct od_data { // size = 12
 	float dist;
 
 	od_data() {};
-	od_data(int type0, int id0, float dist0, int val0=0) : id(id0), type(type0), dist(dist0), val(val0) {};
+	od_data(int type0, int id0, float dist0, int val0=0) : id(id0), type(type0), val(val0), dist(dist0) {};
 	bool operator<(od_data const &o) const {return (dist < o.dist);}
 };
 

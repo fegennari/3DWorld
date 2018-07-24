@@ -264,11 +264,11 @@ template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &ran
 	generated = 1;
 	if (!range.is_strictly_normalized()) return; // if the range is empty or denormalized in z, mark as generated but skip
 	rgen.set_state(long(1000*range.d[0][0]), long(1000*range.d[1][0])); // seed with x1, y1
-	reserve(size() + num); // optional
+	this->reserve(this->size() + num); // optional
 
 	for (unsigned n = 0; n < num; ++n) {
 		A animal;
-		if (animal.gen(rgen, range, tile)) {push_back(animal);} // only add if generation was successful
+		if (animal.gen(rgen, range, tile)) {this->push_back(animal);} // only add if generation was successful
 	}
 	bcube = range; // initial value (approx)
 }
@@ -279,7 +279,7 @@ template<typename A> void animal_group_t<A>::update(tile_t const *const tile) {
 	bool bcube_set(0);
 	bcube.set_from_point(all_zeros);
 
-	for (iterator i = begin(); i != end(); ++i) {
+	for (auto i = this->begin(); i != this->end(); ++i) {
 		i->update(rgen, tile);
 		if (!i->is_enabled()) continue;
 		if (!bcube_set) {bcube.set_from_sphere(*i); bcube_set = 1;}
@@ -288,20 +288,20 @@ template<typename A> void animal_group_t<A>::update(tile_t const *const tile) {
 }
 
 template<typename A> void animal_group_t<A>::remove(unsigned ix) {
-	assert(ix < size());
-	std::swap(operator[](ix), back());
-	pop_back();
+	assert(ix < this->size());
+	std::swap(this->operator[](ix), this->back());
+	this->pop_back();
 }
 
 template<typename A> void animal_group_t<A>::remove_disabled() {
-	iterator i(begin()), o(i);
-	for (; i != end(); ++i) {if (i->is_enabled()) {*(o++) = *i;}}
-	erase(o, end());
+	auto i(this->begin()), o(i);
+	for (; i != this->end(); ++i) {if (i->is_enabled()) {*(o++) = *i;}}
+	this->erase(o, this->end());
 }
 
 template<typename A> void animal_group_t<A>::draw_animals(shader_t &s) const {
-	if (empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
-	for (const_iterator i = begin(); i != end(); ++i) {i->draw(s);}
+	if (this->empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
+	for (auto i = this->begin(); i != this->end(); ++i) {i->draw(s);}
 }
 
 

@@ -73,7 +73,7 @@ public:
 		short shape;
 
 		hmap_brush_t() : x(0), y(0), radius(0), delta(0), shape(0) {}
-		hmap_brush_t(int x_, int y_, hmap_val_t d, unsigned r, short s) : x(x_), y(y_), delta(d), radius(r), shape(s) {assert(shape < NUM_BSHAPES);}
+		hmap_brush_t(int x_, int y_, hmap_val_t d, unsigned r, short s) : x(x_), y(y_), radius(r), delta(d), shape(s) {assert(shape < NUM_BSHAPES);}
 		bool is_flatten_brush() const {return (shape == BSHAPE_FLAT_SQ || shape == BSHAPE_FLAT_CIR);}
 		void apply(tex_mod_map_manager_t *tmmm, int step_sz=1, unsigned num_steps=1) const;
 	};

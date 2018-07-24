@@ -1558,12 +1558,12 @@ public:
 	kw_to_val_map_t(int &error_) : error(error_) {}
 
 	void add(string const &k, T &v) {
-		bool const did_ins(insert(make_pair(k, &v)).second);
+		bool const did_ins(this->insert(make_pair(k, &v)).second);
 		assert(did_ins);
 	}
 	bool maybe_set_from_fp(string const &str, FILE *fp) {
-		iterator it(find(str));
-		if (it == end()) return 0;
+		auto it(this->find(str));
+		if (it == this->end()) return 0;
 		if (!read_type_t(fp, *it->second)) {cfg_err(str + " keyword", error);}
 		return 1;
 	}

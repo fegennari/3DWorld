@@ -27,7 +27,7 @@ struct spark_t {
 	point const &get_pos() const {return pos;}
 
 	spark_t() {}
-	spark_t(point const &p_, colorRGBA const &c_, float s_) : pos(p_), c(c_), s(s_) {}
+	spark_t(point const &p_, colorRGBA const &c_, float s_) : s(s_), pos(p_), c(c_) {}
 	void draw(quad_batch_draw &qbd) const;
 };
 
@@ -247,7 +247,7 @@ public:
 	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT),
 	already_bounced(0), skip_dynamic(skip_dynamic_), only_drawn(only_drawn_), skip_movable(skip_movable_), coll(0), obj_index(obj_index_),
 	do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), cdir(0), lcoll(0), z_old(obj.pos.z), o_radius(0.0),
-	z1(0.0), z2(0.0), cnorm(cnorm_), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
+	z1(0.0), z2(0.0), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity), cnorm(cnorm_) {}
 
 	void check_cobj(int index);
 	int check_coll();
@@ -281,6 +281,8 @@ template<typename T> class obj_vector_t : public vector<T> {
 	}
 
 public:
+	using vector<T>::size;
+	using vector<T>::empty;
 	obj_vector_t(unsigned sz=0) : vector<T>(sz), cur_avail(0) {}
 
 	unsigned choose_element(bool peek=0) {
@@ -339,7 +341,7 @@ public:
 
 	bool any_active() const {
 		for (unsigned i = 0; i < size(); ++i) {
-			if (operator[](i).status) return 1;
+ 			if (vector<T>::operator[](i).status) return 1;
 		}
 		return 0;
 	}

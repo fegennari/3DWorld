@@ -852,7 +852,7 @@ struct dir_cost_t {
 	float cost, dp;
 	vector3d dir;
 
-	dir_cost_t() : cost(0.0), dp(0.0) {}
+ 	dir_cost_t() : cost(0.0), dp(0.0), dir(zero_vector) {}
 	dir_cost_t(float cost_, vector3d const &dir_, vector3d const &opt_dir)
 		: cost(cost_), dp(dot_product(dir_, opt_dir)), dir(dir_) {}
 

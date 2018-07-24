@@ -60,8 +60,8 @@ struct blastr { // size = 118 (120)
 	blastr() {}
 	blastr(int tm, int ty, int sr, float sz, float dam, point const &p, vector3d const &d,
 		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0, bool elight=0, float esc=0.0)
-		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), pos(p), dir(d.get_norm()), up_vector(plus_y),
-		color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), one_frame_seen(0), emits_light(elight), exp_sphere_scale(esc) {}
+		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), exp_sphere_scale(esc), pos(p), dir(d.get_norm()), up_vector(plus_y),
+		color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), one_frame_seen(0), emits_light(elight) {}
 	void setup();
 	void check_pointers();
 	void update();

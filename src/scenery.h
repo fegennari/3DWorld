@@ -23,7 +23,7 @@ struct plant_type {
 	colorRGBA stemc, leafc, berryc;
 
 	plant_type(int tid_, colorRGBA const &sc, colorRGBA const &lc, colorRGBA const &bc, float leaf_length_=1.0, float leaf_width_base_=1.0, float leaf_width_end_=1.0)
-		: tid(tid_), stemc(sc), leafc(lc), berryc(bc), leaf_length(leaf_length_), leaf_width_base(leaf_width_base_), leaf_width_end(leaf_width_end_) {}
+		: tid(tid_), leaf_length(leaf_length_), leaf_width_base(leaf_width_base_), leaf_width_end(leaf_width_end_), stemc(sc), leafc(lc), berryc(bc) {}
 };
 
 

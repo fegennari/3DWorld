@@ -126,7 +126,7 @@ struct poly_header_t {
 	int mat_id;
 	vector3d n;
 
-	poly_header_t(int mat_id_=-1, unsigned obj_id_=0) : npts(0), mat_id(mat_id_), obj_id(obj_id_), n(zero_vector) {}
+	poly_header_t(int mat_id_=-1, unsigned obj_id_=0) : npts(0), obj_id(obj_id_), mat_id(mat_id_), n(zero_vector) {}
 };
 
 
@@ -179,9 +179,9 @@ public:
 	bool get_average_normals() const {return average_normals;}
 	
 	void check_for_clear(int mat_id) {
-		if (mat_id != last_mat_id || size() >= MAX_VMAP_SIZE) {
+		if (mat_id != last_mat_id || this->size() >= MAX_VMAP_SIZE) {
 			last_mat_id = mat_id;
-			clear();
+			this->clear();
 		}
 	}
 };
@@ -222,7 +222,7 @@ public:
 	point get_center () const {return bsphere.pos;}
 	float get_bradius() const {return bsphere.radius;}
 	void optimize(unsigned npts) {remove_excess_cap();}
-	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);} // shrink_to_fit()?
+	void remove_excess_cap() {if (20*vector<T>::size() < 19*vector<T>::capacity()) vector<T>(*this).swap(*this);} // shrink_to_fit()?
 	void write(ostream &out) const;
 	void read(istream &in);
 };
@@ -253,7 +253,8 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 	unsigned get_block_ix(float area) const;
 
 public:
-	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0), optimized(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
+	using vntc_vect_t<T>::size;
+	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_), need_normalize(0), optimized(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
@@ -291,7 +292,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	float calc_draw_order_score() const;
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
-	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)size(); stats.verts += num_unique_verts();}
+	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)this->size(); stats.verts += num_unique_verts();}
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void invert_tcy();

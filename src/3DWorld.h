@@ -314,8 +314,10 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	bool is_nonzero() const {return (x != 0.0 || y != 0.0 || z != 0.0);}
 
 	bool operator<(pointT const &p) const { // needed for maps and stuff
-		if (z > p.z) return 1; if (z < p.z) return 0; // greater than operation?
-		if (y < p.y) return 1; if (y > p.y) return 0;
+		if (z > p.z) return 1;
+		if (z < p.z) return 0; // greater than operation?
+		if (y < p.y) return 1;
+		if (y > p.y) return 0;
 		return (x < p.x);
 	}
 };
@@ -988,7 +990,7 @@ struct vert_color : public color_wrapper { // size = 16
 	typedef point non_color_class;
 
 	vert_color() {}
-	vert_color(point const &v_, color_wrapper const &cw) : v(v_), color_wrapper(cw) {}
+ 	vert_color(point const &v_, color_wrapper const &cw) : color_wrapper(cw), v(v_) {}
 	vert_color(point const &v_, colorRGBA const &c_)     : v(v_) {set_c4(c_);}
 	vert_color(point const &v_, unsigned char const *c_) : v(v_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
@@ -1179,11 +1181,11 @@ template<typename T> void draw_vect_quads(T const &verts) {
 
 
 template <typename T> void translate_verts(vector<T> &verts, vector3d const &xlate) {
-	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v += xlate;}
+	for (auto i = verts.begin(); i != verts.end(); ++i) {i->v += xlate;}
 }
 
 template <typename T> void scale_verts(vector<T> &verts, vector3d const &scale) {
-	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v *= scale;}
+	for (auto i = verts.begin(); i != verts.end(); ++i) {i->v *= scale;}
 }
 
 template <typename T> void tri_strip_push(vector<T> &v) {
@@ -1444,9 +1446,12 @@ public:
 template<typename base> class rand_gen_template_t : public base {
 
 public:
+ 	using rgen_core_t::rseed1;
+	using rgen_core_t::rseed2;
+	
 	int rand() {
 		int rand_num;
-		randome_int(rand_num);
+		base::randome_int(rand_num);
 		return rand_num;
 	}
 	int rand_fast() { // faster but lower quality, only uses rseed1
@@ -1465,9 +1470,9 @@ public:
 	}
 	void rand_mix() {rand(); swap(rseed1, rseed2);}
 	float rand_float() {return 0.000001*(rand()%1000000);} // uniform 0 to 1
-	float signed_rand_float() {return 2.0*float(randd()) - 1.0;}
+	float signed_rand_float() {return 2.0*float(base::randd()) - 1.0;}
 	bool rand_bool() {return ((rand()&1) != 0);}
-	float rand_uniform(float val1, float val2) {assert(val1 <= val2); return val1 + (val2 - val1)*float(randd());}
+	float rand_uniform(float val1, float val2) {assert(val1 <= val2); return val1 + (val2 - val1)*float(base::randd());}
 	unsigned rand_uniform_uint(unsigned min_val, unsigned max_val) {assert(min_val <= max_val); return (min_val + (rand() % (max_val - min_val + 1)));}
 	int rand_int(int start, int end) {return (rand()%(end - start + 1) + start);} // used for trees; start and end should be positive
 	float rgauss() {return gauss_rand_arr[rand()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0

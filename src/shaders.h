@@ -260,7 +260,7 @@ template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 		}
 	}
 	static void disable(int start_loc) {
-		for (unsigned i = 0; i < N; ++i) {disable_instancing_for_shader_loc(start_loc + i);}
+		for (unsigned i = 0; i < N; ++i) {shader_float_matrix_uploader::disable_instancing_for_shader_loc(start_loc + i);}
 	}
 };
 

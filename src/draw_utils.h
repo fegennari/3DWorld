@@ -30,8 +30,8 @@ public:
 		lines.resize(0);
 	}
 	void free_mem() {
-		points.swap(vector<vert_norm_color>());
-		lines.swap(vector<vert_norm_color>());
+		vector<vert_norm_color>().swap(points);
+		vector<vert_norm_color>().swap(lines);
 	}
 	void add_pt(point const &v, vector3d const &n, colorRGBA const &c) {
 		points.emplace_back(v, n, c);

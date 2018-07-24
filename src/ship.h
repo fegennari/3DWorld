@@ -238,7 +238,7 @@ public:
 		upos_point_type const &pos_, vector3d const &vel_, vector3d const &dir_, vector3d const &upv_, float dist_,
 		float radius_, float crs_, bool dlights_, bool first, bool final, bool p1, bool p2)
 		: ndiv(ndiv_), time(t), on_time(t), lifetime(0), eflags(0), nengines(0), powered(power), specular_en(spec_en),
-		dlights(dlights_), final_pass(final), first_pass(first), phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_),
+		dlights(dlights_), first_pass(first), final_pass(final), phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_),
 		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir),
 		color_a(WHITE), color_b(WHITE), engine_color(BLACK), obj(obj_), shader(shader_), upc_shader(upc_shader_) {}
 
@@ -795,7 +795,7 @@ public:
 	virtual bool fire_weapon(vector3d const &fire_dir, float target_dist) {return 0;} // default - do nothing (should this be here?)
 	virtual bool dec_ref() {return 0;} // could be const?
 	virtual void reset_target() {target_obj = NULL;}
-	virtual bool source_is_player()            const {return ((parent == NULL) ? NULL : parent->source_is_player());}
+	virtual bool source_is_player()            const {return ((parent == NULL) ? 0 : parent->source_is_player());}
 	virtual u_ship_base const *get_ship_base() const {assert(0); return NULL;} // sort of a hack
 	virtual ship_explosion get_explosion()     const {assert(0); return ship_explosion();} // shouldn't be here
 	virtual void next_frame() {} // empty
@@ -877,7 +877,7 @@ protected:
 
 public:
 	static uobj_asteroid *create(point const &pos, float radius, unsigned model, int tid, unsigned rseed_ix=0, unsigned lt=0);
-	uobj_asteroid(point const &pos_, float radius_, int tid, unsigned lt) : tex_id(tid), stationary_obj(SO_ASTEROID, pos_, radius_, lt) {}
+	uobj_asteroid(point const &pos_, float radius_, int tid, unsigned lt) : stationary_obj(SO_ASTEROID, pos_, radius_, lt), tex_id(tid) {}
 	bool calc_rvs() const {return 1;} // so that texture is oriented properly
 	string get_name() const {return "Asteroid";}
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,

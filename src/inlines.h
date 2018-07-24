@@ -10,7 +10,7 @@
 #include "gl_includes.h"
 
 
-extern int MESH_X_SIZE, MESH_Y_SIZE, world_mode, do_zoom, xoff, yoff, xoff2, yoff2;
+extern int MESH_X_SIZE, MESH_Y_SIZE, XY_MULT_SIZE, world_mode, do_zoom, xoff, yoff, xoff2, yoff2;
 extern float X_SCENE_SIZE, Y_SCENE_SIZE, Z_SCENE_SIZE, DX_VAL, DY_VAL;
 extern float light_factor, relh_adj_tex, glaciate_exp_inv, cview_radius, czmin, czmax, zbottom, ztop;
 extern point cview_dir, camera_origin, camera_pos;
@@ -423,7 +423,7 @@ inline float distance_to_camera_sq(point const &pos) {
 	return p2p_dist_sq(get_camera_pos(), pos);
 }
 inline point get_camera_all() {
-	return ((world_mode == WMODE_UNIVERSE) ? get_player_pos() : get_camera_pos());
+ 	return ((world_mode == WMODE_UNIVERSE) ? (point)get_player_pos() : get_camera_pos());
 }
 inline vector3d get_vdir_all() {
 	return ((world_mode == WMODE_UNIVERSE) ? get_player_dir() : cview_dir);

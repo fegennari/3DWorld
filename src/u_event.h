@@ -19,7 +19,7 @@ unsigned const NUM_UE_TYPES     = 9;
 unsigned const UE_MAX_PARAMS    = 4;
 unsigned const MAX_U_EVENTS     = 100000;
 unsigned const MAX_EVENT_FRAMES = 1000000;
-char *const UEL_SAVE_NAME       = "ueventlist";
+char const *const UEL_SAVE_NAME = "ueventlist";
 
 enum {UE_SRAND = 0, UE_RESIZE, UE_MBUTTON, UE_MMOTION, UE_KEYBOARD, UE_BREAK, UE_GOTO, UE_NULL, UE_KEYBOARD_SPECIAL, UE_KEYBOARD_UP};
 

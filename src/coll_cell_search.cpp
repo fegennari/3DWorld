@@ -454,7 +454,6 @@ void get_occluders() {
 		last_camera   = camera;
 	}
 	first_run = 0;
-	unsigned ix(0);
 	
 	for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 		if (skipval > 0 && ((*i + startval) % skipval) != 0) continue;

@@ -126,7 +126,7 @@ protected:
 
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
-	  orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0), max_asteroid_radius(0.0), scale(scale_) {}
+	orbital_plane_normal(opn), scale(scale_), max_asteroid_radius(0.0), inner_radius(0.0), outer_radius(0.0), temperature(0.0) {}
 	virtual bool is_planet_ab() const {return 0;}
 	virtual void gen_asteroids();
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;

@@ -77,15 +77,15 @@ class voxel_query_tree {
 			return bcube_valid;
 		}
 		void update_bcube(unsigned ix) {
-			assert(ix < size());
+			assert(ix < this->size());
 			cube_t bc;
-			if (!operator[](ix).get_root_bcube(bc)) return; // invalid/empty bcube
+			if (!this->operator[](ix).get_root_bcube(bc)) return; // invalid/empty bcube
 			if (!bcube_valid) {bcube = bc;} else {bcube.union_with_cube(bc);}
 			bcube_valid = 1;
 		}
 		void calc_bcube() {
 			bcube_valid = 0;
-			for (const_iterator i = begin(); i != end(); ++i) {update_bcube(i);}
+			for (auto i = this->begin(); i != this->end(); ++i) {update_bcube(i);}
 		}
 	};
 

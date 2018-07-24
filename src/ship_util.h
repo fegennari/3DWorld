@@ -89,7 +89,7 @@ struct query_data {
 
 	query_data(vector<cached_obj> const *const objs_, point const &pos_, float radius_, float urm_)
 		: objs(objs_), pos(pos_), urm(urm_), radius(radius_), damage(0.0), dist(0.0), eflags(0), index(0),
-		wclass(-1), align(-1), fobj(NULL), parent(NULL), ptr(NULL), exit_query(0), skip_self(0) {}
+		wclass(-1), align(-1), parent(NULL), fobj(NULL), ptr(NULL), exit_query(0), skip_self(0) {}
 };
 
 
@@ -114,7 +114,7 @@ struct closeness_data : public base_query_data {
 
 	closeness_data(vector<cached_obj> const *const objs_, point const &pos_, float dmin_, float min_dist_sq_,
 		free_obj const *const questioner_, bool req_sh=0, bool rdock=0, bool fr=0) :
-		base_query_data(objs_, pos_, questioner_), q_dir(zero_vector), dmin(dmin_), init_dmin(dmin), min_dist_sq(min_dist_sq_),
+		base_query_data(objs_, pos_, questioner_), q_dir(zero_vector), dmin(dmin_), min_dist_sq(min_dist_sq_), init_dmin(dmin),
 		dscale(1.0), closest(NULL), req_shields(req_sh), req_dock(rdock), friendly(fr) {}
 };
 
