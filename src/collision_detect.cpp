@@ -2053,7 +2053,6 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 void create_sky_vis_zval_texture(unsigned &tid) {
 
 	RESET_TIME;
-	unsigned const num_samples = 9;
 	unsigned const divs_per_cell(max(1U, snow_coverage_resolution));
 	unsigned const nx(MESH_X_SIZE*divs_per_cell), ny(MESH_Y_SIZE*divs_per_cell);
 	float const dx(DX_VAL/divs_per_cell), dy(DY_VAL/divs_per_cell);
