@@ -1,9 +1,9 @@
 
 VPATH=../src
 #CPPFLAGS=-g -Wall 
-CPPFLAGS=-g -Wall -O3
+CPPFLAGS=-g -Wall -O3 -fopenmp
 TARGET=../lib/3dworld
-OBJS=$(shell cat ../src/obj_list)
+OBJS=$(shell cat ../obj_list)
 TARGET2=
 OBJS2= 
 
@@ -22,7 +22,7 @@ all :
 	-mkdir ../obj
 	-mkdir ../run
 	-mkdir ../lib
-	-ln -s ../src/makefile ../obj/makefile
+	-ln -s ../makefile ../obj/makefile
 	cd ../obj && $(MAKE)
 else
 
