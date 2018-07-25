@@ -20,7 +20,7 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors);
 
 
-FILE *open_screenshot_file(char *file_path, string const &extension, unsigned &id) {
+FILE *open_screenshot_file(char const *const file_path, string const &extension, unsigned &id) {
 
 	FILE *fp;
 	ostringstream oss;
@@ -72,7 +72,7 @@ void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned 
 }
 
 
-int screenshot(unsigned window_width, unsigned window_height, char *file_path, bool write_bmp) {
+int screenshot(unsigned window_width, unsigned window_height, char const *const file_path, bool write_bmp) {
 
 	static unsigned ss_id(0);
 	FILE *fp = open_screenshot_file(file_path, (write_bmp ? "bmp" : "raw"), ss_id);
@@ -96,7 +96,7 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path, b
 }
 
 
-int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
+int write_jpeg(unsigned window_width, unsigned window_height, char const *const file_path) {
 
 	static unsigned ss_id(0);
 	FILE *fp = open_screenshot_file(file_path, "jpg", ss_id);

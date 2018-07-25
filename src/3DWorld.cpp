@@ -50,13 +50,13 @@ float const DEF_CAMERA_RADIUS     = 0.06;
 int const START_MODE       = WMODE_GROUND; // 0 = standard mesh, 1 = planet/universe, 2 = infinite terrain
 
 
-char *defaults_file    = "defaults.txt";
-char *dstate_file      = "state.txt";
-char *dmesh_file       = "mesh.txt";
-char *dcoll_obj_file   = "coll_objs/coll_objs.txt";
-char *dship_def_file   = "universe/ship_defs.txt";
-char *state_file(dstate_file), *mesh_file(dmesh_file), *coll_obj_file(dcoll_obj_file);
-char *mh_filename(NULL), *mh_filename_tt(NULL), *mesh_diffuse_tex_fn(NULL), *ship_def_file(dship_def_file), *snow_file(NULL);
+char const *const defaults_file  = "defaults.txt";
+char const *const dstate_file    = "state.txt";
+char const *const dmesh_file     = "mesh.txt";
+char const *const dcoll_obj_file = "coll_objs/coll_objs.txt";
+char const *const dship_def_file = "universe/ship_defs.txt";
+char *state_file(nullptr), *mesh_file(nullptr), *coll_obj_file(nullptr);
+char *mh_filename(nullptr), *mh_filename_tt(nullptr), *mesh_diffuse_tex_fn(nullptr), *ship_def_file(nullptr), *snow_file(nullptr);
 char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
@@ -1474,9 +1474,20 @@ void proc_kbd_events() {
 }
 
 
+void alloc_if_req(char *&fn, const char *def_fn=nullptr) {
+	if (fn == nullptr) {
+		fn = new char[MAX_CHARS];
+		if (def_fn != nullptr) {sprintf(fn, "%s", def_fn);}
+	}
+}
+
 int load_top_level_config(const char *def_file) {
 
 	assert(def_file != NULL);
+	alloc_if_req(state_file, dstate_file);
+	alloc_if_req(mesh_file, dmesh_file);
+	alloc_if_req(coll_obj_file, dcoll_obj_file);
+	alloc_if_req(ship_def_file, dship_def_file);
 	string config_file;
 	ifstream in(def_file);
 	if (!in.good()) return 0;
@@ -1525,11 +1536,6 @@ bool open_file(FILE *&fp, char const *const fn, string const &file_type, char co
 	if (fp != NULL) return 1;
 	cout << "Could not open " << file_type << " file '" << fn << "'." << endl;
 	return 0;
-}
-
-
-void alloc_if_req(char *&fn, const char *def_fn=NULL) {
-	if (fn == def_fn) {fn = new char[MAX_CHARS];}
 }
 
 
@@ -1965,11 +1971,9 @@ int load_config(string const &config_file) {
 			}
 		}
 		else if (str == "coll_obj_file") {
-			alloc_if_req(coll_obj_file, dcoll_obj_file);
 			if (!read_str(fp, coll_obj_file)) cfg_err("coll_obj_file command", error);
 		}
 		else if (str == "state_file") {
-			alloc_if_req(state_file, dstate_file);
 			if (!read_str(fp, state_file)) cfg_err("state_file command", error);
 		}
 		else if (str == "read_hmap_modmap_filename") {
@@ -1992,7 +1996,6 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);
-			alloc_if_req(mesh_file, dmesh_file);
 			if (fscanf(fp, "%255s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) < 1) cfg_err("mesh_file command", error);
 			if (read_float(fp, rmz)) {read_mesh_zmm = rmz;}
 		}
@@ -2021,7 +2024,6 @@ int load_config(string const &config_file) {
 			mesh_detail_tex = get_texture_by_name(std::string(strc));
 		}
 		else if (str == "ship_def_file") {
-			alloc_if_req(ship_def_file, dship_def_file);
 			if (!read_str(fp, ship_def_file)) cfg_err("ship_def_file command", error);
 		}
 		else if (str == "smoke_bounds") {
