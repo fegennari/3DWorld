@@ -268,7 +268,7 @@ void draw_select_groups(int solid, int reflection_pass) {
 		obj_group &objg(obj_groups[i]);
 
 		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) {
-			if (!(object_types[objg.type].flags & SEMI_TRANSPARENT) == solid) {
+			if ((!(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
 				draw_group(objg, s, lt_atten_manager);
 			}
 		}

@@ -398,7 +398,7 @@ void process_groups() {
 				if (obj.status == OBJ_STAT_STOP && type != MAT_SPHERE && type != LANDMINE) { // stopped cobj
 					// defer removal of stopped dynamic spheres, with the hope that the location is the same and we can skip re-adding it as well
 					coll_obj const &cobj(coll_objects.get_cobj(obj.coll_id));
-					if (cobj.type == COLL_SPHERE && cobj.status == COLL_DYNAMIC && cobj.cp.cf_index == j) {cobj_pos = cobj.points[0]; defer_remove_cobj = 1;}
+					if (cobj.type == COLL_SPHERE && cobj.status == COLL_DYNAMIC && cobj.cp.cf_index == (int)j) {cobj_pos = cobj.points[0]; defer_remove_cobj = 1;}
 				}
 				if (!defer_remove_cobj) {remove_reset_coll_obj(obj.coll_id);}
 			}
@@ -1547,10 +1547,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				unsigned num_dlight_rays(0);
 
 				if (num_read == 0) {fseek(fp, fpos, SEEK_SET);}
-				else if (num_read == 3) {
-					fscanf(fp, "%f%f%i%i%u", &beamwidth, &r_inner, &ivals[0], &use_smap, &num_dlight_rays);
+				else if (num_read == 3) { // try to read additional optional values
+					int const num_read2(fscanf(fp, "%f%f%i%i%u", &beamwidth, &r_inner, &ivals[0], &use_smap, &num_dlight_rays));
 					if (use_smap < 0 || use_smap > 2) {return read_error(fp, "light source use_smap (must be 0, 1, or 2)", coll_obj_file);}
-					if (ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
+					if (num_read2 >= 3 && ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
 					else {xf.xform_pos_rm(dir);} // spotlight (or hemispherical light ray culling if beamwidth == 1.0)
 				}
 				else {return read_error(fp, "light source direction or end point position", coll_obj_file);}
@@ -2087,10 +2087,7 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 	if (dgroup_id >= 0) {
 		vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(dgroup_id, *this));
 
-		for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
-			unsigned const ix(*j + coll_objects.size()); // map to a range that doesn't overlap coll_objects
-			cdraw_groups.get_cobj(*j).write_to_cobj_file_int(out, prev);
-		}
+		for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {cdraw_groups.get_cobj(*j).write_to_cobj_file_int(out, prev);}
 		out << "end_draw_group" << endl;
 	}
 }

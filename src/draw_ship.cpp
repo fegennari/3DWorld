@@ -1041,7 +1041,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 
 void uobj_draw_data::draw_us_enforcer() const { // could be better
 	
-	unsigned const ndiv32(get_ndiv(3*ndiv/2)), ndiv2(get_ndiv(ndiv/2)), nengines(nengines - 1);
+	unsigned const ndiv32(get_ndiv(3*ndiv/2)), ndiv2(get_ndiv(ndiv/2)), outer_engines(nengines - 1);
 	float const epos(0.44);
 	setup_draw_ship();
 	set_ship_texture(SHIP_HULL_TEX);
@@ -1056,14 +1056,15 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 	set_color(color_b);
 	end_ship_texture();
 	disable_normal_map();
+	float const theta_mult(TWO_PI/((float)outer_engines));
 
 	if (ndiv > 3) {
 		draw_cylin_fast(0.18, 0.16, 0.09, ndiv, 0, 1.0, -0.09); // big center engine
 		if (ndiv > 5) draw_circle_normal(0.0, 0.17, ndiv32, 0, -0.045);
 	}
 	if (ndiv > 6) { // draw engines
-		for (unsigned i = 0; i < nengines; ++i) {
-			float const theta(TWO_PI*i/((float)nengines));
+		for (unsigned i = 0; i < outer_engines; ++i) {
+			float const theta(i*theta_mult);
 			point const p1(epos*sinf(theta), epos*cosf(theta), -0.06);
 			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 0.06), 0.12, 0.10, ndiv2, 0);
 			if (ndiv > 8) {draw_circle_normal(0.0, 0.11, ndiv2, 0, p1+vector3d(0.0, 0.0, 0.03));}
@@ -1075,8 +1076,8 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 		float const escale(0.3);
 		draw_engine(0, engine_color, point(0.0, 0.0, 1.26), 2.0*escale); // center engine
 		
-		for (unsigned i = 0; i < nengines; ++i) {
-			float const theta(TWO_PI*i/((float)nengines));
+		for (unsigned i = 0; i < outer_engines; ++i) {
+			float const theta(i*theta_mult);
 			draw_engine(i+1, engine_color, point(epos*sinf(theta), epos*cosf(theta), 1.21), escale);
 		}
 		draw_ship_flares(engine_color);

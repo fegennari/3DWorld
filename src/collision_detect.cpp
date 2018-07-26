@@ -1314,7 +1314,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		float const radius(cobj.radius + o_radius);
 		float rad(p2p_dist_sq(pos, cobj.points[0])), reff(radius);
 		if (player && cobj.cp.coll_func == landmine_collision) {reff += 1.5*object_types[type].radius;} // landmine
-		if (type == LANDMINE && cobj.is_player()) {reff += 1.5*object_types[cobj.type].radius;} // landmine
+		if (type == LANDMINE && cobj.is_player()) {reff += 1.5*object_types[unsigned(cobj.type)].radius;} // landmine
 		
 		if (rad <= reff*reff) {
 			lcoll = 1;

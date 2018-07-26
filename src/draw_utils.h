@@ -210,7 +210,7 @@ public:
 	}
 	void begin_render() const;
 	void end_render() const {post_render();}
-	void clear_points() {pts.swap(vector<vert_type_t>());}
+	void clear_points() {vector<vert_type_t>().swap(pts);}
 	vector<vert_type_t> &get_pts_vector_for_adding() {return pts;}
 	void clear(bool free_pts_mem=1);
 	void upload_and_clear_points() {upload(); clear_points();}

@@ -61,7 +61,7 @@ protected:
 public:
 	shape3d() : tid(0), tex_scale(1.0), scale(1.0) {}
 	bool alloc_shape(unsigned npoints, unsigned nfaces, unsigned ncolors);
-	bool read_from_file(char *filename);
+	bool read_from_file(const char *filename);
 	void set_texture(int tid_, float tscale=1.0) {tid = tid_; tex_scale = tscale;}
 	void move_to(point const &pos_)          {pos   = pos_;}
 	void set_scale(float scale_)             {scale = scale_;}

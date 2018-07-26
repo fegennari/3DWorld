@@ -827,7 +827,7 @@ string get_weapon_qualifier(int type, int index, int source) {
 }
 
 
-bool dwobject::lm_coll_invalid() const {return (time < LM_ACT_TIME);}
+bool dwobject::lm_coll_invalid() const {return (time < (int)LM_ACT_TIME);}
 
 
 int damage_done(int type, int index) {
@@ -1730,7 +1730,7 @@ struct delayed_proj_t {
 	int shooter;
 	float damage, velocity;
 
-	delayed_proj_t(point const &p, vector3d const &d, float dam, int s, float v) : pos(p), dir(d), damage(dam), shooter(s), velocity(v) {}
+	delayed_proj_t(point const &p, vector3d const &d, float dam, int s, float v) : pos(p), dir(d), shooter(s), damage(dam), velocity(v) {}
 };
 
 vector<delayed_proj_t> delayed_projs;
@@ -1924,7 +1924,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				unsigned const shot_count = 4;
 				int &pammo(sstates[shooter].p_ammo[weapon_id]);
 			
-				if (pammo >= shot_count || UNLIMITED_WEAPONS) {
+				if (pammo >= (int)shot_count || UNLIMITED_WEAPONS) {
 					firing_error *= 2.0;
 					shot_delta    = 7.0*object_types[RAPT_PROJ].radius; // required to prevent shots from colliding with each other
 					nshots = shot_count;
@@ -2752,7 +2752,7 @@ void player_state::update_sstate_game_frame(int i) {
 	}
 	if (powerup != PU_NONE && powerup_time > 0 && obj_enabled) {add_dynamic_light(1.3, pos, get_powerup_color(powerup));}
 
-	if (SMILEY_GAS && game_mode == 1 && obj_enabled && powerup == PU_SHIELD && powerup_time > INIT_PU_SH_TIME && !(rand()&31)) {
+	if (SMILEY_GAS && game_mode == 1 && obj_enabled && powerup == PU_SHIELD && powerup_time > (int)INIT_PU_SH_TIME && !(rand()&31)) {
 		vector3d const dir(get_sstate_dir(i)), vel(velocity*0.5 - dir*1.2);
 		point const spos(pos - dir*get_sstate_radius(i)); // generate gas
 		gen_arb_smoke(spos, GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, GASSED, 0);

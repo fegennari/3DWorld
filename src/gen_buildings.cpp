@@ -574,7 +574,7 @@ public:
 		unsigned const ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
-		float const ndiv_inv(1.0/ndiv), z_top(pos.z + height), tscale_x(2.0*tex.tscale_x), tscale_y(2.0*tex.tscale_y); // adjust for local vs. global space change
+		float const z_top(pos.z + height), tscale_x(2.0*tex.tscale_x), tscale_y(2.0*tex.tscale_y); // adjust for local vs. global space change
 		bool const apply_ao(!no_ao && !shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
@@ -641,7 +641,6 @@ public:
 			
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
 				if (view_dir != nullptr && ((view_dir->z < 0.0) ^ d)) continue; // back facing
-				float const zval(d ? z_top : pos.z);
 				vert.set_norm(d ? plus_z : -plus_z);
 				if (apply_ao) {vert.copy_color(cw[d]);}
 				vert_norm_comp_tc_color center(vert);
@@ -1527,7 +1526,6 @@ public:
 
 				if (use_plots) {
 					assert(plot_ix < bix_by_plot.size());
-					vector<unsigned> &ixs(bix_by_plot[plot_ix]);
 					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand)) continue;
 					bix_by_plot[plot_ix].push_back(buildings.size());
 				}

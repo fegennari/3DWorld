@@ -16,6 +16,8 @@ unsigned const NUM_SHADER_TYPES  = 6;
 
 #define make_shader_bool_prefix(name, val) ((val) ? ("const bool " name " = true;") : ("const bool " name " = false;"))
 
+void disable_instancing_for_shader_loc(int loc);
+
 
 struct gl_light_params_t {
 

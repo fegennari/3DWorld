@@ -323,7 +323,7 @@ protected:
 			}
 			if (!uw_mesh_lighting.empty()) { // water caustics: slow and low resolution, but conceptually interesting
 				// Note: normal is never set to zero because we need it for dynamic light sources
-				data[c].n *= max(pow(uw_mesh_lighting[i*MESH_X_SIZE + j].get_val(), 8), 0.01f); // enhance the contrast (can be > 1.0)
+				data[c].n *= max((float)pow(uw_mesh_lighting[i*MESH_X_SIZE + j].get_val(), 8), 0.01f); // enhance the contrast (can be > 1.0)
 			}
 		}
 		data[c].set_c3(color);

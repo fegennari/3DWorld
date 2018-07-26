@@ -4,6 +4,7 @@
 
 #include "3DWorld.h"
 #include "mesh.h"
+#include <cfloat> // for FLT_EPSILON
 
 
 extern float erode_amount, water_plane_z;

@@ -721,8 +721,8 @@ void subdiv_sphere_manager_t<T>::clear() {
 }
 
 // explicit template instantiations
-template cube_map_sphere_manager_t;
-template icosphere_manager_t;
+template class subdiv_sphere_manager_t<cube_map_sphere_drawer_t>;
+template class subdiv_sphere_manager_t<icosphere_drawer_t>;
 
 
 template< typename vert_type_t >

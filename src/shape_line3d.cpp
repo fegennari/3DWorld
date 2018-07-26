@@ -27,7 +27,7 @@ bool shape3d::alloc_shape(unsigned npoints, unsigned nfaces, unsigned ncolors) {
 
 
 // similar to the object file reader
-bool shape3d::read_from_file(char *filename) {
+bool shape3d::read_from_file(const char *filename) {
 
 	float x, y, z;
 	char  letter;

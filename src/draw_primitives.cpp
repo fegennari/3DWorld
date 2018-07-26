@@ -415,7 +415,6 @@ void draw_shadow_cylinder(point const &p1, point const &p2, float radius1, float
 	}
 	draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 	if (!draw_ends) return;
-	float const theta_mult(TWO_PI/ndiv);
 
 	for (unsigned i = 0; i < 2; ++i) {
 		if ((i ? radius2 : radius1) == 0.0) continue;
@@ -1170,7 +1169,7 @@ void bind_draw_sphere_vbo(bool textured, bool normals) {
 void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_instances) {
 
 	assert(ndiv >= 3);
-	assert(ndiv <= MAX_SPHERE_VBO_NDIV);
+	assert(ndiv <= (int)MAX_SPHERE_VBO_NDIV);
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
 	assert(off1 < off2);
 	check_mvm_update();
@@ -1200,7 +1199,7 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instan
 
 void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc) {
 
-	if (ndiv <= MAX_SPHERE_VBO_NDIV) { // speedup is highly variable
+	if (ndiv <= (int)MAX_SPHERE_VBO_NDIV) { // speedup is highly variable
 		assert(ndiv > 0);
 		bool const has_xform(radius != 1.0 || pos != all_zeros);
 		//if (shader_loc >= 0) {shader_t::set_uniform_vector4d(shader_loc, vector4d(pos, radius));}

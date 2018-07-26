@@ -12,6 +12,7 @@
 #include "lightmap.h"
 #include "buildings.h"
 #include "tree_3dw.h"
+#include <cfloat> // for FLT_MAX
 
 using std::string;
 
@@ -848,7 +849,6 @@ namespace streetlight_ns {
 			if (!is_lit(always_on)) return;
 			float const ldist(light_dist*city_params.road_width);
 			if (!lights_bcube.contains_pt_xy(pos)) return; // not contained within the light volume
-			float const height(light_height*city_params.road_width);
 			point const lpos(get_lpos());
 			if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) return; // VFC
 			min_eq(lights_bcube.z1(), (lpos.z - ldist));
@@ -1363,8 +1363,8 @@ class city_road_gen_t {
 			glDepthFunc(GL_LESS);
 		}
 		template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case (plot/park)
-		template<> void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
-		template<> void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
+		void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
+		void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
 		
 		template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
 			if (rp.s == rp.e) return; // empty
@@ -1396,7 +1396,7 @@ class city_road_gen_t {
 			min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
 			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 			point const cpos(camera_pdu.pos - xlate);
-			float const width(bcube.d[!d][1] - bcube.d[!d][0]), center(0.5*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
+			float const center(0.5*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
 			point p1, p2; // centerline end points
 			p1.z = bridge.get_start_z();
 			p2.z = bridge.get_end_z();
@@ -1591,7 +1591,6 @@ class city_road_gen_t {
 				draw_cube(qbd, cw_concrete, center, pts, (!shadow_only && i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube unless shadowed
 			}
 			qbd.draw_and_clear();
-			bool const dir(tunnel.ends[1].d[d][0] > tunnel.ends[0].d[d][0]); // positive
 			float const width(max(0.5*tunnel.get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
 
 			if (!shadow_only) {
@@ -2146,7 +2145,7 @@ class city_road_gen_t {
 				for (unsigned dir = 0; dir < 2; ++dir) { // dir
 					bool found(0);
 					int const seg_ix(search_for_adj(segs, rix.seg_ixs, seg, seg.dim, (dir != 0)));
-					if (seg_ix >= 0) {assert(seg_ix != i); seg.conn_ix[dir] = seg_ix; seg.conn_type[dir] = TYPE_RSEG; found = 1;} // found segment
+					if (seg_ix >= 0) {assert(seg_ix != (int)i); seg.conn_ix[dir] = seg_ix; seg.conn_type[dir] = TYPE_RSEG; found = 1;} // found segment
 
 					for (unsigned n = 0; n < 3; ++n) { // 2-way, 3-way, 4-way
 						int const isec_ix(search_for_adj(isecs[n], rix.isec_ixs[n][seg.dim], seg, seg.dim, (dir != 0)));
@@ -2834,7 +2833,7 @@ public:
 			}
 		} // for d
 		point const center1(bcube1.get_cube_center()), center2(bcube2.get_cube_center());
-		bool const dx(center1.x < center2.x), dy(center1.y < center2.y), slope(dx ^ dy);
+		bool const dx(center1.x < center2.x), dy(center1.y < center2.y);
 		cube_t const bc[2] = {bcube1, bcube2};
 		
 		if ((bc[dx].x1() - bc[!dx].x1() > min_jog) && (bc[dy].y1() - bc[!dy].y1() > min_jog)) {
@@ -2869,7 +2868,7 @@ public:
 					for (auto b = blockers.begin(); b != blockers.end(); ++b) {
 						if (b->intersects_xy(int_cube)) {has_int = 1; break;} // bad intersection, fail
 					}
-					//cout << TXT(dx) << TXT(dy) << TXT(slope) << TXT(fdim) << TXT(range_dir1) << TXT(range_dir2) << TXT(xval) << TXT(yval) << TXT(height) << TXT(has_int) << endl;
+					//cout << TXT(dx) << TXT(dy) << TXT(dx ^ dy) << TXT(fdim) << TXT(range_dir1) << TXT(range_dir2) << TXT(xval) << TXT(yval) << TXT(height) << TXT(has_int) << endl;
 					if (has_int) continue; // bad intersection, fail
 					float const cost1(global_rn.create_connector_road(bcube1, int_cube, blockers, &rn1, nullptr, city1, CONN_CITY_IX, hq, road_width, (fdim ? xval : yval),  fdim, 1)); // check_only=1
 					if (cost1 < 0.0) continue; // bad segment
@@ -2905,7 +2904,6 @@ public:
 		timer_t timer("Connect Cities");
 		heightmap_query_t hq(heightmap, xsize, ysize);
 		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected (0=unconnected, 1=connected, 2=done/connect failed
-		unsigned cur_city(0), num_conn(0), num_done(0);
 		vector<pair<float, unsigned>> cands;
 		vector<cube_t> blockers; // existing cities and connector roads that we want to avoid intersecting
 
@@ -3201,7 +3199,6 @@ class car_manager_t {
 			top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
 			set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
 			if (include_top) {set_cube_pts(top_part, zmid, z2, dim, dir, pt);} // top
-			float const sign((dim^dir) ? -1.0 : 1.0);
 
 			if (car.dz != 0.0) { // rotate all points about dim !d
 				float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
@@ -3506,7 +3503,7 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 
 struct city_smap_manager_t {
 	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
-		unsigned const num_smaps(min(light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
+		unsigned const num_smaps(min((unsigned)light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
 		dl_smap_enabled = 0;
 		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
 		sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again

@@ -439,6 +439,7 @@ struct tree_placer_t {
 	struct tree_block {
 		vector<tree_ref> trees;
 		cube_t bcube;
+		tree_block() : bcube(all_zeros) {}
 	};
 	vector<tree_block> blocks;
 
