@@ -280,7 +280,7 @@ void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, 
 	if (last_element < decals.size() && dist_less_than(pos, last_pos, 2.0*min_dist)) {
 		decal_obj &decal(decals[last_element]);
 
-		if (decal.color == color && decal.tid == tid && decal.cid == cid && (decal.pos, last_pos, 0.1*radius)) { // last decal is valid and mergeable
+		if (decal.color == color && decal.tid == tid && decal.cid == cid && dist_less_than(decal.pos, last_pos, 0.1*radius)) { // last decal is valid and mergeable
 			decal.radius   = min(pow((decal.radius*decal.radius*decal.radius + radius*radius*radius), 1.0f/3.0f), 4.0f*radius); // increase radius of last decal (linear volume increase)
 			decal.lifetime = (lifetime + decal.lifetime)/2; // average lifetime
 			return; // merged
