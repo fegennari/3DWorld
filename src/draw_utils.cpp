@@ -34,7 +34,7 @@ void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_s
 }
 
 
-void const *ptr_add(void const *p, unsigned off) {return (unsigned char const *)(unsigned(p) + off);}
+void const *ptr_add(void const *p, unsigned off) {return (unsigned char const *)(size_t(p) + off);}
 
 void set_vn_ptrs(unsigned stride, bool comp, void const *vbo_ptr_offset) {
 	assert(cur_shader);
