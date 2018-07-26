@@ -1010,7 +1010,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	switch (powerup) {
 		case PU_DAMAGE: // devil horns
 			shader.set_cur_color(RED);
-			for (unsigned d = 0; d < d; ++d) {draw_cylinder_at(point((d ? -3.0 : 3.0)*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);}
+			for (unsigned d = 0; d < 2; ++d) {draw_cylinder_at(point((d ? -3.0 : 3.0)*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);}
 			break;
 
 		case PU_REGEN: // raindrops
@@ -1036,7 +1036,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			fgTranslate(0.0, 0.0, 1.4*radius);
 			fgRotate(float((30*time)%360), 0.0, 0.0, 1.0);
 			fgScale(1.0, 0.25, 0.05);
-			for (unsigned d = 0; d < d; ++d) {draw_sphere_vbo(point((d ? -5.0 : 5.0)*radius, 0.0, 0.0), 0.5*radius, ndiv, 0);} // propeller
+			for (unsigned d = 0; d < 2; ++d) {draw_sphere_vbo(point((d ? -5.0 : 5.0)*radius, 0.0, 0.0), 0.5*radius, ndiv, 0);} // propeller
 			fgPopMatrix();
 			break;
 
