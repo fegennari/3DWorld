@@ -610,8 +610,6 @@ struct tquad_t { // size = 52
 };
 
 
-template<typename T, typename S> inline float p2p_dist(const pointT<T> &pt1, const pointT<S> &pt2);
-
 struct line_3dw {
 
 	point p1, p2;
@@ -619,7 +617,7 @@ struct line_3dw {
 	line_3dw() : p1(all_zeros), p2(all_zeros) {}
 	line_3dw(point const &p1_, point const &p2_) : p1(p1_), p2(p2_) {assert(p1 != p2);}
 	vector3d get_norm_dir_vect() const {return (p2 - p1).get_norm();}
-	float get_length() const {return p2p_dist(p1, p2);}
+	float get_length() const {return (p1 - p2).mag();}
 	void translate(point const &p) {p1 += p; p2 += p;}
 };
 

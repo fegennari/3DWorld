@@ -880,7 +880,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 			unsigned short const *const ixs(dlsc.get_src_ixs());
 			unsigned num_ixs(dlsc.size());
 			assert(num_ixs < 256);
-			num_ixs = min(num_ixs, (max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
+			num_ixs = min(num_ixs, unsigned(max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
 			
 			for (unsigned i = 0; i < num_ixs; ++i) {
 				if (ixs[i] < ndl) {elem_data.push_back((unsigned short)ixs[i]);} // if dlight index is too high, skip
@@ -902,7 +902,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, elem_tex_x, elem_tex_y, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, nullptr);
 	}
 	bind_2d_texture(elem_tid);
-	unsigned const height(min(elem_tex_y, (elem_data.size()/elem_tex_x+1U))); // approximate ceiling
+	unsigned const height(min(elem_tex_y, unsigned(elem_data.size()/elem_tex_x+1U))); // approximate ceiling
 	elem_data.reserve(elem_tex_x*height); // ensure it's large enough for the padded upload
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_x, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, &elem_data.front());
 
@@ -1233,7 +1233,7 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 
 bool is_any_dlight_visible(point const &p) {
 	
-	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
+	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y));
 	if (point_outside_mesh(x, y)) return 0; // outside the mesh range
 	if (dl_sources.empty() || !dlight_bcube.contains_pt(p)) return 0;
 	dls_cell const &ldv(ldynamic[get_ldynamic_ix(x, y)]);

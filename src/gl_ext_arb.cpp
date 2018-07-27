@@ -206,7 +206,7 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 	bind_vbo(vbo, is_index);
 	assert(has_space_for(size_bytes));
 	upload_vbo_sub_data_no_sync(v, pos, size_bytes, is_index);
-	void const *ret((unsigned char const *)pos);
+	void const *ret((unsigned char const *)((size_t)pos));
 	pos += size_bytes; // data allocated
 	align_vbo_ptr(pos); // 16-byte alignment - makes no difference?
 	return ret;

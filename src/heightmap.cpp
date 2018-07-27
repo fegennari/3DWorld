@@ -138,7 +138,7 @@ void heightmap_t::postprocess_height() {
 		float v(unscale_mh_texture_val(vals[i]));
 		assert(v >= 0.0 && v < 256.0); // must convert to [0,256) range
 		if (ncolors == 2) {write_pixel_16_bits(i, v);} // 16-bit
-		else {data[i] = unsigned char(v);} // 8-bit
+		else {data[i] = (unsigned char)v;} // 8-bit
 	}
 }
 

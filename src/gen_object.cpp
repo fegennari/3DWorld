@@ -359,7 +359,7 @@ void physics_particle_manager::gen_particles(point const &pos, vector3d const &v
 	if (!is_pos_valid(pos)) return; // origin invalid
 	unsigned const MAX_PARTS = 100000; // limit of 100K particles
 	if (parts.size() >= MAX_PARTS) return; // too may particles
-	num = min(num, parts.size() - MAX_PARTS);
+	num = min(num, unsigned(parts.size() - MAX_PARTS));
 
 	for (unsigned i = 0; i < num; ++i) {
 		point ppos;
@@ -412,9 +412,9 @@ double rgen_pregen_t::randd() {
 	return val;
 }
 
-template<typename base> vector3d rand_gen_template_t<base>::rand_vector(float scale=1.0) {
+template<typename base> vector3d rand_gen_template_t<base>::rand_vector(float scale) {
 	assert(scale > 0.0);
-	return vector3d(scale*randd(), scale*randd(), scale*randd());
+	return vector3d(scale*base::randd(), scale*base::randd(), scale*base::randd());
 }
 template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector(float scale) {
 	assert(scale > 0.0);

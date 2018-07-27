@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h> // for memset
 #include "gl_includes.h"
 
 
@@ -173,19 +174,6 @@ inline float get_water_coll_angle(vector3d const &v) { // normal n = (0, 0, 1.0)
 	return safe_acosf(-v.z/v.mag());
 }
 
-inline float pt_line_dist(point const &P, point const &L1, point const &L2) {
-	vector3d const L(L2 - L1);
-	float const L_mag(L.mag());
-	return ((L_mag < TOLERANCE) ? p2p_dist(L1, P) : cross_product(L, (L1 - P)).mag()/L_mag);
-}
-inline bool pt_line_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
-	vector3d const L(L2 - L1), cp(cross_product(L, (L1 - P)));
-	return (cp.mag_sq() < dist*dist*L.mag_sq());
-}
-inline bool pt_line_dir_dist_less_than(point const &P, point const &L1, vector3d const &Ldir, float dist) { // Ldir is normalized
-	return (cross_product(Ldir, (L1 - P)).mag_sq() < dist*dist);
-}
-
 template<typename T, typename S> inline float p2p_dist_sq(const pointT<T> &pt1, const pointT<S> &pt2) {
 	return (pt1.x-pt2.x)*(pt1.x-pt2.x) + (pt1.y-pt2.y)*(pt1.y-pt2.y) + (pt1.z-pt2.z)*(pt1.z-pt2.z);
 }
@@ -205,6 +193,19 @@ template<typename T, typename S, typename V> inline bool dist_less_than(pointT<T
 }
 template<typename T, typename S, typename V> inline bool dist_xy_less_than(pointT<T> const &pt1, pointT<S> const &pt2, V dval) {
 	return (p2p_dist_xy_sq(pt1, pt2) < dval*dval);
+}
+
+inline float pt_line_dist(point const &P, point const &L1, point const &L2) {
+	vector3d const L(L2 - L1);
+	float const L_mag(L.mag());
+	return ((L_mag < TOLERANCE) ? p2p_dist(L1, P) : cross_product(L, (L1 - P)).mag()/L_mag);
+}
+inline bool pt_line_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
+	vector3d const L(L2 - L1), cp(cross_product(L, (L1 - P)));
+	return (cp.mag_sq() < dist*dist*L.mag_sq());
+}
+inline bool pt_line_dir_dist_less_than(point const &P, point const &L1, vector3d const &Ldir, float dist) { // Ldir is normalized
+	return (cross_product(Ldir, (L1 - P)).mag_sq() < dist*dist);
 }
 
 template<typename T> inline T dot_product(pointT<T> const &A, pointT<T> const &B, pointT<T> const &C) {

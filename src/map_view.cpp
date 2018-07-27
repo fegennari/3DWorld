@@ -8,6 +8,7 @@
 #include "physics_objects.h"
 #include "shaders.h"
 #include "heightmap.h"
+#include <cfloat> // for FLT_MAX
 
 
 bool const MAP_VIEW_LIGHTING = 1;

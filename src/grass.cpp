@@ -493,7 +493,6 @@ public:
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2)), rad_sq(rad*rad);
 		if (rad == 0.0) return 0;
-		float const xa(pos.x - radius), xb(pos.x + radius), ya(pos.y - radius), yb(pos.y + radius);
 
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {

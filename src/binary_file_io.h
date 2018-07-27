@@ -48,7 +48,7 @@ struct binary_file_writer : public binary_file_io {
 
 	bool write(void const *ptr, size_t sz, size_t count) {
 		if      (fp ) {return (fwrite (ptr, sz, count, fp) == count);}
-		else if (gzf) {return (gzwrite(gzf, ptr, sz*count) == sz*count);}
+		else if (gzf) {return (gzwrite(gzf, ptr, sz*count) == int(sz*count));}
 		else {assert(0);} // no file opened
 		return 0;
 	}
