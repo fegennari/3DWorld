@@ -1,7 +1,7 @@
 
 VPATH=../src
 #CPPFLAGS=-g -Wall 
-CPPFLAGS=-g -Wall -O3 -fopenmp
+CPPFLAGS=-g -Wall -O3 -fopenmp -I../Targa
 TARGET=../lib/3dworld
 OBJS=$(shell cat ../obj_list)
 TARGET2=
