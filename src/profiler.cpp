@@ -35,7 +35,7 @@ public:
 	void stats() const {
 		cout << "name count total max average" << endl;
 		unsigned max_name(0);
-		for (auto i = entries.begin(); i != entries.end(); ++i) {max_name = max(max_name, i->first.size());}
+		for (auto i = entries.begin(); i != entries.end(); ++i) {max_name = max(max_name, (unsigned)i->first.size());}
 
 		for (auto i = entries.begin(); i != entries.end(); ++i) {
 			string const spaces((max_name - i->first.size()), ' ');

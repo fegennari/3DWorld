@@ -856,7 +856,7 @@ void texture_t::make_normal_map() {
 				        ((int)data[x+yp1*width] - (int)data[x+ym1*width])/max_delta_f, 1.0);
 			n.normalize();
 			if (invert_bump_maps) {n.x = -n.x; n.y = -n.y;}
-			UNROLL_3X(new_data[off+i_] = unsigned char(127.5*(n[i_]+1.0)););
+			UNROLL_3X(new_data[off+i_] = (unsigned char)(127.5*(n[i_]+1.0)););
 		}
 	}
 	free_data();
@@ -1805,8 +1805,8 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2], float cons
 	get_poly_texgen_dirs(norm, v);
 	
 	for (unsigned i = 0; i < 2; ++i) {
-		vector4d const v(scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i])));
-		set_texgen_vec4(v, ((i != 0) ^ swap_txy), shader, mode);
+		vector4d const vv(scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i])));
+		set_texgen_vec4(vv, ((i != 0) ^ swap_txy), shader, mode);
 	}
 }
 
@@ -1879,7 +1879,7 @@ colorRGBA get_texture_color(unsigned tid, float u, float v) {
 void texture_t::write_pixel_16_bits(unsigned ix, float val) { // Note: no error checking
 	unsigned char const high_bits(val); // high bits - truncate
 	data[(ix<<1)+1] = high_bits;
-	data[ix<<1]     = unsigned char(256.0*(val - float(high_bits))); // low bits - remainder
+	data[ix<<1]     = (unsigned char)(256.0*(val - float(high_bits))); // low bits - remainder
 }
 
 

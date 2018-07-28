@@ -209,6 +209,8 @@ protected:
 	cube_t bcube;
 
 public:
+	using vector<T>::empty;
+	using vector<T>::size;
 	unsigned obj_id;
 
 	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), obj_id(obj_id_) {bcube.set_to_zeros();}

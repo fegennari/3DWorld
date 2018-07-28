@@ -54,7 +54,6 @@ platform.o
 postproc_effects.o
 precipitation.o
 profiler.o
-quad_tri_drawer.o
 quartic.o
 ray_trace.o
 read_3ds.o

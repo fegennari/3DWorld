@@ -6,8 +6,13 @@
 #include "function_registry.h"
 #include <iostream>
 #include <assert.h>
+#ifdef _WIN32
 #include <al.h>
 #include <alc.h>
+#else // FIXME: are these valid for Windows as well?
+#include <AL/al.h>
+#include <AL/alc.h>
+#endif
 #include <AL/alut.h>
 
 using namespace std;

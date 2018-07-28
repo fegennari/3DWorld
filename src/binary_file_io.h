@@ -38,7 +38,7 @@ struct binary_file_reader : public binary_file_io {
 
 	bool read(void *ptr, size_t sz, size_t count) {
 		if      (fp ) {return (fread (ptr, sz, count, fp) == count);}
-		else if (gzf) {return (gzread(gzf, ptr, sz*count) == sz*count);}
+		else if (gzf) {return (gzread(gzf, ptr, sz*count) == int(sz*count));}
 		else {assert(0);} // no file opened
 		return 0;
 	}

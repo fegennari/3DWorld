@@ -28,6 +28,7 @@
 #include <math.h>
 #include <vector>
 #include <assert.h>
+#include <cstring> // for memset
 
 
 namespace TriListOpt

@@ -7,6 +7,8 @@
 #include "model3d.h"
 #include "file_reader.h"
 #include <stdint.h>
+#include <algorithm> // for transform()
+#include <cctype> // for tolower()
 #include "fast_atof.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION

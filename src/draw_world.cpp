@@ -106,14 +106,14 @@ void gl_light_params_t::set_pos(point const &p, float w) {
 
 void set_light_ds_color(int light, colorRGBA const &diffuse, shader_t *shader) {
 
-	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
+	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	gl_light_params[light].set_ds(diffuse);
 	if (shader) {shader->upload_light_source(light, 0x0C);}
 }
 
 void set_light_a_color(int light, colorRGBA const &ambient, shader_t *shader) {
 
-	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
+	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	gl_light_params[light].set_a(ambient);
 	if (shader) {shader->upload_light_source(light, 0x02);}
 }
@@ -133,14 +133,14 @@ void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA 
 void clear_colors_and_disable_light(int light, shader_t *shader) {
 
 	enable_light(light); // enable temporarily so that we can update the shader colors for shaders that don't check the enabled state
-	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
+	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	set_light_colors(light, BLACK, BLACK, shader);
 	disable_light(light);
 }
 
 void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader) {
 
-	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
+	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	gl_light_params[light].set_pos(pos, w);
 	if (shader) {shader->upload_light_source(light, 0x01);}
 }
@@ -182,9 +182,9 @@ void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 }
 
 
-bool is_light_enabled(int l) {assert(l < MAX_SHADER_LIGHTS); return ((enabled_lights & (1<<l)) != 0);}
-void enable_light    (int l) {assert(l < MAX_SHADER_LIGHTS); enabled_lights |=  (1<<l);}
-void disable_light   (int l) {assert(l < MAX_SHADER_LIGHTS); enabled_lights &= ~(1<<l);}
+bool is_light_enabled(int l) {assert(l < (int)MAX_SHADER_LIGHTS); return ((enabled_lights & (1<<l)) != 0);}
+void enable_light    (int l) {assert(l < (int)MAX_SHADER_LIGHTS); enabled_lights |=  (1<<l);}
+void disable_light   (int l) {assert(l < (int)MAX_SHADER_LIGHTS); enabled_lights &= ~(1<<l);}
 
 
 void calc_cur_ambient_diffuse() {

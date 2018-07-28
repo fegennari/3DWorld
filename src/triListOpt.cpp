@@ -285,9 +285,9 @@ namespace TriListOpt
 				{
 					int j = 0;
 					for(; j < (int)outTrisToUpdate.size(); j++)
-						if(outTrisToUpdate[j] == triIdx)
+ 						if(outTrisToUpdate[j] == (U32)triIdx)
 							break;
-					if(j == outTrisToUpdate.size())
+					if(j == (int)outTrisToUpdate.size())
 						outTrisToUpdate.push_back(triIdx);
 				}
 			}
@@ -365,7 +365,7 @@ namespace TriListOpt
 				}
 				else
 				{
-					assert(vertexData.cachePosition < MaxSizeVertexCache);
+					assert(vertexData.cachePosition < (int)MaxSizeVertexCache);
 
 					// Points for being high in the cache.
 					const float Scaler = 1.0f / (MaxSizeVertexCache - 3);

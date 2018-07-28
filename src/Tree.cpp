@@ -1095,7 +1095,7 @@ void tree_data_t::draw_branches(shader_t &s, float size_scale, bool force_low_de
 	vert_norm_comp_tc::set_vbo_arrays(0);
 	int const index_type((branch_index_bytes == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
 	unsigned const idata_sz(6*num_branch_quads*branch_index_bytes);
-	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, (low_detail ? 3 : 6)*num, index_type, (void *)(low_detail ? idata_sz : 0));
+	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, (low_detail ? 3 : 6)*num, index_type, (void *)size_t(low_detail ? idata_sz : 0));
 	branch_manager.post_render();
 }
 
@@ -1123,7 +1123,7 @@ void tree_data_t::reset_leaf_pos_norm() {
 
 void tree_data_t::ensure_leaf_vbo() {
 
-	leaf_change_end = min(leaf_change_end, leaves.size()); // in case a leaf was removed after a previous update this frame
+	leaf_change_end = min(leaf_change_end, (unsigned)leaves.size()); // in case a leaf was removed after a previous update this frame
 
 	if (leaf_vbo == 0) {
 		create_vbo_and_upload(leaf_vbo, leaf_data, 0, 0, 1); // dynamic draw, due to wind updates, collision, burn damage, etc.
@@ -2098,8 +2098,8 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 	int tree_id(-1);
 
 	if (ttype >= 0) {
-		unsigned const num_per_type(max(1U, shared_tree_data.size()/NUM_TREE_TYPES));
-		tree_id = min(unsigned((((rgen.rseed1 >> 7) + rgen.rseed2) % num_per_type) + ttype*num_per_type), shared_tree_data.size()-1);
+		unsigned const num_per_type(max(1U, (unsigned)shared_tree_data.size()/NUM_TREE_TYPES));
+		tree_id = min(unsigned((((rgen.rseed1 >> 7) + rgen.rseed2) % num_per_type) + ttype*num_per_type), (unsigned)shared_tree_data.size()-1);
 	}
 	else {
 		tree_id = (rgen.rseed2 % shared_tree_data.size());

@@ -6,6 +6,7 @@
 #include "u_event.h"
 #include <iostream>
 #include <algorithm>
+#include <cstring> // for strcmp()
 
 using std::vector;
 using std::cout;

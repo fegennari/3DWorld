@@ -103,7 +103,7 @@ int solve_cubic(const double *poly,double *roots)
 	// Three real, surprisingly this is the most difficult one.
 	d = sqrt(-d);
 	q = atan2(d,r) / 3.0;
-	r = cbrt(_hypot(d,r));
+	r = cbrt(hypot(d,r));
 	{
 		double s,t;
 		s =  (2.0 * r) * cos(q);

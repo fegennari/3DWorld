@@ -106,7 +106,7 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	texture_t &t(get_texture(tid));
 	assert(t.ncolors == 3 || t.ncolors == 4);
 	if (t.alpha_tid == alpha_tid) return; // already bound
-	assert(tid < BUILTIN_TID_START); // can't modify builtin textures
+	assert(tid < (int)BUILTIN_TID_START); // can't modify builtin textures
 	assert(t.alpha_tid < 0); // can't rebind to a different value
 	assert(!t.is_allocated()); // must not yet be loaded
 	t.alpha_tid = alpha_tid;
@@ -119,12 +119,12 @@ texture_t &get_builtin_texture(int tid) {
 	return textures[tid];
 }
 texture_t const &texture_manager::get_texture(int tid) const {
-	if (tid >= BUILTIN_TID_START) {return get_builtin_texture(tid - BUILTIN_TID_START);} // global textures lookup
+	if (tid >= (int)BUILTIN_TID_START) {return get_builtin_texture(tid - BUILTIN_TID_START);} // global textures lookup
 	assert((unsigned)tid < textures.size());
 	return textures[tid]; // local textures lookup
 }
 texture_t &texture_manager::get_texture(int tid) {
-	if (tid >= BUILTIN_TID_START) {return get_builtin_texture(tid - BUILTIN_TID_START);} // global textures lookup
+	if (tid >= (int)BUILTIN_TID_START) {return get_builtin_texture(tid - BUILTIN_TID_START);} // global textures lookup
 	assert((unsigned)tid < textures.size());
 	return textures[tid]; // local textures lookup
 }

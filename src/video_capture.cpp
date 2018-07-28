@@ -7,6 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <cstring> // for memcpy()
 
 using namespace std;
 
@@ -130,11 +131,19 @@ public:
 		oss << "ffmpeg.exe.lnk -r " << video_framerate << " -f rawvideo -pix_fmt rgba -s " << window_width << "x" << window_height
 			<< " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << filename;
 		// open pipe to ffmpeg's stdin in binary write mode
+#ifdef _WIN32
 		FILE* ffmpeg = _popen(oss.str().c_str(), "wb");
+#else
+		FILE* ffmpeg = popen(oss.str().c_str(), "wb");
+#endif
 		assert(ffmpeg != nullptr);
 		is_writing   = 1;
 		while (is_recording || !buffer.empty()) {buffer.write_frames(ffmpeg); alut_sleep(0.001);} // 1ms sleep
+#ifdef _WIN32
 		_pclose(ffmpeg);
+#else
+		pclose(ffmpeg);
+#endif
 		is_writing   = 0;
 	}
 	void end() {

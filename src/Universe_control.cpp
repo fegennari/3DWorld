@@ -337,7 +337,7 @@ void process_univ_objects() {
 		if (no_coll && particle)   continue; // no collisions, gravity, or temperature on this object
 		if (uobj->is_stationary()) continue;
 		bool const is_ship(uobj->is_ship()), orbiting(uobj->is_orbiting());
-		bool const calc_gravity(((uobj->get_time() + (unsigned(uobj)>>8)) & (GRAV_CHECK_MOD-1)) == 0);
+		bool const calc_gravity(((uobj->get_time() + unsigned(size_t(uobj)>>8)) & (GRAV_CHECK_MOD-1)) == 0);
 		bool const lod_coll(PLAYER_SLOW_PLANET_APPROACH && is_ship && uobj->is_player_ship()); // enable if we want to do close planet flyby
 		float const radius(uobj->get_c_radius()*(no_coll ? 0.5 : 1.0));
 		upos_point_type const &obj_pos(uobj->get_pos());
