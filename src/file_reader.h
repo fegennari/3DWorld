@@ -26,7 +26,7 @@ protected:
 	void close_file();
 	int get_next_char() {assert(fp); return get_char(fp);}
 	void unget_last_char(int c);
-	static bool fast_isspace(char c) {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '/r');}
+	static bool fast_isspace(char c) {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');}
 	static bool fast_isdigit(char c) {return (c >= '0' && c <= '9');}
 	int get_char(FILE *fp_);
 	int get_char(std::ifstream &in) const {return in.get();}
