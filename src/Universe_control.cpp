@@ -817,7 +817,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 				}
 			}
 			for (auto m = p->moons.begin(); m != p->moons.end(); ++m) {
-				if (!m->colonizable() || m->get_id() == exclude_id && m->temp < tmax) continue;
+				if (!m->colonizable() || m->get_id() == exclude_id || m->temp >= tmax) continue;
 				float const mvalue(m->get_land_value(align, pos, sradius));
 				sol_good = 1;
 
