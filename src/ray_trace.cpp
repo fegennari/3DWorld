@@ -498,7 +498,7 @@ struct rt_data {
 	cobj_ray_accum_map_t accum_map;
 
 	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0, int lt=0, unsigned jid=0)
-		: ix(i), num(n), job_id(jid), checksum(0), ltype(lt), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {update_bcube.set_to_zeros();}
+		: ix(i), num(n), job_id(jid), checksum(0), rseed(s), ltype(lt), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(nullptr) {update_bcube.set_to_zeros();}
 
 	void pre_run(rand_gen_t &rgen) {
 		assert(lmgr);
@@ -524,7 +524,7 @@ public:
 	bool is_active() const {return (!threads.empty());}
 
 	bool any_threads_running() const {
-		for (vector<T>::const_iterator i = data.begin(); i != data.end(); ++i) {if (i->is_running) return 1;}
+		for (auto i = data.begin(); i != data.end(); ++i) {if (i->is_running) return 1;}
 		return 0;
 	}
 

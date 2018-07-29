@@ -323,7 +323,7 @@ public:
 
 		while (mat_in.good() && (mat_in >> s)) {
 			assert(!s.empty());
-			transform(s.begin(), s.end(), s.begin(), tolower); // convert all characters to lowercase
+			transform(s.begin(), s.end(), s.begin(), ::tolower); // convert all characters to lowercase
 
 			if (s[0] == '#') { // comment - can we have comments here?
 				read_to_newline(mat_in); // ignore
