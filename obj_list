@@ -95,3 +95,4 @@ voxels.o
 Water.o
 waypoints.o
 weapon_draw.o
+targa.o

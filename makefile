@@ -1,6 +1,7 @@
 VPATH=../src
 GLUI=../../glui
-CPPFLAGS=-g -Wall -O3 -fopenmp -I../Targa -I$(GLUI)/include
+TARGA=../Targa
+CPPFLAGS=-g -Wall -O3 -fopenmp -I$(TARGA) -I$(GLUI)/include
 TARGET=../lib/3dworld
 OBJS=$(shell cat ../obj_list)
 TARGET2=
@@ -10,9 +11,9 @@ LIB_TARGET=
 LIB_OBJS=
 
 #LINK=g++ $(CPPFLAGS) -lz -lpng -lpthread -L/usr/X11R6/lib64 -lglut -lGL -lGLU
-LINK=g++ $(CPPFLAGS) -L$(GLUI)/lib -lz -lpng -lpthread $(shell pkg-config --libs xrender) -lglui -lglut -lGL -lGLU
+LINK=g++ $(CPPFLAGS) -L$(GLUI)/lib
 
-LFLAGS=$(LIB_TARGET)
+LFLAGS=-lz -lpng -lpthread $(shell pkg-config --libs xrender) -lglui -lglut -lGLEW -lGLU -lGL -lopenal -lalut $(LIB_TARGET)
 
 #  In most cases, you should not change anything below this line.
 ifeq ($(shell test -L makefile ; echo $$? ),1)
