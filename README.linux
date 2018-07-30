@@ -17,6 +17,8 @@ git clone https://github.com/libglui/glui
 cd glui
 make
 
+git clone https://github.com/g-truc/gli
+
 Build setup:
 mkdir lib
 mkdir obj
