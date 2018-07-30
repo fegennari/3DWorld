@@ -1020,10 +1020,7 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	if (burn_amt == 1.0) return;
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
-	float const dist(distance_to_camera(pos+xlate));
 	(shadow_only ? WHITE : get_plant_color(xlate)).set_for_cur_shader(); // no underwater case yet
-	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
-	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	bool const is_underwater(pos.z < water_plane_z);
 	select_texture(get_tid());
 	assert(vbo_mgr_ix >= 0);
