@@ -53,7 +53,7 @@ protected:
 
 public:
 	// Note: the max number of controls we can fit on the screen is around 13
-	keyboard_menu_t(unsigned num_controls_, string const &title_) : num_controls(num_controls_), cur_control(0), title(title_) {assert(num_controls > 0);}
+	keyboard_menu_t(unsigned num_controls_, string const &title_) : title(title_), num_controls(num_controls_), cur_control(0) {assert(num_controls > 0);}
 	virtual ~keyboard_menu_t() {}
 	virtual bool is_enabled() const = 0;
 	void next_control() {cur_control = (cur_control == num_controls-1) ? 0  : (cur_control+1);}

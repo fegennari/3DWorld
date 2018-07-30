@@ -122,6 +122,16 @@ public:
 	vector3d vsz; // size of a voxel in x,y,z
 	point center, lo_pos;
 
+	using vector<V>::clear;
+	using vector<V>::empty;
+	using vector<V>::size;
+	using vector<V>::at;
+	using vector<V>::operator[];
+	using vector<V>::resize;
+	using vector<V>::begin;
+	using vector<V>::end;
+	using vector<V>::front;
+
 	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V const &default_val, unsigned num_blocks=1);
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, cube_t const &bcube, V const &default_val, unsigned num_blocks=1);

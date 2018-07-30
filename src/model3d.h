@@ -256,6 +256,15 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 public:
 	using vntc_vect_t<T>::size;
+	using vntc_vect_t<T>::empty;
+	using vntc_vect_t<T>::begin;
+	using vntc_vect_t<T>::end;
+	using vntc_vect_t<T>::at;
+	using vntc_vect_t<T>::operator[];
+	using vntc_vect_t<T>::finalized;
+	using vntc_vect_t<T>::bcube;
+	using vntc_vect_t<T>::bsphere;
+	
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_), need_normalize(0), optimized(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
@@ -287,6 +296,9 @@ public:
 
 template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t<T> > {
 
+	using deque<indexed_vntc_vect_t<T> >::begin;
+	using deque<indexed_vntc_vect_t<T> >::end;
+	
 	void finalize(unsigned npts);
 	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();

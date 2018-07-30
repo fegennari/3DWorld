@@ -144,13 +144,13 @@ unsigned read_uint(istream &in) {
 
 template<typename V> void write_vector(ostream &out, V const &v) {
 	write_uint(out, (unsigned)v.size());
-	out.write((const char *)&v.front(), v.size()*sizeof(V::value_type));
+	out.write((const char *)&v.front(), v.size()*sizeof(typename V::value_type));
 }
 
 template<typename V> void read_vector(istream &in, V &v) {
 	v.clear();
 	v.resize(read_uint(in));
-	in.read((char *)&v.front(), v.size()*sizeof(V::value_type));
+	in.read((char *)&v.front(), v.size()*sizeof(typename V::value_type));
 }
 
 
@@ -292,10 +292,10 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 	optimize(npts);
 
 	if (need_normalize) {
-		for (iterator i = begin(); i != end(); ++i) {i->n.normalize();}
+		for (auto i = begin(); i != end(); ++i) {i->n.normalize();}
 		need_normalize = 0;
 	}
-	if (!empty()) {ensure_bounding_volumes();}
+	if (!empty()) {this->ensure_bounding_volumes();}
 	if (indices.empty() || finalized) return; // nothing to do
 
 	unsigned const simplify_steps = 0; // TESTING, maybe this doesn't really go here
@@ -527,7 +527,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 
 	if (empty()) return;
 	assert(npts == 3 || npts == 4);
-	//if (is_shadow_pass && vbo == 0 && world_mode == WMODE_GROUND) return; // don't create the vbo on the shadow pass (voxel terrain problems - works now?)
+	//if (is_shadow_pass && this->vbo == 0 && world_mode == WMODE_GROUND) return; // don't create the vbo on the shadow pass (voxel terrain problems - works now?)
 
 	if (no_vfc) {
 		// do nothing
@@ -535,7 +535,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	else if (is_shadow_pass) { // Note: makes shadow map caching more difficult
 		if (no_sparse_smap_update() && !orig_camera_pdu.projected_cube_visible(bcube, camera_pdu.pos)) return; // light_pos == camera_pdu.pos for the shadow pass
 	}
-	else if (vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
+	else if (this->vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
 		if (!camera_pdu.sphere_and_cube_visible_test(bsphere.pos, bsphere.radius, bcube)) return; // view frustum culling
 		
 		if (indices.size() >= 100 && xlate != nullptr && (display_mode & 0x08) != 0) { // Note: null xlate implies there are transforms other than translate, so skip occlusion culling
@@ -557,18 +557,18 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		}
 	}
 	if (use_core_context && npts == 4) {
-		if (!ivbo) {
+		if (!this->ivbo) {
 			vector<unsigned> tixs;
 			convert_quad_ixs_to_tri_ixs(indices, tixs); // Note: can use geometry shader, see http://github.prideout.net/quad-meshes
-			create_and_upload(*this, tixs);
+			this->create_and_upload(*this, tixs);
 		}
 		ixn = 6; ixd = 4; // convert quads to 2 triangles
 	}
 	else {
 		if (npts == 4) {prim_type = GL_QUADS;}
-		create_and_upload(*this, indices);
+		this->create_and_upload(*this, indices);
 	}
-	pre_render();
+	this->pre_render();
 	// Note: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
 	//if (is_shadow_pass) {T::set_vbo_arrays_shadow(0);} else
 	T::set_vbo_arrays(); // calls check_mvm_update()
@@ -578,13 +578,13 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	else { // draw each block independently
 		// could use glDrawElementsIndirect(), but the draw calls don't seem to add any significant overhead for the current set of models
-		for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
+		for (auto i = blocks.begin(); i != blocks.end(); ++i) {
 			if (camera_pdu.cube_visible(i->bcube)) {
 				glDrawRangeElements(prim_type, 0, (unsigned)size(), (ixn*i->num/ixd), GL_UNSIGNED_INT, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));
 			}
 		}
 	}
-	post_render();
+	this->post_render();
 	T::unset_attrs();
 }
 
@@ -609,12 +609,12 @@ template<typename T> unsigned indexed_vntc_vect_t<T>::add_vertex(T const &v, ver
 
 	T v2(v);
 	if (vmap.get_average_normals()) {v2.n = zero_vector;}
-	vertex_map_t<T>::const_iterator it(vmap.find(v2));
+	auto it(vmap.find(v2));
 	unsigned ix;
 
 	if (it == vmap.end()) { // not found
 		ix = (unsigned)size();
-		push_back(v);
+		this->push_back(v);
 		vmap[v2] = ix;
 	}
 	else { // found
@@ -799,32 +799,32 @@ template struct vntc_vect_block_t<vert_norm_tc_tan>;
 
 
 template<typename T> void vntc_vect_block_t<T>::finalize(unsigned npts) {
-	for (iterator i = begin(); i != end(); ++i) {i->finalize(npts);}
+	for (auto i = begin(); i != end(); ++i) {i->finalize(npts);}
 }
 
 template<typename T> void vntc_vect_block_t<T>::free_vbos() {
-	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
+	for (auto i = begin(); i != end(); ++i) {i->clear_vbos();}
 }
 
 template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
 
-	if (empty()) return all_zeros_cube;
-	cube_t bcube(front().get_bcube());
-	for (const_iterator i = begin()+1; i != end(); ++i) {bcube.union_with_cube(i->get_bcube());}
+	if (this->empty()) return all_zeros_cube;
+	cube_t bcube(this->front().get_bcube());
+	for (auto i = begin()+1; i != end(); ++i) {bcube.union_with_cube(i->get_bcube());}
 	return bcube;
 }
 
 template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 
 	unsigned s(0);
-	for (const_iterator i = begin(); i != end(); ++i) {s += i->num_verts();}
+	for (auto i = begin(); i != end(); ++i) {s += i->num_verts();}
 	return s;
 }
 
 template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 
 	unsigned s(0);
-	for (const_iterator i = begin(); i != end(); ++i) {s += (unsigned)i->size();}
+	for (auto i = begin(); i != end(); ++i) {s += (unsigned)i->size();}
 	return s;
 }
 
@@ -833,7 +833,7 @@ template<typename T> float vntc_vect_block_t<T>::calc_draw_order_score() const {
 	float area(0.0);
 	unsigned count(0);
 
-	for (const_iterator i = begin(); i != end(); ++i) {
+	for (auto i = begin(); i != end(); ++i) {
 		count += i->size();
 		area  += i->get_bradius()*i->get_bradius();
 	}
@@ -842,30 +842,30 @@ template<typename T> float vntc_vect_block_t<T>::calc_draw_order_score() const {
 
 template<typename T> float vntc_vect_block_t<T>::calc_area(unsigned npts) {
 	float area(0.0);
-	for (iterator i = begin(); i != end(); ++i) {area += i->calc_area(npts);}
+	for (auto i = begin(); i != end(); ++i) {area += i->calc_area(npts);}
 	return area;
 }
 
 template<typename T> void vntc_vect_block_t<T>::get_polygons(get_polygon_args_t &args, unsigned npts) const {
-	for (const_iterator i = begin(); i != end(); ++i) {i->get_polygons(args, npts);}
+	for (auto i = begin(); i != end(); ++i) {i->get_polygons(args, npts);}
 }
 
 template<typename T> void vntc_vect_block_t<T>::invert_tcy() {
-	for (iterator i = begin(); i != end(); ++i) {i->invert_tcy();}
+	for (auto i = begin(); i != end(); ++i) {i->invert_tcy();}
 }
 
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
-	write_uint(out, (unsigned)size());
-	for (const_iterator i = begin(); i != end(); ++i) {i->write(out);}
+	write_uint(out, (unsigned)this->size());
+	for (auto i = begin(); i != end(); ++i) {i->write(out);}
 	return 1;
 }
 
 template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 
-	clear();
-	resize(read_uint(in));
-	for (iterator i = begin(); i != end(); ++i) {i->read(in);}
+	this->clear();
+	this->resize(read_uint(in));
+	for (auto i = begin(); i != end(); ++i) {i->read(in);}
 	return 1;
 }
 
@@ -1291,6 +1291,11 @@ struct float_plus_dir {
 	bool operator<(float_plus_dir const &fd) const {return ((f == fd.f) ? (d < fd.d) : (f < fd.f));}
 };
 
+void xform_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned start_ix=0) {
+	if (xf.is_identity()) return;
+#pragma omp parallel for schedule(static,1)
+	for (int i = start_ix; i < (int)ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
+}
 
 template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &polygons, T const &cont,
 	vector<vector<float_plus_dir> > &zvals, int bounds[2][2], int num_xy[2], float spacing, unsigned &nhq, model3d_xform_t const &xf)
@@ -2326,12 +2331,6 @@ model3d &get_cur_model(string const &operation) {
 		exit(1);
 	}
 	return all_models.back();
-}
-
-void xform_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned start_ix=0) {
-	if (xf.is_identity()) return;
-#pragma omp parallel for schedule(static,1)
-	for (int i = start_ix; i < (int)ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
 }
 
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned lod_level) {
