@@ -1035,7 +1035,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
 	if (draw_order_score == 0) {
-		unsigned num_nonempty;
+		unsigned num_nonempty(0);
 		update_score(geom.triangles,     draw_order_score, num_nonempty);
 		update_score(geom.quads,         draw_order_score, num_nonempty);
 		update_score(geom_tan.triangles, draw_order_score, num_nonempty);
