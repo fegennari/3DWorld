@@ -1,0 +1,25 @@
+Install (Ubuntu):
+sudo apt install libopenal-dev
+sudo apt install libalut-dev
+sudo apt install freeglut3-dev
+sudo apt install libpng-dev
+sudo apt install libglew-dev
+sudo apt install libglm-dev
+sudo apt install libzstd1-dev
+sudo apt install libtiff-dev
+sudo apt install libjpeg-dev
+sudo apt install libxrender-dev
+sudo apt install libxmu-dev
+sudo apt install libxi-dev
+
+Setup glui:
+git clone https://github.com/libglui/glui
+cd glui
+make
+
+Build setup:
+mkdir lib
+mkdir obj
+cd obj
+ln -s ../makefile .
+make -j4 -k
