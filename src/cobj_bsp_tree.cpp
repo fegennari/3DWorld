@@ -243,6 +243,8 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree_top(bool verbos
 	}
 }
 
+template class cobj_tree_simple_type_t<sphere_with_id_t>; // explicit instantiation of cobj_tree_sphere_t
+
 
 // *** cobj_tree_tquads_t ***
 

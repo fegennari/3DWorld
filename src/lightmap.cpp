@@ -236,6 +236,8 @@ template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, 
 	assert(cur_v == nbins);
 }
 
+template void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, unsigned char **nonempty_bins, lmcell const &init_lmcell); // explicit instantiation
+
 
 void lmap_manager_t::init_from(lmap_manager_t const &src) {
 
