@@ -375,7 +375,7 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 
 	assert(level <= nlevels);
 	unsigned const xsize(MESH_X_SIZE >> ((nlevels-level+unsigned(!dir0)) >> 1)), ix(y*xsize + x);
-	assert((tree[level] - tree[0]) + ix < bsp_data.size());
+	assert((tree[level] - tree[0]) + ix < (int)bsp_data.size());
 	if (!do_line_clip(v1, v2, tree[level][ix].c.d)) return 0;
 
 	if (level == nlevels) { // base case - at a leaf, now verify plane intersection

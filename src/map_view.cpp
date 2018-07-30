@@ -282,6 +282,7 @@ void draw_overhead_map() {
 						else if (height <= map_heights[3]) {color = map_colors[3];} // sand
 						else if (height >= map_heights[0]) {color = map_colors[0];} // snow
 						else {
+							color = BLACK;
 							for (unsigned k = 0; k < 4; ++k) { // mixed
 								if (height > map_heights[k+1]) {
 									float const h((height - map_heights[k+1])/(map_heights[k] - map_heights[k+1])), v(cubic_interpolate(h));

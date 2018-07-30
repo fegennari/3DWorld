@@ -443,7 +443,7 @@ public:
 			for (unsigned j = to_start; j < to_end; ++j) {
 				if (i == (int)j || waypoints[j].disabled) continue;
 
-				if (waypoints[i].connected_to == j) { // connected by a teleporter
+				if (waypoints[i].connected_to == (int)j) { // connected by a teleporter
 					cands.push_back(make_pair(CAMERA_RADIUS, j)); // small but nonzero distance
 					continue;
 				}
@@ -486,7 +486,7 @@ public:
 				}
 				if (redundant) continue;
 
-				if (waypoints[i].connected_to == k || is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT, 1)) {
+				if (waypoints[i].connected_to == (int)k || is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT, 1)) {
 					next.push_back(k);
 					++num_edges;
 				}

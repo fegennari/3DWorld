@@ -29,8 +29,9 @@ extern map<unsigned, unsigned> sclasses_to_weapons;
 // ************ U_SHIP_BASE ************
 
 
-u_ship_base::u_ship_base(unsigned sclass_) : sclass(sclass_), ncredits(0), kills(0), tot_kills(0), deaths(0), regened(1),
-	energy(0.0), fuel(1.0), used_cargo(0.0), size_scale(1.0)
+u_ship_base::u_ship_base(unsigned sclass_) :
+  sclass(sclass_), ncrew(0), ncredits(0), kills(0), tot_kills(0), deaths(0), docked(0), regened(1), o_docked(0),
+  shields(0.0), armor(0.0), energy(0.0), fuel(1.0), used_cargo(0.0), size_scale(1.0)
 {
 	assert(sclass < sclasses.size());
 	assert(specs().inited);
@@ -478,7 +479,7 @@ float u_ship_base::get_true_rel_mass_scale() const {
 
 
 ship_weapon::ship_weapon(unsigned weapon, unsigned num, unsigned ammo0, vector<point> const &weap_pts_)
-	: wclass(weapon), init_ammo(ammo0), wcount(num), rtime(0), nregen(0), ndamaged(0), last_fframe(0), cur_wpt(0)
+	: wclass(weapon), init_ammo(ammo0), wcount(num), rtime(0), nregen(0), ndamaged(0), cur_wpt(0), last_fframe(0)
 {
 	assert(wclass < us_weapons.size());
 	if (init_ammo == 0) init_ammo = wcount*us_weapons[wclass].def_ammo; // get the default for that weapon

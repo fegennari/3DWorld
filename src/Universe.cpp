@@ -198,7 +198,7 @@ struct planet_draw_data_t {
 	bool selected;
 	shadow_vars_t svars;
 	planet_draw_data_t() : ix(0), size(0.0), selected(0) {}
-	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_, bool sel) : ix(ix_), size(size_), svars(svars_), selected(sel) {}
+	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_, bool sel) : ix(ix_), size(size_), selected(sel), svars(svars_) {}
 };
 
 
@@ -3406,20 +3406,29 @@ void s_object::assign(int gc, int cl, int sy, float di, int ty, uobj_solid *obj)
 
 bool s_object::operator<(const s_object &I) const {
 
-	if (type   < I.type)      return 1; if (type   > I.type)   return 0;
-	if (type == UTYPE_NONE)   return 0;
-	if (cellxyz[0] < I.cellxyz[0]) return 1; if (cellxyz[0] > I.cellxyz[0]) return 0;
-	if (cellxyz[1] < I.cellxyz[1]) return 1; if (cellxyz[1] > I.cellxyz[1]) return 0;
-	if (cellxyz[2] < I.cellxyz[2]) return 1; if (cellxyz[2] > I.cellxyz[2]) return 0;
-	if (type == UTYPE_CELL)   return 0;
-	if (galaxy < I.galaxy)    return 1; if (galaxy > I.galaxy)  return 0;
+	if (type < I.type) return 1;
+	if (type > I.type) return 0;
+	if (type == UTYPE_NONE) return 0;
+	if (cellxyz[0] < I.cellxyz[0]) return 1;
+	if (cellxyz[0] > I.cellxyz[0]) return 0;
+	if (cellxyz[1] < I.cellxyz[1]) return 1;
+	if (cellxyz[1] > I.cellxyz[1]) return 0;
+	if (cellxyz[2] < I.cellxyz[2]) return 1;
+	if (cellxyz[2] > I.cellxyz[2]) return 0;
+	if (type == UTYPE_CELL) return 0;
+	if (galaxy < I.galaxy)  return 1;
+	if (galaxy > I.galaxy)  return 0;
 	if (type == UTYPE_GALAXY) return 0;
-	if (cluster < I.cluster)  return 1; if (cluster > I.cluster)return 0; // maybe unnecessary
-	if (system < I.system)    return 1; if (system > I.system)  return 0;
-	if (type == UTYPE_SYSTEM || type == UTYPE_STAR)             return 0;
-	if (planet < I.planet)    return 1; if (planet > I.planet)  return 0;
+	if (cluster < I.cluster)  return 1;
+	if (cluster > I.cluster)  return 0; // maybe unnecessary
+	if (system < I.system)    return 1;
+	if (system > I.system)    return 0;
+	if (type == UTYPE_SYSTEM || type == UTYPE_STAR) return 0;
+	if (planet < I.planet)    return 1;
+	if (planet > I.planet)    return 0;
 	if (type == UTYPE_PLANET) return 0;
-	if (moon   < I.moon)      return 1; if (moon   > I.moon)    return 0;
+	if (moon   < I.moon)      return 1;
+	if (moon   > I.moon)      return 0;
 	if (type == UTYPE_MOON)   return 0;
 	return (id < I.id);
 }

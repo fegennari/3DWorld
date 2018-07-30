@@ -754,7 +754,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 		if (camera_view) return;
 
 		if (sstate.powerup == PU_INVISIBILITY) {
-			bool const flash(sstate.powerup_time < 4*TICKS_PER_SECOND && ((4*sstate.powerup_time/TICKS_PER_SECOND)&1));
+			bool const flash(sstate.powerup_time < int(4*TICKS_PER_SECOND) && ((4*sstate.powerup_time/TICKS_PER_SECOND)&1));
 			alpha *= (flash ? 0.8 : 0.4);
 
 			if (wid != W_BLADE) {

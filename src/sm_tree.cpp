@@ -425,7 +425,6 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	// faster, but lower z-value accuracy, and only works for tiled terrain mode
 	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !use_hmap_tex && (mesh_gen_mode == MGEN_SINE || ntrees_mult > 0.025));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
-	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
 	mesh_xy_grid_cache_t density_gen, height_gen; // random tree generation based on transformed mesh height function
 	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1), 0, 1); // force_sine_mode=1
 	

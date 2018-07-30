@@ -157,7 +157,7 @@ int shader_t::subroutine_val_t::get_ix_for_name(char const *const name) const {
 unsigned shader_t::get_subroutine_index(int shader_type, char const *const name) const {
 
 	assert(program && name);
-	assert(shader_type < NUM_SHADER_TYPES);
+	assert(shader_type < (int)NUM_SHADER_TYPES);
 	unsigned const ret(glGetSubroutineIndex(program, shader_type_table[shader_type], name));
 	assert(ret != GL_INVALID_INDEX); // check that name exists
 	return ret;
@@ -166,7 +166,7 @@ unsigned shader_t::get_subroutine_index(int shader_type, char const *const name)
 unsigned shader_t::get_subroutine_uniform_loc(int shader_type, char const *const name) const {
 
 	assert(program && name);
-	assert(shader_type < NUM_SHADER_TYPES);
+	assert(shader_type < (int)NUM_SHADER_TYPES);
 	unsigned const ret(glGetSubroutineUniformLocation(program, shader_type_table[shader_type], name));
 	assert(ret != GL_INVALID_INDEX); // check that name exists
 	return ret;
@@ -174,7 +174,7 @@ unsigned shader_t::get_subroutine_uniform_loc(int shader_type, char const *const
 
 void shader_t::set_all_subroutines(int shader_type, unsigned count, char const *const *const uniforms, char const *const *const bindings) {
 
-	assert(shader_type < NUM_SHADER_TYPES && count > 0 && uniforms != nullptr && bindings != nullptr);
+	assert(shader_type < (int)NUM_SHADER_TYPES && count > 0 && uniforms != nullptr && bindings != nullptr);
 	subroutine_val_t &val(subroutines[shader_type]);
 	val.resize(count);
 	
@@ -192,7 +192,7 @@ void shader_t::set_all_subroutines(int shader_type, unsigned count, char const *
 void shader_t::set_subroutines(int shader_type, unsigned count, unsigned const *const indices) {
 
 	assert(program);
-	assert(shader_type < NUM_SHADER_TYPES && count > 0 && indices != nullptr);
+	assert(shader_type < (int)NUM_SHADER_TYPES && count > 0 && indices != nullptr);
 	int const stype(shader_type_table[shader_type]);
 	//assert(count == glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, v));
 	//assert(all_indices < glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINES, v));

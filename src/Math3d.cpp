@@ -437,7 +437,7 @@ bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const
 void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from, float radius, unsigned num_pts) {
 
 	assert(qp && num_pts <= 5);
-	vector3d vortho;
+	vector3d vortho(zero_vector);
 
 	if (num_pts > 2) {
 		cross_product((viewed_from - pos), plus_z, vortho); // xy direction

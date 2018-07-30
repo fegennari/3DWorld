@@ -247,7 +247,7 @@ class light_source_trig : public light_source, public bind_point_t {
 	vector3d rot_axis;
 
 public:
-	light_source_trig() : use_smap(0), outdoor_shadows(0), dynamic_indir(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0), rot_rate(0.0), rot_axis(zero_vector) {}
+	light_source_trig() : use_smap(0), outdoor_shadows(0), dynamic_indir(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0), last_pos(all_zeros), last_dir(zero_vector), rot_rate(0.0), rot_axis(zero_vector) {}
 	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t(), bool outdoor_shadows_=0)
 		: light_source(ls), use_smap(smap), outdoor_shadows(outdoor_shadows_), dynamic_indir(0), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0),
 		last_pos(pos), last_dir(dir), sensor(cur_sensor), rot_rate(0.0), rot_axis(zero_vector)

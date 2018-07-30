@@ -116,6 +116,7 @@ struct tile_cloud_t : public volume_part_cloud {
 	point pos;
 	vector3d size; // {x, y, z}
 
+	tile_cloud_t(void) : pos_hash(0.0), pos(all_zeros), size(zero_vector) {}
 	float get_rmax() const {return size.get_max_val();}
 	cube_t get_bcube() const {cube_t bcube(pos, pos); bcube.expand_by(size); return bcube;}
 	void draw(vpc_shader_t &s, vector3d const &xlate, float alpha_mult=1.0) const;

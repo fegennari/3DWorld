@@ -674,7 +674,7 @@ void get_torus_triangles(vector<vert_wrap_t> &verts, point const &center, vector
 		point const vpos[2] = {(center + pos[0]*ro), (center + pos[1]*ro)};
 
 		for (unsigned t = 0; t <= (unsigned)ndiv; ++t) { // inner
-			unsigned const t_((t == ndiv) ? 0 : t);
+			unsigned const t_((t == (unsigned)ndiv) ? 0 : t);
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 			
 			for (unsigned i = 0; i < 2; ++i) {

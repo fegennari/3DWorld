@@ -63,7 +63,7 @@ class smoke_grid_t {
 	vector<smoke_entry_t> zrng; // z smoke ranges for each xy grid element
 public:
 	void ensure_zrng() {
-		if (zrng.empty()) {zrng.resize(XY_MULT_SIZE);} else {assert(zrng.size() == XY_MULT_SIZE);}
+		if (zrng.empty()) {zrng.resize(XY_MULT_SIZE);} else {assert((int)zrng.size() == XY_MULT_SIZE);}
 	}
 	void register_smoke(int x, int y, int z) {
 		ensure_zrng();
@@ -465,7 +465,7 @@ public:
 	void next_frame() {
 		if (!is_active() || !animate2) return; // not inited or no fire
 		//timer_t timer("Ground Fire Update");
-		assert(grid.size() == XY_MULT_SIZE);
+		assert((int)grid.size() == XY_MULT_SIZE);
 		int const dirs[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}}; // W, E, S, N
 		int const dx(dirs[frame_counter&3][0]), dy(dirs[frame_counter&3][1]);
 		vector3d const dir(dx, dy, 0.0);

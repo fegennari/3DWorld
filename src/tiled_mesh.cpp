@@ -1940,7 +1940,7 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), buildings_valid(0), terrain_zmin(0.0), tiles_gen_prev_frame(0) {
+tile_draw_t::tile_draw_t() : buildings_valid(0), tiles_gen_prev_frame(0), terrain_zmin(0.0), lod_renderer(USE_TREE_BILLBOARDS) {
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 
@@ -3385,7 +3385,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 					unsigned char grass_added(grass_weight - prev_gw);
 
 					for (unsigned i = 0; i < 4 && grass_added > 0; ++i) { // remove other weights until weights are balanced
-						if (i == grass_tex_ix) continue; // skip grass
+						if ((int)i == grass_tex_ix) continue; // skip grass
 						if (weight_data[off+i] == 0) continue; // none of this layer
 						unsigned char const num_rem(min(weight_data[off+i], grass_added)); // FIXME: should depend on ratio of other weights (but rounding is difficult)
 						weight_data[off+i] -= num_rem;

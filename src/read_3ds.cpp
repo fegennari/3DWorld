@@ -37,7 +37,7 @@ protected:
 		if (!read_data(&chunk_id, 2, 1, (top_level ? nullptr : "chunk id"))) return 0;
 		if (EXTRA_VERBOSE && verbose) {printf("ChunkID: %x\n", chunk_id);}
 		if (!read_data(&chunk_len, 4, 1, "chunk length")) return 0;
-		assert(chunk_len < (1<<31)); // sanity check
+		assert(chunk_len < (1U<<31)); // sanity check
 		if (EXTRA_VERBOSE && verbose) {printf("ChunkLength: %u\n", chunk_len);}
 		return 1;
 	}

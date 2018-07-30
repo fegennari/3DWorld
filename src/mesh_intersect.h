@@ -65,6 +65,6 @@ public:
 };
 
 
-#endif _MESH_INTERSECT_H_
+#endif // _MESH_INTERSECT_H_
 
 

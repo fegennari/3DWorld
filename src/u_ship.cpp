@@ -2500,8 +2500,8 @@ bool u_ship::register_attacker(free_obj const *source) {
 			break;
 		case ALIGN_PLAYER:
 		default: // ALIGN_RED, ALIGN_BLUE, etc. - attack the shooter, but only attack an ally if there are no enemies
-			attack = (d_align != alignment || (target_obj == NULL && last_targ_t >
-				(source->is_proj() ? source->get_time() : FFIRE_WAIT_T)) && !is_orbiting() && !damager->is_orbiting());
+			attack = (d_align != alignment || ((target_obj == NULL && last_targ_t >
+						      (source->is_proj() ? source->get_time() : FFIRE_WAIT_T)) && !is_orbiting() && !damager->is_orbiting()));
 	}
 	if (attack && (!target_set || target_obj == NULL) && target_valid(damager)) { // target_set keeps current target
 		if (target_obj == NULL || target_mode == TARGET_ATTACKER || !is_enemy(damager) ||
@@ -3032,7 +3032,7 @@ bool orbiting_ship::maybe_has_line_of_sight(upos_point_type const &to_pos) const
 // any fighters are also type rand_spawn_ship, except they don't respawn
 // can't colonize or build anything
 rand_spawn_ship::rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient, bool will_respawn_)
-	: u_ship(sclass_, all_zeros, align, ai_type_, target_mode_, rand_orient), rand_spawn_mixin(pos, radius, rand_spawn_ship_dmax), orig_align(align), will_respawn(will_respawn_)
+	: u_ship(sclass_, all_zeros, align, ai_type_, target_mode_, rand_orient), rand_spawn_mixin(pos, radius, rand_spawn_ship_dmax), will_respawn(will_respawn_), orig_align(align)
 {
 	if (pos == all_zeros) {gen_valid_pos();} // otherwise we assume pos is where we want to start
 	//cout << "spawn " << get_name() << endl;

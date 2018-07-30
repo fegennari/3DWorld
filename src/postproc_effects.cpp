@@ -256,7 +256,7 @@ void run_postproc_effects() {
 		if (world_mode != WMODE_INF_TERRAIN) {add_bloom();}
 		else if (have_buildings() && is_night()) {add_2d_bloom();} // allow bloom for building windows at night in TT mode
 	}
-	if (0) { // capture matrices from this frame for use with next frame (if needed in the future)
+	if (0 && !prev_mat_valid) { // capture matrices from this frame for use with next frame (if needed in the future)
 		prev_mvm = fgGetMVM();
 		prev_pjm = fgGetPJM();
 		prev_mat_valid = 1;

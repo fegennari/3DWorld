@@ -854,7 +854,7 @@ bool s_plant::is_shadowed() const {
 
 void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
 
-	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
+	bool const is_water_plant(type >= (int)NUM_LAND_PLANT_TYPES);
 	if (world_mode == WMODE_INF_TERRAIN && is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, (height + radius), pos2)) return;
@@ -895,7 +895,7 @@ void s_plant::shader_state_t::set_wind_add(shader_t &s, float w_add) {
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
 	if (burn_amt == 1.0) return;
-	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
+	bool const is_water_plant(type >= (int)NUM_LAND_PLANT_TYPES);
 	if (world_mode == WMODE_INF_TERRAIN && is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, 0.5*(height + radius), pos2)) return;
@@ -1263,7 +1263,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				if (!check_valid_scenery_pos(surface_rocks.back())) {surface_rocks.pop_back(); continue;}
 				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
-			else if (USE_VOXEL_ROCKS == 1 || (USE_VOXEL_ROCKS == 2 && vegetation == 0.0) && val < 35) {
+			else if ((USE_VOXEL_ROCKS == 1 || (USE_VOXEL_ROCKS == 2 && vegetation == 0.0)) && val < 35) {
 				voxel_rocks.push_back(voxel_rock());
 				voxel_rocks.back().create(j, i, 1);
 				if (!check_valid_scenery_pos(voxel_rocks.back())) {voxel_rocks.pop_back(); continue;}

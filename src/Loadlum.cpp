@@ -66,7 +66,8 @@ static ImageRec *ImageOpen(std::string const &filename) {
 	ImageRec *image(new ImageRec);
 	image->file = open_texture_file(filename);
 	assert(image->file != NULL);
-	fread(image, 1, 12, image->file);
+	int num_read(fread(image, 1, 12, image->file));
+	assert(num_read == 12);
 	if (swapFlag) ConvertShort(&image->imagic, 6);
 	image->tmp = new unsigned char[image->xsize * 256];
 
@@ -76,8 +77,10 @@ static ImageRec *ImageOpen(std::string const &filename) {
 		image->rowSize  = new int[x];
 		image->rleEnd = 512 + (2 * x);
 		fseek(image->file, 512, SEEK_SET);
-		fread(image->rowStart, 1, x, image->file);
-		fread(image->rowSize, 1, x, image->file);
+		num_read = fread(image->rowStart, 1, x, image->file);
+		assert(num_read == x);
+		num_read = fread(image->rowSize, 1, x, image->file);
+		assert(num_read == x);
 
 		if (swapFlag) {
 			ConvertUint(image->rowStart, x / (int) sizeof(unsigned));
@@ -106,7 +109,9 @@ static void ImageGetRow(ImageRec * image, unsigned char *buf, int y, int z) {
 
 	if ((image->type & 0xFF00) == 0x0100) {
 		fseek(image->file, (long) image->rowStart[y + z * image->ysize], SEEK_SET);
-		fread(image->tmp, 1, (unsigned) image->rowSize[y + z * image->ysize], image->file);
+		unsigned const row_sz(image->rowSize[y + z * image->ysize]);
+		size_t const num_read(fread(image->tmp, 1, row_sz, image->file));
+		assert(num_read == row_sz);
 		unsigned char *iPtr = image->tmp;
 		unsigned char *oPtr = buf;
 
@@ -126,7 +131,8 @@ static void ImageGetRow(ImageRec * image, unsigned char *buf, int y, int z) {
 	}
 	else {
 		fseek(image->file, 512 + (y * image->xsize) + (z * image->xsize * image->ysize), SEEK_SET);
-		fread(buf, 1, image->xsize, image->file);
+		size_t const num_read(fread(buf, 1, image->xsize, image->file));
+		assert(num_read == image->xsize);
 	}
 }
 

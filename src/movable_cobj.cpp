@@ -589,8 +589,10 @@ float cross_mag(point const &O, point const &A, point const &B, vector3d const &
 
 struct pt_less { // override standard strange point operator<()
 	bool operator()(point const &a, point const &b) const {
-		if (a.z < b.z) return 1; if (a.z > b.z) return 0;
-		if (a.y < b.y) return 1; if (a.y > b.y) return 0;
+		if (a.z < b.z) return 1;
+		if (a.z > b.z) return 0;
+		if (a.y < b.y) return 1;
+		if (a.y > b.y) return 0;
 		return (a.x < b.x);
 	}
 };
@@ -945,7 +947,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 
 			if (min(overlap_sz.x, overlap_sz.y) < 0.05*overlap_sz.z) { // push rather than stack
 				int const dim(overlap_sz[1] < overlap_sz[0]);
-				bool const dir(cobj.get_cube_center()[dim] < c.get_cube_center()[dim]);
+				//bool const dir(cobj.get_cube_center()[dim] < c.get_cube_center()[dim]);
 				float const delta(overlap_sz[dim]);
 				if (delta*delta > delta_max.mag_sq()) {delta_max = zero_vector; delta_max[dim] = delta;}
 				continue;
@@ -1312,7 +1314,7 @@ bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index,
 		vector3d cnorm; // unused
 
 		if (check_coll_line_exact_tree(player_pos, bot_pos, cpos, cnorm, cindex, -1)) {
-			if (cindex == index || (cobj.cgroup_id >= 0 && coll_objects.get_cobj(cindex).cgroup_id == cobj.cgroup_id)) { // this cobj, or one in the same group
+			if (cindex == (int)index || (cobj.cgroup_id >= 0 && coll_objects.get_cobj(cindex).cgroup_id == cobj.cgroup_id)) { // this cobj, or one in the same group
 				player_pos = orig_pos; // don't allow the player to be moved
 				return 0;
 			}

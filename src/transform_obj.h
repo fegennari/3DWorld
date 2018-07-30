@@ -63,7 +63,7 @@ public:
 	void push_identity() {m.push_back(xform_matrix());}
 	xform_matrix const &top() const {assert(!m.empty()); return m.back();}
 	void assign(xform_matrix const &v) {assert(!m.empty()); m.back() = v;}
-	void identity() {assert(!m.empty()); m.back() = xform_matrix();}
+	void identity() {assert(!m.empty()); m.back() = glm::mat4();}
 };
 
 

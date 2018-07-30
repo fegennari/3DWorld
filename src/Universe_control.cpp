@@ -1065,8 +1065,8 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
 							 vector3d const &axis_, point const &start_pos, float rad, float start_ang, float rate)
 	: u_ship(sclass_, all_zeros, align, (AI_ATT_ENEMY | (guardian ? AI_GUARDIAN : 0)), TARGET_CLOSEST, 0), GSO(rate == 0.0),
-	fixed_pos(start_pos != all_zeros), has_sobj(0), has_decremented_owner(0), last_build_time(time), system_ix(world_path.system),
-	planet_ix(world_path.planet), moon_ix(world_path.moon), orbit_r(rad), start_angle(start_ang), rot_rate(rate), axis(axis_), rel_pos(start_pos)
+	  fixed_pos(start_pos != all_zeros), has_sobj(0), has_decremented_owner(0), last_build_time(time), system_ix(world_path.system),
+	planet_ix(world_path.planet), moon_ix(world_path.moon), orbit_r(rad), rot_rate(rate), start_angle(start_ang), axis(axis_), rel_pos(start_pos)
 {
 	urev_body &world(world_path.get_world());
 	assert(world.type == UTYPE_PLANET || world.type == UTYPE_MOON);

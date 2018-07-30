@@ -1251,7 +1251,7 @@ public:
 	vector<point> points;
 	colorRGBA color;
 
-	line3d() : width(0.0) {}
+	line3d() : width(0.0), color(0,0,0,0) {}
 	void draw_lines() const;
 	bool empty() const {return points.empty();}
 };

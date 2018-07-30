@@ -75,7 +75,7 @@ struct water_section {
 	water_section() {}
 
 	water_section(float x1_, float y1_, float x2_, float y2_, float zval_, float wvol_) : zval(zval_), wvol(wvol_),
-		x1(get_xpos_clamp(x1_)), x2(get_xpos_clamp(x2_)), y1(get_ypos_clamp(y1_)), y2(get_ypos_clamp(y2_))
+		x1(get_xpos_clamp(x1_)), y1(get_ypos_clamp(y1_)), x2(get_xpos_clamp(x2_)), y2(get_ypos_clamp(y2_))
 	{
 		if (x1 > x2) swap(x1, x2);
 		if (y1 > y2) swap(y1, y2);
@@ -404,7 +404,7 @@ class water_surface_draw : public water_vertex_calc_t {
 		color_wrapper cw;
 		int ix;
 		color_scale_ix() : n(zero_vector), ix(-1) {}
-		color_scale_ix(color_wrapper const &cw_, vector3d const &n_, int ix_) : cw(cw_), n(n_), ix(ix_) {}
+		color_scale_ix(color_wrapper const &cw_, vector3d const &n_, int ix_) : n(n_), cw(cw_), ix(ix_) {}
 	};
 
 	vector<color_scale_ix> last_row_colors;
