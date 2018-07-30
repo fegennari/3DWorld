@@ -1,17 +1,16 @@
-
 VPATH=../src
-#CPPFLAGS=-g -Wall 
-CPPFLAGS=-g -Wall -O3 -fopenmp -I../Targa
+GLUI=../../glui
+CPPFLAGS=-g -Wall -O3 -fopenmp -I../Targa -I$(GLUI)/include
 TARGET=../lib/3dworld
 OBJS=$(shell cat ../obj_list)
 TARGET2=
-OBJS2= 
+OBJS2=
 
 LIB_TARGET=
 LIB_OBJS=
 
 #LINK=g++ $(CPPFLAGS) -lz -lpng -lpthread -L/usr/X11R6/lib64 -lglut -lGL -lGLU
-LINK=g++ $(CPPFLAGS) -lz -lpng -lpthread $(shell pkg-config --libs xrender) -lglui -lglut -lGL -lGLU
+LINK=g++ $(CPPFLAGS) -L$(GLUI)/lib -lz -lpng -lpthread $(shell pkg-config --libs xrender) -lglui -lglut -lGL -lGLU
 
 LFLAGS=$(LIB_TARGET)
 
