@@ -4,6 +4,7 @@ uniform float depth_bias = 0.0;
 
 out vec3 vpos, eye_norm, normal, world_space_pos;
 out vec4 epos;
+out vec2 tc; // declared in bump_map.part.frag, but unused for asteroids
 
 #ifdef USE_CUSTOM_XFORM
 in mat4 inst_xform_matrix;
