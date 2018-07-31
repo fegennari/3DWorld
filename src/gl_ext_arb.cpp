@@ -21,13 +21,13 @@ void init_glew() {
 
 	if (GLEW_OK != err) {
 		std::cerr << "Error: " << glewGetErrorString(err) << endl;
-		assert(0);
+		exit(1);
 	}
 #endif
 	if (!glewIsSupported("GL_VERSION_3_3")) {
 		std::cerr << "Error: GL version 3.3 not found" << endl;
-		assert(0);
-    }
+		exit(1);
+	}
 }
 
 
