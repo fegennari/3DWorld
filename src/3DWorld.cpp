@@ -247,6 +247,7 @@ void quit_3dworld() { // called once at the end for proper cleanup
 	cout << "quitting" << endl;
 	kill_current_raytrace_threads();
 	clear_context();
+	exit_openal();
 
 	if (!universe_only) {
 		free_models();

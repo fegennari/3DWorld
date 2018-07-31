@@ -179,5 +179,6 @@ void play_thunder(point const &pos, float gain, float delay);
 void play_switch_weapon_sound();
 void play_switch_wmode_sound();
 void init_openal(int &argc, char** argv);
+void exit_openal();
 int read_sound_file(std::string const &name);
 
