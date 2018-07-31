@@ -77,7 +77,7 @@ erode_amount 1.0
 water_h_off 9.0 0.0
 relh_adj_tex -0.22
 ocean_depth_opacity_mult 8.0
-mh_filename ../heightmaps/heightmap_island_1K.png 180.3 -18.75 0
+mh_filename ../heightmaps/heightmap_island_1k.png 180.3 -18.75 0
 #mh_filename_tiled_terrain ../heightmaps/heightmap_island.png
 #write_heightmap_png ../heightmaps/heightmap_island_eroded.png
 mh_filename_tiled_terrain ../heightmaps/heightmap_island_eroded.png
