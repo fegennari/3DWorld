@@ -25,3 +25,6 @@ mkdir obj
 cd obj
 ln -s ../makefile .
 make -j4 -k
+
+Run:
+MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450 lib/3dworld
