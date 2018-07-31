@@ -675,6 +675,7 @@ public:
 	// texture units used: 0: grass texture, 1: wind texture
 	void draw() {
 		if (empty()) return;
+		if (glPatchParameteri == nullptr) {use_grass_tess = 0;} // disable tess - not supported
 		//RESET_TIME;
 		check_for_updates();
 		shader_t s;

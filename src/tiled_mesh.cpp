@@ -94,7 +94,7 @@ bool is_distance_mode     () {return ((display_mode & 0x10) != 0);}
 bool nonunif_fog_enabled  () {return (show_fog && is_distance_mode());}
 bool enable_ocean_waves   () {return ((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);}
 bool draw_distant_water   () {return (is_water_enabled() && is_distance_mode() && far_clip_ratio > 1.1);}
-bool use_water_plane_tess () {return (enable_ocean_waves() && cloud_model == 0 && !draw_distant_water());} // hack to use cloud_model (F10)
+bool use_water_plane_tess () {return (enable_ocean_waves() && cloud_model == 0 && !draw_distant_water() && glPatchParameteri != nullptr);} // hack to use cloud_model (F10)
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
