@@ -1,4 +1,4 @@
-3DWorld is an OpenGL-based 3D Game engine that I've been working on since I took the CS184 computer graphics course at UC Berkeley in 2001.
+3DWorld is a cross-platform OpenGL-based 3D Game Engine that I've been working on since I took the CS184 computer graphics course at UC Berkeley in 2001.
 It has the following features:
 * 3D graphics functions, classes, and wrappers around OpenGL
 * Shader generator/processor with hot reload
@@ -21,6 +21,7 @@ I converted the project from svn to git at commit 6607.
 Most of the code is written in C++, with GLSL for shaders.
 This is intended to be a cross-platform project.
 Microsoft Visual Studio 2015 project files are included.
+A linux/gcc makefile is also included, but is more experimental. See README.linux for more details.
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
 I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
 
@@ -53,6 +54,9 @@ I currently use a 32-bit MS Visual Studio build target for 3DWorld.
 It should compile in 64-bit mode, but I couldn't find compatible 64-bit debug libraries for OpenAL,
 and a few of the other dependencies didn't build cleanly in 64-bit mode.
 
+If you have linux, you can try to build using the provided makefile. The file README.linux should be helpful.
+I've gotten 3DWorld to build and mostly run on Ubuntu 18.04 with gcc 7.
+
 3DWorld takes a config filename on the command line. If not found, it reads defaults.txt and uses any config file(s) listed there.
 Some of these congig files include models such as the Sponza Atrium, Stanford Dragon, sportscar, etc.
 These files are too large to store in the git repo. I've attempted to have 3DWorld generate nonfatal errors if the models can't be found.
@@ -60,7 +64,7 @@ Many of the larger models can be found at the McGuire Computer Graphics Archive:
 http://casual-effects.com/data/
 
 System requirements:
-* Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux if you create a makefile for gcc.
+* Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux when using the makefile with gcc.
 * Microsoft Visual Studio 2015 (or newer?). The professional version is needed for OpenMP support. You can also try to use gcc.
 * A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
 * At least 4GB system memory for the larger scenes
