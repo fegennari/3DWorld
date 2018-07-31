@@ -2424,7 +2424,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 }
 
 
-bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15);}
+bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15 && glPatchParameteri != nullptr);}
 
 bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2, bool enable_text_tag) {
 
