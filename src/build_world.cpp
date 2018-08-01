@@ -1191,7 +1191,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector<coll_tquad> ppts;
 	// tree state
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
-	bool enable_leaf_wind(1), remove_t_junctions(0), outdoor_shadows(0), dynamic_indir(0);
+	bool enable_leaf_wind(1), remove_t_junctions(0), outdoor_shadows(0), dynamic_indir(0), skip_cur_model(0);
 	int reflective(0); // reflective: 0=none, 1=planar, 2=cube map (applies to cobjs and model3d)
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
@@ -1281,6 +1281,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					unsigned num(0);
 					vector3d step(zero_vector);
 					if (fscanf(fp, "%u%f%f%f", &num, &step.x, &step.y, &step.z) != 4 || num == 0) {return read_error(fp, "transform_array_1d", coll_obj_file);}
+					if (skip_cur_model) break; // don't apply the transform
 					if (!have_cur_model()) {cerr << "Error: No model loaded, can't apply transform_array_1d" << endl; break;}
 					model3d_xform_t model_xf_xlate(model_xf);
 
@@ -1295,6 +1296,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (fscanf(fp, "%u%u%f%f%f%f%f%f", &num1, &num2, &step1.x, &step1.y, &step1.z, &step2.x, &step2.y, &step2.z) != 8 || num1 == 0 || num2 == 0) {
 						return read_error(fp, "transform_array_2d", coll_obj_file);
 					}
+					if (skip_cur_model) break; // don't apply the transform
 					if (!have_cur_model()) {cerr << "Error: No model loaded, can't apply transform_array_2d" << endl; break;}
 					model3d_xform_t model_xf_xlate(model_xf);
 
@@ -1407,10 +1409,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				{
 					//return read_error(fp, "model file data", coll_obj_file);
 					cerr << "Error reading model file data from file " << fn << "; Model will be skipped" << endl; // make it nonfatal
+					skip_cur_model = 1;
 					break;
 				}
 				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf));
 				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
+				skip_cur_model = 0;
 				PRINT_TIME("Model File Load/Process");
 				break;
 			}
@@ -1422,6 +1426,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (num_args != 4 && num_args != 5 && num_args != 9 && num_args != 10) {return read_error(fp, "model3d transform", coll_obj_file);}
 				if (model_xf.group_cobjs_level < 0 || model_xf.group_cobjs_level > 6) {return read_error(fp, "add model transform command group_cobjs_level", coll_obj_file);}
 				if (model_xf.scale == 0.0) {return read_error(fp, "model3d transform scale", coll_obj_file);} // what about negative scales?
+				if (skip_cur_model) break; // don't apply the transform
 				if (!have_cur_model()) {cerr << "Error: No model loaded, can't apply model transform" << endl; break;}
 				model_xf.material = cobj.cp; // copy base material from cobj
 				if (!add_model_transform(fp, model_xf, ppts, cobj, xf.scale, has_layer)) return 0;
