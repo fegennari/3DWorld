@@ -1,5 +1,7 @@
 out vec3 vpos, normal; // world space
 out vec3 eye_norm;
+out vec4 epos; // declared in bump_map.part.frag, but unused in this shader
+out vec2 tc; // declared in bump_map.part.frag, but unused in this shader
 
 void main()
 {
