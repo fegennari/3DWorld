@@ -24,6 +24,7 @@ zlib-1.2.1/
 zlib/
 *.dll
 screenshot*.jpg
+video_out*.mp4
 positions.log.txt
 state.txt
 shaders/generated/*
