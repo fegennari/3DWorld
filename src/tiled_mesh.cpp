@@ -2915,6 +2915,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 	unsigned num_grass_drawn(0), num_flowers_drawn(0);
+	if (glPatchParameteri == nullptr) {use_grass_tess = 0;} // disable tess - not supported
 
 	for (unsigned wpass = 0; wpass < 2; ++wpass) { // wind, no wind
 		for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
