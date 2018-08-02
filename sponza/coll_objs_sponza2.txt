@@ -24,8 +24,8 @@ Y 1.0 1.0 1
 
 reflective 1
 metalness 0.0
-O ..\sponza2\sponza.model3d 3 0 0
-#O ..\sponza2\sponza.obj 3 0 1
+O ../sponza2/sponza.model3d 3 0 0
+#O ../sponza2/sponza.obj 3 0 1
 reflective 0
 
 # could set transform back to the identity here...
