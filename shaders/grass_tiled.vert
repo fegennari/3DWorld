@@ -7,8 +7,10 @@ uniform vec2 xlate = vec2(0.0);
 in vec2 local_translate;
 
 out vec2 tc;
-//out vec4 epos; // required when not using tess shader flow for grass
 out vec3 vertex_from_vs;
+#ifdef NO_GRASS_TESS
+out vec4 epos; // required when not using tess shader flow for grass
+#endif
 
 void main()
 {
@@ -29,7 +31,10 @@ void main()
 	if (enable_grass_wind) {vertex.xyz += get_grass_wind_delta(vertex.xyz, tc.s);}
 
 	vec4 fin_vert   = (vertex + vec4(xlate, 0, 0));
-	vec4 epos       = fg_ModelViewMatrix  * fin_vert;
+#ifndef NO_GRASS_TESS
+	vec4 epos; // local variable
+#endif
+	epos            = fg_ModelViewMatrix  * fin_vert;
 	gl_Position     = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
 	vec4 weights    = texture(weight_tex, tc2);

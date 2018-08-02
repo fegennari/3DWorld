@@ -654,6 +654,7 @@ public:
 		setup_shaders_pre(s);
 		if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
 		if (use_grass_tess) {s.set_prefixes("#define INCLUDE_NORMALS", 24);} // TC/TE
+		else {s.set_prefix("#define NO_GRASS_TESS", 0);} // VS
 		s.set_vert_shader("wind.part*+grass_texture.part+grass_pp_dl");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+grass_with_dlights");
 		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_texture.part+grass");
