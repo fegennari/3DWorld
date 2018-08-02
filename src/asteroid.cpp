@@ -33,6 +33,7 @@ unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 colorRGBA const ICE_ROCK_COLOR(0.6, 1.2, 1.5);
 
 
+extern bool allow_shader_invariants;
 extern int animate2, display_mode, frame_counter, window_width, window_height;
 extern float fticks;
 extern double tfticks;
@@ -360,6 +361,7 @@ public:
 			if (use_bmap) {enable_bump_map_pre(s);}
 			s.set_int_prefix("num_lights", num_lights, 1); // FS
 			s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
+			if (allow_shader_invariants) {s.set_prefix("invariant gl_Position;", 0);} // VS
 			s.set_vert_shader("asteroid");
 			s.set_frag_shader("bump_map.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+triplanar_bump_map.part+voxel_asteroid");
 			s.begin_shader();
@@ -1252,6 +1254,7 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 		set_shader_prefix_for_shadow_casters(shader, num_shadow_casters);
 		if (ENABLE_CRATERS ) {shader.set_prefix("#define HAS_CRATERS",      1);} // FS
 		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
+		if (allow_shader_invariants) {shader.set_prefix("invariant gl_Position;", 0);} // VS
 		if (use_bmap) {enable_bump_map_pre(shader);}
 		shader.set_vert_shader("asteroid");
 		string frag_shader_str("bump_map.part+ads_lighting.part*+triplanar_texture.part+sphere_shadow.part*+triplanar_bump_map.part+sphere_shadow_casters.part");

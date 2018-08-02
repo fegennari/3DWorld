@@ -10,8 +10,6 @@ out vec2 tc; // declared in bump_map.part.frag, but unused for asteroids
 in mat4 inst_xform_matrix;
 #endif
 
-invariant gl_Position;
-
 void main()
 {
 #ifdef USE_CUSTOM_XFORM

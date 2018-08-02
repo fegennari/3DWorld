@@ -56,6 +56,7 @@ unsigned align_t_kills[NUM_ALIGNMENT] = {0};
 unsigned friendly_kills[NUM_ALIGNMENT]= {0};
 
 
+extern bool allow_shader_invariants;
 extern int show_framerate, frame_counter, display_mode, animate2, do_run, show_scores;
 extern float fticks, player_sensor_dist_mult;
 extern double tfticks;
@@ -915,6 +916,7 @@ void setup_ship_draw_shader(shader_t &s) {
 	s.set_vert_shader("ship_draw");
 	s.set_frag_shader("bump_map.part+ads_lighting.part*+black_body_burn.part+ship_draw");
 	s.set_prefix("#define USE_BUMP_MAP", 1); // FS
+	if (allow_shader_invariants) {s.set_prefix("invariant gl_Position;", 0);} // VS
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("bump_map", 2);

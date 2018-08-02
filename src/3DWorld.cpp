@@ -75,7 +75,7 @@ bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_m
 bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_maps(0), use_interior_cube_map_refl(0), enable_cube_map_bump_maps(1), no_store_model_textures_in_memory(0);
 bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map_view_mandelbrot(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0);
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0), enable_translocator(0), enable_grass_fire(0);
-bool disable_model_textures(0), start_in_inf_terrain(0);
+bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants(1);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
@@ -1662,6 +1662,7 @@ int load_config(string const &config_file) {
 	kwmb.add("tiled_terrain_only", tiled_terrain_only);
 	kwmb.add("disable_model_textures", disable_model_textures);
 	kwmb.add("start_in_inf_terrain", start_in_inf_terrain);
+	kwmb.add("allow_shader_invariants", allow_shader_invariants);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);

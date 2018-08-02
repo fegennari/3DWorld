@@ -6,8 +6,6 @@ out vec2 tc;
 out vec4 epos;
 out vec3 eye_norm;
 
-invariant gl_Position;
-
 void main()
 {
 	tc = fg_TexCoord*vec2(tscale_s, tscale_t);
