@@ -158,6 +158,7 @@ unsigned shader_t::get_subroutine_index(int shader_type, char const *const name)
 
 	assert(program && name);
 	assert(shader_type < (int)NUM_SHADER_TYPES);
+	assert(glGetSubroutineIndex != nullptr);
 	unsigned const ret(glGetSubroutineIndex(program, shader_type_table[shader_type], name));
 	assert(ret != GL_INVALID_INDEX); // check that name exists
 	return ret;
@@ -167,6 +168,7 @@ unsigned shader_t::get_subroutine_uniform_loc(int shader_type, char const *const
 
 	assert(program && name);
 	assert(shader_type < (int)NUM_SHADER_TYPES);
+	assert(glGetSubroutineUniformLocation != nullptr);
 	unsigned const ret(glGetSubroutineUniformLocation(program, shader_type_table[shader_type], name));
 	assert(ret != GL_INVALID_INDEX); // check that name exists
 	return ret;
@@ -175,6 +177,7 @@ unsigned shader_t::get_subroutine_uniform_loc(int shader_type, char const *const
 void shader_t::set_all_subroutines(int shader_type, unsigned count, char const *const *const uniforms, char const *const *const bindings) {
 
 	assert(shader_type < (int)NUM_SHADER_TYPES && count > 0 && uniforms != nullptr && bindings != nullptr);
+	if (glGetSubroutineIndex == nullptr) return;
 	subroutine_val_t &val(subroutines[shader_type]);
 	val.resize(count);
 	
@@ -193,9 +196,11 @@ void shader_t::set_subroutines(int shader_type, unsigned count, unsigned const *
 
 	assert(program);
 	assert(shader_type < (int)NUM_SHADER_TYPES && count > 0 && indices != nullptr);
+	if (glGetSubroutineIndex == nullptr) return;
 	int const stype(shader_type_table[shader_type]);
 	//assert(count == glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, v));
 	//assert(all_indices < glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINES, v));
+	assert(glUniformSubroutinesuiv != nullptr);
 	glUniformSubroutinesuiv(stype, count, indices);
 }
 
@@ -210,6 +215,7 @@ void shader_t::set_subroutine(int shader_type, unsigned index) { // single subro
 void shader_t::reset_subroutine(int shader_type, char const *const uniform, char const *const binding) {
 
 	assert(uniform != nullptr && binding != nullptr);
+	if (glGetSubroutineIndex == nullptr) return;
 	subroutine_val_t &val(subroutines[shader_type]);
 	int const ix(val.get_ix_for_name(uniform));
 	assert(ix >= 0); // name must be known
