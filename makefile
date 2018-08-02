@@ -1,8 +1,11 @@
 VPATH=../src
 GLUI=../../glui
 TARGA=../Targa
-GLI=../../gli
-CPPFLAGS=-g -Wall -O3 -fopenmp -I$(TARGA) -I$(GLUI)/include -I$(GLI)/gli -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF #-DENABLE_DDS
+# new GLI version from GitHub - API change from old version
+#GLI=../../gli
+# old GLI with API that matches 3DWorld
+GLI=../dependencies/gli-0.5.1.0
+CPPFLAGS=-g -Wall -O3 -fopenmp -I$(TARGA) -I$(GLUI)/include -I$(GLI)/gli -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
 TARGET=../lib/3dworld
 OBJS=$(shell cat ../obj_list)
 TARGET2=
