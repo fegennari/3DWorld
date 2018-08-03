@@ -132,11 +132,18 @@ public:
 			<< " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << filename;
 		// open pipe to ffmpeg's stdin in binary write mode
 #ifdef _WIN32
-		FILE* ffmpeg = _popen((string("ffmpeg.exe.lnk") + oss.str()).c_str(), "wb");
+		string const cmd(string("ffmpeg.exe.lnk") + oss.str());
+		FILE* ffmpeg = _popen(cmd.c_str(), "wb");
 #else
-		FILE* ffmpeg = popen((string("ffmpeg") + oss.str()).c_str(), "wb");
+		string const cmd(string("ffmpeg") + oss.str());
+		FILE* ffmpeg = popen(cmd.c_str(), "w");
 #endif
-		assert(ffmpeg != nullptr);
+		if(ffmpeg == nullptr) {
+		  cerr << "Error running ffmpeg command: " << cmd << endl;
+		  is_writing = 0;
+		  end();
+		  return;
+		}
 		is_writing   = 1;
 		while (is_recording || !buffer.empty()) {buffer.write_frames(ffmpeg); alut_sleep(0.001);} // 1ms sleep
 #ifdef _WIN32
