@@ -54,6 +54,7 @@ $ADD UWEAP_INFERNO  1
 $ADD UWEAP_PARALYZE 1
 $ADD UWEAP_MIND_C   1
 $ADD UWEAP_SEIGEC
+$ADD UWEAP_HYPER
 
 
 # $SHIP_NAMES 8 "foo" "bar" "baz" "foozle" "fizzle" "bob" "yomamma" "clown"

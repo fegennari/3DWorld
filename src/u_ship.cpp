@@ -1653,6 +1653,10 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 				}
 				break;
 
+			case UWEAP_HYPER:
+				// FIXME: WRITE
+				break;
+
 			default:
 				if (weap.is_beamlike()) { // beams, LRCPA, PT_DEF
 					fire_beam(fpos, fdir, weapon_id, nshots, intersect_type);
@@ -1712,6 +1716,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 		// fighter bay sounds
 		case UWEAP_FIGHTER: case UWEAP_B_BAY: case UWEAP_CRU_BAY: case UWEAP_SOD_BAY: case UWEAP_BOARDING: case UWEAP_NM_BAY: // fallthrough
 		case UWEAP_WRAI_BAY: case UWEAP_HUNTER: case UWEAP_DEATHORB: case UWEAP_SAUC_BAY: gen_sound(SOUND_HISS, pos, gain, 1.0); break;
+		//case UWEAP_HYPER: break; // any sound?
 		}
 	}
 	return 1;
