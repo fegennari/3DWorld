@@ -25,7 +25,7 @@ A linux/gcc makefile is also included, but is more experimental. See README.linu
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
 I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
 
-Be warned, this is a large repository, currently 820MB.
+Be warned, this is a large repository, currently 888MB.
 I've included source code, config files, textures, sounds, small models, lighting files, scene data, heightmaps, and project files.
 This repo does not contain the large model files used in some scenes, you'll have to download these separately.
 This means that some of the scene config files won't work because they can't find their referenced data.
