@@ -94,13 +94,19 @@ bool is_distance_mode     () {return ((display_mode & 0x10) != 0);}
 bool nonunif_fog_enabled  () {return (show_fog && is_distance_mode());}
 bool enable_ocean_waves   () {return ((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);}
 bool draw_distant_water   () {return (is_water_enabled() && is_distance_mode() && far_clip_ratio > 1.1);}
-bool use_water_plane_tess () {return (enable_ocean_waves() && cloud_model == 0 && !draw_distant_water() && glPatchParameteri != nullptr);} // hack to use cloud_model (F10)
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
 float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile_width();}
 float get_tile_smap_dist  () {return get_smap_atten_val();}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
+
+bool use_water_plane_tess () {
+	if (!enable_ocean_waves() || cloud_model != 0 || draw_distant_water()) return 0; // hack to use cloud_model (F10)
+	static bool tess_enabled(1);
+	if (tess_enabled && !check_for_tess_shader()) {tess_enabled = 0;} // disable tess - not supported
+	return tess_enabled;
+}
 
 vector3d get_tiled_terrain_model_xlate() {return model3d_offset.get_xlate();}
 vector3d get_camera_coord_space_xlate () {return vector3d((world_mode == WMODE_INF_TERRAIN) ? get_tiled_terrain_model_xlate() : zero_vector);}
@@ -2915,7 +2921,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 	unsigned num_grass_drawn(0), num_flowers_drawn(0);
-	if (glPatchParameteri == nullptr) {use_grass_tess = 0;} // disable tess - not supported
+	if (use_grass_tess && !check_for_tess_shader()) {use_grass_tess = 0;} // disable tess - not supported
 
 	for (unsigned wpass = 0; wpass < 2; ++wpass) { // wind, no wind
 		for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps

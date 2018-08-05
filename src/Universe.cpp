@@ -2424,7 +2424,12 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 }
 
 
-bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15 && glPatchParameteri != nullptr);}
+bool urev_body::use_vert_shader_offset() const {
+	if (atmos > 0.15) return 0; // doesn't work well for atmosphere
+	static bool tess_enabled(1);
+	if (tess_enabled && !check_for_tess_shader()) {tess_enabled = 0;} // disable tess - not supported
+	return tess_enabled;
+}
 
 bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2, bool enable_text_tag) {
 

@@ -431,5 +431,11 @@ void disable_instancing_for_shader_loc(int loc) {
 	glDisableVertexAttribArray(loc);
 }
 
+bool check_for_tess_shader() {
+	if (glPatchParameteri != nullptr) return 1; // found
+	std::cerr << "*** Warning: Tessellation shader support not found; disabling tessellation" << endl;
+	return 0;
+}
+
 
 
