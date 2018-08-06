@@ -760,6 +760,7 @@
     <None Include="house\config_house_winter.txt" />
     <None Include="house\placements.TXT" />
     <None Include="model_data\config_soda.txt" />
+    <None Include="README.defaults" />
     <None Include="README.md" />
     <None Include="shaders\alpha_mask.frag" />
     <None Include="shaders\asteroid.frag" />
