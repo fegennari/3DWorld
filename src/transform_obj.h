@@ -16,6 +16,8 @@
 inline glm::vec3 vec3_from_vector3d (vector3d const &v) {return glm::vec3(v.x, v.y, v.z);}
 inline vector3d  vector3d_from_vec3(glm::vec3 const &v) {return vector3d (v.x, v.y, v.z);}
 
+void print_matrix(float const *const m, std::string const &prefix=std::string());
+
 
 struct xform_matrix : public glm::mat4 {
 
@@ -26,6 +28,7 @@ struct xform_matrix : public glm::mat4 {
 	void get_as_doubles(double md[16]) const;
 	void normalize();
 	void apply_to_vector3d(vector3d &v) const;
+	void print(std::string const &prefix=std::string()) const {print_matrix(get_ptr(), prefix);}
 };
 
 

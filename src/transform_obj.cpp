@@ -287,6 +287,16 @@ void mirror_about_plane(vector3d const &norm, point const &pt) { // applies to G
 }
 
 
+void print_matrix(float const *const m, std::string const &prefix) {
+
+	if (!prefix.empty()) {cout << prefix << endl;}
+
+	for (unsigned i = 0; i < 4; ++i) {
+		for (unsigned j = 0; j < 4; ++j) {cout << m[4*i+j] << " ";}
+		cout << endl;
+	}
+}
+
 // Note: instance_render_t::draw_and_clear() is defined in shaders.cpp
 
 
