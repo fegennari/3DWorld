@@ -19,7 +19,7 @@ inline vector3d  vector3d_from_vec3(glm::vec3 const &v) {return vector3d (v.x, v
 
 struct xform_matrix : public glm::mat4 {
 
-	xform_matrix() {}
+	xform_matrix() : glm::mat4(1.0) {} // identity
 	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}
 	float *get_ptr();
 	float const *get_ptr() const;
@@ -63,7 +63,7 @@ public:
 	void push_identity() {m.push_back(xform_matrix());}
 	xform_matrix const &top() const {assert(!m.empty()); return m.back();}
 	void assign(xform_matrix const &v) {assert(!m.empty()); m.back() = v;}
-	void identity() {assert(!m.empty()); m.back() = glm::mat4();}
+	void identity() {assert(!m.empty()); m.back() = glm::mat4(1.0);}
 };
 
 

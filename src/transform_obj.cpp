@@ -236,7 +236,7 @@ void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lp
 
 			if (vrot.mag() > TOLERANCE) {
 				matrix.normalize();
-				matrix = glm::rotate(glm::mat4(), angle, vec3_from_vector3d(vrot)) * matrix;
+				matrix = glm::rotate(glm::mat4(1.0), angle, vec3_from_vector3d(vrot)) * matrix;
 			}
 		}
 	}
