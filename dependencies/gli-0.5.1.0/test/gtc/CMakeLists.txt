@@ -1,1 +1,0 @@
-glmCreateTestGTC(gtc)

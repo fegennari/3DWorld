@@ -98,7 +98,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>jpeg-9a;glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;glm;freeglut-2.8.1\include\GL;gli-0.5.1.0\gli</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>jpeg-9a;glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;dependencies\glm;freeglut-2.8.1\include\GL;dependencies\gli</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>

@@ -1,34 +1,22 @@
-///////////////////////////////////////////////////////////////////////////////////
-/// OpenGL Mathematics (glm.g-truc.net)
-///
-/// Copyright (c) 2005 - 2014 G-Truc Creation (www.g-truc.net)
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-/// 
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-/// 
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
-///
 /// @ref core
 /// @file glm/vec3.hpp
-/// @date 2013-12-24 / 2013-12-24
-/// @author Christophe Riccio
-///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef GLM_VEC3_INCLUDED
-#define GLM_VEC3_INCLUDED
+#pragma once
+#include "bvec3.hpp"
+#include "bvec3_precision.hpp"
+#include "fvec3.hpp"
+#include "fvec3_precision.hpp"
+#include "dvec3.hpp"
+#include "dvec3_precision.hpp"
+#include "ivec3.hpp"
+#include "ivec3_precision.hpp"
+#include "uvec3.hpp"
+#include "uvec3_precision.hpp"
 
-#include "detail/type_vec3.hpp"
+namespace glm
+{
+#	if GLM_HAS_TEMPLATE_ALIASES
+		template <typename T, qualifier Q = defaultp> using tvec3 = vec<3, T, Q>;
+#	endif
+}//namespace glm
 
-#endif//GLM_VEC3_INCLUDED

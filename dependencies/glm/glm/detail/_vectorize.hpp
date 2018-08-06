@@ -1,217 +1,126 @@
-///////////////////////////////////////////////////////////////////////////////////
-/// OpenGL Mathematics (glm.g-truc.net)
-///
-/// Copyright (c) 2005 - 2014 G-Truc Creation (www.g-truc.net)
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-/// 
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-/// 
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
-///
 /// @ref core
-/// @file glm/core/_vectorize.hpp
-/// @date 2011-10-14 / 2011-10-14
-/// @author Christophe Riccio
-///////////////////////////////////////////////////////////////////////////////////
+/// @file glm/detail/_vectorize.hpp
 
-#ifndef GLM_CORE_DETAIL_INCLUDED
-#define GLM_CORE_DETAIL_INCLUDED
-
-#include "type_vec1.hpp"
-#include "type_vec2.hpp"
-#include "type_vec3.hpp"
-#include "type_vec4.hpp"
-
-#define VECTORIZE1_VEC(func)						\
-	template <typename T, precision P>				\
-	GLM_FUNC_QUALIFIER detail::tvec1<T, P> func(	\
-		detail::tvec1<T, P> const & v)				\
-	{												\
-		return detail::tvec1<T, P>(					\
-			func(v.x));								\
-	}
-
-#define VECTORIZE2_VEC(func)						\
-	template <typename T, precision P>				\
-	GLM_FUNC_QUALIFIER detail::tvec2<T, P> func(	\
-		detail::tvec2<T, P> const & v)				\
-	{												\
-		return detail::tvec2<T, P>(					\
-			func(v.x),								\
-			func(v.y));								\
-	}
-
-#define VECTORIZE3_VEC(func)						\
-	template <typename T, precision P>				\
-	GLM_FUNC_QUALIFIER detail::tvec3<T, P> func(	\
-		detail::tvec3<T, P> const & v)				\
-	{												\
-		return detail::tvec3<T, P>(					\
-			func(v.x),								\
-			func(v.y),								\
-			func(v.z));								\
-	}
-
-#define VECTORIZE4_VEC(func)						\
-	template <typename T, precision P>				\
-	GLM_FUNC_QUALIFIER detail::tvec4<T, P> func(	\
-		detail::tvec4<T, P> const & v)				\
-	{												\
-		return detail::tvec4<T, P>(					\
-			func(v.x),								\
-			func(v.y),								\
-			func(v.z),								\
-			func(v.w));								\
-	}
-
-#define VECTORIZE_VEC(func)		\
-	VECTORIZE1_VEC(func)		\
-	VECTORIZE2_VEC(func)		\
-	VECTORIZE3_VEC(func)		\
-	VECTORIZE4_VEC(func)
-
-#define VECTORIZE1_VEC_SCA(func)							\
-	template <typename T, precision P>						\
-	GLM_FUNC_QUALIFIER detail::tvec1<T, P> func				\
-	(														\
-		detail::tvec1<T, P> const & x,						\
-		T const & y											\
-	)														\
-	{														\
-		return detail::tvec1<T, P>(							\
-			func(x.x, y));									\
-	}
-
-#define VECTORIZE2_VEC_SCA(func)							\
-	template <typename T, precision P>						\
-	GLM_FUNC_QUALIFIER detail::tvec2<T, P> func				\
-	(														\
-		detail::tvec2<T, P> const & x,						\
-		T const & y	\
-	)														\
-	{														\
-		return detail::tvec2<T, P>(							\
-			func(x.x, y),									\
-			func(x.y, y));									\
-	}
-
-#define VECTORIZE3_VEC_SCA(func)							\
-	template <typename T, precision P>						\
-	GLM_FUNC_QUALIFIER detail::tvec3<T, P> func				\
-	(														\
-		detail::tvec3<T, P> const & x,						\
-		T const & y	\
-	)														\
-	{														\
-		return detail::tvec3<T, P>(							\
-			func(x.x, y),									\
-			func(x.y, y),									\
-			func(x.z, y));									\
-	}
-
-#define VECTORIZE4_VEC_SCA(func)							\
-	template <typename T, precision P>						\
-	GLM_FUNC_QUALIFIER detail::tvec4<T, P> func				\
-	(														\
-		detail::tvec4<T, P> const & x,						\
-		T const & y	\
-	)														\
-	{														\
-		return detail::tvec4<T, P>(							\
-			func(x.x, y),									\
-			func(x.y, y),									\
-			func(x.z, y),									\
-			func(x.w, y));									\
-	}
-
-#define VECTORIZE_VEC_SCA(func)		\
-	VECTORIZE1_VEC_SCA(func)		\
-	VECTORIZE2_VEC_SCA(func)		\
-	VECTORIZE3_VEC_SCA(func)		\
-	VECTORIZE4_VEC_SCA(func)
-
-#define VECTORIZE2_VEC_VEC(func)					\
-	template <typename T, precision P>				\
-	GLM_FUNC_QUALIFIER detail::tvec2<T, P> func		\
-	(												\
-		detail::tvec2<T, P> const & x,				\
-		detail::tvec2<T, P> const & y				\
-	)												\
-	{												\
-		return detail::tvec2<T, P>(					\
-			func(x.x, y.x),							\
-			func(x.y, y.y));						\
-	}
-
-#define VECTORIZE3_VEC_VEC(func)					\
-	template <typename T, precision P>				\
-	GLM_FUNC_QUALIFIER detail::tvec3<T, P> func		\
-	(												\
-		detail::tvec3<T, P> const & x,				\
-		detail::tvec3<T, P> const & y				\
-	)												\
-	{												\
-		return detail::tvec3<T, P>(					\
-			func(x.x, y.x),							\
-			func(x.y, y.y),							\
-			func(x.z, y.z));						\
-	}
-
-#define VECTORIZE4_VEC_VEC(func)				\
-	template <typename T, precision P>			\
-	GLM_FUNC_QUALIFIER detail::tvec4<T, P> func	\
-	(											\
-		detail::tvec4<T, P> const & x,			\
-		detail::tvec4<T, P> const & y			\
-	)											\
-	{											\
-		return detail::tvec4<T, P>(				\
-			func(x.x, y.x),						\
-			func(x.y, y.y),						\
-			func(x.z, y.z),						\
-			func(x.w, y.w));					\
-	}
-
-#define VECTORIZE_VEC_VEC(func)		\
-	VECTORIZE2_VEC_VEC(func)		\
-	VECTORIZE3_VEC_VEC(func)		\
-	VECTORIZE4_VEC_VEC(func)
+#pragma once
 
 namespace glm{
 namespace detail
 {
-	template<bool C>
-	struct If
+	template<template<length_t L, typename T, qualifier Q> class vec, length_t L, typename R, typename T, qualifier Q>
+	struct functor1{};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename R, typename T, qualifier Q>
+	struct functor1<vec, 1, R, T, Q>
 	{
-		template<typename F, typename T>
-		static GLM_FUNC_QUALIFIER T apply(F functor, const T& val)
+		GLM_FUNC_QUALIFIER GLM_CONSTEXPR static vec<1, R, Q> call(R (*Func) (T x), vec<1, T, Q> const& v)
 		{
-			return functor(val);
+			return vec<1, R, Q>(Func(v.x));
 		}
 	};
 
-	template<>
-	struct If<false>
+	template<template<length_t L, typename T, qualifier Q> class vec, typename R, typename T, qualifier Q>
+	struct functor1<vec, 2, R, T, Q>
 	{
-		template<typename F, typename T>
-		static GLM_FUNC_QUALIFIER T apply(F, const T& val)
+		GLM_FUNC_QUALIFIER GLM_CONSTEXPR static vec<2, R, Q> call(R (*Func) (T x), vec<2, T, Q> const& v)
 		{
-			return val;
+			return vec<2, R, Q>(Func(v.x), Func(v.y));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename R, typename T, qualifier Q>
+	struct functor1<vec, 3, R, T, Q>
+	{
+		GLM_FUNC_QUALIFIER GLM_CONSTEXPR static vec<3, R, Q> call(R (*Func) (T x), vec<3, T, Q> const& v)
+		{
+			return vec<3, R, Q>(Func(v.x), Func(v.y), Func(v.z));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename R, typename T, qualifier Q>
+	struct functor1<vec, 4, R, T, Q>
+	{
+		GLM_FUNC_QUALIFIER GLM_CONSTEXPR static vec<4, R, Q> call(R (*Func) (T x), vec<4, T, Q> const& v)
+		{
+			return vec<4, R, Q>(Func(v.x), Func(v.y), Func(v.z), Func(v.w));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, length_t L, typename T, qualifier Q>
+	struct functor2{};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2<vec, 1, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<1, T, Q> call(T (*Func) (T x, T y), vec<1, T, Q> const& a, vec<1, T, Q> const& b)
+		{
+			return vec<1, T, Q>(Func(a.x, b.x));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2<vec, 2, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<2, T, Q> call(T (*Func) (T x, T y), vec<2, T, Q> const& a, vec<2, T, Q> const& b)
+		{
+			return vec<2, T, Q>(Func(a.x, b.x), Func(a.y, b.y));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2<vec, 3, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<3, T, Q> call(T (*Func) (T x, T y), vec<3, T, Q> const& a, vec<3, T, Q> const& b)
+		{
+			return vec<3, T, Q>(Func(a.x, b.x), Func(a.y, b.y), Func(a.z, b.z));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2<vec, 4, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<4, T, Q> call(T (*Func) (T x, T y), vec<4, T, Q> const& a, vec<4, T, Q> const& b)
+		{
+			return vec<4, T, Q>(Func(a.x, b.x), Func(a.y, b.y), Func(a.z, b.z), Func(a.w, b.w));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, length_t L, typename T, qualifier Q>
+	struct functor2_vec_sca{};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2_vec_sca<vec, 1, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<1, T, Q> call(T (*Func) (T x, T y), vec<1, T, Q> const& a, T b)
+		{
+			return vec<1, T, Q>(Func(a.x, b));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2_vec_sca<vec, 2, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<2, T, Q> call(T (*Func) (T x, T y), vec<2, T, Q> const& a, T b)
+		{
+			return vec<2, T, Q>(Func(a.x, b), Func(a.y, b));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2_vec_sca<vec, 3, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<3, T, Q> call(T (*Func) (T x, T y), vec<3, T, Q> const& a, T b)
+		{
+			return vec<3, T, Q>(Func(a.x, b), Func(a.y, b), Func(a.z, b));
+		}
+	};
+
+	template<template<length_t L, typename T, qualifier Q> class vec, typename T, qualifier Q>
+	struct functor2_vec_sca<vec, 4, T, Q>
+	{
+		GLM_FUNC_QUALIFIER static vec<4, T, Q> call(T (*Func) (T x, T y), vec<4, T, Q> const& a, T b)
+		{
+			return vec<4, T, Q>(Func(a.x, b), Func(a.y, b), Func(a.z, b), Func(a.w, b));
 		}
 	};
 }//namespace detail
 }//namespace glm
-
-#endif//GLM_CORE_DETAIL_INCLUDED

@@ -1,43 +1,17 @@
-///////////////////////////////////////////////////////////////////////////////////
-/// OpenGL Mathematics (glm.g-truc.net)
-///
-/// Copyright (c) 2005 - 2014 G-Truc Creation (www.g-truc.net)
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-/// 
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-/// 
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
-///
 /// @ref gtx_quaternion
 /// @file glm/gtx/quaternion.hpp
-/// @date 2005-12-21 / 2011-06-07
-/// @author Christophe Riccio
 ///
 /// @see core (dependence)
 /// @see gtx_extented_min_max (dependence)
 ///
 /// @defgroup gtx_quaternion GLM_GTX_quaternion
 /// @ingroup gtx
-/// 
-/// @brief Extented quaternion types and functions
-/// 
-/// <glm/gtx/quaternion.hpp> need to be included to use these functionalities.
-///////////////////////////////////////////////////////////////////////////////////
+///
+/// Include <glm/gtx/quaternion.hpp> to use the features of this extension.
+///
+/// Extented quaternion types and functions
 
-#ifndef GLM_GTX_quaternion
-#define GLM_GTX_quaternion
+#pragma once
 
 // Dependency:
 #include "../glm.hpp"
@@ -45,7 +19,11 @@
 #include "../gtc/quaternion.hpp"
 #include "../gtx/norm.hpp"
 
-#if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
+#ifndef GLM_ENABLE_EXPERIMENTAL
+#	error "GLM: GLM_GTX_quaternion is an experimental extension and may change in the future. Use #define GLM_ENABLE_EXPERIMENTAL before including it, if you really want to use it."
+#endif
+
+#if GLM_MESSAGES == GLM_ENABLE && !defined(GLM_EXT_INCLUDED)
 #	pragma message("GLM: GLM_GTX_quaternion extension included")
 #endif
 
@@ -54,160 +32,191 @@ namespace glm
 	/// @addtogroup gtx_quaternion
 	/// @{
 
-	//! Compute a cross product between a quaternion and a vector.
+	/// Create an identity quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tvec3<T, P> cross(
-		detail::tquat<T, P> const & q,
-		detail::tvec3<T, P> const & v);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> quat_identity();
+
+	/// Compute a cross product between a quaternion and a vector.
+	///
+	/// @see gtx_quaternion
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL vec<3, T, Q> cross(
+		tquat<T, Q> const& q,
+		vec<3, T, Q> const& v);
 
 	//! Compute a cross product between a vector and a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tvec3<T, P> cross(
-		detail::tvec3<T, P> const & v,
-		detail::tquat<T, P> const & q);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL vec<3, T, Q> cross(
+		vec<3, T, Q> const& v,
+		tquat<T, Q> const& q);
 
-	//! Compute a point on a path according squad equation. 
+	//! Compute a point on a path according squad equation.
 	//! q1 and q2 are control points; s1 and s2 are intermediate control points.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> squad(
-		detail::tquat<T, P> const & q1,
-		detail::tquat<T, P> const & q2,
-		detail::tquat<T, P> const & s1,
-		detail::tquat<T, P> const & s2,
-		T const & h);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> squad(
+		tquat<T, Q> const& q1,
+		tquat<T, Q> const& q2,
+		tquat<T, Q> const& s1,
+		tquat<T, Q> const& s2,
+		T const& h);
 
 	//! Returns an intermediate control point for squad interpolation.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> intermediate(
-		detail::tquat<T, P> const & prev,
-		detail::tquat<T, P> const & curr,
-		detail::tquat<T, P> const & next);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> intermediate(
+		tquat<T, Q> const& prev,
+		tquat<T, Q> const& curr,
+		tquat<T, Q> const& next);
 
 	//! Returns a exp of a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> exp(
-		detail::tquat<T, P> const & q);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> exp(
+		tquat<T, Q> const& q);
 
 	//! Returns a log of a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> log(
-		detail::tquat<T, P> const & q);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> log(
+		tquat<T, Q> const& q);
 
 	/// Returns x raised to the y power.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> pow(
-		detail::tquat<T, P> const & x,
-		T const & y);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> pow(
+		tquat<T, Q> const& x,
+		T const& y);
 
 	//! Returns quarternion square root.
 	///
 	/// @see gtx_quaternion
-	//template<typename T, precision P>
-	//detail::tquat<T, P> sqrt(
-	//	detail::tquat<T, P> const & q);
+	//template<typename T, qualifier Q>
+	//tquat<T, Q> sqrt(
+	//	tquat<T, Q> const& q);
 
 	//! Rotates a 3 components vector by a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tvec3<T, P> rotate(
-		detail::tquat<T, P> const & q,
-		detail::tvec3<T, P> const & v);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL vec<3, T, Q> rotate(
+		tquat<T, Q> const& q,
+		vec<3, T, Q> const& v);
 
 	/// Rotates a 4 components vector by a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tvec4<T, P> rotate(
-		detail::tquat<T, P> const & q,
-		detail::tvec4<T, P> const & v);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL vec<4, T, Q> rotate(
+		tquat<T, Q> const& q,
+		vec<4, T, Q> const& v);
 
 	/// Extract the real component of a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	T extractRealComponent(
-		detail::tquat<T, P> const & q);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL T extractRealComponent(
+		tquat<T, Q> const& q);
 
 	/// Converts a quaternion to a 3 * 3 matrix.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tmat3x3<T, P> toMat3(
-		detail::tquat<T, P> const & x){return mat3_cast(x);}
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL mat<3, 3, T, Q> toMat3(
+		tquat<T, Q> const& x){return mat3_cast(x);}
 
 	/// Converts a quaternion to a 4 * 4 matrix.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tmat4x4<T, P> toMat4(
-		detail::tquat<T, P> const & x){return mat4_cast(x);}
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL mat<4, 4, T, Q> toMat4(
+		tquat<T, Q> const& x){return mat4_cast(x);}
 
 	/// Converts a 3 * 3 matrix to a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> toQuat(
-		detail::tmat3x3<T, P> const & x){return quat_cast(x);}
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> toQuat(
+		mat<3, 3, T, Q> const& x){return quat_cast(x);}
 
 	/// Converts a 4 * 4 matrix to a quaternion.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> toQuat(
-		detail::tmat4x4<T, P> const & x){return quat_cast(x);}
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> toQuat(
+		mat<4, 4, T, Q> const& x){return quat_cast(x);}
 
 	/// Quaternion interpolation using the rotation short path.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> shortMix(
-		detail::tquat<T, P> const & x,
-		detail::tquat<T, P> const & y,
-		T const & a);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> shortMix(
+		tquat<T, Q> const& x,
+		tquat<T, Q> const& y,
+		T const& a);
 
 	/// Quaternion normalized linear interpolation.
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> fastMix(
-		detail::tquat<T, P> const & x,
-		detail::tquat<T, P> const & y,
-		T const & a);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> fastMix(
+		tquat<T, Q> const& x,
+		tquat<T, Q> const& y,
+		T const& a);
 
 	/// Compute the rotation between two vectors.
 	/// param orig vector, needs to be normalized
 	/// param dest vector, needs to be normalized
 	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	detail::tquat<T, P> rotation(
-		detail::tvec3<T, P> const & orig, 
-		detail::tvec3<T, P> const & dest);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> rotation(
+		vec<3, T, Q> const& orig,
+		vec<3, T, Q> const& dest);
+
+	/// Build a look at quaternion based on the default handedness.
+	///
+	/// @param direction Desired forward direction. Needs to be normalized.
+	/// @param up Up vector, how the camera is oriented. Typically (0, 1, 0).
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> quatLookAt(
+		vec<3, T, Q> const& direction,
+		vec<3, T, Q> const& up);
+
+	/// Build a right-handed look at quaternion.
+	///
+	/// @param direction Desired forward direction onto which the -z-axis gets mapped. Needs to be normalized.
+	/// @param up Up vector, how the camera is oriented. Typically (0, 1, 0).
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> quatLookAtRH(
+		vec<3, T, Q> const& direction,
+		vec<3, T, Q> const& up);
+
+	/// Build a left-handed look at quaternion.
+	///
+	/// @param direction Desired forward direction onto which the +z-axis gets mapped. Needs to be normalized.
+	/// @param up Up vector, how the camera is oriented. Typically (0, 1, 0).
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL tquat<T, Q> quatLookAtLH(
+		vec<3, T, Q> const& direction,
+		vec<3, T, Q> const& up);
 
 	/// Returns the squared length of x.
-	/// 
+	///
 	/// @see gtx_quaternion
-	template<typename T, precision P>
-	T length2(detail::tquat<T, P> const & q);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL T length2(tquat<T, Q> const& q);
 
 	/// @}
 }//namespace glm
 
 #include "quaternion.inl"
-
-#endif//GLM_GTX_quaternion

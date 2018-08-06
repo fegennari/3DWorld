@@ -1,25 +1,19 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// OpenGL Mathematics Copyright (c) 2005 - 2014 G-Truc Creation (www.g-truc.net)
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Created : 2009-03-06
-// Updated : 2013-04-09
-// Licence : This source is under MIT License
-// File    : glm/gtx/gradient_paint.inl
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/// @ref gtx_gradient_paint
+/// @file glm/gtx/gradient_paint.inl
 
 namespace glm
 {
-	template <typename T, precision P>
-	T radialGradient
+	template<typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER T radialGradient
 	(
-		detail::tvec2<T, P> const & Center,
-		T const & Radius,
-		detail::tvec2<T, P> const & Focal,
-		detail::tvec2<T, P> const & Position
+		vec<2, T, Q> const& Center,
+		T const& Radius,
+		vec<2, T, Q> const& Focal,
+		vec<2, T, Q> const& Position
 	)
 	{
-		detail::tvec2<T, P> F = Focal - Center;
-		detail::tvec2<T, P> D = Position - Focal;
+		vec<2, T, Q> F = Focal - Center;
+		vec<2, T, Q> D = Position - Focal;
 		T Radius2 = pow2(Radius);
 		T Fx2 = pow2(F.x);
 		T Fy2 = pow2(F.y);
@@ -29,15 +23,15 @@ namespace glm
 		return Numerator / Denominator;
 	}
 
-	template <typename T, precision P>
-	T linearGradient
+	template<typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER T linearGradient
 	(
-		detail::tvec2<T, P> const & Point0,
-		detail::tvec2<T, P> const & Point1,
-		detail::tvec2<T, P> const & Position
+		vec<2, T, Q> const& Point0,
+		vec<2, T, Q> const& Point1,
+		vec<2, T, Q> const& Position
 	)
 	{
-		detail::tvec2<T, P> Dist = Point1 - Point0;
+		vec<2, T, Q> Dist = Point1 - Point0;
 		return (Dist.x * (Position.x - Point0.x) + Dist.y * (Position.y - Point0.y)) / glm::dot(Dist, Dist);
 	}
 }//namespace glm

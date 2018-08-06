@@ -1,75 +1,64 @@
-///////////////////////////////////////////////////////////////////////////////////
-/// OpenGL Mathematics (glm.g-truc.net)
-///
-/// Copyright (c) 2005 - 2014 G-Truc Creation (www.g-truc.net)
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-/// 
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-/// 
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
-///
 /// @ref core
-/// @file glm/core/func_exponential.inl
-/// @date 2008-08-03 / 2011-06-15
-/// @author Christophe Riccio
-///////////////////////////////////////////////////////////////////////////////////
+/// @file glm/detail/func_exponential.inl
 
-#include "func_vector_relational.hpp"
+#include "../vector_relational.hpp"
 #include "_vectorize.hpp"
 #include <limits>
+#include <cmath>
 #include <cassert>
 
 namespace glm{
 namespace detail
 {
-	template <bool isFloat>
+#	if GLM_HAS_CXX11_STL
+		using std::log2;
+#	else
+		template<typename genType>
+		genType log2(genType Value)
+		{
+			return std::log(Value) * static_cast<genType>(1.4426950408889634073599246810019);
+		}
+#	endif
+
+	template<length_t L, typename T, qualifier Q, bool isFloat, bool Aligned>
 	struct compute_log2
 	{
-		template <typename T>
-		T operator() (T const & Value) const;
-	};
-
-	template <>
-	struct compute_log2<true>
-	{
-		template <typename T>
-		T operator() (T const & Value) const
+		GLM_FUNC_QUALIFIER static vec<L, T, Q> call(vec<L, T, Q> const& v)
 		{
-			return static_cast<T>(::std::log(Value)) * static_cast<T>(1.4426950408889634073599246810019);
+			GLM_STATIC_ASSERT(std::numeric_limits<T>::is_iec559, "'log2' only accept floating-point inputs. Include <glm/gtc/integer.hpp> for integer inputs.");
+
+			return detail::functor1<vec, L, T, T, Q>::call(log2, v);
 		}
 	};
 
-	template <template <class, precision> class vecType, typename T, precision P>
+	template<length_t L, typename T, qualifier Q, bool Aligned>
+	struct compute_sqrt
+	{
+		GLM_FUNC_QUALIFIER static vec<L, T, Q> call(vec<L, T, Q> const& x)
+		{
+			return detail::functor1<vec, L, T, T, Q>::call(std::sqrt, x);
+		}
+	};
+
+	template<length_t L, typename T, qualifier Q, bool Aligned>
 	struct compute_inversesqrt
 	{
-		static vecType<T, P> call(vecType<T, P> const & x)
+		GLM_FUNC_QUALIFIER static vec<L, T, Q> call(vec<L, T, Q> const& x)
 		{
 			return static_cast<T>(1) / sqrt(x);
 		}
 	};
-		
-	template <template <class, precision> class vecType>
-	struct compute_inversesqrt<vecType, float, lowp>
+
+	template<length_t L, bool Aligned>
+	struct compute_inversesqrt<L, float, lowp, Aligned>
 	{
-		static vecType<float, lowp> call(vecType<float, lowp> const & x)
+		GLM_FUNC_QUALIFIER static vec<L, float, lowp> call(vec<L, float, lowp> const& x)
 		{
-			vecType<float, lowp> tmp(x);
-			vecType<float, lowp> xhalf(tmp * 0.5f);
-			vecType<uint, lowp>* p = reinterpret_cast<vecType<uint, lowp>*>(const_cast<vecType<float, lowp>*>(&x));
-			vecType<uint, lowp> i = vecType<uint, lowp>(0x5f375a86) - (*p >> vecType<uint, lowp>(1));
-			vecType<float, lowp>* ptmp = reinterpret_cast<vecType<float, lowp>*>(&i);
+			vec<L, float, lowp> tmp(x);
+			vec<L, float, lowp> xhalf(tmp * 0.5f);
+			vec<L, uint, lowp>* p = reinterpret_cast<vec<L, uint, lowp>*>(const_cast<vec<L, float, lowp>*>(&x));
+			vec<L, uint, lowp> i = vec<L, uint, lowp>(0x5f375a86) - (*p >> vec<L, uint, lowp>(1));
+			vec<L, float, lowp>* ptmp = reinterpret_cast<vec<L, float, lowp>*>(&i);
 			tmp = *ptmp;
 			tmp = tmp * (1.5f - xhalf * tmp * tmp);
 			return tmp;
@@ -78,160 +67,86 @@ namespace detail
 }//namespace detail
 
 	// pow
-	template <typename genType>
-	GLM_FUNC_QUALIFIER genType pow
-	(
-		genType const & x, 
-		genType const & y
-	)
+	using std::pow;
+	template<length_t L, typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<L, T, Q> pow(vec<L, T, Q> const& base, vec<L, T, Q> const& exponent)
 	{
-		GLM_STATIC_ASSERT(
-			std::numeric_limits<genType>::is_iec559,
-			"'pow' only accept floating-point inputs");
-
-		return std::pow(x, y);
+		return detail::functor2<vec, L, T, Q>::call(pow, base, exponent);
 	}
-
-	VECTORIZE_VEC_VEC(pow)
 
 	// exp
-	template <typename genType>
-	GLM_FUNC_QUALIFIER genType exp
-	(
-		genType const & x
-	)
+	using std::exp;
+	template<length_t L, typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<L, T, Q> exp(vec<L, T, Q> const& x)
 	{
-		GLM_STATIC_ASSERT(
-			std::numeric_limits<genType>::is_iec559,
-			"'exp' only accept floating-point inputs");
-
-		return std::exp(x);
+		return detail::functor1<vec, L, T, T, Q>::call(exp, x);
 	}
-
-	VECTORIZE_VEC(exp)
 
 	// log
-	template <typename genType>
-	GLM_FUNC_QUALIFIER genType log
-	(
-		genType const & x
-	)
+	using std::log;
+	template<length_t L, typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<L, T, Q> log(vec<L, T, Q> const& x)
 	{
-		GLM_STATIC_ASSERT(
-			std::numeric_limits<genType>::is_iec559,
-			"'log' only accept floating-point inputs");
-
-		return std::log(x);
+		return detail::functor1<vec, L, T, T, Q>::call(log, x);
 	}
 
-	VECTORIZE_VEC(log)
-
+#   if GLM_HAS_CXX11_STL
+    using std::exp2;
+#   else
 	//exp2, ln2 = 0.69314718055994530941723212145818f
-	template <typename genType>
-	GLM_FUNC_QUALIFIER genType exp2(genType const & x)
+	template<typename genType>
+	GLM_FUNC_QUALIFIER genType exp2(genType x)
 	{
-		GLM_STATIC_ASSERT(
-			std::numeric_limits<genType>::is_iec559,
-			"'exp2' only accept floating-point inputs");
+		GLM_STATIC_ASSERT(std::numeric_limits<genType>::is_iec559, "'exp2' only accept floating-point inputs");
 
 		return std::exp(static_cast<genType>(0.69314718055994530941723212145818) * x);
 	}
+#   endif
 
-	VECTORIZE_VEC(exp2)
+	template<length_t L, typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<L, T, Q> exp2(vec<L, T, Q> const& x)
+	{
+		return detail::functor1<vec, L, T, T, Q>::call(exp2, x);
+	}
 
 	// log2, ln2 = 0.69314718055994530941723212145818f
-	template <typename genType>
+	template<typename genType>
 	GLM_FUNC_QUALIFIER genType log2(genType x)
 	{
-		GLM_STATIC_ASSERT(std::numeric_limits<genType>::is_iec559 || std::numeric_limits<genType>::is_integer,
-			"GLM core 'log2' only accept floating-point inputs. Include <glm/gtx/integer.hpp> for additional integer support.");
-
-		assert(x > genType(0)); // log2 is only defined on the range (0, inf]
-		return detail::compute_log2<std::numeric_limits<genType>::is_iec559>()(x);
+		return log2(vec<1, genType>(x)).x;
 	}
 
-	VECTORIZE_VEC(log2)
-
-	namespace detail
+	template<length_t L, typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<L, T, Q> log2(vec<L, T, Q> const& x)
 	{
-		template <template <class, precision> class vecType, typename T, precision P>
-		struct compute_sqrt{};
-		
-		template <typename T, precision P>
-		struct compute_sqrt<detail::tvec1, T, P>
-		{
-			static detail::tvec1<T, P> call(detail::tvec1<T, P> const & x)
-			{
-				return detail::tvec1<T, P>(std::sqrt(x.x));
-			}
-		};
-		
-		template <typename T, precision P>
-		struct compute_sqrt<detail::tvec2, T, P>
-		{
-			static detail::tvec2<T, P> call(detail::tvec2<T, P> const & x)
-			{
-				return detail::tvec2<T, P>(std::sqrt(x.x), std::sqrt(x.y));
-			}
-		};
-		
-		template <typename T, precision P>
-		struct compute_sqrt<detail::tvec3, T, P>
-		{
-			static detail::tvec3<T, P> call(detail::tvec3<T, P> const & x)
-			{
-				return detail::tvec3<T, P>(std::sqrt(x.x), std::sqrt(x.y), std::sqrt(x.z));
-			}
-		};
-		
-		template <typename T, precision P>
-		struct compute_sqrt<detail::tvec4, T, P>
-		{
-			static detail::tvec4<T, P> call(detail::tvec4<T, P> const & x)
-			{
-				return detail::tvec4<T, P>(std::sqrt(x.x), std::sqrt(x.y), std::sqrt(x.z), std::sqrt(x.w));
-			}
-		};
-	}//namespace detail
-	
+		return detail::compute_log2<L, T, Q, std::numeric_limits<T>::is_iec559, detail::is_aligned<Q>::value>::call(x);
+	}
+
 	// sqrt
-	GLM_FUNC_QUALIFIER float sqrt(float x)
-	{
-		return detail::compute_sqrt<detail::tvec1, float, highp>::call(x).x;
-	}
-
-	GLM_FUNC_QUALIFIER double sqrt(double x)
-	{
-		return detail::compute_sqrt<detail::tvec1, double, highp>::call(x).x;
-	}
-		
-	template <typename T, precision P, template <typename, precision> class vecType>
-	GLM_FUNC_QUALIFIER vecType<T, P> sqrt(vecType<T, P> const & x)
+	using std::sqrt;
+	template<length_t L, typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<L, T, Q> sqrt(vec<L, T, Q> const& x)
 	{
 		GLM_STATIC_ASSERT(std::numeric_limits<T>::is_iec559, "'sqrt' only accept floating-point inputs");
-		return detail::compute_sqrt<vecType, T, P>::call(x);
+		return detail::compute_sqrt<L, T, Q, detail::is_aligned<Q>::value>::call(x);
 	}
 
 	// inversesqrt
-	GLM_FUNC_QUALIFIER float inversesqrt(float const & x)
+	template<typename genType>
+	GLM_FUNC_QUALIFIER genType inversesqrt(genType x)
 	{
-		return 1.0f / sqrt(x);
-	}
-	
-	GLM_FUNC_QUALIFIER double inversesqrt(double const & x)
-	{
-		return 1.0 / sqrt(x);
-	}
-	
-	template <template <class, precision> class vecType, typename T, precision P>
-	GLM_FUNC_QUALIFIER vecType<T, P> inversesqrt
-	(
-		vecType<T, P> const & x
-	)
-	{
-		GLM_STATIC_ASSERT(std::numeric_limits<T>::is_iec559, "'inversesqrt' only accept floating-point inputs");
-		return detail::compute_inversesqrt<vecType, T, P>::call(x);
+		return static_cast<genType>(1) / sqrt(x);
 	}
 
-	VECTORIZE_VEC(inversesqrt)
+	template<length_t L, typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<L, T, Q> inversesqrt(vec<L, T, Q> const& x)
+	{
+		GLM_STATIC_ASSERT(std::numeric_limits<T>::is_iec559, "'inversesqrt' only accept floating-point inputs");
+		return detail::compute_inversesqrt<L, T, Q, detail::is_aligned<Q>::value>::call(x);
+	}
 }//namespace glm
+
+#if GLM_CONFIG_SIMD == GLM_ENABLE
+#	include "func_exponential_simd.inl"
+#endif
+

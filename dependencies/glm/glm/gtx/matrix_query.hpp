@@ -1,50 +1,28 @@
-///////////////////////////////////////////////////////////////////////////////////
-/// OpenGL Mathematics (glm.g-truc.net)
-///
-/// Copyright (c) 2005 - 2014 G-Truc Creation (www.g-truc.net)
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-/// 
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-/// 
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
-///
 /// @ref gtx_matrix_query
 /// @file glm/gtx/matrix_query.hpp
-/// @date 2007-03-05 / 2011-08-28
-/// @author Christophe Riccio
 ///
 /// @see core (dependence)
 /// @see gtx_vector_query (dependence)
 ///
 /// @defgroup gtx_matrix_query GLM_GTX_matrix_query
 /// @ingroup gtx
-/// 
-/// @brief Query to evaluate matrix properties
-/// 
-/// <glm/gtx/matrix_query.hpp> need to be included to use these functionalities.
-///////////////////////////////////////////////////////////////////////////////////
+///
+/// Include <glm/gtx/matrix_query.hpp> to use the features of this extension.
+///
+/// Query to evaluate matrix properties
 
-#ifndef GLM_GTX_matrix_query
-#define GLM_GTX_matrix_query
+#pragma once
 
 // Dependency:
 #include "../glm.hpp"
 #include "../gtx/vector_query.hpp"
 #include <limits>
 
-#if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
+#ifndef GLM_ENABLE_EXPERIMENTAL
+#	error "GLM: GLM_GTX_matrix_query is an experimental extension and may change in the future. Use #define GLM_ENABLE_EXPERIMENTAL before including it, if you really want to use it."
+#endif
+
+#if GLM_MESSAGES == GLM_ENABLE && !defined(GLM_EXT_INCLUDED)
 #	pragma message("GLM: GLM_GTX_matrix_query extension included")
 #endif
 
@@ -55,47 +33,45 @@ namespace glm
 
 	/// Return whether a matrix a null matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P>
-	bool isNull(detail::tmat2x2<T, P> const & m, T const & epsilon);
-		
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL bool isNull(mat<2, 2, T, Q> const& m, T const& epsilon);
+
 	/// Return whether a matrix a null matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P>
-	bool isNull(detail::tmat3x3<T, P> const & m, T const & epsilon);
-		
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL bool isNull(mat<3, 3, T, Q> const& m, T const& epsilon);
+
 	/// Return whether a matrix is a null matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P>
-	bool isNull(detail::tmat4x4<T, P> const & m, T const & epsilon);
-			
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL bool isNull(mat<4, 4, T, Q> const& m, T const& epsilon);
+
 	/// Return whether a matrix is an identity matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P, template <typename, precision> class matType>
-	bool isIdentity(matType<T, P> const & m, T const & epsilon);
+	template<length_t C, length_t R, typename T, qualifier Q, template<length_t, length_t, typename, qualifier> class matType>
+	GLM_FUNC_DECL bool isIdentity(matType<C, R, T, Q> const& m, T const& epsilon);
 
 	/// Return whether a matrix is a normalized matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P>
-	bool isNormalized(detail::tmat2x2<T, P> const & m, T const & epsilon);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL bool isNormalized(mat<2, 2, T, Q> const& m, T const& epsilon);
 
 	/// Return whether a matrix is a normalized matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P>
-	bool isNormalized(detail::tmat3x3<T, P> const & m, T const & epsilon);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL bool isNormalized(mat<3, 3, T, Q> const& m, T const& epsilon);
 
 	/// Return whether a matrix is a normalized matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P>
-	bool isNormalized(detail::tmat4x4<T, P> const & m, T const & epsilon);
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL bool isNormalized(mat<4, 4, T, Q> const& m, T const& epsilon);
 
 	/// Return whether a matrix is an orthonormalized matrix.
 	/// From GLM_GTX_matrix_query extension.
-	template<typename T, precision P, template <typename, precision> class matType>
-	bool isOrthogonal(matType<T, P> const & m, T const & epsilon);
+	template<length_t C, length_t R, typename T, qualifier Q, template<length_t, length_t, typename, qualifier> class matType>
+	GLM_FUNC_DECL bool isOrthogonal(matType<C, R, T, Q> const& m, T const& epsilon);
 
 	/// @}
 }//namespace glm
 
 #include "matrix_query.inl"
-
-#endif//GLM_GTX_matrix_query

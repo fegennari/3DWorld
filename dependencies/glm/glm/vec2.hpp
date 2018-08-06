@@ -1,34 +1,21 @@
-///////////////////////////////////////////////////////////////////////////////////
-/// OpenGL Mathematics (glm.g-truc.net)
-///
-/// Copyright (c) 2005 - 2014 G-Truc Creation (www.g-truc.net)
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-/// 
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-/// 
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
-///
 /// @ref core
 /// @file glm/vec2.hpp
-/// @date 2013-12-24 / 2013-12-24
-/// @author Christophe Riccio
-///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef GLM_VEC2_INCLUDED
-#define GLM_VEC2_INCLUDED
+#pragma once
+#include "bvec2.hpp"
+#include "bvec2_precision.hpp"
+#include "fvec2.hpp"
+#include "fvec2_precision.hpp"
+#include "dvec2.hpp"
+#include "dvec2_precision.hpp"
+#include "ivec2.hpp"
+#include "ivec2_precision.hpp"
+#include "uvec2.hpp"
+#include "uvec2_precision.hpp"
 
-#include "detail/type_vec2.hpp"
-
-#endif//GLM_VEC2_INCLUDED
+namespace glm
+{
+#	if GLM_HAS_TEMPLATE_ALIASES
+		template <typename T, qualifier Q = defaultp> using tvec2 = vec<2, T, Q>;
+#	endif
+}//namespace glm
