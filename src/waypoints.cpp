@@ -628,6 +628,7 @@ public:
 		if (goal.mode == 7) {goal.wpt = wb.add_new_waypoint(goal.pos, -1, 1, 1, 1, 1);} // goal position - add temp waypoint
 		if (goal.mode == 7) {has_wpt_goal = 1;}
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: " << goal.pos.str() << ", wpt: " << goal.wpt << endl;
+		if (goal.wpt < 0) return 0.0; // no current waypoint (maybe none visible)
 		std::priority_queue<pair<float, unsigned> > open_queue;
 		wc.open.resize(waypoints.size(), 0); // already resized after the first call
 		wc.closed.resize(waypoints.size(), 0);
