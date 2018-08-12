@@ -15,6 +15,9 @@ planet_update_rate 1.0
 rgen_seed 21 # 1 is also good
 include config_resolution.txt
 ship_def_file universe/ship_defs_fight.txt
+#ship_def_file universe/ship_defs_assault.txt
+#ship_def_file universe/ship_defs_colonize.txt
+#ship_def_file universe/ship_defs_colonize_sparse.txt
 font_texture_atlas_fn textures/atlas/text_atlas.png
 end
 

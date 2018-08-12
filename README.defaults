@@ -1,46 +1,90 @@
+Notes:
+* The top-level foncig file(s) is specified in defaults.txt
+* Config files can include other config files with "include <filename>"
+* All paths are relative to the run directory, currently the git root directory '3DWorld'
+* Most 3D models are defined in the <coll_obj_file> file
+* The '#' character is for config file comments
+* Most scenes start in windowed mode; 'm' key will maximize to fullscreen
+* Some scenes import models that aren't part of the git repo; Sometimes this is nonfatal (models not loaded/drawn), sometimes this is fatal/error
+* Most large scenes are stored in 3DWorld's own model3d format; These are imported from OBJ or 3DS file formats and stored more compactly, with fast read times
+
+Important key bindings:
+* Enable mouse look with the 'V' key in fullscreen mode
+* Switch between orbiting and first person cameras with 'v' key
+* Switch between walking and flying in tiled terrain mode with the 'h' key
+* The 'R' key can be used to cycle through several different running/flying speeds
+* F1 will switch between ground => tiled terrain => universe modes (when enabled)
+* F2 will switch between gameplay modes while in ground mode
+* The 'k' key will toggle overhead map mode, which can be panned and zoomed woth keyboard and mouse
+* The <tab> key brings up menus and team stats displays; Can switch between menus with 'X' key
+* Use 'a'/'w'/'s'/'d' to move and <space> to jump in ground mode
+
+Available config files:
+
 universe/config_universe.txt
-house/config_house.txt
-house/config_house_winter.txt
-mapx/config_mapx.txt
-mapx/config_mapx_voxels.txt
-cornell_box/config_box.txt
-config_scrolling.txt
-config.txt
-config_t.txt
-config_heightmap.txt
-config_lava_moon.txt
-config_voxels.txt
-config_voxels2.txt
-config_voxels_grass.txt
-config_ice_caves.txt
-config_trees.txt
-config_water.txt
-config_river.txt
-config_gym.txt
-config_berkeley.txt
-config_puzzle.txt
-config_buildings.txt
-config_white_plane.txt
+Procedural universe mode with ship combat. Use the 'b' key to enable ship AIs. Can select between these ship configuration files:
+universe/ship_defs_fight.txt - Red vs. Blue ship battle around the local planet with respawn (player is a neutral green team)
+universe/ship_defs_assault.txt - Blue attackers vs. Red defenders, single battle
+universe/ship_defs_colonize.txt - 4 team (red, blue, purple, orange) colonization + battle game (takes several hours for a team to win)
+universe/ship_defs_colonize_sparse.txt - 4 team colonization with fewer starting ships (slower but more consistent results)
+
+Ground mode gameplay scenes:
+Notes:
+* Use F2 key to enter gameplay mode
+* Use 'v' key to switch from orbit camera to ground / first person camera
+* Use 'b' key to enable enemy smileys and pickup items, most of which fall from the sky
+* The player is on red team; blue team smileys are the enemy
+* Scenes start out maximized / full screen
+house/config_house.txt - Model of my parents' house; Need to pick up weapons
+house/config_house_winter.txt - Same as above but with snow on the ground
+mapx/config_mapx.txt - Office building scene; My primary test environment; Start out with unlimited weapons and ammo; Look for yellow switches around the scene that control lights and moving platforms
+mapx/config_mapx_voxels.txt - Voxel version of office building scene
+
+cornell_box/config_box.txt - Standard Cornell Box scene to test path traced lighting; Use 'v' key to enter the box
+config_scrolling.txt - Simple terrain with trees that scrolls to follow the player; Use 'v' key and walk around
+config.txt - Test scene for vegetation and terrain generation; Can use F1 key to enter tiled/infinite terrain mode and walk around
+config_t.txt - Same as above, but with higher tree detail; make sure you have a good GPU
+config_heightmap.txt - Procedural height map with erosion; city generation test scene; uses precomputed terrain; takes a while to load and a lot of graphics memory (> 1GB)
+config_lava_moon.txt - Lava moon demo scene; Switch to tiled terrain mode using F1
+
+Voxel test scenes: voxels can be edited using mouse wheel or 'q' and 'e' keys to change editing mode; Use <tab> key + arrow keys for onscreen menu
+config_voxels.txt - 512x512x128 procedural editable voxel terrain (rock)
+config_voxels2.txt - Floating voxel rock
+config_voxels_grass.txt - Voxel mountain with grass, indirect lighting; editable
+config_ice_caves.txt - 512x512x128 procedural editable voxel terrain with indirect lighting (ice)
+
+config_trees.txt - Test scene with ~100 trees
+config_water.txt - Test scene with reflective water (CPU reflections)
+config_river.txt - River test scene
+config_gym.txt - Scene for testing smiley AI and weapons
+config_berkeley.txt - 1024x1024 Berkeley, CA model; height from USGS DEM databases, texture from tiled Google maps satellite images
+config_puzzle.txt - Experimental platformer game; Use 'a'/'w'/'s'/'d' to move and <space> to jump; Very difficult - don't fall!
+config_buildings.txt - Procedural buildings test; Try F1 => 'm' => 'V' => 'h' => 'R' => 'w'
+
+config_white_plane.txt - 100 Reflective/refractive spheres test scene;
+Try F2 then 'b' for a short period of time the 'b' again to generate multiple reflections;
+Requires a good GPU and at least 2GB graphics memory
 
 The following config files require loading large models that aren't part of the 3DWorld git repo.
 In many cases, the raw model files will need to be fixed/patched/updated in some way to make them valid and compatible with 3DWorld.
 Many of the models can be found here: http://casual-effects.com/data/
+3DWorld can load all McGuire Computer Graphics Archive models, though some require editing to fix file paths, mtllib typos, etc.
 This is left as an exercise for the reader.
 
-config_puget_sound.txt
-config_puget_sound_tt.txt
-config_grand_canyon.txt
-config_grand_canyon_tt.txt
-config_hetch.txt
-sponza/config_sponza.txt
-sponza/config_sponza2.txt
-model_data/config_soda.txt
-config_samples.txt
-config_san_miguel.txt : http://casual-effects.com/data/ : San Miguel 2.0
-config_minecraft.txt
+config_puget_sound.txt - 16K x 16K Puget Sound heightmap: Download from https://www.cc.gatech.edu/projects/large_models/ps.html
+config_puget_sound_tt.txt - 32K x 32K Puget Sound heightmap designed for tiled terrain mode; Use F1 key
+config_grand_canyon.txt - 8K x 2K Grand Canyon heightmap: Download from https://www.cc.gatech.edu/projects/large_models/gcanyon.html
+config_grand_canyon_tt.txt - 8K x 2K Grand Canyon heightmap designed for tiled terrain mode; Use F1 key
+config_hetch.txt - Hetch Hetchy heightmap, can't remember where I got this from
+sponza/config_sponza.txt - Dabrovic Sponza scene with precomputed indirect lighting: http://casual-effects.com/data/
+sponza/config_sponza2.txt - Crytek Sponza scene with precomputed indirect lighting: http://casual-effects.com/data/
+model_data/config_soda.txt - UC Berkeley Soda Hall scene with precomputed indirect lighting; no textures; From UC Berkeley project, not sure where to download it
+config_samples.txt - Assorted 3D models; Uncomment the one you want to try - though you'll have to find these for download
+config_san_miguel.txt : San Miguel 2.0; High geometry and texture detail, indirect lighting, reflections; need a good GPU with lots of memory: http://casual-effects.com/data/
+config_minecraft.txt - Rungholt Minecraft city, ported to OBJ format, converted to 3DWorld's model3d format: http://casual-effects.com/data/
 
 Download from http://www.3drender.com/challenges/ : Challenge #17: Natural History
-config_museum.txt
-config_museum_tt_model.txt
+config_museum.txt - Museum scene with precomputed indirect lighting (not included), shadows, reflections, and procedural texturing
+config_museum_tt_model.txt - Museum scene arrayed out as 10,000 instances in tiled terrain mode for performance testing
 
 
