@@ -19,7 +19,6 @@ libpng-1.2.20/
 tiff-4.0.3/
 zlib-1.2.1/
 zlib/
-*.dll
 screenshot*.jpg
 video_out*.mp4
 positions.log.txt
