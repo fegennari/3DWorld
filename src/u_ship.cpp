@@ -64,6 +64,7 @@ extern vector<us_class> sclasses;
 extern vector<us_weapon> us_weapons;
 extern usw_ray_group beam_rays;
 extern vector<temp_source> temp_sources;
+extern vector<hyper_inhibit_t> hyper_inhibits;
 extern vector<unsigned> build_types[];
 extern shader_t emissive_shader;
 
@@ -1654,7 +1655,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 				break;
 
 			case UWEAP_HYPER:
-				// FIXME: WRITE
+				hyper_inhibits.emplace_back(fpos, weap.bradius, this);
 				break;
 
 			default:

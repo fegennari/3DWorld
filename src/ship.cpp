@@ -35,6 +35,7 @@ vector<free_obj const *> a_targets(NUM_ALIGNMENT, NULL), attackers(NUM_ALIGNMENT
 vector<cached_obj> c_uobjs;
 usw_ray_group trail_rays, beam_rays; // engine trails, beams
 vector<temp_source> temp_sources;
+vector<hyper_inhibit_t> hyper_inhibits;
 pt_line_drawer particle_pld;
 point_sprite_drawer_sized glow_psd;
 shader_t emissive_shader;
@@ -500,6 +501,7 @@ void apply_univ_physics() {
 	decoys.resize(0);
 	exploding.resize(0);
 	temp_sources.resize(0);
+	hyper_inhibits.resize(0);
 	uobj_rmax = urm_ship = urm_static = urm_proj = 0.0;
 	
 	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {

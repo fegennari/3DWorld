@@ -361,6 +361,15 @@ struct temp_source {
 };
 
 
+struct hyper_inhibit_t : public uobject_base {
+
+	u_ship *parent;
+
+	hyper_inhibit_t() : parent(nullptr) {}
+	hyper_inhibit_t(upos_point_type const &pos_, float radius_, u_ship *parent_) : uobject_base(pos_, radius_), parent(parent_) {}
+};
+
+
 class ship_coll_obj {
 
 	float dscale;

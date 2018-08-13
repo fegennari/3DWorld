@@ -41,6 +41,7 @@ extern water_params_t water_params;
 extern vector<free_obj *> uobjs;
 extern vector<cached_obj> stat_objs;
 extern vector<temp_source> temp_sources;
+extern vector<hyper_inhibit_t> hyper_inhibits;
 extern universe_t universe;
 
 
@@ -463,14 +464,28 @@ void process_univ_objects() {
 				if (temp > uobj->get_temp()) {
 					uobj->set_temp(temp, ts.pos, ts.source); // source should be valid (and should register as an attacker)
 				}
-			}
+			} // for t
 			if (!orbiting) {
-				float speed_factor(uobj->get_max_sf()), speed_factor2(1.0);
+				float const speed_factor(uobj->get_max_sf()); // SLOW_SPEED_FACTOR = 0.04, FAST_SPEED_FACTOR = 1.0
+				float speed_factor2(1.0);
 				
 				if (clobj.val > 0) {
-					float min_sf(0.01);
+					float min_sf(0.25*SLOW_SPEED_FACTOR);
 					if (lod_coll && dot_product_ptv(upos_point_type(uobj->get_velocity()), obj_pos, clobj.object->get_pos()) < 0.0) {min_sf = (has_rings ? 0.0025 : 0.001);} // only on approach
 					speed_factor2 = max(min_sf, min(1.0f, 0.7f*limit_speed_dist)); // clip to [0.01, 1.0]
+				}
+				if (min(speed_factor, speed_factor2) > SLOW_SPEED_FACTOR) { // faster than slow speed
+					for (auto h = hyper_inhibits.begin(); h != hyper_inhibits.end(); ++h) {
+						float const dist_sq(p2p_dist_sq(obj_pos, h->pos));
+						if (dist_sq > h->radius*h->radius) continue; // too far away to take effect
+						if (uobj == h->parent) continue; // don't inhibit self
+						if (h->parent->is_related(uobj)) continue; // don't inhibit our own fighters or parent
+						//if (h->parent->is_enemy(uobj)) continue; // should we only inhibit enemies?
+						//uobj->register_attacker(h->parent); // no attacker registration (yet)
+						float const val(sqrt(dist_sq)/h->radius), val2(val*val); // 0.0 - 1.0
+						min_eq(speed_factor2, ((1.0f - val2)*SLOW_SPEED_FACTOR + val2*speed_factor));
+						// WRITE
+					} // for h
 				}
 				uobj->set_speed_factor(min(speed_factor, speed_factor2));
 			}
