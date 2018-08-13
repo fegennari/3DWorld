@@ -328,11 +328,11 @@ public:
 			team_left = i;
 		} // for i
 		if (num_left == 1) {
-			cout << "*** " << align_names[team_left] << " Team Won" << endl;
+			if (frame_counter > 0) {cout << "*** " << align_names[team_left] << " Team Won" << endl;} // don't print anything on the first frame for trivial win conditions
 			game_over = 1;
 		}
 		else if (num_left == 0) {
-			cout << "*** " << "No Team Won" << endl;
+			if (frame_counter > 0) {cout << "*** " << "No Team Won" << endl;}
 			game_over = 1;
 		}
 	}
