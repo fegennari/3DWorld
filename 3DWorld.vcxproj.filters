@@ -1,0 +1,1463 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{205955b5-2f85-435a-8874-4060d3f5a626}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files\&quot;Borrowed&quot;">
+      <UniqueIdentifier>{b240df72-5ea6-4ffe-a777-b2666d0990ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{6f3cccd2-3f23-4fd2-a5e9-69ec0db65352}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+    <Filter Include="Universe">
+      <UniqueIdentifier>{c2d5ac59-bf26-4842-a091-bfcfb7dc0223}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Universe\Source">
+      <UniqueIdentifier>{f7098b9a-0855-4afe-8e1a-bd9f56398657}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Universe\Include">
+      <UniqueIdentifier>{f357c79f-f567-4a07-9571-8d7979c2652b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files">
+      <UniqueIdentifier>{f1020b85-e72b-4571-af20-d72aba4b6b36}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files\mapx">
+      <UniqueIdentifier>{c669397f-a59e-4bfd-a611-2ebf817a009e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files\House">
+      <UniqueIdentifier>{211a0899-3adf-4e9b-b550-e8ae21f3587c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files\universe">
+      <UniqueIdentifier>{09fbc4da-be8f-4ca8-816f-5348c3235359}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files\cornell_box">
+      <UniqueIdentifier>{81610dc2-ac01-4221-bff5-e295f48a9757}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{f71d8e09-1989-44c6-adaa-9baad1e2f311}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\vert">
+      <UniqueIdentifier>{aee2879e-dd80-4e3f-b242-12aea76825a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\frag">
+      <UniqueIdentifier>{3ea77bbb-4fd3-4d55-acd0-c8338503e7c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\geom">
+      <UniqueIdentifier>{aa7d1f11-8a29-4b7c-9616-eae80c5f143f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Shared">
+      <UniqueIdentifier>{aebddeef-1197-4275-9c9c-dabec83be0f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files\Sponza">
+      <UniqueIdentifier>{b63bf90c-4059-4e9c-b241-eb2025306954}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files\config">
+      <UniqueIdentifier>{bc2770c4-67fb-479c-b182-6ef5d9a58ce5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{721eefd7-2b0a-432a-9467-3cdf55017c84}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Source Files\&quot;Borrowed&quot;\Source">
+      <UniqueIdentifier>{6d476184-d562-41f9-90f9-0228b2397c94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\&quot;Borrowed&quot;\Header">
+      <UniqueIdentifier>{5af90bad-cc40-4baf-9298-6266641fe9a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\frag\Gallery">
+      <UniqueIdentifier>{4ad9796d-8779-40bf-961a-2499648e0a1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\tess">
+      <UniqueIdentifier>{17a41f99-c7d1-449c-a7d6-7571e3dfe6d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\compute">
+      <UniqueIdentifier>{e50256a6-d1e2-4e6b-aebf-928ad2e34508}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\frag\Fullscreen">
+      <UniqueIdentifier>{be1d2f03-2545-4023-b03d-0df4ce7901de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Files\coll_objs">
+      <UniqueIdentifier>{f876b4f4-fdfe-4612-a3b5-ea5672d78a49}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\3DWorld.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ai.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\build_world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cobj_bsp_tree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\coll_cell_search.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\collision_detect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\csg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\display_world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_mech.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_primitives.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_shapes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dynamic_particle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gen_object.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gl_ext_arb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\grass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lightmap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lightning.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\map_view.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\matrix_ops.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mesh_gen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mesh_intersect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\objects.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ray_trace.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shadows.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shape_line3d.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sm_tree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\snow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\spillover.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tessellate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tiled_mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\transform_obj.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\u_event.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\visibility.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\weapon_draw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_ship.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\free_obj.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\modmap.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ship.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ship_base.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ship_config.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ship_intersect.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ship_query.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\u_ship.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Universe_name.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\upsurface.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shadow_map.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\smoke.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\waypoints.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\destroy_cobj.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\object_file_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model3d.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openal_wrap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\screenshot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\clouds.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\voxels.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_groups.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\asteroid.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\precipitation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\profiler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vertex_opt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\intersect.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\loadlum.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\quartic.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Targa\targa.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\triListOpt.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\spray_paint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\image_io.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\heightmap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\edit_ui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\draw_text.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\read_3ds.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\light_source.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\postproc_effects.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\movable_cobj.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\video_capture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\reflections.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\animals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Universe_control.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Universe.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Textures.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Water.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scenery.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Tree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Gameplay.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sphere_materials.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Physics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Math3d.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\explosion.cpp">
+      <Filter>Universe\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gen_buildings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\glflare.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\erosion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\city_gen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\teleporter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\3DWorld.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\collision_detect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\csg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dynamic_particle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gameplay.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gl_ext_arb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\inlines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lightmap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mesh_intersect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\physics_objects.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\player_state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shape_line3d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sinf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\spillover.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\subdiv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Textures_3dw.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\timetest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\transform_obj.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tree_3dw.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tree_leaf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\u_event.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\explosion.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\obj_sort.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ship.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ship_util.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\universe.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\upsurface.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\globals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shaders.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\model3d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gl_includes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\openal_wrap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cobj_bsp_tree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\voxels.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\marching_cubes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\file_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\draw_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\small_tree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scenery.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\grass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\function_registry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\asteroid.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tiled_mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vertex_opt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fast_atof.h">
+      <Filter>Source Files\"Borrowed"\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Targa\targa.h">
+      <Filter>Source Files\"Borrowed"\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\triListOpt.h">
+      <Filter>Source Files\"Borrowed"\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\heightmap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mesh2d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shadow_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\file_reader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\trigger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\animals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\universe_base.h">
+      <Filter>Universe\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sphere_materials.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cube_map_shadow_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\binary_file_io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\allocators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\buildings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="icon1.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="defaults.txt">
+      <Filter>Input Files</Filter>
+    </None>
+    <None Include="mapx\basement.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\bench.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\chair.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\config_mapx.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\courtyard.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\exploding_tank.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\floor1.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\floor2.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\floor3.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\floor4.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\lamp.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\lightbulb.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\outside.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\placements.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\roof.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\round_table.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\stairs.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\table.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\vsupport.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\vsupport_low.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="house\COLL_OBJS_House.TXT">
+      <Filter>Input Files\House</Filter>
+    </None>
+    <None Include="house\config_house.txt">
+      <Filter>Input Files\House</Filter>
+    </None>
+    <None Include="house\config_house_winter.txt">
+      <Filter>Input Files\House</Filter>
+    </None>
+    <None Include="house\placements.TXT">
+      <Filter>Input Files\House</Filter>
+    </None>
+    <None Include="universe\config_universe.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="universe\formatting.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="universe\ship_defs.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="universe\ship_defs_teams.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="universe.modmap">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="cornell_box\coll_objs_box.txt">
+      <Filter>Input Files\cornell_box</Filter>
+    </None>
+    <None Include="cornell_box\config_box.txt">
+      <Filter>Input Files\cornell_box</Filter>
+    </None>
+    <None Include="shaders\grass.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\no_lighting_texture_gen.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\no_lt_texgen_smoke.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\per_pixel_lighting.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\per_pixel_lighting_textured.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\texture_gen.part.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tiled_mesh.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tree_leaves.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\two_lights.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\two_lights_no_xform.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\two_lights_texture.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\two_lights_texture_gen.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\color_only.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\linear_fog.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\multitex_2.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\per_pixel_lighting.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\per_pixel_lighting_textured.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\simple_texture.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\textured_with_smoke.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\pt_billboard.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\pt_billboard_tri.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\tri_wind.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\ads_lighting.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\line_clip.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="readme-keys.txt" />
+    <None Include="shaders\dynamic_lighting.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\grass_with_dlights.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\grass_pp_dl.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\wind.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\draw_mesh.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\draw_mesh.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\exponential_fog.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\water_plane.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\water_plane.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\fresnel.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\vert_xform_only.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\write_depth.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\shadow_map.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="sponza\coll_objs_sponza.txt">
+      <Filter>Input Files\Sponza</Filter>
+    </None>
+    <None Include="sponza\coll_objs_sponza2.txt">
+      <Filter>Input Files\Sponza</Filter>
+    </None>
+    <None Include="sponza\config_sponza.txt">
+      <Filter>Input Files\Sponza</Filter>
+    </None>
+    <None Include="sponza\config_sponza2.txt">
+      <Filter>Input Files\Sponza</Filter>
+    </None>
+    <None Include="shaders\bump_map.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\spec_map.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\bump_map.part.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="config.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_water.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_gym.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_landscape.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_river.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_samples.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_scrolling.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="model_data\config_soda.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_trees.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="shaders\no_lighting_tex_coord.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\cloud_billboard.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="config_minecraft.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_resolution.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_gameplay.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_voxels.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="shaders\procedural_gen.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\procedural_gen.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\procedural_texture.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\triplanar_texture.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="config_voxel_params.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="shaders\indir_lighting.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\ship_draw.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\ship_draw.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\snow.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tiled_mesh.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\point_to_quad.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\output_textured_quad.part.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\leaf_lighting.part.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\pine_tree.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\pine_tree.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\grass_tiled.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\grass_tiled.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\clouds.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\clouds.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\fog_only.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\fog_only.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="config_voxels2.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="shaders\asteroid.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\asteroid.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\voxel_texture.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\perlin_clouds.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\water_fog.part.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\textured_with_fog.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\write_normal.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\write_normal_textured.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\write_normal.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tree_leaves_no_lighting.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\planet_draw.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\planet_rings.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\star_draw.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\perlin_clouds_3d.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\star_draw.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\atmosphere.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\atmosphere.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\planet_draw.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\sphere_shadow.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\procedural_rock.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\procedural_rock.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\nebula.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\nebula.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\voxel_asteroid.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\particle_draw.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\craters.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\rand_gen.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\tree_leaves_billboard.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tree_leaves_billboard.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\leaf_lighting_comp.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\textured_with_fog_opacity.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\noise_dither.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\tree_branches_no_lighting.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tree_branches_billboard.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\tree_branches_billboard.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tiled_tree_branches.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\multitex_2.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\grass_tiled.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\grass_texture.part.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\pine_tree_billboard_auto_orient.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\xy_billboard.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="config_voxels_grass.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="mapx\crate.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\config_mapx_voxels.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\config_mapx_base.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="shaders\asteroid_dust.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\asteroid_dust.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\sphere_shadow_casters.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="config_puget_sound.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_puget_sound_tt.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_berkeley.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_ice_caves.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_grand_canyon.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_grand_canyon_tt.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="config_hetch.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="shaders\fog_epos_only.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\fog_epos_only.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\black_body_burn.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\cloud_sphere.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\moon_draw.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\planet_draw_distant.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\simple_texture_luminance.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\point_sprite.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\point_sprite_texture.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\common_header.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\vertex_xlate_scale.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\common_header.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\common_header_shared.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\detail_normal_map.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\alpha_mask.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\vert_xform_vpos.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\procedural_height_gen.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\procedural_planet.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="todo.txt" />
+    <None Include="shaders\line_draw_halo.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\water_fog.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\flowers_pp_dl.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\flowers.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\flowers_tiled.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\flowers_tiled.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tiled_shadow_map.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\flower_from_pt.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\flowers_tiled_gs.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\glsl_sandbox_planet.frag">
+      <Filter>Shaders\frag\Gallery</Filter>
+    </None>
+    <None Include="shaders\ocean.frag">
+      <Filter>Shaders\frag\Gallery</Filter>
+    </None>
+    <None Include="shaders\star_draw_iq.frag">
+      <Filter>Shaders\frag\Gallery</Filter>
+    </None>
+    <None Include="shaders\glsl_sandbox_terrain.frag">
+      <Filter>Shaders\frag\Gallery</Filter>
+    </None>
+    <None Include="shaders\moon_draw.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\ship_shields.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\no_lighting_pos_tc.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\common_header.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\cloud_sphere_shadow.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\gen_voxel_weights.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\planet_draw.tesc">
+      <Filter>Shaders\tess</Filter>
+    </None>
+    <None Include="shaders\planet_draw.tese">
+      <Filter>Shaders\tess</Filter>
+    </None>
+    <None Include="shaders\planet_draw_procedural.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\planet_draw_procedural_tess.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\triplanar_bump_map.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\procedural_height_gen.comp">
+      <Filter>Shaders\compute</Filter>
+    </None>
+    <None Include="shaders\noise_2d_3d.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\gen_voxel_weights.comp">
+      <Filter>Shaders\compute</Filter>
+    </None>
+    <None Include="shaders\water_plane_tess.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\water_plane.tesc">
+      <Filter>Shaders\tess</Filter>
+    </None>
+    <None Include="shaders\water_plane.tese">
+      <Filter>Shaders\tess</Filter>
+    </None>
+    <None Include="config_t.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="shaders\sun_flare_with_clouds.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="config_museum.txt">
+      <Filter>Input Files\config</Filter>
+    </None>
+    <None Include="shaders\god_rays.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\screen_space_ao.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\screen_space_blur.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\depth_of_field.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\depth_utils.part.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\point_sprite_circle.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\leaf_wind.part.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\heat_waves.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\drunken_wave.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\postproc_bloom.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="house\cobjs_out.txt">
+      <Filter>Input Files\House</Filter>
+    </None>
+    <None Include="mapx\cobjs_out.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="shaders\leaf_lighting_ppl.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\tree_leaves_ppl.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tree_leaf_lighting.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\pine_tree_ppl.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\pine_tree_ppl.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\tiled_mesh_shadow.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\water_ripples.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="mapx\bottle.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="mapx\bottle2.txt">
+      <Filter>Input Files\mapx</Filter>
+    </None>
+    <None Include="shaders\tree_billboard.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\tree_billboard_gs.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\screen_space_blur_1d.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="universe\ship_defs_base.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="shaders\pine_tree_billboard.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\pine_tree_billboard_gs.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="universe\ship_defs_colonize.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="universe\ship_defs_assault.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="universe\ship_defs_fight.txt">
+      <Filter>Input Files\universe</Filter>
+    </None>
+    <None Include="shaders\grass_tiled.tesc">
+      <Filter>Shaders\tess</Filter>
+    </None>
+    <None Include="shaders\grass_tiled.tese">
+      <Filter>Shaders\tess</Filter>
+    </None>
+    <None Include="shaders\texture_tile_utils.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\sphere_refract_screen.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\simplex_noise.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\noise_deriv.part">
+      <Filter>Shaders\Shared</Filter>
+    </None>
+    <None Include="shaders\vert_plus_normal.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\spotlight_volume.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\window_lights.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\window_lights.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\postproc_bloom_2d.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\circular_portal.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\tiled_tree_branches.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="README.md" />
+    <None Include="README.defaults" />
+    <None Include=".gitignore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Script1.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="mapx\coll_objs_mapx.txt">
+      <Filter>Input Files\mapx</Filter>
+    </Text>
+    <Text Include="sphere_materials.txt">
+      <Filter>Input Files</Filter>
+    </Text>
+    <Text Include="config_puzzle.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="mapx\coll_objs_cubes.txt">
+      <Filter>Input Files\mapx</Filter>
+    </Text>
+    <Text Include="mapx\coll_objs_spheres.txt">
+      <Filter>Input Files\mapx</Filter>
+    </Text>
+    <Text Include="config_san_miguel.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="config_museum_tt_model.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS.TXT">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS_Maze.TXT">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\coll_objs_minecraft.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS_museum.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS_museum_tt_model.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\coll_objs_puget_sound.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\coll_objs_puzzle.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS_River.TXT">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\coll_objs_samples.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\coll_objs_san_miguel.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS_Test.TXT">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\coll_objs_transformed.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS1.TXT">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS2.TXT">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\COLL_OBJS3.TXT">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="buildings.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="config_buildings.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="config_lava_moon.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="config_heightmap.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="universe\ship_defs_colonize_sparse.txt">
+      <Filter>Input Files\universe</Filter>
+    </Text>
+    <Text Include="building_params.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="building_materials.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="config_white_plane.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="coll_objs\white_plane_test.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
