@@ -702,6 +702,7 @@
     <ClInclude Include="Targa\targa.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".gitignore" />
     <None Include="config_berkeley.txt" />
     <None Include="config_gameplay.txt" />
     <None Include="config_grand_canyon.txt" />
