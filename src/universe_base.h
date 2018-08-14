@@ -52,7 +52,7 @@ public:
 	upos_point_type pos; // required for high precision universe coordinates (can't use a sphere_t)
 
 	uobject_base() : radius(0.0) {}
-	uobject_base(upos_point_type const &pos_, float radius_) : pos(pos_), radius(radius_) {}
+	uobject_base(upos_point_type const &pos_, float radius_) : radius(radius_), pos(pos_) {}
 	upos_point_type const &get_pos() const {return pos;}
 	float           get_radius()     const {return radius;}
 	void set_pos(point const &pos_) {pos = pos_;}
