@@ -912,6 +912,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'v': // reset camera and change camera mode from air to surface
 		reset_camera_pos();
+		if (world_mode == WMODE_INF_TERRAIN) {camera_reset = camera_change = 1; break;} // reset camera in case player died
 		if (world_mode != WMODE_GROUND) break; // universe/inf terrain mode
 		gamemode_rand_appear();
 		toggle_camera_mode();

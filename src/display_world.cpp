@@ -1114,6 +1114,16 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 }
 
 
+void run_tt_gameplay() {
+
+	process_groups();
+	setup_dynamic_teleporters();
+	draw_select_groups(1);
+	draw_select_groups(0);
+	update_blasts();
+}
+
+
 void display_inf_terrain() { // infinite terrain mode (Note: uses light params from ground mode)
 
 	static int init_xx(1);
@@ -1177,6 +1187,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	pre_draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.26");
 	draw_tiled_terrain(0);
+	run_tt_gameplay(); // enable limited gameplay elements in tiled terrain mode
 	if (TIMETEST) PRINT_TIME("3.3");
 	//if (underwater ) {draw_local_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, tt_reflection_tid);}

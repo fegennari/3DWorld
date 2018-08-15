@@ -2788,7 +2788,7 @@ void free_dodgeballs(bool camera, bool smileys) {
 
 void gamemode_rand_appear() {
 
-	if (!game_mode || world_mode != WMODE_GROUND) return;
+	if (!game_mode) return;
 	gen_smiley_or_player_pos(surface_pos, CAMERA_ID);
 	camera_last_pos = surface_pos;
 	free_dodgeballs(1, 0);
