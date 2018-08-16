@@ -267,6 +267,7 @@ uint64_t get_tile_id_containing_point(point const &pos);
 uint64_t get_tile_id_containing_point_no_xyoff(point const &pos);
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(shader_t &s, float zval);
+bool sphere_int_tiled_terrain(point &pos, float radius);
 bool check_player_tiled_terrain_collision();
 bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int);
 void change_inf_terrain_fire_mode(int val);
