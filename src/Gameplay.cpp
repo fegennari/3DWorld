@@ -2108,8 +2108,14 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	}
 	vector3d const vcf0(vcf*vcf_mag);
 	if (vcf_used) {*vcf_used = vcf0;}
-	int const intersect(get_range_to_mesh(pos, vcf, coll_pos));
+	int intersect(0);
 
+	if (world_mode == WMODE_INF_TERRAIN) {
+		intersect = line_intersect_tiled_mesh(pos, (pos + vcf*range), coll_pos);
+	}
+	else {
+		intersect = get_range_to_mesh(pos, vcf, coll_pos);
+	}
 	if (intersect) {
 		range = p2p_dist(pos, coll_pos);
 		if (intersect == 1) {coll_pos = pos + vcf*(range - 0.01);} // not an ice intersection - simple and inexact, but seems OK
