@@ -825,7 +825,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		float dz;
 		int val(get_obj_zval(pos, dz, ((otype.flags & COLL_DESTROYS) ? 0.25*radius : radius))); // 0 = out of simulation region, 1 = airborne, 2 = on ground
 
-		if (val == 2 && dz > radius && !is_over_mesh(old_pos) && old_pos.z < pos.z) { // hit side of simulation region
+		if (world_mode == WMODE_GROUND && val == 2 && dz > radius && !is_over_mesh(old_pos) && old_pos.z < pos.z) { // hit side of simulation region
 			status = 0;
 			return;
 		}
@@ -836,8 +836,12 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		int const wcoll(check_water_collision(vz_old));
 		vector3d cnorm;
 		bool const last_stat_coll((flags & STATIC_COBJ_COLL) != 0);
-		int const coll(check_vert_collision(obj_index, 1, iter, &cnorm));
+		int coll(check_vert_collision(obj_index, 1, iter, &cnorm));
 		if (disabled()) return;
+
+		if (world_mode == WMODE_INF_TERRAIN) {
+			//if (sphere_int_tiled_terrain(pos, radius)) {coll = 1;} // FIXME
+		}
 		if (!coll) {flags &= ~Z_STOPPED;} // fix for landmine no longer stuck to cobj
 		
 		if (wcoll) {
@@ -923,11 +927,13 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 
 int get_obj_zval(point &pt, float &dz, float z_offset) { // 0 = out of bounds/error, 1 = airborne, 2 = on ground
 
-	if (!is_over_mesh(pt))              return 0;
-	int const xpos(get_xpos(pt.x)), ypos(get_ypos(pt.y));
-	if (point_outside_mesh(xpos, ypos)) return 0;
-	if ((pt.z - z_offset) > ztop)       return 1;
-	if (is_in_ice(xpos, ypos) && pt.z < water_matrix[ypos][xpos]) return 1;
+	if (world_mode == WMODE_GROUND) { // this stuff doesn't apply to tiled terrain mode
+		if (!is_over_mesh(pt))              return 0;
+		int const xpos(get_xpos(pt.x)), ypos(get_ypos(pt.y));
+		if (point_outside_mesh(xpos, ypos)) return 0;
+		if ((pt.z - z_offset) > ztop)       return 1;
+		if (is_in_ice(xpos, ypos) && pt.z < water_matrix[ypos][xpos]) return 1;
+	}
 	float const zval(interpolate_mesh_zval(pt.x, pt.y, 0.0, 0, 0));
 	if ((pt.z - z_offset) > zval) return 1;
 	dz   = zval - pt.z;
@@ -1053,6 +1059,7 @@ void dwobject::set_orient_for_coll(vector3d const *const forced_norm) {
 
 int dwobject::check_water_collision(float vz_old) {
 
+	if (world_mode != WMODE_GROUND) return 0;
 	obj_type const &otype(object_types[type]);
 	float const radius(otype.radius);
 	if ((pos.z - radius) > max_water_height) return 0; // quick check for efficiency
@@ -1304,6 +1311,7 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2, fl
 	vector3d bounce_v;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
+	// Note: this test is mandatory (no tiled terrain exception) because we lookup mesh normals below
 	if (point_outside_mesh(xpos, ypos)) { // object on/over edge
 		status = 0;
 		return 0;

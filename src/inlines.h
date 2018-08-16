@@ -497,8 +497,8 @@ inline bool point_interior_to_mesh(int xpos, int ypos) {
 	return (xpos > 0 && ypos > 0 && xpos < MESH_X_SIZE-1 && ypos < MESH_Y_SIZE-1);
 }
 
-inline bool is_over_mesh(point const &pos) {
-	return (pos.x > -X_SCENE_SIZE && pos.x < X_SCENE_SIZE && pos.y > -Y_SCENE_SIZE && pos.y < Y_SCENE_SIZE);
+inline bool is_over_mesh(point const &pos) { // always over mesh in tiled terrain mode
+	return (world_mode == WMODE_INF_TERRAIN || (pos.x > -X_SCENE_SIZE && pos.x < X_SCENE_SIZE && pos.y > -Y_SCENE_SIZE && pos.y < Y_SCENE_SIZE));
 }
 
 
