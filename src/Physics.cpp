@@ -934,7 +934,7 @@ int get_obj_zval(point &pt, float &dz, float z_offset) { // 0 = out of bounds/er
 		if ((pt.z - z_offset) > ztop)       return 1;
 		if (is_in_ice(xpos, ypos) && pt.z < water_matrix[ypos][xpos]) return 1;
 	}
-	float const zval(interpolate_mesh_zval(pt.x, pt.y, 0.0, 0, 0));
+	float const zval(int_mesh_zval_pt_off(pt, 0, 0));
 	if ((pt.z - z_offset) > zval) return 1;
 	dz   = zval - pt.z;
 	pt.z = zval + z_offset;
