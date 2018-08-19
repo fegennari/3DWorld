@@ -196,9 +196,11 @@ struct planet_draw_data_t {
 	unsigned ix;
 	float size;
 	bool selected;
+	upos_point_type pos; // pos cached before planet update
 	shadow_vars_t svars;
 	planet_draw_data_t() : ix(0), size(0.0), selected(0) {}
-	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_, bool sel) : ix(ix_), size(size_), selected(sel), svars(svars_) {}
+	planet_draw_data_t(unsigned ix_, float size_, upos_point_type const &pos_, shadow_vars_t const &svars_, bool sel) :
+		ix(ix_), size(size_), selected(sel), pos(pos_), svars(svars_) {}
 };
 
 
@@ -986,10 +988,10 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								planet_asteroid_belts.push_back(planet.asteroid_belt);
 							}
 							if (!planet.ring_data.empty() && ring_scale > 2.5) {
-								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars, sel_p));
+								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, ppos, svars, sel_p));
 							}
 							if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0) {
-								usg.atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars, sel_p));
+								usg.atmos_to_draw.push_back(planet_draw_data_t(k, sizep, ppos, svars, sel_p));
 							}
 						}
 					} // planet k
@@ -1012,13 +1014,13 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						for (auto k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
 							uplanet &planet(sol.planets[k->ix]);
 							bool const use_a2c(!k->selected); // only for distant rings (looks bad when up close)
-							bool const use_two_passes(!use_a2c && !usg.atmos_to_draw.empty() && fabs(dot_product((camera - (pos + planet.pos)).get_norm(), planet.rot_axis.get_norm())) < 0.5);
+							bool const use_two_passes(!use_a2c && !usg.atmos_to_draw.empty() && fabs(dot_product((camera - k->pos).get_norm(), planet.rot_axis.get_norm())) < 0.5);
 							
 							// distant planets: draw planet+atmos then rings; nearby planets: draw rings, then planet+atmos, then maybe draw near part of rings in a second pass
 							if ((pass != 0) == use_a2c || use_two_passes) {
 								if (use_a2c) {glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 								planet.ensure_rings_texture();
-								planet.draw_prings(usg, (pos + planet.pos), k->size, (use_two_passes ? ((pass == 1) ? -1.0 : 1.0) : 0), use_a2c);
+								planet.draw_prings(usg, k->pos, k->size, (use_two_passes ? ((pass == 1) ? -1.0 : 1.0) : 0), use_a2c);
 								if (use_a2c) {glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 							}
 						}
@@ -1027,7 +1029,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 							for (vector<planet_draw_data_t>::const_iterator k = usg.atmos_to_draw.begin(); k != usg.atmos_to_draw.end(); ++k) {
 								uplanet const &planet(sol.planets[k->ix]);
-								planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
+								planet.draw_atmosphere(usg, k->pos, k->size, k->svars);
 							}
 							glDisable(GL_CULL_FACE);
 						}
