@@ -839,7 +839,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		shader.add_uniform_color("color", base_color.modulate_with(texture_color(tid)));
 		if (!has_sun) {clear_colors_and_disable_light(0, &shader);} // if there's no sun, make sure this shader knows it
 		set_multisample(0); // not faster, but looks better disabled
-		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale, density); // full/sparse
+		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*orbit_scale, density); // full/sparse
 		set_multisample(1); // reset
 		shader.end_shader();
 	}
@@ -861,7 +861,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		set_point_sprite_mode(1);
 
 		for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
-			ast_belt_part[1].draw(afpos, orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*scale, density);
+			ast_belt_part[1].draw(afpos, orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*orbit_scale, density);
 		}
 		set_point_sprite_mode(0);
 		if (is_ice) {shader.clear_specular();} // reset specular
@@ -875,7 +875,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		fgPushMatrix();
 		global_translate(afpos);
 		rotate_into_plus_z(orbital_plane_normal);
-		scale_by(scale);
+		scale_by(orbit_scale);
 		draw_torus(all_zeros, inner_radius, outer_radius, N_SPHERE_DIV, N_SPHERE_DIV);
 		fgPopMatrix();
 		glDisable(GL_CULL_FACE);
@@ -982,7 +982,7 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 	resize((rand2() % max_num/2) + max_num/2); // 50% to 100% of max
 	vector3d vxy[2] = {plus_x, plus_y};
 	rotate_norm_vector3d_into_plus_z_multi(orbital_plane_normal, vxy, 2, -1.0); // inverse rotate
-	for (unsigned d = 0; d < 2; ++d) {vxy[d] *= scale[d];}
+	for (unsigned d = 0; d < 2; ++d) {vxy[d] *= orbit_scale[d];}
 	bool const is_ice(get_is_ice());
 
 	for (iterator i = begin(); i != end(); ++i) {
@@ -991,8 +991,8 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 		rmax = max(rmax, (p2p_dist(pos, i->pos) + i->radius));
 		max_asteroid_radius = max(max_asteroid_radius, i->radius);
 	}
-	radius  = rmax; // update with the bounding radius of the generated asteroids
-	scale.z = plane_dmax / inner_radius;
+	radius = rmax; // update with the bounding radius of the generated asteroids
+	orbit_scale.z = plane_dmax / inner_radius;
 }
 
 
@@ -1030,10 +1030,10 @@ void uasteroid_belt_planet::init_rings(point const &pos) {
 void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 	pt -= pos;
 	rotate_norm_vector3d_into_plus_z(orbital_plane_normal, pt);
-	UNROLL_3X(pt[i_] /= scale[i_];) // account for squished/elliptical torus in orbital plane
+	UNROLL_3X(pt[i_] /= orbit_scale[i_];) // account for squished/elliptical torus in orbital plane
 }
 void uasteroid_belt::xform_from_local_torus_coord_space(point &pt) const { // unused
-	UNROLL_3X(pt[i_] *= scale[i_];) // account for squished/elliptical torus in orbital plane
+	UNROLL_3X(pt[i_] *= orbit_scale[i_];) // account for squished/elliptical torus in orbital plane
 	rotate_norm_vector3d_into_plus_z(orbital_plane_normal, pt); // inverse rotate
 	pt += pos;
 }
@@ -1070,7 +1070,7 @@ bool uasteroid_belt::sphere_might_intersect(point const &sc, float sr) const {
 }
 
 float uasteroid_belt::get_line_sphere_int_radius_scale() const {
-	return 1.0/scale.get_min_val(); // conservative expand to account for elliptical scaling of asteroid belt
+	return 1.0/orbit_scale.get_min_val(); // conservative expand to account for elliptical scaling of asteroid belt
 }
 
 float uasteroid_belt::get_dist_to_boundary(point const &pt) const {
@@ -1078,7 +1078,7 @@ float uasteroid_belt::get_dist_to_boundary(point const &pt) const {
 	//if (sphere_might_intersect(pt, 0.0)) return 0.0;
 	float const dp(dot_product((pt - pos), orbital_plane_normal));
 	point const vproj(pt - dp*orbital_plane_normal);
-	float const zd(max(0.0f, (fabs(dp) - inner_radius*scale.z)));
+	float const zd(max(0.0f, (fabs(dp) - inner_radius*orbit_scale.z)));
 	float const xyd(max(0.0f, (fabs(outer_radius - p2p_dist(pos, vproj)) - inner_radius))); // Note: ignores scale.x and scale.y
 	return sqrt(xyd*xyd + zd*zd);
 }
@@ -1151,7 +1151,7 @@ void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point con
 	//RESET_TIME;
 	calc_colliders();
 	upos_point_type const opn(orbital_plane_normal);
-	for (iterator i = begin(); i != end(); ++i) {i->apply_belt_physics(pos, opn, colliders);}
+	for (iterator i = begin(); i != end(); ++i) {i->apply_belt_physics(pos, opn, orbit_scale, colliders);}
 	calc_shadowers();
 	//PRINT_TIME("Physics"); // < 1ms
 	// no collision detection between asteroids as it's rare and too slow
@@ -1435,13 +1435,13 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 	rot_ang += fticks*rot_ang0;
 	pos     += velocity;
 	
-	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) {  // outside asteroid field bounds
+	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) { // outside asteroid field bounds
 		calc_reflection_angle(velocity, velocity, (af_pos - pos).get_norm()); // reflect
 	}
 }
 
 
-void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector<sphere_t> const &colliders) {
+void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector3d const &orbit_scale, vector<sphere_t> const &colliders) {
 
 	upos_point_type const dir(pos - af_pos);
 	rot_ang += 0.5*fticks*rot_ang0; // slow rotation
@@ -1449,7 +1449,15 @@ void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_typ
 	// Note: slightly off for asteroids not in the plane, should be cross_product(dir, op_normal).get_norm() but that's slower
 	velocity = rev_ang0*cross_product(dir, op_normal);
 	upos_point_type const orbit_dir(dir + fticks*velocity); // adjust for next frame pos
-	pos      = af_pos + orbit_dir*(orbital_dist/orbit_dir.mag()); // renormalize for constant distance
+	float odist(orbital_dist);
+
+	if (orbit_scale.x != 1.0 || orbit_scale.y != 1.0) { // nonuniform/elliptical orbit scale - slow
+		vector3d vref(orbit_dir.get_norm());
+		rotate_norm_vector3d_into_plus_z(op_normal, vref); // vref.z should be near zero
+		float const angle(atan2(fabs(vref.y), fabs(vref.x))), s(orbit_scale.x*sinf(angle)), c(orbit_scale.y*cosf(angle));
+		odist *= orbit_scale.x*orbit_scale.y/sqrt(s*s + c*c); // https://www.quora.com/How-do-I-find-the-radius-of-an-ellipse-at-a-given-angle-to-its-axis
+	}
+	pos = af_pos + orbit_dir*(odist/orbit_dir.mag()); // renormalize for constant distance
 
 	for (vector<sphere_t>::const_iterator i = colliders.begin(); i != colliders.end(); ++i) {
 		if (dist_less_than(pos, i->pos, (radius + i->radius))) {

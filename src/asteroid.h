@@ -39,7 +39,7 @@ public:
 	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
 		float belt_radius, float belt_width, float belt_thickness, float max_radius, float &ri_max, float &plane_dmax);
 	void apply_field_physics(point const &af_pos, float af_radius);
-	void apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector<sphere_t> const &colliders);
+	void apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector3d const &orbit_scale, vector<sphere_t> const &colliders);
 	void draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const;
 	void destroy();
 	void set_velocity(vector3d const &v) {velocity = v;}
@@ -115,7 +115,7 @@ protected:
 	struct cloud_dist_cmp {
 		bool operator()(pair<float, cloud_inst> const &a, pair<float, cloud_inst> const &b) const {return (a.first < b.first);}
 	};
-	vector3d orbital_plane_normal, scale;
+	vector3d orbital_plane_normal, orbit_scale;
 	float max_asteroid_radius, inner_radius, outer_radius, temperature;
 	vector<cloud_inst> cloud_insts;
 	mutable vector<pair<float, cloud_inst>> clouds_to_draw;
@@ -126,7 +126,7 @@ protected:
 
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
-	orbital_plane_normal(opn), scale(scale_), max_asteroid_radius(0.0), inner_radius(0.0), outer_radius(0.0), temperature(0.0) {}
+	orbital_plane_normal(opn), orbit_scale(scale_), max_asteroid_radius(0.0), inner_radius(0.0), outer_radius(0.0), temperature(0.0) {}
 	virtual bool is_planet_ab() const {return 0;}
 	virtual void gen_asteroids();
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
