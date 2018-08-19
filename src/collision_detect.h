@@ -467,6 +467,7 @@ class platform { // animated (player controlled) scene object
 	bool const cont; // continuous - always in motion
 	bool const is_rot; // motion is rotation rather than translation
 	bool const update_light; // indirect lighting should be updated when moving
+	bool const destroys; // destroys overlapping/nearby destroyable cobjs
 	float const fspeed, rspeed; // velocity of forward/reverse motion in units per tick (can be negative)
 	float const sdelay, rdelay; // start delay / reverse delay in ticks
 	float const ext_dist, act_dist; // distance traveled | rotation angle, activation distance
@@ -499,7 +500,7 @@ public:
 	vector<unsigned> lights; // dynamic light source(s) bound to this platform
 	
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0, point const &o=all_zeros,
-		vector3d const &dir_=plus_z, bool c=0, bool ir=0, bool ul=0, int sid=-1, sensor_t const &cur_sensor=sensor_t());
+		vector3d const &dir_=plus_z, bool c=0, bool ir=0, bool ul=0, bool destroys_=0, int sid=-1, sensor_t const &cur_sensor=sensor_t());
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	bool get_update_light()    const {return update_light;}

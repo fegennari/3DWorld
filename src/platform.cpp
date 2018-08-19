@@ -196,8 +196,8 @@ void sensor_t::write_end_sensor_to_cobj_file(std::ostream &out) const {
 
 // ***** platforms *****
 
-platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, bool ul, int sid, sensor_t const &cur_sensor)
-				   : cont(c), is_rot(ir), update_light(ul), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad),
+platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, bool ul, bool destroys_, int sid, sensor_t const &cur_sensor) :
+	cont(c), is_rot(ir), update_light(ul), destroys(destroys_), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad),
 	origin(o), dir(dir_.get_norm()), sound_id(sid), delta(all_zeros), sensor(cur_sensor)
 {
 	assert(dir_ != all_zeros);
@@ -360,7 +360,8 @@ void platform::advance_timestep() {
 			// need to update collision structure when there is an x/y delta by removing/adding to coll_cells (except for cubes)
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
 			cobj.move_cobj(delta, update_colls); // move object
-			// squish player or stop when hit player?
+			// TODO: squish player or stop when hit player?
+			if (destroys) {destroy_coll_objs(cobj.get_center_pt(), 1000.0, NO_SOURCE, IMPACT, cobj.get_bsphere_radius());}
 		}
 		for (vector<unsigned>::const_iterator i = lights.begin(); i != lights.end(); ++i) {
 			assert(*i < light_sources_d.size());
@@ -396,10 +397,10 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
 	point origin;
 	vector3d dir; // or rot_axis
-	int cont(0), is_rotation(0), update_light(0);
-	// Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0]]]
-	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i%i%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
-		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont, &is_rotation, &update_light) < 13)  {return 0;}
+	int cont(0), is_rotation(0), update_light(0), destroys(0);
+	// Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0 [destroys=0]]]]
+	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i%i%i%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
+		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont, &is_rotation, &update_light, &destroys) < 13)  {return 0;}
 	if ((cont != 0 && cont != 1) || (is_rotation != 0 && is_rotation != 1) || (update_light != 0 && update_light != 1)) return 0; // not a bool
 	sdelay *= TICKS_PER_SECOND;
 	rdelay *= TICKS_PER_SECOND;
@@ -407,7 +408,7 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 	rspeed /= TICKS_PER_SECOND;
 	xf.xform_pos(origin);
 	xf.xform_pos_rm(dir);
-	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), (update_light != 0), cur_sound_id, cur_sensor));
+	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0), (is_rotation != 0), (update_light != 0), (destroys != 0), cur_sound_id, cur_sensor));
 	cur_sound_id = -1; // reset to null after use
 	if (!triggers.empty()) {back().add_triggers(triggers);} // if a custom trigger is used, reset any built-in trigger
 	return 1;
@@ -420,7 +421,7 @@ void platform::write_to_cobj_file(std::ostream &out) const {
 	if (sound_id >= 0) {out << "sound_file " << get_sound_name(sound_id) << endl;}
 	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0 [update_light=0]]]
 	out << "Q 1 " << fspeed*TICKS_PER_SECOND << " " << rspeed*TICKS_PER_SECOND << " " << sdelay/TICKS_PER_SECOND << " " << rdelay/TICKS_PER_SECOND << " " << ext_dist << " " << act_dist
-		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << endl; // always enabled
+		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << " " << destroys << endl; // always enabled
 	
 	for (auto i = lights.begin(); i != lights.end(); ++i) {
 		assert(*i < light_sources_d.size());
