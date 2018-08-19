@@ -70,7 +70,7 @@ vector<uobject const *> show_info_uobjs;
 extern bool enable_multisample, using_tess_shader, no_shift_universe;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks, frame_counter;
 extern unsigned enabled_lights;
-extern float fticks;
+extern float fticks, system_max_orbit;
 extern double tfticks;
 extern point universe_origin;
 extern colorRGBA bkg_color, sunlight_color;
@@ -1505,8 +1505,16 @@ void ussystem::process() {
 	planets.resize((unsigned)sqrt(float((rand2()%(MAX_PLANETS_PER_SYSTEM+1))*(rand2()%(MAX_PLANETS_PER_SYSTEM+1)))));
 	float const sradius(sun.radius);
 	radius = sradius;
-	//orbit_scale.assign(0.5, 2.0, 1.0); // TODO: currently (1,1,1); could make it randomly different for elliptical orbit
 
+	if (system_max_orbit != 1.0 && system_max_orbit > 0.0) { // ignore zero and negative values
+		if (system_max_orbit < 1.0) {system_max_orbit = 1.0/system_max_orbit;}
+		// Note: This code will produce elliptical system (planet and asteroid belt) orbits, which have some issues/limitations:
+		// * Temperature changes with distance to the sun, which may cause problems with AI ships entering or leaving planets
+		// * Collisions between planets, moons, and asteroids may be possible because initial distances may be larger than min distances
+		// * Planet and asteroid updates will be slower and may be less stable over long periods of time
+		float const min_orbit(1.0/system_max_orbit); // lower end
+		orbit_scale.assign(rand_uniform2(min_orbit, system_max_orbit), rand_uniform2(min_orbit, system_max_orbit), 1.0); // z is always 1.0
+	}
 	for (unsigned i = 0; i < planets.size(); ++i) {
 		current.planet    = i;
 		planets[i].system = this;
