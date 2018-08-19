@@ -44,9 +44,9 @@ colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUN
 
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
-extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion;
+extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
-extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
+extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale;
@@ -828,7 +828,9 @@ void display(void) {
 			show_framerate = 2;
 		}
 		if (world_mode == WMODE_GROUND) {process_platforms_falling_moving_and_light_triggers();} // must be before camera code
-		if (world_mode == WMODE_INF_TERRAIN) {camera_mode = 1;} // force to ground/walking mode
+		else if (world_mode == WMODE_INF_TERRAIN) {camera_mode = 1;} // force to ground/walking mode
+		if (world_mode == WMODE_GROUND) {UNLIMITED_WEAPONS = config_unlimited_weapons;}
+		else if (world_mode == WMODE_INF_TERRAIN) {UNLIMITED_WEAPONS = 1;} // always have unlimited weapons in tiled terrain mode
 
 		// camera position code
 		auto_advance_camera();
