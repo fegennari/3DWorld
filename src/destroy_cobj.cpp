@@ -69,7 +69,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 	bool maybe_is_glass(0);
 
 	for (unsigned i = 0; i < cts.size(); ++i) {
-		if (cts[i].destroy == EXPLODEABLE) {
+		if (cts[i].destroy >= EXPLODEABLE) {
 			float const val(float(pow(double(cts[i].volume), 1.0/3.0))), exp_damage(25000.0*val + 0.25*damage + 500.0);
 			create_explosion(pos, shooter, 0, exp_damage, 10.0*val, BLAST_RADIUS, 0);
 			gen_fire(pos, min(4.0, 12.0*val), shooter);
@@ -504,6 +504,7 @@ void fire_damage_cobjs(int xpos, int ypos) {
 
 	if (point_outside_mesh(xpos, ypos)) return;
 	vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
+	if (cvals.empty()) return;
 	point const pos(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);
 
 	for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
@@ -512,6 +513,7 @@ void fire_damage_cobjs(int xpos, int ypos) {
 		if (cobj.destroy < EXPLODEABLE) continue;
 		if (!cobj.sphere_intersects(pos, HALF_DXY)) continue;
 		destroy_coll_objs(pos, 1000.0, NO_SOURCE, FIRE, HALF_DXY);
-	}
+		break; // done
+	} // for i
 }
 
