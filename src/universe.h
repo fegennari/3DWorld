@@ -610,6 +610,7 @@ bool export_modmap(string const &filename);
 s_object get_shifted_sobj(s_object const &sobj);
 float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj=0.0);
 bool sphere_size_less_than(point const &pos, point const &camera, float radius, float num_pixels);
+float get_elliptical_orbit_radius(vector3d const &axis, vector3d const &orbit_scale, vector3d vref);
 
 
 #endif

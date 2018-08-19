@@ -1866,6 +1866,12 @@ void urev_body::gen_rotrev() {
 }
 
 
+float get_elliptical_orbit_radius(vector3d const &axis, vector3d const &orbit_scale, vector3d vref) {
+	rotate_norm_vector3d_into_plus_z(axis, vref); // Note: rev_axis is parent's rot_axis
+	float const s(orbit_scale.x*vref.y), c(orbit_scale.y*vref.x);
+	return orbit_scale.x*orbit_scale.y/sqrt(s*s + c*c); // https://www.quora.com/How-do-I-find-the-radius-of-an-ellipse-at-a-given-angle-to-its-axis
+}
+
 // Note: Update is only done when the objects solar system is visible to the player
 point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot) { // orbit is around p0
 
@@ -1880,10 +1886,8 @@ point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot
 	double orbit_radius(orbit);
 
 	if (orbit_scale != all_ones) { // nonuniform/elliptical orbit scale (planet with rings)
-		vector3d vref(new_pos);
-		rotate_norm_vector3d_into_plus_z(rev_axis, vref); // Note: rev_axis is parent's rot_axis
-		UNROLL_3X(vref[i_] *= orbit_scale[i_];); // vref.z should be zero
-		orbit_radius *= vref.mag()/orbit_scale.xy_mag(); // normalize ellipse area
+		orbit_radius *= get_elliptical_orbit_radius(rev_axis, orbit_scale, new_pos); // Note: rev_axis is parent's rot_axis
+		orbit_radius /= orbit_scale.xy_mag(); // normalize ellipse area
 	}
 	new_pos *= orbit_radius;
 	new_pos += p0;

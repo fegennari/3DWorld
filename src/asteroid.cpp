@@ -1450,13 +1450,7 @@ void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_typ
 	velocity = rev_ang0*cross_product(dir, op_normal);
 	upos_point_type const orbit_dir(dir + fticks*velocity); // adjust for next frame pos
 	float odist(orbital_dist);
-
-	if (orbit_scale.x != 1.0 || orbit_scale.y != 1.0) { // nonuniform/elliptical orbit scale - slow
-		vector3d vref(orbit_dir.get_norm());
-		rotate_norm_vector3d_into_plus_z(op_normal, vref); // vref.z should be near zero
-		float const s(orbit_scale.x*vref.y), c(orbit_scale.y*vref.x);
-		odist *= orbit_scale.x*orbit_scale.y/sqrt(s*s + c*c); // https://www.quora.com/How-do-I-find-the-radius-of-an-ellipse-at-a-given-angle-to-its-axis
-	}
+	if (orbit_scale.x != 1.0 || orbit_scale.y != 1.0) {odist *= get_elliptical_orbit_radius(op_normal, orbit_scale, orbit_dir.get_norm());} // elliptical orbit scale - slow
 	pos = af_pos + orbit_dir*(odist/orbit_dir.mag()); // renormalize for constant distance
 
 	for (vector<sphere_t>::const_iterator i = colliders.begin(); i != colliders.end(); ++i) {
