@@ -1505,6 +1505,7 @@ void ussystem::process() {
 	planets.resize((unsigned)sqrt(float((rand2()%(MAX_PLANETS_PER_SYSTEM+1))*(rand2()%(MAX_PLANETS_PER_SYSTEM+1)))));
 	float const sradius(sun.radius);
 	radius = sradius;
+	//orbit_scale.assign(0.5, 2.0, 1.0); // TODO: currently (1,1,1); could make it randomly different for elliptical orbit
 
 	for (unsigned i = 0; i < planets.size(); ++i) {
 		current.planet    = i;
