@@ -70,6 +70,7 @@ colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
 void play_camera_footstep_sound();
 void draw_voxel_edit_volume();
+void play_switch_weapon_sound();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -703,6 +704,13 @@ void create_reflection_and_portal_textures() {
 	create_portal_textures();
 }
 
+void flashlight_next_frame() {
+	static bool last_flashlight_on(0);
+	if (flashlight_on != last_flashlight_on) {play_switch_weapon_sound();}
+	last_flashlight_on = flashlight_on;
+	flashlight_on = 0;
+}
+
 
 // The display function. It is called whenever the window needs
 // redrawing (ie: overlapping window moves, resize, maximize)
@@ -755,9 +763,9 @@ void display(void) {
 		fticks = 1.0;
 		iticks = 1;
 	}
+	flashlight_next_frame();
 	tstep         = TIMESTEP*fticks;
 	reset_timing  = 0;
-	flashlight_on = 0;
 	check_gl_error(1);
 	set_fill_mode();
 	set_std_blend_mode();

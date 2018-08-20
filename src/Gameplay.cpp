@@ -1558,7 +1558,7 @@ void switch_player_weapon(int val) {
 	else if (world_mode == WMODE_GROUND && create_voxel_landscape) {change_voxel_editing_mode(val);}
 	else if (spraypaint_mode) {change_spraypaint_color(val);}
 	else if (spheres_mode   ) {change_sphere_material (val, 0);}
-	else if (flashlight_on  ) {flashlight_color_id ^= 1;}
+	else if (flashlight_on  ) {flashlight_color_id ^= 1; play_switch_weapon_sound();}
 }
 
 
