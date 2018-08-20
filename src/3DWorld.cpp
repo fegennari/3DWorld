@@ -1184,7 +1184,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x40;   break;
 	case '8': // toggle water caustics/smoke accumulation
 		display_mode ^= 0x80;   break;
-	case '9': // toggle leaf wind, ocean waves, footsteps, snow footprints, and asteroid belt fog
+	case '9': // toggle leaf wind, ocean waves, footsteps, snow footprints, asteroid belt fog, and flashlight indirect
 		display_mode ^= 0x0100; break;
 	case '0': // toggle universe stencil shadows / toggle spraypaint mode / toggle particles / toggle TT tree leaf shadows
 		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;}

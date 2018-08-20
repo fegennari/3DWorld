@@ -966,10 +966,10 @@ void add_camera_flashlight() {
 	//add_dynamic_light(FLASHLIGHT_RAD, lpos, get_flashlight_color(), cview_dir, FLASHLIGHT_BW);
 	flashlight_on = 1;
 
-	if (0 && (display_mode & 0x10)) { // add one bounce of indirect lighting
+	if (display_mode & 0x0100) { // add one bounce of indirect lighting
 		unsigned const NUM_VPLS = 32;
 		float const theta(acosf(1.0f - FLASHLIGHT_BW /*- 0.5*LT_DIR_FALLOFF*/)); // flashlight beam angle
-		float const rad_per_len(tan(theta));
+		float const rad_per_len(0.95*tan(theta));
 		vector3d vab[2];
 		get_ortho_vectors(cview_dir, vab);
 
@@ -985,9 +985,9 @@ void add_camera_flashlight() {
 				cpos -= 0.0001*FLASHLIGHT_RAD*cnorm; // move behind the collision plane so as not to multiply light
 				assert(cindex >= 0);
 				colorRGBA const color(get_flashlight_color().modulate_with(coll_objects[cindex].get_avg_color()));
-				add_dynamic_light(0.1*FLASHLIGHT_RAD, cpos, color*0.15, cnorm, 0.5); // wide angle (almost hemisphere)
+				add_dynamic_light(0.12*FLASHLIGHT_RAD, cpos, color*0.15, cnorm, 0.4); // wide angle (almost hemisphere)
 			}
-		}
+		} // for i
 	}
 }
 
