@@ -405,13 +405,14 @@ class city_road_gen_t;
 
 struct car_t {
 	cube_t bcube, prev_bcube;
-	bool dim, dir, stopped_at_light, entering_city, in_tunnel;
+	bool dim, dir, stopped_at_light, entering_city, in_tunnel, dest_valid;
 	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
-	unsigned short cur_city, cur_road, cur_seg;
+	unsigned short cur_city, cur_road, cur_seg, dest_city, dest_isec;
 	float height, dz, rot_z, turn_val, cur_speed, max_speed;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), cur_road_type(0), color_id(0), turn_dir(TURN_NONE),
-		front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), cur_road_type(0), color_id(0),
+		turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
+		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
@@ -2720,6 +2721,23 @@ class city_road_gen_t {
 			}
 			assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
 		}
+		bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
+			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size());
+			if (num_tot == 0) return 0; // no isecs to select
+			car.dest_isec  = (unsigned short)(rgen.rand() % num_tot);
+			return 1;
+		}
+		bool car_at_dest(car_t const &car) const {
+			return get_isec_by_ix(car.dest_isec).contains_pt_xy(car.get_center());
+		}
+		road_isec_t const &get_isec_by_ix(unsigned ix) const {
+			for (unsigned n = 0; n < 3; ++n) {
+				if (ix < isecs[n].size()) return isecs[n][ix];
+				ix -= isecs[n].size();
+			}
+			assert(0); // should never get here (invalid ix)
+			return isecs[0][0]; // never gets here
+		}
 		void next_frame() {
 			for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {i->next_frame();} // update stoplight state
@@ -3004,8 +3022,40 @@ public:
 		car.cur_city = city;
 		return road_networks[city].add_car(car, rgen);
 	}
+	bool update_car_dest(car_t &car) const {
+		if (car.is_parked()) return 0; // no dest for parked cars
+		if (car.dest_valid && !car_at_dest(car)) return 0; // not yet at destination, keep existing dest
+		static rand_gen_t rgen; // reused across calls
+		choose_new_car_dest(car, rgen);
+		return 1;
+	}
+	void choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
+		if (road_networks.empty()) {assert(!car.dest_valid); return;} // no roads, no updates
+		
+		if (!car.dest_valid) { // select initial dest city randomly
+			car.dest_city = (unsigned short)(rgen.rand() % road_networks.size());
+		}
+		else if (road_networks.size() > 1 && (rgen.rand()&4) == 0) { // 25% chance of selecting a different city when there are multiple cities
+			while (1) {
+				unsigned const new_city(rgen.rand() % road_networks.size());
+				if (new_city != car.dest_city) {car.dest_city = new_city; break;} // keep if different from existing city
+			}
+		}
+		assert(car.dest_city < road_networks.size()); // city must be valid
+		car.dest_valid = road_networks[car.dest_city].choose_new_car_dest(car, rgen);
+		//cout << TXT(car.dest_valid) << TXT(car.dest_city) << TXT(car.dest_isec) << endl;
+	}
+	bool car_at_dest(car_t const &car) const {
+		if (!car.dest_valid) return 0;
+		assert(car.dest_city < road_networks.size());
+		return road_networks[car.dest_city].car_at_dest(car);
+	}
 	road_network_t const &get_car_rn(car_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
-	void update_car(car_t &car, rand_gen_t &rgen) const {get_car_rn(car).update_car(car, rgen, road_networks, global_rn);}
+	
+	void update_car(car_t &car, rand_gen_t &rgen) const {
+		get_car_rn(car).update_car(car, rgen, road_networks, global_rn);
+		//update_car_dest(car);
+	}
 	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 	road_isec_t const &get_car_isec(car_t const &car) const {return get_car_rn(car).get_car_isec(car);}
 }; // city_road_gen_t
