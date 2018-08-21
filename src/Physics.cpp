@@ -1648,7 +1648,7 @@ void auto_advance_time() { // T = 1 hour
 	}
 	if (!auto_time_adv) return;
 	static int last_itime(0), precip_inited(0);
-	static float ftime, precip(0.0), precip_app_rate(0.0), prate(0.0), ccover(0.0);
+	static float ftime, precip(-1.0), precip_app_rate(0.0), prate(0.0), ccover(0.0); // start off not raining
 	static rand_gen_t rgen;
 	if (last_itime == 0) {rgen.set_state(rand(), rand());} // random seed at the start
 
@@ -1714,7 +1714,9 @@ void auto_advance_time() { // T = 1 hour
 	prate += 0.2*rgen.signed_rand_float();
 	if      (prate < -0.5) {prate = -1.0 - prate;}
 	else if (prate >  0.5) {prate =  1.0 - prate;}
-	precip      = max(-2.0f, min(1.0f, (precip + 0.4f*prate)));
+	precip = max(-2.0f, min(1.0f, (precip + 0.8f*prate))); // average is negative
+	if      (precip ==  1.0f) {prate -= 0.2;} // decrease when at max precip to reduce the average precipitation duration
+	else if (precip == -2.0f) {prate += 0.2;}
 	precip_mode = ((precip > 0.0) ? 1 : 0);
 	is_cloudy   = (precip_mode > 0);
 	obj_groups[cid].app_rate = ((precip_mode > 0) ? max(0, int(2.0*precip*precip_app_rate)) : 0.0);
