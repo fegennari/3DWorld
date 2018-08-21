@@ -53,7 +53,7 @@ extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, 
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
-extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
 extern float smap_thresh_scale;
@@ -2080,12 +2080,22 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	bool const sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
 	bool const moon_change(moon_pos != last_moon && light_factor <= 0.6);
 
-	// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
 	if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
-		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadows();}
-		last_sun  = sun_pos;
-		last_moon = moon_pos;
+		if (auto_time_adv) {
+			int const skip_factor = 8;
+
+			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+				tile_xy_pair const tp(i->second->get_tile_xy_pair());
+				if (((tp.x + tp.y + frame_counter) % skip_factor) == 0) {i->second->clear_shadows();} // cycle through tiles and update 1/8 of them each frame
+			}
+		}
+		else {
+			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadows();}
+			last_sun  = sun_pos;
+			last_moon = moon_pos;
+		}
 	}
+	// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Tiled Terrain Update");}
 	return terrain_zmin;
 }
