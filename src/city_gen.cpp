@@ -1930,6 +1930,7 @@ class city_road_gen_t {
 		void set_cluster(unsigned id) {cluster_id = id;}
 		void register_connected_city(unsigned id) {connected_to.insert(id);}
 		set<unsigned> const &get_connected() const {return connected_to;}
+		bool is_connected_to(unsigned id) const {return (connected_to.find(id) != connected_to.end());}
 
 		void clear() {
 			roads.clear();
@@ -2701,17 +2702,31 @@ class city_road_gen_t {
 					orients[TURN_LEFT ] = conn_left [orient_in];
 					orients[TURN_RIGHT] = conn_right[orient_in];
 
-					// Note: Could use A* path finding, but it's unlikely to make a visual difference to the casual observer
-					while (1) {
-						unsigned new_turn_dir(0); // force turn on global conn road 75% of the time to get more cars traveling between cities
-						bool const force_turn(isec.is_global_conn_int() && (rgen.rand()&3) != 0);
-						int const rval(rgen.rand()%(force_turn ? 2 : 4));
-						if      (rval == 0) {new_turn_dir = TURN_LEFT ;} // 25%
-						else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
-						else                {new_turn_dir = TURN_NONE ;} // 50%
-						if (new_turn_dir == car.front_car_turn_dir && (rgen.rand()%4) != 0) continue; // car in front is too slow, don't turn the same way as it
-						if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;} // success
-					} // end while
+					if (car.dest_valid) { // Note: Could use A* path finding, but it's unlikely to make a visual difference to the casual observer
+						if (car.dest_city == city_id) { // local destination
+							point const dest_pos(get_isec_by_ix(car.dest_isec).get_cube_center());
+							vector3d const dest_dir(dest_pos - car.get_center());
+							bool const pri_dim(fabs(dest_dir.x) < fabs(dest_dir.y)), pri_dir(dest_dir[pri_dim] > 0);
+							// FIXME: WRITE
+						}
+						else { // destination in another city
+							assert(car.dest_city < road_networks.size());
+							//road_networks[car.dest_city].find_path_to_dest(car, global_rn);
+							// FIXME: WRITE
+						}
+					}
+					else {
+						while (1) {
+							unsigned new_turn_dir(0); // force turn on global conn road 75% of the time to get more cars traveling between cities
+							bool const force_turn(isec.is_global_conn_int() && (rgen.rand()&3) != 0);
+							int const rval(rgen.rand()%(force_turn ? 2 : 4));
+							if      (rval == 0) {new_turn_dir = TURN_LEFT ;} // 25%
+							else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
+							else                {new_turn_dir = TURN_NONE ;} // 50%
+							if (new_turn_dir == car.front_car_turn_dir && (rgen.rand()%4) != 0) continue; // car in front is too slow, don't turn the same way as it
+							if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;} // success
+						} // end while
+					}
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
 					car.stopped_at_light   = isec.red_or_yellow_light(car);
@@ -3025,6 +3040,7 @@ public:
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
 		if (car.dest_valid && !car_at_dest(car)) return 0; // not yet at destination, keep existing dest
+		assert(car.dest_city == car.cur_city); // sanity check
 		static rand_gen_t rgen; // reused across calls
 		choose_new_car_dest(car, rgen);
 		return 1;
@@ -3032,14 +3048,14 @@ public:
 	void choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) {assert(!car.dest_valid); return;} // no roads, no updates
 		
-		if (!car.dest_valid) { // select initial dest city randomly
-			car.dest_city = (unsigned short)(rgen.rand() % road_networks.size());
+		if (!car.dest_valid) {
+			//car.dest_city = (unsigned short)(rgen.rand() % road_networks.size()); // select initial dest city randomly
+			car.dest_city = car.cur_city; // start in current city
 		}
 		else if (road_networks.size() > 1 && (rgen.rand()&4) == 0) { // 25% chance of selecting a different city when there are multiple cities
-			while (1) {
-				unsigned const new_city(rgen.rand() % road_networks.size());
-				if (new_city != car.dest_city) {car.dest_city = new_city; break;} // keep if different from existing city
-			}
+			auto const &conn(road_networks[car.dest_city].get_connected());
+			vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
+			if (!cands.empty()) {car.dest_city = cands[rgen.rand() % cands.size()];} // choose a random connected (adjacent) city
 		}
 		assert(car.dest_city < road_networks.size()); // city must be valid
 		car.dest_valid = road_networks[car.dest_city].choose_new_car_dest(car, rgen);
