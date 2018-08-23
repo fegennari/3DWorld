@@ -2585,10 +2585,7 @@ class city_road_gen_t {
 				assert((unsigned)conn_ix < global_rn.segs.size());
 				rix = global_rn.segs[conn_ix].road_ix;
 				car.cur_city = CONN_CITY_IX; // move to global road network
-			}
-			else {
-				assert(rix >= 0); // local road
-			}
+			} else {assert(rix >= 0);} // local road
 			car.cur_road = (unsigned)rix;
 			car.cur_seg  = (unsigned)conn_ix;
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
@@ -2702,20 +2699,25 @@ class city_road_gen_t {
 					orients[TURN_LEFT ] = conn_left [orient_in];
 					orients[TURN_RIGHT] = conn_right[orient_in];
 
-					if (car.dest_valid) { // Note: Could use A* path finding, but it's unlikely to make a visual difference to the casual observer
-						if (car.dest_city == city_id) { // local destination
-							point const dest_pos(get_isec_by_ix(car.dest_isec).get_cube_center());
-							vector3d const dest_dir(dest_pos - car.get_center());
-							bool const pri_dim(fabs(dest_dir.x) < fabs(dest_dir.y)), pri_dir(dest_dir[pri_dim] > 0);
-							// FIXME: WRITE
-						}
-						else { // destination in another city
-							assert(car.dest_city < road_networks.size());
-							//road_networks[car.dest_city].find_path_to_dest(car, global_rn);
-							// FIXME: WRITE
-						}
+					// Note: Could use A* path finding, but it's unlikely to make a visual difference to the casual observer
+					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
+						point const dest_pos(get_car_dest_isec_center(car, road_networks, global_rn));
+						vector3d const dest_dir(dest_pos - car.get_center());
+						bool const pri_dim(fabs(dest_dir.x) < fabs(dest_dir.y)), pri_dir(dest_dir[pri_dim] > 0), sec_dir(dest_dir[!pri_dim] > 0);
+						unsigned best_score(0);
+
+						for (unsigned tdir = 0; tdir < 3; ++tdir) { // choose best scoring of all valid turn dirs from {none/straight, left, right}
+							unsigned const orient(orients[tdir]);
+							if (!(isec.conn & (1<<orient))) continue; // can't turn in this dir
+							bool const dim2((orient >> 1) != 0), dir2(orient & 1);
+							unsigned score(1); // start at lowest valid score
+							if      (dim2 == pri_dim && dir2 == pri_dir) {score = 3;} // best score
+							else if (dim2 != pri_dim && dir2 == sec_dir) {score = 2;} // second best score
+							if (score > best_score) {best_score = score; car.turn_dir = tdir;}
+						} // for d
+						assert(best_score > 0); // no dead end roads
 					}
-					else {
+					else { // use random turn direction
 						while (1) {
 							unsigned new_turn_dir(0); // force turn on global conn road 75% of the time to get more cars traveling between cities
 							bool const force_turn(isec.is_global_conn_int() && (rgen.rand()&3) != 0);
@@ -2736,6 +2738,40 @@ class city_road_gen_t {
 			}
 			assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
 		}
+	private:
+		point get_car_dest_isec_center(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
+			if (car.dest_city == city_id) {return get_isec_by_ix(car.dest_isec).get_cube_center(); } // local destination within the current city
+			assert(car.dest_city < road_networks.size());
+			road_isec_t const *const isec(find_isec_to_dest_city(car, road_networks[car.dest_city], global_rn)); // destination in another city
+			assert(isec != nullptr); // path must exist, otherwise this city wouldn't have been chosen
+			return isec->get_cube_center();
+		}
+		road_isec_t const *find_isec_to_dest_city(car_t &car, road_network_t const &dest_rn, road_network_t const &global_rn) const {
+			assert(car. cur_city == city_id);
+			assert(car.dest_city == dest_rn.city_id);
+
+			// Note: here we don't attempt to find shortcuts through other cities as this would be quite complex
+			for (auto i = isecs[1].begin(); i != isecs[1].end(); ++i) { // iterate over all 3-way intersections, looking for the one that connects to car.dest_city
+				for (unsigned o = 0; o < 4; ++o) { // check each connection (orient)
+					if (!(i->conn & (1<<o))) continue; // no connection in this orient
+					int conn_ix(i->conn_ix[o]);
+					if (conn_ix >= 0) continue; // local road, ignore
+					conn_ix = decode_neg_ix(conn_ix);
+					assert((unsigned)conn_ix < global_rn.segs.size());
+					unsigned const rix(global_rn.segs[conn_ix].road_ix);
+					assert(rix < global_rn.road_to_city.size());
+					city_id_pair_t const &cip(global_rn.road_to_city[rix]);
+
+					for (unsigned d = 0; d < 2; ++d) { // check both directions on connector road
+						if (cip.id[d] != car.dest_city) continue; // not the correct road/dir pair
+						assert(cip.id[d] == city_id); // other end must be here
+						return &(*i); // found
+					}
+				} // for o
+			} // for i
+			return nullptr; // not found, caller can error check
+		}
+	public:
 		bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
 			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size());
 			if (num_tot == 0) return 0; // no isecs to select
