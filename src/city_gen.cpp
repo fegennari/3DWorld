@@ -632,10 +632,11 @@ namespace stoplight_ns {
 
 struct road_isec_t : public cube_t {
 	uint8_t num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
+	short conn_to_city;
 	short rix_xy[2], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
 
-	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_, bool at_conn_road) : cube_t(c), conn(conn_), stoplight(at_conn_road) {
+	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_, bool at_conn_road, short conn_to_city_=-1) : cube_t(c), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road) {
 		rix_xy[0] = rx; rix_xy[1] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
 		if (conn == 15) {num_conn = 4;} // 4-way
 		else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
@@ -2074,7 +2075,7 @@ class city_road_gen_t {
 			for (unsigned i = 0; i < v.size(); ++i) {if (c.intersects_xy(v[i])) return i;}
 			return -1; // not found
 		}
-		void make_4way_int(unsigned int3_ix) { // turn a 3-way intersection into a 4-way intersection for a connector road
+		void make_4way_int(unsigned int3_ix) { // turn a 3-way intersection into a 4-way intersection for a connector road (unused)
 			assert(int3_ix < isecs[1].size());
 			road_isec_t &isec(isecs[1][int3_ix]); // bbox doesn't change, only conn changes
 			isec.make_4way(); // all connected
@@ -2198,7 +2199,8 @@ class city_road_gen_t {
 			} // for n
 		}
 		bool check_valid_conn_intersection(cube_t const &c, bool dim, bool dir) const {return (find_conn_int_seg(c, dim, dir) >= 0);}
-		void insert_conn_intersection(cube_t const &c, bool dim, bool dir, unsigned grn_rix) { // Note: dim is the dimension of the connector road
+		void insert_conn_intersection(cube_t const &c, bool dim, bool dir, unsigned grn_rix, unsigned dest_city_id) { // Note: dim is the dimension of the connector road
+			assert(dest_city_id != city_id); // not connected to self
 			int const seg_id(find_conn_int_seg(c, dim, dir));
 			assert(seg_id >= 0 && (unsigned)seg_id < segs.size());
 			segs.push_back(segs[seg_id]); // clone the segment first
@@ -2211,10 +2213,10 @@ class city_road_gen_t {
 			ibc.d[!dim][1] = c.d[!dim][1];
 			uint8_t const conns[4] = {7, 11, 13, 14};
 			int const other_rix(encode_neg_ix(grn_rix)); // make negative
-			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true);
+			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true, dest_city_id);
 		}
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<cube_t> &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
-			heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only=0)
+			unsigned dest_city_id1, unsigned dest_city_id2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only=0)
 		{
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
 			if (dir == 0) {swap(city1, city2);} // make {lo, hi}
@@ -2245,8 +2247,8 @@ class city_road_gen_t {
 			}
 			if (!check_only) { // create intersections and add blocker
 				unsigned const grn_rix(roads.size()); // may be wrong end of connector, but doesn't matter?
-				if (rn1) {rn1->insert_conn_intersection(road, dim,  dir, grn_rix);}
-				if (rn2) {rn2->insert_conn_intersection(road, dim, !dir, grn_rix);}
+				if (rn1) {rn1->insert_conn_intersection(road, dim,  dir, grn_rix, dest_city_id2);}
+				if (rn2) {rn2->insert_conn_intersection(road, dim, !dir, grn_rix, dest_city_id1);}
 				float const blocker_padding(max(city_params.road_spacing, 2.0f*city_params.road_border*max(DX_VAL, DY_VAL))); // use road_spacing?
 				blockers.push_back(road);
 				blockers.back().expand_by(blocker_padding); // add extra padding
@@ -2701,7 +2703,8 @@ class city_road_gen_t {
 
 					// Note: Could use A* path finding, but it's unlikely to make a visual difference to the casual observer
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
-						point const dest_pos(get_car_dest_isec_center(car, road_networks, global_rn));
+						assert(car.cur_city < road_networks.size());
+						point const dest_pos(road_networks[car.cur_city].get_car_dest_isec_center(car, road_networks, global_rn));
 						vector3d const dest_dir(dest_pos - car.get_center());
 						bool const pri_dim(fabs(dest_dir.x) < fabs(dest_dir.y)), pri_dir(dest_dir[pri_dim] > 0), sec_dir(dest_dir[!pri_dim] > 0);
 						unsigned best_score(0);
@@ -2711,6 +2714,7 @@ class city_road_gen_t {
 							if (!(isec.conn & (1<<orient))) continue; // can't turn in this dir
 							bool const dim2((orient >> 1) != 0), dir2(orient & 1);
 							unsigned score(1); // start at lowest valid score
+							// FIXME: turn onto connector road to travel to different city
 							if      (dim2 == pri_dim && dir2 == pri_dir) {score = 3;} // best score
 							else if (dim2 != pri_dim && dir2 == sec_dir) {score = 2;} // second best score
 							if (score > best_score) {best_score = score; car.turn_dir = tdir;}
@@ -2749,26 +2753,12 @@ class city_road_gen_t {
 		road_isec_t const *find_isec_to_dest_city(car_t &car, road_network_t const &dest_rn, road_network_t const &global_rn) const {
 			assert(car. cur_city == city_id);
 			assert(car.dest_city == dest_rn.city_id);
+			assert(dest_rn.city_id != city_id); // not ourself
 
 			// Note: here we don't attempt to find shortcuts through other cities as this would be quite complex
 			for (auto i = isecs[1].begin(); i != isecs[1].end(); ++i) { // iterate over all 3-way intersections, looking for the one that connects to car.dest_city
-				for (unsigned o = 0; o < 4; ++o) { // check each connection (orient)
-					if (!(i->conn & (1<<o))) continue; // no connection in this orient
-					int conn_ix(i->conn_ix[o]);
-					if (conn_ix >= 0) continue; // local road, ignore
-					conn_ix = decode_neg_ix(conn_ix);
-					assert((unsigned)conn_ix < global_rn.segs.size());
-					unsigned const rix(global_rn.segs[conn_ix].road_ix);
-					assert(rix < global_rn.road_to_city.size());
-					city_id_pair_t const &cip(global_rn.road_to_city[rix]);
-
-					for (unsigned d = 0; d < 2; ++d) { // check both directions on connector road
-						if (cip.id[d] != car.dest_city) continue; // not the correct road/dir pair
-						assert(cip.id[d] == city_id); // other end must be here
-						return &(*i); // found
-					}
-				} // for o
-			} // for i
+				if (i->conn_to_city == car.dest_city) {return &(*i);}
+			}
 			return nullptr; // not found, caller can error check
 		}
 	public:
@@ -2891,12 +2881,12 @@ public:
 
 				for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a straight line
 					float const conn_pos(rgen_uniform(val1, val2, rgen)); // chose a random new connection point and try it
-					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, hq, road_width, conn_pos, !d, 1)); // check_only=1
+					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1)); // check_only=1
 					if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost;}
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					//cout << "Single segment dim: << "d " << cost: " << best_cost << endl;
-					global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, hq, road_width, best_conn_pos, !d, 0); // check_only=0; actually make the change
+					global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, city1, city2, hq, road_width, best_conn_pos, !d, 0); // check_only=0; make change
 					return 1;
 				}
 			}
@@ -2939,10 +2929,12 @@ public:
 					}
 					//cout << TXT(dx) << TXT(dy) << TXT(dx ^ dy) << TXT(fdim) << TXT(range_dir1) << TXT(range_dir2) << TXT(xval) << TXT(yval) << TXT(height) << TXT(has_int) << endl;
 					if (has_int) continue; // bad intersection, fail
-					float const cost1(global_rn.create_connector_road(bcube1, int_cube, blockers, &rn1, nullptr, city1, CONN_CITY_IX, hq, road_width, (fdim ? xval : yval),  fdim, 1)); // check_only=1
+					float const cost1(global_rn.create_connector_road(bcube1, int_cube, blockers, &rn1, nullptr, city1,
+						CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? xval : yval),  fdim, 1)); // check_only=1
 					if (cost1 < 0.0) continue; // bad segment
 					if (best_cost > 0.0 && cost1 > best_cost) continue; // bound - early terminate
-					float const cost2(global_rn.create_connector_road(int_cube, bcube2, blockers, nullptr, &rn2, CONN_CITY_IX, city2, hq, road_width, (fdim ? yval : xval), !fdim, 1)); // check_only=1
+					float const cost2(global_rn.create_connector_road(int_cube, bcube2, blockers, nullptr, &rn2,
+						CONN_CITY_IX, city2, city1, city2, hq, road_width, (fdim ? yval : xval), !fdim, 1)); // check_only=1
 					if (cost2 < 0.0) continue; // bad segment
 					float const cost(cost1 + cost2); // Note: cost function will prefer shorter routes
 					if (best_cost < 0.0 || cost < best_cost) {best_xval = xval; best_yval = yval; best_int_cube = int_cube; best_cost = cost;}
@@ -2952,10 +2944,12 @@ public:
 					hq.flatten_region_to(best_int_cube, city_params.road_border); // do this first to improve flattening
 					unsigned road_ix[2];
 					road_ix[ fdim] = global_rn.num_roads();
-					global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, city1, CONN_CITY_IX, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0); // check_only=0
+					global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, city1,
+						CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0); // check_only=0
 					flatten_op_t const fop(hq.last_flatten_op); // cache for reuse later during decrease_only pass
 					road_ix[!fdim] = global_rn.num_roads();
-					global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2, CONN_CITY_IX, city2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0); // check_only=0
+					global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2,
+						CONN_CITY_IX, city2, city1, city2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0); // check_only=0
 					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), road_ix[0], road_ix[1]);
 					// decrease_only=1; remove any dirt that the prev road added
 					hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, fop.skip_six, fop.skip_eix, 0, 1);
@@ -3076,7 +3070,7 @@ public:
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
 		if (car.dest_valid && !car_at_dest(car)) return 0; // not yet at destination, keep existing dest
-		assert(car.dest_city == car.cur_city); // sanity check
+		assert(!car.dest_valid || car.dest_city == car.cur_city); // sanity check
 		static rand_gen_t rgen; // reused across calls
 		choose_new_car_dest(car, rgen);
 		return 1;
