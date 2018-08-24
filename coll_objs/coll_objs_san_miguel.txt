@@ -7,6 +7,4 @@ B -1.6 1.6  -3.0 4.0  -0.1 -0.012 # invisible walking surface, remove when compu
 cube_map_ref 1
 metalness 0.0
 t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 white.png 1  O ../models/san-miguel-new/sanMiguel.model3d 4 0 0
-#t 0 0 0  s 1 2  s 0 2  m 0.12  l 0.8 1.0 1.0 1.0 1.0 white.png 1  O ../models/san-miguel-7-17/san-miguel.model3d 4 0 0
-#t 0 0 0  s 1 2  s 0 2  m 0.12  l 0.8 1.0 1.0 1.0 1.0 white.png 1  O ../models/san-miguel-7-17/san-miguel-low-poly.obj 4 0 0
 #Z 4  -0.4 -1.5 -0.1  2.4 # group_cobjs_level tx ty tz [scale [rx ry rz angle [<voxel_spacing>]]]
