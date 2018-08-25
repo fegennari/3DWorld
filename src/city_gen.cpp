@@ -2712,9 +2712,14 @@ class city_road_gen_t {
 						for (unsigned tdir = 0; tdir < 3; ++tdir) { // choose best scoring of all valid turn dirs from {none/straight, left, right}
 							unsigned const orient(orients[tdir]);
 							if (!(isec.conn & (1<<orient))) continue; // can't turn in this dir
+
+							if (isec.conn_to_city >= 0 && isec.conn_ix[orient] < 0) { // city connector isec
+								if (isec.conn_to_city != car.dest_city) continue; // leads to incorrect city, skip
+								car.turn_dir = tdir; // this is our destination - done
+								break;
+							}
 							bool const dim2((orient >> 1) != 0), dir2(orient & 1);
 							unsigned score(1); // start at lowest valid score
-							// FIXME: turn onto connector road to travel to different city
 							if      (dim2 == pri_dim && dir2 == pri_dir) {score = 3;} // best score
 							else if (dim2 != pri_dim && dir2 == sec_dir) {score = 2;} // second best score
 							if (score > best_score) {best_score = score; car.turn_dir = tdir;}
@@ -2744,7 +2749,7 @@ class city_road_gen_t {
 		}
 	private:
 		point get_car_dest_isec_center(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
-			if (car.dest_city == city_id) {return get_isec_by_ix(car.dest_isec).get_cube_center(); } // local destination within the current city
+			if (car.dest_city == city_id) {return get_isec_by_ix(car.dest_isec).get_cube_center();} // local destination within the current city
 			assert(car.dest_city < road_networks.size());
 			road_isec_t const *const isec(find_isec_to_dest_city(car, road_networks[car.dest_city], global_rn)); // destination in another city
 			assert(isec != nullptr); // path must exist, otherwise this city wouldn't have been chosen
@@ -2754,9 +2759,11 @@ class city_road_gen_t {
 			assert(car. cur_city == city_id);
 			assert(car.dest_city == dest_rn.city_id);
 			assert(dest_rn.city_id != city_id); // not ourself
+			//cout << TXT(car.cur_city) << TXT(car.dest_city) << TXT(isecs[1].size()) << TXT(connected_to.size()) << endl;
 
 			// Note: here we don't attempt to find shortcuts through other cities as this would be quite complex
 			for (auto i = isecs[1].begin(); i != isecs[1].end(); ++i) { // iterate over all 3-way intersections, looking for the one that connects to car.dest_city
+				//cout << TXT(i->conn_to_city) << endl;
 				if (i->conn_to_city == car.dest_city) {return &(*i);}
 			}
 			return nullptr; // not found, caller can error check
@@ -2985,6 +2992,7 @@ public:
 				bool const success(connect_two_cities(i, j, blockers, hq, road_width));
 				//cout << "Trying to connect city " << i << " to city " << j << ": " << success << endl;
 				if (!success) continue;
+				//cout << i << " connected to " << j << endl;
 				road_networks[i].register_connected_city(j);
 				road_networks[j].register_connected_city(i);
 			} // for j
@@ -3077,13 +3085,9 @@ public:
 	}
 	void choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) {assert(!car.dest_valid); return;} // no roads, no updates
-		
-		if (!car.dest_valid) {
-			//car.dest_city = (unsigned short)(rgen.rand() % road_networks.size()); // select initial dest city randomly
-			car.dest_city = car.cur_city; // start in current city
-		}
-		else if (road_networks.size() > 1 && (rgen.rand()&4) == 0) { // 25% chance of selecting a different city when there are multiple cities
-			auto const &conn(road_networks[car.dest_city].get_connected());
+		if (!car.dest_valid) {car.dest_city = car.cur_city;} // start in current city
+		else if (road_networks.size() > 1 && (rgen.rand()%5) == 0) { // 20% chance of selecting a different city when there are multiple cities
+			auto const &conn(road_networks[car.cur_city].get_connected());
 			vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
 			if (!cands.empty()) {car.dest_city = cands[rgen.rand() % cands.size()];} // choose a random connected (adjacent) city
 		}
