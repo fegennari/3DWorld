@@ -613,15 +613,16 @@ namespace stoplight_ns {
 			future_self.run_update_logic();
 			return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : GREEN_LIGHT);
 		}
-		bool check_int_clear(car_t const &car) const { // check for cars on other lanes blocking the intersection
-			unsigned const orient(car.get_orient());  // {W, E, S, N}
-			switch (car.turn_dir) {
+		bool check_int_clear(unsigned orient, unsigned turn_dir) const { // check for cars on other lanes blocking the intersection
+			switch (turn_dir) { // orient: {W, E, S, N}
 			case TURN_NONE:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]]); // straight
 			case TURN_LEFT:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]] && !blocked[other_lane[orient]]);
 			case TURN_RIGHT: return (!blocked[to_right[orient]]);
 			}
 			return 1;
 		}
+		bool check_int_clear(car_t const &car) const {return check_int_clear(car.get_orient(), car.turn_dir);}
+
 		bool can_turn_right_on_red(car_t const &car) const { // check for legal right on red (no other lanes turning into the road to our right)
 			if (car.turn_dir != TURN_RIGHT) return 0;
 			unsigned const orient(car.get_orient());  // {W, E, S, N}
@@ -668,11 +669,23 @@ struct road_isec_t : public cube_t {
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0);}
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
 	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
+	bool yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
 
+	bool can_go_based_on_light(car_t const &car) const {
+		return (!red_or_yellow_light(car) || stoplight.can_turn_right_on_red(car)); // green light or right turn on red
+	}
+	bool is_orient_currently_valid(unsigned orient, unsigned turn_dir) const {
+		if (!(conn & (1<<orient))) return 0; // no road connection in this orient
+		//if (!can_go_based_on_light(car)) return 1; // Note: can't call this without more car info
+		//return stoplight.check_int_clear(orient, turn_dir); // intersection not clear (Note: too strong of a check, blocking car may be exiting the intersection)
+		return 1;
+	}
 	bool can_go_now(car_t const &car) const {
 		if (!stoplight.check_int_clear(car)) return 0; // intersection not clear
-		if (!red_or_yellow_light(car)) return 1; // green light
-		return stoplight.can_turn_right_on_red(car); // stopped at light
+		return can_go_based_on_light(car);
+	}
+	bool is_blocked(car_t const &car) const {
+		return (can_go_based_on_light(car) && !stoplight.check_int_clear(car)); // light is green but intersection is blocked
 	}
 	bool has_left_turn_signal(unsigned orient) const {
 		if (num_conn == 2) return 0; // never
@@ -2610,7 +2623,18 @@ class city_road_gen_t {
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
 				if (!car.in_isect() || get_car_isec(car).can_go_now(car)) {car.stopped_at_light = 0;} // can go now
-				else {car.decelerate_fast();}
+				else {
+					if (car.turn_dir == TURN_LEFT) { // turning left at intersection
+						assert(car.in_isect());
+						road_isec_t const &isec(get_car_isec(car));
+						
+						if ((isec.conn & (1<<car.get_orient())) && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
+							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
+							car.turn_dir = TURN_NONE; // give up on the left turn and go straight instead - helps with gridlock at connector roads
+						}
+					}
+					car.decelerate_fast();
+				}
 				if (was_stopped) return; // no update needed
 			} else {car.accelerate();}
 
@@ -2715,7 +2739,7 @@ class city_road_gen_t {
 
 						for (unsigned tdir = 0; tdir < 3; ++tdir) { // choose best scoring of all valid turn dirs from {none/straight, left, right}
 							unsigned const orient(orients[tdir]);
-							if (!(isec.conn & (1<<orient))) continue; // can't turn in this dir
+							if (!isec.is_orient_currently_valid(orient, tdir)) continue; // can't turn in this dir
 
 							if (isec.conn_to_city >= 0 && isec.conn_ix[orient] < 0) { // city connector isec
 								if (isec.conn_to_city != car.dest_city) continue; // leads to incorrect city, skip
@@ -2739,7 +2763,7 @@ class city_road_gen_t {
 							else if (rval == 1) {new_turn_dir = TURN_RIGHT;} // 25%
 							else                {new_turn_dir = TURN_NONE ;} // 50%
 							if (new_turn_dir == car.front_car_turn_dir && (rgen.rand()%4) != 0) continue; // car in front is too slow, don't turn the same way as it
-							if (isec.conn & (1<<orients[new_turn_dir])) {car.turn_dir = new_turn_dir; break;} // success
+							if (isec.is_orient_currently_valid(orients[new_turn_dir], new_turn_dir)) {car.turn_dir = new_turn_dir; break;} // success
 						} // end while
 					}
 					assert(isec.conn & (1<<orients[car.turn_dir]));
