@@ -2759,11 +2759,9 @@ class city_road_gen_t {
 			assert(car. cur_city == city_id);
 			assert(car.dest_city == dest_rn.city_id);
 			assert(dest_rn.city_id != city_id); // not ourself
-			//cout << TXT(car.cur_city) << TXT(car.dest_city) << TXT(isecs[1].size()) << TXT(connected_to.size()) << endl;
 
 			// Note: here we don't attempt to find shortcuts through other cities as this would be quite complex
 			for (auto i = isecs[1].begin(); i != isecs[1].end(); ++i) { // iterate over all 3-way intersections, looking for the one that connects to car.dest_city
-				//cout << TXT(i->conn_to_city) << endl;
 				if (i->conn_to_city == car.dest_city) {return &(*i);}
 			}
 			return nullptr; // not found, caller can error check
@@ -3086,10 +3084,14 @@ public:
 	void choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) {assert(!car.dest_valid); return;} // no roads, no updates
 		if (!car.dest_valid) {car.dest_city = car.cur_city;} // start in current city
-		else if (road_networks.size() > 1 && (rgen.rand()%5) == 0) { // 20% chance of selecting a different city when there are multiple cities
+		else {
 			auto const &conn(road_networks[car.cur_city].get_connected());
-			vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
-			if (!cands.empty()) {car.dest_city = cands[rgen.rand() % cands.size()];} // choose a random connected (adjacent) city
+			float const new_city_prob(min(0.4f, 0.1f*conn.size())); // 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
+
+			if (rgen.rand_float() < new_city_prob) { // select a different city when there are multiple cities
+				vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
+				car.dest_city = cands[rgen.rand() % cands.size()]; // choose a random connected (adjacent) city
+			}
 		}
 		assert(car.dest_city < road_networks.size()); // city must be valid
 		car.dest_valid = road_networks[car.dest_city].choose_new_car_dest(car, rgen);
