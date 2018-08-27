@@ -454,6 +454,12 @@ struct car_t {
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const;
+
+	bool front_intersects_car(car_t const &c) const {
+		point car_front(get_center());
+		car_front[dim] += (dir ? 0.5 : -0.5)*get_length();
+		return c.bcube.contains_pt(car_front);
+	}
 };
 
 struct comp_car_road_then_pos {
@@ -3142,9 +3148,17 @@ public:
 
 
 bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
-
+	
+	if (c.dim != dim) { // turning in an intersection, etc.
+		car_t *to_stop(nullptr);
+		if (c.front_intersects_car(*this)) {to_stop = &c;}
+		else if (front_intersects_car(c)) {to_stop = this;}
+		if (!to_stop) {return 0;}
+		to_stop->decelerate_fast(); // attempt to prevent one car from T-boning the other
+		to_stop->bcube = to_stop->prev_bcube;
+		return 1;
+	}
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
-	if (c.dim != dim) return 0; // turning in an intersection, etc.
 	float const avg_len(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
 	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
 	float const sep_dist(avg_len*(0.25 + 1.11*min_speed)); // 25% to 125% car length, depending on speed
