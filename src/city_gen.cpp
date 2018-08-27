@@ -12,6 +12,7 @@
 #include "lightmap.h"
 #include "buildings.h"
 #include "tree_3dw.h"
+#include "openal_wrap.h"
 #include <cfloat> // for FLT_MAX
 
 using std::string;
@@ -460,6 +461,13 @@ struct car_t {
 		car_front[dim] += (dir ? 0.5 : -0.5)*get_length();
 		return c.bcube.contains_pt(car_front);
 	}
+	void honk_horn_if_close() const {
+		point const pos(get_center());
+		if (dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 1.0)) {gen_sound(SOUND_HORN, pos);}
+	}
+	void honk_horn_if_close_and_fast() const {
+		if (cur_speed > 0.25*max_speed) {honk_horn_if_close();}
+	}
 };
 
 struct comp_car_road_then_pos {
@@ -715,8 +723,10 @@ struct road_isec_t : public cube_t {
 		return 1;
 	}
 	bool can_go_now(car_t const &car) const {
-		if (!stoplight.check_int_clear(car)) return 0; // intersection not clear
-		return can_go_based_on_light(car);
+		if (!can_go_based_on_light(car)) return 0;
+		if (stoplight.check_int_clear(car)) return 1;
+		car.honk_horn_if_close_and_fast();
+		return 0; // intersection not clear
 	}
 	bool is_blocked(car_t const &car) const {
 		return (can_go_based_on_light(car) && !stoplight.check_int_clear(car)); // light is green but intersection is blocked
@@ -2665,6 +2675,7 @@ class city_road_gen_t {
 							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
 							if (isec.conn & (1<<car.get_orient())) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead - helps with gridlock at connector roads
 							else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
+							car.honk_horn_if_close();
 						}
 					}
 					isec.notify_waiting_car(car);
@@ -3187,9 +3198,10 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 		car_t *to_stop(nullptr);
 		if (c.front_intersects_car(*this)) {to_stop = &c;}
 		else if (front_intersects_car(c)) {to_stop = this;}
-		if (!to_stop) {return 0;}
+		if (!to_stop) return 0;
 		to_stop->decelerate_fast(); // attempt to prevent one car from T-boning the other
 		to_stop->bcube = to_stop->prev_bcube;
+		to_stop->honk_horn_if_close_and_fast();
 		return 1;
 	}
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
@@ -3217,6 +3229,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 		//if (cmove.bcube == cmove.prev_bcube) {return 1;} // collided, but not safe to move the car (init pos or second collision)
 		if (cmove.bcube != cmove.prev_bcube) { // try resetting to last frame's position
 			cmove.bcube  = cmove.prev_bcube; // restore prev frame's pos
+			//cmove.honk_horn_if_close_and_fast();
 			return 1; // done
 		}
 		else { // keep the car from moving outside its current segment (init collision case)
