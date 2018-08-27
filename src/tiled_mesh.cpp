@@ -2605,7 +2605,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail
 		}
 		if (scenery_enabled()) {draw_scenery(0, 1);}
-		render_models(1, 0, 3, model3d_offset.get_xlate()); // both transparent and opaque; VFC should work here (somewhat?) for models
+		render_models(1, 0, 3, get_tiled_terrain_model_xlate()); // both transparent and opaque; VFC should work here (somewhat?) for models
 	}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
@@ -3189,7 +3189,7 @@ void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, 
 void render_tt_models(bool reflection_pass, bool transparent_pass) {
 
 	if (reflection_pass && !enable_tt_model_reflect) return;
-	vector3d const xlate(model3d_offset.get_xlate());
+	vector3d const xlate(get_tiled_terrain_model_xlate());
 	if (!reflection_pass && !transparent_pass) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 	render_models(0, reflection_pass, (transparent_pass ? 2 : 1), xlate);
 }
