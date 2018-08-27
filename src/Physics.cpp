@@ -1606,13 +1606,16 @@ void shift_other_objs(vector3d const &vd) {
 
 void advance_physics_objects() {
 
-	apply_obj_physics(bubbles);
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
-	apply_obj_physics(decals);
 	for (unsigned d = 0; d < 2; ++d) {explosion_part_man[d].apply_physics(0.5, 4.0, (d == 1));} // gravity=0.5, air_factor=0.25
-	water_part_man.apply_physics();
-	for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
+
+	if (world_mode == WMODE_GROUND) { // these don't apply to tiled terrain mode
+		apply_obj_physics(bubbles);
+		apply_obj_physics(decals);
+		water_part_man.apply_physics();
+		for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
+	}
 }
 
 

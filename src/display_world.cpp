@@ -1148,7 +1148,6 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		camera_surf_collide = 1;
 	}
 	camera_view = 0;
-	if (animate2) {advance_physics_objects();} // is this correct/necessary?
 	if (camera_surf_collide) {check_player_tiled_terrain_collision();}
 	update_temperature(0);
 	point const camera(get_camera_pos());
