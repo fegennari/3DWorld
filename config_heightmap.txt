@@ -33,7 +33,7 @@ city max_benches_per_plot 0 # incomplete
 
 city num_cars 4000
 city car_speed 10.0
-city enable_car_path_finding 1
+city enable_car_path_finding 0
 city car_model ../models/cars/sports_car/sportsCar.model3d        22 -1 90  -0.02 1.0  20 22
 city car_model ../models/cars/natla_car/natla_car.obj             -1  2 90   0.06 0.5  1 # always GRAY
 city car_model ../models/cars/speedCar/speedCar.obj               -1  6 0    0.12 0.5  4 5 # always DK_BLUE
