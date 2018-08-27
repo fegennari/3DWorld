@@ -556,8 +556,10 @@ namespace stoplight_ns {
 	class stoplight_t {
 		uint8_t num_conn, conn, cur_state;
 		bool at_conn_road; // longer light times in this case
-		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits; mutable because it's set during car update logic, where roads are supposed to be const
 		float cur_state_ticks;
+		// these are mutable because they are set during car update logic, where roads are supposed to be const
+		mutable uint8_t car_waiting_sr, car_waiting_left;
+		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits
 
 		void next_state() {
 			++cur_state;
@@ -582,13 +584,31 @@ namespace stoplight_ns {
 			}
 			cur_state_ticks = 0.0; // reset for this state
 		}
+		bool is_any_car_waiting_at_this_state() const {
+			if (num_conn == 2) return 0; // 2-way intersection, no cross traffic
+			return ((left_orient_masks[cur_state] & car_waiting_left) || (st_r_orient_masks[cur_state] & car_waiting_sr));
+		}
+		void find_state_with_waiting_car() {
+			uint8_t const prev_state(cur_state);
+
+			while (1) {
+				advance_state();
+				if (is_any_car_waiting_at_this_state()) break; // car is waiting at this state
+				if (cur_state == prev_state) {advance_state(); break;} // wrapped around, leave at the next valid state after the prev state
+			}
+			car_waiting_sr = car_waiting_left = 0; // waiting bits have been used, clear for next state change
+		}
 		void run_update_logic() {
 			assert(cur_state < NUM_STATE);
-			if (cur_state_ticks > get_cur_state_time_secs()) {advance_state();} // time to update to next state
+			//if (cur_state_ticks > get_cur_state_time_secs()) {advance_state();} // time to update to next state
+			if (cur_state_ticks > get_cur_state_time_secs()) {find_state_with_waiting_car();} // time to update to next state
 		}
 		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
 	public:
-		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0) {UNROLL_4X(blocked[i_] = 0;)}
+		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0), car_waiting_sr(0), car_waiting_left(0) {
+			reset_blocked();
+		}
+		void reset_blocked() {UNROLL_4X(blocked[i_] = 0;)}
 		void mark_blocked(bool dim, bool dir) const {blocked[2*dim + dir] = 1;} // Note: not actually const, but blocked is mutable
 		bool is_blocked(bool dim, bool dir) const {return (blocked[2*dim + dir] != 0);}
 
@@ -600,10 +620,14 @@ namespace stoplight_ns {
 			cur_state_ticks = get_cur_state_time_secs()*stoplight_rgen.rand_float(); // start at a random time within this state
 		}
 		void next_frame() {
-			UNROLL_4X(blocked[i_] = 0;)
+			reset_blocked();
 			if (num_conn == 2) return; // nothing else to do
 			cur_state_ticks += fticks;
 			run_update_logic();
+		}
+		void notify_waiting_car(bool dim, bool dir, unsigned turn) const {
+			unsigned const orient(2*dim + dir); // {W, E, S, N}
+			((turn == TURN_LEFT) ? car_waiting_left : car_waiting_sr) |= (1 << orient);
 		}
 		bool red_light(bool dim, bool dir, unsigned turn) const {
 			assert(cur_state < NUM_STATE);
@@ -675,6 +699,7 @@ struct road_isec_t : public cube_t {
 	}
 	void make_4way() {num_conn = 4; conn = 15;}
 	void next_frame() {stoplight.next_frame();}
+	void notify_waiting_car(car_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0);}
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
 	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
@@ -2632,16 +2657,16 @@ class city_road_gen_t {
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
 				if (!car.in_isect() || get_car_isec(car).can_go_now(car)) {car.stopped_at_light = 0;} // can go now
-				else {
+				else if (car.in_isect()) {
+					road_isec_t const &isec(get_car_isec(car));
+
 					if (car.turn_dir == TURN_LEFT) { // turning left at intersection
-						assert(car.in_isect());
-						road_isec_t const &isec(get_car_isec(car));
-						
 						if ((isec.conn & (1<<car.get_orient())) && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
 							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
 							car.turn_dir = TURN_NONE; // give up on the left turn and go straight instead - helps with gridlock at connector roads
 						}
 					}
+					isec.notify_waiting_car(car);
 					car.decelerate_fast();
 				}
 				if (was_stopped) return; // no update needed
