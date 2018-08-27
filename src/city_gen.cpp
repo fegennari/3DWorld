@@ -532,9 +532,12 @@ struct road_t : public cube_t {
 
 struct road_seg_t : public road_t {
 	unsigned short road_ix, conn_ix[2], conn_type[2]; // {dim=0, dim=1}
+	mutable unsigned short car_count; // can be written to during car update logic
+
 	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
-	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix) {init_ixs();}
-	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {init_ixs();}
+	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix), car_count(0) {init_ixs();}
+	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix), car_count(0) {init_ixs();}
+	void next_frame() {car_count = 0;}
 };
 
 namespace stoplight_ns {
@@ -2735,7 +2738,7 @@ class city_road_gen_t {
 					orients[TURN_LEFT ] = conn_left [orient_in];
 					orients[TURN_RIGHT] = conn_right[orient_in];
 
-					// Note: Could use A* path finding, but it's unlikely to make a visual difference to the casual observer
+					// TODO: use dest_seg.car_count to estimate traffic and route around
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
 						assert(car.cur_city < road_networks.size());
 						point const dest_pos(road_networks[car.cur_city].get_car_dest_isec_center(car, road_networks, global_rn));
@@ -2822,11 +2825,15 @@ class city_road_gen_t {
 			for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {i->next_frame();} // update stoplight state
 			}
+			for (auto i = segs.begin(); i != segs.end(); ++i) {i->next_frame();}
 		}
 		static road_network_t const &get_car_rn(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
 			if (car.cur_city == CONN_CITY_IX) return global_rn;
 			assert(car.cur_city < road_networks.size());
 			return road_networks[car.cur_city];
+		}
+		void update_car_seg_stats(car_t const &car) const {
+			if (car.cur_road_type == TYPE_RSEG) {++get_car_seg(car).car_count;}
 		}
 		road_seg_t const &get_car_seg(car_t const &car) const {
 			assert(car.cur_road_type == TYPE_RSEG);
@@ -3142,6 +3149,7 @@ public:
 		get_car_rn(car).update_car(car, rgen, road_networks, global_rn);
 		if (city_params.enable_car_path_finding) {update_car_dest(car);}
 	}
+	void update_car_seg_stats(car_t const &car) const {get_car_rn(car).update_car_seg_stats(car);}
 	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 	road_isec_t const &get_car_isec(car_t const &car) const {return get_car_rn(car).get_car_isec(car);}
 }; // city_road_gen_t
@@ -3549,7 +3557,7 @@ public:
 	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
-		//timer_t timer("Update Cars"); // 10K cars = 1.7ms / 2K cars = 0.2ms
+		//timer_t timer("Update Cars"); // 4K cars = 0.7ms
 		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		car_blocks.clear();
@@ -3591,6 +3599,7 @@ public:
 				}
 				//++num_on_conn_road;
 			}
+			//road_gen.update_car_seg_stats(*i);
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
 		//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
