@@ -133,6 +133,7 @@ public:
 		add_new_sound("ice_crack.wav"  ); // SOUND_ICE_CRACK
 		add_new_sound("reload.wav"     ); // SOUND_RELOAD
 		add_new_sound("falling.wav"    ); // SOUND_FALLING
+		add_new_sound("horn.wav"       ); // SOUND_HORN
 		cout << endl;
 
 		// create sources
