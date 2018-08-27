@@ -2661,9 +2661,10 @@ class city_road_gen_t {
 					road_isec_t const &isec(get_car_isec(car));
 
 					if (car.turn_dir == TURN_LEFT) { // turning left at intersection
-						if ((isec.conn & (1<<car.get_orient())) && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
+						if (isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
 							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
-							car.turn_dir = TURN_NONE; // give up on the left turn and go straight instead - helps with gridlock at connector roads
+							if (isec.conn & (1<<car.get_orient())) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead - helps with gridlock at connector roads
+							else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
 						}
 					}
 					isec.notify_waiting_car(car);
