@@ -2663,6 +2663,7 @@ class city_road_gen_t {
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
+			unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
@@ -2670,13 +2671,20 @@ class city_road_gen_t {
 				else if (car.in_isect()) {
 					road_isec_t const &isec(get_car_isec(car));
 
-					if (car.turn_dir == TURN_LEFT) { // turning left at intersection
-						if (isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
+					// helps with gridlock at connector roads
+					if (car.turn_val == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
+						if (car.turn_dir == TURN_LEFT) { // turning left at intersection
 							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
-							if (isec.conn & (1<<car.get_orient())) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead - helps with gridlock at connector roads
+							if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
 							else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
 							car.honk_horn_if_close();
 						}
+						/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
+							if (isec.is_orient_currently_valid(conn_right[2*car.dim + (!car.dir)], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
+								car.turn_dir = TURN_RIGHT; // go right instead
+								car.honk_horn_if_close();
+							}
+						}*/
 					}
 					isec.notify_waiting_car(car);
 					car.decelerate_fast();
@@ -2770,7 +2778,6 @@ class city_road_gen_t {
 					unsigned const orient_in(2*car.dim + (!car.dir)); // invert dir (incoming, not outgoing)
 					assert(isec.conn & (1<<orient_in)); // car must come from an enabled orient
 					unsigned orients[3]; // {straight, left, right}
-					unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 					orients[TURN_NONE ] = car.get_orient(); // straight
 					orients[TURN_LEFT ] = conn_left [orient_in];
 					orients[TURN_RIGHT] = conn_right[orient_in];
