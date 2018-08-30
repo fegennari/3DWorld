@@ -706,26 +706,26 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 
 	assert(!disabled());
 	if (temperature <= ABSOLUTE_ZERO) return;
-	bool const coll_last_frame((flags & OBJ_COLLIDED) != 0);
+	bool const coll_last_frame((flags & OBJ_COLLIDED) != 0), ground_mode(world_mode == WMODE_GROUND);
 	flags &= ~OBJ_COLLIDED;
 	verify_data();
 	obj_type const &otype(object_types[type]);
 
-	if (status == 0 || pos.z < zmin || time > otype.lifetime || (type == PARTICLE && is_underwater(pos))) {
+	if (status == 0 || (ground_mode && pos.z < zmin) || time > otype.lifetime || (type == PARTICLE && is_underwater(pos))) {
 		assert(type != SMILEY);
 		status = 0;
 		return;
 	}
-	if (iter == 0) time += iticks;
+	if (iter == 0) {time += iticks;}
 	bool const frozen(temperature <= W_FREEZE_POINT);
-	if (frozen && type == SHRAPNEL) flags &= ~IN_WATER;
+	if (frozen && type == SHRAPNEL) {flags &= ~IN_WATER;}
 
 	if (!frozen && (flags & IS_ON_ICE)) { // ice melted while object was on it
 		flags  |= IN_WATER;
 		flags  &= ~(XYZ_STOPPED | IS_ON_ICE);
 		status  = 1;
 	}
-	if (disable_motionless_objects && status == 4) {
+	if (disable_motionless_objects && status == 4 && ground_mode) {
 		if ((flags & IS_ON_ICE) || (!(flags & (FLOATING | STATIC_COBJ_COLL)) && object_still_stopped(obj_index))) {
 			point const old_pos(pos);
 			check_vert_collision(obj_index, 1, iter); // needed for gameplay (already tested in object_still_stopped()?)
@@ -762,7 +762,9 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (flags & Z_STOPPED) {
 			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
-			if (!point_outside_mesh(xpos, ypos) && (pos.z - radius) > water_matrix[ypos][xpos] && ((friction < 2.0*STICK_THRESHOLD) || (friction < rand_uniform(2.0, 2.5)*STICK_THRESHOLD))) {
+			if (ground_mode && !point_outside_mesh(xpos, ypos) && (pos.z - radius) > water_matrix[ypos][xpos] &&
+				((friction < 2.0*STICK_THRESHOLD) || (friction < rand_uniform(2.0, 2.5)*STICK_THRESHOLD)))
+			{
 				flags &= ~Z_STOPPED;
 			}
 			else {
@@ -776,7 +778,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		vector3d const local_wind(get_local_wind(pos));
 		
 		if (iter == 0) {
-			if (collided) vtot.z += local_wind.z; else vtot += local_wind;
+			if (collided) {vtot.z += local_wind.z;} else {vtot += local_wind;}
 		}
 		if (!(flags & Z_STOPPED)) {
 			double gscale((type == PLASMA && init_dir.x != 0.0) ? 1.0/sqrt(init_dir.x) : 1.0);
@@ -825,24 +827,24 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		float dz;
 		int val(get_obj_zval(pos, dz, ((otype.flags & COLL_DESTROYS) ? 0.25*radius : radius))); // 0 = out of simulation region, 1 = airborne, 2 = on ground
 
-		if (world_mode == WMODE_GROUND && val == 2 && dz > radius && !is_over_mesh(old_pos) && old_pos.z < pos.z) { // hit side of simulation region
+		if (ground_mode && val == 2 && dz > radius && !is_over_mesh(old_pos) && old_pos.z < pos.z) { // hit side of simulation region
 			status = 0;
 			return;
 		}
 		if (val == 0) {
-			if (pos.z < zmin || (flags & Z_STOPPED)) {status = 0;} // out of simulation region and underwater
+			if ((ground_mode && pos.z < zmin) || (flags & Z_STOPPED)) {status = 0;} // out of simulation region and underwater
 			return;
 		}
 		int const wcoll(check_water_collision(vz_old));
 		vector3d cnorm;
 		bool const last_stat_coll((flags & STATIC_COBJ_COLL) != 0);
-		int coll(check_vert_collision(obj_index, 1, iter, &cnorm));
+		int coll(ground_mode && check_vert_collision(obj_index, 1, iter, &cnorm));
 		if (disabled()) return;
 
-		if (world_mode == WMODE_INF_TERRAIN) {
+		if (!ground_mode) { // tiled terrain
 			//if (sphere_int_tiled_terrain(pos, radius)) {coll = 1;} // FIXME
 		}
-		if (!coll) {flags &= ~Z_STOPPED;} // fix for landmine no longer stuck to cobj
+		if (ground_mode && !coll) {flags &= ~Z_STOPPED;} // fix for landmine no longer stuck to cobj
 		
 		if (wcoll) {
 			if (!frozen) status = 1;
@@ -850,7 +852,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			return;
 		}
 		if (val == 2 && !coll) { // collision with mesh surface but not vertical surface
-			if (iter == 0) {surf_collide_obj();} // only supports blood and chunks for now
+			if (ground_mode && iter == 0) {surf_collide_obj();} // only supports blood and chunks for now
 			
 			if (object_bounce(0, cnorm, 0.0, radius)) {
 				if (radius >= LARGE_OBJ_RAD) {
@@ -865,7 +867,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			bool const stopped(otype.friction_factor >= STICK_THRESHOLD || (flags & XY_STOPPED) || velocity.mag_sq() < BOUNCE_CUTOFF);
 			velocity *= (stopped ? 0.0 : 0.95); // apply some damping
 		}
-		if (coll) {
+		if (coll) { // cobj collision
 			if (type == SAWBLADE) {destroy_coll_objs(pos, 500.0, source, IMPACT);} // shatterable but not destroyable
 			bool const stat_coll((flags & STATIC_COBJ_COLL) != 0);
 
@@ -903,7 +905,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) {modify_grass_at(pos, radius, 1);} // crush grass
 		}
 		else if (val == 1) { // stopped
-			if (otype.flags & IS_PRECIP) {
+			if (ground_mode && (otype.flags & IS_PRECIP)) {
 				int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
 				if (!point_outside_mesh(xpos, ypos) && spillway_matrix[ypos][xpos] >= short(frame_counter-1)) {
@@ -912,9 +914,9 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 				}
 			}
 			if (status != 4) {
-				check_vert_collision(obj_index, 0, iter); // one last time before the object is "stopped"???
+				if (ground_mode) {check_vert_collision(obj_index, 0, iter);} // one last time before the object is "stopped"???
 				velocity = zero_vector;
-				if (!disabled()) status = 4;
+				if (!disabled()) {status = 4;}
 			}
 		}
 		else {
@@ -970,6 +972,7 @@ int dwobject::surface_advance() {
 		velocity = zero_vector;
 		return 1;
 	}
+	if (world_mode == WMODE_INF_TERRAIN) return 1; // stopped
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y)), val(0);
 	if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
 	float const mesh_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)), radius(get_true_radius()), density(get_true_density());
@@ -1307,43 +1310,49 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2, fl
 	if (elasticity == 0.0)      return 0;
 	vector3d const delta_v(velocity - obj_vel);
 	if (delta_v == zero_vector) return 0;
-	vector3d const v_orig(velocity);
-	vector3d bounce_v;
-	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
-	// Note: this test is mandatory (no tiled terrain exception) because we lookup mesh normals below
-	if (point_outside_mesh(xpos, ypos)) { // object on/over edge
-		status = 0;
-		return 0;
+	if (world_mode == WMODE_INF_TERRAIN) {
+		max_eq(pos.z, (int_mesh_zval_pt_off(pos, 0, 0) + z_offset));
+		norm = plus_z; // FIXME: assume terrain oriented in +z
+		elasticity *= LAND_ELASTICITY;
 	}
-	switch (coll_type) {
-	case 0: // mesh surface
-		{
-			float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
-			if ((pos.z - z_offset) < zval) pos.z = zval + z_offset;
-			norm = surface_normals[ypos][xpos];
-			elasticity *= LAND_ELASTICITY*(1.0 - 0.5*get_grass_density(pos)); // half elastic in dense grass
-			if (spillway_matrix[ypos][xpos] >= short(frame_counter-1)) elasticity *= SPILL_ELASTIC;
+	else {
+		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+
+		if (point_outside_mesh(xpos, ypos)) { // object on/over edge
+			status = 0;
+			return 0;
 		}
-		break;
-	case 1: // ice
-		norm.assign(0.0, 0.0, -1.0);
-		elasticity *= ICE_ELASTICITY;
-		break;
-	case 2: // water
-		norm.assign(0.0, 0.0, -1.0);
-		elasticity *= WATER_ELASTIC;
-		break;
-	case 3:
-	default: // horizontal/vertical surface or other
-		elasticity *= elasticity2;
-		assert(norm != zero_vector); // norm must come in correct
+		switch (coll_type) {
+		case 0: // mesh surface
+			{
+				max_eq(pos.z, (interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + z_offset));
+				norm = surface_normals[ypos][xpos];
+				elasticity *= LAND_ELASTICITY*(1.0 - 0.5*get_grass_density(pos)); // half elastic in dense grass
+				if (spillway_matrix[ypos][xpos] >= short(frame_counter-1)) {elasticity *= SPILL_ELASTIC;}
+			}
+			break;
+		case 1: // ice
+			norm.assign(0.0, 0.0, -1.0);
+			elasticity *= ICE_ELASTICITY;
+			break;
+		case 2: // water
+			norm.assign(0.0, 0.0, -1.0);
+			elasticity *= WATER_ELASTIC;
+			break;
+		case 3:
+		default: // horizontal/vertical surface or other
+			elasticity *= elasticity2;
+			assert(norm != zero_vector); // norm must come in correct
+		}
 	}
 	elasticity = CLIP_TO_01(elasticity);
 	assert(!is_nan(norm));
+	vector3d bounce_v;
 	calc_reflection_angle(delta_v, bounce_v, norm);
 	assert(!is_nan(bounce_v));
 	float const xy_elasticity(elasticity*(1.0 - object_types[type].air_factor));
+	vector3d const v_orig(velocity);
 	velocity.assign(xy_elasticity*bounce_v.x, xy_elasticity*bounce_v.y, elasticity*bounce_v.z);
 	float const v_tot_sq(velocity.mag_sq());
 
