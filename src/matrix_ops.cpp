@@ -333,9 +333,16 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 	return zval;
 }
 
-
 float int_mesh_zval_pt_off(point const &pos, int use_real_equation, int ignore_ice) {
 	return interpolate_mesh_zval((pos.x-DX_VAL*xoff), (pos.y-DY_VAL*yoff), 0.0, use_real_equation, ignore_ice);
+}
+
+vector3d get_interpolated_terrain_normal(point const &pos) {
+
+	point const px(pos.x+DX_VAL, pos.y, pos.z), py(pos.x, pos.y+DY_VAL, pos.z);
+	float const mh(int_mesh_zval_pt_off(pos, 0, 0)), mhx(int_mesh_zval_pt_off(px, 0, 0)), mhy(int_mesh_zval_pt_off(py, 0, 0));
+	point const p1(pos.x, pos.y, mh), p2(px.x, px.y, mhx), p3(py.x, py.y, mhy);
+	return cross_product((p2 - p1), (p3 - p1)).get_norm(); // calculate using X and Y deltas
 }
 
 

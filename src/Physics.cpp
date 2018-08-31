@@ -1313,7 +1313,7 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2, fl
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		max_eq(pos.z, (int_mesh_zval_pt_off(pos, 0, 0) + z_offset));
-		norm = plus_z; // FIXME: assume terrain oriented in +z
+		norm = get_interpolated_terrain_normal(pos);
 		elasticity *= LAND_ELASTICITY;
 	}
 	else {
