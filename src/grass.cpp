@@ -1107,7 +1107,7 @@ void draw_grass() { // and flowers
 }
 
 void modify_grass_at(point const &pos, float radius, bool crush, int burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
-	if (no_grass()) return;
+	if (no_grass() || world_mode != WMODE_GROUND) return;
 	if (burn && is_underwater(pos)) {burn = 0;}
 	grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_color, remove, color);
 	point const fpos(pos + vector3d(0, 0, (burn ? grass_length : 0.0))); // if mesh is burning, shift base of fire up to flower height

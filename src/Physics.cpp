@@ -900,7 +900,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 
 		if (val == 2) { // moved, recalculate velocity from position change
 			status = 3;
-			if (radius >= LARGE_OBJ_RAD) check_vert_collision(obj_index, 1, iter); // adds instability though
+			if (radius >= LARGE_OBJ_RAD) {check_vert_collision(obj_index, 1, iter);} // adds instability though
 			assert(tstep > 0.0);
 			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) {modify_grass_at(pos, radius, 1);} // crush grass
 		}
@@ -972,33 +972,39 @@ int dwobject::surface_advance() {
 		velocity = zero_vector;
 		return 1;
 	}
-	if (world_mode == WMODE_INF_TERRAIN) return 1; // stopped
-	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y)), val(0);
-	if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
-	float const mesh_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)), radius(get_true_radius()), density(get_true_density());
+	float const radius(get_true_radius());
+	float mh(0.0), friction(otype.friction_factor);
+	vector3d snorm(zero_vector);
 
-	if (pos.z < (mesh_height - RECOVER_DEPTH*radius)) { // below surface
-		if (pos.z < (mesh_height - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
-		pos.z = mesh_height; // recover it
+	if (world_mode == WMODE_INF_TERRAIN) {
+		snorm = get_interpolated_terrain_normal(pos, &mh);
+		if (pos.z < (mh - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
+		if (pos.z < (mh - RECOVER_DEPTH*radius)) {pos.z = mh;} // below surfac, erecover it
+		if (friction >= STICK_THRESHOLD) {velocity = zero_vector; return 1;} // stopped by grass
 	}
-	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos)*(1.0 - 0.5*rain_wetness)); // half friction when wet
-	float const friction(otype.friction_factor + grass_friction);
-	
-	if (friction >= STICK_THRESHOLD) { // stopped by grass
-		velocity = zero_vector;
-		return 1;
+	else {
+		int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+		if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
+		mh = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0);
+		if (pos.z < (mh - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
+		if (pos.z < (mh - RECOVER_DEPTH*radius)) {pos.z = mh;} // below surfac, erecover it
+		float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos)*(1.0 - 0.5*rain_wetness)); // half friction when wet
+		friction += grass_friction;
+		if (friction >= STICK_THRESHOLD) {velocity = zero_vector; return 1;} // stopped by grass
+		float const s((pos.x - get_xval(xpos))*DX_VAL_INV + 0.5), t((pos.y - get_yval(ypos))*DY_VAL_INV + 0.5);
+		int const xpp1(min(xpos+1, MESH_X_SIZE-1)), ypp1(min(ypos+1, MESH_Y_SIZE-1));
+		vector3d const &n00(vertex_normals[ypos][xpos]);
+		vector3d const &n01(vertex_normals[ypp1][xpos]);
+		vector3d const &n10(vertex_normals[ypos][xpp1]);
+		vector3d const &n11(vertex_normals[ypp1][xpp1]);
+		snorm = (n11*t + n10*(1.0-t))*s + (n01*t + n00*(1.0-t))*(1.0-s); // interpolate across the quad
 	}
-	float const s((pos.x - get_xval(xpos))*DX_VAL_INV + 0.5), t((pos.y - get_yval(ypos))*DY_VAL_INV + 0.5);
-	int const xpp1(min(xpos+1, MESH_X_SIZE-1)), ypp1(min(ypos+1, MESH_Y_SIZE-1));
-	vector3d const &n00(vertex_normals[ypos][xpos]);
-	vector3d const &n01(vertex_normals[ypp1][xpos]);
-	vector3d const &n10(vertex_normals[ypos][xpp1]);
-	vector3d const &n11(vertex_normals[ypp1][xpp1]);
-	vector3d const snorm((n11*t + n10*(1.0-t))*s + (n01*t + n00*(1.0-t))*(1.0-s)); // interpolate across the quad
 	float const dzn(sqrt(snorm.x*snorm.x + snorm.y*snorm.y));
 	vector3d mesh_vel(zero_vector);
+	int val(0);
 
 	if (dzn > TOLERANCE && dzn > friction) {
+		float const density(get_true_density());
 		float vel((SURF_ADV_STEP/XY_SCENE_SIZE)*dzn*(1.0 - 0.5*friction)/DEF_TIMESTEP);
 		assert(density > 0.0);
 		if ((flags & IN_WATER) && density >= WATER_DENSITY) {vel *= (density - WATER_DENSITY)/density;}
@@ -1013,7 +1019,7 @@ int dwobject::surface_advance() {
 	velocity = (mesh_vel*(1.0 - vmult) + velocity*vmult);
 	pos.x   += velocity.x*tstep;
 	pos.y   += velocity.y*tstep;
-	pos.z    = mesh_height + radius;
+	pos.z    = mh + radius;
 	return val+1;
 }
 
@@ -1312,8 +1318,9 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2, fl
 	if (delta_v == zero_vector) return 0;
 
 	if (world_mode == WMODE_INF_TERRAIN) {
-		max_eq(pos.z, (int_mesh_zval_pt_off(pos, 0, 0) + z_offset));
-		norm = get_interpolated_terrain_normal(pos);
+		float mh(0.0);
+		norm = get_interpolated_terrain_normal(pos, &mh);
+		max_eq(pos.z, (mh + z_offset));
 		elasticity *= LAND_ELASTICITY;
 	}
 	else {

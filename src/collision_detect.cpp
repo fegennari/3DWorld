@@ -1610,10 +1610,11 @@ int vert_coll_detector::check_coll() {
 // ************ end vert_coll_detector ************
 
 
-// 0 = non vert coll, 1 = X coll, 2 = Y coll, 3 = X + Y coll
+// 0 = no vert coll, 1 = X coll, 2 = Y coll, 3 = X + Y coll
 int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm,
 	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj, bool skip_movable)
 {
+	if (world_mode != WMODE_GROUND) return 0;
 	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj, skip_movable);
 	return vcd.check_coll();
 }

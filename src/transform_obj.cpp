@@ -227,12 +227,19 @@ void transform_data::reset_perturb_if_set(unsigned i) {
 void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add, float a_mult) {
 
 	if (!dist_less_than(pos, lpos, 0.01*radius)) {
-		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+		vector3d normal(zero_vector);
 
-		if (!point_outside_mesh(xpos, ypos)) {
+		if (world_mode == WMODE_INF_TERRAIN) {
+			normal = get_interpolated_terrain_normal(pos);
+		}
+		else {
+			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+			if (!point_outside_mesh(xpos, ypos)) {normal = surface_normals[ypos][xpos];}
+		}
+		if (normal != zero_vector) {
 			vector3d const delta(pos, lpos);
 			float const dmag(delta.mag()), angle(a_mult*(dmag/radius) + a_add);
-			vector3d const vrot(cross_product(surface_normals[ypos][xpos], delta/dmag));
+			vector3d const vrot(cross_product(normal, delta/dmag));
 
 			if (vrot.mag() > TOLERANCE) {
 				matrix.normalize();
