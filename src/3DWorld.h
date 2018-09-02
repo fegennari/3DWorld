@@ -1615,6 +1615,7 @@ void timing_profiler_stats();
 #define PRINT_TIME_STR(str) {PRINT_TIME((str).c_str());}
 #define PRINT_TIME_ONSCREEN(str) {std::ostringstream oss; oss << str << " time = " << GET_DELTA_TIME; print_debug_text(oss);}
 #define TXT(x) #x"=" << x << " "
+#define TXTn(x) #x"=" << x << "\n"
 
 #if 0 // still only ms accuracy in windows
 #include <time.h>

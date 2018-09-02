@@ -46,7 +46,7 @@ unsigned  const NUM_CAR_COLORS = 10;
 colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
 
-extern bool enable_dlight_shadows, dl_smap_enabled;
+extern bool enable_dlight_shadows, dl_smap_enabled, tt_fire_button_down;
 extern int rand_gen_index, display_mode, animate2;
 extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks, FAR_CLIP;
@@ -437,6 +437,12 @@ struct car_t {
 		std::ostringstream oss;
 		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << TXT(max_speed) << TXT(cur_speed)
 			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
+		return oss.str();
+	}
+	string label_str() const {
+		std::ostringstream oss;
+		oss << TXTn(dim) << TXTn(dir) << TXTn(cur_city) << TXTn(cur_road) << TXTn(cur_seg) << TXTn(dz) << TXTn(turn_val) << TXTn(max_speed) << TXTn(cur_speed)
+			<< "cur_road_type=" << unsigned(cur_road_type) << "\n" << TXTn(stopped_at_light) << TXTn(dest_city) << TXTn(dest_isec);
 		return oss.str();
 	}
 	void move(float speed_mult) {
@@ -3588,7 +3594,7 @@ public:
 		} // for cb
 		return 0;
 	}
-	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const {
+	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const { // Note: pos in local TT space
 		if (cars.empty()) return 0;
 		if (int_ret != INT_ROAD && int_ret != INT_PARKING) return 0; // not a road or a parking lot - no car intersections
 
@@ -3605,6 +3611,18 @@ public:
 			}
 		} // for cb
 		return 0;
+	}
+	car_t const *get_car_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
+		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+			if (!road_gen.get_city_bcube(cb->cur_city).line_intersects(p1, p2)) continue; // skip
+			unsigned start(cb->start), end((cb+1)->start);
+			assert(start <= end && end <= cars.size());
+
+			for (unsigned c = start; c != end; ++c) { // Note: includes parked cars
+				if (cars[c].bcube.line_intersects(p1, p2)) {return &cars[c];}
+			}
+		} // for cb
+		return nullptr; // no car found
 	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
@@ -3680,8 +3698,21 @@ public:
 			} // for cb
 			dstate.post_draw();
 			fgPopMatrix();
+			
+			if (tt_fire_button_down) {
+				point const camera(get_camera_pos());
+				show_car_stats_at(camera, (camera + cview_dir*FAR_CLIP));
+			}
 		}
 		if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
+	}
+	void show_car_stats_at(point const &p1, point const &p2) const {
+		vector3d const xlate(get_camera_coord_space_xlate());
+		car_t const *car(get_car_at(p1-xlate, p2-xlate));
+		if (car == nullptr) return; // no car found
+		text_drawer_t text_drawer;
+		text_drawer.strs.push_back(text_string_t(car->label_str(), (car->get_center() + xlate), 20.0, CYAN));
+		text_drawer.draw();
 	}
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context();}
