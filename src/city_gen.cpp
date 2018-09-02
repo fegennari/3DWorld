@@ -47,7 +47,7 @@ colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, R
 
 
 extern bool enable_dlight_shadows, dl_smap_enabled, tt_fire_button_down;
-extern int rand_gen_index, display_mode, animate2;
+extern int rand_gen_index, display_mode, animate2, game_mode;
 extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks, FAR_CLIP;
 extern double tfticks;
@@ -3699,7 +3699,7 @@ public:
 			dstate.post_draw();
 			fgPopMatrix();
 			
-			if (tt_fire_button_down) {
+			if (tt_fire_button_down && !game_mode) {
 				point const camera(get_camera_pos());
 				show_car_stats_at(camera, (camera + cview_dir*FAR_CLIP));
 			}
