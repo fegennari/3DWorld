@@ -50,7 +50,7 @@ hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv;
@@ -3495,8 +3495,10 @@ tile_t *get_tile_for_xy(int x, int y) {
 
 void inf_terrain_fire_weapon() {
 
-	// FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS
-	if (!inf_terrain_fire_mode) return; // ignore
+	if (inf_terrain_fire_mode == FM_NONE) {
+		tt_fire_button_down = 1;
+		return; // ignore
+	}
 	//RESET_TIME;
 	static double last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
@@ -3505,6 +3507,7 @@ void inf_terrain_fire_weapon() {
 	unsigned const bradius(cur_brush_param.get_radius());
 	point p_int;
 	
+	// FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS
 	if (inf_terrain_fire_mode == FM_REM_TREES || inf_terrain_fire_mode == FM_ADD_TREES) { // tree addition/removal
 		if (line_intersect_tiled_mesh(v1, v2, p_int)) {
 			terrain_tile_draw.add_or_remove_trees_at(p_int, (bradius + 0.5)*HALF_DXY, (inf_terrain_fire_mode == FM_ADD_TREES), cur_brush_param.shape);

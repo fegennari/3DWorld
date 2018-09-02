@@ -34,7 +34,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1), fog_enabled(0);
+bool mesh_invalidated(1), fog_enabled(0), tt_fire_button_down(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned enabled_lights(0); // 8 bit flags
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
@@ -999,7 +999,7 @@ void display(void) {
 			show_blood_on_camera();
 			show_crosshair(WHITE, do_zoom);
 		}
-		else if (world_mode == WMODE_INF_TERRAIN && inf_terrain_fire_mode) {
+		else if (world_mode == WMODE_INF_TERRAIN && (inf_terrain_fire_mode || tt_fire_button_down)) {
 			show_crosshair(get_inf_terrain_mod_color(), do_zoom);
 		}
 		else if (world_mode == WMODE_GROUND && voxel_editing) {
@@ -1012,6 +1012,7 @@ void display(void) {
 			draw_compass_and_alt();
 		}
 		if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
+		tt_fire_button_down = 0;
 		if (TIMETEST) PRINT_TIME("X");
 
 		if (dynamic_mesh_scroll && world_mode == WMODE_GROUND && camera_mode == 1 && !camera_view) {
