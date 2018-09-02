@@ -515,6 +515,8 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (cube.d[i_][0] >= d[i_][1] || cube.d[i_][1] <= d[i_][0]) return 0;)
 		return 1;
 	}
+	bool line_intersects(point const &p1, point const &p2) const;
+
 	void clamp_pt(point &pt) const {
 		UNROLL_3X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)
 	}

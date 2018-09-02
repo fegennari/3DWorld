@@ -306,6 +306,8 @@ void cube_t::get_points(point pts[8]) const {
 	}
 }
 
+bool cube_t::line_intersects(point const &p1, point const &p2) const {return check_line_clip(p1, p2, d);}
+
 
 // *** CSG_CUBE IMPLEMENTATION ***
 
