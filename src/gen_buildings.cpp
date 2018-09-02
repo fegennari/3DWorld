@@ -612,13 +612,14 @@ public:
 					vector3d normal(n1 + n2); normal.x *= ry; normal.y *= rx; // average the two vertex normals for the flat face normal
 					if (bg.rot_sin != 0.0) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
 					if (view_dir != nullptr && (view_dir->x*normal.x + view_dir->y*normal.y) > 0.0) continue; // back facing
-					if (!smooth_normals) {vert.set_norm(normal.get_norm());}
+					bool const cur_smooth_normals(smooth_normals && (bg.flat_side_amt == 0.0 || S+1 != ndiv)); // flat side of cylindrical building is not smooth
+					if (!cur_smooth_normals) {vert.set_norm(normal.get_norm());}
 
 					for (unsigned d = 0; d < 2; ++d) {
 						vector3d const &n(d ? n2 : n1);
 						vert.t[0] = tscale_x*cur_perim[d]*tscale_mult + tex.txoff; // Note: could try harder to ensure an integer multiple to fix seams, but not a problem in practice
 					
-						if (smooth_normals) {
+						if (cur_smooth_normals) {
 							vector3d normal(n); normal.x *= ry; normal.y *= rx; // scale normal by radius (swapped)
 							if (bg.rot_sin != 0.0) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
 							vert.set_norm(normal.get_norm());
