@@ -2111,7 +2111,13 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	int intersect(0);
 
 	if (world_mode == WMODE_INF_TERRAIN) {
-		intersect = line_intersect_tiled_mesh(pos, (pos + vcf*range), coll_pos);
+		point const pos2(pos + vcf*range);
+		intersect = line_intersect_tiled_mesh(pos, pos2, coll_pos); // check terrain
+		point p_int;
+		
+		if (line_intersect_city(pos, pos2, p_int)) { // check city (buildings and cars)
+			if (!intersect || p2p_dist_sq(pos, p_int) < p2p_dist_sq(pos, coll_pos)) {coll_pos = p_int; intersect = 1;} // keep closest intersection point
+		}
 	}
 	else {
 		intersect = get_range_to_mesh(pos, vcf, coll_pos);
