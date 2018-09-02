@@ -592,6 +592,7 @@ namespace stoplight_ns {
 			}
 			cur_state_ticks = 0.0; // reset for this state
 		}
+		bool any_blocked() const {return (blocked[0] || blocked[1] || blocked[2] || blocked[3]);}
 		bool is_any_car_waiting_at_this_state() const {
 			if (num_conn == 2) return 0; // 2-way intersection, no cross traffic
 			return ((left_orient_masks[cur_state] & car_waiting_left) || (st_r_orient_masks[cur_state] & car_waiting_sr));
@@ -601,6 +602,7 @@ namespace stoplight_ns {
 
 			while (1) {
 				advance_state();
+				if (any_blocked()) break; // if some car is blocking the intersection in some dir, force all states (no skipped lights) to guarantee we can make progress
 				if (is_any_car_waiting_at_this_state()) break; // car is waiting at this state
 				if (cur_state == prev_state) {advance_state(); break;} // wrapped around, leave at the next valid state after the prev state
 			}
