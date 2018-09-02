@@ -2502,6 +2502,9 @@ class city_road_gen_t {
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius)) return 1;
 			return 0;
 		}
+		bool line_intersect(point const &p1, point const &p2, float &t) const {
+			return 0; // TODO: bridges and tunnels
+		}
 		bool check_mesh_disable(point const &pos, float radius) const {
 			if (tunnels.empty()) return 0;
 			point const query_pos(pos - get_camera_coord_space_xlate());
@@ -3132,10 +3135,14 @@ public:
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			if (r->proc_sphere_coll(pos, p_last, radius, prev_frame_zval)) return 1;
 		}
-		return global_rn.proc_sphere_coll(pos, p_last, radius, prev_frame_zval); // needed for bridges
+		return global_rn.proc_sphere_coll(pos, p_last, radius, prev_frame_zval); // needed for bridges and tunnels
+	}
+	bool line_intersect(point const &p1, point const &p2, float &t) const {
+		// TODO: streetlights and stoplights?
+		return global_rn.line_intersect(p1, p2, t); // bridges and tunnels
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const {
-		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, but may need to add lights for bridges
+		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, but may need to add lights for bridges and tunnels
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->add_city_lights(xlate, lights_bcube);}
 	}
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) { // non-const because qbd is modified
@@ -3624,6 +3631,21 @@ public:
 		} // for cb
 		return nullptr; // no car found
 	}
+	bool line_intersect_cars(point const &p1, point const &p2, float &t) const { // Note: p1/p2 in local TT space
+		bool found(0);
+
+		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+			if (!road_gen.get_city_bcube(cb->cur_city).line_intersects(p1, p2)) continue; // skip
+			unsigned start(cb->start), end((cb+1)->start);
+			assert(start <= end && end <= cars.size());
+
+			for (unsigned c = start; c != end; ++c) { // Note: includes parked cars
+				float tmin(0.0), tmax(1.0);
+				if (get_line_clip(p1, p2, cars[c].bcube.d, tmin, tmax) && tmin < t) {t = tmin; found = 1;}
+			}
+		} // for cb
+		return found;
+	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars"); // 4K cars = 0.7ms
@@ -3813,6 +3835,10 @@ public:
 		//return car_manager.proc_sphere_coll(pos, p_last, radius); // Note: doesn't really work well, disabled
 		return 0;
 	}
+	bool line_intersect(point const &p1, point const &p2, float &t) const {
+		vector3d const xlate(get_camera_coord_space_xlate()), p1x(p1 - xlate), p2x(p2 - xlate);
+		return (road_gen.line_intersect(p1x, p2x, t) || car_manager.line_intersect_cars(p1x, p2x, t));
+	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
 
 	bool get_color_at_xy(float x, float y, colorRGBA &color) const {
@@ -3893,6 +3919,16 @@ bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
 	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval); // Note: no xy_only for cities
+}
+bool line_intersect_city(point const &p1, point const &p2, float &t) {
+	unsigned hit_bix(0); // unused
+	return (check_buildings_line_coll(p1, p2, t, hit_bix, 0) || city_gen.line_intersect(p1, p2, t)); // apply_tt_xlate=0
+}
+bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
+	float t(1.0);
+	if (!line_intersect_city(p1, p2, t)) return 0;
+	p_int = p1 + t*(p2 - p1);
+	return 1;
 }
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
