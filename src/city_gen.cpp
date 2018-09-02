@@ -458,8 +458,11 @@ struct car_t {
 
 	bool front_intersects_car(car_t const &c) const {
 		point car_front(get_center());
-		car_front[dim] += (dir ? 0.5 : -0.5)*get_length();
-		return c.bcube.contains_pt(car_front);
+		float const val((dir ? 0.5 : -0.5)*get_length()); // half length
+		car_front[dim] += val;
+		if (c.bcube.contains_pt(car_front)) return 1; // check front-middle
+		car_front[dim] += val;
+		return c.bcube.contains_pt(car_front); // check very front
 	}
 	void honk_horn_if_close() const {
 		point const pos(get_center());
@@ -3206,7 +3209,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	if (c.dim != dim) { // turning in an intersection, etc.
 		car_t *to_stop(nullptr);
 		if (c.front_intersects_car(*this)) {to_stop = &c;}
-		else if (front_intersects_car(c)) {to_stop = this;}
+		else if (front_intersects_car(c))  {to_stop = this;}
 		if (!to_stop) return 0;
 		to_stop->decelerate_fast(); // attempt to prevent one car from T-boning the other
 		to_stop->bcube = to_stop->prev_bcube;
