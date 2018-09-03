@@ -442,7 +442,7 @@ struct car_t {
 	string label_str() const {
 		std::ostringstream oss;
 		oss << TXTn(dim) << TXTn(dir) << TXTn(cur_city) << TXTn(cur_road) << TXTn(cur_seg) << TXTn(dz) << TXTn(turn_val) << TXTn(max_speed) << TXTn(cur_speed)
-			<< "cur_road_type=" << unsigned(cur_road_type) << "\n" << TXTn(stopped_at_light) << TXTn(dest_city) << TXTn(dest_isec);
+			<< "cur_road_type=" << unsigned(cur_road_type) << "\n" << TXTn(stopped_at_light) << TXTn(in_isect()) << TXTn(dest_city) << TXTn(dest_isec);
 		return oss.str();
 	}
 	void move(float speed_mult) {
