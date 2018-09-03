@@ -2959,6 +2959,11 @@ public:
 		assert(city_ix < road_networks.size());
 		return road_networks[city_ix].get_bcube();
 	}
+	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
+		cube_t bcube(get_city_bcube(city_ix));
+		bcube.expand_by_xy(city_params.get_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
+		return bcube;
+	}
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region, road_networks.size()));
@@ -3591,7 +3596,7 @@ public:
 		float const dist(p2p_dist(pos, p_last));
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!sphere_cube_intersect_xy(pos, (radius + dist), (road_gen.get_city_bcube(cb->cur_city) + xlate))) continue;
+			if (!sphere_cube_intersect_xy(pos, (radius + dist), (road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate))) continue;
 			unsigned const end((cb+1)->start);
 			assert(end <= cars.size());
 
@@ -3606,7 +3611,7 @@ public:
 		if (int_ret != INT_ROAD && int_ret != INT_PARKING) return 0; // not a road or a parking lot - no car intersections
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!road_gen.get_city_bcube(cb->cur_city).contains_pt_xy(pos)) continue; // skip
+			if (!road_gen.get_city_bcube_for_cars(cb->cur_city).contains_pt_xy(pos)) continue; // skip
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(end <= cars.size());
 			if      (int_ret == INT_ROAD)    {end   = cb->first_parked;} // moving cars only (beginning of range)
@@ -3621,7 +3626,7 @@ public:
 	}
 	car_t const *get_car_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!road_gen.get_city_bcube(cb->cur_city).line_intersects(p1, p2)) continue; // skip
+			if (!road_gen.get_city_bcube_for_cars(cb->cur_city).line_intersects(p1, p2)) continue; // skip
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(start <= end && end <= cars.size());
 
@@ -3635,7 +3640,7 @@ public:
 		bool found(0);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!road_gen.get_city_bcube(cb->cur_city).line_intersects(p1, p2)) continue; // skip
+			if (!road_gen.get_city_bcube_for_cars(cb->cur_city).line_intersects(p1, p2)) continue; // skip
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(start <= end && end <= cars.size());
 
@@ -3709,7 +3714,7 @@ public:
 			dstate.pre_draw(xlate, use_dlights, shadow_only);
 
 			for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-				if (!camera_pdu.cube_visible(road_gen.get_city_bcube(cb->cur_city) + xlate)) continue; // city not visible - skip
+				if (!camera_pdu.cube_visible(road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate)) continue; // city not visible - skip
 				unsigned const end((cb+1)->start);
 				assert(end <= cars.size());
 				
