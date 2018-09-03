@@ -477,6 +477,10 @@ struct car_t {
 	void honk_horn_if_close_and_fast() const {
 		if (cur_speed > 0.25*max_speed) {honk_horn_if_close();}
 	}
+	void on_alternate_turn_dir(rand_gen_t &rgen) {
+		honk_horn_if_close();
+		if ((rgen.rand()&3) == 0) {dest_valid = 0;} // 25% chance of choosing a new destination rather than driving in circles; will be in current city
+	}
 };
 
 struct comp_car_road_then_pos {
@@ -2692,12 +2696,12 @@ class city_road_gen_t {
 							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
 							if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
 							else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
-							car.honk_horn_if_close();
+							car.on_alternate_turn_dir(rgen);
 						}
 						/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
 							if (isec.is_orient_currently_valid(conn_right[2*car.dim + (!car.dir)], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
 								car.turn_dir = TURN_RIGHT; // go right instead
-								car.honk_horn_if_close();
+								car.on_alternate_turn_dir(rgen);
 							}
 						}*/
 					}
