@@ -2677,6 +2677,7 @@ class city_road_gen_t {
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
+			if (car.in_isect()) {get_car_isec(car).notify_waiting_car(car);} // even if not stopped
 			unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
@@ -2686,7 +2687,7 @@ class city_road_gen_t {
 					road_isec_t const &isec(get_car_isec(car));
 
 					// helps with gridlock at connector roads
-					if (car.turn_val == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
+					if (car.rot_z == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
 						if (car.turn_dir == TURN_LEFT) { // turning left at intersection
 							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
 							if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
@@ -2700,7 +2701,6 @@ class city_road_gen_t {
 							}
 						}*/
 					}
-					isec.notify_waiting_car(car);
 					car.decelerate_fast();
 				}
 				if (was_stopped) return; // no update needed
