@@ -1616,6 +1616,9 @@ void timing_profiler_stats();
 #define PRINT_TIME_ONSCREEN(str) {std::ostringstream oss; oss << str << " time = " << GET_DELTA_TIME; print_debug_text(oss);}
 #define TXT(x) #x"=" << x << " "
 #define TXTn(x) #x"=" << x << "\n"
+// these two are intended to be used with char/unsigned char where we want to print them as integers rather than characters
+#define TXTi(x) #x"=" << (int)x << " "
+#define TXTin(x) #x"=" << (int)x << "\n"
 
 #if 0 // still only ms accuracy in windows
 #include <time.h>

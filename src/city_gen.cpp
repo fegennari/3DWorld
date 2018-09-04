@@ -437,14 +437,14 @@ struct car_t {
 	string str() const {
 		std::ostringstream oss;
 		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << TXT(max_speed) << TXT(cur_speed)
-			<< "cur_road_type=" << unsigned(cur_road_type) << " color=" << unsigned(color_id) << " bcube=" << bcube.str();
+			<< TXTi(cur_road_type) << TXTi(color_id) << " bcube=" << bcube.str();
 		return oss.str();
 	}
 	string label_str() const {
 		std::ostringstream oss;
 		oss << TXTn(dim) << TXTn(dir) << TXTn(cur_city) << TXTn(cur_road) << TXTn(cur_seg) << TXTn(dz) << TXTn(turn_val) << TXTn(max_speed) << TXTn(cur_speed)
-			<< "cur_road_type=" << unsigned(cur_road_type) << "\n" << TXTn(stopped_at_light) << TXTn(in_isect()) << TXTn(dest_city) << TXTn(dest_isec);// << TXTn((int)color_id);
-		//if (car_in_front != nullptr) {oss << TXTn((int)car_in_front->color_id);}
+			<< TXTin(cur_road_type) << TXTn(stopped_at_light) << TXTn(in_isect()) << TXTn(dest_city) << TXTn(dest_isec);// << TXTn((int)color_id);
+		//if (car_in_front != nullptr) {oss << TXTin(car_in_front->color_id);}
 		return oss.str();
 	}
 	void move(float speed_mult) {
@@ -591,6 +591,12 @@ namespace stoplight_ns {
 		mutable uint8_t car_waiting_sr, car_waiting_left;
 		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits
 
+		string str() const {
+			std::ostringstream oss;
+			oss << TXTi(num_conn) << TXTi(conn) << TXTi(cur_state) << TXT(at_conn_road) << TXT(cur_state_ticks) << TXTi(car_waiting_sr) << TXTi(car_waiting_left)
+				<< "blocked: " << blocked[0] << blocked[1] << blocked[2] << blocked[3];
+			return oss.str();
+		}
 		void next_state() {
 			++cur_state;
 			if (cur_state == NUM_STATE) {cur_state = 0;} // wraparound
