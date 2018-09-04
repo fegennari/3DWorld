@@ -2693,6 +2693,18 @@ class city_road_gen_t {
 			if (car.in_isect()) {get_car_isec(car).notify_waiting_car(car);} // even if not stopped
 			unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
+			// check if there's a car in front of us on the same or adjacent road segment/isect of the same road in the same city
+			if (car.car_in_front != nullptr && car.car_in_front->cur_city == car.cur_city && car.car_in_front->cur_road == car.cur_road) {
+				if (!car.in_isect() && car.car_in_front->in_isect() && car.car_in_front->is_stopped()) { // car in front stopped in isect, we haven't entered yet
+					road_isec_t const &isec(get_car_isec(*car.car_in_front));
+					
+					if (isec.contains_pt_xy(car.get_front(0.375))) { // we're about to enter the intersection
+						car.stopped_at_light = 1;
+						car.decelerate_fast();
+						return; // stop and wait for other car to go
+					}
+				}
+			}
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
 				if (!car.in_isect() || get_car_isec(car).can_go_now(car)) {car.stopped_at_light = 0;} // can go now
