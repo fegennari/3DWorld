@@ -838,7 +838,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		int const wcoll(check_water_collision(vz_old));
 		vector3d cnorm;
 		bool const last_stat_coll((flags & STATIC_COBJ_COLL) != 0);
-		int coll(ground_mode && check_vert_collision(obj_index, 1, iter, &cnorm));
+		int coll(check_vert_collision(obj_index, 1, iter, &cnorm));
 		if (disabled()) return;
 
 		if (!ground_mode) { // tiled terrain
@@ -914,7 +914,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 				}
 			}
 			if (status != 4) {
-				if (ground_mode) {check_vert_collision(obj_index, 0, iter);} // one last time before the object is "stopped"???
+				check_vert_collision(obj_index, 0, iter); // one last time before the object is "stopped"???
 				velocity = zero_vector;
 				if (!disabled()) {status = 4;}
 			}

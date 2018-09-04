@@ -3868,10 +3868,10 @@ public:
 		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
 		return road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels);
 	}
-	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
+	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars) const {
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval)) return 1;
-		//return car_manager.proc_sphere_coll(pos, p_last, radius); // Note: doesn't really work well, disabled
-		return 0;
+		if (!inc_cars) return 0;
+		return car_manager.proc_sphere_coll(pos, p_last, radius); // Note: doesn't really work well, at least for player collisions
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		vector3d const xlate(get_camera_coord_space_xlate()), p1x(p1 - xlate), p2x(p2 - xlate);
@@ -3954,9 +3954,9 @@ bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
 	return city_gen.check_city_sphere_coll(center, radius, 1, exclude_bridges_and_tunnels);
 }
-bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only) {
+bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
-	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval); // Note: no xy_only for cities
+	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars); // Note: no xy_only for cities
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t) {
 	unsigned hit_bix(0); // unused

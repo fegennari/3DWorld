@@ -1614,6 +1614,11 @@ int vert_coll_detector::check_coll() {
 int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm,
 	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj, bool skip_movable)
 {
+	if (world_mode == WMODE_INF_TERRAIN) {
+		point const p_last(pos - velocity*fticks);
+		proc_city_sphere_coll(pos, p_last, get_true_radius(), p_last.z, 0, 1); // xy_only=0, inc_cars=1
+		return 0;
+	}
 	if (world_mode != WMODE_GROUND) return 0;
 	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj, skip_movable);
 	return vcd.check_coll();
