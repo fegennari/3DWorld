@@ -414,10 +414,11 @@ struct car_t {
 	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
 	unsigned short cur_city, cur_road, cur_seg, dest_city, dest_isec;
 	float height, dz, rot_z, turn_val, cur_speed, max_speed;
+	car_t const *car_in_front;
 
 	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), cur_road_type(0), color_id(0),
 		turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
-		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0) {}
+		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
@@ -442,7 +443,8 @@ struct car_t {
 	string label_str() const {
 		std::ostringstream oss;
 		oss << TXTn(dim) << TXTn(dir) << TXTn(cur_city) << TXTn(cur_road) << TXTn(cur_seg) << TXTn(dz) << TXTn(turn_val) << TXTn(max_speed) << TXTn(cur_speed)
-			<< "cur_road_type=" << unsigned(cur_road_type) << "\n" << TXTn(stopped_at_light) << TXTn(in_isect()) << TXTn(dest_city) << TXTn(dest_isec);
+			<< "cur_road_type=" << unsigned(cur_road_type) << "\n" << TXTn(stopped_at_light) << TXTn(in_isect()) << TXTn(dest_city) << TXTn(dest_isec);// << TXTn((int)color_id);
+		//if (car_in_front != nullptr) {oss << TXTn((int)car_in_front->color_id);}
 		return oss.str();
 	}
 	void move(float speed_mult) {
@@ -480,6 +482,13 @@ struct car_t {
 	void on_alternate_turn_dir(rand_gen_t &rgen) {
 		honk_horn_if_close();
 		if ((rgen.rand()&3) == 0) {dest_valid = 0;} // 25% chance of choosing a new destination rather than driving in circles; will be in current city
+	}
+	void register_adj_car(car_t &c) {
+		if (car_in_front != nullptr) return; // already found the car in front
+		cube_t cube(bcube);
+		cube.d[dim][!dir] = cube.d[dim][dir];
+		cube.d[dim][dir] += (dir ? 1.0 : -1.0)*get_length(); // extend one car length in front
+		if (cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
 	}
 };
 
@@ -3667,6 +3676,7 @@ public:
 		
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
 			unsigned const cix(i - cars.begin());
+			i->car_in_front = nullptr; // reset for this frame
 
 			if (car_blocks.empty() || i->cur_city != car_blocks.back().cur_city) {
 				if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cix;}
@@ -3692,6 +3702,8 @@ public:
 				if (i->cur_city != j->cur_city || i->cur_road != j->cur_road) break; // different cities or roads
 				if (!on_conn_road && i->cur_road_type == j->cur_road_type && abs((int)i->cur_seg - (int)j->cur_seg) > (on_conn_road ? 1 : 0)) break; // diff road segs or diff isects
 				i->check_collision(*j, road_gen);
+				i->register_adj_car(*j);
+				j->register_adj_car(*i);
 			}
 			if (on_conn_road) { // on connector road, check before entering intersection to a city
 				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
