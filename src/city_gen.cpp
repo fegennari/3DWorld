@@ -406,6 +406,13 @@ public:
 	}
 }; // draw_state_t
 
+
+void show_label_text(string const &str, point const &pos) {
+	text_drawer_t text_drawer;
+	text_drawer.strs.push_back(text_string_t(str, pos, 20.0, CYAN));
+	text_drawer.draw();
+}
+
 class city_road_gen_t;
 
 struct car_t {
@@ -591,12 +598,6 @@ namespace stoplight_ns {
 		mutable uint8_t car_waiting_sr, car_waiting_left;
 		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits
 
-		string str() const {
-			std::ostringstream oss;
-			oss << TXTi(num_conn) << TXTi(conn) << TXTi(cur_state) << TXT(at_conn_road) << TXT(cur_state_ticks) << TXTi(car_waiting_sr) << TXTi(car_waiting_left)
-				<< "blocked: " << blocked[0] << blocked[1] << blocked[2] << blocked[3];
-			return oss.str();
-		}
 		void next_state() {
 			++cur_state;
 			if (cur_state == NUM_STATE) {cur_state = 0;} // wraparound
@@ -701,6 +702,18 @@ namespace stoplight_ns {
 			if (!red_light( car.dim, (other_lane[orient] & 1), TURN_LEFT)) return 0; // opposing traffic has a green or yellow light for turning left
 			// Note: there are no U-turns, so we don't need to worry about 
 			return 1; // can turn right on red to_left[orient]
+		}
+		string str() const {
+			std::ostringstream oss;
+			oss << TXTi(num_conn) << TXTi(conn) << TXTi(cur_state) << TXT(at_conn_road) << TXT(cur_state_ticks) << TXTi(car_waiting_sr) << TXTi(car_waiting_left)
+				<< "blocked: " << blocked[0] << blocked[1] << blocked[2] << blocked[3];
+			return oss.str();
+		}
+		string label_str() const {
+			std::ostringstream oss;
+			oss << TXTi(num_conn) << TXTin(conn) << TXTi(cur_state) << TXTn(cur_state_ticks) << TXTn(at_conn_road) << TXTi(car_waiting_sr) << TXTin(car_waiting_left)
+				<< "blocked: " << blocked[0] << blocked[1] << blocked[2] << blocked[3];
+			return oss.str();
 		}
 		colorRGBA get_stoplight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
 	};
@@ -841,6 +854,11 @@ struct road_isec_t : public cube_t {
 				c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
 				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
 				dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is back so it's all black anyway
+
+				/*if (!shadow_only && tt_fire_button_down && !game_mode) {
+					point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
+					if (c.line_intersects(p1, p2)) {show_label_text(stoplight.label_str(), (c.get_cube_center() + dstate.xlate));}
+				}*/
 			}
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
@@ -3760,19 +3778,12 @@ public:
 			fgPopMatrix();
 			
 			if (tt_fire_button_down && !game_mode) {
-				point const camera(get_camera_pos());
-				show_car_stats_at(camera, (camera + cview_dir*FAR_CLIP));
+				point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
+				car_t const *car(get_car_at(p1, p2));
+				if (car != nullptr) {show_label_text(car->label_str(), (car->get_center() + xlate));} // car found
 			}
 		}
 		if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
-	}
-	void show_car_stats_at(point const &p1, point const &p2) const {
-		vector3d const xlate(get_camera_coord_space_xlate());
-		car_t const *car(get_car_at(p1-xlate, p2-xlate));
-		if (car == nullptr) return; // no car found
-		text_drawer_t text_drawer;
-		text_drawer.strs.push_back(text_string_t(car->label_str(), (car->get_center() + xlate), 20.0, CYAN));
-		text_drawer.draw();
 	}
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context();}
