@@ -248,6 +248,12 @@ bool is_night(float adj) {return (light_factor - adj < 0.5);} // for car headlig
 float rand_hash(float to_hash) {return fract(12345.6789*to_hash);}
 float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1.0);}
 
+bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c) {
+	float tmin(0.0), tmax(1.0);
+	if (get_line_clip(p1, p2, c.d, tmin, tmax) && tmin < t) {t = tmin; return 1;}
+	return 0;
+}
+
 class road_mat_mgr_t {
 
 	bool inited;
@@ -722,6 +728,7 @@ namespace stoplight_ns {
 		}
 		colorRGBA get_stoplight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
 	};
+	static float stoplight_max_height() {return 9.2*(0.03*city_params.road_width);} // 2.0*h + 1.2*h*num_segs
 } // end stoplight_ns
 
 struct road_isec_t : public cube_t {
@@ -792,25 +799,41 @@ struct road_isec_t : public cube_t {
 		}
 		return 0;
 	}
+	cube_t get_stoplight_cube(unsigned n) const { // Note: mostly duplicated with draw_stoplights(), but difficult to factor the code out and share it
+		assert(conn & (1<<n));
+		float const sz(0.03*city_params.road_width), h(1.0*sz);
+		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
+		float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
+		float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
+		unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
+		float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
+		cube_t c;
+		c.z1() = z1(); c.z2() = sl_top;
+		c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
+		c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
+		return c;
+	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist) const {
 		if (num_conn == 2) return 0; // no stoplights
 		if (!sphere_cube_intersect_xy(pos, (radius + dist), (*this + xlate))) return 0;
-		float const sz(0.03*city_params.road_width), h(1.0*sz);
 		
-		for (unsigned n = 0; n < 4; ++n) { // Note: mostly duplicated with draw_stoplights(), but difficult to factor the code out and share it
+		for (unsigned n = 0; n < 4; ++n) {
 			if (!(conn & (1<<n))) continue; // no road in this dir
-			bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-			float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
-			float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
-			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
-			float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
-			cube_t c;
-			c.z1() = z1(); c.z2() = sl_top;
-			c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
-			c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-			if (sphere_cube_int_update_pos(pos, radius, (c + xlate), p_last)) return 1; // there typically won't be more than one collision, just return the first one
-		} // for n
+			if (sphere_cube_int_update_pos(pos, radius, (get_stoplight_cube(n) + xlate), p_last)) return 1; // typically won't be more than one collision, just return the first one
+		}
 		return 0;
+	}
+	bool line_intersect(point const &p1, point const &p2, float &t) const {
+		if (num_conn == 2) return 0; // no stoplights
+		cube_t c(*this); // deep copy
+		c.z2() += stoplight_ns::stoplight_max_height();
+		if (!c.line_intersects(p1, p2)) return 0;
+		bool ret(0);
+
+		for (unsigned n = 0; n < 4; ++n) {
+			if (conn & (1<<n)) {ret |= check_line_clip_update_t(p1, p2, t, get_stoplight_cube(n));}
+		}
+		return ret;
 	}
 	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const {
 		for (unsigned j = 0; j < 3; ++j) {
@@ -1002,6 +1025,9 @@ struct streetlights_t {
 			if (i->proc_sphere_coll(pos, radius, xlate)) return 1;
 		}
 		return 0;
+	}
+	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const {
+		return 0; // TODO
 	}
 };
 
@@ -2544,8 +2570,20 @@ class city_road_gen_t {
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius)) return 1;
 			return 0;
 		}
-		bool line_intersect(point const &p1, point const &p2, float &t) const {
-			return 0; // TODO: bridges and tunnels
+		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: xlate has already been applied
+			cube_t c(bcube); // deep copy
+			c.z2() += stoplight_ns::stoplight_max_height();
+			if (!c.line_intersects(p1, p2)) return 0;
+			bool ret(0);
+
+			for (unsigned n = 1; n < 3; ++n) { // intersections (3-way, 4-way)
+				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
+			}
+			//for (auto i = bridges.begin(); i != bridges.end(); ++i) {} // TODO
+			//for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {} // TODO
+			ret |= line_intersect_streetlights(p1, p2, t);
+			// TODO: city_obj_placer
+			return ret;
 		}
 		bool check_mesh_disable(point const &pos, float radius) const {
 			if (tunnels.empty()) return 0;
@@ -3196,8 +3234,10 @@ public:
 		return global_rn.proc_sphere_coll(pos, p_last, radius, prev_frame_zval); // needed for bridges and tunnels
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
-		// TODO: streetlights and stoplights?
-		return global_rn.line_intersect(p1, p2, t); // bridges and tunnels
+		bool ret(0);
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {ret |= r->line_intersect(p1, p2, t);}
+		ret |= global_rn.line_intersect(p1, p2, t); // bridges and tunnels
+		return ret;
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, but may need to add lights for bridges and tunnels
@@ -3691,7 +3731,7 @@ public:
 		return nullptr; // no car found
 	}
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const { // Note: p1/p2 in local TT space
-		bool found(0);
+		bool ret(0);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			if (!road_gen.get_city_bcube_for_cars(cb->cur_city).line_intersects(p1, p2)) continue; // skip
@@ -3699,11 +3739,10 @@ public:
 			assert(start <= end && end <= cars.size());
 
 			for (unsigned c = start; c != end; ++c) { // Note: includes parked cars
-				float tmin(0.0), tmax(1.0);
-				if (get_line_clip(p1, p2, cars[c].bcube.d, tmin, tmax) && tmin < t) {t = tmin; found = 1;}
+				ret |= check_line_clip_update_t(p1, p2, t, cars[c].bcube);
 			}
 		} // for cb
-		return found;
+		return ret;
 	}
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
@@ -3893,7 +3932,9 @@ public:
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		vector3d const xlate(get_camera_coord_space_xlate()), p1x(p1 - xlate), p2x(p2 - xlate);
-		return (road_gen.line_intersect(p1x, p2x, t) || car_manager.line_intersect_cars(p1x, p2x, t));
+		bool ret(road_gen.line_intersect(p1x, p2x, t));
+		ret |= car_manager.line_intersect_cars(p1x, p2x, t);
+		return ret;
 	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
 
