@@ -306,6 +306,8 @@ struct draw_state_t {
 protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
+	string label_str;
+	point label_pos;
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
 	virtual void draw_unshadowed() {}
@@ -404,14 +406,17 @@ public:
 		light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, colorRGBA(color, dp*alpha)), radius));
 		return 1;
 	}
+	void set_label_text(string const &str, point const &pos) {label_str = str; label_pos = pos;}
+
+	void show_label_text() {
+		if (label_str.empty()) return;
+		text_drawer_t text_drawer;
+		text_drawer.strs.push_back(text_string_t(label_str, label_pos, 20.0, CYAN));
+		text_drawer.draw();
+		label_str.clear(); // drawn, clear for next frame
+	}
 }; // draw_state_t
 
-
-void show_label_text(string const &str, point const &pos) {
-	text_drawer_t text_drawer;
-	text_drawer.strs.push_back(text_string_t(str, pos, 20.0, CYAN));
-	text_drawer.draw();
-}
 
 class city_road_gen_t;
 
@@ -449,8 +454,8 @@ struct car_t {
 	}
 	string label_str() const {
 		std::ostringstream oss;
-		oss << TXTn(dim) << TXTn(dir) << TXTn(cur_city) << TXTn(cur_road) << TXTn(cur_seg) << TXTn(dz) << TXTn(turn_val) << TXTn(max_speed) << TXTn(cur_speed)
-			<< TXTin(cur_road_type) << TXTn(stopped_at_light) << TXTn(in_isect()) << TXTn(dest_city) << TXTn(dest_isec);// << TXTn((int)color_id);
+		oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
+			<< TXTin(cur_road_type) << TXTn(stopped_at_light) << TXTn(in_isect()) << TXT(dest_city) << TXTn(dest_isec);// << TXTn((int)color_id);
 		//if (car_in_front != nullptr) {oss << TXTin(car_in_front->color_id);}
 		return oss.str();
 	}
@@ -855,10 +860,10 @@ struct road_isec_t : public cube_t {
 				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
 				dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is back so it's all black anyway
 
-				/*if (!shadow_only && tt_fire_button_down && !game_mode) {
+				if (!shadow_only && tt_fire_button_down && !game_mode) {
 					point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
-					if (c.line_intersects(p1, p2)) {show_label_text(stoplight.label_str(), (c.get_cube_center() + dstate.xlate));}
-				}*/
+					if (c.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (c.get_cube_center() + dstate.xlate));}
+				}
 			}
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
@@ -3215,6 +3220,7 @@ public:
 		}
 		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
+	void draw_label() {dstate.show_label_text();}
 
 	// cars
 	void next_frame() {
@@ -3780,10 +3786,11 @@ public:
 			if (tt_fire_button_down && !game_mode) {
 				point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
 				car_t const *car(get_car_at(p1, p2));
-				if (car != nullptr) {show_label_text(car->label_str(), (car->get_center() + xlate));} // car found
+				if (car != nullptr) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found
 			}
 		}
 		if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
+		dstate.show_label_text();
 	}
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context();}
@@ -3905,6 +3912,7 @@ public:
 		bool const use_dlights(enable_lights());
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only);
+		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void setup_city_lights(vector3d const &xlate) {
