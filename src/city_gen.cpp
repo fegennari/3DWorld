@@ -448,6 +448,7 @@ struct car_t {
 	bool is_parked  () const {return (max_speed == 0.0);}
 	bool in_isect   () const {return is_isect(cur_road_type);}
 	bool headlights_on() const {return(!is_parked() && (in_tunnel || is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed))));} // no headlights when parked
+	unsigned get_isec_type() const {assert(in_isect()); return (cur_road_type - TYPE_ISEC2);}
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
@@ -760,7 +761,7 @@ struct road_isec_t : public cube_t {
 		}
 		return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
 	}
-	void make_4way() {num_conn = 4; conn = 15;}
+	void make_4way(unsigned conn_to_city_) {num_conn = 4; conn = 15; assert(conn_to_city < 0);conn_to_city = conn_to_city_;}
 	void next_frame() {stoplight.next_frame();}
 	void notify_waiting_car(car_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0);}
@@ -2121,7 +2122,7 @@ class city_road_gen_t {
 			if (num_x > 2 && num_y > 2) {
 				isecs[0].reserve(4); // 2-way, always exactly 4 at each corner
 				isecs[1].reserve(2*((num_x-2) + (num_y-2)) + 4); // 3-way, allocate one extra per side for connectors
-				isecs[2].reserve((num_x-2)*(num_y-2)); // 4-way
+				isecs[2].reserve((num_x-2)*(num_y-2) + 4); // 4-way, allocate one extra per side for connectors
 			}
 			for (unsigned x = 0; x < num_x; ++x) {
 				for (unsigned y = num_x; y < num_r; ++y) {
@@ -2210,16 +2211,10 @@ class city_road_gen_t {
 			} // for i
 			return -1; // not found
 		}
-		int find_conn_intersection(cube_t const &c, bool dim, bool dir, unsigned num_conn) const {
-			assert(num_conn == 2 || num_conn == 3); // 2 or 3 way intersections; 4 way can't have more connections
-			vector<road_isec_t> const &v(isecs[num_conn-2]);
-			for (unsigned i = 0; i < v.size(); ++i) {if (c.intersects_xy(v[i])) return i;}
-			return -1; // not found
-		}
-		void make_4way_int(unsigned int3_ix) { // turn a 3-way intersection into a 4-way intersection for a connector road (unused)
+		void make_4way_int(unsigned int3_ix, unsigned conn_to_city) { // turn a 3-way intersection into a 4-way intersection for a connector road (unused)
 			assert(int3_ix < isecs[1].size());
 			road_isec_t &isec(isecs[1][int3_ix]); // bbox doesn't change, only conn changes
-			isec.make_4way(); // all connected
+			isec.make_4way(conn_to_city); // all connected
 			isecs[2].push_back(isec); // add as 4-way intersection
 			isecs[1][int3_ix] = isecs[1].back(); // remove original 3-way intersection
 			isecs[1].pop_back();
@@ -2248,6 +2243,7 @@ class city_road_gen_t {
 			bool const is_global_rn(&global_rn == this);
 			assert(road_to_city.size() == (is_global_rn ? roads.size() : 0));
 			vector<road_ixs_t> by_ix(roads.size()); // maps road_ix to list of seg_ix values
+			vector<unsigned> all_ixs;
 
 			if (is_global_rn) {
 				unsigned num_cities(0);
@@ -2299,19 +2295,26 @@ class city_road_gen_t {
 						if (isec_ix >= 0) {assert(!found); seg.conn_ix[dir] = isec_ix; seg.conn_type[dir] = (TYPE_ISEC2 + n); found = 1;} // found intersection
 					}
 					if (is_global_rn && !found) { // connection to a city
-						seg.conn_type[dir] = TYPE_ISEC3; // always connects to a 3-way intersection within the city
 						assert(seg.road_ix < road_to_city.size());
 						unsigned const city(road_to_city[seg.road_ix].id[dir]);
 						assert(city != CONN_CITY_IX); // internal segments should be connected and not get here
 						assert(city < road_networks.size());
-						road_network_t const &rn(road_networks[city]);
-						vector<unsigned> all_ixs(rn.isecs[1].size());
-						for (unsigned n = 0; n < all_ixs.size(); ++n) {all_ixs[n] = n;} // all sequential index values
-						int const isec_ix(rn.search_for_adj(rn.isecs[1], all_ixs, seg, seg.dim, (dir != 0)));
-						assert(isec_ix >= 0); // must be found
-						seg.conn_ix[dir] = isec_ix;
 						assert(city < city_to_seg.size());
 						city_to_seg[city].push_back(i); // add segment ID
+						road_network_t const &rn(road_networks[city]);
+						bool found2(0);
+
+						for (unsigned n = 1; n < 3; ++n) { // search 3-way and 4-way intersections
+							all_ixs.resize(rn.isecs[n].size());
+							for (unsigned m = 0; m < all_ixs.size(); ++m) {all_ixs[m] = m;} // all sequential index values
+							int const isec_ix(rn.search_for_adj(rn.isecs[n], all_ixs, seg, seg.dim, (dir != 0)));
+							if (isec_ix < 0) continue; // not be found
+							seg.conn_ix  [dir] = isec_ix;
+							seg.conn_type[dir] = TYPE_ISEC2 + n; // always connects to a 3-way or 4-way intersection within the city
+							found2 = 1;
+							break;
+						} // for n
+						assert(found2); // must be found
 						continue;
 					}
 					assert(found);
@@ -2357,7 +2360,7 @@ class city_road_gen_t {
 			ibc.d[!dim][1] = c.d[!dim][1];
 			uint8_t const conns[4] = {7, 11, 13, 14};
 			int const other_rix(encode_neg_ix(grn_rix)); // make negative
-			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true, dest_city_id);
+			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true, dest_city_id); // 3-way
 		}
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<cube_t> &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
 			unsigned dest_city_id1, unsigned dest_city_id2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only=0)
@@ -2559,7 +2562,7 @@ class city_road_gen_t {
 			float const dist(p2p_dist(pos, p_last));
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
 
-			for (unsigned n = 1; n < 3; ++n) { // intersections (3-way, 4-way)
+			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
 					if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist)) return 1;
 				}
@@ -2580,7 +2583,7 @@ class city_road_gen_t {
 			if (!c.line_intersects(p1, p2)) return 0;
 			bool ret(0);
 
-			for (unsigned n = 1; n < 3; ++n) { // intersections (3-way, 4-way)
+			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
 			}
 			//for (auto i = bridges.begin(); i != bridges.end(); ++i) {} // TODO
@@ -2638,7 +2641,7 @@ class city_road_gen_t {
 				if (!is_connector_road) { // connector road has no stoplights to cast shadows
 					for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 						if (!dstate.check_cube_visible(b->bcube, 1.0, shadow_only)) continue; // VFC/too far
-						for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections (3-way, 4-way)
+						for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections with stoplights (3-way, 4-way)
 					}
 				}
 			}
@@ -2723,9 +2726,8 @@ class city_road_gen_t {
 					
 					if (car.in_isect() && city_ix != CONN_CITY_IX) {
 						road_network_t const &rn(road_networks[city_ix]);
-						vector<road_isec_t> const &isecs(rn.isecs[1]);
+						vector<road_isec_t> const &isecs(rn.isecs[car.get_isec_type()]); // must be a 3-way or 4-way intersection
 						car.cur_city = city_ix;
-						assert(car.cur_road_type == TYPE_ISEC3); // must be a 3-way intersection
 						assert(car.cur_seg  < isecs.size());
 						car.cur_road = isecs[car.cur_seg].rix_xy[!car.dim]; // use the road in the other dim, since it must be within the new city
 						assert(car.cur_road < rn.roads.size());
@@ -2992,8 +2994,7 @@ class city_road_gen_t {
 			return segs[car.cur_seg];
 		}
 		road_isec_t const &get_car_isec(car_t const &car) const {
-			assert(car.in_isect());
-			auto const &iv(isecs[car.cur_road_type - TYPE_ISEC2]);
+			auto const &iv(isecs[car.get_isec_type()]);
 			assert(car.cur_seg < iv.size());
 			return iv[car.cur_seg];
 		}
