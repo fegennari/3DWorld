@@ -2017,6 +2017,7 @@ class city_road_gen_t {
 		vector<road_t> segments; // reused temporary
 		set<unsigned> connected_to; // vector?
 		map<uint64_t, unsigned> tile_to_block_map;
+		map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
 		unsigned city_id, cluster_id;
 		//string city_name; // future work
 
@@ -2263,8 +2264,10 @@ class city_road_gen_t {
 			}
 			for (unsigned n = 0; n < 3; ++n) { // {2-way, 3-way, 4-way}
 				for (unsigned i = 0; i < isecs[n].size(); ++i) {
+					road_isec_t const &isec(isecs[n][i]);
+
 					for (unsigned d = 0; d < 2; ++d) { // {x, y}
-						int ix(isecs[n][i].rix_xy[d]);
+						int ix(isec.rix_xy[d]);
 
 						if (ix < 0) { // global connector road
 							ix = decode_neg_ix(ix);
@@ -2277,6 +2280,7 @@ class city_road_gen_t {
 							by_ix[ix].isec_ixs[n][d].push_back(i);
 						}
 					} // for d
+					if (isec.conn_to_city >= 0) {cix_to_isec[isec.conn_to_city] = &isec;}
 				} // for i
 			} // for n
 
@@ -2945,18 +2949,16 @@ class city_road_gen_t {
 			assert(car. cur_city == city_id);
 			assert(car.dest_city == dest_rn.city_id);
 			assert(dest_rn.city_id != city_id); // not ourself
-
 			// Note: here we don't attempt to find shortcuts through other cities as this would be quite complex
-			for (auto i = isecs[1].begin(); i != isecs[1].end(); ++i) { // iterate over all 3-way intersections, looking for the one that connects to car.dest_city
-				if (i->conn_to_city == car.dest_city) {return &(*i);}
-			}
+			auto it(cix_to_isec.find(car.dest_city));
+			if (it != cix_to_isec.end()) {return it->second;} // found
 			return nullptr; // not found, caller can error check
 		}
 	public:
 		bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
 			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size());
 			if (num_tot == 0) return 0; // no isecs to select
-			car.dest_isec  = (unsigned short)(rgen.rand() % num_tot);
+			car.dest_isec = (unsigned short)(rgen.rand() % num_tot);
 			return 1;
 		}
 		bool car_at_dest(car_t const &car) const {
