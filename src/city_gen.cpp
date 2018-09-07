@@ -89,6 +89,7 @@ struct city_params_t {
 
 	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks;
 	float road_width, road_spacing, conn_road_seg_len, max_road_slope;
+	bool make_4_way_ints;
 	// cars
 	unsigned num_cars;
 	float car_speed;
@@ -107,9 +108,9 @@ struct city_params_t {
 	unsigned max_benches_per_plot;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0),
-		slope_width(0), num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), num_cars(0), car_speed(0.0),
-		enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024),
-		max_shadow_maps(0), max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0) {}
+		slope_width(0), num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0),
+		car_speed(0.0), enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0),
+		max_lights(1024), max_shadow_maps(0), max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -162,6 +163,9 @@ struct city_params_t {
 		}
 		else if (str == "max_road_slope") {
 			if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
+		}
+		else if (str == "make_4_way_ints") {
+			if (!read_bool(fp, make_4_way_ints)) {return read_error(str);}
 		}
 		// cars
 		else if (str == "num_cars") {
@@ -735,11 +739,11 @@ namespace stoplight_ns {
 struct road_isec_t : public cube_t {
 	uint8_t num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 	short conn_to_city;
-	short rix_xy[2], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
+	short rix_xy[4], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
 
 	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_, bool at_conn_road, short conn_to_city_=-1) : cube_t(c), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road) {
-		rix_xy[0] = rx; rix_xy[1] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
+		rix_xy[0] = rix_xy[1] = rx; rix_xy[2] = rix_xy[3] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
 		if (conn == 15) {num_conn = 4;} // 4-way
 		else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
 		else if (conn == 5 || conn == 6  || conn == 9  || conn == 10) {num_conn = 2;} // 2-way
@@ -761,10 +765,14 @@ struct road_isec_t : public cube_t {
 		}
 		return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
 	}
-	void make_4way(unsigned conn_to_city_) {num_conn = 4; conn = 15; assert(conn_to_city < 0);conn_to_city = conn_to_city_;}
+	void make_4way(unsigned conn_to_city_) {
+		num_conn = 4; conn = 15;
+		assert(conn_to_city < 0); conn_to_city = conn_to_city_;
+		stoplight.init(num_conn, conn); // re-init with new conn
+	}
 	void next_frame() {stoplight.next_frame();}
 	void notify_waiting_car(car_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
-	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0);}
+	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
 	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
 	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
 	bool yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
@@ -2223,10 +2231,11 @@ class city_road_gen_t {
 			} // for i
 			return -1; // not found
 		}
-		void make_4way_int(unsigned int3_ix, unsigned conn_to_city) { // turn a 3-way intersection into a 4-way intersection for a connector road
+		void make_4way_int(unsigned int3_ix, bool dim, bool dir, unsigned conn_to_city, int road_ix) { // turn a 3-way intersection into a 4-way intersection for a connector road
 			assert(int3_ix < isecs[1].size());
 			road_isec_t &isec(isecs[1][int3_ix]); // bbox doesn't change, only conn changes
 			isec.make_4way(conn_to_city); // all connected
+			isec.rix_xy[2*dim + dir] = road_ix; // Note: should be negative (connector road)
 			isecs[2].push_back(isec); // add as 4-way intersection
 			isecs[1][int3_ix] = isecs[1].back(); // remove original 3-way intersection
 			isecs[1].pop_back();
@@ -2275,17 +2284,20 @@ class city_road_gen_t {
 					road_isec_t const &isec(isecs[n][i]);
 
 					for (unsigned d = 0; d < 2; ++d) { // {x, y}
-						int ix(isec.rix_xy[d]);
+						for (unsigned e = 0; e < 2; ++e) {
+							int ix(isec.rix_xy[2*d + e]);
 
-						if (ix < 0) { // global connector road
-							ix = decode_neg_ix(ix);
-							assert((unsigned)ix < global_rn.roads.size()); // connector road, nothing else to do here?
-						}
-						else {
-							assert((unsigned)ix < roads.size());
-							assert(roads[ix].dim == (d != 0));
-							by_ix[ix].isec_ixs[n][d].push_back(i);
-						}
+							if (ix < 0) { // global connector road
+								ix = decode_neg_ix(ix);
+								assert((unsigned)ix < global_rn.roads.size()); // connector road, nothing else to do here?
+							}
+							else if (e == 1 && ix == isec.rix_xy[2*d]) {} // same local road in both dirs, skip
+							else {
+								assert((unsigned)ix < roads.size());
+								assert(roads[ix].dim == (d != 0));
+								by_ix[ix].isec_ixs[n][d].push_back(i);
+							}
+						} // for e
 					} // for d
 					if (isec.conn_to_city >= 0) {cix_to_isec[isec.conn_to_city] = &isec;}
 				} // for i
@@ -2338,7 +2350,7 @@ class city_road_gen_t {
 					for (unsigned d = 0; d < 4; ++d) { // {-x, +x, -y, +y}
 						if (!(isec.conn & (1<<d))) continue; // no connection in this position
 						unsigned const dim(d>>1), dir(d&1);
-						int const ix(isec.rix_xy[dim]);
+						int const ix(isec.rix_xy[d]);
 
 						if (ix < 0) { // global connector road
 							vector<unsigned> const &seg_ids(global_rn.get_segs_connecting_to_city(city_id));
@@ -2365,7 +2377,7 @@ class city_road_gen_t {
 			if (is_4_way) {
 				int const int3_ix(find_3way_int_at(c, dim, dir));
 				assert(int3_ix >= 0);
-				make_4way_int(int3_ix, dest_city_id);
+				make_4way_int(int3_ix, dim, dir, dest_city_id, encode_neg_ix(grn_rix));
 			}
 			else {
 				int const seg_id(find_conn_int_seg(c, dim, dir));
@@ -2749,7 +2761,7 @@ class city_road_gen_t {
 						vector<road_isec_t> const &isecs(rn.isecs[car.get_isec_type()]); // must be a 3-way or 4-way intersection
 						car.cur_city = city_ix;
 						assert(car.cur_seg  < isecs.size());
-						car.cur_road = isecs[car.cur_seg].rix_xy[!car.dim]; // use the road in the other dim, since it must be within the new city
+						car.cur_road = isecs[car.cur_seg].rix_xy[2*(!car.dim) + 0]; // use the road in the other dim, since it must be within the new city (dir doesn't matter)
 						assert(car.cur_road < rn.roads.size());
 						car.entering_city = 1; // flag so that collision detection works
 					}
@@ -2759,7 +2771,7 @@ class city_road_gen_t {
 			}
 			road_isec_t const &isec(get_car_isec(car)); // conn_ix: {-x, +x, -y, +y}
 			unsigned const orient(car.get_orient());
-			int conn_ix(isec.conn_ix[orient]), rix(isec.rix_xy[car.dim]);
+			int conn_ix(isec.conn_ix[orient]), rix(isec.rix_xy[car.get_orient()]);
 			assert(isec.conn & (1<<orient));
 
 			if (conn_ix < 0) { // city connector road case, use global_rn
@@ -2893,8 +2905,9 @@ class city_road_gen_t {
 					road_isec_t const &isec(get_car_isec(car));
 					
 					if (isec.conn_ix[car.get_orient()] >= 0) {
-						assert(isec.rix_xy[car.dim] >= 0); // not connector road
-						car.cur_road = isec.rix_xy[car.dim]; // switch to using road_ix in new dim
+						short const rix(isec.rix_xy[car.get_orient()]);
+						assert(rix >= 0); // not connector road
+						car.cur_road = rix; // switch to using road_ix in new dim
 					}
 				}
 			}
@@ -3099,7 +3112,6 @@ public:
 		assert(!bcube1.intersects_xy(bcube2));
 		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width), half_width(0.5*road_width);
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
-		bool const make_4_way_ints = 0;
 
 		for (unsigned d = 0; d < 2; ++d) { // try for single segment
 			float const shared_min(max(bcube1.d[d][0], bcube2.d[d][0])), shared_max(min(bcube1.d[d][1], bcube2.d[d][1]));
@@ -3109,7 +3121,7 @@ public:
 				float best_conn_pos(0.0), best_cost(-1.0);
 				bool is_4way1(0), is_4way2(0);
 
-				if (make_4_way_ints) {
+				if (city_params.make_4_way_ints) {
 					for (unsigned r12 = 0; r12 < 2; ++r12) {
 						vector<road_t> const &roads((r12 ? rn2 : rn1).get_roads());
 
@@ -3163,7 +3175,7 @@ public:
 				bool is_4way1(0), is_4way2(0);
 				cube_t best_int_cube;
 
-				if (make_4_way_ints) {
+				if (city_params.make_4_way_ints) {
 					// TODO
 				}
 				for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a single jog
