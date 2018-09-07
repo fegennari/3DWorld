@@ -2932,6 +2932,7 @@ class city_road_gen_t {
 							if (isec.conn_to_city >= 0 && isec.conn_ix[orient] < 0) { // city connector isec
 								if (isec.conn_to_city != car.dest_city) continue; // leads to incorrect city, skip
 								car.turn_dir = tdir; // this is our destination - done
+								best_score = 1; // set to avoid assertion failure below
 								break;
 							}
 							bool const dim2((orient >> 1) != 0), dir2(orient & 1);
