@@ -2815,22 +2815,24 @@ class city_road_gen_t {
 				if (!car.in_isect() || get_car_isec(car).can_go_now(car)) {car.stopped_at_light = 0;} // can go now
 				else if (car.in_isect()) {
 					road_isec_t const &isec(get_car_isec(car));
+					unsigned char const orig_turn_dir(car.turn_dir);
 
 					// helps with gridlock at connector roads
 					if (car.rot_z == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
-						if (car.turn_dir == TURN_LEFT) { // turning left at intersection
-							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
-							if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
-							else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
-							car.on_alternate_turn_dir(rgen);
-						}
-						/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
-							if (isec.is_orient_currently_valid(conn_right[2*car.dim + (!car.dir)], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
-								car.turn_dir = TURN_RIGHT; // go right instead
-								car.on_alternate_turn_dir(rgen);
+						if (!isec.is_global_conn_int()) { // don't do this at global connector road intersections; not safe - need to avoid going to the wrong city
+							if (car.turn_dir == TURN_LEFT) { // turning left at intersection
+								assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
+								if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
+								else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
 							}
-						}*/
+							/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
+								if (isec.is_orient_currently_valid(conn_right[2*car.dim + (!car.dir)], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
+									car.turn_dir = TURN_RIGHT; // go right instead
+								}
+							}*/
+						}
 					}
+					if (car.turn_dir != orig_turn_dir) {car.on_alternate_turn_dir(rgen);}
 					car.decelerate_fast();
 				}
 				if (was_stopped) return; // no update needed
