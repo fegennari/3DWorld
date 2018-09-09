@@ -447,6 +447,7 @@ struct car_t {
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
+	unsigned get_orient_in_isec() const {return (2*dim + (!dir));} // invert dir (incoming, not outgoing)
 	float get_max_speed() const {return ((cur_city == CONN_CITY_IX) ? CONN_ROAD_SPEED_MULT : 1.0)*max_speed;}
 	float get_length() const {return (bcube.d[ dim][1] - bcube.d[ dim][0]);}
 	float get_width () const {return (bcube.d[!dim][1] - bcube.d[!dim][0]);}
@@ -606,6 +607,7 @@ namespace stoplight_ns {
 	unsigned const to_right  [4] = {3, 2, 0, 1}; // {N, S, W, E}
 	unsigned const to_left   [4] = {2, 3, 1, 0}; // {S, N, E, W}
 	unsigned const other_lane[4] = {1, 0, 3, 2}; // {E, W, N, S}
+	unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 	rand_gen_t stoplight_rgen;
 
@@ -2802,7 +2804,6 @@ class city_road_gen_t {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
 			if (car.in_isect()) {get_car_isec(car).notify_waiting_car(car);} // even if not stopped
-			unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
 
 			// check if there's a car in front of us on the same or adjacent road segment/isect of the same road in the same city
 			if (car.car_in_front != nullptr && car.car_in_front->cur_city == car.cur_city && car.car_in_front->cur_road == car.cur_road) {
@@ -2931,12 +2932,12 @@ class city_road_gen_t {
 				
 				if (car.in_isect()) { // moved into an intersection, choose direction
 					road_isec_t const &isec(get_car_rn(car, road_networks, global_rn).get_car_isec(car)); // Note: either == city_id, or just moved from global to a new city
-					unsigned const orient_in(2*car.dim + (!car.dir)); // invert dir (incoming, not outgoing)
+					unsigned const orient_in(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
 					assert(isec.conn & (1<<orient_in)); // car must come from an enabled orient
 					unsigned orients[3]; // {straight, left, right}
 					orients[TURN_NONE ] = car.get_orient(); // straight
-					orients[TURN_LEFT ] = conn_left [orient_in];
-					orients[TURN_RIGHT] = conn_right[orient_in];
+					orients[TURN_LEFT ] = stoplight_ns::conn_left [orient_in];
+					orients[TURN_RIGHT] = stoplight_ns::conn_right[orient_in];
 
 					// TODO: use dest_seg.car_count to estimate traffic and route around
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
