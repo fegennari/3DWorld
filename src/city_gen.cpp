@@ -2029,6 +2029,8 @@ class city_road_gen_t {
 		map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
 		unsigned city_id, cluster_id;
 		//string city_name; // future work
+		float tot_road_len;
+		mutable unsigned num_cars; // Note: not counting parked cars; mutable so that car_manager can update this
 
 		// use only for the global road network
 		struct city_id_pair_t {
@@ -2071,8 +2073,10 @@ class city_road_gen_t {
 			} // for i
 		}
 	public:
-		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0) {} // global road network ctor
-		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0) {bcube.d[2][1] += ROAD_HEIGHT;} // make it nonzero size
+		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), tot_road_len(0.0), num_cars(0) {} // global road network ctor
+		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), tot_road_len(0.0), num_cars(0) {
+			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
+		}
 		cube_t const &get_bcube() const {return bcube;}
 		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
 		unsigned num_roads() const {return roads.size();}
@@ -2083,6 +2087,8 @@ class city_road_gen_t {
 		void register_connected_city(unsigned id) {connected_to.insert(id);}
 		set<unsigned> const &get_connected() const {return connected_to;}
 		bool is_connected_to(unsigned id) const {return (connected_to.find(id) != connected_to.end());}
+		float get_traffic_density() const {return ((tot_road_len == 0.0) ? 0.0 : num_cars/tot_road_len);} // cars per unit road
+		void register_car() const {++num_cars;} // Note: must be const; num_cars is mutable
 
 		void clear() {
 			roads.clear();
@@ -2367,6 +2373,7 @@ class city_road_gen_t {
 					} // for d
 				} // for i
 			} // for n
+			for (auto r = roads.begin(); r != roads.end(); ++r) {tot_road_len += r->get_length();} // calculate tot_road_len
 		}
 		bool check_valid_conn_intersection(cube_t const &c, bool dim, bool dir, bool is_4_way) const {
 			return (is_4_way ? (find_3way_int_at(c, dim, dir) >= 0) : (find_conn_int_seg(c, dim, dir) >= 0));
@@ -3015,6 +3022,8 @@ class city_road_gen_t {
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {i->next_frame();} // update stoplight state
 			}
 			for (auto i = segs.begin(); i != segs.end(); ++i) {i->next_frame();}
+			//cout << TXT(city_id) << TXT(tot_road_len) << TXT(num_cars) << TXT(get_traffic_density()) << endl;
+			num_cars = 0;
 		}
 		static road_network_t const &get_car_rn(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
 			if (car.cur_city == CONN_CITY_IX) return global_rn;
@@ -3347,6 +3356,13 @@ public:
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->next_frame();}
 		global_rn.next_frame(); // not needed since there are no 3/4-way intersections/stoplights?
 	}
+	void register_car_at_city(unsigned city_id) const { // Note: must be const
+		if (city_id == CONN_CITY_IX) {global_rn.register_car();}
+		else {
+			assert(city_id < road_networks.size());
+			road_networks[city_id].register_car();
+		}
+	}
 	bool add_car(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) return 0; // no cities to add cars to
 		unsigned const city(rgen.rand()%road_networks.size());
@@ -3369,8 +3385,19 @@ public:
 			float const new_city_prob(min(0.4f, 0.1f*conn.size())); // 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
 
 			if (rgen.rand_float() < new_city_prob) { // select a different city when there are multiple cities
-				vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
-				car.dest_city = cands[rgen.rand() % cands.size()]; // choose a random connected (adjacent) city
+				if (rgen.rand_bool()) { // choose the connected city with the lowest traffic density
+					float min_td(0.0);
+
+					for (auto c = conn.begin(); c != conn.end(); ++c) {
+						assert(*c < road_networks.size()); // excludes global_rn
+						float const td(road_networks[*c].get_traffic_density());
+						if (min_td == 0.0 || td < min_td) {min_td = td; car.dest_city = *c;}
+					}
+				}
+				else { // choose a randomly selected connected city
+					vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
+					car.dest_city = cands[rgen.rand() % cands.size()]; // choose a random connected (adjacent) city
+				}
 			}
 		}
 		assert(car.dest_city < road_networks.size()); // city must be valid
@@ -3848,6 +3875,7 @@ public:
 			i->move(speed);
 			if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
 			if (!i->stopped_at_light && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
+			road_gen.register_car_at_city(i->cur_city);
 		} // for i
 		if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();}
 		car_blocks.emplace_back(cars.size(), 0); // add terminator
@@ -4024,7 +4052,7 @@ public:
 		return 1;
 	}
 	void next_frame() {
-		road_gen.next_frame(); // update stoplights
+		road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
 		car_manager.next_frame(city_params.car_speed);
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
