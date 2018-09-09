@@ -2448,6 +2448,7 @@ class city_road_gen_t {
 			segments.clear();
 			float tot_dz(0.0);
 			bool last_was_bridge(0), last_was_tunnel(0);
+			vector<flatten_op_t> replay_fops;
 
 			for (unsigned n = 0; n < num_segs; ++n) {
 				rs.d[dim][1] = ((n+1 == num_segs) ? road.d[dim][1] : (rs.d[dim][0] + seg_len)); // make sure it ends exactly at the correct location
@@ -2470,6 +2471,7 @@ class city_road_gen_t {
 				bridge_t bridge(*s);
 				tunnel_t tunnel(*s);
 				tot_dz += hq.flatten_for_road(*s, city_params.road_border, check_only, 0, (last_was_bridge ? nullptr : &bridge), (last_was_tunnel ? nullptr : &tunnel));
+				replay_fops.push_back(hq.last_flatten_op);
 				
 				if (!check_only) {
 					roads.push_back(*s);
@@ -2478,17 +2480,11 @@ class city_road_gen_t {
 					if (tunnel.enabled()) {tunnels.push_back(tunnel);}
 				}
 				last_was_bridge = bridge.make_bridge; // Note: conservative; used to prevent two consecutive bridges with no (or not enough) mesh in between
-				last_was_tunnel = (tunnel.enabled()); // same thing for tunnels
-			}
+				last_was_tunnel = tunnel.enabled(); // same thing for tunnels
+			} // for s
 			if (!check_only) { // post-flatten pass to fix up dirt at road joints - doesn't help much
-				last_was_bridge = last_was_tunnel = 0;
-
-				for (auto s = segments.begin(); s != segments.end(); ++s) {
-					bridge_t bridge(*s); // Note: set but value unused
-					tunnel_t tunnel(*s); // Note: set but value unused
-					hq.flatten_for_road(*s, city_params.road_border, 0, 1, (last_was_bridge ? nullptr : &bridge), (last_was_tunnel ? nullptr : &tunnel)); // decrease_only=1
-					last_was_bridge = bridge.make_bridge;
-					last_was_tunnel = (tunnel.enabled());
+				for (auto f = replay_fops.begin(); f != replay_fops.end(); ++f) { // replay the same series of operations; Note that bridge and tunnel segments have been cached
+					hq.flatten_sloped_region(f->x1, f->y1, f->x2, f->y2, f->z1, f->z2, f->dim, f->border, f->skip_six, f->skip_eix, 0, 1);
 				}
 			}
 			return tot_dz; // success
