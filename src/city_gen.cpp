@@ -791,6 +791,19 @@ struct road_isec_t : public cube_t {
 		//return stoplight.check_int_clear(orient, turn_dir); // intersection not clear (Note: too strong of a check, blocking car may be exiting the intersection)
 		return 1;
 	}
+	unsigned get_orient_for_turning_car(car_t const &car) const {
+		unsigned const orient_in(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
+		assert(conn & (1<<orient_in)); // car must come from an enabled orient
+		unsigned new_orient(0);
+		switch (car.turn_dir) {
+		case TURN_NONE:  new_orient = car.get_orient(); break;
+		case TURN_LEFT:  new_orient = stoplight_ns::conn_left [orient_in]; break;
+		case TURN_RIGHT: new_orient = stoplight_ns::conn_right[orient_in]; break;
+		default: assert(0);
+		}
+		assert(conn & (1<<new_orient)); // car mustto go an enabled orient
+		return new_orient;
+	}
 	bool can_go_now(car_t const &car) const {
 		if (!can_go_based_on_light(car)) return 0;
 		if (stoplight.check_int_clear(car)) return 1;
@@ -2822,24 +2835,26 @@ class city_road_gen_t {
 				if (!car.in_isect() || get_car_isec(car).can_go_now(car)) {car.stopped_at_light = 0;} // can go now
 				else if (car.in_isect()) {
 					road_isec_t const &isec(get_car_isec(car));
-					unsigned char const orig_turn_dir(car.turn_dir);
 
 					// helps with gridlock at connector roads
 					if (car.rot_z == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
-						if (!isec.is_global_conn_int()) { // don't do this at global connector road intersections; not safe - need to avoid going to the wrong city
-							if (car.turn_dir == TURN_LEFT) { // turning left at intersection
-								assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
-								if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
-								else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
-							}
-							/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
-								if (isec.is_orient_currently_valid(conn_right[2*car.dim + (!car.dir)], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
-									car.turn_dir = TURN_RIGHT; // go right instead
-								}
-							}*/
+						unsigned char const orig_turn_dir(car.turn_dir);
+
+						if (car.turn_dir == TURN_LEFT) { // turning left at intersection
+							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
+							if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
+							else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
 						}
+						/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
+							if (isec.is_orient_currently_valid(conn_right[car.get_orient_in_isec()], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
+								car.turn_dir = TURN_RIGHT; // go right instead
+							}
+						}*/
+						if (car.turn_dir != orig_turn_dir && isec.is_global_conn_int()) { // change of turn dir at global connector road intersection
+							if (isec.rix_xy[isec.get_orient_for_turning_car(car)] < 0) {car.turn_dir = orig_turn_dir;} // abort turn change to avoid going to the wrong city
+						}
+						if (car.turn_dir != orig_turn_dir) {car.on_alternate_turn_dir(rgen);}
 					}
-					if (car.turn_dir != orig_turn_dir) {car.on_alternate_turn_dir(rgen);}
 					car.decelerate_fast();
 				}
 				if (was_stopped) return; // no update needed
