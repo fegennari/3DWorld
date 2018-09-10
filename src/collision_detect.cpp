@@ -1616,8 +1616,38 @@ int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, v
 {
 	if (world_mode == WMODE_INF_TERRAIN) {
 		point const p_last(pos - velocity*fticks);
-		proc_city_sphere_coll(pos, p_last, get_true_radius(), p_last.z, 0, 1); // xy_only=0, inc_cars=1
-		return 0;
+		float const o_radius(get_true_radius());
+		vector3d cnorm(plus_z);
+		
+		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 0, 1, &cnorm)) { // xy_only=0, inc_cars=1
+			obj_type const &otype(object_types[type]);
+			float const friction(otype.friction_factor*((flags & FROZEN_FLAG) ? 0.5 : 1.0)); // frozen objects have half friction
+			if (animate2 && health <= 0.1) {disable();}
+
+			if (friction < STICK_THRESHOLD) {
+				if (otype.elasticity == 0.0 || (flags & IS_CUBE_FLAG) || !object_bounce(3, cnorm, 0.8, 0.0)) { // elasticity is hard-coded to 0.8 here
+					if (type != DYNAM_PART && velocity != zero_vector) {
+						if (friction > 0.0) {velocity *= (1.0 - min(1.0f, (tstep/TIMESTEP)*friction));} // apply kinetic friction
+						orthogonalize_dir(velocity, cnorm, velocity, 0); // rolling friction model
+					}
+				}
+				else { // play bounce sounds
+					if (type == BALL) {
+						if (velocity.mag() > 1.0) {gen_sound(SOUND_BOING, pos, min(1.0, 0.1*velocity.mag()));}
+					}
+					else if (type == SAWBLADE) {gen_sound(SOUND_RICOCHET, pos, 1.0, 0.5);}
+					else if (type == SHELLC && direction == 0) {gen_sound(SOUND_SHELLC, pos, 0.1, 1.0);} // M16
+				}
+			}
+			else { // sticks
+				pos -= cnorm*(0.1*o_radius); // make sure it still intersects
+				velocity = zero_vector; // I think this is correct
+			}
+			verify_data();
+			if (!disabled() && (otype.flags & EXPL_ON_COLL)) {disable();}
+			flags |= OBJ_COLLIDED;
+		}
+		return 0; // no vert coll
 	}
 	if (world_mode != WMODE_GROUND) return 0;
 	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj, skip_movable);
