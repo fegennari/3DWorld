@@ -343,7 +343,7 @@ void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bma
 void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 void setup_city_lights(vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels);
-bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars=0);
+bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars=0, vector3d *cnorm=nullptr);
 bool line_intersect_city(point const &p1, point const &p2, float &t);
 bool line_intersect_city(point const &p1, point const &p2, point &p_int);
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall=0);
@@ -491,7 +491,7 @@ bool line_sphere_intersect_s_t(point const &p1, point const &p2, point const &sc
 							   vector3d const &sdir, double &s, double &t);
 bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, float radius, point &lsint, bool test_neg_t);
 bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc, float radius, float &rad, float &dist, float &t);
-bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c);
+bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm=nullptr);
 void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from, float radius, unsigned num_pts);
 void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, float ri, float ro, float &t);
@@ -504,7 +504,7 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube);
 bool sphere_cube_intersect_xy(point const &pos, float radius, cube_t const &cube);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last,
 						   point &p_int, vector3d &norm, unsigned &cdir, bool check_int=1, bool skip_z=0);
-bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int=1, bool skip_z=0);
+bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int=1, bool skip_z=0, vector3d *cnorm=nullptr);
 bool coll_sphere_cylin_int(point const &sc, float sr, coll_obj const &c);
 bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, point const &cp2, float cr);
 bool approx_poly_cylin_int(point const *const pts, unsigned npts, cylinder_3dw const &cylin);
@@ -956,7 +956,7 @@ void draw_buildings(bool shadow_only, vector3d const &xlate);
 void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval);
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only);
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only);
-bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only);
+bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm=nullptr);
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate);
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);

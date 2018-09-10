@@ -387,11 +387,11 @@ struct building_t : public building_geom_t {
 	bool check_bcube_overlap_xy(building_t const &b, float expand) const {
 		return (check_bcube_overlap_xy_one_dir(b, expand) || b.check_bcube_overlap_xy_one_dir(*this, expand));
 	}
-	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points) const {
+	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm) const {
 		point pos2(pos);
-		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points);
+		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points) const;
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
@@ -402,7 +402,7 @@ struct building_t : public building_geom_t {
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
-	bool test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points) const;
+	bool test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 };
 
 
@@ -906,7 +906,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	return 0;
 }
 
-bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points) const {
+bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
 	building_draw.calc_poly_pts(*this, (part + xlate), points); // without the expand
 	float const dist(p2p_dist(p_last, pos));
@@ -925,18 +925,20 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 		if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
 		if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
 		pos += normal*min(rdist, dist); // calculate intersection point, adjust outward by min of distance and step size (FIXME: jittery)
+		if (cnorm) {*cnorm = normal;}
 		updated = 1;
 	} // for S
 	if (updated) return 1;
 	
 	if (point_in_polygon_2d(pos.x, pos.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
 		pos.z = p_last.z; // assume falling/z coll
+		if (cnorm) {*cnorm = plus_z;}
 		return 1;
 	}
 	return 0;
 }
 
-bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points) const {
+bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr) const {
 
 	if (!is_valid()) return 0; // invalid building
 	point p_int;
@@ -963,26 +965,30 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			if (fabs(crx - cry) < radius) { // close to a circle
 				if (p_last2.z > i->d[2][1] + xlate.z && dist_xy_less_than(pos2, cc, max(crx, cry))) {
 					pos2.z = p_last2.z; // assume falling/z coll
+					if (cnorm_ptr) {*cnorm_ptr = plus_z;}
 				}
 				else { // side coll
 					vector2d const d((pos2.x - cc.x), (pos2.y - cc.y));
 					float const mult(r_sum/d.mag());
 					pos2.x = cc.x + mult*d.x;
 					pos2.y = cc.y + mult*d.y;
+					if (cnorm_ptr) {*cnorm_ptr = vector3d(d.x, d.y, 0.0).get_norm();} // no z-component
 				}
 				had_coll = 1;
 			}
-			else {had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points);} // use polygon collision test
+			else {
+				had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points, cnorm_ptr); // use polygon collision test
+			}
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points);
+			had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points, cnorm_ptr);
 		}
-		else if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only)) { // cube
+		else if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) { // cube
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 		}
 	} // for i
 	for (auto i = details.begin(); i != details.end(); ++i) {
-		if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only)) {had_coll = 1;} // cube, flag as colliding
+		if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // Note: doesn't really work with a pointed roof
 		point const pos_xlate(pos2 - xlate);
@@ -992,11 +998,16 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
 			pos2 += normal*(radius - rdist); // update current pos
 			had_coll = 1; // flag as colliding
+			if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
 			break; // only use first colliding tquad
 		}
 	}
 	if (!had_coll) return 0;
-	if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, pos2);} // rotate back
+
+	if (is_rotated()) {
+		do_xy_rotate(rot_sin, rot_cos, center, pos2); // rotate back around center
+		if (cnorm_ptr) {do_xy_rotate(rot_sin, rot_cos, all_zeros, *cnorm_ptr);} // rotate back (pure rotation)
+	}
 	pos = pos2;
 	return had_coll;
 }
@@ -1692,7 +1703,7 @@ public:
 		building_draw_wind_lights.upload_to_vbos();
 	}
 
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0) const {
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
@@ -1708,7 +1719,7 @@ public:
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-					if (get_building(*b).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points)) return 1;
+					if (get_building(*b).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm)) return 1;
 				}
 			} // for x
 		} // for y
@@ -1817,8 +1828,8 @@ bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_x
 	if (apply_tt_xlate) {center += get_tt_xlate_val();} // apply xlate for all static objects - not the camera
 	return building_creator.check_sphere_coll(center, pos, radius, xy_only);
 }
-bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only) {
-	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only);
+bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
+	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm);
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate) {
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);

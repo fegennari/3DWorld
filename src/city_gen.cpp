@@ -489,7 +489,7 @@ struct car_t {
 	void stop() {cur_speed = 0.0;} // immediate stop
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
 	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const;
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const;
 
 	point get_front(float dval=0.5) const {
 		point car_front(get_center());
@@ -840,13 +840,13 @@ struct road_isec_t : public cube_t {
 		c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
 		return c;
 	}
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist) const {
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
 		if (num_conn == 2) return 0; // no stoplights
 		if (!sphere_cube_intersect_xy(pos, (radius + dist), (*this + xlate))) return 0;
 		
 		for (unsigned n = 0; n < 4; ++n) {
 			if (!(conn & (1<<n))) continue; // no road in this dir
-			if (sphere_cube_int_update_pos(pos, radius, (get_stoplight_cube(n) + xlate), p_last)) return 1; // typically won't be more than one collision, just return the first one
+			if (sphere_cube_int_update_pos(pos, radius, (get_stoplight_cube(n) + xlate), p_last, 1, 0, cnorm)) return 1; // typically only one coll, just return the first one
 		}
 		return 0;
 	}
@@ -1021,12 +1021,12 @@ namespace streetlight_ns {
 			max_eq(lights_bcube.z2(), (lpos.z + ldist));
 			dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH)); // points down
 		}
-		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate) const {
+		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
 			point const p2(pos + xlate);
 			float const pradius(pole_radius*city_params.road_width);
 			if (!dist_xy_less_than(p2, center, (pradius + radius))) return 0;
 			float const height(light_height*city_params.road_width);
-			return sphere_vert_cylin_intersect(center, radius, cylinder_3dw(p2, (p2 + vector3d(0.0, 0.0, height)), pradius, 0.7*pradius));
+			return sphere_vert_cylin_intersect(center, radius, cylinder_3dw(p2, (p2 + vector3d(0.0, 0.0, height)), pradius, 0.7*pradius), cnorm);
 		}
 	};
 } // streetlight_ns
@@ -1047,9 +1047,9 @@ struct streetlights_t {
 		if (!always_on && !is_night(STREETLIGHT_ON_RAND)) return; // none of them can be on
 		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube, always_on);}
 	}
-	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate) const {
+	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const {
 		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-			if (i->proc_sphere_coll(pos, radius, xlate)) return 1;
+			if (i->proc_sphere_coll(pos, radius, xlate, cnorm)) return 1;
 		}
 		return 0;
 	}
@@ -1094,8 +1094,8 @@ struct bridge_t : public road_connector_t {
 	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
 	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
 
-	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate) const {
-		if (proc_streetlight_sphere_coll(center, sradius, xlate)) return 1;
+	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const {
+		if (proc_streetlight_sphere_coll(center, sradius, xlate, cnorm)) return 1;
 		float const exp(0.5*sradius);
 		bool const prev_int(contains_pt_xy_exp((prev - xlate), exp));
 		if (!prev_int && !src_road.contains_pt_xy_exp((center - xlate), exp)) return 0; // no x/y containment for road segment (cur or prev)
@@ -1106,6 +1106,7 @@ struct bridge_t : public road_connector_t {
 		if (center.z - sradius > zval || prev_frame_zval + sradius < zval) return 0; // completely above or below the road/bridge
 		center.z = zval + sradius; // place exactly on the road/bridge surface
 		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere from falling off the bridge (approximate; assumes bridge has walls)
+		if (cnorm) {*cnorm = plus_z;} // approximate - assume collision with bottom surface of road (intended for player)
 		return 1;
 	}
 };
@@ -1140,8 +1141,8 @@ struct tunnel_t : public road_connector_t {
 	bool check_mesh_disable(cube_t const &query_region) const {
 		return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region)); // check both ends
 	}
-	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate) const {
-		if (proc_streetlight_sphere_coll(center, sradius, xlate)) return 1;
+	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const {
+		if (proc_streetlight_sphere_coll(center, sradius, xlate, cnorm)) return 1;
 		bool const prev_int(contains_pt_xy(prev - xlate));
 		if (!prev_int && !contains_pt_xy(center - xlate)) return 0; // no x/y containment for road segment (cur or prev)
 		cube_t const c(src_road + xlate);
@@ -1151,6 +1152,7 @@ struct tunnel_t : public road_connector_t {
 		if (prev_frame_zval - sradius > zval + height) return 0; // completely above the tunnel
 		center.z = zval + sradius; // place exactly on mesh under the road/tunnel surface
 		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere inside the tunnel (approximate)
+		if (cnorm) {*cnorm = plus_z;} // approximate - assume collision with bottom surface of road (intended for player)
 		return 1; // Note: will disable mesh occlusion culling
 	}
 };
@@ -1815,8 +1817,8 @@ class city_road_gen_t {
 #endif
 			dstate.draw_cube(qbd, bcube, color_wrapper(WHITE), 1); // skip_bottom=1
 		}
-		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate) const {
-			return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last);
+		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
+			return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 1, 0, cnorm);
 		}
 	};
 
@@ -2012,11 +2014,11 @@ class city_road_gen_t {
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) const {
 			draw_objects(benches, dstate, shadow_only);
 		}
-		bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
+		bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
 
 			for (auto i = benches.begin(); i != benches.end(); ++i) {
-				if (i->proc_sphere_coll(pos, p_last, radius, xlate)) return 1;
+				if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 			}
 			return 0;
 		}
@@ -2610,24 +2612,24 @@ class city_road_gen_t {
 			if (check_bcubes_sphere_coll(tracks, query_pos, radius, xy_only)) return 1; // collision with a track
 			return 0;
 		}
-		bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
+		bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
 			float const dist(p2p_dist(pos, p_last));
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
 
 			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
-					if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist)) return 1;
+					if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist, cnorm)) return 1;
 				}
 			}
 			for (auto i = bridges.begin(); i != bridges.end(); ++i) {
-				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate)) return 1;
+				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate, cnorm)) return 1;
 			}
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate)) return 1;
+				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate, cnorm)) return 1;
 			}
-			if (proc_streetlight_sphere_coll(pos, radius, xlate)) return 1;
-			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius)) return 1;
+			if (proc_streetlight_sphere_coll(pos, radius, xlate, cnorm)) return 1;
+			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius, cnorm)) return 1;
 			return 0;
 		}
 		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: xlate has already been applied
@@ -3333,11 +3335,11 @@ public:
 		}
 		return INT_NONE;
 	}
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval) const {
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (r->proc_sphere_coll(pos, p_last, radius, prev_frame_zval)) return 1;
+			if (r->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
 		}
-		return global_rn.proc_sphere_coll(pos, p_last, radius, prev_frame_zval); // needed for bridges and tunnels
+		return global_rn.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm); // needed for bridges and tunnels
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		bool ret(0);
@@ -3490,9 +3492,9 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	return 1;
 }
 
-bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate) const {
-	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last); // Note: approximate when car is tilted or turning
-	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos);
+bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const {
+	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 1, 0, cnorm); // Note: approximate when car is tilted or turning
+	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos); // Note: handle cnorm in if using this
 }
 
 
@@ -3810,7 +3812,7 @@ public:
 		} // for i
 		cout << "Total Cars: " << cars.size() << endl;
 	}
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius) const {
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 		vector3d const xlate(get_camera_coord_space_xlate());
 		float const dist(p2p_dist(pos, p_last));
 
@@ -3820,7 +3822,7 @@ public:
 			assert(end <= cars.size());
 
 			for (unsigned c = cb->start; c != end; ++c) {
-				if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate)) return 1;
+				if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 			}
 		} // for cb
 		return 0;
@@ -4051,10 +4053,10 @@ public:
 		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
 		return road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels);
 	}
-	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars) const {
-		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval)) return 1;
+	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const {
+		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
 		if (!inc_cars) return 0;
-		return car_manager.proc_sphere_coll(pos, p_last, radius); // Note: doesn't really work well, at least for player collisions
+		return car_manager.proc_sphere_coll(pos, p_last, radius, cnorm); // Note: doesn't really work well, at least for player collisions
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		vector3d const xlate(get_camera_coord_space_xlate()), p1x(p1 - xlate), p2x(p2 - xlate);
@@ -4140,9 +4142,9 @@ bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
 	return city_gen.check_city_sphere_coll(center, radius, 1, exclude_bridges_and_tunnels);
 }
-bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars) {
-	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only)) return 1;
-	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars); // Note: no xy_only for cities
+bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm) {
+	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;
+	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // Note: no xy_only for cities
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t) {
 	unsigned hit_bix(0); // unused

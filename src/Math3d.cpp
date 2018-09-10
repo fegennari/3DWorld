@@ -422,14 +422,15 @@ bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, f
 }
 
 
-bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c) {
+bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm) {
 
 	float const rsum(radius + max(c.r1, c.r2));
 	assert(rsum > radius); // cylin not degenerate
 	if (center.z < min(c.p1.z, c.p2.z) || center.z > max(c.p1.z, c.p2.z)) return 0; // not enough z overlap (could bias by up to radius)
 	if (!dist_xy_less_than(c.p1, center, rsum)) return 0;
-	vector3d const normal(vector3d(center.x-c.p1.x, center.y-c.p1.y, 0.0).get_norm()); // Note: assumes (near) vertical cylinder, not correct for all trees
+	vector3d const normal(vector3d(center.x-c.p1.x, center.y-c.p1.y, 0.0).get_norm()); // Note: assumes (near) vertical cylinder, not correct for all cases
 	center = point(c.p1.x, c.p1.y, center.z) + normal*(1.001*rsum); // move center out along cylin normal so it doesn't intersect
+	if (cnorm) {*cnorm = normal;}
 	return 1;
 }
 
@@ -982,12 +983,13 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 	return found;
 }
 
-bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int, bool skip_z) {
-	vector3d cnorm; // unused
+bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int, bool skip_z, vector3d *cnorm_ptr) {
+	vector3d cnorm;
 	unsigned cdir(0); // unused
 	point p_int;
 	if (!sphere_cube_intersect(pos, radius, cube, p_last, p_int, cnorm, cdir, 1)) return 0;
 	pos = p_int; // update current pos
+	if (cnorm_ptr) {*cnorm_ptr = cnorm;}
 	return 1;
 }
 
