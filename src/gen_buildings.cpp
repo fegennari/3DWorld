@@ -931,7 +931,7 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	if (updated) return 1;
 	
 	if (point_in_polygon_2d(pos.x, pos.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
-		pos.z = p_last.z; // assume falling/z coll
+		pos.z = part.z2() + radius; // make sure it doesn't intersect the roof
 		if (cnorm) {*cnorm = plus_z;}
 		return 1;
 	}
@@ -964,7 +964,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 
 			if (fabs(crx - cry) < radius) { // close to a circle
 				if (p_last2.z > i->d[2][1] + xlate.z && dist_xy_less_than(pos2, cc, max(crx, cry))) {
-					pos2.z = p_last2.z; // assume falling/z coll
+					pos2.z = i->z2() + radius; // make sure it doesn't intersect the roof
 					if (cnorm_ptr) {*cnorm_ptr = plus_z;}
 				}
 				else { // side coll
