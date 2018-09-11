@@ -3129,7 +3129,6 @@ public:
 		road_networks.push_back(road_network_t(region, road_networks.size()));
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back(); return;}
 		//cout << "Roads: " << road_networks.back().num_roads() << endl;
-		road_networks.back().add_streetlights();
 	}
 	bool connect_two_cities(unsigned city1, unsigned city2, vector<cube_t> &blockers, heightmap_query_t &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
@@ -3304,6 +3303,9 @@ public:
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
+	}
+	void add_streetlights() {
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->add_streetlights();}
 	}
 	void gen_tile_blocks() {
 		timer_t timer("Gen Tile Blocks");
@@ -4037,6 +4039,7 @@ public:
 		bool const is_const_zval(cities_bcube.z1() == cities_bcube.z2());
 		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube, is_const_zval);}
 		road_gen.connect_all_cities(heightmap, xsize, ysize, params.road_width, params.road_spacing);
+		road_gen.add_streetlights();
 		road_gen.gen_tile_blocks();
 		car_manager.init_cars(city_params.num_cars);
 	}
