@@ -2248,14 +2248,38 @@ class city_road_gen_t {
 		}
 		int find_3way_int_at(cube_t const &c, bool dim, bool dir) const {
 			float const cube_cent(0.5*(c.d[!dim][0] + c.d[!dim][1]));
+			float dmin(0.0);
+			int ret(-1);
 
 			for (unsigned i = 0; i < isecs[1].size(); ++i) {
 				road_isec_t const &isec(isecs[1][i]);
 				if (isec.d[dim][dir] != bcube.d[dim][dir]) continue; // not on edge of road grid
-				if (isec.d[!dim][1] < cube_cent || isec.d[!dim][0] > cube_cent) continue; // no overlap/projection in other dim
-				return i; // this is the one we want
+				if (isec.d[!dim][1] > cube_cent && isec.d[!dim][0] < cube_cent) return i; // this is the one we want (early terminate case)
+				//float const int_cent(0.5*(isec.d[!dim][0] + isec.d[!dim][1])), dist(fabs(int_cent - cube_cent));
+				//if (ret < 0 || dist < dmin) {ret = i; dmin = dist;} // update if closer
 			} // for i
-			return -1; // not found
+			return ret; // not found if ret is still at -1
+		}
+		template<typename T> static void do_road_align(vector<T> &v, float from, float to, bool dim) {
+			for (auto i = v.begin(); i != v.end(); ++i) {
+				for (unsigned d = 0; d < 2; ++d) { // low, high edge
+					if (i->d[dim][d] == from) {i->d[dim][d] = to;}
+				}
+			} // for i
+		}
+		bool align_isec3_to(unsigned int3_ix, cube_t const &c, bool dim) {
+			assert(int3_ix < isecs[1].size());
+			cube_t const src(isecs[1][int3_ix]); // deep copy so that it's not changed below
+			//cout << c.d[!dim][0] << " " << c.d[!dim][1] << " " << src.d[!dim][0] << " " << src.d[!dim][1] << " " << (c.d[!dim][0] - src.d[!dim][0]) << endl; // TESTING
+			if (c.d[!dim][0] == src.d[!dim][0]) return 0; // already aligned - done
+
+			for (unsigned d = 0; d < 2; ++d) { // low, high
+				do_road_align(roads, src.d[!dim][d], c.d[!dim][d], !dim);
+				do_road_align(segs,  src.d[!dim][d], c.d[!dim][d], !dim);
+				do_road_align(plots, src.d[!dim][d], c.d[!dim][d], !dim);
+				for (unsigned i = 0; i < 3; ++i) {do_road_align(isecs[i], src.d[!dim][d], c.d[!dim][d], !dim);}
+			}
+			return 1;
 		}
 		void make_4way_int(unsigned int3_ix, bool dim, bool dir, unsigned conn_to_city, int road_ix) { // turn a 3-way intersection into a 4-way intersection for a connector road
 			assert(int3_ix < isecs[1].size());
@@ -2403,7 +2427,8 @@ class city_road_gen_t {
 
 			if (is_4_way) {
 				int const int3_ix(find_3way_int_at(c, dim, dir));
-				assert(int3_ix >= 0);
+				assert(int3_ix >= 0); // must be found
+				align_isec3_to(int3_ix, c, dim);
 				make_4way_int(int3_ix, dim, dir, dest_city_id, encode_neg_ix(grn_rix));
 			}
 			else {
@@ -3158,7 +3183,12 @@ public:
 							float const conn_pos(0.5*(r->d[d][0] + r->d[d][1]));
 							float const cost(0.5*global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
 								city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1, (r12==0), (r12!=0))); // check_only=1; half cost (prefer over 3-way intersection)
-							if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost; is_4way1 = (r12==0); is_4way2 = (r12!=0);}
+							
+							if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {
+								best_conn_pos = conn_pos; best_cost = cost;
+								is_4way1 = (r12==0); is_4way2 = (r12!=0); // make only one end a 4-way intersection
+								//is_4way1 = is_4way2 = 1; // make both ends 4-way intersections and move the roads to make them connect (WIP)
+							}
 						} // for r
 					} // for r12
 				}
