@@ -29,6 +29,7 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 float const STREETLIGHT_ON_RAND     = 0.05;
 float const HEADLIGHT_ON_RAND       = 0.1;
 float const TRACKS_WIDTH            = 0.5; // relative to road width
+float const TUNNEL_WALL_THICK       = 0.25; // relative to radius
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
@@ -1121,7 +1122,7 @@ struct tunnel_t : public road_connector_t {
 	
 	void init(point const &start, point const &end, float radius_, bool dim) {
 		radius = radius_;
-		height = 1.25*radius;
+		height = (1.0 + TUNNEL_WALL_THICK)*radius;
 		vector3d const dir((end - start).get_norm());
 		point const extend[2] = {(start + dir*radius), (end - dir*radius)};
 		ends[0].set_from_point(start);
@@ -1316,7 +1317,7 @@ public:
 			}
 		} // end bridge logic
 		if (!stats_only && tunnel != nullptr && skip_eix == 0 && fabs(tunnel->get_slope_val()) < 0.2) { // determine if we should add a tunnel here
-			float const radius(1.0*city_params.road_width);
+			float const radius(1.0*city_params.road_width), min_height((1.0 + TUNNEL_WALL_THICK)*radius);
 			float added(0.0), removed(0.0), total(0.0);
 			bool end_tunnel(0);
 
@@ -1328,7 +1329,7 @@ public:
 					if (road_z < h) {
 						removed += (h - road_z);
 
-						if (!end_tunnel && road_z + radius < h) { // below terrain by a significant amount
+						if (!end_tunnel && road_z + min_height < h) { // below terrain by a significant amount
 							min_eq(six, (dim ? y : x));
 							max_eq(eix, (dim ? y : x));
 						}
@@ -1347,7 +1348,7 @@ public:
 				
 				if (len > 4.0*radius) { // don't make the tunnel too short
 					tunnel->init(ps, pe, radius, dim);
-					seg_min_dh = tunnel->height;
+					seg_min_dh = tunnel->height + TUNNEL_WALL_THICK*radius; // add another wall thickness to account for sloped terrain minima
 					skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 					tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
 					int const rwidth(ceil(city_params.road_width/(dim ? DX_VAL : DY_VAL)));
