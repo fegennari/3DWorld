@@ -3209,11 +3209,13 @@ public:
 
 					for (auto r1 = roads1.begin(); r1 != roads1.end(); ++r1) {
 						if (r1->dim == (d1 != 0)) continue; // wrong dim
+						if (r1->d[d1][0] < bcube1.d[d1][0]+min_edge_dist || r1->d[d1][1] > bcube1.d[d1][1]-min_edge_dist) continue; // not an interior road (edge road)
 						if (r1->d[d1][0] < (fdim ? xmin : ymin) || r1->d[d1][1] > (fdim ? xmax : ymax)) continue; // road not contained in placement range
 						float const cpos1(0.5*(r1->d[d1][0] + r1->d[d1][1])); // fdim=0 => yval
 						
 						for (auto r2 = roads2.begin(); r2 != roads2.end(); ++r2) {
 							if (r2->dim == (d2 != 0)) continue; // wrong dim
+							if (r2->d[d2][0] < bcube2.d[d2][0]+min_edge_dist || r2->d[d2][1] > bcube2.d[d2][1]-min_edge_dist) continue; // not an interior road (edge road)
 							if (r2->d[d2][0] < (fdim ? ymin : xmin) || r2->d[d2][1] > (fdim ? ymax : xmax)) continue; // road not contained in placement range
 							float const cpos2(0.5*(r2->d[d2][0] + r2->d[d2][1])); // fdim=0 => xval
 							float const xval(fdim ? cpos1 : cpos2), yval(fdim ? cpos2 : cpos1);
