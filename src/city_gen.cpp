@@ -1265,6 +1265,7 @@ public:
 		unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0);
 		float tot_dz(0.0), seg_min_dh(0.0);
 		float const bridge_cost(0.0), bridge_dist_cost(0.0), tunnel_cost(0.0), tunnel_dist_cost(0.0); // Note: currently set to zero, but could be used
+		unsigned const min_bridge_len(12), min_tunnel_len(12); // in mesh texels
 		
 		if (dim) {
 			px1 = max((int)x1-pad, 0);
@@ -1302,7 +1303,7 @@ public:
 					total += 1.0;
 				} // for x
 			} // for y
-			if (eix > six+4 && added > 1.5*city_params.road_width*total && added > 2.0*removed) {
+			if (eix > six+min_bridge_len && added > 1.5*city_params.road_width*total && added > 2.0*removed) {
 				point ps, pe;
 				get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
 				bridge->d[dim][0] = ps[dim];
@@ -1339,26 +1340,30 @@ public:
 					total += 1.0;
 				} // for x
 			} // for y
-			if (eix > six+4 && removed > 1.0*city_params.road_width*total && removed > 2.0*added) {
+			if (eix > six+min_tunnel_len && removed > 1.0*city_params.road_width*total && removed > 2.0*added) {
 				point ps, pe;
 				get_segment_end_pts(*tunnel, six, eix, ps, pe);
-				tunnel->init(ps, pe, radius, dim);
-				seg_min_dh = tunnel->height;
-				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
-				tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
-				int const rwidth(ceil(city_params.road_width/(dim ? DX_VAL : DY_VAL)));
+				float const len(fabs(ps[dim] - pe[dim]));
+				
+				if (len > 4.0*radius) { // don't make the tunnel too short
+					tunnel->init(ps, pe, radius, dim);
+					seg_min_dh = tunnel->height;
+					skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
+					tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
+					int const rwidth(ceil(city_params.road_width/(dim ? DX_VAL : DY_VAL)));
 
-				for (int dxy = -rwidth; dxy <= rwidth; ++dxy) { // shifts in !dim
-					unsigned qpt[2] = {(x1 + x2)/2, (y1 + y2)/2}; // start at center
-					qpt[!dim] += dxy;
+					for (int dxy = -rwidth; dxy <= rwidth; ++dxy) { // shifts in !dim
+						unsigned qpt[2] = {(x1 + x2)/2, (y1 + y2)/2}; // start at center
+						qpt[!dim] += dxy;
 
-					for (unsigned n = 0; n < 4; ++n) { // take several samples and find the peak mesh hieght for the tunnel facades
-						qpt[dim] = six + n;
-						max_eq(tunnel->facade_height[0], (get_height(qpt[0], qpt[1]) - ps.z));
-						qpt[dim] = eix - n;
-						max_eq(tunnel->facade_height[1], (get_height(qpt[0], qpt[1]) - pe.z));
-					} // for n
-				} // for dxy
+						for (unsigned n = 0; n < 4; ++n) { // take several samples and find the peak mesh height for the tunnel facades
+							qpt[dim] = six + n;
+							max_eq(tunnel->facade_height[0], (get_height(qpt[0], qpt[1]) - ps.z));
+							qpt[dim] = eix - n;
+							max_eq(tunnel->facade_height[1], (get_height(qpt[0], qpt[1]) - pe.z));
+						} // for n
+					} // for dxy
+				}
 			}
 		} // end tunnel logic
 		if (!stats_only && skip_six < skip_eix) {last_flatten_op.skip_six = skip_six; last_flatten_op.skip_eix = skip_eix;} // clip to a partial range
