@@ -89,7 +89,7 @@ struct city_params_t {
 
 	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks;
 	float road_width, road_spacing, conn_road_seg_len, max_road_slope;
-	bool make_4_way_ints;
+	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 4=only 4-way (no straight roads)
 	// cars
 	unsigned num_cars;
 	float car_speed, traffic_balance_val;
@@ -165,7 +165,7 @@ struct city_params_t {
 			if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
 		}
 		else if (str == "make_4_way_ints") {
-			if (!read_bool(fp, make_4_way_ints)) {return read_error(str);}
+			if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
 		}
 		// cars
 		else if (str == "num_cars") {
@@ -3166,6 +3166,7 @@ public:
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
 
 		for (unsigned d = 0; d < 2; ++d) { // try for single segment
+			if (city_params.make_4_way_ints > 2) continue; // only allow connector roads that have 4-way intersections at both ends (single jog case below)
 			float const shared_min(max(bcube1.d[d][0], bcube2.d[d][0])), shared_max(min(bcube1.d[d][1], bcube2.d[d][1]));
 			
 			if (shared_max - shared_min > min_edge_dist) { // can connect with single road segment in dim !d, if the terrain in between is passable
@@ -3173,7 +3174,7 @@ public:
 				float best_conn_pos(0.0), best_cost(-1.0);
 				bool is_4way1(0), is_4way2(0);
 
-				if (city_params.make_4_way_ints) {
+				if (city_params.make_4_way_ints) { // currently only inserts connector roads that have 3-way intersections on one end and 4-way intersections on the other end
 					for (unsigned r12 = 0; r12 < 2; ++r12) {
 						vector<road_t> const &roads((r12 ? rn2 : rn1).get_roads());
 
@@ -3192,10 +3193,12 @@ public:
 						} // for r
 					} // for r12
 				}
-				for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a straight line
-					float const conn_pos(rgen_uniform(val1, val2, rgen)); // chose a random new connection point and try it
-					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1, 0, 0)); // check_only=1
-					if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost; is_4way1 = is_4way2 = 0;}
+				if (city_params.make_4_way_ints < 2) { // include connector roads that have 3-way intersections on both ends
+					for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a straight line
+						float const conn_pos(rgen_uniform(val1, val2, rgen)); // chose a random new connection point and try it
+						float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1, 0, 0)); // check_only=1
+						if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost; is_4way1 = is_4way2 = 0;}
+					}
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					//cout << "Single segment dim: << "d " << cost: " << best_cost << endl;
@@ -3230,7 +3233,7 @@ public:
 				float const xmin(region1.d[!fdim][0]), xmax(region1.d[!fdim][1]), ymin(region2.d[fdim][0]), ymax(region2.d[fdim][1]); // Note: x and y may be swapped!
 				float best_xval(0.0), best_yval(0.0), best_cost(-1.0);
 				cube_t best_int_cube;
-				bool const is_4way(city_params.make_4_way_ints);
+				bool const is_4way(city_params.make_4_way_ints > 0);
 
 				if (is_4way) {
 					vector<road_t> const &roads1(rn1.get_roads()), &roads2(rn2.get_roads());
