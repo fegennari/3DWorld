@@ -1304,6 +1304,9 @@ public:
 					total += 1.0;
 				} // for x
 			} // for y
+			max_eq(six, (dim ? y1+border : x1+border)); // keep away from segment end points (especially connector road jogs)
+			min_eq(eix, (dim ? y2-border : x2-border));
+
 			if (eix > six+min_bridge_len && added > 1.5*city_params.road_width*total && added > 2.0*removed) {
 				point ps, pe;
 				get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
@@ -1341,6 +1344,9 @@ public:
 					total += 1.0;
 				} // for x
 			} // for y
+			max_eq(six, (dim ? y1+border : x1+border)); // keep away from segment end points (especially connector road jogs)
+			min_eq(eix, (dim ? y2-border : x2-border));
+
 			if (eix > six+min_tunnel_len && removed > 1.0*city_params.road_width*total && removed > 2.0*added) {
 				point ps, pe;
 				get_segment_end_pts(*tunnel, six, eix, ps, pe);
