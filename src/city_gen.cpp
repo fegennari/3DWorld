@@ -2145,6 +2145,8 @@ class city_road_gen_t {
 			int const num_x_roads((rx2 - rx1)/road_pitch_x), num_y_roads((ry2 - ry1)/road_pitch_y);
 			road_pitch_x = 0.9999*(rx2 - rx1)/num_x_roads; // auto-calculate, round down slightly to avoid FP error
 			road_pitch_y = 0.9999*(ry2 - ry1)/num_y_roads;
+			//cout << "road pitch: " << road_pitch_x/DX_VAL << " " << road_pitch_y/DY_VAL << " road width: " << road_width/DX_VAL << " " << road_width/DY_VAL << endl;
+			//spacing = int((road_width + road_spacing)/DX_VAL)*DX_VAL - road_width;
 
 			// create a grid, for now; crossing roads will overlap
 			for (float x = rx1; x < rx2; x += road_pitch_x) {
