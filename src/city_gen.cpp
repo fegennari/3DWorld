@@ -22,6 +22,7 @@ float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CONN_ROAD_SPEED_MULT    = 2.0; // twice the speed limit on connector roads
+float const MIN_CAR_STOP_SEP        = 0.25; // in units of car lengths
 float const PARK_SPACE_WIDTH        = 1.6;
 float const PARK_SPACE_LENGTH       = 1.8;
 float const STREETLIGHT_BEAMWIDTH   = 0.25;
@@ -2139,6 +2140,7 @@ class city_road_gen_t {
 			cube_t const &region(bcube); // use our bcube as the region to process
 			vector3d const size(region.get_size());
 			assert(size.x > 0.0 && size.y > 0.0);
+			//rand_gen_t rgen; rgen.set_state(int(123.0*region.x1()), int(456.0*region.y1())); road_spacing *= rgen.rand_uniform(0.8, 1.2); // add some random variation?
 			float const half_width(0.5*road_width), zval(region.z1() + ROAD_HEIGHT);
 			float const rx1(region.x1() + half_width), rx2(region.x2() - half_width), ry1(region.y1() + half_width), ry2(region.y2() - half_width); // shrink to include centerlines
 			float road_pitch_x(road_width + road_spacing), road_pitch_y(road_pitch_x);
@@ -2254,7 +2256,7 @@ class city_road_gen_t {
 				if (s.dim == dim) continue; // not perp dim
 				if (s.d[dim][dir] != bcube.d[dim][dir]) continue; // not on edge of road grid
 				if (s.d[!dim][1] < c.d[!dim][0] || s.d[!dim][0] > c.d[!dim][1]) continue; // no overlap/projection in other dim
-				// c contained in segment in other dim with enough padding (min road length) on each side
+				// c contained in segment in other dim with enough padding (min road width) on each side
 				if (c.d[!dim][0] > s.d[!dim][0]+min_seg_len && c.d[!dim][1] < s.d[!dim][1]-min_seg_len) return i; // this is the one we want
 				return -1; // partial overlap in other dim, can't split, fail
 			} // for i
@@ -2494,7 +2496,7 @@ class city_road_gen_t {
 				unsigned const grn_rix(roads.size()); // may be wrong end of connector, but doesn't matter?
 				if (rn1) {rn1->insert_conn_intersection(road, dim,  dir, grn_rix, dest_city_id2, is_4_way1);}
 				if (rn2) {rn2->insert_conn_intersection(road, dim, !dir, grn_rix, dest_city_id1, is_4_way2);}
-				float const blocker_padding(max(city_params.road_spacing, 2.0f*city_params.road_border*max(DX_VAL, DY_VAL))); // use road_spacing?
+				float const blocker_padding(max(city_params.road_spacing, 2.0f*city_params.road_border*max(DX_VAL, DY_VAL)));
 				blockers.push_back(road);
 				blockers.back().expand_by(blocker_padding); // add extra padding
 			}
@@ -3507,9 +3509,9 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 		return 1;
 	}
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
-	float const avg_len(0.5*((bcube.d[dim][1] - bcube.d[dim][0]) + (c.bcube.d[c.dim][1] - c.bcube.d[c.dim][0]))); // average length of the two cars
+	float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
 	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
-	float const sep_dist(avg_len*(0.25 + 1.11*min_speed)); // 25% to 125% car length, depending on speed
+	float const sep_dist(avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed)); // 25% to 125% car length, depending on speed
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
