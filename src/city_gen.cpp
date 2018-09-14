@@ -440,12 +440,12 @@ struct car_t {
 	bool dim, dir, stopped_at_light, entering_city, in_tunnel, dest_valid;
 	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
 	unsigned short cur_city, cur_road, cur_seg, dest_city, dest_isec;
-	float height, dz, rot_z, turn_val, cur_speed, max_speed;
+	float height, dz, rot_z, turn_val, cur_speed, max_speed, waiting_start;
 	car_t const *car_in_front;
 
 	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), cur_road_type(0), color_id(0),
 		turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
-		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), car_in_front(nullptr) {}
+		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), waiting_start(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
@@ -461,6 +461,7 @@ struct car_t {
 	unsigned get_isec_type() const {assert(in_isect()); return (cur_road_type - TYPE_ISEC2);}
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
+	float get_wait_time_secs  () const {return (stopped_at_light ? (tfticks - waiting_start)/TICKS_PER_SECOND : 0.0);} // Note: only meaningful for cars stopped at lights
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 
 	string str() const {
@@ -472,8 +473,9 @@ struct car_t {
 	string label_str() const {
 		std::ostringstream oss;
 		oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
-			<< TXTin(cur_road_type) << TXTn(stopped_at_light) << TXTn(in_isect()) << TXT(dest_city) << TXTn(dest_isec);// << TXTn((int)color_id);
-		//if (car_in_front != nullptr) {oss << TXTin(car_in_front->color_id);}
+			<< "wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
+			<< TXTn(stopped_at_light) << TXTn(in_isect()) << "cars_in_front=" << count_cars_in_front() << "\n" << TXT(dest_city) << TXTn(dest_isec);
+		oss << "car=" << this << " car_in_front=" << car_in_front << endl; // debugging
 		return oss.str();
 	}
 	void move(float speed_mult) {
@@ -484,6 +486,7 @@ struct car_t {
 		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
 		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 		move_by((dir ? 1.0 : -1.0)*dist);
+		waiting_start = tfticks;
 	}
 	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
 	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
@@ -2802,6 +2805,11 @@ class city_road_gen_t {
 		// cars
 		static float get_car_lane_offset() {return CAR_LANE_OFFSET*city_params.road_width;}
 
+		static bool add_car_to_rns(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
+			unsigned const city(rgen.rand()%road_networks.size());
+			car.cur_city = city;
+			return road_networks[city].add_car(car, rgen);
+		}
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
 			vector3d const nom_car_size(city_params.get_car_size());
@@ -2922,6 +2930,15 @@ class city_road_gen_t {
 						if (car.turn_dir != orig_turn_dir) {car.on_alternate_turn_dir(rgen);}
 					}
 					car.decelerate_fast();
+					float const wait_secs(car.get_wait_time_secs());
+
+					if (wait_secs > 60.0 && isec.yellow_light(car)) {
+						cout << "car waiting for " << wait_secs << " seconds" << endl;
+						car_t const orig_car(car);
+						car = car_t(); // reset default fields
+						if (add_car_to_rns(car, rgen, road_networks)) {car.model_id = orig_car.model_id; car.color_id = orig_car.color_id; return;} // relocate car somewhere else
+						car = orig_car; // failed (unlikely) - restore original car state
+					}
 				}
 				if (was_stopped) return; // no update needed
 			} else {car.accelerate();}
@@ -3463,9 +3480,7 @@ public:
 	}
 	bool add_car(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) return 0; // no cities to add cars to
-		unsigned const city(rgen.rand()%road_networks.size());
-		car.cur_city = city;
-		return road_networks[city].add_car(car, rgen);
+		return road_network_t::add_car_to_rns(car, rgen, road_networks);
 	}
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
