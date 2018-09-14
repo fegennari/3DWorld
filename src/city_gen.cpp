@@ -513,11 +513,34 @@ struct car_t {
 		if ((rgen.rand()&3) == 0) {dest_valid = 0;} // 25% chance of choosing a new destination rather than driving in circles; will be in current city
 	}
 	void register_adj_car(car_t &c) {
-		if (car_in_front != nullptr) return; // already found the car in front
+		if (car_in_front != nullptr && p2p_dist_xy_sq(get_center(), c.get_center()) > p2p_dist_xy_sq(get_center(), car_in_front->get_center())) return; // already found a closer car
 		cube_t cube(bcube);
 		cube.d[dim][!dir] = cube.d[dim][dir];
-		cube.d[dim][dir] += (dir ? 1.0 : -1.0)*get_length(); // extend one car length in front
-		if (cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
+		cube.d[dim][dir] += (dir ? 1.0 : -1.0)*(get_length() + city_params.road_width); // extend one car length + one road width in front
+		if (/*c.dim == dim && c.dir == dir &&*/ cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
+	}
+	unsigned count_cars_in_front(cube_t const &range=cube_t(all_zeros)) const {
+		unsigned num(0);
+		car_t const *cur_car(this);
+
+		for (unsigned i = 0; i < 100; ++i) { // limit iterations
+			cur_car = cur_car->car_in_front;
+			if (!cur_car || (!range.is_all_zeros() && !range.contains_pt_xy(cur_car->get_center()))) break;
+			if (cur_car->dim == dim && cur_car->dir == dir) {++num;} // include if same dim/dir
+		}
+		return num;
+	}
+	float get_sum_len_space_for_cars_in_front(cube_t const &range) const {
+		float len(0.0);
+		car_t const *cur_car(this);
+
+		// FIXME: only correct for cars that are going straight (not turning)?
+		for (unsigned i = 0; i < 100; ++i) { // limit iterations; avg len = city_params.get_car_size().x
+			if (cur_car->dim == dim && cur_car->dir == dir) {len += cur_car->get_length();} // include if same dim/dir
+			cur_car = cur_car->car_in_front;
+			if (!cur_car || !range.contains_pt_xy(cur_car->get_center())) break;
+		}
+		return len * (1.0 + MIN_CAR_STOP_SEP); // car length + stopped space (including one extra space for the car behind us)
 	}
 };
 
