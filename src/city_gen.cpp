@@ -2932,7 +2932,7 @@ class city_road_gen_t {
 					car.decelerate_fast();
 					float const wait_secs(car.get_wait_time_secs());
 
-					if (wait_secs > 60.0 && isec.yellow_light(car)) {
+					if (wait_secs > 60.0 && isec.contains_pt_xy(car.get_center()) && isec.yellow_light(car)) { // car in the intersection
 						cout << "car waiting for " << wait_secs << " seconds" << endl;
 						car_t const orig_car(car);
 						car = car_t(); // reset default fields
