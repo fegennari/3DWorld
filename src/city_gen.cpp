@@ -485,7 +485,7 @@ struct car_t {
 		float dist(cur_speed*speed_mult);
 		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
 		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
-		move_by((dir ? 1.0 : -1.0)*dist);
+		move_by(dir ? dist : -dist);
 		waiting_start = tfticks;
 	}
 	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
@@ -520,7 +520,7 @@ struct car_t {
 		cube_t cube(bcube);
 		cube.d[dim][!dir] = cube.d[dim][dir];
 		cube.d[dim][dir] += (dir ? 1.0 : -1.0)*(get_length() + city_params.road_width); // extend one car length + one road width in front
-		if (/*c.dim == dim && c.dir == dir &&*/ cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
+		if (cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
 	}
 	unsigned count_cars_in_front(cube_t const &range=cube_t(all_zeros)) const {
 		unsigned num(0);
@@ -3152,8 +3152,9 @@ class city_road_gen_t {
 		}
 		road_isec_t const &get_isec_by_ix(unsigned ix) const {
 			for (unsigned n = 0; n < 3; ++n) {
-				if (ix < isecs[n].size()) return isecs[n][ix];
-				ix -= isecs[n].size();
+				unsigned const sz(isecs[n].size());
+				if (ix < sz) return isecs[n][ix];
+				ix -= sz;
 			}
 			assert(0); // should never get here (invalid ix)
 			return isecs[0][0]; // never gets here
@@ -3574,7 +3575,7 @@ public:
 
 bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	
-	if (c.dim != dim) { // turning in an intersection, etc. (Note: unclear if this is needed)
+	if (c.dim != dim) { // turning in an intersection, etc. (Note: asserts with bad intersection without this)
 		car_t *to_stop(nullptr);
 		if (c.front_intersects_car(*this)) {to_stop = &c;}
 		else if (front_intersects_car(c))  {to_stop = this;}
@@ -4042,7 +4043,7 @@ public:
 					if (it->cur_road_type == TYPE_RSEG) { // road segment
 						if (it->cur_seg != seg_ix) continue; // on a different segment, skip
 					}
-					else if (&road_gen.get_car_isec(*it) != &isec) continue; // in a different intersection
+					else if (it->cur_road_type != car.cur_road_type || it->cur_seg != car.cur_seg) continue; // in a different intersection
 					if (it->get_orient() != dest_orient) continue; // wrong orient
 					float const dist_sq(p2p_dist_sq(car_center, it->get_center()));
 					if (p2p_dist_sq(car_center, it->get_front()) < dist_sq) continue; // front is closer than back - this car is not in front of us (waiting on other side of isect?)
