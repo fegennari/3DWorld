@@ -2916,6 +2916,38 @@ class city_road_gen_t {
 			if (car.cur_road_type != TYPE_ISEC2 && !get_car_isec(car).can_go_now(car)) return 0; // check stoplights and blocked intersections
 			return car_can_fit_in_seg(car, global_rn); // check if there's space, to avoid blocking the intersection
 		}
+		void stop_and_wait_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_isec_t const &isec) const {
+			// helps with gridlock at connector roads
+			if (car.rot_z == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
+				unsigned char const orig_turn_dir(car.turn_dir);
+
+				if (car.turn_dir == TURN_LEFT) { // turning left at intersection
+					assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
+					if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
+					else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
+				}
+				/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
+					if (isec.is_orient_currently_valid(conn_right[car.get_orient_in_isec()], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
+						car.turn_dir = TURN_RIGHT; // go right instead
+					}
+				}*/
+				if (car.turn_dir != orig_turn_dir && isec.is_global_conn_int()) { // change of turn dir at global connector road intersection
+					if (isec.rix_xy[isec.get_dest_orient_for_car_in_isec(car, 1)] < 0) {car.turn_dir = orig_turn_dir;} // abort turn change to avoid going to the wrong city
+				}
+				if (car.turn_dir != orig_turn_dir) {car.on_alternate_turn_dir(rgen);}
+			}
+			car.stopped_at_light = 1;
+			car.decelerate_fast();
+			float const wait_secs(car.get_wait_time_secs());
+
+			if (wait_secs > 60.0 && isec.contains_pt_xy(car.get_center()) && isec.yellow_light(car)) { // car in the intersection
+				cout << "car waiting for " << wait_secs << " seconds" << endl;
+				car_t const orig_car(car);
+				car = car_t(); // reset default fields
+				if (add_car_to_rns(car, rgen, road_networks)) {car.model_id = orig_car.model_id; car.color_id = orig_car.color_id; return;} // relocate car somewhere else
+				car = orig_car; // failed (unlikely) - restore original car state
+			}
+		}
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
@@ -2926,8 +2958,7 @@ class city_road_gen_t {
 
 				// FIXME: unclear why this was needed (how was stopped_at_light not set earlier?)
 				if (isec.contains_pt_xy(car.get_front()) && !isec.contains_pt_xy(car.get_center()) && !car_can_fit_in_seg(car, global_rn)) { // not yet in the isec - stop and wait
-					car.stopped_at_light = 1;
-					car.decelerate_fast();
+					stop_and_wait_car(car, rgen, road_networks, isec);
 					return;
 				}
 			}
@@ -2937,8 +2968,7 @@ class city_road_gen_t {
 					road_isec_t const &isec(get_car_isec(*car.car_in_front));
 					
 					if (isec.contains_pt_xy(car.get_front(0.375))) { // we're about to enter the intersection
-						car.stopped_at_light = 1;
-						car.decelerate_fast();
+						stop_and_wait_car(car, rgen, road_networks, isec);
 						return; // stop and wait for other car to go
 					}
 				}
@@ -2946,39 +2976,7 @@ class city_road_gen_t {
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
 				if (car_can_go_now(car, global_rn)) {car.stopped_at_light = 0;} // can go now
-				else if (car.in_isect()) {
-					road_isec_t const &isec(get_car_isec(car));
-
-					// helps with gridlock at connector roads
-					if (car.rot_z == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
-						unsigned char const orig_turn_dir(car.turn_dir);
-
-						if (car.turn_dir == TURN_LEFT) { // turning left at intersection
-							assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
-							if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
-							else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
-						}
-						/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
-							if (isec.is_orient_currently_valid(conn_right[car.get_orient_in_isec()], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
-								car.turn_dir = TURN_RIGHT; // go right instead
-							}
-						}*/
-						if (car.turn_dir != orig_turn_dir && isec.is_global_conn_int()) { // change of turn dir at global connector road intersection
-							if (isec.rix_xy[isec.get_dest_orient_for_car_in_isec(car, 1)] < 0) {car.turn_dir = orig_turn_dir;} // abort turn change to avoid going to the wrong city
-						}
-						if (car.turn_dir != orig_turn_dir) {car.on_alternate_turn_dir(rgen);}
-					}
-					car.decelerate_fast();
-					float const wait_secs(car.get_wait_time_secs());
-
-					if (wait_secs > 60.0 && isec.contains_pt_xy(car.get_center()) && isec.yellow_light(car)) { // car in the intersection
-						cout << "car waiting for " << wait_secs << " seconds" << endl;
-						car_t const orig_car(car);
-						car = car_t(); // reset default fields
-						if (add_car_to_rns(car, rgen, road_networks)) {car.model_id = orig_car.model_id; car.color_id = orig_car.color_id; return;} // relocate car somewhere else
-						car = orig_car; // failed (unlikely) - restore original car state
-					}
-				}
+				else if (car.in_isect()) {stop_and_wait_car(car, rgen, road_networks, get_car_isec(car));}
 				if (was_stopped) return; // no update needed
 			} else {car.accelerate();}
 
