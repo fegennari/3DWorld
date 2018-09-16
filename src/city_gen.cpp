@@ -49,7 +49,7 @@ colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, R
 
 
 extern bool enable_dlight_shadows, dl_smap_enabled, tt_fire_button_down;
-extern int rand_gen_index, display_mode, animate2, game_mode;
+extern int rand_gen_index, display_mode, animate2, game_mode, frame_counter;
 extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks, FAR_CLIP;
 extern double tfticks;
@@ -835,7 +835,7 @@ struct road_isec_t : public cube_t {
 	bool can_go_now(car_t const &car) const {
 		if (!can_go_based_on_light(car)) return 0;
 		if (stoplight.check_int_clear(car)) return 1;
-		car.honk_horn_if_close_and_fast();
+		if ((frame_counter&15) == 0) {car.honk_horn_if_close_and_fast();} // honk every so often
 		return 0; // intersection not clear
 	}
 	bool is_blocked(car_t const &car) const {
@@ -4013,7 +4013,7 @@ public:
 			}
 			i->move(speed);
 			if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
-			if (!i->stopped_at_light && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
+			if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 			road_gen.register_car_at_city(i->cur_city);
 		} // for i
 		if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();}
