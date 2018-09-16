@@ -443,7 +443,7 @@ struct car_t {
 	float height, dz, rot_z, turn_val, cur_speed, max_speed, waiting_start;
 	car_t const *car_in_front;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), cur_road_type(0), color_id(0),
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), cur_road_type(TYPE_RSEG), color_id(0),
 		turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
 		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), waiting_start(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
@@ -772,7 +772,7 @@ namespace stoplight_ns {
 struct road_isec_t : public cube_t {
 	uint8_t num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 	short conn_to_city;
-	short rix_xy[4], conn_ix[4]; // pos=cur city road, neg=global road; always segment ix
+	short rix_xy[4], conn_ix[4]; // road/segment index: pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
 
 	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_, bool at_conn_road, short conn_to_city_=-1) : cube_t(c), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road) {
@@ -2910,15 +2910,16 @@ class city_road_gen_t {
 			return (avail_space > req_space); // check if there's enough space in straight segment
 		}
 		bool car_can_go_now(car_t const &car) const {
-			if (!car.in_isect() || car.cur_road_type == TYPE_ISEC2) return 1; // not at an intersection with stoplights
-			return (get_car_isec(car).can_go_now(car) && car_can_fit_in_seg(car));
+			if (!car.in_isect()) return 1; // not at an intersection
+			if (car.cur_road_type != TYPE_ISEC2 && !get_car_isec(car).can_go_now(car)) return 0; // check stoplights and blocked intersections
+			return car_can_fit_in_seg(car); // check if there's space, to avoid blocking the intersection
 		}
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
 			if (car.in_isect()) {get_car_isec(car).notify_waiting_car(car);} // even if not stopped
 
-			// check if there's a car in front of us on the same or adjacent road segment/isect of the same road in the same city
+			// check if there's a car in front of us on the same or adjacent road segment/isect of the same road in the same city (Note: unclear if this is needed)
 			if (car.car_in_front != nullptr && car.car_in_front->cur_city == car.cur_city && car.car_in_front->cur_road == car.cur_road) {
 				if (!car.in_isect() && car.car_in_front->in_isect() && car.car_in_front->is_stopped()) { // car in front stopped in isect, we haven't entered yet
 					road_isec_t const &isec(get_car_isec(*car.car_in_front));
@@ -3562,7 +3563,7 @@ public:
 
 bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	
-	if (c.dim != dim) { // turning in an intersection, etc.
+	if (c.dim != dim) { // turning in an intersection, etc. (Note: unclear if this is needed)
 		car_t *to_stop(nullptr);
 		if (c.front_intersects_car(*this)) {to_stop = &c;}
 		else if (front_intersects_car(c))  {to_stop = this;}
