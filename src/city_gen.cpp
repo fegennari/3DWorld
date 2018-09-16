@@ -4004,9 +4004,9 @@ public:
 		struct comp_car_road {
 			bool operator()(car_t const &c1, car_t const &c2) const {return (c1.cur_road < c2.cur_road);}
 		};
-		void find_adj_car_after_turn(car_t &car) {
+		int find_next_car_after_turn(car_t &car) {
 			road_isec_t const &isec(road_gen.get_car_isec(car));
-			if (car.turn_dir == TURN_NONE && !isec.is_global_conn_int()) return; // car not turning, and not on connector road isec: should be handled by sorted car_in_front logic
+			if (car.turn_dir == TURN_NONE && !isec.is_global_conn_int()) return -1; // car not turning, and not on connector road isec: should be handled by sorted car_in_front logic
 			unsigned const dest_orient(isec.get_dest_orient_for_car_in_isec(car, 0)); // Note: may be before, during, or after turning
 			int road_ix(isec.rix_xy[dest_orient]), seg_ix(isec.conn_ix[dest_orient]);
 			unsigned city_ix(car.cur_city);
@@ -4023,6 +4023,7 @@ public:
 			// include normal sorted order car; this is needed when going straight through connector road 4-way intersections where cur_road changes within the intersection
 			if (car.car_in_front && car.car_in_front->get_orient() != dest_orient) {car.car_in_front = 0;} // not the correct car (turning a different way)
 			if (car.turn_dir == TURN_NONE && car.car_in_front) {min_eq(dmin_sq, p2p_dist_sq(car_center, car.car_in_front->get_center()));}
+			int ret_car_ix(-1);
 			
 			for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 				if (cb->cur_city != city_ix) continue; // incorrect city - skip
@@ -4031,6 +4032,7 @@ public:
 				auto range_end(cars.begin()+end);
 				car_t ref_car; ref_car.cur_road = road_ix;
 				auto it(std::lower_bound(cars.begin()+start, range_end, ref_car, comp_car_road())); // binary search acceleration
+				float prev_dist_sq(FLT_MAX);
 
 				for (; it != range_end; ++it) {
 					if (&(*it) == &car) continue; // skip self
@@ -4045,14 +4047,22 @@ public:
 					float const dist_sq(p2p_dist_sq(car_center, it->get_center()));
 					if (p2p_dist_sq(car_center, it->get_front()) < dist_sq) continue; // front is closer than back - this car is not in front of us (waiting on other side of isect?)
 					//cout << TXT(dmin_sq) << TXT(dist_sq) << (dist_sq < dmin_sq) << endl;
-					if (dist_sq < dmin_sq) {dmin_sq = dist_sq; car.car_in_front = &(*it);} // new closest car
+					
+					if (dist_sq < dmin_sq) { // new closest car
+						if (&(*it) != car.car_in_front) {ret_car_ix = (it - cars.begin());} // record index if set to a new value
+						car.car_in_front = &(*it);
+						dmin_sq = dist_sq;
+					}
+					else if (dist_sq > prev_dist_sq) break; // we're moving too far away from the car
+					prev_dist_sq = dist_sq;
 				} // for it
 			} // for cb
+			return ret_car_ix;
 		}
 	public:
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
-		//timer_t timer("Update Cars"); // 4K cars = 0.7ms
+		//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 1.2ms with destinations + navigation
 		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		car_blocks.clear();
@@ -4098,7 +4108,10 @@ public:
 				}
 				//++num_on_conn_road;
 			}
-			if (i->in_isect()) {find_adj_car_after_turn(*i);}
+			if (i->in_isect()) {
+				int const next_car(find_next_car_after_turn(*i)); // Note: calculates in i->car_in_front
+				if (next_car >= 0) {i->check_collision(cars[next_car], road_gen);} // make sure we collide with the correct car
+			}
 			//road_gen.update_car_seg_stats(*i);
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
