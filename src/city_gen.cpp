@@ -538,7 +538,7 @@ struct car_t {
 		car_t const *cur_car(this);
 
 		// FIXME: only correct for cars that are going straight (not turning)?
-		for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_car_size().x
+		for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_car_size().x (FIXME: 50 not high enough for connector roads)
 			if (cur_car->dim != dim || cur_car->dir == dir) {len += cur_car->get_length();} // include if not going in opposite direction
 			cur_car = cur_car->car_in_front;
 			if (!cur_car || !range.contains_pt_xy(cur_car->get_center())) break;
@@ -2132,6 +2132,10 @@ class city_road_gen_t {
 				tile_blocks[block_id].bcube.union_with_cube(v[i]);
 			} // for i
 		}
+		road_seg_t const &get_seg(unsigned seg_ix) const {
+			assert(seg_ix < segs.size());
+			return segs[seg_ix];
+		}
 	public:
 		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), tot_road_len(0.0), num_cars(0) {} // global road network ctor
 		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), tot_road_len(0.0), num_cars(0) {
@@ -2873,8 +2877,7 @@ class city_road_gen_t {
 			if (conn_ix < 0) { // city connector road case, use global_rn
 				assert(rix < 0);
 				conn_ix = decode_neg_ix(conn_ix);
-				assert((unsigned)conn_ix < global_rn.segs.size());
-				rix = global_rn.segs[conn_ix].road_ix;
+				rix = global_rn.get_seg(conn_ix).road_ix;
 				car.cur_city = CONN_CITY_IX; // move to global road network
 			} else {assert(rix >= 0);} // local road
 			car.cur_road = (unsigned)rix;
@@ -2898,22 +2901,20 @@ class city_road_gen_t {
 				return car.cur_seg;
 			}
 		}
-		bool car_can_fit_in_seg(car_t const &car) const {
+		bool car_can_fit_in_seg(car_t const &car, road_network_t const &global_rn) const {
 			if (!car.car_in_front) return 1; // no car in front, assume we can fit (optimization)
-			int const seg_ix(get_next_seg(car));
-			if (seg_ix < 0) return 1; // connector road - assume we can fit (FIXME: should handle this)
-			assert((unsigned)seg_ix < segs.size());
-			road_t const &seg(segs[seg_ix]);
+			int seg_ix(get_next_seg(car));
+			road_t const &seg((seg_ix < 0) ? global_rn.get_seg(decode_neg_ix(seg_ix)) : get_seg(seg_ix)); // handle global connector road
 			cube_t region(seg);
 			if (car.in_isect()) {region.union_with_cube(get_car_isec(car));} // include cars in the current intersection as well
 			float const req_space(car.get_sum_len_space_for_cars_in_front(region)), avail_space(seg.get_length());
 			//cout << "num_in_front: " << car.count_cars_in_front(region) << ", avail_space: " << avail_space << ", req_space: " << req_space << ", fits: " << (avail_space > req_space) << endl;
 			return (avail_space > req_space); // check if there's enough space in straight segment
 		}
-		bool car_can_go_now(car_t const &car) const {
+		bool car_can_go_now(car_t const &car, road_network_t const &global_rn) const {
 			if (!car.in_isect()) return 1; // not at an intersection
 			if (car.cur_road_type != TYPE_ISEC2 && !get_car_isec(car).can_go_now(car)) return 0; // check stoplights and blocked intersections
-			return car_can_fit_in_seg(car); // check if there's space, to avoid blocking the intersection
+			return car_can_fit_in_seg(car, global_rn); // check if there's space, to avoid blocking the intersection
 		}
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
@@ -2924,7 +2925,7 @@ class city_road_gen_t {
 				isec.notify_waiting_car(car); // even if not stopped
 
 				// FIXME: unclear why this was needed (how was stopped_at_light not set earlier?)
-				if (isec.contains_pt_xy(car.get_front()) && !isec.contains_pt_xy(car.get_center()) && !car_can_fit_in_seg(car)) { // not yet in the intersection - stop and wait
+				if (isec.contains_pt_xy(car.get_front()) && !isec.contains_pt_xy(car.get_center()) && !car_can_fit_in_seg(car, global_rn)) { // not yet in the isec - stop and wait
 					car.stopped_at_light = 1;
 					car.decelerate_fast();
 					return;
@@ -2944,7 +2945,7 @@ class city_road_gen_t {
 			}
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
-				if (car_can_go_now(car)) {car.stopped_at_light = 0;} // can go now
+				if (car_can_go_now(car, global_rn)) {car.stopped_at_light = 0;} // can go now
 				else if (car.in_isect()) {
 					road_isec_t const &isec(get_car_isec(car));
 
@@ -3115,7 +3116,7 @@ class city_road_gen_t {
 					}
 					assert(isec.conn & (1<<orients[car.turn_dir]));
 					car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
-					car.stopped_at_light   = (isec.red_or_yellow_light(car) || !car_rn.car_can_go_now(car));
+					car.stopped_at_light   = (isec.red_or_yellow_light(car) || !car_rn.car_can_go_now(car, global_rn));
 					if (car.stopped_at_light) {car.decelerate_fast();}
 					if (car.turn_dir != TURN_NONE) {car.turn_val = car.get_center()[!dim];} // capture car centerline before the turn
 				}
@@ -3175,8 +3176,7 @@ class city_road_gen_t {
 		}
 		road_seg_t const &get_car_seg(car_t const &car) const {
 			assert(car.cur_road_type == TYPE_RSEG);
-			assert(car.cur_seg < segs.size());
-			return segs[car.cur_seg];
+			return get_seg(car.cur_seg);
 		}
 		road_isec_t const &get_car_isec(car_t const &car) const {
 			auto const &iv(isecs[car.get_isec_type()]);
