@@ -819,9 +819,10 @@ struct road_isec_t : public cube_t {
 		//return stoplight.check_int_clear(orient, turn_dir); // intersection not clear (Note: too strong of a check, blocking car may be exiting the intersection)
 		return 1;
 	}
-	unsigned get_orient_for_turning_car(car_t const &car) const {
+	unsigned get_dest_orient_for_car_in_isec(car_t const &car, bool is_entering) const {
 		unsigned const orient_in(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
-		assert(conn & (1<<orient_in)); // car must come from an enabled orient
+		//cout << TXT(car.rot_z) << TXT(car.turn_val) << TXT(unsigned(car.turn_dir)) << TXT(car.dim) << TXT(car.dir) << TXT(orient_in) << hex << unsigned(conn) << dec << endl;
+		if (is_entering) {assert(conn & (1<<orient_in));} // car must come from an enabled orient
 		unsigned new_orient(0);
 		switch (car.turn_dir) {
 		case TURN_NONE:  new_orient = car.get_orient(); break;
@@ -2890,7 +2891,7 @@ class city_road_gen_t {
 		int get_next_seg(car_t const &car) const {
 			if (car.in_isect()) { // use segment at exit of current intersection
 				road_isec_t const &isec(get_car_isec(car));
-				return isec.conn_ix[isec.get_orient_for_turning_car(car)];
+				return isec.conn_ix[isec.get_dest_orient_for_car_in_isec(car, 1)];
 			}
 			else { // use current segment
 				assert(car.cur_road_type == TYPE_RSEG);
@@ -2900,7 +2901,7 @@ class city_road_gen_t {
 		bool car_can_fit_in_seg(car_t const &car) const {
 			if (!car.car_in_front) return 1; // no car in front, assume we can fit (optimization)
 			int const seg_ix(get_next_seg(car));
-			if (seg_ix < 0) return 1; // connector road - assume we can fit
+			if (seg_ix < 0) return 1; // connector road - assume we can fit (FIXME: should handle this)
 			assert((unsigned)seg_ix < segs.size());
 			road_t const &seg(segs[seg_ix]);
 			cube_t region(seg);
@@ -2917,8 +2918,18 @@ class city_road_gen_t {
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
-			if (car.in_isect()) {get_car_isec(car).notify_waiting_car(car);} // even if not stopped
+			
+			if (car.in_isect()) {
+				road_isec_t const &isec(get_car_isec(car));
+				isec.notify_waiting_car(car); // even if not stopped
 
+				// FIXME: unclear why this was needed (how was stopped_at_light not set earlier?)
+				if (isec.contains_pt_xy(car.get_front()) && !isec.contains_pt_xy(car.get_center()) && !car_can_fit_in_seg(car)) { // not yet in the intersection - stop and wait
+					car.stopped_at_light = 1;
+					car.decelerate_fast();
+					return;
+				}
+			}
 			// check if there's a car in front of us on the same or adjacent road segment/isect of the same road in the same city (Note: unclear if this is needed)
 			if (car.car_in_front != nullptr && car.car_in_front->cur_city == car.cur_city && car.car_in_front->cur_road == car.cur_road) {
 				if (!car.in_isect() && car.car_in_front->in_isect() && car.car_in_front->is_stopped()) { // car in front stopped in isect, we haven't entered yet
@@ -2952,7 +2963,7 @@ class city_road_gen_t {
 							}
 						}*/
 						if (car.turn_dir != orig_turn_dir && isec.is_global_conn_int()) { // change of turn dir at global connector road intersection
-							if (isec.rix_xy[isec.get_orient_for_turning_car(car)] < 0) {car.turn_dir = orig_turn_dir;} // abort turn change to avoid going to the wrong city
+							if (isec.rix_xy[isec.get_dest_orient_for_car_in_isec(car, 1)] < 0) {car.turn_dir = orig_turn_dir;} // abort turn change to avoid going to the wrong city
 						}
 						if (car.turn_dir != orig_turn_dir) {car.on_alternate_turn_dir(rgen);}
 					}
@@ -3989,6 +4000,56 @@ public:
 		} // for cb
 		return ret;
 	}
+	protected:
+		struct comp_car_road {
+			bool operator()(car_t const &c1, car_t const &c2) const {return (c1.cur_road < c2.cur_road);}
+		};
+		void find_adj_car_after_turn(car_t &car) {
+			road_isec_t const &isec(road_gen.get_car_isec(car));
+			if (car.turn_dir == TURN_NONE && !isec.is_global_conn_int()) return; // car not turning, and not on connector road isec: should be handled by sorted car_in_front logic
+			unsigned const dest_orient(isec.get_dest_orient_for_car_in_isec(car, 0)); // Note: may be before, during, or after turning
+			int road_ix(isec.rix_xy[dest_orient]), seg_ix(isec.conn_ix[dest_orient]);
+			unsigned city_ix(car.cur_city);
+			//cout << TXT(car.get_orient()) << TXT(dest_orient) << TXT(city_ix) << TXT(road_ix) << TXT(seg_ix) << endl;
+			assert((road_ix < 0) == (seg_ix < 0));
+
+			if (road_ix < 0) { // goes to connector road
+				city_ix = CONN_CITY_IX;
+				road_ix = decode_neg_ix(road_ix);
+				seg_ix  = decode_neg_ix(seg_ix );
+			}
+			point const car_center(car.get_center());
+			float dmin(car.get_length() + city_params.road_width), dmin_sq(dmin*dmin);
+			// include normal sorted order car; this is needed when going straight through connector road 4-way intersections where cur_road changes within the intersection
+			if (car.car_in_front && car.car_in_front->get_orient() != dest_orient) {car.car_in_front = 0;} // not the correct car (turning a different way)
+			if (car.turn_dir == TURN_NONE && car.car_in_front) {min_eq(dmin_sq, p2p_dist_sq(car_center, car.car_in_front->get_center()));}
+			
+			for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+				if (cb->cur_city != city_ix) continue; // incorrect city - skip
+				unsigned const start(cb->start), end(cb->first_parked);
+				assert(end <= cars.size() && start <= end);
+				auto range_end(cars.begin()+end);
+				car_t ref_car; ref_car.cur_road = road_ix;
+				auto it(std::lower_bound(cars.begin()+start, range_end, ref_car, comp_car_road())); // binary search acceleration
+
+				for (; it != range_end; ++it) {
+					if (&(*it) == &car) continue; // skip self
+					assert(it->cur_city == city_ix); // must be same city
+					if (it->cur_road != road_ix) break; // different road, done
+					
+					if (it->cur_road_type == TYPE_RSEG) { // road segment
+						if (it->cur_seg != seg_ix) continue; // on a different segment, skip
+					}
+					else if (&road_gen.get_car_isec(*it) != &isec) continue; // in a different intersection
+					if (it->get_orient() != dest_orient) continue; // wrong orient
+					float const dist_sq(p2p_dist_sq(car_center, it->get_center()));
+					if (p2p_dist_sq(car_center, it->get_front()) < dist_sq) continue; // front is closer than back - this car is not in front of us (waiting on other side of isect?)
+					//cout << TXT(dmin_sq) << TXT(dist_sq) << (dist_sq < dmin_sq) << endl;
+					if (dist_sq < dmin_sq) {dmin_sq = dist_sq; car.car_in_front = &(*it);} // new closest car
+				} // for it
+			} // for cb
+		}
+	public:
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars"); // 4K cars = 0.7ms
@@ -4037,6 +4098,7 @@ public:
 				}
 				//++num_on_conn_road;
 			}
+			if (i->in_isect()) {find_adj_car_after_turn(*i);}
 			//road_gen.update_car_seg_stats(*i);
 		} // for i
 		for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
