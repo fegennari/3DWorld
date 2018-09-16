@@ -529,7 +529,7 @@ struct car_t {
 		for (unsigned i = 0; i < 50; ++i) { // limit iterations
 			cur_car = cur_car->car_in_front;
 			if (!cur_car || (!range.is_all_zeros() && !range.contains_pt_xy(cur_car->get_center()))) break;
-			if (cur_car->dim == dim && cur_car->dir == dir) {++num;} // include if same dim/dir
+			if (cur_car->dim != dim || cur_car->dir == dir) {++num;} // include if not going in opposite direction
 		}
 		return num;
 	}
@@ -539,7 +539,7 @@ struct car_t {
 
 		// FIXME: only correct for cars that are going straight (not turning)?
 		for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_car_size().x
-			if (cur_car->dim == dim && cur_car->dir == dir) {len += cur_car->get_length();} // include if same dim/dir
+			if (cur_car->dim != dim || cur_car->dir == dir) {len += cur_car->get_length();} // include if not going in opposite direction
 			cur_car = cur_car->car_in_front;
 			if (!cur_car || !range.contains_pt_xy(cur_car->get_center())) break;
 		}
