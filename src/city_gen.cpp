@@ -3578,6 +3578,7 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	}
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
 	float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
+	if (fabs(c.bcube.d[dim][0] - bcube.d[dim][0]) > 2.5*avg_len) return 0; // early termination test
 	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
 	float const sep_dist(avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed)); // 25% to 125% car length, depending on speed
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
@@ -4091,10 +4092,10 @@ public:
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
 				if (i->cur_city != j->cur_city || i->cur_road != j->cur_road) break; // different cities or roads
 				if (!on_conn_road && i->cur_road_type == j->cur_road_type && abs((int)i->cur_seg - (int)j->cur_seg) > (on_conn_road ? 1 : 0)) break; // diff road segs or diff isects
-				bool const coll(i->check_collision(*j, road_gen));
+				i->check_collision(*j, road_gen);
 				i->register_adj_car(*j);
 				j->register_adj_car(*i);
-				if (!coll && !dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break; // cars are far away from each other, dist should increase unless coll/overlap
+				if (!dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break; // cars are far away from each other, dist should increase unless coll/overlap
 			}
 			if (on_conn_road) { // on connector road, check before entering intersection to a city
 				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
