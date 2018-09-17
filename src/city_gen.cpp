@@ -2945,6 +2945,7 @@ class city_road_gen_t {
 
 			if (wait_secs > 60.0 && isec.contains_pt_xy(car.get_center()) && isec.yellow_light(car)) { // car in the intersection
 				cout << "car waiting for " << wait_secs << " seconds" << endl;
+				car.honk_horn_if_close();
 				car_t const orig_car(car);
 				car = car_t(); // reset default fields
 				if (add_car_to_rns(car, rgen, road_networks)) {car.model_id = orig_car.model_id; car.color_id = orig_car.color_id; return;} // relocate car somewhere else
