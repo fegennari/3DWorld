@@ -3004,7 +3004,8 @@ class city_road_gen_t {
 				bool const turn_dir(car.turn_dir == TURN_RIGHT); // 0=left, 1=right
 				point const car_center(car.get_center()), prev_center(car.prev_bcube.get_cube_center());
 				float const car_lane_offset(get_car_lane_offset());
-				float const turn_radius((turn_dir ? 0.15 : 0.25)*city_params.road_width); // right turn has smaller radius
+				float const trad_mult((car.cur_road_type == TYPE_ISEC2) ? 2.0 : 1.0); // larger turn radius for 2-way intersections (bends)
+				float const turn_radius((turn_dir ? 0.15 : 0.25)*trad_mult*city_params.road_width); // right turn has smaller radius
 				float const isec_center(bcube.get_cube_center()[dim]);
 				float const centerline(isec_center + (((car.turn_dir == TURN_LEFT) ^ car.dir) ? -1.0 : 1.0)*car_lane_offset);
 				float const prev_val(prev_center[dim]), cur_val(car_center[dim]);
