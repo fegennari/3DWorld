@@ -2966,17 +2966,6 @@ class city_road_gen_t {
 					return;
 				}
 			}
-			// check if there's a car in front of us on the same or adjacent road segment/isect of the same road in the same city (Note: unclear if this is needed)
-			if (car.car_in_front != nullptr && car.car_in_front->cur_city == car.cur_city && car.car_in_front->cur_road == car.cur_road) {
-				if (!car.in_isect() && car.car_in_front->in_isect() && car.car_in_front->is_stopped()) { // car in front stopped in isect, we haven't entered yet
-					road_isec_t const &isec(get_car_isec(*car.car_in_front));
-					
-					if (isec.contains_pt_xy(car.get_front(0.375))) { // we're about to enter the intersection
-						stop_and_wait_car(car, rgen, road_networks, isec);
-						return; // stop and wait for other car to go
-					}
-				}
-			}
 			if (car.stopped_at_light) { // Note: is_isect test is here to allow cars to coast through lights when decel is very low
 				bool const was_stopped(car.is_stopped());
 				if (car_can_go_now(car, global_rn)) {car.stopped_at_light = 0;} // can go now
@@ -3577,7 +3566,7 @@ public:
 
 bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	
-	if (c.dim != dim) { // turning in an intersection, etc. (Note: asserts with bad intersection without this)
+	if (c.dim != dim) { // turning in an intersection, etc. (Note: may not be needed, but at least need to return here)
 		car_t *to_stop(nullptr);
 		if (c.front_intersects_car(*this)) {to_stop = &c;}
 		else if (front_intersects_car(c))  {to_stop = this;}
