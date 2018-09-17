@@ -94,7 +94,7 @@ struct city_params_t {
 	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 4=only 4-way (no straight roads)
 	// cars
 	unsigned num_cars;
-	float car_speed, traffic_balance_val;
+	float car_speed, traffic_balance_val, new_city_prob;
 	bool enable_car_path_finding;
 	vector<car_model_t> car_model_files;
 	// parking lots
@@ -111,8 +111,8 @@ struct city_params_t {
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0),
 		slope_width(0), num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0),
-		car_speed(0.0), traffic_balance_val(0.5), enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0),
-		car_shadows(0), max_lights(1024), max_shadow_maps(0), max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0) {}
+		car_speed(0.0), traffic_balance_val(0.5), new_city_prob(1.0), enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0),
+		max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
@@ -178,6 +178,9 @@ struct city_params_t {
 		}
 		else if (str == "traffic_balance_val") {
 			if (!read_float(fp, traffic_balance_val) || traffic_balance_val > 1.0 || traffic_balance_val < 0.0) {return read_error(str);}
+		}
+		else if (str == "new_city_prob") {
+			if (!read_float(fp, new_city_prob) || new_city_prob < 0.0) {return read_error(str);}
 		}
 		else if (str == "enable_car_path_finding") {
 			if (!read_bool(fp, enable_car_path_finding)) {return read_error(str);}
@@ -3532,7 +3535,7 @@ public:
 		if (!car.dest_valid) {car.dest_city = car.cur_city;} // start in current city
 		else {
 			auto const &conn(road_networks[car.cur_city].get_connected());
-			float const new_city_prob(min(0.4f, 0.1f*conn.size())); // 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
+			float const new_city_prob(city_params.new_city_prob*min(0.4f, 0.1f*conn.size())); // 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
 
 			if (rgen.rand_float() < new_city_prob) { // select a different city when there are multiple cities
 				if (rgen.rand_float() < city_params.traffic_balance_val) { // choose the connected city with the lowest traffic density
