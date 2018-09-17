@@ -464,7 +464,7 @@ struct car_t {
 	unsigned get_isec_type() const {assert(in_isect()); return (cur_road_type - TYPE_ISEC2);}
 	void park() {cur_speed = max_speed = 0.0;}
 	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
-	float get_wait_time_secs  () const {return (stopped_at_light ? (tfticks - waiting_start)/TICKS_PER_SECOND : 0.0);} // Note: only meaningful for cars stopped at lights
+	float get_wait_time_secs  () const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 
 	string str() const {
