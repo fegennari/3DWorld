@@ -540,7 +540,6 @@ struct car_t {
 		float len(0.0);
 		car_t const *cur_car(this);
 
-		// FIXME: only correct for cars that are going straight (not turning)?
 		for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_car_size().x (FIXME: 50 not high enough for connector roads)
 			if (cur_car->dim != dim || cur_car->dir == dir) {len += cur_car->get_length();} // include if not going in opposite direction
 			cur_car = cur_car->car_in_front;
@@ -2298,7 +2297,7 @@ class city_road_gen_t {
 		}
 		int find_3way_int_at(cube_t const &c, bool dim, bool dir) const {
 			float const cube_cent(0.5*(c.d[!dim][0] + c.d[!dim][1]));
-			float dmin(0.0);
+			//float dmin(0.0);
 			int ret(-1);
 
 			for (unsigned i = 0; i < isecs[1].size(); ++i) {
@@ -3249,7 +3248,7 @@ public:
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
-		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width), half_width(0.5*road_width);
+		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width);
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
 
 		for (unsigned d = 0; d < 2; ++d) { // try for single segment
