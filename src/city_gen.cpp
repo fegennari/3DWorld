@@ -3578,9 +3578,8 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 	}
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
 	float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
-	if (fabs(c.bcube.d[dim][0] - bcube.d[dim][0]) > 2.5*avg_len) return 0; // early termination test
 	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
-	float const sep_dist(avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed)); // 25% to 125% car length, depending on speed
+	float const sep_dist(avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed)); // 25% to 125% car length, depending on speed (2x on connector roads)
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
