@@ -2919,7 +2919,7 @@ class city_road_gen_t {
 			return car_can_fit_in_seg(car, global_rn); // check if there's space, to avoid blocking the intersection
 		}
 		void stop_and_wait_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_isec_t const &isec) const {
-			// helps with gridlock at connector roads
+			// helps with gridlock at connector roads; Note that right turns can't be blocked by cross traffic
 			if (car.rot_z == 0.0 && car.turn_dir != TURN_RIGHT && isec.yellow_light(car) && !isec.stoplight.check_int_clear(car)) { // light turned yellow and isec still blocked
 				unsigned char const orig_turn_dir(car.turn_dir);
 
@@ -2928,11 +2928,11 @@ class city_road_gen_t {
 					if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
 					else {car.turn_dir = TURN_RIGHT;} // can't go straight - then go right instead
 				}
-				/*else if (car.turn_dir == TURN_NONE) { // was going straight (Note: fails with bad intersection)
-					if (isec.is_orient_currently_valid(conn_right[car.get_orient_in_isec()], TURN_RIGHT)) { // invert dir (incoming, not outgoing)
-						car.turn_dir = TURN_RIGHT; // go right instead
-					}
-				}*/
+				else if (car.turn_dir == TURN_NONE && car.turn_val != 0.0) { // was going straight, just entered the isec, turn not yet completed
+					unsigned const isec_orient(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
+					if      (isec.is_orient_currently_valid(stoplight_ns::conn_right[isec_orient], TURN_RIGHT)) {car.turn_dir = TURN_RIGHT;} // go right instead
+					else if (isec.is_orient_currently_valid(stoplight_ns::conn_left [isec_orient], TURN_LEFT )) {car.turn_dir = TURN_LEFT ;} // go left instead
+				}
 				if (car.turn_dir != orig_turn_dir && isec.is_global_conn_int()) { // change of turn dir at global connector road intersection
 					if (isec.rix_xy[isec.get_dest_orient_for_car_in_isec(car, 1)] < 0) {car.turn_dir = orig_turn_dir;} // abort turn change to avoid going to the wrong city
 				}
