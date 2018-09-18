@@ -4085,7 +4085,7 @@ public:
 
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			if (i->is_parked()) continue; // no collisions for parked cars
-			bool const on_conn_road(i->cur_city == CONN_CITY_IX);
+			bool const on_conn_road(i->cur_city == CONN_CITY_IX), in_isec(i->in_isect());
 			float const max_check_dist(3.0*i->get_length());
 
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
@@ -4094,7 +4094,8 @@ public:
 				i->check_collision(*j, road_gen);
 				i->register_adj_car(*j);
 				j->register_adj_car(*i);
-				if (!dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break; // cars are far away from each other, dist should increase unless coll/overlap
+				// cars are far away from each other, dist should increase unless coll/overlap
+				if (!in_isec && !dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break; // skip test for car in isec to ensure car_in_front is correct
 			}
 			if (on_conn_road) { // on connector road, check before entering intersection to a city
 				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
