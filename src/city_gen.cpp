@@ -483,7 +483,7 @@ struct car_t {
 	}
 	void move(float speed_mult) {
 		prev_bcube = bcube;
-		if (is_stopped()) return;
+		if (stopped_at_light || is_stopped()) return;
 		assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= CONN_ROAD_SPEED_MULT*max_speed); // Note: must be valid for connector road => city transitions
 		float dist(cur_speed*speed_mult);
 		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
