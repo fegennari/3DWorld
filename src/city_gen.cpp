@@ -3846,7 +3846,7 @@ class car_manager_t {
 					add_light_flare(pos, -front_n, RED, 1.0, 0.5*car.height); // pb 2,3,6,7
 				}
 			}
-			if (car.turn_dir != TURN_NONE && dist_val < 0.1) { // turn signals
+			if (car.turn_dir != TURN_NONE && car.cur_city != CONN_CITY_IX && dist_val < 0.1) { // turn signals (not on connector road bends)
 				float const ts_period = 1.5; // in seconds
 				double const time(fract((tfticks + 1000.0*car.max_speed)/(ts_period*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
 				
