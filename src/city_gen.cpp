@@ -456,6 +456,7 @@ struct car_t {
 	float get_max_speed() const {return ((cur_city == CONN_CITY_IX) ? CONN_ROAD_SPEED_MULT : 1.0)*max_speed;}
 	float get_length() const {return (bcube.d[ dim][1] - bcube.d[ dim][0]);}
 	float get_width () const {return (bcube.d[!dim][1] - bcube.d[!dim][0]);}
+	float get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
@@ -522,7 +523,7 @@ struct car_t {
 		if (car_in_front != nullptr && p2p_dist_xy_sq(get_center(), c.get_center()) > p2p_dist_xy_sq(get_center(), car_in_front->get_center())) return; // already found a closer car
 		cube_t cube(bcube);
 		cube.d[dim][!dir] = cube.d[dim][dir];
-		cube.d[dim][dir] += (dir ? 1.0 : -1.0)*(get_length() + city_params.road_width); // extend one car length + one road width in front
+		cube.d[dim][dir] += (dir ? 1.0 : -1.0)*get_max_lookahead_dist();
 		if (cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
 	}
 	unsigned count_cars_in_front(cube_t const &range=cube_t(all_zeros)) const {
@@ -4011,7 +4012,7 @@ public:
 				seg_ix  = decode_neg_ix(seg_ix );
 			}
 			point const car_center(car.get_center());
-			float dmin(car.get_length() + city_params.road_width), dmin_sq(dmin*dmin);
+			float dmin(car.get_max_lookahead_dist()), dmin_sq(dmin*dmin);
 			// include normal sorted order car; this is needed when going straight through connector road 4-way intersections where cur_road changes within the intersection
 			if (car.car_in_front && car.car_in_front->get_orient() != dest_orient) {car.car_in_front = 0;} // not the correct car (turning a different way)
 			if (car.turn_dir == TURN_NONE && car.car_in_front) {min_eq(dmin_sq, p2p_dist_sq(car_center, car.car_in_front->get_center()));}
@@ -4086,7 +4087,7 @@ public:
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			if (i->is_parked()) continue; // no collisions for parked cars
 			bool const on_conn_road(i->cur_city == CONN_CITY_IX), in_isec(i->in_isect());
-			float const max_check_dist(3.0*i->get_length());
+			float const length(i->get_length()), max_check_dist(max(3.0f*length, (length + i->get_max_lookahead_dist()))); // max of collision dist and car-in-front dist
 
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
 				if (i->cur_city != j->cur_city || i->cur_road != j->cur_road) break; // different cities or roads
@@ -4094,8 +4095,7 @@ public:
 				i->check_collision(*j, road_gen);
 				i->register_adj_car(*j);
 				j->register_adj_car(*i);
-				// cars are far away from each other, dist should increase unless coll/overlap
-				if (!in_isec && !dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break; // skip test for car in isec to ensure car_in_front is correct
+				if (!dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break;
 			}
 			if (on_conn_road) { // on connector road, check before entering intersection to a city
 				for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
