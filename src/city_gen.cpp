@@ -443,12 +443,12 @@ struct car_t {
 	bool dim, dir, stopped_at_light, entering_city, in_tunnel, dest_valid;
 	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
 	unsigned short cur_city, cur_road, cur_seg, dest_city, dest_isec;
-	float height, dz, rot_z, turn_val, cur_speed, max_speed, waiting_start;
+	float height, dz, rot_z, turn_val, cur_speed, max_speed, waiting_pos, waiting_start;
 	car_t const *car_in_front;
 
 	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), cur_road_type(TYPE_RSEG), color_id(0),
 		turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
-		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), waiting_start(0.0), car_in_front(nullptr) {}
+		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), waiting_pos(0.0), waiting_start(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
@@ -490,7 +490,9 @@ struct car_t {
 		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
 		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 		move_by(dir ? dist : -dist);
-		waiting_start = tfticks;
+		// update waiting state
+		float const cur_pos(bcube.d[dim][dir]);
+		if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; waiting_start = tfticks;} // update when we move at least a car length
 	}
 	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
 	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
