@@ -1316,42 +1316,40 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2, fl
 	if (elasticity == 0.0)      return 0;
 	vector3d const delta_v(velocity - obj_vel);
 	if (delta_v == zero_vector) return 0;
+	int xpos(0), ypos(0);
+	float mh(0.0);
 
-	if (world_mode == WMODE_INF_TERRAIN) {
-		float mh(0.0);
-		norm = get_interpolated_terrain_normal(pos, &mh);
+	if (world_mode != WMODE_INF_TERRAIN) { // ground mode
+		xpos = get_xpos(pos.x);
+		ypos = get_ypos(pos.y);
+		if (point_outside_mesh(xpos, ypos)) {status = 0; return 0;} // object on/over edge
+	}
+	switch (coll_type) {
+	case 0: // mesh surface
+		if (world_mode == WMODE_INF_TERRAIN) {
+			norm = get_interpolated_terrain_normal(pos, &mh); // Note: calculates mh as well
+		}
+		else { // ground mode
+			mh = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0);
+			norm = surface_normals[ypos][xpos];
+			elasticity *= (1.0 - 0.5*get_grass_density(pos)); // half elastic in dense grass
+			if (spillway_matrix[ypos][xpos] >= short(frame_counter-1)) {elasticity *= SPILL_ELASTIC;}
+		}
 		max_eq(pos.z, (mh + z_offset));
 		elasticity *= LAND_ELASTICITY;
-	}
-	else {
-		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-
-		if (point_outside_mesh(xpos, ypos)) { // object on/over edge
-			status = 0;
-			return 0;
-		}
-		switch (coll_type) {
-		case 0: // mesh surface
-			{
-				max_eq(pos.z, (interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + z_offset));
-				norm = surface_normals[ypos][xpos];
-				elasticity *= LAND_ELASTICITY*(1.0 - 0.5*get_grass_density(pos)); // half elastic in dense grass
-				if (spillway_matrix[ypos][xpos] >= short(frame_counter-1)) {elasticity *= SPILL_ELASTIC;}
-			}
-			break;
-		case 1: // ice
-			norm.assign(0.0, 0.0, -1.0);
-			elasticity *= ICE_ELASTICITY;
-			break;
-		case 2: // water
-			norm.assign(0.0, 0.0, -1.0);
-			elasticity *= WATER_ELASTIC;
-			break;
-		case 3:
-		default: // horizontal/vertical surface or other
-			elasticity *= elasticity2;
-			assert(norm != zero_vector); // norm must come in correct
-		}
+		break;
+	case 1: // ice
+		norm.assign(0.0, 0.0, -1.0);
+		elasticity *= ICE_ELASTICITY;
+		break;
+	case 2: // water
+		norm.assign(0.0, 0.0, -1.0);
+		elasticity *= WATER_ELASTIC;
+		break;
+	case 3:
+	default: // horizontal/vertical surface or other
+		elasticity *= elasticity2;
+		assert(norm != zero_vector); // norm must come in correct
 	}
 	elasticity = CLIP_TO_01(elasticity);
 	assert(!is_nan(norm));
