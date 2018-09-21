@@ -468,6 +468,11 @@ struct car_t {
 	float get_wait_time_secs  () const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 
+	float get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len=0) const {
+		float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
+		float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
+		return avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed + (add_one_car_len ? 1.0 : 0.0)); // 25% to 125% car length, depending on speed (2x on connector roads)
+	}
 	string str() const {
 		std::ostringstream oss;
 		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << TXT(max_speed) << TXT(cur_speed)
@@ -493,6 +498,13 @@ struct car_t {
 		// update waiting state
 		float const cur_pos(bcube.d[dim][dir]);
 		if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; waiting_start = tfticks;} // update when we move at least a car length
+	}
+	void maybe_accelerate(float mult=0.02) {
+		if (car_in_front) {
+			float const dmin(get_min_sep_dist_to_car(*car_in_front, 1)); // add_one_car_len=1; space between the two car centers
+			if (dist_xy_less_than(get_center(), car_in_front->get_center(), dmin)) {decelerate(mult); return;} // too close to the car in front - decelerate instead
+		}
+		accelerate(mult);
 	}
 	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
 	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
@@ -2981,7 +2993,7 @@ class city_road_gen_t {
 				if (car_can_go_now(car, global_rn)) {car.stopped_at_light = 0;} // can go now
 				else if (car.in_isect()) {stop_and_wait_car(car, rgen, road_networks, get_car_isec(car));} // Note: is_isect test allows cars to coast through lights when decel is very low
 				if (was_stopped) return; // no update needed
-			} else {car.accelerate();}
+			} else {car.maybe_accelerate();}
 
 			cube_t const bcube(get_road_bcube_for_car(car));
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << bcube.str() << endl; assert(0);} // sanity check
@@ -3588,14 +3600,12 @@ bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
 		return 1;
 	}
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
-	float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
-	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
-	float const sep_dist(avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed)); // 25% to 125% car length, depending on speed (2x on connector roads)
+	float const sep_dist(get_min_sep_dist_to_car(c));
 	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
 	if (!bcube_ext.intersects_xy(c.bcube)) return 0;
-	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[c.dim][c.dir]);
+	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[dim][dir]);
 	bool const move_c((front < c_front) ^ dir); // move the car that's behind
 	// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
 	car_t &cmove(move_c ? c : *this); // the car that will be moved
