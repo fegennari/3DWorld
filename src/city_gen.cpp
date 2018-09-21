@@ -501,8 +501,12 @@ struct car_t {
 	}
 	void maybe_accelerate(float mult=0.02) {
 		if (car_in_front) {
-			float const dmin(get_min_sep_dist_to_car(*car_in_front, 1)); // add_one_car_len=1; space between the two car centers
-			if (dist_xy_less_than(get_center(), car_in_front->get_center(), dmin)) {decelerate(mult); return;} // too close to the car in front - decelerate instead
+			float const dist_sq(p2p_dist_xy_sq(get_center(), car_in_front->get_center())), length(get_length());
+
+			if (dist_sq > length*length) { // if cars are colliding, let the collision detection system handle it
+				float const dmin(get_min_sep_dist_to_car(*car_in_front, 1)); // add_one_car_len=1; space between the two car centers
+				if (dist_sq < dmin*dmin) {decelerate(mult); return;} // too close to the car in front - decelerate instead
+			}
 		}
 		accelerate(mult);
 	}
