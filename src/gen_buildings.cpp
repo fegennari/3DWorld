@@ -402,7 +402,7 @@ struct building_t : public building_geom_t {
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
-	bool test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
+	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 };
 
 
@@ -906,9 +906,9 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	return 0;
 }
 
-bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
+bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
-	building_draw.calc_poly_pts(*this, (part + xlate), points); // without the expand
+	building_draw.calc_poly_pts(*this, part, points); // without the expand
 	float const dist(p2p_dist(p_last, pos));
 	point quad_pts[4]; // quads
 	bool updated(0);
@@ -977,11 +977,11 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				had_coll = 1;
 			}
 			else {
-				had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points, cnorm_ptr); // use polygon collision test
+				had_coll |= test_coll_with_sides(pos2, p_last2, radius, (*i + xlate), points, cnorm_ptr); // use polygon collision test
 			}
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			had_coll = test_coll_with_sides(pos2, p_last2, radius, xlate, *i, points, cnorm_ptr);
+			had_coll |= test_coll_with_sides(pos2, p_last2, radius, (*i + xlate), points, cnorm_ptr);
 		}
 		else if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) { // cube
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
@@ -1139,7 +1139,7 @@ void building_t::gen_geometry(unsigned ix) {
 	parts.resize(num_levels);
 	float const height(base.get_dz()), dz(height/num_levels);
 
-	if (rgen.rand_bool() && !do_split) {
+	if (rgen.rand_bool() && !do_split) { // oddly shaped multi-sided overlapping sections
 		point const llc(base.get_llc()), sz(base.get_size());
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels
