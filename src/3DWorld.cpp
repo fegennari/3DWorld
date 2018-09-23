@@ -1335,7 +1335,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		break;
 
 	case GLUT_KEY_F4: // switch weapon mode
-		if (world_mode == WMODE_GROUND) {switch_weapon_mode();}
+		if (world_mode != WMODE_UNIVERSE) {switch_weapon_mode();}
 		break;
 	case GLUT_KEY_F5: // toggle large/small trees
 		change_tree_mode();
