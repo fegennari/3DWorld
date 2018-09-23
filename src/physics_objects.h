@@ -502,6 +502,7 @@ public:
 #define OBJ_COLLIDED     0x0800
 #define PLATFORM_COLL    0x1000
 #define USER_PLACED      0x2000
+#define WAS_FIRED        0x2000 // Note: duplicate value of USER_PLACED flag
 #define WAS_PUSHED       0x4000
 #define FROZEN_FLAG      0x8000
 

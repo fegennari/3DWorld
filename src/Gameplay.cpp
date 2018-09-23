@@ -1980,6 +1980,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		obj.init_dir  = -dir2;
 		obj.time      = -1;
 		obj.source    = shooter;
+		obj.flags    |= WAS_FIRED;
 		if (rapid_fire) {obj.time = int((1.0 - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);}
 		shot_offset += shot_delta; // move to next shot pos
 

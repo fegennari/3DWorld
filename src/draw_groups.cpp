@@ -46,7 +46,7 @@ void draw_smiley_part(point const &pos, vector3d const &orient, int type, int sm
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, mesh2d const *const mesh, shader_t &shader);
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader, lt_atten_manager_t &lt_atten_manager);
-void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
+void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, bool just_thrown, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
@@ -368,7 +368,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		break;
 	case BALL:
 		// Note: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
-		draw_rolling_obj(pos, objg.get_obj(j).init_dir, radius, obj.status, ndiv, ((obj.flags & PLATFORM_COLL) != 0),
+		draw_rolling_obj(pos, objg.get_obj(j).init_dir, radius, obj.status, ((obj.flags & WAS_FIRED) != 0), ndiv, ((obj.flags & PLATFORM_COLL) != 0),
 			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)));
 		break;
 	case POWERUP:
@@ -1156,7 +1156,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 }
 
 
-void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix) {
+void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, bool just_thrown, int ndiv, bool on_platform, int tid, xform_matrix *matrix) {
 
 	select_texture(tid);
 	fgPushMatrix();
@@ -1164,7 +1164,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 	
 	if (matrix) {
 		if (on_platform) {lpos = pos;} // reset now so there's no rotation
-		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
+		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? (just_thrown ? 0.05 : 0.2) : 1.0));
 	}
 	//draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
 	draw_cube_mapped_sphere(all_zeros, radius, ndiv, 1);

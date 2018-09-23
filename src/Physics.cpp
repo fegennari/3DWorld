@@ -1365,6 +1365,7 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2, fl
 		if (type == PLASMA && (coll_type == 0 || coll_type == 3) && v_tot_sq >= 2.25*BOUNCE_CUTOFF && (rand()%10) < 8) {
 			gen_fire(pos, rand_uniform(0.4, 1.2), source);
 		}
+		if (object_types[type].flags & OBJ_ROLLS) {flags &= ~WAS_FIRED;} // mark rolling objects as no longer in was-fired state
 		return 1;
 	}
 	velocity = v_orig;
