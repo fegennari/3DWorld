@@ -1874,10 +1874,12 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		break;
 
 	case W_LASER: { // line of sight damage
-			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
+			vector3d final_dir(dir);
+			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj, 0.0, &final_dir);
+
 			if (range > 1.1*radius) {
-				beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), get_laser_beam_color(shooter));
-				add_laser_beam(beam); // might not need to actually add laser itself for camera/player
+				beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + final_dir*radius), (fpos + final_dir*range), get_laser_beam_color(shooter));
+				add_laser_beam(beam); // might not need to actually add laser itself for camera/player (only need line light?)
 			}
 		}
 		break;
