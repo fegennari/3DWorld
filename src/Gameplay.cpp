@@ -1738,7 +1738,7 @@ vector<delayed_proj_t> delayed_projs;
 void projectile_test_delayed(point const &pos, vector3d const &dir, float firing_error, float damage,
 	int shooter, float &range, float intensity, int ignore_cobj, float velocity)
 {
-	float const max_range(velocity*fticks); // Note: velocity=0.0 => infinite speed/instant hit
+	float const max_range(velocity*fticks); // Note: velocity=0.0 => infinite speed/instant hit (FIXME: use tstep instead of fticks here?)
 	vector3d dir_used(dir);
 	point const ret(projectile_test(pos, dir, firing_error, damage, shooter, range, intensity, ignore_cobj, max_range, &dir_used));
 	if (max_range == 0.0 || range < max_range) return; // inf speed, or hit something within range, done

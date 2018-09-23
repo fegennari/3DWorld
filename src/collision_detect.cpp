@@ -1615,7 +1615,7 @@ int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, v
 	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj, bool skip_movable)
 {
 	if (world_mode == WMODE_INF_TERRAIN) {
-		point const p_last(pos - velocity*fticks);
+		point const p_last(pos - velocity*tstep);
 		float const o_radius(get_true_radius());
 		vector3d cnorm(plus_z);
 		
