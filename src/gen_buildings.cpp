@@ -909,7 +909,6 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
 	building_draw.calc_poly_pts(*this, part, points); // without the expand
-	float const dist(p2p_dist(p_last, pos));
 	point quad_pts[4]; // quads
 	bool updated(0);
 
@@ -924,13 +923,13 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 		float const rdist(dot_product_ptv(normal, pos, quad_pts[0]));
 		if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
 		if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
-		pos += normal*min(rdist, dist); // calculate intersection point, adjust outward by min of distance and step size (FIXME: jittery)
+		pos += normal*(radius - rdist);
 		if (cnorm) {*cnorm = normal;}
 		updated = 1;
 	} // for S
 	if (updated) return 1;
 	
-	if (point_in_polygon_2d(pos.x, pos.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
+	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
 		pos.z = part.z2() + radius; // make sure it doesn't intersect the roof
 		if (cnorm) {*cnorm = plus_z;}
 		return 1;
