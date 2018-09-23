@@ -1736,11 +1736,12 @@ struct delayed_proj_t {
 vector<delayed_proj_t> delayed_projs;
 
 void projectile_test_delayed(point const &pos, vector3d const &dir, float firing_error, float damage,
-	int shooter, float &range, float intensity, int ignore_cobj, float velocity)
+	int shooter, float &range, float intensity, int ignore_cobj, float velocity, vector3d *dir_used_ptr=nullptr)
 {
 	float const max_range(velocity*fticks); // Note: velocity=0.0 => infinite speed/instant hit (FIXME: use tstep instead of fticks here?)
 	vector3d dir_used(dir);
 	point const ret(projectile_test(pos, dir, firing_error, damage, shooter, range, intensity, ignore_cobj, max_range, &dir_used));
+	if (dir_used_ptr) {*dir_used_ptr = dir_used;}
 	if (max_range == 0.0 || range < max_range) return; // inf speed, or hit something within range, done
 	point const new_pos(pos + dir_used.get_norm()*max_range); // the location of this projectile after this frame's timestep
 	if (!get_scene_bounds().contains_pt(new_pos)) return; // outside the scene, done
@@ -1831,9 +1832,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) {firing_error *= 0.1;}
 			if (underwater) {firing_error += UWATER_FERR_ADD;}
-			projectile_test_delayed(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj, vel);
-			create_shell_casing(fpos, dir, shooter, radius, 0);
-			if (!is_player && range > 0.1*radius) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
+			vector3d dir_used(dir);
+			projectile_test_delayed(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj, vel, &dir_used);
+			create_shell_casing(fpos, dir_used, shooter, radius, 0);
+			if (!is_player && range > 0.1*radius) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir_used), ORANGE, 1.0));} // generate bullet light trail
 			return 1;
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
