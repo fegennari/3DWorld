@@ -42,7 +42,7 @@ void beam3d::draw(line_tquad_draw_t &drawer) const {
 	float const mag(sqrt(intensity));
 	colorRGBA c(color);
 	c.alpha = CLIP_TO_01(color.alpha*mag);
-	drawer.add_line_as_tris(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c));
+	drawer.add_line_as_tris(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? colorRGBA(c, 0.0) : c));
 }
 
 
