@@ -31,6 +31,7 @@ extern int window_width, window_height, game_mode, draw_model, animate2;
 extern float fticks, TIMESTEP, base_gravity, temperature, brightness, indir_vert_offset, cobj_z_bias, camera_health;
 extern point star_pts[];
 extern vector3d up_norm;
+extern vector<beam3d> beams;
 extern vector<spark_t> sparks;
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -637,9 +638,17 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				set_color_v2(color2, obj.status, s);
 				draw_star(pos, obj.orientation, obj.init_dir, tradius, obj.angle, 1);
 				break;
-			case SHRAPNEL:
-				add_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, get_glow_color(obj, 1), shrapnel_verts);
+			case SHRAPNEL: {
+				colorRGBA glow_color(get_glow_color(obj, 1));
+				add_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, glow_color, shrapnel_verts);
+				
+				if (glow_color.R > 0.2 && obj.time > 0.05*TICKS_PER_SECOND) {
+					glow_color.B *= 0.6; glow_color.G *= 0.6; // reduce the color temperature
+					float const vmag(obj.velocity.mag()), trail_dist(2.0*radius*min(vmag, 50.0f));
+					if (vmag > 0.1) {beams.push_back(beam3d(1, 0, pos, (pos - obj.velocity*(trail_dist/vmag)), glow_color, 0.5*glow_color.R));} // intensity scales with red component
+				}
 				break;
+			}
 			case PARTICLE:
 				particles_to_draw.push_back(make_pair(-distance_to_camera_sq(pos), j));
 				if (animate2 && (int)j == selected_particle && obj.time < otype.lifetime/3) {gen_smoke(pos, 0.25, 0.1);} // max one particle per frame
@@ -1490,7 +1499,7 @@ colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 
 	float stime;
 	colorRGBA color(get_glowing_obj_color(obj.pos, obj.time, object_types[obj.type].lifetime, stime, shrapnel_cscale, ((obj.flags & TYPE_FLAG) != 0)));
-	if (shrapnel_cscale) color *= CLIP_TO_01(1.0f - stime);
+	if (shrapnel_cscale) {color *= CLIP_TO_01(1.0f - stime);}
 	return color;
 }
 
