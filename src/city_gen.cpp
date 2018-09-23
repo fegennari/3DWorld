@@ -3253,11 +3253,13 @@ public:
 	bool has_tunnels() const {return global_rn.has_tunnels();}
 	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
 
-	cube_t const &get_city_bcube(unsigned city_ix) const {
-		if (city_ix == CONN_CITY_IX) {return global_rn.get_bcube();}
+	road_network_t const &get_city(unsigned city_ix) const {
+		if (city_ix == CONN_CITY_IX) {return global_rn;}
 		assert(city_ix < road_networks.size());
-		return road_networks[city_ix].get_bcube();
+		return road_networks[city_ix];
 	}
+	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
+
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
 		bcube.expand_by_xy(city_params.get_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
@@ -3529,13 +3531,8 @@ public:
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->next_frame();}
 		global_rn.next_frame(); // not needed since there are no 3/4-way intersections/stoplights?
 	}
-	void register_car_at_city(unsigned city_id) const { // Note: must be const
-		if (city_id == CONN_CITY_IX) {global_rn.register_car();}
-		else {
-			assert(city_id < road_networks.size());
-			road_networks[city_id].register_car();
-		}
-	}
+	void register_car_at_city(unsigned city_id) const {get_city(city_id).register_car();} // Note: must be const
+	
 	bool add_car(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) return 0; // no cities to add cars to
 		return road_network_t::add_car_to_rns(car, rgen, road_networks);
@@ -3571,14 +3568,12 @@ public:
 				}
 			}
 		}
-		assert(car.dest_city < road_networks.size()); // city must be valid
-		car.dest_valid = road_networks[car.dest_city].choose_new_car_dest(car, rgen);
+		car.dest_valid = get_city(car.dest_city).choose_new_car_dest(car, rgen);
 		//cout << TXT(car.dest_valid) << TXT(car.dest_city) << TXT(car.dest_isec) << endl;
 	}
 	bool car_at_dest(car_t const &car) const {
 		if (!car.dest_valid) return 0;
-		assert(car.dest_city < road_networks.size());
-		return road_networks[car.dest_city].car_at_dest(car);
+		return get_city(car.dest_city).car_at_dest(car);
 	}
 	road_network_t const &get_car_rn(car_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
 	
