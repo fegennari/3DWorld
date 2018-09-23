@@ -2089,6 +2089,10 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
+		bool cube_overlaps_parking_lot_xy(cube_t const &c) const {
+			for (auto p = parking_lots.begin(); p != parking_lots.end(); ++p) {if (p->intersects(c)) return 1;}
+			return 0;
+		}
 	}; // city_obj_placer_t
 
 
@@ -2781,6 +2785,11 @@ class city_road_gen_t {
 			if (!plots.empty()) {color = colorRGBA(0.65, 0.65, 0.65, 1.0); return INT_PLOT;} // inside a city and not over a road - must be over a plot
 			return INT_NONE;
 		}
+		bool cube_overlaps_road_xy(cube_t const &c) const {
+			for (auto i = roads.begin(); i != roads.end(); ++i) {if (i->intersects(c)) return 1;}
+			return 0;
+		}
+		bool cube_overlaps_parking_lot_xy(cube_t const &c) const {return city_obj_placer.cube_overlaps_parking_lot_xy(c);}
 
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			if (empty()) return;
@@ -3265,6 +3274,9 @@ public:
 		bcube.expand_by_xy(city_params.get_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
 		return bcube;
 	}
+	bool cube_overlaps_road_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy(c);}
+	bool cube_overlaps_parking_lot_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_parking_lot_xy(c);}
+
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region, road_networks.size()));
@@ -3959,11 +3971,17 @@ public:
 		float const dist(p2p_dist(pos, p_last));
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!sphere_cube_intersect_xy(pos, (radius + dist), (road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate))) continue;
-			unsigned const end((cb+1)->start);
+			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate);
+			if (pos.z - radius > city_bcube.z2() + city_params.get_car_size().z) continue; // above the cars
+			if (!sphere_cube_intersect_xy(pos, (radius + dist), city_bcube)) continue;
+			cube_t sphere_bc; sphere_bc.set_from_sphere((pos - xlate), radius);
+			unsigned start(cb->start), end((cb+1)->start);
 			assert(end <= cars.size());
+			if (!road_gen.cube_overlaps_parking_lot_xy(sphere_bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
+			if (!road_gen.cube_overlaps_road_xy(sphere_bc, cb->cur_city))        {start = cb->first_parked;} // parked cars only (end of range)
+			assert(start <= end);
 
-			for (unsigned c = cb->start; c != end; ++c) {
+			for (unsigned c = start; c != end; ++c) {
 				if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 			}
 		} // for cb
