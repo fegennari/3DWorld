@@ -1013,6 +1013,7 @@ namespace streetlight_ns {
 	float const pole_radius  = 0.015;
 	float const light_radius = 0.025;
 	float const light_dist   = 3.0;
+	static float get_streetlight_height() {return light_height*city_params.road_width;}
 
 	struct streetlight_t {
 		point pos; // bottom point
@@ -1022,11 +1023,11 @@ namespace streetlight_ns {
 		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
 
 		point get_lpos() const {
-			float const height(light_height*city_params.road_width);
+			float const height(get_streetlight_height());
 			return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
 		}
 		void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow, bool always_on) const { // Note: translate has already been applied as a transform
-			float const height(light_height*city_params.road_width);
+			float const height(get_streetlight_height());
 			point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
 			if (shadow_only && is_local_shadow && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
 			if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
@@ -1075,7 +1076,7 @@ namespace streetlight_ns {
 			point const p2(pos + xlate);
 			float const pradius(pole_radius*city_params.road_width);
 			if (!dist_xy_less_than(p2, center, (pradius + radius))) return 0;
-			float const height(light_height*city_params.road_width);
+			float const height(get_streetlight_height());
 			return sphere_vert_cylin_intersect(center, radius, cylinder_3dw(p2, (p2 + vector3d(0.0, 0.0, height)), pradius, 0.7*pradius), cnorm);
 		}
 	};
@@ -2726,7 +2727,9 @@ class city_road_gen_t {
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
 				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate, cnorm)) return 1;
 			}
-			if (proc_streetlight_sphere_coll(pos, radius, xlate, cnorm)) return 1;
+			if ((pos.z - xlate.z - radius < bcube.z2()) + (streetlight_ns::get_streetlight_height())) { // below the level of the streetlights
+				if (proc_streetlight_sphere_coll(pos, radius, xlate, cnorm)) return 1;
+			}
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius, cnorm)) return 1;
 			return 0;
 		}
