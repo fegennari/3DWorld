@@ -2709,6 +2709,7 @@ class city_road_gen_t {
 			vector3d const xlate(get_camera_coord_space_xlate());
 			float const dist(p2p_dist(pos, p_last));
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
+			if (!plots.empty()) {max_eq(pos.z, (bcube.z1() + radius));} // make sure the sphere is above the city road/plot surface
 
 			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
