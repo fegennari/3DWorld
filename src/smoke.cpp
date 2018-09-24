@@ -504,7 +504,7 @@ public:
 		} // for y
 	}
 	void add_fire(point const &pos, float radius, float val) { // val is around 0.01 for fires
-		if (empty() || !animate2) return; // not inited
+		if (empty() || !animate2 || world_mode != WMODE_GROUND) return; // not inited or not ground mode
 		if (val == 0.0 || radius == 0.0) return; // no fire
 		assert(radius > 0.0);
 		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));

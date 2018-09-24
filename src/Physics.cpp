@@ -1426,15 +1426,15 @@ void particle_cloud::apply_physics(unsigned i) {
 			coll = 1;
 			break;
 		}
-	}
+	} // for j
 	float const tstep_scale(TIMESTEP/DEF_TIMESTEP), rscale(get_rscale());
 	pos       = obj.pos;
 	time     += iticks;
 	density  *= pow(0.97f, tstep_scale);
 	darkness *= pow(0.98f, tstep_scale);
 	radius   *= pow(1.03f, tstep_scale);
-	if (density  < 0.0001) density  = 0.0;
-	if (darkness < 0.0001) darkness = 0.0;
+	if (density  < 0.0001) {density  = 0.0;}
+	if (darkness < 0.0001) {darkness = 0.0;}
 	
 	if (damage > 0.0) {
 		if (is_fire()) {modify_grass_at(pos, radius, 0, 1);} // burn grass
@@ -1490,7 +1490,7 @@ void fire::apply_physics(unsigned i) {
 
 		if (status == 2) {
 			velocity = zero_vector; // above ground - no movement
-			float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0/*radius*/, 0, 0));
+			float const zval(int_mesh_zval_pt_off(pos, 0, 0));
 
 			if (pos.z - zval > 1.5*radius) {
 				dwobject obj(FIRE, pos, zero_vector, 1, 10000.0); // make a FIRE object for collision detection
@@ -1517,20 +1517,20 @@ void fire::apply_physics(unsigned i) {
 		}
 		radius += (0.02 + radius)*(rand_uniform(-0.02, 0.02) + 250.0*velocity.z);
 		heat    = 0.8*heat + 0.2*rand_uniform(0.25, 1.2)/(0.9 + 2.0*radius);
-		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+		if (radius <= 0.0001) {extinguish(); return;}
 
-		if (radius <= 0.0001 || !point_interior_to_mesh(xpos, ypos)) {
-			extinguish();
-			return;
-		}
-		if (status != 2) {surface_damage[ypos][xpos] += 20.0*radius*heat;} // near mesh
+		if (world_mode == WMODE_GROUND) { // the logic below only applies to ground mode fires
+			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+			if (!point_interior_to_mesh(xpos, ypos)) {extinguish(); return;}
+			if (status != 2) {surface_damage[ypos][xpos] += 20.0*radius*heat;} // near mesh
 
-		if (radius > 0.04) { // split into smaller fires
-			for (unsigned i = 0; i < 2; ++i) {pos2[i] = pos[i] + rand_uniform(-0.05, 0.05);}
-			if (rand() & 1) {pos2.z = pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.3*radius;}
-			else {pos2.z = pos.z + rand_uniform(-0.05, 0.05);}
-			gen_fire(pos2, 1.0, source, 1);
-			radius -= 0.017;
+			if (radius > 0.04) { // split into smaller fires
+				for (unsigned i = 0; i < 2; ++i) {pos2[i] = pos[i] + rand_uniform(-0.05, 0.05);}
+				if (rand() & 1) {pos2.z = pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.3*radius;}
+				else {pos2.z = pos.z + rand_uniform(-0.05, 0.05);}
+				gen_fire(pos2, 1.0, source, 1);
+				radius -= 0.017;
+			}
 		}
 	} // !is_static
 	if (begin_motion && animate2 && damage > 0.005 && (rand()%max(1, int(0.5/damage))) == 0) {gen_particles(pos, 1);}
