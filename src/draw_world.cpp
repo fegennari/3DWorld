@@ -366,7 +366,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const is_snowy(ground_mode && enable_rain_snow && is_ground_snowy() && !use_burn_mask);
 	bool const use_wet_mask(ground_mode && is_wet && is_outside == 2);
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
-	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
+	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
+	use_smap &= ground_mode; // TT shadow maps aren't supported by this flow
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
 	if (use_depth_trans   ) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
