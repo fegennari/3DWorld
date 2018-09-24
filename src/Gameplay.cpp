@@ -1288,6 +1288,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame
 	exp_damage_groups(pos, shooter, chain_level, damage, size, type, cview);
 	exp_damage_trees(pos, damage, bradius, type);
+	if (world_mode == WMODE_INF_TERRAIN) {destroy_city_in_radius(pos, 0.5*bradius);}
 
 	if (damage > 500.0 || is_rocket_type(type)) { // everything except for plasma
 		gen_delayed_from_player_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));

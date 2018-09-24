@@ -13,6 +13,7 @@
 #include "buildings.h"
 #include "tree_3dw.h"
 #include "openal_wrap.h"
+#include "explosion.h" // for add_blastr()
 #include <cfloat> // for FLT_MAX
 
 using std::string;
@@ -440,14 +441,14 @@ class city_road_gen_t;
 
 struct car_t {
 	cube_t bcube, prev_bcube;
-	bool dim, dir, stopped_at_light, entering_city, in_tunnel, dest_valid;
+	bool dim, dir, stopped_at_light, entering_city, in_tunnel, dest_valid, destroyed;
 	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
 	unsigned short cur_city, cur_road, cur_seg, dest_city, dest_isec;
 	float height, dz, rot_z, turn_val, cur_speed, max_speed, waiting_pos, waiting_start;
 	car_t const *car_in_front;
 
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), cur_road_type(TYPE_RSEG), color_id(0),
-		turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
+	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), cur_road_type(TYPE_RSEG),
+		color_id(0), turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
 		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), waiting_pos(0.0), waiting_start(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	point get_center() const {return bcube.get_cube_center();}
@@ -468,6 +469,12 @@ struct car_t {
 	float get_wait_time_secs  () const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 
+	void destroy() { // Note: not calling create_explosion(), so no chain reactions
+		point const pos(get_center() + get_tiled_terrain_model_xlate());
+		add_blastr(pos, (pos - get_camera_pos()), 3.0*get_length(), 0.0, 0.6*TICKS_PER_SECOND, CAMERA_ID, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1);
+		park();
+		destroyed = 1;
+	}
 	float get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len=0) const {
 		float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
 		float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
@@ -489,7 +496,7 @@ struct car_t {
 	}
 	void move(float speed_mult) {
 		prev_bcube = bcube;
-		if (stopped_at_light || is_stopped()) return;
+		if (destroyed || stopped_at_light || is_stopped()) return;
 		assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= CONN_ROAD_SPEED_MULT*max_speed); // Note: must be valid for connector road => city transitions
 		float dist(cur_speed*speed_mult);
 		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
@@ -3929,9 +3936,10 @@ class car_manager_t {
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
 	vector<unsigned> entering_city;
+	bool car_destroyed;
 
 public:
-	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader) {}
+	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader), car_destroyed(0) {}
 	bool empty() const {return cars.empty();}
 	
 	void clear() {
@@ -3977,11 +3985,11 @@ public:
 			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate);
 			if (pos.z - radius > city_bcube.z2() + city_params.get_car_size().z) continue; // above the cars
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), city_bcube)) continue;
-			cube_t sphere_bc; sphere_bc.set_from_sphere((pos - xlate), radius);
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(end <= cars.size());
+			cube_t sphere_bc; sphere_bc.set_from_sphere((pos - xlate), radius);
 			if (!road_gen.cube_overlaps_parking_lot_xy(sphere_bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
-			if (!road_gen.cube_overlaps_road_xy(sphere_bc, cb->cur_city))        {start = cb->first_parked;} // parked cars only (end of range)
+			if (!road_gen.cube_overlaps_road_xy       (sphere_bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
 			assert(start <= end);
 
 			for (unsigned c = start; c != end; ++c) {
@@ -3989,6 +3997,21 @@ public:
 			}
 		} // for cb
 		return 0;
+	}
+	void destroy_cars_in_radius(point const &pos_in, float radius) {
+		point const pos(pos_in - get_camera_coord_space_xlate());
+
+		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city));
+			if (pos.z - radius > city_bcube.z2() + city_params.get_car_size().z) continue; // above the cars
+			if (!sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
+			unsigned const start(cb->start), end((cb+1)->start); // Note: shouldnt be called frequently enough to need road/parking lot acceleration
+			assert(end <= cars.size() && start <= end);
+
+			for (unsigned c = start; c != end; ++c) {
+				if (dist_less_than(cars[c].get_center(), pos, radius)) {cars[c].destroy(); car_destroyed = 1;} // destroy if within the sphere
+			}
+		} // for cb
 	}
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const { // Note: pos in local TT space
 		if (cars.empty()) return 0;
@@ -4097,6 +4120,13 @@ public:
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 1.2ms with destinations + navigation
+
+		if (car_destroyed) { // at least one car was destroyed in the previous frame - remove it/them
+			vector<car_t>::iterator i(cars.begin()), o(i);
+			for (; i != cars.end(); ++i) {if (!i->destroyed) {*(o++) = *i;}}
+			cars.erase(o, cars.end());
+			car_destroyed = 0;
+		}
 		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		car_blocks.clear();
@@ -4296,6 +4326,10 @@ public:
 	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
 
+	void destroy_in_radius(point const &pos, float radius) {
+		car_manager.destroy_cars_in_radius(pos, radius);
+		// TODO: streetlights, stoplights, trees, etc.
+	}
 	bool get_color_at_xy(float x, float y, colorRGBA &color) const {
 		point const pos(point(x, y, 0.0) - get_camera_coord_space_xlate());
 		int const int_ret(road_gen.get_color_at_xy(pos, color)); // check roads/plots first to determine if we need to check cars
@@ -4398,6 +4432,7 @@ bool check_mesh_disable(point const &pos, float radius) {
 	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
 	return city_gen.check_mesh_disable(center, radius);
 }
+void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
 void free_city_context() {city_gen.free_context();}
