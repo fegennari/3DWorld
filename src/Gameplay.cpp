@@ -2122,7 +2122,11 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		point p_int;
 		
 		if (line_intersect_city(pos, pos2, p_int)) { // check city (buildings and cars)
-			if (!intersect || p2p_dist_sq(pos, p_int) < p2p_dist_sq(pos, coll_pos)) {coll_pos = p_int; intersect = 1;} // keep closest intersection point
+			if (!intersect || p2p_dist_sq(pos, p_int) < p2p_dist_sq(pos, coll_pos)) { // keep closest intersection point
+				if (damage > 0.0) {destroy_city_in_radius((p_int + vcf*object_types[PROJC].radius), 0.0);} // destroy whatever is at this location
+				coll_pos = p_int;
+				intersect = 1;
+			}
 		}
 	}
 	else {
