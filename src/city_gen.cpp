@@ -471,7 +471,18 @@ struct car_t {
 
 	void destroy() { // Note: not calling create_explosion(), so no chain reactions
 		point const pos(get_center() + get_tiled_terrain_model_xlate());
-		add_blastr(pos, (pos - get_camera_pos()), 3.0*get_length(), 0.0, 0.6*TICKS_PER_SECOND, CAMERA_ID, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1);
+		float const length(get_length());
+		static rand_gen_t rgen;
+
+		for (unsigned n = 0; n < rgen.rand_int(3, 5); ++n) {
+			vector3d off(rgen.signed_rand_vector_spherical()*(0.5*length));
+			off.z = abs(off.z); // not into the ground
+			point const exp_pos(pos + off);
+			float const radius(rgen.rand_uniform(1.0, 1.5)*length), time(rgen.rand_uniform(0.2, 0.5));
+			add_blastr(exp_pos, (exp_pos - get_camera_pos()), radius, 0.0, time*TICKS_PER_SECOND, CAMERA_ID, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1);
+			gen_smoke(exp_pos, 1.0, rgen.rand_uniform(0.4, 0.6));
+		} // for n
+		gen_delayed_from_player_sound(SOUND_EXPLODE, pos, 1.0);
 		park();
 		destroyed = 1;
 	}
@@ -4000,16 +4011,20 @@ public:
 	}
 	void destroy_cars_in_radius(point const &pos_in, float radius) {
 		point const pos(pos_in - get_camera_coord_space_xlate());
+		bool const is_pt(radius == 0.0);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city));
 			if (pos.z - radius > city_bcube.z2() + city_params.get_car_size().z) continue; // above the cars
-			if (!sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
+			if (is_pt ? !city_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
 			unsigned const start(cb->start), end((cb+1)->start); // Note: shouldnt be called frequently enough to need road/parking lot acceleration
 			assert(end <= cars.size() && start <= end);
 
 			for (unsigned c = start; c != end; ++c) {
-				if (dist_less_than(cars[c].get_center(), pos, radius)) {cars[c].destroy(); car_destroyed = 1;} // destroy if within the sphere
+				if (is_pt ? cars[c].bcube.contains_pt(pos) : dist_less_than(cars[c].get_center(), pos, radius)) { // destroy if within the sphere
+					cars[c].destroy();
+					car_destroyed = 1;
+				}
 			}
 		} // for cb
 	}
