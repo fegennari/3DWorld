@@ -474,7 +474,7 @@ struct car_t {
 		float const length(get_length());
 		static rand_gen_t rgen;
 
-		for (unsigned n = 0; n < rgen.rand_int(3, 5); ++n) {
+		for (int n = 0; n < rgen.rand_int(3, 5); ++n) {
 			vector3d off(rgen.signed_rand_vector_spherical()*(0.5*length));
 			off.z = abs(off.z); // not into the ground
 			point const exp_pos(pos + off);
