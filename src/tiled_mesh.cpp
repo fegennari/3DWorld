@@ -1570,6 +1570,7 @@ void tile_t::update_animals() {
 		birds.gen(num_birds_per_tile, range, this);
 	}
 	else {
+		//birds.flock(this);
 		birds.update(this);
 		propagate_animals_to_neighbor_tiles(birds);
 	}

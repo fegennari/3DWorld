@@ -93,6 +93,7 @@ struct vect_fish_t : public animal_group_t<fish_t> {
 };
 
 struct vect_bird_t : public animal_group_t<bird_t> {
+	void flock(tile_t const *const tile);
 	static void begin_draw(shader_t &s);
 	static void end_draw(shader_t &s);
 	void draw() const;

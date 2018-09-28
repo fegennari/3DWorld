@@ -173,6 +173,38 @@ bool bird_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile 
 	return 1;
 }
 
+void vect_bird_t::flock(tile_t const *const tile) { // boids
+
+	// Note: this is per-tile
+	// see https://www.blog.drewcutchins.com/blog/2018-8-16-flocking
+	if (!animate2 || this->empty()) return;
+	float const neighbor_dist(0.5*get_tile_width()), nd_sq(neighbor_dist*neighbor_dist);
+	unsigned num_neighbors(0);
+	tile_xy_pair const tp(tile->get_tile_xy_pair());
+
+	for (int dy = -1; dy <= 1; ++dy) {
+		for (int dx = -1; dx <= 1; ++dx) {
+			tile_t *const adj_tile(get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy)));
+			if (!adj_tile) continue;
+			vect_bird_t &birds(adj_tile->get_birds());
+
+			for (auto j = birds.begin(); j != birds.end(); ++j) {
+				if (!j->is_enabled()) continue;
+
+				for (auto i = this->begin(); i != this->end(); ++i) {
+					if (!i->is_enabled()) continue;
+					if (i == j) continue; // skip self
+					float const dxy_sq(p2p_dist_xy_sq(i->pos, j->pos)); // Note: ignores zval
+					if (dxy_sq > nd_sq) continue; // too far away to interact
+					++num_neighbors;
+					// TODO
+				} // for i
+			} // for j
+		} // for dx
+	} // for dy
+	//cout << "birds: " << this->size() << ", neighbors: " << num_neighbors << endl;
+}
+
 
 bool animal_t::is_visible(point const &pos_, float vis_dist_scale) const {
 
