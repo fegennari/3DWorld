@@ -14,7 +14,7 @@ float const FISH_SPEED  = 0.002;
 float const BIRD_SPEED  = 0.05;
 
 extern bool water_is_lava;
-extern int window_width, animate2;
+extern int window_width, animate2, display_mode;
 extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height;
 extern colorRGBA cur_fog_color;
 
@@ -115,6 +115,7 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	color   = BLACK;
 	time    = rgen.rand_uniform(0.0, 100.0); // start at random time offsets
 	enabled = 1;
+	flocking= 0;
 	//tile_off.set_from_xyoff2(); // Note: TT specific
 	return 1;
 }
@@ -162,47 +163,67 @@ bool bird_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile 
 
 	if (!enabled || !animate2 || !birds_active()) return 0;
 
-	if ((rand() & 1) == 0) { // randomly update direction
+	if (!flocking && (rand() & 1) == 0) { // randomly update direction
 		float const speed(velocity.mag());
 		dir += rgen.signed_rand_vector_xy(0.05); // 5% change max
 		dir.normalize();
 		velocity = dir * speed; // always flies in the direction it's pointed in
 	}
+	flocking = 0; // reset for next frame
 	pos  += velocity*fticks; // always moving
 	time += fticks;
 	return 1;
+}
+
+void bird_t::apply_force_xy_const_vel(vector3d const &force) {
+
+	float const vmag(velocity.mag());
+	velocity.x += force.x; velocity.y += force.y;
+	velocity *= vmag/velocity.mag(); // re-normalize
+	dir = velocity/vmag; // normalized
+	flocking = 1;
 }
 
 void vect_bird_t::flock(tile_t const *const tile) { // boids
 
 	// Note: this is per-tile
 	// see https://www.blog.drewcutchins.com/blog/2018-8-16-flocking
+	//if (display_mode & 0x10) return; // TESTING
 	if (!animate2 || this->empty()) return;
 	float const neighbor_dist(0.5*get_tile_width()), nd_sq(neighbor_dist*neighbor_dist);
-	unsigned num_neighbors(0);
+	float const sep_dist_sq(0.2*nd_sq), cohesion_dist_sq(0.3*nd_sq), align_dist_sq(0.25*nd_sq);
+	float const mass(100.0), sep_strength(0.05), cohesion_strength(0.05), align_strength(0.5);
 	tile_xy_pair const tp(tile->get_tile_xy_pair());
 
-	for (int dy = -1; dy <= 1; ++dy) {
-		for (int dx = -1; dx <= 1; ++dx) {
-			tile_t *const adj_tile(get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy)));
-			if (!adj_tile) continue;
-			vect_bird_t &birds(adj_tile->get_birds());
+	for (auto i = this->begin(); i != this->end(); ++i) {
+		if (!i->is_enabled()) continue;
+		vector3d sep_force(zero_vector), avg_pos(zero_vector), avg_vel(zero_vector), tot_force(zero_vector);
+		unsigned pcount(0), vcount(0);
 
-			for (auto j = birds.begin(); j != birds.end(); ++j) {
-				if (!j->is_enabled()) continue;
+		for (int dy = -1; dy <= 1; ++dy) {
+			for (int dx = -1; dx <= 1; ++dx) {
+				tile_t *const adj_tile(get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy))); // Note: could cache this if needed
+				if (!adj_tile) continue;
+				vect_bird_t &birds(adj_tile->get_birds());
 
-				for (auto i = this->begin(); i != this->end(); ++i) {
-					if (!i->is_enabled()) continue;
+				for (auto j = birds.begin(); j != birds.end(); ++j) {
+					if (!j->is_enabled()) continue;
 					if (i == j) continue; // skip self
 					float const dxy_sq(p2p_dist_xy_sq(i->pos, j->pos)); // Note: ignores zval
-					if (dxy_sq > nd_sq) continue; // too far away to interact
-					++num_neighbors;
-					// TODO
-				} // for i
-			} // for j
-		} // for dx
-	} // for dy
-	//cout << "birds: " << this->size() << ", neighbors: " << num_neighbors << endl;
+
+					if (dxy_sq < sep_dist_sq) { // separation
+						vector3d const delta(i->pos - j->pos), sep_force(delta/dxy_sq); // force decreases with distance
+						tot_force += sep_force*sep_strength;
+					}
+					if (dxy_sq < cohesion_dist_sq) {avg_pos += j->pos;      ++pcount;}
+					if (dxy_sq < align_dist_sq   ) {avg_vel += j->velocity; ++vcount;}
+				} // for j
+			} // for dx
+		} // for dy
+		if (pcount > 0) {tot_force += (avg_pos/pcount - i->pos)*cohesion_strength;} // cohesion
+		if (vcount > 0) {tot_force += avg_vel*(align_strength/vcount);} // alignment
+		if (tot_force != zero_vector) {i->apply_force_xy_const_vel(tot_force/mass);}
+	} // for i
 }
 
 

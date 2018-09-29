@@ -25,18 +25,23 @@ struct tile_offset_t {
 
 class animal_t : public sphere_t {
 
+public:
+	vector3d velocity;
+
 protected:
 	bool enabled;
 	vector3d dir;
-	vector3d velocity;
 	colorRGBA color;
 	//tile_offset_t tile_off;
 
 	int get_ndiv(point const &pos_) const;
 	void gen_dir_vel(rand_gen_t &rgen, float speed);
+	float heading() const {return atan2(velocity.x, velocity.y);}
 
 public:
 	animal_t() : enabled(0) {}
+	void apply_force(vector3d const &force) {velocity += force;}
+	void apply_force_xy(vector3d const &force) {velocity.x += force.x; velocity.y += force.y;}
 	bool is_enabled() const {return enabled;}
 	bool is_visible(point const &pos_, float vis_dist_scale=1.0) const;
 	point get_draw_pos() const;
@@ -55,11 +60,14 @@ public:
 
 class bird_t : public animal_t {
 
+	bool flocking;
 	float time;
 
 public:
+	bird_t() : flocking(0), time(0) {}
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
+	void apply_force_xy_const_vel(vector3d const &force);
 	void draw(shader_t &s) const;
 };
 
