@@ -478,7 +478,7 @@ struct car_t {
 			vector3d off(rgen.signed_rand_vector_spherical()*(0.5*length));
 			off.z = abs(off.z); // not into the ground
 			point const exp_pos(pos + off);
-			float const radius(rgen.rand_uniform(1.0, 1.5)*length), time(rgen.rand_uniform(0.2, 0.5));
+			float const radius(rgen.rand_uniform(1.0, 1.5)*length), time(rgen.rand_uniform(0.3, 0.8));
 			add_blastr(exp_pos, (exp_pos - get_camera_pos()), radius, 0.0, time*TICKS_PER_SECOND, CAMERA_ID, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1);
 			gen_smoke(exp_pos, 1.0, rgen.rand_uniform(0.4, 0.6));
 		} // for n

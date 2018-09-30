@@ -662,7 +662,7 @@ void uobj_draw_data::draw_usw_chaff() const {
 void uobj_draw_data::draw_usw_rfire() const {
 
 	if (animate2 && first_pass && (time & 1)) {
-		add_blastr(pos, dir, 1.5*radius, 0.0, int(0.4*TICKS_PER_SECOND), -1, YELLOW, ORANGE, ETYPE_ANIM_FIRE, obj);
+		add_blastr(pos, dir, 1.5*radius, 0.0, int(0.6*TICKS_PER_SECOND), -1, YELLOW, ORANGE, ETYPE_ANIM_FIRE, obj);
 	}
 }
 

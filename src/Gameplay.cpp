@@ -1282,7 +1282,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
 		bool const create_exp_sphere(is_rocket_type(type) || type == LANDMINE);
-		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
+		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(2.3*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
 		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
 	}
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame

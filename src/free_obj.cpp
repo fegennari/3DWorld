@@ -753,14 +753,12 @@ stationary_obj::stationary_obj(unsigned type_, point const &pos_, float radius_,
 
 
 float stationary_obj::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
-	
-	if (type == DAMAGE_DESTROY) def_explode(2.5, ETYPE_ANIM_FIRE, dir, WCLASS_EXPLODE, alignment, 0, NULL); // can't be damaged by anything else
+	if (type == DAMAGE_DESTROY) {def_explode(2.5, ETYPE_ANIM_FIRE, dir, WCLASS_EXPLODE, alignment, 0, NULL);} // can't be damaged by anything else
 	return 0.0;
 }
 
 
 void stationary_obj::apply_physics() {
-
 	time += iticks;
 	if (lifetime > 0 && time > lifetime) status = 1; // lifetime expired, destroy it
 }

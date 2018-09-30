@@ -30,7 +30,7 @@ void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const
 
 
 // duration color1 color2
-exp_type_params et_params[NUM_ETYPES] = {
+exp_type_params et_params[NUM_ETYPES] = { // for universe mode ship explosions
 	exp_type_params(1.0, BLACK,  BLACK),    // ETYPE_NONE
 	exp_type_params(1.0, YELLOW, RED  ),    // ETYPE_FIRE
 	exp_type_params(4.0, WHITE,  BLUE ),    // ETYPE_NUCLEAR
@@ -42,7 +42,7 @@ exp_type_params et_params[NUM_ETYPES] = {
 	exp_type_params(1.7, LT_BLUE, WHITE),   // ETYPE_FUSION
 	exp_type_params(1.2, WHITE,   CYAN),    // ETYPE_EBURST
 	exp_type_params(0.8, GREEN,   WHITE),   // ETYPE_ESTEAL
-	exp_type_params(1.2, WHITE,   WHITE),   // ETYPE_ANIM_FIRE
+	exp_type_params(1.8, WHITE,   WHITE),   // ETYPE_ANIM_FIRE
 	exp_type_params(0.8, PURPLE,  LT_BLUE), // ETYPE_SIEGE
 	exp_type_params(1.7, LT_BLUE, WHITE),   // ETYPE_FUSION_ROT
 	exp_type_params(2.0, WHITE,   BLACK),   // ETYPE_PART_CLOUD
@@ -279,7 +279,7 @@ void draw_blasts(shader_t &s) {
 
 	for (vector<ix_type_pair>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 		blastr const &br(blastrs[i->ix]);
-		float const timescale(((float)br.time)/(float)br.st_time);
+		float const timescale(((float)br.time)/(float)br.st_time); // goes from 1.0 to 0.0
 		bool const begin_type(i == to_draw.begin() || i->type != (i-1)->type);
 		bool const end_type  (i+1 == to_draw.end() || i->type != (i+1)->type);
 
@@ -288,7 +288,9 @@ void draw_blasts(shader_t &s) {
 				glDepthMask(GL_FALSE);
 				select_texture(EXPLOSION_TEX);
 			}
-			qbd.add_animated_billboard(br.pos, get_camera_pos(), br.up_vector, WHITE, br.cur_size, br.cur_size, timescale); // Note: *not* using cur_color
+			float const ts_val(max(0.0, (1.5*timescale - 0.5))); // compact animation into first 67%
+			float const alpha(min(1.0, 1.5*timescale)); // drops from 1.0 to 0.0 in second 33%
+			qbd.add_animated_billboard(br.pos, get_camera_pos(), br.up_vector, colorRGBA(WHITE, alpha), br.cur_size, br.cur_size, ts_val); // Note: *not* using cur_color
 			
 			if (end_type) {
 				qbd.draw_and_clear();
