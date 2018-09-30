@@ -765,7 +765,7 @@ void change_tree_mode() {
 
 void switch_weapon_mode() {
 
-	if (sstates == NULL) return;
+	if (sstates == NULL || !game_mode) return;
 	++sstates[CAMERA_ID].wmode;
 	sstates[CAMERA_ID].verify_wmode();
 	play_switch_wmode_sound();
