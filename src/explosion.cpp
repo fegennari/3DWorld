@@ -253,6 +253,19 @@ int get_exp_ndiv(point const &pos, float radius) {
 	return max(4, min(N_SPHERE_DIV, int(250.0*radius*sscale)));
 }
 
+void draw_billboard_explosion(blastr const &br, quad_batch_draw &qbd, point const &camera, bool aligned) {
+	
+	if (world_mode == WMODE_UNIVERSE) {
+		vector3d const dir(aligned ? (camera - br.pos) : br.dir);
+		vector3d const dx(2.0*br.cur_size*cross_product(plus_z, dir).get_norm());
+		vector3d const dy(2.0*br.cur_size*cross_product(dx,     dir).get_norm());
+		qbd.add_quad_dirs(make_pt_global(br.pos), dx, dy, br.cur_color);
+	}
+	else {
+		qbd.add_billboard(br.pos, camera, plus_z, br.cur_color, 2.0*br.cur_size, 2.0*br.cur_size);
+	}
+}
+
 void draw_blasts(shader_t &s) {
 
 	if (blastrs.empty()) return;
@@ -276,12 +289,15 @@ void draw_blasts(shader_t &s) {
 	sort(to_draw.begin(), to_draw.end());
 	quad_batch_draw qbd;
 	vpc_shader_t vpc_shader;
+	vector<ix_type_pair>::const_iterator range_start(to_draw.begin());
+	point const camera(get_camera_pos());
 
 	for (vector<ix_type_pair>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 		blastr const &br(blastrs[i->ix]);
 		float const timescale(((float)br.time)/(float)br.st_time); // goes from 1.0 to 0.0
 		bool const begin_type(i == to_draw.begin() || i->type != (i-1)->type);
 		bool const end_type  (i+1 == to_draw.end() || i->type != (i+1)->type);
+		if (begin_type) {range_start = i;}
 
 		if (br.type == ETYPE_ANIM_FIRE) {
 			if (begin_type) {
@@ -290,7 +306,7 @@ void draw_blasts(shader_t &s) {
 			}
 			float const ts_val(max(0.0, (1.5*timescale - 0.5))); // compact animation into first 67%
 			float const alpha(min(1.0, 1.5*timescale)); // drops from 1.0 to 0.0 in second 33%
-			qbd.add_animated_billboard(br.pos, get_camera_pos(), br.up_vector, colorRGBA(WHITE, alpha), br.cur_size, br.cur_size, ts_val); // Note: *not* using cur_color
+			qbd.add_animated_billboard(br.pos, camera, br.up_vector, colorRGBA(WHITE, alpha), br.cur_size, br.cur_size, ts_val); // Note: *not* using cur_color
 			
 			if (end_type) {
 				qbd.draw_and_clear();
@@ -298,7 +314,7 @@ void draw_blasts(shader_t &s) {
 			}
 			continue;
 		}
-		if (begin_type) {set_additive_blend_mode();}
+		if (begin_type) {set_additive_blend_mode();} // all types below use additive blending
 
 		switch (br.type) {
 		case ETYPE_FIRE:
@@ -310,7 +326,19 @@ void draw_blasts(shader_t &s) {
 				//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
 				s.set_cur_color(br.cur_color);
 				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, get_exp_ndiv(br.pos, br.cur_size), 1); // cube mapped sphere? too slow?
-				if (end_type) {glDisable(GL_CULL_FACE); end_sphere_draw();}
+				
+				if (end_type) {
+					glDisable(GL_CULL_FACE);
+					end_sphere_draw();
+					glDepthMask(GL_FALSE);
+					select_texture((br.type == ETYPE_FIRE) ? FLARE4_TEX : FLARE2_TEX);
+
+					for (auto j = range_start; j != i+1; ++j) { // go back and add flares
+						draw_billboard_explosion(blastrs[j->ix], qbd, camera, 1); // aligned to the camera
+					}
+					qbd.draw_and_clear();
+					glDepthMask(GL_TRUE);
+				}
 			}
 			break;
 
@@ -342,15 +370,8 @@ void draw_blasts(shader_t &s) {
 				glDepthMask(GL_FALSE);
 				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? FLARE5_TEX : ((br.type == ETYPE_STARB) ? STARBURST_TEX : BLUR_TEX)), 0);
 			}
-			if (universe) {
-				vector3d const dir((br.type == ETYPE_FUSION_ROT) ? (get_camera_pos() - br.pos) : br.dir); // only ETYPE_FUSION_ROT aligns to the camera
-				vector3d const dx(2.0*br.cur_size*cross_product(plus_z, dir).get_norm());
-				vector3d const dy(2.0*br.cur_size*cross_product(dx,     dir).get_norm());
-				qbd.add_quad_dirs(make_pt_global(br.pos), dx, dy, br.cur_color);
-			}
-			else {
-				qbd.add_billboard(br.pos, get_camera_pos(), plus_z, br.cur_color, 2.0*br.cur_size, 2.0*br.cur_size);
-			}
+			draw_billboard_explosion(br, qbd, camera, (br.type == ETYPE_FUSION_ROT)); // only ETYPE_FUSION_ROT aligns to the camera
+
 			if (end_type) {
 				qbd.draw_and_clear();
 				glDepthMask(GL_TRUE);
