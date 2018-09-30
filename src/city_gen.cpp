@@ -1257,7 +1257,7 @@ struct tunnel_t : public road_connector_t {
 		// FIXME: remove duplicate code with draw_tunnel()?
 		cube_t cubes[4];
 		calc_top_bot_side_cubes(cubes);
-		float const scale(1.0*city_params.road_width), wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
+		float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
 		float zf(ends[0].z1()), zb(ends[1].z1());
 		float const end_ext(2.0*(d ? DY_VAL : DX_VAL)), dz_ext(end_ext*(zb - zf)/get_length());
 		zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
@@ -1265,7 +1265,7 @@ struct tunnel_t : public road_connector_t {
 		bool ret(0);
 
 		for (unsigned i = 0; i < 4; ++i) { // check tunnel top, bottom, and sides
-			cube_t const &c(cubes[i]);
+			//cube_t const &c(cubes[i]);
 			//set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, pts); // TODO: tilted cube case
 		}
 		for (unsigned n = 0; n < 2; ++n) { // check tunnel facades
@@ -4224,7 +4224,7 @@ public:
 
 		for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
 			if (i->is_parked()) continue; // no collisions for parked cars
-			bool const on_conn_road(i->cur_city == CONN_CITY_IX), in_isec(i->in_isect());
+			bool const on_conn_road(i->cur_city == CONN_CITY_IX);
 			float const length(i->get_length()), max_check_dist(max(3.0f*length, (length + i->get_max_lookahead_dist()))); // max of collision dist and car-in-front dist
 
 			for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
