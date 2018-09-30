@@ -1406,7 +1406,7 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 	shader_t s, vrs;
 
 	if (!shadow_only) {
-		setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // direct lighting + dlights + shadow map, is_outside=1
+		setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 2, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // direct lighting + dlights + shadow map, is_outside=1
 	}
 	else {
 		s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only

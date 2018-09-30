@@ -315,7 +315,7 @@ void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bma
 
 	cube_t const lights_bcube(get_city_lights_bcube());
 	use_dlights &= !lights_bcube.is_zero_area();
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, use_smap, use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, use_dlights, 0, 0, (use_smap ? 2 : 0), use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
 }
 

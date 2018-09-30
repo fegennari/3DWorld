@@ -648,7 +648,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 		s.begin_color_only_shader();
 	}
 	else {
-		setup_smoke_shaders(s, 0.0, 0, 0, tree_indir_lighting, 1, 1, 0, 0, 1, use_bump_map, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, is_outside=1
+		setup_smoke_shaders(s, 0.0, 0, 0, tree_indir_lighting, 1, 1, 0, 0, 2, use_bump_map, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, is_outside=1
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
 	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
@@ -663,7 +663,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 		vbo_manager[0].upload();
 		if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 		s.set_prefix("#define NO_SPECULAR", 1); // FS - disable rain effect
-		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, texgen, is_outside=1
+		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, (v ? 2 : 1), 0, 0, v, v, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, texgen, is_outside=1
 		setup_leaf_wind(s, wind_mag, 0);
 		draw_pine_leaves(s, shadow_only);
 		s.end_shader();
@@ -681,7 +681,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 		}
 		if (num_palm_trees > 0) { // palm trees
 			if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
-			setup_smoke_shaders(s, 0.75, 4, 0, 0, v, v, 0, 0, v, 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better); use bent quad texgen mode 4
+			setup_smoke_shaders(s, 0.75, 4, 0, 0, v, v, 0, 0, (v ? 2 : 1), 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better); use bent quad texgen mode 4
 			setup_leaf_wind(s, wind_mag, 0);
 			draw_non_pine_leaves(shadow_only, 1, 0);
 			s.end_shader();

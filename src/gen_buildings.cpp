@@ -1646,7 +1646,7 @@ public:
 		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
 		else {
 			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, use_smap, use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		}
 		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
 		float const WIND_LIGHT_ON_RAND = 0.08;

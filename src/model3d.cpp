@@ -2219,7 +2219,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, use_smap, use_bmap, use_spec_map, use_mvm, two_sided_lighting,
+					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, (use_smap ? 2 : 1), use_bmap, use_spec_map, use_mvm, two_sided_lighting,
 						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside, 1, 0, use_gloss_map);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
