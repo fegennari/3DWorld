@@ -733,9 +733,11 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 					if (glow_color.alpha > 0.0) {particle_qbd.add_billboard(obj.pos, camera, up_vector, glow_color, 1.2*tradius, 1.2*tradius);}
 				}
 				bool const can_use_additive_blend(0 && smoke_exists); // too much of a transition when smoke appears/disappears, so disable for now
+				glDepthMask(GL_FALSE); // disable depth writing
 				if (can_use_additive_blend) {set_additive_blend_mode();}
 				particle_qbd.draw_and_clear();
 				if (can_use_additive_blend) {set_std_blend_mode();}
+				glDepthMask(GL_TRUE); // re-enable depth writing
 			}
 			draw_verts(shrapnel_verts, GL_TRIANGLES);
 			s.add_uniform_float("emissive_scale", 0.0); // reset

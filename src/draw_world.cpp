@@ -1665,7 +1665,7 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 }
 
 
-void draw_sparks(bool clear_at_end) {
+void draw_sparks(bool clear_at_end) { // projectile hit locations
 
 	if (sparks.empty()) return;
 	ensure_filled_polygons();
