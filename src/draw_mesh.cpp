@@ -756,6 +756,7 @@ float get_tess_wave_height() {return 0.02/mesh_scale_z;}
 void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth,
 	bool depth_only, colorRGBA const &color, colorRGBA const &rcolor, bool use_tess)
 {
+	if (water_is_lava) {use_depth = 0;} // lava has no depth-dependent effects
 	if (no_specular) {s.set_prefix("#define NO_SPECULAR",      1);} // FS
 	if (depth_only)  {s.set_prefix("#define WRITE_DEPTH_ONLY", 1);} // FS
 	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH",  1);} // FS
@@ -838,7 +839,7 @@ void draw_distant_mesh_bottom(float terrain_zmin) {
 }
 
 
-// texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture, 3: rain noise, 4: deep water normal map
+// texture units used: 8: reflection texture, 1: water normal map, 2: mesh height texture, 3: rain noise, 4: deep water normal map
 void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;

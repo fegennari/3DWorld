@@ -27,8 +27,11 @@ vec3 deep_water_normal_lookup(in vec2 wtc) {
 vec4 get_norm_foam_val(vec3 n) {
 	return vec4(n, clamp(3.0*(0.5 - dot(n, vec3(0,0,1))), 0.0, 1.0)); // use dot product with +z
 }
+float get_wave_time(float time_scale) {
+	return 2.0*abs(fract(0.011111*wave_time*time_scale) - 0.5);
+}
 vec4 get_deep_wave_normal(in vec2 wtc) {
-	float ntime = 2.0*abs(fract(0.011111*wave_time) - 0.5);
+	float ntime = get_wave_time(is_lava ? 2.0 : 1.0);
 	vec3 n1 = deep_water_normal_lookup(wtc);
 	vec3 n2 = deep_water_normal_lookup(wtc + vec2(0.5, 0.5));
 	// reduce the pulsing effect by increasing normal map amplitude when two normal maps are averaged together
@@ -129,8 +132,14 @@ void main() {
 #endif
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
-	color = mix(color, (is_lava ? vec4(1.0, 0.5, 0.0, color.a) : vec4(0.0, 1.0, 0.5, color.a)), min(1.0, water_green_comp*green_scale));
+	color = mix(color, (is_lava ? vec4(1.0, 1.0, 0.0, color.a) : vec4(0.0, 1.0, 0.5, color.a)), min(1.0, water_green_comp*green_scale));
 
+	if (is_lava) {
+		float ntime = get_wave_time(1.0);
+		float color_temp = mix(texture(foam_tex, 0.87*tc).r, texture(foam_tex, 0.63*tc).r, ntime);
+		float mag = sqrt(2.0 - 2.0*abs(ntime - 0.5));
+		color.g  += 0.7*mag*(color_temp - 0.5);
+	}
 #ifdef USE_SHALLOW_WATER_MUD // unset/unused
 	float mud_amt = 1.0 - clamp(0.25*depth, 0.0, 1.0);
 	color         = mix(color, vec4(0.15, 0.1, 0.05, 1.0), mud_amt); // shallow water is muddy
