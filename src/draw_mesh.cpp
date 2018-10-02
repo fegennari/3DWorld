@@ -39,7 +39,7 @@ vector<fp_ratio> uw_mesh_lighting; // for water caustics
 extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
-extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt;
+extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt, CAMERA_RADIUS;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, FAR_CLIP, sun_radius, ocean_depth_opacity_mult;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
@@ -839,6 +839,64 @@ void draw_distant_mesh_bottom(float terrain_zmin) {
 }
 
 
+class lava_bubble_manager_t {
+	struct bubble : public sphere_t {
+		float time; // 0.0=start, 1.0=end
+		bool valid;
+
+		bubble() : time(0.0), valid(0) {}
+		void age(float dtime) {time += dtime;}
+		float     get_radius() const {return radius*(1.0 + time);}
+		colorRGBA get_color () const {return colorRGBA(1.0, 0.4*(1.0 - time), 0.0, min(1.0, 5.0*(1.0 - time)));} // orange => transparent red
+	};
+	vector<bubble> bubbles;
+	rand_gen_t rgen;
+
+	void gen_bubble(bubble &b, float lava_zval) {
+		point const center(get_camera_pos());
+		float const range(1.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		b.pos.assign((center.x + range*rgen.rand_uniform(-1.0, 1.0)), (center.y + range*rgen.rand_uniform(-1.0, 1.0)), lava_zval);
+		b.radius = rgen.rand_uniform(0.3, 0.6)*CAMERA_RADIUS;
+		b.time   = 0.0;
+		b.valid  = (int_mesh_zval_pt_off(b.pos, 1, 1) < lava_zval); // check if over lava
+	}
+public:
+	void clear() {bubbles.clear();}
+
+	void next_frame(float lava_zval) {
+		if (bubbles.empty()) {
+			unsigned const num = 250;
+			bubbles.resize(num);
+
+			for (auto i = bubbles.begin(); i != bubbles.end(); ++i) { // init bubbles
+				gen_bubble(*i, lava_zval);
+				i->age(rgen.rand_float()); // age a random amount so that all bubbles don't start at the same size
+			}
+			return;
+		}
+		float const lifetime = 4.0; // seconds
+		float const elapsed(fticks/TICKS_PER_SECOND), dtime(elapsed/lifetime);
+
+		for (auto i = bubbles.begin(); i != bubbles.end(); ++i) {
+			i->age(dtime);
+			if (i->time > 1.0) {gen_bubble(*i, lava_zval);} // spawn a new bubble
+		}
+	}
+	void draw(shader_t &s) const {
+		if (bubbles.empty()) return;
+
+		for (auto i = bubbles.begin(); i != bubbles.end(); ++i) {
+			if (!i->valid) continue;
+			float const radius(i->get_radius());
+			if (!camera_pdu.sphere_visible_test(i->pos, radius)) continue;
+			s.add_uniform_color("water_color", i->get_color());
+			draw_subdiv_sphere(i->pos, radius, 16, 0, 0); // untextured
+			//draw_sphere_vbo(i->pos, radius, 16, 0); // no, we don't want the translate in here
+		}
+	}
+};
+
+
 // texture units used: 8: reflection texture, 1: water normal map, 2: mesh height texture, 3: rain noise, 4: deep water normal map
 void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 
@@ -869,8 +927,9 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 	}
 	set_active_texture(0); // reset
+	point const camera(get_camera_pos());
 	bool const add_waves(enable_ocean_waves());
-	bool const camera_underwater(get_camera_pos().z < zval);
+	bool const camera_underwater(camera.z < zval);
 	bool const rain_mode(add_waves && !water_is_lava && is_rain_enabled() /*&& !camera_underwater*/);
 	bool const use_tess(use_water_plane_tess());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
@@ -910,6 +969,19 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		draw_plane_to_far_clip(zval - 0.01); // slightly below water level
 		s.end_shader();
 	}
+	static lava_bubble_manager_t lava_bubble_manager;
+
+	if (water_is_lava && !camera_underwater && (camera.z - zval) < 50.0*CAMERA_RADIUS) { // camera just above lava surface
+		select_texture(WHITE_TEX); // no reflections
+		setup_water_plane_shader(s, no_specular, 0, 0, 0, 0, 0, color, BLACK, 0); // reflections=0, add_waves=0, rain_mode=0, use_depth=0, use_tess=0
+		// Note: bound uniforms and textures should be set to valid values from above
+		s.set_cur_color(WHITE);
+		lava_bubble_manager.next_frame(zval);
+		lava_bubble_manager.draw(s);
+		s.end_shader();
+	}
+	else {lava_bubble_manager.clear();}
+
 	disable_blend();
 }
 
