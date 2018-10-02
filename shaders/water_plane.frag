@@ -119,12 +119,12 @@ void main() {
 	float dscale = 1.0;
 #endif
 	vec4 lighting = vec4(0,0,0,1);
-	if (is_lava) {lighting += vec4(0.5, 0.1, 0.0, 0.0);} // add emissive light
+	if (is_lava) {lighting += vec4(0.8, 0.4, 0.0, 0.0);} // add emissive light
 
 	// Note: when drawing the mesh we use two passes, one with shadow maps enabled and one without
 	// for water we only have one pass, and the shadow map texture may not be bound/valid in all cases,
 	// but we know that it's valid when smap_scale > 0.0, so we can/must use this test to control the shadow map texture lookup
-	lighting.rgb += do_shadowed_lighting(vec4(0.0), epos, light_norm, gl_Color, ascale, dscale); // Note: vertex parameter is unused
+	lighting.rgb += do_shadowed_lighting(vec4(0.0), epos, light_norm, gl_Color, ascale, dscale)*(is_lava ? 0.5 : 1.0); // Note: vertex parameter is unused
 	
 #ifdef TESS_MODE
 	float subsurf_scatter = max(0.55*(1.0 - cos_view_angle)*wave_dz, 0.0);
@@ -138,7 +138,7 @@ void main() {
 		float ntime = get_wave_time(1.0);
 		float color_temp = mix(texture(foam_tex, 0.87*tc).r, texture(foam_tex, 0.63*tc).r, ntime);
 		float mag = sqrt(2.0 - 2.0*abs(ntime - 0.5));
-		color.g  += 0.7*mag*(color_temp - 0.5);
+		color.g  += 0.67*mag*(color_temp - 0.5);
 	}
 #ifdef USE_SHALLOW_WATER_MUD // unset/unused
 	float mud_amt = 1.0 - clamp(0.25*depth, 0.0, 1.0);
