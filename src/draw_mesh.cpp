@@ -879,7 +879,11 @@ public:
 
 		for (auto i = bubbles.begin(); i != bubbles.end(); ++i) {
 			i->age(dtime);
-			if (i->time > 1.0) {gen_bubble(*i, lava_zval);} // spawn a new bubble
+
+			if (i->time > 1.0) {
+				gen_smoke((i->pos + vector3d(0.0, 0.0, i->radius)), 1.5, 1.0, colorRGBA(4.0, 4.0, 4.0, 1.0)); // brighter color to represent steam rather than smoke
+				gen_bubble(*i, lava_zval); // spawn a new bubble
+			}
 		}
 	}
 	void draw(shader_t &s) const {
