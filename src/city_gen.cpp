@@ -1925,24 +1925,52 @@ class city_road_gen_t {
 		cube_t bcube;
 
 		bench_t() : dim(0), dir(0) {}
-		bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : sphere_t(pos_, radius_), dim(dim_), dir(dir_) {
+		bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : sphere_t(pos_, radius_), dim(dim_), dir(dir_) {calc_bcube();}
+
+		void calc_bcube() {
 			bcube.set_from_point(pos);
-			bcube.expand_by(vector3d((dim ? 0.5 : 1.0), (dim ? 1.0 : 0.5), 0.4)*radius);
+			bcube.expand_by(vector3d((dim ? 0.45 : 1.08), (dim ? 1.08 : 0.45), 0.0)*radius);
+			bcube.z2() += 1.0*radius; // set bench height
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
-			//dstate.pre_draw() or other shader setup
 		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, bool shadow_only) const {
 			if (!dstate.check_cube_visible(bcube, 0.16, shadow_only)) return; // dist_scale=0.16
-#if 0 // FIXME: incomplete/disabled
+			dstate.begin_tile(pos, 1);
+
+			cube_t cubes[] = { // Note: taken from mapx/bench.txt
+				cube_t( 0.0, 4.0,  -5.35,  5.35,  1.6, 2.0), // seat
+				cube_t(-0.4, 0.0,  -5.0,   5.0,   1.6, 5.0), // back (straight)
+				cube_t( 0.3, 1.3,  -5.3,  -4.7,   0.0, 1.6), // legs
+				cube_t( 2.7, 3.7,  -5.3,  -4.7,   0.0, 1.6),
+				cube_t( 0.3, 1.3,   4.7,   5.3,   0.0, 1.6),
+				cube_t( 2.7, 3.7,   4.7,   5.3,   0.0, 1.6),
+				cube_t(-0.5, 3.8,  -5.4,  -4.5,   3.0, 3.2), // arms
+				cube_t(-0.5, 3.8,   4.5,   5.4,   3.0, 3.2),
+				cube_t( 0.8, 1.2,  -5.1,  -4.9,   2.0, 3.0), // arm supports
+				cube_t( 2.8, 3.2,  -5.1,  -4.9,   2.0, 3.0),
+				cube_t( 0.8, 1.2,   4.9,   5.1,   2.0, 3.0),
+				cube_t( 2.8, 3.2,   4.9,   5.1,   2.0, 3.0),
+			};
 			point const center(pos + dstate.xlate);
 			float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
-			vector3d const cview_dir(camera_pdu.pos - center);
-#endif
-			dstate.draw_cube(qbd, bcube, color_wrapper(WHITE), 1); // skip_bottom=1
+			cube_t bc; // bench bbox
+
+			for (unsigned i = 0; i < 12; ++i) {
+				if (dir)  {swap(cubes[i].d[0][0], cubes[i].d[0][1]); cubes[i].d[0][0] *= -1.0; cubes[i].d[0][1] *= -1.0;}
+				if (!dim) {swap(cubes[i].d[0][0], cubes[i].d[1][0]); swap(cubes[i].d[0][1], cubes[i].d[1][1]);}
+				if (i == 0) {bc = cubes[i];} else {bc.union_with_cube(cubes[i]);}
+			}
+			point const c1(bcube.get_cube_center()), c2(bc.get_cube_center());
+			vector3d const scale(bcube.get_dx()/bc.get_dx(), bcube.get_dy()/bc.get_dy(), bcube.get_dz()/bc.get_dz()); // scale to fit to target cube
+			color_wrapper const cw(WHITE);
+			unsigned const num(min(12U, unsigned(1.0/dist_val))); // simple distance-based LOD
+			for (unsigned i = 0; i < num; ++i) {dstate.draw_cube(qbd, ((cubes[i] - c2)*scale + c1), cw, 1);}
+			//point const pts[4] = {point(-1.0, -5.0, 5.0), point(-1.0, 5.0, 5.0), point(0.2, 5.0, 1.6), point(0.2, -5.0, 1.6)}; // back; thickness = 0.4
+			qbd.draw_and_clear(); // draw with current smap
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
 			return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 1, 0, cnorm);
@@ -2084,12 +2112,13 @@ class city_road_gen_t {
 		}
 		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
 			bench_t bench;
-			bench.radius = 0.5*city_params.get_car_size().x;
+			bench.radius = 0.35*city_params.get_car_size().x;
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 				if (try_place_obj(plot, blockers, rgen, bench.radius, bench.radius, 1, bench.pos)) { // 1 try
 					bench.dim = rgen.rand_bool();
 					bench.dir = rgen.rand_bool();
+					bench.calc_bcube();
 					benches.push_back(bench);
 				}
 			} // for n
