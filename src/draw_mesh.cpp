@@ -850,6 +850,7 @@ class lava_bubble_manager_t {
 		colorRGBA get_color () const {return colorRGBA(1.0, 0.4*(1.0 - time), 0.0, min(1.0, 5.0*(1.0 - time)));} // orange => transparent red
 	};
 	vector<bubble> bubbles;
+	vector<sphere_t> splashes;
 	rand_gen_t rgen;
 
 	void gen_bubble(bubble &b, float lava_zval) {
@@ -861,7 +862,7 @@ class lava_bubble_manager_t {
 		b.valid  = (int_mesh_zval_pt_off(b.pos, 1, 1) < lava_zval); // check if over lava
 	}
 public:
-	void clear() {bubbles.clear();}
+	void clear() {bubbles.clear(); splashes.clear();}
 
 	void next_frame(float lava_zval) {
 		if (bubbles.empty()) {
@@ -876,13 +877,18 @@ public:
 		}
 		float const lifetime = 4.0; // seconds
 		float const elapsed(fticks/TICKS_PER_SECOND), dtime(elapsed/lifetime);
+		splashes.clear();
 
 		for (auto i = bubbles.begin(); i != bubbles.end(); ++i) {
 			i->age(dtime);
 
 			if (i->time > 1.0) {
-				gen_smoke((i->pos + vector3d(0.0, 0.0, i->radius)), 1.5, 1.0, colorRGBA(4.0, 4.0, 4.0, 1.0)); // brighter color to represent steam rather than smoke
+				gen_smoke((i->pos + vector3d(0.0, 0.0, i->get_radius())), 1.5, 1.0, colorRGBA(4.0, 4.0, 4.0, 1.0)); // brighter color to represent steam rather than smoke
 				gen_bubble(*i, lava_zval); // spawn a new bubble
+			}
+			else if (i->time > 0.8) {
+				float const radius(i->get_radius());
+				splashes.emplace_back((i->pos + vector3d(0.0, 0.0, 0.7*radius)), 10.0*(i->time - 0.7)*radius);
 			}
 		}
 	}
@@ -897,6 +903,17 @@ public:
 			draw_subdiv_sphere(i->pos, radius, 16, 0, 0); // untextured
 			//draw_sphere_vbo(i->pos, radius, 16, 0); // no, we don't want the translate in here
 		}
+		if (splashes.empty()) return;
+		quad_batch_draw splash_qbd;
+		point const camera(get_camera_pos());
+		s.end_shader();
+		setup_smoke_shaders(s, 0.01, 0, 1, 0, 1, 0, 0);
+		select_texture(FLARE2_TEX);
+
+		for (auto i = splashes.begin(); i != splashes.end(); ++i) {
+			splash_qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(1.0, 0.1, 0.0, 1.0), i->radius, i->radius, tex_range_t(), 0, &plus_z);
+		}
+		splash_qbd.draw();
 	}
 };
 
@@ -980,7 +997,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		setup_water_plane_shader(s, no_specular, 0, 0, 0, 0, 0, color, BLACK, 0); // reflections=0, add_waves=0, rain_mode=0, use_depth=0, use_tess=0
 		// Note: bound uniforms and textures should be set to valid values from above
 		s.set_cur_color(WHITE);
-		lava_bubble_manager.next_frame(zval);
+		if (animate2) {lava_bubble_manager.next_frame(zval);}
 		lava_bubble_manager.draw(s);
 		s.end_shader();
 	}
