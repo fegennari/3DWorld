@@ -1962,7 +1962,6 @@ class city_road_gen_t {
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
 			float const pad_dist   (1.0*nom_car_size.x); // one car length
 			plot.expand_by_xy(-pad_dist);
-			get_building_bcubes(plot, bcubes);
 			if (bcubes.empty()) return 0; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
 			unsigned const first_corner(rgen.rand()&3); // 0-3
 			bool const car_dim(rgen.rand() & 1); // 0=cars face in X; 1=cars face in Y
@@ -2119,8 +2118,7 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
-		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<car_t> &cars, unsigned city_id) { // Note: fills in plots.has_parking
-			if (city_params.min_park_spaces == 0 || city_params.min_park_rows == 0) return; // disable parking lots
+		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<car_t> &cars, unsigned city_id, bool have_cars) { // Note: fills in plots.has_parking
 			timer_t timer("Gen Parking Lots and Place Objects");
 			vector<cube_t> bcubes; // reused across calls
 			rand_gen_t rgen, detail_rgen;
@@ -2129,10 +2127,12 @@ class city_road_gen_t {
 			detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 			clear();
 			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block();}
+			bool const add_parking_lots(have_cars && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				bcubes.clear();
-				i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);
+				get_building_bcubes(*i, bcubes);
+				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);}
 				place_trees_in_plot (*i, bcubes, detail_rgen);
 				place_detail_objects(*i, bcubes, detail_rgen);
 			} // for i
@@ -2725,8 +2725,8 @@ class city_road_gen_t {
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
-		void gen_parking_lots(vector<car_t> &cars) {
-			city_obj_placer.gen_parking_and_place_objects(plots, cars, city_id);
+		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
+			city_obj_placer.gen_parking_and_place_objects(plots, cars, city_id, have_cars);
 			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 			tile_to_block_map.clear(); // no longer needed
 		}
@@ -3548,8 +3548,8 @@ public:
 		global_rn.calc_ix_values(road_networks, global_rn);
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->calc_ix_values(road_networks, global_rn);}
 	}
-	void gen_parking_lots(vector<car_t> &cars) {
-		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots(cars);}
+	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots_and_place_objects(cars, have_cars);}
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
@@ -4025,6 +4025,7 @@ public:
 		cars.insert(cars.end(), new_cars.begin(), new_cars.end());
 	}
 	void finalize_cars() {
+		if (empty()) return;
 		unsigned const num_models(car_model_loader.num_models());
 
 		for (auto i = cars.begin(); i != cars.end(); ++i) {
@@ -4366,10 +4367,10 @@ public:
 		car_manager.init_cars(city_params.num_cars);
 	}
 	void gen_details() {
-		if (road_gen.empty() || car_manager.empty()) return; // nothing to do - no roads or cars
+		if (road_gen.empty()) return; // nothing to do - no roads or cars
 		// generate parking lots
 		vector<car_t> parked_cars;
-		road_gen.gen_parking_lots(parked_cars);
+		road_gen.gen_parking_lots_and_place_objects(parked_cars, !car_manager.empty());
 		car_manager.add_parked_cars(parked_cars);
 		car_manager.finalize_cars();
 	}
