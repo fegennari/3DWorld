@@ -1920,7 +1920,6 @@ class city_road_gen_t {
 
 
 	struct bench_t : public sphere_t {
-		//float rot; // rotation angle in degrees
 		bool dim, dir;
 		cube_t bcube;
 
@@ -1929,8 +1928,8 @@ class city_road_gen_t {
 
 		void calc_bcube() {
 			bcube.set_from_point(pos);
-			bcube.expand_by(vector3d((dim ? 0.45 : 1.08), (dim ? 1.08 : 0.45), 0.0)*radius);
-			bcube.z2() += 1.0*radius; // set bench height
+			bcube.expand_by(vector3d((dim ? 0.42 : 1.0), (dim ? 1.0 : 0.42), 0.0)*radius);
+			bcube.z2() += 0.93*radius; // set bench height
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
@@ -2115,12 +2114,17 @@ class city_road_gen_t {
 			bench.radius = 0.35*city_params.get_car_size().x;
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
-				if (try_place_obj(plot, blockers, rgen, bench.radius, bench.radius, 1, bench.pos)) { // 1 try
-					bench.dim = rgen.rand_bool();
-					bench.dir = rgen.rand_bool();
-					bench.calc_bcube();
-					benches.push_back(bench);
+				if (!try_place_obj(plot, blockers, rgen, bench.radius, bench.radius, 1, bench.pos)) continue; // 1 try
+				float dmin(0.0);
+
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						float const dist(fabs(bench.pos[dim] - plot.d[dim][dir])); // find closest distance to road (plot edge) and orient bench that way
+						if (dmin == 0.0 || dist < dmin) {bench.dim = !dim; bench.dir = !dir; dmin = dist;}
+					}
 				}
+				bench.calc_bcube();
+				benches.push_back(bench);
 			} // for n
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) const {
@@ -2165,7 +2169,7 @@ class city_road_gen_t {
 				place_trees_in_plot (*i, bcubes, detail_rgen);
 				place_detail_objects(*i, bcubes, detail_rgen);
 			} // for i
-			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;
+			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) const {
 			draw_objects(benches, dstate, shadow_only);
@@ -2191,6 +2195,12 @@ class city_road_gen_t {
 		}
 		bool cube_overlaps_parking_lot_xy(cube_t const &c) const {
 			for (auto p = parking_lots.begin(); p != parking_lots.end(); ++p) {if (p->intersects(c)) return 1;}
+			return 0;
+		}
+		bool get_color_at_xy(point const &pos, colorRGBA &color) const {
+			for (auto i = benches.begin(); i != benches.end(); ++i) {
+				if (i->bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
+			}
 			return 0;
 		}
 	}; // city_obj_placer_t
@@ -2884,6 +2894,7 @@ class city_road_gen_t {
 				}
 			}
 			if (city_obj_placer.pt_in_parking_lot_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
+			if (city_obj_placer.get_color_at_xy(pos, color)) {return INT_PLOT;} // hit a detail object, but still in a plot
 			if (!plots.empty()) {color = colorRGBA(0.65, 0.65, 0.65, 1.0); return INT_PLOT;} // inside a city and not over a road - must be over a plot
 			return INT_NONE;
 		}
