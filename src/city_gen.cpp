@@ -1966,8 +1966,8 @@ class city_road_gen_t {
 			point const c1(bcube.get_cube_center()), c2(bc.get_cube_center());
 			vector3d const scale(bcube.get_dx()/bc.get_dx(), bcube.get_dy()/bc.get_dy(), bcube.get_dz()/bc.get_dz()); // scale to fit to target cube
 			color_wrapper const cw(WHITE);
-			unsigned const num(min(12U, unsigned(1.0/dist_val))); // simple distance-based LOD
-			for (unsigned i = 0; i < num; ++i) {dstate.draw_cube(qbd, ((cubes[i] - c2)*scale + c1), cw, 1);}
+			unsigned const num(shadow_only ? 6U : max(1U, min(6U, unsigned(0.2/dist_val)))); // simple distance-based LOD, in pairs
+			for (unsigned i = 0; i < 2*num; ++i) {dstate.draw_cube(qbd, ((cubes[i] - c2)*scale + c1), cw, 1);}
 			//point const pts[4] = {point(-1.0, -5.0, 5.0), point(-1.0, 5.0, 5.0), point(0.2, 5.0, 1.6), point(0.2, -5.0, 1.6)}; // back; thickness = 0.4
 			qbd.draw_and_clear(); // draw with current smap
 		}
