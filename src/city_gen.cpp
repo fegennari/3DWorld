@@ -1938,6 +1938,7 @@ class city_road_gen_t {
 
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, bool shadow_only) const {
 			if (!dstate.check_cube_visible(bcube, 0.16, shadow_only)) return; // dist_scale=0.16
+			dstate.ensure_shader_active(); // needed for use_smap=0 case
 			dstate.begin_tile(pos, 1);
 
 			cube_t cubes[] = { // Note: taken from mapx/bench.txt
