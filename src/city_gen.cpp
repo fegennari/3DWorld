@@ -1942,8 +1942,8 @@ class city_road_gen_t {
 			dstate.begin_tile(pos, 1);
 
 			cube_t cubes[] = { // Note: taken from mapx/bench.txt
-				cube_t( 0.0, 4.0,  -5.35,  5.35,  1.6, 2.0), // seat
 				cube_t(-0.4, 0.0,  -5.0,   5.0,   1.6, 5.0), // back (straight)
+				cube_t( 0.0, 4.0,  -5.35,  5.35,  1.6, 2.0), // seat
 				cube_t( 0.3, 1.3,  -5.3,  -4.7,   0.0, 1.6), // legs
 				cube_t( 2.7, 3.7,  -5.3,  -4.7,   0.0, 1.6),
 				cube_t( 0.3, 1.3,   4.7,   5.3,   0.0, 1.6),
@@ -1959,7 +1959,7 @@ class city_road_gen_t {
 			float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 			cube_t bc; // bench bbox
 
-			for (unsigned i = 0; i < 12; ++i) {
+			for (unsigned i = 0; i < 12; ++i) { // back still contributes to bbox
 				if (dir)  {swap(cubes[i].d[0][0], cubes[i].d[0][1]); cubes[i].d[0][0] *= -1.0; cubes[i].d[0][1] *= -1.0;}
 				if (!dim) {swap(cubes[i].d[0][0], cubes[i].d[1][0]); swap(cubes[i].d[0][1], cubes[i].d[1][1]);}
 				if (i == 0) {bc = cubes[i];} else {bc.union_with_cube(cubes[i]);}
@@ -1968,8 +1968,26 @@ class city_road_gen_t {
 			vector3d const scale(bcube.get_dx()/bc.get_dx(), bcube.get_dy()/bc.get_dy(), bcube.get_dz()/bc.get_dz()); // scale to fit to target cube
 			color_wrapper const cw(WHITE);
 			unsigned const num(shadow_only ? 6U : max(1U, min(6U, unsigned(0.2/dist_val)))); // simple distance-based LOD, in pairs
-			for (unsigned i = 0; i < 2*num; ++i) {dstate.draw_cube(qbd, ((cubes[i] - c2)*scale + c1), cw, 1);}
-			//point const pts[4] = {point(-1.0, -5.0, 5.0), point(-1.0, 5.0, 5.0), point(0.2, 5.0, 1.6), point(0.2, -5.0, 1.6)}; // back; thickness = 0.4
+			for (unsigned i = 1; i < 2*num; ++i) {dstate.draw_cube(qbd, ((cubes[i] - c2)*scale + c1), cw, 1);} // skip back
+			point pts[4] = {point(-1.0, -5.0, 5.0), point(-1.0, 5.0, 5.0), point(0.2, 5.0, 1.6), point(0.2, -5.0, 1.6)}; // Note: back not drawn
+			point f[4], b[4];
+
+			for (unsigned i = 0; i < 4; ++i) {
+				if (dir)  {pts[i].x *= -1.0;}
+				if (!dim) {swap(pts[i].x, pts[i].y);}
+				pts[i] = ((pts[i] - c2)*scale + c1);
+			}
+			vector3d const normal(get_poly_norm(pts, 1)), delta((0.2*scale.x)*normal); // thickness = 0.4
+			UNROLL_4X(f[i_] = pts[i_] + delta;);
+			qbd.add_quad_pts(f, WHITE,  normal);
+			UNROLL_4X(b[i_] = pts[i_] - delta;);
+			qbd.add_quad_pts(b, WHITE, -normal);
+
+			for (unsigned i = 0; i < 4; ++i) { // draw sides
+				unsigned const j((i+1)&3); // next i
+				point const s[4] = {f[i], b[i], b[j], f[j]};
+				qbd.add_quad_pts(s, WHITE, get_poly_norm(s, 1));
+			}
 			qbd.draw_and_clear(); // draw with current smap
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
