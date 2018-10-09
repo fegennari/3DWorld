@@ -668,6 +668,7 @@ namespace stoplight_ns {
 
 	enum {GREEN_LIGHT=0, YELLOW_LIGHT, RED_LIGHT}; // colors, unused (only have stop and go states anyway)
 	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
+	enum {CW_WALK=0, CW_WARN, CW_STOP}; // crosswalk state
 	float const state_times[NUM_STATE] = {5.0, 6.0, 5.0, 5.0, 6.0, 5.0}; // in seconds
 	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
 	unsigned const left_orient_masks[NUM_STATE] = {2, 0, 1, 8, 0,  4}; // {W=1, E=2, S=4, N=8}, for left turns only
@@ -731,6 +732,11 @@ namespace stoplight_ns {
 			if (cur_state_ticks > get_cur_state_time_secs()) {find_state_with_waiting_car();} // time to update to next state
 		}
 		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
+
+		void ffwd_to_future(float time_secs) {
+			cur_state_ticks += TICKS_PER_SECOND*time_secs;
+			run_update_logic();
+		}
 	public:
 		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0), car_waiting_sr(0), car_waiting_left(0) {
 			reset_blocked();
@@ -768,10 +774,27 @@ namespace stoplight_ns {
 			if (red_light(dim, dir, turn)) return RED_LIGHT;
 			if (num_conn == 2) return GREEN_LIGHT;
 			stoplight_t future_self(*this);
-			float const yellow_light_time(2.0);
-			future_self.cur_state_ticks += TICKS_PER_SECOND*yellow_light_time;
-			future_self.run_update_logic();
+			future_self.ffwd_to_future(2.0); // yellow light time = 2.0s
 			return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : GREEN_LIGHT);
+		}
+		bool can_walk(bool dim, bool dir) const { // Note: symmetric across the two sides of the street
+			// Note: ignores blocked state and right-on-red
+			unsigned const orient(2*dim + dir); // {W, E, S, N}
+			assert(conn & (1<<orient));
+			// check for cars entering the isec from this side
+			if ((1<<orient) & (left_orient_masks[cur_state] | st_r_orient_masks[cur_state])) return 0; // any turn dir
+			// check for cars entering the isec from the other side
+			if (conn & st_r_orient_masks[cur_state] & (1<<other_lane[orient])) return 0; // opposing traffic going straight
+			if (conn & st_r_orient_masks[cur_state] & (1<<to_left   [orient])) return 0; // traffic to the left turning right
+			if (conn & left_orient_masks[cur_state] & (1<<to_right  [orient])) return 0; // traffic to the right turning left
+			return 1;
+		}
+		unsigned get_crosswalk_state(bool dim, bool dir) const {
+			if (!can_walk(dim, dir)) return CW_STOP;
+			stoplight_t future_self(*this);
+			future_self.ffwd_to_future(1.0); // crosswalk warn time = 1.0s
+			if (!can_walk(dim, dir)) return CW_WARN;
+			return CW_WALK;
 		}
 		bool check_int_clear(unsigned orient, unsigned turn_dir) const { // check for cars on other lanes blocking the intersection
 			switch (turn_dir) { // orient: {W, E, S, N}
