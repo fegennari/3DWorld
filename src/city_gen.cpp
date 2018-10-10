@@ -41,7 +41,6 @@ enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING};
 enum {RTYPE_ROAD=0, RTYPE_TRACKS};
 unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
 colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
 
 int       const FORCE_MODEL_ID = -1; // -1 disables
@@ -676,6 +675,8 @@ namespace stoplight_ns {
 	unsigned const to_left   [4] = {2, 3, 1, 0}; // {S, N, E, W}
 	unsigned const other_lane[4] = {1, 0, 3, 2}; // {E, W, N, S}
 	unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
+	colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
+	colorRGBA const crosswalk_colors[3] = {WHITE, ORANGE, ORANGE};
 
 	rand_gen_t stoplight_rgen;
 
@@ -785,15 +786,15 @@ namespace stoplight_ns {
 			if ((1<<orient) & (left_orient_masks[cur_state] | st_r_orient_masks[cur_state])) return 0; // any turn dir
 			// check for cars entering the isec from the other side
 			if (conn & st_r_orient_masks[cur_state] & (1<<other_lane[orient])) return 0; // opposing traffic going straight
-			if (conn & st_r_orient_masks[cur_state] & (1<<to_left   [orient])) return 0; // traffic to the left turning right
 			if (conn & left_orient_masks[cur_state] & (1<<to_right  [orient])) return 0; // traffic to the right turning left
+			//if (conn & st_r_orient_masks[cur_state] & (1<<to_left   [orient])) return 0; // traffic to the left turning right (skip)
 			return 1;
 		}
 		unsigned get_crosswalk_state(bool dim, bool dir) const {
 			if (!can_walk(dim, dir)) return CW_STOP;
 			stoplight_t future_self(*this);
-			future_self.ffwd_to_future(1.0); // crosswalk warn time = 1.0s
-			if (!can_walk(dim, dir)) return CW_WARN;
+			future_self.ffwd_to_future(2.0); // crosswalk warn time = 2.0s
+			if (!future_self.can_walk(dim, dir)) return CW_WARN;
 			return CW_WALK;
 		}
 		bool check_int_clear(unsigned orient, unsigned turn_dir) const { // check for cars on other lanes blocking the intersection
@@ -955,7 +956,7 @@ struct road_isec_t : public cube_t {
 	}
 	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const {
 		for (unsigned j = 0; j < 3; ++j) {
-			colorRGBA const &color(stoplight_colors[j]);
+			colorRGBA const &color(stoplight_ns::stoplight_colors[j]);
 
 			if (j == state) {
 				qbd.add_quad_pts(p, color, n, tr);
