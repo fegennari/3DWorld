@@ -784,10 +784,10 @@ namespace stoplight_ns {
 			assert(conn & (1<<orient));
 			// check for cars entering the isec from this side
 			if ((1<<orient) & (left_orient_masks[cur_state] | st_r_orient_masks[cur_state])) return 0; // any turn dir
-			// check for cars entering the isec from the other side
-			if (conn & st_r_orient_masks[cur_state] & (1<<other_lane[orient])) return 0; // opposing traffic going straight
-			if (conn & left_orient_masks[cur_state] & (1<<to_right  [orient])) return 0; // traffic to the right turning left
-			//if (conn & st_r_orient_masks[cur_state] & (1<<to_left   [orient])) return 0; // traffic to the left turning right (skip)
+			// check for cars entering the isec from the other side; Note that we don't check conn mask here because unconnected dirs don't get green lights
+			if (st_r_orient_masks[cur_state] & (1<<other_lane[orient])) return 0; // opposing traffic going straight
+			if (left_orient_masks[cur_state] & (1<<to_right  [orient])) return 0; // traffic to the right turning left
+			//if (st_r_orient_masks[cur_state] & (1<<to_left   [orient])) return 0; // traffic to the left turning right (skip)
 			return 1;
 		}
 		unsigned get_crosswalk_state(bool dim, bool dir) const {
@@ -1000,27 +1000,66 @@ struct road_isec_t : public cube_t {
 				c.z1() = z1(); c.z2() = sl_top;
 				c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
 				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-				dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is back so it's all black anyway
+				dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
 
 				if (!shadow_only && tt_fire_button_down && !game_mode) {
 					point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
 					if (c.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (c.get_cube_center() + dstate.xlate));}
 				}
 			}
+			bool const draw_detail(dist_val < 0.05); // add flares only when very close
+
+			// Note skip crosswalk for road to the right of an unconnected 3-way int (T-junction)
+			// because it's not needed and will never get to walk (due to opposing left turn light), and there's no stoplight to attach it to
+			if (dist_val <= 0.06 && (conn & (1<<stoplight_ns::to_right[2*dim + (!dir)])) != 0) { // draw crosswalk
+				int const cw_state(shadow_only ? 0 : stoplight.get_crosswalk_state(dim, !dir)); // Note: backwards dir
+				colorRGBA cw_color(stoplight_ns::crosswalk_colors[cw_state] * 0.6); // less bright
+
+				if (cw_state == stoplight_ns::CW_WARN) { // flashing
+					float const flash_period = 0.5; // in seconds
+					double const time(fract(tfticks/(flash_period*TICKS_PER_SECOND)));
+					if (time > 0.5) {cw_color = BLACK;}
+				}
+				float const cw_dim_pos(d[dim][!dir] + 1.7*(dir ? sz : -sz)); // location in road dim
+				cube_t c;
+				c.z1() = zbot + 1.2*h + 1.4*h*dim; c.z2() = c.z1() + 1.4*h;
+				c.d[dim][0] = cw_dim_pos - 0.5*sz; c.d[dim][1] = cw_dim_pos + 0.5*sz;
+
+				for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
+					float const ndp(d[!dim][i] - 1.2*(i ? sz : -sz));
+					c.d[!dim][0] = ndp - 0.1*sz; c.d[!dim][1] = ndp + 0.1*sz;
+					dstate.draw_cube(qbd, c, cw, 0); // skip_bottom=0
+
+					if (!shadow_only && cw_color != BLACK) { // draw light
+						point p[4];
+						p[0][!dim] = p[1][!dim] = p[2][!dim] = p[3][!dim] = c.d[!dim][!i] + 0.01*(i ? -sz : sz);
+						p[0][dim] = p[3][dim] = c.d[dim][0]; p[1][dim] = p[2][dim] = c.d[dim][1];
+						p[0].z = p[1].z = c.z1(); p[2].z = p[3].z = c.z2();
+						vector3d normal(zero_vector);
+						normal[!dim] = (i ? -1.0 : 1.0);
+						point const cw_center(0.25*(p[0] + p[1] + p[2] + p[3]));
+						vector3d const cw_cview_dir(camera_pdu.pos - (cw_center + dstate.xlate));
+
+						if (dot_product(normal, cw_cview_dir) > 0.0) { // if back facing, don't draw the lights
+							qbd.add_quad_pts(p, cw_color, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
+							if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color, 1.0, 1.2*h);}
+						}
+					}
+				} // for i
+			} // end crosswalk
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
 			vector3d normal(zero_vector);
 			normal[dim] = (dir ? -1.0 : 1.0);
-			if (dot_product(normal, cview_dir) < 0.0) continue; // back facing, don't draw the lights
+			if (dot_product(normal, cview_dir) < 0.0) continue; // if back facing, don't draw the lights
 			// draw straight/line turn light
 			point p[4];
 			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
 			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
 			p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
-			bool const draw_detail(dist_val < 0.05); // only when very close
 			draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
-			// draw left turn light (upper light section)
-			if (has_left_turn_signal(n)) {
+			
+			if (has_left_turn_signal(n)) { // draw left turn light (upper light section)
 				draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.0, 0.5, 1.0));
 			}
 		} // for n
