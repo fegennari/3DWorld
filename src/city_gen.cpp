@@ -1039,11 +1039,16 @@ struct road_isec_t : public cube_t {
 						normal[!dim] = (i ? -1.0 : 1.0);
 						point const cw_center(0.25*(p[0] + p[1] + p[2] + p[3]));
 						vector3d const cw_cview_dir(camera_pdu.pos - (cw_center + dstate.xlate));
+						float dp(dot_product(normal, cw_cview_dir));
 
-						if (dot_product(normal, cw_cview_dir) > 0.0) { // if back facing, don't draw the lights
-							bool const is_walk(cw_state == stoplight_ns::CW_WALK);
-							qbd.add_quad_pts(p, WHITE, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color is stored in the texture
-							if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color, 1.0, 0.8*h);}
+						if (dp > 0.0) { // if back facing, don't draw the lights
+							float const mag(CLIP_TO_01(2.5f*dp/cw_cview_dir.mag() - 1.0f)); // normalize and strengthen slope
+
+							if (mag > 0.0) {
+								bool const is_walk(cw_state == stoplight_ns::CW_WALK);
+								qbd.add_quad_pts(p, WHITE*mag, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color is stored in the texture
+								if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color*mag, 1.0, 0.8*h);}
+							}
 						}
 					}
 				} // for i
