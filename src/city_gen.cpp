@@ -1041,8 +1041,9 @@ struct road_isec_t : public cube_t {
 						vector3d const cw_cview_dir(camera_pdu.pos - (cw_center + dstate.xlate));
 
 						if (dot_product(normal, cw_cview_dir) > 0.0) { // if back facing, don't draw the lights
-							qbd.add_quad_pts(p, cw_color, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
-							if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color, 1.0, 1.2*h);}
+							bool const is_walk(cw_state == stoplight_ns::CW_WALK);
+							qbd.add_quad_pts(p, WHITE, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color is stored in the texture
+							if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color, 1.0, 0.8*h);}
 						}
 					}
 				} // for i
@@ -1057,10 +1058,10 @@ struct road_isec_t : public cube_t {
 			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
 			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
 			p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
-			draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.0, 0.5, 1.0));
+			draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.5, 0.5, 1.0));
 			
 			if (has_left_turn_signal(n)) { // draw left turn light (upper light section)
-				draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.0, 0.5, 1.0));
+				draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.5, 0.5, 1.0));
 			}
 		} // for n
 	}
