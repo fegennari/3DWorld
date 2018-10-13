@@ -1022,7 +1022,7 @@ struct road_isec_t : public cube_t {
 				}
 				float const cw_dim_pos(d[dim][!dir] + 1.7*(dir ? sz : -sz)); // location in road dim
 				cube_t c;
-				c.z1() = zbot + 1.2*h + 1.4*h*dim; c.z2() = c.z1() + 1.4*h;
+				c.z1() = zbot + 1.2*h + 1.4*h*dim; c.z2() = c.z1() + 1.6*h;
 				c.d[dim][0] = cw_dim_pos - 0.5*sz; c.d[dim][1] = cw_dim_pos + 0.5*sz;
 
 				for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
