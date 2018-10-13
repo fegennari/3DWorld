@@ -1009,9 +1009,9 @@ struct road_isec_t : public cube_t {
 			}
 			bool const draw_detail(dist_val < 0.05); // add flares only when very close
 
-			// Note skip crosswalk for road to the right of an unconnected 3-way int (T-junction)
+			// Note skip crosswalk signal for road to the right of an unconnected 3-way int (T-junction)
 			// because it's not needed and will never get to walk (due to opposing left turn light), and there's no stoplight to attach it to
-			if (dist_val <= 0.06 && (conn & (1<<stoplight_ns::to_right[2*dim + (!dir)])) != 0) { // draw crosswalk
+			if (dist_val <= 0.06 && (conn & (1<<stoplight_ns::to_right[2*dim + (!dir)])) != 0) { // draw crosswalk signal
 				int const cw_state(shadow_only ? 0 : stoplight.get_crosswalk_state(dim, !dir)); // Note: backwards dir
 				colorRGBA cw_color(stoplight_ns::crosswalk_colors[cw_state] * 0.6); // less bright
 
@@ -1052,7 +1052,7 @@ struct road_isec_t : public cube_t {
 						}
 					}
 				} // for i
-			} // end crosswalk
+			} // end crosswalk signal
 			if (shadow_only)    continue; // no lights in shadow pass
 			if (dist_val > 0.1) continue; // too far away
 			vector3d normal(zero_vector);
@@ -1254,6 +1254,7 @@ struct bridge_t : public road_connector_t {
 		if (cnorm) {*cnorm = plus_z;} // approximate - assume collision with bottom surface of road (intended for player)
 		return 1;
 	}
+	bool line_intersect(point const &p1, point const &p2, float &t) const {return 0;} // TODO
 };
 
 struct tunnel_t : public road_connector_t {
@@ -2939,7 +2940,7 @@ class city_road_gen_t {
 			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
 			}
-			//for (auto i = bridges.begin(); i != bridges.end(); ++i) {} // TODO
+			for (auto i = bridges.begin(); i != bridges.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
 			ret |= line_intersect_streetlights(p1, p2, t);
 			ret |= city_obj_placer.line_intersect(p1, p2, t);
