@@ -998,6 +998,7 @@ void display(void) {
 			show_user_stats();
 			show_blood_on_camera();
 			show_crosshair(WHITE, do_zoom);
+			inf_terrain_fire_mode = 0;
 		}
 		else if (world_mode == WMODE_INF_TERRAIN && (inf_terrain_fire_mode || tt_fire_button_down)) {
 			show_crosshair(get_inf_terrain_mod_color(), do_zoom);
