@@ -1448,6 +1448,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 	if (weapon == W_BBBAT && sstates[shooter].fire_frame > 0) {
 		destroy_coll_objs(pos, 0.5*damage, shooter, IMPACT);
 	}
+	destroy_city_in_radius(pos, radius);
 	int const xpos(get_xpos(fpos.x)), ypos(get_ypos(fpos.y));
 
 	if (has_water(xpos, ypos) && water_matrix[ypos][xpos] > (fpos.z - radius) &&
