@@ -44,17 +44,19 @@ city car_speed 10.0
 city traffic_balance_val 0.9
 city new_city_prob 0.5
 city enable_car_path_finding 1
-city car_model ../models/cars/sports_car/sportsCar.model3d        22 -1 90  -0.02 1.0  20 22
-city car_model ../models/cars/natla_car/natla_car.obj             -1  2 90   0.06 0.5  1 # always GRAY
-city car_model ../models/cars/speedCar/speedCar.obj               -1  6 0    0.12 0.5  4 5 # always DK_BLUE
-city car_model ../models/cars/Lamborghini/Lamborghini.model3d      2 -1 180 -0.02 0.5  2 3 4
-city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj -1  1 90   0.18 0.2  0 1 # always GRAY_BLACK
-city car_model ../models/cars/bugatti/bugatti.model3d              0 -1 80  -0.08 2.0  0 4 # Note: underside disabled for shadows model is already too many triangles
-city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d  0 -1 180  1.00 0.5  0 6 7
-city car_model ../models/cars/Rio/rio.model3d                      5 -1 270  4.00 0.5  1 5 # Note: shadow material 1 may be optional
-city car_model ../models/cars/Soarer/soarer.model3d                2 -1 90   2.00 0.5  2 5 8
-city car_model ../models/cars/Camaro/camaro2.model3d              24 -1 90   0.10 0.5  9 21 24
-#city car_model ../models/cars/Bentley/Bentley.model3d              1 -1 90   0.50 0.5  1
+# car_model: filename body_material_id fixed_color_id xy_rot dz scale lod_mult shadow_mat_ids
+city car_model ../models/cars/sports_car/sportsCar.model3d        22 -1 90  -0.02 1.0 1.0  20 22
+city car_model ../models/cars/natla_car/natla_car.obj             -1  2 90   0.06 1.0 0.5  1 # always GRAY
+city car_model ../models/cars/speedCar/speedCar.obj               -1  6 0    0.12 1.0 0.5  4 5 # always DK_BLUE
+city car_model ../models/cars/Lamborghini/Lamborghini.model3d      2 -1 180 -0.02 1.0 0.5  2 3 4
+city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj -1  1 90   0.18 1.0 0.2  0 1 # always GRAY_BLACK
+city car_model ../models/cars/bugatti/bugatti.model3d              0 -1 80  -0.08 1.0 2.0  0 4 # Note: underside disabled for shadows model is already too many triangles
+city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d  0 -1 180  1.00 1.0 0.5  0 6 7
+city car_model ../models/cars/Rio/rio.model3d                      5 -1 270  4.00 1.0 0.5  1 5 # Note: shadow material 1 may be optional
+city car_model ../models/cars/Soarer/soarer.model3d                2 -1 90   2.00 1.0 0.5  2 5 8
+city car_model ../models/cars/Camaro/camaro2.model3d              24 -1 90   0.10 1.0 0.5  9 21 24
+city car_model ../models/cars/LowPolyTruck/truck.obj              -1  2  0   0.70 1.5 0.5  3 4 5 16 17 20 # always GRAY
+#city car_model ../models/cars/Bentley/Bentley.model3d              1 -1 90   0.50 1.0 0.5  1
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 

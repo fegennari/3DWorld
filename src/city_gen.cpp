@@ -65,10 +65,10 @@ struct car_model_t {
 
 	string fn;
 	int body_mat_id, fixed_color_id;
-	float xy_rot, dz, lod_mult; // xy_rot in degrees
+	float xy_rot, dz, lod_mult, scale; // xy_rot in degrees
 	vector<unsigned> shadow_mat_ids;
 
-	car_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), dz(0.0), lod_mult(1.0) {}
+	car_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), dz(0.0), lod_mult(1.0), scale(1.0) {}
 	car_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
 		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm), shadow_mat_ids(smids) {}
 
@@ -79,6 +79,7 @@ struct car_model_t {
 		if (!read_int(fp, fixed_color_id)) return 0;
 		if (!read_float(fp, xy_rot)) return 0;
 		if (!read_float(fp, dz)) return 0;
+		if (!read_float(fp, scale)) return 0;
 		if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
 		unsigned shadow_mat_id;
 		while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
@@ -468,6 +469,16 @@ struct car_t {
 	float get_wait_time_secs  () const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 
+	void apply_scale(float scale) {
+		if (scale == 1.0) return; // no scale
+		float const prev_height(height);
+		height *= scale;
+		point const pos(get_center());
+		bcube.z2() += height - prev_height; // z1 is unchanged
+		float const dx(bcube.x2() - pos.x), dy(bcube.y2() - pos.y);
+		bcube.x1() = pos.x - scale*dx; bcube.x2() = pos.x + scale*dx;
+		bcube.y1() = pos.y - scale*dy; bcube.y2() = pos.y + scale*dy;
+	}
 	void destroy() { // Note: not calling create_explosion(), so no chain reactions
 		point const pos(get_center() + get_tiled_terrain_model_xlate());
 		float const length(get_length());
@@ -4163,7 +4174,9 @@ public:
 			if (num_models > 0) {
 				if (FORCE_MODEL_ID >= 0) {i->model_id = FORCE_MODEL_ID;}
 				else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
-				fixed_color = car_model_loader.get_model(i->model_id).fixed_color_id;
+				car_model_t const &model(car_model_loader.get_model(i->model_id));
+				fixed_color = model.fixed_color_id;
+				i->apply_scale(model.scale);
 			}
 			i->color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
 			assert(i->is_valid());
