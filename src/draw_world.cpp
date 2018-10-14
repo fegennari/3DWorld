@@ -897,12 +897,12 @@ void draw_stars(float alpha) {
 	point const xlate((camera_mode == 1) ? surface_pos : all_zeros);
 	enable_blend();
 	glDisable(GL_DEPTH_TEST);
-	point_sprite_drawer psd;
+	static point_sprite_drawer psd;
 	psd.reserve_pts(stars.size());
 	rand_gen_t rgen;
 
 	for (unsigned i = 0; i < stars.size(); ++i) {
-		if ((rgen.rand()%400) == 0) continue; // flicker out
+		if ((rgen.rand()&255) == 0) continue; // flicker out
 
 		for (unsigned j = 0; j < 3; ++j) {
 			float const c(stars[i].color[j]*stars[i].intensity);
@@ -910,7 +910,7 @@ void draw_stars(float alpha) {
 		}
 		psd.add_pt(vert_color((stars[i].pos + xlate), color));
 	}
-	psd.draw(BLUR_TEX, 2.0); // draw with points of size 2 pixels
+	psd.draw_and_clear(BLUR_TEX, 2.0); // draw with points of size 2 pixels
 	glEnable(GL_DEPTH_TEST);
 	disable_blend();
 }
