@@ -290,12 +290,14 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 		T const vmag(mag());
 		if (vmag > TOLERANCE && vmag > vmax) operator*=(vmax/vmag);
 	}
+	T sum() const {return (x + y + z);}
 	pointT operator+(pointT const &p)  const {return pointT((x+p.x), (y+p.y), (z+p.z));}
 	pointT operator-(pointT const &p)  const {return pointT((x-p.x), (y-p.y), (z-p.z));}
 	pointT operator+(T const &v)       const {return pointT((x+v), (y+v), (z+v));}
 	pointT operator-(T const &v)       const {return pointT((x-v), (y-v), (z-v));}
 	pointT operator*(T      const val) const {return pointT(x*val, y*val, z*val);}
 	pointT operator*(pointT const &p)  const {return pointT(x*p.x, y*p.y, z*p.z);} // component multiply
+	pointT operator/(pointT const &p)  const {return pointT(x/p.x, y/p.y, z/p.z);} // component division
 	pointT operator-()                 const {return pointT(-x, -y, -z);}
 	
 	pointT operator/(T      const val) const {
