@@ -1804,11 +1804,11 @@ void tile_t::draw_water(shader_t &s, float z) const {
 bool tile_t::check_sphere_collision(point &pos, float sradius) const {
 
 	if (is_distant || !contains_point(pos)) return 0;
-	if (pos.z > get_tile_zmax() + sradius)   return 0; // sphere is completely above the tile
+	if (pos.z > get_tile_zmax() + sradius)  return 0; // sphere is completely above the tile
 	bool coll(0);
 
 	if (!pine_trees.empty()) {
-		pos  -= ptree_off.get_xlate();
+		pos  -= ptree_off.get_xlate(); // Note: pos adj is required because pos is modified
 		coll |= pine_trees.check_sphere_coll(pos, sradius);
 		pos  += ptree_off.get_xlate();
 	}
@@ -1848,6 +1848,8 @@ int tile_t::get_tid_under_point(point const &pos) const {
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const {
 
 	if (is_distant) return 0; // Note: this can be made to work, but won't work as-is
+	//if (!pine_trees .empty()) {} // TODO: check pine trees with -= dtree_off.get_xlate()
+	//if (!decid_trees.empty()) {} // TODO: check decid trees with -= dtree_off.get_xlate()
 	point v1c(v1), v2c(v2); // clipped verts
 	if (!do_line_clip(v1c, v2c, get_mesh_bcube().d)) return 0;
 	// similar to mesh_intersector::line_intersect_surface_fast()
