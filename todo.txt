@@ -11,6 +11,5 @@ TT Projectile and object collision detection
 Top-down approximation for sky lighting, similar to rain/snow map
 
 Cities:
-- Trucks and other vehicles of different sizes
 - Wider connector roads/intersections
 - Railroad tracks

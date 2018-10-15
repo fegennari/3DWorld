@@ -3900,10 +3900,8 @@ class car_manager_t {
 		void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color, point const &xlate,
 			unsigned model_id, bool is_shadow_pass, bool low_detail)
 		{
-			ensure_models_loaded();
-			assert(size() == num_models());
-			assert(model_id < size());
 			assert(is_model_valid(model_id));
+			assert(size() == num_models()); // must be loaded
 			car_model_t const &model_file(get_model(model_id));
 			model3d &model(at(model_id));
 
@@ -3919,7 +3917,7 @@ class car_manager_t {
 			bool const camera_pdu_valid(camera_pdu.valid);
 			camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 			// Note: in model space, front-back=z, left-right=x, top-bot=y
-			float const sz_scale((car_bcube.get_dx() + car_bcube.get_dy() + car_bcube.get_dz()) / (bcube.get_dx() + bcube.get_dy() + bcube.get_dz()));
+			float const sz_scale(car_bcube.get_size().sum() / bcube.get_size().sum());
 			fgPushMatrix();
 			translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
 			if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
@@ -4001,14 +3999,16 @@ class car_manager_t {
 		void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const {
 			point const center(car.get_center());
 			cube_t const &c(car.bcube);
-			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + 0.1*car.height), length(car.get_length());
+			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + (include_top ? 0.1 : 0.5)*car.height), length(car.get_length());
 			bool const dim(car.dim), dir(car.dir);
-			cube_t top_part(c);
-			top_part.d[dim][0] += (dir ? 0.25 : 0.30)*length; // back
-			top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
 			set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
-			if (include_top) {set_cube_pts(top_part, zmid, z2, dim, dir, pt);} // top
-
+			
+			if (include_top) {
+				cube_t top_part(c);
+				top_part.d[dim][0] += (dir ? 0.25 : 0.30)*length; // back
+				top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
+				set_cube_pts(top_part, zmid, z2, dim, dir, pt); // top
+			}
 			if (car.dz != 0.0) { // rotate all points about dim !d
 				float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
 				rotate_pts(center, sine_val, cos_val, dim, 2, pb);
@@ -4032,7 +4032,8 @@ class car_manager_t {
 			begin_tile(center); // enable shadows
 			colorRGBA const &color(car.get_color());
 			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
-			bool const draw_top(dist_val < 0.25), dim(car.dim), dir(car.dir);
+			bool const is_truck(car.bcube.dz() > 1.2*city_params.get_car_size().z); // hack - truck has a larger than average size
+			bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
 			float const sign((dim^dir) ? -1.0 : 1.0);
 			point pb[8], pt[8]; // bottom and top sections
 			gen_car_pts(car, draw_top, pb, pt);

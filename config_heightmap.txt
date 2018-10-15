@@ -55,7 +55,7 @@ city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d  0 -1 180  1.0
 city car_model ../models/cars/Rio/rio.model3d                      5 -1 270  4.00 1.0 0.5  1 5 # Note: shadow material 1 may be optional
 city car_model ../models/cars/Soarer/soarer.model3d                2 -1 90   2.00 1.0 0.5  2 5 8
 city car_model ../models/cars/Camaro/camaro2.model3d              24 -1 90   0.10 1.0 0.5  9 21 24
-city car_model ../models/cars/LowPolyTruck/truck.obj              -1  2  0   0.70 1.5 0.5  3 4 5 16 17 20 # always GRAY
+city car_model ../models/cars/LowPolyTruck/truck.obj              -1  2  0   0.70 1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
 #city car_model ../models/cars/Bentley/Bentley.model3d              1 -1 90   0.50 1.0 0.5  1
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
