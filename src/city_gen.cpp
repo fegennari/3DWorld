@@ -2009,8 +2009,8 @@ class city_road_gen_t {
 
 		void calc_bcube() {
 			bcube.set_from_point(pos);
-			bcube.expand_by(vector3d((dim ? 0.42 : 1.0), (dim ? 1.0 : 0.42), 0.0)*radius);
-			bcube.z2() += 0.93*radius; // set bench height
+			bcube.expand_by(vector3d((dim ? 0.32 : 1.0), (dim ? 1.0 : 0.32), 0.0)*radius);
+			bcube.z2() += 0.85*radius; // set bench height
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
