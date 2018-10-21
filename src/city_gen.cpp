@@ -2211,7 +2211,7 @@ class city_road_gen_t {
 		}
 		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
 			bench_t bench;
-			bench.radius = 0.35*city_params.get_car_size().x;
+			bench.radius = 0.3*city_params.get_car_size().x;
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 				if (!try_place_obj(plot, blockers, rgen, bench.radius, bench.radius, 1, bench.pos)) continue; // 1 try
