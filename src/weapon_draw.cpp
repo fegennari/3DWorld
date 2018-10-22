@@ -294,7 +294,7 @@ int select_dodgeball_texture(int shooter) {
 		return dodgeball_tids[player_dodgeball_id]; // choose once and don't change - may throw a ball of a different color
 	}
 	bool const default_tex(sstates == NULL || shooter == NO_SOURCE || sstates[shooter].balls.empty());
-	assert(shooter >= CAMERA_ID && shooter < num_smileys);
+	assert(shooter == NO_SOURCE || (shooter >= CAMERA_ID && shooter < num_smileys));
 	return dodgeball_tids[default_tex ? 0 : (sstates[shooter].balls.back() % NUM_DB_TIDS)];
 }
 
@@ -391,7 +391,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			rotate_to_dir(dir, 90.0, 1.0); // cancel out rotation with camera
 			fgRotate(90.0, 1.0, 0.0, 0.0); // make it vertical
 
-			if (sstates != nullptr && sstates[shooter].p_ammo[W_XLOCATOR] > 0) { // have the translocator
+			if (sstates != nullptr && (shooter == NO_SOURCE || sstates[shooter].p_ammo[W_XLOCATOR] > 0)) { // have the translocator
 				draw_translocator(all_zeros, radius, N_SPHERE_DIV, shooter, shader);
 			}
 			else { // don't have the translocator
