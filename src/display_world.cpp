@@ -291,6 +291,7 @@ void final_draw(float framerate) {
 	fog_enabled = 0;
 	run_postproc_effects();
 	check_zoom(); // also resets MVM to identity
+	draw_inventory(); // drawn last, on top of everything else
 	draw_camera_filters(cfilters);
 	draw_frame_rate(framerate);
 	show_other_messages();

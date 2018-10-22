@@ -201,8 +201,10 @@ struct player_state { // size = big
 	void init_wa();
 	void init(bool w_start);
 	void reset_wpt_state();
-	bool no_weap() const;
-	bool no_ammo() const;
+	bool no_weap_id(int cur_weapon) const;
+	bool no_ammo_id(int cur_weapon) const;
+	bool no_weap() const {return no_weap_id(weapon);}
+	bool no_ammo() const {return no_ammo_id(weapon);}
 	float weapon_range(bool use_far_clip) const;
 	void jump(point const &pos);
 	void verify_wmode();

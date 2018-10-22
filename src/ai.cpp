@@ -1541,23 +1541,21 @@ void player_state::reset_wpt_state() {
 }
 
 
-bool player_state::no_weap() const {
+bool player_state::no_weap_id(int cur_weapon) const {
 
 	if (!game_mode) return 0;
-	assert(weapon < NUM_WEAPONS);
-	assert(p_weapons[weapon] >= 0);
-	return (!UNLIMITED_WEAPONS && weapons[weapon].need_weapon && p_weapons[weapon] == 0);
+	assert(cur_weapon < NUM_WEAPONS);
+	assert(p_weapons[cur_weapon] >= 0);
+	return (!UNLIMITED_WEAPONS && weapons[cur_weapon].need_weapon && p_weapons[cur_weapon] == 0);
 }
 
-
-bool player_state::no_ammo() const {
+bool player_state::no_ammo_id(int cur_weapon) const {
 
 	if (!game_mode) return 0;
-	assert(weapon < NUM_WEAPONS);
-	assert(p_ammo[weapon] >= 0);
-	return ((!UNLIMITED_WEAPONS || weapon == W_XLOCATOR) && weapons[weapon].need_ammo && p_ammo[weapon] == 0);
+	assert(cur_weapon < NUM_WEAPONS);
+	assert(p_ammo[cur_weapon] >= 0);
+	return ((!UNLIMITED_WEAPONS || cur_weapon == W_XLOCATOR) && weapons[cur_weapon].need_ammo && p_ammo[cur_weapon] == 0);
 }
-
 
 float player_state::weapon_range(bool use_far_clip) const {
 

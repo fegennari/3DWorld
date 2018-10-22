@@ -38,8 +38,7 @@ struct text_message_params {
 };
 
 
-int following(0), camera_flight(0), blood_spilled(0);
-int camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0);
+int following(0), camera_flight(0), blood_spilled(0), camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0), last_inventory_frame(0);
 float camera_health(100.0), team_damage(1.0), self_damage(1.0), player_damage(1.0), smiley_damage(1.0);
 point orig_camera(all_zeros), orig_cdir(plus_z);
 vector<spark_t> sparks;
@@ -415,6 +414,12 @@ string get_kill_str(int type) {
 	return ((damage_name == "Fell") ? "Teleporter" : damage_name); // can only kill with teleporter, not fell
 }
 
+void camera_weapon_ammo_pickup(point const &position, colorRGBA &cam_filter_color) {
+	cam_filter_color = BLUE;
+	last_inventory_frame = frame_counter;
+	gen_sound(SOUND_ITEM, position, 0.25);
+}
+
 
 bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
@@ -458,15 +463,13 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		sstate.p_weapons[wa_id] = 1;
 		sstate.p_ammo[wa_id]    = min(weapons[wa_id].max_ammo, sstate.p_ammo[wa_id]+weapons[wa_id].def_ammo);
 		print_text_onscreen(weapons[wa_id].name, GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
-		cam_filter_color = BLUE;
-		gen_sound(SOUND_ITEM, position, 0.25);
+		camera_weapon_ammo_pickup(position, cam_filter_color);
 		break;
 
 	case AMMO:
 		sstate.p_ammo[wa_id] = min(weapons[wa_id].max_ammo, sstate.p_ammo[wa_id]+weapons[wa_id].def_ammo);
 		print_text_onscreen((make_string(weapons[wa_id].def_ammo) + " " + weapons[wa_id].name + " ammo"), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
-		cam_filter_color = BLUE;
-		gen_sound(SOUND_ITEM, position, 0.25);
+		camera_weapon_ammo_pickup(position, cam_filter_color);
 		break;
 
 	case WA_PACK:
@@ -475,8 +478,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			sstate.p_weapons[wa_id] = 1;
 			sstate.p_ammo[wa_id]    = min((int)weapons[wa_id].max_ammo, (sstate.p_ammo[wa_id] + pickup_ammo));
 			print_text_onscreen((weapons[wa_id].name + " pack with ammo " + make_string(pickup_ammo)), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
-			cam_filter_color = BLUE;
-			gen_sound(SOUND_ITEM, position, 0.25);
+			camera_weapon_ammo_pickup(position, cam_filter_color);
 		}
 		break;
 
@@ -484,6 +486,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		if (energy < 10.0 && sstate.pickup_ball(obj_index)) {
 			print_text_onscreen("You have the ball", GREEN, 1.2, 2*MESSAGE_TIME/3, 1);
 			gen_sound(SOUND_POWERUP, position, 0.5);
+			//last_inventory_frame = frame_counter; // acts more like a powerup than an inventory item
 		}
 		else {cam_filter_color = RED;}
 		break;
@@ -1554,7 +1557,10 @@ bool try_use_translocator(int player_id) {
 void switch_player_weapon(int val) {
 
 	if (game_mode) {
-		if (sstates != NULL) {sstates[CAMERA_ID].switch_weapon(val, 1);}
+		if (sstates != NULL) {
+			sstates[CAMERA_ID].switch_weapon(val, 1);
+			last_inventory_frame = frame_counter;
+		}
 	}
 	else if (world_mode == WMODE_INF_TERRAIN) {change_inf_terrain_fire_mode(val);}
 	else if (world_mode == WMODE_GROUND && create_voxel_landscape) {change_voxel_editing_mode(val);}

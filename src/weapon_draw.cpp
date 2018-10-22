@@ -12,9 +12,9 @@ int player_dodgeball_id(-1);
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool keep_beams, have_indir_smoke_tex, begin_motion;
-extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
-extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2;
+extern bool keep_beams, have_indir_smoke_tex, begin_motion, enable_translocator;
+extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, spectate;
+extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2, last_inventory_frame;
 extern float fticks, NEAR_CLIP, FAR_CLIP;
 extern double tfticks;
 extern vector3d pre_ref_cview_dir;
@@ -318,7 +318,7 @@ void draw_raptor_section(float tx, float ty, float tz, float length, float radiu
 // Note: shader is passed all the way into here just to set the min_alpha for cblade
 void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid, int wmode, int fframe, int p_loaded,
 				 int ammo, int rot_counter, unsigned delay, int shooter, int sb_tex, float alpha, float dpos,
-				 float fire_val, float scale, bool draw_pass, shader_t &shader)
+				 float fire_val, float scale, bool draw_pass, shader_t &shader, bool fixed_lod=0)
 {
 	bool const just_fired(abs(fframe - (int)delay) <= 1), is_camera(shooter == CAMERA_ID);
 	
@@ -342,7 +342,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	select_texture(WHITE_TEX);
 	
 	if (draw_pass == 0) { // draw solid objects
-		int ndiv(int(get_zoom_scale()*300.0*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
+		int ndiv(fixed_lod ? 24 : int(get_zoom_scale()*300.0*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
 		ndiv = min(N_SPHERE_DIV, max(3, ndiv));
 		unsigned const oid(weapons[wid].obj_id);
 		//int const cobj(weapons[wid].need_weapon ? cid : -1);
@@ -710,8 +710,8 @@ sphere_t get_weapon_bsphere(int weapon) {
 }
 
 
-void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader) {
-	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, NO_SOURCE, 0, 1.0, 0.0, 0.0, scale, 0, shader);
+void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader, int shooter, bool fixed_lod) {
+	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, shooter, 0, 1.0, 0.0, 0.0, scale, 0, shader, fixed_lod);
 }
 
 
@@ -929,5 +929,56 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	psd.add_pt(vert_color(point(0.0, 0.0, zval), color));
 	psd.draw(WHITE_TEX, 1.0); // draw with points of size 1 pixel, not blended
 	glEnable(GL_DEPTH_TEST);
+}
+
+
+void draw_inventory() {
+
+	// Note: currently only weapons as there are no other collectible pickup items
+	if (!game_mode || sstates == NULL) return;
+	if (spectate) return; // onlys show if player is alive and playing
+	float const elapsed_secs(float(frame_counter - last_inventory_frame)/TICKS_PER_SECOND);
+	if (elapsed_secs > 2.5) return; // inventory only shows up for 2.5s after item pickup or inventory change
+	if (elapsed_secs < 1.5) {} // TODO: fade?
+	player_state const &sstate(sstates[CAMERA_ID]);
+	vector<unsigned> weapons;
+
+	for (unsigned i = 1; i < NUM_WEAPONS; ++i) { // skip unarmed
+		// if player doesn't have this weapon, or it's out of ammo, don't show it
+		if (game_mode == 2 && i != W_BALL) continue; // dodgeballs only
+		if ((enable_translocator && i == W_XLOCATOR) || (!sstate.no_weap_id(i) && !sstate.no_ammo_id(i))) {weapons.push_back(i);}
+	}
+	shader_t s;
+	s.begin_simple_textured_shader(); // no lighting
+	float const ar(float(window_width)/float(window_height)), dx(0.006*ar), quad_sz(0.35*dx), border_sz(1.06*quad_sz), radius(0.05);
+	float const x0(-0.045*ar + 0.5*(15 - int(weapons.size()))*dx); // centered on the screen
+	point pos(x0, -0.045, -10.0*NEAR_CLIP);
+
+	// draw background boxes
+	select_texture(WHITE_TEX);
+	quad_batch_draw qbd;
+	
+	for (auto w = weapons.begin(); w != weapons.end(); ++w) {
+		if (*w == sstate.weapon) {qbd.add_quad_dirs(pos, border_sz*plus_x, border_sz*plus_y, WHITE);} // draw selection box
+		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, GRAY_BLACK); // add black square background
+		pos.x += dx;
+	}
+	glDisable(GL_DEPTH_TEST);
+	//glDepthMask(GL_FALSE);
+	qbd.draw();
+	//glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+
+	// draw weapons
+	// UNARMED BBBAT BALL SBALL ROCKET LANDMINE SEEK_D STAR5 M16 SHOTGUN GRENADE LASER PLASMA BLADE GASSER RAPTOR XLOCATOR
+	float const scale[NUM_WEAPONS] = {0.0, 2.0, 1.0, 2.0, 0.4, 2.0, 0.4, 2.0, 0.4, 0.4, 2.0, 0.4, 0.35, 1.0, 0.4, 0.4, 2.0};
+	float const dist [NUM_WEAPONS] = {0.0, 1.0, 1.3, 2.6, 0.4, 2.6, 0.4, 2.6, 0.4, 0.4, 2.6, 0.6, 0.5,  1.0, 0.4, 0.4, 2.6};
+	glClear(GL_DEPTH_BUFFER_BIT);
+	pos.x = x0;
+
+	for (auto w = weapons.begin(); w != weapons.end(); ++w) {
+		draw_weapon_simple((pos + dist[*w]*vector3d(0.0, -0.15*radius, 0.004)), plus_y, radius, -1, *w, 0.1*scale[*w], s, CAMERA_ID, 1); // fixed_lod=1
+		pos.x += dx;
+	}
 }
 
