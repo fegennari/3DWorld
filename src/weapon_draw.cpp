@@ -466,13 +466,15 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 		case W_ROCKET:
 			radius = 0.95*object_types[ROCKET].radius;
-			set_copper_material(shader, alpha);
+			select_texture(get_texture_by_name("metal_plate.jpg"));
+			set_copper_material(shader, alpha, 2.0); // bright copper
 			rot_angle = max(0.0f, 10.0f*(fire_val - 0.7f)); // recoil
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
 			fgTranslate(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0);
 			draw_cylinder(6.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 5.0*radius);
+			select_texture(WHITE_TEX);
 			// draw the sight
 			fgTranslate(0.8*radius, 0.0, 6.5*radius);
 			fgRotate(90.0, 0.0, 1.0, 0.0);
@@ -483,12 +485,16 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 		case W_SEEK_D: // similar to rocket
 			radius = 0.95*object_types[SEEK_D].radius;
-			set_brass_material(shader, alpha);
+			select_texture(SHIP_HULL_TEX);
+			set_brass_material(shader, alpha, 2.0); // bright brass
 			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f)); // recoil
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
-			draw_cylinder_at(point(tx, ty, 0.0), 5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
-			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(tx, ty, 4.0*radius));
+			fgTranslate(tx, ty, 0.0);
+			rotate_to_dir(dir, 0.0, 1.0);
+			draw_cylinder(5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
+			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 4.0*radius);
 			shader.clear_specular();
+			select_texture(WHITE_TEX);
 			break;
 
 		case W_RAPTOR: { // similar to rocket
