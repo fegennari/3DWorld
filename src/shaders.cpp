@@ -425,6 +425,11 @@ void shader_t::set_color_e(colorRGBA const &color) {
 	set_uniform_color(emission_loc, color);
 }
 
+void shader_t::set_black_diffuse_emissive_color(colorRGBA const &color) {
+	set_color_e(color);
+	set_cur_color((emission_loc >= 0) ? colorRGBA(BLACK, color.alpha) : color); // if emissive color was set, then use black; otherwise, assume lighting is disabled and use the provided color
+}
+
 void shader_t::set_specular_color(colorRGB const &specular, float shininess) {
 
 	assert(is_setup());

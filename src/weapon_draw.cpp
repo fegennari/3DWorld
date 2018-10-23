@@ -29,7 +29,6 @@ extern blood_spot blood_spots[];
 extern player_state *sstates;
 
 
-void set_emissive_only(colorRGBA const &color, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_plasmaball(point const &pos0, int shooter, shader_t &shader);
 void draw_translocator(point const &pos, float radius, int ndiv, int source, shader_t &shader);
@@ -543,7 +542,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			//draw_cylinder(0.18, radius, radius, 2*ndiv);
 			{
 				colorRGBA color(0.8, 0.6, 1.0, 0.5*alpha);
-				if (p_loaded) {set_emissive_only(color, shader);} else {shader.set_cur_color(color);} // emissive when loaded
+				if (p_loaded) {shader.set_black_diffuse_emissive_color(color);} else {shader.set_cur_color(color);} // emissive when loaded
 				fgScale(1.0, 1.0, 0.2);
 				for (unsigned i = 0; i < 3; ++i) {draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.25+0.08*i), 0.01, ndiv, 0);}
 				if (p_loaded) {shader.clear_color_e();}
@@ -618,7 +617,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				colorRGBA const laser_color(get_laser_beam_color(shooter));
 				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), laser_color)); // should probably use this instead
 				fgPushMatrix();
-				set_emissive_only(laser_color, shader);
+				shader.set_black_diffuse_emissive_color(laser_color);
 				fgTranslate(0.0, 0.0, 0.148);
 				fgRotate(30.0, -dir.y, dir.x, 0.0);
 				draw_cylinder_at(point(tx, ty, 0.0), 0.103, 0.0007, 0.0007, ndiv);
@@ -659,7 +658,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_M16:
 			if (just_fired) {
 				float const size(((wmode&1) == 0) ? 0.02 : 0.0272);
-				set_emissive_only(ORANGE, shader);
+				shader.set_black_diffuse_emissive_color(ORANGE);
 				fgTranslate(0.6*tx, 0.6*ty, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				set_additive_blend_mode();
@@ -674,7 +673,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				radius = 0.0042;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
-				set_emissive_only(ORANGE, shader);
+				shader.set_black_diffuse_emissive_color(ORANGE);
 				set_additive_blend_mode();
 				fgTranslate(0.6*tx, 0.6*ty, 0.0);
 				fgRotate(90.0, 0.0, 0.0, 1.0);
@@ -960,13 +959,11 @@ void draw_inventory() {
 	
 	for (auto w = weapons.begin(); w != weapons.end(); ++w) {
 		if (*w == sstate.weapon) {qbd.add_quad_dirs(pos, border_sz*plus_x, border_sz*plus_y, WHITE);} // draw selection box
-		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, GRAY_BLACK); // add black square background
+		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, colorRGBA(0.08, 0.08, 0.08, 1.0)); // add black square background
 		pos.x += dx;
 	}
 	glDisable(GL_DEPTH_TEST);
-	//glDepthMask(GL_FALSE);
 	qbd.draw();
-	//glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 
 	// draw weapons

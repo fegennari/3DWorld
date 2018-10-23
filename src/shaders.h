@@ -177,6 +177,7 @@ public:
 
 	void set_color_e(colorRGBA const &color);
 	void clear_color_e() {set_color_e(BLACK);}
+	void set_black_diffuse_emissive_color(colorRGBA const &color);
 	void set_specular_color(colorRGB const &specular, float shininess);
 	void set_specular(float spec, float shine) {set_specular_color(colorRGB(spec, spec, spec), shine);}
 	void set_material(base_mat_t const &mat);

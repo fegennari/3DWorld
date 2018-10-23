@@ -93,13 +93,6 @@ void check_drawing_flags(unsigned flags, int init_draw, shader_t &shader) {
 }
 
 
-void set_emissive_only(colorRGBA const &color, shader_t &shader) {
-
-	shader.set_color_e(color);
-	shader.set_cur_color(colorRGBA(BLACK, color.alpha));
-}
-
-
 void set_color_by_status(int status, shader_t &shader) {
 
 	colorRGBA const colors[6] = {BLACK, RED, WHITE, YELLOW, BLUE, GRAY};
@@ -898,7 +891,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 		}
 		break;
 	case BEAM: // laser
-		set_emissive_only(RED, shader);
+		shader.set_black_diffuse_emissive_color(RED);
 		pos.z -= 0.5*radius;
 		draw_cylinder_at(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1);
 		shader.clear_color_e();
@@ -1157,7 +1150,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 
 	ndiv = 3*ndiv/2; // increase ndiv for better transparency effect
 	colorRGBA const ecolor(((type == -1) ? color : get_powerup_color(type)), 0.02); // low alpha
-	set_emissive_only(ecolor, shader);
+	shader.set_black_diffuse_emissive_color(ecolor);
 	lt_atten_manager.next_sphere(40.0, 1.0, pos, 0.7*radius); // dense gas
 	draw_sphere_vbo(pos, 0.7*radius, ndiv, 0); // draw flare/billboard?
 	shader.clear_color_e();
@@ -1333,7 +1326,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	}
 	else {
 		colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
-		set_emissive_only(color, shader);
+		shader.set_black_diffuse_emissive_color(color);
 		//draw_sphere_vbo(pos, size*radius, ndiv, 1);
 		draw_cube_mapped_sphere(pos, size*radius, ndiv/2, 1);
 		shader.clear_color_e();
@@ -1405,8 +1398,7 @@ void draw_translocator(point const &pos, float radius, int ndiv, int source, sha
 	fgPopMatrix();
 
 	// draw colored top
-	shader.set_cur_color(BLACK);
-	shader.set_color_e(get_smiley_team_color(source));
+	shader.set_black_diffuse_emissive_color(get_smiley_team_color(source));
 	set_obj_specular(object_types[XLOCATOR].flags, brightness, shader);
 	fgPushMatrix();
 	translate_to(pos);

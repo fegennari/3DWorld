@@ -227,10 +227,8 @@ void end_ship_texture()        {end_texture();}
 
 
 void set_emissive_color(colorRGBA const &color, shader_t *shader) {
-
 	assert(shader);
-	shader->set_cur_color(colorRGBA(0.0, 0.0, 0.0, color.alpha));
-	shader->set_color_e(color);
+	shader->set_black_diffuse_emissive_color(color);
 }
 
 
