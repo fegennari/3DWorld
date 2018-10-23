@@ -163,10 +163,10 @@ void draw_framerate(float val);
 void draw_compass_and_alt();
 void draw_health_bar(float health, float shields, float pu_time=0.0, colorRGBA const &pu_color=BLACK);
 void exec_universe_text(std::string const &text);
-void set_silver_material(shader_t &shader, float alpha=1.0);
-void set_gold_material  (shader_t &shader, float alpha=1.0);
-void set_copper_material(shader_t &shader, float alpha=1.0);
-void set_brass_material (shader_t &shader, float alpha=1.0);
+void set_silver_material(shader_t &shader, float alpha=1.0, float brightness=1.0);
+void set_gold_material  (shader_t &shader, float alpha=1.0, float brightness=1.0);
+void set_copper_material(shader_t &shader, float alpha=1.0, float brightness=1.0);
+void set_brass_material (shader_t &shader, float alpha=1.0, float brightness=1.0);
 
 // function prototypes - draw shapes
 bool is_above_mesh(point const &pos);
