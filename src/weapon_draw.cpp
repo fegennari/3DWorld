@@ -394,8 +394,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				draw_translocator(all_zeros, radius, N_SPHERE_DIV, shooter, shader);
 			}
 			else { // don't have the translocator
-				shader.set_cur_color(GRAY_BLACK);
-				draw_cube(all_zeros, 1.6*radius, 1.0*radius, 2.4*radius, 0); // untextured remote control box
+				shader.set_cur_color(WHITE);
+				select_texture(HAZARD_TEX);
+				draw_cube(all_zeros, 1.6*radius, 1.0*radius, 2.4*radius, 1, 0.5); // hazard textured remote control box
+				select_texture(WHITE_TEX);
 				shader.set_cur_color(colorRGBA(1.0, 0.15, 0.0, 1.0)); // reddish orange
 				draw_sphere_vbo(vector3d(0.0, -0.4*radius, 0.5*radius), 0.48*radius, 32, 0); // fire button
 				shader.set_cur_color(RED);
@@ -959,7 +961,7 @@ void draw_inventory() {
 	
 	for (auto w = weapons.begin(); w != weapons.end(); ++w) {
 		if (*w == sstate.weapon) {qbd.add_quad_dirs(pos, border_sz*plus_x, border_sz*plus_y, WHITE);} // draw selection box
-		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, colorRGBA(0.08, 0.08, 0.08, 1.0)); // add black square background
+		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, colorRGBA(0.1, 0.1, 0.1, 1.0)); // add near-black square background
 		pos.x += dx;
 	}
 	glDisable(GL_DEPTH_TEST);
