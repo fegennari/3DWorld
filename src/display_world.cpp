@@ -1010,7 +1010,7 @@ void display(void) {
 		else if (spraypaint_mode) {
 			draw_spraypaint_crosshair();
 		}
-		if (display_framerate && !is_video_recording() && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1))) {
+		if (display_framerate && !is_video_recording() && !game_mode && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && camera_mode == 1))) {
 			draw_compass_and_alt();
 		}
 		if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
