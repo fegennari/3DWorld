@@ -4073,8 +4073,9 @@ class car_manager_t {
 			if (shadow_only || car.is_parked()) return; // no lights when parked, or in shadow pass
 			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
+			bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
 
-			if (car.headlights_on() && dist_val < 0.3) { // night time headlights
+			if (headlights_on && dist_val < 0.3) { // night time headlights
 				colorRGBA const hl_color(get_headlight_color(car));
 
 				for (unsigned d = 0; d < 2; ++d) { // L, R
@@ -4083,11 +4084,11 @@ class car_manager_t {
 					add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
 				}
 			}
-			if ((car.is_almost_stopped() || car.stopped_at_light) && dist_val < 0.2) { // brake lights
+			if ((brake_lights_on || headlights_on) && dist_val < 0.2) { // brake lights
 				for (unsigned d = 0; d < 2; ++d) { // L, R
 					unsigned const lr(d ^ lr_xor);
 					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[2] + 0.8*pb[6]) + (lr ? 0.8 : 0.2)*(0.2*pb[3] + 0.8*pb[7]));
-					add_light_flare(pos, -front_n, RED, 1.0, 0.5*car.height); // pb 2,3,6,7
+					add_light_flare(pos, -front_n, RED, (brake_lights_on ? 1.0 : 0.5), 0.5*car.height); // pb 2,3,6,7
 				}
 			}
 			if (car.turn_dir != TURN_NONE && car.cur_city != CONN_CITY_IX && dist_val < 0.1) { // turn signals (not on connector road bends)
