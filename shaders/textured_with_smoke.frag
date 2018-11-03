@@ -78,6 +78,17 @@ void ray_trace_cube_sphere(in vec3 p1, in vec3 dir, out vec3 p2, out vec3 n) {
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
+float get_ambient_scale() {
+#ifdef ENABLE_SKY_OCCLUSION
+	vec3 pos    = (vpos - scene_llc)/scene_scale;
+	float cmp   = vpos.z + 0.5*half_dxy;
+	float delta = texture(sky_zval_tex, pos.xy).r - cmp; // incorrectly interpolated, but smooth
+	return 0.25 + 0.75*clamp((1.0 - 0.1*delta/half_dxy), 0.0, 1.0);
+#else
+	return 1.0;
+#endif
+}
+
 vec3 add_light0(in vec3 n, in float normal_sign, in vec4 base_color) {
 	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz); // Note: could drop the -epos.xyz for a directional light
 	float nscale   = 1.0;
@@ -110,14 +121,14 @@ vec3 add_light0(in vec3 n, in float normal_sign, in vec4 base_color) {
 		}
 	}
 #endif // DYNAMIC_SMOKE_SHADOWS
-	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, 1.0, base_color, fg_LightSource[0], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, get_ambient_scale(), base_color, fg_LightSource[0], normal_sign).rgb;
 }
 
 vec3 add_light1(in vec3 n, in float normal_sign, in vec4 base_color) {
 #ifdef USE_SHADOW_MAP
 	if (use_shadow_map) {n *= get_shadow_map_weight_light1(epos, n);}
 #endif
-	return add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, base_color, fg_LightSource[1], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(n, epos, 1.0, get_ambient_scale(), base_color, fg_LightSource[1], normal_sign).rgb;
 }
 
 void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {

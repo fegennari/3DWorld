@@ -359,6 +359,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool has_lt_atten, int use_smap_in, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
 	bool use_depth_trans, int enable_reflect, int is_outside, bool enable_rain_snow, bool is_cobj, bool use_gloss_map)
 {
+	bool const en_sky_occ = 0; // simple zval-based ambient occlusion, similar to shadow map; not as good as precomputed indirect lighting
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
 	bool const ground_mode(world_mode == WMODE_GROUND);
@@ -367,6 +368,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const use_wet_mask(ground_mode && is_wet && is_outside == 2);
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	bool use_smap(ground_mode ? (use_smap_in != 0) : (use_smap_in == 2)); // TT shadow maps are only enabled when use_smap_in == 2
+	bool const enable_sky_occlusion(en_sky_occ && direct_lighting && !indir_lighting); // FIXME
 	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
@@ -375,6 +377,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
+	if (enable_sky_occlusion) {s.set_prefix("#define ENABLE_SKY_OCCLUSION", 1);} // FS
 	//if (0) {s.set_prefix("#define SCREEN_SPACE_DLIGHTS",   1);} // FS
 	if (enable_reflect == 2 && use_bmap && (enable_cube_map_bump_maps || is_cobj)) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
@@ -448,7 +451,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
 		s.add_uniform_int("wet_noise_tex", 11);
 	}
-	if (use_wet_mask || is_snowy) {
+	if (use_wet_mask || is_snowy || enable_sky_occlusion) {
 		bind_texture_tu(get_sky_zval_texture(), 10);
 		s.add_uniform_int("sky_zval_tex", 10);
 	}
