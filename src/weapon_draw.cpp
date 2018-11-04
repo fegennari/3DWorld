@@ -717,8 +717,8 @@ sphere_t get_weapon_bsphere(int weapon) {
 }
 
 
-void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader, int shooter, bool fixed_lod) {
-	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, shooter, 0, 1.0, 0.0, 0.0, scale, 0, shader, fixed_lod);
+void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader, int shooter, bool fixed_lod, float apha) {
+	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, shooter, 0, apha, 0.0, 0.0, scale, 0, shader, fixed_lod);
 }
 
 
@@ -945,8 +945,9 @@ void draw_inventory() {
 	if (!game_mode || sstates == NULL) return;
 	if (spectate) return; // onlys show if player is alive and playing
 	float const elapsed_secs(float(frame_counter - last_inventory_frame)/TICKS_PER_SECOND);
-	if (elapsed_secs > 2.5) return; // inventory only shows up for 2.5s after item pickup or inventory change
-	if (elapsed_secs < 1.5) {} // TODO: fade?
+	if (elapsed_secs > 3.0) return; // inventory only shows up for 2-3s after item pickup or inventory change
+	float alpha(1.0);
+	if (elapsed_secs > 2.0) {alpha = 3.0 - elapsed_secs;} // fade over the last second
 	player_state const &sstate(sstates[CAMERA_ID]);
 	vector<unsigned> weapons;
 
@@ -962,16 +963,18 @@ void draw_inventory() {
 	point pos(x0, -0.045, -10.0*NEAR_CLIP);
 
 	// draw background boxes
-	select_texture(WHITE_TEX);
 	quad_batch_draw qbd;
 	
 	for (auto w = weapons.begin(); w != weapons.end(); ++w) {
-		if (*w == sstate.weapon) {qbd.add_quad_dirs(pos, border_sz*plus_x, border_sz*plus_y, WHITE);} // draw selection box
-		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, colorRGBA(0.1, 0.1, 0.1, 1.0)); // add near-black square background
+		if (*w == sstate.weapon) {qbd.add_quad_dirs(pos, border_sz*plus_x, border_sz*plus_y, colorRGBA(WHITE, alpha));} // draw selection box
+		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, colorRGBA(0.1, 0.1, 0.1, alpha)); // add near-black square background
 		pos.x += dx;
 	}
+	select_texture(WHITE_TEX);
 	glDisable(GL_DEPTH_TEST);
+	enable_blend();
 	qbd.draw();
+	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 
 	// draw weapons
@@ -982,7 +985,7 @@ void draw_inventory() {
 	pos.x = x0;
 
 	for (auto w = weapons.begin(); w != weapons.end(); ++w) {
-		draw_weapon_simple((pos + dist[*w]*vector3d(0.0, -0.15*radius, 0.004)), plus_y, radius, -1, *w, 0.1*scale[*w], s, CAMERA_ID, 1); // fixed_lod=1
+		draw_weapon_simple((pos + dist[*w]*vector3d(0.0, -0.15*radius, 0.004)), plus_y, radius, -1, *w, 0.1*scale[*w], s, CAMERA_ID, 1, alpha); // fixed_lod=1
 		pos.x += dx;
 	}
 }

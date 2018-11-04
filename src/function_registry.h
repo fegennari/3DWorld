@@ -654,7 +654,7 @@ void show_blood_on_camera();
 void update_weapon_cobjs();
 int select_dodgeball_texture(int shooter);
 sphere_t get_weapon_bsphere(int weapon);
-void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader, int shooter=NO_SOURCE, bool fixed_lod=0);
+void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader, int shooter=NO_SOURCE, bool fixed_lod=0, float apha=1.0);
 void draw_weapon_in_hand(int shooter, shader_t &shader, int reflection_pass=0);
 bool weap_has_transparent(int shooter);
 int get_shooter_coll_id(int shooter);
