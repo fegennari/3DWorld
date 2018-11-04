@@ -46,7 +46,7 @@ extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cub
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
-extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale;
+extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale;
 extern double tfticks;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
@@ -359,7 +359,6 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool has_lt_atten, int use_smap_in, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
 	bool use_depth_trans, int enable_reflect, int is_outside, bool enable_rain_snow, bool is_cobj, bool use_gloss_map)
 {
-	bool const en_sky_occ = 0; // simple zval-based ambient occlusion, similar to shadow map; not as good as precomputed indirect lighting
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
 	bool const ground_mode(world_mode == WMODE_GROUND);
@@ -368,7 +367,6 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const use_wet_mask(ground_mode && is_wet && is_outside == 2);
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	bool use_smap(ground_mode ? (use_smap_in != 0) : (use_smap_in == 2)); // TT shadow maps are only enabled when use_smap_in == 2
-	bool const enable_sky_occlusion(en_sky_occ && direct_lighting && !indir_lighting); // FIXME
 	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
@@ -377,11 +375,12 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
-	if (enable_sky_occlusion) {s.set_prefix("#define ENABLE_SKY_OCCLUSION", 1);} // FS
 	//if (0) {s.set_prefix("#define SCREEN_SPACE_DLIGHTS",   1);} // FS
 	if (enable_reflect == 2 && use_bmap && (enable_cube_map_bump_maps || is_cobj)) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0, use_wet_mask);
+	bool const enable_sky_occlusion(sky_occlude_scale > 0.0 && direct_lighting && !indir_lighting); // Note: common_shader_block_pre() changes indir_lighting
+	if (enable_sky_occlusion) {s.set_prefix("#define ENABLE_SKY_OCCLUSION", 1);} // FS
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl, use_gloss_map);
 	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	string fstr("linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
@@ -455,6 +454,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		bind_texture_tu(get_sky_zval_texture(), 10);
 		s.add_uniform_int("sky_zval_tex", 10);
 	}
+	// simple zval-based ambient occlusion, similar to shadow map; not as good as precomputed indirect lighting
+	if (enable_sky_occlusion) {s.add_uniform_float("sky_occlude_scale", sky_occlude_scale);}
 	// need to handle wet/outside vs. dry/inside surfaces differently, so the caller must either set is_outside properly or override wet and snow values
 	s.add_uniform_float("wet_effect",   (is_outside ? rain_wetness : 0.0)); // only enable when drawing cobjs?
 	s.add_uniform_float("reflectivity", (enable_reflect ?  1.0 : 0.0));

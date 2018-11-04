@@ -10,6 +10,7 @@ smiley_speed 0.4
 texture_alpha_in_red_comp 1
 model3d_alpha_thresh 0.01
 model3d_texture_anisotropy 4.0
+sky_occlude_scale 1.0
 use_model2d_tex_mipmaps 1
 preproc_cube_cobjs 2 # slower load time (but not as slow as mode 1) but fewer cubes
 

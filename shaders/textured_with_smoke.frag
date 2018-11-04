@@ -37,6 +37,9 @@ uniform samplerCube reflection_tex;
 uniform float cube_map_near_clip = 1.0;
 uniform vec3 cube_map_center     = vec3(0.0);
 #endif
+#ifdef ENABLE_SKY_OCCLUSION
+uniform float sky_occlude_scale = 0.5;
+#endif
 
 const float SMOKE_SCALE = 0.25;
 
@@ -83,7 +86,7 @@ float get_ambient_scale() {
 	vec3 pos    = (vpos - scene_llc)/scene_scale;
 	float cmp   = vpos.z + 0.5*half_dxy;
 	float delta = texture(sky_zval_tex, pos.xy).r - cmp; // incorrectly interpolated, but smooth
-	return 0.25 + 0.75*clamp((1.0 - 0.1*delta/half_dxy), 0.0, 1.0);
+	return mix(1.0, clamp((1.0 - 0.1*delta/half_dxy), 0.0, 1.0), sky_occlude_scale);
 #else
 	return 1.0;
 #endif
