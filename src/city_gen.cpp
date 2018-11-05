@@ -3548,8 +3548,9 @@ public:
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					//cout << "Single segment dim: << "d " << cost: " << best_cost << endl;
-					global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
-						city1, city2, city1, city2, hq, road_width, best_conn_pos, !d, 0, is_4way1, is_4way2); // check_only=0; make change
+					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
+						city1, city2, city1, city2, hq, road_width, best_conn_pos, !d, 0, is_4way1, is_4way2)); // check_only=0; make change
+					assert(cost >= 0.0);
 					return 1;
 				}
 			}
@@ -3613,12 +3614,14 @@ public:
 					hq.flatten_region_to(best_int_cube, city_params.road_border); // do this first to improve flattening
 					unsigned road_ix[2];
 					road_ix[ fdim] = global_rn.num_roads();
-					global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, city1,
-						CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0, is_4way, 0); // check_only=0
+					float const cost1(global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, city1,
+						CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0, is_4way, 0)); // check_only=0
+					assert(cost1 >= 0.0);
 					flatten_op_t const fop(hq.last_flatten_op); // cache for reuse later during decrease_only pass
 					road_ix[!fdim] = global_rn.num_roads();
-					global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2,
-						CONN_CITY_IX, city2, city1, city2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0, 0, is_4way); // check_only=0
+					float const cost2(global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2,
+						CONN_CITY_IX, city2, city1, city2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0, 0, is_4way)); // check_only=0
+					assert(cost2 >= 0.0);
 					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), road_ix[0], road_ix[1]);
 					// decrease_only=1; remove any dirt that the prev road added
 					hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, fop.skip_six, fop.skip_eix, 0, 1);
