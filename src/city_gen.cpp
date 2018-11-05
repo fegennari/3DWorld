@@ -59,6 +59,7 @@ extern tree_placer_t tree_placer;
 
 void add_dynamic_lights_city(cube_t const &scene_bcube);
 void disable_shadow_maps(shader_t &s);
+vector3d get_tt_xlate_val();
 
 
 struct car_model_t {
@@ -4622,9 +4623,7 @@ void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate)
 
 bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels) {
 	if (!have_cities()) return 0;
-	point center(pos);
-	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
-	return city_gen.check_city_sphere_coll(center, radius, 1, exclude_bridges_and_tunnels);
+	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels); // apply xlate for all static objects
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;
@@ -4641,16 +4640,14 @@ bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 	return 1;
 }
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
-	if (check_buildings_sphere_coll(pos, radius, 1, 1)) return 0; // apply_tt_xlate=1, xy_only=1
-	if (check_city_sphere_coll(pos, radius, !is_tall))  return 0; // exclude bridges if not tall
+	if (check_buildings_sphere_coll(pos, radius, 1, 1))   return 0; // apply_tt_xlate=1, xy_only=1
+	if (check_city_sphere_coll(pos, radius, !is_tall))    return 0; // exclude bridges if not tall
 	if (check_mesh_disable(pos, (radius + 2.0*HALF_DXY))) return 0; // check tunnels
 	return 1;
 }
 bool check_mesh_disable(point const &pos, float radius) {
 	if (!have_cities()) return 0;
-	point center(pos);
-	if (world_mode == WMODE_INF_TERRAIN) {center += vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0);} // apply xlate for all static objects
-	return city_gen.check_mesh_disable(center, radius);
+	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
