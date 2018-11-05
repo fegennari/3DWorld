@@ -2793,8 +2793,13 @@ class city_road_gen_t {
 				rs.slope  = (rs.z2() < rs.z1());
 				
 				if (fabs(rs.get_slope_val()) > max_slope) { // slope is too high, clamp z2 to max allowed value
-					if (n+1 == num_segs) return -1.0;
-					rs.z2() = rs.z1() + seg_len*max_slope*SIGN(rs.get_dz());
+					if (n+1 == num_segs) {
+						// Note: the height of the first/last segment may change slightly after placing the bend,
+						// which can make this slope check fail when check_only=0 while it passed when check_only=1;
+						// returning here will create a disconnected road segment and fail an assert later, so instead we allow the high slope
+						if (check_only) return -1.0;
+					}
+					else {rs.z2() = rs.z1() + seg_len*max_slope*SIGN(rs.get_dz());}
 				}
 				segments.push_back(rs);
 				rs.d[dim][0] = rs.d[dim][1]; rs.z1() = rs.z2(); // shift segment end point
