@@ -243,7 +243,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
-	is_distant(0), no_trees(0), just_cleared(0), has_disabled_area(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	is_distant(0), no_trees(0), just_cleared(0), has_tunnel(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -915,7 +915,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	get_texture_ixs(sand_tex_ix, dirt_tex_ix, grass_tex_ix, rock_tex_ix, snow_tex_ix);
 
 	if (weight_tid == 0) { // create weights
-		has_any_grass = has_disabled_area = 0;
+		has_any_grass = has_tunnel = 0;
 		grass_blocks.clear();
 		mesh_weight_data.resize(4*num_texels); // RGBA
 		unsigned const grass_block_dim(get_grass_block_dim());
@@ -937,6 +937,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
 		//bool const same_dirt(params[0][1].dirt == params[0][0].dirt && params[1][0].dirt == params[0][0].dirt && params[1][1].dirt == params[0][0].dirt);
+		has_tunnel |= tile_contains_tunnel(get_mesh_bcube());
 
 #pragma omp parallel for schedule(static,1) num_threads(2)
 		for (int y = 0; y < (int)tsize-DEBUG_TILE_BOUNDS; ++y) {
@@ -953,7 +954,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				if (check_mesh_mask && check_mesh_disable(point(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0), HALF_DXY)) {
 					mesh_weight_data[off+0] = mesh_weight_data[off+1] = 255; // set invalid values to flag as transparent
 					mesh_weight_data[off+2] = mesh_weight_data[off+3] = 0;   // make sure grass is disabled
-					has_disabled_area = 1;
+					has_tunnel = 1; // Note: should be covered by the tile_contains_tunnel(), but we include this case for safety
 					continue;
 				}
 				float weights[NTEX_DIRT] = {0};
@@ -3318,7 +3319,7 @@ bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
 }
 
 bool tile_t::use_as_occluder() const {
-	return (!has_disabled_area && get_rel_dist_to_camera() < OCCLUDER_DIST && is_visible());
+	return (!has_tunnel && get_rel_dist_to_camera() < OCCLUDER_DIST && is_visible());
 }
 
 template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius, bool is_square) {

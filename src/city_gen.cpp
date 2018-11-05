@@ -1331,7 +1331,7 @@ struct tunnel_t : public road_connector_t {
 		center.z = zval + sradius; // place exactly on mesh under the road/tunnel surface
 		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere inside the tunnel (approximate)
 		if (cnorm) {*cnorm = plus_z;} // approximate - assume collision with bottom surface of road (intended for player)
-		return 1; // Note: will disable mesh occlusion culling
+		return 1;
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		cube_t const bcube(get_tunnel_bcube());
@@ -2973,6 +2973,12 @@ class city_road_gen_t {
 			}
 			return 0;
 		}
+		bool tile_contains_tunnel(cube_t const &bcube) const {
+			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
+				if (i->intersects_xy(bcube)) return 1;
+			}
+			return 0;
+		}
 		bool point_in_tunnel(point const &pos) const {
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
 				if (i->contains_pt(pos)) return 1; // Note: checks z-val
@@ -3711,6 +3717,7 @@ public:
 		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels);
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
+	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
 
 	int get_color_at_xy(point const &pos, colorRGBA &color) const {
 		int const ret(global_rn.get_color_at_xy(pos, color));
@@ -4546,6 +4553,7 @@ public:
 		return ret;
 	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
+	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
 
 	void destroy_in_radius(point const &pos, float radius) {
 		car_manager.destroy_cars_in_radius(pos, radius);
@@ -4649,6 +4657,7 @@ bool check_mesh_disable(point const &pos, float radius) {
 	if (!have_cities()) return 0;
 	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
+bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube + get_tt_xlate_val());}
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
