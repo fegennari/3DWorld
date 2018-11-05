@@ -2689,12 +2689,12 @@ class city_road_gen_t {
 							assert(!seg_ids.empty());
 							int const seg_ix(global_rn.search_for_adj(global_rn.segs, seg_ids, isec, (dim != 0), (dir != 0))); // global conn segment
 							assert(seg_ix >= 0); // must be found
-							isec.conn_ix[d] = encode_neg_ix(seg_ix);
+							if (seg_ix >= 0) {isec.conn_ix[d] = encode_neg_ix(seg_ix);}
 						}
 						else { // local segment
 							int const seg_ix(search_for_adj(segs, by_ix[ix].seg_ixs, isec, (dim != 0), (dir != 0))); // always connects to a road segment
 							assert(seg_ix >= 0); // must be found
-							isec.conn_ix[d] = seg_ix;
+							if (seg_ix >= 0) {isec.conn_ix[d] = seg_ix;}
 						}
 					} // for d
 				} // for i
