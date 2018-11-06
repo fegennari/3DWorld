@@ -1990,7 +1990,7 @@ class city_road_gen_t {
 				c.d[!d][0] = tunnel.ends[n].d[!d][0] - width; c.d[!d][1] = tend.d[!d][0]; // left side
 				draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
 				c.d[!d][1] = tunnel.ends[n].d[!d][1] + width; c.d[!d][0] = tend.d[!d][1]; // right side
-				draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
+				draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0 in case there are overhangs due to steep cliffs
 				qbd.draw_and_clear();
 			} // for n
 		}
