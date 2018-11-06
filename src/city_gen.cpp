@@ -1290,7 +1290,7 @@ struct tunnel_t : public road_connector_t {
 			ends[d].d[!dim][0] -= radius; // width
 			ends[d].d[!dim][1] += radius; // width
 			ends[d].union_with_pt(extend[d]); // length
-			facade_height[d] = 0.0; // TBD
+			facade_height[d] = 2.0*TUNNEL_WALL_THICK*radius; // min value - will likely be increased later
 		}
 		get_bcube() = ends[0]; get_bcube().union_with_cube(ends[1]); // bounding cube of both ends - overwrite road bcube
 	}
