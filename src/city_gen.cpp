@@ -1955,24 +1955,36 @@ class city_road_gen_t {
 			zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
 			cube_t cubes[4];
 			tunnel.calc_top_bot_side_cubes(cubes);
+			float const tile_sz(d ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), xy1(cubes[0].d[d][0]), xy2(cubes[0].d[d][1]), length(xy2 - xy1);
+			unsigned const num_segs(ceil(length/tile_sz));
+			float const dt(1.0/num_segs);
 			point pts[8];
 			float tscale(0.0);
-			begin_tile(tunnel.get_cube_center(), 1);
 
 			if (!shadow_only) {
 				s.add_uniform_float("hemi_lighting_scale", 0.1); // mostly disable hemispherical lighting, which doesn't work for tunnel interiors
 				select_texture(get_texture_by_name("roads/asphalt.jpg"));
 				tscale = 1.0/scale; // scale texture to match road width
 			}
-			for (unsigned i = 0; i < 4; ++i) { // add tunnel top, bottom, and sides
-				cube_t const &c(cubes[i]);
-				point const center(c.get_cube_center() + vector3d(0.0, 0.0, 0.5*(zf + zb)));
-				// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
-				set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, pts); // dir=9 here
-				draw_cube(qbd, cw_concrete, center, pts, (!shadow_only && i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube unless shadowed
-			}
-			qbd.draw_and_clear();
+			for (unsigned s = 0; s < num_segs; ++s) { // split into segments, one per tile shadow map
+				float const t1(s*dt), t2((s+1)*dt), tmid(0.5*(t1 + t2)); // in range [0.0, 1.0]
+				point center(tunnel.get_cube_center());
+				center[d] = xy1 + tmid*length; // halfway between the end points
+				begin_tile(center, 1);
 
+				for (unsigned i = 0; i < 4; ++i) { // add tunnel top, bottom, and sides
+					cube_t c(cubes[i]); // deep copy so we can modify it
+					c.d[d][0] = xy1 + t1*length;
+					c.d[d][1] = xy1 + t2*length;
+					float const dz(zb - zf), zft(zf + t1*dz), zbt(zf + t2*dz);
+					point center(c.get_cube_center());
+					center.z += 0.5*(zft + zbt);
+					// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
+					set_cube_pts(c, c.z1()+zft, c.z1()+zbt, c.z2()+zft, c.z2()+zbt, d, 0, pts); // dir=0 here
+					draw_cube(qbd, cw_concrete, center, pts, (!shadow_only && i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube unless shadowed
+				} // for i
+				qbd.draw_and_clear();
+			} // for s
 			if (!shadow_only) {
 				s.add_uniform_float("hemi_lighting_scale", 0.5); // set back to the default of 0.5
 				select_texture(get_texture_by_name("cblock2.jpg"));
