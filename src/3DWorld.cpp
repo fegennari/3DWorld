@@ -1537,8 +1537,8 @@ bool has_extension(string const &ext) { // is this always correct?
 bool open_file(FILE *&fp, char const *const fn, string const &file_type, char const *const mode) {
 
 	fp = fopen(fn, mode);
-	if (fp != NULL) return 1;
-	cout << "Could not open " << file_type << " file '" << fn << "'." << endl;
+	if (fp != nullptr) return 1;
+	cout << "*** Error: Could not open " << file_type << " file '" << fn << "'." << endl;
 	return 0;
 }
 
@@ -1586,10 +1586,21 @@ bool bmp_file_to_binary_array(char const *const fn, unsigned char **&data) {
 }
 
 
+std::string const config_dir("scene_config");
+
+FILE *open_config_file(string const &filename) {
+
+	FILE *fp(fopen(filename.c_str(), "r"));
+	if (fp != nullptr) return fp; // found in run dir
+	if (open_file(fp, (config_dir + "/" + filename).c_str(), "input configuration file")) return fp; // found in config dir
+	return nullptr; // failed
+}
+
+
 int load_config(string const &config_file) {
 
-	FILE *fp;
-	if (!open_file(fp, config_file.c_str(), "input configuration file")) return 0;
+	FILE *fp(open_config_file(config_file));
+	if (fp == nullptr) return 0;
 	int gms_set(0), error(0);
 	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
 
