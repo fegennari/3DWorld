@@ -261,6 +261,7 @@ public:
 				set_prefix("#define PROCEDURAL_DETAIL", 1); // FS
 				set_prefix("uniform sampler3D cloud_noise_tex;", 0); // VS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
+				else {set_prefix("#define DOMAIN_WARP", 1);} // FS - add domain warping for procedural planets with land (slower but looks better)
 
 				if (body.use_vert_shader_offset()) {
 					proc_detail_vs = 1;

@@ -2,7 +2,7 @@ uniform float water_val = 0.0;
 uniform float lava_val  = 0.0;
 uniform float terrain_scale, noise_offset;
 
-float eval_terrain_noise_base(in vec3 npos, const int num_octaves, const in float gain, const in float lacunarity) {
+float eval_noise_from_texture(in vec3 npos, const in int num_octaves, const in float gain, const in float lacunarity) {
 	float val  = 0.0;
 	float mag  = 1.0;
 	float freq = 0.5; // lower freq for ridged noise
@@ -18,10 +18,23 @@ float eval_terrain_noise_base(in vec3 npos, const int num_octaves, const in floa
 	return val;
 }
 
-float eval_terrain_noise(in vec3 npos, const int num_octaves) {
+void terrain_warp(inout vec3 npos, const in int num_octaves) {
+	float mult = eval_noise_from_texture(0.73*npos, num_octaves, 0.5, 2.0);
+	float add  = eval_noise_from_texture(0.57*npos, num_octaves, 0.5, 2.0);
+	npos = (0.005*mult + 0.25)*npos + 0.1*terrain_scale*vec3(add);
+}
+
+float eval_terrain_noise_base(in vec3 npos, const in int num_octaves, const in float gain, const in float lacunarity) {
+#ifdef DOMAIN_WARP
+	terrain_warp(npos, num_octaves); // looks better, but slower and looks blocky when close to the surface
+#endif
+	return eval_noise_from_texture(npos, num_octaves, gain, lacunarity);
+}
+
+float eval_terrain_noise(in vec3 npos, const in int num_octaves) {
 	return 0.7*eval_terrain_noise_base(npos, num_octaves, 0.7, 2.0);
 }
-float eval_terrain_noise_normal(in vec3 npos, const int num_octaves) {
+float eval_terrain_noise_normal(in vec3 npos, const in int num_octaves) {
 	return eval_terrain_noise_base(npos, num_octaves, 0.5, 1.92);
 }
 
