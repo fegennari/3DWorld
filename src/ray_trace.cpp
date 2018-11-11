@@ -226,7 +226,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 	vector3d const step((p2 - p1)/nsteps); // at least two points
 	if (!first_pt) {p1 += step;} // move past the first step so we don't double count
 
-	// FIXME: probably better time vs. quality tradeoff using a proper line drawing algorithm that chooses step size by distance to closest grid boundary and multiplies weigth by segment length
+	// FIXME: probably better time vs. quality tradeoff using a proper line drawing algorithm that chooses step size by distance to closest grid boundary and multiplies weight by segment length
 	if (dynamic) { // it's a local lighting volume
 		light_volume_local &lvol(get_local_light_volume(ltype));
 
@@ -590,7 +590,7 @@ void check_for_lighting_finished() { // to be called about once per frame
 }
 
 
-// see https://computing.llnl.gov/tutorials/pthreads/
+// see https://computing.llnl.gov/tutorials/pthreads/ (for old pthread implementation - now using std::thread)
 void launch_threaded_job(unsigned num_threads, void (*start_func)(rt_data *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized, int ltype, unsigned job_id=0) {
 
 	kill_current_raytrace_threads();
@@ -706,7 +706,7 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 			}
 		}
 		if (verbose) cout << endl;
-	}
+	} // for i
 }
 
 
