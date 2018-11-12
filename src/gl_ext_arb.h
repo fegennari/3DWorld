@@ -10,6 +10,7 @@ unsigned const NUM_TEX_MS_SAMPLES   = 4; // or 8
 
 
 inline GLenum get_internal_texture_format(int ncolors, bool compressed=0, bool linear_space=0) { // Note: ncolors=2 is unused
+	assert(ncolors > 0 && ncolors <= 4);
 	GLenum const cformats [4] = {GL_COMPRESSED_RED, GL_COMPRESSED_RG, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT}; // clouds and explosions look bad
 	GLenum const formats  [4] = {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
 	// Note: only supports linear space for RGB and RGBA texture formats (others not checked)
@@ -35,7 +36,7 @@ void bind_texture_tu(unsigned tid, unsigned tu_id, bool is_cube_map=0);
 // 3D texture prototypes
 void bind_3d_texture(unsigned tid);
 void setup_3d_texture(unsigned &tid, int filter, int wrap);
-unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress=0);
+unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress=0, unsigned bytes_per_pixel=1);
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data);
 void set_3d_texture_as_current(unsigned tid, unsigned tu_id);

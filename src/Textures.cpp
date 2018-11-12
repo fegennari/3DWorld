@@ -1248,18 +1248,18 @@ void gen_noise_texture() {
 }
 
 
-unsigned create_3d_noise_texture(unsigned size, unsigned ncomp) {
+unsigned create_3d_noise_texture(unsigned size, unsigned ncomp, unsigned bytes_per_pixel) {
 
-	vector<unsigned char> data(ncomp*size*size*size);
+	vector<unsigned char> data(ncomp*bytes_per_pixel*size*size*size);
 	noise_fill(&data.front(), data.size());
-	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT); // compressed?
+	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT, 0, bytes_per_pixel); // compressed?
 }
 
 
-unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp) {
+unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp, unsigned bytes_per_pixel) {
 
-	pair<texture_map_t::iterator, bool> ret(noise_tex_3ds.insert(make_pair(make_pair(tsize, ncomp), 0)));
-	if (ret.second) {ret.first->second = create_3d_noise_texture(tsize, ncomp);}
+	pair<texture_map_t::iterator, bool> ret(noise_tex_3ds.insert(make_pair(make_pair(tsize, (ncomp + 4*bytes_per_pixel)), 0)));
+	if (ret.second) {ret.first->second = create_3d_noise_texture(tsize, ncomp, bytes_per_pixel);}
 	return ret.first->second;
 }
 

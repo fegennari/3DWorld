@@ -597,7 +597,7 @@ unsigned get_texture_size(int tid, bool dim);
 void get_lum_alpha(colorRGBA const &color, int tid, float &luminance, float &alpha);
 std::string get_file_extension(std::string const &filename, unsigned level, bool make_lower);
 void gen_building_window_texture(float width_frac, float height_frac);
-unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp);
+unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp, unsigned bytes_per_pixel=1);
 colorRGBA get_landscape_texture_color(int xpos, int ypos);
 int get_bare_ls_tid(float zval);
 void update_lttex_ix(int &ix);
