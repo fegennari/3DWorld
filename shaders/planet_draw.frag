@@ -56,8 +56,8 @@ vec3 calc_cloud_coord(in vec3 cloud_vertex) {
 	return lv;
 }
 
-void main()
-{
+void main() {
+
 	vec4 epos        = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	vec3 norm        = normal;
 	float city_light = 0.0;
@@ -108,20 +108,21 @@ void main()
 	vec3 bpos    = 32.0*spos;
 	float hval   = eval_terrain_noise(npos, 8);
 	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
+	float height_above_water = height - water_val;
 	float nscale = 0.0;
 	float dnval  = 0.0;
 	vec4 shallow_water_color = mix(mix(water_color, color_b, 0.2), vec4(1.0), 0.025);
 	vec4 texel;
 
 	if (height < water_val) { // underwater
-		if (height < water_val - 0.2) {texel = water_color;} // under deep water
-		else {texel = mix(shallow_water_color, water_color, (water_val - height)/0.2);}
+		if (height_above_water < -0.2) {texel = water_color;} // under deep water
+		else {texel = mix(shallow_water_color, water_color, -height_above_water/0.2);}
 		spec_mag = 1.0;
 	}
 	else {
 		spec_mag = 0.0;
 		nscale   = 1.0;
-		float height_ws = (height - water_val)/(1.0 - water_val); // rescale to [0,1] above water
+		float height_ws = height_above_water/(1.0 - water_val); // rescale to [0,1] above water
 
 		if (water_val > 0.2 && atmosphere > 0.1) { // Earthlike planet
 			vec4 gray = vec4(0.4, 0.4, 0.4, 1.0); // gray rock
@@ -157,7 +158,7 @@ void main()
 		}
 		else if (water_val > 0.0 && temperature < 30.0) { // handle water/ice/snow
 			if (height < water_val + 0.07) { // close to water line (can have a little water even if water == 0)
-				float val = (height - water_val)/0.07;
+				float val = height_above_water/0.07;
 				texel     = mix(shallow_water_color, texel, val);
 				spec_mag  = 1.0 - val;
 				nscale    = val*val; // faster falloff
@@ -173,7 +174,7 @@ void main()
 	}
 	if (/*snow_thresh < 1.0 &&*/ water_val > 0.2 && temperature < 30.0) { // add polar ice caps
 		float icv = 0.7 + 0.01*temperature; // 1.0 @ T=30, 0.9 @ T=20, 0.7 @ T=0
-		float val = (coldness - icv)/(1.0 - icv) + 1.0*(height - water_val);
+		float val = (coldness - icv)/(1.0 - icv) + 1.0*height_above_water;
 		val       = clamp(3.0*val-1.0, 0.0, 1.0); // sharpen edges
 		spec_mag  = mix(spec_mag, 0.7, val);
 		texel     = mix(texel, vec4(1,1,1,1), val); // ice/snow
