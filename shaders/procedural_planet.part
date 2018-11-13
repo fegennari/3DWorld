@@ -2,6 +2,39 @@ uniform float water_val = 0.0;
 uniform float lava_val  = 0.0;
 uniform float terrain_scale, noise_offset;
 
+// perform manual floating-point interpolation rather than 8-bit integer interpolation; higher quality but slower
+float texture_sample_3d_high(sampler3D sampler, vec3 uv) {
+	vec3 res = textureSize(cloud_noise_tex, 0);
+	vec3 st  = uv*res - 0.5;
+	vec3 iuv = floor(st);
+	vec3 fuv = fract(st);
+	float a = texture(sampler, (iuv+vec3(0.5,0.5,0.5))/res).r;
+	float b = texture(sampler, (iuv+vec3(1.5,0.5,0.5))/res).r;
+	float c = texture(sampler, (iuv+vec3(0.5,1.5,0.5))/res).r;
+	float d = texture(sampler, (iuv+vec3(1.5,1.5,0.5))/res).r;
+	float e = texture(sampler, (iuv+vec3(0.5,0.5,1.5))/res).r;
+	float f = texture(sampler, (iuv+vec3(1.5,0.5,1.5))/res).r;
+	float g = texture(sampler, (iuv+vec3(0.5,1.5,1.5))/res).r;
+	float h = texture(sampler, (iuv+vec3(1.5,1.5,1.5))/res).r;
+	return mix(mix(mix(a, b, fuv.x), mix(c, d, fuv.x), fuv.y), mix(mix(e, f, fuv.x), mix(g, h, fuv.x), fuv.y), fuv.z);
+}
+
+float eval_noise_from_texture_high(in vec3 npos, const in int num_octaves, const in float gain, const in float lacunarity) {
+	float val  = 0.0;
+	float mag  = 1.0;
+	float freq = 0.5; // lower freq for ridged noise
+
+	for (int i = 0; i < num_octaves; ++i) { // similar to gen_cloud_alpha_time()
+		float v = texture_sample_3d_high(cloud_noise_tex, freq*npos);
+		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
+		v = max(0.0, (0.75 - abs(v))); // ridged noise
+		val  += v*mag;
+		freq *= lacunarity;
+		mag  *= gain;
+	}
+	return val;
+}
+
 float eval_noise_from_texture(in vec3 npos, const in int num_octaves, const in float gain, const in float lacunarity) {
 	float val  = 0.0;
 	float mag  = 1.0;
@@ -19,9 +52,9 @@ float eval_noise_from_texture(in vec3 npos, const in int num_octaves, const in f
 }
 
 void terrain_warp(inout vec3 npos, const in int num_octaves) {
-	float mult = eval_noise_from_texture(0.73*npos, num_octaves, 0.5, 2.0);
-	float add  = eval_noise_from_texture(0.57*npos, num_octaves, 0.5, 2.0);
-	npos = (0.005*mult + 0.25)*npos + 0.1*terrain_scale*vec3(add);
+	float val = eval_noise_from_texture_high(0.57*npos, num_octaves, 0.5, 2.0);
+	npos += 0.4*terrain_scale*vec3(val);
+	//npos = (0.01*val + 0.5)*npos;
 }
 
 float eval_terrain_noise_base(in vec3 npos, const in int num_octaves, const in float gain, const in float lacunarity) {
