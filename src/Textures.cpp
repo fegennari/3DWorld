@@ -1225,9 +1225,13 @@ void gen_building_window_texture(float width_frac, float height_frac) { // Note:
 
 
 void noise_fill(unsigned char *data, unsigned size) {
-
 	rand_gen_t rgen;
 	for (unsigned i = 0; i < size; ++i) {data[i] = (rgen.rand() & 255);}
+}
+
+void noise_fill_01(vector<float> &data) {
+	rand_gen_t rgen;
+	for (auto i = data.begin(); i != data.end(); ++i) {*i = rgen.rand_float();}
 }
 
 
@@ -1250,6 +1254,15 @@ void gen_noise_texture() {
 
 unsigned create_3d_noise_texture(unsigned size, unsigned ncomp, unsigned bytes_per_pixel) {
 
+	if (bytes_per_pixel == 4) { // special case - use floating-point texture
+		assert(ncomp == 1); // grayscale only for now
+		vector<float> data(ncomp*size*size*size);
+		noise_fill_01(data);
+		unsigned tid(0);
+		setup_3d_texture(tid, GL_LINEAR, GL_REPEAT);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size, size, size, 0, get_texture_format(ncomp), GL_FLOAT, &data.front());
+		return tid;
+	}
 	vector<unsigned char> data(ncomp*bytes_per_pixel*size*size*size);
 	noise_fill(&data.front(), data.size());
 	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT, 0, bytes_per_pixel); // compressed?
