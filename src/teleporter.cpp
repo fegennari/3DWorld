@@ -116,7 +116,7 @@ void draw_teleporters() {
 	enable_blend();
 
 	// Note: drawn additively with no depth write, doesn't need to be back to front sorted
-	for (unsigned d = 0; d < 3; ++d) { // static, dynamic, and in-hand teleporters
+	for (unsigned d = ((world_mode == WMODE_GROUND) ? 0 : 1); d < 3; ++d) { // static (if ground mode), dynamic, and in-hand teleporters
 		for (auto i = teleporters[d].begin(); i != teleporters[d].end(); ++i) {i->draw(s, (d > 0));}
 	}
 	disable_blend();

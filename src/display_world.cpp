@@ -1160,6 +1160,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	next_city_frame();
 	if (b2down) {fire_weapon();}
 
+	// drawing
 	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);
 	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_DISTANCE);
 	camera_mode   = 1; // walking on ground
@@ -1209,6 +1210,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if ( underwater) {draw_underwater_particles(terrain_zmin);}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	draw_game_elements(timer1);
+	draw_teleporters();
 	if (camera_surf_collide) {play_camera_footstep_sound();}
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();
