@@ -96,7 +96,7 @@ struct city_params_t {
 	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 4=only 4-way (no straight roads)
 	// cars
 	unsigned num_cars;
-	float car_speed, traffic_balance_val, new_city_prob;
+	float car_speed, traffic_balance_val, new_city_prob, max_car_scale;
 	bool enable_car_path_finding;
 	vector<car_model_t> car_model_files;
 	// parking lots
@@ -111,9 +111,9 @@ struct city_params_t {
 	// detail objects
 	unsigned max_benches_per_plot;
 
-	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0),
-		slope_width(0), num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0),
-		car_speed(0.0), traffic_balance_val(0.5), new_city_prob(1.0), enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0),
+	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
+		num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0), car_speed(0.0),
+		traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0),
 		max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
@@ -191,6 +191,7 @@ struct city_params_t {
 			car_model_t car_model;
 			if (!car_model.read(fp)) {return read_error(str);}
 			car_model_files.push_back(car_model);
+			max_eq(max_car_scale, car_model.scale);
 		}
 		// parking lots
 		else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
@@ -232,7 +233,8 @@ struct city_params_t {
 		}
 		return 1;
 	}
-	vector3d get_car_size() const {return CAR_SIZE*road_width;}
+	vector3d get_nom_car_size() const {return CAR_SIZE*road_width;}
+	vector3d get_max_car_size() const {return max_car_scale*get_nom_car_size();}
 }; // city_params_t
 
 city_params_t city_params;
@@ -588,7 +590,7 @@ struct car_t {
 		float len(0.0);
 		car_t const *cur_car(this);
 
-		for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_car_size().x (FIXME: 50 not high enough for connector roads)
+		for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_nom_car_size().x (FIXME: 50 not high enough for connector roads)
 			if (cur_car->dim != dim || cur_car->dir == dir) {len += cur_car->get_length();} // include if not going in opposite direction
 			cur_car = cur_car->car_in_front;
 			if (!cur_car || !range.contains_pt_xy(cur_car->get_center())) break;
@@ -1097,8 +1099,8 @@ struct parking_lot_t : public cube_t {
 	
 	tex_range_t get_tex_range(float ar) const {
 		bool const d(!dim); // Note: R90
-		float const xscale(1.0/(2.0*PARK_SPACE_WIDTH *city_params.get_car_size().y));
-		float const yscale(1.0/(1.0*PARK_SPACE_LENGTH*city_params.get_car_size().x));
+		float const xscale(1.0/(2.0*PARK_SPACE_WIDTH *city_params.get_nom_car_size().y));
+		float const yscale(1.0/(1.0*PARK_SPACE_LENGTH*city_params.get_nom_car_size().x));
 		float const dx(get_dx()), dy(get_dy()), tx(0.24), ty(0.0); // x=cols, y=rows
 		return tex_range_t(tx, ty, (xscale*(d ? dy : dx) + tx), (yscale*(d ? dx : dy) + ty), 0, d);
 	}
@@ -2097,7 +2099,7 @@ class city_road_gen_t {
 		unsigned num_spaces, filled_spaces;
 
 		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, rand_gen_t &rgen) {
-			vector3d const nom_car_size(city_params.get_car_size()); // {length, width, height}
+			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
 			float const pad_dist   (1.0*nom_car_size.x); // one car length
@@ -2200,7 +2202,7 @@ class city_road_gen_t {
 		}
 		static void place_trees_in_plot(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
 			if (city_params.max_trees_per_plot == 0) return;
-			float const radius(city_params.tree_spacing*city_params.get_car_size().x); // in multiples of car length
+			float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
 			vector3d const plot_sz(plot.get_size());
 			if (min(plot_sz.x, plot_sz.y) < 4.0*radius) return; // plot is too small for trees of this size
 
@@ -2224,7 +2226,7 @@ class city_road_gen_t {
 		}
 		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
 			bench_t bench;
-			bench.radius = 0.3*city_params.get_car_size().x;
+			bench.radius = 0.3*city_params.get_nom_car_size().x;
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 				if (!try_place_obj(plot, blockers, rgen, bench.radius, bench.radius, 1, bench.pos)) continue; // 1 try
@@ -3085,7 +3087,7 @@ class city_road_gen_t {
 		}
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
-			vector3d const nom_car_size(city_params.get_car_size());
+			vector3d const nom_car_size(city_params.get_nom_car_size());
 
 			for (unsigned n = 0; n < 10; ++n) { // make 10 tries
 				unsigned const seg_ix(rgen.rand()%segs.size());
@@ -3508,7 +3510,7 @@ public:
 
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
-		bcube.expand_by_xy(city_params.get_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
+		bcube.expand_by_xy(city_params.get_max_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
 		return bcube;
 	}
 	bool cube_overlaps_road_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy(c);}
@@ -4060,7 +4062,7 @@ class car_manager_t {
 			begin_tile(center); // enable shadows
 			colorRGBA const &color(car.get_color());
 			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
-			bool const is_truck(car.bcube.dz() > 1.2*city_params.get_car_size().z); // hack - truck has a larger than average size
+			bool const is_truck(car.bcube.dz() > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
 			bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
 			float const sign((dim^dir) ? -1.0 : 1.0);
 			point pb[8], pt[8]; // bottom and top sections
@@ -4219,7 +4221,7 @@ public:
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate);
-			if (pos.z - radius > city_bcube.z2() + city_params.get_car_size().z) continue; // above the cars
+			if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), city_bcube)) continue;
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(end <= cars.size());
@@ -4240,7 +4242,7 @@ public:
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city));
-			if (pos.z - radius > city_bcube.z2() + city_params.get_car_size().z) continue; // above the cars
+			if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
 			if (is_pt ? !city_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
 			unsigned const start(cb->start), end((cb+1)->start); // Note: shouldnt be called frequently enough to need road/parking lot acceleration
 			assert(end <= cars.size() && start <= end);
