@@ -2412,7 +2412,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 float get_projectile_range(point const &pos, vector3d vcf, float dist, float range, point &coll_pos, vector3d &coll_norm,
 						   int &coll, int &cindex, int source, int check_splash, int ignore_cobj)
 {
-	if (world_mode == WMODE_INF_TERRAIN) return range; // not yet implemented
+	if (world_mode == WMODE_INF_TERRAIN) {coll = 0; cindex = -1; return range;} // not yet implemented
 	vcf.normalize();
 	float const splash_val((!DISABLE_WATER && check_splash && (temperature > W_FREEZE_POINT)) ? SPLASH_BASE_SZ*100.0 : 0.0);
 	point const pos1(pos + vcf*dist), pos2(pos + vcf*range);
@@ -2441,7 +2441,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 	if (fframe > 0 && !(sstate.wmode&1)) { // carnage blade extension
 		point coll_pos;
 		vector3d coll_norm; // unused
-		int coll, cindex;
+		int coll(0), cindex(-1);
 		int const fdir(fframe > (delay/2)), ff(fdir ? (delay - fframe) : fframe); // fdir = forward
 		float range(get_projectile_range(pos, dir, 1.1*cradius, 1.5*cradius+CBLADE_EXT, coll_pos, coll_norm, coll, cindex, shooter, 0));
 		bool cobj_coll(coll && cindex >= 0);
