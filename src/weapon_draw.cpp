@@ -782,7 +782,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 	vector3d const dir((shooter == CAMERA_ID && reflection_pass) ? pre_ref_cview_dir : get_sstate_dir(shooter));
 	unsigned const delay(max(1u, weapons[wid].fire_delay));
 	float const fire_val((float)sstate.fire_frame/(float)delay);
-	point const pos((draw_pass == 0 && wid == W_BLADE && world_mode == WMODE_GROUND) ? sstate.cb_pos : (reflection_pass ? pre_ref_camera_pos : get_sstate_draw_pos(shooter)));
+	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : (reflection_pass ? pre_ref_camera_pos : get_sstate_draw_pos(shooter)));
 	float const scale(CAMERA_RADIUS/0.06); // weapons scale with camera radius (Note: inverse scale is pre-applied to cradius so that it cancels out inside draw_weapon())
 	select_texture(WHITE_TEX); // always textured
 	draw_weapon(pos, dir, cradius/scale, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],

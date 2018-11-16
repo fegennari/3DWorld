@@ -1159,6 +1159,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	set_global_state();
 	next_city_frame();
 	if (b2down) {fire_weapon();}
+	update_weapon_cobjs(); // and update cblade
 
 	// drawing
 	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);

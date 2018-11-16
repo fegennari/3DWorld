@@ -2443,7 +2443,8 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 		vector3d coll_norm; // unused
 		int coll(0), cindex(-1);
 		int const fdir(fframe > (delay/2)), ff(fdir ? (delay - fframe) : fframe); // fdir = forward
-		float range(get_projectile_range(pos, dir, 1.1*cradius, 1.5*cradius+CBLADE_EXT, coll_pos, coll_norm, coll, cindex, shooter, 0));
+		float const ext_scale(cradius/0.06), max_ext(ext_scale*CBLADE_EXT_PT*ff); // ext_scale = CAMERA_RADIUS/DEF_CAMERA_RADIUS
+		float range(get_projectile_range(pos, dir, 1.1*cradius, (1.5*cradius + ext_scale*CBLADE_EXT), coll_pos, coll_norm, coll, cindex, shooter, 0));
 		bool cobj_coll(coll && cindex >= 0);
 
 		if (get_range_to_mesh(pos, dir, coll_pos)) {
@@ -2453,10 +2454,10 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 				range     = mesh_range;
 				cobj_coll = 0;
 			}
-			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) {modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1);} // cut grass
+			if (max_ext > (range - 0.8f*cradius)) {modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1);} // cut grass
 		}
 		if (cobj_coll) {coll_objects.get_cobj(cindex).register_coll(TICKS_PER_SECOND/2, IMPACT);}
-		sstate.dpos = max(0.0f, min(CBLADE_EXT_PT*ff, (range - 0.8f*cradius)));
+		sstate.dpos = max(0.0f, min(max_ext, (range - 0.8f*cradius)));
 		pos += dir*sstate.dpos;
 	}
 	// always doing damage
@@ -2477,7 +2478,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 			}
 		}
 	}
-	if (fframe > 0) pos -= dir*(1.0*cradius);
+	if (fframe > 0) {pos -= dir*(1.0*cradius);}
 }
 
 
