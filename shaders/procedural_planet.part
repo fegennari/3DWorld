@@ -52,7 +52,7 @@ float eval_noise_from_texture(in vec3 npos, const in int num_octaves, const in f
 }
 
 void terrain_warp(inout vec3 npos, const in int num_octaves) {
-	float val = eval_noise_from_texture_high(0.57*npos, num_octaves, 0.5, 2.0);
+	float val = eval_noise_from_texture_high(0.57*npos, 4, 0.5, 2.0); // fewer octaves for domain warp to improve performance
 	npos += 0.4*terrain_scale*vec3(val);
 	//npos = (0.01*val + 0.5)*npos;
 }
