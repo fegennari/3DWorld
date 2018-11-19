@@ -967,7 +967,7 @@ void draw_inventory() {
 	quad_batch_draw qbd;
 	
 	for (auto w = weapons.begin(); w != weapons.end(); ++w) {
-		if (*w == sstate.weapon) {qbd.add_quad_dirs(pos, border_sz*plus_x, border_sz*plus_y, colorRGBA(WHITE, alpha));} // draw selection box
+		if ((int)*w == sstate.weapon) {qbd.add_quad_dirs(pos, border_sz*plus_x, border_sz*plus_y, colorRGBA(WHITE, alpha));} // draw selection box
 		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, colorRGBA(0.1, 0.1, 0.1, alpha)); // add near-black square background
 		pos.x += dx;
 	}
