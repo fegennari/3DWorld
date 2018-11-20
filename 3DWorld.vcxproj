@@ -319,6 +319,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="src\cars.cpp" />
     <ClCompile Include="src\city_gen.cpp" />
     <ClCompile Include="src\clouds.cpp" />
     <ClCompile Include="src\cobj_bsp_tree.cpp" />
@@ -645,6 +646,7 @@
     <ClInclude Include="src\asteroid.h" />
     <ClInclude Include="src\binary_file_io.h" />
     <ClInclude Include="src\buildings.h" />
+    <ClInclude Include="src\city.h" />
     <ClInclude Include="src\cobj_bsp_tree.h" />
     <ClInclude Include="src\collision_detect.h" />
     <ClInclude Include="src\csg.h" />

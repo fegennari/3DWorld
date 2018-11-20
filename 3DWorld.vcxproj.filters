@@ -378,6 +378,9 @@
     <ClCompile Include="src\teleporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\cars.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
@@ -561,6 +564,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\buildings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\city.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

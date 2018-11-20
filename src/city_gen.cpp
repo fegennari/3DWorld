@@ -2,18 +2,15 @@
 // by Frank Gennari
 // 2/10/18
 
-#include "3DWorld.h"
+#include "city.h"
 #include "mesh.h"
 #include "heightmap.h"
 #include "file_utils.h"
 #include "draw_utils.h"
 #include "shaders.h"
-#include "model3d.h"
 #include "lightmap.h"
 #include "buildings.h"
 #include "tree_3dw.h"
-#include "openal_wrap.h"
-#include "explosion.h" // for add_blastr()
 #include <cfloat> // for FLT_MAX
 
 using std::string;
@@ -22,37 +19,21 @@ bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edg
 float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
-float const CONN_ROAD_SPEED_MULT    = 2.0; // twice the speed limit on connector roads
-float const MIN_CAR_STOP_SEP        = 0.25; // in units of car lengths
 float const PARK_SPACE_WIDTH        = 1.6;
 float const PARK_SPACE_LENGTH       = 1.8;
 float const STREETLIGHT_BEAMWIDTH   = 0.25;
 float const CITY_LIGHT_FALLOFF      = 0.2;
 float const STREETLIGHT_ON_RAND     = 0.05;
-float const HEADLIGHT_ON_RAND       = 0.1;
 float const TRACKS_WIDTH            = 0.5; // relative to road width
 float const TUNNEL_WALL_THICK       = 0.25; // relative to radius
-vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
-unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
-enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  NUM_RD_TIDS};
-enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, NUM_RD_TYPES};
-enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
-enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING};
-enum {RTYPE_ROAD=0, RTYPE_TRACKS};
-unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
 
-int       const FORCE_MODEL_ID = -1; // -1 disables
-unsigned  const NUM_CAR_COLORS = 10;
-colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
-
+city_params_t city_params;
 
 extern bool enable_dlight_shadows, dl_smap_enabled, tt_fire_button_down;
 extern int rand_gen_index, display_mode, animate2, game_mode, frame_counter;
 extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks, FAR_CLIP;
-extern double tfticks;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
 
@@ -62,182 +43,120 @@ void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 
 
-struct car_model_t {
+bool city_params_t::read_option(FILE *fp) {
 
-	string fn;
-	int body_mat_id, fixed_color_id;
-	float xy_rot, dz, lod_mult, scale; // xy_rot in degrees
-	vector<unsigned> shadow_mat_ids;
+	char strc[MAX_CHARS] = {0};
+	if (!read_str(fp, strc)) return 0;
+	string const str(strc);
 
-	car_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), dz(0.0), lod_mult(1.0), scale(1.0) {}
-	car_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
-		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm), shadow_mat_ids(smids) {}
-
-	bool read(FILE *fp) { // filename body_material_id fixed_color_id xy_rot dz lod_mult shadow_mat_ids
-		assert(fp);
-		if (!read_string(fp, fn)) return 0;
-		if (!read_int(fp, body_mat_id)) return 0;
-		if (!read_int(fp, fixed_color_id)) return 0;
-		if (!read_float(fp, xy_rot)) return 0;
-		if (!read_float(fp, dz)) return 0;
-		if (!read_float(fp, scale)) return 0;
-		if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
-		unsigned shadow_mat_id;
-		while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
-		return 1;
+	if (str == "num_cities") {
+		if (!read_uint(fp, num_cities)) {return read_error(str);}
 	}
-};
-
-
-struct city_params_t {
-
-	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks;
-	float road_width, road_spacing, conn_road_seg_len, max_road_slope;
-	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 4=only 4-way (no straight roads)
+	else if (str == "num_rr_tracks") {
+		if (!read_uint(fp, num_rr_tracks)) {return read_error(str);}
+	}
+	else if (str == "num_samples") {
+		if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
+	}
+	else if (str == "num_conn_tries") {
+		if (!read_uint(fp, num_conn_tries) || num_conn_tries == 0) {return read_error(str);}
+	}
+	else if (str == "city_size_min") {
+		if (!read_uint(fp, city_size_min)) {return read_error(str);}
+		if (city_size_max == 0) {city_size_max = city_size_min;}
+		if (city_size_max < city_size_min) {return read_error(str);}
+	}
+	else if (str == "city_size_max") {
+		if (!read_uint(fp, city_size_max)) {return read_error(str);}
+		if (city_size_min == 0) {city_size_min = city_size_max;}
+		if (city_size_max < city_size_min) {return read_error(str);}
+	}
+	else if (str == "city_border") {
+		if (!read_uint(fp, city_border)) {return read_error(str);}
+	}
+	else if (str == "road_border") {
+		if (!read_uint(fp, road_border)) {return read_error(str);}
+	}
+	else if (str == "slope_width") {
+		if (!read_uint(fp, slope_width)) {return read_error(str);}
+	}
+	else if (str == "road_width") {
+		if (!read_float(fp, road_width) || road_width < 0.0) {return read_error(str);}
+	}
+	else if (str == "road_spacing") {
+		if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
+	}
+	else if (str == "conn_road_seg_len") {
+		if (!read_float(fp, conn_road_seg_len) || conn_road_seg_len <= 0.0) {return read_error(str);}
+	}
+	else if (str == "max_road_slope") {
+		if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
+	}
+	else if (str == "make_4_way_ints") {
+		if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
+	}
 	// cars
-	unsigned num_cars;
-	float car_speed, traffic_balance_val, new_city_prob, max_car_scale;
-	bool enable_car_path_finding;
-	vector<car_model_t> car_model_files;
-	// parking lots
-	unsigned min_park_spaces, min_park_rows;
-	float min_park_density, max_park_density;
-	// lighting
-	bool car_shadows;
-	unsigned max_lights, max_shadow_maps;
-	// trees
-	unsigned max_trees_per_plot;
-	float tree_spacing;
-	// detail objects
-	unsigned max_benches_per_plot;
-
-	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
-		num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0), car_speed(0.0),
-		traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0),
-		max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0) {}
-	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
-	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
-	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
-	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
-
-	bool read_option(FILE *fp) {
-		char strc[MAX_CHARS] = {0};
-		if (!read_str(fp, strc)) return 0;
-		string const str(strc);
-
-		if (str == "num_cities") {
-			if (!read_uint(fp, num_cities)) {return read_error(str);}
-		}
-		else if (str == "num_rr_tracks") {
-			if (!read_uint(fp, num_rr_tracks)) {return read_error(str);}
-		}
-		else if (str == "num_samples") {
-			if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
-		}
-		else if (str == "num_conn_tries") {
-			if (!read_uint(fp, num_conn_tries) || num_conn_tries == 0) {return read_error(str);}
-		}
-		else if (str == "city_size_min") {
-			if (!read_uint(fp, city_size_min)) {return read_error(str);}
-			if (city_size_max == 0) {city_size_max = city_size_min;}
-			if (city_size_max < city_size_min) {return read_error(str);}
-		}
-		else if (str == "city_size_max") {
-			if (!read_uint(fp, city_size_max)) {return read_error(str);}
-			if (city_size_min == 0) {city_size_min = city_size_max;}
-			if (city_size_max < city_size_min) {return read_error(str);}
-		}
-		else if (str == "city_border") {
-			if (!read_uint(fp, city_border)) {return read_error(str);}
-		}
-		else if (str == "road_border") {
-			if (!read_uint(fp, road_border)) {return read_error(str);}
-		}
-		else if (str == "slope_width") {
-			if (!read_uint(fp, slope_width)) {return read_error(str);}
-		}
-		else if (str == "road_width") {
-			if (!read_float(fp, road_width) || road_width < 0.0) {return read_error(str);}
-		}
-		else if (str == "road_spacing") {
-			if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
-		}
-		else if (str == "conn_road_seg_len") {
-			if (!read_float(fp, conn_road_seg_len) || conn_road_seg_len <= 0.0) {return read_error(str);}
-		}
-		else if (str == "max_road_slope") {
-			if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
-		}
-		else if (str == "make_4_way_ints") {
-			if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
-		}
-		// cars
-		else if (str == "num_cars") {
-			if (!read_uint(fp, num_cars)) {return read_error(str);}
-		}
-		else if (str == "car_speed") {
-			if (!read_float(fp, car_speed) || car_speed < 0.0) {return read_error(str);}
-		}
-		else if (str == "traffic_balance_val") {
-			if (!read_float(fp, traffic_balance_val) || traffic_balance_val > 1.0 || traffic_balance_val < 0.0) {return read_error(str);}
-		}
-		else if (str == "new_city_prob") {
-			if (!read_float(fp, new_city_prob) || new_city_prob < 0.0) {return read_error(str);}
-		}
-		else if (str == "enable_car_path_finding") {
-			if (!read_bool(fp, enable_car_path_finding)) {return read_error(str);}
-		}
-		else if (str == "car_model") {
-			car_model_t car_model;
-			if (!car_model.read(fp)) {return read_error(str);}
-			car_model_files.push_back(car_model);
-			max_eq(max_car_scale, car_model.scale);
-		}
-		// parking lots
-		else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
-			if (!read_uint(fp, min_park_spaces)) {return read_error(str);}
-		}
-		else if (str == "min_park_rows") { // with default road parameters, can be up to 8
-			if (!read_uint(fp, min_park_rows)) {return read_error(str);}
-		}
-		else if (str == "min_park_density") {
-			if (!read_float(fp, min_park_density)) {return read_error(str);}
-		}
-		else if (str == "max_park_density") {
-			if (!read_float(fp, max_park_density) || max_park_density < 0.0) {return read_error(str);}
-		}
-		// lighting
-		else if (str == "max_lights") {
-			if (!read_uint(fp, max_lights)) {return read_error(str);}
-		}
-		else if (str == "max_shadow_maps") {
-			if (!read_uint(fp, max_shadow_maps)) {return read_error(str);}
-		}
-		else if (str == "car_shadows") {
-			if (!read_bool(fp, car_shadows)) {return read_error(str);}
-		}
-		// trees
-		else if (str == "max_trees_per_plot") {
-			if (!read_uint(fp, max_trees_per_plot)) {return read_error(str);}
-		}
-		else if (str == "tree_spacing") {
-			if (!read_float(fp, tree_spacing) || tree_spacing <= 0.0) {return read_error(str);}
-		}
-		// detail objects
-		else if (str == "max_benches_per_plot") {
-			if (!read_uint(fp, max_benches_per_plot)) {return read_error(str);}
-		}
-		else {
-			cout << "Unrecognized city keyword in input file: " << str << endl;
-			return 0;
-		}
-		return 1;
+	else if (str == "num_cars") {
+		if (!read_uint(fp, num_cars)) {return read_error(str);}
 	}
-	vector3d get_nom_car_size() const {return CAR_SIZE*road_width;}
-	vector3d get_max_car_size() const {return max_car_scale*get_nom_car_size();}
-}; // city_params_t
-
-city_params_t city_params;
+	else if (str == "car_speed") {
+		if (!read_float(fp, car_speed) || car_speed < 0.0) {return read_error(str);}
+	}
+	else if (str == "traffic_balance_val") {
+		if (!read_float(fp, traffic_balance_val) || traffic_balance_val > 1.0 || traffic_balance_val < 0.0) {return read_error(str);}
+	}
+	else if (str == "new_city_prob") {
+		if (!read_float(fp, new_city_prob) || new_city_prob < 0.0) {return read_error(str);}
+	}
+	else if (str == "enable_car_path_finding") {
+		if (!read_bool(fp, enable_car_path_finding)) {return read_error(str);}
+	}
+	else if (str == "car_model") {
+		car_model_t car_model;
+		if (!car_model.read(fp)) {return read_error(str);}
+		car_model_files.push_back(car_model);
+		max_eq(max_car_scale, car_model.scale);
+	}
+	// parking lots
+	else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
+		if (!read_uint(fp, min_park_spaces)) {return read_error(str);}
+	}
+	else if (str == "min_park_rows") { // with default road parameters, can be up to 8
+		if (!read_uint(fp, min_park_rows)) {return read_error(str);}
+	}
+	else if (str == "min_park_density") {
+		if (!read_float(fp, min_park_density)) {return read_error(str);}
+	}
+	else if (str == "max_park_density") {
+		if (!read_float(fp, max_park_density) || max_park_density < 0.0) {return read_error(str);}
+	}
+	// lighting
+	else if (str == "max_lights") {
+		if (!read_uint(fp, max_lights)) {return read_error(str);}
+	}
+	else if (str == "max_shadow_maps") {
+		if (!read_uint(fp, max_shadow_maps)) {return read_error(str);}
+	}
+	else if (str == "car_shadows") {
+		if (!read_bool(fp, car_shadows)) {return read_error(str);}
+	}
+	// trees
+	else if (str == "max_trees_per_plot") {
+		if (!read_uint(fp, max_trees_per_plot)) {return read_error(str);}
+	}
+	else if (str == "tree_spacing") {
+		if (!read_float(fp, tree_spacing) || tree_spacing <= 0.0) {return read_error(str);}
+	}
+	// detail objects
+	else if (str == "max_benches_per_plot") {
+		if (!read_uint(fp, max_benches_per_plot)) {return read_error(str);}
+	}
+	else {
+		cout << "Unrecognized city keyword in input file: " << str << endl;
+		return 0;
+	}
+	return 1;
+}
 
 
 template<typename T> void get_all_bcubes(vector<T> const &v, vector<cube_t> &bcubes) {
@@ -255,14 +174,7 @@ float smooth_interp(float a, float b, float mix) {
 	return mix*a + (1.0 - mix)*b;
 }
 
-bool is_isect(unsigned type) {return (type >= TYPE_ISEC2 && type <= TYPE_ISEC4);}
-int encode_neg_ix(unsigned ix) {return -(int(ix)+1);}
-unsigned decode_neg_ix(int ix) {assert(ix < 0); return -(ix+1);}
-
 bool is_night(float adj) {return (light_factor - adj < 0.5);} // for car headlights and streetlights
-
-float rand_hash(float to_hash) {return fract(12345.6789*to_hash);}
-float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1.0);}
 
 bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c) {
 	float tmin(0.0), tmax(1.0);
@@ -439,181 +351,6 @@ public:
 	}
 }; // draw_state_t
 
-
-class city_road_gen_t;
-
-struct car_t {
-	cube_t bcube, prev_bcube;
-	bool dim, dir, stopped_at_light, entering_city, in_tunnel, dest_valid, destroyed;
-	unsigned char cur_road_type, color_id, turn_dir, front_car_turn_dir, model_id;
-	unsigned short cur_city, cur_road, cur_seg, dest_city, dest_isec;
-	float height, dz, rot_z, turn_val, cur_speed, max_speed, waiting_pos, waiting_start;
-	car_t const *car_in_front;
-
-	car_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), cur_road_type(TYPE_RSEG),
-		color_id(0), turn_dir(TURN_NONE), front_car_turn_dir(TURN_UNSPEC), model_id(0), cur_city(0), cur_road(0), cur_seg(0), dest_city(0), dest_isec(0),
-		height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), cur_speed(0.0), max_speed(0.0), waiting_pos(0.0), waiting_start(0.0), car_in_front(nullptr) {}
-	bool is_valid() const {return !bcube.is_all_zeros();}
-	point get_center() const {return bcube.get_cube_center();}
-	unsigned get_orient() const {return (2*dim + dir);}
-	unsigned get_orient_in_isec() const {return (2*dim + (!dir));} // invert dir (incoming, not outgoing)
-	float get_max_speed() const {return ((cur_city == CONN_CITY_IX) ? CONN_ROAD_SPEED_MULT : 1.0)*max_speed;}
-	float get_length() const {return (bcube.d[ dim][1] - bcube.d[ dim][0]);}
-	float get_width () const {return (bcube.d[!dim][1] - bcube.d[!dim][0]);}
-	float get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
-	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
-	bool is_stopped () const {return (cur_speed == 0.0);}
-	bool is_parked  () const {return (max_speed == 0.0);}
-	bool in_isect   () const {return is_isect(cur_road_type);}
-	bool headlights_on() const {return(!is_parked() && (in_tunnel || is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed))));} // no headlights when parked
-	unsigned get_isec_type() const {assert(in_isect()); return (cur_road_type - TYPE_ISEC2);}
-	void park() {cur_speed = max_speed = 0.0;}
-	float get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
-	float get_wait_time_secs  () const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights
-	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
-
-	void apply_scale(float scale) {
-		if (scale == 1.0) return; // no scale
-		float const prev_height(height);
-		height *= scale;
-		point const pos(get_center());
-		bcube.z2() += height - prev_height; // z1 is unchanged
-		float const dx(bcube.x2() - pos.x), dy(bcube.y2() - pos.y);
-		bcube.x1() = pos.x - scale*dx; bcube.x2() = pos.x + scale*dx;
-		bcube.y1() = pos.y - scale*dy; bcube.y2() = pos.y + scale*dy;
-	}
-	void destroy() { // Note: not calling create_explosion(), so no chain reactions
-		point const pos(get_center() + get_tiled_terrain_model_xlate());
-		float const length(get_length());
-		static rand_gen_t rgen;
-
-		for (int n = 0; n < rgen.rand_int(3, 5); ++n) {
-			vector3d off(rgen.signed_rand_vector_spherical()*(0.5*length));
-			off.z = abs(off.z); // not into the ground
-			point const exp_pos(pos + off);
-			float const radius(rgen.rand_uniform(1.0, 1.5)*length), time(rgen.rand_uniform(0.3, 0.8));
-			add_blastr(exp_pos, (exp_pos - get_camera_pos()), radius, 0.0, time*TICKS_PER_SECOND, CAMERA_ID, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1);
-			gen_smoke(exp_pos, 1.0, rgen.rand_uniform(0.4, 0.6));
-		} // for n
-		gen_delayed_from_player_sound(SOUND_EXPLODE, pos, 1.0);
-		park();
-		destroyed = 1;
-	}
-	float get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len=0) const {
-		float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
-		float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
-		return avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed + (add_one_car_len ? 1.0 : 0.0)); // 25% to 125% car length, depending on speed (2x on connector roads)
-	}
-	string str() const {
-		std::ostringstream oss;
-		oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << TXT(max_speed) << TXT(cur_speed)
-			<< TXTi(cur_road_type) << TXTi(color_id) << " bcube=" << bcube.str();
-		return oss.str();
-	}
-	string label_str() const {
-		std::ostringstream oss;
-		oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
-			<< "wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
-			<< TXTn(stopped_at_light) << TXTn(in_isect()) << "cars_in_front=" << count_cars_in_front() << "\n" << TXT(dest_city) << TXTn(dest_isec);
-		oss << "car=" << this << " car_in_front=" << car_in_front << endl; // debugging
-		return oss.str();
-	}
-	void move(float speed_mult) {
-		prev_bcube = bcube;
-		if (destroyed || stopped_at_light || is_stopped()) return;
-		assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= CONN_ROAD_SPEED_MULT*max_speed); // Note: must be valid for connector road => city transitions
-		float dist(cur_speed*speed_mult);
-		if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
-		min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
-		move_by(dir ? dist : -dist);
-		// update waiting state
-		float const cur_pos(bcube.d[dim][dir]);
-		if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; waiting_start = tfticks;} // update when we move at least a car length
-	}
-	void maybe_accelerate(float mult=0.02) {
-		if (car_in_front) {
-			float const dist_sq(p2p_dist_xy_sq(get_center(), car_in_front->get_center())), length(get_length());
-
-			if (dist_sq > length*length) { // if cars are colliding, let the collision detection system handle it
-				float const dmin(get_min_sep_dist_to_car(*car_in_front, 1)); // add_one_car_len=1; space between the two car centers
-				if (dist_sq < dmin*dmin) {decelerate(mult); return;} // too close to the car in front - decelerate instead
-			}
-		}
-		accelerate(mult);
-	}
-	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
-	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
-	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
-	void stop() {cur_speed = 0.0;} // immediate stop
-	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
-	bool check_collision(car_t &c, city_road_gen_t const &road_gen);
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const;
-
-	point get_front(float dval=0.5) const {
-		point car_front(get_center());
-		car_front[dim] += (dir ? dval : -dval)*get_length(); // half length
-		return car_front;
-	}
-	bool front_intersects_car(car_t const &c) const {
-		return (c.bcube.contains_pt(get_front(0.25)) || c.bcube.contains_pt(get_front(0.5))); // check front-middle and very front
-	}
-	void honk_horn_if_close() const {
-		point const pos(get_center());
-		if (dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 1.0)) {gen_sound(SOUND_HORN, pos);}
-	}
-	void honk_horn_if_close_and_fast() const {
-		if (cur_speed > 0.25*max_speed) {honk_horn_if_close();}
-	}
-	void on_alternate_turn_dir(rand_gen_t &rgen) {
-		honk_horn_if_close();
-		if ((rgen.rand()&3) == 0) {dest_valid = 0;} // 25% chance of choosing a new destination rather than driving in circles; will be in current city
-	}
-	void register_adj_car(car_t &c) {
-		if (car_in_front != nullptr && p2p_dist_xy_sq(get_center(), c.get_center()) > p2p_dist_xy_sq(get_center(), car_in_front->get_center())) return; // already found a closer car
-		cube_t cube(bcube);
-		cube.d[dim][!dir] = cube.d[dim][dir];
-		cube.d[dim][dir] += (dir ? 1.0 : -1.0)*get_max_lookahead_dist();
-		if (cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
-	}
-	unsigned count_cars_in_front(cube_t const &range=cube_t(all_zeros)) const {
-		unsigned num(0);
-		car_t const *cur_car(this);
-
-		for (unsigned i = 0; i < 50; ++i) { // limit iterations
-			cur_car = cur_car->car_in_front;
-			if (!cur_car || (!range.is_all_zeros() && !range.contains_pt_xy(cur_car->get_center()))) break;
-			if (cur_car->dim != dim || cur_car->dir == dir) {++num;} // include if not going in opposite direction
-		}
-		return num;
-	}
-	float get_sum_len_space_for_cars_in_front(cube_t const &range) const {
-		float len(0.0);
-		car_t const *cur_car(this);
-
-		for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_nom_car_size().x (FIXME: 50 not high enough for connector roads)
-			if (cur_car->dim != dim || cur_car->dir == dir) {len += cur_car->get_length();} // include if not going in opposite direction
-			cur_car = cur_car->car_in_front;
-			if (!cur_car || !range.contains_pt_xy(cur_car->get_center())) break;
-		}
-		return len * (1.0 + MIN_CAR_STOP_SEP); // car length + stopped space (including one extra space for the car behind us)
-	}
-};
-
-struct comp_car_road_then_pos {
-	vector3d const &xlate;
-	comp_car_road_then_pos(vector3d const &xlate_) : xlate(xlate_) {}
-
-	bool operator()(car_t const &c1, car_t const &c2) const { // sort spatially for collision detection and drawing
-		if (c1.cur_city != c2.cur_city) return (c1.cur_city < c2.cur_city);
-		if (c1.is_parked() != c2.is_parked()) {return c2.is_parked();} // parked cars last
-		if (c1.cur_road != c2.cur_road) return (c1.cur_road < c2.cur_road);
-		
-		if (c1.is_parked()) { // sort parked cars back to front relative to camera so that alpha blending works
-			return (p2p_dist_sq((c1.bcube.get_cube_center() + xlate), camera_pdu.pos) > p2p_dist_sq((c2.bcube.get_cube_center() + xlate), camera_pdu.pos));
-		}
-		return (c1.bcube.d[c1.dim][c1.dir] < c2.bcube.d[c2.dim][c2.dir]); // compare front end of car (used for collisions)
-	}
-};
 
 struct rect_t {
 	unsigned x1, y1, x2, y2;
@@ -1716,7 +1453,7 @@ public:
 }; // city_plot_gen_t
 
 
-class city_road_gen_t {
+class city_road_gen_t : public road_gen_base_t {
 
 	struct range_pair_t {
 		unsigned s, e; // Note: e is one past the end
@@ -3837,144 +3574,13 @@ public:
 		if (city_params.enable_car_path_finding) {update_car_dest(car);}
 	}
 	void update_car_seg_stats(car_t const &car) const {get_car_rn(car).update_car_seg_stats(car);}
-	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 	road_isec_t const &get_car_isec(car_t const &car) const {return get_car_rn(car).get_car_isec(car);}
+	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
+	virtual cube_t get_bcube_for_car(car_t const &car) const {return get_road_bcube_for_car(car);}
 }; // city_road_gen_t
 
 
-bool car_t::check_collision(car_t &c, city_road_gen_t const &road_gen) {
-	
-	if (c.dim != dim) { // turning in an intersection, etc. (Note: may not be needed, but at least need to return here)
-		car_t *to_stop(nullptr);
-		if (c.front_intersects_car(*this)) {to_stop = &c;}
-		else if (front_intersects_car(c))  {to_stop = this;}
-		if (!to_stop) return 0;
-		to_stop->decelerate_fast(); // attempt to prevent one car from T-boning the other
-		to_stop->bcube = to_stop->prev_bcube;
-		to_stop->honk_horn_if_close_and_fast();
-		return 1;
-	}
-	if (dir != c.dir) return 0; // traveling on opposite sides of the road
-	float const sep_dist(get_min_sep_dist_to_car(c));
-	float const test_dist(0.999*sep_dist); // slightly smaller than separation distance
-	cube_t bcube_ext(bcube);
-	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
-	if (!bcube_ext.intersects_xy(c.bcube)) return 0;
-	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[dim][dir]);
-	bool const move_c((front < c_front) ^ dir); // move the car that's behind
-	// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
-	car_t &cmove(move_c ? c : *this); // the car that will be moved
-	car_t const &cstay(move_c ? *this : c); // the car that won't be moved
-	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
-	if (cstay.is_stopped()) {cmove.decelerate_fast();} else {cmove.decelerate();}
-	float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
-	point delta(all_zeros);
-	delta[dim] += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
-	cube_t const &bcube(road_gen.get_road_bcube_for_car(cmove));
-	if (cstay.max_speed < cmove.max_speed) {cmove.front_car_turn_dir = cstay.turn_dir;} // record the turn dir of this slow car in front of us so we can turn a different way
-
-	if (!bcube.contains_cube_xy(cmove.bcube + delta)) { // moved outside its current road segment bcube
-		//if (cmove.bcube == cmove.prev_bcube) {return 1;} // collided, but not safe to move the car (init pos or second collision)
-		if (cmove.bcube != cmove.prev_bcube) { // try resetting to last frame's position
-			cmove.bcube  = cmove.prev_bcube; // restore prev frame's pos
-			//cmove.honk_horn_if_close_and_fast();
-			return 1; // done
-		}
-		else { // keep the car from moving outside its current segment (init collision case)
-			if (cmove.dir) {max_eq(delta[dim], min(0.0f, 0.999f*(bcube.d[cmove.dim][0] - cmove.bcube.d[cmove.dim][0])));}
-			else           {min_eq(delta[dim], max(0.0f, 0.999f*(bcube.d[cmove.dim][1] - cmove.bcube.d[cmove.dim][1])));}
-		}
-	}
-	cmove.bcube += delta;
-	return 1;
-}
-
-bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const {
-	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 1, 0, cnorm); // Note: approximate when car is tilted or turning
-	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos); // Note: handle cnorm in if using this
-}
-
-
 class car_manager_t {
-
-	class car_model_loader_t : public model3ds {
-		vector<int> models_valid;
-		void ensure_models_loaded() {if (empty()) {load_car_models();}}
-	public:
-		static unsigned num_models() {return city_params.car_model_files.size();}
-
-		bool is_model_valid(unsigned id) {
-			assert(id < num_models());
-			ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
-			assert(id < models_valid.size());
-			return (models_valid[id] != 0);
-		}
-		car_model_t const &get_model(unsigned id) const {
-			assert(id < num_models());
-			return city_params.car_model_files[id];
-		}
-		void load_car_models() {
-			models_valid.resize(num_models(), 1); // assume valid
-
-			for (unsigned i = 0; i < num_models(); ++i) {
-				string const &fn(get_model(i).fn);
-				bool const recalc_normals = 1;
-
-				if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
-					cerr << "Error: Failed to read model file '" << fn << "'; Skipping this model (will use default box model)." << endl;
-					push_back(model3d(fn, tmgr)); // add a placeholder dummy model
-					models_valid[i] = 0;
-				}
-			} // for i
-		}
-		void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color, point const &xlate,
-			unsigned model_id, bool is_shadow_pass, bool low_detail)
-		{
-			assert(is_model_valid(model_id));
-			assert(size() == num_models()); // must be loaded
-			car_model_t const &model_file(get_model(model_id));
-			model3d &model(at(model_id));
-
-			if (!is_shadow_pass && model_file.body_mat_id >= 0) { // use custom color for body material
-				material_t &body_mat(model.get_material(model_file.body_mat_id));
-				body_mat.ka = body_mat.kd = color;
-				//if (model_id == 5) {cout << body_mat.name << endl;}
-			}
-			model.bind_all_used_tids();
-			cube_t const &bcube(model.get_bcube());
-			point const orig_camera_pos(camera_pdu.pos);
-			camera_pdu.pos += bcube.get_cube_center() - pos - xlate; // required for distance based LOD
-			bool const camera_pdu_valid(camera_pdu.valid);
-			camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
-			// Note: in model space, front-back=z, left-right=x, top-bot=y
-			float const sz_scale(car_bcube.get_size().sum() / bcube.get_size().sum());
-			fgPushMatrix();
-			translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
-			if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
-			else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
-			fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);
-			if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);}
-			fgRotate(90.0, 1.0, 0.0, 0.0);
-			uniform_scale(sz_scale);
-			translate_to(-bcube.get_cube_center()); // cancel out model local translate
-
-			if ((low_detail || is_shadow_pass) && !model_file.shadow_mat_ids.empty()) {
-				for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass);}
-			}
-			else {
-				auto const &unbound_mat(model.get_unbound_material());
-
-				for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
-					model.render_materials(s, is_shadow_pass, 0, 0, (sam_pass == 1), 3, 3, unbound_mat, rotation_t(),
-						nullptr, nullptr, is_shadow_pass, model_file.lod_mult, (is_shadow_pass ? 10.0 : 0.0));
-				}
-			}
-			fgPopMatrix();
-			camera_pdu.valid = camera_pdu_valid;
-			camera_pdu.pos   = orig_camera_pos;
-			select_texture(WHITE_TEX); // reset back to default/untextured
-		}
-	};
 
 	car_model_loader_t car_model_loader;
 
