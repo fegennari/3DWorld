@@ -5,9 +5,12 @@
 #include "file_utils.h"
 #include "openal_wrap.h"
 #include "explosion.h" // for add_blastr()
+#include "lightmap.h" // for light_source
 
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
 
+extern int display_mode;
+extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
@@ -302,5 +305,184 @@ void car_model_loader_t::draw_car(shader_t &s, vector3d const &pos, cube_t const
 	camera_pdu.valid = camera_pdu_valid;
 	camera_pdu.pos   = orig_camera_pos;
 	select_texture(WHITE_TEX); // reset back to default/untextured
+}
+
+
+void car_draw_state_t::occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
+	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
+	pos_dir_up near_pdu(pdu);
+	near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block
+	get_building_occluders(near_pdu, state);
+	//cout << "occluders: " << state.building_ids.size() << endl;
+}
+
+bool car_draw_state_t::occlusion_checker_t::is_occluded(cube_t const &c) {
+	if (state.building_ids.empty()) return 0;
+	float const z(c.z2()); // top edge
+	point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
+	return check_pts_occluded(corners, 4, state);
+}
+
+/*static*/ float car_draw_state_t::get_headlight_dist() {return 3.5*city_params.road_width;} // distance headlights will shine
+
+colorRGBA car_draw_state_t::get_headlight_color(car_t const &car) const {
+	return colorRGBA(1.0, 1.0, (1.0 + 0.8*(fract(1000.0*car.max_speed) - 0.5)), 1.0); // slight yellow-blue tinting using max_speed as a hash
+}
+
+void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
+	//use_bmap = 1; // used only for some car models
+	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
+	select_texture(WHITE_TEX);
+	if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
+}
+
+void car_draw_state_t::draw_unshadowed() {
+	qbds[0].draw_and_clear();
+	if (qbds[2].empty()) return;
+	enable_blend();
+	select_texture(BLUR_CENT_TEX);
+	qbds[2].draw_and_clear();
+	select_texture(WHITE_TEX); // reset back to default/untextured
+	disable_blend();
+}
+
+void car_draw_state_t::add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube) {
+	xlate = xlate_; // needed earlier in the flow
+	for (auto i = cars.begin(); i != cars.end(); ++i) {add_car_headlights(*i, lights_bcube);}
+}
+
+void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const {
+	point const center(car.get_center());
+	cube_t const &c(car.bcube);
+	float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + (include_top ? 0.1 : 0.5)*car.height), length(car.get_length());
+	bool const dim(car.dim), dir(car.dir);
+	set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
+
+	if (include_top) {
+		cube_t top_part(c);
+		top_part.d[dim][0] += (dir ? 0.25 : 0.30)*length; // back
+		top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
+		set_cube_pts(top_part, zmid, z2, dim, dir, pt); // top
+	}
+	if (car.dz != 0.0) { // rotate all points about dim !d
+		float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
+		rotate_pts(center, sine_val, cos_val, dim, 2, pb);
+		if (include_top) {rotate_pts(center, sine_val, cos_val, dim, 2, pt);}
+	}
+	if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
+		float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
+		rotate_pts(center, sine_val, cos_val, 0, 1, pb);
+		if (include_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
+	}
+}
+
+void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
+	if (is_dlight_shadows) {
+		if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.6*camera_pdu.far_)) return;
+		cube_t bcube(car.bcube);
+		bcube.expand_by(0.1*car.height);
+		if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
+	}
+	if (!check_cube_visible(car.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
+	point const center(car.get_center());
+	begin_tile(center); // enable shadows
+	colorRGBA const &color(car.get_color());
+	float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
+	bool const is_truck(car.bcube.dz() > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
+	bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
+	float const sign((dim^dir) ? -1.0 : 1.0);
+	point pb[8], pt[8]; // bottom and top sections
+	gen_car_pts(car, draw_top, pb, pt);
+
+	if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
+		if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
+		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
+		car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
+	}
+	else { // draw simple 1-2 cube model
+		quad_batch_draw &qbd(qbds[emit_now]);
+		color_wrapper cw(color);
+		draw_cube(qbd, cw, center, pb, 1, (dim^dir)); // bottom (skip_bottom=1)
+		if (draw_top) {draw_cube(qbd, cw, center, pt, 1, (dim^dir));} // top (skip_bottom=1)
+		if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
+	}
+	if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
+		float const length(car.get_length());
+		point pao[4];
+
+		for (unsigned i = 0; i < 4; ++i) {
+			point &v(pao[i]);
+			v = pb[i] - center;
+			v[ dim] += 0.1*length*SIGN(v[ dim]); // increase length slightly
+			v[!dim] += 0.1*length*SIGN(v[!dim]); // increase width  slightly
+			v   += center;
+			v.z += 0.02*car.height; // shift up slightly to avoid z-fighting
+		}
+		/*if (!car.headlights_on()) { // daytime, adjust shadow to match sun pos
+		vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
+		vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
+		for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
+		}*/
+		qbds[2].add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
+	}
+	if (dist_val > 0.3)  return; // to far - no lights to draw
+	if (shadow_only || car.is_parked()) return; // no lights when parked, or in shadow pass
+	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
+	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
+	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
+
+	if (headlights_on && dist_val < 0.3) { // night time headlights
+		colorRGBA const hl_color(get_headlight_color(car));
+
+		for (unsigned d = 0; d < 2; ++d) { // L, R
+			unsigned const lr(d ^ lr_xor ^ 1);
+			point const pos((lr ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (lr ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
+			add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
+		}
+	}
+	if ((brake_lights_on || headlights_on) && dist_val < 0.2) { // brake lights
+		for (unsigned d = 0; d < 2; ++d) { // L, R
+			unsigned const lr(d ^ lr_xor);
+			point const pos((lr ? 0.2 : 0.8)*(0.2*pb[2] + 0.8*pb[6]) + (lr ? 0.8 : 0.2)*(0.2*pb[3] + 0.8*pb[7]));
+			add_light_flare(pos, -front_n, RED, (brake_lights_on ? 1.0 : 0.5), 0.5*car.height); // pb 2,3,6,7
+		}
+	}
+	if (car.turn_dir != TURN_NONE && car.cur_city != CONN_CITY_IX && dist_val < 0.1) { // turn signals (not on connector road bends)
+		float const ts_period = 1.5; // in seconds
+		double const time(fract((tfticks + 1000.0*car.max_speed)/(ts_period*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
+
+		if (time > 0.5) { // flash on and off
+			bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir); // R=1,2,5,6 or L=0,3,4,7
+			vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
+
+			for (unsigned d = 0; d < 2; ++d) { // B, F
+				point const pos(0.3*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + 0.7*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
+				add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.3*car.height); // normal points out 45 degrees
+			}
+		}
+	}
+}
+
+void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
+	if (!car.headlights_on()) return;
+	float const headlight_dist(get_headlight_dist());
+	cube_t bcube(car.bcube);
+	bcube.expand_by(headlight_dist);
+	if (!lights_bcube.contains_cube_xy(bcube))   return; // not contained within the light volume
+	if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
+	float const sign((car.dim^car.dir) ? -1.0 : 1.0);
+	point pb[8], pt[8]; // bottom and top sections
+	gen_car_pts(car, 0, pb, pt); // draw_top=0
+	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
+	vector3d const dir((0.5*front_n - 0.5*plus_z).get_norm()); // point slightly down
+	colorRGBA const color(get_headlight_color(car));
+	float const beamwidth = 0.08;
+	min_eq(lights_bcube.z1(), bcube.z1());
+	max_eq(lights_bcube.z2(), bcube.z2());
+
+	for (unsigned d = 0; d < 2; ++d) { // L, R
+		point const pos((d ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (d ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
+		dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, dir, beamwidth));
+	}
 }
 

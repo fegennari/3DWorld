@@ -519,6 +519,7 @@
     <ClCompile Include="src\ray_trace.cpp" />
     <ClCompile Include="src\read_3ds.cpp" />
     <ClCompile Include="src\reflections.cpp" />
+    <ClCompile Include="src\roads.cpp" />
     <ClCompile Include="src\scenery.cpp" />
     <ClCompile Include="src\screenshot.cpp" />
     <ClCompile Include="src\shaders.cpp" />

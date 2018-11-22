@@ -6,8 +6,6 @@
 #include "mesh.h"
 #include "heightmap.h"
 #include "file_utils.h"
-#include "draw_utils.h"
-#include "shaders.h"
 #include "lightmap.h"
 #include "buildings.h"
 #include "tree_3dw.h"
@@ -16,22 +14,15 @@
 using std::string;
 
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
-float const ROAD_HEIGHT             = 0.002;
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
-float const PARK_SPACE_WIDTH        = 1.6;
-float const PARK_SPACE_LENGTH       = 1.8;
-float const STREETLIGHT_BEAMWIDTH   = 0.25;
 float const CITY_LIGHT_FALLOFF      = 0.2;
-float const STREETLIGHT_ON_RAND     = 0.05;
-float const TRACKS_WIDTH            = 0.5; // relative to road width
-float const TUNNEL_WALL_THICK       = 0.25; // relative to radius
 
 
 city_params_t city_params;
 
 extern bool enable_dlight_shadows, dl_smap_enabled, tt_fire_button_down;
-extern int rand_gen_index, display_mode, animate2, game_mode, frame_counter;
+extern int rand_gen_index, display_mode, animate2, game_mode;
 extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks, FAR_CLIP;
 extern vector<light_source> dl_sources;
@@ -163,12 +154,6 @@ template<typename T> void get_all_bcubes(vector<T> const &v, vector<cube_t> &bcu
 	for (auto i = v.begin(); i != v.end(); ++i) {bcubes.push_back(*i);}
 }
 
-template<typename T> static void add_flat_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2
-	float const z(r.z1());
-	point const pts[4] = {point(r.x1(), r.y1(), z), point(r.x2(), r.y1(), z), point(r.x2(), r.y2(), z), point(r.x1(), r.y2(), z)};
-	qbd.add_quad_pts(pts, color, plus_z, r.get_tex_range(ar));
-}
-
 float smooth_interp(float a, float b, float mix) {
 	mix = mix * mix * (3.0 - 2.0 * mix); // cubic Hermite interoplation (smoothstep)
 	return mix*a + (1.0 - mix)*b;
@@ -176,41 +161,6 @@ float smooth_interp(float a, float b, float mix) {
 
 bool is_night(float adj) {return (light_factor - adj < 0.5);} // for car headlights and streetlights
 
-bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c) {
-	float tmin(0.0), tmax(1.0);
-	if (get_line_clip(p1, p2, c.d, tmin, tmax) && tmin < t) {t = tmin; return 1;}
-	return 0;
-}
-
-class road_mat_mgr_t {
-
-	bool inited;
-	unsigned tids[NUM_RD_TIDS], sl_tid;
-
-public:
-	road_mat_mgr_t() : inited(0), sl_tid(0) {}
-
-	void ensure_road_textures() {
-		if (inited) return;
-		timer_t timer("Load Road Textures");
-		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "parking_lot.png", "rail_tracks.jpg"};
-		float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
-		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
-		sl_tid = get_texture_by_name("roads/traffic_light.png");
-		inited = 1;
-	}
-	void set_texture(unsigned type) {
-		assert(type < NUM_RD_TYPES);
-		ensure_road_textures();
-		select_texture(tids[type]);
-	}
-	void set_stoplight_texture() {
-		ensure_road_textures();
-		select_texture(sl_tid);
-	}
-};
-
-road_mat_mgr_t road_mat_mgr;
 
 void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap) {
 
@@ -234,877 +184,104 @@ void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bma
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
 }
 
-struct draw_state_t {
-	shader_t s;
-	vector3d xlate;
-protected:
-	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
-	point_sprite_drawer_sized light_psd; // for car/traffic lights
-	string label_str;
-	point label_pos;
-public:
-	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
-	virtual void draw_unshadowed() {}
-	
-	void begin_tile(point const &pos, bool will_emit_now=0) {
-		emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
-		if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
+void draw_state_t::begin_tile(point const &pos, bool will_emit_now) {
+	emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
+	if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
+}
+void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader) {
+	xlate       = xlate_;
+	shadow_only = shadow_only_;
+	use_dlights = (use_dlights_ && !shadow_only);
+	use_smap    = (shadow_map_enabled() && !shadow_only);
+	if (!use_smap && !always_setup_shader) return;
+	city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only));
+}
+/*virtual*/ void draw_state_t::post_draw() {
+	emit_now = 0;
+	if (s.is_setup()) {s.end_shader();} // use_smap case
+	ensure_shader_active();
+	draw_unshadowed();
+	s.end_shader();
+}
+void draw_state_t::ensure_shader_active() {
+	if (s.is_setup()) return; // already active
+	if (shadow_only) {s.begin_color_only_shader();}
+	else {city_shader_setup(s, use_dlights, 0, use_bmap);} // no smap
+}
+void draw_state_t::draw_and_clear_light_flares() {
+	if (light_psd.empty()) return; // no lights to draw
+	enable_blend();
+	set_additive_blend_mode();
+	light_psd.draw_and_clear(BLUR_TEX, 0.0, 0, 1, 0.005); // use geometry shader for unlimited point size
+	set_std_blend_mode();
+	disable_blend();
+}
+bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale, bool shadow_only) const {
+	cube_t const bcx(bc + xlate);
+
+	if (dist_scale > 0.0) {
+		float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
+		if (!dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dmax)) return 0;
 	}
-	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader) {
-		xlate       = xlate_;
-		shadow_only = shadow_only_;
-		use_dlights = (use_dlights_ && !shadow_only);
-		use_smap    = (shadow_map_enabled() && !shadow_only);
-		if (!use_smap && !always_setup_shader) return;
-		city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only));
+	return camera_pdu.cube_visible(bcx);
+}
+/*static*/ void draw_state_t::set_cube_pts(cube_t const &c, float z1f, float z1b, float z2f, float z2b, bool d, bool D, point p[8]) {
+	p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = z1f; p[4].z = z2f; // front right
+	p[1][!d] = p[5][!d] = c.d[!d][0]; p[1][d] = p[5][d] = c.d[d][ D]; p[1].z = z1f; p[5].z = z2f; // front left
+	p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = z1b; p[6].z = z2b; // back  left
+	p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = z1b; p[7].z = z2b; // back  right
+}
+/*static*/ void draw_state_t::rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]) {
+	for (unsigned i = 0; i < 8; ++i) {
+		point &v(p[i]); // rotate p[i]
+		v -= center; // translate to origin
+		float const a(v[d]*cos_val - v[e]*sine_val), b(v[e]*cos_val + v[d]*sine_val);
+		v[d] = a; v[e] = b; // rotate
+		v += center; // translate back
 	}
-	virtual void post_draw() {
-		emit_now = 0;
-		if (s.is_setup()) {s.end_shader();} // use_smap case
-		ensure_shader_active();
-		draw_unshadowed();
-		s.end_shader();
+}
+void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals, float tscale) const {
+	vector3d const cview_dir((camera_pdu.pos - xlate) - center);
+	float const sign(invert_normals ? -1.0 : 1.0);
+	vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
+	vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
+	vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2]))*sign);
+	tex_range_t tr_top, tr_front, tr_right;
+
+	if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
+		tr_top   = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[2] - p[1]).mag());
+		tr_front = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[5] - p[1]).mag());
+		tr_right = tex_range_t(0.0, 0.0, tscale*(p[1] - p[2]).mag(), tscale*(p[6] - p[2]).mag());
 	}
-	void ensure_shader_active() {
-		if (s.is_setup()) return; // already active
-		if (shadow_only) {s.begin_color_only_shader();}
-		else {city_shader_setup(s, use_dlights, 0, use_bmap);} // no smap
-	}
-	void draw_and_clear_light_flares() {
-		if (light_psd.empty()) return; // no lights to draw
-		enable_blend();
-		set_additive_blend_mode();
-		light_psd.draw_and_clear(BLUR_TEX, 0.0, 0, 1, 0.005); // use geometry shader for unlimited point size
-		set_std_blend_mode();
-		disable_blend();
-	}
-	bool check_sphere_visible(point const &pos, float radius) const {return camera_pdu.sphere_visible_test((pos + xlate), radius);}
-	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0, bool shadow_only=0) const {
-		cube_t const bcx(bc + xlate);
+	if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n, tr_top);} // top
+	else if (!skip_bottom)                 {qbd.add_quad_pts(p+0, cw, -top_n, tr_top);} // bottom - not always drawn
+	if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n, tr_front);} // front
+	else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n, tr_front);} // back
+	if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // right
+	else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // left
+}
+void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale) const {
+	point pts[8];
+	set_cube_pts(c, 0, 0, pts);
+	draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom, 0, tscale);
+}
+bool draw_state_t::add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
+	point pos(xlate + flare_pos);
+	vector3d const view_dir((camera_pdu.pos - pos).get_norm());
+	float dp(dot_product(n, view_dir));
+	pos += 0.75*radius*view_dir; // move toward the camera, away from the stoplight, to prevent clipping
+	if (dp < 0.05) return 0; // back facing, skip
+	light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, colorRGBA(color, dp*alpha)), radius));
+	return 1;
+}
+void draw_state_t::show_label_text() {
+	if (label_str.empty()) return;
+	text_drawer_t text_drawer;
+	text_drawer.strs.push_back(text_string_t(label_str, label_pos, 20.0, CYAN));
+	text_drawer.draw();
+	label_str.clear(); // drawn, clear for next frame
+}
 
-		if (dist_scale > 0.0) {
-			float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
-			if (!dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dmax)) return 0;
-		}
-		return camera_pdu.cube_visible(bcx);
-	}
-	static void set_cube_pts(cube_t const &c, float z1f, float z1b, float z2f, float z2b, bool d, bool D, point p[8]) {
-		p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = z1f; p[4].z = z2f; // front right
-		p[1][!d] = p[5][!d] = c.d[!d][0]; p[1][d] = p[5][d] = c.d[d][ D]; p[1].z = z1f; p[5].z = z2f; // front left
-		p[2][!d] = p[6][!d] = c.d[!d][0]; p[2][d] = p[6][d] = c.d[d][!D]; p[2].z = z1b; p[6].z = z2b; // back  left
-		p[3][!d] = p[7][!d] = c.d[!d][1]; p[3][d] = p[7][d] = c.d[d][!D]; p[3].z = z1b; p[7].z = z2b; // back  right
-	}
-	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {set_cube_pts(c, z1, z1, z2, z2, d, D, p);}
-	static void set_cube_pts(cube_t const &c, bool d, bool D, point p[8]) {set_cube_pts(c, c.z1(), c.z2(), d, D, p);}
-
-	static void rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]) {
-		for (unsigned i = 0; i < 8; ++i) {
-			point &v(p[i]); // rotate p[i]
-			v -= center; // translate to origin
-			float const a(v[d]*cos_val - v[e]*sine_val), b(v[e]*cos_val + v[d]*sine_val);
-			v[d] = a; v[e] = b; // rotate
-			v += center; // translate back
-		}
-	}
-	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals=0, float tscale=0.0) const {
-		vector3d const cview_dir((camera_pdu.pos - xlate) - center);
-		float const sign(invert_normals ? -1.0 : 1.0);
-		vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
-		vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
-		vector3d const right_n(cross_product((p[6] - p[2]), (p[1] - p[2]))*sign);
-		tex_range_t tr_top, tr_front, tr_right;
-
-		if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
-			tr_top   = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[2] - p[1]).mag());
-			tr_front = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[5] - p[1]).mag());
-			tr_right = tex_range_t(0.0, 0.0, tscale*(p[1] - p[2]).mag(), tscale*(p[6] - p[2]).mag());
-		}
-		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n, tr_top);} // top
-		else if (!skip_bottom)                 {qbd.add_quad_pts(p+0, cw, -top_n, tr_top);} // bottom - not always drawn
-		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n, tr_front);} // front
-		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n, tr_front);} // back
-		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // right
-		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // left
-	}
-	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale=0.0) const {
-		point pts[8];
-		set_cube_pts(c, 0, 0, pts);
-		draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom, 0, tscale);
-	}
-	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
-		point pos(xlate + flare_pos);
-		vector3d const view_dir((camera_pdu.pos - pos).get_norm());
-		float dp(dot_product(n, view_dir));
-		pos += 0.75*radius*view_dir; // move toward the camera, away from the stoplight, to prevent clipping
-		if (dp < 0.05) return 0; // back facing, skip
-		light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, colorRGBA(color, dp*alpha)), radius));
-		return 1;
-	}
-	void set_label_text(string const &str, point const &pos) {label_str = str; label_pos = pos;}
-
-	void show_label_text() {
-		if (label_str.empty()) return;
-		text_drawer_t text_drawer;
-		text_drawer.strs.push_back(text_string_t(label_str, label_pos, 20.0, CYAN));
-		text_drawer.draw();
-		label_str.clear(); // drawn, clear for next frame
-	}
-}; // draw_state_t
-
-
-struct rect_t {
-	unsigned x1, y1, x2, y2;
-	rect_t() : x1(0), y1(0), x2(0), y2(0) {}
-	rect_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_) : x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
-	bool is_valid() const {return (x1 < x2 && y1 < y2);}
-	unsigned get_area() const {return (x2 - x1)*(y2 - y1);}
-	bool operator== (rect_t const &r) const {return (x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2);}
-	bool has_overlap(rect_t const &r) const {return (x1 < r.x2 && y1 < r.y2 && r.x1 < x2 && r.y1 < y2);}
-};
-struct flatten_op_t : public rect_t {
-	float z1, z2;
-	bool dim;
-	unsigned border, skip_six, skip_eix;
-	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0) {}
-	flatten_op_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_, float z1_, float z2_, bool dim_, unsigned border_) :
-		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_), skip_six(0), skip_eix(0) {}
-};
-
-struct road_t : public cube_t {
-	unsigned road_ix;
-	//unsigned char type; // road, railroad, etc. {RTYPE_ROAD, RTYPE_TRACKS}
-	bool dim; // dim the road runs in
-	bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
-
-	road_t(cube_t const &c, bool dim_, bool slope_=0, unsigned road_ix_=0) : cube_t(c), road_ix(road_ix_), dim(dim_), slope(slope_) {}
-	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0, unsigned road_ix_=0) : road_ix(road_ix_), dim(dim_), slope(slope_) {
-		assert(s != e);
-		assert(width > 0.0);
-		vector3d const dw(0.5*width*cross_product((e - s), plus_z).get_norm());
-		point const pts[4] = {(s - dw), (s + dw), (e + dw), (e - dw)};
-		set_from_points(pts, 4);
-	}
-	float get_length   () const {return (d[ dim][1] - d[ dim][0]);}
-	float get_width    () const {return (d[!dim][1] - d[!dim][0]);}
-	float get_slope_val() const {return get_dz()/get_length();}
-	float get_start_z  () const {return (slope ? z2() : z1());}
-	float get_end_z    () const {return (slope ? z1() : z2());}
-	float get_z_adj    () const {return (ROAD_HEIGHT + 0.5*get_slope_val()*(dim ? DY_VAL : DX_VAL));} // account for a half texel of error for sloped roads
-	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
-	cube_t const &get_bcube() const {return *this;}
-	cube_t       &get_bcube()       {return *this;}
-
-	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const { // specialized here for sloped roads (road segments and railroad tracks)
-		if (z1() == z2()) {add_flat_road_quad(*this, qbd, color, ar); return;}
-		bool const s(slope ^ dim);
-		point pts[4] = {point(x1(), y1(), d[2][!s]), point(x2(), y1(), d[2][!s]), point(x2(), y2(), d[2][ s]), point(x1(), y2(), d[2][ s])};
-		if (!dim) {swap(pts[0].z, pts[2].z);}
-		vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
-		qbd.add_quad_pts(pts, color, normal, get_tex_range(ar));
-	}
-};
-
-struct road_seg_t : public road_t {
-	unsigned short road_ix, conn_ix[2], conn_type[2]; // {dim=0, dim=1}
-	mutable unsigned short car_count; // can be written to during car update logic
-
-	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
-	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix), car_count(0) {init_ixs();}
-	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix), car_count(0) {init_ixs();}
-	void next_frame() {car_count = 0;}
-};
-
-namespace stoplight_ns {
-
-	enum {GREEN_LIGHT=0, YELLOW_LIGHT, RED_LIGHT}; // colors, unused (only have stop and go states anyway)
-	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
-	enum {CW_WALK=0, CW_WARN, CW_STOP}; // crosswalk state
-	float const state_times[NUM_STATE] = {5.0, 6.0, 5.0, 5.0, 6.0, 5.0}; // in seconds
-	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
-	unsigned const left_orient_masks[NUM_STATE] = {2, 0, 1, 8, 0,  4}; // {W=1, E=2, S=4, N=8}, for left turns only
-	unsigned const to_right  [4] = {3, 2, 0, 1}; // {N, S, W, E}
-	unsigned const to_left   [4] = {2, 3, 1, 0}; // {S, N, E, W}
-	unsigned const other_lane[4] = {1, 0, 3, 2}; // {E, W, N, S}
-	unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
-	colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
-	colorRGBA const crosswalk_colors[3] = {WHITE, ORANGE, ORANGE};
-
-	rand_gen_t stoplight_rgen;
-
-	class stoplight_t {
-		uint8_t num_conn, conn, cur_state;
-		bool at_conn_road; // longer light times in this case
-		float cur_state_ticks;
-		// these are mutable because they are set during car update logic, where roads are supposed to be const
-		mutable uint8_t car_waiting_sr, car_waiting_left;
-		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits
-
-		void next_state() {
-			++cur_state;
-			if (cur_state == NUM_STATE) {cur_state = 0;} // wraparound
-		}
-		void advance_state() {
-			if (num_conn == 4) {next_state();} // all states are valid for 4-way intersections
-			else { // 3-way intersection
-				assert(num_conn == 3);
-				while (1) {
-					next_state();
-					bool valid(0);
-					switch (conn) {
-					case 7 : {bool const allow[6] = {0,1,1,1,0,0}; valid = allow[cur_state]; break;} // no +y / S
-					case 11: {bool const allow[6] = {1,1,0,0,0,1}; valid = allow[cur_state]; break;} // no -y / N
-					case 13: {bool const allow[6] = {1,0,0,1,1,0}; valid = allow[cur_state]; break;} // no +x / W
-					case 14: {bool const allow[6] = {0,0,1,0,1,1}; valid = allow[cur_state]; break;} // no -x / E
-					default: assert(0);
-					}
-					if (valid) break;
-				} // end while
-			}
-			cur_state_ticks = 0.0; // reset for this state
-		}
-		bool any_blocked() const {return (blocked[0] || blocked[1] || blocked[2] || blocked[3]);}
-		bool is_any_car_waiting_at_this_state() const {
-			if (num_conn == 2) return 0; // 2-way intersection, no cross traffic
-			return ((left_orient_masks[cur_state] & car_waiting_left) || (st_r_orient_masks[cur_state] & car_waiting_sr));
-		}
-		void find_state_with_waiting_car() {
-			uint8_t const prev_state(cur_state);
-
-			while (1) {
-				advance_state();
-				if (any_blocked()) break; // if some car is blocking the intersection in some dir, force all states (no skipped lights) to guarantee we can make progress
-				if (is_any_car_waiting_at_this_state()) break; // car is waiting at this state
-				if (cur_state == prev_state) {advance_state(); break;} // wrapped around, leave at the next valid state after the prev state
-			}
-			car_waiting_sr = car_waiting_left = 0; // waiting bits have been used, clear for next state change
-		}
-		void run_update_logic() {
-			assert(cur_state < NUM_STATE);
-			//if (cur_state_ticks > get_cur_state_time_secs()) {advance_state();} // time to update to next state
-			if (cur_state_ticks > get_cur_state_time_secs()) {find_state_with_waiting_car();} // time to update to next state
-		}
-		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
-
-		void ffwd_to_future(float time_secs) {
-			cur_state_ticks += TICKS_PER_SECOND*time_secs;
-			run_update_logic();
-		}
-	public:
-		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0), car_waiting_sr(0), car_waiting_left(0) {
-			reset_blocked();
-		}
-		void reset_blocked() {UNROLL_4X(blocked[i_] = 0;)}
-		void mark_blocked(bool dim, bool dir) const {blocked[2*dim + dir] = 1;} // Note: not actually const, but blocked is mutable
-		bool is_blocked(bool dim, bool dir) const {return (blocked[2*dim + dir] != 0);}
-
-		void init(uint8_t num_conn_, uint8_t conn_) {
-			num_conn = num_conn_; conn = conn_;
-			if (num_conn == 2) return; // nothing else to do
-			cur_state = stoplight_rgen.rand() % NUM_STATE; // start at a random state
-			advance_state(); // make sure cur_state is valid
-			cur_state_ticks = get_cur_state_time_secs()*stoplight_rgen.rand_float(); // start at a random time within this state
-		}
-		void next_frame() {
-			reset_blocked();
-			if (num_conn == 2) return; // nothing else to do
-			cur_state_ticks += fticks;
-			run_update_logic();
-		}
-		void notify_waiting_car(bool dim, bool dir, unsigned turn) const {
-			unsigned const orient(2*dim + dir); // {W, E, S, N}
-			((turn == TURN_LEFT) ? car_waiting_left : car_waiting_sr) |= (1 << orient);
-		}
-		bool red_light(bool dim, bool dir, unsigned turn) const {
-			assert(cur_state < NUM_STATE);
-			assert(turn == TURN_LEFT || turn == TURN_RIGHT || turn == TURN_NONE);
-			if (num_conn == 2) return 0; // 2-way intersection, no cross traffic
-			unsigned const mask(((turn == TURN_LEFT) ? left_orient_masks : st_r_orient_masks)[cur_state]);
-			unsigned const orient(2*dim + dir); // {W, E, S, N}
-			return (((1<<orient) & mask) == 0);
-		}
-		unsigned get_light_state(bool dim, bool dir, unsigned turn) const { // 0=green, 1=yellow, 2=red
-			if (red_light(dim, dir, turn)) return RED_LIGHT;
-			if (num_conn == 2) return GREEN_LIGHT;
-			stoplight_t future_self(*this);
-			future_self.ffwd_to_future(2.0); // yellow light time = 2.0s
-			return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : GREEN_LIGHT);
-		}
-		bool can_walk(bool dim, bool dir) const { // Note: symmetric across the two sides of the street
-			// Note: ignores blocked state and right-on-red
-			unsigned const orient(2*dim + dir); // {W, E, S, N}
-			assert(conn & (1<<orient));
-			// check for cars entering the isec from this side
-			if ((1<<orient) & (left_orient_masks[cur_state] | st_r_orient_masks[cur_state])) return 0; // any turn dir
-			// check for cars entering the isec from the other side; Note that we don't check conn mask here because unconnected dirs don't get green lights
-			if (st_r_orient_masks[cur_state] & (1<<other_lane[orient])) return 0; // opposing traffic going straight
-			if (left_orient_masks[cur_state] & (1<<to_right  [orient])) return 0; // traffic to the right turning left
-			//if (st_r_orient_masks[cur_state] & (1<<to_left   [orient])) return 0; // traffic to the left turning right (skip)
-			return 1;
-		}
-		unsigned get_crosswalk_state(bool dim, bool dir) const {
-			if (!can_walk(dim, dir)) return CW_STOP;
-			stoplight_t future_self(*this);
-			future_self.ffwd_to_future(2.0); // crosswalk warn time = 2.0s
-			if (!future_self.can_walk(dim, dir)) return CW_WARN;
-			return CW_WALK;
-		}
-		bool check_int_clear(unsigned orient, unsigned turn_dir) const { // check for cars on other lanes blocking the intersection
-			switch (turn_dir) { // orient: {W, E, S, N}
-			case TURN_NONE:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]]); // straight
-			case TURN_LEFT:  return (!blocked[to_right[orient]] && !blocked[to_left[orient]] && !blocked[other_lane[orient]]);
-			case TURN_RIGHT: return (!blocked[to_right[orient]]);
-			}
-			return 1;
-		}
-		bool check_int_clear(car_t const &car) const {return check_int_clear(car.get_orient(), car.turn_dir);}
-
-		bool can_turn_right_on_red(car_t const &car) const { // check for legal right on red (no other lanes turning into the road to our right)
-			if (car.turn_dir != TURN_RIGHT) return 0;
-			unsigned const orient(car.get_orient());  // {W, E, S, N}
-			if (!red_light(!car.dim, (to_right  [orient] & 1), TURN_NONE)) return 0; // traffic to our left has a green or yellow light for going straight
-			if (!red_light( car.dim, (other_lane[orient] & 1), TURN_LEFT)) return 0; // opposing traffic has a green or yellow light for turning left
-			// Note: there are no U-turns, so we don't need to worry about 
-			return 1; // can turn right on red to_left[orient]
-		}
-		string str() const {
-			std::ostringstream oss;
-			oss << TXTi(num_conn) << TXTi(conn) << TXTi(cur_state) << TXT(at_conn_road) << TXT(cur_state_ticks) << TXTi(car_waiting_sr) << TXTi(car_waiting_left)
-				<< "blocked: " << blocked[0] << blocked[1] << blocked[2] << blocked[3];
-			return oss.str();
-		}
-		string label_str() const {
-			std::ostringstream oss;
-			oss << TXTi(num_conn) << TXTin(conn) << TXTi(cur_state) << TXTn(cur_state_ticks) << TXTn(at_conn_road) << TXTi(car_waiting_sr) << TXTin(car_waiting_left)
-				<< "blocked: " << blocked[0] << blocked[1] << blocked[2] << blocked[3];
-			return oss.str();
-		}
-		colorRGBA get_stoplight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
-	};
-	static float stoplight_max_height() {return 9.2*(0.03*city_params.road_width);} // 2.0*h + 1.2*h*num_segs
-} // end stoplight_ns
-
-struct road_isec_t : public cube_t {
-	uint8_t num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
-	short conn_to_city;
-	short rix_xy[4], conn_ix[4]; // road/segment index: pos=cur city road, neg=global road; always segment ix
-	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
-
-	road_isec_t(cube_t const &c, int rx, int ry, uint8_t conn_, bool at_conn_road, short conn_to_city_=-1) : cube_t(c), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road) {
-		rix_xy[0] = rix_xy[1] = rx; rix_xy[2] = rix_xy[3] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
-		if (conn == 15) {num_conn = 4;} // 4-way
-		else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
-		else if (conn == 5 || conn == 6  || conn == 9  || conn == 10) {num_conn = 2;} // 2-way
-		else {assert(0);}
-		stoplight.init(num_conn, conn);
-	}
-	tex_range_t get_tex_range(float ar) const {
-		switch (conn) {
-		case 5 : return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 0); // 2-way: MX
-		case 6 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 2-way: R0
-		case 9 : return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 2-way: MXMY
-		case 10: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 0); // 2-way: MY
-		case 7 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 3-way: R0
-		case 11: return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 3-way: MY
-		case 13: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 1); // 3-way: R90MY
-		case 14: return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 1); // 3-way: R90MX
-		case 15: return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 4-way: R0
-		default: assert(0);
-		}
-		return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
-	}
-	void make_4way(unsigned conn_to_city_) {
-		num_conn = 4; conn = 15;
-		assert(conn_to_city < 0); conn_to_city = conn_to_city_;
-		stoplight.init(num_conn, conn); // re-init with new conn
-	}
-	void next_frame() {stoplight.next_frame();}
-	void notify_waiting_car(car_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
-	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
-	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
-	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
-	bool yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
-
-	bool can_go_based_on_light(car_t const &car) const {
-		return (!red_or_yellow_light(car) || stoplight.can_turn_right_on_red(car)); // green light or right turn on red
-	}
-	bool is_orient_currently_valid(unsigned orient, unsigned turn_dir) const {
-		if (!(conn & (1<<orient))) return 0; // no road connection in this orient
-		//if (!can_go_based_on_light(car)) return 1; // Note: can't call this without more car info
-		//return stoplight.check_int_clear(orient, turn_dir); // intersection not clear (Note: too strong of a check, blocking car may be exiting the intersection)
-		return 1;
-	}
-	unsigned get_dest_orient_for_car_in_isec(car_t const &car, bool is_entering) const {
-		unsigned const orient_in(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
-		//cout << TXT(car.rot_z) << TXT(car.turn_val) << TXT(unsigned(car.turn_dir)) << TXT(car.dim) << TXT(car.dir) << TXT(orient_in) << hex << unsigned(conn) << dec << endl;
-		if (is_entering) {assert(conn & (1<<orient_in));} // car must come from an enabled orient
-		unsigned new_orient(0);
-		switch (car.turn_dir) {
-		case TURN_NONE:  new_orient = car.get_orient(); break;
-		case TURN_LEFT:  new_orient = stoplight_ns::conn_left [orient_in]; break;
-		case TURN_RIGHT: new_orient = stoplight_ns::conn_right[orient_in]; break;
-		default: assert(0);
-		}
-		assert(conn & (1<<new_orient)); // car mustto go an enabled orient
-		return new_orient;
-	}
-	bool can_go_now(car_t const &car) const {
-		if (!can_go_based_on_light(car)) return 0;
-		if (stoplight.check_int_clear(car)) return 1;
-		if ((frame_counter&15) == 0) {car.honk_horn_if_close_and_fast();} // honk every so often
-		return 0; // intersection not clear
-	}
-	bool is_blocked(car_t const &car) const {
-		return (can_go_based_on_light(car) && !stoplight.check_int_clear(car)); // light is green but intersection is blocked
-	}
-	bool has_left_turn_signal(unsigned orient) const {
-		if (num_conn == 2) return 0; // never
-		if (num_conn == 4) return 1; // always
-		assert(num_conn == 3);
-		switch (conn) {
-		case 7 : return (orient == 1 || orient == 2);
-		case 11: return (orient == 0 || orient == 3);
-		case 13: return (orient == 0 || orient == 2);
-		case 14: return (orient == 1 || orient == 3);
-		default: assert(0);
-		}
-		return 0;
-	}
-	cube_t get_stoplight_cube(unsigned n) const { // Note: mostly duplicated with draw_stoplights(), but difficult to factor the code out and share it
-		assert(conn & (1<<n));
-		float const sz(0.03*city_params.road_width), h(1.0*sz);
-		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-		float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
-		float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
-		unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
-		float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
-		cube_t c;
-		c.z1() = z1(); c.z2() = sl_top;
-		c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
-		c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-		return c;
-	}
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
-		if (num_conn == 2) return 0; // no stoplights
-		if (!sphere_cube_intersect_xy(pos, (radius + dist), (*this + xlate))) return 0;
-		
-		for (unsigned n = 0; n < 4; ++n) {
-			if (!(conn & (1<<n))) continue; // no road in this dir
-			if (sphere_cube_int_update_pos(pos, radius, (get_stoplight_cube(n) + xlate), p_last, 1, 0, cnorm)) return 1; // typically only one coll, just return the first one
-		}
-		return 0;
-	}
-	bool line_intersect(point const &p1, point const &p2, float &t) const {
-		if (num_conn == 2) return 0; // no stoplights
-		cube_t c(*this); // deep copy
-		c.z2() += stoplight_ns::stoplight_max_height();
-		if (!c.line_intersects(p1, p2)) return 0;
-		bool ret(0);
-
-		for (unsigned n = 0; n < 4; ++n) {
-			if (conn & (1<<n)) {ret |= check_line_clip_update_t(p1, p2, t, get_stoplight_cube(n));}
-		}
-		return ret;
-	}
-	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const {
-		for (unsigned j = 0; j < 3; ++j) {
-			colorRGBA const &color(stoplight_ns::stoplight_colors[j]);
-
-			if (j == state) {
-				qbd.add_quad_pts(p, color, n, tr);
-				if (flare_alpha > 0.0) {dstate.add_light_flare(0.25*(p[0] + p[1] + p[2] + p[3]), n, color, flare_alpha, 2.0*h);}
-			}
-			else if (draw_unlit) {
-				qbd.add_quad_pts(p, (color + WHITE)*0.05, n, tr);
-			}
-			for (unsigned e = 0; e < 4; ++e) {p[e].z += 1.2*h;}
-		}
-	}
-	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
-		if (num_conn == 2) return; // no stoplights
-		if (!dstate.check_cube_visible(*this, 0.16, shadow_only)) return; // dist_scale=0.16
-		point const center(get_cube_center() + dstate.xlate);
-		float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
-		vector3d const cview_dir(camera_pdu.pos - center);
-		float const sz(0.03*city_params.road_width), h(1.0*sz);
-		color_wrapper cw(BLACK);
-
-		for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
-			if (!(conn & (1<<n))) continue; // no road in this dir
-			bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-			float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
-			float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
-			// draw base
-			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
-			float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
-
-			if (dist_val > 0.06) { // draw front face only
-				point pts[4];
-				pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = dim_pos;
-				pts[0][!dim] = pts[3][!dim] = sl_lo;
-				pts[1][!dim] = pts[2][!dim] = sl_hi;
-				pts[0].z = pts[1].z = z1();
-				pts[2].z = pts[3].z = sl_top;
-				qbd.add_quad_pts(pts, cw,  (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
-			}
-			else {
-				cube_t c;
-				c.z1() = z1(); c.z2() = sl_top;
-				c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
-				c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-				dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
-
-				if (!shadow_only && tt_fire_button_down && !game_mode) {
-					point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
-					if (c.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (c.get_cube_center() + dstate.xlate));}
-				}
-			}
-			bool const draw_detail(dist_val < 0.05); // add flares only when very close
-
-			// Note skip crosswalk signal for road to the right of an unconnected 3-way int (T-junction)
-			// because it's not needed and will never get to walk (due to opposing left turn light), and there's no stoplight to attach it to
-			if (dist_val <= 0.06 && (conn & (1<<stoplight_ns::to_right[2*dim + (!dir)])) != 0) { // draw crosswalk signal
-				int const cw_state(shadow_only ? 0 : stoplight.get_crosswalk_state(dim, !dir)); // Note: backwards dir
-				colorRGBA cw_color(stoplight_ns::crosswalk_colors[cw_state] * 0.6); // less bright
-
-				if (cw_state == stoplight_ns::CW_WARN) { // flashing
-					float const flash_period = 0.5; // in seconds
-					double const time(fract(tfticks/(flash_period*TICKS_PER_SECOND)));
-					if (time > 0.5) {cw_color = BLACK;}
-				}
-				float const cw_dim_pos(d[dim][!dir] + 1.7*(dir ? sz : -sz)); // location in road dim
-				cube_t c;
-				c.z1() = zbot + 1.2*h + 1.4*h*dim; c.z2() = c.z1() + 1.6*h;
-				c.d[dim][0] = cw_dim_pos - 0.5*sz; c.d[dim][1] = cw_dim_pos + 0.5*sz;
-
-				for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
-					float const ndp(d[!dim][i] - 1.2*(i ? sz : -sz));
-					c.d[!dim][0] = ndp - 0.1*sz; c.d[!dim][1] = ndp + 0.1*sz;
-					dstate.draw_cube(qbd, c, cw, 0); // skip_bottom=0
-
-					if (!shadow_only && cw_color != BLACK) { // draw light
-						point p[4];
-						p[0][!dim] = p[1][!dim] = p[2][!dim] = p[3][!dim] = c.d[!dim][!i] + 0.01*(i ? -sz : sz);
-						p[0][dim] = p[3][dim] = c.d[dim][0]; p[1][dim] = p[2][dim] = c.d[dim][1];
-						p[0].z = p[1].z = c.z1(); p[2].z = p[3].z = c.z2();
-						vector3d normal(zero_vector);
-						normal[!dim] = (i ? -1.0 : 1.0);
-						point const cw_center(0.25*(p[0] + p[1] + p[2] + p[3]));
-						vector3d const cw_cview_dir(camera_pdu.pos - (cw_center + dstate.xlate));
-						float dp(dot_product(normal, cw_cview_dir));
-
-						if (dp > 0.0) { // if back facing, don't draw the lights
-							float const mag(CLIP_TO_01(2.5f*dp/cw_cview_dir.mag() - 1.0f)); // normalize and strengthen slope
-
-							if (mag > 0.0) {
-								bool const is_walk(cw_state == stoplight_ns::CW_WALK);
-								qbd.add_quad_pts(p, WHITE*mag, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color is stored in the texture
-								if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color*mag, 1.0, 0.8*h);}
-							}
-						}
-					}
-				} // for i
-			} // end crosswalk signal
-			if (shadow_only)    continue; // no lights in shadow pass
-			if (dist_val > 0.1) continue; // too far away
-			vector3d normal(zero_vector);
-			normal[dim] = (dir ? -1.0 : 1.0);
-			if (dot_product(normal, cview_dir) < 0.0) continue; // if back facing, don't draw the lights
-			// draw straight/line turn light
-			point p[4];
-			p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
-			p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
-			p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
-			draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.5, 0.5, 1.0));
-			
-			if (has_left_turn_signal(n)) { // draw left turn light (upper light section)
-				draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.5, 0.5, 1.0));
-			}
-		} // for n
-	}
-};
-
-struct road_plot_t : public cube_t {
-	bool has_parking;
-	road_plot_t(cube_t const &c) : cube_t(c), has_parking(0) {}
-	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
-};
-
-struct parking_lot_t : public cube_t {
-	bool dim, dir;
-	unsigned short row_sz, num_rows;
-	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : cube_t(c), dim(dim_), dir(dir_), row_sz(row_sz_), num_rows(num_rows_) {}
-	
-	tex_range_t get_tex_range(float ar) const {
-		bool const d(!dim); // Note: R90
-		float const xscale(1.0/(2.0*PARK_SPACE_WIDTH *city_params.get_nom_car_size().y));
-		float const yscale(1.0/(1.0*PARK_SPACE_LENGTH*city_params.get_nom_car_size().x));
-		float const dx(get_dx()), dy(get_dy()), tx(0.24), ty(0.0); // x=cols, y=rows
-		return tex_range_t(tx, ty, (xscale*(d ? dy : dx) + tx), (yscale*(d ? dx : dy) + ty), 0, d);
-	}
-};
-
-namespace streetlight_ns {
-
-	colorRGBA const pole_color(BLACK); // so we don't have to worry about shadows
-	colorRGBA const light_color(1.0, 0.9, 0.7, 1.0);
-	float const light_height = 0.5; // in units of road width
-	float const pole_radius  = 0.015;
-	float const light_radius = 0.025;
-	float const light_dist   = 3.0;
-	static float get_streetlight_height() {return light_height*city_params.road_width;}
-
-	struct streetlight_t {
-		point pos; // bottom point
-		vector3d dir;
-
-		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
-		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
-
-		point get_lpos() const {
-			float const height(get_streetlight_height());
-			return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
-		}
-		void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow, bool always_on) const { // Note: translate has already been applied as a transform
-			float const height(get_streetlight_height());
-			point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
-			if (shadow_only && is_local_shadow && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
-			if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
-			float const dist_val(shadow_only ? 0.06 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
-			if (dist_val > 0.2) return; // too far
-			if (!s.is_setup()) {s.begin_color_only_shader();} // likely only needed for shadow pass, could do better with this
-			float const pradius(pole_radius*city_params.road_width), lradius(light_radius*city_params.road_width);
-			int const ndiv(max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
-			point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
-			if (!shadow_only) {s.set_cur_color(pole_color);}
-			draw_cylinder_at(pos, height, pradius, 0.7*pradius, min(ndiv, 24), 0); // vertical post, no ends
-			if (dist_val < 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
-			bool const is_on(is_lit(always_on));
-			
-			if (shadow_only) {
-				if (dist_less_than(camera_pdu.pos, (get_lpos() + xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
-			}
-			else {
-				if (!is_on && dist_val > 0.15) return; // too far
-				if (is_on) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
-			}
-			fgPushMatrix();
-			translate_to(lpos);
-			scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
-			draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
-			if (!shadow_only && is_on) {s.clear_color_e();}
-
-			if (!shadow_only && dist_val < 0.12) {
-				fgTranslate(0.0, 0.0, 0.1); // translate up slightly and draw top cap of light
-				s.set_cur_color(pole_color);
-				draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
-			}
-			fgPopMatrix();
-		}
-		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {
-			if (!is_lit(always_on)) return;
-			float const ldist(light_dist*city_params.road_width);
-			if (!lights_bcube.contains_pt_xy(pos)) return; // not contained within the light volume
-			point const lpos(get_lpos());
-			if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) return; // VFC
-			min_eq(lights_bcube.z1(), (lpos.z - ldist));
-			max_eq(lights_bcube.z2(), (lpos.z + ldist));
-			dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH)); // points down
-		}
-		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
-			point const p2(pos + xlate);
-			float const pradius(pole_radius*city_params.road_width);
-			if (!dist_xy_less_than(p2, center, (pradius + radius))) return 0;
-			return sphere_vert_cylin_intersect(center, radius, cylinder_3dw(p2, (p2 + vector3d(0.0, 0.0, get_streetlight_height())), pradius, 0.7*pradius), cnorm);
-		}
-		bool line_intersect(point const &p1, point const &p2, float &t) const {
-			float const pradius(pole_radius*city_params.road_width);
-			float t_new(0.0);
-			if (line_int_cylinder(p1, p2, pos, (pos + vector3d(0.0, 0.0, get_streetlight_height())), pradius, 0.7*pradius, 0, t_new) && t_new < t) {t = t_new; return 1;}
-			return 0;
-		}
-	};
-} // streetlight_ns
-
-
-struct streetlights_t {
-
-	vector<streetlight_ns::streetlight_t> streetlights;
-
-	void draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only, bool always_on) const {
-		if (streetlights.empty()) return;
-		//timer_t t("Draw Streetlights");
-		select_texture(WHITE_TEX);
-		bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
-		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(s, xlate, shadow_only, is_local_shadow, always_on);}
-	}
-	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {
-		if (!always_on && !is_night(STREETLIGHT_ON_RAND)) return; // none of them can be on
-		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube, always_on);}
-	}
-	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const {
-		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-			if (i->proc_sphere_coll(pos, radius, xlate, cnorm)) return 1;
-		}
-		return 0;
-	}
-	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const {
-		bool ret(0);
-		for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
-		return ret;
-	}
-};
-
-
-struct road_connector_t : public road_t, public streetlights_t {
-
-	road_t src_road;
-	road_connector_t(road_t const &road) : road_t(road), src_road(road) {}
-	
-	float get_player_zval(point const &center, cube_t const &c) const {
-		float const t((center[dim] - c.d[dim][0])/(c.d[dim][1] - c.d[dim][0]));
-		float const za(slope ? c.z2() : c.z1()), zb(slope ? c.z1() : c.z2()), zval(za + (zb - za)*t); // z-value at x/y location
-		return zval - src_road.get_z_adj() - ROAD_HEIGHT; // place exactly on mesh under the road/bridge/tunnel surface
-	}
-	void add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb) {
-		streetlights.reserve(2*num_per_side);
-		float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]), dn_shift(dn_shift_mult*dnsz);
-		if (staggered) {num_per_side *= 2;}
-
-		for (unsigned n = 0; n < num_per_side; ++n) {
-			float const v((n + 0.5)/num_per_side); // 1/8, 3/8, 5/8, 7/8
-			point pos1, pos2;
-			pos1[ dim] = pos2[dim] = d[dim][0] + v*dsz;
-			pos1[!dim] = d[!dim][0] - dn_shift; pos2[!dim] = d[!dim][1] + dn_shift;
-			pos1.z = pos2.z = za + v*(zb - za);
-			vector3d dir(zero_vector); dir[!dim] = 1.0;
-			if (!staggered || (n&1) == 0) {streetlights.emplace_back(pos1,  dir);}
-			if (!staggered || (n&1) == 1) {streetlights.emplace_back(pos2, -dir);}
-		} // for n
-	}
-};
-
-struct bridge_t : public road_connector_t {
-
-	bool make_bridge;
-
-	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
-	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
-
-	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const {
-		if (proc_streetlight_sphere_coll(center, sradius, xlate, cnorm)) return 1;
-		float const exp(0.5*sradius);
-		bool const prev_int(contains_pt_xy_exp((prev - xlate), exp));
-		if (!prev_int && !src_road.contains_pt_xy_exp((center - xlate), exp)) return 0; // no x/y containment for road segment (cur or prev)
-		cube_t const c(src_road + xlate);
-		float const zval(get_player_zval(center, c));
-		// Note: we need to use prev_frame_zval for camera collisions because center.z will always start at the mesh zval;
-		// we can't just always place the camera on the bridge because the player may be walking on the ground under the bridge
-		if (center.z - sradius > zval || prev_frame_zval + sradius < zval) return 0; // completely above or below the road/bridge
-		center.z = zval + sradius; // place exactly on the road/bridge surface
-		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere from falling off the bridge (approximate; assumes bridge has walls)
-		if (cnorm) {*cnorm = plus_z;} // approximate - assume collision with bottom surface of road (intended for player)
-		return 1;
-	}
-	bool line_intersect(point const &p1, point const &p2, float &t) const {return 0;} // TODO
-};
-
-struct tunnel_t : public road_connector_t {
-
-	cube_t ends[2];
-	float radius, height, facade_height[2];
-
-	tunnel_t(road_t const &road) : road_connector_t(road), radius(0.0), height(0.0) {}
-	bool enabled() const {return (radius > 0.0);}
-	
-	void init(point const &start, point const &end, float radius_, bool dim) {
-		radius = radius_;
-		height = (1.0 + TUNNEL_WALL_THICK)*radius;
-		vector3d const dir((end - start).get_norm());
-		point const extend[2] = {(start + dir*radius), (end - dir*radius)};
-		ends[0].set_from_point(start);
-		ends[1].set_from_point(end);
-
-		for (unsigned d = 0; d < 2; ++d) {
-			ends[d].z2() += height; // height
-			ends[d].d[!dim][0] -= radius; // width
-			ends[d].d[!dim][1] += radius; // width
-			ends[d].union_with_pt(extend[d]); // length
-			facade_height[d] = 2.0*TUNNEL_WALL_THICK*radius; // min value - will likely be increased later
-		}
-		get_bcube() = ends[0]; get_bcube().union_with_cube(ends[1]); // bounding cube of both ends - overwrite road bcube
-	}
-	void add_streetlights() {road_connector_t::add_streetlights(2, 1, -0.15, ends[0].z1(), ends[1].z1());} // 2 per side, staggered
-
-	cube_t get_tunnel_bcube() const {
-		cube_t bcube(*this);
-		bcube.expand_by(vector3d(radius, radius, 0.0));
-		bcube.z2() += max(facade_height[0], facade_height[1]); // should be close enough
-		return bcube;
-	}
-	void calc_top_bot_side_cubes(cube_t cubes[4]) const {
-		float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), end_ext(2.0*(dim ? DY_VAL : DX_VAL));
-		cube_t tc(*this);
-		tc.d[dim][0] -= end_ext; tc.d[dim][1] += end_ext; // extend to cover the gaps in the mesh
-		cubes[0] = cubes[1] = cubes[2] = cubes[3] = tc;
-		cubes[0].z1() = -wall_thick; // bottom cube extends below the road surface
-		cubes[0].z2() = -ROAD_HEIGHT; // top of bottom cube is just below the road surface
-		cubes[1].z1() = height - wall_thick; // top cube
-		cubes[1].z2() = height;
-		cubes[2].z1() = cubes[3].z1() = cubes[0].z2(); // bottom of sides meet bottom cube
-		cubes[2].z2() = cubes[3].z2() = cubes[1].z1(); // top of sides meet top cube
-		cubes[2].d[!dim][1] = cubes[2].d[!dim][0] + wall_thick; // left side
-		cubes[3].d[!dim][0] = cubes[3].d[!dim][1] - wall_thick; // right side
-	}
-	bool check_mesh_disable(cube_t const &query_region) const {
-		return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region)); // check both ends
-	}
-	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const {
-		if (proc_streetlight_sphere_coll(center, sradius, xlate, cnorm)) return 1;
-		bool const prev_int(contains_pt_xy(prev - xlate));
-		if (!prev_int && !contains_pt_xy(center - xlate)) return 0; // no x/y containment for road segment (cur or prev)
-		cube_t const c(src_road + xlate);
-		float const zval(get_player_zval(center, c));
-		// Note: we need to use prev_frame_zval for camera collisions because center.z will always start at the mesh zval;
-		// we can't just always place the camera on the tunnel because the player may be walking on the ground above the tunnel
-		if (prev_frame_zval - sradius > zval + height) return 0; // completely above the tunnel
-		center.z = zval + sradius; // place exactly on mesh under the road/tunnel surface
-		if (prev_int) {center[!dim] = min(c.d[!dim][1], max(c.d[!dim][0], center[!dim]));} // keep the sphere inside the tunnel (approximate)
-		if (cnorm) {*cnorm = plus_z;} // approximate - assume collision with bottom surface of road (intended for player)
-		return 1;
-	}
-	bool line_intersect(point const &p1, point const &p2, float &t) const {
-		cube_t const bcube(get_tunnel_bcube());
-		if (!check_line_clip(p1, p2, bcube.d)) return 0;
-		// FIXME: remove duplicate code with draw_tunnel()?
-		cube_t cubes[4];
-		calc_top_bot_side_cubes(cubes);
-		float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
-		float zf(ends[0].z1()), zb(ends[1].z1());
-		float const end_ext(2.0*(d ? DY_VAL : DX_VAL)), dz_ext(end_ext*(zb - zf)/get_length());
-		zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
-		bool const d(dim);
-		bool ret(0);
-
-		for (unsigned i = 0; i < 4; ++i) { // check tunnel top, bottom, and sides
-			//cube_t const &c(cubes[i]);
-			//set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, pts); // TODO: tilted cube case
-		}
-		for (unsigned n = 0; n < 2; ++n) { // check tunnel facades
-			cube_t const &tend(ends[n]);
-			cube_t c(tend);
-			c.z1() += height - 0.5*wall_thick; // tunnel ceiling
-			c.z2() += facade_height[n]; // high enough to cover the hole in the mesh
-			c.d[d][0] -= 0.9*end_ext; c.d[d][1] += 0.9*end_ext; // extend to cover the gaps in the mesh (both dirs) - slightly less than interior so that it sticks out
-			ret |= check_line_clip_update_t(p1, p2, t, c);
-			c.z1() = ends[n].z1() - wall_thick; // extend to the bottom
-			c.d[!d][0] = ends[n].d[!d][0] - width; c.d[!d][1] = tend.d[!d][0]; // left side
-			ret |= check_line_clip_update_t(p1, p2, t, c);
-			c.d[!d][1] = ends[n].d[!d][1] + width; c.d[!d][0] = tend.d[!d][1]; // right side
-			ret |= check_line_clip_update_t(p1, p2, t, c);
-		} // for n
-		return ret;
-	}
-};
 
 bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
 	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
@@ -1453,304 +630,14 @@ public:
 }; // city_plot_gen_t
 
 
+void range_pair_t::update(unsigned v) {
+	if (s == 0 && e == 0) {s = v;} // first insert
+	else {assert(s < e && v >= e);} // v must strictly increase
+	e = v+1; // one past the end
+}
+
+
 class city_road_gen_t : public road_gen_base_t {
-
-	struct range_pair_t {
-		unsigned s, e; // Note: e is one past the end
-		range_pair_t(unsigned s_=0, unsigned e_=0) : s(s_), e(e_) {}
-		void update(unsigned v) {
-			if (s == 0 && e == 0) {s = v;} // first insert
-			else {assert(s < e && v >= e);} // v must strictly increase
-			e = v+1; // one past the end
-		}
-	};
-
-	class road_draw_state_t : public draw_state_t {
-		quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_sl, qbd_bridge;
-		float ar;
-
-	public:
-		road_draw_state_t() : ar(1.0) {}
-
-		void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
-			draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 0); // always_setup_shader=0
-			ar = city_params.get_road_ar();
-		}
-		virtual void draw_unshadowed() {
-			for (unsigned i = 0; i < NUM_RD_TYPES; ++i) { // only unshadowed blocks
-				road_mat_mgr.set_texture(i);
-				qbd_batched[i].draw_and_clear();
-			}
-		}
-		virtual void post_draw() {
-			draw_state_t::post_draw();
-			if (qbd_sl.empty()) return; // no stoplights to draw
-			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-			shader_t s;
-			s.begin_simple_textured_shader(); // Note: no lighting
-			road_mat_mgr.set_stoplight_texture();
-			qbd_sl.draw_and_clear();
-			s.end_shader();
-			glDepthFunc(GL_LESS);
-		}
-		template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case (plot/park)
-		void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
-		void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
-		
-		template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
-			if (rp.s == rp.e) return; // empty
-			assert(rp.s <= rp.e);
-			assert(rp.e <= v.size());
-			assert(type_ix < NUM_RD_TYPES);
-			colorRGBA const color(road_colors[type_ix]);
-			
-			if (cache.empty()) { // generate and cache quads
-				for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache, color);}
-			}
-			if (emit_now) { // draw shadow blocks directly
-				road_mat_mgr.set_texture(type_ix);
-				cache.draw();
-			} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
-		}
-
-		void draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
-			//timer_t timer("Draw Bridge"); // 0.065ms - 0.11ms
-			cube_t bcube(bridge);
-			float const scale(1.0*city_params.road_width);
-			bcube.z2() += 2.0*scale; // make it higher
-			unsigned const d(bridge.dim);
-			float const l_expand(2.0*(d ? DY_VAL : DY_VAL)); // slight expand along road dim so that we're sure to cover the entire gap
-			float const w_expand(0.25*scale); // expand width to add space for supports
-			bcube.d[ d][0] -= l_expand; bcube.d[ d][1] += l_expand;
-			bcube.d[!d][0] -= w_expand; bcube.d[!d][1] += w_expand;
-			max_eq(bcube.d[d][0], bridge.src_road.d[d][0]); // clamp to orig road segment length
-			min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
-			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
-			point const cpos(camera_pdu.pos - xlate);
-			float const center(0.5*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
-			point p1, p2; // centerline end points
-			p1.z = bridge.get_start_z();
-			p2.z = bridge.get_end_z();
-			p1[!d] = p2[!d] = center;
-			p1[ d] = bcube.d[d][0];
-			p2[ d] = bcube.d[d][1];
-			vector3d const delta(p2 - p1);
-			colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(LT_GRAY);
-			color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
-			float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
-			point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
-			float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/get_draw_tile_dist());
-			int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
-			unsigned const num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
-			float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z);
-			float zvals[48+1], cur_zpos(p1.z), cur_dval(p1[d]); // resize zvals based on max num_segs
-			vector<float> sm_split_pos;
-			uint64_t prev_tile_id(0);
-			point query_pt(bridge.get_cube_center());
-			ensure_shader_active(); // needed for use_smap=0 case
-			if (!shadow_only) {select_texture(WHITE_TEX);}
-			
-			for (unsigned n = 0; n <= num_segs; ++n) { // populate zvals and dvals
-				float const t(n*step_sz), v(2.0*fabs(t - 0.5)), zpos(p1.z + delta.z*t);
-				zvals[n] = zpos + 0.3*len*(1.0 - v*v) - 0.5*scale;
-			}
-			for (unsigned n = 0; n < num_segs; ++n) { // add arches
-				float const zval(zvals[n+1]), next_dval(cur_dval + delta_d);
-				point pts[4], conn_pts[2];
-				pts[0][d] = pts[3][d] = cur_dval;
-				pts[1][d] = pts[2][d] = next_dval;
-
-				if (!shadow_only) {
-					query_pt[d] = 0.5*(cur_dval + next_dval); // center point of this segment
-					uint64_t const tile_id(get_tile_id_containing_point(query_pt + xlate));
-					
-					if (n == 0 || tile_id != prev_tile_id) { // first segment, or new tile for this segment
-						qbd_bridge.draw_and_clear(); // flush
-						begin_tile(query_pt, 1); // will_emit_now=1
-						prev_tile_id = tile_id;
-						if (n > 0) {sm_split_pos.push_back(query_pt[d]);} // record split point for splitting road surface and guardrails
-					}
-				}
-				for (unsigned e = 0; e < 2; ++e) { // two sides
-					float const ndv(bcube.d[!d][e]);
-					pts[0][!d] = pts[1][!d] = (e ? ndv-w_expand : ndv);
-					pts[2][!d] = pts[3][!d] = (e ? ndv : ndv+w_expand);
-
-					for (unsigned f = 0; f < 2; ++f) { // top/bottom surfaces
-						float const dz(f ? 0.0 : thickness);
-						pts[0].z = pts[3].z = zvals[n] + dz;
-						pts[1].z = pts[2].z = zval + dz;
-						// construct previous and next pts in order to calculate the face normals below
-						point prev_pt(pts[0]); prev_pt[d] -= delta_d; if (n   > 0       ) {prev_pt.z = zvals[n-1] + dz;}
-						point next_pt(pts[1]); next_pt[d] += delta_d; if (n+1 < num_segs) {next_pt.z = zvals[n+2] + dz;}
-						vector3d const v_shared((pts[2] - pts[1])*((f^d) ? -1.0 : 1.0));
-						vector3d const fn(cross_product((pts[1] - pts[0]), v_shared));
-							
-						if (dot_product((cpos - pts[0]), fn) > 0) { // BFC
-							vector3d const fn_prev(cross_product((pts[0] - prev_pt), v_shared)), fn_next(cross_product((next_pt - pts[1]), v_shared));
-							vector3d const vn_prev((fn + fn_prev).get_norm()), vn_next((fn + fn_next).get_norm()); // average of both face normals
-							vector3d const n[4] = {vn_prev, vn_next, vn_next, vn_prev};
-							qbd_bridge.add_quad_pts_vert_norms(pts, n, cw_main);
-						}
-					}
-					for (unsigned f = 0; f < 2; ++f) { // side surfaces
-						unsigned const i0(f ? 3 : 0), i1(f ? 2 : 1);
-						point pts2[4] = {pts[i0], pts[i1], pts[i1], pts[i0]};
-						pts2[2].z += thickness; pts2[3].z += thickness; // top surface
-						add_bridge_quad(pts2, cw_main, ((f^d) ? -1.0 : 1.0));
-					}
-					if (zval > cur_zpos) { // vertical cables
-						conn_pts[e] = 0.5*(pts[1] + pts[2]);
-						conn_pts[e].z += 0.5*thickness;
-
-						if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
-							s.set_cur_color(cables_color);
-							point const &p(conn_pts[e]);
-							draw_fast_cylinder(point(p.x, p.y, cur_zpos), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
-						}
-						else { // use lower detail cubes; okay for shadow pass
-							cube_t c(conn_pts[e]);
-							c.z1() = cur_zpos;
-							c.z2() = zval;
-							c.expand_by(cable_thick);
-							draw_cube(qbd_bridge, c, cw_cables, 1); // skip_bottom=1
-						}
-					}
-				} // for e
-				if (zval > cur_zpos + 0.5*scale) { // add horizontal connectors if high enough
-					cube_t c(conn_pts[0], conn_pts[1]);
-					vector3d exp(zero_vector);
-					exp.z  = 0.75*conn_thick;
-					exp[d] = conn_thick;
-					c.expand_by(exp);
-					draw_cube(qbd_bridge, c, cw_main, 0); // skip_bottom=0
-				}
-				cur_dval  = next_dval;
-				cur_zpos += delta_z;
-			} // for s
-			// bottom surface
-			float tscale(0.0);
-			
-			if (!shadow_only) {
-				qbd_bridge.draw_and_clear(); // flush before texture change
-				select_texture(get_texture_by_name("roads/asphalt.jpg"));
-				tscale = 1.0/scale; // scale texture to match road width
-			}
-			bool const dir(bridge.slope), invert_normals((d!=0) ^ dir);
-			float const dz_scale(bridge.dz()/(bridge.d[d][1] - bridge.d[d][0]));
-			cur_dval = bcube.d[d][0]; // reset to start
-			point pts[8];
-
-			for (unsigned n = 0; n <= sm_split_pos.size(); ++n) {
-				float const next_dval((n == sm_split_pos.size()) ? bcube.d[d][1] : sm_split_pos[n]);
-				cube_t bot_bc(bcube);
-				bot_bc.d[ d][0]  = cur_dval; // one tile slice
-				bot_bc.d[ d][1]  = next_dval;
-				bot_bc.d[!d][0] += 0.4*w_expand;
-				bot_bc.d[!d][1] -= 0.4*w_expand;
-				float extend_dz1(dz_scale*(bridge.d[d][0] - bot_bc.d[d][0])), extend_dz2(dz_scale*(bot_bc.d[d][1] - bridge.d[d][1]));
-				if (dir) {swap(extend_dz1, extend_dz2);}
-				float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
-				point bot_center(bot_bc.get_cube_center());
-				bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
-
-				if (!sm_split_pos.empty()) { // multiple tiles, must select a new shadow map set
-					query_pt[d] = cur_dval;
-					begin_tile(query_pt, 1); // will_emit_now=1
-				}
-				// add bottom road/bridge surface
-				set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, (d != 0), dir, pts);
-				draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0, invert_normals, tscale); // skip_bottom=0
-
-				// add guardrails/walls
-				for (unsigned e = 0; e < 2; ++e) { // two sides
-					cube_t side_bc(bot_bc);
-					side_bc.d[!d][!e] = side_bc.d[!d][e] + (e ? -wall_width : wall_width);
-					point side_center(side_bc.get_cube_center());
-					side_center.z = 0.5*(z1 + z2) + 0.5*wall_height;
-					set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, (d != 0), dir, pts);
-					draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, invert_normals, tscale); // skip_bottom=1
-				}
-				qbd_bridge.draw_and_clear(); // flush
-				cur_dval = next_dval;
-			} // for n
-		}
-		void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale) {
-			vector3d const normal(cross_product((pts[1] - pts[0]), (pts[3] - pts[0]))*normal_scale);
-			if (dot_product(((camera_pdu.pos - xlate) - pts[0]), normal) < 0) return; // BFC
-			qbd_bridge.add_quad_pts(pts, cw, normal.get_norm());
-		}
-
-		void draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
-			cube_t const bcube(tunnel.get_tunnel_bcube());
-			if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
-			ensure_shader_active(); // needed for use_smap=0 case
-			quad_batch_draw &qbd(qbd_bridge); // use same qbd as bridges
-			color_wrapper cw_concrete(LT_GRAY);
-			bool const d(tunnel.dim), invert_normals(d);
-			float const scale(1.0*city_params.road_width), wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*tunnel.get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
-			float zf(tunnel.ends[0].z1()), zb(tunnel.ends[1].z1());
-			float const end_ext(2.0*(d ? DY_VAL : DX_VAL)), dz_ext(end_ext*(zb - zf)/tunnel.get_length());
-			zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
-			cube_t cubes[4];
-			tunnel.calc_top_bot_side_cubes(cubes);
-			float const tile_sz(d ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), xy1(cubes[0].d[d][0]), xy2(cubes[0].d[d][1]), length(xy2 - xy1);
-			unsigned const num_segs(ceil(length/tile_sz));
-			float const dt(1.0/num_segs);
-			point pts[8];
-			float tscale(0.0);
-
-			if (!shadow_only) {
-				s.add_uniform_float("hemi_lighting_scale", 0.1); // mostly disable hemispherical lighting, which doesn't work for tunnel interiors
-				select_texture(get_texture_by_name("roads/asphalt.jpg"));
-				tscale = 1.0/scale; // scale texture to match road width
-			}
-			for (unsigned s = 0; s < num_segs; ++s) { // split into segments, one per tile shadow map
-				float const t1(s*dt), t2((s+1)*dt), tmid(0.5*(t1 + t2)); // in range [0.0, 1.0]
-				point center(tunnel.get_cube_center());
-				center[d] = xy1 + tmid*length; // halfway between the end points
-				begin_tile(center, 1);
-
-				for (unsigned i = 0; i < 4; ++i) { // add tunnel top, bottom, and sides
-					cube_t c(cubes[i]); // deep copy so we can modify it
-					c.d[d][0] = xy1 + t1*length;
-					c.d[d][1] = xy1 + t2*length;
-					float const dz(zb - zf), zft(zf + t1*dz), zbt(zf + t2*dz);
-					point center(c.get_cube_center());
-					center.z += 0.5*(zft + zbt);
-					// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
-					set_cube_pts(c, c.z1()+zft, c.z1()+zbt, c.z2()+zft, c.z2()+zbt, d, 0, pts); // dir=0 here
-					draw_cube(qbd, cw_concrete, center, pts, (!shadow_only && i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube unless shadowed
-				} // for i
-				qbd.draw_and_clear();
-			} // for s
-			if (!shadow_only) {
-				s.add_uniform_float("hemi_lighting_scale", 0.5); // set back to the default of 0.5
-				select_texture(get_texture_by_name("cblock2.jpg"));
-				tscale *= 4.0;
-			}
-			for (unsigned n = 0; n < 2; ++n) { // add tunnel facades
-				cube_t const &tend(tunnel.ends[n]);
-				cube_t c(tend);
-				c.z1() += tunnel.height - 0.5*wall_thick; // tunnel ceiling
-				c.z2() += tunnel.facade_height[n]; // high enough to cover the hole in the mesh
-				c.d[d][0] -= 0.9*end_ext; c.d[d][1] += 0.9*end_ext; // extend to cover the gaps in the mesh (both dirs) - slightly less than interior so that it sticks out
-				begin_tile(c.get_cube_center(), 1); // required for long tunnels where facade is in a different tile from the tunnel center
-				draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0
-				c.z1() = tunnel.ends[n].z1() - wall_thick; // extend to the bottom
-				c.d[!d][0] = tunnel.ends[n].d[!d][0] - width; c.d[!d][1] = tend.d[!d][0]; // left side
-				draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
-				c.d[!d][1] = tunnel.ends[n].d[!d][1] + width; c.d[!d][0] = tend.d[!d][1]; // right side
-				draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0 in case there are overhangs due to steep cliffs
-				qbd.draw_and_clear();
-			} // for n
-		}
-
-		void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
-			for (auto i = isecs.begin(); i != isecs.end(); ++i) {i->draw_stoplights(qbd_sl, *this, shadow_only);}
-		}
-	}; // road_draw_state_t
-
 
 	struct bench_t : public sphere_t {
 		bool dim, dir;
@@ -3583,188 +2470,6 @@ public:
 class car_manager_t {
 
 	car_model_loader_t car_model_loader;
-
-	class occlusion_checker_t {
-		building_occlusion_state_t state;
-	public:
-		void set_camera(pos_dir_up const &pdu) {
-			if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
-			pos_dir_up near_pdu(pdu);
-			near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block
-			get_building_occluders(near_pdu, state);
-			//cout << "occluders: " << state.building_ids.size() << endl;
-		}
-		bool is_occluded(cube_t const &c) {
-			if (state.building_ids.empty()) return 0;
-			float const z(c.z2()); // top edge
-			point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
-			return check_pts_occluded(corners, 4, state);
-		}
-	};
-
-	class car_draw_state_t : public draw_state_t {
-		quad_batch_draw qbds[3]; // unshadowed, shadowed, AO
-		car_model_loader_t &car_model_loader;
-		occlusion_checker_t occlusion_checker;
-	public:
-		car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_) {}
-		static float get_headlight_dist() {return 3.5*city_params.road_width;} // distance headlights will shine
-
-		colorRGBA get_headlight_color(car_t const &car) const {
-			return colorRGBA(1.0, 1.0, (1.0 + 0.8*(fract(1000.0*car.max_speed) - 0.5)), 1.0); // slight yellow-blue tinting using max_speed as a hash
-		}
-		void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
-			//use_bmap = 1; // used only for some car models
-			draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
-			select_texture(WHITE_TEX);
-			if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
-		}
-		virtual void draw_unshadowed() {
-			qbds[0].draw_and_clear();
-			if (qbds[2].empty()) return;
-			enable_blend();
-			select_texture(BLUR_CENT_TEX);
-			qbds[2].draw_and_clear();
-			select_texture(WHITE_TEX); // reset back to default/untextured
-			disable_blend();
-		}
-		void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube) {
-			xlate = xlate_; // needed earlier in the flow
-			for (auto i = cars.begin(); i != cars.end(); ++i) {add_car_headlights(*i, lights_bcube);}
-		}
-		void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const {
-			point const center(car.get_center());
-			cube_t const &c(car.bcube);
-			float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + (include_top ? 0.1 : 0.5)*car.height), length(car.get_length());
-			bool const dim(car.dim), dir(car.dir);
-			set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
-			
-			if (include_top) {
-				cube_t top_part(c);
-				top_part.d[dim][0] += (dir ? 0.25 : 0.30)*length; // back
-				top_part.d[dim][1] -= (dir ? 0.30 : 0.25)*length; // front
-				set_cube_pts(top_part, zmid, z2, dim, dir, pt); // top
-			}
-			if (car.dz != 0.0) { // rotate all points about dim !d
-				float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
-				rotate_pts(center, sine_val, cos_val, dim, 2, pb);
-				if (include_top) {rotate_pts(center, sine_val, cos_val, dim, 2, pt);}
-			}
-			if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
-				float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
-				rotate_pts(center, sine_val, cos_val, 0, 1, pb);
-				if (include_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
-			}
-		}
-		void draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
-			if (is_dlight_shadows) {
-				if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.6*camera_pdu.far_)) return;
-				cube_t bcube(car.bcube);
-				bcube.expand_by(0.1*car.height);
-				if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
-			}
-			if (!check_cube_visible(car.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
-			point const center(car.get_center());
-			begin_tile(center); // enable shadows
-			colorRGBA const &color(car.get_color());
-			float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
-			bool const is_truck(car.bcube.dz() > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
-			bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
-			float const sign((dim^dir) ? -1.0 : 1.0);
-			point pb[8], pt[8]; // bottom and top sections
-			gen_car_pts(car, draw_top, pb, pt);
-
-			if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
-				if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
-				vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-				car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
-			}
-			else { // draw simple 1-2 cube model
-				quad_batch_draw &qbd(qbds[emit_now]);
-				color_wrapper cw(color);
-				draw_cube(qbd, cw, center, pb, 1, (dim^dir)); // bottom (skip_bottom=1)
-				if (draw_top) {draw_cube(qbd, cw, center, pt, 1, (dim^dir));} // top (skip_bottom=1)
-				if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
-			}
-			if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
-				float const length(car.get_length());
-				point pao[4];
-				
-				for (unsigned i = 0; i < 4; ++i) {
-					point &v(pao[i]);
-					v = pb[i] - center;
-					v[ dim] += 0.1*length*SIGN(v[ dim]); // increase length slightly
-					v[!dim] += 0.1*length*SIGN(v[!dim]); // increase width  slightly
-					v   += center;
-					v.z += 0.02*car.height; // shift up slightly to avoid z-fighting
-				}
-				/*if (!car.headlights_on()) { // daytime, adjust shadow to match sun pos
-					vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
-					vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
-					for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
-				}*/
-				qbds[2].add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
-			}
-			if (dist_val > 0.3)  return; // to far - no lights to draw
-			if (shadow_only || car.is_parked()) return; // no lights when parked, or in shadow pass
-			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-			unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
-			bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
-
-			if (headlights_on && dist_val < 0.3) { // night time headlights
-				colorRGBA const hl_color(get_headlight_color(car));
-
-				for (unsigned d = 0; d < 2; ++d) { // L, R
-					unsigned const lr(d ^ lr_xor ^ 1);
-					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (lr ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
-					add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
-				}
-			}
-			if ((brake_lights_on || headlights_on) && dist_val < 0.2) { // brake lights
-				for (unsigned d = 0; d < 2; ++d) { // L, R
-					unsigned const lr(d ^ lr_xor);
-					point const pos((lr ? 0.2 : 0.8)*(0.2*pb[2] + 0.8*pb[6]) + (lr ? 0.8 : 0.2)*(0.2*pb[3] + 0.8*pb[7]));
-					add_light_flare(pos, -front_n, RED, (brake_lights_on ? 1.0 : 0.5), 0.5*car.height); // pb 2,3,6,7
-				}
-			}
-			if (car.turn_dir != TURN_NONE && car.cur_city != CONN_CITY_IX && dist_val < 0.1) { // turn signals (not on connector road bends)
-				float const ts_period = 1.5; // in seconds
-				double const time(fract((tfticks + 1000.0*car.max_speed)/(ts_period*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
-				
-				if (time > 0.5) { // flash on and off
-					bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir); // R=1,2,5,6 or L=0,3,4,7
-					vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
-
-					for (unsigned d = 0; d < 2; ++d) { // B, F
-						point const pos(0.3*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + 0.7*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
-						add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.3*car.height); // normal points out 45 degrees
-					}
-				}
-			}
-		}
-		void add_car_headlights(car_t const &car, cube_t &lights_bcube) {
-			if (!car.headlights_on()) return;
-			float const headlight_dist(get_headlight_dist());
-			cube_t bcube(car.bcube);
-			bcube.expand_by(headlight_dist);
-			if (!lights_bcube.contains_cube_xy(bcube))   return; // not contained within the light volume
-			if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
-			float const sign((car.dim^car.dir) ? -1.0 : 1.0);
-			point pb[8], pt[8]; // bottom and top sections
-			gen_car_pts(car, 0, pb, pt); // draw_top=0
-			vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-			vector3d const dir((0.5*front_n - 0.5*plus_z).get_norm()); // point slightly down
-			colorRGBA const color(get_headlight_color(car));
-			float const beamwidth = 0.08;
-			min_eq(lights_bcube.z1(), bcube.z1());
-			max_eq(lights_bcube.z2(), bcube.z2());
-
-			for (unsigned d = 0; d < 2; ++d) { // L, R
-				point const pos((d ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (d ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
-				dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, dir, beamwidth));
-			}
-		}
-	}; // car_draw_state_t
 
 	struct car_block_t {
 		unsigned start, cur_city, first_parked;

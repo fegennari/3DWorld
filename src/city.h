@@ -8,6 +8,9 @@
 #include "function_registry.h"
 #include "inlines.h"
 #include "model3d.h"
+#include "shaders.h"
+#include "draw_utils.h"
+#include "buildings.h" // for building_occlusion_state_t
 
 using std::string;
 
@@ -25,8 +28,14 @@ int       const FORCE_MODEL_ID = -1; // -1 disables
 unsigned  const NUM_CAR_COLORS = 10;
 colorRGBA const car_colors[NUM_CAR_COLORS] = {WHITE, GRAY_BLACK, GRAY, ORANGE, RED, DK_RED, DK_BLUE, DK_GREEN, YELLOW, BROWN};
 
+float const ROAD_HEIGHT          = 0.002;
+float const PARK_SPACE_WIDTH     = 1.6;
+float const PARK_SPACE_LENGTH    = 1.8;
 float const CONN_ROAD_SPEED_MULT = 2.0; // twice the speed limit on connector roads
 float const HEADLIGHT_ON_RAND    = 0.1;
+float const STREETLIGHT_ON_RAND  = 0.05;
+float const TUNNEL_WALL_THICK    = 0.25; // relative to radius
+float const TRACKS_WIDTH         = 0.5; // relative to road width
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 
 extern double tfticks;
@@ -169,4 +178,342 @@ public:
 	void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color,
 		point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail);
 };
+
+
+
+class road_mat_mgr_t {
+
+	bool inited;
+	unsigned tids[NUM_RD_TIDS], sl_tid;
+
+public:
+	road_mat_mgr_t() : inited(0), sl_tid(0) {}
+	void ensure_road_textures();
+	void set_texture(unsigned type);
+	void set_stoplight_texture();
+};
+
+template<typename T> static void add_flat_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2
+	float const z(r.z1());
+	point const pts[4] = {point(r.x1(), r.y1(), z), point(r.x2(), r.y1(), z), point(r.x2(), r.y2(), z), point(r.x1(), r.y2(), z)};
+	qbd.add_quad_pts(pts, color, plus_z, r.get_tex_range(ar));
+}
+
+struct rect_t {
+	unsigned x1, y1, x2, y2;
+	rect_t() : x1(0), y1(0), x2(0), y2(0) {}
+	rect_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_) : x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
+	bool is_valid() const {return (x1 < x2 && y1 < y2);}
+	unsigned get_area() const {return (x2 - x1)*(y2 - y1);}
+	bool operator== (rect_t const &r) const {return (x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2);}
+	bool has_overlap(rect_t const &r) const {return (x1 < r.x2 && y1 < r.y2 && r.x1 < x2 && r.y1 < y2);}
+};
+struct flatten_op_t : public rect_t {
+	float z1, z2;
+	bool dim;
+	unsigned border, skip_six, skip_eix;
+	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0) {}
+	flatten_op_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_, float z1_, float z2_, bool dim_, unsigned border_) :
+		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_), skip_six(0), skip_eix(0) {}
+};
+
+struct road_t : public cube_t {
+	unsigned road_ix;
+	//unsigned char type; // road, railroad, etc. {RTYPE_ROAD, RTYPE_TRACKS}
+	bool dim; // dim the road runs in
+	bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
+
+	road_t(cube_t const &c, bool dim_, bool slope_=0, unsigned road_ix_=0) : cube_t(c), road_ix(road_ix_), dim(dim_), slope(slope_) {}
+	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0, unsigned road_ix_=0);
+	float get_length   () const {return (d[ dim][1] - d[ dim][0]);}
+	float get_width    () const {return (d[!dim][1] - d[!dim][0]);}
+	float get_slope_val() const {return get_dz()/get_length();}
+	float get_start_z  () const {return (slope ? z2() : z1());}
+	float get_end_z    () const {return (slope ? z1() : z2());}
+	float get_z_adj    () const {return (ROAD_HEIGHT + 0.5*get_slope_val()*(dim ? DY_VAL : DX_VAL));} // account for a half texel of error for sloped roads
+	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
+	cube_t const &get_bcube() const {return *this;}
+	cube_t       &get_bcube()       {return *this;}
+
+	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const;
+};
+
+struct road_seg_t : public road_t {
+	unsigned short road_ix, conn_ix[2], conn_type[2]; // {dim=0, dim=1}
+	mutable unsigned short car_count; // can be written to during car update logic
+
+	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
+	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix), car_count(0) {init_ixs();}
+	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix), car_count(0) {init_ixs();}
+	void next_frame() {car_count = 0;}
+};
+
+struct road_plot_t : public cube_t {
+	bool has_parking;
+	road_plot_t(cube_t const &c) : cube_t(c), has_parking(0) {}
+	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
+};
+
+struct parking_lot_t : public cube_t {
+	bool dim, dir;
+	unsigned short row_sz, num_rows;
+	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : cube_t(c), dim(dim_), dir(dir_), row_sz(row_sz_), num_rows(num_rows_) {}
+	tex_range_t get_tex_range(float ar) const;
+};
+
+namespace stoplight_ns {
+
+	enum {GREEN_LIGHT=0, YELLOW_LIGHT, RED_LIGHT}; // colors, unused (only have stop and go states anyway)
+	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
+	enum {CW_WALK=0, CW_WARN, CW_STOP}; // crosswalk state
+	float const state_times[NUM_STATE] = {5.0, 6.0, 5.0, 5.0, 6.0, 5.0}; // in seconds
+	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
+	unsigned const left_orient_masks[NUM_STATE] = {2, 0, 1, 8, 0,  4}; // {W=1, E=2, S=4, N=8}, for left turns only
+	unsigned const to_right  [4] = {3, 2, 0, 1}; // {N, S, W, E}
+	unsigned const to_left   [4] = {2, 3, 1, 0}; // {S, N, E, W}
+	unsigned const other_lane[4] = {1, 0, 3, 2}; // {E, W, N, S}
+	unsigned const conn_left[4] = {3,2,0,1}, conn_right[4] = {2,3,1,0};
+	colorRGBA const stoplight_colors[3] = {GREEN, YELLOW, RED};
+	colorRGBA const crosswalk_colors[3] = {WHITE, ORANGE, ORANGE};
+
+	float stoplight_max_height();
+
+	class stoplight_t {
+		uint8_t num_conn, conn, cur_state;
+		bool at_conn_road; // longer light times in this case
+		float cur_state_ticks;
+		// these are mutable because they are set during car update logic, where roads are supposed to be const
+		mutable uint8_t car_waiting_sr, car_waiting_left;
+		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits
+
+		void next_state() {
+			++cur_state;
+			if (cur_state == NUM_STATE) {cur_state = 0;} // wraparound
+		}
+		void advance_state();
+		bool any_blocked() const {return (blocked[0] || blocked[1] || blocked[2] || blocked[3]);}
+		bool is_any_car_waiting_at_this_state() const;
+		void find_state_with_waiting_car();
+		void run_update_logic();
+		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
+		void ffwd_to_future(float time_secs);
+	public:
+		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0), car_waiting_sr(0), car_waiting_left(0) {
+			reset_blocked();
+		}
+		void reset_blocked() {UNROLL_4X(blocked[i_] = 0;)}
+		void mark_blocked(bool dim, bool dir) const {blocked[2*dim + dir] = 1;} // Note: not actually const, but blocked is mutable
+		bool is_blocked(bool dim, bool dir) const {return (blocked[2*dim + dir] != 0);}
+		void init(uint8_t num_conn_, uint8_t conn_);
+		void next_frame();
+		void notify_waiting_car(bool dim, bool dir, unsigned turn) const;
+		bool red_light(bool dim, bool dir, unsigned turn) const;
+		unsigned get_light_state(bool dim, bool dir, unsigned turn) const;
+		bool can_walk(bool dim, bool dir) const;
+		unsigned get_crosswalk_state(bool dim, bool dir) const;
+		bool check_int_clear(unsigned orient, unsigned turn_dir) const;
+		bool check_int_clear(car_t const &car) const {return check_int_clear(car.get_orient(), car.turn_dir);}
+		bool can_turn_right_on_red(car_t const &car) const;
+		string str() const;
+		string label_str() const;
+		colorRGBA get_stoplight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
+	};
+} // end stoplight_ns
+
+
+namespace streetlight_ns {
+
+	colorRGBA const pole_color(BLACK); // so we don't have to worry about shadows
+	colorRGBA const light_color(1.0, 0.9, 0.7, 1.0);
+	float const light_height = 0.5; // in units of road width
+	float const pole_radius  = 0.015;
+	float const light_radius = 0.025;
+	float const light_dist   = 3.0;
+	float get_streetlight_height();
+
+	struct streetlight_t {
+		point pos; // bottom point
+		vector3d dir;
+
+		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
+		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
+		point get_lpos() const;
+		void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow, bool always_on) const;
+		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
+		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const;
+		bool line_intersect(point const &p1, point const &p2, float &t) const;
+	};
+} // streetlight_ns
+
+
+struct streetlights_t {
+
+	vector<streetlight_ns::streetlight_t> streetlights;
+
+	void draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only, bool always_on) const;
+	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
+	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const;
+	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const;
+};
+
+
+struct draw_state_t {
+	shader_t s;
+	vector3d xlate;
+protected:
+	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
+	point_sprite_drawer_sized light_psd; // for car/traffic lights
+	string label_str;
+	point label_pos;
+public:
+	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
+	virtual void draw_unshadowed() {}
+
+	void begin_tile(point const &pos, bool will_emit_now=0);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader);
+	virtual void post_draw();
+	void ensure_shader_active();
+	void draw_and_clear_light_flares();
+	bool check_sphere_visible(point const &pos, float radius) const {return camera_pdu.sphere_visible_test((pos + xlate), radius);}
+	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0, bool shadow_only=0) const;
+	static void set_cube_pts(cube_t const &c, float z1f, float z1b, float z2f, float z2b, bool d, bool D, point p[8]);
+	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {set_cube_pts(c, z1, z1, z2, z2, d, D, p);}
+	static void set_cube_pts(cube_t const &c, bool d, bool D, point p[8]) {set_cube_pts(c, c.z1(), c.z2(), d, D, p);}
+	static void rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]);
+	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals=0, float tscale=0.0) const;
+	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale=0.0) const;
+	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius);
+	void set_label_text(string const &str, point const &pos) {label_str = str; label_pos = pos;}
+	void show_label_text();
+}; // draw_state_t
+
+
+struct road_isec_t : public cube_t {
+	unsigned char num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
+	short conn_to_city;
+	short rix_xy[4], conn_ix[4]; // road/segment index: pos=cur city road, neg=global road; always segment ix
+	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
+
+	road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, short conn_to_city_=-1);
+	tex_range_t get_tex_range(float ar) const;
+	void make_4way(unsigned conn_to_city_);
+	void next_frame() {stoplight.next_frame();}
+	void notify_waiting_car(car_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
+	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
+	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
+	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
+	bool yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
+	bool can_go_based_on_light(car_t const &car) const;
+	bool is_orient_currently_valid(unsigned orient, unsigned turn_dir) const;
+	unsigned get_dest_orient_for_car_in_isec(car_t const &car, bool is_entering) const;
+	bool can_go_now(car_t const &car) const;
+	bool is_blocked(car_t const &car) const {return (can_go_based_on_light(car) && !stoplight.check_int_clear(car));} // light is green but intersection is blocked
+	bool has_left_turn_signal(unsigned orient) const;
+	cube_t get_stoplight_cube(unsigned n) const;
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
+	bool line_intersect(point const &p1, point const &p2, float &t) const;
+	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const;
+	void draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const;
+};
+
+
+struct road_connector_t : public road_t, public streetlights_t {
+
+	road_t src_road;
+
+	road_connector_t(road_t const &road) : road_t(road), src_road(road) {}
+	float get_player_zval(point const &center, cube_t const &c) const;
+	void add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb);
+};
+
+struct bridge_t : public road_connector_t {
+
+	bool make_bridge;
+
+	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
+	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
+	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const;
+	bool line_intersect(point const &p1, point const &p2, float &t) const {return 0;} // TODO
+};
+
+struct tunnel_t : public road_connector_t {
+
+	cube_t ends[2];
+	float radius, height, facade_height[2];
+
+	tunnel_t(road_t const &road) : road_connector_t(road), radius(0.0), height(0.0) {}
+	bool enabled() const {return (radius > 0.0);}
+	void init(point const &start, point const &end, float radius_, bool dim);
+	void add_streetlights() {road_connector_t::add_streetlights(2, 1, -0.15, ends[0].z1(), ends[1].z1());} // 2 per side, staggered
+	cube_t get_tunnel_bcube() const;
+	void calc_top_bot_side_cubes(cube_t cubes[4]) const;
+	bool check_mesh_disable(cube_t const &query_region) const {return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region));} // check both ends
+	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const;
+	bool line_intersect(point const &p1, point const &p2, float &t) const;
+};
+
+struct range_pair_t {
+	unsigned s, e; // Note: e is one past the end
+	range_pair_t(unsigned s_=0, unsigned e_=0) : s(s_), e(e_) {}
+	void update(unsigned v);
+};
+
+class road_draw_state_t : public draw_state_t {
+	quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_sl, qbd_bridge;
+	float ar;
+
+	void draw_road_region_int(quad_batch_draw &cache, unsigned type_ix);
+public:
+	road_draw_state_t() : ar(1.0) {}
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only);
+	virtual void draw_unshadowed();
+	virtual void post_draw();
+	template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case (plot/park)
+	void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
+	void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
+
+	template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
+		if (rp.s == rp.e) return; // empty
+		assert(rp.s <= rp.e);
+		assert(rp.e <= v.size());
+		assert(type_ix < NUM_RD_TYPES);
+		colorRGBA const color(road_colors[type_ix]);
+
+		if (cache.empty()) { // generate and cache quads
+			for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache, color);}
+		}
+		draw_road_region_int(cache, type_ix);
+	}
+	void draw_bridge(bridge_t const &bridge, bool shadow_only);
+	void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale);
+	void draw_tunnel(tunnel_t const &tunnel, bool shadow_only);
+	void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only);
+}; // road_draw_state_t
+
+class car_draw_state_t : public draw_state_t {
+
+	class occlusion_checker_t {
+		building_occlusion_state_t state;
+	public:
+		void set_camera(pos_dir_up const &pdu);
+		bool is_occluded(cube_t const &c);
+	};
+
+	quad_batch_draw qbds[3]; // unshadowed, shadowed, AO
+	car_model_loader_t &car_model_loader;
+	occlusion_checker_t occlusion_checker;
+public:
+	car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_) {}
+	static float get_headlight_dist();
+	colorRGBA get_headlight_color(car_t const &car) const;
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only);
+	virtual void draw_unshadowed();
+	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
+	void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const;
+	void draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows);
+	void add_car_headlights(car_t const &car, cube_t &lights_bcube);
+}; // car_draw_state_t
+
+
+bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c);
 
