@@ -508,5 +508,54 @@ public:
 }; // car_draw_state_t
 
 
+class city_road_gen_t;
+
+class car_manager_t {
+
+	car_model_loader_t car_model_loader;
+
+	struct car_block_t {
+		unsigned start, cur_city, first_parked;
+		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c), first_parked(0) {}
+	};
+	struct comp_car_road {
+		bool operator()(car_t const &c1, car_t const &c2) const {return (c1.cur_road < c2.cur_road);}
+	};
+	city_road_gen_t const &road_gen;
+	vector<car_t> cars;
+	vector<car_block_t> car_blocks;
+	car_draw_state_t dstate;
+	rand_gen_t rgen;
+	vector<unsigned> entering_city;
+	bool car_destroyed;
+
+	cube_t const get_cb_bcube(car_block_t const &cb ) const;
+	road_isec_t const &get_car_isec(car_t const &car) const;
+	bool check_collision(car_t &c1, car_t &c2) const;
+	void register_car_at_city(car_t const &car);
+	void add_car();
+	void get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const;
+	void remove_destroyed_cars();
+	void update_cars();
+	int find_next_car_after_turn(car_t &car);
+public:
+	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader), car_destroyed(0) {}
+	bool empty() const {return cars.empty();}
+	void clear() {cars.clear(); car_blocks.clear();}
+	void init_cars(unsigned num);
+	void add_parked_cars(vector<car_t> const &new_cars) {cars.insert(cars.end(), new_cars.begin(), new_cars.end());}
+	void finalize_cars();
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
+	void destroy_cars_in_radius(point const &pos_in, float radius);
+	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
+	car_t const *get_car_at(point const &p1, point const &p2) const;
+	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
+	void next_frame(float car_speed);
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only);
+	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
+	void free_context() {car_model_loader.free_context();}
+}; // car_manager_t
+
+
 bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c);
 

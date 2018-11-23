@@ -9,7 +9,9 @@
 
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
 
-extern int display_mode;
+extern bool tt_fire_button_down;
+extern int display_mode, game_mode, animate2;
+extern float FAR_CLIP;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
@@ -484,5 +486,279 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 		point const pos((d ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (d ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
 		dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, dir, beamwidth));
 	}
+}
+
+
+void car_manager_t::remove_destroyed_cars() {
+	vector<car_t>::iterator i(cars.begin()), o(i);
+	for (; i != cars.end(); ++i) {if (!i->destroyed) {*(o++) = *i;}}
+	cars.erase(o, cars.end());
+	car_destroyed = 0;
+}
+
+void car_manager_t::init_cars(unsigned num) {
+	if (num == 0) return;
+	timer_t timer("Init Cars");
+	cars.reserve(num);
+	for (unsigned n = 0; n < num; ++n) {add_car();}
+	cout << "Dynamic Cars: " << cars.size() << endl;
+}
+
+void car_manager_t::finalize_cars() {
+	if (empty()) return;
+	unsigned const num_models(car_model_loader.num_models());
+
+	for (auto i = cars.begin(); i != cars.end(); ++i) {
+		int fixed_color(-1);
+
+		if (num_models > 0) {
+			if (FORCE_MODEL_ID >= 0) {i->model_id = FORCE_MODEL_ID;}
+			else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
+			car_model_t const &model(car_model_loader.get_model(i->model_id));
+			fixed_color = model.fixed_color_id;
+			i->apply_scale(model.scale);
+		}
+		i->color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
+		assert(i->is_valid());
+	} // for i
+	cout << "Total Cars: " << cars.size() << endl;
+}
+
+bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
+	vector3d const xlate(get_camera_coord_space_xlate());
+	float const dist(p2p_dist(pos, p_last));
+
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		cube_t const city_bcube(get_cb_bcube(*cb) + xlate);
+		if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
+		if (!sphere_cube_intersect_xy(pos, (radius + dist), city_bcube)) continue;
+		cube_t sphere_bc; sphere_bc.set_from_sphere((pos - xlate), radius);
+		unsigned start(0), end(0);
+		get_car_ix_range_for_cube(cb, sphere_bc, start, end);
+
+		for (unsigned c = start; c != end; ++c) {
+			if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
+		}
+	} // for cb
+	return 0;
+}
+
+void car_manager_t::destroy_cars_in_radius(point const &pos_in, float radius) {
+	point const pos(pos_in - get_camera_coord_space_xlate());
+	bool const is_pt(radius == 0.0);
+
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		cube_t const city_bcube(get_cb_bcube(*cb));
+		if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
+		if (is_pt ? !city_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
+		unsigned const start(cb->start), end((cb+1)->start); // Note: shouldnt be called frequently enough to need road/parking lot acceleration
+		assert(end <= cars.size() && start <= end);
+
+		for (unsigned c = start; c != end; ++c) {
+			if (is_pt ? cars[c].bcube.contains_pt(pos) : dist_less_than(cars[c].get_center(), pos, radius)) { // destroy if within the sphere
+				cars[c].destroy();
+				car_destroyed = 1;
+			}
+		}
+	} // for cb
+}
+
+bool car_manager_t::get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const { // Note: pos in local TT space
+	if (cars.empty()) return 0;
+	if (int_ret != INT_ROAD && int_ret != INT_PARKING) return 0; // not a road or a parking lot - no car intersections
+
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		if (!get_cb_bcube(*cb).contains_pt_xy(pos)) continue; // skip
+		unsigned start(cb->start), end((cb+1)->start);
+		assert(end <= cars.size());
+		if      (int_ret == INT_ROAD)    {end   = cb->first_parked;} // moving cars only (beginning of range)
+		else if (int_ret == INT_PARKING) {start = cb->first_parked;} // parked cars only (end of range)
+		assert(start <= end);
+
+		for (unsigned c = start; c != end; ++c) { // Note: slow, could use road as accel structure
+			if (cars[c].bcube.contains_pt_xy(pos)) {color = cars[c].get_color(); return 1;}
+		}
+	} // for cb
+	return 0;
+}
+
+car_t const *car_manager_t::get_car_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		if (!get_cb_bcube(*cb).line_intersects(p1, p2)) continue; // skip
+		unsigned start(cb->start), end((cb+1)->start);
+		assert(start <= end && end <= cars.size());
+
+		for (unsigned c = start; c != end; ++c) { // Note: includes parked cars
+			if (cars[c].bcube.line_intersects(p1, p2)) {return &cars[c];}
+		}
+	} // for cb
+	return nullptr; // no car found
+}
+
+bool car_manager_t::line_intersect_cars(point const &p1, point const &p2, float &t) const { // Note: p1/p2 in local TT space
+	bool ret(0);
+
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		if (!get_cb_bcube(*cb).line_intersects(p1, p2)) continue; // skip
+		unsigned start(cb->start), end((cb+1)->start);
+		assert(start <= end && end <= cars.size());
+
+		for (unsigned c = start; c != end; ++c) { // Note: includes parked cars
+			ret |= check_line_clip_update_t(p1, p2, t, cars[c].bcube);
+		}
+	} // for cb
+	return ret;
+}
+
+int car_manager_t::find_next_car_after_turn(car_t &car) {
+	road_isec_t const &isec(get_car_isec(car));
+	if (car.turn_dir == TURN_NONE && !isec.is_global_conn_int()) return -1; // car not turning, and not on connector road isec: should be handled by sorted car_in_front logic
+	unsigned const dest_orient(isec.get_dest_orient_for_car_in_isec(car, 0)); // Note: may be before, during, or after turning
+	int road_ix(isec.rix_xy[dest_orient]), seg_ix(isec.conn_ix[dest_orient]);
+	unsigned city_ix(car.cur_city);
+	//cout << TXT(car.get_orient()) << TXT(dest_orient) << TXT(city_ix) << TXT(road_ix) << TXT(seg_ix) << endl;
+	assert((road_ix < 0) == (seg_ix < 0));
+
+	if (road_ix < 0) { // goes to connector road
+		city_ix = CONN_CITY_IX;
+		road_ix = decode_neg_ix(road_ix);
+		seg_ix  = decode_neg_ix(seg_ix );
+	}
+	point const car_center(car.get_center());
+	float dmin(car.get_max_lookahead_dist()), dmin_sq(dmin*dmin);
+	// include normal sorted order car; this is needed when going straight through connector road 4-way intersections where cur_road changes within the intersection
+	if (car.car_in_front && car.car_in_front->get_orient() != dest_orient) {car.car_in_front = 0;} // not the correct car (turning a different way)
+	if (car.turn_dir == TURN_NONE && car.car_in_front) {min_eq(dmin_sq, p2p_dist_sq(car_center, car.car_in_front->get_center()));}
+	int ret_car_ix(-1);
+
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		if (cb->cur_city != city_ix) continue; // incorrect city - skip
+		unsigned const start(cb->start), end(cb->first_parked);
+		assert(end <= cars.size() && start <= end);
+		auto range_end(cars.begin()+end);
+		car_t ref_car; ref_car.cur_road = road_ix;
+		auto it(std::lower_bound(cars.begin()+start, range_end, ref_car, comp_car_road())); // binary search acceleration
+		float prev_dist_sq(FLT_MAX);
+
+		for (; it != range_end; ++it) {
+			if (&(*it) == &car) continue; // skip self
+			assert(it->cur_city == city_ix); // must be same city
+			if (it->cur_road != road_ix) break; // different road, done
+
+			if (it->cur_road_type == TYPE_RSEG) { // road segment
+				if (it->cur_seg != seg_ix) continue; // on a different segment, skip
+			}
+			else if (it->cur_road_type != car.cur_road_type || it->cur_seg != car.cur_seg) continue; // in a different intersection
+			if (it->get_orient() != dest_orient) continue; // wrong orient
+			float const dist_sq(p2p_dist_sq(car_center, it->get_center()));
+			if (p2p_dist_sq(car_center, it->get_front()) < dist_sq) continue; // front is closer than back - this car is not in front of us (waiting on other side of isect?)
+																			  //cout << TXT(dmin_sq) << TXT(dist_sq) << (dist_sq < dmin_sq) << endl;
+
+			if (dist_sq < dmin_sq) { // new closest car
+				if (&(*it) != car.car_in_front) {ret_car_ix = (it - cars.begin());} // record index if set to a new value
+				car.car_in_front = &(*it);
+				dmin_sq = dist_sq;
+			}
+			else if (dist_sq > prev_dist_sq) break; // we're moving too far away from the car
+			prev_dist_sq = dist_sq;
+		} // for it
+	} // for cb
+	return ret_car_ix;
+}
+
+void car_manager_t::next_frame(float car_speed) {
+	if (cars.empty() || !animate2) return;
+	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 1.2ms with destinations + navigation
+	if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
+	sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
+	entering_city.clear();
+	car_blocks.clear();
+	float const speed(0.001*car_speed*fticks);
+	bool saw_parked(0);
+	//unsigned num_on_conn_road(0);
+
+	for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
+		unsigned const cix(i - cars.begin());
+		i->car_in_front = nullptr; // reset for this frame
+
+		if (car_blocks.empty() || i->cur_city != car_blocks.back().cur_city) {
+			if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cix;}
+			saw_parked = 0;
+			car_blocks.emplace_back(cix, i->cur_city);
+		}
+		if (i->is_parked()) {
+			if (!saw_parked) {car_blocks.back().first_parked = cix; saw_parked = 1;}
+			continue; // no update for parked cars
+		}
+		i->move(speed);
+		if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
+		if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
+		register_car_at_city(*i);
+	} // for i
+	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();}
+	car_blocks.emplace_back(cars.size(), 0); // add terminator
+
+	for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
+		if (i->is_parked()) continue; // no collisions for parked cars
+		bool const on_conn_road(i->cur_city == CONN_CITY_IX);
+		float const length(i->get_length()), max_check_dist(max(3.0f*length, (length + i->get_max_lookahead_dist()))); // max of collision dist and car-in-front dist
+
+		for (auto j = i+1; j != cars.end(); ++j) { // check for collisions with cars on the same road (can't test seg because they can be on diff segs but still collide)
+			if (i->cur_city != j->cur_city || i->cur_road != j->cur_road) break; // different cities or roads
+			if (!on_conn_road && i->cur_road_type == j->cur_road_type && abs((int)i->cur_seg - (int)j->cur_seg) > (on_conn_road ? 1 : 0)) break; // diff road segs or diff isects
+			check_collision(*i, *j);
+			i->register_adj_car(*j);
+			j->register_adj_car(*i);
+			if (!dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break;
+		}
+		if (on_conn_road) { // on connector road, check before entering intersection to a city
+			for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
+				if (*ix != (i - cars.begin())) {check_collision(*i, cars[*ix]);}
+			}
+			//++num_on_conn_road;
+		}
+		if (i->in_isect()) {
+			int const next_car(find_next_car_after_turn(*i)); // Note: calculates in i->car_in_front
+			if (next_car >= 0) {check_collision(*i, cars[next_car]);} // make sure we collide with the correct car
+		}
+	} // for i
+	update_cars(); // run update logic
+	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
+}
+
+void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) {
+	if (cars.empty()) return;
+
+	if (trans_op_mask & 1) { // opaque pass, should be first
+		bool const is_dlight_shadows(shadow_only && xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
+		if (is_dlight_shadows && !city_params.car_shadows) return;
+		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
+																   //timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
+		dstate.xlate = xlate;
+		fgPushMatrix();
+		translate_to(xlate);
+		dstate.pre_draw(xlate, use_dlights, shadow_only);
+
+		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+			if (!camera_pdu.cube_visible(get_cb_bcube(*cb) + xlate)) continue; // city not visible - skip
+			unsigned const end((cb+1)->start);
+			assert(end <= cars.size());
+
+			for (unsigned c = cb->start; c != end; ++c) {
+				if (only_parked && !cars[c].is_parked()) continue; // skip non-parked cars
+				dstate.draw_car(cars[c], shadow_only, is_dlight_shadows);
+			}
+		} // for cb
+		dstate.post_draw();
+		fgPopMatrix();
+
+		if (tt_fire_button_down && !game_mode) {
+			point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
+			car_t const *car(get_car_at(p1, p2));
+			if (car != nullptr) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found
+		}
+	}
+	if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
+	dstate.show_label_text();
 }
 
