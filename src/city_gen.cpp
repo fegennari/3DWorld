@@ -2484,6 +2484,26 @@ class car_manager_t {
 	vector<unsigned> entering_city;
 	bool car_destroyed;
 
+	cube_t const get_cb_bcube(car_block_t const &cb ) const {return road_gen.get_city_bcube_for_cars(cb.cur_city);}
+	road_isec_t const &get_car_isec(car_t const &car) const {return road_gen.get_car_isec(car);}
+
+	void add_car() {
+		car_t car;
+		if (road_gen.add_car(car, rgen)) {cars.push_back(car);}
+	}
+	void get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const {
+		start = cb->start; end = (cb+1)->start;
+		assert(end <= cars.size());
+		if (!road_gen.cube_overlaps_parking_lot_xy(bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
+		if (!road_gen.cube_overlaps_road_xy       (bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
+		assert(start <= end);
+	}
+	void remove_destroyed_cars() {
+		vector<car_t>::iterator i(cars.begin()), o(i);
+		for (; i != cars.end(); ++i) {if (!i->destroyed) {*(o++) = *i;}}
+		cars.erase(o, cars.end());
+		car_destroyed = 0;
+	}
 public:
 	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader), car_destroyed(0) {}
 	bool empty() const {return cars.empty();}
@@ -2496,12 +2516,7 @@ public:
 		if (num == 0) return;
 		timer_t timer("Init Cars");
 		cars.reserve(num);
-		
-		for (unsigned n = 0; n < num; ++n) {
-			car_t car;
-			if (!road_gen.add_car(car, rgen)) continue;
-			cars.push_back(car);
-		} // for n
+		for (unsigned n = 0; n < num; ++n) {add_car();}
 		cout << "Dynamic Cars: " << cars.size() << endl;
 	}
 	void add_parked_cars(vector<car_t> const &new_cars) {
@@ -2531,15 +2546,12 @@ public:
 		float const dist(p2p_dist(pos, p_last));
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate);
+			cube_t const city_bcube(get_cb_bcube(*cb) + xlate);
 			if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), city_bcube)) continue;
-			unsigned start(cb->start), end((cb+1)->start);
-			assert(end <= cars.size());
 			cube_t sphere_bc; sphere_bc.set_from_sphere((pos - xlate), radius);
-			if (!road_gen.cube_overlaps_parking_lot_xy(sphere_bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
-			if (!road_gen.cube_overlaps_road_xy       (sphere_bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
-			assert(start <= end);
+			unsigned start(0), end(0);
+			get_car_ix_range_for_cube(cb, sphere_bc, start, end);
 
 			for (unsigned c = start; c != end; ++c) {
 				if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2552,7 +2564,7 @@ public:
 		bool const is_pt(radius == 0.0);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			cube_t const city_bcube(road_gen.get_city_bcube_for_cars(cb->cur_city));
+			cube_t const city_bcube(get_cb_bcube(*cb));
 			if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
 			if (is_pt ? !city_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
 			unsigned const start(cb->start), end((cb+1)->start); // Note: shouldnt be called frequently enough to need road/parking lot acceleration
@@ -2571,7 +2583,7 @@ public:
 		if (int_ret != INT_ROAD && int_ret != INT_PARKING) return 0; // not a road or a parking lot - no car intersections
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!road_gen.get_city_bcube_for_cars(cb->cur_city).contains_pt_xy(pos)) continue; // skip
+			if (!get_cb_bcube(*cb).contains_pt_xy(pos)) continue; // skip
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(end <= cars.size());
 			if      (int_ret == INT_ROAD)    {end   = cb->first_parked;} // moving cars only (beginning of range)
@@ -2586,7 +2598,7 @@ public:
 	}
 	car_t const *get_car_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!road_gen.get_city_bcube_for_cars(cb->cur_city).line_intersects(p1, p2)) continue; // skip
+			if (!get_cb_bcube(*cb).line_intersects(p1, p2)) continue; // skip
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(start <= end && end <= cars.size());
 
@@ -2600,7 +2612,7 @@ public:
 		bool ret(0);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (!road_gen.get_city_bcube_for_cars(cb->cur_city).line_intersects(p1, p2)) continue; // skip
+			if (!get_cb_bcube(*cb).line_intersects(p1, p2)) continue; // skip
 			unsigned start(cb->start), end((cb+1)->start);
 			assert(start <= end && end <= cars.size());
 
@@ -2615,7 +2627,7 @@ public:
 			bool operator()(car_t const &c1, car_t const &c2) const {return (c1.cur_road < c2.cur_road);}
 		};
 		int find_next_car_after_turn(car_t &car) {
-			road_isec_t const &isec(road_gen.get_car_isec(car));
+			road_isec_t const &isec(get_car_isec(car));
 			if (car.turn_dir == TURN_NONE && !isec.is_global_conn_int()) return -1; // car not turning, and not on connector road isec: should be handled by sorted car_in_front logic
 			unsigned const dest_orient(isec.get_dest_orient_for_car_in_isec(car, 0)); // Note: may be before, during, or after turning
 			int road_ix(isec.rix_xy[dest_orient]), seg_ix(isec.conn_ix[dest_orient]);
@@ -2673,13 +2685,7 @@ public:
 	void next_frame(float car_speed) {
 		if (cars.empty() || !animate2) return;
 		//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 1.2ms with destinations + navigation
-
-		if (car_destroyed) { // at least one car was destroyed in the previous frame - remove it/them
-			vector<car_t>::iterator i(cars.begin()), o(i);
-			for (; i != cars.end(); ++i) {if (!i->destroyed) {*(o++) = *i;}}
-			cars.erase(o, cars.end());
-			car_destroyed = 0;
-		}
+		if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
 		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 		entering_city.clear();
 		car_blocks.clear();
@@ -2702,7 +2708,7 @@ public:
 			}
 			i->move(speed);
 			if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
-			if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {road_gen.get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
+			if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 			road_gen.register_car_at_city(i->cur_city);
 		} // for i
 		if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();}
@@ -2750,7 +2756,7 @@ public:
 			dstate.pre_draw(xlate, use_dlights, shadow_only);
 
 			for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-				if (!camera_pdu.cube_visible(road_gen.get_city_bcube_for_cars(cb->cur_city) + xlate)) continue; // city not visible - skip
+				if (!camera_pdu.cube_visible(get_cb_bcube(*cb) + xlate)) continue; // city not visible - skip
 				unsigned const end((cb+1)->start);
 				assert(end <= cars.size());
 				

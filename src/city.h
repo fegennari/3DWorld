@@ -14,7 +14,7 @@
 
 using std::string;
 
-unsigned  const CONN_CITY_IX((1<<16)-1); // uint16_t max
+unsigned const CONN_CITY_IX((1<<16)-1); // uint16_t max
 
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  NUM_RD_TIDS};
 enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, NUM_RD_TYPES};
@@ -180,7 +180,6 @@ public:
 };
 
 
-
 class road_mat_mgr_t {
 
 	bool inited;
@@ -234,7 +233,6 @@ struct road_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 	cube_t const &get_bcube() const {return *this;}
 	cube_t       &get_bcube()       {return *this;}
-
 	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const;
 };
 
@@ -343,11 +341,10 @@ namespace streetlight_ns {
 		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const;
 		bool line_intersect(point const &p1, point const &p2, float &t) const;
 	};
-} // streetlight_ns
+} // end streetlight_ns
 
 
 struct streetlights_t {
-
 	vector<streetlight_ns::streetlight_t> streetlights;
 
 	void draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only, bool always_on) const;
@@ -368,7 +365,6 @@ protected:
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
 	virtual void draw_unshadowed() {}
-
 	void begin_tile(point const &pos, bool will_emit_now=0);
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader);
 	virtual void post_draw();
@@ -418,7 +414,6 @@ struct road_isec_t : public cube_t {
 
 
 struct road_connector_t : public road_t, public streetlights_t {
-
 	road_t src_road;
 
 	road_connector_t(road_t const &road) : road_t(road), src_road(road) {}
@@ -427,7 +422,6 @@ struct road_connector_t : public road_t, public streetlights_t {
 };
 
 struct bridge_t : public road_connector_t {
-
 	bool make_bridge;
 
 	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
@@ -437,7 +431,6 @@ struct bridge_t : public road_connector_t {
 };
 
 struct tunnel_t : public road_connector_t {
-
 	cube_t ends[2];
 	float radius, height, facade_height[2];
 
