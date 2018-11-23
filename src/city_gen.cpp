@@ -142,6 +142,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "max_benches_per_plot") {
 		if (!read_uint(fp, max_benches_per_plot)) {return read_error(str);}
 	}
+	else if (str == "num_peds") {
+		if (!read_uint(fp, num_peds)) {return read_error(str);}
+	}
 	else {
 		cout << "Unrecognized city keyword in input file: " << str << endl;
 		return 0;
@@ -2532,10 +2535,39 @@ struct city_smap_manager_t {
 	}
 };
 
+class ped_manager_t { // pedestrians
+	struct ped_t {
+		point pos;
+		ped_t() : pos(all_zeros) {}
+	};
+	vector<ped_t> peds;
+	rand_gen_t rgen;
+public:
+	bool empty() const {return peds.empty();}
+	void clear() {peds.clear();}
+
+	void init(unsigned num) {
+		peds.resize(num);
+		for (auto i = peds.begin(); i != peds.end(); ++i) {} // FIXME: finish - gen pos
+	}
+	//bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
+	//bool line_intersect(point const &p1, point const &p2, float &t) const;
+	
+	void next_frame() {
+		// WRITE
+	}
+	void draw(vector3d const &xlate, bool shadow_only) const {
+		if (empty()) return;
+		// WRITE
+	}
+	void free_context() {} // for future use with models
+};
+
 class city_gen_t : public city_plot_gen_t {
 
 	city_road_gen_t road_gen;
 	car_manager_t car_manager;
+	ped_manager_t ped_manager;
 	city_smap_manager_t city_smap_manager;
 	cube_t lights_bcube;
 	float light_radius_scale;
@@ -2566,6 +2598,7 @@ public:
 		road_gen.add_streetlights();
 		road_gen.gen_tile_blocks();
 		car_manager.init_cars(city_params.num_cars);
+		ped_manager.init(city_params.num_peds);
 	}
 	void gen_details() {
 		if (road_gen.empty()) return; // nothing to do - no roads or cars
@@ -2610,11 +2643,13 @@ public:
 	void next_frame() {
 		road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
 		car_manager.next_frame(city_params.car_speed);
+		ped_manager.next_frame();
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
 		bool const use_dlights(enable_lights());
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only);
+		if (trans_op_mask & 1) {ped_manager.draw(xlate, shadow_only);}
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
@@ -2647,7 +2682,7 @@ public:
 		upload_dlights_textures(lights_bcube);
 	}
 	bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());}
-	void free_context() {car_manager.free_context();}
+	void free_context() {car_manager.free_context(); ped_manager.free_context();}
 	cube_t get_lights_bcube() const {return lights_bcube;}
 }; // city_gen_t
 
