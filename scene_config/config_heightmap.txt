@@ -60,6 +60,8 @@ city car_model ../models/cars/LowPolyTruck/truck.obj              -1  2  0   0.7
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 
+city num_peds 0
+
 city max_lights 1024
 city max_shadow_maps 40
 city car_shadows 1

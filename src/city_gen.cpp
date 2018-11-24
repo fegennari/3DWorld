@@ -199,9 +199,12 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	if (!use_smap && !always_setup_shader) return;
 	city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only));
 }
-/*virtual*/ void draw_state_t::post_draw() {
+void draw_state_t::end_draw() {
 	emit_now = 0;
 	if (s.is_setup()) {s.end_shader();} // use_smap case
+}
+/*virtual*/ void draw_state_t::post_draw() {
+	end_draw();
 	ensure_shader_active();
 	draw_unshadowed();
 	s.end_shader();
@@ -306,6 +309,16 @@ template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 	cube_t bcube(cubes.front()); // first cube
 	for (auto r = cubes.begin()+1; r != cubes.end(); ++r) {bcube.union_with_cube(*r);} // skip first cube
 	return bcube;
+}
+
+point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
+	return point(rgen.rand_uniform(c.x1()+radius, c.x2()-radius), rgen.rand_uniform(c.y1()+radius, c.y2()-radius), c.z1());
+}
+
+bool is_valid_ped_pos(point const &pos, float radius) {
+	if (check_buildings_sphere_coll(pos, radius, 0, 1)) return 0; // apply_tt_xlate=0, xy_only=1
+	// FIXME_PEDS: check benches, trees, roads/cars/crosswalks
+	return 1;
 }
 
 
@@ -822,7 +835,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		static bool try_place_obj(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen, float radius, float extra_spacing, float num_tries, point &pos) {
 			for (unsigned t = 0; t < num_tries; ++t) {
-				pos = point(rgen.rand_uniform(plot.x1()+radius, plot.x2()-radius), rgen.rand_uniform(plot.y1()+radius, plot.y2()-radius), plot.z1());
+				pos = rand_xy_pt_in_cube(plot, radius, rgen);
 				if (check_pt_and_place_blocker(pos, blockers, radius, extra_spacing)) return 1; // success
 			} // for t
 			return 0;
@@ -1704,13 +1717,20 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {t->add_streetlight_dlights(xlate, lights_bcube, 1);} // always_on=1
 		}
 
-		// cars
+		// cars/peds
 		static float get_car_lane_offset() {return CAR_LANE_OFFSET*city_params.road_width;}
 
+		static unsigned gen_rand_city(rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
+			assert(!road_networks.empty());
+			return rgen.rand()%road_networks.size();
+		}
 		static bool add_car_to_rns(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
-			unsigned const city(rgen.rand()%road_networks.size());
-			car.cur_city = city;
-			return road_networks[city].add_car(car, rgen);
+			car.cur_city = gen_rand_city(rgen, road_networks);
+			return road_networks[car.cur_city].add_car(car, rgen);
+		}
+		static bool gen_ped_pos(point &pos, unsigned &city_id, float radius, rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
+			city_id = gen_rand_city(rgen, road_networks);
+			return road_networks[city_id].gen_ped_pos(pos, radius, rgen);
 		}
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
@@ -1739,6 +1759,17 @@ class city_road_gen_t : public road_gen_base_t {
 				car.bcube.expand_by(0.5*car_sz);
 				assert(get_road_bcube_for_car(car).contains_cube_xy(car.bcube)); // sanity check
 				return 1; // success
+			} // for n
+			return 0; // failed
+		}
+		bool gen_ped_pos(point &pos, float radius, rand_gen_t &rgen) const {
+			if (plots.empty()) return 0; // no plots to place car on
+
+			for (unsigned n = 0; n < 100; ++n) { // make 100 tries
+				unsigned const plot_ix(rgen.rand()%plots.size());
+				road_plot_t const &plot(plots[plot_ix]); // chose a random plot
+				pos = rand_xy_pt_in_cube(plot, radius, rgen);
+				if (is_valid_ped_pos(pos, radius)) return 1; // success
 			} // for n
 			return 0; // failed
 		}
@@ -2405,7 +2436,7 @@ public:
 	}
 	void draw_label() {dstate.show_label_text();}
 
-	// cars
+	// cars/peds
 	void next_frame() {
 		if (!animate2) return;
 		//timer_t timer("Update Stoplights");
@@ -2418,6 +2449,10 @@ public:
 	bool add_car(car_t &car, rand_gen_t &rgen) const {
 		if (road_networks.empty()) return 0; // no cities to add cars to
 		return road_network_t::add_car_to_rns(car, rgen, road_networks);
+	}
+	bool gen_ped_pos(point &pos, unsigned &city_id, float radius, rand_gen_t &rgen) const {
+		if (road_networks.empty()) return 0; // no cities to add peds to
+		return road_network_t::gen_ped_pos(pos, city_id, radius, rgen, road_networks);
 	}
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
@@ -2535,33 +2570,121 @@ struct city_smap_manager_t {
 	}
 };
 
+
 class ped_manager_t { // pedestrians
 	struct ped_t {
 		point pos;
-		ped_t() : pos(all_zeros) {}
+		vector3d vel;
+		unsigned city;
+
+		ped_t() : pos(all_zeros), vel(zero_vector), city(0) {}
+		bool operator<(ped_t const &ped) const {return (city < ped.city);} // currently only compares city
+		void move() {pos += vel*fticks;}
 	};
+	city_road_gen_t const &road_gen;
 	vector<ped_t> peds;
+	vector<unsigned> by_city; // first ped index for each city
 	rand_gen_t rgen;
+	draw_state_t dstate;
+
+	float get_ped_radius() const {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
+
+	cube_t get_city_bcube_for_peds(unsigned city_id) const {
+		cube_t bcube(road_gen.get_city_bcube(city_id));
+		bcube.expand_by_xy(get_ped_radius());
+		return bcube;
+	}
 public:
+	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
 	bool empty() const {return peds.empty();}
-	void clear() {peds.clear();}
+	void clear() {peds.clear(); by_city.clear();}
 
 	void init(unsigned num) {
-		peds.resize(num);
-		for (auto i = peds.begin(); i != peds.end(); ++i) {} // FIXME: finish - gen pos
+		if (num == 0) return;
+		timer_t timer("Gen Peds");
+		peds.reserve(num);
+
+		for (unsigned n = 0; n < num; ++n) {
+			ped_t ped;
+			if (road_gen.gen_ped_pos(ped.pos, ped.city, get_ped_radius(), rgen)) {peds.push_back(ped);}
+		}
+		cout << "Pedestrians: " << peds.size() << endl; // testing
+		if (peds.empty()) return;
+		sort(peds.begin(), peds.end());
+		unsigned const max_city(peds.back().city);
+		by_city.resize(max_city + 2); // one per city + terminator
+		unsigned prev_city(max_city + 1); // start at an invalid value
+
+		for (unsigned i = 0; i < peds.size(); ++i) {
+			unsigned const city(peds[i].city);
+			if (city == prev_city) continue;
+			assert(city <= max_city);
+			by_city[city] = i;
+		}
+		by_city.back() = peds.size(); // add terminator for range iteration
 	}
-	//bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
+	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const { // Note: no p_last; for potential use with ped/ped collisions
+		float const rsum(get_ped_radius() + radius);
+
+		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+			cube_t const city_bcube(get_city_bcube_for_peds(city));
+			if (pos.z > city_bcube.z2() + rsum) continue; // above the peds
+			if (!sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
+
+			for (unsigned i = by_city[city]; i < by_city[city+1]; ++i) {
+				assert(i < peds.size());
+				if (!dist_less_than(pos, peds[i].pos, rsum)) continue;
+				if (cnorm) {*cnorm = (pos - peds[i].pos).get_norm();}
+				return 1; // return on first coll
+			}
+		} // for city
+		return 0;
+	}
 	//bool line_intersect(point const &p1, point const &p2, float &t) const;
 	
 	void next_frame() {
-		// WRITE
+		for (auto i = peds.begin(); i != peds.end(); ++i) {
+			// FIXME_PEDS: navigation
+
+			if (!is_valid_ped_pos(i->pos, get_ped_radius())) {
+				assert(i->vel != zero_vector); // can't get to invalid state unless moving
+				float const vmag(i->vel.mag());
+				i->vel = rgen.signed_rand_vector_spherical(vmag); // try a random new direction
+			} else {i->move();}
+		}
 	}
-	void draw(vector3d const &xlate, bool shadow_only) const {
+	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
 		if (empty()) return;
-		// WRITE
+		float const radius(get_ped_radius());
+		dstate.xlate = xlate;
+		fgPushMatrix();
+		translate_to(xlate);
+		dstate.pre_draw(xlate, use_dlights, shadow_only, 0); // always_setup_shader=0?
+		bool const textured = 0;
+		if (!textured) {select_texture(WHITE_TEX);} // currently not textured
+		begin_sphere_draw(textured);
+
+		// FIXME_PEDS: batch by tile?
+		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+			if (!camera_pdu.cube_visible(get_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
+
+			for (unsigned i = by_city[city]; i < by_city[city+1]; ++i) {
+				assert(i < peds.size());
+				point const &pos(peds[i].pos);
+				if (!camera_pdu.sphere_visible_test((pos + xlate), radius)) continue; // not visible - skip
+				dstate.ensure_shader_active(); // needed for use_smap=0 case
+				dstate.begin_tile(pos, 1);
+				int const ndiv = 16; // FIXME_PEDS: LOD, better model
+				draw_sphere_vbo(pos, radius, ndiv, textured);
+			} // for i
+		} // for city
+		end_sphere_draw();
+		dstate.end_draw();
+		fgPopMatrix();
 	}
 	void free_context() {} // for future use with models
-};
+}; // end ped_manager_t
+
 
 class city_gen_t : public city_plot_gen_t {
 
@@ -2573,7 +2696,7 @@ class city_gen_t : public city_plot_gen_t {
 	float light_radius_scale;
 
 public:
-	city_gen_t() : car_manager(road_gen), lights_bcube(all_zeros), light_radius_scale(1.0) {}
+	city_gen_t() : car_manager(road_gen), ped_manager(road_gen), lights_bcube(all_zeros), light_radius_scale(1.0) {}
 
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		unsigned x1(0), y1(0), x2(0), y2(0);
@@ -2649,7 +2772,7 @@ public:
 		bool const use_dlights(enable_lights());
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only);
-		if (trans_op_mask & 1) {ped_manager.draw(xlate, shadow_only);}
+		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, shadow_only);}
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
