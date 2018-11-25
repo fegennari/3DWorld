@@ -316,7 +316,11 @@ point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 }
 
 bool is_valid_ped_pos(point const &pos, float radius) {
-	if (check_buildings_sphere_coll(pos, radius, 0, 1)) return 0; // apply_tt_xlate=0, xy_only=1
+	float t(0.0); // unused
+	unsigned hit_bix(0); // unused
+	point const p1(pos - vector3d(0.0, 0.0, radius)), p2(pos + vector3d(0.0, 0.0, radius+get_buildings_max_extent().z));
+	if (check_buildings_line_coll(p1, p2, t, hit_bix, 0, 1)) return 0; // check for point inside building
+	if (check_buildings_sphere_coll(pos, radius, 0, 1)) return 0; // check for sphere intsect building sides; apply_tt_xlate=0, xy_only=1
 	// FIXME_PEDS: check benches, trees, roads/cars/crosswalks
 	return 1;
 }
@@ -1769,6 +1773,7 @@ class city_road_gen_t : public road_gen_base_t {
 				unsigned const plot_ix(rgen.rand()%plots.size());
 				road_plot_t const &plot(plots[plot_ix]); // chose a random plot
 				pos = rand_xy_pt_in_cube(plot, radius, rgen);
+				pos.z += radius; // place on top of the plot
 				if (is_valid_ped_pos(pos, radius)) return 1; // success
 			} // for n
 			return 0; // failed
@@ -2612,14 +2617,12 @@ public:
 		if (peds.empty()) return;
 		sort(peds.begin(), peds.end());
 		unsigned const max_city(peds.back().city);
-		by_city.resize(max_city + 2); // one per city + terminator
-		unsigned prev_city(max_city + 1); // start at an invalid value
+		by_city.resize((max_city + 2), peds.size()); // one per city + terminator
 
 		for (unsigned i = 0; i < peds.size(); ++i) {
 			unsigned const city(peds[i].city);
-			if (city == prev_city) continue;
 			assert(city <= max_city);
-			by_city[city] = i;
+			min_eq(by_city[city], i);
 		}
 		by_city.back() = peds.size(); // add terminator for range iteration
 	}
@@ -2644,10 +2647,10 @@ public:
 	
 	void next_frame() {
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
+			if (i->vel == zero_vector) continue; // not moving
 			// FIXME_PEDS: navigation
 
-			if (!is_valid_ped_pos(i->pos, get_ped_radius())) {
-				assert(i->vel != zero_vector); // can't get to invalid state unless moving
+			if (!is_valid_ped_pos(i->pos, get_ped_radius())) { // FIXME: too slow, don't check every frame
 				float const vmag(i->vel.mag());
 				i->vel = rgen.signed_rand_vector_spherical(vmag); // try a random new direction
 			} else {i->move();}
@@ -2655,13 +2658,14 @@ public:
 	}
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
 		if (empty()) return;
-		float const radius(get_ped_radius());
+		float const radius(get_ped_radius()), draw_dist(2000.0*radius);
 		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
-		dstate.pre_draw(xlate, use_dlights, shadow_only, 0); // always_setup_shader=0?
+		dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 		bool const textured = 0;
 		if (!textured) {select_texture(WHITE_TEX);} // currently not textured
+		dstate.s.set_cur_color(YELLOW); // smileys
 		begin_sphere_draw(textured);
 
 		// FIXME_PEDS: batch by tile?
@@ -2670,12 +2674,15 @@ public:
 
 			for (unsigned i = by_city[city]; i < by_city[city+1]; ++i) {
 				assert(i < peds.size());
+				if (shadow_only && peds[i].vel != zero_vector) continue; // don't add to precomputed shadow map if moving
 				point const &pos(peds[i].pos);
-				if (!camera_pdu.sphere_visible_test((pos + xlate), radius)) continue; // not visible - skip
+				assert(peds[i].city == city);
+				if (!dist_less_than(camera_pdu.pos, (pos + xlate), draw_dist)) continue; // too far - skip
+				if (!camera_pdu.sphere_visible_test((pos + xlate), radius))    continue; // not visible - skip
 				dstate.ensure_shader_active(); // needed for use_smap=0 case
 				dstate.begin_tile(pos, 1);
-				int const ndiv = 16; // FIXME_PEDS: LOD, better model
-				draw_sphere_vbo(pos, radius, ndiv, textured);
+				int const ndiv = 16;
+				draw_sphere_vbo(pos, radius, ndiv, textured); // FIXME_PEDS: better model
 			} // for i
 		} // for city
 		end_sphere_draw();
@@ -2721,7 +2728,6 @@ public:
 		road_gen.add_streetlights();
 		road_gen.gen_tile_blocks();
 		car_manager.init_cars(city_params.num_cars);
-		ped_manager.init(city_params.num_peds);
 	}
 	void gen_details() {
 		if (road_gen.empty()) return; // nothing to do - no roads or cars
@@ -2730,6 +2736,7 @@ public:
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, !car_manager.empty());
 		car_manager.add_parked_cars(parked_cars);
 		car_manager.finalize_cars();
+		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
