@@ -1042,7 +1042,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 				float const dx(cc.x - p1r.x), dy(cc.y - p1r.y), rx(0.5*csz.x), ry(0.5*csz.y);
 				if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // no intersection (below test should return true as well)
 				tmin = (i->z2() - p1r.z)/(p2r.z - p1r.z);
-				if (tmin < t) {t = tmin; hit = 1;}
+				if (tmin >= 0.0 && tmin < t) {t = tmin; hit = 1;}
 			}
 			else {
 				point const cp1(cc - vector3d(0.0, 0.0, 0.5*csz.z)), cp2(cc + vector3d(0.0, 0.0, 0.5*csz.z));
@@ -1053,7 +1053,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			building_draw.calc_poly_pts(*this, *i, points);
 			float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 
-			if (tz < t) {
+			if (tz >= 0.0 && tz < t) {
 				float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
 				if (point_in_polygon_2d(xval, yval, &points.front(), points.size(), 0, 1)) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
 			}
