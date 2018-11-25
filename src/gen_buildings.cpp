@@ -1031,21 +1031,20 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 		if (pzmin > i->z2() || pzmax < i->z1()) continue; // no overlap in z
 		bool hit(0);
 
-		if (use_cylinder_coll()) {
+		if (use_cylinder_coll()) { // vertical cylinder
+			// Note: we know the line intersects the cylinder's bcube, and there's a good chance it intersects the cylinder, so we don't need any expensive early termination cases here
 			point const cc(i->get_cube_center());
-			float const dist(pt_line_dist(cc, p1r, p2r));
 			vector3d const csz(i->get_size());
 			float const radius(0.5*max(csz.x, csz.y));
-			if (dist > radius) continue; // test conservative bounding circle
 			
-			if (vert) { // vertical cylinder optimization + handling of ellipsoids
+			if (vert) { // vertical line + vertical cylinder optimization + handling of ellipsoids
 				float const dx(cc.x - p1r.x), dy(cc.y - p1r.y), rx(0.5*csz.x), ry(0.5*csz.y);
 				if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // no intersection (below test should return true as well)
 				tmin = (i->z2() - p1r.z)/(p2r.z - p1r.z);
 				if (tmin >= 0.0 && tmin < t) {t = tmin; hit = 1;}
 			}
 			else {
-				point const cp1(cc - vector3d(0.0, 0.0, 0.5*csz.z)), cp2(cc + vector3d(0.0, 0.0, 0.5*csz.z));
+				point const cp1(cc.x, cc.y, i->z1()), cp2(cc.x, cc.y, i->z2());
 				if (line_int_cylinder(p1r, p2r, cp1, cp2, radius, radius, 1, tmin) && tmin < t) {t = tmin; hit = 1;}
 			}
 		}
