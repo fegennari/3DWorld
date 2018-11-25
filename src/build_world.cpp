@@ -1847,7 +1847,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'x': // teleporter sx sy sz  dx dy dz  radius [is_portal [is_indoors]]
+		case 'x': // teleporter sx sy sz  dx dy dz  radius [is_portal=0 [is_indoors=0]]
 			{
 				teleporter tp;
 				int is_portal(0), is_indoors(0);

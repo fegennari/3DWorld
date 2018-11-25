@@ -27,6 +27,7 @@ B  2.7  2.9   2.0  2.2  0.2 1.45 # drop zone
 B  0.8  1.0   2.0  2.2  0.2 1.85 # top of ramp
 B -1.0 -0.8   2.0  2.2  0.2 1.85 # glass floor
 B -2.1 -2.3   2.0  2.2  0.2 1.85 # after three rotating things
+B -2.25 -2.1 -0.1  0.1  0.2 1.95 # temp connector
 
 # walkable surfaces
 l 0.8 1.0 1.0 1.0 1.0 tile.png 1
@@ -43,9 +44,10 @@ B  2.60  2.95   1.90  2.25  1.45 1.5 # drop zone
 B  0.75  1.05   1.90  2.25  1.85 1.9 # top of ramp
 B -1.10 -0.75   1.90  2.25  1.85 1.9 # glass floor
 B -2.35 -2.00   1.90  2.25  1.85 1.9 # after three rotating things
+B -2.30 -2.05  -0.20  1.90  1.95 2.0 # temp connector
 X none
 
-x 0.0 0.0 2.55 0.0 -3.5 1.25 0.05 # teleporter
+x 0.0 0.0 2.55 0.0 -3.5 1.25 0.05 1 0 # teleporter sx sy sz  dx dy dz  radius [is_portal [is_indoors]]
 
 # mirror walls
 cube_map_ref 1
@@ -303,4 +305,13 @@ B -2.00 -1.70   1.90  2.25  1.85 1.9
 Q 0
 metalness 0.0
 
+# placeholder to get to the top - replace with more puzzle content later
+# balance bar
+metalness 1.0 # metal
+l 0.8 0.4 0.25 0.03 1.0 -1 1 # gold
+r 2.0 40.0  0.9 0.6 0.1 # set gold specular
+#cube_map_ref 1 # slower, and doesn't look quite right
+C -2.06 0.0 1.98  -0.14 0.0 2.48  0.02 0.02
+cube_map_ref 0
+r 0.0 1.0 # reset specularity
 
