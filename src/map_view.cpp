@@ -335,7 +335,9 @@ void draw_overhead_map() {
 	s.begin_simple_textured_shader(0.0, 0, 0, &WHITE);
 	setup_texture(tid, 0, 0, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, nx, ny, 0, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
+	ensure_filled_polygons();
 	draw_tquad(0.58*((float)window_width)/((float)window_height), 0.58, -1.0);
+	reset_fill_mode();
 	free_texture(tid);
 	s.end_shader();
 	//PRINT_TIME("draw map")
