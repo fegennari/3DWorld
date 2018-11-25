@@ -344,7 +344,7 @@ void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vecto
 void setup_city_lights(vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels);
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars=0, vector3d *cnorm=nullptr);
-bool line_intersect_city(point const &p1, point const &p2, float &t);
+bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt=0);
 bool line_intersect_city(point const &p1, point const &p2, point &p_int);
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall=0);
 bool check_mesh_disable(point const &pos, float radius);
@@ -960,7 +960,7 @@ void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval);
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only);
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only);
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm=nullptr);
-unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate);
+unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt=0);
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
 bool have_buildings();

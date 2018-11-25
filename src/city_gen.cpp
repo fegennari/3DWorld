@@ -2836,9 +2836,9 @@ bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float 
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;
 	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // Note: no xy_only for cities
 }
-bool line_intersect_city(point const &p1, point const &p2, float &t) {
+bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt) {
 	unsigned hit_bix(0); // unused
-	return (check_buildings_line_coll(p1, p2, t, hit_bix, 0) || city_gen.line_intersect(p1, p2, t)); // apply_tt_xlate=0
+	return (check_buildings_line_coll(p1, p2, t, hit_bix, 0, ret_any_pt) || city_gen.line_intersect(p1, p2, t)); // apply_tt_xlate=0
 }
 bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 	float t(1.0);

@@ -392,7 +392,7 @@ struct building_t : public building_geom_t {
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm) const;
-	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0) const;
+	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
@@ -1011,7 +1011,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	return had_coll;
 }
 
-unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only) const {
+unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only, bool ret_any_pt) const {
 
 	if (!check_line_clip(p1-xlate, p2-xlate, bcube.d)) return 0; // no intersection
 	point p1r(p1), p2r(p2);
@@ -1075,6 +1075,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			if (occlusion_only) return 1; // early exit
 			float const zval(p1.z + t*(p2.z - p1.z));
 			coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->get_dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
+			if (ret_any_pt) return coll;
 		}
 	} // for i
 	if (occlusion_only) return 0;
@@ -1725,9 +1726,9 @@ public:
 		return 0;
 	}
 
-	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix) const {
+	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt) const {
 		if (empty()) return 0;
-		bool const vertical(p1.x == p2.x && p1.y == p2.y);
+		bool const is_vertical(p1.x == p2.x && p1.y == p2.y); // vertical lines can only intersect one building
 		vector3d const xlate(get_camera_coord_space_xlate());
 		point const p1x(p1 - xlate);
 		cube_t bcube(p1x, p2-xlate);
@@ -1750,14 +1751,14 @@ public:
 					building_t const &building(get_building(*b));
 					if (!building.bcube.intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(building.check_line_coll(p1, p2, xlate, t_new, points));
+					unsigned const ret(building.check_line_coll(p1, p2, xlate, t_new, points, 0, ret_any_pt));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
 						t       = t_new;
 						hit_bix = *b;
 						coll    = ret;
 						end_pos = p1 + t*(p2 - p1);
-						if (vertical) return coll; // vertical lines can only intersect one building
+						if (ret_any_pt || is_vertical) return coll;
 					}
 				}
 			} // for x
@@ -1830,9 +1831,9 @@ bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_x
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
 	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm);
 }
-unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate) {
+unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) {
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
-	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix);
+	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt);
 }
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 
