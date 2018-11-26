@@ -961,6 +961,7 @@ bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_o
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only);
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm=nullptr);
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt=0);
+bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id);
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
 bool have_buildings();

@@ -316,11 +316,8 @@ point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 }
 
 bool is_valid_ped_pos(point const &pos, float radius) {
-	float t(0.0); // unused
-	unsigned hit_bix(0); // unused
-	point const p1(pos - vector3d(0.0, 0.0, radius)), p2(pos + vector3d(0.0, 0.0, radius+get_buildings_max_extent().z));
-	if (check_buildings_line_coll(p1, p2, t, hit_bix, 0, 1)) return 0; // check for point inside building
-	if (check_buildings_sphere_coll(pos, radius, 0, 1)) return 0; // check for sphere intsect building sides; apply_tt_xlate=0, xy_only=1
+	unsigned const plot_id(0);
+	if (check_buildings_ped_coll(pos, radius, plot_id)) return 0;
 	// FIXME_PEDS: check benches, trees, roads/cars/crosswalks
 	return 1;
 }
@@ -2646,18 +2643,20 @@ public:
 	//bool line_intersect(point const &p1, point const &p2, float &t) const;
 	
 	void next_frame() {
+		timer_t timer("Ped Update");
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
-			if (i->vel == zero_vector) continue; // not moving
+			//if (i->vel == zero_vector) continue; // not moving
 			// FIXME_PEDS: navigation
 
 			if (!is_valid_ped_pos(i->pos, get_ped_radius())) { // FIXME: too slow, don't check every frame
 				float const vmag(i->vel.mag());
-				i->vel = rgen.signed_rand_vector_spherical(vmag); // try a random new direction
+				if (vmag > 0.0) {i->vel = rgen.signed_rand_vector_spherical(vmag);} // try a random new direction
 			} else {i->move();}
 		}
 	}
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
 		if (empty()) return;
+		//timer_t timer("Ped Draw");
 		float const radius(get_ped_radius()), draw_dist(2000.0*radius);
 		dstate.xlate = xlate;
 		fgPushMatrix();

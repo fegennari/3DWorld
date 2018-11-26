@@ -387,11 +387,11 @@ struct building_t : public building_geom_t {
 	bool check_bcube_overlap_xy(building_t const &b, float expand) const {
 		return (check_bcube_overlap_xy_one_dir(b, expand) || b.check_bcube_overlap_xy_one_dir(*this, expand));
 	}
-	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm) const {
+	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
 		point pos2(pos);
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm) const;
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
@@ -1768,6 +1768,35 @@ public:
 		return coll;
 	}
 
+	bool check_ped_coll(point const &pos, float radius, unsigned plot_id) const {
+		if (empty()) return 0;
+		vector3d const xlate(get_camera_coord_space_xlate());
+		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
+		unsigned ixr[2][2];
+		get_grid_range(bcube, ixr);
+		vector<point> points; // reused across calls
+		point const p1(pos - vector3d(0.0, 0.0, radius)), p2(pos + vector3d(0.0, 0.0, radius+max_extent.z));
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.ixs.empty()) continue; // skip empty grid
+				if (!sphere_cube_intersect(pos, radius, (ge.bcube + xlate))) continue; // Note: makes little difference
+
+				// Note: assumes buildings are separated so that only one ped collision can occur
+				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
+					building_t const &building(get_building(*b));
+					if (!building.bcube.intersects_xy(bcube)) continue;
+					float t(1.0);
+					if (building.check_line_coll(p1, p2, xlate, t, points, 1, 1)) return 1; // occlusion_only=1
+					point pos2(pos); // copy so that it can be modified (and discarded)
+					if (building.check_sphere_coll(pos2, pos, xlate, radius, 1, points)) return 1;
+				}
+			} // for x
+		} // for y
+		return 0;
+	}
+
 	void get_overlapping_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
@@ -1837,6 +1866,7 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
 	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt);
 }
+bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id) {return building_creator.check_ped_coll(pos, radius, plot_id);}
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
