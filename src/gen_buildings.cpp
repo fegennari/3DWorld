@@ -1772,6 +1772,7 @@ public:
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
+		// FIXME: use plot_id rather than grid
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		vector<point> points; // reused across calls

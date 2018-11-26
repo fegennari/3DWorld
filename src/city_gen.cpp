@@ -315,11 +315,26 @@ point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 	return point(rgen.rand_uniform(c.x1()+radius, c.x2()-radius), rgen.rand_uniform(c.y1()+radius, c.y2()-radius), c.z1());
 }
 
-bool is_valid_ped_pos(point const &pos, float radius) {
-	unsigned const plot_id(0);
-	if (check_buildings_ped_coll(pos, radius, plot_id)) return 0;
+
+bool pedestrian_t::is_valid_pos() const {
+	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
 	// FIXME_PEDS: check benches, trees, roads/cars/crosswalks
 	return 1;
+}
+bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, unsigned plot_id, rand_gen_t &rgen) {
+	pos = rand_xy_pt_in_cube(plot_cube, radius, rgen);
+	pos.z += radius; // place on top of the plot
+	if (!is_valid_pos()) return 0; // failed
+	plot = plot_id;
+	return 1; // success
+}
+void pedestrian_t::next_frame(rand_gen_t &rgen) {
+	//if (vel == zero_vector) continue; // not moving
+
+	if (!is_valid_pos()) { // FIXME: too slow, don't check every frame
+		float const vmag(vel.mag());
+		if (vmag > 0.0) {vel = rgen.signed_rand_vector_spherical(vmag);} // try a random new direction
+	} else {move();}
 }
 
 
@@ -978,7 +993,7 @@ class city_road_gen_t : public road_gen_base_t {
 		set<unsigned> connected_to; // vector?
 		map<uint64_t, unsigned> tile_to_block_map;
 		map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
-		unsigned city_id, cluster_id;
+		unsigned city_id, cluster_id, plot_id_offset;
 		//string city_name; // future work
 		float tot_road_len;
 		mutable unsigned num_cars; // Note: not counting parked cars; mutable so that car_manager can update this
@@ -1028,7 +1043,7 @@ class city_road_gen_t : public road_gen_base_t {
 			return segs[seg_ix];
 		}
 	public:
-		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), tot_road_len(0.0), num_cars(0) {} // global road network ctor
+		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {} // global road network ctor
 		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), tot_road_len(0.0), num_cars(0) {
 			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
@@ -1546,7 +1561,8 @@ class city_road_gen_t : public road_gen_base_t {
 			get_all_bcubes(roads,  bcubes);
 			get_all_bcubes(tracks, bcubes);
 		}
-		void get_plot_bcubes(vector<cube_t> &bcubes) const { // Note: z-values of cubes indicate building height ranges
+		void get_plot_bcubes(vector<cube_t> &bcubes) { // Note: z-values of cubes indicate building height ranges
+			plot_id_offset = bcubes.size(); // cache offset into global plot bcubes vector; this makes the function non-const
 			if (plots.empty()) return; // connector road city
 			unsigned const start(bcubes.size());
 			get_all_bcubes(plots, bcubes);
@@ -1729,9 +1745,9 @@ class city_road_gen_t : public road_gen_base_t {
 			car.cur_city = gen_rand_city(rgen, road_networks);
 			return road_networks[car.cur_city].add_car(car, rgen);
 		}
-		static bool gen_ped_pos(point &pos, unsigned &city_id, float radius, rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
+		static bool gen_ped_pos(pedestrian_t &ped, unsigned &city_id, rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
 			city_id = gen_rand_city(rgen, road_networks);
-			return road_networks[city_id].gen_ped_pos(pos, radius, rgen);
+			return road_networks[city_id].gen_ped_pos(ped, rgen);
 		}
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
@@ -1763,16 +1779,13 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for n
 			return 0; // failed
 		}
-		bool gen_ped_pos(point &pos, float radius, rand_gen_t &rgen) const {
+		bool gen_ped_pos(pedestrian_t &ped, rand_gen_t &rgen) const {
 			if (plots.empty()) return 0; // no plots to place car on
 
 			for (unsigned n = 0; n < 100; ++n) { // make 100 tries
-				unsigned const plot_ix(rgen.rand()%plots.size());
-				road_plot_t const &plot(plots[plot_ix]); // chose a random plot
-				pos = rand_xy_pt_in_cube(plot, radius, rgen);
-				pos.z += radius; // place on top of the plot
-				if (is_valid_ped_pos(pos, radius)) return 1; // success
-			} // for n
+				unsigned const plot_id(rgen.rand()%plots.size()); // chose a random plot
+				if (ped.try_place_in_plot(plots[plot_id], (plot_id + plot_id_offset), rgen)) return 1; // success
+			}
 			return 0; // failed
 		}
 		void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
@@ -2384,7 +2397,7 @@ public:
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
 	}
-	void get_all_plot_bcubes(vector<cube_t> &bcubes) const { // Note: no global_rn
+	void get_all_plot_bcubes(vector<cube_t> &bcubes) { // Note: no global_rn; caches plot_id_offset, so non-const
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
@@ -2452,9 +2465,9 @@ public:
 		if (road_networks.empty()) return 0; // no cities to add cars to
 		return road_network_t::add_car_to_rns(car, rgen, road_networks);
 	}
-	bool gen_ped_pos(point &pos, unsigned &city_id, float radius, rand_gen_t &rgen) const {
+	bool gen_ped_pos(pedestrian_t &ped, unsigned &city_id, rand_gen_t &rgen) const {
 		if (road_networks.empty()) return 0; // no cities to add peds to
-		return road_network_t::gen_ped_pos(pos, city_id, radius, rgen, road_networks);
+		return road_network_t::gen_ped_pos(ped, city_id, rgen, road_networks);
 	}
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
@@ -2574,17 +2587,9 @@ struct city_smap_manager_t {
 
 
 class ped_manager_t { // pedestrians
-	struct ped_t {
-		point pos;
-		vector3d vel;
-		unsigned city;
 
-		ped_t() : pos(all_zeros), vel(zero_vector), city(0) {}
-		bool operator<(ped_t const &ped) const {return (city < ped.city);} // currently only compares city
-		void move() {pos += vel*fticks;}
-	};
 	city_road_gen_t const &road_gen;
-	vector<ped_t> peds;
+	vector<pedestrian_t> peds;
 	vector<unsigned> by_city; // first ped index for each city
 	rand_gen_t rgen;
 	draw_state_t dstate;
@@ -2605,10 +2610,11 @@ public:
 		if (num == 0) return;
 		timer_t timer("Gen Peds");
 		peds.reserve(num);
+		float const radius(get_ped_radius()); // currently, all pedestrians are the same size
 
 		for (unsigned n = 0; n < num; ++n) {
-			ped_t ped;
-			if (road_gen.gen_ped_pos(ped.pos, ped.city, get_ped_radius(), rgen)) {peds.push_back(ped);}
+			pedestrian_t ped(radius);
+			if (road_gen.gen_ped_pos(ped, ped.city, rgen)) {peds.push_back(ped);}
 		}
 		cout << "Pedestrians: " << peds.size() << endl; // testing
 		if (peds.empty()) return;
@@ -2645,13 +2651,8 @@ public:
 	void next_frame() {
 		timer_t timer("Ped Update");
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
-			//if (i->vel == zero_vector) continue; // not moving
 			// FIXME_PEDS: navigation
-
-			if (!is_valid_ped_pos(i->pos, get_ped_radius())) { // FIXME: too slow, don't check every frame
-				float const vmag(i->vel.mag());
-				if (vmag > 0.0) {i->vel = rgen.signed_rand_vector_spherical(vmag);} // try a random new direction
-			} else {i->move();}
+			i->next_frame(rgen);
 		}
 	}
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
@@ -2738,7 +2739,7 @@ public:
 		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
-	void get_all_plot_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_plot_bcubes(bcubes);}
+	void get_all_plot_bcubes(vector<cube_t> &bcubes)       {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
 
 	bool check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
 		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;

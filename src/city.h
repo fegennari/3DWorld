@@ -559,5 +559,20 @@ public:
 }; // car_manager_t
 
 
+struct pedestrian_t {
+	point pos;
+	vector3d vel;
+	float radius;
+	unsigned city, plot;
+
+	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), radius(radius_), city(0), plot(0) {}
+	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
+	void move() {pos += vel*fticks;}
+	bool pedestrian_t::is_valid_pos() const;
+	bool try_place_in_plot(cube_t const &plot_cube, unsigned plot_id, rand_gen_t &rgen);
+	void next_frame(rand_gen_t &rgen);
+};
+
+
 bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c);
 
