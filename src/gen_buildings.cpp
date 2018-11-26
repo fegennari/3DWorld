@@ -1714,11 +1714,14 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (!sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate))) continue;
+				if (ge.ixs.empty()) continue; // skip empty grid
+				if (!sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate))) continue; // Note: makes little difference
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-					if (get_building(*b).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm)) return 1;
+					building_t const &building(get_building(*b));
+					if (!building.bcube.intersects_xy(bcube)) continue;
+					if (building.check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm)) return 1;
 				}
 			} // for x
 		} // for y
