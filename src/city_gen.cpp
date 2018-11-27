@@ -316,22 +316,23 @@ point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 }
 
 
-bool pedestrian_t::is_valid_pos() const {
+bool pedestrian_t::is_valid_pos(cube_t const &plot_cube) const {
+	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
 	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
 	// FIXME_PEDS: check benches, trees, roads/cars/crosswalks
 	return 1;
 }
 bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, unsigned plot_id, rand_gen_t &rgen) {
-	pos = rand_xy_pt_in_cube(plot_cube, radius, rgen);
+	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
-	if (!is_valid_pos()) return 0; // failed
-	plot = plot_id;
+	plot   = plot_id;
+	if (!is_valid_pos(plot_cube)) return 0; // failed
 	return 1; // success
 }
-void pedestrian_t::next_frame(rand_gen_t &rgen) {
+void pedestrian_t::next_frame(cube_t const &plot_cube, rand_gen_t &rgen) {
 	//if (vel == zero_vector) continue; // not moving
 
-	if (!is_valid_pos()) { // FIXME: too slow, don't check every frame
+	if (!is_valid_pos(plot_cube)) { // FIXME: too slow, don't check every frame
 		float const vmag(vel.mag());
 		if (vmag > 0.0) {vel = rgen.signed_rand_vector_spherical(vmag);} // try a random new direction
 	} else {move();}
@@ -1788,6 +1789,12 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0; // failed
 		}
+		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {
+			assert(global_plot_id >= plot_id_offset);
+			unsigned const plot_id(global_plot_id - plot_id_offset);
+			assert(plot_id < plots.size());
+			return plots[plot_id];
+		}
 		void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			if (car.cur_road_type == TYPE_RSEG) {
 				road_seg_t const &seg(get_car_seg(car));
@@ -2469,6 +2476,8 @@ public:
 		if (road_networks.empty()) return 0; // no cities to add peds to
 		return road_network_t::gen_ped_pos(ped, city_id, rgen, road_networks);
 	}
+	cube_t const &get_plot_from_global_id(unsigned city_id, unsigned global_plot_id) const {return get_city(city_id).get_plot_from_global_id(global_plot_id);}
+	
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
 		if (car.dest_valid && !car_at_dest(car)) return 0; // not yet at destination, keep existing dest
@@ -2652,7 +2661,7 @@ public:
 		timer_t timer("Ped Update");
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
 			// FIXME_PEDS: navigation
-			i->next_frame(rgen);
+			i->next_frame(road_gen.get_plot_from_global_id(i->city, i->plot), rgen);
 		}
 	}
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
