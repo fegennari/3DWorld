@@ -2658,7 +2658,7 @@ public:
 	//bool line_intersect(point const &p1, point const &p2, float &t) const;
 	
 	void next_frame() {
-		timer_t timer("Ped Update");
+		//timer_t timer("Ped Update"); // ~1s for 10K peds
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
 			// FIXME_PEDS: navigation
 			i->next_frame(road_gen.get_plot_from_global_id(i->city, i->plot), rgen);

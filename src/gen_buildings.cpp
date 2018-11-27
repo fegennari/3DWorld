@@ -384,8 +384,8 @@ struct building_t : public building_geom_t {
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
-	bool check_bcube_overlap_xy(building_t const &b, float expand) const {
-		return (check_bcube_overlap_xy_one_dir(b, expand) || b.check_bcube_overlap_xy_one_dir(*this, expand));
+	bool check_bcube_overlap_xy(building_t const &b, float expand, vector<point> &points) const {
+		return (check_bcube_overlap_xy_one_dir(b, expand, points) || b.check_bcube_overlap_xy_one_dir(*this, expand, points));
 	}
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
 		point pos2(pos);
@@ -401,7 +401,7 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
 private:
-	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const;
+	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 };
@@ -874,12 +874,11 @@ bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, 
 	return point_in_polygon_2d(pt.x, pt.y, &points.front(), points.size(), 0, 1); // 2D x/y containment
 }
 
-bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand) const { // can be called before levels/splits are created
+bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand, vector<point> &points) const { // can be called before levels/splits are created
 
 	if (expand == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
-	vector<point> points; // reused across calls
 	
 	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
 		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
@@ -1482,10 +1481,10 @@ class building_creator_t {
 			}
 		}
 	}
-	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand) const {
+	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand, vector<point> &points) const {
 		for (auto i = ixs.begin(); i != ixs.end(); ++i) {
 			building_t const &ob(get_building(*i));
-			if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand)) return 1;
+			if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand, points)) return 1;
 		}
 		return 0;
 	}
@@ -1522,6 +1521,7 @@ public:
 		point center(all_zeros);
 		bool zval_set(0);
 		bix_by_plot.resize(city_plot_bcubes.size());
+		vector<point> points; // reused temporary
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
@@ -1581,7 +1581,7 @@ public:
 
 				if (use_plots) {
 					assert(plot_ix < bix_by_plot.size());
-					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand)) continue;
+					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand, points)) continue;
 					bix_by_plot[plot_ix].push_back(buildings.size());
 				}
 				else {
@@ -1593,7 +1593,7 @@ public:
 						for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 							grid_elem_t const &ge(get_grid_elem(x, y));
 							if (!test_bc.intersects_xy(ge.bcube)) continue;
-							if (check_for_overlaps(ge.ixs, test_bc, b, expand)) {overlaps = 1; break;}
+							if (check_for_overlaps(ge.ixs, test_bc, b, expand, points)) {overlaps = 1; break;}
 						} // for x
 					} // for y
 					if (overlaps) continue;
@@ -1812,14 +1812,14 @@ public:
 		return coll;
 	}
 
-	bool check_ped_coll(point const &pos, float radius, unsigned plot_id) const {
+	bool check_ped_coll(point const &pos, float radius, unsigned plot_id) const { // Note: not thread safe sue to static points
 		if (empty()) return 0;
 		assert(plot_id < bix_by_plot.size());
 		vector<unsigned> const &bixes(bix_by_plot[plot_id]); // should be populated in gen()
 		if (bixes.empty()) return 0;
 		point const pos_x(pos - get_camera_coord_space_xlate());
 		cube_t bcube; bcube.set_from_sphere(pos_x, radius);
-		vector<point> points; // reused across calls
+		static vector<point> points; // reused across calls
 
 		// Note: assumes buildings are separated so that only one ped collision can occur
 		for (auto b = bixes.begin(); b != bixes.end(); ++b) {
