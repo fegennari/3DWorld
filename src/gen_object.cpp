@@ -448,6 +448,16 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_s
 	return zero_vector; // never gets here
 }
 
+template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_spherical_xy(float scale) {
+	assert(scale > 0.0);
+
+	while (1) {
+		vector3d const v(signed_rand_vector_xy(scale));
+		if (v.mag_sq() < scale*scale) return v;
+	}
+	return zero_vector; // never gets here
+}
+
 template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_spherical_noloop(float scale) {
 	// uniform distribution of points about a sphere from http://mathworld.wolfram.com/SpherePointPicking.html
 	float const u(signed_rand_float()), theta(TWO_PI*signed_rand_float()), xy_term(sqrt(1.0-u*u));
