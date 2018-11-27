@@ -145,6 +145,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "num_peds") {
 		if (!read_uint(fp, num_peds)) {return read_error(str);}
 	}
+	else if (str == "ped_speed") {
+		if (!read_float(fp, ped_speed) || ped_speed < 0.0) {return read_error(str);}
+	}
 	else {
 		cout << "Unrecognized city keyword in input file: " << str << endl;
 		return 0;
@@ -331,11 +334,12 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, unsigned plot_id, 
 }
 void pedestrian_t::next_frame(cube_t const &plot_cube, rand_gen_t &rgen) {
 	//if (vel == zero_vector) continue; // not moving
-
-	if (!is_valid_pos(plot_cube)) { // FIXME: too slow, don't check every frame
-		float const vmag(vel.mag());
-		if (vmag > 0.0) {vel = rgen.signed_rand_vector_spherical(vmag);} // try a random new direction
-	} else {move();}
+	move();
+	if (is_valid_pos(plot_cube)) return; // nothing else to do
+	if (vel == zero_vector) return; // stopped
+	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
+	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
+	vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
 }
 
 
@@ -2623,7 +2627,11 @@ public:
 
 		for (unsigned n = 0; n < num; ++n) {
 			pedestrian_t ped(radius);
-			if (road_gen.gen_ped_pos(ped, ped.city, rgen)) {peds.push_back(ped);}
+
+			if (road_gen.gen_ped_pos(ped, ped.city, rgen)) {
+				if (city_params.ped_speed > 0.0) {ped.vel = rgen.signed_rand_vector_spherical_xy(city_params.ped_speed);}
+				peds.push_back(ped);
+			}
 		}
 		cout << "Pedestrians: " << peds.size() << endl; // testing
 		if (peds.empty()) return;
@@ -2658,7 +2666,9 @@ public:
 	//bool line_intersect(point const &p1, point const &p2, float &t) const;
 	
 	void next_frame() {
+		if (!animate2) return;
 		//timer_t timer("Ped Update"); // ~1s for 10K peds
+
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
 			// FIXME_PEDS: navigation
 			i->next_frame(road_gen.get_plot_from_global_id(i->city, i->plot), rgen);
