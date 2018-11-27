@@ -334,9 +334,11 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, unsigned plot_id, 
 }
 void pedestrian_t::next_frame(cube_t const &plot_cube, rand_gen_t &rgen) {
 	//if (vel == zero_vector) continue; // not moving
+	point const prev_pos(pos);
 	move();
 	if (is_valid_pos(plot_cube)) return; // nothing else to do
 	if (vel == zero_vector) return; // stopped
+	pos = prev_pos; // restore to previous valid pos
 	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
 	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
 	vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
