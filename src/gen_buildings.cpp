@@ -1398,6 +1398,7 @@ class building_creator_t {
 	cube_t range, buildings_bcube;
 	rand_gen_t rgen;
 	vector<building_t> buildings;
+	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 
 	struct grid_elem_t {
 		vector<unsigned> ixs;
@@ -1476,7 +1477,6 @@ public:
 		bool const use_plots(!city_plot_bcubes.empty());
 		point center(all_zeros);
 		bool zval_set(0);
-		vector<vector<unsigned>> bix_by_plot;
 		bix_by_plot.resize(city_plot_bcubes.size());
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
@@ -1770,31 +1770,23 @@ public:
 
 	bool check_ped_coll(point const &pos, float radius, unsigned plot_id) const {
 		if (empty()) return 0;
+		assert(plot_id < bix_by_plot.size());
+		vector<unsigned> const &bixes(bix_by_plot[plot_id]); // should be populated in gen()
+		if (bixes.empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
-		// FIXME: use plot_id rather than grid
-		unsigned ixr[2][2];
-		get_grid_range(bcube, ixr);
-		vector<point> points; // reused across calls
 		point const p1(pos - vector3d(0.0, 0.0, radius)), p2(pos + vector3d(0.0, 0.0, radius+max_extent.z));
+		vector<point> points; // reused across calls
 
-		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
-			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
-				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.ixs.empty()) continue; // skip empty grid
-				if (!sphere_cube_intersect(pos, radius, (ge.bcube + xlate))) continue; // Note: makes little difference
-
-				// Note: assumes buildings are separated so that only one ped collision can occur
-				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-					building_t const &building(get_building(*b));
-					if (!building.bcube.intersects_xy(bcube)) continue;
-					float t(1.0);
-					if (building.check_line_coll(p1, p2, xlate, t, points, 1, 1)) return 1; // occlusion_only=1
-					point pos2(pos); // copy so that it can be modified (and discarded)
-					if (building.check_sphere_coll(pos2, pos, xlate, radius, 1, points)) return 1;
-				}
-			} // for x
-		} // for y
+		// Note: assumes buildings are separated so that only one ped collision can occur
+		for (auto b = bixes.begin(); b != bixes.end(); ++b) {
+			building_t const &building(get_building(*b));
+			if (!building.bcube.intersects_xy(bcube)) continue;
+			float t(1.0);
+			if (building.check_line_coll(p1, p2, xlate, t, points, 1, 1)) return 1; // occlusion_only=1
+			point pos2(pos); // copy so that it can be modified (and discarded)
+			if (building.check_sphere_coll(pos2, pos, xlate, radius, 1, points)) return 1;
+		} // for b
 		return 0;
 	}
 
