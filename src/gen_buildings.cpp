@@ -393,6 +393,7 @@ struct building_t : public building_geom_t {
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0) const;
+	bool check_point_contained(point const &pos, vector<point> &points) const;
 	void gen_geometry(unsigned ix);
 	void gen_details(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
@@ -1088,6 +1089,32 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 	return coll;
 }
 
+bool building_t::check_point_contained(point const &pos, vector<point> &points) const {
+
+	if (!bcube.contains_pt(pos)) return 0; // no intersection
+	point pr(pos);
+	if (is_rotated()) {do_xy_rotate(-rot_sin, rot_cos, bcube.get_cube_center(), pr);} // inverse rotate - negate the sine term
+	
+	for (auto i = parts.begin(); i != parts.end(); ++i) {
+		if (pr.z > i->z2() || pr.z < i->z1()) continue; // no overlap in z
+
+		if (use_cylinder_coll()) { // vertical cylinder
+			point const cc(i->get_cube_center());
+			vector3d const csz(i->get_size());
+			float const radius(0.5*max(csz.x, csz.y));
+			float const dx(cc.x - pr.x), dy(cc.y - pr.y), rx(0.5*csz.x), ry(0.5*csz.y);
+			if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // no intersection (below test should return true as well)
+			return 1;
+		}
+		else if (num_sides != 4) {
+			building_draw.calc_poly_pts(*this, *i, points);
+			if (point_in_polygon_2d(pr.x, pr.y, &points.front(), points.size(), 0, 1)) return 1; // XY plane test for top surface
+		}
+		else if (i->contains_pt(pr)) return 1; // cube
+	} // for i
+	return 0;
+}
+
 void building_t::gen_geometry(unsigned ix) {
 
 	if (!is_valid()) return; // invalid building
@@ -1775,15 +1802,13 @@ public:
 		if (bixes.empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
-		point const p1(pos - vector3d(0.0, 0.0, radius)), p2(pos + vector3d(0.0, 0.0, radius+max_extent.z));
 		vector<point> points; // reused across calls
 
 		// Note: assumes buildings are separated so that only one ped collision can occur
 		for (auto b = bixes.begin(); b != bixes.end(); ++b) {
 			building_t const &building(get_building(*b));
 			if (!building.bcube.intersects_xy(bcube)) continue;
-			float t(1.0);
-			if (building.check_line_coll(p1, p2, xlate, t, points, 1, 1)) return 1; // occlusion_only=1
+			if (building.check_point_contained(pos, points)) return 1;
 			point pos2(pos); // copy so that it can be modified (and discarded)
 			if (building.check_sphere_coll(pos2, pos, xlate, radius, 1, points)) return 1;
 		} // for b
