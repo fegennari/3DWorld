@@ -570,9 +570,9 @@ struct pedestrian_t {
 	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), radius(radius_), city(0), plot(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	void move() {pos += vel*fticks;}
-	bool is_valid_pos(cube_t const &plot_cube) const;
-	bool try_place_in_plot(cube_t const &plot_cube, unsigned plot_id, rand_gen_t &rgen);
-	void next_frame(cube_t const &plot_cube, rand_gen_t &rgen);
+	bool is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const;
+	bool try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen);
+	void next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, rand_gen_t &rgen);
 };
 
 

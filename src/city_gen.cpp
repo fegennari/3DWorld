@@ -319,32 +319,6 @@ point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 }
 
 
-bool pedestrian_t::is_valid_pos(cube_t const &plot_cube) const {
-	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
-	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
-	// FIXME_PEDS: check benches, trees, roads/cars/crosswalks
-	return 1;
-}
-bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, unsigned plot_id, rand_gen_t &rgen) {
-	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
-	pos.z += radius; // place on top of the plot
-	plot   = plot_id;
-	if (!is_valid_pos(plot_cube)) return 0; // failed
-	return 1; // success
-}
-void pedestrian_t::next_frame(cube_t const &plot_cube, rand_gen_t &rgen) {
-	//if (vel == zero_vector) continue; // not moving
-	point const prev_pos(pos);
-	move();
-	if (is_valid_pos(plot_cube)) return; // nothing else to do
-	if (vel == zero_vector) return; // stopped
-	pos = prev_pos; // restore to previous valid pos
-	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
-	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
-	vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
-}
-
-
 class heightmap_query_t {
 protected:
 	float *heightmap;
@@ -929,7 +903,8 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
-		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<car_t> &cars, unsigned city_id, bool have_cars) { // Note: fills in plots.has_parking
+		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vector<cube_t>> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
+			// Note: fills in plots.has_parking
 			timer_t timer("Gen Parking Lots and Place Objects");
 			vector<cube_t> bcubes; // reused across calls
 			rand_gen_t rgen, detail_rgen;
@@ -944,8 +919,13 @@ class city_road_gen_t : public road_gen_base_t {
 				bcubes.clear();
 				get_building_bcubes(*i, bcubes);
 				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);}
+				size_t const bcubes_start(bcubes.size());
 				place_trees_in_plot (*i, bcubes, detail_rgen);
 				place_detail_objects(*i, bcubes, detail_rgen);
+				size_t const plot_id(i - plots.begin());
+				assert(plot_id < plot_colliders.size());
+				vector<cube_t> &colliders(plot_colliders[plot_id]);
+				colliders.insert(colliders.end(), (bcubes.begin() + bcubes_start), bcubes.end());
 			} // for i
 			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 		}
@@ -1000,6 +980,7 @@ class city_road_gen_t : public road_gen_base_t {
 		set<unsigned> connected_to; // vector?
 		map<uint64_t, unsigned> tile_to_block_map;
 		map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
+		vector<vector<cube_t>> plot_colliders;
 		unsigned city_id, cluster_id, plot_id_offset;
 		//string city_name; // future work
 		float tot_road_len;
@@ -1079,6 +1060,7 @@ class city_road_gen_t : public road_gen_base_t {
 			streetlights.clear();
 			city_obj_placer.clear();
 			tile_blocks.clear();
+			plot_colliders.clear();
 		}
 		bool gen_road_grid(float road_width, float road_spacing) {
 			cube_t const &region(bcube); // use our bcube as the region to process
@@ -1143,6 +1125,7 @@ class city_road_gen_t : public road_gen_base_t {
 					}
 				} // for y
 			} // for x
+			plot_colliders.resize(plots.size());
 			return 1;
 		}
 		void gen_railroad_tracks(float width, unsigned num, cube_t const &region, vector<cube_t> const &blockers, heightmap_query_t &hq) {
@@ -1548,7 +1531,7 @@ class city_road_gen_t : public road_gen_base_t {
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
 		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
-			city_obj_placer.gen_parking_and_place_objects(plots, cars, city_id, have_cars);
+			city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars);
 			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 			tile_to_block_map.clear(); // no longer needed
 		}
@@ -1791,16 +1774,19 @@ class city_road_gen_t : public road_gen_base_t {
 
 			for (unsigned n = 0; n < 100; ++n) { // make 100 tries
 				unsigned const plot_id(rgen.rand()%plots.size()); // chose a random plot
-				if (ped.try_place_in_plot(plots[plot_id], (plot_id + plot_id_offset), rgen)) return 1; // success
+				if (ped.try_place_in_plot(plots[plot_id], plot_colliders[plot_id], (plot_id + plot_id_offset), rgen)) return 1; // success
 			}
 			return 0; // failed
 		}
-		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {
+		unsigned decode_plot_id(unsigned global_plot_id) const {
 			assert(global_plot_id >= plot_id_offset);
 			unsigned const plot_id(global_plot_id - plot_id_offset);
 			assert(plot_id < plots.size());
-			return plots[plot_id];
+			return plot_id;
 		}
+		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {return plots[decode_plot_id(global_plot_id)];}
+		vector<cube_t> const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
+
 		void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			if (car.cur_road_type == TYPE_RSEG) {
 				road_seg_t const &seg(get_car_seg(car));
@@ -2193,6 +2179,7 @@ public:
 		return road_networks[city_ix];
 	}
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
+	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
 
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
@@ -2601,6 +2588,34 @@ struct city_smap_manager_t {
 };
 
 
+bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const {
+	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
+	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
+	
+	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
+		if (sphere_cube_intersect(pos, 1.5*radius, *i)) return 0; // use a larger radius for safety
+	}
+	return 1;
+}
+bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen) {
+	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
+	pos.z += radius; // place on top of the plot
+	plot   = plot_id;
+	if (!is_valid_pos(plot_cube, colliders)) return 0; // failed
+	return 1; // success
+}
+void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, rand_gen_t &rgen) {
+	//if (vel == zero_vector) continue; // not moving
+	point const prev_pos(pos);
+	move();
+	if (is_valid_pos(plot_cube, colliders)) return; // nothing else to do
+	if (vel == zero_vector) return; // stopped
+	pos = prev_pos; // restore to previous valid pos
+	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
+	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
+	vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
+}
+
 class ped_manager_t { // pedestrians
 
 	city_road_gen_t const &road_gen;
@@ -2669,11 +2684,11 @@ public:
 	
 	void next_frame() {
 		if (!animate2) return;
-		//timer_t timer("Ped Update"); // ~1s for 10K peds
+		//timer_t timer("Ped Update"); // ~1.25ms for 10K peds
 
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
 			// FIXME_PEDS: navigation
-			i->next_frame(road_gen.get_plot_from_global_id(i->city, i->plot), rgen);
+			i->next_frame(road_gen.get_plot_from_global_id(i->city, i->plot), road_gen.get_colliders_for_plot(i->city, i->plot), rgen);
 		}
 	}
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
