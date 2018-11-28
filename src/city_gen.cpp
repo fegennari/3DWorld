@@ -837,7 +837,7 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for t
 			return 0;
 		}
-		static void place_trees_in_plot(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
+		static void place_trees_in_plot(cube_t const &plot, vector<cube_t> &blockers, vector<cube_t> &colliders, rand_gen_t &rgen) {
 			if (city_params.max_trees_per_plot == 0) return;
 			float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
 			vector3d const plot_sz(plot.get_size());
@@ -858,10 +858,12 @@ class city_road_gen_t : public road_gen_base_t {
 					if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
 					if (!check_pt_and_place_blocker(pos, blockers, radius, radius)) break; // placement failed
 					tree_placer.add(pos, 0, ttype); // use same tree type
+					cube_t bcube; bcube.set_from_sphere(pos, 0.1*radius); // use 10% of the placement radius for collision
+					colliders.push_back(bcube);
 				} // for n
 			} // for n
 		}
-		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen) {
+		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, vector<cube_t> &colliders, rand_gen_t &rgen) {
 			bench_t bench;
 			bench.radius = 0.3*city_params.get_nom_car_size().x;
 
@@ -877,6 +879,7 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 				bench.calc_bcube();
 				benches.push_back(bench);
+				colliders.push_back(bench.bcube);
 			} // for n
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) const {
@@ -919,13 +922,10 @@ class city_road_gen_t : public road_gen_base_t {
 				bcubes.clear();
 				get_building_bcubes(*i, bcubes);
 				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);}
-				size_t const bcubes_start(bcubes.size());
-				place_trees_in_plot (*i, bcubes, detail_rgen);
-				place_detail_objects(*i, bcubes, detail_rgen);
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
-				vector<cube_t> &colliders(plot_colliders[plot_id]);
-				colliders.insert(colliders.end(), (bcubes.begin() + bcubes_start), bcubes.end());
+				place_trees_in_plot (*i, bcubes, plot_colliders[plot_id], detail_rgen);
+				place_detail_objects(*i, bcubes, plot_colliders[plot_id], detail_rgen);
 			} // for i
 			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 		}
@@ -2593,7 +2593,7 @@ bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &c
 	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
 	
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
-		if (sphere_cube_intersect(pos, 1.5*radius, *i)) return 0; // use a larger radius for safety
+		if (sphere_cube_intersect(pos, radius, *i)) return 0;
 	}
 	return 1;
 }
