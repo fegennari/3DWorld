@@ -2601,6 +2601,15 @@ bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &c
 	}
 	return 1;
 }
+bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> const &peds, unsigned pid) const {
+	assert(pid < peds.size());
+
+	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
+		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
+		if (dist_less_than(pos, i->pos, (radius + i->radius))) return 1; // collision
+	}
+	return 0;
+}
 bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen) {
 	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
@@ -2608,11 +2617,11 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 	if (!is_valid_pos(plot_cube, colliders)) return 0; // failed
 	return 1; // success
 }
-void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, rand_gen_t &rgen) {
+void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> const &peds, unsigned pid, rand_gen_t &rgen) {
 	//if (vel == zero_vector) continue; // not moving
 	point const prev_pos(pos);
 	move();
-	if (is_valid_pos(plot_cube, colliders)) return; // nothing else to do
+	if (is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) return; // no collisions, nothing else to do
 	if (vel == zero_vector) return; // stopped
 	pos = prev_pos; // restore to previous valid pos
 	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
@@ -2691,8 +2700,10 @@ public:
 		//timer_t timer("Ped Update"); // ~1.25ms for 10K peds
 
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
-			// FIXME_PEDS: navigation
-			i->next_frame(road_gen.get_plot_from_global_id(i->city, i->plot), road_gen.get_colliders_for_plot(i->city, i->plot), rgen);
+			// FIXME_PEDS: navigation with destination
+			cube_t const plot(road_gen.get_plot_from_global_id(i->city, i->plot));
+			auto const &colliders(road_gen.get_colliders_for_plot(i->city, i->plot));
+			i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen);
 		}
 	}
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
