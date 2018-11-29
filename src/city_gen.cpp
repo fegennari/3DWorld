@@ -837,6 +837,12 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for t
 			return 0;
 		}
+		static void place_tree(point const &pos, float radius, int ttype, vector<cube_t> &colliders) {
+			tree_placer.add(pos, 0, ttype); // use same tree type
+			cube_t bcube; bcube.set_from_sphere(pos, 0.1*radius); // use 10% of the placement radius for collision
+			bcube.z2() += radius; // increase cube height
+			colliders.push_back(bcube);
+		}
 		static void place_trees_in_plot(cube_t const &plot, vector<cube_t> &blockers, vector<cube_t> &colliders, rand_gen_t &rgen) {
 			if (city_params.max_trees_per_plot == 0) return;
 			float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
@@ -847,7 +853,7 @@ class city_road_gen_t : public road_gen_base_t {
 				point pos;
 				if (!try_place_obj(plot, blockers, rgen, radius, radius, 10, pos)) continue; // 10 tries per tree
 				int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-				tree_placer.add(pos, 0, ttype); // size is randomly selected by the tree generator using default values
+				place_tree(pos, radius, ttype, colliders); // size is randomly selected by the tree generator using default values
 				// now that we're here, try to place more trees at this same distance from the road in a row
 				bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
 				bool const dir((pos[dim] - plot.d[dim][0]) < (plot.d[dim][1] - pos[dim]));
@@ -857,9 +863,7 @@ class city_road_gen_t : public road_gen_base_t {
 					pos[dim] += step;
 					if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
 					if (!check_pt_and_place_blocker(pos, blockers, radius, radius)) break; // placement failed
-					tree_placer.add(pos, 0, ttype); // use same tree type
-					cube_t bcube; bcube.set_from_sphere(pos, 0.1*radius); // use 10% of the placement radius for collision
-					colliders.push_back(bcube);
+					place_tree(pos, radius, ttype, colliders); // use same tree type
 				} // for n
 			} // for n
 		}
