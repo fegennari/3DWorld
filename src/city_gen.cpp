@@ -910,6 +910,9 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
+		struct cube_by_x1 {
+			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
+		};
 		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vector<cube_t>> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
 			// Note: fills in plots.has_parking
 			timer_t timer("Gen Parking Lots and Place Objects");
@@ -928,8 +931,10 @@ class city_road_gen_t : public road_gen_base_t {
 				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);}
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
-				place_trees_in_plot (*i, bcubes, plot_colliders[plot_id], detail_rgen);
-				place_detail_objects(*i, bcubes, plot_colliders[plot_id], detail_rgen);
+				vector<cube_t> &colliders(plot_colliders[plot_id]);
+				place_trees_in_plot (*i, bcubes, colliders, detail_rgen);
+				place_detail_objects(*i, bcubes, colliders, detail_rgen);
+				sort(colliders.begin(), colliders.end(), cube_by_x1());
 			} // for i
 			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 		}
@@ -2595,21 +2600,25 @@ struct city_smap_manager_t {
 bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const {
 	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
 	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
+	float const xmin(pos.x - radius), xmax(pos.x + radius);
 	
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
+		if (i->x2() < xmin) continue; // to the left
+		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
 		if (sphere_cube_intersect(pos, radius, *i)) return 0;
 	}
 	return 1;
 }
-bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> const &peds, unsigned pid) const {
+bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const {
 	assert(pid < peds.size());
 
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
 		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
-		if (dist_less_than(pos, i->pos, (radius + i->radius))) return 1; // collision
+		if (dist_xy_less_than(pos, i->pos, (radius + i->radius))) {i->collided = 1; return 1;} // collision
 	}
 	return 0;
 }
+// FIXME_PEDS: handle init ped-ped coll
 bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen) {
 	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
@@ -2617,12 +2626,12 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 	if (!is_valid_pos(plot_cube, colliders)) return 0; // failed
 	return 1; // success
 }
-void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> const &peds, unsigned pid, rand_gen_t &rgen) {
-	//if (vel == zero_vector) continue; // not moving
+void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen) {
+	if (vel == zero_vector) return; // not moving
 	point const prev_pos(pos);
 	move();
-	if (is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) return; // no collisions, nothing else to do
-	if (vel == zero_vector) return; // stopped
+	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) return; // no collisions, nothing else to do
+	collided = 0; // reset for next frame
 	pos = prev_pos; // restore to previous valid pos
 	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
 	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
@@ -2697,7 +2706,7 @@ public:
 	
 	void next_frame() {
 		if (!animate2) return;
-		//timer_t timer("Ped Update"); // ~1.25ms for 10K peds
+		//timer_t timer("Ped Update"); // ~1.6ms for 10K peds
 
 		for (auto i = peds.begin(); i != peds.end(); ++i) {
 			// FIXME_PEDS: navigation with destination
