@@ -10,6 +10,7 @@
 #include "buildings.h"
 #include "tree_3dw.h"
 #include <cfloat> // for FLT_MAX
+#include <omp.h>
 
 using std::string;
 
@@ -2728,7 +2729,7 @@ public:
 		dstate.s.set_cur_color(YELLOW); // smileys
 		begin_sphere_draw(textured);
 
-		// FIXME_PEDS: batch by tile?
+		// batch by tile? or is sorted by plot close enough?
 		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
 			if (!camera_pdu.cube_visible(get_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
 
@@ -2831,9 +2832,11 @@ public:
 		return 1;
 	}
 	void next_frame() {
-		road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
-		car_manager.next_frame(city_params.car_speed);
-		ped_manager.next_frame();
+#pragma omp parallel num_threads(2)
+		if (omp_get_thread_num() == 0) {
+			road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
+			car_manager.next_frame(city_params.car_speed);
+		} else {ped_manager.next_frame();}
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
 		bool const use_dlights(enable_lights());
