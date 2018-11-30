@@ -566,9 +566,10 @@ struct pedestrian_t {
 	vector3d vel;
 	float radius;
 	unsigned city, plot;
+	unsigned char stuck_count;
 	bool collided;
 
-	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), radius(radius_), city(0), plot(0), collided(0) {}
+	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), radius(radius_), city(0), plot(0), stuck_count(0), collided(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	void move() {pos += vel*fticks;}
 	bool check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const;

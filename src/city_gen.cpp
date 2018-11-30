@@ -2614,11 +2614,10 @@ bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) 
 
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
 		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
-		if (dist_xy_less_than(pos, i->pos, (radius + i->radius))) {i->collided = 1; return 1;} // collision
+		if (dist_xy_less_than(pos, i->pos, (radius + i->radius))) {i->collided  = 1; return 1;} // collision
 	}
 	return 0;
 }
-// FIXME_PEDS: handle init ped-ped coll
 bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen) {
 	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
@@ -2628,11 +2627,12 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 }
 void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen) {
 	if (vel == zero_vector) return; // not moving
-	point const prev_pos(pos);
+	point const prev_pos(pos); // assume this ped starts out not colliding
 	move();
-	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) return; // no collisions, nothing else to do
+	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) {stuck_count = 0; return;} // no collisions, nothing else to do
 	collided = 0; // reset for next frame
 	pos = prev_pos; // restore to previous valid pos
+	if (++stuck_count > 8) {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius);} // shift randomly by 10% radius to get unstuck
 	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
 	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
 	vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
