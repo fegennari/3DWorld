@@ -736,7 +736,7 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<bench_t> benches;
 		unsigned num_spaces, filled_spaces;
 
-		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, rand_gen_t &rgen) {
+		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, vector<cube_t> &colliders, rand_gen_t &rgen) {
 			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
@@ -783,6 +783,7 @@ class city_road_gen_t : public road_gen_base_t {
 				parking_lots.push_back(park);
 				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 				bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
+				colliders.push_back(park);
 				num_spaces += park.row_sz*park.num_rows;
 
 				// fill the parking lot with cars
@@ -929,10 +930,10 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				bcubes.clear();
 				get_building_bcubes(*i, bcubes);
-				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, rgen);}
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
 				vector<cube_t> &colliders(plot_colliders[plot_id]);
+				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, colliders, rgen);}
 				place_trees_in_plot (*i, bcubes, colliders, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, detail_rgen);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
