@@ -1461,6 +1461,11 @@ class building_creator_t {
 		assert(gx < grid_sz && gy < grid_sz);
 		return grid[gy*grid_sz + gx];
 	}
+	struct bix_by_x1 {
+		vector<building_t> const &buildings;
+		bix_by_x1(vector<building_t> const &buildings_) : buildings(buildings_) {}
+		bool operator()(unsigned const a, unsigned const b) const {return (buildings[a].bcube.x1() < buildings[b].bcube.x1());}
+	};
 	void get_grid_range(cube_t const &bcube, unsigned ixr[2][2]) const { // {lo,hi}x{x,y}
 		point llc(bcube.get_llc()), urc(bcube.get_urc());
 		range.clamp_pt(llc);
@@ -1609,6 +1614,8 @@ public:
 				break; // done
 			} // for n
 		} // for i
+		bix_by_x1 cmp_x1(buildings);
+		for (auto i = bix_by_plot.begin(); i != bix_by_plot.end(); ++i) {sort(i->begin(), i->end(), cmp_x1);}
 		timer.end();
 
 		if (params.flatten_mesh) {
@@ -1824,6 +1831,7 @@ public:
 		// Note: assumes buildings are separated so that only one ped collision can occur
 		for (auto b = bixes.begin(); b != bixes.end(); ++b) {
 			building_t const &building(get_building(*b));
+			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
 			if (building.check_point_or_cylin_contained(pos_x, 2.0*radius, points)) return 1; // double the radius value to add padding to account for inaccuracy
 		}
