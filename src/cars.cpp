@@ -192,10 +192,10 @@ bool car_t::check_collision(car_t &c, road_gen_base_t const &road_gen) {
 	if (!bcube_ext.intersects_xy(c.bcube)) return 0;
 	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[dim][dir]);
 	bool const move_c((front < c_front) ^ dir); // move the car that's behind
-												// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
+	// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
 	car_t &cmove(move_c ? c : *this); // the car that will be moved
 	car_t const &cstay(move_c ? *this : c); // the car that won't be moved
-											//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
+	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
 	if (cstay.is_stopped()) {cmove.decelerate_fast();} else {cmove.decelerate();}
 	float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
 	point delta(all_zeros);
@@ -204,10 +204,10 @@ bool car_t::check_collision(car_t &c, road_gen_base_t const &road_gen) {
 	if (cstay.max_speed < cmove.max_speed) {cmove.front_car_turn_dir = cstay.turn_dir;} // record the turn dir of this slow car in front of us so we can turn a different way
 
 	if (!bcube.contains_cube_xy(cmove.bcube + delta)) { // moved outside its current road segment bcube
-														//if (cmove.bcube == cmove.prev_bcube) {return 1;} // collided, but not safe to move the car (init pos or second collision)
+		//if (cmove.bcube == cmove.prev_bcube) {return 1;} // collided, but not safe to move the car (init pos or second collision)
 		if (cmove.bcube != cmove.prev_bcube) { // try resetting to last frame's position
 			cmove.bcube  = cmove.prev_bcube; // restore prev frame's pos
-											 //cmove.honk_horn_if_close_and_fast();
+			//cmove.honk_horn_if_close_and_fast();
 			return 1; // done
 		}
 		else { // keep the car from moving outside its current segment (init collision case)
@@ -280,7 +280,7 @@ void car_model_loader_t::draw_car(shader_t &s, vector3d const &pos, cube_t const
 	camera_pdu.pos += bcube.get_cube_center() - pos - xlate; // required for distance based LOD
 	bool const camera_pdu_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
-							// Note: in model space, front-back=z, left-right=x, top-bot=y
+	// Note: in model space, front-back=z, left-right=x, top-bot=y
 	float const sz_scale(car_bcube.get_size().sum() / bcube.get_size().sum());
 	fgPushMatrix();
 	translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));

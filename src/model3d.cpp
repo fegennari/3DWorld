@@ -1104,13 +1104,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 }
 
 
-bool material_t::use_bump_map() const {
-	return (enable_bump_map() && bump_tid >= 0);
-}
-
-bool material_t::use_spec_map() const {
-	return (enable_spec_map() && (s_tid >= 0 || ns_tid >= 0));
-}
+bool material_t::use_bump_map() const {return (enable_bump_map() && bump_tid >= 0);}
+bool material_t::use_spec_map() const {return (enable_spec_map() && (s_tid >= 0 || ns_tid >= 0));}
 
 colorRGBA material_t::get_ad_color() const {
 

@@ -335,9 +335,7 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 }
 
 
-void check_init_texture(int id) {
-	textures[id].check_init();
-}
+void check_init_texture(int id) {textures[id].check_init();}
 
 void force_upload_all_textures() {
 
