@@ -481,7 +481,8 @@ void texture_t::do_gl_init(bool free_after_upload) {
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
 	if (defer_load()) {deferred_load_and_bind();} // FIXME: mipmaps?
 	else {
-		assert(is_allocated() && width > 0 && height > 0);
+		assert(is_allocated());
+		assert(width > 0 && height > 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
 		if (use_mipmaps == 1 || use_mipmaps == 2) {gen_mipmaps();}
 		if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
@@ -949,13 +950,13 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mi
 
 	assert(tid == 0);
 	assert(!nearest || !mipmap);
-	int const target(get_2d_texture_target(is_array, multisample));
 	glGenTextures(1, &tid);
 	check_gl_error(600);
 
 	// select our current texture
 	bind_2d_texture(tid, is_array, multisample);
 	if (multisample) return; // don't set any other state
+	int const target(get_2d_texture_target(is_array, multisample));
 
 	// when texture area is small, use linear filter (bilinear filter the closest mipmap)
 	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
