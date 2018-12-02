@@ -1046,6 +1046,7 @@ class city_road_gen_t : public road_gen_base_t {
 			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
 		cube_t const &get_bcube() const {return bcube;}
+		cube_t const &get_plot_bcube(unsigned plot_ix) const {assert(plot_ix < plots.size()); return plots[plot_ix];}
 		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
 		unsigned num_roads() const {return roads.size();}
 		vector<road_t> const &get_roads() const {return roads;} // used for connecting roads between cities with 4-way intersections
@@ -2189,6 +2190,7 @@ public:
 		return road_networks[city_ix];
 	}
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
+	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
 	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
 
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
@@ -2641,16 +2643,28 @@ void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &col
 
 class ped_manager_t { // pedestrians
 
+	struct city_ixs_t {
+		unsigned ped_ix, plot_ix;
+		city_ixs_t() : ped_ix(0), plot_ix(0) {}
+		void assign(unsigned ped_ix_, unsigned plot_ix_) {ped_ix = ped_ix_; plot_ix = plot_ix_;}
+	};
 	city_road_gen_t const &road_gen;
 	vector<pedestrian_t> peds;
-	vector<unsigned> by_city; // first ped index for each city
+	vector<city_ixs_t> by_city; // first ped/plot index for each city
+	vector<unsigned> by_plot;
 	rand_gen_t rgen;
 	draw_state_t dstate;
 
 	float get_ped_radius() const {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
+	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_plot_from_global_id(city_ix, plot_ix);}
 
-	cube_t get_city_bcube_for_peds(unsigned city_id) const {
-		cube_t bcube(road_gen.get_city_bcube(city_id));
+	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const {
+		cube_t bcube(road_gen.get_city_bcube(city_ix));
+		bcube.expand_by_xy(get_ped_radius());
+		return bcube;
+	}
+	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {
+		cube_t bcube(road_gen.get_plot_from_global_id(city_ix, plot_ix));
 		bcube.expand_by_xy(get_ped_radius());
 		return bcube;
 	}
@@ -2676,30 +2690,45 @@ public:
 		cout << "Pedestrians: " << peds.size() << endl; // testing
 		if (peds.empty()) return;
 		sort(peds.begin(), peds.end());
-		unsigned const max_city(peds.back().city);
-		by_city.resize((max_city + 2), peds.size()); // one per city + terminator
 
-		for (unsigned i = 0; i < peds.size(); ++i) {
-			unsigned const city(peds[i].city);
-			assert(city <= max_city);
-			min_eq(by_city[city], i);
+		// construct by_city
+		unsigned const max_city(peds.back().city), max_plot(peds.back().plot);
+		by_city.resize(max_city + 2); // one per city + terminator
+
+		for (unsigned city = 0, pix = 0; city <= max_city; ++city) {
+			while (pix < peds.size() && peds[pix].city == city) {++pix;}
+			unsigned const cur_plot((pix < peds.size()) ? peds[pix].plot : max_plot+1);
+			by_city[city+1].assign(pix, cur_plot); // next city begins here
 		}
-		by_city.back() = peds.size(); // add terminator for range iteration
+		// construct by_plot
+		by_plot.resize((max_plot + 2), 0); // one per by_plot + terminator
+
+		for (unsigned plot = 0, pix = 0; plot <= max_plot; ++plot) {
+			while (pix < peds.size() && peds[pix].plot == plot) {++pix;}
+			by_plot[plot+1] = pix; // next plot begins here
+		}
 	}
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const { // Note: no p_last; for potential use with ped/ped collisions
 		float const rsum(get_ped_radius() + radius);
 
 		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
-			cube_t const city_bcube(get_city_bcube_for_peds(city));
+			cube_t const city_bcube(get_expanded_city_bcube_for_peds(city));
 			if (pos.z > city_bcube.z2() + rsum) continue; // above the peds
 			if (!sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
+			unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
 
-			for (unsigned i = by_city[city]; i < by_city[city+1]; ++i) {
-				assert(i < peds.size());
-				if (!dist_less_than(pos, peds[i].pos, rsum)) continue;
-				if (cnorm) {*cnorm = (pos - peds[i].pos).get_norm();}
-				return 1; // return on first coll
-			}
+			for (unsigned plot = plot_start; plot < plot_end; ++plot) {
+				cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
+				if (!sphere_cube_intersect_xy(pos, radius, plot_bcube)) continue;
+				unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
+
+				for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
+					assert(i < peds.size());
+					if (!dist_less_than(pos, peds[i].pos, rsum)) continue;
+					if (cnorm) {*cnorm = (pos - peds[i].pos).get_norm();}
+					return 1; // return on first coll
+				}
+			} // for plot
 		} // for city
 		return 0;
 	}
@@ -2719,35 +2748,44 @@ public:
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 		if (empty()) return;
 		if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
-		//timer_t timer("Ped Draw");
+		if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
+		//timer_t timer("Ped Draw"); // 0.42ms
 		float const radius(get_ped_radius()), draw_dist(is_dlight_shadows ? 0.6*camera_pdu.far_ : 2000.0*radius);
 		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
-		bool const textured = 0;
+		bool const textured(shadow_only && 0); // disabled for now
 		if (!textured) {select_texture(WHITE_TEX);} // currently not textured
 		dstate.s.set_cur_color(YELLOW); // smileys
 		begin_sphere_draw(textured);
 
-		// batch by tile? or is sorted by plot close enough?
 		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
-			if (!camera_pdu.cube_visible(get_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
+			if (!camera_pdu.cube_visible(get_expanded_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
+			unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
+			assert(plot_start <= plot_end);
 
-			// FIXME_PEDS: check if plot visible, at least for is_dlight_shadows 
-			for (unsigned i = by_city[city]; i < by_city[city+1]; ++i) {
-				assert(i < peds.size());
-				pedestrian_t const &ped(peds[i]);
-				assert(ped.city == city);
-				if (shadow_only && !is_dlight_shadows && ped.vel != zero_vector) continue; // don't add to precomputed shadow map if moving
-				point const pos_x(ped.pos + xlate);
-				if (!dist_less_than(camera_pdu.pos, pos_x, draw_dist)) continue; // too far - skip
-				if (!camera_pdu.sphere_visible_test(pos_x, radius))    continue; // not visible - skip
+			for (unsigned plot = plot_start; plot < plot_end; ++plot) {
+				assert(plot < by_plot.size());
+				cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
+				if (!camera_pdu.cube_visible(plot_bcube + xlate)) continue; // plot not visible - skip
+				unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
+				assert(ped_start <= ped_end);
+				if (ped_start == ped_end) continue; // no peds on this plot
 				dstate.ensure_shader_active(); // needed for use_smap=0 case
-				if (!shadow_only) {dstate.begin_tile(ped.pos, 1);}
-				int const ndiv = 16; // currently hard-coded
-				draw_sphere_vbo(ped.pos, radius, ndiv, textured); // FIXME_PEDS: better model
-			} // for i
+				if (!shadow_only) {dstate.begin_tile(plot_bcube.get_cube_center(), 1);} // use the plot's tile's shadow map
+
+				for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
+					assert(i < peds.size());
+					pedestrian_t const &ped(peds[i]);
+					assert(ped.city == city && ped.plot == plot);
+					point const pos_x(ped.pos + xlate);
+					if (!dist_less_than(camera_pdu.pos, pos_x, draw_dist)) continue; // too far - skip
+					if (!camera_pdu.sphere_visible_test(pos_x, radius))    continue; // not visible - skip
+					int const ndiv = 16; // currently hard-coded
+					draw_sphere_vbo(ped.pos, radius, ndiv, textured); // FIXME_PEDS: better model
+				} // for i
+			} // for plot
 		} // for city
 		end_sphere_draw();
 		dstate.end_draw();
