@@ -1824,8 +1824,7 @@ public:
 		assert(plot_id < bix_by_plot.size());
 		vector<unsigned> const &bixes(bix_by_plot[plot_id]); // should be populated in gen()
 		if (bixes.empty()) return 0;
-		point const pos_x(pos - get_camera_coord_space_xlate());
-		cube_t bcube; bcube.set_from_sphere(pos_x, radius);
+		cube_t bcube; bcube.set_from_sphere(pos, radius);
 		static vector<point> points; // reused across calls
 
 		// Note: assumes buildings are separated so that only one ped collision can occur
@@ -1833,7 +1832,7 @@ public:
 			building_t const &building(get_building(*b));
 			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
-			if (building.check_point_or_cylin_contained(pos_x, 2.0*radius, points)) return 1; // double the radius value to add padding to account for inaccuracy
+			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points)) return 1; // double the radius value to add padding to account for inaccuracy
 		}
 		return 0;
 	}
