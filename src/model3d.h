@@ -485,6 +485,7 @@ public:
 	base_mat_t const &get_unbound_material() const {return unbound_mat;}
 
 	// creation and query
+	bool are_textures_loaded() const {return textures_loaded;}
 	void set_has_cobjs() {has_cobjs = 1;}
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);

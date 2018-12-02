@@ -977,9 +977,10 @@ void material_t::compute_area_per_tri() {
 void material_t::ensure_textures_loaded(texture_manager &tmgr) {
 
 	tmgr.ensure_tid_loaded(get_render_texture(), 0); // only one tid for now
-	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);}
-	if (use_spec_map()) {tmgr.ensure_tid_loaded( s_tid,   0);}
-	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid,   0);}
+	// if bump_tid is set, but bump maps are disabled, then clear bump_tid because either a) we won't use it, or b) it won't be loaded later when we try to use it
+	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);} else {bump_tid = -1;}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded( s_tid,   0);} else {s_tid    = -1;}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid,   0);} else {ns_tid   = -1;}
 }
 
 void maybe_free_tid(texture_manager &tmgr, unsigned tid) {
