@@ -60,6 +60,8 @@ void add_player_ship_engine_light();
 
 
 
+int omp_get_thread_num_3dw() {return omp_get_thread_num();} // where does this belong?
+
 void init_universe_display() {
 
 	setup_ships();
@@ -288,8 +290,8 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 		// is this legal when a query object that tries to access a planet/moon/star through clobj as the uobject is being deleted?
 		#pragma omp parallel num_threads(2)
 		{
-			if (omp_get_thread_num() == 1) {process_ships(timer1);}
-			if (omp_get_thread_num() == 0) {draw_universe_all(static_only, skip_closest, no_distant, gen_only, no_asteroid_dust);} // *must* be done by master thread
+			if (omp_get_thread_num_3dw() == 1) {process_ships(timer1);}
+			else {draw_universe_all(static_only, skip_closest, no_distant, gen_only, no_asteroid_dust);} // *must* be done by master thread
 		}
 	}
 	else

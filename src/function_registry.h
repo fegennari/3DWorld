@@ -9,6 +9,8 @@
 
 struct xform_matrix;
 
+int omp_get_thread_num_3dw();
+
 // function prototypes - main (3DWorld.cpp, etc.)
 bool get_gl_error(unsigned loc_id=0);
 bool check_gl_error(unsigned loc_id);
