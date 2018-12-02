@@ -318,7 +318,9 @@ void create_tt_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	
 	if (get_camera_pos().z <= get_tt_cloud_level()) { // camera is below the clouds
 		if (show_lightning) {draw_tiled_terrain_lightning(1);}
+		render_tt_models(1, 0); // reflection + opaque pass
 		draw_tiled_terrain(1);
+		render_tt_models(1, 1); // reflection + transparent pass
 		if (show_lightning) {end_tiled_terrain_lightning();}
 		draw_tiled_terrain_clouds(1);
 	}

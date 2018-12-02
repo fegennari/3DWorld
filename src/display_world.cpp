@@ -1141,6 +1141,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 
 	static int init_xx(1);
 	RESET_TIME;
+	//timer_t timer("Display Inf Terrain"); // 6.9 no update / 10.6 1-thread / 8.0 2-threads / 7.6 3-threads
 
 	if (init_x || init_xx) {
 		init_xx  = 0;
@@ -1157,7 +1158,6 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	apply_camera_offsets(camera);
 	compute_brightness();
 	set_global_state();
-	next_city_frame();
 	if (b2down) {fire_weapon();}
 	update_weapon_cobjs(); // and update cblade
 
@@ -1200,7 +1200,16 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
 	pre_draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.26");
-	draw_tiled_terrain(0);
+	render_tt_models(0, 0); // opaque pass; draws city buildings, cars, etc.
+
+	// threads: 0=draw, 1=roads and cars, 2=pedestrians
+	// Note: it's questionable to update (move) cars between the opaque and transparent pass because the parts will be out of sync;
+	// however, only the headlight flares are drawn in the transparent pass, and it doesn't seem to be a problem, so we allow it
+#pragma omp parallel num_threads(3) if (have_cities())
+	if (omp_get_thread_num_3dw() == 0) {draw_tiled_terrain(0);} // drawing must be on thread 0
+	else {next_city_frame();}
+
+	render_tt_models(0, 1); // transparent pass
 	run_tt_gameplay(); // enable limited gameplay elements in tiled terrain mode
 	if (TIMETEST) PRINT_TIME("3.3");
 	//if (underwater ) {draw_local_precipitation();}

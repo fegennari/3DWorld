@@ -255,6 +255,7 @@ vector3d get_tiled_terrain_height_tex_norm(int x, int y);
 bool write_default_hmap_modmap();
 float update_tiled_terrain(float &min_camera_dist);
 void pre_draw_tiled_terrain(bool reflection_pass);
+void render_tt_models(bool reflection_pass, bool transparent_pass);
 void draw_tiled_terrain(bool reflection_pass);
 void draw_tiled_terrain_lightning(bool reflection_pass);
 void end_tiled_terrain_lightning();

@@ -10,7 +10,6 @@
 #include "buildings.h"
 #include "tree_3dw.h"
 #include <cfloat> // for FLT_MAX
-#include <omp.h>
 
 using std::string;
 
@@ -2832,18 +2831,17 @@ public:
 		car_manager.get_color_at_xy(pos, color, int_ret); // check cars next, but override the color
 		return 1;
 	}
-	void next_frame() {
-#pragma omp parallel num_threads(2)
-		if (omp_get_thread_num() == 0) {
+	void next_frame() { // Note: threads: 0=draw, 1=roads and cars, 2=pedestrians
+		if (omp_get_thread_num_3dw() == 1) {
 			road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
 			car_manager.next_frame(city_params.car_speed);
-		} else {ped_manager.next_frame();}
+		} else {ped_manager.next_frame();} // thread=2
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
 		bool const use_dlights(enable_lights());
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only);
-		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, shadow_only);}
+		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, shadow_only);} // opaque
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}

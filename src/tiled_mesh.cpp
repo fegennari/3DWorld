@@ -3200,7 +3200,6 @@ void render_tt_models(bool reflection_pass, bool transparent_pass) {
 
 void draw_tiled_terrain(bool reflection_pass) {
 
-	render_tt_models(reflection_pass, 0); // opaque pass
 	//RESET_TIME;
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
@@ -3243,7 +3242,6 @@ void draw_tiled_terrain(bool reflection_pass) {
 	if (!reflection_pass && camera_surf_collide) {
 		//int const tid(get_tiled_terrain_tid_under_point(get_camera_pos())); // TESTING
 	}
-	render_tt_models(reflection_pass, 1); // transparent pass
 }
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
