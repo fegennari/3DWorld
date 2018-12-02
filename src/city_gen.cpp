@@ -2716,10 +2716,11 @@ public:
 			i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen);
 		}
 	}
-	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only) {
+	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 		if (empty()) return;
+		if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 		//timer_t timer("Ped Draw");
-		float const radius(get_ped_radius()), draw_dist(2000.0*radius);
+		float const radius(get_ped_radius()), draw_dist(is_dlight_shadows ? 0.6*camera_pdu.far_ : 2000.0*radius);
 		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
@@ -2733,17 +2734,19 @@ public:
 		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
 			if (!camera_pdu.cube_visible(get_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
 
+			// FIXME_PEDS: check if plot visible, at least for is_dlight_shadows 
 			for (unsigned i = by_city[city]; i < by_city[city+1]; ++i) {
 				assert(i < peds.size());
-				if (shadow_only && peds[i].vel != zero_vector) continue; // don't add to precomputed shadow map if moving
-				point const &pos(peds[i].pos);
-				assert(peds[i].city == city);
-				if (!dist_less_than(camera_pdu.pos, (pos + xlate), draw_dist)) continue; // too far - skip
-				if (!camera_pdu.sphere_visible_test((pos + xlate), radius))    continue; // not visible - skip
+				pedestrian_t const &ped(peds[i]);
+				assert(ped.city == city);
+				if (shadow_only && !is_dlight_shadows && ped.vel != zero_vector) continue; // don't add to precomputed shadow map if moving
+				point const pos_x(ped.pos + xlate);
+				if (!dist_less_than(camera_pdu.pos, pos_x, draw_dist)) continue; // too far - skip
+				if (!camera_pdu.sphere_visible_test(pos_x, radius))    continue; // not visible - skip
 				dstate.ensure_shader_active(); // needed for use_smap=0 case
-				dstate.begin_tile(pos, 1);
-				int const ndiv = 16;
-				draw_sphere_vbo(pos, radius, ndiv, textured); // FIXME_PEDS: better model
+				if (!shadow_only) {dstate.begin_tile(ped.pos, 1);}
+				int const ndiv = 16; // currently hard-coded
+				draw_sphere_vbo(ped.pos, radius, ndiv, textured); // FIXME_PEDS: better model
 			} // for i
 		} // for city
 		end_sphere_draw();
@@ -2839,9 +2842,10 @@ public:
 	}
 	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
 		bool const use_dlights(enable_lights());
+		bool const is_dlight_shadows(shadow_only && xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
-		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only);
-		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, shadow_only);} // opaque
+		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only, is_dlight_shadows);
+		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, shadow_only, is_dlight_shadows);} // opaque
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}

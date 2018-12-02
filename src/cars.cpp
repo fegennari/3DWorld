@@ -380,7 +380,7 @@ void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[
 
 void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
 	if (is_dlight_shadows) {
-		if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.6*camera_pdu.far_)) return;
+		if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.6*camera_pdu.far_)) return; // optimization
 		cube_t bcube(car.bcube);
 		bcube.expand_by(0.1*car.height);
 		if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
@@ -726,11 +726,10 @@ void car_manager_t::next_frame(float car_speed) {
 	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
 }
 
-void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) {
+void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (cars.empty()) return;
 
 	if (trans_op_mask & 1) { // opaque pass, should be first
-		bool const is_dlight_shadows(shadow_only && xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
 		if (is_dlight_shadows && !city_params.car_shadows) return;
 		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
 		//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms

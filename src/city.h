@@ -555,7 +555,7 @@ public:
 	car_t const *get_car_at(point const &p1, point const &p2) const;
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
 	void next_frame(float car_speed);
-	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only);
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context();}
 }; // car_manager_t
