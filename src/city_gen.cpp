@@ -2751,7 +2751,7 @@ public:
 		if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 		if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
 		//timer_t timer("Ped Draw"); // 0.42ms
-		float const radius(get_ped_radius()), draw_dist(is_dlight_shadows ? 0.6*camera_pdu.far_ : 2000.0*radius);
+		float const radius(get_ped_radius()), draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : 2000.0*radius);
 		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
