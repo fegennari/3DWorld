@@ -343,7 +343,7 @@ void get_city_road_bcubes(vector<cube_t> &bcubes);
 void get_city_plot_bcubes(vector<cube_t> &bcubes);
 void next_city_frame();
 void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap);
-void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
+void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 void setup_city_lights(vector3d const &xlate);
 bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels);
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars=0, vector3d *cnorm=nullptr);

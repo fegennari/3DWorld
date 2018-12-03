@@ -2879,9 +2879,8 @@ public:
 			car_manager.next_frame(city_params.car_speed);
 		} else {ped_manager.next_frame();} // thread=2
 	}
-	void draw(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // for now, there are only roads
-		bool const use_dlights(enable_lights());
-		bool const is_dlight_shadows(shadow_only && xlate == zero_vector); // not the best way to test for this, should make shadow_only 3-valued
+	void draw(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow
+		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only);} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, shadow_only, is_dlight_shadows);
 		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, shadow_only, is_dlight_shadows);} // opaque
@@ -2937,7 +2936,7 @@ void gen_city_details() {city_gen.gen_details();} // called after gen_buildings(
 void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
 void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame() {city_gen.next_frame();}
-void draw_cities(bool shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
+void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
 bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels) {

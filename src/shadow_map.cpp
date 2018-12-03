@@ -586,14 +586,14 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 		// it likely doesn't matter, since cobj geometry will generally be cached during the global smap pass (which is run first)
 		smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 		smap_vertex_cache.render();
-		render_models(1, 0);
+		render_models(2, 0);
 		unsigned const fixed_ndiv = 24;
 		// high back_face_thresh of 0.75 to avoid shadow artifacts for close cubes (should be at least 1/sqrt(2) for 90 deg FOV, and < 1.0)
 		smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_, pdu.dir, 0.75);
 		if (outdoor_shadows) {draw_outdoor_shadow_pass(lpos, smap_sz);}
 	}
 	else if (world_mode == WMODE_INF_TERRAIN) { // Note: not really a clean case split; should pass this in somehow, or use a different class in tiled terrain mode (cities)
-		render_models(1, 0, 1); // opaque only
+		render_models(2, 0, 1); // opaque only
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		camera_pdu.pos += xlate;
 		fgPushMatrix();

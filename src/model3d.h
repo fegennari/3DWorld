@@ -584,7 +584,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
-void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask=3, vector3d const &xlate=zero_vector);
+void render_models(int shadow_pass, int reflection_pass, int trans_op_mask=3, vector3d const &xlate=zero_vector);
 void ensure_model_reflection_cube_maps();
 void auto_calc_model_zvals();
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);

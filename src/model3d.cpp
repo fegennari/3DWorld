@@ -2308,7 +2308,7 @@ void model3d_stats_t::print() const {
 void free_model_context() {
 	all_models.free_context();
 }
-void render_models(bool shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) {
+void render_models(int shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow
 	all_models.render(shadow_pass, reflection_pass, trans_op_mask, xlate);
 	if (trans_op_mask & 1) {draw_buildings(shadow_pass, xlate);} // opaque pass
 	if (world_mode == WMODE_INF_TERRAIN) {draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);}
