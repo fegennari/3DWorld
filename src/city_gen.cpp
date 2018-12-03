@@ -200,7 +200,8 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	use_dlights = (use_dlights_ && !shadow_only);
 	use_smap    = (shadow_map_enabled() && !shadow_only);
 	if (!use_smap && !always_setup_shader) return;
-	city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only));
+	if (shadow_only) {s.begin_simple_textured_shader();}
+	else {city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only));}
 }
 void draw_state_t::end_draw() {
 	emit_now = 0;
