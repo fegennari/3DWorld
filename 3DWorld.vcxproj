@@ -511,6 +511,7 @@
     <ClCompile Include="src\objects.cpp" />
     <ClCompile Include="src\object_file_reader.cpp" />
     <ClCompile Include="src\openal_wrap.cpp" />
+    <ClCompile Include="src\pedestrians.cpp" />
     <ClCompile Include="src\Physics.cpp" />
     <ClCompile Include="src\platform.cpp" />
     <ClCompile Include="src\postproc_effects.cpp" />

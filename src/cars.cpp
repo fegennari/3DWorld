@@ -16,7 +16,7 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
-bool car_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id xy_rot dz lod_mult shadow_mat_ids
+bool city_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id xy_rot dz lod_mult shadow_mat_ids
 
 	assert(fp);
 	if (!read_string(fp, fn)) return 0;
@@ -232,21 +232,21 @@ bool comp_car_road_then_pos::operator()(car_t const &c1, car_t const &c2) const 
 }
 
 
-/*static*/ unsigned car_model_loader_t::num_models() {return city_params.car_model_files.size();}
+unsigned car_model_loader_t::num_models() const {return city_params.car_model_files.size();}
 
-bool car_model_loader_t::is_model_valid(unsigned id) {
+city_model_t const &car_model_loader_t::get_model(unsigned id) const {
+	assert(id < num_models());
+	return city_params.car_model_files[id];
+}
+
+bool city_model_loader_t::is_model_valid(unsigned id) {
 	assert(id < num_models());
 	ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
 	assert(id < models_valid.size());
 	return (models_valid[id] != 0);
 }
 
-car_model_t const &car_model_loader_t::get_model(unsigned id) const {
-	assert(id < num_models());
-	return city_params.car_model_files[id];
-}
-
-void car_model_loader_t::load_car_models() {
+void city_model_loader_t::load_models() {
 	models_valid.resize(num_models(), 1); // assume valid
 
 	for (unsigned i = 0; i < num_models(); ++i) {
@@ -254,7 +254,7 @@ void car_model_loader_t::load_car_models() {
 		bool const recalc_normals = 1;
 
 		if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
-			cerr << "Error: Failed to read model file '" << fn << "'; Skipping this model (will use default box model)." << endl;
+			cerr << "Error: Failed to read model file '" << fn << "'; Skipping this model (will use default low poly model)." << endl;
 			push_back(model3d(fn, tmgr)); // add a placeholder dummy model
 			models_valid[i] = 0;
 		}
@@ -266,7 +266,7 @@ void car_model_loader_t::draw_car(shader_t &s, vector3d const &pos, cube_t const
 {
 	assert(is_model_valid(model_id));
 	assert(size() == num_models()); // must be loaded
-	car_model_t const &model_file(get_model(model_id));
+	city_model_t const &model_file(get_model(model_id));
 	model3d &model(at(model_id));
 
 	if (!is_shadow_pass && model_file.body_mat_id >= 0) { // use custom color for body material
@@ -514,7 +514,7 @@ void car_manager_t::finalize_cars() {
 		if (num_models > 0) {
 			if (FORCE_MODEL_ID >= 0) {i->model_id = FORCE_MODEL_ID;}
 			else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
-			car_model_t const &model(car_model_loader.get_model(i->model_id));
+			city_model_t const &model(car_model_loader.get_model(i->model_id));
 			fixed_color = model.fixed_color_id;
 			i->apply_scale(model.scale);
 		}

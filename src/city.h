@@ -49,15 +49,15 @@ inline unsigned decode_neg_ix(int ix) {assert(ix < 0); return -(ix+1);}
 inline float rand_hash(float to_hash) {return fract(12345.6789*to_hash);}
 inline float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1.0);}
 
-struct car_model_t {
+struct city_model_t {
 
 	string fn;
 	int body_mat_id, fixed_color_id;
 	float xy_rot, dz, lod_mult, scale; // xy_rot in degrees
 	vector<unsigned> shadow_mat_ids;
 
-	car_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), dz(0.0), lod_mult(1.0), scale(1.0) {}
-	car_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
+	city_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), dz(0.0), lod_mult(1.0), scale(1.0) {}
+	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
 		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), dz(dz_), lod_mult(lm), shadow_mat_ids(smids) {}
 	bool read(FILE *fp);
 };
@@ -71,7 +71,7 @@ struct city_params_t {
 	unsigned num_cars;
 	float car_speed, traffic_balance_val, new_city_prob, max_car_scale;
 	bool enable_car_path_finding;
-	vector<car_model_t> car_model_files;
+	vector<city_model_t> car_model_files, ped_model_files;
 	// parking lots
 	unsigned min_park_spaces, min_park_rows;
 	float min_park_density, max_park_density;
@@ -169,17 +169,31 @@ struct comp_car_road_then_pos {
 };
 
 
-class car_model_loader_t : public model3ds {
+class city_model_loader_t : public model3ds {
+protected:
 	vector<int> models_valid;
-	void ensure_models_loaded() {if (empty()) {load_car_models();}}
+	void ensure_models_loaded() {if (empty()) {load_models();}}
 public:
-	static unsigned num_models();
-
+	virtual ~city_model_loader_t() {}
+	virtual unsigned num_models() const = 0;
+	virtual city_model_t const &get_model(unsigned id) const = 0;
 	bool is_model_valid(unsigned id);
-	car_model_t const &get_model(unsigned id) const;
-	void load_car_models();
+	void load_models();
+};
+
+class car_model_loader_t : public city_model_loader_t {
+public:
+	unsigned num_models() const;
+	city_model_t const &get_model(unsigned id) const;
 	void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color,
 		point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail);
+};
+
+class ped_model_loader_t : public city_model_loader_t {
+public:
+	unsigned num_models() const;
+	city_model_t const &get_model(unsigned id) const;
+	void draw_ped(shader_t &s, vector3d const &pos, float radius, float height, vector3d const &dir, point const &xlate, unsigned model_id, bool is_shadow_pass);
 };
 
 
@@ -562,15 +576,17 @@ public:
 
 
 struct pedestrian_t {
+
 	point pos;
 	vector3d vel;
 	float radius;
-	unsigned city, plot;
+	unsigned city, plot, model_id;
 	unsigned char stuck_count;
 	bool collided;
 
-	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), radius(radius_), city(0), plot(0), stuck_count(0), collided(0) {}
+	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), radius(radius_), city(0), plot(0), model_id(0), stuck_count(0), collided(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
+	string str() const;
 	void move() {pos += vel*fticks;}
 	bool check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const;
 	bool is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const;
@@ -578,6 +594,40 @@ struct pedestrian_t {
 	void next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen);
 };
 
+class ped_manager_t { // pedestrians
+
+	struct city_ixs_t {
+		unsigned ped_ix, plot_ix;
+		city_ixs_t() : ped_ix(0), plot_ix(0) {}
+		void assign(unsigned ped_ix_, unsigned plot_ix_) {ped_ix = ped_ix_; plot_ix = plot_ix_;}
+	};
+	city_road_gen_t const &road_gen;
+	ped_model_loader_t ped_model_loader;
+	vector<pedestrian_t> peds;
+	vector<city_ixs_t> by_city; // first ped/plot index for each city
+	vector<unsigned> by_plot;
+	rand_gen_t rgen;
+	draw_state_t dstate;
+
+	float get_ped_radius() const;
+	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
+	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
+	bool gen_ped_pos(pedestrian_t &ped);
+public:
+	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
+	bool empty() const {return peds.empty();}
+	void clear() {peds.clear(); by_city.clear();}
+
+	void init(unsigned num);
+	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
+	//bool line_intersect(point const &p1, point const &p2, float &t) const;
+	void next_frame();
+	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
+	void free_context() {ped_model_loader.free_context();}
+}; // end ped_manager_t
+
 
 bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c);
-
+point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen);

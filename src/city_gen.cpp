@@ -103,10 +103,22 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_bool(fp, enable_car_path_finding)) {return read_error(str);}
 	}
 	else if (str == "car_model") {
-		car_model_t car_model;
+		city_model_t car_model;
 		if (!car_model.read(fp)) {return read_error(str);}
 		car_model_files.push_back(car_model);
 		max_eq(max_car_scale, car_model.scale);
+	}
+	// pedestrians
+	else if (str == "num_peds") {
+		if (!read_uint(fp, num_peds)) {return read_error(str);}
+	}
+	else if (str == "ped_speed") {
+		if (!read_float(fp, ped_speed) || ped_speed < 0.0) {return read_error(str);}
+	}
+	else if (str == "ped_model") {
+		city_model_t ped_model;
+		if (!ped_model.read(fp)) {return read_error(str);}
+		ped_model_files.push_back(ped_model); // Note: no ped_model_scale
 	}
 	// parking lots
 	else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
@@ -141,12 +153,6 @@ bool city_params_t::read_option(FILE *fp) {
 	// detail objects
 	else if (str == "max_benches_per_plot") {
 		if (!read_uint(fp, max_benches_per_plot)) {return read_error(str);}
-	}
-	else if (str == "num_peds") {
-		if (!read_uint(fp, num_peds)) {return read_error(str);}
-	}
-	else if (str == "ped_speed") {
-		if (!read_float(fp, ped_speed) || ped_speed < 0.0) {return read_error(str);}
 	}
 	else {
 		cout << "Unrecognized city keyword in input file: " << str << endl;
@@ -1747,9 +1753,9 @@ class city_road_gen_t : public road_gen_base_t {
 			car.cur_city = gen_rand_city(rgen, road_networks);
 			return road_networks[car.cur_city].add_car(car, rgen);
 		}
-		static bool gen_ped_pos(pedestrian_t &ped, unsigned &city_id, rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
-			city_id = gen_rand_city(rgen, road_networks);
-			return road_networks[city_id].gen_ped_pos(ped, rgen);
+		static bool gen_ped_pos(pedestrian_t &ped, rand_gen_t &rgen, vector<road_network_t> const &road_networks) {
+			ped.city = gen_rand_city(rgen, road_networks);
+			return road_networks[ped.city].gen_ped_pos(ped, rgen);
 		}
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
@@ -2478,9 +2484,9 @@ public:
 		if (road_networks.empty()) return 0; // no cities to add cars to
 		return road_network_t::add_car_to_rns(car, rgen, road_networks);
 	}
-	bool gen_ped_pos(pedestrian_t &ped, unsigned &city_id, rand_gen_t &rgen) const {
+	bool gen_ped_pos(pedestrian_t &ped, rand_gen_t &rgen) const {
 		if (road_networks.empty()) return 0; // no cities to add peds to
-		return road_network_t::gen_ped_pos(ped, city_id, rgen, road_networks);
+		return road_network_t::gen_ped_pos(ped, rgen, road_networks);
 	}
 	cube_t const &get_plot_from_global_id(unsigned city_id, unsigned global_plot_id) const {return get_city(city_id).get_plot_from_global_id(global_plot_id);}
 	
@@ -2601,199 +2607,21 @@ struct city_smap_manager_t {
 };
 
 
-bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const {
-	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
-	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
-	float const xmin(pos.x - radius), xmax(pos.x + radius);
-	
-	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
-		if (i->x2() < xmin) continue; // to the left
-		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
-		if (sphere_cube_intersect(pos, radius, *i)) return 0;
-	}
-	return 1;
+// Note: these ped_manager_t functions are defined here because they use road_gen
+cube_t const &ped_manager_t::get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_plot_from_global_id(city_ix, plot_ix);}
+
+cube_t ped_manager_t::get_expanded_city_bcube_for_peds(unsigned city_ix) const {
+	cube_t bcube(road_gen.get_city_bcube(city_ix));
+	bcube.expand_by_xy(get_ped_radius());
+	return bcube;
 }
-bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const {
-	assert(pid < peds.size());
-
-	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
-		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
-		if (dist_xy_less_than(pos, i->pos, (radius + i->radius))) {i->collided  = 1; return 1;} // collision
-	}
-	return 0;
+cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {
+	cube_t bcube(road_gen.get_plot_from_global_id(city_ix, plot_ix));
+	bcube.expand_by_xy(get_ped_radius());
+	return bcube;
 }
-bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen) {
-	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
-	pos.z += radius; // place on top of the plot
-	plot   = plot_id;
-	if (!is_valid_pos(plot_cube, colliders)) return 0; // failed
-	return 1; // success
-}
-void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen) {
-	if (vel == zero_vector) return; // not moving
-	point const prev_pos(pos); // assume this ped starts out not colliding
-	move();
-	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) {stuck_count = 0; return;} // no collisions, nothing else to do
-	collided = 0; // reset for next frame
-	pos = prev_pos; // restore to previous valid pos
-	if (++stuck_count > 8) {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius);} // shift randomly by 10% radius to get unstuck
-	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
-	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
-	vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
-}
-
-class ped_manager_t { // pedestrians
-
-	struct city_ixs_t {
-		unsigned ped_ix, plot_ix;
-		city_ixs_t() : ped_ix(0), plot_ix(0) {}
-		void assign(unsigned ped_ix_, unsigned plot_ix_) {ped_ix = ped_ix_; plot_ix = plot_ix_;}
-	};
-	city_road_gen_t const &road_gen;
-	vector<pedestrian_t> peds;
-	vector<city_ixs_t> by_city; // first ped/plot index for each city
-	vector<unsigned> by_plot;
-	rand_gen_t rgen;
-	draw_state_t dstate;
-
-	float get_ped_radius() const {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
-	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_plot_from_global_id(city_ix, plot_ix);}
-
-	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const {
-		cube_t bcube(road_gen.get_city_bcube(city_ix));
-		bcube.expand_by_xy(get_ped_radius());
-		return bcube;
-	}
-	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {
-		cube_t bcube(road_gen.get_plot_from_global_id(city_ix, plot_ix));
-		bcube.expand_by_xy(get_ped_radius());
-		return bcube;
-	}
-public:
-	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
-	bool empty() const {return peds.empty();}
-	void clear() {peds.clear(); by_city.clear();}
-
-	void init(unsigned num) {
-		if (num == 0) return;
-		timer_t timer("Gen Peds");
-		peds.reserve(num);
-		float const radius(get_ped_radius()); // currently, all pedestrians are the same size
-
-		for (unsigned n = 0; n < num; ++n) {
-			pedestrian_t ped(radius);
-
-			if (road_gen.gen_ped_pos(ped, ped.city, rgen)) {
-				if (city_params.ped_speed > 0.0) {ped.vel = rgen.signed_rand_vector_spherical_xy(city_params.ped_speed);}
-				peds.push_back(ped);
-			}
-		}
-		cout << "Pedestrians: " << peds.size() << endl; // testing
-		if (peds.empty()) return;
-		sort(peds.begin(), peds.end());
-
-		// construct by_city
-		unsigned const max_city(peds.back().city), max_plot(peds.back().plot);
-		by_city.resize(max_city + 2); // one per city + terminator
-
-		for (unsigned city = 0, pix = 0; city <= max_city; ++city) {
-			while (pix < peds.size() && peds[pix].city == city) {++pix;}
-			unsigned const cur_plot((pix < peds.size()) ? peds[pix].plot : max_plot+1);
-			by_city[city+1].assign(pix, cur_plot); // next city begins here
-		}
-		// construct by_plot
-		by_plot.resize((max_plot + 2), 0); // one per by_plot + terminator
-
-		for (unsigned plot = 0, pix = 0; plot <= max_plot; ++plot) {
-			while (pix < peds.size() && peds[pix].plot == plot) {++pix;}
-			by_plot[plot+1] = pix; // next plot begins here
-		}
-	}
-	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const { // Note: no p_last; for potential use with ped/ped collisions
-		float const rsum(get_ped_radius() + radius);
-
-		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
-			cube_t const city_bcube(get_expanded_city_bcube_for_peds(city));
-			if (pos.z > city_bcube.z2() + rsum) continue; // above the peds
-			if (!sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
-			unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
-
-			for (unsigned plot = plot_start; plot < plot_end; ++plot) {
-				cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
-				if (!sphere_cube_intersect_xy(pos, radius, plot_bcube)) continue;
-				unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
-
-				for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
-					assert(i < peds.size());
-					if (!dist_less_than(pos, peds[i].pos, rsum)) continue;
-					if (cnorm) {*cnorm = (pos - peds[i].pos).get_norm();}
-					return 1; // return on first coll
-				}
-			} // for plot
-		} // for city
-		return 0;
-	}
-	//bool line_intersect(point const &p1, point const &p2, float &t) const;
-	
-	void next_frame() {
-		if (!animate2) return;
-		//timer_t timer("Ped Update"); // ~1.6ms for 10K peds
-
-		for (auto i = peds.begin(); i != peds.end(); ++i) {
-			// FIXME_PEDS: navigation with destination
-			cube_t const plot(road_gen.get_plot_from_global_id(i->city, i->plot));
-			auto const &colliders(road_gen.get_colliders_for_plot(i->city, i->plot));
-			i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen);
-		}
-	}
-	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
-		if (empty()) return;
-		if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
-		if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
-		//timer_t timer("Ped Draw"); // 0.42ms
-		float const radius(get_ped_radius()), draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : 2000.0*radius);
-		dstate.xlate = xlate;
-		fgPushMatrix();
-		translate_to(xlate);
-		dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
-		bool const textured(shadow_only && 0); // disabled for now
-		if (!textured) {select_texture(WHITE_TEX);} // currently not textured
-		dstate.s.set_cur_color(YELLOW); // smileys
-		begin_sphere_draw(textured);
-
-		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
-			if (!camera_pdu.cube_visible(get_expanded_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
-			unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
-			assert(plot_start <= plot_end);
-
-			for (unsigned plot = plot_start; plot < plot_end; ++plot) {
-				assert(plot < by_plot.size());
-				cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
-				if (!camera_pdu.cube_visible(plot_bcube + xlate)) continue; // plot not visible - skip
-				unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
-				assert(ped_start <= ped_end);
-				if (ped_start == ped_end) continue; // no peds on this plot
-				dstate.ensure_shader_active(); // needed for use_smap=0 case
-				if (!shadow_only) {dstate.begin_tile(plot_bcube.get_cube_center(), 1);} // use the plot's tile's shadow map
-
-				for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
-					assert(i < peds.size());
-					pedestrian_t const &ped(peds[i]);
-					assert(ped.city == city && ped.plot == plot);
-					point const pos_x(ped.pos + xlate);
-					if (!dist_less_than(camera_pdu.pos, pos_x, draw_dist)) continue; // too far - skip
-					if (!camera_pdu.sphere_visible_test(pos_x, radius))    continue; // not visible - skip
-					int const ndiv = 16; // currently hard-coded
-					draw_sphere_vbo(ped.pos, radius, ndiv, textured); // FIXME_PEDS: better model
-				} // for i
-			} // for plot
-		} // for city
-		end_sphere_draw();
-		dstate.end_draw();
-		fgPopMatrix();
-	}
-	void free_context() {} // for future use with models
-}; // end ped_manager_t
+vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
+bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(ped, rgen);} // Note: non-const because rgen is modified
 
 
 class city_gen_t : public city_plot_gen_t {
