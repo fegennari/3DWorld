@@ -1,4 +1,5 @@
 include config.txt
+include config_city.txt
 start_in_inf_terrain 1
 start_maximized 1
 enable_mouse_look 1
@@ -7,68 +8,7 @@ camera_radius 0.03 # default is 0.06
 camera_height 0.02 # added to camera_radius; default is 0.0
 player_speed 0.5 # default is 1.0
 
-
-include building_params.txt
-buildings num_place 100000
-buildings max_rot_angle 0.0 # no rotated buildings - Manhattan only
-buildings place_radius  0.0 # no radius clipping - place in a square
-buildings max_altitude 6.00 # same for all buildings
-buildings flatten_mesh 0 # not needed in city mode
-include building_materials.txt
 buildings tt_only 1
-
-city num_cities 8
-city num_rr_tracks 0
-city num_samples 100
-city num_conn_tries 100
-city city_size_min 200
-city city_size_max 400
-city city_border 1000
-city road_border 10
-city slope_width 50
-city road_width 0.265
-city road_spacing 1.5
-#city road_width 0.25 # 4 texels
-#city road_spacing 1.4375 # fixed pitch (1.485 for road_width of 0.265)
-city conn_road_seg_len 6.0 # also determines max length of bridges and tunnels
-city max_road_slope 0.3
-city make_4_way_ints 2 # 0,1,2,3
-city min_park_spaces 12
-city min_park_rows 1
-city min_park_density 0.0
-city max_park_density 0.8
-city max_benches_per_plot 6
-
-# cars
-city num_cars 4000
-city car_speed 10.0
-city traffic_balance_val 0.9
-city new_city_prob 0.5
-city enable_car_path_finding 1
-# car_model: filename body_material_id fixed_color_id xy_rot dz scale lod_mult shadow_mat_ids
-city car_model ../models/cars/sports_car/sportsCar.model3d        22 -1 90  -0.02 1.0 1.0  20 22
-city car_model ../models/cars/natla_car/natla_car.obj             -1  2 90   0.06 1.0 0.5  1 # always GRAY
-city car_model ../models/cars/speedCar/speedCar.obj               -1  6 0    0.12 1.0 0.5  4 5 # always DK_BLUE
-city car_model ../models/cars/Lamborghini/Lamborghini.model3d      2 -1 180 -0.02 1.0 0.5  2 3 4
-city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.obj -1  1 90   0.18 1.0 0.2  0 1 # always GRAY_BLACK
-city car_model ../models/cars/bugatti/bugatti.model3d              0 -1 80  -0.08 1.0 2.0  0 4 # Note: underside disabled for shadows model is already too many triangles
-city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d  0 -1 180  1.00 1.0 0.5  0 6 7
-city car_model ../models/cars/Rio/rio.model3d                      5 -1 270  4.00 1.0 0.5  1 5 # Note: shadow material 1 may be optional
-city car_model ../models/cars/Soarer/soarer.model3d                2 -1 90   2.00 1.0 0.5  2 5 8
-city car_model ../models/cars/Camaro/camaro2.model3d              24 -1 90   0.10 1.0 0.5  9 21 24
-city car_model ../models/cars/LowPolyTruck/truck.obj              -1  2  0   0.70 1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
-#city car_model ../models/cars/Bentley/Bentley.model3d              1 -1 90   0.50 1.0 0.5  1
-use_model_lod_blocks 0 # doesn't really work on car model
-model_mat_lod_thresh 0.008
-
-# pedestrians
-city num_peds 0
-city ped_speed 0.001
-city ped_model ../models/people/muro/muro.obj 0 -1 90   27.0 1.0 1.0  0
-
-city max_lights 1024
-city max_shadow_maps 40
-city car_shadows 1
 shadow_map_sz 4096
 
 #sun_rot 2.0
@@ -81,8 +21,6 @@ ntrees 1 # set to a small number so that most of the trees are generated city tr
 tree_size 0.2
 tree_4th_branches 1
 nleaves_scale 1.0
-city max_trees_per_plot 20
-city tree_spacing 1.0
 tree_lod_scale 0.24 0.2 0.24 0.2
 
 fast_water_reflect 1

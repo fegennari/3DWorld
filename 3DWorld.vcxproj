@@ -979,6 +979,7 @@
     <Text Include="scene_config\config.txt" />
     <Text Include="scene_config\config_berkeley.txt" />
     <Text Include="scene_config\config_buildings.txt" />
+    <Text Include="scene_config\config_city.txt" />
     <Text Include="scene_config\config_gameplay.txt" />
     <Text Include="scene_config\config_grand_canyon.txt" />
     <Text Include="scene_config\config_grand_canyon_tt.txt" />

@@ -1468,5 +1468,8 @@
     <Text Include="scene_config\config_white_plane.txt">
       <Filter>Input Files\config</Filter>
     </Text>
+    <Text Include="scene_config\config_city.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
   </ItemGroup>
 </Project>
