@@ -1035,7 +1035,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			// Note: we know the line intersects the cylinder's bcube, and there's a good chance it intersects the cylinder, so we don't need any expensive early termination cases here
 			point const cc(i->get_cube_center());
 			vector3d const csz(i->get_size());
-			float const radius(0.5*max(csz.x, csz.y));
+			float const radius(0.5*(occlusion_only ? min(csz.x, csz.y) : max(csz.x, csz.y))); // use conservative radius unless this is an occlusion query
 			
 			if (vert) { // vertical line + vertical cylinder optimization + handling of ellipsoids
 				float const dx(cc.x - p1r.x), dy(cc.y - p1r.y), rx(0.5*csz.x), ry(0.5*csz.y);
