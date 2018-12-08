@@ -179,21 +179,20 @@ public:
 	virtual city_model_t const &get_model(unsigned id) const = 0;
 	bool is_model_valid(unsigned id);
 	void load_models();
+	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
+		point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail);
 };
 
 class car_model_loader_t : public city_model_loader_t {
 public:
 	unsigned num_models() const;
 	city_model_t const &get_model(unsigned id) const;
-	void draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color,
-		point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail);
 };
 
 class ped_model_loader_t : public city_model_loader_t {
 public:
 	unsigned num_models() const;
 	city_model_t const &get_model(unsigned id) const;
-	void draw_ped(shader_t &s, vector3d const &pos, float radius, float height, vector3d const &dir, point const &xlate, unsigned model_id, bool is_shadow_pass);
 };
 
 

@@ -63,17 +63,6 @@ city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
 	return city_params.ped_model_files[id];
 }
 
-void ped_model_loader_t::draw_ped(shader_t &s, vector3d const &pos, float radius, float height, vector3d const &dir,
-	point const &xlate, unsigned model_id, bool is_shadow_pass)
-{
-	if (empty()) { // or distant?
-		int const ndiv = 16; // currently hard-coded
-		draw_sphere_vbo(pos, radius, ndiv, 0); // untextured
-		return;
-	}
-	// FIXME_PEDS: draw model
-}
-
 
 float ped_manager_t::get_ped_radius() const {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
 
@@ -152,6 +141,19 @@ void ped_manager_t::next_frame() {
 	} // for i
 }
 
+void being_sphere_draw(shader_t &s, bool &in_sphere_draw, bool textured) {
+	if (in_sphere_draw) return;
+	if (!textured) {select_texture(WHITE_TEX);} // currently not textured
+	s.set_cur_color(YELLOW); // smileys
+	begin_sphere_draw(textured);
+	in_sphere_draw = 1;
+}
+void end_sphere_draw(bool &in_sphere_draw) {
+	if (!in_sphere_draw) return;
+	end_sphere_draw();
+	in_sphere_draw = 0;
+}
+
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
@@ -163,9 +165,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	translate_to(xlate);
 	dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 	bool const textured(shadow_only && 0); // disabled for now
-	if (!textured) {select_texture(WHITE_TEX);} // currently not textured
-	dstate.s.set_cur_color(YELLOW); // smileys
-	begin_sphere_draw(textured);
+	bool in_sphere_draw(0);
 
 	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
 		if (!camera_pdu.cube_visible(get_expanded_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
@@ -188,12 +188,28 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				assert(ped.city == city && ped.plot == plot);
 				point const pos_x(ped.pos + xlate);
 				if (!dist_less_than(camera_pdu.pos, pos_x, draw_dist)) continue; // too far - skip
-				if (!camera_pdu.sphere_visible_test(pos_x, radius))    continue; // not visible - skip
-				ped_model_loader.draw_ped(dstate.s, ped.pos, ped.radius, ped.radius, ped.vel.get_norm(), xlate, ped.model_id, shadow_only);
+
+				if (ped_model_loader.num_models() == 0) { // or distant?
+					if (!camera_pdu.sphere_visible_test(pos_x, radius)) continue; // not visible - skip
+					being_sphere_draw(dstate.s, in_sphere_draw, textured);
+					int const ndiv = 16; // currently hard-coded
+					draw_sphere_vbo(ped.pos, ped.radius, ndiv, textured);
+				}
+				else {
+					float const width(0.5*radius), height(2.5*ped.radius);
+					cube_t bcube;
+					bcube.set_from_sphere(ped.pos, width);
+					bcube.z1() = ped.pos.z - ped.radius;
+					bcube.z2() = bcube.z1() + height;
+					if (!camera_pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
+					end_sphere_draw(in_sphere_draw);
+					bool const low_detail = 0; // (dist_val > 0.035)?
+					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.vel.get_norm(), ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
+				}
 			} // for i
 		} // for plot
 	} // for city
-	end_sphere_draw();
+	end_sphere_draw(in_sphere_draw);
 	dstate.end_draw();
 	fgPopMatrix();
 }

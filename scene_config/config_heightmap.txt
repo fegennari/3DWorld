@@ -39,6 +39,7 @@ city min_park_density 0.0
 city max_park_density 0.8
 city max_benches_per_plot 6
 
+# cars
 city num_cars 4000
 city car_speed 10.0
 city traffic_balance_val 0.9
@@ -60,7 +61,10 @@ city car_model ../models/cars/LowPolyTruck/truck.obj              -1  2  0   0.7
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 
+# pedestrians
 city num_peds 0
+city ped_speed 0.001
+city ped_model ../models/people/muro/muro.obj 0 -1 90   27.0 1.0 1.0  0
 
 city max_lights 1024
 city max_shadow_maps 40

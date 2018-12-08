@@ -261,7 +261,7 @@ void city_model_loader_t::load_models() {
 	} // for i
 }
 
-void car_model_loader_t::draw_car(shader_t &s, vector3d const &pos, cube_t const &car_bcube, vector3d const &dir, colorRGBA const &color,
+void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail)
 {
 	assert(is_model_valid(model_id));
@@ -269,10 +269,9 @@ void car_model_loader_t::draw_car(shader_t &s, vector3d const &pos, cube_t const
 	city_model_t const &model_file(get_model(model_id));
 	model3d &model(at(model_id));
 
-	if (!is_shadow_pass && model_file.body_mat_id >= 0) { // use custom color for body material
+	if (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0) { // use custom color for body material
 		material_t &body_mat(model.get_material(model_file.body_mat_id));
 		body_mat.ka = body_mat.kd = color;
-		//if (model_id == 5) {cout << body_mat.name << endl;}
 	}
 	model.bind_all_used_tids();
 	cube_t const &bcube(model.get_bcube());
@@ -281,7 +280,7 @@ void car_model_loader_t::draw_car(shader_t &s, vector3d const &pos, cube_t const
 	bool const camera_pdu_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y
-	float const sz_scale(car_bcube.get_size().sum() / bcube.get_size().sum());
+	float const sz_scale(obj_bcube.get_size().sum() / bcube.get_size().sum());
 	fgPushMatrix();
 	translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
 	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
@@ -399,7 +398,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlig
 	if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
 		if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-		car_model_loader.draw_car(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
+		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
 	}
 	else { // draw simple 1-2 cube model
 		quad_batch_draw &qbd(qbds[emit_now]);
