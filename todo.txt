@@ -11,7 +11,6 @@ Cities:
 - Railroad tracks
 - Pedestrians:
   - More models
-  - Model LOD?
   - Walking animation
   - Goals + pathfinding
   - Cross roads at crosswalks

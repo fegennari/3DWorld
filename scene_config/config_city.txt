@@ -54,9 +54,9 @@ use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 
 # pedestrians
-city num_peds 0
+city num_peds 10000
 city ped_speed 0.001
-city ped_model ../models/people/muro/muro.obj 0 -1 90   18.0 1.0 1.0  0
+city ped_model ../models/people/muro/muro.obj 0 -1 90   18.0 1.0 1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
 
 city max_lights 1024
 city max_shadow_maps 40

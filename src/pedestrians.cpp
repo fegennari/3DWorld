@@ -164,7 +164,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
-	//timer_t timer("Ped Draw"); // 0.42ms
+	//timer_t timer("Ped Draw"); // ~1ms
 	bool const use_models(ped_model_loader.num_models() > 0);
 	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : (use_models ? 500.0 : 2000.0)*get_ped_radius()); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
@@ -212,7 +212,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					bcube.z2() = bcube.z1() + height;
 					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
 					end_sphere_draw(in_sphere_draw);
-					bool const low_detail = 0; // (dist_val > 0.035)?
+					bool const low_detail(!shadow_only && !dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)); // low detail for non-shadow pass at half draw dist
 					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
 				}
 			} // for i
