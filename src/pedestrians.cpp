@@ -159,7 +159,11 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
 	//timer_t timer("Ped Draw"); // 0.42ms
-	float const radius(get_ped_radius()), draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : 2000.0*radius);
+	bool const use_models(ped_model_loader.num_models() > 0);
+	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : (use_models ? 500.0 : 2000.0)*get_ped_radius()); // smaller view dist for models
+	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
+	pdu.far_ = draw_dist;
+	pdu.pos -= xlate; // adjust for local translate
 	dstate.xlate = xlate;
 	fgPushMatrix();
 	translate_to(xlate);
@@ -168,14 +172,14 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	bool in_sphere_draw(0);
 
 	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
-		if (!camera_pdu.cube_visible(get_expanded_city_bcube_for_peds(city) + xlate)) continue; // city not visible - skip
+		if (!pdu.cube_visible(get_expanded_city_bcube_for_peds(city))) continue; // city not visible - skip
 		unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
 		assert(plot_start <= plot_end);
 
 		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
 			assert(plot < by_plot.size());
 			cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
-			if (!camera_pdu.cube_visible(plot_bcube + xlate)) continue; // plot not visible - skip
+			if (!pdu.cube_visible(plot_bcube)) continue; // plot not visible - skip
 			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
 			assert(ped_start <= ped_end);
 			if (ped_start == ped_end) continue; // no peds on this plot
@@ -186,22 +190,21 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				assert(i < peds.size());
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
-				point const pos_x(ped.pos + xlate);
-				if (!dist_less_than(camera_pdu.pos, pos_x, draw_dist)) continue; // too far - skip
+				if (!dist_less_than(pdu.pos, ped.pos, draw_dist)) continue; // too far - skip
 
-				if (ped_model_loader.num_models() == 0) { // or distant?
-					if (!camera_pdu.sphere_visible_test(pos_x, radius)) continue; // not visible - skip
+				if (!use_models) { // or distant?
+					if (!pdu.sphere_visible_test(ped.pos, ped.radius)) continue; // not visible - skip
 					being_sphere_draw(dstate.s, in_sphere_draw, textured);
 					int const ndiv = 16; // currently hard-coded
 					draw_sphere_vbo(ped.pos, ped.radius, ndiv, textured);
 				}
 				else {
-					float const width(0.5*radius), height(2.5*ped.radius);
+					float const width(0.5*ped.radius), height(2.5*ped.radius);
 					cube_t bcube;
 					bcube.set_from_sphere(ped.pos, width);
 					bcube.z1() = ped.pos.z - ped.radius;
 					bcube.z2() = bcube.z1() + height;
-					if (!camera_pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
+					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
 					end_sphere_draw(in_sphere_draw);
 					bool const low_detail = 0; // (dist_val > 0.035)?
 					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.vel.get_norm(), ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
