@@ -1107,7 +1107,7 @@ void add_dynamic_lights_ground() {
 		first = 0;
 		int const radius(((int(ls_radius*max(DX_VAL_INV, DY_VAL_INV)) + 1) >> DL_GRID_BS) + 1), rsq(radius*radius);
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
-		if (DL_GRID_BS> 0) {for (unsigned d = 0; d < 4; ++d) {bnds[d>>1][d&1] >>= DL_GRID_BS;}}
+		if (DL_GRID_BS > 0) {for (unsigned d = 0; d < 4; ++d) {bnds[d>>1][d&1] >>= DL_GRID_BS;}}
 		pos_dir_up pdu;
 
 		if (!line_light && ls.is_very_directional()) { // spotlight
@@ -1133,6 +1133,7 @@ void add_dynamic_lights_ground() {
 					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS));
 					if (!pdu.cube_visible(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, z1, z2))) continue; // tile not in spotlight cylinder
 				}
+				//if (DL_GRID_BS == 0 && bcube.z1() > v_collision_matrix[y << DL_GRID_BS][x << DL_GRID_BS].zmax) continue; // should be legal, but doesn't seem to help
 				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
 			} // for x
 		} // for y
