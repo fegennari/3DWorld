@@ -122,8 +122,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 		lpos_r.xyz *= scene_scale; // convert from [0,1] back into world space
 		lpos_r.xyz += scene_llc;
 		lpos_r.w   *= 0.5*scene_scale.x;
-#if !defined(USE_BUMP_MAP_DL) || defined(BUMP_MAP_CUSTOM)
-		// not valid for line lights
+#if (!defined(USE_BUMP_MAP_DL) || defined(BUMP_MAP_CUSTOM)) && !defined(HAS_LINE_LIGHTS) // not valid for line lights
 		// causes problems with bump mapping TBN for some reason?
 		if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
 #endif
