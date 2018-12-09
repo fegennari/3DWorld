@@ -42,17 +42,22 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 	return 1; // success
 }
 
-void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen) {
+void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (vel == zero_vector) return; // not moving
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	move();
-	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) {stuck_count = 0; return;} // no collisions, nothing else to do
-	collided = 0; // reset for next frame
-	pos = prev_pos; // restore to previous valid pos
-	if (++stuck_count > 8) {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius);} // shift randomly by 10% radius to get unstuck
-	vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
-	if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
-	vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
+
+	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) {stuck_count = 0;} // no collisions, nothing else to do
+	else {
+		collided = 0; // reset for next frame
+		pos = prev_pos; // restore to previous valid pos
+		if (++stuck_count > 8) {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius);} // shift randomly by 10% radius to get unstuck
+		vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
+		if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
+		vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
+	}
+	dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
+	dir.normalize();
 }
 
 
@@ -132,12 +137,13 @@ bool ped_manager_t::proc_sphere_coll(point &pos, float radius, vector3d *cnorm) 
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	//timer_t timer("Ped Update"); // ~1.6ms for 10K peds
+	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
 		// FIXME_PEDS: navigation with destination
 		cube_t const plot(get_city_plot_bcube_for_peds(i->city, i->plot));
 		auto const &colliders(get_colliders_for_plot(i->city, i->plot));
-		i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen);
+		i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen, delta_dir);
 	} // for i
 }
 
@@ -207,7 +213,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
 					end_sphere_draw(in_sphere_draw);
 					bool const low_detail = 0; // (dist_val > 0.035)?
-					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.vel.get_norm(), ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
+					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
 				}
 			} // for i
 		} // for plot
