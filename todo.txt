@@ -9,3 +9,9 @@ Load/display model3d models in tiled terrain mode
 Cities:
 - Wider connector roads/intersections
 - Railroad tracks
+- Pedestrians:
+  - More models
+  - Model LOD?
+  - Walking animation
+  - Goals + pathfinding
+  - Cross roads at crosswalks
