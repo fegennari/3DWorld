@@ -221,7 +221,7 @@ void draw_solid_object_groups(int reflection_pass) {
 
 	draw_waypoints();
 	draw_select_groups(1, reflection_pass);
-	if (display_mode & 0x0200) {d_part_sys.draw();}
+	if ((display_mode & 0x0200) && (display_mode & 0x0100)) {d_part_sys.draw();}
 }
 
 void draw_transparent_object_groups(int reflection_pass) {

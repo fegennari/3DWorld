@@ -483,7 +483,7 @@ void add_coll_shadow_objs() {
 		for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {add_shadow_cobj(*j);}
 	}
 	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {add_shadow_cobj(falling_cobjs[i]);}
-	if (display_mode & 0x0200) {d_part_sys.add_cobj_shadows();}
+	if ((display_mode & 0x0200) && (display_mode & 0x0100)) {d_part_sys.add_cobj_shadows();}
 
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID) && no_sparse_smap_update()) { // shadow the camera even when in the air (but not when dead)
 		point camera_pos(camera);

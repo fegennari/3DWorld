@@ -1180,13 +1180,13 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x08;   break;
 	case '5': // walk on snow/ship shadows/reflections
 		display_mode ^= 0x10;   break;
-	case '6': // toggle water reflections, bump maps, and map view lighting/shadows
+	case '6': // toggle water reflections, bump maps, bloom, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
 		display_mode ^= 0x40;   break;
-	case '8': // toggle water caustics/smoke accumulation
+	case '8': // toggle water caustics/smoke accumulation and DOF
 		display_mode ^= 0x80;   break;
-	case '9': // toggle leaf wind, ocean waves, footsteps, snow footprints, asteroid belt fog, and flashlight indirect
+	case '9': // toggle leaf wind, ocean waves, footsteps, snow footprints, asteroid belt fog, flashlight indirect, and dynamic particle drawing
 		display_mode ^= 0x0100; break;
 	case '0': // toggle universe stencil shadows / toggle spraypaint mode / toggle particles / toggle TT tree leaf shadows
 		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;}
