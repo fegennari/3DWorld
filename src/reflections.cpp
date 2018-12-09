@@ -19,7 +19,7 @@ point pre_ref_camera_pos(zero_vector);
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
 
-extern bool combined_gu, show_lightning, begin_motion, use_interior_cube_map_refl;
+extern bool combined_gu, show_lightning, begin_motion, use_interior_cube_map_refl, disable_tt_water_reflect;
 extern int display_mode, window_width, window_height, camera_coll_id;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern point cube_map_center, sun_pos, moon_pos;
@@ -397,7 +397,7 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id,
 
 unsigned create_tt_reflection(float terrain_zmin) {
 
-	if (do_zoom || (display_mode & 0x20)) return 0; // reflections not enabled
+	if (do_zoom || disable_tt_water_reflect || (display_mode & 0x20)) return 0; // reflections not enabled
 	unsigned const xsize(window_width/2), ysize(window_height/2);
 	setup_reflection_texture(reflection_tid, xsize, ysize);
 	create_tt_reflection_texture(reflection_tid, xsize, ysize, terrain_zmin);
