@@ -139,9 +139,10 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 
 		float intensity;
 #ifdef HAS_LINE_LIGHTS // technically cylinder light
+		vec3 lpos1 = lpos_r.xyz;
 		if (dir_w.w == 0.0) { // this is a line light
 			vec3 lpos2 = dir_w.xyz*scene_scale + scene_llc; // other end point of line
-			intensity  = get_line_intensity_at(dlpos, lpos_r.xyz, lpos2, lpos_r.w, lpos_r.xyz); // put the point used for lighting into lpos_r.xyz
+			intensity  = get_line_intensity_at(dlpos, lpos1, lpos2, lpos_r.w, lpos_r.xyz); // put the point used for lighting into lpos_r.xyz
 			light_dir  = normalize(lpos_r.xyz - dlpos); // since lpos_r is updated, we need to defer calculation of light_dir until here
 		}
 		else { // point light
@@ -190,11 +191,27 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 #endif // HAS_DLIGHT_SMAP
 
 		float diff_mag = max(0.0, n_dot_l); // diffuse
+
+// handle specular lighting
 #ifndef NO_DL_SPECULAR
+#ifdef HAS_LINE_LIGHTS
+		if (dir_w.w == 0.0) { // compute specular light dir for line light
+			// https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/lightingHF.hlsli
+			vec3 lpos2 = dir_w.xyz*scene_scale + scene_llc; // other end point of line
+			vec3 ref = -reflect(eye_dir, normal);
+			vec3 L0 = lpos1 - dlpos;
+			vec3 L1 = lpos2 - dlpos;
+			vec3 Ld = L1 - L0;
+			float ndotLd = dot(ref, Ld);
+			float t = (dot(ref, L0) * ndotLd - dot(L0, Ld)) / (dot(Ld, Ld) - ndotLd*ndotLd);
+			light_dir = normalize(L0 + clamp(t, 0.0, 1.0) * Ld);
+		}
+#endif // HAS_LINE_LIGHTS
 		float spec_mag = clamp(10.0*n_dot_l, 0.0, 1.0)*get_spec_intensity(lnorm, light_dir, eye_dir);
-#else
+#else // no specular
 		float spec_mag = 0.0;
 #endif // NO_DL_SPECULAR
+
 		vec3 spec_color= get_wet_specular_color(wet_scale);
 #ifdef USE_SPEC_MAP
 		spec_color    *= get_spec_color();
