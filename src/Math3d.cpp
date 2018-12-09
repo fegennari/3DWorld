@@ -665,9 +665,7 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 			}
 		}
 	}
-	else {
-		ta = 0.0;
-	}
+	else {ta = 0.0;}
 	if (dr2 < TOLERANCE) return 0; // line is parallel to cylinder
 	t  = 2.0; // set > 1.0
 	tb = min(1.0f, tb);

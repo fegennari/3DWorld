@@ -368,6 +368,15 @@ inline bool line_poly_intersect(vector3d const &v1, point const &p1, point const
 	return line_poly_intersect(v1, p1, points, npts, norm);
 }
 
+inline bool point_in_ellipse(point const &p, point const &center, float rx, float ry) {
+	float const dx(center.x - p.x), dy(center.y - p.y);
+	return (dx*dx/(rx*rx) + dy*dy/(ry*ry) <= 1.0);
+}
+inline bool point_in_ellipse_risq(point const &p, point const &center, float rx_inv_sq, float ry_inv_sq) {
+	float const dx(center.x - p.x), dy(center.y - p.y);
+	return (dx*dx*rx_inv_sq + dy*dy*ry_inv_sq <= 1.0);
+}
+
 
 inline float get_angle(vector3d const &v1, vector3d const &v2) {
 	return safe_acosf(dot_product(v1, v2));
