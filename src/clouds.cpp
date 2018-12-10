@@ -352,6 +352,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 
 	shader_t s;
 	float const size(camera_pdu.far_);
+	assert(size > 0.0);
 
 	// draw a plane at terrain_zmin to properly blend the fog (needs to be first when camera is above the clouds)
 	if (draw_floor && !reflection_pass && fog_enabled) {

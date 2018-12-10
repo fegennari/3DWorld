@@ -379,6 +379,8 @@ void reset_camera_pos() {
 
 void set_perspective_near_far(float near_clip, float far_clip, float aspect_ratio) {
 
+	if (window_width == 0) return; // window not setup yet, skip (maybe got here during mouse/keyboard even before display() was called or config was read)
+	assert(window_width > 0 && window_height > 0);
 	perspective_nclip = near_clip;
 	fgMatrixMode(FG_PROJECTION);
 	fgLoadIdentity();
