@@ -615,6 +615,7 @@ class ped_manager_t { // pedestrians
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	bool gen_ped_pos(pedestrian_t &ped);
+	void expand_cube_for_ped(cube_t &cube) const;
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
 	bool empty() const {return peds.empty();}
@@ -622,7 +623,7 @@ public:
 
 	void init(unsigned num);
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
-	//bool line_intersect(point const &p1, point const &p2, float &t) const;
+	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;
 	void next_frame();
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void free_context() {ped_model_loader.free_context();}

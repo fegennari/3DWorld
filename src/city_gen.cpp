@@ -2612,12 +2612,12 @@ cube_t const &ped_manager_t::get_city_plot_bcube_for_peds(unsigned city_ix, unsi
 
 cube_t ped_manager_t::get_expanded_city_bcube_for_peds(unsigned city_ix) const {
 	cube_t bcube(road_gen.get_city_bcube(city_ix));
-	bcube.expand_by_xy(get_ped_radius());
+	expand_cube_for_ped(bcube);
 	return bcube;
 }
 cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {
 	cube_t bcube(road_gen.get_plot_from_global_id(city_ix, plot_ix));
-	bcube.expand_by_xy(get_ped_radius());
+	expand_cube_for_ped(bcube);
 	return bcube;
 }
 vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
@@ -2685,6 +2685,7 @@ public:
 		vector3d const xlate(get_camera_coord_space_xlate()), p1x(p1 - xlate), p2x(p2 - xlate);
 		bool ret(road_gen.line_intersect(p1x, p2x, t));
 		ret |= car_manager.line_intersect_cars(p1x, p2x, t);
+		ret |= ped_manager.line_intersect_peds(p1x, p2x, t);
 		return ret;
 	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}

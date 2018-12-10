@@ -421,6 +421,17 @@ bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, f
 	return 1;
 }
 
+// this version returns the value of t rather than the intersection point; t is the closest point on the line to the sphere center, not the intersection point
+bool line_sphere_int_closest_pt_t(point const &p1, point const &p2, point const &center, float radius, float &t) {
+
+	vector3d v1(p2 - p1), v2(p1, center); // dir from target sphere to object
+	v1.normalize();
+	t = -dot_product(v1, v2); // same as get_closest_pt_on_line_t()
+	if (t < 0.0 || t > 1.0) return 0;
+	v2 += v1*t;
+	return (v2.mag_sq() < radius*radius); // check length of perpendicular to sphere center vs. radius
+}
+
 
 bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm) {
 

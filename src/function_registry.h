@@ -495,6 +495,7 @@ void dir_to_sphere_s_t(vector3d const &dir, vector3d const &sdir, double &s, dou
 bool line_sphere_intersect_s_t(point const &p1, point const &p2, point const &sc, float radius,
 							   vector3d const &sdir, double &s, double &t);
 bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, float radius, point &lsint, bool test_neg_t);
+bool line_sphere_int_closest_pt_t(point const &p1, point const &p2, point const &center, float radius, float &t);
 bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc, float radius, float &rad, float &dist, float &t);
 bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm=nullptr);
 void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from, float radius, unsigned num_pts);

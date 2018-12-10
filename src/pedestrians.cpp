@@ -3,12 +3,17 @@
 // 12/6/18
 #include "city.h"
 
+float const PED_WIDTH_SCALE  = 0.5;
+float const PED_HEIGHT_SCALE = 2.5;
+
 extern int animate2;
 extern city_params_t city_params;
 
 
 string pedestrian_t::str() const {
-	return string(); // FIXME_PEDS: WRITE
+	std::ostringstream oss;
+	oss << TXT(vel.mag()) << TXT(radius) << TXT(city) << TXT(plot) << TXTi(stuck_count) << TXT(collided); // Note: pos, vel, dir not printed
+	return oss.str();
 }
 
 bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const {
@@ -71,6 +76,12 @@ city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
 
 float ped_manager_t::get_ped_radius() const {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
 
+void ped_manager_t::expand_cube_for_ped(cube_t &cube) const {
+	float const radius(get_ped_radius());
+	cube.expand_by_xy(radius); // PED_WIDTH_SCALE*radius for models?
+	cube.z2() += PED_HEIGHT_SCALE*radius;
+}
+
 void ped_manager_t::init(unsigned num) {
 	if (num == 0) return;
 	timer_t timer("Gen Peds");
@@ -79,7 +90,7 @@ void ped_manager_t::init(unsigned num) {
 	unsigned const num_models(ped_model_loader.num_models());
 
 	for (unsigned n = 0; n < num; ++n) {
-		pedestrian_t ped(radius);
+		pedestrian_t ped(radius); // Note: constant radius for now, but can vary this to create peds of different sizes
 
 		if (gen_ped_pos(ped)) {
 			if (city_params.ped_speed > 0.0) {ped.vel = rgen.signed_rand_vector_spherical_xy(city_params.ped_speed);}
@@ -132,6 +143,27 @@ bool ped_manager_t::proc_sphere_coll(point &pos, float radius, vector3d *cnorm) 
 		} // for plot
 	} // for city
 	return 0;
+}
+
+bool ped_manager_t::line_intersect_peds(point const &p1, point const &p2, float &t) const {
+	bool ret(0);
+
+	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+		if (!get_expanded_city_bcube_for_peds(city).line_intersects(p1, p2)) continue;
+		unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
+
+		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
+			if (!get_expanded_city_plot_bcube_for_peds(city, plot).line_intersects(p1, p2)) continue;
+			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
+
+			for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
+				assert(i < peds.size());
+				float tmin(0.0);
+				if (line_sphere_int_closest_pt_t(p1, p2, peds[i].pos, peds[i].radius, tmin) && tmin < t) {t = tmin; ret = 1;}
+			}
+		} // for plot
+	} // for city
+	return ret;
 }
 
 void ped_manager_t::next_frame() {
@@ -206,7 +238,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					draw_sphere_vbo(ped.pos, ped.radius, ndiv, textured);
 				}
 				else {
-					float const width(0.5*ped.radius), height(2.5*ped.radius);
+					float const width(PED_WIDTH_SCALE*ped.radius), height(PED_HEIGHT_SCALE*ped.radius);
 					cube_t bcube;
 					bcube.set_from_sphere(ped.pos, width);
 					bcube.z1() = ped.pos.z - ped.radius;
