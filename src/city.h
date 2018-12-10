@@ -297,7 +297,7 @@ namespace stoplight_ns {
 		bool at_conn_road; // longer light times in this case
 		float cur_state_ticks;
 		// these are mutable because they are set during car update logic, where roads are supposed to be const
-		mutable uint8_t car_waiting_sr, car_waiting_left;
+		mutable uint8_t car_waiting_sr, car_waiting_left, cw_in_use; // one bit per orient
 		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits
 
 		void next_state() {
@@ -312,12 +312,13 @@ namespace stoplight_ns {
 		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
 		void ffwd_to_future(float time_secs);
 	public:
-		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0), car_waiting_sr(0), car_waiting_left(0) {
+		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0), car_waiting_sr(0), car_waiting_left(0), cw_in_use(0) {
 			reset_blocked();
 		}
 		void reset_blocked() {UNROLL_4X(blocked[i_] = 0;)}
 		void mark_blocked(bool dim, bool dir) const {blocked[2*dim + dir] = 1;} // Note: not actually const, but blocked is mutable
 		bool is_blocked(bool dim, bool dir) const {return (blocked[2*dim + dir] != 0);}
+		void mark_crosswalk_in_use(bool dim, bool dir) const {cw_in_use |= (1 << (2*dim + dir));}
 		void init(uint8_t num_conn_, uint8_t conn_);
 		void next_frame();
 		void notify_waiting_car(bool dim, bool dir, unsigned turn) const;

@@ -125,6 +125,7 @@ namespace stoplight_ns {
 
 	void stoplight_t::next_frame() {
 		reset_blocked();
+		cw_in_use = 0;
 		if (num_conn == 2) return; // nothing else to do
 		cur_state_ticks += fticks;
 		run_update_logic();
@@ -187,7 +188,8 @@ namespace stoplight_ns {
 		unsigned const orient(car.get_orient());  // {W, E, S, N}
 		if (!red_light(!car.dim, (to_right  [orient] & 1), TURN_NONE)) return 0; // traffic to our left has a green or yellow light for going straight
 		if (!red_light( car.dim, (other_lane[orient] & 1), TURN_LEFT)) return 0; // opposing traffic has a green or yellow light for turning left
-		// Note: there are no U-turns, so we don't need to worry about 
+		// Note: there are no U-turns, so we don't need to worry about cars coming from the other dir of our dest road
+		if (cw_in_use & (1 << other_lane[orient])) return 0; // ped in the crosswalk, wait
 		return 1; // can turn right on red to_left[orient]
 	}
 

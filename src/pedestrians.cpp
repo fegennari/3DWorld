@@ -141,6 +141,7 @@ void ped_manager_t::next_frame() {
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
 		// FIXME_PEDS: navigation with destination
+		// TODO: road_gen.get_city().get_isec().mark_crosswalk_in_use(dim, dir)
 		cube_t const plot(get_city_plot_bcube_for_peds(i->city, i->plot));
 		auto const &colliders(get_colliders_for_plot(i->city, i->plot));
 		i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen, delta_dir);
