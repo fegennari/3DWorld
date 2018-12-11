@@ -92,7 +92,7 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 }
 
 
-cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh) const {
+cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_scene_bcube) const {
 
 	assert(radius > 0.0);
 	assert(sqrt_thresh < 1.0);
@@ -101,14 +101,14 @@ cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh) const {
 
 	if (is_very_directional()) {
 		cube_t bcube2;
-		calc_bounding_cylin(sqrt_thresh).calc_bcube(bcube2);
+		calc_bounding_cylin(sqrt_thresh, clip_to_scene_bcube).calc_bcube(bcube2);
 		if (add_pad) {bcube2.expand_by(vector3d(DX_VAL, DY_VAL, DZ_VAL));} // add one grid unit
 		bcube.intersect_with_cube(bcube2);
 	}
 	return bcube;
 }
 
-void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset) const {
+void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, bool clip_to_scene_bcube, vector3d const &bounds_offset) const {
 
 	if (radius == 0.0) { // global light source
 		for (unsigned d = 0; d < 3; ++d) {
@@ -119,7 +119,7 @@ void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, 
 		}
 	}
 	else { // local point/spot/line light source
-		bcube = calc_bcube(1, sqrt_thresh); // padded
+		bcube = calc_bcube(1, sqrt_thresh, clip_to_scene_bcube); // padded
 
 		for (unsigned d = 0; d < 3; ++d) {
 			UNROLL_2X(bnds[d][i_] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bcube.d[d][i_] + bounds_offset[d]), d)));)
@@ -131,12 +131,35 @@ float light_source::calc_cylin_end_radius() const {
 	float const d(1.0 - 2.0*(bwidth + LT_DIR_FALLOFF));
 	return radius*sqrt(1.0/(d*d) - 1.0);
 }
-cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh) const {
+cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_scene_bcube) const {
 
 	float const rad(radius*(1.0 - sqrt_thresh));
 	if (is_line_light()) {return cylinder_3dw(pos, pos2, rad, rad);}
 	assert(is_very_directional()); // not for use with point lights or spotlights larger than a hemisphere
-	return cylinder_3dw(pos, pos+dir*rad, 0.0, (1.0 - sqrt_thresh)*calc_cylin_end_radius());
+	point pos2(pos + dir*rad);
+	float end_radius((1.0 - sqrt_thresh)*calc_cylin_end_radius());
+
+	if (clip_to_scene_bcube) { // Note: not correct in general, but okay for bcube calculation for large light sources
+		point pos1(pos);
+		float const len1(p2p_dist(pos, pos2));
+		cube_t const scene_bounds(get_scene_bounds());
+#if 1 // more conservative/correct
+		vector3d dmax;
+		UNROLL_3X(dmax[i_] = max((pos[i_] - scene_bounds.d[i_][0]), (scene_bounds.d[i_][1] - pos[i_]));)
+		float const max_len(dmax.mag());
+
+		if (max_len < len1) {
+			float const t(max_len/len1);
+			end_radius *= t; // scale end_radius by the clipped line length
+			pos2 = pos1 + t*(pos2 - pos1); // clip the line
+		}
+#else // more efficient
+		do_line_clip(pos1, pos2, scene_bounds.d); // clip pos2 to the scene bounds
+		float const max_len(p2p_dist(pos, pos2));
+		end_radius *= max_len/len1; // scale end_radius by the clipped line length
+#endif
+	}
+	return cylinder_3dw(pos, pos2, 0.0, end_radius);
 }
 
 

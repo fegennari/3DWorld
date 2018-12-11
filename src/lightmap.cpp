@@ -1102,7 +1102,7 @@ void add_dynamic_lights_ground() {
 		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby && !ldynamic[ycent*gbx + xcent].check_add_light(ix)) continue;
 		cube_t bcube;
 		int bnds[3][2];
-		ls.get_bounds(bcube, bnds, sqrt_dlight_add_thresh, dlight_shift);
+		ls.get_bounds(bcube, bnds, sqrt_dlight_add_thresh, 1, dlight_shift); // clip_to_scene_bcube=1
 		if (first) {dlight_bcube = bcube;} else {dlight_bcube.union_with_cube(bcube);}
 		first = 0;
 		int const radius(((int(ls_radius*max(DX_VAL_INV, DY_VAL_INV)) + 1) >> DL_GRID_BS) + 1), rsq(radius*radius);
@@ -1111,7 +1111,7 @@ void add_dynamic_lights_ground() {
 		pos_dir_up pdu;
 
 		if (!line_light && ls.is_very_directional()) { // spotlight
-			cylinder_3dw const cylin(ls.calc_bounding_cylin());
+			cylinder_3dw const cylin(ls.calc_bounding_cylin(0.0, 1)); // clip_to_scene_bcube=1
 			vector3d const dir(cylin.p2 - cylin.p1);
 
 			if (dir.x != 0.0 || dir.y != 0.0) { // not vertical
