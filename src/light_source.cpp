@@ -141,23 +141,22 @@ cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_s
 
 	if (clip_to_scene_bcube) { // Note: not correct in general, but okay for bcube calculation for large light sources
 		point pos1(pos);
-		float const len1(p2p_dist(pos, pos2));
 		cube_t const scene_bounds(get_scene_bounds());
-#if 1 // more conservative/correct
-		vector3d dmax;
-		UNROLL_3X(dmax[i_] = max((pos[i_] - scene_bounds.d[i_][0]), (scene_bounds.d[i_][1] - pos[i_]));)
-		float const max_len(dmax.mag());
+		float const len1(p2p_dist(pos, pos2)), max_len(scene_bounds.furthest_dist_to_pt(pos));
 
-		if (max_len < len1) {
-			float const t(max_len/len1);
+		if (max_len < len1) { // spotlight cone projects outside the scene - clip the length to produce a smaller footprint
+			float t(max_len/len1);
 			end_radius *= t; // scale end_radius by the clipped line length
 			pos2 = pos1 + t*(pos2 - pos1); // clip the line
+			cube_t cylin_bcube;
+			cylinder_3dw(pos, pos2, 0.0, end_radius).calc_bcube(cylin_bcube); // compute bounding cube of clipped cylinder
+			cylin_bcube.intersect_with_cube(scene_bounds); // clip to scene bounds
+			float const new_max_len(cylin_bcube.furthest_dist_to_pt(pos)); // compute max dist to new clipped scene, which should be a smaller (less conservative) value
+			t = new_max_len/max_len;
+			end_radius *= t; // scale end_radius by the clipped line length again
+			pos2 = pos1 + t*(pos2 - pos1); // clip the line again
+			//cout << TXT(len1) << TXT(max_len) << TXT(new_max_len) << endl;
 		}
-#else // more efficient
-		do_line_clip(pos1, pos2, scene_bounds.d); // clip pos2 to the scene bounds
-		float const max_len(p2p_dist(pos, pos2));
-		end_radius *= max_len/len1; // scale end_radius by the clipped line length
-#endif
 	}
 	return cylinder_3dw(pos, pos2, 0.0, end_radius);
 }
