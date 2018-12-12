@@ -585,6 +585,11 @@ struct cube_t { // size = 24
 		UNROLL_3X(mextent = max(mextent, max(-d[i_][0], d[i_][1]));)
 		return mextent;
 	}
+	float furthest_dist_to_pt(point const &pos) const {
+		vector3d dmax;
+		UNROLL_3X(dmax[i_] = max((pos[i_] - d[i_][0]), (d[i_][1] - pos[i_]));)
+		return dmax.mag();
+	}
 	int closest_face(point const &pos) const;
 	bool cube_merge(cube_t const &cube);
 	void get_points(point pts[8]) const;
