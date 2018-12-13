@@ -366,7 +366,7 @@ public:
 };
 
 
-struct material_params_t {
+struct material_params_t { // Warning: changing this struct will invalidate the model3d file format
 
 	colorRGB ka, kd, ks, ke, tf;
 	float ns, ni, alpha, tr;

@@ -341,19 +341,19 @@ public:
 				assert(cur_mat_id >= 0); // must be valid
 				cur_mat    = &model.get_material(cur_mat_id);
 			}
-			else if (s == "ka") {
+			else if (s == "ka") { // ambient color
 				assert(cur_mat);
 				if (!read_color_rgb(mat_in, "Ka", cur_mat->ka, material_name)) return 0;
 			}
-			else if (s == "kd") {
+			else if (s == "kd") { // diffuse color
 				assert(cur_mat);
 				if (!read_color_rgb(mat_in, "Kd", cur_mat->kd, material_name)) return 0;
 			}
-			else if (s == "ks") {
+			else if (s == "ks") { // specular color
 				assert(cur_mat);
 				if (!read_color_rgb(mat_in, "Ks", cur_mat->ks, material_name)) return 0;
 			}
-			else if (s == "ke") {
+			else if (s == "ke") { // emissive color
 				assert(cur_mat);
 				if (!read_color_rgb(mat_in, "Ke", cur_mat->ke, material_name)) return 0;
 			}
@@ -373,9 +373,14 @@ public:
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->tr)) {cerr << "Error reading material Tr for " << material_name << endl; return 0;}
 			}
-			else if (s == "tf") { // transmittion filter
+			else if (s == "tf") { // transmittion filter - stored but unused
 				assert(cur_mat);
 				if (!read_color_rgb(mat_in, "Tf", cur_mat->tf, material_name)) return 0;
+			}
+			else if (s == "km") { // bump strengh - ignored
+				assert(cur_mat);
+				float km(0.0);
+				if (!(mat_in >> km)) {cerr << "Error reading material km for " << material_name << endl; return 0;}
 			}
 			else if (s == "illum") { // 0 - 10
 				assert(cur_mat);
