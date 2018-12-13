@@ -56,7 +56,11 @@ model_mat_lod_thresh 0.008
 # pedestrians
 city num_peds 10000
 city ped_speed 0.001
-city ped_model ../models/people/muro/muro.obj 0 -1 90   18.0 1.0 1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
+city ped_model ../models/people/muro/muro.obj       0 -1 90  18.0  1.0 1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
+city ped_model ../models/people/Patrick/Patrick.obj 0 -1 90   0.18 1.0 1.0  0
+#city ped_model ../models/people/Alfred/Alfred.obj   0 -1 90   0.4  1.0 1.0  0 # arms out in odd position, low poly
+#city ped_model ../models/people/Ana/Ana_Model.obj   0 -1 90   0.4  1.0 1.0  0 # arms out in odd position, low poly
+#city ped_model ../models/people/Belle/Belle.obj     0 -1 90  19.0  1.0 1.0  0 # too cartoonish (large head compared to body)
 
 city max_lights 1024
 city max_shadow_maps 40
