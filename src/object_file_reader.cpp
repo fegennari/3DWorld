@@ -277,6 +277,11 @@ void model_from_file_t::check_and_bind(int &tid, string const &tfn, bool is_alph
 
 
 
+bool endswith(string const &value, string const &ending) {
+	if (ending.size() > value.size()) return 0;
+	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
 class object_file_reader_model : public object_file_reader, public model_from_file_t {
 
 	bool had_empty_mat_error;
@@ -298,6 +303,10 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 			}
 		}
 		read_to_newline(in, &name);
+		// FIXME: sometimes the -bm option can be after the filename instead
+		// however, this is difficult to differentiate from a filename with whitespace ahd hyphen, so we don't support it and require the user to update their file
+		// unless it's "-bm 1", which seems to be the common case
+		if (endswith(name, " -bm 1")) {name = name.substr(0, name.size()-6);}
 		return 1;
 	}
 	bool read_color_rgb(ifstream &in, string const &name, colorRGB &color, string const &material_name) const {
