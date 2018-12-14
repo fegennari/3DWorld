@@ -204,6 +204,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	pdu.far_ = draw_dist;
 	pdu.pos -= xlate; // adjust for local translate
 	dstate.xlate = xlate;
+	dstate.enable_normal_map();
 	fgPushMatrix();
 	translate_to(xlate);
 	dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1

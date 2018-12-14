@@ -331,7 +331,7 @@ colorRGBA car_draw_state_t::get_headlight_color(car_t const &car) const {
 }
 
 void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
-	//use_bmap = 1; // used only for some car models
+	//enable_normal_map(); // used only for some car models
 	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
 	select_texture(WHITE_TEX);
 	if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}

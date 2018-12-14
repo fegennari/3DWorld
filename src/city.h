@@ -381,6 +381,7 @@ protected:
 	point label_pos;
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
+	void enable_normal_map() {use_bmap = 1;}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0);
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader);
