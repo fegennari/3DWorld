@@ -9,7 +9,7 @@
 
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
 
-extern bool tt_fire_button_down;
+extern bool tt_fire_button_down, enable_model3d_bump_maps;
 extern int display_mode, game_mode, animate2;
 extern float FAR_CLIP;
 extern vector<light_source> dl_sources;
@@ -331,7 +331,7 @@ colorRGBA car_draw_state_t::get_headlight_color(car_t const &car) const {
 }
 
 void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
-	//enable_normal_map(); // used only for some car models
+	//if (enable_model3d_bump_maps) {enable_normal_map();} // used only for some car models, and currently doesn't work
 	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
 	select_texture(WHITE_TEX);
 	if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
@@ -398,6 +398,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlig
 	if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
 		if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
+		ensure_valid_normap_map();
 		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
 	}
 	else { // draw simple 1-2 cube model
