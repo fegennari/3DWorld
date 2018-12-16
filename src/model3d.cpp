@@ -1506,7 +1506,6 @@ void model3d::load_all_used_tids() {
 
 	if (textures_loaded) return; // is this safe to skip?
 	tmgr.free_after_upload = no_store_model_textures_in_memory;
-	timer_t timer("Texture Load");
 //#pragma omp parallel for schedule(dynamic) // not thread safe due to texture_t::resize() GL calls and reuse of textures across materials
 	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].init_textures(tmgr);}
 	textures_loaded = 1;

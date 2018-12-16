@@ -503,8 +503,9 @@ public:
 			}
 		}
 		model.load_all_used_tids();
+		PRINT_TIME("Model Texture Load");
 		if (verbose) {model.show_stats();}
-		PRINT_TIME("Model3d Load");
+		PRINT_TIME("Total Model3d Load");
 		return 1;
 	}
 

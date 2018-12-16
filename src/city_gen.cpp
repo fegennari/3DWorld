@@ -923,7 +923,7 @@ class city_road_gen_t : public road_gen_base_t {
 		};
 		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vector<cube_t>> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
 			// Note: fills in plots.has_parking
-			timer_t timer("Gen Parking Lots and Place Objects");
+			//timer_t timer("Gen Parking Lots and Place Objects");
 			vector<cube_t> bcubes; // reused across calls
 			rand_gen_t rgen, detail_rgen;
 			parking_lots.clear();
