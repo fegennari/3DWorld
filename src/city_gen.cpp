@@ -196,10 +196,6 @@ void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bma
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
 }
 
-void draw_state_t::ensure_valid_normap_map() const {
-	if (use_bmap) {model3d::bind_default_flat_normal_map();} // bind in case the model doesn't contain normal maps (should be per material)
-}
-
 void draw_state_t::begin_tile(point const &pos, bool will_emit_now) {
 	emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
 	if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps

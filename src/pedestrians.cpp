@@ -6,7 +6,6 @@
 float const PED_WIDTH_SCALE  = 0.5;
 float const PED_HEIGHT_SCALE = 2.5;
 
-extern bool enable_model3d_bump_maps;
 extern int animate2;
 extern city_params_t city_params;
 
@@ -205,7 +204,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	pdu.far_ = draw_dist;
 	pdu.pos -= xlate; // adjust for local translate
 	dstate.xlate = xlate;
-	if (enable_model3d_bump_maps) {dstate.enable_normal_map();}
+	dstate.set_enable_normal_map(use_model3d_bump_maps());
 	fgPushMatrix();
 	translate_to(xlate);
 	dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
@@ -248,7 +247,6 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
 					end_sphere_draw(in_sphere_draw);
 					bool const low_detail(!shadow_only && !dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)); // low detail for non-shadow pass at half draw dist
-					dstate.ensure_valid_normap_map();
 					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
 				}
 			} // for i

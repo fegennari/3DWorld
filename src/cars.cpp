@@ -9,7 +9,7 @@
 
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
 
-extern bool tt_fire_button_down, enable_model3d_bump_maps;
+extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2;
 extern float FAR_CLIP;
 extern vector<light_source> dl_sources;
@@ -291,8 +291,9 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	uniform_scale(sz_scale);
 	translate_to(-bcube.get_cube_center()); // cancel out model local translate
 
-	if ((low_detail || is_shadow_pass) && !model_file.shadow_mat_ids.empty()) {
-		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass);}
+	if ((low_detail || is_shadow_pass) && !model_file.shadow_mat_ids.empty()) { // low detail pass, normal maps disabled
+		if (!is_shadow_pass && use_model3d_bump_maps()) {model3d::bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
+		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 0, 0);}
 	}
 	else {
 		auto const &unbound_mat(model.get_unbound_material());
@@ -331,7 +332,7 @@ colorRGBA car_draw_state_t::get_headlight_color(car_t const &car) const {
 }
 
 void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
-	//if (enable_model3d_bump_maps) {enable_normal_map();} // used only for some car models, and currently doesn't work
+	//set_enable_normal_map(use_model3d_bump_maps()); // used only for some car models, and currently doesn't work
 	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
 	select_texture(WHITE_TEX);
 	if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
@@ -398,7 +399,6 @@ void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlig
 	if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
 		if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-		ensure_valid_normap_map();
 		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
 	}
 	else { // draw simple 1-2 cube model

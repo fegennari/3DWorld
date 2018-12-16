@@ -36,11 +36,12 @@ extern vector<texture_t> textures;
 model3ds all_models;
 
 
-bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (display_mode & 0x20) == 0) && enable_model3d_bump_maps;} // enabled by default
+bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (display_mode & 0x20) == 0 && enable_model3d_bump_maps);} // enabled by default
 bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
 string texture_str(int tid);
+bool use_model3d_bump_maps() {return enable_bump_map();} // global function export
 
 
 // ************ texture_manager ************
@@ -1030,8 +1031,9 @@ void bind_texture_tu_or_white_tex(texture_manager const &tmgr, int tid, unsigned
 }
 
 
-void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate) {
-
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid,
+	bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
+{
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
@@ -1076,6 +1078,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			set_active_texture(5);
 			tmgr.bind_texture(bump_tid);
 			set_active_texture(0);
+		}
+		else if (enable_bump_map() && is_bmap_pass) {
+			model3d::bind_default_flat_normal_map(); // use default normal map in this case instead of leaving it unbound, or bound to the previous material
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
@@ -1547,7 +1552,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
 	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist)
 {
-	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
+	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass), is_bmap_pass((bmap_pass_mask & 2) != 0);
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
 
 	if (group_back_face_cull && reflection_pass != 2) { // okay enable culling if is_shadow_pass on some scenes
@@ -1599,7 +1604,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, xlate);
+			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);
 		}
 		to_draw.clear();
 	}
@@ -1609,9 +1614,9 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 }
 
-void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate) {
+void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, bool is_bmap_pass, point const *const xlate) {
 	assert(mat_id < materials.size());
-	materials[mat_id].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, xlate);
+	materials[mat_id].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);
 }
 
 
