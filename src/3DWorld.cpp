@@ -2222,6 +2222,7 @@ int main(int argc, char** argv) {
 		);
 		//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
 	}
+	//toggle_timing_profiler(); // uncomment to enable profiler logging on init without using the 'u' key
 	progress();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;
