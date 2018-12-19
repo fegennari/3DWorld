@@ -6,6 +6,7 @@
 #include "openal_wrap.h"
 #include "explosion.h" // for add_blastr()
 #include "lightmap.h" // for light_source
+#include <cfloat> // for FLT_MAX
 
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
 

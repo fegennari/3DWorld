@@ -96,3 +96,6 @@ Water.o
 waypoints.o
 weapon_draw.o
 targa.o
+roads.o
+cars.o
+pedestrians.o
