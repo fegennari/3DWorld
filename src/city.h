@@ -268,6 +268,38 @@ struct road_plot_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
+struct plot_xy_t {
+	unsigned nx, ny;
+	plot_xy_t() : nx(0), ny(0) {}
+	plot_xy_t(unsigned nx_, unsigned ny_) : nx(nx_), ny(ny_) {}
+	unsigned num() const {return nx*ny;}
+	unsigned get_id(unsigned x, unsigned y) const {assert(x < nx); assert(y < ny); return (y*nx + x);} // {x,y} => id
+	unsigned get_x (unsigned id) const {assert(id < num()); return (id % nx);} // id => x
+	unsigned get_y (unsigned id) const {assert(id < num()); return (id / nx);} // id => y
+	// prev and next x/y
+	bool get_xp(unsigned id, unsigned &xp) const { // id(x,y) => id(x-1,y)
+		unsigned const x(get_x(id));
+		if (x == 0) {return 0;} else {xp = x-1; return 1;}
+	}
+	bool get_xn(unsigned id, unsigned &xn) const { // id(x,y) => id(x+1,y)
+		unsigned const x(get_x(id));
+		if (x+1 == nx) {return 0;} else {xn = x+1; return 1;}
+	}
+	bool get_yp(unsigned id, unsigned &yp) const { // id(x,y) => id(x,y-1)
+		unsigned const y(get_y(id));
+		if (y == 0) {return 0;} else {yp = y-1; return 1;}
+	}
+	bool get_yn(unsigned id, unsigned &yn) const { // id(x,y) => id(x,y+1)
+		unsigned const y(get_y(id));
+		if (y+1 == ny) {return 0;} else {yn = y+1; return 1;}
+	}
+	// these versions assert that prev/next are valid
+	unsigned get_xp(unsigned id) const {unsigned xp(0); bool const ret(this->get_xp(id, xp)); assert(ret); return xp;}
+	unsigned get_xn(unsigned id) const {unsigned xn(0); bool const ret(this->get_xn(id, xn)); assert(ret); return xn;}
+	unsigned get_yp(unsigned id) const {unsigned yp(0); bool const ret(this->get_yp(id, yp)); assert(ret); return yp;}
+	unsigned get_yn(unsigned id) const {unsigned yn(0); bool const ret(this->get_yn(id, yn)); assert(ret); return yn;}
+};
+
 struct parking_lot_t : public cube_t {
 	bool dim, dir;
 	unsigned short row_sz, num_rows;
@@ -581,11 +613,12 @@ struct pedestrian_t {
 	point pos;
 	vector3d vel, dir;
 	float radius;
-	unsigned city, plot, model_id;
+	unsigned plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
+	unsigned short city, model_id;
 	unsigned char stuck_count;
 	bool collided;
 
-	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_), city(0), plot(0), model_id(0), stuck_count(0), collided(0) {}
+	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_), plot(0), dest_plot(0), dest_bldg(0), city(0), model_id(0), stuck_count(0), collided(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string str() const;
 	void move() {pos += vel*fticks;}
@@ -621,13 +654,17 @@ public:
 	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
 	bool empty() const {return peds.empty();}
 	void clear() {peds.clear(); by_city.clear();}
-
 	void init(unsigned num);
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
 	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;
 	void next_frame();
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void free_context() {ped_model_loader.free_context();}
+	// path finding
+	bool choose_dest_building(pedestrian_t &ped);
+	bool at_dest(pedestrian_t &ped) const;
+	unsigned get_next_plot(pedestrian_t &ped) const;
+	//vector3d get_dest_move_dir(point const &pos) const;
 }; // end ped_manager_t
 
 

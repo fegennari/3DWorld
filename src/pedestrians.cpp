@@ -18,7 +18,7 @@ string pedestrian_t::str() const {
 
 bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const {
 	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
-	if (check_buildings_ped_coll(pos, radius, plot)) return 0;
+	if (check_buildings_ped_coll(pos, radius, plot)) return 0; // FIXME: get building_id and cache at_dest state when == dest_bldg
 	float const xmin(pos.x - radius), xmax(pos.x + radius);
 
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) {

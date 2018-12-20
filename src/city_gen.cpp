@@ -998,6 +998,7 @@ class city_road_gen_t : public road_gen_base_t {
 		map<uint64_t, unsigned> tile_to_block_map;
 		map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
 		vector<vector<cube_t>> plot_colliders;
+		plot_xy_t plot_xy;
 		unsigned city_id, cluster_id, plot_id_offset;
 		//string city_name; // future work
 		float tot_road_len;
@@ -1058,6 +1059,7 @@ class city_road_gen_t : public road_gen_base_t {
 		unsigned num_roads() const {return roads.size();}
 		vector<road_t> const &get_roads() const {return roads;} // used for connecting roads between cities with 4-way intersections
 		bool empty() const {return roads.empty();}
+		plot_xy_t const &get_plot_xy() const {return plot_xy;}
 		bool has_tunnels() const {return !tunnels.empty();}
 		void set_cluster(unsigned id) {cluster_id = id;}
 		void register_connected_city(unsigned id) {connected_to.insert(id);}
@@ -1111,8 +1113,9 @@ class city_road_gen_t : public road_gen_base_t {
 			bcube.y2() = roads[num_r-1].y2(); // actual bcube y2 from last  y road
 
 			// create road segments and intersections
+			plot_xy.nx = num_x - 1; plot_xy.ny = num_y - 1;
 			segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y + 4); // X + Y segments, allocate one extra per side for connectors
-			plots.reserve((num_x-1)*(num_y-1));
+			plots.reserve(plot_xy.num());
 
 			if (num_x > 2 && num_y > 2) {
 				isecs[0].reserve(4); // 2-way, always exactly 4 at each corner
@@ -1805,6 +1808,20 @@ class city_road_gen_t : public road_gen_base_t {
 		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {return plots[decode_plot_id(global_plot_id)];}
 		vector<cube_t> const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
+		unsigned get_next_plot(unsigned plot, unsigned dest_plot) const {
+			if (plot == dest_plot) return plot; // identity
+			int const cur_x(plot_xy.get_x(plot)), cur_y(plot_xy.get_y(plot)), next_x(plot_xy.get_x(dest_plot)), next_y(plot_xy.get_y(dest_plot)); // use int to avoid signed problems
+			int const dx(next_x - cur_x), dy(next_y - cur_y);
+			if (abs(dx) > abs(dy)) {return plot_xy.get_id(((dx < 0) ? plot_xy.get_xp(plot) : plot_xy.get_xn(plot)), cur_y);} // move in X
+			else                   {return plot_xy.get_id(cur_x, ((dy < 0) ? plot_xy.get_yp(plot) : plot_xy.get_yn(plot)));} // move in Y
+		}
+		bool choose_dest_building(unsigned &global_plot, unsigned &building, rand_gen_t &rgen) const {
+			if (plots.empty()) return 0; // no plots
+			unsigned const plot_id(rgen.rand() % plots.size());
+			//building = ?; // WRITE
+			global_plot = plot_id + plot_id_offset;
+			return 1;
+		}
 		void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			if (car.cur_road_type == TYPE_RSEG) {
 				road_seg_t const &seg(get_car_seg(car));
@@ -2489,7 +2506,9 @@ public:
 		return road_network_t::gen_ped_pos(ped, rgen, road_networks);
 	}
 	cube_t const &get_plot_from_global_id(unsigned city_id, unsigned global_plot_id) const {return get_city(city_id).get_plot_from_global_id(global_plot_id);}
-	
+	unsigned get_next_plot(unsigned city_id, unsigned plot, unsigned dest_plot) const {return get_city(city_id).get_next_plot(plot, dest_plot);}
+	bool choose_dest_building(unsigned city_id, unsigned &plot, unsigned &building, rand_gen_t &rgen) const {return get_city(city_id).choose_dest_building(plot, building, rgen);}
+		
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
 		if (car.dest_valid && !car_at_dest(car)) return 0; // not yet at destination, keep existing dest
@@ -2622,6 +2641,17 @@ cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, un
 }
 vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
 bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(ped, rgen);} // Note: non-const because rgen is modified
+
+// path finding
+bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const
+	return road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
+}
+bool ped_manager_t::at_dest(pedestrian_t &ped) const {
+	return 0; // WRITE - check ped.last_coll_building?
+}
+unsigned ped_manager_t::get_next_plot(pedestrian_t &ped) const {
+	return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot);
+}
 
 
 class city_gen_t : public city_plot_gen_t {
