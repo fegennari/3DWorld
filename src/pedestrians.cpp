@@ -16,9 +16,14 @@ string pedestrian_t::str() const {
 	return oss.str();
 }
 
-bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) const {
+bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) { // Note: non-const because at_dest is modified
 	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
-	if (check_buildings_ped_coll(pos, radius, plot)) return 0; // FIXME: get building_id and cache at_dest state when == dest_bldg
+	unsigned building_id(0);
+
+	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
+		if (building_id == dest_bldg) {at_dest = 1;}
+		return 0;
+	}
 	float const xmin(pos.x - radius), xmax(pos.x + radius);
 
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
@@ -173,6 +178,8 @@ void ped_manager_t::next_frame() {
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
 		// FIXME_PEDS: navigation with destination
+		//if (i->plot == i->dest_plot) {i->dest_plot = get_next_plot(*i);}
+		//if (i->at_dest) {choose_dest_building(*i);}
 		// TODO: road_gen.get_city().get_isec().mark_crosswalk_in_use(dim, dir)
 		cube_t const plot(get_city_plot_bcube_for_peds(i->city, i->plot));
 		auto const &colliders(get_colliders_for_plot(i->city, i->plot));

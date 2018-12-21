@@ -1831,7 +1831,7 @@ public:
 		return coll;
 	}
 
-	bool check_ped_coll(point const &pos, float radius, unsigned plot_id) const { // Note: not thread safe sue to static points
+	bool check_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe sue to static points
 		if (empty()) return 0;
 		assert(plot_id < bix_by_plot.size());
 		vector<unsigned> const &bixes(bix_by_plot[plot_id]); // should be populated in gen()
@@ -1844,9 +1844,16 @@ public:
 			building_t const &building(get_building(*b));
 			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
-			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points)) return 1; // double the radius value to add padding to account for inaccuracy
+			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points)) {building_id = *b; return 1;} // double the radius value to add padding to account for inaccuracy
 		}
 		return 0;
+	}
+	bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) const {
+		assert(plot_id < bix_by_plot.size());
+		vector<unsigned> const &bixes(bix_by_plot[plot_id]);
+		if (bixes.empty()) return 0;
+		building_id = bixes[rand_val % bixes.size()];
+		return 1;
 	}
 
 	void get_overlapping_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
@@ -1918,7 +1925,8 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
 	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt);
 }
-bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id) {return building_creator.check_ped_coll(pos, radius, plot_id);}
+bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator.check_ped_coll(pos, radius, plot_id, building_id);}
+bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator.select_building_in_plot(plot_id, rand_val, building_id);}
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {

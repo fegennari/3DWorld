@@ -1817,9 +1817,8 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		bool choose_dest_building(unsigned &global_plot, unsigned &building, rand_gen_t &rgen) const {
 			if (plots.empty()) return 0; // no plots
-			unsigned const plot_id(rgen.rand() % plots.size());
-			//building = ?; // WRITE
-			global_plot = plot_id + plot_id_offset;
+			global_plot = (rgen.rand() % plots.size()) + plot_id_offset;
+			if (!select_building_in_plot(global_plot, rgen.rand(), building)) return 0; // no buildings in plot
 			return 1;
 		}
 		void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
@@ -2644,14 +2643,10 @@ bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(
 
 // path finding
 bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const
+	ped.at_dest = 0; // will choose a new dest
 	return road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
 }
-bool ped_manager_t::at_dest(pedestrian_t &ped) const {
-	return 0; // WRITE - check ped.last_coll_building?
-}
-unsigned ped_manager_t::get_next_plot(pedestrian_t &ped) const {
-	return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot);
-}
+unsigned ped_manager_t::get_next_plot(pedestrian_t &ped) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot);}
 
 
 class city_gen_t : public city_plot_gen_t {
