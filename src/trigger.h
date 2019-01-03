@@ -61,8 +61,10 @@ public:
 	void write_end_sensor_to_cobj_file(std::ostream &out) const;
 };
 
-struct multi_sensor_t : public vector<sensor_t> {
-	// WRITE
+struct multi_sensor_t : public vector<sensor_t> { // unused
+	bool enabled() const;
+	bool check_active() const;
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 

@@ -193,6 +193,23 @@ void sensor_t::write_end_sensor_to_cobj_file(std::ostream &out) const {
 	out << "sensor disabled" << endl;
 }
 
+bool multi_sensor_t::enabled() const {
+	for (auto i = begin(); i != end(); ++i) {
+		if (i->enabled()) return 1;
+	}
+	return 0;
+}
+bool multi_sensor_t::check_active() const {
+	for (auto i = begin(); i != end(); ++i) {
+		if (i->check_active()) return 1;
+	}
+	return 0;
+}
+void multi_sensor_t::write_to_cobj_file(std::ostream &out) const { // one per line
+	for (auto i = begin(); i != end(); ++i) {i->write_to_cobj_file(out);}
+	//out << "sensor disabled" << endl; // should there be an option for this?
+}
+
 
 // ***** platforms *****
 
