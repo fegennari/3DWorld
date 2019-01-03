@@ -1181,7 +1181,7 @@ class city_road_gen_t : public road_gen_base_t {
 						p2[dim]  = min((p1[dim] + step_sz), seg_end);
 					} // end while
 					// TODO: check for collisions with roads and handle them with intersections, bridges, or tunnels
-					// TODO: handle slopes that are too steep and shadow artifacts
+					// TODO: handle slopes that are too steep and have shadow artifacts
 					break; // success
 				} // for tries
 			} // for n
