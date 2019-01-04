@@ -219,38 +219,40 @@ namespace streetlight_ns {
 		return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
 	}
 
-	void streetlight_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow, bool always_on) const { // Note: translate has already been applied as a transform
+	void streetlight_t::draw(draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const { // Note: translate has already been applied as a transform
 		float const height(get_streetlight_height());
-		point const center(pos + xlate + vector3d(0.0, 0.0, 0.5*height));
+		point const center(pos + dstate.xlate + vector3d(0.0, 0.0, 0.5*height));
 		if (shadow_only && is_local_shadow && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
 		if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
 		float const dist_val(shadow_only ? 0.06 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		if (dist_val > 0.2) return; // too far
-		if (!s.is_setup()) {s.begin_color_only_shader();} // likely only needed for shadow pass, could do better with this
+		if (!dstate.s.is_setup()) {dstate.s.begin_color_only_shader();} // likely only needed for shadow pass, could do better with this
 		float const pradius(pole_radius*city_params.road_width), lradius(light_radius*city_params.road_width);
 		int const ndiv(max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
 		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
-		if (!shadow_only) {s.set_cur_color(pole_color);}
+		if (!shadow_only) {dstate.s.set_cur_color(pole_color);}
 		draw_cylinder_at(pos, height, pradius, 0.7*pradius, min(ndiv, 24), 0); // vertical post, no ends
 		if (dist_val < 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
 		bool const is_on(is_lit(always_on));
 
 		if (shadow_only) {
-			if (dist_less_than(camera_pdu.pos, (get_lpos() + xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
+			if (dist_less_than(camera_pdu.pos, (lpos + dstate.xlate), 0.01*lradius)) return; // this is the light source, don't make it shadow itself
 		}
 		else {
 			if (!is_on && dist_val > 0.15) return; // too far
-			if (is_on) {s.set_color_e(light_color);} else {s.set_cur_color(light_color);} // emissive when lit
+			if (is_on) {dstate.s.set_color_e(light_color);} else {dstate.s.set_cur_color(light_color);} // emissive when lit
+			// streetlight bloom: should be elliptical, disable when viewed from above, use tighter alpha mask
+			//if (is_on && dist_val > 0.05) {dstate.add_light_flare((lpos - vector3d(0.0, 0.0, 0.6*lradius)), zero_vector, light_color, min(1.0f, 10.0f*dist_val), 2.5*lradius);} // non-directional
 		}
 		fgPushMatrix();
 		translate_to(lpos);
 		scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
 		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
-		if (!shadow_only && is_on) {s.clear_color_e();}
+		if (!shadow_only && is_on) {dstate.s.clear_color_e();}
 
 		if (!shadow_only && dist_val < 0.12) {
 			fgTranslate(0.0, 0.0, 0.1); // translate up slightly and draw top cap of light
-			s.set_cur_color(pole_color);
+			dstate.s.set_cur_color(pole_color);
 			draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
 		}
 		fgPopMatrix();
@@ -283,12 +285,12 @@ namespace streetlight_ns {
 } // streetlight_ns
 
 
-void streetlights_t::draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only, bool always_on) const {
+void streetlights_t::draw_streetlights(draw_state_t &dstate, bool shadow_only, bool always_on) const {
 	if (streetlights.empty()) return;
 	//timer_t t("Draw Streetlights");
 	select_texture(WHITE_TEX);
 	bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
-	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(s, xlate, shadow_only, is_local_shadow, always_on);}
+	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate, shadow_only, is_local_shadow, always_on);}
 }
 
 void streetlights_t::add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {

@@ -284,9 +284,9 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 bool draw_state_t::add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 	point pos(xlate + flare_pos);
 	vector3d const view_dir((camera_pdu.pos - pos).get_norm());
-	float dp(dot_product(n, view_dir));
-	pos += 0.75*radius*view_dir; // move toward the camera, away from the stoplight, to prevent clipping
+	float dp((n == zero_vector) ? 1.0 : dot_product(n, view_dir)); // n == 0 => non-directional
 	if (dp < 0.05) return 0; // back facing, skip
+	pos += 0.75*radius*view_dir; // move toward the camera, away from the stoplight, to prevent clipping
 	light_psd.add_pt(sized_vert_t<vert_color>(vert_color(pos, colorRGBA(color, dp*alpha)), radius));
 	return 1;
 }
@@ -1726,16 +1726,16 @@ class city_road_gen_t : public road_gen_base_t {
 					}
 				} // for b
 			}
-			draw_streetlights(dstate.s, dstate.xlate, shadow_only, 0);
+			draw_streetlights(dstate, shadow_only, 0);
 			
 			// draw bridges and tunnels; only in connector road network; bridgesand tunnels are sparse/uncommon, so don't need to be batched by blocks
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {
 				dstate.draw_bridge(*b, shadow_only);
-				b->draw_streetlights(dstate.s, dstate.xlate, shadow_only, 0);
+				b->draw_streetlights(dstate, shadow_only, 0);
 			}
 			for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {
 				dstate.draw_tunnel(*t, shadow_only);
-				t->draw_streetlights(dstate.s, dstate.xlate, shadow_only, 1); // always_on=1
+				t->draw_streetlights(dstate, shadow_only, 1); // always_on=1
 			}
 			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}

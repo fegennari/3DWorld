@@ -368,41 +368,6 @@ namespace stoplight_ns {
 } // end stoplight_ns
 
 
-namespace streetlight_ns {
-
-	colorRGBA const pole_color(BLACK); // so we don't have to worry about shadows
-	colorRGBA const light_color(1.0, 0.9, 0.7, 1.0);
-	float const light_height = 0.5; // in units of road width
-	float const pole_radius  = 0.015;
-	float const light_radius = 0.025;
-	float const light_dist   = 3.0;
-	float get_streetlight_height();
-
-	struct streetlight_t {
-		point pos; // bottom point
-		vector3d dir;
-
-		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
-		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
-		point get_lpos() const;
-		void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool is_local_shadow, bool always_on) const;
-		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
-		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const;
-		bool line_intersect(point const &p1, point const &p2, float &t) const;
-	};
-} // end streetlight_ns
-
-
-struct streetlights_t {
-	vector<streetlight_ns::streetlight_t> streetlights;
-
-	void draw_streetlights(shader_t &s, vector3d const &xlate, bool shadow_only, bool always_on) const;
-	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
-	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const;
-	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const;
-};
-
-
 struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
@@ -433,6 +398,41 @@ public:
 	void set_label_text(string const &str, point const &pos) {label_str = str; label_pos = pos;}
 	void show_label_text();
 }; // draw_state_t
+
+
+namespace streetlight_ns {
+
+	colorRGBA const pole_color(BLACK); // so we don't have to worry about shadows
+	colorRGBA const light_color(1.0, 0.9, 0.7, 1.0);
+	float const light_height = 0.5; // in units of road width
+	float const pole_radius  = 0.015;
+	float const light_radius = 0.025;
+	float const light_dist   = 3.0;
+	float get_streetlight_height();
+
+	struct streetlight_t {
+		point pos; // bottom point
+		vector3d dir;
+
+		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
+		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
+		point get_lpos() const;
+		void draw(draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const;
+		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
+		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const;
+		bool line_intersect(point const &p1, point const &p2, float &t) const;
+	};
+} // end streetlight_ns
+
+
+struct streetlights_t {
+	vector<streetlight_ns::streetlight_t> streetlights;
+
+	void draw_streetlights(draw_state_t &dstate, bool shadow_only, bool always_on) const;
+	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
+	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const;
+	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const;
+};
 
 
 struct road_isec_t : public cube_t {
