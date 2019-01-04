@@ -152,8 +152,11 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 			intensity = get_point_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
 			//intensity = get_sphere_intensity_at(dlpos, lpos_r.xyz, lpos_r.w, 0.1*lpos_r.w);
 #ifdef HAS_SPOTLIGHTS
-			dir_w.xyz  = (2.0*dir_w.xyz - 1.0); // expand from [0,1] to [-1,1] range
-			intensity *= get_dir_light_scale(light_dir, dir_w.xyz, dir_w.w);
+			//if (dir_w.w < 1.0) // seems to be slightly slower
+			{
+				dir_w.xyz  = (2.0*dir_w.xyz - 1.0); // expand from [0,1] to [-1,1] range
+				intensity *= get_dir_light_scale(light_dir, dir_w.xyz, dir_w.w);
+			}
 #endif
 		}
 		vec3 orig_ldir = light_dir; // world space
