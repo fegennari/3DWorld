@@ -1059,6 +1059,17 @@ void clear_dynamic_lights() {
 }
 
 
+void calc_spotlight_pdu(light_source const &ls, pos_dir_up &pdu) {
+
+	if (ls.is_line_light() || !ls.is_very_directional()) return; // not a spotlight
+	cylinder_3dw const cylin(ls.calc_bounding_cylin(0.0, 1)); // clip_to_scene_bcube=1
+	vector3d const dir(cylin.p2 - cylin.p1);
+	if (dir.x == 0.0 && dir.y == 0.0) return; // vertical
+	float const len(dir.mag());
+	pdu = pos_dir_up(cylin.p1, dir/len, plus_z, tan(cylin.r2/len), 0.0, ls.get_radius(), 1.0, 1);
+}
+
+
 void add_dynamic_lights_ground() {
 
 	//RESET_TIME;
@@ -1109,16 +1120,8 @@ void add_dynamic_lights_ground() {
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
 		if (DL_GRID_BS > 0) {for (unsigned d = 0; d < 4; ++d) {bnds[d>>1][d&1] >>= DL_GRID_BS;}}
 		pos_dir_up pdu;
+		calc_spotlight_pdu(ls, pdu);
 
-		if (!line_light && ls.is_very_directional()) { // spotlight
-			cylinder_3dw const cylin(ls.calc_bounding_cylin(0.0, 1)); // clip_to_scene_bcube=1
-			vector3d const dir(cylin.p2 - cylin.p1);
-
-			if (dir.x != 0.0 || dir.y != 0.0) { // not vertical
-				float const len(dir.mag());
-				pdu = pos_dir_up(cylin.p1, dir/len, plus_z, tan(cylin.r2/len), 0.0, ls_radius, 1.0, 1);
-			}
-		}
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
 			int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
 
@@ -1156,31 +1159,36 @@ void add_dynamic_lights_city(cube_t const &scene_bcube) {
 	float const grid_dx(scene_sz.x/gbx), grid_dy(scene_sz.y/gby), grid_dx_inv(1.0/grid_dx), grid_dy_inv(1.0/grid_dy);
 
 	for (unsigned ix = 0; ix < ndl; ++ix) {
-		light_source const &ls(dl_sources[ix]);
-		//if (!ls.is_visible()) continue; // view culling (done by caller?)
+		light_source const &ls(dl_sources[ix]); // Note: should always be visible
 		point const &lpos(ls.get_pos());
 		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5);
+		cube_t bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh)); // padded below
+		if (ls.is_very_directional()) {bcube.expand_by(vector3d(grid_dx, grid_dy, 0.0));} // add one grid unit
 		int bnds[2][2];
-		cube_t const bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh)); // FIXME: pad is incorrect
 
 		for (unsigned e = 0; e < 2; ++e) {
-			//UNROLL_2X(bnds[d][i_] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bcube.d[d][i_] + bounds_offset[d]), d)));)
 			bnds[0][e] = max(0, min((int)gbx-1, int((bcube.d[0][e] - scene_llc.x)*grid_dx_inv)));
 			bnds[1][e] = max(0, min((int)gby-1, int((bcube.d[1][e] - scene_llc.y)*grid_dy_inv)));
 		}
 		int const radius(ls.get_radius()*max(grid_dx_inv, grid_dy_inv) + 2), rsq(radius*radius);
-		// Note: no spotlight optimization yet
+		pos_dir_up pdu;
+		//calc_spotlight_pdu(ls, pdu); // correct, but doesn't really help because lights are small
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
 			int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
 
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
 				if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
-				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
+				
+				/*if (pdu.valid) {
+					float const px(x*grid_dx + scene_llc.x), py(y*grid_dy + scene_llc.y);
+					if (!pdu.cube_visible(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, scene_bcube.z1(), scene_bcube.z2()))) continue; // tile not in spotlight cylinder
+				}*/
+				ldynamic[offset + x].add_light(ix);
 			} // for x
 		} // for y
 	} // for ix (light index)
-	  //PRINT_TIME("Dynamic Light Add");
+	//PRINT_TIME("Dynamic Light Add");
 }
 
 
