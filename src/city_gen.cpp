@@ -1614,8 +1614,12 @@ class city_road_gen_t : public road_gen_base_t {
 			vector3d const xlate(get_camera_coord_space_xlate());
 			float const dist(p2p_dist(pos, p_last));
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
-			if (!plots.empty()) {max_eq(pos.z, (bcube.z1() + radius));} // make sure the sphere is above the city road/plot surface
-
+			bool plot_coll(0);
+			
+			if (!plots.empty()) {
+				float const max_obj_z(bcube.z1() + radius);
+				if (pos.z < max_obj_z) {pos.z = max_obj_z; plot_coll = 1;} // make sure the sphere is above the city road/plot surface
+			}
 			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
 					if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist, cnorm)) return 1;
@@ -1631,6 +1635,11 @@ class city_road_gen_t : public road_gen_base_t {
 				if (proc_streetlight_sphere_coll(pos, radius, xlate, cnorm)) return 1;
 			}
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius, cnorm)) return 1;
+			
+			/*if (plot_coll) { // no other collisions - return collision with plot or road - doesn't work correctly for bouncing balls
+				if (cnorm) {*cnorm = plus_z;}
+				return 1;
+			}*/
 			return 0;
 		}
 		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: xlate has already been applied

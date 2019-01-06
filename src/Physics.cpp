@@ -771,7 +771,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 				velocity.z = 0.0;
 			}
 		}
-		point const old_pos(pos);
+		point old_pos(pos);
 		bool const collided(coll_last_frame || fabs(velocity.z) < 1.0E-6);
 		vector3d v_flow(enable_fsource ? get_flow_velocity(pos) : velocity), vtot(v_flow);
 		float const vz_old(velocity.z);
@@ -838,11 +838,13 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		int const wcoll(check_water_collision(vz_old));
 		vector3d cnorm;
 		bool const last_stat_coll((flags & STATIC_COBJ_COLL) != 0);
+		old_pos = pos;
 		int coll(check_vert_collision(obj_index, 1, iter, &cnorm));
 		if (disabled()) return;
 
 		if (!ground_mode) { // tiled terrain
 			//if (sphere_int_tiled_terrain(pos, radius)) {coll = 1;} // FIXME
+			if ((otype.flags & COLL_DESTROYS) && pos != old_pos) {coll = 1;} // rocket clipped to city zval counts as a plot coll and should destroy the rocket
 		}
 		if (ground_mode && !coll) {flags &= ~Z_STOPPED;} // fix for landmine no longer stuck to cobj
 		
@@ -895,7 +897,6 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (check_water_collision(velocity.z) && (frozen || get_true_density() < WATER_DENSITY)) return;
 		if (flags & IS_CUBE_FLAG) return;
 		if (is_flat() || (otype.flags & OBJ_IS_CYLIN)) {set_orient_for_coll(NULL);}
-		point const old_pos(pos);
 		int const val(surface_advance()); // move along ground
 
 		if (val == 2) { // moved, recalculate velocity from position change
