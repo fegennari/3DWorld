@@ -64,6 +64,7 @@ city ped_model ../models/people/Patrick/Patrick.obj 0 -1 90   0.18 1.0 1.0  0
 
 city max_lights 1024
 city max_shadow_maps 40
+city smap_size 0 # 0 = default
 city car_shadows 1
 
 city max_trees_per_plot 20

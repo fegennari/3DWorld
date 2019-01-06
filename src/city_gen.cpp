@@ -140,6 +140,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "max_shadow_maps") {
 		if (!read_uint(fp, max_shadow_maps)) {return read_error(str);}
 	}
+	else if (str == "smap_size") {
+		if (!read_uint(fp, smap_size) || smap_size > 4096) {return read_error(str);}
+	}
 	else if (str == "car_shadows") {
 		if (!read_bool(fp, car_shadows)) {return read_error(str);}
 	}
@@ -2609,13 +2612,15 @@ struct city_smap_manager_t {
 		sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
 		cmp_light_source_sz_dist sz_cmp(cpos);
 		unsigned num_used(0);
+		unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
+		// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
 		
 		// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
 		for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
 			if (!i->is_very_directional()) continue; // not a spotlight
 			//if (!city_params.car_shadows && i->is_dynamic()) continue; // skip headlights (optimization)
 			if (sz_cmp.get_value(*i) < 0.002) break; // light influence is too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail
-			dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF);
+			dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF, 0, 0, 0, smap_size);
 			++num_used;
 		} // for i
 	}

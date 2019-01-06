@@ -207,7 +207,7 @@ public:
 	void setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const;
 	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
 	void draw_light_cone(shader_t &shader, float alpha) const;
-	bool setup_shadow_map(float falloff, bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0);
+	bool setup_shadow_map(float falloff, bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0, unsigned sm_size=0);
 	void release_smap();
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
@@ -236,7 +236,7 @@ class light_source_trig : public light_source, public bind_point_t {
 
 	bool use_smap, outdoor_shadows, dynamic_indir;
 	short platform_id;
-	unsigned indir_dlight_ix;
+	unsigned indir_dlight_ix, sm_size; // Note: sm_size of 0 uses default shadow map resolution
 	float active_time, inactive_time;
 	point last_pos;
 	vector3d last_dir;
@@ -247,10 +247,11 @@ class light_source_trig : public light_source, public bind_point_t {
 	vector3d rot_axis;
 
 public:
-	light_source_trig() : use_smap(0), outdoor_shadows(0), dynamic_indir(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0), last_pos(all_zeros), last_dir(zero_vector), rot_rate(0.0), rot_axis(zero_vector) {}
-	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t(), bool outdoor_shadows_=0)
-		: light_source(ls), use_smap(smap), outdoor_shadows(outdoor_shadows_), dynamic_indir(0), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0),
-		last_pos(pos), last_dir(dir), sensor(cur_sensor), rot_rate(0.0), rot_axis(zero_vector)
+	light_source_trig() : use_smap(0), outdoor_shadows(0), dynamic_indir(0), platform_id(-1), indir_dlight_ix(0), sm_size(0),
+		active_time(0.0), inactive_time(0.0), last_pos(all_zeros), last_dir(zero_vector), rot_rate(0.0), rot_axis(zero_vector) {}
+	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t(), bool outdoor_shadows_=0, unsigned sm_size_=0)
+		: light_source(ls), use_smap(smap), outdoor_shadows(outdoor_shadows_), dynamic_indir(0), platform_id(platform_id_), indir_dlight_ix(lix), sm_size(sm_size_),
+		active_time(0.0), inactive_time(0.0), last_pos(pos), last_dir(dir), sensor(cur_sensor), rot_rate(0.0), rot_axis(zero_vector)
 	{user_placed = 1; dynamic = (platform_id >= 0); if (is_cube_face) {assert(use_smap);}}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	void set_rotate(vector3d const &axis, float rotate);

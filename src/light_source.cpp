@@ -522,13 +522,13 @@ bool light_source_trig::check_shadow_map() {
 	if (!is_shadow_map_enabled()) return 0;
 	if (!is_enabled())            return 0; // disabled or destroyed
 	bool const force_update(rot_rate != 0.0); // force shadow map update if rotating
-	return setup_shadow_map(LT_DIR_FALLOFF, dynamic_cobj, outdoor_shadows, force_update);
+	return setup_shadow_map(LT_DIR_FALLOFF, dynamic_cobj, outdoor_shadows, force_update, sm_size);
 }
 
-bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdoor_shadows, bool force_update) {
+bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdoor_shadows, bool force_update, unsigned sm_size) {
 
 	if (smap_index == 0) {
-		smap_index = local_smap_manager.new_smap();
+		smap_index = local_smap_manager.new_smap(sm_size);
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
