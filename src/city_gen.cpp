@@ -2605,10 +2605,11 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 }
 
 struct city_smap_manager_t {
-	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
+	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned car_headlights_end) {
 		unsigned const num_smaps(min((unsigned)light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
 		dl_smap_enabled = 0;
 		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
+		// TODO: use car_headlights_end to merge adjacent car headlights? (must be done before the sort)
 		sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
 		cmp_light_source_sz_dist sz_cmp(cpos);
 		unsigned num_used(0);
@@ -2759,6 +2760,7 @@ public:
 		lights_bcube.z1() =  FLT_MAX;
 		lights_bcube.z2() = -FLT_MAX;
 		car_manager.add_car_headlights(xlate, lights_bcube);
+		unsigned car_headlights_end(dl_sources.size());
 		road_gen.add_city_lights(xlate, lights_bcube);
 		//cout << "dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
 		unsigned const max_dlights(min(1024U, city_params.max_lights)); // Note: should be <= the value used in upload_dlights_textures()
@@ -2769,8 +2771,9 @@ public:
 				cout << "Too many city lights: " << dl_sources.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
 			}
 			filter_dlights_to(dl_sources, max_dlights, cpos);
+			car_headlights_end = 0; // sort will mix up headlights and streetlights, so we can't use this index below
 		}
-		city_smap_manager.setup_shadow_maps(dl_sources, cpos);
+		city_smap_manager.setup_shadow_maps(dl_sources, cpos, car_headlights_end);
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
 	}
