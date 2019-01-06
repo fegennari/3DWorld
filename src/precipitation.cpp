@@ -53,6 +53,7 @@ public:
 		}
 		check_size();
 		precip_dist = ((world_mode == WMODE_GROUND) ? XY_SCENE_SIZE : TT_PRECIP_DIST);
+		//cout << "num: " << get_num_precip() << endl; // 28K .... 142K
 	}
 	point gen_pt(float zval) {
 		point const camera(get_camera_pos());
@@ -146,7 +147,7 @@ class rain_manager_t : public precip_manager_t<2> {
 	}
 public:
 	void update() {
-		//timer_t timer("Rain Update"); // 0.64ms for default rain intensity / 2.66ms for 4x rain
+		//timer_t timer("Rain Update"); // 0.64ms for default rain intensity / 2.66ms for 5x rain
 		pre_update();
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
