@@ -23,7 +23,7 @@ template <unsigned VERTS_PER_PRIM> class precip_manager_t {
 protected:
 	typedef vert_wrap_t vert_type_t;
 	vector<vert_type_t> verts;
-	rand_gen_t rgen;
+	rand_gen_t rgen; // modified in update logic
 	float prev_zmin, cur_zmin, prev_zmax, cur_zmax, precip_dist;
 	bool check_water_coll, check_mesh_coll, check_cobj_coll;
 
@@ -63,7 +63,7 @@ public:
 		}
 		return zero_vector; // never gets here
 	}
-	bool check_splash_dist(point const &pos) {
+	bool check_splash_dist(point const &pos) const {
 		point const camera(get_camera_pos());
 		return (pos.z < camera.z && dist_less_than(camera, pos, 5.0)); // skip splashes above the camera (assuming the surface points up)
 	}
@@ -146,7 +146,7 @@ class rain_manager_t : public precip_manager_t<2> {
 	}
 public:
 	void update() {
-		//timer_t timer("Rain Update"); // 0.64ms for default rain intensity
+		//timer_t timer("Rain Update"); // 0.64ms for default rain intensity / 2.66ms for 4x rain
 		pre_update();
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
@@ -154,8 +154,8 @@ public:
 		if (animate2) {for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}}
 		deque<sphere_t> *sv(begin_motion ? &splashes : nullptr);
 
-		//#pragma omp parallel for schedule(static,1) // not valid for splashes, and actually slower for light rain
-		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
+//#pragma omp parallel for schedule(static,64) num_threads(2) // not valid for splashes, and actually slower for light rain
+		for (int i = 0; i < (int)verts.size(); i += 2) { // iterate in pairs
 			check_pos(verts[i].v, verts[i+1].v, sv);
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
