@@ -617,10 +617,10 @@ struct pedestrian_t {
 	unsigned plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city, model_id;
 	unsigned char stuck_count;
-	bool collided, at_dest;
+	bool collided, at_dest, destroyed;
 
 	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_),
-		plot(0), dest_plot(0), dest_bldg(0), city(0), model_id(0), stuck_count(0), collided(0), at_dest(1) {} // at_dest starts at 1
+		plot(0), dest_plot(0), dest_bldg(0), city(0), model_id(0), stuck_count(0), collided(0), at_dest(1), destroyed(0) {} // at_dest starts at 1
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string str() const;
 	void move() {pos += vel*fticks;}
@@ -628,6 +628,7 @@ struct pedestrian_t {
 	bool is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders);
 	bool try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	void next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
+	void destroy() {destroyed = 1;} // that's it, no other effects
 };
 
 class ped_manager_t { // pedestrians
@@ -644,6 +645,7 @@ class ped_manager_t { // pedestrians
 	vector<unsigned> by_plot;
 	rand_gen_t rgen;
 	draw_state_t dstate;
+	bool ped_destroyed;
 
 	float get_ped_radius() const;
 	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
@@ -652,13 +654,15 @@ class ped_manager_t { // pedestrians
 	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
+	void remove_destroyed_peds();
 public:
-	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_) {}
+	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), ped_destroyed(0) {}
 	bool empty() const {return peds.empty();}
 	void clear() {peds.clear(); by_city.clear();}
 	void init(unsigned num);
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
 	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;
+	void destroy_peds_in_radius(point const &pos_in, float radius);
 	void next_frame();
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void free_context() {ped_model_loader.free_context();}
@@ -667,6 +671,13 @@ public:
 	unsigned get_next_plot(pedestrian_t &ped) const;
 	//vector3d get_dest_move_dir(point const &pos) const;
 }; // end ped_manager_t
+
+
+template <typename T> void remove_destroyed(vector<T> &objs) {
+	vector<T>::iterator i(objs.begin()), o(i);
+	for (; i != objs.end(); ++i) {if (!i->destroyed) {*(o++) = *i;}}
+	objs.erase(o, objs.end());
+}
 
 
 bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c);

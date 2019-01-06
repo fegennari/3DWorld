@@ -501,9 +501,7 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 
 
 void car_manager_t::remove_destroyed_cars() {
-	vector<car_t>::iterator i(cars.begin()), o(i);
-	for (; i != cars.end(); ++i) {if (!i->destroyed) {*(o++) = *i;}}
-	cars.erase(o, cars.end());
+	remove_destroyed(cars);
 	car_destroyed = 0;
 }
 

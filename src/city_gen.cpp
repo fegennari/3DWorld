@@ -2724,6 +2724,7 @@ public:
 
 	void destroy_in_radius(point const &pos, float radius) {
 		car_manager.destroy_cars_in_radius(pos, radius);
+		ped_manager.destroy_peds_in_radius(pos, radius);
 		// TODO: streetlights, stoplights, trees, etc.
 	}
 	bool get_color_at_xy(float x, float y, colorRGBA &color) const {

@@ -53,7 +53,7 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 }
 
 void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
-	if (vel == zero_vector) return; // not moving
+	if (vel == zero_vector || destroyed) return; // not moving or destroyed
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	move();
 
@@ -171,8 +171,40 @@ bool ped_manager_t::line_intersect_peds(point const &p1, point const &p2, float 
 	return ret;
 }
 
+void ped_manager_t::destroy_peds_in_radius(point const &pos_in, float radius) {
+	point const pos(pos_in - get_camera_coord_space_xlate());
+	bool const is_pt(radius == 0.0);
+	float const rsum(get_ped_radius() + radius);
+
+	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+		cube_t const city_bcube(get_expanded_city_bcube_for_peds(city));
+		if (pos.z > city_bcube.z2() + rsum) continue; // above the peds
+		if (is_pt ? !city_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
+		unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
+
+		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
+			cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
+			if (is_pt ? !plot_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, plot_bcube)) continue;
+			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
+
+			for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
+				assert(i < peds.size());
+				if (!dist_less_than(pos, peds[i].pos, rsum)) continue;
+				peds[i].destroy();
+				ped_destroyed = 1;
+			}
+		} // for plot
+	} // for city
+}
+
+void ped_manager_t::remove_destroyed_peds() {
+	//remove_destroyed(peds); // invalidates indexing, can't do this yet
+	ped_destroyed = 0;
+}
+
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
+	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
 	//timer_t timer("Ped Update"); // ~1.6ms for 10K peds
 	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
 
@@ -238,6 +270,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				assert(i < peds.size());
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
+				if (ped.destroyed) continue; // skip
 				if (!dist_less_than(pdu.pos, ped.pos, draw_dist)) continue; // too far - skip
 				if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) continue;
 				
