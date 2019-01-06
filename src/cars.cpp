@@ -386,6 +386,8 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 }
 
 void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
+	if (car.destroyed) return;
+
 	if (is_dlight_shadows) { // dynamic spotlight shadow
 		point const center(car.get_center());
 		if (!dist_less_than(camera_pdu.pos, center, 0.6*camera_pdu.far_)) return; // optimization
@@ -553,7 +555,8 @@ bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radi
 }
 
 void car_manager_t::destroy_cars_in_radius(point const &pos_in, float radius) {
-	point const pos(pos_in - get_camera_coord_space_xlate());
+	vector3d const xlate(get_camera_coord_space_xlate());
+	point const pos(pos_in - xlate);
 	bool const is_pt(radius == 0.0);
 
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
@@ -564,11 +567,15 @@ void car_manager_t::destroy_cars_in_radius(point const &pos_in, float radius) {
 		assert(end <= cars.size() && start <= end);
 
 		for (unsigned c = start; c != end; ++c) {
-			if (is_pt ? cars[c].bcube.contains_pt(pos) : dist_less_than(cars[c].get_center(), pos, radius)) { // destroy if within the sphere
-				cars[c].destroy();
+			car_t &car(cars[c]);
+
+			if (is_pt ? car.bcube.contains_pt(pos) : dist_less_than(car.get_center(), pos, radius)) { // destroy if within the sphere
+				car.destroy();
 				car_destroyed = 1;
+				// FIXME: approximate - won't update shadow maps for cars that are near a boundary and overlap more than one
+				if (city_params.car_shadows && car.is_parked()) {invalidate_tile_smap_at_pt(car.get_center() + xlate);} // invalidate tile shadow map for destroyed parked cars
 			}
-		}
+		} // for c
 	} // for cb
 }
 

@@ -3090,6 +3090,11 @@ bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s) con
 	return (tile != nullptr && tile->try_bind_shadow_map(s));
 }
 
+void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos) {
+	tile_t *const tile(get_tile_containing_point(pos));
+	if (tile) {tile->clear_shadow_map(&smap_manager);}
+}
+
 bool tile_draw_t::check_sphere_collision(point &pos, float radius) const { // Note: pos is modified
 	tile_t const *const tile(get_tile_containing_point(pos)); // can return null for camera during tile generation frames
 	return (tile ? tile->check_sphere_collision(pos, radius) : 0);
@@ -3256,6 +3261,7 @@ bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_play
 bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_draw.check_sphere_collision(pos, radius);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s);}
+void invalidate_tile_smap_at_pt(point const &pos) {terrain_tile_draw.invalidate_tile_smap_at_pt(pos);}
 
 
 // *** tree/grass addition/removal ***
