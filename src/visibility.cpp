@@ -156,22 +156,20 @@ bool pos_dir_up::cube_visible(cube_t const &c) const {
 
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	point const cube_pts[8] = {
-		point(c.d[0][0], c.d[1][0], c.d[2][0]), point(c.d[0][0], c.d[1][0], c.d[2][1]), point(c.d[0][0], c.d[1][1], c.d[2][0]), point(c.d[0][0], c.d[1][1], c.d[2][1]),
-		point(c.d[0][1], c.d[1][0], c.d[2][0]), point(c.d[0][1], c.d[1][0], c.d[2][1]), point(c.d[0][1], c.d[1][1], c.d[2][0]), point(c.d[0][1], c.d[1][1], c.d[2][1])};
+		point(c.x1(), c.y1(), c.z1()), point(c.x1(), c.y1(), c.z2()), point(c.x1(), c.y2(), c.z1()), point(c.x1(), c.y2(), c.z2()),
+		point(c.x2(), c.y1(), c.z1()), point(c.x2(), c.y1(), c.z2()), point(c.x2(), c.y2(), c.z1()), point(c.x2(), c.y2(), c.z2())};
 	if (!pt_set_visible<8>(cube_pts)) return 0;
 	return dist_less_than(pos, c.closest_pt(pos), far_); // extra check for far clipping plane - useful for short range lights and faraway objects
 	// Note: if the above call returns true, we could perform a further check for the frustum (all points) to the outside of each plane of the cube
 }
 
-bool pos_dir_up::cube_visible_for_light_cone(cube_t const &c) const {
+bool pos_dir_up::cube_visible_for_light_cone(cube_t const &c) const { // test only horizontal and far planes; ignores zval
 
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
-	point const cube_pts[8] = {
-		point(c.d[0][0], c.d[1][0], c.d[2][0]), point(c.d[0][0], c.d[1][0], c.d[2][1]), point(c.d[0][0], c.d[1][1], c.d[2][0]), point(c.d[0][0], c.d[1][1], c.d[2][1]),
-		point(c.d[0][1], c.d[1][0], c.d[2][0]), point(c.d[0][1], c.d[1][0], c.d[2][1]), point(c.d[0][1], c.d[1][1], c.d[2][0]), point(c.d[0][1], c.d[1][1], c.d[2][1])};
-	// Note: below is pt_set_visible<8>() but without the vertical and near/far clip tests
-	if (!check_clip_plane<8>(cube_pts, pos, cp, x_sterm*x_sterm, 0)) return 0;
-	if (!check_clip_plane<8>(cube_pts, pos, cp, x_sterm*x_sterm, 1)) return 0;
+	point const cube_pts[4] = {point(c.x1(), c.y1(), c.z1()), point(c.x1(), c.y2(), c.z1()), point(c.x2(), c.y1(), c.z1()), point(c.x2(), c.y2(), c.z1())};
+	// Note: below is pt_set_visible<4>() but without the vertical and near/far clip tests
+	if (!check_clip_plane<4>(cube_pts, pos, cp, x_sterm*x_sterm, 0)) return 0;
+	if (!check_clip_plane<4>(cube_pts, pos, cp, x_sterm*x_sterm, 1)) return 0;
 	return dist_less_than(pos, c.closest_pt(pos), far_); // extra check for far clipping plane - useful for short range lights and faraway objects
 }
 
