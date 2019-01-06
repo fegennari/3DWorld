@@ -6,7 +6,7 @@
 float const PED_WIDTH_SCALE  = 0.5;
 float const PED_HEIGHT_SCALE = 2.5;
 
-extern int animate2;
+extern int animate2, display_mode;
 extern city_params_t city_params;
 
 
@@ -226,6 +226,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
 			assert(plot < by_plot.size());
 			cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
+			if (is_dlight_shadows && !dist_less_than(plot_bcube.closest_pt(pdu.pos), pdu.pos, draw_dist)) continue; // plot is too far away
 			if (!pdu.cube_visible(plot_bcube)) continue; // plot not visible - skip
 			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
 			assert(ped_start <= ped_end);
@@ -238,7 +239,8 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
 				if (!dist_less_than(pdu.pos, ped.pos, draw_dist)) continue; // too far - skip
-
+				if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) continue;
+				
 				if (!use_models) { // or distant?
 					if (!pdu.sphere_visible_test(ped.pos, ped.radius)) continue; // not visible - skip
 					being_sphere_draw(dstate.s, in_sphere_draw, textured);

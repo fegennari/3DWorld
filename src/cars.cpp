@@ -294,6 +294,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 
 	if ((low_detail || is_shadow_pass) && !model_file.shadow_mat_ids.empty()) { // low detail pass, normal maps disabled
 		if (!is_shadow_pass && use_model3d_bump_maps()) {model3d::bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
+		// TODO: combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1; this is complex and may not yield a significant improvement
 		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 0, 0);}
 	}
 	else {
@@ -379,9 +380,17 @@ void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[
 	}
 }
 
+bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, float radius) {
+	float const dist(p2p_dist(pdu.pos, center)), radius_at_dist(dist*pdu.sterm), rmod(radius_at_dist + radius);
+	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), radius_at_dist);
+}
+
 void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
-	if (is_dlight_shadows) {
-		if (!dist_less_than(camera_pdu.pos, car.get_center(), 0.6*camera_pdu.far_)) return; // optimization
+	if (is_dlight_shadows) { // dynamic spotlight shadow
+		point const center(car.get_center());
+		if (!dist_less_than(camera_pdu.pos, center, 0.6*camera_pdu.far_)) return; // optimization
+		// since we know the dlight is a spotlight with a cone shape rather than a frustum, we can do a tighter visibility test
+		if (!sphere_in_light_cone_approx(camera_pdu, center, car.bcube.get_xy_bsphere_radius())) return;
 		cube_t bcube(car.bcube);
 		bcube.expand_by(0.1*car.height);
 		if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
