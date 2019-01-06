@@ -160,12 +160,12 @@ void tessellate_polygon(polygon_t const &poly) {
 }
 
 
-template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh) {
+template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh, bool allow_quads) {
 
 	unsigned const npts((unsigned)poly.size());
 	assert(npts >= 3);
 	
-	if (npts <= 4 && (npts == 3 || (poly.is_coplanar(coplanar_thresh) && poly.is_convex()))) { // triangle or convex/coplanar quad
+	if (npts <= 4 && (npts == 3 || (allow_quads && poly.is_coplanar(coplanar_thresh) && poly.is_convex()))) { // triangle or convex/coplanar quad
 		if (!poly.is_valid()) return 0; // invalid zero area polygon - skip
 		ppts.push_back(poly);
 		return 1;
@@ -192,8 +192,8 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 	return 1;
 }
 
-template bool split_polygon<polygon_t >(polygon_t const &poly, vector<polygon_t > &ppts, float coplanar_thresh);
-template bool split_polygon<coll_tquad>(polygon_t const &poly, vector<coll_tquad> &ppts, float coplanar_thresh);
+template bool split_polygon<polygon_t >(polygon_t const &poly, vector<polygon_t > &ppts, float coplanar_thresh, bool allow_quads);
+template bool split_polygon<coll_tquad>(polygon_t const &poly, vector<coll_tquad> &ppts, float coplanar_thresh, bool allow_quads);
 
 
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pts) {
@@ -207,7 +207,7 @@ void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons
 	static vector<coll_tquad> ppts;
 	ppts.resize(0);
 	poly.from_points(poly_pts);
-	split_polygon(poly, ppts, 0.0);
+	split_polygon(poly, ppts, 0.0, 1); // allow_quads=1
 
 	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		split_polygons.push_back(cobj);

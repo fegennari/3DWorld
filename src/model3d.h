@@ -581,7 +581,7 @@ public:
 };
 
 
-template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh);
+template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh, bool allow_quads=1);
 
 bool use_model3d_bump_maps();
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);

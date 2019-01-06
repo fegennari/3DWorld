@@ -52,6 +52,7 @@ city car_model ../models/cars/LowPolyTruck/truck.obj              -1  2  0   0.7
 #city car_model ../models/cars/Bentley/Bentley.model3d              1 -1 90   0.50 1.0 0.5  1
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
+allow_model3d_quads 1 # 0 is slightly faster for drawing but uses more memory (must recreate model3d files to change this)
 
 # pedestrians
 city num_peds 10000
