@@ -572,8 +572,8 @@ void car_manager_t::destroy_cars_in_radius(point const &pos_in, float radius) {
 			if (is_pt ? car.bcube.contains_pt(pos) : dist_less_than(car.get_center(), pos, radius)) { // destroy if within the sphere
 				car.destroy();
 				car_destroyed = 1;
-				// FIXME: approximate - won't update shadow maps for cars that are near a boundary and overlap more than one
-				if (city_params.car_shadows && car.is_parked()) {invalidate_tile_smap_at_pt(car.get_center() + xlate);} // invalidate tile shadow map for destroyed parked cars
+				// invalidate tile shadow map for destroyed parked cars
+				if (city_params.car_shadows && car.is_parked()) {invalidate_tile_smap_at_pt((car.get_center() + xlate), 0.5*car.get_length());} // radius = length/2
 			}
 		} // for c
 	} // for cb

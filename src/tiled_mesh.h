@@ -479,7 +479,7 @@ public:
 	void clear_flowers();
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp) const;
 	tile_t *get_tile_containing_point(point const &pos) const;
-	void invalidate_tile_smap_at_pt(point const &pos);
+	void invalidate_tile_smap_at_pt(point const &pos, float radius);
 	bool try_bind_tile_smap_at_point(point const &pos, shader_t &s) const;
 	bool check_sphere_collision(point &pos, float radius) const;
 	bool check_player_collision() const;

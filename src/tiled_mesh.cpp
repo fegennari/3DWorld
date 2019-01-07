@@ -3090,9 +3090,16 @@ bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s) con
 	return (tile != nullptr && tile->try_bind_shadow_map(s));
 }
 
-void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos) {
-	tile_t *const tile(get_tile_containing_point(pos));
-	if (tile) {tile->clear_shadow_map(&smap_manager);}
+void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos, float radius) {
+	vector3d const &b_ext(get_buildings_max_extent());
+	radius += max(0.5f*get_road_max_len(), max(b_ext.x, b_ext.y)); // expand by city tile overlap (should also include trees?)
+
+	for (int y = 0; y < 2; ++y) { // try 4 corners, needed to handle objects that overlap more than one tile
+		for (int x = 0; x < 2; ++x) {
+			tile_t *const tile(get_tile_containing_point(pos + vector3d((x ? radius : -radius), (y ? radius : -radius), 0.0)));
+			if (tile) {tile->clear_shadow_map(&smap_manager);}
+		}
+	}
 }
 
 bool tile_draw_t::check_sphere_collision(point &pos, float radius) const { // Note: pos is modified
@@ -3261,7 +3268,7 @@ bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_play
 bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_draw.check_sphere_collision(pos, radius);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s);}
-void invalidate_tile_smap_at_pt(point const &pos) {terrain_tile_draw.invalidate_tile_smap_at_pt(pos);}
+void invalidate_tile_smap_at_pt(point const &pos, float radius) {terrain_tile_draw.invalidate_tile_smap_at_pt(pos, radius);}
 
 
 // *** tree/grass addition/removal ***
