@@ -65,7 +65,12 @@ void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &col
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	move();
 
-	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) {stuck_count = 0;} // no collisions, nothing else to do
+	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) { // no collisions
+		if (plot == dest_plot && !at_dest) {
+			// TODO: move toward dest_bldg somehow
+		}
+		stuck_count = 0;
+	}
 	else {
 		collided = 0; // reset for next frame
 		pos = prev_pos; // restore to previous valid pos
@@ -76,6 +81,11 @@ void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &col
 	}
 	dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
 	dir.normalize();
+}
+
+void pedestrian_t::register_at_dest() {
+	assert(plot == dest_plot);
+	cout << get_name() << " at destination building " << dest_bldg << " in plot " << dest_plot << endl; // placeholder for something better
 }
 
 
@@ -213,18 +223,32 @@ void ped_manager_t::remove_destroyed_peds() {
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~1.6ms for 10K peds
+	//timer_t timer("Ped Update"); // ~2.1ms for 10K peds
 	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
+	static bool first_frame(1);
 
+	if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
+		for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building(*i);}
+	}
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
-		// FIXME_PEDS: navigation with destination
-		//if (i->plot == i->dest_plot) {i->dest_plot = get_next_plot(*i);}
-		//if (i->at_dest) {choose_dest_building(*i);}
-		// TODO: road_gen.get_city().get_isec().mark_crosswalk_in_use(dim, dir)
+		if (i->destroyed) continue;
+		// navigation with destination
+		if (i->at_dest) {
+			i->register_at_dest();
+			choose_dest_building(*i);
+		}
+		bool const at_crosswalk(0); // TODO: WRITE
+		
+		if (at_crosswalk) {
+			mark_crosswalk_in_use(*i);
+			// at some point update i->plot
+			if (i->plot == i->next_plot) {i->next_plot = get_next_plot(*i);}
+		}
 		cube_t const plot(get_city_plot_bcube_for_peds(i->city, i->plot));
 		auto const &colliders(get_colliders_for_plot(i->city, i->plot));
 		i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen, delta_dir);
 	} // for i
+	first_frame = 0;
 }
 
 void being_sphere_draw(shader_t &s, bool &in_sphere_draw, bool textured) {

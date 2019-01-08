@@ -1820,8 +1820,8 @@ class city_road_gen_t : public road_gen_base_t {
 		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {return plots[decode_plot_id(global_plot_id)];}
 		vector<cube_t> const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
-		unsigned get_next_plot(unsigned plot, unsigned dest_plot) const {
-			if (plot == dest_plot) return plot; // identity
+		unsigned get_next_plot(unsigned plot, unsigned dest_plot) const { // plot = current plot, dest_plot = final destination plot; returns next plot adj to cur plot on path to dest_plot
+			if (plot == dest_plot) return plot; // identity, at destination, no change
 			int const cur_x(plot_xy.get_x(plot)), cur_y(plot_xy.get_y(plot)), next_x(plot_xy.get_x(dest_plot)), next_y(plot_xy.get_y(dest_plot)); // use int to avoid signed problems
 			int const dx(next_x - cur_x), dy(next_y - cur_y);
 			if (abs(dx) > abs(dy)) {return plot_xy.get_id(((dx < 0) ? plot_xy.get_xp(plot) : plot_xy.get_xn(plot)), cur_y);} // move in X
@@ -2178,6 +2178,13 @@ class city_road_gen_t : public road_gen_base_t {
 			if (car.cur_city == city_id) {return get_road_bcube_for_car(car);}
 			else if (car.cur_city == CONN_CITY_IX) {return global_rn.get_road_bcube_for_car(car);}
 			else {assert(0); return cube_t();}
+		}
+		void mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const { // FIXME: something better than an iteration? cache isect for ped?
+			for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped because there's no light/crosswalk
+				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
+					if (i->contains_pt_xy(pos)) {i->stoplight.mark_crosswalk_in_use(dim, dir); return;}
+				}
+			}
 		}
 	}; // road_network_t
 
@@ -2655,6 +2662,11 @@ cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, un
 }
 vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
 bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(ped, rgen);} // Note: non-const because rgen is modified
+
+void ped_manager_t::mark_crosswalk_in_use(pedestrian_t &ped) {
+	bool const dim(fabs(ped.dir.y) > fabs(ped.dir.x)), dir(ped.dir[dim] > 0); // something like this?
+	road_gen.get_city(ped.city).mark_crosswalk_in_use(ped.pos, dim, dir);
+}
 
 // path finding
 bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const

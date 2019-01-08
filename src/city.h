@@ -614,13 +614,13 @@ struct pedestrian_t {
 	point pos;
 	vector3d vel, dir;
 	float radius;
-	unsigned plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
+	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city, model_id;
 	unsigned char stuck_count;
 	bool collided, at_dest, destroyed;
 
 	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_),
-		plot(0), dest_plot(0), dest_bldg(0), city(0), model_id(0), stuck_count(0), collided(0), at_dest(1), destroyed(0) {} // at_dest starts at 1
+		plot(0), next_plot(0), dest_plot(0), dest_bldg(0), city(0), model_id(0), stuck_count(0), collided(0), at_dest(0), destroyed(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
@@ -629,6 +629,7 @@ struct pedestrian_t {
 	bool is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders);
 	bool try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	void next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
+	void register_at_dest();
 	void destroy() {destroyed = 1;} // that's it, no other effects
 };
 
@@ -653,6 +654,7 @@ class ped_manager_t { // pedestrians
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
+	void mark_crosswalk_in_use(pedestrian_t &ped);
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
