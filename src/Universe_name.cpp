@@ -58,22 +58,28 @@ void parse_str_tables() {
 }
 
 
+string gen_random_name(rand_gen_t &rgen) {
+
+	parse_str_tables();
+	bool at_end(0), vc((rgen.rand() % 100) < 90); // 0 = vowel, 1 = consonant
+	string name;
+
+	for (unsigned i = 0; !at_end; ++i, vc ^= 1) {
+		at_end = (i >= 5 || name.size() >= 8 || (i > 1 && (rgen.rand() % 100) < int((vc ? 10 : 5) + 16*i)));
+		vector<string> const &str((i == 0) ? n_start[vc] : (at_end ? n_ending[vc] : n_middle[vc]));
+		assert(!str.empty());
+		name += str[rgen.rand() % str.size()];
+	}
+	assert(!name.empty());
+	name[0] += ('A' - 'a'); // make uppercase
+	return name;
+}
+
 extern rand_gen_t global_rand_gen;
 
 void named_obj::gen_name(s_object const &sobj) {
 
-	parse_str_tables();
-	bool at_end(0), vc((global_rand_gen.rand() % 100) < 90); // 0 = vowel, 1 = consonant
-	name = "";
-
-	for (unsigned i = 0; !at_end; ++i, vc ^= 1) {
-		at_end = (i >= 5 || name.size() >= 8 || (i > 1 && (global_rand_gen.rand() % 100) < int((vc ? 10 : 5) + 16*i)));
-		vector<string> const &str((i == 0) ? n_start[vc] : (at_end ? n_ending[vc] : n_middle[vc]));
-		assert(!str.empty());
-		name += str[global_rand_gen.rand() % str.size()];
-	}
-	assert(!name.empty());
-	name[0] += ('A' - 'a'); // make uppercase
+	name = gen_random_name(global_rand_gen);
 	lookup_given_name(sobj); // already named, overwrite the old value (but need to preserve random number generator state)
 	//cout << name << "  ";
 }

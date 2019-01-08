@@ -10,9 +10,17 @@ extern int animate2, display_mode;
 extern city_params_t city_params;
 
 
+string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+
+string pedestrian_t::get_name() const {
+	rand_gen_t rgen;
+	rgen.set_state(uintptr_t(this), 123); // use our own pointer as the random seed for name generation; should be constant because peds aren't reordered
+	return gen_random_name(rgen); // for now, borrow the universe name generator to assign silly names
+}
+
 string pedestrian_t::str() const {
 	std::ostringstream oss;
-	oss << TXT(vel.mag()) << TXT(radius) << TXT(city) << TXT(plot) << TXTi(stuck_count) << TXT(collided); // Note: pos, vel, dir not printed
+	oss << get_name() << ": " << TXT(vel.mag()) << TXT(radius) << TXT(city) << TXT(plot) << TXTi(stuck_count) << TXT(collided); // Note: pos, vel, dir not printed
 	return oss.str();
 }
 
