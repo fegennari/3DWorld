@@ -615,12 +615,12 @@ struct pedestrian_t {
 	vector3d vel, dir;
 	float radius;
 	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
-	unsigned short city, model_id;
+	unsigned short city, model_id, ssn;
 	unsigned char stuck_count;
 	bool collided, at_dest, destroyed;
 
-	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_),
-		plot(0), next_plot(0), dest_plot(0), dest_bldg(0), city(0), model_id(0), stuck_count(0), collided(0), at_dest(0), destroyed(0) {}
+	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_), plot(0), next_plot(0), dest_plot(0),
+		dest_bldg(0), city(0), model_id(0), ssn(0), stuck_count(0), collided(0), at_dest(0), destroyed(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;

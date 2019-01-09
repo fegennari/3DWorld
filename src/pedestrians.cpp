@@ -14,7 +14,7 @@ string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
 
 string pedestrian_t::get_name() const {
 	rand_gen_t rgen;
-	rgen.set_state(uintptr_t(this), 123); // use our own pointer as the random seed for name generation; should be constant because peds aren't reordered
+	rgen.set_state(ssn, 123); // use ssn as name rand gen seed
 	return gen_random_name(rgen); // for now, borrow the universe name generator to assign silly names
 }
 
@@ -79,6 +79,7 @@ void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &col
 		if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
 		vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
 	}
+	if (vel == zero_vector) return; // stopped, don't update dir
 	dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
 	dir.normalize();
 }
@@ -118,6 +119,7 @@ void ped_manager_t::init(unsigned num) {
 		if (gen_ped_pos(ped)) {
 			if (city_params.ped_speed > 0.0) {ped.vel = rgen.signed_rand_vector_spherical_xy(city_params.ped_speed);}
 			ped.model_id = ((num_models > 0) ? (rgen.rand()%num_models) : 0);
+			ped.ssn = peds.size(); // assign init peds index so that all are unique; won't change if peds are reordered
 			peds.push_back(ped);
 		}
 	}
