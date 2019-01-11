@@ -151,9 +151,11 @@ public:
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
 	void register_attrib_name(char const *const name, unsigned bind_ix);
 	bool set_attrib_float_array(int loc, float const *const val, unsigned num) const;
+	bool set_attrib_int_array  (int loc, int   const *const val, unsigned num) const;
 	bool set_attrib_float      (int loc, float val) const;
 	bool set_attrib_int        (int loc, int val) const;
 	bool add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;
+	bool add_attrib_int_array  (unsigned ix, int   const *const val, unsigned num) const;
 	bool add_attrib_float      (unsigned ix, float val) const;
 	bool add_attrib_int        (unsigned ix, int val) const;
 
