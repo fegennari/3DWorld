@@ -2179,12 +2179,18 @@ class city_road_gen_t : public road_gen_base_t {
 			else if (car.cur_city == CONN_CITY_IX) {return global_rn.get_road_bcube_for_car(car);}
 			else {assert(0); return cube_t();}
 		}
-		void mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const { // FIXME: something better than an iteration? cache isect for ped?
-			for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped because there's no light/crosswalk
-				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
-					if (i->contains_pt_xy(pos)) {i->stoplight.mark_crosswalk_in_use(dim, dir); return;}
+		void mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const {
+			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
+				if (!b->bcube.contains_pt_xy(pos)) continue;
+
+				for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped because there's no light/crosswalk
+					range_pair_t const &range(b->ranges[TYPE_ISEC2 + n]);
+
+					for (auto i = isecs[n].begin()+range.s; i != isecs[n].begin()+range.e; ++i) {
+						if (i->contains_pt_xy(pos)) {i->stoplight.mark_crosswalk_in_use(dim, dir); return;}
+					}
 				}
-			}
+			} // for b
 		}
 	}; // road_network_t
 
