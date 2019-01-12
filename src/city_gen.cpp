@@ -2179,18 +2179,24 @@ class city_road_gen_t : public road_gen_base_t {
 			else if (car.cur_city == CONN_CITY_IX) {return global_rn.get_road_bcube_for_car(car);}
 			else {assert(0); return cube_t();}
 		}
-		void mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const {
+		road_isec_t const *find_isec_containing_pt(point const &pos, unsigned ns, unsigned ne) const {
+			assert(ns < ne && ne <= 3);
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!b->bcube.contains_pt_xy(pos)) continue;
-
-				for (unsigned n = 1; n < 3; ++n) { // {2-way, 3-way, 4-way} - Note: 2-way can be skipped because there's no light/crosswalk
+				for (unsigned n = ns; n < ne; ++n) { // {2-way, 3-way, 4-way}
 					range_pair_t const &range(b->ranges[TYPE_ISEC2 + n]);
-
 					for (auto i = isecs[n].begin()+range.s; i != isecs[n].begin()+range.e; ++i) {
-						if (i->contains_pt_xy(pos)) {i->stoplight.mark_crosswalk_in_use(dim, dir); return;}
+						if (i->contains_pt_xy(pos)) {return &(*i);}
 					}
 				}
 			} // for b
+			return nullptr;
+		}
+		bool mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const {
+			road_isec_t const *isec(find_isec_containing_pt(pos, 1, 3)); // 2-way can be skipped because there's no light/crosswalk
+			if (isec == nullptr) return 0;
+			isec->stoplight.mark_crosswalk_in_use(dim, dir);
+			return 1;
 		}
 	}; // road_network_t
 
@@ -2669,9 +2675,9 @@ cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, un
 vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
 bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(ped, rgen);} // Note: non-const because rgen is modified
 
-void ped_manager_t::mark_crosswalk_in_use(pedestrian_t &ped) {
+bool ped_manager_t::mark_crosswalk_in_use(pedestrian_t &ped) {
 	bool const dim(fabs(ped.dir.y) > fabs(ped.dir.x)), dir(ped.dir[dim] > 0); // something like this?
-	road_gen.get_city(ped.city).mark_crosswalk_in_use(ped.pos, dim, dir);
+	return road_gen.get_city(ped.city).mark_crosswalk_in_use(ped.pos, dim, dir);
 }
 
 // path finding

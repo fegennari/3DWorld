@@ -654,7 +654,7 @@ class ped_manager_t { // pedestrians
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
-	void mark_crosswalk_in_use(pedestrian_t &ped);
+	bool mark_crosswalk_in_use(pedestrian_t &ped);
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
