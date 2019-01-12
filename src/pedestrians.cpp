@@ -119,7 +119,7 @@ void ped_manager_t::init(unsigned num) {
 		if (gen_ped_pos(ped)) {
 			if (city_params.ped_speed > 0.0) {ped.vel = rgen.signed_rand_vector_spherical_xy(city_params.ped_speed);}
 			ped.model_id = ((num_models > 0) ? (rgen.rand()%num_models) : 0);
-			ped.ssn = peds.size(); // assign init peds index so that all are unique; won't change if peds are reordered
+			ped.ssn = (unsigned short)peds.size(); // assign init peds index so that all are unique; won't change if peds are reordered
 			peds.push_back(ped);
 		}
 	}
