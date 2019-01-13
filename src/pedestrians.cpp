@@ -124,25 +124,43 @@ void ped_manager_t::init(unsigned num) {
 		}
 	}
 	cout << "Pedestrians: " << peds.size() << endl; // testing
+	sort_by_city_and_plot();
+}
+
+struct ped_by_plot {
+	bool operator()(pedestrian_t const &a, pedestrian_t const &b) const {return (a.plot < b.plot);}
+};
+
+void ped_manager_t::sort_by_city_and_plot() {
+	//timer_t timer("Ped Sort"); // 0.12ms
 	if (peds.empty()) return;
-	sort(peds.begin(), peds.end());
+	bool const first_sort(by_city.empty()); // since peds can't yet move between cities, we only need to sorty by city the first time
 
-	// construct by_city
-	unsigned const max_city(peds.back().city), max_plot(peds.back().plot);
-	by_city.resize(max_city + 2); // one per city + terminator
+	if (first_sort) { // construct by_city
+		sort(peds.begin(), peds.end());
+		unsigned const max_city(peds.back().city), max_plot(peds.back().plot);
+		by_city.resize(max_city + 2); // one per city + terminator
 
-	for (unsigned city = 0, pix = 0; city <= max_city; ++city) {
-		while (pix < peds.size() && peds[pix].city == city) {++pix;}
-		unsigned const cur_plot((pix < peds.size()) ? peds[pix].plot : max_plot+1);
-		by_city[city+1].assign(pix, cur_plot); // next city begins here
+		for (unsigned city = 0, pix = 0; city <= max_city; ++city) {
+			while (pix < peds.size() && peds[pix].city == city) {++pix;}
+			unsigned const cur_plot((pix < peds.size()) ? peds[pix].plot : max_plot+1);
+			by_city[city+1].assign(pix, cur_plot); // next city begins here
+		}
+	}
+	else { // sort by plot within each city
+		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+			sort((peds.begin() + by_plot[by_city[city].plot_ix]), (peds.begin() + by_plot[by_city[city+1].plot_ix]), ped_by_plot());
+		}
 	}
 	// construct by_plot
+	unsigned const max_plot(peds.back().plot);
 	by_plot.resize((max_plot + 2), 0); // one per by_plot + terminator
 
 	for (unsigned plot = 0, pix = 0; plot <= max_plot; ++plot) {
 		while (pix < peds.size() && peds[pix].plot == plot) {++pix;}
 		by_plot[plot+1] = pix; // next plot begins here
 	}
+	need_to_sort_peds = 0; // peds are now sorted
 }
 
 bool ped_manager_t::proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const { // Note: no p_last; for potential use with ped/ped collisions
@@ -152,9 +170,8 @@ bool ped_manager_t::proc_sphere_coll(point &pos, float radius, vector3d *cnorm) 
 		cube_t const city_bcube(get_expanded_city_bcube_for_peds(city));
 		if (pos.z > city_bcube.z2() + rsum) continue; // above the peds
 		if (!sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
-		unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
 
-		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
+		for (unsigned plot = by_city[city].plot_ix; plot < by_city[city+1].plot_ix; ++plot) {
 			cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
 			if (!sphere_cube_intersect_xy(pos, radius, plot_bcube)) continue;
 			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
@@ -175,9 +192,8 @@ bool ped_manager_t::line_intersect_peds(point const &p1, point const &p2, float 
 
 	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
 		if (!get_expanded_city_bcube_for_peds(city).line_intersects(p1, p2)) continue;
-		unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
 
-		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
+		for (unsigned plot = by_city[city].plot_ix; plot < by_city[city+1].plot_ix; ++plot) {
 			if (!get_expanded_city_plot_bcube_for_peds(city, plot).line_intersects(p1, p2)) continue;
 			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
 
@@ -200,9 +216,8 @@ void ped_manager_t::destroy_peds_in_radius(point const &pos_in, float radius) {
 		cube_t const city_bcube(get_expanded_city_bcube_for_peds(city));
 		if (pos.z > city_bcube.z2() + rsum) continue; // above the peds
 		if (is_pt ? !city_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
-		unsigned const plot_start(by_city[city].plot_ix), plot_end(by_city[city+1].plot_ix);
 
-		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
+		for (unsigned plot = by_city[city].plot_ix; plot < by_city[city+1].plot_ix; ++plot) {
 			cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
 			if (is_pt ? !plot_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, plot_bcube)) continue;
 			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
@@ -220,6 +235,12 @@ void ped_manager_t::destroy_peds_in_radius(point const &pos_in, float radius) {
 void ped_manager_t::remove_destroyed_peds() {
 	//remove_destroyed(peds); // invalidates indexing, can't do this yet
 	ped_destroyed = 0;
+}
+
+void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
+	if (ped.next_plot == ped.plot) return; // already there (error?)
+	ped.plot = ped.next_plot; // assumes plot is adjacent; doesn't actually do any moving, only registers the move
+	need_to_sort_peds = 1;
 }
 
 void ped_manager_t::next_frame() {
@@ -250,6 +271,7 @@ void ped_manager_t::next_frame() {
 		auto const &colliders(get_colliders_for_plot(i->city, i->plot));
 		i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen, delta_dir);
 	} // for i
+	if (need_to_sort_peds) {sort_by_city_and_plot();} // testing
 	first_frame = 0;
 }
 

@@ -647,7 +647,7 @@ class ped_manager_t { // pedestrians
 	vector<unsigned> by_plot;
 	rand_gen_t rgen;
 	draw_state_t dstate;
-	bool ped_destroyed;
+	bool ped_destroyed, need_to_sort_peds;
 
 	float get_ped_radius() const;
 	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
@@ -658,8 +658,10 @@ class ped_manager_t { // pedestrians
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
+	void move_ped_to_next_plot(pedestrian_t &ped);
+	void sort_by_city_and_plot();
 public:
-	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), ped_destroyed(0) {}
+	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), ped_destroyed(0), need_to_sort_peds(0) {}
 	bool empty() const {return peds.empty();}
 	void clear() {peds.clear(); by_city.clear();}
 	void init(unsigned num);
