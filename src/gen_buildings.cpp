@@ -1512,6 +1512,7 @@ public:
 	void clear() {buildings.clear(); grid.clear();}
 	vector3d const &get_max_extent() const {return max_extent;}
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
+	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 
 	void gen(building_params_t const &params) {
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
@@ -1925,6 +1926,7 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
 	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt);
 }
+cube_t get_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator.select_building_in_plot(plot_id, rand_val, building_id);}
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied

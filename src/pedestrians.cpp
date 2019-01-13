@@ -25,7 +25,13 @@ string pedestrian_t::str() const {
 }
 
 bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) { // Note: non-const because at_dest is modified
-	if (!plot_cube.contains_pt_xy(pos)) return 0; // outside the plot (not yet allowing crossing roads at crosswalks)
+	if (!plot_cube.contains_pt_xy(pos)) { // outside the plot
+		if (next_plot != plot) {
+			// FIXME: allow crossing roads at crosswalks
+			// set is_stopped if waiting at crosswalk
+		}
+		return 0; // not able to cross
+	}
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
@@ -55,19 +61,38 @@ bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) 
 bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen) {
 	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
-	plot   = plot_id;
+	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
 	if (!is_valid_pos(plot_cube, colliders)) return 0; // failed
 	return 1; // success
 }
 
-void pedestrian_t::next_frame(cube_t const &plot_cube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
+void pedestrian_t::next_frame(cube_t const &plot_cube, cube_t const &next_plot_bcube, vector<cube_t> const &colliders,
+	vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir)
+{
 	if (vel == zero_vector || destroyed) return; // not moving or destroyed
 	point const prev_pos(pos); // assume this ped starts out not colliding
-	move();
+	if (!is_stopped) {move();}
+	is_stopped = at_crosswalk = 0;
 
 	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) { // no collisions
-		if (plot == dest_plot && !at_dest) {
-			// TODO: move toward dest_bldg somehow
+		vector3d dest_pos(pos);
+
+		if (plot == dest_plot) {
+			if (!at_dest) {
+				// FIXME: handle cases where there is another building between pos and dest_bldg
+				dest_pos = get_building_bcube(dest_bldg).get_cube_center(); // move toward dest_bldg
+			}
+		}
+		else if (next_plot != plot) { // move toward next plot
+			assert(!next_plot_bcube.contains_pt_xy(pos)); // shound't be in this plot next (may need to change this later)
+			dest_pos = next_plot_bcube.closest_pt(pos); // FIXME: should cross at intersection, not in the middle of the street
+			//if (???) {at_crosswalk = 1;}
+		}
+		if (dest_pos != pos) {
+			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
+			float const vmag(vel.mag());
+			vel  = (delta_dir/dest_dir.mag())*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
+			vel *= vmag / vel.mag(); // normalize to original velocity
 		}
 		stuck_count = 0;
 	}
@@ -246,7 +271,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~2.1ms for 10K peds
+	//timer_t timer("Ped Update"); // ~2.4ms for 10K peds
 	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
 	static bool first_frame(1);
 
@@ -260,16 +285,15 @@ void ped_manager_t::next_frame() {
 			i->register_at_dest();
 			choose_dest_building(*i);
 		}
-		bool const at_crosswalk(0); // TODO: WRITE
-		
-		if (at_crosswalk) {
+		if (i->at_crosswalk) {
 			mark_crosswalk_in_use(*i);
-			// at some point update i->plot
+			//if (???) {move_ped_to_next_plot(*i);} // FIXME: at some point update i->plot
 			if (i->plot == i->next_plot) {i->next_plot = get_next_plot(*i);}
 		}
 		cube_t const plot(get_city_plot_bcube_for_peds(i->city, i->plot));
+		cube_t const next_plot(get_city_plot_bcube_for_peds(i->city, i->next_plot));
 		auto const &colliders(get_colliders_for_plot(i->city, i->plot));
-		i->next_frame(plot, colliders, peds, (i - peds.begin()), rgen, delta_dir);
+		i->next_frame(plot, next_plot, colliders, peds, (i - peds.begin()), rgen, delta_dir);
 	} // for i
 	if (need_to_sort_peds) {sort_by_city_and_plot();} // testing
 	first_frame = 0;
