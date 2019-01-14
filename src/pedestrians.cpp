@@ -6,7 +6,9 @@
 float const PED_WIDTH_SCALE  = 0.5;
 float const PED_HEIGHT_SCALE = 2.5;
 
-extern int animate2, display_mode;
+extern bool tt_fire_button_down;
+extern int display_mode, game_mode, animate2;
+extern float FAR_CLIP;
 extern city_params_t city_params;
 
 
@@ -299,6 +301,23 @@ void ped_manager_t::next_frame() {
 	first_frame = 0;
 }
 
+pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
+	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+		if (!get_expanded_city_bcube_for_peds(city).line_intersects(p1, p2)) continue; // skip
+
+		for (unsigned plot = by_city[city].plot_ix; plot < by_city[city+1].plot_ix; ++plot) {
+			if (!get_expanded_city_plot_bcube_for_peds(city, plot).line_intersects(p1, p2)) continue; // skip
+			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
+
+			for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
+				assert(i < peds.size());
+				if (line_sphere_intersect(p1, p2, peds[i].pos, peds[i].radius)) {return &peds[i];}
+			}
+		} // for plot
+	} // for city
+	return nullptr; // no ped found
+}
+
 void being_sphere_draw(shader_t &s, bool &in_sphere_draw, bool textured) {
 	if (in_sphere_draw) return;
 	if (!textured) {select_texture(WHITE_TEX);} // currently not textured
@@ -377,5 +396,12 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	end_sphere_draw(in_sphere_draw);
 	dstate.end_draw();
 	fgPopMatrix();
+
+	if (tt_fire_button_down && !game_mode) {
+		point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
+		pedestrian_t const *ped(get_ped_at(p1, p2));
+		if (ped != nullptr) {dstate.set_label_text(ped->str(), (ped->pos + xlate));} // ped found
+	}
+	dstate.show_label_text();
 }
 

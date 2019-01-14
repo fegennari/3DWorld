@@ -669,6 +669,7 @@ public:
 	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;
 	void destroy_peds_in_radius(point const &pos_in, float radius);
 	void next_frame();
+	pedestrian_t const *get_ped_at(point const &p1, point const &p2) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void free_context() {ped_model_loader.free_context();}
 	// path finding
