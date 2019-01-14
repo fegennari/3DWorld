@@ -407,6 +407,17 @@ cube_t road_isec_t::get_stoplight_cube(unsigned n) const { // Note: mostly dupli
 	return c;
 }
 
+bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // used for peds
+	if (num_conn == 2) return 0; // no stoplights
+	if (!sphere_cube_intersect_xy(pos, radius, *this)) return 0;
+
+	for (unsigned n = 0; n < 4; ++n) {
+		if (!(conn & (1 << n))) continue; // no road in this dir
+		if (sphere_cube_intersect(pos, radius, get_stoplight_cube(n))) return 1;
+	}
+	return 0;
+}
+
 bool road_isec_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
 	if (num_conn == 2) return 0; // no stoplights
 	if (!sphere_cube_intersect_xy(pos, (radius + dist), (*this + xlate))) return 0;

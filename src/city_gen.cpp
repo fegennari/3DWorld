@@ -2198,6 +2198,11 @@ class city_road_gen_t : public road_gen_base_t {
 			isec->stoplight.mark_crosswalk_in_use(dim, dir);
 			return 1;
 		}
+		bool check_isec_sphere_coll(point const &pos, float radius) const {
+			road_isec_t const *isec(find_isec_containing_pt(pos, 1, 3)); // 2-way can be skipped because there's no light/crosswalk
+			if (isec == nullptr) return 0;
+			return isec->check_sphere_coll(pos, radius);
+		}
 	}; // road_network_t
 
 	vector<road_network_t> road_networks; // one per city
@@ -2678,6 +2683,9 @@ bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(
 bool ped_manager_t::mark_crosswalk_in_use(pedestrian_t &ped) {
 	bool const dim(fabs(ped.dir.y) > fabs(ped.dir.x)), dir(ped.dir[dim] > 0); // something like this?
 	return road_gen.get_city(ped.city).mark_crosswalk_in_use(ped.pos, dim, dir);
+}
+bool ped_manager_t::check_isec_sphere_coll(pedestrian_t &ped) const {
+	return road_gen.get_city(ped.city).check_isec_sphere_coll(ped.pos, ped.radius); // Note: no xlate is required since peds and city are in the same coord space
 }
 
 // path finding
