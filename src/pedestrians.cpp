@@ -20,19 +20,35 @@ string pedestrian_t::get_name() const {
 	return gen_random_name(rgen); // for now, borrow the universe name generator to assign silly names
 }
 
-string pedestrian_t::str() const {
+string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
-	oss << get_name() << ": " << TXT(vel.mag()) << TXT(radius) << TXT(city) << TXT(plot) << TXTi(stuck_count) << TXT(collided); // Note: pos, vel, dir not printed
+	oss << get_name() << ": " << TXTn(ssn) << TXT(vel.mag()) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
+		<< TXTi(stuck_count) << TXT(collided) << TXT(in_the_road) << TXT(at_dest); // Note: pos, vel, dir not printed
 	return oss.str();
 }
 
-bool pedestrian_t::is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders) { // Note: non-const because at_dest is modified
-	if (!plot_cube.contains_pt_xy(pos)) { // outside the plot
-		if (next_plot != plot) {
-			// FIXME: allow crossing roads at crosswalks
-			// set is_stopped if waiting at crosswalk
-		}
-		return 0; // not able to cross
+bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
+	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
+	if (plot_bcube.contains_pt_xy(pos)) return 1; // inside the plot
+	if (next_plot == plot) return 0; // no next plot - clip to this plot
+	
+	if (next_plot_bcube.contains_pt_xy(pos)) {
+		ped_mgr.move_ped_to_next_plot(*this);
+		next_plot = ped_mgr.get_next_plot(*this);
+		return 1;
+	}
+	// FIXME: should only be at crosswalks
+	// set is_stopped if waiting at crosswalk
+	in_the_road = 1;
+	// FIXME: check for streetlight collisions (only if allowed to cross at non-crosswalk locations)
+	if (ped_mgr.check_isec_sphere_coll(*this)) return 0;
+	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
+}
+
+bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-const because at_dest is modified
+	if (in_the_road) {
+		// FIXME: check for car collisions if not crossing at a crosswalk?
+		return 1; // not in a plot, no collision detection needed
 	}
 	unsigned building_id(0);
 
@@ -64,36 +80,51 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
-	if (!is_valid_pos(plot_cube, colliders)) return 0; // failed
+	if (!is_valid_pos(colliders)) return 0; // plot == next_plot; return if failed
 	return 1; // success
 }
 
-void pedestrian_t::next_frame(cube_t const &plot_cube, cube_t const &next_plot_bcube, vector<cube_t> const &colliders,
-	vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir)
-{
-	if (vel == zero_vector || destroyed) return; // not moving or destroyed
+void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
+	if (destroyed) return; // destroyed
+
+	// navigation with destination
+	if (at_dest) {
+		register_at_dest();
+		ped_mgr.choose_dest_building(*this);
+	}
+	if (at_crosswalk) {ped_mgr.mark_crosswalk_in_use(*this);}
+	// movement logic
+	if (vel == zero_vector) return; // not moving, no update needed
+	cube_t const plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
+	cube_t const next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	if (!is_stopped) {move();}
-	is_stopped = at_crosswalk = 0;
+	is_stopped = at_crosswalk = in_the_road = 0;
 
-	if (!collided && is_valid_pos(plot_cube, colliders) && !check_ped_ped_coll(peds, pid)) { // no collisions
+	if (!collided && check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube) &&
+		is_valid_pos(ped_mgr.get_colliders_for_plot(city, plot)) && !check_ped_ped_coll(peds, pid))
+	{ // no collisions
 		vector3d dest_pos(pos);
+		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
 
 		if (plot == dest_plot) {
 			if (!at_dest) {
 				// FIXME: handle cases where there is another building between pos and dest_bldg
-				dest_pos = get_building_bcube(dest_bldg).get_cube_center(); // move toward dest_bldg
+				dest_pos = get_building_bcube(dest_bldg).get_cube_center(); // slowly adjust dir to move toward dest_bldg
+				//cout << get_name() << " move to dest bldg" << endl;
 			}
 		}
 		else if (next_plot != plot) { // move toward next plot
-			assert(!next_plot_bcube.contains_pt_xy(pos)); // shound't be in this plot next (may need to change this later)
-			dest_pos = next_plot_bcube.closest_pt(pos); // FIXME: should cross at intersection, not in the middle of the street
-			//if (???) {at_crosswalk = 1;}
+			if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
+				// FIXME: handle cases where there is a building between pos and next_plot_bcube
+				dest_pos = next_plot_bcube.closest_pt(pos); // FIXME: should cross at intersection, not in the middle of the street
+				//if (???) {at_crosswalk = 1;}
+			}
 		}
 		if (dest_pos != pos) {
 			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
 			float const vmag(vel.mag());
-			vel  = (delta_dir/dest_dir.mag())*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
+			vel  = (0.1*delta_dir/dest_dir.mag())*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
 			vel *= vmag / vel.mag(); // normalize to original velocity
 		}
 		stuck_count = 0;
@@ -113,7 +144,7 @@ void pedestrian_t::next_frame(cube_t const &plot_cube, cube_t const &next_plot_b
 
 void pedestrian_t::register_at_dest() {
 	assert(plot == dest_plot);
-	cout << get_name() << " at destination building " << dest_bldg << " in plot " << dest_plot << endl; // placeholder for something better
+	//cout << get_name() << " at destination building " << dest_bldg << " in plot " << dest_plot << endl; // placeholder for something better
 }
 
 
@@ -167,6 +198,7 @@ void ped_manager_t::sort_by_city_and_plot() {
 		sort(peds.begin(), peds.end());
 		unsigned const max_city(peds.back().city), max_plot(peds.back().plot);
 		by_city.resize(max_city + 2); // one per city + terminator
+		need_to_sort_city.resize(max_city+1, 0);
 
 		for (unsigned city = 0, pix = 0; city <= max_city; ++city) {
 			while (pix < peds.size() && peds[pix].city == city) {++pix;}
@@ -176,6 +208,8 @@ void ped_manager_t::sort_by_city_and_plot() {
 	}
 	else { // sort by plot within each city
 		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+			if (!need_to_sort_city[city]) continue;
+			need_to_sort_city[city] = 0;
 			sort((peds.begin() + by_plot[by_city[city].plot_ix]), (peds.begin() + by_plot[by_city[city+1].plot_ix]), ped_by_plot());
 		}
 	}
@@ -268,35 +302,20 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 	if (ped.next_plot == ped.plot) return; // already there (error?)
 	ped.plot = ped.next_plot; // assumes plot is adjacent; doesn't actually do any moving, only registers the move
 	need_to_sort_peds = 1;
+	if (!need_to_sort_city.empty()) {need_to_sort_city[ped.city] = 1;}
 }
 
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~2.4ms for 10K peds
+	//timer_t timer("Ped Update"); // ~2.9ms for 10K peds
 	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
 	static bool first_frame(1);
 
 	if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
 		for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building(*i);}
 	}
-	for (auto i = peds.begin(); i != peds.end(); ++i) {
-		if (i->destroyed) continue;
-		// navigation with destination
-		if (i->at_dest) {
-			i->register_at_dest();
-			choose_dest_building(*i);
-		}
-		if (i->at_crosswalk) {
-			mark_crosswalk_in_use(*i);
-			//if (???) {move_ped_to_next_plot(*i);} // FIXME: at some point update i->plot
-			if (i->plot == i->next_plot) {i->next_plot = get_next_plot(*i);}
-		}
-		cube_t const plot(get_city_plot_bcube_for_peds(i->city, i->plot));
-		cube_t const next_plot(get_city_plot_bcube_for_peds(i->city, i->next_plot));
-		auto const &colliders(get_colliders_for_plot(i->city, i->plot));
-		i->next_frame(plot, next_plot, colliders, peds, (i - peds.begin()), rgen, delta_dir);
-	} // for i
+	for (auto i = peds.begin(); i != peds.end(); ++i) {i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);}
 	if (need_to_sort_peds) {sort_by_city_and_plot();} // testing
 	first_frame = 0;
 }

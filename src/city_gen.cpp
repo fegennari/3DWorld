@@ -659,6 +659,20 @@ void range_pair_t::update(unsigned v) {
 	e = v+1; // one past the end
 }
 
+void plot_xy_t::gen_adj_plots(vector<road_plot_t> const &plots) {
+	assert(plots.size() == num());
+	adj_plots.clear();
+	adj_plots.resize(plots.size()); // start at -1
+
+	for (unsigned i = 0; i < plots.size(); ++i) {
+		unsigned x(plots[i].xpos), y(plots[i].ypos), ix(y*nx + x);
+		if (x+1 < nx) {adj_plots[ix+1 ].set_adj(0, i);} // i is to the west  of this plot
+		if (x   > 0 ) {adj_plots[ix-1 ].set_adj(1, i);} // i is to the east  of this plot
+		if (y+1 < ny) {adj_plots[ix+nx].set_adj(2, i);} // i is to the north of this plot
+		if (y   > 0 ) {adj_plots[ix-nx].set_adj(3, i);} // i is to the south of this plot
+	}
+}
+
 
 class city_road_gen_t : public road_gen_base_t {
 
@@ -1144,7 +1158,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 						if (!LX) { // skip last y segment
 							cube_t const &rxn(roads[x+1]);
-							plots.push_back(cube_t(rx.x2(), rxn.x1(), ry.y2(), ryn.y1(), zval, zval)); // plots between roads
+							plots.emplace_back(cube_t(rx.x2(), rxn.x1(), ry.y2(), ryn.y1(), zval, zval), x, (y - num_x)); // plots between roads
 						}
 					}
 				} // for y
@@ -1552,6 +1566,7 @@ class city_road_gen_t : public road_gen_base_t {
 			add_tile_blocks(plots,      tile_to_block_map, TYPE_PLOT);
 			add_tile_blocks(track_segs, tile_to_block_map, TYPE_TRACKS);
 			for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
+			plot_xy.gen_adj_plots(plots);
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
 		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
@@ -1820,12 +1835,21 @@ class city_road_gen_t : public road_gen_base_t {
 		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {return plots[decode_plot_id(global_plot_id)];}
 		vector<cube_t> const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
-		unsigned get_next_plot(unsigned plot, unsigned dest_plot) const { // plot = current plot, dest_plot = final destination plot; returns next plot adj to cur plot on path to dest_plot
-			if (plot == dest_plot) return plot; // identity, at destination, no change
-			int const cur_x(plot_xy.get_x(plot)), cur_y(plot_xy.get_y(plot)), next_x(plot_xy.get_x(dest_plot)), next_y(plot_xy.get_y(dest_plot)); // use int to avoid signed problems
-			int const dx(next_x - cur_x), dy(next_y - cur_y);
-			if (abs(dx) > abs(dy)) {return plot_xy.get_id(((dx < 0) ? plot_xy.get_xp(plot) : plot_xy.get_xn(plot)), cur_y);} // move in X
-			else                   {return plot_xy.get_id(cur_x, ((dy < 0) ? plot_xy.get_yp(plot) : plot_xy.get_yn(plot)));} // move in Y
+		// plot = current plot, dest_plot = final destination plot; returns next plot adj to cur plot on path to dest_plot
+		unsigned get_next_plot(unsigned global_plot, unsigned global_dest_plot) const {
+			if (global_plot == global_dest_plot) return global_plot; // identity, at destination, no change
+			unsigned const plot(decode_plot_id(global_plot)), dest_plot(decode_plot_id(global_dest_plot)); // convert to local space
+			assert(plot < plots.size() && dest_plot < plots.size());
+			int const cur_x(plots[plot].xpos), cur_y(plots[plot].ypos), dest_x(plots[dest_plot].xpos), dest_y(plots[dest_plot].ypos); // use int to avoid signed problems
+			int const dx(dest_x - cur_x), dy(dest_y - cur_y);
+			bool const move_dir(abs(dx) > abs(dy)); // technically !move_dir
+			unsigned const dir(move_dir ? ((dx < 0) ? 0 : 1) : ((dy < 0) ? 2 : 3));
+			int const next_plot(plot_xy.get_adj(cur_x, cur_y, dir));
+			assert(next_plot >= 0 && next_plot <= int(plots.size())); // must be found
+			road_plot_t const &np(plots[next_plot]);
+			if (move_dir) {assert(np.xpos == cur_x + ((dx < 0) ? -1 : 1)); assert(np.ypos == cur_y);}
+			else          {assert(np.ypos == cur_y + ((dy < 0) ? -1 : 1)); assert(np.xpos == cur_x);}
+			return (next_plot + plot_id_offset); // convert back to global space
 		}
 		bool choose_dest_building(unsigned &global_plot, unsigned &building, rand_gen_t &rgen) const {
 			if (plots.empty()) return 0; // no plots
@@ -2691,7 +2715,9 @@ bool ped_manager_t::check_isec_sphere_coll(pedestrian_t &ped) const {
 // path finding
 bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const
 	ped.at_dest = 0; // will choose a new dest
-	return road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
+	if (!road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen)) return 0;
+	ped.next_plot = get_next_plot(ped);
+	return 1;
 }
 unsigned ped_manager_t::get_next_plot(pedestrian_t &ped) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot);}
 

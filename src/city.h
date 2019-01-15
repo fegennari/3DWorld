@@ -264,41 +264,26 @@ struct road_seg_t : public road_t {
 };
 
 struct road_plot_t : public cube_t {
+	uint8_t xpos, ypos; // position within the city grid
 	bool has_parking;
-	road_plot_t(cube_t const &c) : cube_t(c), has_parking(0) {}
+	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : cube_t(c), has_parking(0), xpos(xpos_), ypos(ypos_) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
+};
+
+struct plot_adj_t {
+	int adj[4]; // adjacent plots, by index: west, east, south, north; -1 is none
+	plot_adj_t() {adj[0] = adj[1] = adj[2] = adj[3] = -1;}
+	void set_adj(unsigned dir, unsigned ix) {assert(dir < 4); assert(adj[dir] == -1); adj[dir] = ix;} // can only set once
 };
 
 struct plot_xy_t {
 	unsigned nx, ny;
+	vector<plot_adj_t> adj_plots;
 	plot_xy_t() : nx(0), ny(0) {}
 	plot_xy_t(unsigned nx_, unsigned ny_) : nx(nx_), ny(ny_) {}
+	void gen_adj_plots(vector<road_plot_t> const &plots);
 	unsigned num() const {return nx*ny;}
-	unsigned get_id(unsigned x, unsigned y) const {assert(x < nx); assert(y < ny); return (y*nx + x);} // {x,y} => id
-	unsigned get_x (unsigned id) const {assert(id < num()); return (id % nx);} // id => x
-	unsigned get_y (unsigned id) const {assert(id < num()); return (id / nx);} // id => y
-	// prev and next x/y
-	bool get_xp(unsigned id, unsigned &xp) const { // id(x,y) => id(x-1,y)
-		unsigned const x(get_x(id));
-		if (x == 0) {return 0;} else {xp = x-1; return 1;}
-	}
-	bool get_xn(unsigned id, unsigned &xn) const { // id(x,y) => id(x+1,y)
-		unsigned const x(get_x(id));
-		if (x+1 == nx) {return 0;} else {xn = x+1; return 1;}
-	}
-	bool get_yp(unsigned id, unsigned &yp) const { // id(x,y) => id(x,y-1)
-		unsigned const y(get_y(id));
-		if (y == 0) {return 0;} else {yp = y-1; return 1;}
-	}
-	bool get_yn(unsigned id, unsigned &yn) const { // id(x,y) => id(x,y+1)
-		unsigned const y(get_y(id));
-		if (y+1 == ny) {return 0;} else {yn = y+1; return 1;}
-	}
-	// these versions assert that prev/next are valid
-	unsigned get_xp(unsigned id) const {unsigned xp(0); bool const ret(this->get_xp(id, xp)); assert(ret); return xp;}
-	unsigned get_xn(unsigned id) const {unsigned xn(0); bool const ret(this->get_xn(id, xn)); assert(ret); return xn;}
-	unsigned get_yp(unsigned id) const {unsigned yp(0); bool const ret(this->get_yp(id, yp)); assert(ret); return yp;}
-	unsigned get_yn(unsigned id) const {unsigned yn(0); bool const ret(this->get_yn(id, yn)); assert(ret); return yn;}
+	int get_adj(unsigned x, unsigned y, unsigned dir) const {assert(x < nx && y < ny); return adj_plots[y*nx + x].adj[dir];} // -1 == no plot
 };
 
 struct parking_lot_t : public cube_t {
@@ -610,6 +595,8 @@ public:
 }; // car_manager_t
 
 
+class ped_manager_t; // forward declaration for use in pedestrian_t
+
 struct pedestrian_t {
 
 	point pos;
@@ -618,18 +605,19 @@ struct pedestrian_t {
 	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city, model_id, ssn;
 	unsigned char stuck_count;
-	bool collided, is_stopped, at_crosswalk, at_dest, destroyed;
+	bool collided, is_stopped, in_the_road, at_crosswalk, at_dest, destroyed;
 
 	pedestrian_t(float radius_) : pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_), plot(0), next_plot(0), dest_plot(0),
-		dest_bldg(0), city(0), model_id(0), ssn(0), stuck_count(0), collided(0), is_stopped(0), at_crosswalk(0), at_dest(0), destroyed(0) {}
+		dest_bldg(0), city(0), model_id(0), ssn(0), stuck_count(0), collided(0), is_stopped(0), in_the_road(0), at_crosswalk(0), at_dest(0), destroyed(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
 	void move() {pos += vel*fticks;}
 	bool check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const;
-	bool is_valid_pos(cube_t const &plot_cube, vector<cube_t> const &colliders);
+	bool check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
+	bool is_valid_pos(vector<cube_t> const &colliders);
 	bool try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen);
-	void next_frame(cube_t const &plot_cube, cube_t const &next_plot_bcube, vector<cube_t> const &colliders, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
+	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();
 	void destroy() {destroyed = 1;} // that's it, no other effects
 };
@@ -646,21 +634,27 @@ class ped_manager_t { // pedestrians
 	vector<pedestrian_t> peds;
 	vector<city_ixs_t> by_city; // first ped/plot index for each city
 	vector<unsigned> by_plot;
+	vector<unsigned char> need_to_sort_city;
 	rand_gen_t rgen;
 	draw_state_t dstate;
 	bool ped_destroyed, need_to_sort_peds;
 
 	float get_ped_radius() const;
-	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
-	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
-	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
-	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
-	bool mark_crosswalk_in_use(pedestrian_t &ped);
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
-	void move_ped_to_next_plot(pedestrian_t &ped);
 	void sort_by_city_and_plot();
+public:
+	// for use in pedestrian_t, mostly for collisions and path finding
+	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
+	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
+	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	bool check_isec_sphere_coll(pedestrian_t &ped) const;
+	bool mark_crosswalk_in_use(pedestrian_t &ped);
+	bool choose_dest_building(pedestrian_t &ped);
+	unsigned get_next_plot(pedestrian_t &ped) const;
+	void move_ped_to_next_plot(pedestrian_t &ped);
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), ped_destroyed(0), need_to_sort_peds(0) {}
 	bool empty() const {return peds.empty();}
@@ -673,9 +667,6 @@ public:
 	pedestrian_t const *get_ped_at(point const &p1, point const &p2) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void free_context() {ped_model_loader.free_context();}
-	// path finding
-	bool choose_dest_building(pedestrian_t &ped);
-	unsigned get_next_plot(pedestrian_t &ped) const;
 	//vector3d get_dest_move_dir(point const &pos) const;
 }; // end ped_manager_t
 
