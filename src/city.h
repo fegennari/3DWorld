@@ -581,7 +581,7 @@ public:
 	bool empty() const {return cars.empty();}
 	void clear() {cars.clear(); car_blocks.clear();}
 	void init_cars(unsigned num);
-	void add_parked_cars(vector<car_t> const &new_cars) {cars.insert(cars.end(), new_cars.begin(), new_cars.end());}
+	void add_parked_cars(vector<car_t> const &new_cars) {vector_add_to(new_cars, cars);}
 	void finalize_cars();
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
 	void destroy_cars_in_radius(point const &pos_in, float radius);

@@ -739,6 +739,7 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 	--ix;
 }
 
+template<typename T> void vector_add_to(T const &src, T &dest) {dest.insert(dest.end(), src.begin(), src.end());}
 
 // string converters
 
