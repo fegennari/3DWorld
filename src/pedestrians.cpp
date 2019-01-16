@@ -7,7 +7,7 @@ float const PED_WIDTH_SCALE  = 0.5;
 float const PED_HEIGHT_SCALE = 2.5;
 
 extern bool tt_fire_button_down;
-extern int display_mode, game_mode, animate2;
+extern int display_mode, game_mode, animate2, frame_counter;
 extern float FAR_CLIP;
 extern city_params_t city_params;
 
@@ -84,6 +84,16 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 	return 1; // success
 }
 
+bool line_int_cubes_xy(point const &p1, point const &p2, vector<cube_t> const &cubes) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		if (check_line_clip(p1, p2, i->d)) return 1;
+	}
+	return 0;
+}
+void expand_cubes_by(vector<cube_t> &cubes, vector3d const &val) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {i->expand_by(val);}
+}
+
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed) return; // destroyed
 
@@ -100,28 +110,36 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	if (!is_stopped) {move();}
 	is_stopped = at_crosswalk = in_the_road = 0;
+	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 
-	if (!collided && check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube) &&
-		is_valid_pos(ped_mgr.get_colliders_for_plot(city, plot)) && !check_ped_ped_coll(peds, pid))
-	{ // no collisions
+	if (!collided && check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube) && is_valid_pos(colliders) && !check_ped_ped_coll(peds, pid)) { // no collisions
 		vector3d dest_pos(pos);
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
 
 		if (plot == dest_plot) {
 			if (!at_dest) {
-				// FIXME: handle cases where there is another building between pos and dest_bldg
 				dest_pos = get_building_bcube(dest_bldg).get_cube_center(); // slowly adjust dir to move toward dest_bldg
 				//cout << get_name() << " move to dest bldg" << endl;
 			}
 		}
 		else if (next_plot != plot) { // move toward next plot
 			if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
-				// FIXME: handle cases where there is a building between pos and next_plot_bcube
 				dest_pos = next_plot_bcube.closest_pt(pos); // FIXME: should cross at intersection, not in the middle of the street
 				//if (???) {at_crosswalk = 1;}
 			}
 		}
 		if (dest_pos != pos) {
+			if (0 && ((frame_counter + ssn) & 15) == 0) { // run only every frame to reduce runtime (or when dest_pos is reached?)
+				vector<cube_t> &avoid(ped_mgr.temp_cubes); // reuse
+				avoid.clear();
+				vector_add_to(colliders, avoid);
+				get_building_bcubes(plot_bcube, avoid);
+				expand_cubes_by(avoid, vector3d(radius, radius, 0.0)); // expand cubes in x and y to approximate a cylinder collision (conservative)
+
+				if (line_int_cubes_xy(pos, dest_pos, avoid)) {
+					// FIXME: implement path finding between pos and dest_pos using avoid cubes
+				}
+			}
 			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
 			float const vmag(vel.mag());
 			vel  = (0.1*delta_dir/dest_dir.mag())*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)

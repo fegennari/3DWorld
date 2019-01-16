@@ -646,6 +646,7 @@ class ped_manager_t { // pedestrians
 	void sort_by_city_and_plot();
 public:
 	// for use in pedestrian_t, mostly for collisions and path finding
+	vector<cube_t> temp_cubes; // reused temporary
 	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
