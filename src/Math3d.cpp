@@ -1030,6 +1030,22 @@ bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float 
 	return 1;
 }
 
+bool get_line_clip_xy(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax) {
+
+	int const region1(get_region_xy(v1, d)), region2(get_region_xy(v2, d));
+	if (region1 & region2) return 0; // line outside
+	int const region3(region1 | region2);
+	tmax = 1.0;
+	tmin = 0.0;
+	if (region3 == 0) return 1; // both points inside => entire line inside
+	vector2d const dv(v2.x-v1.x, v2.y-v1.y);
+	TEST_CLIP_T(0x01, d[0][0], v1.x, dv.x,  dv.x); // -x plane
+	TEST_CLIP_T(0x02, d[0][1], v1.x, dv.x, -dv.x); // +x plane
+	TEST_CLIP_T(0x04, d[1][0], v1.y, dv.y,  dv.y); // -y plane
+	TEST_CLIP_T(0x08, d[1][1], v1.y, dv.y, -dv.y); // +y plane
+	return 1;
+}
+
 
 // performance critical: return 1 if line intersects the cube
 bool do_line_clip(point &v1, point &v2, float const d[3][2]) {

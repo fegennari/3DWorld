@@ -512,9 +512,12 @@ inline bool is_over_mesh(point const &pos) { // always over mesh in tiled terrai
 
 
 inline bool check_line_clip(point const &v1, point const &v2, float const d[3][2]) {
-
 	float tmin, tmax;
 	return get_line_clip(v1, v2, d, tmin, tmax);
+}
+inline bool check_line_clip_xy(point const &v1, point const &v2, float const d[3][2]) {
+	float tmin, tmax;
+	return get_line_clip_xy(v1, v2, d, tmin, tmax);
 }
 
 inline bool do_line_clip_scene(point &v1, point &v2, float z1, float z2) {
@@ -525,11 +528,17 @@ inline bool do_line_clip_scene(point &v1, point &v2, float z1, float z2) {
 
 
 inline int get_region(point const &v, float const d[3][2]) {
-
 	int region(0);
-	if (v.x < d[0][0]) region |= 0x01; else if (v.x >= d[0][1]) region |= 0x02;
-	if (v.y < d[1][0]) region |= 0x04; else if (v.y >= d[1][1]) region |= 0x08;
-	if (v.z < d[2][0]) region |= 0x10; else if (v.z >= d[2][1]) region |= 0x20;
+	if (v.x < d[0][0]) {region |= 0x01;} else if (v.x >= d[0][1]) {region |= 0x02;}
+	if (v.y < d[1][0]) {region |= 0x04;} else if (v.y >= d[1][1]) {region |= 0x08;}
+	if (v.z < d[2][0]) {region |= 0x10;} else if (v.z >= d[2][1]) {region |= 0x20;}
+	return region;
+}
+
+inline int get_region_xy(point const &v, float const d[3][2]) {
+	int region(0);
+	if (v.x < d[0][0]) {region |= 0x01;} else if (v.x >= d[0][1]) {region |= 0x02;}
+	if (v.y < d[1][0]) {region |= 0x04;} else if (v.y >= d[1][1]) {region |= 0x08;}
 	return region;
 }
 
