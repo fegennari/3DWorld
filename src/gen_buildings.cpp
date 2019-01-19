@@ -1873,6 +1873,7 @@ public:
 				}
 			} // for x
 		} // for y
+		sort_and_unique(bcubes); // FIXME: avoid doing this by using home grid for buildings?
 	}
 
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
