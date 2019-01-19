@@ -750,6 +750,11 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 
 template<typename T> void vector_add_to(T const &src, T &dest) {dest.insert(dest.end(), src.begin(), src.end());}
 
+template<typename T> void sort_and_unique(T &v) {
+	std::sort(v.begin(), v.end());
+	v.erase(std::unique(v.begin(), v.end()), v.end());
+}
+
 // string converters
 
 template<typename T> inline std::string make_string(T const val) {

@@ -410,6 +410,11 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (d[i_][1] != c.d[i_][1]) return 0;)
 		return 1;
 	}
+	bool operator<(cube_t const &c) const { // for use in sorting/uniquing
+		UNROLL_3X(if (d[i_][0] != c.d[i_][0]) return (d[i_][0] < c.d[i_][0]);)
+		UNROLL_3X(if (d[i_][1] != c.d[i_][1]) return (d[i_][1] < c.d[i_][1]);)
+		return 0;
+	}
 	float x1() const {return d[0][0];}
 	float x2() const {return d[0][1];}
 	float y1() const {return d[1][0];}
