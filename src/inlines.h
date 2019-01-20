@@ -158,12 +158,14 @@ template<typename T> inline void cross_product(pointT<T> const &v1, pointT<T> co
 	v3.z = v1.x*v2.y - v1.y*v2.x;
 }
 
-
 template<typename T> inline pointT<T> cross_product(pointT<T> const &v1, pointT<T> const &v2) {
 	pointT<T> cp;
 	cross_product(v1, v2, cp);
 	return cp;
 }
+
+inline float cross_product_xy(vector3d const &a, vector3d const &b) {return (a.x*b.y - a.y*b.x);} // result is z-value
+inline float dot_product_xy  (vector3d const &a, vector3d const &b) {return (a.x*b.x + a.y*b.y);}
 
 
 inline float vector_determinant(vector3d const &v1, vector3d const &v2, vector3d const &v3) { // 3x3
