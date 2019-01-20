@@ -1518,7 +1518,7 @@ public:
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		if (params.materials.empty()) return; // no materials
 		timer_t timer("Gen Buildings");
-		float const def_water_level(get_water_z_height());
+		float const def_water_level(get_water_z_height()), min_building_spacing(get_min_obj_spacing());
 		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
 		vector3d const delta_range((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
@@ -1552,6 +1552,7 @@ public:
 				if (use_plots) { // select a random plot, if available
 					plot_ix   = rgen.rand()%city_plot_bcubes.size();
 					pos_range = city_plot_bcubes[plot_ix];
+					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
 				}
 				else {
 					pos_range = mat.pos_range + delta_range;
@@ -1591,15 +1592,17 @@ public:
 				++num_gen;
 				
 				// check building for overlap with other buildings
-				float const expand(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
+				float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
+				vector3d expand(expand_val*b.bcube.get_size());
+				for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
 				b.bcube.d[2][0] = center.z; // zval
 				b.bcube.d[2][1] = center.z + 0.5*height_val;
 				cube_t test_bc(b.bcube);
-				test_bc.expand_by(expand*b.bcube.get_size());
+				test_bc.expand_by_xy(expand);
 
 				if (use_plots) {
 					assert(plot_ix < bix_by_plot.size());
-					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand, points)) continue;
+					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, points)) continue;
 					bix_by_plot[plot_ix].push_back(buildings.size());
 				}
 				else {
@@ -1611,7 +1614,7 @@ public:
 						for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 							grid_elem_t const &ge(get_grid_elem(x, y));
 							if (!test_bc.intersects_xy(ge.bcube)) continue;
-							if (check_for_overlaps(ge.ixs, test_bc, b, expand, points)) {overlaps = 1; break;}
+							if (check_for_overlaps(ge.ixs, test_bc, b, expand_val, points)) {overlaps = 1; break;}
 						} // for x
 					} // for y
 					if (overlaps) continue;

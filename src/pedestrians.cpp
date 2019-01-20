@@ -70,6 +70,7 @@ bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-
 bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const {
 	assert(pid < peds.size());
 
+	// FIXME: need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
 		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
 		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided  = 1; return 1;} // collision (using a smaller radius)
@@ -206,6 +207,7 @@ class path_finder_t {
 		} // for i
 		assert(cur_path.length < best_path.length);
 		best_path = cur_path; // if we got here without returning above, this is the best path seen so far
+		// FIXME: attempt to remove points to simplify this path to something shorter
 	}
 public:
 	path_finder_t(point const &pos_, point const &dest_, vector<cube_t> const &avoid_, float gap_) : avoid(avoid_), gap(gap_), pos(pos_), dest(dest_) {}
@@ -347,7 +349,7 @@ city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
 }
 
 
-float ped_manager_t::get_ped_radius() const {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
+/*static*/ float ped_manager_t::get_ped_radius() {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
 
 void ped_manager_t::expand_cube_for_ped(cube_t &cube) const {
 	float const radius(get_ped_radius());
