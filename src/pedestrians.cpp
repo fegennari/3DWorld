@@ -30,6 +30,7 @@ string pedestrian_t::str() const { // Note: no label_str()
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
 	if (plot_bcube.contains_pt_xy(pos)) return 1; // inside the plot
+	stuck_count = 0; // no longer stuck
 	if (next_plot == plot) return 0; // no next plot - clip to this plot
 	
 	if (next_plot_bcube.contains_pt_xy(pos)) {
