@@ -362,11 +362,17 @@ void ped_manager_t::init(unsigned num) {
 	unsigned const num_models(ped_model_loader.num_models());
 
 	for (unsigned n = 0; n < num; ++n) {
-		pedestrian_t ped(radius); // Note: constant radius for now, but can vary this to create peds of different sizes
+		pedestrian_t ped(radius); // start with a constant radius
 
 		if (gen_ped_pos(ped)) {
 			if (city_params.ped_speed > 0.0) {ped.vel = rgen.signed_rand_vector_spherical_xy().get_norm()*(city_params.ped_speed*rgen.rand_uniform(0.5, 1.0));}
-			ped.model_id = ((num_models > 0) ? (rgen.rand()%num_models) : 0);
+
+			if (num_models > 0) {
+				ped.model_id = rgen.rand()%num_models;
+				ped.radius  *= ped_model_loader.get_model(ped.model_id).scale;
+				assert(ped.radius > 0.0); // no zero/negative model scales
+			}
+			else {ped.model_id = 0;} // will be unused
 			ped.ssn = (unsigned short)peds.size(); // assign init peds index so that all are unique; won't change if peds are reordered
 			peds.push_back(ped);
 		}
