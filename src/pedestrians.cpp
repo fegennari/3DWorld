@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 12/6/18
 #include "city.h"
+#include "shaders.h"
 
 float const PED_WIDTH_SCALE  = 0.5;
 float const PED_HEIGHT_SCALE = 2.5;
@@ -556,23 +557,31 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, avoid);
 	path_finder_t path_finder(pos, dest_pos, avoid, 0.05*radius); // cache in ped_mgr?
 	vector<point> path;
+	colorRGBA base_color((plot == dest_plot) ? RED : YELLOW); // paths
+	
 	if (path_finder.run(dest_pos)) {path = path_finder.get_best_path();} // found a path
-	else if (!line_int_cubes_xy(pos, dest_pos, avoid)) {path.push_back(pos); path.push_back(dest_pos);} // straight line
+	else if (!line_int_cubes_xy(pos, dest_pos, avoid)) { // straight line
+		path.push_back(pos);
+		path.push_back(dest_pos);
+		if (plot != dest_plot) {base_color = ORANGE;} // straight line
+	}
 	else {return;} // no path found
 	float const spacing(4.0*radius);
+	vector<vert_color> line_pts;
+	shader_t s;
+	s.begin_color_only_shader(YELLOW);
+	bool in_sphere_draw(0);
+	being_sphere_draw(s, in_sphere_draw, 0);
 
 	for (auto p = path.begin(); p+1 != path.end(); ++p) { // iterate over line segments, skip last point
 		point const &n(*(p+1));
-		float const dist(p2p_dist(*p, n));
-		unsigned const num_steps(dist/spacing + 1.0);
-		vector3d const step((n - *p)/num_steps);
-		point path_pos(*p);
-
-		for (unsigned s = 0; s < num_steps; ++s) {
-			draw_sphere_vbo(path_pos, radius, 16, 0);
-			path_pos += step;
-		}
+		draw_sphere_vbo(n, radius, 16, 0);
+		line_pts.emplace_back(*p, base_color);
+		line_pts.emplace_back(n,  base_color);
 	} // for p
+	end_sphere_draw(in_sphere_draw);
+	draw_verts(line_pts, GL_LINES);
+	s.end_shader();
 }
 
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
@@ -653,15 +662,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 		assert(selected_ped); // must be found
 	}
 	dstate.end_draw();
-
-	if (selected_ped) {
-		shader_t s;
-		s.begin_color_only_shader(YELLOW);
-		being_sphere_draw(dstate.s, in_sphere_draw, 0);
-		selected_ped->debug_draw(*this);
-		end_sphere_draw(in_sphere_draw);
-		s.end_shader();
-	}
+	if (selected_ped) {selected_ped->debug_draw(*this);}
 	fgPopMatrix();
 	dstate.show_label_text();
 }
