@@ -640,6 +640,7 @@ class ped_manager_t { // pedestrians
 	vector<unsigned char> need_to_sort_city;
 	rand_gen_t rgen;
 	draw_state_t dstate;
+	int selected_ped_ssn;
 	bool ped_destroyed, need_to_sort_peds;
 
 	float get_ped_radius() const;
@@ -660,7 +661,7 @@ public:
 	unsigned get_next_plot(pedestrian_t &ped) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);
 public:
-	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), ped_destroyed(0), need_to_sort_peds(0) {}
+	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), selected_ped_ssn(-1), ped_destroyed(0), need_to_sort_peds(0) {}
 	bool empty() const {return peds.empty();}
 	void clear() {peds.clear(); by_city.clear();}
 	void init(unsigned num);

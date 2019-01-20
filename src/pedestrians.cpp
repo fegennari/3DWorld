@@ -618,21 +618,30 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 		} // for plot
 	} // for city
 	end_sphere_draw(in_sphere_draw);
-	static pedestrian_t const *prev_ped(nullptr);
+	pedestrian_t const *selected_ped(nullptr);
 
 	if (tt_fire_button_down && !game_mode) {
 		point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
 		pedestrian_t const *ped(get_ped_at(p1, p2));
-		prev_ped = ped; // cache for use below
-		if (ped != nullptr) {dstate.set_label_text(ped->str(), (ped->pos + xlate));} // found
+		selected_ped_ssn = (ped ? ped->ssn : -1); // update and cache for use in later frames
+		if (ped) {dstate.set_label_text(ped->str(), (ped->pos + xlate));} // found
 	}
-	if (prev_ped != nullptr) {
-		being_sphere_draw(dstate.s, in_sphere_draw, 0);
-		dstate.s.set_cur_color(YELLOW);
-		prev_ped->debug_draw(*this);
-		end_sphere_draw(in_sphere_draw);
+	else if (selected_ped_ssn >= 0) { // a ped was selected, iterate and find it by SSN
+		for (auto i = peds.begin(); i != peds.end(); ++i) {
+			if (i->ssn == selected_ped_ssn) {selected_ped = &(*i); break;}
+		}
+		assert(selected_ped); // must be found
 	}
 	dstate.end_draw();
+
+	if (selected_ped) {
+		shader_t s;
+		s.begin_color_only_shader(YELLOW);
+		being_sphere_draw(dstate.s, in_sphere_draw, 0);
+		selected_ped->debug_draw(*this);
+		end_sphere_draw(in_sphere_draw);
+		s.end_shader();
+	}
 	fgPopMatrix();
 	dstate.show_label_text();
 }
