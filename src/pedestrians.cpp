@@ -71,7 +71,7 @@ bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) 
 
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
 		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
-		if (dist_xy_less_than(pos, i->pos, (radius + i->radius))) {i->collided  = 1; return 1;} // collision
+		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided  = 1; return 1;} // collision (using a smaller radius)
 	}
 	return 0;
 }
@@ -222,6 +222,14 @@ public:
 	}
 	bool run(point &new_dest) {
 		if (!line_int_cubes_xy(pos, dest, avoid)) return 0; // no work to be done, leave dest as it is
+		
+		if (any_cube_contains_pt_xy(avoid, dest)) { // invalid dest pos
+			return 0; // FIXME: clip dest_pos to make it valid
+		}
+		// if there are any other cubes containing pos, skip this step; could be initial ped positions, ped pushed by a collision, or some other problem
+		if (any_cube_contains_pt_xy(avoid, pos)) {
+			return 0; // FIXME: choose dest to get out of the bcube
+		}
 		if (find_best_path()) {new_dest = best_path[1]; return 1;} // set dest to next point on the best path
 		return 0; // if we fail to find a path, leave new_dest unchanged
 	}
@@ -253,7 +261,7 @@ point pedestrian_t::get_dest_pos(cube_t const &next_plot_bcube) const {
 void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const &colliders, point const &dest_pos, vector<cube_t> &avoid) const {
 	avoid.clear();
 	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
-	vector3d const expand(1.05*vector3d(radius, radius, 0.0)); // slightly larger than radius to leave some room for floating-point error
+	vector3d const expand(1.1*vector3d(radius, radius, 0.0)); // slightly larger than radius to leave some room for floating-point error
 	expand_cubes_by(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	// if we're already inside the bcube of a building, exclude it; otherwise, there will be no solution; however, we may get stuck
 	// FIXME: this case can occur right after we reach our dest building
@@ -292,13 +300,9 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				vector<cube_t> &avoid(ped_mgr.temp_cubes); // reuse
 				get_avoid_cubes(ped_mgr, colliders, dest_pos, avoid);
 				target_pos = all_zeros;
-				
-				// if there are any other cubes containing pos or dest_pos, skip this step; could be initial ped positions, ped pushed by a collision, or some other problem
-				if (!any_cube_contains_pt_xy(avoid, pos) && !any_cube_contains_pt_xy(avoid, dest_pos)) {
-					// run path finding between pos and dest_pos using avoid cubes
-					path_finder_t path_finder(pos, dest_pos, avoid, 0.05*radius); // cache in ped_mgr?
-					if (path_finder.run(dest_pos)) {target_pos = dest_pos;}
-				}
+				// run path finding between pos and dest_pos using avoid cubes
+				path_finder_t path_finder(pos, dest_pos, avoid, 0.1*radius); // cache in ped_mgr?
+				if (path_finder.run(dest_pos)) {target_pos = dest_pos;}
 			}
 			else if (target_pos != all_zeros) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
@@ -308,17 +312,24 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		}
 		stuck_count = 0;
 	}
-	else {
-		collided = 0; // reset for next frame
+	else { // collision
 		pos = prev_pos; // restore to previous valid pos
-		if (++stuck_count > 8) {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius);} // shift randomly by 10% radius to get unstuck
+
+		if (++stuck_count > 8) {
+			if (target_pos != all_zeros) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
+			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); }// shift randomly by 10% radius to get unstuck
+		}
 		vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
 		if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
 		vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
+		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
 	}
-	if (vel == zero_vector) return; // stopped, don't update dir
-	dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
-	dir.normalize();
+	if (vel != zero_vector) { // if stopped, don't update dir
+		if (!collided && target_pos != all_zeros) {delta_dir = min(1.0f, 4.0f*delta_dir);} // use a tighter turning radius when there's an unobstructed target_pos
+		dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
+		dir.normalize();
+	}
+	collided = 0; // reset for next frame
 }
 
 void pedestrian_t::register_at_dest() {
