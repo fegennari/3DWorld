@@ -634,6 +634,7 @@ class path_finder_t {
 		path_t(point const &a, point const &b) {init(a, b);} // line constructor
 		void init(point const &a, point const &b) {length = p2p_dist(a, b); push_back(a); push_back(b);}
 		void calc_length();
+		cube_t calc_bcube() const;
 	};
 	vector<cube_t> avoid;
 	vector<uint8_t> used;

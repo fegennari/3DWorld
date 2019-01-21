@@ -113,6 +113,12 @@ void path_finder_t::path_t::calc_length() {
 	length = 0.0;
 	for (auto p = begin(); p+1 != end(); ++p) {length += p2p_dist(*p, *(p+1));}
 }
+cube_t path_finder_t::path_t::calc_bcube() const { // Note: could probably get away with only x/y bounds
+	assert(!empty());
+	cube_t bcube(front(), front());
+	for (auto i = begin()+1; i != end(); ++i) {bcube.union_with_pt(*i);}
+	return bcube;
+}
 
 // path_finder_t
 bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir) {
@@ -145,13 +151,13 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	path.push_back(ecorners[dest_cix]); // expanded corner
 	unsigned num_add(1);
 
-	if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // not path to dest, add another point
+	if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
 		if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
 		assert(dest_cix != (dir ? cix1 : cix2));
 		path.push_back(ecorners[dest_cix]); // expanded corner
 		++num_add;
 
-		if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // not path to dest, add another point
+		if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
 			if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
 			path.push_back(ecorners[dest_cix]); // expanded corner
 			//assert(!check_line_clip_xy(n, ecorners[dest_cix], c.d)); // must have a path now
@@ -167,20 +173,18 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth) {
 	if (depth >= MAX_PATH_DEPTH) return; // depth is too high, fail (stack not allocated)
 	if (/*found_path() &&*/ cur_path.length >= best_path.length) return; // bound
+	cube_t const bcube(cur_path.calc_bcube());
 
 	for (auto p = cur_path.begin(); p+1 != cur_path.end(); ++p) { // iterate over line segments, skip last point
 		float tmin(1.0);
 		unsigned cix(0);
 
-		for (auto c = avoid.begin(); c != avoid.end(); ++c) {
-			unsigned const ix(c - avoid.begin());
-			assert(ix < used.size());
-			if (used[ix]) continue; // done with this cube
+		for (unsigned c = 0; c < avoid.size(); ++c) {
+			if (used[c]) continue; // done with this cube
+			if (!avoid[c].intersects_xy(bcube)) continue;
 			float c_tmin, c_tmax;
-			if (get_line_clip_xy(*p, *(p+1), c->d, c_tmin, c_tmax) && c_tmin < tmin) {tmin = c_tmin; cix = ix;} // intersection
-		} // for c
-		//cout << TXT(tmin) << TXT(cix) << TXT(cur_path.size()) << TXT(best_path.size()) << endl;
-
+			if (get_line_clip_xy(*p, *(p+1), avoid[c].d, c_tmin, c_tmax) && c_tmin < tmin) {tmin = c_tmin; cix = c;} // intersection
+		}
 		if (tmin < 1.0) { // an intersectin bcube was found
 			path_t &next_path(path_stack[depth]);
 			next_path.clear();
@@ -289,7 +293,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		vector3d dest_pos(get_dest_pos(next_plot_bcube));
 
 		if (dest_pos != pos) {
-			if (1 && ((frame_counter + ssn) & 15) == 0) { // run only every frame to reduce runtime (or when dest_pos is reached?)
+			if (((frame_counter + ssn) & 15) == 0) { // run only every frame to reduce runtime (or when dest_pos is reached?)
 				get_avoid_cubes(ped_mgr, colliders, dest_pos, ped_mgr.path_finder.get_avoid_vector());
 				target_pos = all_zeros;
 				// run path finding between pos and dest_pos using avoid cubes
@@ -496,7 +500,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~2.9ms for 10K peds
+	//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
 	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
 	static bool first_frame(1);
 
