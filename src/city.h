@@ -612,6 +612,7 @@ struct pedestrian_t {
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
+	bool target_valid() const {return (target_pos != all_zeros);}
 	void move() {pos += vel*fticks;}
 	bool check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const;
 	bool check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
@@ -650,7 +651,7 @@ public:
 	vector<point> const &get_best_path() const {return best_path;}
 
 	bool find_best_path();
-	bool run(point const &pos_, point const &dest_, float gap_, point &new_dest);
+	unsigned run(point const &pos_, point const &dest_, float gap_, point &new_dest);
 };
 
 class ped_manager_t { // pedestrians

@@ -24,7 +24,7 @@ string pedestrian_t::get_name() const {
 string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
 	oss << get_name() << ": " << TXTn(ssn) << TXT(vel.mag()) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
-		<< TXTi(stuck_count) << TXT(collided) << TXT(in_the_road) << TXT(at_dest); // Note: pos, vel, dir not printed
+		<< TXTi(stuck_count) << TXT(collided) << TXT(in_the_road) << TXT(at_dest) << TXT(target_valid()); // Note: pos, vel, dir not printed
 	return oss.str();
 }
 
@@ -55,8 +55,10 @@ bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
-		if (building_id == dest_bldg) {at_dest = 1;}
-		return 0;
+		if (building_id != dest_bldg) return 0;
+		bool const ret(!at_dest);
+		at_dest = 1;
+		return ret; // only valid if we just reached our dest
 	}
 	float const xmin(pos.x - radius), xmax(pos.x + radius);
 
@@ -74,7 +76,7 @@ bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) 
 	// FIXME: need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
 		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
-		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided  = 1; return 1;} // collision (using a smaller radius)
+		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided = 1; return 1;} // collision (using a smaller radius)
 	}
 	return 0;
 }
@@ -217,19 +219,31 @@ bool path_finder_t::find_best_path() {
 	return found_path();
 }
 
-bool path_finder_t::run(point const &pos_, point const &dest_, float gap_, point &new_dest) {
+// Note: avoid must be non-overlapping and should be non-adjacent; even better if cubes are separated enough that peds can pass between them (> 2*ped radius)
+unsigned path_finder_t::run(point const &pos_, point const &dest_, float gap_, point &new_dest) {
 	if (!line_int_cubes_xy(pos_, dest_, avoid)) return 0; // no work to be done, leave dest as it is
 	pos = pos_; dest = dest_; gap = gap_;
-		
-	if (any_cube_contains_pt_xy(avoid, dest)) { // invalid dest pos
-		return 0; // FIXME: clip dest_pos to make it valid
+	//if (any_cube_contains_pt_xy(avoid, dest)) return 0; // invalid dest pos - ignore for now and let path finding deal with it when we get to that pos
+	unsigned next_pt_ix(1); // default: point after pos
+
+	// if there are any other cubes containing pos, move away from this cube; could be initial ped positions, ped pushed by a collision, or some other problem
+	for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+		if (!i->contains_pt_xy(pos)) continue;
+		point const center(i->get_cube_center());
+		vector3d const move_dir(vector3d(pos.x-center.x, pos.y-center.y, 0.0).get_norm());
+		vector3d const move_delta(move_dir*i->furthest_dist_to_pt(pos)); // away from the cube center
+		point const pos2(pos + move_delta);
+		float tmin, tmax;
+		bool const ret(get_line_clip_xy(pos, pos2, i->d, tmin, tmax)); // must intersect
+		assert(ret);
+		assert(tmin == 0.0); // starts inside the cube
+		pos += tmax*move_delta + gap*move_dir; // move just outside the cube
+		next_pt_ix = 0; // start at the new pos
+		break; // at most one cube should contain pos
 	}
-	// if there are any other cubes containing pos, skip this step; could be initial ped positions, ped pushed by a collision, or some other problem
-	if (any_cube_contains_pt_xy(avoid, pos)) {
-		return 0; // FIXME: choose dest to get out of the bcube
-	}
-	if (find_best_path()) {new_dest = best_path[1]; return 1;} // set dest to next point on the best path
-	return 0; // if we fail to find a path, leave new_dest unchanged
+	if (!find_best_path()) return 0; // if we fail to find a path, leave new_dest unchanged
+	new_dest = best_path[next_pt_ix]; // set dest to next point on the best path
+	return (next_pt_ix ? 1 : 2); // return 2 for the init contained case
 }
 
 // pedestrian_t
@@ -261,8 +275,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const 
 	vector3d const expand(1.1*vector3d(radius, radius, 0.0)); // slightly larger than radius to leave some room for floating-point error
 	expand_cubes_by(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	// if we're already inside the bcube of a building, exclude it; otherwise, there will be no solution; however, we may get stuck
-	// FIXME: this case can occur right after we reach our dest building
-	remove_cube_if_contains_pt_xy(avoid, pos);
+	//remove_cube_if_contains_pt_xy(avoid, pos); // FIXME: this case can occur right after we reach our dest building
 	// exclude our dest building, since we do want to collide with it
 	if (plot == dest_plot) {remove_cube_if_contains_pt_xy(avoid, dest_pos);}
 	size_t const num_building_cubes(avoid.size());
@@ -299,7 +312,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				// run path finding between pos and dest_pos using avoid cubes
 				if (ped_mgr.path_finder.run(pos, dest_pos, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
 			}
-			else if (target_pos != all_zeros) {dest_pos = target_pos;} // use previous frame's dest if valid
+			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
 			float const vmag(vel.mag());
 			vel  = (0.1*delta_dir/dest_dir.mag())*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
@@ -311,7 +324,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		pos = prev_pos; // restore to previous valid pos
 
 		if (++stuck_count > 8) {
-			if (target_pos != all_zeros) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
+			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
 			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); }// shift randomly by 10% radius to get unstuck
 		}
 		vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
@@ -320,7 +333,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
 	}
 	if (vel != zero_vector) { // if stopped, don't update dir
-		if (!collided && target_pos != all_zeros) {delta_dir = min(1.0f, 4.0f*delta_dir);} // use a tighter turning radius when there's an unobstructed target_pos
+		if (!collided && target_valid()) {delta_dir = min(1.0f, 4.0f*delta_dir);} // use a tighter turning radius when there's an unobstructed target_pos
 		dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
 		dir.normalize();
 	}
@@ -549,8 +562,9 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
 	vector<point> path;
 	colorRGBA base_color((plot == dest_plot) ? RED : YELLOW); // paths
+	unsigned const ret(path_finder.run(pos, dest_pos, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
 	
-	if (path_finder.run(pos, dest_pos, 0.05*radius, dest_pos)) {path = path_finder.get_best_path();} // found a path
+	if (ret > 0) {path = path_finder.get_best_path();} // found a path
 	else if (!line_int_cubes_xy(pos, dest_pos, path_finder.get_avoid_vector())) { // straight line
 		path.push_back(pos);
 		path.push_back(dest_pos);
@@ -564,12 +578,18 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	bool in_sphere_draw(0);
 	being_sphere_draw(s, in_sphere_draw, 0);
 
+	if (ret == 2) { // show segment from current pos to edge of building
+		assert(!path.empty());
+		draw_sphere_vbo(path[0], radius, 16, 0);
+		line_pts.emplace_back(pos, BLUE);
+		line_pts.emplace_back(path[0], BLUE);
+	}
 	for (auto p = path.begin(); p+1 != path.end(); ++p) { // iterate over line segments, skip last point
 		point const &n(*(p+1));
 		draw_sphere_vbo(n, radius, 16, 0);
 		line_pts.emplace_back(*p, base_color);
 		line_pts.emplace_back(n,  base_color);
-	} // for p
+	}
 	end_sphere_draw(in_sphere_draw);
 	draw_verts(line_pts, GL_LINES);
 	s.end_shader();
