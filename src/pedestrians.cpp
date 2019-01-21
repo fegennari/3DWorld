@@ -126,7 +126,7 @@ cube_t path_finder_t::path_t::calc_bcube() const { // Note: could probably get a
 bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir) {
 	point const &n(*(p+1));
 	if (c.contains_pt_xy(*p) || c.contains_pt_xy(n)) return 0; // point contained in cube - likely two overlapping/adjacent building cubes - fail
-	path.reserve(cur_path.size() + 2); // upper bound
+	path.clear();
 	path.insert(path.end(), cur_path.begin(), p+1); // add the prefix, including p
 	cube_t ec(c);
 	ec.expand_by(vector3d(gap, gap, 0.0)); // expand cubes in x and y
@@ -188,10 +188,9 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 			if (get_line_clip_xy(*p, *(p+1), avoid[c].d, c_tmin, c_tmax) && c_tmin < tmin) {tmin = c_tmin; cix = c;} // intersection
 		}
 		if (tmin < 1.0) { // an intersectin bcube was found
-			path_t &next_path(path_stack[depth]);
-			next_path.clear();
 			assert(!used[cix]);
 			used[cix] = 1; // mark this cube used so that we don't try to intersect it again (and to avoid floating-point errors with line adjacency)
+			path_t &next_path(path_stack[depth]);
 
 			for (unsigned d = 0; d < 2; ++d) {
 				if (add_pts_around_cube_xy(next_path, cur_path, p, avoid[cix], d)) {find_best_path_recur(next_path, depth+1);} // recursive call
