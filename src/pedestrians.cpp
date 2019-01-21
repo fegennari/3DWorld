@@ -123,6 +123,12 @@ cube_t path_finder_t::path_t::calc_bcube() const { // Note: could probably get a
 }
 
 // path_finder_t
+bool path_finder_t::add_pt_to_path(point const &p, path_t &path) const {
+	if (!plot_bcube.contains_pt_xy(p)) return 0; // outside the plot - invalid
+	path.push_back(p);
+	return 1;
+}
+
 bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir) {
 	point const &n(*(p+1));
 	if (c.contains_pt_xy(*p) || c.contains_pt_xy(n)) return 0; // point contained in cube - likely two overlapping/adjacent building cubes - fail
@@ -150,23 +156,19 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	unsigned dest_cix(dir ? cix2 : cix1);
 	bool const move_dir((((dest_cix+1)&3) == (dir ? cix1 : cix2)) ? 0 : 1); // CCW/CW based on which dir moves around the other side of the cube
 	if (check_line_clip_xy(*p, ecorners[dest_cix], c.d)) return 0; // something bad happened (floating-point error?), fail
-	path.push_back(ecorners[dest_cix]); // expanded corner
-	unsigned num_add(1);
+	if (!add_pt_to_path(ecorners[dest_cix], path)) return 0; // expanded corner
 
 	if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
 		if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
 		assert(dest_cix != (dir ? cix1 : cix2));
-		path.push_back(ecorners[dest_cix]); // expanded corner
-		++num_add;
+		if (!add_pt_to_path(ecorners[dest_cix], path)) return 0; // expanded corner
 
 		if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
 			if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
-			path.push_back(ecorners[dest_cix]); // expanded corner
+			if (!add_pt_to_path(ecorners[dest_cix], path)) return 0; // expanded corner
 			//assert(!check_line_clip_xy(n, ecorners[dest_cix], c.d)); // must have a path now
-			++num_add;
 		}
 	}
-	//cout << TXT(num_add) << endl;
 	path.insert(path.end(), p+1, cur_path.end()); // add the suffix, including p+1
 	path.calc_length();
 	return 1;
@@ -200,8 +202,8 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 			return;
 		}
 	} // for i
-	assert(cur_path.length < best_path.length);
-	best_path = cur_path; // if we got here without returning above, this is the best path seen so far
+	// if we got here without returning above, this is the best path seen so far
+	if (cur_path.length < best_path.length) {best_path = cur_path;} // this test almost always succeeds
 	// FIXME: attempt to remove points to simplify this path to something shorter
 }
 
@@ -219,26 +221,31 @@ bool path_finder_t::find_best_path() {
 }
 
 // Note: avoid must be non-overlapping and should be non-adjacent; even better if cubes are separated enough that peds can pass between them (> 2*ped radius)
-unsigned path_finder_t::run(point const &pos_, point const &dest_, float gap_, point &new_dest) {
+unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const &plot_bcube_, float gap_, point &new_dest) {
 	if (!line_int_cubes_xy(pos_, dest_, avoid)) return 0; // no work to be done, leave dest as it is
-	pos = pos_; dest = dest_; gap = gap_;
+	pos = pos_; dest = dest_; plot_bcube = plot_bcube_; gap = gap_;
 	//if (any_cube_contains_pt_xy(avoid, dest)) return 0; // invalid dest pos - ignore for now and let path finding deal with it when we get to that pos
 	unsigned next_pt_ix(1); // default: point after pos
 
-	// if there are any other cubes containing pos, move away from this cube; could be initial ped positions, ped pushed by a collision, or some other problem
-	for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-		if (!i->contains_pt_xy(pos)) continue;
-		point const center(i->get_cube_center());
-		vector3d const move_dir(vector3d(pos.x-center.x, pos.y-center.y, 0.0).get_norm());
-		vector3d const move_delta(move_dir*i->furthest_dist_to_pt(pos)); // away from the cube center
-		point const pos2(pos + move_delta);
-		float tmin, tmax;
-		bool const ret(get_line_clip_xy(pos, pos2, i->d, tmin, tmax)); // must intersect
-		assert(ret);
-		assert(tmin == 0.0); // starts inside the cube
-		pos += tmax*move_delta + gap*move_dir; // move just outside the cube
+	if (!plot_bcube.contains_pt_xy(pos)) { // keep pos inside the plot
+		plot_bcube.clamp_pt_xy(pos); // clamp point to plot bounds
 		next_pt_ix = 0; // start at the new pos
-		break; // at most one cube should contain pos
+	}
+	else { // if there are any other cubes containing pos, move away from this cube; could be initial ped positions, ped pushed by a collision, or some other problem
+		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+			if (!i->contains_pt_xy(pos)) continue;
+			point const center(i->get_cube_center());
+			vector3d const move_dir(vector3d(pos.x-center.x, pos.y-center.y, 0.0).get_norm());
+			vector3d const move_delta(move_dir*i->furthest_dist_to_pt(pos)); // away from the cube center
+			point const pos2(pos + move_delta);
+			float tmin, tmax;
+			bool const ret(get_line_clip_xy(pos, pos2, i->d, tmin, tmax)); // must intersect
+			assert(ret);
+			assert(tmin == 0.0); // starts inside the cube
+			pos += tmax*move_delta + gap*move_dir; // move just outside the cube
+			next_pt_ix = 0; // start at the new pos
+			break; // at most one cube should contain pos
+		}
 	}
 	if (!find_best_path()) return 0; // if we fail to find a path, leave new_dest unchanged
 	new_dest = best_path[next_pt_ix]; // set dest to next point on the best path
@@ -309,7 +316,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				get_avoid_cubes(ped_mgr, colliders, dest_pos, ped_mgr.path_finder.get_avoid_vector());
 				target_pos = all_zeros;
 				// run path finding between pos and dest_pos using avoid cubes
-				if (ped_mgr.path_finder.run(pos, dest_pos, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
+				if (ped_mgr.path_finder.run(pos, dest_pos, plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
 			}
 			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
@@ -512,7 +519,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
+	//timer_t timer("Ped Update"); // ~4.0ms for 10K peds
 	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
 	static bool first_frame(1);
 
@@ -561,7 +568,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
 	vector<point> path;
 	colorRGBA base_color((plot == dest_plot) ? RED : YELLOW); // paths
-	unsigned const ret(path_finder.run(pos, dest_pos, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
+	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
+	unsigned const ret(path_finder.run(pos, dest_pos, plot_bcube, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
 	
 	if (ret > 0) {path = path_finder.get_best_path();} // found a path
 	else if (!line_int_cubes_xy(pos, dest_pos, path_finder.get_avoid_vector())) { // straight line
