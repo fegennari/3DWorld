@@ -109,137 +109,126 @@ bool remove_cube_if_contains_pt_xy(vector<cube_t> &cubes, vector3d const &pos) {
 	return 0;
 }
 
-class path_finder_t {
-	struct path_t : public vector<point> {
-		float length;
-		path_t() : length(0.0) {}
-		path_t(point const &a, point const &b) : length(p2p_dist(a, b)) { // line constructor
-			push_back(a);
-			push_back(b);
-		}
-		void calc_length() {
-			length = 0.0;
-			for (auto p = begin(); p+1 != end(); ++p) {length += p2p_dist(*p, *(p+1));}
-		}
-	};
-	vector<cube_t> const &avoid;
-	float gap;
-	point pos, dest;
-	path_t best_path;
-	vector<uint8_t> used;
-	bool found_path() const {return (!best_path.empty());}
+void path_finder_t::path_t::calc_length() {
+	length = 0.0;
+	for (auto p = begin(); p+1 != end(); ++p) {length += p2p_dist(*p, *(p+1));}
+}
 
-	bool add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir) {
-		point const &n(*(p+1));
-		if (c.contains_pt_xy(*p) || c.contains_pt_xy(n)) return 0; // point contained in cube - likely two overlapping/adjacent building cubes - fail
-		path.reserve(cur_path.size() + 2); // upper bound
-		path.insert(path.end(), cur_path.begin(), p+1); // add the prefix, including p
-		cube_t ec(c);
-		ec.expand_by(vector3d(gap, gap, 0.0)); // expand cubes in x and y
-		point const corners [4] = {point( c.x1(),  c.y1(), p->z), point( c.x1(),  c.y2(), p->z), point( c.x2(),  c.y2(), p->z), point( c.x2(),  c.y1(), p->z)}; // CW
-		point const ecorners[4] = {point(ec.x1(), ec.y1(), p->z), point(ec.x1(), ec.y2(), p->z), point(ec.x2(), ec.y2(), p->z), point(ec.x2(), ec.y1(), p->z)}; // CW; expanded cube
-		vector3d const delta(n - *p); // not normalized
-		// find the two closest corners to the left and right
-		float min_dp1(0.0), min_dp2(0.0);
-		unsigned cix1(4), cix2(4); // start at invalid values
-		//cout << TXT(p->x) << TXT(p->y) << TXT(n.x) << TXT(n.y) << TXT(delta.x) << TXT(delta.y) << TXT(c.x1()) << TXT(c.x2()) << TXT(c.y1()) << TXT(c.y2()) << endl;
+// path_finder_t
+bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir) {
+	point const &n(*(p+1));
+	if (c.contains_pt_xy(*p) || c.contains_pt_xy(n)) return 0; // point contained in cube - likely two overlapping/adjacent building cubes - fail
+	path.reserve(cur_path.size() + 2); // upper bound
+	path.insert(path.end(), cur_path.begin(), p+1); // add the prefix, including p
+	cube_t ec(c);
+	ec.expand_by(vector3d(gap, gap, 0.0)); // expand cubes in x and y
+	point const corners [4] = {point( c.x1(),  c.y1(), p->z), point( c.x1(),  c.y2(), p->z), point( c.x2(),  c.y2(), p->z), point( c.x2(),  c.y1(), p->z)}; // CW
+	point const ecorners[4] = {point(ec.x1(), ec.y1(), p->z), point(ec.x1(), ec.y2(), p->z), point(ec.x2(), ec.y2(), p->z), point(ec.x2(), ec.y1(), p->z)}; // CW; expanded cube
+	vector3d const delta(n - *p); // not normalized
+	// find the two closest corners to the left and right
+	float min_dp1(0.0), min_dp2(0.0);
+	unsigned cix1(4), cix2(4); // start at invalid values
+	//cout << TXT(p->x) << TXT(p->y) << TXT(n.x) << TXT(n.y) << TXT(delta.x) << TXT(delta.y) << TXT(c.x1()) << TXT(c.x2()) << TXT(c.y1()) << TXT(c.y2()) << endl;
 
-		for (unsigned i = 0; i < 4; ++i) {
-			vector3d const delta2(corners[i] - *p); // unexpanded corners
-			float const dp(dot_product_xy(delta, delta2)/delta2.mag());
-			bool const turn_dir(cross_product_xy(delta, delta2) < 0.0);
-			//cout << TXT(delta2.x) << TXT(delta2.y) << TXT(i) << TXT(dp) << TXT(turn_dir) << endl;
-			if ((turn_dir ? cix1 : cix2) == 4 || dp < (turn_dir ? min_dp1 : min_dp2)) {(turn_dir ? min_dp1 : min_dp2) = dp; (turn_dir ? cix1 : cix2) = i;}
-		}
-		//cout << TXT(dir) << TXT(min_dp1) << TXT(min_dp2) << TXT(cix1) << TXT(cix2) << endl;
-		if (cix1 == 4 || cix2 == 4) return 0; // something bad happened (floating-point error?), fail
-		unsigned dest_cix(dir ? cix2 : cix1);
-		bool const move_dir((((dest_cix+1)&3) == (dir ? cix1 : cix2)) ? 0 : 1); // CCW/CW based on which dir moves around the other side of the cube
-		if (check_line_clip_xy(*p, ecorners[dest_cix], c.d)) return 0; // something bad happened (floating-point error?), fail
+	for (unsigned i = 0; i < 4; ++i) {
+		vector3d const delta2(corners[i] - *p); // unexpanded corners
+		float const dp(dot_product_xy(delta, delta2)/delta2.mag());
+		bool const turn_dir(cross_product_xy(delta, delta2) < 0.0);
+		//cout << TXT(delta2.x) << TXT(delta2.y) << TXT(i) << TXT(dp) << TXT(turn_dir) << endl;
+		if ((turn_dir ? cix1 : cix2) == 4 || dp < (turn_dir ? min_dp1 : min_dp2)) {(turn_dir ? min_dp1 : min_dp2) = dp; (turn_dir ? cix1 : cix2) = i;}
+	}
+	//cout << TXT(dir) << TXT(min_dp1) << TXT(min_dp2) << TXT(cix1) << TXT(cix2) << endl;
+	if (cix1 == 4 || cix2 == 4) return 0; // something bad happened (floating-point error?), fail
+	unsigned dest_cix(dir ? cix2 : cix1);
+	bool const move_dir((((dest_cix+1)&3) == (dir ? cix1 : cix2)) ? 0 : 1); // CCW/CW based on which dir moves around the other side of the cube
+	if (check_line_clip_xy(*p, ecorners[dest_cix], c.d)) return 0; // something bad happened (floating-point error?), fail
+	path.push_back(ecorners[dest_cix]); // expanded corner
+	unsigned num_add(1);
+
+	if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // not path to dest, add another point
+		if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
+		assert(dest_cix != (dir ? cix1 : cix2));
 		path.push_back(ecorners[dest_cix]); // expanded corner
-		unsigned num_add(1);
+		++num_add;
 
 		if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // not path to dest, add another point
 			if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
-			assert(dest_cix != (dir ? cix1 : cix2));
 			path.push_back(ecorners[dest_cix]); // expanded corner
+			//assert(!check_line_clip_xy(n, ecorners[dest_cix], c.d)); // must have a path now
 			++num_add;
-
-			if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // not path to dest, add another point
-				if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
-				path.push_back(ecorners[dest_cix]); // expanded corner
-				//assert(!check_line_clip_xy(n, ecorners[dest_cix], c.d)); // must have a path now
-				++num_add;
-			}
 		}
-		//cout << TXT(num_add) << endl;
-		path.insert(path.end(), p+1, cur_path.end()); // add the suffix, including p+1
-		path.calc_length();
-		return 1;
 	}
-	void find_best_path_recur(path_t const &cur_path) {
-		if (/*found_path() &&*/ cur_path.length >= best_path.length) return; // bound
+	//cout << TXT(num_add) << endl;
+	path.insert(path.end(), p+1, cur_path.end()); // add the suffix, including p+1
+	path.calc_length();
+	return 1;
+}
 
-		for (auto p = cur_path.begin(); p+1 != cur_path.end(); ++p) { // iterate over line segments, skip last point
-			float tmin(1.0);
-			unsigned cix(0);
+void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth) {
+	if (depth >= MAX_PATH_DEPTH) return; // depth is too high, fail (stack not allocated)
+	if (/*found_path() &&*/ cur_path.length >= best_path.length) return; // bound
 
-			for (auto c = avoid.begin(); c != avoid.end(); ++c) {
-				unsigned const ix(c - avoid.begin());
-				assert(ix < used.size());
-				if (used[ix]) continue; // done with this cube
-				float c_tmin, c_tmax;
-				if (get_line_clip_xy(*p, *(p+1), c->d, c_tmin, c_tmax) && c_tmin < tmin) {tmin = c_tmin; cix = ix;} // intersection
-			} // for c
-			//cout << TXT(tmin) << TXT(cix) << TXT(cur_path.size()) << TXT(best_path.size()) << endl;
+	for (auto p = cur_path.begin(); p+1 != cur_path.end(); ++p) { // iterate over line segments, skip last point
+		float tmin(1.0);
+		unsigned cix(0);
 
-			if (tmin < 1.0) { // an intersectin bcube was found
-				path_t next_path;
-				assert(!used[cix]);
-				used[cix] = 1; // mark this cube used so that we don't try to intersect it again (and to avoid floating-point errors with line adjacency)
+		for (auto c = avoid.begin(); c != avoid.end(); ++c) {
+			unsigned const ix(c - avoid.begin());
+			assert(ix < used.size());
+			if (used[ix]) continue; // done with this cube
+			float c_tmin, c_tmax;
+			if (get_line_clip_xy(*p, *(p+1), c->d, c_tmin, c_tmax) && c_tmin < tmin) {tmin = c_tmin; cix = ix;} // intersection
+		} // for c
+		//cout << TXT(tmin) << TXT(cix) << TXT(cur_path.size()) << TXT(best_path.size()) << endl;
 
-				for (unsigned d = 0; d < 2; ++d) {
-					if (add_pts_around_cube_xy(next_path, cur_path, p, avoid[cix], d)) {find_best_path_recur(next_path);} // recursive call
-				}
-				assert(used[cix]);
-				used[cix] = 0; // mark cube as unused
-				return;
+		if (tmin < 1.0) { // an intersectin bcube was found
+			path_t &next_path(path_stack[depth]);
+			next_path.clear();
+			assert(!used[cix]);
+			used[cix] = 1; // mark this cube used so that we don't try to intersect it again (and to avoid floating-point errors with line adjacency)
+
+			for (unsigned d = 0; d < 2; ++d) {
+				if (add_pts_around_cube_xy(next_path, cur_path, p, avoid[cix], d)) {find_best_path_recur(next_path, depth+1);} // recursive call
 			}
-		} // for i
-		assert(cur_path.length < best_path.length);
-		best_path = cur_path; // if we got here without returning above, this is the best path seen so far
-		// FIXME: attempt to remove points to simplify this path to something shorter
-	}
-public:
-	path_finder_t(point const &pos_, point const &dest_, vector<cube_t> const &avoid_, float gap_) : avoid(avoid_), gap(gap_), pos(pos_), dest(dest_) {}
+			assert(used[cix]);
+			used[cix] = 0; // mark cube as unused
+			return;
+		}
+	} // for i
+	assert(cur_path.length < best_path.length);
+	best_path = cur_path; // if we got here without returning above, this is the best path seen so far
+	// FIXME: attempt to remove points to simplify this path to something shorter
+}
 
-	bool find_best_path() {
-		//for (auto c = avoid.begin(); c != avoid.end(); ++c) {cout << c->contains_pt_xy(pos) << c->contains_pt_xy(dest) << " ";} cout << endl;
-		used.clear();
-		used.resize(avoid.size(), 0);
-		best_path.clear();
-		path_t cur_path(pos, dest);
-		best_path.length = 4.0*cur_path.length; // add an upper bound of 4x length to avoid too much recursion
-		find_best_path_recur(cur_path);
-		//cout << TXT(avoid.size()) << TXT(cur_path.length) << TXT(best_path.length) << found_path() << endl;
-		return found_path();
-	}
-	bool run(point &new_dest) {
-		if (!line_int_cubes_xy(pos, dest, avoid)) return 0; // no work to be done, leave dest as it is
+bool path_finder_t::find_best_path() {
+	//for (auto c = avoid.begin(); c != avoid.end(); ++c) {cout << c->contains_pt_xy(pos) << c->contains_pt_xy(dest) << " ";} cout << endl;
+	used.clear();
+	used.resize(avoid.size(), 0);
+	best_path.clear();
+	cur_path.clear();
+	cur_path.init(pos, dest);
+	best_path.length = 4.0*cur_path.length; // add an upper bound of 4x length to avoid too much recursion
+	find_best_path_recur(cur_path, 0); // depth=0
+	//cout << TXT(avoid.size()) << TXT(cur_path.length) << TXT(best_path.length) << found_path() << endl;
+	return found_path();
+}
+
+bool path_finder_t::run(point const &pos_, point const &dest_, float gap_, point &new_dest) {
+	if (!line_int_cubes_xy(pos_, dest_, avoid)) return 0; // no work to be done, leave dest as it is
+	pos = pos_; dest = dest_; gap = gap_;
 		
-		if (any_cube_contains_pt_xy(avoid, dest)) { // invalid dest pos
-			return 0; // FIXME: clip dest_pos to make it valid
-		}
-		// if there are any other cubes containing pos, skip this step; could be initial ped positions, ped pushed by a collision, or some other problem
-		if (any_cube_contains_pt_xy(avoid, pos)) {
-			return 0; // FIXME: choose dest to get out of the bcube
-		}
-		if (find_best_path()) {new_dest = best_path[1]; return 1;} // set dest to next point on the best path
-		return 0; // if we fail to find a path, leave new_dest unchanged
+	if (any_cube_contains_pt_xy(avoid, dest)) { // invalid dest pos
+		return 0; // FIXME: clip dest_pos to make it valid
 	}
-	vector<point> const &get_best_path() const {return best_path;}
-}; // path_finder_t
+	// if there are any other cubes containing pos, skip this step; could be initial ped positions, ped pushed by a collision, or some other problem
+	if (any_cube_contains_pt_xy(avoid, pos)) {
+		return 0; // FIXME: choose dest to get out of the bcube
+	}
+	if (find_best_path()) {new_dest = best_path[1]; return 1;} // set dest to next point on the best path
+	return 0; // if we fail to find a path, leave new_dest unchanged
+}
 
+// pedestrian_t
 point pedestrian_t::get_dest_pos(cube_t const &next_plot_bcube) const {
 	if (plot == dest_plot) {
 		if (!at_dest) {
@@ -301,12 +290,10 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 		if (dest_pos != pos) {
 			if (1 && ((frame_counter + ssn) & 15) == 0) { // run only every frame to reduce runtime (or when dest_pos is reached?)
-				vector<cube_t> &avoid(ped_mgr.temp_cubes); // reuse
-				get_avoid_cubes(ped_mgr, colliders, dest_pos, avoid);
+				get_avoid_cubes(ped_mgr, colliders, dest_pos, ped_mgr.path_finder.get_avoid_vector());
 				target_pos = all_zeros;
 				// run path finding between pos and dest_pos using avoid cubes
-				path_finder_t path_finder(pos, dest_pos, avoid, 0.1*radius); // cache in ped_mgr?
-				if (path_finder.run(dest_pos)) {target_pos = dest_pos;}
+				if (ped_mgr.path_finder.run(pos, dest_pos, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
 			}
 			else if (target_pos != all_zeros) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
@@ -350,6 +337,7 @@ city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
 }
 
 
+// ped_manager_t
 /*static*/ float ped_manager_t::get_ped_radius() {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
 
 void ped_manager_t::expand_cube_for_ped(cube_t &cube) const {
@@ -553,14 +541,13 @@ void end_sphere_draw(bool &in_sphere_draw) {
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	vector3d dest_pos(get_dest_pos(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot)));
 	if (dest_pos == pos) return; // no path, nothing to draw
-	vector<cube_t> avoid;
-	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, avoid);
-	path_finder_t path_finder(pos, dest_pos, avoid, 0.05*radius); // cache in ped_mgr?
+	path_finder_t path_finder;
+	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
 	vector<point> path;
 	colorRGBA base_color((plot == dest_plot) ? RED : YELLOW); // paths
 	
-	if (path_finder.run(dest_pos)) {path = path_finder.get_best_path();} // found a path
-	else if (!line_int_cubes_xy(pos, dest_pos, avoid)) { // straight line
+	if (path_finder.run(pos, dest_pos, 0.05*radius, dest_pos)) {path = path_finder.get_best_path();} // found a path
+	else if (!line_int_cubes_xy(pos, dest_pos, path_finder.get_avoid_vector())) { // straight line
 		path.push_back(pos);
 		path.push_back(dest_pos);
 		if (plot != dest_plot) {base_color = ORANGE;} // straight line

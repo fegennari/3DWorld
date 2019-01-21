@@ -625,6 +625,33 @@ struct pedestrian_t {
 	void debug_draw(ped_manager_t &ped_mgr) const;
 };
 
+unsigned const MAX_PATH_DEPTH = 20;
+
+class path_finder_t {
+	struct path_t : public vector<point> {
+		float length;
+		path_t() : length(0.0) {}
+		path_t(point const &a, point const &b) {init(a, b);} // line constructor
+		void init(point const &a, point const &b) {length = p2p_dist(a, b); push_back(a); push_back(b);}
+		void calc_length();
+	};
+	vector<cube_t> avoid;
+	vector<uint8_t> used;
+	path_t path_stack[MAX_PATH_DEPTH];
+	float gap;
+	point pos, dest;
+	path_t cur_path, best_path;
+	bool found_path() const {return (!best_path.empty());}
+	bool add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir);
+	void find_best_path_recur(path_t const &cur_path, unsigned depth);
+public:
+	vector<cube_t> &get_avoid_vector() {return avoid;}
+	vector<point> const &get_best_path() const {return best_path;}
+
+	bool find_best_path();
+	bool run(point const &pos_, point const &dest_, float gap_, point &new_dest);
+};
+
 class ped_manager_t { // pedestrians
 
 	struct city_ixs_t {
@@ -649,7 +676,7 @@ class ped_manager_t { // pedestrians
 	void sort_by_city_and_plot();
 public:
 	// for use in pedestrian_t, mostly for collisions and path finding
-	vector<cube_t> temp_cubes; // reused temporary
+	path_finder_t path_finder;
 	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
