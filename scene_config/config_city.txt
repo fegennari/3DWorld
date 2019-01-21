@@ -65,6 +65,7 @@ city ped_model ../models/people/Patrick/Patrick.obj 0 -1 90   0.18 1.0 1.0  0
 #city ped_model ../models/people/Belle/Belle.obj     0 -1 90  19.0  1.0 1.0  0 # too cartoonish (large head compared to body)
 # MakeHuman models
 city ped_model ../models/people/makehuman/Katie/Katie.obj 0 -1 90   1.0 0.7 1.0  0 3
+#city ped_model ../models/people/makehuman/Test/test.obj   0 -1 90   1.0 1.0 1.0  0
 
 city max_lights 1024
 city max_shadow_maps 40

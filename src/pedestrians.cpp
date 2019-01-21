@@ -75,7 +75,7 @@ bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) 
 
 	// FIXME: need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
-		if (i->plot != plot || i->city != city) break; // moved to a new plot or city, no collision, done
+		if (i->plot != plot || i->city != city || ssn == i->ssn) break; // moved to a new plot or city, no collision, done (Note: ssn check should not be required but is here for safety)
 		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided = 1; return 1;} // collision (using a smaller radius)
 	}
 	return 0;
@@ -204,7 +204,6 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 	} // for i
 	// if we got here without returning above, this is the best path seen so far
 	if (cur_path.length < best_path.length) {best_path = cur_path;} // this test almost always succeeds
-	// FIXME: attempt to remove points to simplify this path to something shorter
 }
 
 bool path_finder_t::find_best_path() {
@@ -234,15 +233,20 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 	else { // if there are any other cubes containing pos, move away from this cube; could be initial ped positions, ped pushed by a collision, or some other problem
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->contains_pt_xy(pos)) continue;
-			point const center(i->get_cube_center());
-			vector3d const move_dir(vector3d(pos.x-center.x, pos.y-center.y, 0.0).get_norm());
-			vector3d const move_delta(move_dir*i->furthest_dist_to_pt(pos)); // away from the cube center
-			point const pos2(pos + move_delta);
-			float tmin, tmax;
-			bool const ret(get_line_clip_xy(pos, pos2, i->d, tmin, tmax)); // must intersect
-			assert(ret);
-			assert(tmin == 0.0); // starts inside the cube
-			pos += tmax*move_delta + gap*move_dir; // move just outside the cube
+			point new_pos;
+			float dmin(0.0);
+
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					float const edge(i->d[dim][dir]), dist(abs(pos[dim] - edge));
+					if (dmin == 0.0 || dist < dmin) {
+						new_pos = pos;
+						new_pos[dim] = i->d[dim][dir];
+						dmin = dist;
+					}
+				}
+			}
+			pos = new_pos;
 			next_pt_ix = 0; // start at the new pos
 			break; // at most one cube should contain pos
 		}
@@ -280,8 +284,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const 
 	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
 	vector3d const expand(1.1*vector3d(radius, radius, 0.0)); // slightly larger than radius to leave some room for floating-point error
 	expand_cubes_by(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
-	// if we're already inside the bcube of a building, exclude it; otherwise, there will be no solution; however, we may get stuck
-	//remove_cube_if_contains_pt_xy(avoid, pos); // FIXME: this case can occur right after we reach our dest building
+	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	// exclude our dest building, since we do want to collide with it
 	if (plot == dest_plot) {remove_cube_if_contains_pt_xy(avoid, dest_pos);}
 	size_t const num_building_cubes(avoid.size());
@@ -331,6 +334,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 		if (++stuck_count > 8) {
 			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
+			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(next_plot_bcube) - pos).get_norm();} // move toward dest if stuck count gets too high
 			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); }// shift randomly by 10% radius to get unstuck
 		}
 		vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
