@@ -73,10 +73,13 @@ bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-
 bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const {
 	assert(pid < peds.size());
 
-	// FIXME: need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
 		if (i->plot != plot || i->city != city || ssn == i->ssn) break; // moved to a new plot or city, no collision, done (Note: ssn check should not be required but is here for safety)
 		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided = 1; return 1;} // collision (using a smaller radius)
+	}
+	if (in_the_road && next_plot != plot) {
+		// FIXME: need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
+		// use lower_bound() to find first ped with i->plot == next_plot and iterate until plot or city changes
 	}
 	return 0;
 }
@@ -276,11 +279,11 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 }
 
 // pedestrian_t
-point pedestrian_t::get_dest_pos(cube_t const &next_plot_bcube) const {
+point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube) const {
 	if (plot == dest_plot) {
 		if (!at_dest) {
 			cube_t const dest_bcube(get_building_bcube(dest_bldg));
-			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // FIXME: better to set this here rather than requiring an actual collision?
+			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // could set this here, but requiring a collision also works
 			point dest_pos(dest_bcube.get_cube_center()); // slowly adjust dir to move toward dest_bldg
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
@@ -289,7 +292,8 @@ point pedestrian_t::get_dest_pos(cube_t const &next_plot_bcube) const {
 	}
 	else if (next_plot != plot) { // move toward next plot
 		if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
-			point dest_pos(next_plot_bcube.closest_pt(pos)); // FIXME: should cross at intersection, not in the middle of the street
+			point dest_pos(next_plot_bcube.closest_pt(pos));
+			// FIXME: should cross at intersection, not in the middle of the street; find closest crosswalk (corner of plot_bcube) to dest_pos
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
 			//if (???) {at_crosswalk = 1;}
@@ -331,7 +335,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 	if (!collided && check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube) && is_valid_pos(colliders) && !check_ped_ped_coll(peds, pid)) { // no collisions
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
-		vector3d dest_pos(get_dest_pos(next_plot_bcube));
+		vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube));
 
 		if (dest_pos != pos) {
 			bool update_path(0);
@@ -361,7 +365,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 		if (++stuck_count > 8) {
 			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
-			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(next_plot_bcube) - pos).get_norm();} // move toward dest if stuck count gets too high
+			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube) - pos).get_norm();} // move toward dest if stuck count is high
 			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); }// shift randomly by 10% radius to get unstuck
 		}
 		vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
@@ -593,13 +597,14 @@ void end_sphere_draw(bool &in_sphere_draw) {
 }
 
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
-	vector3d dest_pos(get_dest_pos(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot)));
+	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
+	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
+	vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube));
 	if (dest_pos == pos) return; // no path, nothing to draw
 	path_finder_t path_finder;
 	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
 	vector<point> path;
 	colorRGBA base_color((plot == dest_plot) ? RED : YELLOW); // paths
-	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	unsigned const ret(path_finder.run(pos, dest_pos, plot_bcube, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
 	
 	if (ret > 0) {path = path_finder.get_best_path();} // found a path
