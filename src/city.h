@@ -647,6 +647,7 @@ class path_finder_t {
 	bool add_pt_to_path(point const &p, path_t &path) const;
 	bool add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir);
 	void find_best_path_recur(path_t const &cur_path, unsigned depth);
+	bool shorten_path(path_t &path) const;
 public:
 	vector<cube_t> &get_avoid_vector() {return avoid;}
 	vector<point> const &get_best_path() const {return best_path;}

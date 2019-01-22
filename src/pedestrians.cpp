@@ -210,8 +210,22 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 	if (cur_path.length < best_path.length) {best_path = cur_path;} // this test almost always succeeds
 }
 
+bool path_finder_t::shorten_path(path_t &path) const {
+	if (path.size() <= 2) return 0; // nothing to do
+	path_t::iterator i(path.begin()+1), o(i); // skip first point, which we must keep
+
+	for (; i != path.end(); ++i) {
+		if (i+1 == path.end()) {*(o++) = *i; continue;} // always keep last point
+		point const &a(*(i-1)), &b(*(i+1));
+		if (line_int_cubes_xy(a, b, avoid)) {*(o++) = *i;} // keep if removing this point generates an intersection
+	}
+	if (o == path.end()) return 0; // no update
+	path.erase(o, path.end());
+	path.calc_length();
+	return 1; // shortened
+}
+
 bool path_finder_t::find_best_path() {
-	//for (auto c = avoid.begin(); c != avoid.end(); ++c) {cout << c->contains_pt_xy(pos) << c->contains_pt_xy(dest) << " ";} cout << endl;
 	used.clear();
 	used.resize(avoid.size(), 0);
 	best_path.clear();
@@ -219,6 +233,7 @@ bool path_finder_t::find_best_path() {
 	cur_path.init(pos, dest);
 	best_path.length = 4.0*cur_path.length; // add an upper bound of 4x length to avoid too much recursion
 	find_best_path_recur(cur_path, 0); // depth=0
+	shorten_path(best_path); // see if we can remove any path points; this rarely has a big effect on path length, so it's okay to save time by doing this after the length test
 	//cout << TXT(avoid.size()) << TXT(cur_path.length) << TXT(best_path.length) << found_path() << endl;
 	return found_path();
 }
