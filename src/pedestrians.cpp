@@ -176,32 +176,36 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 
 void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth) {
 	if (depth >= MAX_PATH_DEPTH) return; // depth is too high, fail (stack not allocated)
-	if (/*found_path() &&*/ cur_path.length >= best_path.length) return; // bound
+	if (cur_path.length >= best_path.length) return; // bound (best path length is set to an upper bound even when not valid)
 	cube_t const bcube(cur_path.calc_bcube());
+	path_t::const_iterator first_int_p(cur_path.end());
+	float tmin(1.0);
+	unsigned cix(0);
 
-	for (auto p = cur_path.begin(); p+1 != cur_path.end(); ++p) { // iterate over line segments, skip last point
-		float tmin(1.0);
-		unsigned cix(0);
+	for (unsigned ix = 0; ix < avoid.size(); ++ix) {
+		if (used[ix]) continue; // done with this cube
+		cube_t const &c(avoid[ix]);
+		if (!c.intersects_xy(bcube)) continue;
 
-		for (unsigned c = 0; c < avoid.size(); ++c) {
-			if (used[c]) continue; // done with this cube
-			if (!avoid[c].intersects_xy(bcube)) continue;
+		for (auto p = cur_path.begin(); p+1 != cur_path.end() && p <= first_int_p; ++p) { // iterate over line segments up to/including first_int_p, skip last point
 			float c_tmin, c_tmax;
-			if (get_line_clip_xy(*p, *(p+1), avoid[c].d, c_tmin, c_tmax) && c_tmin < tmin) {tmin = c_tmin; cix = c;} // intersection
+			if (!get_line_clip_xy(*p, *(p+1), c.d, c_tmin, c_tmax)) continue;
+			if (p < first_int_p || c_tmin < tmin) {first_int_p = p; tmin = c_tmin; cix = ix;} // intersection
 		}
-		if (tmin < 1.0) { // an intersectin bcube was found
-			assert(!used[cix]);
-			used[cix] = 1; // mark this cube used so that we don't try to intersect it again (and to avoid floating-point errors with line adjacency)
-			path_t &next_path(path_stack[depth]);
+	} // for ix
+	if (first_int_p != cur_path.end()) {
+		assert(tmin < 1.0);
+		path_t &next_path(path_stack[depth]);
+		assert(!used[cix]);
+		used[cix] = 1; // mark this cube used so that we don't try to intersect it again (and to avoid floating-point errors with line adjacency)
 
-			for (unsigned d = 0; d < 2; ++d) {
-				if (add_pts_around_cube_xy(next_path, cur_path, p, avoid[cix], d)) {find_best_path_recur(next_path, depth+1);} // recursive call
-			}
-			assert(used[cix]);
-			used[cix] = 0; // mark cube as unused
-			return;
+		for (unsigned d = 0; d < 2; ++d) {
+			if (add_pts_around_cube_xy(next_path, cur_path, first_int_p, avoid[cix], d)) {find_best_path_recur(next_path, depth+1);} // recursive call
 		}
-	} // for i
+		assert(used[cix]);
+		used[cix] = 0; // mark cube as unused
+		return;
+	}
 	// if we got here without returning above, this is the best path seen so far
 	if (cur_path.length < best_path.length) {best_path = cur_path;} // this test almost always succeeds
 }
