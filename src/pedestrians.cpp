@@ -319,7 +319,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		vector3d dest_pos(get_dest_pos(next_plot_bcube));
 
 		if (dest_pos != pos) {
-			if (((frame_counter + ssn) & 15) == 0) { // run only every frame to reduce runtime (or when dest_pos is reached?)
+			// run only every 32 frames to reduce runtime; also run when at dest and when close to the current target pos
+			if (at_dest || ((frame_counter + ssn) & 31) == 0 || (target_valid() && dist_less_than(pos, target_pos, radius))) {
 				get_avoid_cubes(ped_mgr, colliders, dest_pos, ped_mgr.path_finder.get_avoid_vector());
 				target_pos = all_zeros;
 				// run path finding between pos and dest_pos using avoid cubes
@@ -527,7 +528,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~4.0ms for 10K peds
+	//timer_t timer("Ped Update"); // ~3.8ms for 10K peds
 	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
 	static bool first_frame(1);
 
