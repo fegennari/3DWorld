@@ -614,7 +614,7 @@ struct pedestrian_t {
 	string str() const;
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void move() {pos += vel*fticks;}
-	bool check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const;
+	bool check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid) const;
 	bool check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	bool is_valid_pos(vector<cube_t> const &colliders);
 	bool try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen);
@@ -702,6 +702,7 @@ public:
 	void destroy_peds_in_radius(point const &pos_in, float radius);
 	void next_frame();
 	pedestrian_t const *get_ped_at(point const &p1, point const &p2) const;
+	unsigned get_first_ped_at_plot(unsigned plot) const {assert(plot < by_plot.size()); return by_plot[plot];}
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void free_context() {ped_model_loader.free_context();}
 	//vector3d get_dest_move_dir(point const &pos) const;

@@ -70,16 +70,23 @@ bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-
 	return 1;
 }
 
-bool pedestrian_t::check_ped_ped_coll(vector<pedestrian_t> &peds, unsigned pid) const {
+bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid) const {
 	assert(pid < peds.size());
 
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
-		if (i->plot != plot || i->city != city || ssn == i->ssn) break; // moved to a new plot or city, no collision, done (Note: ssn check should not be required but is here for safety)
+		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
+		if (ssn == i->ssn) continue; // Note: ssn check should not be required but is here for safety
 		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided = 1; return 1;} // collision (using a smaller radius)
 	}
 	if (in_the_road && next_plot != plot) {
-		// FIXME: need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
-		// use lower_bound() to find first ped with i->plot == next_plot and iterate until plot or city changes
+		// need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
+		unsigned const ped_ix(ped_mgr.get_first_ped_at_plot(next_plot));
+		assert(ped_ix <= peds.size()); // could be at the end
+
+		for (auto i = peds.begin()+ped_ix; i != peds.end(); ++i) { // check every ped in next_plot
+			if (i->plot != next_plot) break; // moved to a new plot, no collision, done
+			if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided = 1; return 1;} // collision (using a smaller radius)
+		}
 	}
 	return 0;
 }
@@ -333,7 +340,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	is_stopped = at_crosswalk = in_the_road = 0;
 	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 
-	if (!collided && check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube) && is_valid_pos(colliders) && !check_ped_ped_coll(peds, pid)) { // no collisions
+	if (!collided && check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube) && is_valid_pos(colliders) && !check_ped_ped_coll(ped_mgr, peds, pid)) { // no collisions
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
 		vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube));
 
