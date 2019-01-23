@@ -807,9 +807,12 @@ class city_road_gen_t : public road_gen_base_t {
 				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 				bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
 				colliders.push_back(park);
-				num_spaces += park.row_sz*park.num_rows;
+				unsigned const nspaces(park.row_sz*park.num_rows);
+				num_spaces += nspaces;
 
 				// fill the parking lot with cars
+				vector<unsigned char> &used_spaces(parking_lots.back().used_spaces);
+				used_spaces.resize(nspaces, 0); // start empty
 				vector3d car_sz(nom_car_size);
 				car.dim    = car_dim;
 				car.dir    = car_dir;
@@ -833,11 +836,12 @@ class city_road_gen_t : public road_gen_base_t {
 							if (col+1 != park.row_sz && (rgen.rand()&15) == 0) {// occasional bad parking job
 								cpos[!car_dim] += dw*rgen.rand_uniform(0.3, 0.35);
 								prev_was_bad = 1;
-							} 
+							}
 							car.bcube.set_from_point(cpos);
 							car.bcube.expand_by(0.5*car_sz);
 							cars.push_back(car);
 							if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // pack backwards 1/8 of the time
+							used_spaces[row*park.num_rows + col] = 1;
 							++filled_spaces;
 							has_parking = 1;
 						}

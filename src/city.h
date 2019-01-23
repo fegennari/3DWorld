@@ -289,6 +289,7 @@ struct plot_xy_t {
 struct parking_lot_t : public cube_t {
 	bool dim, dir;
 	unsigned short row_sz, num_rows;
+	vector<unsigned char> used_spaces;
 	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : cube_t(c), dim(dim_), dir(dir_), row_sz(row_sz_), num_rows(num_rows_) {}
 	tex_range_t get_tex_range(float ar) const;
 };
