@@ -562,7 +562,7 @@ void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
 	//timer_t timer("Ped Update"); // ~3.2ms for 10K peds
-	float const delta_dir(1.0 - pow(0.7f, fticks)); // controls pedestrian turning rate
+	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 	static bool first_frame(1);
 
 	if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
