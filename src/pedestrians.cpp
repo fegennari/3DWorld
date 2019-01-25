@@ -608,7 +608,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
 	vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube));
 	if (dest_pos == pos) return; // no path, nothing to draw
-	path_finder_t path_finder;
+	path_finder_t path_finder(1); // debug=1
 	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
 	vector<point> path;
 	colorRGBA base_color((plot == dest_plot) ? RED : YELLOW); // paths

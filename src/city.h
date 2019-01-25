@@ -645,6 +645,8 @@ class path_finder_t {
 	point pos, dest;
 	cube_t plot_bcube;
 	path_t cur_path, best_path;
+	bool debug;
+
 	bool add_pt_to_path(point const &p, path_t &path) const;
 	bool add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir);
 	void find_best_path_recur(path_t const &cur_path, unsigned depth);
@@ -653,6 +655,7 @@ public:
 	vector<cube_t> &get_avoid_vector() {return avoid;}
 	vector<point> const &get_best_path() const {return best_path;}
 
+	path_finder_t(bool debug_=0) : debug(debug_) {}
 	bool found_path() const {return (!best_path.empty());}
 	bool find_best_path();
 	unsigned run(point const &pos_, point const &dest_, cube_t const &plot_bcube_, float gap_, point &new_dest);
