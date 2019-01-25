@@ -627,7 +627,7 @@ struct pedestrian_t {
 	void debug_draw(ped_manager_t &ped_mgr) const;
 };
 
-unsigned const MAX_PATH_DEPTH = 20;
+unsigned const MAX_PATH_DEPTH = 32;
 
 class path_finder_t {
 	struct path_t : public vector<point> {

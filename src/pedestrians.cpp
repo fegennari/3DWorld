@@ -241,7 +241,7 @@ bool path_finder_t::find_best_path() {
 	best_path.clear();
 	cur_path.clear();
 	cur_path.init(pos, dest);
-	best_path.length = 4.0*cur_path.length; // add an upper bound of 4x length to avoid too much recursion
+	best_path.length = 5.0*cur_path.length; // add an upper bound of 4x length to avoid too much recursion
 	find_best_path_recur(cur_path, 0); // depth=0
 	shorten_path(best_path); // see if we can remove any path points; this rarely has a big effect on path length, so it's okay to save time by doing this after the length test
 	//cout << TXT(avoid.size()) << TXT(cur_path.length) << TXT(best_path.length) << found_path() << endl;
