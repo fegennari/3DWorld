@@ -879,7 +879,7 @@ class city_road_gen_t : public road_gen_base_t {
 			cube_t bc(pos);
 			if (has_bcube_int_xy(bc, blockers, radius)) return 0; // intersects a building or parking lot - skip
 			bc.expand_by_xy(extra_spacing);
-			blockers.push_back(bc); // prevent trees from being too close to each other
+			blockers.push_back(bc); // prevent trees and benches from being too close to each other
 			return 1;
 		}
 		static bool try_place_obj(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen, float radius, float extra_spacing, float num_tries, point &pos) {
@@ -898,13 +898,13 @@ class city_road_gen_t : public road_gen_base_t {
 		static void place_trees_in_plot(cube_t const &plot, vector<cube_t> &blockers, vector<cube_t> &colliders, rand_gen_t &rgen) {
 			if (city_params.max_trees_per_plot == 0) return;
 			float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
-			float const extra_spacing(max(radius, get_min_obj_spacing())), radius_exp(radius + extra_spacing);
+			float const spacing(max(radius, get_min_obj_spacing())), radius_exp(2.0*spacing);
 			vector3d const plot_sz(plot.get_size());
 			if (min(plot_sz.x, plot_sz.y) < 2.0*radius_exp) return; // plot is too small for trees of this size
 
 			for (unsigned n = 0; n < city_params.max_trees_per_plot; ++n) {
 				point pos;
-				if (!try_place_obj(plot, blockers, rgen, radius, extra_spacing, 10, pos)) continue; // 10 tries per tree
+				if (!try_place_obj(plot, blockers, rgen, spacing, radius, 10, pos)) continue; // 10 tries per tree
 				int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
 				place_tree(pos, radius, ttype, colliders); // size is randomly selected by the tree generator using default values
 				// now that we're here, try to place more trees at this same distance from the road in a row
@@ -915,7 +915,7 @@ class city_road_gen_t : public road_gen_base_t {
 				for (; n < city_params.max_trees_per_plot; ++n) {
 					pos[dim] += step;
 					if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
-					if (!check_pt_and_place_blocker(pos, blockers, radius, extra_spacing)) break; // placement failed
+					if (!check_pt_and_place_blocker(pos, blockers, spacing, spacing)) break; // placement failed
 					place_tree(pos, radius, ttype, colliders); // use same tree type
 				} // for n
 			} // for n
@@ -926,7 +926,7 @@ class city_road_gen_t : public road_gen_base_t {
 			float const spacing(max(bench.radius, get_min_obj_spacing()));
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
-				if (!try_place_obj(plot, blockers, rgen, bench.radius, spacing, 1, bench.pos)) continue; // 1 try
+				if (!try_place_obj(plot, blockers, rgen, spacing, 0.0, 1, bench.pos)) continue; // 1 try
 				float dmin(0.0);
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
