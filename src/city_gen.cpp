@@ -821,16 +821,15 @@ class city_road_gen_t : public road_gen_base_t {
 				point pos(corner_pos.x, corner_pos.y, (plot.z2() + 0.5*car_sz.z));
 				pos[ car_dim] += 0.5*dr + (car_dim ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
 				float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
-				cube_t cur_cube(park); // set zvals, etc.
 
 				for (unsigned row = 0; row < park.num_rows; ++row) {
 					pos[!car_dim] = corner_pos[!car_dim] + 0.5*dw; // half offset for centerline
-					bool prev_was_bad(0), inside(0);
+					bool prev_was_bad(0);
 
-					for (unsigned col = 0; col <= park.row_sz; ++col) { // iterate one past the end
+					for (unsigned col = 0; col < park.row_sz; ++col) { // iterate one past the end
 						bool car_placed(0);
 						if (prev_was_bad) {prev_was_bad = 0;} // previous car did a bad parking job, leave this space empty
-						else if (col < park.row_sz && rgen.rand_float() < car_density) { // only half the spaces are filled on average
+						else if (rgen.rand_float() < car_density) { // only half the spaces are filled on average
 							point cpos(pos);
 							cpos[ car_dim] += 0.05*dr*rgen.rand_uniform(-1.0, 1.0); // randomness of front amount
 							cpos[!car_dim] += 0.12*dw*rgen.rand_uniform(-1.0, 1.0); // randomness of side  amount
@@ -848,23 +847,31 @@ class city_road_gen_t : public road_gen_base_t {
 							has_parking = 1;
 							car_placed  = 1;
 						}
-						if (!inside && car_placed) { // start a new segment
-							cur_cube.d[ car_dim][0] = corner_pos[ car_dim] + row*dr;
-							cur_cube.d[ car_dim][1] = corner_pos[ car_dim] + (row+1)*dr;
-							cur_cube.d[!car_dim][0] = corner_pos[!car_dim] + col*dw;
-							inside = 1;
-						}
-						else if (inside && !car_placed) { // end the current segment
-							cur_cube.d[!car_dim][1] = corner_pos[!car_dim] + col*dw;
-							cur_cube.normalize();
-							//assert(park.contains_cube(cur_cube)); // can fail due to floating-point precision
-							colliders.push_back(cur_cube);
-							inside = 0;
-						}
 						pos[!car_dim] += dw;
 					} // for col
 					pos[car_dim] += dr;
 				} // for row
+				// generate colliders for each group of used parking space columns
+				cube_t cur_cube(park); // set zvals, etc.
+				bool inside(0);
+
+				for (unsigned col = 0; col <= park.row_sz; ++col) {
+					// mark this space as blocked if any spaces in the row are blocked; this avoids creating diagonally adjacent colliders that cause dead ends and confuse path finding
+					bool blocked(0);
+					for (unsigned row = 0; col < park.row_sz && row < park.num_rows; ++row) {blocked |= (used_spaces[row*park.num_rows + col] != 0);}
+
+					if (!inside && blocked) { // start a new segment
+						cur_cube.d[!car_dim][0] = corner_pos[!car_dim] + col*dw;
+						inside = 1;
+					}
+					else if (inside && !blocked) { // end the current segment
+						cur_cube.d[!car_dim][1] = corner_pos[!car_dim] + col*dw;
+						cur_cube.normalize();
+						//assert(park.contains_cube(cur_cube)); // can fail due to floating-point precision
+						colliders.push_back(cur_cube);
+						inside = 0;
+					}
+				} // for col
 			} // for c
 			return has_parking;
 		}
