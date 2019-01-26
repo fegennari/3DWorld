@@ -635,7 +635,8 @@ class path_finder_t {
 		path_t() : length(0.0) {}
 		path_t(point const &a, point const &b) {init(a, b);} // line constructor
 		void init(point const &a, point const &b) {length = p2p_dist(a, b); push_back(a); push_back(b);}
-		void calc_length();
+		float calc_length_up_to(const_iterator i) const;
+		void calc_length() {length = calc_length_up_to(end());}
 		cube_t calc_bcube() const;
 	};
 	vector<cube_t> avoid;
@@ -644,7 +645,7 @@ class path_finder_t {
 	float gap;
 	point pos, dest;
 	cube_t plot_bcube;
-	path_t cur_path, best_path;
+	path_t cur_path, best_path, partial_path;
 	bool debug;
 
 	bool add_pt_to_path(point const &p, path_t &path) const;
@@ -652,11 +653,11 @@ class path_finder_t {
 	void find_best_path_recur(path_t const &cur_path, unsigned depth);
 	bool shorten_path(path_t &path) const;
 public:
-	vector<cube_t> &get_avoid_vector() {return avoid;}
-	vector<point> const &get_best_path() const {return best_path;}
-
 	path_finder_t(bool debug_=0) : debug(debug_) {}
-	bool found_path() const {return (!best_path.empty());}
+	vector<cube_t> &get_avoid_vector() {return avoid;}
+	vector<point> const &get_best_path() const {return (found_complete_path() ? best_path : partial_path);}
+	bool found_complete_path() const {return (!best_path.empty());}
+	bool found_path() const {return (found_complete_path() || !partial_path.empty());}
 	bool find_best_path();
 	unsigned run(point const &pos_, point const &dest_, cube_t const &plot_bcube_, float gap_, point &new_dest);
 };

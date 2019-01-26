@@ -121,9 +121,11 @@ bool remove_cube_if_contains_pt_xy(vector<cube_t> &cubes, vector3d const &pos) {
 	return 0;
 }
 
-void path_finder_t::path_t::calc_length() {
-	length = 0.0;
-	for (auto p = begin(); p+1 != end(); ++p) {length += p2p_dist(*p, *(p+1));}
+float path_finder_t::path_t::calc_length_up_to(const_iterator i) const {
+	assert(i <= end());
+	float len(0.0);
+	for (auto p = begin(); p+1 != i; ++p) {len += p2p_dist(*p, *(p+1));}
+	return len;
 }
 cube_t path_finder_t::path_t::calc_bcube() const { // Note: could probably get away with only x/y bounds
 	assert(!empty());
@@ -214,10 +216,20 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 		}
 		assert(used[cix]);
 		used[cix] = 0; // mark cube as unused
+		if (first_int_p == cur_path.begin() || found_complete_path()) return; // path is no good, terminate
+		// calculate the length of the partial path; add twice the distance we're short (to the destination) as a penalty
+		float const partial_len(cur_path.calc_length_up_to(first_int_p+1) + 2.0*p2p_dist(*first_int_p, dest));
+		if (partial_len >= partial_path.length) return; // not better
+		partial_path.clear();
+		partial_path.insert(partial_path.end(), cur_path.begin(), first_int_p+1); // record best partial path seen
+		partial_path.length = partial_len;
 		return;
 	}
-	// if we got here without returning above, this is the best path seen so far
-	if (cur_path.length < best_path.length) {best_path = cur_path;} // this test almost always succeeds
+	if (cur_path.length < best_path.length) { // this test almost always succeeds
+		best_path = cur_path; // if we got here without returning above, this is the best path seen so far
+		partial_path.clear(); // not using partial_path after this point
+		partial_path.length = 0.0;
+	}
 }
 
 bool path_finder_t::shorten_path(path_t &path) const {
@@ -239,11 +251,13 @@ bool path_finder_t::find_best_path() {
 	used.clear();
 	used.resize(avoid.size(), 0);
 	best_path.clear();
+	partial_path.clear();
 	cur_path.clear();
 	cur_path.init(pos, dest);
-	best_path.length = 5.0*cur_path.length; // add an upper bound of 4x length to avoid too much recursion
+	best_path.length = partial_path.length = 5.0*cur_path.length; // add an upper bound of 4x length to avoid too much recursion
 	find_best_path_recur(cur_path, 0); // depth=0
 	shorten_path(best_path); // see if we can remove any path points; this rarely has a big effect on path length, so it's okay to save time by doing this after the length test
+	shorten_path(partial_path);
 	//cout << TXT(avoid.size()) << TXT(cur_path.length) << TXT(best_path.length) << found_path() << endl;
 	return found_path();
 }
@@ -281,7 +295,9 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 		}
 	}
 	if (!find_best_path()) return 0; // if we fail to find a path, leave new_dest unchanged
-	new_dest = best_path[next_pt_ix]; // set dest to next point on the best path
+	vector<point> const &path(get_best_path());
+	assert(next_pt_ix < path.size());
+	new_dest = path[next_pt_ix]; // set dest to next point on the best path
 	return (next_pt_ix ? 1 : 2); // return 2 for the init contained case
 }
 
@@ -590,10 +606,10 @@ pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) 
 	return nullptr; // no ped found
 }
 
-void being_sphere_draw(shader_t &s, bool &in_sphere_draw, bool textured) {
+void begin_ped_sphere_draw(shader_t &s, colorRGBA const &color, bool &in_sphere_draw, bool textured) {
 	if (in_sphere_draw) return;
 	if (!textured) {select_texture(WHITE_TEX);} // currently not textured
-	s.set_cur_color(YELLOW); // smileys
+	s.set_cur_color(color); // smileys
 	begin_sphere_draw(textured);
 	in_sphere_draw = 1;
 }
@@ -611,22 +627,23 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	path_finder_t path_finder(1); // debug=1
 	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
 	vector<point> path;
-	colorRGBA base_color((plot == dest_plot) ? RED : YELLOW); // paths
 	unsigned const ret(path_finder.run(pos, dest_pos, plot_bcube, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
+	colorRGBA line_color((plot == dest_plot) ? RED : YELLOW); // paths
+	colorRGBA node_color(path_finder.found_complete_path() ? YELLOW : ORANGE);
 	
 	if (ret > 0) {path = path_finder.get_best_path();} // found a path
 	else if (!line_int_cubes_xy(pos, dest_pos, path_finder.get_avoid_vector())) { // straight line
 		path.push_back(pos);
 		path.push_back(dest_pos);
-		if (plot != dest_plot) {base_color = ORANGE;} // straight line
+		if (plot != dest_plot) {line_color = ORANGE; node_color = GREEN;} // straight line
 	}
 	else {return;} // no path found
 	float const spacing(4.0*radius);
 	vector<vert_color> line_pts;
 	shader_t s;
-	s.begin_color_only_shader(YELLOW);
+	s.begin_color_only_shader();
 	bool in_sphere_draw(0);
-	being_sphere_draw(s, in_sphere_draw, 0);
+	begin_ped_sphere_draw(s, node_color, in_sphere_draw, 0);
 
 	if (ret == 2) { // show segment from current pos to edge of building
 		assert(!path.empty());
@@ -637,8 +654,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	for (auto p = path.begin(); p+1 != path.end(); ++p) { // iterate over line segments, skip last point
 		point const &n(*(p+1));
 		draw_sphere_vbo(n, radius, 16, 0);
-		line_pts.emplace_back(*p, base_color);
-		line_pts.emplace_back(n,  base_color);
+		line_pts.emplace_back(*p, line_color);
+		line_pts.emplace_back(n,  line_color);
 	}
 	end_sphere_draw(in_sphere_draw);
 	draw_verts(line_pts, GL_LINES);
@@ -689,7 +706,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				
 				if (!use_models) { // or distant?
 					if (!pdu.sphere_visible_test(ped.pos, ped.radius)) continue; // not visible - skip
-					being_sphere_draw(dstate.s, in_sphere_draw, textured);
+					begin_ped_sphere_draw(dstate.s, YELLOW, in_sphere_draw, textured);
 					int const ndiv = 16; // currently hard-coded
 					draw_sphere_vbo(ped.pos, ped.radius, ndiv, textured);
 				}
