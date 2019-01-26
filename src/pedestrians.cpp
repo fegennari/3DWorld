@@ -99,8 +99,8 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 	return 1; // success
 }
 
-void expand_cubes_by(vector<cube_t> &cubes, vector3d const &val) {
-	for (auto i = cubes.begin(); i != cubes.end(); ++i) {i->expand_by(val);}
+void expand_cubes_by_xy(vector<cube_t> &cubes, float val) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {i->expand_by_xy(val);}
 }
 bool any_cube_contains_pt_xy(vector<cube_t> const &cubes, vector3d const &pos) {
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
@@ -145,7 +145,7 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	path.clear();
 	path.insert(path.end(), cur_path.begin(), p+1); // add the prefix, including p
 	cube_t ec(c);
-	ec.expand_by(vector3d(gap, gap, 0.0)); // expand cubes in x and y
+	ec.expand_by_xy(gap); // expand cubes in x and y
 	point const corners [4] = {point( c.x1(),  c.y1(), p->z), point( c.x1(),  c.y2(), p->z), point( c.x2(),  c.y2(), p->z), point( c.x2(),  c.y1(), p->z)}; // CW
 	point const ecorners[4] = {point(ec.x1(), ec.y1(), p->z), point(ec.x1(), ec.y2(), p->z), point(ec.x2(), ec.y2(), p->z), point(ec.x2(), ec.y1(), p->z)}; // CW; expanded cube
 	vector3d const delta(n - *p); // not normalized
@@ -312,14 +312,14 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const &colliders, point const &dest_pos, vector<cube_t> &avoid) const {
 	avoid.clear();
 	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
-	vector3d const expand(1.1*vector3d(radius, radius, 0.0)); // slightly larger than radius to leave some room for floating-point error
-	expand_cubes_by(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
+	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
+	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	// exclude our dest building, since we do want to collide with it
 	if (plot == dest_plot) {remove_cube_if_contains_pt_xy(avoid, dest_pos);}
 	size_t const num_building_cubes(avoid.size());
 	vector_add_to(colliders, avoid);
-	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by(expand);} // expand colliders as well
+	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by_xy(expand);} // expand colliders as well
 }
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {

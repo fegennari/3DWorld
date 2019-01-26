@@ -628,7 +628,7 @@ void tunnel_t::init(point const &start, point const &end, float radius_, bool di
 
 cube_t tunnel_t::get_tunnel_bcube() const {
 	cube_t bcube(*this);
-	bcube.expand_by(vector3d(radius, radius, 0.0));
+	bcube.expand_by_xy(radius);
 	bcube.z2() += max(facade_height[0], facade_height[1]); // should be close enough
 	return bcube;
 }
