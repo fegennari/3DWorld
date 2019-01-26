@@ -2728,6 +2728,7 @@ cube_t ped_manager_t::get_expanded_city_bcube_for_peds(unsigned city_ix) const {
 cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {
 	cube_t bcube(road_gen.get_plot_from_global_id(city_ix, plot_ix));
 	expand_cube_for_ped(bcube);
+	bcube.expand_by_xy(city_params.road_width); // required to include pedestrians that are crossing the road and not contained in the plot bcube
 	return bcube;
 }
 vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
