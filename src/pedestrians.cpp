@@ -42,8 +42,8 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_
 	// FIXME: should only be at crosswalks
 	// set is_stopped if waiting at crosswalk
 	in_the_road = 1;
-	// FIXME: check for streetlight collisions (only if allowed to cross at non-crosswalk locations)
 	if (ped_mgr.check_isec_sphere_coll(*this)) return 0;
+	//if (ped_mgr.check_streetlight_sphere_coll(*this)) return 0; // FIXME
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
 }
 

@@ -406,6 +406,7 @@ namespace streetlight_ns {
 		point get_lpos() const;
 		void draw(draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const;
 		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
+		bool check_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const;
 		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const;
 		bool line_intersect(point const &p1, point const &p2, float &t) const;
 	};
@@ -417,6 +418,7 @@ struct streetlights_t {
 
 	void draw_streetlights(draw_state_t &dstate, bool shadow_only, bool always_on) const;
 	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
+	bool check_streetlight_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const;
 	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const;
 	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const;
 };
@@ -692,6 +694,7 @@ public:
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	bool check_isec_sphere_coll(pedestrian_t &ped) const;
+	bool check_streetlight_sphere_coll(pedestrian_t &ped) const;
 	bool mark_crosswalk_in_use(pedestrian_t &ped);
 	bool choose_dest_building(pedestrian_t &ped);
 	unsigned get_next_plot(pedestrian_t &ped) const;

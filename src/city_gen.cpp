@@ -2741,6 +2741,9 @@ bool ped_manager_t::mark_crosswalk_in_use(pedestrian_t &ped) {
 bool ped_manager_t::check_isec_sphere_coll(pedestrian_t &ped) const {
 	return road_gen.get_city(ped.city).check_isec_sphere_coll(ped.pos, ped.radius); // Note: no xlate is required since peds and city are in the same coord space
 }
+bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t &ped) const {
+	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius, zero_vector);
+}
 
 // path finding
 bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const

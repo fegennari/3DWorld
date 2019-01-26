@@ -269,6 +269,12 @@ namespace streetlight_ns {
 		dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH)); // points down
 	}
 
+	bool streetlight_t::check_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const {
+		point const p2(pos + xlate);
+		float const pradius(pole_radius*city_params.road_width);
+		return dist_xy_less_than(p2, center, (pradius + radius));
+	}
+
 	bool streetlight_t::proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
 		point const p2(pos + xlate);
 		float const pradius(pole_radius*city_params.road_width);
@@ -298,9 +304,16 @@ void streetlights_t::add_streetlight_dlights(vector3d const &xlate, cube_t &ligh
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube, always_on);}
 }
 
-bool streetlights_t::proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const {
+bool streetlights_t::proc_streetlight_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-		if (i->proc_sphere_coll(pos, radius, xlate, cnorm)) return 1;
+		if (i->proc_sphere_coll(center, radius, xlate, cnorm)) return 1;
+	}
+	return 0;
+}
+
+bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const {
+	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
+		if (i->check_sphere_coll_xy(center, radius, xlate)) return 1;
 	}
 	return 0;
 }
