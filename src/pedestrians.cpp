@@ -712,7 +712,6 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		if (plot != dest_plot) {line_color = ORANGE; node_color = GREEN;} // straight line
 	}
 	else {return;} // no path found
-	float const spacing(4.0*radius);
 	vector<vert_color> line_pts;
 	shader_t s;
 	s.begin_color_only_shader();

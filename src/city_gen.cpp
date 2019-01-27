@@ -827,7 +827,6 @@ class city_road_gen_t : public road_gen_base_t {
 					bool prev_was_bad(0);
 
 					for (unsigned col = 0; col < park.row_sz; ++col) { // iterate one past the end
-						bool car_placed(0);
 						if (prev_was_bad) {prev_was_bad = 0;} // previous car did a bad parking job, leave this space empty
 						else if (rgen.rand_float() < car_density) { // only half the spaces are filled on average
 							point cpos(pos);
@@ -845,7 +844,6 @@ class city_road_gen_t : public road_gen_base_t {
 							used_spaces[row*park.num_rows + col] = 1;
 							++filled_spaces;
 							has_parking = 1;
-							car_placed  = 1;
 						}
 						pos[!car_dim] += dw;
 					} // for col
@@ -1681,10 +1679,10 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius, cnorm)) return 1;
 			
-			/*if (plot_coll) { // no other collisions - return collision with plot or road - doesn't work correctly for bouncing balls
+			if (0 && plot_coll) { // no other collisions - return collision with plot or road - doesn't work correctly for bouncing balls
 				if (cnorm) {*cnorm = plus_z;}
 				return 1;
-			}*/
+			}
 			return 0;
 		}
 		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: xlate has already been applied

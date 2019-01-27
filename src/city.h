@@ -267,7 +267,7 @@ struct road_seg_t : public road_t {
 struct road_plot_t : public cube_t {
 	uint8_t xpos, ypos; // position within the city grid
 	bool has_parking;
-	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : cube_t(c), has_parking(0), xpos(xpos_), ypos(ypos_) {}
+	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : cube_t(c), xpos(xpos_), ypos(ypos_), has_parking(0) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
@@ -722,7 +722,7 @@ public:
 
 
 template <typename T> void remove_destroyed(vector<T> &objs) {
-	vector<T>::iterator i(objs.begin()), o(i);
+	typename vector<T>::iterator i(objs.begin()), o(i);
 	for (; i != objs.end(); ++i) {if (!i->destroyed) {*(o++) = *i;}}
 	objs.erase(o, objs.end());
 }
