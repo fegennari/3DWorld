@@ -81,14 +81,20 @@ bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-
 	return 1;
 }
 
-bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid) const {
+void register_ped_coll(pedestrian_t &p1, pedestrian_t &p2, unsigned pid1, unsigned pid2) {
+	p1.collided = p1.ped_coll = 1; p1.colliding_ped = pid2;
+	p2.collided = p2.ped_coll = 1; p2.colliding_ped = pid1;
+}
+
+bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
 	assert(pid < peds.size());
 
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
 		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		if (ssn == i->ssn) continue; // Note: ssn check should not be required but is here for safety
-		if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided = 1; return 1;} // collision (using a smaller radius)
-	}
+		float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
+		if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
+	} // for i
 	if (in_the_road && next_plot != plot) {
 		// need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
 		unsigned const ped_ix(ped_mgr.get_first_ped_at_plot(next_plot));
@@ -96,7 +102,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_
 
 		for (auto i = peds.begin()+ped_ix; i != peds.end(); ++i) { // check every ped in next_plot
 			if (i->plot != next_plot) break; // moved to a new plot, no collision, done
-			if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {i->collided = 1; return 1;} // collision (using a smaller radius)
+			if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision (using a smaller radius)
 		}
 	}
 	return 0;
@@ -377,7 +383,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	else if (!check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // outside the plot, treat as a collision with the plot bounds
 	else if (!is_valid_pos(colliders)) {collided = 1;} // collided with a static collider
 	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
-	else if (check_ped_ped_coll(ped_mgr, peds, pid)) {collided = 1;} // collided with another pedestrian
+	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir)) {collided = 1;} // collided with another pedestrian
 	else { // no collisions
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
 		vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube));
@@ -390,7 +396,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			else { // distant pedestrian - lower update rate
 				update_path = (((frame_counter + ssn) & 63) == 0);
 			}
-			// run only every 32 frames to reduce runtime; also run when at dest and when close to the current target pos
+			// run only every several frames to reduce runtime; also run when at dest and when close to the current target pos or at the destination
 			if (at_dest || update_path) {
 				get_avoid_cubes(ped_mgr, colliders, dest_pos, ped_mgr.path_finder.get_avoid_vector());
 				target_pos = all_zeros;
@@ -413,15 +419,24 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	if (collided) { // collision
 		pos = prev_pos; // restore to previous valid pos
+		vector3d new_dir;
 
 		if (++stuck_count > 8) {
 			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
 			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube) - pos).get_norm();} // move toward dest if stuck count is high
 			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); }// shift randomly by 10% radius to get unstuck
 		}
-		vector3d new_vel(rgen.signed_rand_vector_spherical_xy()); // try a random new direction
-		if (dot_product(vel, new_vel) > 0.0) {new_vel *= -1.0;} // negate if pointing in the same dir
-		vel = new_vel * (vel.mag()/new_vel.mag()); // normalize to original velocity
+		if (ped_coll) {
+			assert(colliding_ped < peds.size());
+			vector3d const coll_dir(peds[colliding_ped].pos - pos);
+			new_dir = cross_product(vel, plus_z);
+			if (dot_product(new_dir, coll_dir) > 0.0) {new_dir = -new_dir;} // orient away from the other ped
+		}
+		else { // static object collision (should be rare if path_finder does a good job)
+			new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
+			if (dot_product(vel, new_dir) > 0.0) {new_dir *= -1.0;} // negate if pointing in the same dir
+		}
+		vel = new_dir * (vel.mag()/new_dir.mag()); // normalize to original velocity
 		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
 	}
 	if (vel != zero_vector) { // if stopped, don't update dir
@@ -429,7 +444,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
 		dir.normalize();
 	}
-	collided = 0; // reset for next frame
+	collided = ped_coll = 0; // reset for next frame
 }
 
 void pedestrian_t::register_at_dest() {
