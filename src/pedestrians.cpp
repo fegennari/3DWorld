@@ -340,6 +340,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const 
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed) return; // destroyed
+	//assert(!is_nan(pos));
 
 	// navigation with destination
 	if (at_dest) {
@@ -377,9 +378,12 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			}
 			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
-			float const vmag(vel.mag());
-			vel  = (0.1*delta_dir/dest_dir.mag())*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
-			vel *= vmag / vel.mag(); // normalize to original velocity
+			float const vmag(vel.mag()), dmag(dest_dir.mag());
+
+			if (vmag > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
+				vel  = (0.1*delta_dir/dmag)*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
+				vel *= vmag / vel.mag(); // normalize to original velocity
+			}
 		}
 		stuck_count = 0;
 	}
