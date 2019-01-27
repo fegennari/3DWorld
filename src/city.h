@@ -693,9 +693,9 @@ public:
 	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
-	bool check_isec_sphere_coll(pedestrian_t &ped) const;
-	bool check_streetlight_sphere_coll(pedestrian_t &ped) const;
-	bool mark_crosswalk_in_use(pedestrian_t &ped);
+	bool check_isec_sphere_coll(pedestrian_t const &ped) const;
+	bool check_streetlight_sphere_coll(pedestrian_t const &ped) const;
+	bool mark_crosswalk_in_use(pedestrian_t const &ped);
 	bool choose_dest_building(pedestrian_t &ped);
 	unsigned get_next_plot(pedestrian_t &ped) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);

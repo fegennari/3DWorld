@@ -2734,14 +2734,14 @@ cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, un
 vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
 bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(ped, rgen);} // Note: non-const because rgen is modified
 
-bool ped_manager_t::mark_crosswalk_in_use(pedestrian_t &ped) {
+bool ped_manager_t::mark_crosswalk_in_use(pedestrian_t const &ped) {
 	bool const dim(fabs(ped.dir.y) > fabs(ped.dir.x)), dir(ped.dir[dim] > 0); // something like this?
 	return road_gen.get_city(ped.city).mark_crosswalk_in_use(ped.pos, dim, dir);
 }
-bool ped_manager_t::check_isec_sphere_coll(pedestrian_t &ped) const {
+bool ped_manager_t::check_isec_sphere_coll(pedestrian_t const &ped) const {
 	return road_gen.get_city(ped.city).check_isec_sphere_coll(ped.pos, ped.radius); // Note: no xlate is required since peds and city are in the same coord space
 }
-bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t &ped) const {
+bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped) const {
 	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius, zero_vector);
 }
 
