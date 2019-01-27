@@ -328,6 +328,11 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 		if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
 			point dest_pos(next_plot_bcube.closest_pt(pos));
 			// FIXME: should cross at intersection, not in the middle of the street; find closest crosswalk (corner of plot_bcube) to dest_pos
+
+			if (!plot_bcube.contains_pt_xy(pos)) { // went outside the current plot
+				point const closest_pos(plot_bcube.closest_pt(pos));
+				if (dot_product((pos - dest_pos), (pos - closest_pos)) > 0.0) {dest_pos = closest_pos;} // went outside on the wrong side, go back inside the current plot
+			}
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
 			//if (???) {at_crosswalk = 1;}
