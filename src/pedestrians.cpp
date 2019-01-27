@@ -398,11 +398,14 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				if (ped_mgr.path_finder.run(pos, dest_pos, plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
 			}
 			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
-			vector3d const dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
+			vector3d dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
 			float const vmag(vel.mag()), dmag(dest_dir.mag());
 
 			if (vmag > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
-				vel  = (0.1*delta_dir/dmag)*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
+				dest_dir /= dmag; // normalize
+				// if destination is in exactly the opposite dir, pick an orthogonal direction using our SSN to decide which way deterministically
+				if (dot_product(dest_dir, vel)/vmag < -0.99) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
+				vel  = (0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
 				vel *= vmag / vel.mag(); // normalize to original velocity
 			}
 		}
