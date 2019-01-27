@@ -382,7 +382,7 @@ void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[
 
 bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, float radius) {
 	float const dist(p2p_dist(pdu.pos, center)), radius_at_dist(dist*pdu.sterm), rmod(radius_at_dist + radius);
-	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), radius_at_dist);
+	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
 
 void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
