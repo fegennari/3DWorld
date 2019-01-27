@@ -1606,7 +1606,7 @@ class city_road_gen_t : public road_gen_base_t {
 		void add_streetlights() {
 			streetlights.clear();
 			streetlights.reserve(4*plots.size()); // one on each side of each plot
-			float const b(-0.015), a(1.0 - b); // spacing from light pos to plot edge
+			float const b(STREETLIGHT_DIST_FROM_PLOT_EDGE), a(1.0 - b); // spacing from light pos to plot edge (placed just outside the plot, so spacing is negative)
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				streetlights.emplace_back(point((a*i->x1() + b*i->x2()), (0.75*i->y1() + 0.25*i->y2()), i->z2()), -plus_x); // left   edge one   quarter  up
@@ -1614,6 +1614,7 @@ class city_road_gen_t : public road_gen_base_t {
 				streetlights.emplace_back(point((0.25*i->x1() + 0.75*i->x2()), (a*i->y1() + b*i->y2()), i->z2()), -plus_y); // bottom edge three quarters right
 				streetlights.emplace_back(point((0.75*i->x1() + 0.25*i->x2()), (a*i->y2() + b*i->y1()), i->z2()),  plus_y); // top    edge one   quarter  right
 			}
+			sort_streetlights_by_yx();
 		}
 		void get_road_bcubes(vector<cube_t> &bcubes) const {
 			get_all_bcubes(roads,  bcubes);
@@ -2742,7 +2743,7 @@ bool ped_manager_t::check_isec_sphere_coll(pedestrian_t const &ped) const {
 	return road_gen.get_city(ped.city).check_isec_sphere_coll(ped.pos, ped.radius); // Note: no xlate is required since peds and city are in the same coord space
 }
 bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped) const {
-	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius, zero_vector);
+	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius);
 }
 
 // path finding

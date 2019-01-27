@@ -36,6 +36,7 @@ float const HEADLIGHT_ON_RAND    = 0.1;
 float const STREETLIGHT_ON_RAND  = 0.05;
 float const TUNNEL_WALL_THICK    = 0.25; // relative to radius
 float const TRACKS_WIDTH         = 0.5; // relative to road width
+float const STREETLIGHT_DIST_FROM_PLOT_EDGE = -0.015; // relative to plot width
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 
 extern double tfticks;
@@ -396,17 +397,18 @@ namespace streetlight_ns {
 	float const light_radius = 0.025;
 	float const light_dist   = 3.0;
 	float get_streetlight_height();
+	float get_streetlight_pole_radius();
 
 	struct streetlight_t {
 		point pos; // bottom point
 		vector3d dir;
 
 		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
+		bool operator<(streetlight_t const &s) const {return ((pos.y == s.pos.y) ? (pos.x < s.pos.x) : (pos.y < s.pos.y));} // compare y then x
 		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
 		point get_lpos() const;
 		void draw(draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const;
 		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
-		bool check_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const;
 		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const;
 		bool line_intersect(point const &p1, point const &p2, float &t) const;
 	};
@@ -418,9 +420,10 @@ struct streetlights_t {
 
 	void draw_streetlights(draw_state_t &dstate, bool shadow_only, bool always_on) const;
 	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
-	bool check_streetlight_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const;
+	bool check_streetlight_sphere_coll_xy(point const &center, float radius) const;
 	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const;
 	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const;
+	void sort_streetlights_by_yx() {sort(streetlights.begin(), streetlights.end());}
 };
 
 
@@ -619,6 +622,7 @@ struct pedestrian_t {
 	void move() {pos += vel*fticks;}
 	bool check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid) const;
 	bool check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
+	bool check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	bool is_valid_pos(vector<cube_t> const &colliders);
 	bool try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube) const;

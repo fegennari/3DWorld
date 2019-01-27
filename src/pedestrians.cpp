@@ -42,9 +42,20 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_
 	// FIXME: should only be at crosswalks
 	// set is_stopped if waiting at crosswalk
 	in_the_road = 1;
-	if (ped_mgr.check_isec_sphere_coll(*this)) return 0;
-	//if (ped_mgr.check_streetlight_sphere_coll(*this)) return 0; // FIXME
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
+}
+
+bool pedestrian_t::check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
+	if (!in_the_road) return 0;
+	float const plot_sz(max(plot_bcube.dx(), plot_bcube.dy())); // plot is almost square, so this is close enough
+	float const expand(-STREETLIGHT_DIST_FROM_PLOT_EDGE*plot_sz + streetlight_ns::get_streetlight_pole_radius() + radius); // max dist from plot edge where a collision can occur
+	cube_t pbce(plot_bcube), npbce(next_plot_bcube);
+	pbce.expand_by_xy(expand);
+	npbce.expand_by_xy(expand);
+	if ((!pbce.contains_pt_xy(pos)) && (!npbce.contains_pt_xy(pos))) return 0; // ped is too far from the edge of the road to collide with streetlights or stoplights
+	if (ped_mgr.check_isec_sphere_coll(*this)) return 1;
+	if (ped_mgr.check_streetlight_sphere_coll(*this)) return 1;
+	return 0;
 }
 
 bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-const because at_dest is modified
@@ -357,7 +368,12 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	is_stopped = at_crosswalk = in_the_road = 0;
 	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 
-	if (!collided && check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube) && is_valid_pos(colliders) && !check_ped_ped_coll(ped_mgr, peds, pid)) { // no collisions
+	if (collided) {} // already collided with a previous ped this frame, handled below
+	else if (!check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // outside the plot, treat as a collision with the plot bounds
+	else if (!is_valid_pos(colliders)) {collided = 1;} // collided with a static collider
+	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
+	else if (check_ped_ped_coll(ped_mgr, peds, pid)) {collided = 1;} // collided with another pedestrian
+	else { // no collisions
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
 		vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube));
 
@@ -387,7 +403,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		}
 		stuck_count = 0;
 	}
-	else { // collision
+	if (collided) { // collision
 		pos = prev_pos; // restore to previous valid pos
 
 		if (++stuck_count > 8) {
@@ -581,7 +597,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 void ped_manager_t::next_frame() {
 	if (!animate2) return;
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~3.2ms for 10K peds
+	//timer_t timer("Ped Update"); // ~3.4ms for 10K peds
 	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 	static bool first_frame(1);
 

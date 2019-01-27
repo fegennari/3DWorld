@@ -212,7 +212,8 @@ namespace stoplight_ns {
 
 namespace streetlight_ns {
 
-	float get_streetlight_height() {return light_height*city_params.road_width;}
+	float get_streetlight_height     () {return light_height*city_params.road_width;}
+	float get_streetlight_pole_radius() {return pole_radius *city_params.road_width;}
 
 	point streetlight_t::get_lpos() const {
 		float const height(get_streetlight_height());
@@ -227,7 +228,7 @@ namespace streetlight_ns {
 		float const dist_val(shadow_only ? 0.06 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 		if (dist_val > 0.2) return; // too far
 		if (!dstate.s.is_setup()) {dstate.s.begin_color_only_shader();} // likely only needed for shadow pass, could do better with this
-		float const pradius(pole_radius*city_params.road_width), lradius(light_radius*city_params.road_width);
+		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
 		int const ndiv(max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
 		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
 		if (!shadow_only) {dstate.s.set_cur_color(pole_color);}
@@ -269,21 +270,15 @@ namespace streetlight_ns {
 		dl_sources.push_back(light_source(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH)); // points down
 	}
 
-	bool streetlight_t::check_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const {
-		point const p2(pos + xlate);
-		float const pradius(pole_radius*city_params.road_width);
-		return dist_xy_less_than(p2, center, (pradius + radius));
-	}
-
 	bool streetlight_t::proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
 		point const p2(pos + xlate);
-		float const pradius(pole_radius*city_params.road_width);
+		float const pradius(get_streetlight_pole_radius());
 		if (!dist_xy_less_than(p2, center, (pradius + radius))) return 0;
 		return sphere_vert_cylin_intersect(center, radius, cylinder_3dw(p2, (p2 + vector3d(0.0, 0.0, get_streetlight_height())), pradius, 0.7*pradius), cnorm);
 	}
 
 	bool streetlight_t::line_intersect(point const &p1, point const &p2, float &t) const {
-		float const pradius(pole_radius*city_params.road_width);
+		float const pradius(get_streetlight_pole_radius());
 		float t_new(0.0);
 		if (line_int_cylinder(p1, p2, pos, (pos + vector3d(0.0, 0.0, get_streetlight_height())), pradius, 0.7*pradius, 0, t_new) && t_new < t) {t = t_new; return 1;}
 		return 0;
@@ -306,14 +301,17 @@ void streetlights_t::add_streetlight_dlights(vector3d const &xlate, cube_t &ligh
 
 bool streetlights_t::proc_streetlight_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-		if (i->proc_sphere_coll(center, radius, xlate, cnorm)) return 1;
+		if (i->proc_sphere_coll(center, radius, xlate, cnorm)) return 1; // TODO: optimize this like we did with check_streetlight_sphere_coll_xy() below
 	}
 	return 0;
 }
 
-bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float radius, vector3d const &xlate) const {
+bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float radius) const {
+	float const pradius(streetlight_ns::get_streetlight_pole_radius()), rtot(pradius + radius), y_end(center.y + rtot);
+
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-		if (i->check_sphere_coll_xy(center, radius, xlate)) return 1;
+		if (i->pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
+		if (dist_xy_less_than(i->pos, center, rtot)) return 1;
 	}
 	return 0;
 }
@@ -601,6 +599,7 @@ void road_connector_t::add_streetlights(unsigned num_per_side, bool staggered, f
 		if (!staggered || (n&1) == 0) {streetlights.emplace_back(pos1,  dir);}
 		if (!staggered || (n&1) == 1) {streetlights.emplace_back(pos2, -dir);}
 	} // for n
+	sort_streetlights_by_yx();
 }
 
 
