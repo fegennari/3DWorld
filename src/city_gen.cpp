@@ -2246,7 +2246,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		bool mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const {
 			road_isec_t const *isec(find_isec_containing_pt(pos, 1, 3)); // 2-way can be skipped because there's no light/crosswalk
-			if (isec == nullptr) return 0;
+			if (isec == nullptr) return 0; // ped not at a crosswalk, maybe crossing in the middle of the street; this is okay for now, nothing else to do in this case
 			isec->stoplight.mark_crosswalk_in_use(dim, dir);
 			return 1;
 		}

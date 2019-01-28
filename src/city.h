@@ -607,19 +607,22 @@ struct pedestrian_t {
 
 	point pos, target_pos;
 	vector3d vel, dir;
-	float radius;
+	float radius, speed;
 	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city, model_id, ssn, colliding_ped;
 	unsigned char stuck_count;
 	bool collided, ped_coll, is_stopped, in_the_road, at_crosswalk, at_dest, destroyed;
 
-	pedestrian_t(float radius_) : pos(all_zeros), target_pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_), plot(0), next_plot(0), dest_plot(0),
+	pedestrian_t(float radius_) : pos(all_zeros), target_pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_), speed(0.0), plot(0), next_plot(0), dest_plot(0),
 		dest_bldg(0), city(0), model_id(0), ssn(0), colliding_ped(0), stuck_count(0), collided(0), ped_coll(0), is_stopped(0), in_the_road(0), at_crosswalk(0), at_dest(0), destroyed(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
 	bool target_valid() const {return (target_pos != all_zeros);}
+	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move() {pos += vel*fticks;}
+	void stop();
+	void go();
 	bool check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir);
 	bool check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	bool check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);

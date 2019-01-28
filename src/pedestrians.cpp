@@ -23,9 +23,19 @@ string pedestrian_t::get_name() const {
 
 string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
-	oss << get_name() << ": " << TXTn(ssn) << TXT(vel.mag()) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
+	oss << get_name() << ": " << TXTn(ssn) << TXT(speed) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
 		<< TXTi(stuck_count) << TXT(collided) << TXT(in_the_road) << TXT(at_dest) << TXT(target_valid()); // Note: pos, vel, dir not printed
 	return oss.str();
+}
+
+void pedestrian_t::stop() {
+	//dir = vel.get_norm(); // ???
+	vel = zero_vector;
+	is_stopped = 1;
+}
+void pedestrian_t::go() {
+	vel = dir * speed; // assumes dir is correct
+	is_stopped = 0;
 }
 
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
@@ -39,9 +49,9 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_
 		next_plot = ped_mgr.get_next_plot(*this);
 		return 1;
 	}
-	// FIXME: should only be at crosswalks
 	// set is_stopped if waiting at crosswalk
-	in_the_road = 1;
+	in_the_road  = 1;
+	at_crosswalk = 1; // FIXME: should only be at crosswalks; but if we actually are at a crosswalk, this is the correct thing to do
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
 }
 
@@ -88,7 +98,7 @@ void register_ped_coll(pedestrian_t &p1, pedestrian_t &p2, unsigned pid1, unsign
 
 bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
 	assert(pid < peds.size());
-	float const timestep(2.0*TICKS_PER_SECOND), vmag(vel.mag()), lookahead_dist(timestep*vmag); // how far we can travel in 2s
+	float const timestep(2.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 2s
 	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
 
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
@@ -100,7 +110,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_
 			if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
 #if 0
 			// not colliding but close FIXME: need this in the code below as well
-			if (vmag < TOLERANCE) continue; // stopped, don't need to run code below (avoid div-by-zero)
+			if (speed < TOLERANCE) continue; // stopped, don't need to run code below (avoid div-by-zero)
 			vector3d const delta(i->pos - pos);
 			if (dot_product(vel, delta) < 0.0) continue; // traveling away from this ped, no collision
 			point const pos2(pos + vel*timestep), ipos2(i->pos + i->vel*timestep);
@@ -110,15 +120,14 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_
 
 			if (fabs(cp_mag) < TOLERANCE) { // lines are parallel
 				if (dot_product(vel, i->vel) > 0.0) { // other ped is in front of us moving in the same direction; else other ped is opposite us
-					if (i->vel.mag() >= vmag) continue; // other ped is moving faster, no collision
+					if (i->speed >= speed) continue; // other ped is moving faster, no collision
 				}
 				vector3d const v_para(a*(dot_product(a, delta)/a.mag_sq())), v_perp(delta - v_para);
 				float const dmin(v_perp.mag());
 				if (dmin > r_sum) continue; // no collision
 				point const pos2(pos2 - v_perp*((r_sum - dmin)/dmin)); // move away from other ped in perp direction using normalized v_perp by enough to avoid a collision
 				vector3d const dest_dir((pos2 - pos).get_norm());
-				vel  = (0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // blend in direction change (turn)
-				vel *= vmag / vel.mag(); // normalize to original velocity
+				set_velocity((0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/speed)*vel); // blend in direction change (turn)
 			}
 			float const dmin(fabs(dot_product_ptv(cp, i->pos, pos))/cp_mag);
 			if (dmin > r_sum) continue; // no collision
@@ -436,14 +445,13 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			}
 			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
-			float const vmag(vel.mag()), dmag(dest_dir.mag());
+			float const dmag(dest_dir.mag());
 
-			if (vmag > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
+			if (speed > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
 				dest_dir /= dmag; // normalize
 				// if destination is in exactly the opposite dir, pick an orthogonal direction using our SSN to decide which way deterministically
-				if (dot_product(dest_dir, vel)/vmag < -0.99) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
-				vel  = (0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/vmag)*vel; // slowly blend in destination dir (to avoid sharp direction changes)
-				vel *= vmag / vel.mag(); // normalize to original velocity
+				if (dot_product(dest_dir, vel)/speed < -0.99) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
+				set_velocity((0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/speed)*vel); // slowly blend in destination dir (to avoid sharp direction changes)
 			}
 		}
 		stuck_count = 0;
@@ -467,12 +475,12 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
 			if (dot_product(vel, new_dir) > 0.0) {new_dir *= -1.0;} // negate if pointing in the same dir
 		}
-		vel = new_dir * (vel.mag()/new_dir.mag()); // normalize to original velocity
+		set_velocity(new_dir);
 		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
 	}
 	if (vel != zero_vector) { // if stopped, don't update dir
 		if (!collided && target_valid()) {delta_dir = min(1.0f, 4.0f*delta_dir);} // use a tighter turning radius when there's an unobstructed target_pos
-		dir = (delta_dir/vel.mag())*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
+		dir = (delta_dir/speed)*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
 		dir.normalize();
 	}
 	collided = ped_coll = 0; // reset for next frame
@@ -512,8 +520,10 @@ void ped_manager_t::init(unsigned num) {
 		pedestrian_t ped(radius); // start with a constant radius
 
 		if (gen_ped_pos(ped)) {
-			if (city_params.ped_speed > 0.0) {ped.vel = rgen.signed_rand_vector_spherical_xy().get_norm()*(city_params.ped_speed*rgen.rand_uniform(0.5, 1.0));}
-
+			if (city_params.ped_speed > 0.0) {
+				ped.speed = city_params.ped_speed*rgen.rand_uniform(0.5, 1.0);
+				ped.vel   = rgen.signed_rand_vector_spherical_xy().get_norm()*ped.speed;
+			}
 			if (num_models > 0) {
 				ped.model_id = rgen.rand()%num_models;
 				ped.radius  *= ped_model_loader.get_model(ped.model_id).scale;
