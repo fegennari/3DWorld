@@ -626,6 +626,30 @@ bool car_manager_t::line_intersect_cars(point const &p1, point const &p2, float 
 	return ret;
 }
 
+bool car_manager_t::has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time) const {
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		if (cb->cur_city != city_ix) continue; // incorrect city - skip
+		unsigned const start(cb->start), end(cb->first_parked);
+		assert(end <= cars.size() && start <= end);
+		auto range_end(cars.begin()+end);
+		car_t ref_car; ref_car.cur_road = road_ix;
+		auto it(std::lower_bound(cars.begin()+start, range_end, ref_car, comp_car_road())); // binary search acceleration
+
+		for (; it != range_end; ++it) {
+			car_t const &c(*it);
+			//assert(c.cur_city == city_ix); // must be same city (but can fail as car update runs in a different thread, so we can't be too strict here)
+			if (c.cur_city != city_ix || c.cur_road != road_ix) break; // different road, done
+			if (c.dim != dim) continue; // wrong dim (can this happen?)
+			if (c.is_stopped() || c.stopped_at_light) continue; // not a threat (yet)
+			float const travel_dist(c.cur_speed*delta_time);
+			float lo(c.bcube.d[dim][0]), hi(c.bcube.d[dim][1]);
+			if (c.dir) {hi += travel_dist;} else {lo -= travel_dist;}
+			if (lo < pos[dim] && hi > pos[dim]) return 1; // overlaps current or future car in dim
+		} // for it
+	} // for cb
+	return 0;
+}
+
 int car_manager_t::find_next_car_after_turn(car_t &car) {
 	road_isec_t const &isec(get_car_isec(car));
 	if (car.turn_dir == TURN_NONE && !isec.is_global_conn_int()) return -1; // car not turning, and not on connector road isec: should be handled by sorted car_in_front logic

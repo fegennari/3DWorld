@@ -594,6 +594,7 @@ public:
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
 	car_t const *get_car_at(point const &p1, point const &p2) const;
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
+	bool has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time) const;
 	void next_frame(float car_speed);
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
@@ -679,6 +680,7 @@ class ped_manager_t { // pedestrians
 		void assign(unsigned ped_ix_, unsigned plot_ix_) {ped_ix = ped_ix_; plot_ix = plot_ix_;}
 	};
 	city_road_gen_t const &road_gen;
+	car_manager_t const &car_manager; // used for ped road crossing safety
 	ped_model_loader_t ped_model_loader;
 	vector<pedestrian_t> peds;
 	vector<city_ixs_t> by_city; // first ped/plot index for each city
@@ -706,8 +708,10 @@ public:
 	bool choose_dest_building(pedestrian_t &ped);
 	unsigned get_next_plot(pedestrian_t &ped) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);
+	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time) const;
 public:
-	ped_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), selected_ped_ssn(-1), ped_destroyed(0), need_to_sort_peds(0) {}
+	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :
+		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), ped_destroyed(0), need_to_sort_peds(0) {}
 	static float get_ped_radius();
 	bool empty() const {return peds.empty();}
 	void clear() {peds.clear(); by_city.clear();}

@@ -2255,6 +2255,20 @@ class city_road_gen_t : public road_gen_base_t {
 			if (isec == nullptr) return 0;
 			return isec->check_sphere_coll(pos, radius);
 		}
+		int get_nearby_road_ix(point const &pos, bool road_dim) const {
+			for (auto r = roads.begin(); r != roads.end(); ++r) {
+				if (r->dim != road_dim) continue;
+				cube_t bcube(*r);
+				bcube.expand_by_xy(0.01*city_params.road_width); // expand slightly to pick up roads that are adjacent to this point
+				if (bcube.contains_pt_xy(pos)) {return r->road_ix;}
+			}
+			return -1; // should never get here, but occasionally can due to bad collisions between peds, floating-point error, etc.
+			// debug printouts below
+			cout << "pos: " << pos.str() << ", dim: " << road_dim << endl;
+			for (auto r = roads.begin(); r != roads.end(); ++r) {cout << TXT(r->dim) << "bcube: " << r->str() << endl;}
+			assert(0);
+			return -1;
+		}
 	}; // road_network_t
 
 	vector<road_network_t> road_networks; // one per city
@@ -2743,6 +2757,12 @@ bool ped_manager_t::check_isec_sphere_coll(pedestrian_t const &ped) const {
 bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped) const {
 	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius);
 }
+bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time) const {
+	int const road_ix(road_gen.get_city(ped.city).get_nearby_road_ix(ped.pos, road_dim));
+	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
+	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
+	return car_manager.has_nearby_car(ped.pos, ped.city, road_ix, road_dim, delta_time);
+}
 
 // path finding
 bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const
@@ -2764,7 +2784,7 @@ class city_gen_t : public city_plot_gen_t {
 	float light_radius_scale;
 
 public:
-	city_gen_t() : car_manager(road_gen), ped_manager(road_gen), lights_bcube(all_zeros), light_radius_scale(1.0) {}
+	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager), lights_bcube(all_zeros), light_radius_scale(1.0) {}
 
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		unsigned x1(0), y1(0), x2(0), y2(0);
