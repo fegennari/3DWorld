@@ -24,7 +24,7 @@ string pedestrian_t::get_name() const {
 string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
 	oss << get_name() << ": " << TXTn(ssn) << TXT(speed) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
-		<< TXTi(stuck_count) << TXT(collided) << TXT(in_the_road) << TXT(at_dest) << TXT(target_valid()); // Note: pos, vel, dir not printed
+		<< TXTi(stuck_count) << TXT(collided) << TXTn(in_the_road) << TXT(is_stopped) << TXT(at_dest) << TXT(target_valid()); // Note: pos, vel, dir not printed
 	return oss.str();
 }
 
@@ -36,6 +36,11 @@ void pedestrian_t::stop() {
 void pedestrian_t::go() {
 	vel = dir * speed; // assumes dir is correct
 	is_stopped = 0;
+}
+
+float get_sidewalk_width(cube_t const &plot_bcube) { // Note: technically should depend on road_width rather than plot size?
+	float const plot_sz(max(plot_bcube.dx(), plot_bcube.dy())); // plot is almost square, so this is close enough
+	return -STREETLIGHT_DIST_FROM_PLOT_EDGE*plot_sz + streetlight_ns::get_streetlight_pole_radius();
 }
 
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
@@ -57,8 +62,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_
 
 bool pedestrian_t::check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	if (!in_the_road) return 0;
-	float const plot_sz(max(plot_bcube.dx(), plot_bcube.dy())); // plot is almost square, so this is close enough
-	float const expand(-STREETLIGHT_DIST_FROM_PLOT_EDGE*plot_sz + streetlight_ns::get_streetlight_pole_radius() + radius); // max dist from plot edge where a collision can occur
+	float const expand(get_sidewalk_width(plot_bcube) + radius); // max dist from plot edge where a collision can occur
 	cube_t pbce(plot_bcube), npbce(next_plot_bcube);
 	pbce.expand_by_xy(expand);
 	npbce.expand_by_xy(expand);
@@ -69,10 +73,7 @@ bool pedestrian_t::check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bc
 }
 
 bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-const because at_dest is modified
-	if (in_the_road) {
-		// FIXME: check for car collisions if not crossing at a crosswalk?
-		return 1; // not in a plot, no collision detection needed
-	}
+	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
@@ -360,8 +361,10 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 
 // pedestrian_t
 point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube) const {
-	if (plot == dest_plot) {
-		if (!at_dest) {
+	if (is_stopped && target_valid()) {return target_pos;} // stay the course (this case only needed for debug drawing)
+
+	if (plot == dest_plot) { // this plot contains our dest building
+		if (!at_dest) { // not there yet
 			cube_t const dest_bcube(get_building_bcube(dest_bldg));
 			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // could set this here, but requiring a collision also works
 			point dest_pos(dest_bcube.get_cube_center()); // slowly adjust dir to move toward dest_bldg
