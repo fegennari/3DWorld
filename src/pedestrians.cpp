@@ -843,9 +843,9 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					bool const low_detail(!shadow_only && !dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)); // low detail for non-shadow pass at half draw dist
 					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
 				}
-				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow (FIXME: don't show up on parking lots?)
+				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow
 					float const ao_radius(0.6*ped.radius);
-					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.02*ped.radius); // at the feet
+					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.05*ped.radius); // at the feet
 					point pao[4];
 					
 					for (unsigned i = 0; i < 4; ++i) {
