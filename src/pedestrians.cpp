@@ -375,12 +375,26 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 	}
 	else if (next_plot != plot) { // move toward next plot
 		if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
-			point dest_pos(next_plot_bcube.closest_pt(pos));
+			bool const in_cur_plot(plot_bcube.contains_pt_xy(pos));
+			point dest_pos(pos);
 			// FIXME: should cross at intersection, not in the middle of the street; find closest crosswalk (corner of plot_bcube) to dest_pos
+			// while the code below is correct, it tends to make peds collide with the stoplight and each other and never actually reach their destinations,
+			// so we allow peds to cross the street wherever they want until at the very least the stoplights can be moved
+			if (0) { // closest corner (crosswalk)
+				cube_t const &cube(in_cur_plot ? plot_bcube : next_plot_bcube); // target the corner of the current plot, then the corner of the next plot
+				float const val((in_cur_plot ? 0.01 : -0.01)*city_params.road_width); // slightly outside the cur plot / inside the next plot, to ensure a proper transition
 
-			if (!plot_bcube.contains_pt_xy(pos)) { // went outside the current plot
-				point const closest_pos(plot_bcube.closest_pt(pos));
-				if (dot_product((pos - dest_pos), (pos - closest_pos)) > 0.0) {dest_pos = closest_pos;} // went outside on the wrong side, go back inside the current plot
+				for (unsigned d = 0; d < 2; ++d) { // x,y
+					dest_pos[d] = (((pos[d] - cube.d[d][0]) < (cube.d[d][1] - pos[d])) ? (cube.d[d][0] - val) : (cube.d[d][1] + val));
+				}
+			}
+			else { // closest point
+				dest_pos = next_plot_bcube.closest_pt(pos);
+			}
+			if (!in_cur_plot) { // went outside the current plot
+				cube_t union_plot_bcube(plot_bcube);
+				union_plot_bcube.union_with_cube(next_plot_bcube);
+				if (!union_plot_bcube.contains_pt_xy(pos)) {dest_pos = plot_bcube.closest_pt(pos);} // went outside on the wrong side, go back inside the current plot
 			}
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
@@ -403,6 +417,23 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const 
 	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by_xy(expand);} // expand colliders as well
 }
 
+void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube) {
+	if (0 && in_the_road) {
+		float const sw_width(get_sidewalk_width(plot_bcube));
+
+		if (dist_less_than(pos, plot_bcube.closest_pt(pos), sw_width)) {
+			// just exited the plot and about the cross the road - check for cars; use speed rather than vel in case we're already stopped and vel==zero_vector
+			float const dx(min((pos.x - plot_bcube.x1()), (plot_bcube.x2() - pos.x))), dy(min((pos.y - plot_bcube.y1()), (plot_bcube.y2() - pos.y)));
+			bool const road_dim(dx < dy); // if at crosswalk, need to know which direction/road the ped is crossing
+			float const time_to_cross((city_params.road_width - 2.0*sw_width)/speed); // road area where cars can drive excluding sidewalks on each side
+			//cout << "plot_bcube: " << plot_bcube.str() << " " << TXT(dx) << TXT(dy) << TXT(road_dim) << TXT(time_to_cross) << endl;
+			if (ped_mgr.has_nearby_car(*this, road_dim, time_to_cross)) {stop(); return;}
+		}
+	}
+	if (is_stopped) {go();}
+	pos += vel*fticks;
+}
+
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed) return; // destroyed
 	//assert(!is_nan(pos));
@@ -418,8 +449,9 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
 	point const prev_pos(pos); // assume this ped starts out not colliding
-	if (!is_stopped) {move();}
-	is_stopped = at_crosswalk = in_the_road = 0;
+	move(ped_mgr, plot_bcube);
+	if (is_stopped) {collided = ped_coll = 0; return;} // ignore any collisions and just stand there, keeping the same target_pos; will go when path is clear
+	at_crosswalk = in_the_road = 0; // reset state for next frame; these may be set back to 1 below
 	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
@@ -443,8 +475,10 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			if (at_dest || update_path) {
 				get_avoid_cubes(ped_mgr, colliders, dest_pos, ped_mgr.path_finder.get_avoid_vector());
 				target_pos = all_zeros;
+				cube_t union_plot_bcube(plot_bcube);
+				union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
 				// run path finding between pos and dest_pos using avoid cubes
-				if (ped_mgr.path_finder.run(pos, dest_pos, plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
+				if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
 			}
 			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
@@ -713,8 +747,10 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (dest_pos == pos) return; // no path, nothing to draw
 	path_finder_t path_finder(1); // debug=1
 	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
+	cube_t union_plot_bcube(plot_bcube);
+	union_plot_bcube.union_with_cube(next_plot_bcube);
 	vector<point> path;
-	unsigned const ret(path_finder.run(pos, dest_pos, plot_bcube, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
+	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
 	colorRGBA line_color((plot == dest_plot) ? RED : YELLOW); // paths
 	colorRGBA node_color(path_finder.found_complete_path() ? YELLOW : ORANGE);
 	

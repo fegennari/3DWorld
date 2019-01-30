@@ -621,7 +621,7 @@ struct pedestrian_t {
 	string str() const;
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
-	void move() {pos += vel*fticks;}
+	void move(ped_manager_t &ped_mgr, cube_t const &plot_bcube);
 	void stop();
 	void go();
 	bool check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir);
