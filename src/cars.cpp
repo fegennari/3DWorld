@@ -312,6 +312,15 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 }
 
 
+void ao_draw_state_t::draw_ao_qbd() {
+	if (ao_qbd.empty()) return;
+	enable_blend();
+	select_texture(BLUR_CENT_TEX);
+	ao_qbd.draw_and_clear();
+	select_texture(WHITE_TEX); // reset back to default/untextured
+	disable_blend();
+}
+
 void car_draw_state_t::occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
 	pos_dir_up near_pdu(pdu);
@@ -342,12 +351,7 @@ void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool 
 
 void car_draw_state_t::draw_unshadowed() {
 	qbds[0].draw_and_clear();
-	if (qbds[2].empty()) return;
-	enable_blend();
-	select_texture(BLUR_CENT_TEX);
-	qbds[2].draw_and_clear();
-	select_texture(WHITE_TEX); // reset back to default/untextured
-	disable_blend();
+	draw_ao_qbd();
 }
 
 void car_draw_state_t::add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube) {
@@ -437,7 +441,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlig
 		vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
 		for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
 		}*/
-		qbds[2].add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
+		ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
 	}
 	if (dist_val > 0.3)  return; // to far - no lights to draw
 	if (shadow_only || car.is_parked()) return; // no lights when parked, or in shadow pass

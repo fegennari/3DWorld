@@ -843,6 +843,19 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					bool const low_detail(!shadow_only && !dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)); // low detail for non-shadow pass at half draw dist
 					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
 				}
+				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow (FIXME: don't show up on parking lots?)
+					float const ao_radius(0.6*ped.radius);
+					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.02*ped.radius); // at the feet
+					point pao[4];
+					
+					for (unsigned i = 0; i < 4; ++i) {
+						point &v(pao[i]);
+						v.x = ped.pos.x + (((i&1)^(i>>1)) ? -ao_radius : ao_radius);
+						v.y = ped.pos.y + ((i>>1)         ? -ao_radius : ao_radius);
+						v.z = zval;
+					}
+					dstate.ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.4), plus_z);
+				}
 			} // for i
 		} // for plot
 	} // for city
@@ -861,7 +874,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 		}
 		assert(selected_ped); // must be found
 	}
-	dstate.end_draw();
+	dstate.post_draw();
 	if (selected_ped) {selected_ped->debug_draw(*this);}
 	fgPopMatrix();
 	dstate.show_label_text();

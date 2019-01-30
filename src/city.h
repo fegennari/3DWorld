@@ -527,7 +527,13 @@ public:
 	void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only);
 }; // road_draw_state_t
 
-class car_draw_state_t : public draw_state_t {
+struct ao_draw_state_t : public draw_state_t {
+	quad_batch_draw ao_qbd;
+	void draw_ao_qbd();
+	virtual void draw_unshadowed() {draw_ao_qbd();}
+};
+
+class car_draw_state_t : public ao_draw_state_t {
 
 	class occlusion_checker_t {
 		building_occlusion_state_t state;
@@ -536,7 +542,7 @@ class car_draw_state_t : public draw_state_t {
 		bool is_occluded(cube_t const &c);
 	};
 
-	quad_batch_draw qbds[3]; // unshadowed, shadowed, AO
+	quad_batch_draw qbds[2]; // unshadowed, shadowed
 	car_model_loader_t &car_model_loader;
 	occlusion_checker_t occlusion_checker;
 public:
@@ -687,7 +693,7 @@ class ped_manager_t { // pedestrians
 	vector<unsigned> by_plot;
 	vector<unsigned char> need_to_sort_city;
 	rand_gen_t rgen;
-	draw_state_t dstate;
+	ao_draw_state_t dstate;
 	int selected_ped_ssn;
 	bool ped_destroyed, need_to_sort_peds;
 
