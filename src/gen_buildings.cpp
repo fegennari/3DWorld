@@ -1478,6 +1478,16 @@ class building_creator_t {
 		bix_by_x1(vector<building_t> const &buildings_) : buildings(buildings_) {}
 		bool operator()(unsigned const a, unsigned const b) const {return (buildings[a].bcube.x1() < buildings[b].bcube.x1());}
 	};
+	unsigned get_grid_ix(point pos) const {
+		range.clamp_pt(pos);
+		unsigned gxy[2];
+		for (unsigned d = 0; d < 2; ++d) {
+			float const v((pos[d] - range.d[d][0])*range_sz_inv[d]);
+			gxy[d] = unsigned(v*(grid_sz-1));
+			assert(gxy[d] < grid_sz);
+		}
+		return (gxy[0]*grid_sz + gxy[1]);
+	}
 	void get_grid_range(cube_t const &bcube, unsigned ixr[2][2]) const { // {lo,hi}x{x,y}
 		point llc(bcube.get_llc()), urc(bcube.get_urc());
 		range.clamp_pt(llc);
@@ -1835,6 +1845,27 @@ public:
 		return coll;
 	}
 
+	// Note: we can get building_id by calling check_ped_coll() or get_building_bcube_at_pos()
+	bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) const { // Note: not thread safe sue to static points
+		assert(building_id < buildings.size());
+		static vector<point> points; // reused across calls
+		float t_new(1.0);
+		return buildings[building_id].check_line_coll(p1, p2, zero_vector, t_new, points, 0, 1);
+	}
+
+	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe sue to static points
+		if (empty()) return -1;
+		unsigned const gix(get_grid_ix(pos));
+		grid_elem_t const &ge(grid[gix]);
+		if (ge.ixs.empty() || !ge.bcube.contains_pt(pos)) return -1; // skip empty or non-containing grid
+		static vector<point> points; // reused across calls
+
+		for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
+			if (get_building(*b).bcube.contains_pt(pos)) {return *b;} // found
+		}
+		return -1;
+	}
+
 	bool check_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe sue to static points
 		if (empty()) return 0;
 		assert(plot_id < bix_by_plot.size());
@@ -1931,6 +1962,8 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt);
 }
 cube_t get_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);}
+bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator.check_line_coll_building(p1, p2, building_id);}
+int get_building_bcube_contains_pos(point const &pos) {return building_creator.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator.select_building_in_plot(plot_id, rand_val, building_id);}
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied

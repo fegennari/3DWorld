@@ -109,6 +109,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_
 		if (dist_xy_less_than(pos, i->pos, prox_radius)) { // proximity test
 			float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 			if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
+			// TODO: maybe can try a repulsive force approach
 #if 0
 			// not colliding but close FIXME: need this in the code below as well
 			if (speed < TOLERANCE) continue; // stopped, don't need to run code below (avoid div-by-zero)
@@ -334,23 +335,27 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 	else { // if there are any other cubes containing pos, move away from this cube; could be initial ped positions, ped pushed by a collision, or some other problem
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->contains_pt_xy(pos)) continue;
+			int const building_id(get_building_bcube_contains_pos(pos));
 			point new_pos;
 			float dmin(0.0);
 
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {
 					float const edge(i->d[dim][dir]), dist(abs(pos[dim] - edge));
-					if (dmin == 0.0 || dist < dmin) {
-						new_pos = pos;
-						new_pos[dim] = i->d[dim][dir];
-						dmin = dist;
-					}
-				}
+					if (dmin > 0.0 && dist >= dmin) continue; // not a better direction
+					point cand_pos(pos);
+					cand_pos[dim] = i->d[dim][dir];
+					if (building_id >= 0 && check_line_coll_building(pos, cand_pos, building_id)) continue; // this dir intersects the building
+					new_pos = cand_pos;
+					dmin    = dist; // valid direction
+				} // for dir
+			} // for dim
+			if (dmin > 0.0) { // new_pos is valid
+				pos = new_pos;
+				next_pt_ix = 0; // start at the new pos
+				break; // at most one cube should contain pos
 			}
-			pos = new_pos;
-			next_pt_ix = 0; // start at the new pos
-			break; // at most one cube should contain pos
-		}
+		} // for i
 	}
 	if (!find_best_path()) return 0; // if we fail to find a path, leave new_dest unchanged
 	vector<point> const &path(get_best_path());
