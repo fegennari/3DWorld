@@ -97,56 +97,35 @@ void register_ped_coll(pedestrian_t &p1, pedestrian_t &p2, unsigned pid1, unsign
 	p2.collided = p2.ped_coll = 1; p2.colliding_ped = pid1;
 }
 
-bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
-	assert(pid < peds.size());
-	float const timestep(2.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 2s
-	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
-
-	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped after this one
-		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
+bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
+	for (auto i = peds.begin()+ped_start; i != peds.end(); ++i) { // check every ped until we exit target_plot
+		if (i->plot != target_plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		if (ssn == i->ssn) continue; // Note: ssn check should not be required but is here for safety
 
 		if (dist_xy_less_than(pos, i->pos, prox_radius)) { // proximity test
 			float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 			if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
-			// TODO: maybe can try a repulsive force approach
-#if 0
-			// not colliding but close FIXME: need this in the code below as well
-			if (speed < TOLERANCE) continue; // stopped, don't need to run code below (avoid div-by-zero)
-			vector3d const delta(i->pos - pos);
-			if (dot_product(vel, delta) < 0.0) continue; // traveling away from this ped, no collision
-			point const pos2(pos + vel*timestep), ipos2(i->pos + i->vel*timestep);
-			// see line_line_dist()
-			vector3d const a(pos2 - pos), b(ipos2 - i->pos), cp(cross_product(a, b));
-			float const cp_mag(cp.mag());
-
-			if (fabs(cp_mag) < TOLERANCE) { // lines are parallel
-				if (dot_product(vel, i->vel) > 0.0) { // other ped is in front of us moving in the same direction; else other ped is opposite us
-					if (i->speed >= speed) continue; // other ped is moving faster, no collision
-				}
-				vector3d const v_para(a*(dot_product(a, delta)/a.mag_sq())), v_perp(delta - v_para);
-				float const dmin(v_perp.mag());
-				if (dmin > r_sum) continue; // no collision
-				point const pos2(pos2 - v_perp*((r_sum - dmin)/dmin)); // move away from other ped in perp direction using normalized v_perp by enough to avoid a collision
-				vector3d const dest_dir((pos2 - pos).get_norm());
-				set_velocity((0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/speed)*vel); // blend in direction change (turn)
-			}
-			float const dmin(fabs(dot_product_ptv(cp, i->pos, pos))/cp_mag);
-			if (dmin > r_sum) continue; // no collision
-			// FIXME: handle this case
-#endif
+			vector3d const delta(pos - i->pos);
+			float const dist(delta.mag()), fmag(1.0/(dist - 0.9*r_sum));
+			force += delta*fmag;
 		}
 	} // for i
+	return 0;
+}
+bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
+	assert(pid < peds.size());
+	float const timestep(1.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 1s
+	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
+	vector3d force(zero_vector);
+	if (check_ped_ped_coll_range(peds, pid, pid+1, plot, prox_radius, force)) return 1;
+
 	if (in_the_road && next_plot != plot) {
 		// need to check for coll between two peds crossing the street from different sides, since they won't be in the same plot while in the street
 		unsigned const ped_ix(ped_mgr.get_first_ped_at_plot(next_plot));
 		assert(ped_ix <= peds.size()); // could be at the end
-
-		for (auto i = peds.begin()+ped_ix; i != peds.end(); ++i) { // check every ped in next_plot
-			if (i->plot != next_plot) break; // moved to a new plot, no collision, done
-			if (dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision (using a smaller radius)
-		}
+		if (check_ped_ped_coll_range(peds, pid, ped_ix, next_plot, prox_radius, force)) return 1;
 	}
+	if (force != zero_vector) {set_velocity((0.02*delta_dir)*force + ((1.0 - delta_dir)/speed)*vel);} // apply ped repulsive force
 	return 0;
 }
 
