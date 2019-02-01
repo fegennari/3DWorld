@@ -101,20 +101,27 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 	for (auto i = peds.begin()+ped_start; i != peds.end(); ++i) { // check every ped until we exit target_plot
 		if (i->plot != target_plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		if (ssn == i->ssn) continue; // Note: ssn check should not be required but is here for safety
-
-		if (dist_xy_less_than(pos, i->pos, prox_radius)) { // proximity test
-			float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
-			if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
-			vector3d const delta(pos - i->pos);
-			float const dist(delta.mag()), fmag(1.0/(dist - 0.9*r_sum));
-			force += delta*fmag;
-		}
+		if (!dist_xy_less_than(pos, i->pos, prox_radius)) continue; // proximity test
+		float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
+		if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
+		if (speed < TOLERANCE) continue;
+		vector3d const delta_v(vel - i->vel), delta_p(pos - i->pos);
+		float const dp(-dot_product(delta_v, delta_p));
+		if (dp <= 0.0) continue; // diverging, no avoidance needed
+		float const dv_mag(delta_v.mag()), dist(delta_p.mag()), fmag(dist/(dist - 0.9*r_sum));
+		if (dv_mag < TOLERANCE) continue;
+		vector3d const rejection(delta_p - (dp/(dv_mag*dv_mag))*delta_v); // component of velocity perpendicular to delta_p (avoid dir)
+		float const rmag(rejection.mag()), rel_vel(max(dv_mag/speed, 0.5f)); // higher when peds are converging
+		if (rmag < TOLERANCE) continue;
+		float const force_mult(dp/(dv_mag*dist)); // stronger with head-on collisions
+		force += rejection*(rel_vel*force_mult*fmag/rmag);
+		//cout << TXT(r_sum) << TXT(dist) << TXT(fmag) << ", dv: " << delta_v.str() << ", dp: " << delta_p.str() << ", rej: " << rejection.str() << ", force: " << force.str() << endl;
 	} // for i
 	return 0;
 }
 bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
 	assert(pid < peds.size());
-	float const timestep(1.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 1s
+	float const timestep(2.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 2s
 	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
 	vector3d force(zero_vector);
 	if (check_ped_ped_coll_range(peds, pid, pid+1, plot, prox_radius, force)) return 1;
@@ -125,7 +132,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_
 		assert(ped_ix <= peds.size()); // could be at the end
 		if (check_ped_ped_coll_range(peds, pid, ped_ix, next_plot, prox_radius, force)) return 1;
 	}
-	if (force != zero_vector) {set_velocity((0.02*delta_dir)*force + ((1.0 - delta_dir)/speed)*vel);} // apply ped repulsive force
+	if (force != zero_vector) {set_velocity((0.1*delta_dir)*force + ((1.0 - delta_dir)/speed)*vel);} // apply ped repulsive force
 	return 0;
 }
 
