@@ -663,16 +663,10 @@ bool car_manager_t::has_nearby_car(point const &pos, float radius, unsigned city
 			if (c.dir) {hi += travel_dist;} else {lo -= travel_dist;}
 			//assert(lo < hi); // logically correct, but can fail when car pos is updated in the other thread
 			bool const overlaps(lo < pos_max && hi > pos_min); // overlaps current or future car in dim
+			// see if this car has a car in front of it; if so, this car may be the nearest; if it's stopped, then this car will need to stop as well
+			if (it != range_start && is_other_car_closer_to(c, *(it-1), pos)) continue; // prev car is closer than c
+			if (it+1 != range_end && is_other_car_closer_to(c, *(it+1), pos)) continue; // next car is closer than c
 			
-			if (overlaps) { // see if this car has a car in front of it; if so, this car may be the nearest; if it's stopped, then this car will need to stop as well
-				if (c.car_in_front) {
-					if (is_other_car_closer_to(c, *c.car_in_front, pos)) continue; // cf is closer than c
-				}
-				else { // no car in front, look before and after this car in the cars vector
-					if (it != range_start && is_other_car_closer_to(c, *(it-1), pos)) continue; // prev car is closer than c
-					if (it+1 != range_end && is_other_car_closer_to(c, *(it+1), pos)) continue; // next car is closer than c
-				}
-			}
 			if (dbg_cubes) {
 				cube_t cube(c.bcube);
 				cube.d[dim][0] = lo; cube.d[dim][1] = hi;
