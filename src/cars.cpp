@@ -9,7 +9,6 @@
 #include <cfloat> // for FLT_MAX
 
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
-float const CAR_SPEED_SCALE  = 0.001;
 
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2;
@@ -113,7 +112,7 @@ void car_t::maybe_accelerate(float mult) {
 	accelerate(mult);
 }
 
-point car_t::get_front(float dval) const {
+point car_base_t::get_front(float dval) const {
 	point car_front(get_center());
 	car_front[dim] += (dir ? dval : -dval)*get_length(); // half length
 	return car_front;
@@ -540,6 +539,22 @@ void car_manager_t::finalize_cars() {
 	cout << "Total Cars: " << cars.size() << endl;
 }
 
+void car_city_vect_t::clear() {
+	for (unsigned d = 0; d < 2; ++d) {cars[d][0].clear(); cars[d][1].clear();}
+}
+
+void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const {
+	if (cars.empty()) return;
+	//timer_t timer("Extract Car Data");
+	for (auto i = cars_by_city.begin(); i != cars_by_city.end(); ++i) {i->clear();} // clear prev frame's state
+
+	for (auto i = cars.begin(); i != cars.end(); ++i) {
+		if (i->is_parked()) continue; // skip parked cars
+		if (i->cur_city >= cars_by_city.size()) {cars_by_city.resize(i->cur_city+1);}
+		cars_by_city[i->cur_city].cars[i->dim][i->dir].push_back(*i);
+	}
+}
+
 bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 	vector3d const xlate(get_camera_coord_space_xlate());
 	float const dist(p2p_dist(pos, p_last));
@@ -631,53 +646,6 @@ bool car_manager_t::line_intersect_cars(point const &p1, point const &p2, float 
 	return ret;
 }
 
-bool is_other_car_closer_to(car_t const &c, car_t const &cf, point const &pos) { // returns true if cf is closer than c to pos and in front of pos
-	if (cf.cur_city != c.cur_city || cf.cur_road != c.cur_road || cf.dim != c.dim || cf.dir != c.dir) return 0; // not on the same road/dir
-	if ((cf.bcube.d[c.dim][0] < c.bcube.d[c.dim][0]) == c.dir) return 0; // car is behind, not in front
-	if (c.dir) {return (cf.bcube.d[c.dim][0] < pos[c.dim]);}
-	else       {return (cf.bcube.d[c.dim][1] > pos[c.dim]);}
-}
-
-bool car_manager_t::has_nearby_car(point const &pos, float radius, unsigned city_ix, unsigned road_ix, bool dim, float delta_time, vector<cube_t> *dbg_cubes) const {
-	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-		if (cb->cur_city != city_ix) continue; // incorrect city - skip
-		unsigned const start(cb->start), end(cb->first_parked);
-		assert(end <= cars.size() && start <= end);
-		auto range_end(cars.begin()+end);
-		car_t ref_car; ref_car.cur_city = city_ix; ref_car.cur_road = road_ix;
-		auto range_start(std::lower_bound(cars.begin()+start, range_end, ref_car, comp_car_road())); // binary search acceleration
-		float const dist_mult(CAR_SPEED_SCALE*city_params.car_speed*delta_time), pos_min(pos[dim] - radius), pos_max(pos[dim] + radius);
-
-		for (auto it = range_start; it != range_end; ++it) {
-			car_t const &c(*it);
-			//assert(c.cur_city == city_ix); // must be same city (but can fail as car update runs in a different thread, so we can't be too strict here)
-			if (c.cur_city != city_ix || c.cur_road != road_ix) break; // different road, done
-			if (c.dim != dim) continue; // wrong dim (can this happen?)
-			float lo(c.bcube.d[dim][0]), hi(c.bcube.d[dim][1]), travel_dist(0.0);
-			
-			if (!c.is_stopped() && !c.stopped_at_light) { // moving
-				//float const travel_dist(dist_mult*c.cur_speed); // Note: inaccurate if car is accelerating
-				travel_dist = dist_mult*(c.is_almost_stopped() ? c.cur_speed : c.max_speed); // conservative - in case car is accelerating
-			}
-			max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light
-			if (c.dir) {hi += travel_dist;} else {lo -= travel_dist;}
-			//assert(lo < hi); // logically correct, but can fail when car pos is updated in the other thread
-			bool const overlaps(lo < pos_max && hi > pos_min); // overlaps current or future car in dim
-			// see if this car has a car in front of it; if so, this car may be the nearest; if it's stopped, then this car will need to stop as well
-			if (it != range_start && is_other_car_closer_to(c, *(it-1), pos)) continue; // prev car is closer than c
-			if (it+1 != range_end && is_other_car_closer_to(c, *(it+1), pos)) continue; // next car is closer than c
-			
-			if (dbg_cubes) {
-				cube_t cube(c.bcube);
-				cube.d[dim][0] = lo; cube.d[dim][1] = hi;
-				dbg_cubes->push_back(cube);
-			}
-			if (overlaps) return 1;
-		} // for it
-	} // for cb
-	return 0;
-}
-
 int car_manager_t::find_next_car_after_turn(car_t &car) {
 	road_isec_t const &isec(get_car_isec(car));
 	if (car.turn_dir == TURN_NONE && !isec.is_global_conn_int()) return -1; // car not turning, and not on connector road isec: should be handled by sorted car_in_front logic
@@ -737,8 +705,11 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 void car_manager_t::next_frame(float car_speed) {
 	if (cars.empty() || !animate2) return;
 	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 1.2ms with destinations + navigation
-	if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
-	sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
+#pragma omp critical(modify_car_data)
+	{
+		if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
+		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
+	}
 	entering_city.clear();
 	car_blocks.clear();
 	float const speed(CAR_SPEED_SCALE*car_speed*fticks);

@@ -446,14 +446,11 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t c
 }
 
 void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
-	bool const safe_to_cross(check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube));
-	// stop if it was unsafe to cross either this frame or last frame; helps prevent occasional car misses (due to thread safety issues)
-	if (!safe_to_cross || !prev_safe_to_cross) {stop();}
+	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop();}
 	else {
 		if (is_stopped) {go();}
 		pos += vel*(fticks*get_speed_mult());
 	}
-	prev_safe_to_cross = safe_to_cross;
 }
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
@@ -724,7 +721,12 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 }
 
 void ped_manager_t::next_frame() {
-	if (!animate2) return;
+	if (!animate2 || peds.empty()) return; // nothing to do
+
+	// FIXME: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
+#pragma omp critical(modify_car_data)
+	{car_manager.extract_car_data(cars_by_city);}
+
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
 	//timer_t timer("Ped Update"); // ~3.4ms for 10K peds
 	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
@@ -755,6 +757,56 @@ pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) 
 	return nullptr; // no ped found
 }
 
+bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vector<cube_t> *dbg_cubes) const {
+	assert(ped.city < cars_by_city.size()); // FIXME: can fail in extreme cases where there are no cars in the final city - should just return in that case; but useful here for debugging
+	car_city_vect_t const &cv(cars_by_city[ped.city]);
+	point const &pos(ped.pos);
+
+	for (unsigned dir = 0; dir < 2; ++dir) { // look both ways before crossing
+		auto const &cars(cv.cars[dim][dir]);
+		car_base_t ref_car; ref_car.cur_city = ped.city; ref_car.cur_road = road_ix;
+		auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_road())); // binary search acceleration
+		float const dist_mult(CAR_SPEED_SCALE*city_params.car_speed*delta_time), pos_min(pos[dim] - ped.radius), pos_max(pos[dim] + ped.radius);
+		auto closest_car(cars.end());
+
+		for (auto it = range_start; it != cars.end(); ++it) {
+			car_base_t const &c(*it);
+			assert(c.cur_city == ped.city && c.dim == dim && c.dir == (dir != 0));
+			if (c.cur_road != road_ix) break; // different road, done
+			float const val(c.bcube.d[dim][!dir]); // back end of the car
+			if (dir ? (val > pos_max) : (val < pos_min)) continue; // already passed the ped, not a threat
+			if (closest_car == cars.end()) {closest_car = it;} // first threatening car
+			else {
+				float const val2(closest_car->bcube.d[dim][!dir]);
+				if (dir ? (val > val2) : (val < val2)) {closest_car = it;} // this car is closer
+			}
+		} // for it
+		if (closest_car == cars.end()) continue; // no car found
+		car_base_t const &c(*closest_car);
+		float lo(c.bcube.d[dim][0]), hi(c.bcube.d[dim][1]), travel_dist(0.0);
+
+		if (c.stopped_at_light) {
+			// FIXME: include this car if the light is about to change?
+		}
+		else if (!c.is_stopped() && c.turn_dir == TURN_NONE) { // moving and not turning
+			//float const travel_dist(dist_mult*c.cur_speed); // Note: inaccurate if car is accelerating
+			travel_dist = dist_mult*(c.is_almost_stopped() ? c.cur_speed : c.max_speed); // conservative - in case car is accelerating
+		}
+		max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light
+		if (dir) {hi += travel_dist;} else {lo -= travel_dist;}
+		assert(lo < hi);
+
+		if (dbg_cubes) {
+			cube_t cube(c.bcube);
+			cube.d[dim][0] = lo; cube.d[dim][1] = hi;
+			dbg_cubes->push_back(cube);
+		}
+		if (lo < pos_max && hi > pos_min) return 1; // overlaps current or future car in dim
+	} // for dir
+	return 0;
+}
+
+// drawing
 void begin_ped_sphere_draw(shader_t &s, colorRGBA const &color, bool &in_sphere_draw, bool textured) {
 	if (in_sphere_draw) return;
 	if (!textured) {select_texture(WHITE_TEX);} // currently not textured
