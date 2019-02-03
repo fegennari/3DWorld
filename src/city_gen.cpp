@@ -2260,7 +2260,7 @@ class city_road_gen_t : public road_gen_base_t {
 				if (r->dim != road_dim) continue;
 				cube_t bcube(*r);
 				bcube.expand_by_xy(0.01*city_params.road_width); // expand slightly to pick up roads that are adjacent to this point
-				if (bcube.contains_pt_xy(pos)) {return r->road_ix;}
+				if (bcube.contains_pt_xy(pos)) {return (r - roads.begin());}
 			}
 			return -1; // should never get here, but occasionally can due to bad collisions between peds, floating-point error, etc.
 			// debug printouts below

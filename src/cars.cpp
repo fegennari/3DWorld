@@ -9,6 +9,7 @@
 #include <cfloat> // for FLT_MAX
 
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
+float const CAR_SPEED_SCALE  = 0.001;
 
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2;
@@ -717,7 +718,7 @@ void car_manager_t::next_frame(float car_speed) {
 	sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 	entering_city.clear();
 	car_blocks.clear();
-	float const speed(0.001*car_speed*fticks);
+	float const speed(CAR_SPEED_SCALE*car_speed*fticks);
 	bool saw_parked(0);
 	//unsigned num_on_conn_road(0);
 

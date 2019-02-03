@@ -427,6 +427,7 @@ void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube) {
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed) return; // destroyed
+	if (speed == 0.0) return; // not moving, no update needed
 	//assert(!is_nan(pos));
 
 	// navigation with destination
@@ -436,7 +437,6 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	if (at_crosswalk) {ped_mgr.mark_crosswalk_in_use(*this);}
 	// movement logic
-	if (vel == zero_vector) return; // not moving, no update needed
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
 	point const prev_pos(pos); // assume this ped starts out not colliding
