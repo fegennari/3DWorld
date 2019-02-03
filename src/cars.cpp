@@ -631,24 +631,34 @@ bool car_manager_t::line_intersect_cars(point const &p1, point const &p2, float 
 	return ret;
 }
 
-bool car_manager_t::has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time) const {
+bool car_manager_t::has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time, vector<cube_t> *dbg_cubes) const {
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 		if (cb->cur_city != city_ix) continue; // incorrect city - skip
 		unsigned const start(cb->start), end(cb->first_parked);
 		assert(end <= cars.size() && start <= end);
 		auto range_end(cars.begin()+end);
-		car_t ref_car; ref_car.cur_road = road_ix;
+		car_t ref_car; ref_car.cur_city = city_ix; ref_car.cur_road = road_ix;
 		auto it(std::lower_bound(cars.begin()+start, range_end, ref_car, comp_car_road())); // binary search acceleration
+		float const dist_mult(CAR_SPEED_SCALE*city_params.car_speed*delta_time);
 
 		for (; it != range_end; ++it) {
 			car_t const &c(*it);
 			//assert(c.cur_city == city_ix); // must be same city (but can fail as car update runs in a different thread, so we can't be too strict here)
 			if (c.cur_city != city_ix || c.cur_road != road_ix) break; // different road, done
 			if (c.dim != dim) continue; // wrong dim (can this happen?)
-			if (c.is_stopped() || c.stopped_at_light) continue; // not a threat (yet)
-			float const travel_dist(c.cur_speed*delta_time);
 			float lo(c.bcube.d[dim][0]), hi(c.bcube.d[dim][1]);
-			if (c.dir) {hi += travel_dist;} else {lo -= travel_dist;}
+			
+			if (!c.is_stopped() && !c.stopped_at_light) { // moving
+				//float const travel_dist(dist_mult*c.cur_speed); // Note: inaccurate if car is accelerating
+				float const travel_dist(dist_mult*(c.is_almost_stopped() ? c.cur_speed : c.max_speed)); // conservative - in case car is accelerating
+				if (c.dir) {hi += travel_dist;} else {lo -= travel_dist;}
+				//assert(lo < hi); // logically correct, but can fail when car pos is updated in the other thread
+			}
+			if (dbg_cubes) {
+				cube_t cube(c.bcube);
+				cube.d[dim][0] = lo; cube.d[dim][1] = hi;
+				dbg_cubes->push_back(cube);
+			}
 			if (lo < pos[dim] && hi > pos[dim]) return 1; // overlaps current or future car in dim
 		} // for it
 	} // for cb

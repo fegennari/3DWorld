@@ -2757,11 +2757,12 @@ bool ped_manager_t::check_isec_sphere_coll(pedestrian_t const &ped) const {
 bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped) const {
 	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius);
 }
-bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time) const {
+bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vector<cube_t> *dbg_cubes) const {
 	int const road_ix(road_gen.get_city(ped.city).get_nearby_road_ix(ped.pos, road_dim));
 	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
 	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
-	return car_manager.has_nearby_car(ped.pos, ped.city, road_ix, road_dim, delta_time);
+	// Warning: this isn't thread safe because cars are updated in a different thread, but this should usually be okay (and isn't easily avoidable without a big perf penalty)
+	return car_manager.has_nearby_car(ped.pos, ped.city, road_ix, road_dim, delta_time, dbg_cubes);
 }
 
 // path finding

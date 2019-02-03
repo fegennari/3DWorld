@@ -600,7 +600,7 @@ public:
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
 	car_t const *get_car_at(point const &p1, point const &p2) const;
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
-	bool has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time) const;
+	bool has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time, vector<cube_t> *dbg_cubes=nullptr) const;
 	void next_frame(float car_speed);
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
@@ -627,9 +627,10 @@ struct pedestrian_t {
 	string str() const;
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
-	void move(ped_manager_t &ped_mgr, cube_t const &plot_bcube);
+	void move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	void stop();
 	void go();
+	bool check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes=nullptr) const;
 	bool check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force);
 	bool check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir);
 	bool check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
@@ -715,7 +716,7 @@ public:
 	bool choose_dest_building(pedestrian_t &ped);
 	unsigned get_next_plot(pedestrian_t &ped) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);
-	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time) const;
+	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vector<cube_t> *dbg_cubes=nullptr) const;
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :
 		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), ped_destroyed(0), need_to_sort_peds(0) {}
