@@ -723,7 +723,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 void ped_manager_t::next_frame() {
 	if (!animate2 || peds.empty()) return; // nothing to do
 
-	// FIXME: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
+	// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
 #pragma omp critical(modify_car_data)
 	{car_manager.extract_car_data(cars_by_city);}
 
@@ -758,7 +758,7 @@ pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) 
 }
 
 bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vector<cube_t> *dbg_cubes) const {
-	assert(ped.city < cars_by_city.size()); // FIXME: can fail in extreme cases where there are no cars in the final city - should just return in that case; but useful here for debugging
+	if (ped.city >= cars_by_city.size()) return 0; // no cars in this city? should be rare, unless cars aren't enabled
 	car_city_vect_t const &cv(cars_by_city[ped.city]);
 	point const &pos(ped.pos);
 
@@ -774,12 +774,14 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 			assert(c.cur_city == ped.city && c.dim == dim && c.dir == (dir != 0));
 			if (c.cur_road != road_ix) break; // different road, done
 			float const val(c.bcube.d[dim][!dir]); // back end of the car
-			if (dir ? (val > pos_max) : (val < pos_min)) continue; // already passed the ped, not a threat
+			if (dir) {if (val > pos_max) break;   } // already passed the ped, not a threat - done (cars are sorted in this dim)
+			else     {if (val < pos_min) continue;} // already passed the ped, not a threat - skip to next car
 			if (closest_car == cars.end()) {closest_car = it;} // first threatening car
 			else {
 				float const val2(closest_car->bcube.d[dim][!dir]);
 				if (dir ? (val > val2) : (val < val2)) {closest_car = it;} // this car is closer
 			}
+			if (!dir) break; // no cars can be closer than this (cars are sorted in this dim)
 		} // for it
 		if (closest_car == cars.end()) continue; // no car found
 		car_base_t const &c(*closest_car);
@@ -792,7 +794,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 			//float const travel_dist(dist_mult*c.cur_speed); // Note: inaccurate if car is accelerating
 			travel_dist = dist_mult*(c.is_almost_stopped() ? c.cur_speed : c.max_speed); // conservative - in case car is accelerating
 		}
-		max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light
+		//max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light (no longer needed?)
 		if (dir) {hi += travel_dist;} else {lo -= travel_dist;}
 		assert(lo < hi);
 
