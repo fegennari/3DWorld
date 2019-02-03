@@ -429,9 +429,14 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t c
 }
 
 void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
-	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
-	if (is_stopped) {go();}
-	pos += vel*fticks;
+	bool const safe_to_cross(check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube));
+	// stop if it was unsafe to cross either this frame or last frame; helps prevent occasional car misses (due to thread safety issues)
+	if (!safe_to_cross || !prev_safe_to_cross) {stop();}
+	else {
+		if (is_stopped) {go();}
+		pos += vel*fticks;
+	}
+	prev_safe_to_cross = safe_to_cross;
 }
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
@@ -706,7 +711,7 @@ void ped_manager_t::next_frame() {
 		for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building(*i);}
 	}
 	for (auto i = peds.begin(); i != peds.end(); ++i) {i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);}
-	if (need_to_sort_peds) {sort_by_city_and_plot();} // testing
+	if (need_to_sort_peds) {sort_by_city_and_plot();}
 	first_frame = 0;
 }
 
