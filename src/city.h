@@ -626,6 +626,7 @@ struct pedestrian_t {
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
+	float get_speed_mult() const;
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);

@@ -4,8 +4,9 @@
 #include "city.h"
 #include "shaders.h"
 
-float const PED_WIDTH_SCALE  = 0.5;
-float const PED_HEIGHT_SCALE = 2.5;
+float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius (x/y)
+float const PED_HEIGHT_SCALE = 2.5; // ratio of collision radius to model height (z)
+float const CROSS_SPEED_MULT = 1.8; // extra speed multiplier when crossing the road
 
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter;
@@ -27,6 +28,8 @@ string pedestrian_t::str() const { // Note: no label_str()
 		<< TXTi(stuck_count) << TXT(collided) << TXTn(in_the_road) << TXT(is_stopped) << TXT(at_dest) << TXT(target_valid()); // Note: pos, vel, dir not printed
 	return oss.str();
 }
+
+float pedestrian_t::get_speed_mult() const {return (in_the_road ? CROSS_SPEED_MULT : 1.0);}
 
 void pedestrian_t::stop() {
 	//dir = vel.get_norm(); // ???
@@ -423,7 +426,7 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t c
 	// just exited the plot and about the cross the road - check for cars; use speed rather than vel in case we're already stopped and vel==zero_vector
 	float const dx(min((pos.x - plot_bcube.x1()), (plot_bcube.x2() - pos.x))), dy(min((pos.y - plot_bcube.y1()), (plot_bcube.y2() - pos.y)));
 	bool const road_dim(dx < dy); // if at crosswalk, need to know which direction/road the ped is crossing
-	float const time_to_cross((city_params.road_width - 2.0*sw_width)/speed); // road area where cars can drive excluding sidewalks on each side
+	float const time_to_cross((city_params.road_width - 2.0*sw_width)/(speed*get_speed_mult())); // road area where cars can drive excluding sidewalks on each side
 	//cout << "plot_bcube: " << plot_bcube.str() << " " << TXT(dx) << TXT(dy) << TXT(road_dim) << TXT(time_to_cross) << endl;
 	return !ped_mgr.has_nearby_car(*this, road_dim, time_to_cross, dbg_cubes);
 }
@@ -434,7 +437,7 @@ void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t
 	if (!safe_to_cross || !prev_safe_to_cross) {stop();}
 	else {
 		if (is_stopped) {go();}
-		pos += vel*fticks;
+		pos += vel*(fticks*get_speed_mult());
 	}
 	prev_safe_to_cross = safe_to_cross;
 }
