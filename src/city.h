@@ -635,6 +635,7 @@ struct pedestrian_t {
 	bool check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes=nullptr) const;
 	bool check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force);
 	bool check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir);
+	bool check_ped_ped_coll_stopped(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid);
 	bool check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	bool check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	bool is_valid_pos(vector<cube_t> const &colliders);

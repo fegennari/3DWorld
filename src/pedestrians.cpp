@@ -59,7 +59,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_
 	}
 	// set is_stopped if waiting at crosswalk
 	in_the_road  = 1;
-	at_crosswalk = 1; // FIXME: should only be at crosswalks; but if we actually are at a crosswalk, this is the correct thing to do
+	at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are at a crosswalk, this is the correct thing to do
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
 }
 
@@ -122,6 +122,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 	} // for i
 	return 0;
 }
+
 bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
 	assert(pid < peds.size());
 	float const timestep(2.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 2s
@@ -136,6 +137,19 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_
 		if (check_ped_ped_coll_range(peds, pid, ped_ix, next_plot, prox_radius, force)) return 1;
 	}
 	if (force != zero_vector) {set_velocity((0.1*delta_dir)*force + ((1.0 - delta_dir)/speed)*vel);} // apply ped repulsive force
+	return 0;
+}
+
+bool pedestrian_t::check_ped_ped_coll_stopped(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid) {
+	assert(pid < peds.size());
+
+	// Note: shouldn't have to check peds in the next plot, assuming that if we're stopped, they likely are as well, and won't be walking toward us
+	for (auto i = peds.begin()+pid; i != peds.end(); ++i) { // check every ped until we exit target_plot
+		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
+		if (!dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) continue; // no collision
+		i->collided = i->ped_coll = 1; i->colliding_ped = pid;
+		return 1; // Note: could omit this return and continue processing peds
+	} // for i
 	return 0;
 }
 
@@ -458,7 +472,13 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	move(ped_mgr, plot_bcube, next_plot_bcube);
-	if (is_stopped) {collided = ped_coll = 0; return;} // ignore any collisions and just stand there, keeping the same target_pos; will go when path is clear
+
+	if (is_stopped) { // ignore any collisions and just stand there, keeping the same target_pos; will go when path is clear
+		// FIXME: add a stopped_count; if stopped for too long, give up and choose another next plot to the left or right
+		check_ped_ped_coll_stopped(ped_mgr, peds, pid); // still need to check for other peds colliding with us; this doesn't always work
+		collided = ped_coll = 0;
+		return;
+	}
 	at_crosswalk = in_the_road = 0; // reset state for next frame; these may be set back to 1 below
 	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 
