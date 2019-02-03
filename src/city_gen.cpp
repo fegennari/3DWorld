@@ -240,7 +240,7 @@ bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale, bool s
 
 	if (dist_scale > 0.0) {
 		float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
-		if (!dist_less_than(camera_pdu.pos, bcx.closest_pt(camera_pdu.pos), dmax)) return 0;
+		if (!bcx.closest_dist_less_than(camera_pdu.pos, dmax)) return 0;
 	}
 	return camera_pdu.cube_visible(bcx);
 }

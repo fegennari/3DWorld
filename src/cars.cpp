@@ -696,7 +696,7 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 			if (it->get_orient() != dest_orient) continue; // wrong orient
 			float const dist_sq(p2p_dist_sq(car_center, it->get_center()));
 			if (p2p_dist_sq(car_center, it->get_front()) < dist_sq) continue; // front is closer than back - this car is not in front of us (waiting on other side of isect?)
-																			  //cout << TXT(dmin_sq) << TXT(dist_sq) << (dist_sq < dmin_sq) << endl;
+			//cout << TXT(dmin_sq) << TXT(dist_sq) << (dist_sq < dmin_sq) << endl;
 
 			if (dist_sq < dmin_sq) { // new closest car
 				if (&(*it) != car.car_in_front) {ret_car_ix = (it - cars.begin());} // record index if set to a new value

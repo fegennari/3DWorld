@@ -801,7 +801,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 		for (unsigned plot = plot_start; plot < plot_end; ++plot) {
 			assert(plot < by_plot.size());
 			cube_t const plot_bcube(get_expanded_city_plot_bcube_for_peds(city, plot));
-			if (is_dlight_shadows && !dist_less_than(plot_bcube.closest_pt(pdu.pos), pdu.pos, draw_dist)) continue; // plot is too far away
+			if (is_dlight_shadows && !plot_bcube.closest_dist_less_than(pdu.pos, draw_dist)) continue; // plot is too far away
 			if (!pdu.cube_visible(plot_bcube)) continue; // plot not visible - skip
 			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
 			assert(ped_start <= ped_end);
