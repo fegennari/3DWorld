@@ -409,9 +409,12 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const 
 }
 
 bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes) const {
-	if (!in_the_road) return 1;
+	if (!in_the_road || speed < TOLERANCE) return 1;
 	float const sw_width(get_sidewalk_width(plot_bcube));
 	if (!plot_bcube.closest_dist_less_than(pos, sw_width)) return 1; // too far into the road to turn back
+	cube_t union_plot_bcube(plot_bcube);
+	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
+	if (!union_plot_bcube.contains_pt_xy(pos)) return 1; // not crossing between plots - must be in the road, go back to the sidewalk
 	
 	if (target_valid()) {
 		if (dist_less_than(pos, target_pos, 0.5*city_params.road_width)) return 1; // already halfway to target pos, finish crossing
