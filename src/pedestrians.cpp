@@ -788,6 +788,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 		float lo(c.bcube.d[dim][0]), hi(c.bcube.d[dim][1]), travel_dist(0.0);
 
 		if (c.stopped_at_light) {
+			road_isec_t const &isec(get_car_isec(c));
 			// FIXME: include this car if the light is about to change?
 		}
 		else if (!c.is_stopped() && c.turn_dir == TURN_NONE) { // moving and not turning

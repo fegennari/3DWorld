@@ -2204,29 +2204,29 @@ class city_road_gen_t : public road_gen_base_t {
 			//cout << TXT(city_id) << TXT(tot_road_len) << TXT(num_cars) << TXT(get_traffic_density()) << endl;
 			num_cars = 0;
 		}
-		static road_network_t const &get_car_rn(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
+		static road_network_t const &get_car_rn(car_base_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
 			if (car.cur_city == CONN_CITY_IX) return global_rn;
 			assert(car.cur_city < road_networks.size());
 			return road_networks[car.cur_city];
 		}
-		void update_car_seg_stats(car_t const &car) const {
+		void update_car_seg_stats(car_base_t const &car) const {
 			if (car.cur_road_type == TYPE_RSEG) {++get_car_seg(car).car_count;}
 		}
-		road_seg_t const &get_car_seg(car_t const &car) const {
+		road_seg_t const &get_car_seg(car_base_t const &car) const {
 			assert(car.cur_road_type == TYPE_RSEG);
 			return get_seg(car.cur_seg);
 		}
-		road_isec_t const &get_car_isec(car_t const &car) const {
+		road_isec_t const &get_car_isec(car_base_t const &car) const {
 			auto const &iv(isecs[car.get_isec_type()]);
 			assert(car.cur_seg < iv.size());
 			return iv[car.cur_seg];
 		}
-		cube_t get_road_bcube_for_car(car_t const &car) const {
+		cube_t get_road_bcube_for_car(car_base_t const &car) const {
 			assert(car.cur_road < roads.size()); // Note: generally holds, but not required
 			if (car.cur_road_type == TYPE_RSEG) {return get_car_seg(car);}
 			return get_car_isec(car);
 		}
-		cube_t get_road_bcube_for_car(car_t const &car, road_network_t const &global_rn) const { // function variant that works with both global and local roads
+		cube_t get_road_bcube_for_car(car_base_t const &car, road_network_t const &global_rn) const { // function variant that works with both global and local roads
 			if (car.cur_city == city_id) {return get_road_bcube_for_car(car);}
 			else if (car.cur_city == CONN_CITY_IX) {return global_rn.get_road_bcube_for_car(car);}
 			else {assert(0); return cube_t();}
@@ -2648,17 +2648,17 @@ public:
 		if (!car.dest_valid) return 0;
 		return get_city(car.dest_city).car_at_dest(car);
 	}
-	road_network_t const &get_car_rn(car_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
+	road_network_t const &get_car_rn(car_base_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
 	
 	void update_car(car_t &car, rand_gen_t &rgen) const {
 		//update_car_seg_stats(car); // not needed - stats not yet used
 		get_car_rn(car).update_car(car, rgen, road_networks, global_rn);
 		if (city_params.enable_car_path_finding) {update_car_dest(car);}
 	}
-	void update_car_seg_stats(car_t const &car) const {get_car_rn(car).update_car_seg_stats(car);}
-	road_isec_t const &get_car_isec(car_t const &car) const {return get_car_rn(car).get_car_isec(car);}
-	cube_t get_road_bcube_for_car(car_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
-	virtual cube_t get_bcube_for_car(car_t const &car) const {return get_road_bcube_for_car(car);}
+	void update_car_seg_stats(car_base_t const &car) const {get_car_rn(car).update_car_seg_stats(car);}
+	road_isec_t const &get_car_isec(car_base_t const &car) const {return get_car_rn(car).get_car_isec(car);}
+	cube_t get_road_bcube_for_car(car_base_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
+	virtual cube_t get_bcube_for_car(car_base_t const &car) const {return get_road_bcube_for_car(car);}
 }; // city_road_gen_t
 
 
@@ -2732,6 +2732,7 @@ struct city_smap_manager_t {
 
 // Note: these ped_manager_t functions are defined here because they use road_gen
 cube_t const &ped_manager_t::get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_plot_from_global_id(city_ix, plot_ix);}
+road_isec_t const &ped_manager_t::get_car_isec(car_base_t const &car) const {return road_gen.get_car_isec(car);}
 
 cube_t ped_manager_t::get_expanded_city_bcube_for_peds(unsigned city_ix) const {
 	cube_t bcube(road_gen.get_city_bcube(city_ix));

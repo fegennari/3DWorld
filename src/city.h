@@ -104,24 +104,26 @@ struct city_params_t {
 }; // city_params_t
 
 
-struct car_t;
+struct car_base_t;
 
 struct road_gen_base_t {
-	virtual cube_t get_bcube_for_car(car_t const &car) const = 0;
+	virtual cube_t get_bcube_for_car(car_base_t const &car) const = 0;
 };
 
 
-struct car_base_t { // the part needed for the pedestrian interface (size = 32)
+struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	cube_t bcube;
 	bool dim, dir, stopped_at_light;
-	unsigned char turn_dir;
-	unsigned short cur_city, cur_road;
+	unsigned char cur_road_type, turn_dir;
+	unsigned short cur_city, cur_road, cur_seg;
 	float cur_speed, max_speed;
 
-	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_speed(0.0), max_speed(0.0) {}
+	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), cur_speed(0.0), max_speed(0.0) {}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
 	unsigned get_orient_in_isec() const {return (2*dim + (!dir));} // invert dir (incoming, not outgoing)
+	bool in_isect() const {return is_isect(cur_road_type);}
+	unsigned get_isec_type() const {assert(in_isect()); return (cur_road_type - TYPE_ISEC2);}
 	float get_max_speed() const {return ((cur_city == CONN_CITY_IX) ? CONN_ROAD_SPEED_MULT : 1.0)*max_speed;}
 	float get_length() const {return (bcube.d[ dim][1] - bcube.d[ dim][0]);}
 	float get_width () const {return (bcube.d[!dim][1] - bcube.d[!dim][0]);}
@@ -134,18 +136,16 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 32)
 struct car_t : public car_base_t { // size = 92
 	cube_t prev_bcube;
 	bool entering_city, in_tunnel, dest_valid, destroyed;
-	unsigned char cur_road_type, color_id, front_car_turn_dir, model_id;
-	unsigned short cur_seg, dest_city, dest_isec;
+	unsigned char color_id, front_car_turn_dir, model_id;
+	unsigned short dest_city, dest_isec;
 	float height, dz, rot_z, turn_val, waiting_pos, waiting_start;
 	car_t const *car_in_front;
 
-	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), cur_road_type(TYPE_RSEG), color_id(0), front_car_turn_dir(TURN_UNSPEC),
-		model_id(0), cur_seg(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), waiting_start(0.0), car_in_front(nullptr) {}
+	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), color_id(0), front_car_turn_dir(TURN_UNSPEC),
+		model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), waiting_start(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	float get_max_lookahead_dist() const;
-	bool in_isect() const {return is_isect(cur_road_type);}
 	bool headlights_on() const {return (!is_parked() && (in_tunnel || is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed))));} // no headlights when parked
-	unsigned get_isec_type() const {assert(in_isect()); return (cur_road_type - TYPE_ISEC2);}
 	float get_turn_rot_z(float dist_to_turn) const;
 	float get_wait_time_secs  () const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
@@ -721,6 +721,7 @@ class ped_manager_t { // pedestrians
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
 	void sort_by_city_and_plot();
+	road_isec_t const &get_car_isec(car_base_t const &car) const;
 public:
 	// for use in pedestrian_t, mostly for collisions and path finding
 	path_finder_t path_finder;
