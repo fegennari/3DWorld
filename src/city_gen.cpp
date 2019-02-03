@@ -2762,7 +2762,7 @@ bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float
 	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
 	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
 	// Warning: this isn't thread safe because cars are updated in a different thread, but this should usually be okay (and isn't easily avoidable without a big perf penalty)
-	return car_manager.has_nearby_car(ped.pos, ped.city, road_ix, road_dim, delta_time, dbg_cubes);
+	return car_manager.has_nearby_car(ped.pos, ped.radius, ped.city, road_ix, road_dim, delta_time, dbg_cubes);
 }
 
 // path finding

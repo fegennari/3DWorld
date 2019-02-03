@@ -600,7 +600,7 @@ public:
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
 	car_t const *get_car_at(point const &p1, point const &p2) const;
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
-	bool has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time, vector<cube_t> *dbg_cubes=nullptr) const;
+	bool has_nearby_car(point const &pos, float radius, unsigned city_ix, unsigned road_ix, bool dim, float delta_time, vector<cube_t> *dbg_cubes=nullptr) const;
 	void next_frame(float car_speed);
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}

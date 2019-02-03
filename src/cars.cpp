@@ -638,7 +638,7 @@ bool is_other_car_closer_to(car_t const &c, car_t const &cf, point const &pos) {
 	else       {return (cf.bcube.d[c.dim][1] > pos[c.dim]);}
 }
 
-bool car_manager_t::has_nearby_car(point const &pos, unsigned city_ix, unsigned road_ix, bool dim, float delta_time, vector<cube_t> *dbg_cubes) const {
+bool car_manager_t::has_nearby_car(point const &pos, float radius, unsigned city_ix, unsigned road_ix, bool dim, float delta_time, vector<cube_t> *dbg_cubes) const {
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 		if (cb->cur_city != city_ix) continue; // incorrect city - skip
 		unsigned const start(cb->start), end(cb->first_parked);
@@ -646,7 +646,7 @@ bool car_manager_t::has_nearby_car(point const &pos, unsigned city_ix, unsigned 
 		auto range_end(cars.begin()+end);
 		car_t ref_car; ref_car.cur_city = city_ix; ref_car.cur_road = road_ix;
 		auto range_start(std::lower_bound(cars.begin()+start, range_end, ref_car, comp_car_road())); // binary search acceleration
-		float const dist_mult(CAR_SPEED_SCALE*city_params.car_speed*delta_time);
+		float const dist_mult(CAR_SPEED_SCALE*city_params.car_speed*delta_time), pos_min(pos[dim] - radius), pos_max(pos[dim] + radius);
 
 		for (auto it = range_start; it != range_end; ++it) {
 			car_t const &c(*it);
@@ -662,7 +662,7 @@ bool car_manager_t::has_nearby_car(point const &pos, unsigned city_ix, unsigned 
 			max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light
 			if (c.dir) {hi += travel_dist;} else {lo -= travel_dist;}
 			//assert(lo < hi); // logically correct, but can fail when car pos is updated in the other thread
-			bool const overlaps(lo < pos[dim] && hi > pos[dim]); // overlaps current or future car in dim
+			bool const overlaps(lo < pos_max && hi > pos_min); // overlaps current or future car in dim
 			
 			if (overlaps) { // see if this car has a car in front of it; if so, this car may be the nearest; if it's stopped, then this car will need to stop as well
 				if (c.car_in_front) {
