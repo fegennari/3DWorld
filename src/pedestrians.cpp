@@ -48,9 +48,9 @@ float get_sidewalk_width(cube_t const &plot_bcube) { // Note: technically should
 	return -STREETLIGHT_DIST_FROM_PLOT_EDGE*plot_sz + streetlight_ns::get_streetlight_pole_radius();
 }
 
-bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
+bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
-	if (plot_bcube.contains_pt_xy(pos)) return 1; // inside the plot
+	if (plot_bcube.contains_pt_xy(pos)) {return 1;} // inside the plot
 	stuck_count = 0; // no longer stuck
 	if (next_plot == plot) return 0; // no next plot - clip to this plot
 	
@@ -59,6 +59,9 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_
 		next_plot = ped_mgr.get_next_plot(*this);
 		return 1;
 	}
+	cube_t union_plot_bcube(plot_bcube);
+	union_plot_bcube.union_with_cube(next_plot_bcube);
+	if (!union_plot_bcube.contains_pt_xy(pos) && union_plot_bcube.contains_pt_xy(prev_pos)) {return 0;} // went outside the valid area
 	in_the_road  = 1;
 	at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are at a crosswalk, this is the correct thing to do
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
@@ -500,9 +503,10 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	at_crosswalk = in_the_road = 0; // reset state for next frame; these may be set back to 1 below
 	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
+	bool outside_plot(0);
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
-	else if (!check_inside_plot(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // outside the plot, treat as a collision with the plot bounds
+	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube)) {collided = outside_plot = 1;} // outside the plot, treat as a collision with the plot bounds
 	else if (!is_valid_pos(colliders)) {collided = 1;} // collided with a static collider
 	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
 	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir)) {collided = 1;} // collided with another pedestrian
@@ -541,7 +545,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		stuck_count = 0;
 	}
 	if (collided) { // collision
-		pos = prev_pos; // restore to previous valid pos
+		if (!outside_plot) {pos = prev_pos;} // restore to previous valid pos unless we're outside the plot
 		vector3d new_dir;
 
 		if (++stuck_count > 8) {
