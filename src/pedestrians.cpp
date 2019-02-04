@@ -457,12 +457,15 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t c
 }
 
 void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
-	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop();}
-	else {
-		reset_waiting();
-		if (is_stopped) {go();}
-		pos += vel*(fticks*get_speed_mult());
+	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
+	reset_waiting();
+	if (is_stopped) {go();}
+
+	if (target_valid()) { // if facing away from the target, rotate in place rather than moving in a circle
+		vector3d const delta(target_pos - pos);
+		if (dot_product(vel, delta)/(speed*delta.mag()) < 0.1) return;
 	}
+	pos += vel*(fticks*get_speed_mult());
 }
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
