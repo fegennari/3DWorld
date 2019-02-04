@@ -111,6 +111,13 @@ struct road_gen_base_t {
 };
 
 
+struct waiting_obj_t {
+	float waiting_start;
+	waiting_obj_t() : waiting_start(0.0) {}
+	void reset_waiting() {waiting_start = tfticks;}
+	float get_wait_time_secs() const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights or peds stopped at roads
+};
+
 struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	cube_t bcube;
 	bool dim, dir, stopped_at_light;
@@ -133,21 +140,20 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	point get_front(float dval=0.5) const;
 };
 
-struct car_t : public car_base_t { // size = 92
+struct car_t : public car_base_t, public waiting_obj_t { // size = 92
 	cube_t prev_bcube;
 	bool entering_city, in_tunnel, dest_valid, destroyed;
 	unsigned char color_id, front_car_turn_dir, model_id;
 	unsigned short dest_city, dest_isec;
-	float height, dz, rot_z, turn_val, waiting_pos, waiting_start;
+	float height, dz, rot_z, turn_val, waiting_pos;
 	car_t const *car_in_front;
 
 	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), color_id(0), front_car_turn_dir(TURN_UNSPEC),
-		model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), waiting_start(0.0), car_in_front(nullptr) {}
+		model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const {return (!is_parked() && (in_tunnel || is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed))));} // no headlights when parked
 	float get_turn_rot_z(float dist_to_turn) const;
-	float get_wait_time_secs  () const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 	void apply_scale(float scale);
 	void destroy();
@@ -629,7 +635,7 @@ public:
 
 class ped_manager_t; // forward declaration for use in pedestrian_t
 
-struct pedestrian_t {
+struct pedestrian_t : public waiting_obj_t {
 
 	point pos, target_pos;
 	vector3d vel, dir;

@@ -25,7 +25,8 @@ string pedestrian_t::get_name() const {
 string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
 	oss << get_name() << ": " << TXTn(ssn) << TXT(speed) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
-		<< TXTi(stuck_count) << TXT(collided) << TXTn(in_the_road) << TXT(is_stopped) << TXT(at_dest) << TXT(target_valid()); // Note: pos, vel, dir not printed
+		<< TXTi(stuck_count) << TXT(collided) << TXTn(in_the_road) << TXT(is_stopped) << TXTn(at_dest) << TXT(target_valid())
+		<< "wait_time=" << get_wait_time_secs(); // Note: pos, vel, dir not printed
 	return oss.str();
 }
 
@@ -448,6 +449,7 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t c
 void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop();}
 	else {
+		reset_waiting();
 		if (is_stopped) {go();}
 		pos += vel*(fticks*get_speed_mult());
 	}

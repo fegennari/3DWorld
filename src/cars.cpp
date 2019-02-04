@@ -97,7 +97,7 @@ void car_t::move(float speed_mult) {
 	move_by(dir ? dist : -dist);
 	// update waiting state
 	float const cur_pos(bcube.d[dim][dir]);
-	if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; waiting_start = tfticks;} // update when we move at least a car length
+	if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; reset_waiting();} // update when we move at least a car length
 }
 
 void car_t::maybe_accelerate(float mult) {
