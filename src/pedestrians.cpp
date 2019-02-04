@@ -7,6 +7,7 @@
 float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius (x/y)
 float const PED_HEIGHT_SCALE = 2.5; // ratio of collision radius to model height (z)
 float const CROSS_SPEED_MULT = 1.8; // extra speed multiplier when crossing the road
+float const CROSS_WAIT_TIME  = 60.0; // in seconds
 
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter;
@@ -58,7 +59,6 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, cube_t const &plot_
 		next_plot = ped_mgr.get_next_plot(*this);
 		return 1;
 	}
-	// set is_stopped if waiting at crosswalk
 	in_the_road  = 1;
 	at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are at a crosswalk, this is the correct thing to do
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
@@ -413,6 +413,16 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 	return pos; // no dest
 }
 
+bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
+	reset_waiting(); // reset waiting state regardless of outcome; we don't want to get here every frame if we fail to find another plot
+	if (plot == next_plot) return 0; // no next plot (error?)
+	//if (next_plot == dest_plot) return 0; // the next plot is our desination, should we still choose another plot?
+	unsigned const cand_next_plot(ped_mgr.get_next_plot(*this, next_plot));
+	if (cand_next_plot == next_plot || cand_next_plot == plot) return 0; // failed
+	next_plot = cand_next_plot;
+	return 1; // success
+}
+
 void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const &colliders, point const &dest_pos, vector<cube_t> &avoid) const {
 	avoid.clear();
 	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
@@ -473,10 +483,15 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	move(ped_mgr, plot_bcube, next_plot_bcube);
 
 	if (is_stopped) { // ignore any collisions and just stand there, keeping the same target_pos; will go when path is clear
-		// FIXME: add a stopped_count; if stopped for too long, give up and choose another next plot to the left or right
-		check_ped_ped_coll_stopped(ped_mgr, peds, pid); // still need to check for other peds colliding with us; this doesn't always work
-		collided = ped_coll = 0;
-		return;
+		if (get_wait_time_secs() > CROSS_WAIT_TIME && choose_alt_next_plot(ped_mgr)) { // give up and choose another destination if waiting for too long
+			target_pos = all_zeros;
+			go(); // FIXME: back up or turn so that we don't walk forward into the street?
+		}
+		else {
+			check_ped_ped_coll_stopped(ped_mgr, peds, pid); // still need to check for other peds colliding with us; this doesn't always work
+			collided = ped_coll = 0;
+			return;
+		}
 	}
 	at_crosswalk = in_the_road = 0; // reset state for next frame; these may be set back to 1 below
 	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
@@ -797,7 +812,6 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 			}
 			else if (!c.is_stopped()) { // moving and not turning; assume it may be accelerating, and could reach max_speed by the time it passes pos
 				//travel_dist = delta_time*speed_mult*c.cur_speed; // Note: inaccurate if car is accelerating
-				//travel_dist = delta_time*speed_mult*(c.is_almost_stopped() ? c.cur_speed : c.max_speed); // conservative - in case car is accelerating
 				travel_dist = delta_time*speed_mult*c.max_speed; // conservative - safer
 			}
 			//max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light (no longer needed?)

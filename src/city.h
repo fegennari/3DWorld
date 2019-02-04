@@ -665,6 +665,7 @@ struct pedestrian_t : public waiting_obj_t {
 	bool is_valid_pos(vector<cube_t> const &colliders);
 	bool try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube) const;
+	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
 	void get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const &colliders, point const &dest_pos, vector<cube_t> &avoid) const;
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();
@@ -743,7 +744,7 @@ public:
 	bool check_streetlight_sphere_coll(pedestrian_t const &ped) const;
 	bool mark_crosswalk_in_use(pedestrian_t const &ped);
 	bool choose_dest_building(pedestrian_t &ped);
-	unsigned get_next_plot(pedestrian_t &ped) const;
+	unsigned get_next_plot(pedestrian_t &ped, int exclude_plot=-1) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);
 	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vector<cube_t> *dbg_cubes=nullptr) const;
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vector<cube_t> *dbg_cubes) const;

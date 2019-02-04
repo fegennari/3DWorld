@@ -1864,20 +1864,43 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<cube_t> const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
 		// plot = current plot, dest_plot = final destination plot; returns next plot adj to cur plot on path to dest_plot
-		unsigned get_next_plot(unsigned global_plot, unsigned global_dest_plot) const {
-			if (global_plot == global_dest_plot) return global_plot; // identity, at destination, no change
+		unsigned get_next_plot(unsigned global_plot, unsigned global_dest_plot, int exclude_plot) const {
+			if (global_plot == global_dest_plot) {return global_plot;} // identity, at destination, no change
 			unsigned const plot(decode_plot_id(global_plot)), dest_plot(decode_plot_id(global_dest_plot)); // convert to local space
 			assert(plot < plots.size() && dest_plot < plots.size());
 			int const cur_x(plots[plot].xpos), cur_y(plots[plot].ypos), dest_x(plots[dest_plot].xpos), dest_y(plots[dest_plot].ypos); // use int to avoid signed problems
 			int const dx(dest_x - cur_x), dy(dest_y - cur_y);
-			bool const move_dir(abs(dx) > abs(dy)); // technically !move_dir
+			bool move_dir(abs(dx) > abs(dy)); // technically !move_dir
 			unsigned const dir(move_dir ? ((dx < 0) ? 0 : 1) : ((dy < 0) ? 2 : 3));
 			int const next_plot(plot_xy.get_adj(cur_x, cur_y, dir));
 			assert(next_plot >= 0 && next_plot <= int(plots.size())); // must be found
-			road_plot_t const &np(plots[next_plot]);
+			road_plot_t const &np(plots[next_plot]); // this next part is only for error checking
 			if (move_dir) {assert(np.xpos == cur_x + ((dx < 0) ? -1 : 1)); assert(np.ypos == cur_y);}
 			else          {assert(np.ypos == cur_y + ((dy < 0) ? -1 : 1)); assert(np.xpos == cur_x);}
-			return (next_plot + plot_id_offset); // convert back to global space
+			unsigned global_next_plot(next_plot + plot_id_offset); // convert back to global space
+			
+			if (exclude_plot == int(global_next_plot)) { // the selected plot has been excluded, choose a different plot
+				move_dir ^= 1; // move in the other dimension - don't move in the wrong direction
+				unsigned dir(0);
+
+				if (dx != 0 && dy != 0) { // moving in the other dimension makes progress
+					dir = (move_dir ? ((dx < 0) ? 0 : 1) : ((dy < 0) ? 2 : 3));	
+				}
+				else { // take a detour in a random direction
+					static rand_gen_t rgen;
+					bool rand_dir(rgen.rand_bool());
+					dir = (move_dir ? (rand_dir ? 0 : 1) : (rand_dir ? 2 : 3));
+					
+					if (plot_xy.get_adj(cur_x, cur_y, dir) < 0) { // that direction's not valid, choose the other one
+						rand_dir ^= 1;
+						dir = (move_dir ? (rand_dir ? 0 : 1) : (rand_dir ? 2 : 3));
+					}
+				}
+				int const next_plot(plot_xy.get_adj(cur_x, cur_y, dir));
+				assert(next_plot >= 0 && next_plot <= int(plots.size())); // must be found
+				global_next_plot = next_plot + plot_id_offset; // convert back to global space
+			}
+			return global_next_plot;
 		}
 		bool choose_dest_building(unsigned &global_plot, unsigned &building, rand_gen_t &rgen) const {
 			if (plots.empty()) return 0; // no plots
@@ -2607,7 +2630,7 @@ public:
 		return road_network_t::gen_ped_pos(ped, rgen, road_networks);
 	}
 	cube_t const &get_plot_from_global_id(unsigned city_id, unsigned global_plot_id) const {return get_city(city_id).get_plot_from_global_id(global_plot_id);}
-	unsigned get_next_plot(unsigned city_id, unsigned plot, unsigned dest_plot) const {return get_city(city_id).get_next_plot(plot, dest_plot);}
+	unsigned get_next_plot(unsigned city_id, unsigned plot, unsigned dest_plot, int exclude_plot) const {return get_city(city_id).get_next_plot(plot, dest_plot, exclude_plot);}
 	bool choose_dest_building(unsigned city_id, unsigned &plot, unsigned &building, rand_gen_t &rgen) const {return get_city(city_id).choose_dest_building(plot, building, rgen);}
 		
 	bool update_car_dest(car_t &car) const {
@@ -2772,7 +2795,7 @@ bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, 
 	ped.next_plot = get_next_plot(ped);
 	return 1;
 }
-unsigned ped_manager_t::get_next_plot(pedestrian_t &ped) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot);}
+unsigned ped_manager_t::get_next_plot(pedestrian_t &ped, int exclude_plot) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot, exclude_plot);}
 
 
 class city_gen_t : public city_plot_gen_t {
