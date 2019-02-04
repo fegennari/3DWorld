@@ -362,11 +362,12 @@ namespace stoplight_ns {
 		void notify_waiting_car(bool dim, bool dir, unsigned turn) const;
 		bool red_light(bool dim, bool dir, unsigned turn) const;
 		unsigned get_light_state(bool dim, bool dir, unsigned turn) const;
+		unsigned get_future_light_state(bool dim, bool dir, unsigned turn, float future_seconds) const;
 		bool can_walk(bool dim, bool dir) const;
 		unsigned get_crosswalk_state(bool dim, bool dir) const;
 		bool check_int_clear(unsigned orient, unsigned turn_dir) const;
-		bool check_int_clear(car_t const &car) const {return check_int_clear(car.get_orient(), car.turn_dir);}
-		bool can_turn_right_on_red(car_t const &car) const;
+		bool check_int_clear(car_base_t const &car) const {return check_int_clear(car.get_orient(), car.turn_dir);}
+		bool can_turn_right_on_red(car_base_t const &car) const;
 		string str() const;
 		string label_str() const;
 		colorRGBA get_stoplight_color(bool dim, bool dir, unsigned turn) const {return stoplight_colors[get_light_state(dim, dir, turn)];}
@@ -455,16 +456,19 @@ struct road_isec_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const;
 	void make_4way(unsigned conn_to_city_);
 	void next_frame() {stoplight.next_frame();}
-	void notify_waiting_car(car_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
+	void notify_waiting_car(car_base_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
-	bool red_light(car_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
-	bool red_or_yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
-	bool yellow_light(car_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
-	bool can_go_based_on_light(car_t const &car) const;
+	bool red_light(car_base_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
+	bool red_or_yellow_light(car_base_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
+	bool yellow_light(car_base_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
+	bool will_be_green_light_in(car_base_t const &car, float future_seconds) const {
+		return (stoplight.get_future_light_state(car.dim, car.dir, car.turn_dir, future_seconds) == stoplight_ns::GREEN_LIGHT);
+	}
+	bool can_go_based_on_light(car_base_t const &car) const;
 	bool is_orient_currently_valid(unsigned orient, unsigned turn_dir) const;
-	unsigned get_dest_orient_for_car_in_isec(car_t const &car, bool is_entering) const;
+	unsigned get_dest_orient_for_car_in_isec(car_base_t const &car, bool is_entering) const;
 	bool can_go_now(car_t const &car) const;
-	bool is_blocked(car_t const &car) const {return (can_go_based_on_light(car) && !stoplight.check_int_clear(car));} // light is green but intersection is blocked
+	bool is_blocked(car_base_t const &car) const {return (can_go_based_on_light(car) && !stoplight.check_int_clear(car));} // light is green but intersection is blocked
 	bool has_left_turn_signal(unsigned orient) const;
 	cube_t get_stoplight_cube(unsigned n) const;
 	bool check_sphere_coll(point const &pos, float radius) const;

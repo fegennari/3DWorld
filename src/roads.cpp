@@ -152,6 +152,13 @@ namespace stoplight_ns {
 		future_self.ffwd_to_future(2.0); // yellow light time = 2.0s
 		return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : GREEN_LIGHT);
 	}
+	unsigned stoplight_t::get_future_light_state(bool dim, bool dir, unsigned turn, float future_seconds) const {
+		if (future_seconds == 0.0) {return get_light_state(dim, dir, turn);}
+		assert(future_seconds > 0.0); // not in the past
+		stoplight_t future_self(*this);
+		future_self.ffwd_to_future(future_seconds);
+		return future_self.get_light_state(dim, dir, turn);
+	}
 
 	bool stoplight_t::can_walk(bool dim, bool dir) const { // Note: symmetric across the two sides of the street
 		// Note: ignores blocked state and right-on-red
@@ -183,7 +190,7 @@ namespace stoplight_ns {
 		return 1;
 	}
 
-	bool stoplight_t::can_turn_right_on_red(car_t const &car) const { // check for legal right on red (no other lanes turning into the road to our right)
+	bool stoplight_t::can_turn_right_on_red(car_base_t const &car) const { // check for legal right on red (no other lanes turning into the road to our right)
 		if (car.turn_dir != TURN_RIGHT) return 0;
 		unsigned const orient(car.get_orient());  // {W, E, S, N}
 		if (!red_light(!car.dim, (to_right  [orient] & 1), TURN_NONE)) return 0; // traffic to our left has a green or yellow light for going straight
@@ -356,7 +363,7 @@ void road_isec_t::make_4way(unsigned conn_to_city_) {
 	stoplight.init(num_conn, conn); // re-init with new conn
 }
 
-bool road_isec_t::can_go_based_on_light(car_t const &car) const {
+bool road_isec_t::can_go_based_on_light(car_base_t const &car) const {
 	return (!red_or_yellow_light(car) || stoplight.can_turn_right_on_red(car)); // green light or right turn on red
 }
 
@@ -367,7 +374,7 @@ bool road_isec_t::is_orient_currently_valid(unsigned orient, unsigned turn_dir) 
 	return 1;
 }
 
-unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_t const &car, bool is_entering) const {
+unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, bool is_entering) const {
 	unsigned const orient_in(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
 	//cout << TXT(car.rot_z) << TXT(car.turn_val) << TXT(unsigned(car.turn_dir)) << TXT(car.dim) << TXT(car.dir) << TXT(orient_in) << hex << unsigned(conn) << dec << endl;
 	if (is_entering) {assert(conn & (1<<orient_in));} // car must come from an enabled orient

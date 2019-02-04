@@ -766,7 +766,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 		auto const &cars(cv.cars[dim][dir]);
 		car_base_t ref_car; ref_car.cur_city = ped.city; ref_car.cur_road = road_ix;
 		auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_road())); // binary search acceleration
-		float const dist_mult(CAR_SPEED_SCALE*city_params.car_speed*delta_time), pos_min(pos[dim] - ped.radius), pos_max(pos[dim] + ped.radius);
+		float const speed_mult(CAR_SPEED_SCALE*city_params.car_speed), pos_min(pos[dim] - ped.radius), pos_max(pos[dim] + ped.radius);
 		auto closest_car(cars.end());
 
 		for (auto it = range_start; it != cars.end(); ++it) {
@@ -787,18 +787,21 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 		car_base_t const &c(*closest_car);
 		float lo(c.bcube.d[dim][0]), hi(c.bcube.d[dim][1]), travel_dist(0.0);
 
-		if (c.stopped_at_light) {
-			road_isec_t const &isec(get_car_isec(c));
-			// FIXME: include this car if the light is about to change?
+		if (lo >= pos_max || hi <= pos_min) { // current car doesn't already overlap, do more work to determine if it will overlap pos sometime in the near future
+			if (c.turn_dir != TURN_NONE) {} // car is turning; since it's already on this road, it must be turning off this road; don't update its future position
+			else if (c.stopped_at_light) { // check if the light will change in time for this car to reach pos; would it be easier to check the crosswalk signal?
+				float const dist_gap(dir ? (pos_min - hi) : (lo - pos_max)), time_to_close(dist_gap/(speed_mult*c.max_speed));
+				if (dist_gap > 0.0 && get_car_isec(c).will_be_green_light_in(c, time_to_close)) {travel_dist = 1.01*dist_gap;} // move it just enough to cover the gap
+			}
+			else if (!c.is_stopped()) { // moving and not turning; assume it may be accelerating, and could reach max_speed by the time it passes pos
+				//travel_dist = delta_time*speed_mult*c.cur_speed; // Note: inaccurate if car is accelerating
+				//travel_dist = delta_time*speed_mult*(c.is_almost_stopped() ? c.cur_speed : c.max_speed); // conservative - in case car is accelerating
+				travel_dist = delta_time*speed_mult*c.max_speed; // conservative - safer
+			}
+			//max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light (no longer needed?)
+			if (dir) {hi += travel_dist;} else {lo -= travel_dist;}
+			assert(lo < hi);
 		}
-		else if (!c.is_stopped() && c.turn_dir == TURN_NONE) { // moving and not turning
-			//float const travel_dist(dist_mult*c.cur_speed); // Note: inaccurate if car is accelerating
-			travel_dist = dist_mult*(c.is_almost_stopped() ? c.cur_speed : c.max_speed); // conservative - in case car is accelerating
-		}
-		//max_eq(travel_dist, 0.5f*c.get_length()); // extend by half a car length to avoid letting pedestrians cross in between cars stopped at a light (no longer needed?)
-		if (dir) {hi += travel_dist;} else {lo -= travel_dist;}
-		assert(lo < hi);
-
 		if (dbg_cubes) {
 			cube_t cube(c.bcube);
 			cube.d[dim][0] = lo; cube.d[dim][1] = hi;
