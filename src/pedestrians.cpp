@@ -104,7 +104,7 @@ void register_ped_coll(pedestrian_t &p1, pedestrian_t &p2, unsigned pid1, unsign
 bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
 	for (auto i = peds.begin()+ped_start; i != peds.end(); ++i) { // check every ped until we exit target_plot
 		if (i->plot != target_plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
-		if (ssn == i->ssn) continue; // Note: ssn check should not be required but is here for safety
+		assert(ssn != i->ssn);
 		if (!dist_xy_less_than(pos, i->pos, prox_radius)) continue; // proximity test
 		float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 		if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
@@ -145,7 +145,8 @@ bool pedestrian_t::check_ped_ped_coll_stopped(ped_manager_t &ped_mgr, vector<ped
 	assert(pid < peds.size());
 
 	// Note: shouldn't have to check peds in the next plot, assuming that if we're stopped, they likely are as well, and won't be walking toward us
-	for (auto i = peds.begin()+pid; i != peds.end(); ++i) { // check every ped until we exit target_plot
+	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped until we exit target_plot
+		assert(ssn != i->ssn);
 		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		if (!dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) continue; // no collision
 		i->collided = i->ped_coll = 1; i->colliding_ped = pid;
@@ -463,7 +464,7 @@ void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t
 
 	if (target_valid()) { // if facing away from the target, rotate in place rather than moving in a circle
 		vector3d const delta(target_pos - pos);
-		if (dot_product(vel, delta)/(speed*delta.mag()) < 0.1) return;
+		if (dot_product(vel, delta)/(speed*delta.mag()) < 0.01) return;
 	}
 	pos += vel*(fticks*get_speed_mult());
 }
@@ -488,7 +489,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	if (is_stopped) { // ignore any collisions and just stand there, keeping the same target_pos; will go when path is clear
 		if (get_wait_time_secs() > CROSS_WAIT_TIME && choose_alt_next_plot(ped_mgr)) { // give up and choose another destination if waiting for too long
 			target_pos = all_zeros;
-			go(); // FIXME: back up or turn so that we don't walk forward into the street?
+			go(); // back up or turn so that we don't walk forward into the street? move() should attempt to rotate in place
 		}
 		else {
 			check_ped_ped_coll_stopped(ped_mgr, peds, pid); // still need to check for other peds colliding with us; this doesn't always work
