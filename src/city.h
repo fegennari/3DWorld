@@ -653,7 +653,7 @@ struct pedestrian_t : public waiting_obj_t {
 	float get_speed_mult() const;
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
-	void move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
+	void move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
 	void stop();
 	void go();
 	bool check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes=nullptr) const;

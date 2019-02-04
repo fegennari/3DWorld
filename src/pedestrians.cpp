@@ -457,14 +457,15 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t c
 	return !ped_mgr.has_nearby_car(*this, road_dim, time_to_cross, dbg_cubes);
 }
 
-void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
+void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
 	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
 	reset_waiting();
 	if (is_stopped) {go();}
 
 	if (target_valid()) { // if facing away from the target, rotate in place rather than moving in a circle
 		vector3d const delta(target_pos - pos);
-		if (dot_product(vel, delta)/(speed*delta.mag()) < 0.01) return;
+		float const dist(delta.mag());
+		if (dist > radius && dot_product(vel, delta)/(speed*dist) < 0.01) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
 	}
 	pos += vel*(fticks*get_speed_mult());
 }
@@ -484,7 +485,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
 	point const prev_pos(pos); // assume this ped starts out not colliding
-	move(ped_mgr, plot_bcube, next_plot_bcube);
+	move(ped_mgr, plot_bcube, next_plot_bcube, delta_dir);
 
 	if (is_stopped) { // ignore any collisions and just stand there, keeping the same target_pos; will go when path is clear
 		if (get_wait_time_secs() > CROSS_WAIT_TIME && choose_alt_next_plot(ped_mgr)) { // give up and choose another destination if waiting for too long
