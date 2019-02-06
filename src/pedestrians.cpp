@@ -476,7 +476,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	// navigation with destination
 	if (at_dest) {
 		register_at_dest();
-		ped_mgr.choose_dest_building(*this);
+		ped_mgr.choose_new_ped_plot_pos(*this);
 	}
 	if (at_crosswalk) {ped_mgr.mark_crosswalk_in_use(*this);}
 	// movement logic
@@ -734,11 +734,14 @@ void ped_manager_t::remove_destroyed_peds() {
 	ped_destroyed = 0;
 }
 
+void ped_manager_t::register_ped_new_plot(pedestrian_t const &ped) {
+	if (!need_to_sort_city.empty()) {need_to_sort_city[ped.city] = 1;}
+	need_to_sort_peds = 1;
+}
 void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 	if (ped.next_plot == ped.plot) return; // already there (error?)
 	ped.plot = ped.next_plot; // assumes plot is adjacent; doesn't actually do any moving, only registers the move
-	need_to_sort_peds = 1;
-	if (!need_to_sort_city.empty()) {need_to_sort_city[ped.city] = 1;}
+	register_ped_new_plot(ped);
 }
 
 void ped_manager_t::next_frame() {

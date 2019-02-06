@@ -120,6 +120,9 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!ped_model.read(fp)) {return read_error(str);}
 		ped_model_files.push_back(ped_model); // Note: no ped_model_scale
 	}
+	else if (str == "ped_respawn_at_dest") {
+		if (!read_bool(fp, ped_respawn_at_dest)) {return read_error(str);}
+	}
 	// parking lots
 	else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
 		if (!read_uint(fp, min_park_spaces)) {return read_error(str);}
@@ -2794,6 +2797,20 @@ bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, 
 	if (!road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen)) return 0;
 	ped.next_plot = get_next_plot(ped);
 	return 1;
+}
+void ped_manager_t::choose_new_ped_plot_pos(pedestrian_t &ped) {
+	if (city_params.ped_respawn_at_dest) { // respawn
+		for (unsigned n = 0; n < 100; ++n) { // keep respawning until it's not visible by the camera
+			float const prev_zval(ped.pos.z);
+			bool const ret(road_gen.get_city(ped.city).gen_ped_pos(ped, rgen));
+			ped.pos.z = prev_zval; // restore orig zval - don't want to change this (zval was set from ped radius post-model scale but should be pre-model scale)
+			if (!ret) break; // failed to respawn, leave at current pos (should be very rare)
+			float const draw_dist(500.0*get_ped_radius());
+			if (!dist_less_than(get_camera_pos(), ped.pos, draw_dist) || !camera_pdu.sphere_visible_test(ped.pos, ped.radius)) break; // good pos
+		}
+		register_ped_new_plot(ped);
+	}
+	choose_dest_building(ped);
 }
 unsigned ped_manager_t::get_next_plot(pedestrian_t &ped, int exclude_plot) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot, exclude_plot);}
 
