@@ -2784,11 +2784,8 @@ bool ped_manager_t::check_isec_sphere_coll(pedestrian_t const &ped) const {
 bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped) const {
 	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius);
 }
-bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vector<cube_t> *dbg_cubes) const {
-	int const road_ix(road_gen.get_city(ped.city).get_nearby_road_ix(ped.pos, road_dim));
-	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
-	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
-	return has_nearby_car_on_road(ped, road_dim, (unsigned)road_ix, delta_time, dbg_cubes);
+int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const { // returns -1 on failure (ped not in the road)
+	return road_gen.get_city(ped.city).get_nearby_road_ix(ped.pos, road_dim);
 }
 
 // path finding
@@ -2897,7 +2894,7 @@ public:
 	void next_frame() { // Note: threads: 0=draw, 1=roads and cars, 2=pedestrians
 		if (omp_get_thread_num_3dw() == 1) {
 			road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
-			car_manager.next_frame(city_params.car_speed);
+			car_manager.next_frame(ped_manager, city_params.car_speed);
 		} else {ped_manager.next_frame();} // thread=2
 	}
 	void draw(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow

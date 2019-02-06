@@ -702,9 +702,20 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 	return ret_car_ix;
 }
 
-void car_manager_t::next_frame(float car_speed) {
+bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
+	if (car.cur_city >= peds_crossing_roads.peds.size()) return 0; // no peds in this city (includes connector road network)
+	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
+	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road
+	auto const &peds(peds_by_road[car.cur_road]);
+	// FIXME: check for future collisions with pedestrians and call i->decelerate_fast()
+	return 0;
+}
+
+void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed) {
 	if (cars.empty() || !animate2) return;
-	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 1.2ms with destinations + navigation
+	// Warning: not really thread safe, but should be okay; the ped state should valid at all points (thought maybe inconsistent) and we don't need it to be exact every frame
+	ped_manager.get_peds_crossing_roads(peds_crossing_roads);
+	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 2.0ms with destinations + navigation
 #pragma omp critical(modify_car_data)
 	{
 		if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
@@ -760,6 +771,7 @@ void car_manager_t::next_frame(float car_speed) {
 			int const next_car(find_next_car_after_turn(*i)); // Note: calculates in i->car_in_front
 			if (next_car >= 0) {check_collision(*i, cars[next_car]);} // make sure we collide with the correct car
 		}
+		if (!peds_crossing_roads.peds.empty()) {check_car_for_ped_colls(*i);}
 	} // for i
 	update_cars(); // run update logic
 	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING

@@ -582,6 +582,18 @@ city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
 	return city_params.ped_model_files[id];
 }
 
+void ped_city_vect_t::add_ped(pedestrian_t const &ped, unsigned road_ix) {
+	if (ped.city >= peds.size()) {peds.resize(ped.city+1);} // allocate city if needed
+	auto &city(peds[ped.city]);
+	if (road_ix  >= city.size()) {city.resize(road_ix+1 );} // allocate road if needed
+	city[road_ix].emplace_back(ped.pos, ped.radius);
+}
+void ped_city_vect_t::clear() {
+	for (auto i = peds.begin(); i != peds.end(); ++i) {
+		for (auto j = i->begin(); j != i->end(); ++j) {j->clear();}
+	}
+}
+
 
 // ped_manager_t
 /*static*/ float ped_manager_t::get_ped_radius() {return 0.05*city_params.road_width;} // or should this be relative to player/camera radius?
@@ -779,6 +791,25 @@ pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) 
 		} // for plot
 	} // for city
 	return nullptr; // no ped found
+}
+
+void ped_manager_t::get_peds_crossing_roads(ped_city_vect_t &pcv) const {
+	//timer_t timer("Get Peds Corssing Roads");
+	pcv.clear();
+
+	for (auto i = peds.begin(); i != peds.end(); ++i) {
+		if (!i->in_the_road || i->is_stopped) continue; // not actively crossing the road
+		bool const road_dim(fabs(i->vel.y) < fabs(i->vel.x)); // ped should be moving across the road, so velocity should give us the road dim (opposite of velocity dim)
+		int const road_ix(get_road_ix_for_ped_crossing(*i, road_dim));
+		if (road_ix >= 0) {pcv.add_ped(*i, road_ix);}
+	} // for i
+}
+
+bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vector<cube_t> *dbg_cubes) const {
+	int const road_ix(get_road_ix_for_ped_crossing(ped, road_dim));
+	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
+	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
+	return has_nearby_car_on_road(ped, road_dim, (unsigned)road_ix, delta_time, dbg_cubes);
 }
 
 bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vector<cube_t> *dbg_cubes) const {

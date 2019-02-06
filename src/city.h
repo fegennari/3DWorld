@@ -587,7 +587,16 @@ public:
 }; // car_draw_state_t
 
 
+// forward declarations of some classes
 class city_road_gen_t;
+struct pedestrian_t;
+class ped_manager_t;
+
+struct ped_city_vect_t {
+	vector<vector<vector<sphere_t>>> peds; // per city per road
+	void add_ped(pedestrian_t const &ped, unsigned road_ix);
+	void clear();
+};
 
 class car_manager_t {
 
@@ -600,6 +609,7 @@ class car_manager_t {
 	city_road_gen_t const &road_gen;
 	vector<car_t> cars;
 	vector<car_block_t> car_blocks;
+	ped_city_vect_t peds_crossing_roads;
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
 	vector<unsigned> entering_city;
@@ -627,14 +637,13 @@ public:
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
 	car_t const *get_car_at(point const &p1, point const &p2) const;
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
-	void next_frame(float car_speed);
+	bool check_car_for_ped_colls(car_t &car) const;
+	void next_frame(ped_manager_t const &ped_manager, float car_speed);
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context();}
 }; // car_manager_t
 
-
-class ped_manager_t; // forward declaration for use in pedestrian_t
 
 struct pedestrian_t : public waiting_obj_t {
 
@@ -735,6 +744,7 @@ class ped_manager_t { // pedestrians
 	void sort_by_city_and_plot();
 	road_isec_t const &get_car_isec(car_base_t const &car) const;
 	void register_ped_new_plot(pedestrian_t const &ped);
+	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
 public:
 	// for use in pedestrian_t, mostly for collisions and path finding
 	path_finder_t path_finder;
@@ -764,6 +774,7 @@ public:
 	void next_frame();
 	pedestrian_t const *get_ped_at(point const &p1, point const &p2) const;
 	unsigned get_first_ped_at_plot(unsigned plot) const {assert(plot < by_plot.size()); return by_plot[plot];}
+	void get_peds_crossing_roads(ped_city_vect_t &pcv) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void free_context() {ped_model_loader.free_context();}
 	//vector3d get_dest_move_dir(point const &pos) const;
