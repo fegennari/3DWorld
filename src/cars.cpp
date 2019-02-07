@@ -704,10 +704,25 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 
 bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 	if (car.cur_city >= peds_crossing_roads.peds.size()) return 0; // no peds in this city (includes connector road network)
+	if (car.turn_val != 0.0) return 0; // for now, don't check for cars when turning as this causes problems with blocked intersections
 	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
 	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road
 	auto const &peds(peds_by_road[car.cur_road]);
-	// FIXME: check for future collisions with pedestrians and call i->decelerate_fast()
+	if (peds.empty()) return 0;
+	cube_t coll_area(car.bcube);
+	coll_area.d[car.dim][!car.dir] = coll_area.d[car.dim][car.dir]; // exclude the car itself
+	coll_area.d[car.dim][car.dir] += (car.dir ? 1.25 : -1.25)*car.get_length(); // extend the front
+	coll_area.d[!car.dim][0] -= 0.5*car.get_width();
+	coll_area.d[!car.dim][1] += 0.5*car.get_width();
+	static rand_gen_t rgen;
+
+	for (auto i = peds.begin(); i != peds.end(); ++i) {
+		if (coll_area.contains_pt_xy_exp(i->pos, i->radius)) {
+			car.decelerate_fast();
+			if ((rgen.rand()&3) == 0) {car.honk_horn_if_close_and_fast();}
+			return 1;
+		}
+	} // for i
 	return 0;
 }
 
@@ -715,7 +730,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	if (cars.empty() || !animate2) return;
 	// Warning: not really thread safe, but should be okay; the ped state should valid at all points (thought maybe inconsistent) and we don't need it to be exact every frame
 	ped_manager.get_peds_crossing_roads(peds_crossing_roads);
-	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 2.0ms with destinations + navigation
+	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 2.1ms with destinations + navigation
 #pragma omp critical(modify_car_data)
 	{
 		if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
