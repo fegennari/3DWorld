@@ -4,7 +4,8 @@
 #include "city.h"
 #include "lightmap.h"
 
-float const STREETLIGHT_BEAMWIDTH   = 0.25;
+float const STREETLIGHT_BEAMWIDTH = 0.25;
+float const stoplight_dist_to_corner_scale = 2.0;
 
 extern bool tt_fire_button_down;
 extern int frame_counter, game_mode;
@@ -414,8 +415,8 @@ cube_t road_isec_t::get_stoplight_cube(unsigned n) const { // Note: mostly dupli
 	assert(conn & (1<<n));
 	float const sz(0.03*city_params.road_width), h(1.0*sz);
 	bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-	float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
-	float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
+	float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + stoplight_dist_to_corner_scale*(dir ? sz : -sz)); // pos in road dim
+	float const side_len(side ? -sz : sz), v1(d[!dim][side] + (stoplight_dist_to_corner_scale - 1.0)*side_len), v2(v1 + side_len); // pos in other dim
 	unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
 	float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
 	cube_t c;
@@ -493,9 +494,9 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 	for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 		if (!(conn & (1<<n))) continue; // no road in this dir
 		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-		float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + (dir ? sz : -sz)); // location in road dim
-		float const v1(d[!dim][side]), v2(v1 + (side ? -sz : sz)); // location in other dim
-																   // draw base
+		float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + stoplight_dist_to_corner_scale*(dir ? sz : -sz)); // pos in road dim
+		float const side_len(side ? -sz : sz), v1(d[!dim][side] + (stoplight_dist_to_corner_scale - 1.0)*side_len), v2(v1 + side_len); // pos in other dim
+		// draw base
 		unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
 		float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
 
@@ -533,13 +534,13 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 				double const time(fract(tfticks/(flash_period*TICKS_PER_SECOND)));
 				if (time > 0.5) {cw_color = BLACK;}
 			}
-			float const cw_dim_pos(d[dim][!dir] + 1.7*(dir ? sz : -sz)); // location in road dim
+			float const cw_dim_pos(dim_pos + 0.7*(dir ? sz : -sz)); // location in road dim
 			cube_t c;
 			c.z1() = zbot + 1.2*h + 1.4*h*dim; c.z2() = c.z1() + 1.6*h;
 			c.d[dim][0] = cw_dim_pos - 0.5*sz; c.d[dim][1] = cw_dim_pos + 0.5*sz;
 
 			for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
-				float const ndp(d[!dim][i] - 1.2*(i ? sz : -sz));
+				float const ndp(d[!dim][i] - (stoplight_dist_to_corner_scale + 0.2)*(i ? sz : -sz));
 				c.d[!dim][0] = ndp - 0.1*sz; c.d[!dim][1] = ndp + 0.1*sz;
 				dstate.draw_cube(qbd, c, cw, 0); // skip_bottom=0
 
