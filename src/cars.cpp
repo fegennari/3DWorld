@@ -703,8 +703,8 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 }
 
 bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
-	if (car.cur_city >= peds_crossing_roads.peds.size()) return 0; // no peds in this city (includes connector road network)
-	if (car.turn_val != 0.0) return 0; // for now, don't check for cars when turning as this causes problems with blocked intersections
+	if (car.cur_city >= peds_crossing_roads.peds.size())  return 0; // no peds in this city (includes connector road network)
+	if (car.turn_val != 0.0 || car.turn_dir != TURN_NONE) return 0; // for now, don't check for cars when turning as this causes problems with blocked intersections
 	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
 	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road
 	auto const &peds(peds_by_road[car.cur_road]);
