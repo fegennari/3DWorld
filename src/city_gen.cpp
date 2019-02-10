@@ -2031,7 +2031,7 @@ class city_road_gen_t : public road_gen_base_t {
 				road_isec_t const &isec(get_car_isec(car));
 				isec.notify_waiting_car(car); // even if not stopped
 
-				// FIXME: unclear why this was needed (how was stopped_at_light not set earlier?)
+				// unclear why this was needed (how was stopped_at_light not set earlier?)
 				if (isec.contains_pt_xy(car.get_front()) && !isec.contains_pt_xy(car.get_center()) && !car_can_fit_in_seg(car, global_rn)) { // not yet in the isec - stop and wait
 					stop_and_wait_car(car, rgen, road_networks, isec);
 					return;

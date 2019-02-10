@@ -8,6 +8,7 @@ float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius
 float const PED_HEIGHT_SCALE = 2.5; // ratio of collision radius to model height (z)
 float const CROSS_SPEED_MULT = 1.8; // extra speed multiplier when crossing the road
 float const CROSS_WAIT_TIME  = 60.0; // in seconds
+bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
 
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter;
@@ -390,10 +391,10 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 		if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
 			bool const in_cur_plot(plot_bcube.contains_pt_xy(pos));
 			point dest_pos(pos);
-			// FIXME: should cross at intersection, not in the middle of the street; find closest crosswalk (corner of plot_bcube) to dest_pos
-			// while the code below is correct, it tends to make peds collide with the stoplight and each other and never actually reach their destinations,
+			// should cross at intersection, not in the middle of the street; find closest crosswalk (corner of plot_bcube) to dest_pos;
+			// while the code below is correct, it tends to make peds collide with the stoplight on the corner and each other and never actually reach their destinations,
 			// so we allow peds to cross the street wherever they want until at the very least the stoplights can be moved
-			if (0) { // closest corner (crosswalk)
+			if (FORCE_USE_CROSSWALKS) { // closest corner (crosswalk)
 				cube_t const &cube(in_cur_plot ? plot_bcube : next_plot_bcube); // target the corner of the current plot, then the corner of the next plot
 				float const val((in_cur_plot ? 0.01 : -0.01)*city_params.road_width); // slightly outside the cur plot / inside the next plot, to ensure a proper transition
 
