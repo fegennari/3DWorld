@@ -542,7 +542,12 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		stuck_count = 0;
 	}
 	if (collided) { // collision
-		if (!outside_plot) {pos = prev_pos;} // restore to previous valid pos unless we're outside the plot
+		if (!outside_plot) {
+			point const cur_pos(pos);
+			pos = prev_pos; // restore to previous valid pos unless we're outside the plot
+			// if prev pos is also invalid, undo the restore to avoid getting this ped stuck in a collision object
+			if (!is_valid_pos(colliders, at_dest) || check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {pos = cur_pos;}
+		}
 		vector3d new_dir;
 
 		if (++stuck_count > 8) {
