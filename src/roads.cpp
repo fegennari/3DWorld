@@ -683,16 +683,21 @@ bool tunnel_t::proc_sphere_coll(point &center, point const &prev, float sradius,
 	return 1;
 }
 
+void tunnel_t::calc_zvals_and_eext(float &zf, float &zb, float &end_ext) const {
+	zf = ends[0].z1(); zb = ends[1].z1();
+	end_ext = (2.0*(d ? DY_VAL : DX_VAL));
+	float const dz_ext(end_ext*(zb - zf)/get_length());
+	zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
+}
+
 bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const {
 	cube_t const bcube(get_tunnel_bcube());
 	if (!check_line_clip(p1, p2, bcube.d)) return 0;
-	// FIXME: remove duplicate code with draw_tunnel()?
 	cube_t cubes[4];
 	calc_top_bot_side_cubes(cubes);
 	float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
-	float zf(ends[0].z1()), zb(ends[1].z1());
-	float const end_ext(2.0*(d ? DY_VAL : DX_VAL)), dz_ext(end_ext*(zb - zf)/get_length());
-	zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
+	float zf, zb, end_ext;
+	calc_zvals_and_eext(zf, zb, end_ext);
 	bool const d(dim);
 	bool ret(0);
 
@@ -700,7 +705,7 @@ bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const 
 		//cube_t const &c(cubes[i]);
 		//set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, pts); // TODO: tilted cube case
 	}
-	for (unsigned n = 0; n < 2; ++n) { // check tunnel facades
+	for (unsigned n = 0; n < 2; ++n) { // check tunnel facades (Note: similar to code in road_draw_state_t::draw_tunnel())
 		cube_t const &tend(ends[n]);
 		cube_t c(tend);
 		c.z1() += height - 0.5*wall_thick; // tunnel ceiling
@@ -927,9 +932,8 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	color_wrapper cw_concrete(LT_GRAY);
 	bool const d(tunnel.dim), invert_normals(d);
 	float const scale(1.0*city_params.road_width), wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*tunnel.get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
-	float zf(tunnel.ends[0].z1()), zb(tunnel.ends[1].z1());
-	float const end_ext(2.0*(d ? DY_VAL : DX_VAL)), dz_ext(end_ext*(zb - zf)/tunnel.get_length());
-	zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
+	float zf, zb, end_ext;
+	tunnel.calc_zvals_and_eext(zf, zb, end_ext);
 	cube_t cubes[4];
 	tunnel.calc_top_bot_side_cubes(cubes);
 	float const tile_sz(d ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), xy1(cubes[0].d[d][0]), xy2(cubes[0].d[d][1]), length(xy2 - xy1);
