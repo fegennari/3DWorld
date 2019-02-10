@@ -1486,7 +1486,7 @@ class building_creator_t {
 			gxy[d] = unsigned(v*(grid_sz-1));
 			assert(gxy[d] < grid_sz);
 		}
-		return (gxy[0]*grid_sz + gxy[1]);
+		return (gxy[1]*grid_sz + gxy[0]);
 	}
 	void get_grid_range(cube_t const &bcube, unsigned ixr[2][2]) const { // {lo,hi}x{x,y}
 		point llc(bcube.get_llc()), urc(bcube.get_urc());
@@ -1903,11 +1903,13 @@ public:
 
 				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
 					building_t const &building(get_building(*b));
-					if (xy_range.intersects_xy(building.bcube)) {bcubes.push_back(building.bcube);}
+					if (!xy_range.intersects_xy(building.bcube)) continue;
+					cube_t shared(xy_range);
+					shared.intersect_with_cube(building.bcube);
+					if (get_grid_ix(shared.get_llc()) == y*grid_sz + x) {bcubes.push_back(building.bcube);} // add only if in home grid (to avoid duplicates)
 				}
 			} // for x
 		} // for y
-		sort_and_unique(bcubes); // FIXME: avoid doing this by using home grid for buildings?
 	}
 
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
