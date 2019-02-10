@@ -144,7 +144,7 @@ void car_t::register_adj_car(car_t &c) {
 	if (cube.intersects_xy(c.bcube)) {car_in_front = &c;} // projected cube intersects other car
 }
 
-unsigned car_t::count_cars_in_front(cube_t const &range) const {
+unsigned car_t::count_cars_in_front(cube_t const &range) const { // Note: currently only used for debug printouts, so the iteration limit is acceptable
 	unsigned num(0);
 	car_t const *cur_car(this);
 
@@ -160,7 +160,10 @@ float car_t::get_sum_len_space_for_cars_in_front(cube_t const &range) const {
 	float len(0.0);
 	car_t const *cur_car(this);
 
-	for (unsigned i = 0; i < 50; ++i) { // limit iterations; avg len = city_params.get_nom_car_size().x (FIXME: 50 not high enough for connector roads)
+	// Note: should exit once we reach the end of the line of cars, or once we go off the current road segment;
+	// this iteration may be very long for cars stopped on long, congested connector roads;
+	// however, it should only be queried by one other car per frame, which means this is overall constant time per frame
+	while (1) { // avg len = city_params.get_nom_car_size().x
 		if (cur_car->dim != dim || cur_car->dir == dir) {len += cur_car->get_length();} // include if not going in opposite direction
 		cur_car = cur_car->car_in_front;
 		if (!cur_car || !range.contains_pt_xy(cur_car->get_center())) break;
