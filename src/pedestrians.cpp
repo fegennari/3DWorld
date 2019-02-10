@@ -68,7 +68,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
 }
 
-bool pedestrian_t::check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
+bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const {
 	if (!in_the_road) return 0;
 	float const expand(get_sidewalk_width(plot_bcube) + radius); // max dist from plot edge where a collision can occur
 	cube_t pbce(plot_bcube), npbce(next_plot_bcube);
@@ -80,14 +80,14 @@ bool pedestrian_t::check_road_coll(ped_manager_t &ped_mgr, cube_t const &plot_bc
 	return 0;
 }
 
-bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders) { // Note: non-const because at_dest is modified
+bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders, bool &ped_at_dest) const {
 	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
 		if (building_id != dest_bldg) return 0;
 		bool const ret(!at_dest);
-		at_dest = 1;
+		ped_at_dest = 1;
 		return ret; // only valid if we just reached our dest
 	}
 	float const xmin(pos.x - radius), xmax(pos.x + radius);
@@ -128,7 +128,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 	return 0;
 }
 
-bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
+bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
 	assert(pid < peds.size());
 	float const timestep(2.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 2s
 	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
@@ -145,7 +145,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t &ped_mgr, vector<pedestrian_
 	return 0;
 }
 
-bool pedestrian_t::check_ped_ped_coll_stopped(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid) {
+bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid) {
 	assert(pid < peds.size());
 
 	// Note: shouldn't have to check peds in the next plot, assuming that if we're stopped, they likely are as well, and won't be walking toward us
@@ -163,7 +163,8 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> con
 	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
-	if (!is_valid_pos(colliders)) return 0; // plot == next_plot; return if failed
+	bool temp_at_dest(0); // we don't want to set at_dest from this call
+	if (!is_valid_pos(colliders, temp_at_dest)) return 0; // plot == next_plot; return if failed
 	return 1; // success
 }
 
@@ -428,7 +429,7 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 	return 1; // success
 }
 
-void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const &colliders, point const &dest_pos, vector<cube_t> &avoid) const {
+void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vector<cube_t> const &colliders, point const &dest_pos, vector<cube_t> &avoid) const {
 	avoid.clear();
 	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
 	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
@@ -441,7 +442,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t &ped_mgr, vector<cube_t> const 
 	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by_xy(expand);} // expand colliders as well
 }
 
-bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes) const {
+bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes) const {
 	if (!in_the_road || speed < TOLERANCE) return 1;
 	float const sw_width(get_sidewalk_width(plot_bcube));
 	if (!plot_bcube.closest_dist_less_than(pos, sw_width)) return 1; // too far into the road to turn back
@@ -456,7 +457,7 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t &ped_mgr, cube_t c
 	return !ped_mgr.has_nearby_car(*this, road_dim, time_to_cross, dbg_cubes);
 }
 
-void pedestrian_t::move(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
+void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
 	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
 	reset_waiting();
 	if (is_stopped) {go();}
@@ -492,7 +493,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			go(); // back up or turn so that we don't walk forward into the street? move() should attempt to rotate in place
 		}
 		else {
-			check_ped_ped_coll_stopped(ped_mgr, peds, pid); // still need to check for other peds colliding with us; this doesn't always work
+			check_ped_ped_coll_stopped(peds, pid); // still need to check for other peds colliding with us; this doesn't always work
 			collided = ped_coll = 0;
 			return;
 		}
@@ -503,7 +504,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
 	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube)) {collided = outside_plot = 1;} // outside the plot, treat as a collision with the plot bounds
-	else if (!is_valid_pos(colliders)) {collided = 1;} // collided with a static collider
+	else if (!is_valid_pos(colliders, at_dest)) {collided = 1;} // collided with a static collider
 	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
 	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir)) {collided = 1;} // collided with another pedestrian
 	else { // no collisions
