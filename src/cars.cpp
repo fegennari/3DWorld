@@ -230,7 +230,7 @@ bool comp_car_road_then_pos::operator()(car_t const &c1, car_t const &c2) const 
 	if (c1.cur_road != c2.cur_road) return (c1.cur_road < c2.cur_road);
 
 	if (c1.is_parked()) { // sort parked cars back to front relative to camera so that alpha blending works
-		return (p2p_dist_sq(c1.bcube.get_cube_center(), camera_pos) > p2p_dist_sq(c2.bcube.get_cube_center(), camera_pos));
+		return (p2p_dist_xy_sq(c1.bcube.get_cube_center(), camera_pos) > p2p_dist_xy_sq(c2.bcube.get_cube_center(), camera_pos));
 	}
 	return (c1.bcube.d[c1.dim][c1.dir] < c2.bcube.d[c2.dim][c2.dir]); // compare front end of car (used for collisions)
 }
