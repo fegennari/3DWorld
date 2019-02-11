@@ -190,8 +190,8 @@ struct comp_car_road {
 	bool operator()(car_base_t const &c1, car_base_t const &c2) const {return (c1.cur_road < c2.cur_road);}
 };
 struct comp_car_road_then_pos {
-	vector3d const &xlate;
-	comp_car_road_then_pos(vector3d const &xlate_) : xlate(xlate_) {}
+	vector3d const &camera_pos;
+	comp_car_road_then_pos(vector3d const &camera_pos_) : camera_pos(camera_pos_) {}
 	bool operator()(car_t const &c1, car_t const &c2) const;
 };
 

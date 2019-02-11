@@ -63,8 +63,12 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	if (!union_plot_bcube.contains_pt_xy(pos) && union_plot_bcube.contains_pt_xy(prev_pos)) {return 0;} // went outside the valid area
-	in_the_road  = 1;
-	at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are at a crosswalk, this is the correct thing to do
+	float const dx(min(fabs(pos.x - plot_bcube.x1()), fabs(pos.x - plot_bcube.x2()))), dy(min(fabs(pos.y - plot_bcube.y1()), fabs(pos.y - plot_bcube.y2())));
+
+	if (dx < max(city_params.road_width, 0.1f*plot_bcube.dx()) && dy < max(city_params.road_width, 0.1f*plot_bcube.dy())) { // near an intersection
+		at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are corssing the road, this is the correct thing to do
+	}
+	in_the_road = 1;
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
 }
 
@@ -108,7 +112,6 @@ void register_ped_coll(pedestrian_t &p1, pedestrian_t &p2, unsigned pid1, unsign
 bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
 	for (auto i = peds.begin()+ped_start; i != peds.end(); ++i) { // check every ped until we exit target_plot
 		if (i->plot != target_plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
-		assert(ssn != i->ssn);
 		if (!dist_xy_less_than(pos, i->pos, prox_radius)) continue; // proximity test
 		float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 		if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
@@ -535,7 +538,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			if (speed > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
 				dest_dir /= dmag; // normalize
 				// if destination is in exactly the opposite dir, pick an orthogonal direction using our SSN to decide which way deterministically
-				if (dot_product(dest_dir, vel)/speed < -0.99) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
+				if (dot_product(dest_dir, vel) < -0.99*speed) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
 				set_velocity((0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/speed)*vel); // slowly blend in destination dir (to avoid sharp direction changes)
 			}
 		}
@@ -771,7 +774,7 @@ void ped_manager_t::next_frame() {
 	{car_manager.extract_car_data(cars_by_city);}
 
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~3.4ms for 10K peds
+	//timer_t timer("Ped Update"); // ~3.8ms for 10K peds
 	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 	static bool first_frame(1);
 

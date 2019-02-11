@@ -230,7 +230,7 @@ bool comp_car_road_then_pos::operator()(car_t const &c1, car_t const &c2) const 
 	if (c1.cur_road != c2.cur_road) return (c1.cur_road < c2.cur_road);
 
 	if (c1.is_parked()) { // sort parked cars back to front relative to camera so that alpha blending works
-		return (p2p_dist_sq((c1.bcube.get_cube_center() + xlate), camera_pdu.pos) > p2p_dist_sq((c2.bcube.get_cube_center() + xlate), camera_pdu.pos));
+		return (p2p_dist_sq(c1.bcube.get_cube_center(), camera_pos) > p2p_dist_sq(c2.bcube.get_cube_center(), camera_pos));
 	}
 	return (c1.bcube.d[c1.dim][c1.dir] < c2.bcube.d[c2.dim][c2.dir]); // compare front end of car (used for collisions)
 }
@@ -737,7 +737,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 #pragma omp critical(modify_car_data)
 	{
 		if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
-		sort(cars.begin(), cars.end(), comp_car_road_then_pos(dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
+		sort(cars.begin(), cars.end(), comp_car_road_then_pos(camera_pdu.pos - dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
 	}
 	entering_city.clear();
 	car_blocks.clear();
