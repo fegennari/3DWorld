@@ -1092,23 +1092,7 @@ void vert_coll_detector::check_cobj(int index) {
 			obj.pos.z = opz;
 			pold.z    = poz;
 		}
-		if (game_mode && sstates != NULL) { // collision detection for player weapon
-			sphere_t weapon_bsphere(get_weapon_bsphere(sstates[CAMERA_ID].weapon));
-
-			if (weapon_bsphere.radius > 0.0 && sphere_cube_intersect(weapon_bsphere.pos, weapon_bsphere.radius, cobj)) {
-				float const o_radius_(o_radius);
-				vector3d const delta(weapon_bsphere.pos - pos);
-				o_radius  = weapon_bsphere.radius;
-				pos      += delta;
-				obj.pos  += delta;
-				pold     += delta;
-				check_cobj_intersect(index, 0, 0);
-				o_radius  = o_radius_;
-				pos      -= delta;
-				obj.pos  -= delta;
-				pold     -= delta;
-			}
-		}
+		//if (game_mode && sstates != NULL) {} // collision detection for player weapon?
 	}
 }
 

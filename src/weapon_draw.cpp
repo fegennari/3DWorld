@@ -709,15 +709,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 }
 
 
-sphere_t get_weapon_bsphere(int weapon) {
-	switch (weapon) {
-	case W_UNARMED: return sphere_t();
-		// FIXME: write
-	}
-	return sphere_t();
-}
-
-
 void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader, int shooter, bool fixed_lod, float apha) {
 	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, shooter, 0, apha, 0.0, 0.0, scale, 0, shader, fixed_lod);
 }
