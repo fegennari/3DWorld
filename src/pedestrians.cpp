@@ -110,16 +110,19 @@ void register_ped_coll(pedestrian_t &p1, pedestrian_t &p2, unsigned pid1, unsign
 }
 
 bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
+	float const prox_radius_sq(prox_radius*prox_radius);
+
 	for (auto i = peds.begin()+ped_start; i != peds.end(); ++i) { // check every ped until we exit target_plot
 		if (i->plot != target_plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
-		if (!dist_xy_less_than(pos, i->pos, prox_radius)) continue; // proximity test
+		float const dist_sq(p2p_dist_xy_sq(pos, i->pos));
+		if (dist_sq > prox_radius_sq) continue; // proximity test
 		float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
-		if (dist_xy_less_than(pos, i->pos, r_sum)) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
+		if (dist_sq < r_sum*r_sum) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
 		if (speed < TOLERANCE) continue;
 		vector3d const delta_v(vel - i->vel), delta_p(pos - i->pos);
-		float const dp(-dot_product(delta_v, delta_p));
+		float const dp(-dot_product_xy(delta_v, delta_p));
 		if (dp <= 0.0) continue; // diverging, no avoidance needed
-		float const dv_mag(delta_v.mag()), dist(delta_p.mag()), fmag(dist/(dist - 0.9*r_sum));
+		float const dv_mag(delta_v.mag()), dist(sqrt(dist_sq)), fmag(dist/(dist - 0.9*r_sum));
 		if (dv_mag < TOLERANCE) continue;
 		vector3d const rejection(delta_p - (dp/(dv_mag*dv_mag))*delta_v); // component of velocity perpendicular to delta_p (avoid dir)
 		float const rmag(rejection.mag()), rel_vel(max(dv_mag/speed, 0.5f)); // higher when peds are converging
@@ -448,7 +451,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vector<cube_t> 
 bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes) const {
 	if (!in_the_road || speed < TOLERANCE) return 1;
 	float const sw_width(get_sidewalk_width(plot_bcube));
-	if (!plot_bcube.closest_dist_less_than(pos, sw_width)) return 1; // too far into the road to turn back
+	if (!plot_bcube.closest_dist_xy_less_than(pos, sw_width)) return 1; // too far into the road to turn back
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
 	if (!union_plot_bcube.contains_pt_xy(pos)) return 1; // not crossing between plots - must be in the road, go back to the sidewalk
@@ -468,7 +471,7 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 	if (target_valid()) { // if facing away from the target, rotate in place rather than moving in a circle
 		vector3d const delta(target_pos - pos);
 		float const dist(delta.mag());
-		if (dist > radius && dot_product(vel, delta)/(speed*dist) < 0.01) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
+		if (dist > radius && dot_product_xy(vel, delta) < 0.01*speed*dist) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
 	}
 	pos += vel*(fticks*get_speed_mult());
 }
@@ -517,7 +520,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (dest_pos != pos) {
 			bool update_path(0);
 			if (dist_less_than(pos, get_camera_pos(), 1000.0*radius)) { // nearby pedestrian - higher update rate
-				update_path = (((frame_counter + ssn) & 15) == 0 || (target_valid() && dist_less_than(pos, target_pos, radius)));
+				update_path = (((frame_counter + ssn) & 15) == 0 || (target_valid() && dist_xy_less_than(pos, target_pos, radius)));
 			}
 			else { // distant pedestrian - lower update rate
 				update_path = (((frame_counter + ssn) & 63) == 0);
@@ -538,7 +541,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			if (speed > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
 				dest_dir /= dmag; // normalize
 				// if destination is in exactly the opposite dir, pick an orthogonal direction using our SSN to decide which way deterministically
-				if (dot_product(dest_dir, vel) < -0.99*speed) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
+				if (dot_product_xy(dest_dir, vel) < -0.99*speed) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
 				set_velocity((0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/speed)*vel); // slowly blend in destination dir (to avoid sharp direction changes)
 			}
 		}
@@ -556,17 +559,17 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (++stuck_count > 8) {
 			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
 			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube) - pos).get_norm();} // move toward dest if stuck count is high
-			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); }// shift randomly by 10% radius to get unstuck
+			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); } // shift randomly by 10% radius to get unstuck
 		}
 		if (ped_coll) {
 			assert(colliding_ped < peds.size());
 			vector3d const coll_dir(peds[colliding_ped].pos - pos);
 			new_dir = cross_product(vel, plus_z);
-			if (dot_product(new_dir, coll_dir) > 0.0) {new_dir = -new_dir;} // orient away from the other ped
+			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir = -new_dir;} // orient away from the other ped
 		}
 		else { // static object collision (should be rare if path_finder does a good job)
 			new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
-			if (dot_product(vel, new_dir) > 0.0) {new_dir *= -1.0;} // negate if pointing in the same dir
+			if (dot_product_xy(vel, new_dir) > 0.0) {new_dir *= -1.0;} // negate if pointing in the same dir
 		}
 		set_velocity(new_dir);
 		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
@@ -768,13 +771,13 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 
 void ped_manager_t::next_frame() {
 	if (!animate2 || peds.empty()) return; // nothing to do
+	//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
 
 	// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
 #pragma omp critical(modify_car_data)
 	{car_manager.extract_car_data(cars_by_city);}
 
 	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	//timer_t timer("Ped Update"); // ~3.8ms for 10K peds
 	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 	static bool first_frame(1);
 
@@ -948,7 +951,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
 	//timer_t timer("Ped Draw"); // ~1ms
 	bool const use_models(ped_model_loader.num_models() > 0);
-	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : (use_models ? 500.0 : 2000.0)*get_ped_radius()); // smaller view dist for models
+	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : (use_models ? 500.0 : 2000.0)*get_ped_radius()), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.far_ = draw_dist;
 	pdu.pos -= xlate; // adjust for local translate
@@ -981,7 +984,8 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
 				if (ped.destroyed) continue; // skip
-				if (!dist_less_than(pdu.pos, ped.pos, draw_dist)) continue; // too far - skip
+				float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
+				if (dist_sq > draw_dist_sq) continue; // too far - skip
 				if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) continue;
 				
 				if (!use_models) { // or distant?
@@ -998,10 +1002,10 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					bcube.z2() = bcube.z1() + height;
 					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
 					end_sphere_draw(in_sphere_draw);
-					bool const low_detail(!shadow_only && !dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)); // low detail for non-shadow pass at half draw dist
+					bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
 					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
 				}
-				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow
+				if (dist_sq < 0.25*draw_dist_sq) { // fake AO shadow at below half draw distance
 					float const ao_radius(0.6*ped.radius);
 					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.05*ped.radius); // at the feet
 					point pao[4];

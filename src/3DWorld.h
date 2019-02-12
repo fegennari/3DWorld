@@ -581,6 +581,7 @@ struct cube_t { // size = 24
 	float get_overlap_volume(const cube_t &cube) const;
 	vector3d closest_side_dir(point const &pos) const;
 	bool closest_dist_less_than(point const &pos, float dist) const;
+	bool closest_dist_xy_less_than(point const &pos, float dist) const;
 	
 	point closest_pt(point const &pos) const {
 		point pt;
