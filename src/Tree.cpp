@@ -1425,13 +1425,32 @@ void tree_xform_t::gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float r
 
 float get_default_tree_depth() {return TREE_DEPTH*(0.5 + 0.5/tree_scale);}
 
+float get_tree_size_scale(int tree_type, bool create_bush) {
+	return TREE_SIZE*tree_types[tree_type].branch_size/tree_scale * (create_bush ? 0.7 : 1.0);
+}
+
+void adjust_tree_zval(point &pos, int size, int type, bool create_bush) {
+
+	int const size_est((size == 0) ? 60 : size); // use average of 40-80
+	float const size_scale(get_tree_size_scale(type, create_bush)), base_radius(size_est*(0.1*size_scale)), radius(4.0*base_radius);
+	float const cc(pos.z);
+
+	for (int dy = -1; dy <= 1; dy += 2) { // take max in 4 directions to prevent intersections with the terrain on steep slopes
+		for (int dx = -1; dx <= 1; dx += 2) {
+			min_eq(pos.z, interpolate_mesh_zval((pos.x + dx*radius), (pos.y + dy*radius), 0.0, 1, 1));
+		}
+	}
+	pos.z -= 10.0*radius;
+	//cout << TXT(radius) << TXT(cc) << TXT(tree_center.z) << endl;
+}
+
 
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
 	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches, bool allow_bushes)
 {
-	assert(calc_z || user_placed);
+	//assert(calc_z || user_placed);
 	tree_center      = pos;
 	created          = 1;
 	tree_color.alpha = 1.0;
@@ -2200,7 +2219,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			}
 			if (!check_valid_scenery_pos((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale, 1)) continue; // approximate bsphere; is_tall=1
 			add_new_tree(rgen, ttype);
-			back().gen_tree(pos, 0, ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
+			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
 		} // for j
 	} // for i
 }
