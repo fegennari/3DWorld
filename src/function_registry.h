@@ -456,6 +456,7 @@ bool cobj_contained(point const &pos1, const point *pts, unsigned npts, int cobj
 colorRGBA get_cobj_color_at_point(int cindex, point const &pos, vector3d const &normal, bool fast);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
+float get_max_mesh_height_within_radius(point const &pos, float radius, bool is_camera);
 void force_onto_surface_mesh(point &pos);
 int  set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id,
 	bool flight, bool on_snow, bool skip_dynamic=0, bool test_only=0, bool skip_movable=0);

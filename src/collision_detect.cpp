@@ -30,7 +30,7 @@ extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
 extern unsigned snow_coverage_resolution;
-extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height;
+extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height, NEAR_CLIP;
 extern double camera_zh, tfticks;
 extern dwobject def_objects[];
 extern obj_type object_types[];
@@ -1705,6 +1705,19 @@ void add_camera_cobj(point const &pos) {
 }
 
 
+float get_max_mesh_height_within_radius(point const &pos, float radius, bool is_camera) {
+
+	float const mh_radius(is_camera ? max(radius, NEAR_CLIP) : radius); // include the near clipping plane for the camera/player
+	float mh(int_mesh_zval_pt_off(pos, 1, 0));
+
+	for (int dy = -1; dy <= 1; dy += 2) { // take max in 4 directions to prevent intersections with the terrain on steep slopes
+		for (int dx = -1; dx <= 1; dx += 2) {
+			max_eq(mh, int_mesh_zval_pt_off((pos + vector3d(dx*mh_radius, dy*mh_radius, 0.0)), 1, 0));
+		}
+	}
+	return mh;
+}
+
 void force_onto_surface_mesh(point &pos) { // for camera
 
 	bool const cflight(game_mode && camera_flight);
@@ -1739,7 +1752,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	}
 	else if (!cflight) { // tiled terrain mode
 		pos.z -= radius; // bottom of camera sphere
-		adjust_zval_for_model_coll(pos, int_mesh_zval_pt_off(pos, 1, 0), C_STEP_HEIGHT*radius);
+		adjust_zval_for_model_coll(pos, get_max_mesh_height_within_radius(pos, radius, 1), C_STEP_HEIGHT*radius);
 		pos.z += radius;
 		proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0); // use prev pos for building collisions; z dir
 		camera_last_pos = pos;
@@ -1749,7 +1762,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	if (cflight) {
 		if (jump_time) {pos.z += 0.5*JUMP_ACCEL*fticks*radius; jump_time = 0;}
 		if (coll) {pos.z = camera_obj.pos.z;}
-		float const mesh_z(int_mesh_zval_pt_off(pos, 1, 0));
+		float const mesh_z(get_max_mesh_height_within_radius(pos, radius, 1));
 		pos.z = min((camera_last_pos.z + float(C_STEP_HEIGHT*radius)), pos.z); // don't fall and don't rise too quickly
 		if (pos.z + radius > zbottom) {pos.z = max(pos.z, (mesh_z + radius));} // if not under the mesh
 	}
@@ -1839,7 +1852,8 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		zvel = 0.0;
 		return 0;
 	}
-	float const radius(object_types[type].radius), step(step_height*radius), mh(int_mesh_zval_pt_off(pos, 1, 0)); // *** step height determined by fticks? ***
+	float const radius(object_types[type].radius), step(step_height*radius); // *** step height determined by fticks? ***
+	float const mh(get_max_mesh_height_within_radius(pos, radius, is_camera));
 	int no_jump_placeholder(0);
 	int &jump_time((sstate == nullptr || !is_player) ? no_jump_placeholder : sstate->jump_time);
 	pos.z = max(pos.z, (mh + radius));
