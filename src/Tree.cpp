@@ -1432,7 +1432,7 @@ float get_tree_size_scale(int tree_type, bool create_bush) {
 void adjust_tree_zval(point &pos, int size, int type, bool create_bush) {
 
 	int const size_est((size == 0) ? 60 : size); // use average of 40-80
-	float const size_scale(get_tree_size_scale(type, create_bush)), base_radius(size_est*(0.1*size_scale)), radius(4.0*base_radius);
+	float const size_scale(get_tree_size_scale(type, create_bush)), base_radius(size_est*(0.1*size_scale)), radius(2.0*base_radius);
 	float const cc(pos.z);
 
 	for (int dy = -1; dy <= 1; dy += 2) { // take max in 4 directions to prevent intersections with the terrain on steep slopes
@@ -1440,8 +1440,6 @@ void adjust_tree_zval(point &pos, int size, int type, bool create_bush) {
 			min_eq(pos.z, interpolate_mesh_zval((pos.x + dx*radius), (pos.y + dy*radius), 0.0, 1, 1));
 		}
 	}
-	pos.z -= 10.0*radius;
-	//cout << TXT(radius) << TXT(cc) << TXT(tree_center.z) << endl;
 }
 
 
@@ -1485,11 +1483,14 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	
 		if (calc_z) {
 			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
+			adjust_tree_zval(tree_center, size, type, create_bush);
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
 		cube_t const cc(clip_cube - tree_center);
-		td.gen_tree_data(type, size, tree_depth, ((height_scale == 1.0) ? treetype.height_scale : height_scale), ((br_scale_mult == 1.0) ? treetype.branch_radius : br_scale_mult),
-			nl_scale, ((height_scale == 1.0) ? treetype.branch_break_off : 1.0), has_4th_branches, (use_clip_cube ? &cc : NULL), create_bush, rgen); // create the tree here
+		float const hscale((height_scale == 1.0) ? treetype.height_scale : height_scale);
+		float const br_scale((br_scale_mult == 1.0) ? treetype.branch_radius : br_scale_mult);
+		float const bbo_scale((height_scale == 1.0) ? treetype.branch_break_off : 1.0);
+		td.gen_tree_data(type, size, tree_depth, hscale, br_scale, nl_scale, bbo_scale, has_4th_branches, (use_clip_cube ? &cc : NULL), create_bush, rgen); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
@@ -1576,7 +1577,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_3_branches_max   = 10;
 	num_34_branches[1]   = (has_4th_branches ? 2000 : 0);
 	if (size <= 0) {size = rgen.rand_int(40, 80);} // tree size
-	float const size_scale(TREE_SIZE*tree_types[tree_type].branch_size/tree_scale * (create_bush ? 0.7 : 1.0));
+	float const size_scale(get_tree_size_scale(tree_type, create_bush));
 	base_radius            = size * (0.1*size_scale);
 	num_leaves_per_occ     = 0.01*nl_scale*nleaves_scale*(rgen.rand_int(30, 60) + size) * (create_bush ? 0.3 : 1.0);
 	base_length_min        = rgen.rand_int(4, 6) * height_scale * base_radius * tree_height_scale * (create_bush ? 0.05 : 1.0); // short trunk for bushes
@@ -2218,6 +2219,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 				}
 			}
 			if (!check_valid_scenery_pos((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale, 1)) continue; // approximate bsphere; is_tall=1
+			adjust_tree_zval(pos, 0, ttype, 0); // create_bush=0
 			add_new_tree(rgen, ttype);
 			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
 		} // for j
