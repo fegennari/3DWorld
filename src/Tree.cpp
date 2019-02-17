@@ -323,7 +323,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 			point const center(t.sphere_center() + xlate);
 			// still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene
 			if (world_mode == WMODE_INF_TERRAIN && shadow_only && !camera_pdu.sphere_visible_test(center, 1.1*t.get_radius())) continue;
-			sorted.emplace_back(distance_to_camera(center), i);
+			sorted.emplace_back(distance_to_camera_sq(center), i);
 		}
 		sort(sorted.begin(), sorted.end()); // sort front to back for better early z culling
 		to_update_leaves.clear();
@@ -899,8 +899,13 @@ void tree_data_t::draw_leaves_shadow_only(float size_scale) {
 
 float tree::calc_size_scale(point const &draw_pos) const {
 
-	if (world_mode == WMODE_INF_TERRAIN && distance_to_camera_xy(draw_pos) > get_draw_tile_dist()) return 0.0; // to far away to draw
-	return (do_zoom ? ZOOM_FACTOR : 1.0)*tdata().base_radius/(distance_to_camera(draw_pos)*DIST_C_SCALE);
+	float const dist_sq(distance_to_camera_sq(draw_pos));
+
+	if (world_mode == WMODE_INF_TERRAIN) {
+		float const dmax(get_draw_tile_dist());
+		if (dist_sq > dmax*dmax) return 0.0; // too far away to draw
+	}
+	return (do_zoom ? ZOOM_FACTOR : 1.0)*tdata().base_radius/(sqrt(dist_sq)*DIST_C_SCALE);
 }
 
 float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_4TH_SCALE : 1.0);}
@@ -2358,12 +2363,18 @@ float tree_cont_t::get_rmax() const {
 tree_type const &tree_cont_t::get_closest_tree_type(point const &pos) const {
 	int closest_type(TREE_MAPLE); // default value for the no-trees-found case
 	float min_dist_sq(0.0);
+	
 	for (const_iterator i = begin(); i != end(); ++i) {
 		int const type(i->get_type());
 		if (type < 0) continue; // tree type not set
 		float const dist_sq(p2p_dist_sq(pos, i->get_center()));
-		if (min_dist_sq == 0.0 || dist_sq < min_dist_sq) {min_dist_sq = dist_sq; closest_type = type;}
-	}
+		
+		if (min_dist_sq == 0.0 || dist_sq < min_dist_sq) {
+			min_dist_sq = dist_sq; closest_type = type;
+			float const r(i->get_radius());
+			if (dist_sq < 2.0*r*r) break; // close enough, early terminate
+		}
+	} // for i
 	assert(closest_type >= 0 && closest_type < NUM_TREE_TYPES);
 	return tree_types[closest_type];
 }
