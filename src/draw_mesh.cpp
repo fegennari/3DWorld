@@ -462,7 +462,7 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 		if (light_factor <= 0.4)      {lzmin = moon_pos.z;}
 		else if (light_factor >= 0.6) {lzmin = sun_pos.z;}
 		else                          {lzmin = min(sun_pos.z, moon_pos.z);}
-		if (lzmin < zmax) {draw_sides_and_bottom(0);} // sun/moon is low on the horizon, so include the mesh sides
+		if (lzmin < zmax) {draw_sides_and_bottom(1);} // sun/moon is low on the horizon, so include the mesh sides
 		return;
 	}
 	RESET_TIME;
