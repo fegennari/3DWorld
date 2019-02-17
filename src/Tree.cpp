@@ -66,7 +66,7 @@ extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lig
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
-extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tree_slope_thresh;
+extern float zmin, zmax, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tree_slope_thresh;
 extern double sim_ticks;
 extern vector3d wind;
 extern lightning l_strike;
@@ -2115,9 +2115,9 @@ void tree_cont_t::post_scroll_remove() {
 }
 
 
-void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) { // default full tile generation function
+void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_, float mesh_dz) { // default full tile generation function
 
-	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, 0, vegetation_, 1); // not using bounding sphere
+	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, 0, vegetation_, mesh_dz, 1); // not using bounding sphere
 	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
@@ -2147,8 +2147,9 @@ void tree_placer_t::add(point const &pos, float size, int type) {
 	block.trees.emplace_back(pos, size, type);
 }
 
-void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square, float vegetation_, bool use_density) {
+void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square, float vegetation_, float mesh_dz, bool use_density) {
 
+	//timer_t timer("Gen Trees");
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
 	float const min_tree_h(water_plane_z + 0.01*zmax_est), max_tree_h(1.8*zmax_est);
@@ -2229,7 +2230,10 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 				}
 			}
 			if (!check_valid_scenery_pos((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale, 1)) continue; // approximate bsphere; is_tall=1
-			if (!adjust_tree_zval(pos, 0, ttype, 0)) continue; // create_bush=0
+			// if terrain is highly varying in height, calculate surrounding mesh zvals and use the min for tree height; if slope is too high, skip this tree
+			if (mesh_dz < 0.0 || mesh_dz > 2.0) {
+				if (!adjust_tree_zval(pos, 0, ttype, 0)) continue; // create_bush=0
+			}
 			add_new_tree(rgen, ttype);
 			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
 		} // for j
@@ -2254,7 +2258,7 @@ void regen_trees(bool keep_old) {
 		int const border(1), ext_x1(border), ext_x2(MESH_X_SIZE-border), ext_y1(border), ext_y2(MESH_Y_SIZE-border);
 		if (scrolling && t_trees.scroll_trees(ext_x1, ext_x2, ext_y1, ext_y2)) {t_trees.post_scroll_remove();}
 		else {t_trees.resize(0);}
-		t_trees.gen_deterministic(ext_x1, ext_y1, ext_x2, ext_y2, vegetation);
+		t_trees.gen_deterministic(ext_x1, ext_y1, ext_x2, ext_y2, vegetation, /*(zmax - zmin)*/-1.0); // don't use mesh_dz (may cause problems with scrolling)
 		if (!scrolling) {cout << "Num trees = " << t_trees.size() << endl;}
 		last_rgi   = rand_gen_index;
 		last_xoff2 = xoff2;

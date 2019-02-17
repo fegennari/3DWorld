@@ -453,7 +453,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 }
 
 // Note: for user placed trees in tiled terrain mode with heightmap texture; ignores vegetation, tree density functions, slope, etc.
-void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square) {
+void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square, float mesh_dz) {
 
 	generated = 1; // may already be set
 	assert(x1 < x2 && y1 < y2);
@@ -473,7 +473,7 @@ void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2
 			
 			for (int n = 0; n < trees_this_xy; ++n) {
 				rgen.rand_float(); // to match the get_median_height() call in gen_trees()
-				maybe_add_tree(i, j, 0.0, tsize, skip_val, 0);
+				maybe_add_tree(i, j, 0.0, tsize, skip_val, 0); // Note: mesh_dz is unused, but could be used for terrain slope estimates
 			}
 		} // for j
 	} // for i

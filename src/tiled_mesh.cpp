@@ -241,7 +241,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_
 	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
+	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), mesh_dz(0.0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
 	is_distant(0), no_trees(0), just_cleared(0), has_tunnel(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
@@ -453,8 +453,9 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 						wx1 = min(wx1, x1+int(x)); wy1 = min(wy1, y1+int(y));
 						wx2 = max(wx2, x1+int(x)); wy2 = max(wy2, y1+int(y));
 					}
-				}
-			}
+				} // for x
+			} // for y
+			max_eq(mesh_dz, (szmax - szmin));
 			mzmin = min(mzmin, szmin);
 			mzmax = max(mzmax, szmax);
 		} // for xx
@@ -1248,7 +1249,7 @@ void tile_t::gen_decid_trees_if_needed() {
 	if (decid_trees.was_generated() || !can_have_decid_trees()) return; // already generated, elevation too high, or distant tile (no trees yet)
 	assert(decid_trees.empty());
 	dtree_off.set_from_xyoff2();
-	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
+	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg(), mesh_dz);
 	postproc_trees(decid_trees, dtzmax);
 }
 
@@ -3338,7 +3339,7 @@ template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &
 	unsigned const start_sz(trees.size());
 	int const orig_xoff2(xoff2), orig_yoff2(yoff2);
 	xoff2 = -toff.dxoff; yoff2 = -toff.dyoff; // translate so that trees are generated relative to toff, rather than current offset
-	trees.gen_trees_tt_within_radius(x1+toff.dxoff, y1+toff.dyoff, x2+toff.dxoff, y2+toff.dyoff, tpos, rradius, is_square);
+	trees.gen_trees_tt_within_radius(x1+toff.dxoff, y1+toff.dyoff, x2+toff.dxoff, y2+toff.dyoff, tpos, rradius, is_square, mesh_dz);
 	xoff2 = orig_xoff2; yoff2 = orig_yoff2; // translate back
 	postproc_trees(trees, tzmax);
 	vector3d const xlate(toff.get_xlate());

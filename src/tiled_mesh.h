@@ -164,7 +164,7 @@ private:
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, normal_tid, shadow_tid;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
-	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
+	float radius, mzmin, mzmax, mesh_dz, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	bool is_distant, no_trees, just_cleared, has_tunnel;
 	colorRGB avg_mesh_tex_color;
