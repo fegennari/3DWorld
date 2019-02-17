@@ -580,35 +580,42 @@ void draw_sides_and_bottom(bool shadow_pass) {
 		} // for d
 	}
 	else {
+		bool const back_face_cull = 1;
 		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE); // with lighting
 		select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
+		point const camera(get_camera_pos());
 		
-		vert_norm_tc const bverts[4] = {
-			vert_norm_tc(point(x1, y1, botz), -plus_z, ts*x1, ts*y1),
-			vert_norm_tc(point(x1, y2, botz), -plus_z, ts*x1, ts*y2),
-			vert_norm_tc(point(x2, y2, botz), -plus_z, ts*x2, ts*y2),
-			vert_norm_tc(point(x2, y1, botz), -plus_z, ts*x2, ts*y1)
-		};
-		draw_verts(bverts, 4, GL_TRIANGLE_FAN); // bottom
+		if (!back_face_cull || camera.z < botz) {
+			vert_norm_tc const bverts[4] = {
+				vert_norm_tc(point(x1, y1, botz), -plus_z, ts*x1, ts*y1),
+				vert_norm_tc(point(x1, y2, botz), -plus_z, ts*x1, ts*y2),
+				vert_norm_tc(point(x2, y2, botz), -plus_z, ts*x2, ts*y2),
+				vert_norm_tc(point(x2, y1, botz), -plus_z, ts*x2, ts*y1)
+			};
+			draw_verts(bverts, 4, GL_TRIANGLE_FAN); // bottom
+		}
 		vector<vert_norm_tc> verts;
 
 		for (unsigned d = 0; d < 2; ++d) {
 			float const xlimit(d ? x2 : x1), ylimit(d ? y2 : y1);
 			vector3d const &n1(d ? plus_y : -plus_y), &n2(d ? plus_x : -plus_x);
 
-			for (int i = 0; i < MESH_X_SIZE; ++i) { // y sides
-				float const xv(get_xval(i));
-				add_vertex(verts, n1, xv, ylimit, botz, 0, ts);
-				add_vertex(verts, n1, xv, ylimit, mesh_height[d?ly:0][i], 0, ts);
+			if (!back_face_cull || (camera.y - ylimit)*n1.y > 0.0) { // camera facing this side
+				for (int i = 0; i < MESH_X_SIZE; ++i) { // y sides
+					float const xv(get_xval(i));
+					add_vertex(verts, n1, xv, ylimit, botz, 0, ts);
+					add_vertex(verts, n1, xv, ylimit, mesh_height[d?ly:0][i], 0, ts);
+				}
+				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
-			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
-
-			for (int i = 0; i < MESH_Y_SIZE; ++i) { // x sides
-				float const yv(get_yval(i));
-				add_vertex(verts, n2, xlimit, yv, botz, 1, ts);
-				add_vertex(verts, n2, xlimit, yv, mesh_height[i][d?lx:0], 1, ts);
+			if (!back_face_cull || (camera.x - xlimit)*n2.x > 0.0) { // camera facing this side
+				for (int i = 0; i < MESH_Y_SIZE; ++i) { // x sides
+					float const yv(get_yval(i));
+					add_vertex(verts, n2, xlimit, yv, botz, 1, ts);
+					add_vertex(verts, n2, xlimit, yv, mesh_height[i][d?lx:0], 1, ts);
+				}
+				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
-			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 		} // for d
 	}
 	s.end_shader();
