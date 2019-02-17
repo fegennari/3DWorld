@@ -1358,6 +1358,7 @@ public:
 	void load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_tiff(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_dds(int index);
+	void load_ppm(int index, bool allow_diff_width_height);
 	void auto_insert_alpha_channel(int index);
 	void fill_transparent_with_avg_color();
 	void do_invert_y();

@@ -3,9 +3,9 @@
 // 10/14/13
 #include "targa.h"
 #include "textures_3dw.h"
+#include <fstream> // for filebuf
 
-using std::string;
-using std::cerr;
+using namespace std;
 
 #ifdef ENABLE_JPEG
 #define INT32 prev_INT32 // fix conflicting typedef used in freeglut
@@ -30,7 +30,7 @@ void wrap_png_error(png_structp, png_const_charp) {
 #endif
 
 
-std::string const texture_dir("textures");
+string const texture_dir("textures");
 
 string append_texture_dir(string const &filename) {return (texture_dir + "/" + filename);}
 
@@ -82,31 +82,18 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 	}
 	else {
 		if (format == 7) { // auto
-			// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS
+			// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm
 			string const ext(get_file_extension(name, 0, 1));
 		
 			if (0) {}
-			else if (ext == "raw") {
-				format = ((ncolors == 4) ? 3 : 0);
-			}
-			else if (ext == "bmp") {
-				format = 1;
-			}
-			else if (ext == "tga" || ext == "targa") {
-				format = 4;
-			}
-			else if (ext == "jpg" || ext == "jpeg") {
-				format = 5;
-			}
-			else if (ext == "png") {
-				format = 6;
-			}
-			else if (ext == "tif" || ext == "tiff") {
-				format = 8;
-			}
-			else if (ext == "dds") {
-				format = 10;
-			}
+			else if (ext == "raw") {format = ((ncolors == 4) ? 3 : 0);}
+			else if (ext == "bmp") {format = 1;}
+			else if (ext == "tga" || ext == "targa") {format = 4;}
+			else if (ext == "jpg" || ext == "jpeg") {format = 5;}
+			else if (ext == "png") {format = 6;}
+			else if (ext == "tif" || ext == "tiff") {format = 8;}
+			else if (ext == "dds") {format = 10;}
+			else if (ext == "ppm") {format = 11;}
 			else {
 				cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
 				exit(1);
@@ -121,6 +108,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 		case 10: load_dds (index); break;
+		case 11: load_ppm (index, allow_diff_width_height); break;
 		default:
 			cerr << "Unsupported image format: " << format << endl;
 			exit(1);
@@ -739,5 +727,59 @@ void texture_t::deferred_load_and_bind() {
 		cerr << "Unhandled texture defer type " << defer_load_type << endl;
 		exit(1);
 #endif
+	}
+}
+
+
+string read_string_ignore_comment_line(istream &in) {
+	string s;
+	in >> s;
+	while (s.front() == '#') {
+		in.ignore(numeric_limits<streamsize>::max(), '\n');
+		in >> s;
+	}
+	return s;
+}
+
+// from Deliot2019
+// https://eheitzresearch.wordpress.com/738-2/
+void texture_t::load_ppm(int index, bool allow_diff_width_height) {
+
+	filebuf fb;
+
+	if (!fb.open(append_texture_dir(name), ios::in | ios::binary)) {
+		cerr << "Error: Couldn't open ppm file " << name << endl;
+		exit(1);
+	}
+	istream in(&fb);
+	ncolors = 3; // Only RGB format supported
+
+	// Header parsing while ignoring comment lines
+	if (read_string_ignore_comment_line(in) != string("P6")) { // Read magic number
+		cerr << "Error: PPM file's magic number needs to be P6 in file " << name << endl;
+		exit(1);
+	}
+
+	// Read width and height
+	int const w(stoi(read_string_ignore_comment_line(in)));
+	int const h(stoi(read_string_ignore_comment_line(in)));
+
+	if (allow_diff_width_height || (width == 0 && height == 0)) {
+		width  = w;
+		height = h;
+		assert(width > 0 && height > 0);
+	}
+	assert((int)w == width && (int)h == height);
+
+	if (read_string_ignore_comment_line(in) != string("255")) { // Read max value
+		cerr << "Error: PPM file's max value needs to be 255 in file " << name << endl;
+		exit(1);
+	}
+	alloc();
+	in.read(reinterpret_cast<char*>(data), num_bytes()); // Pixel data reading
+
+	if (!in) {
+		cerr << "Error reading PPM file" << endl;
+		exit(1);
 	}
 }
