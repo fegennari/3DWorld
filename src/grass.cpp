@@ -708,11 +708,11 @@ public:
 				{
 					visible = 0;
 				}
-				else if (!no_clip) {
+				else if (!no_clip && !camera_pdu.point_visible_test(mpos)) {
 					float const grass_zmax((has_voxel_grass ? max(mpos.z, czmax) : mpos.z) + grass_length);
 					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length,
 									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
-					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
+					visible = camera_pdu.cube_visible(cube);
 				}
 				if (visible && dist_less_than(camera, mpos, 1000.0*grass_width)) { // nearby grass
 					nearby_ixs.push_back(ix);
