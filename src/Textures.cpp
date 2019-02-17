@@ -360,8 +360,8 @@ bool select_texture(int id) {
 float get_tex_ar(int id) {
 
 	if (id < 0) return 1.0;
-	assert((unsigned)id < textures.size());
-	return (((double)textures[id].width)/((double)textures[id].height));
+	texture_t const &texture(get_texture_by_id(id));
+	return (((double)texture.width)/((double)texture.height));
 }
 
 
@@ -623,18 +623,6 @@ void texture_t::set_to_color(colorRGBA const &c) {
 	}
 	free_mm_data();
 	build_mipmaps();
-}
-
-
-colorRGBA texture_color(int tid) {
-	if (tid < 0) {return WHITE;}
-	assert(tid >= 0 && (unsigned)tid < textures.size());
-	return textures[tid].get_avg_color();
-}
-
-unsigned get_texture_size(int tid, bool dim) {
-	assert(tid >= 0 && (unsigned)tid < textures.size());
-	return (dim ? textures[tid].height : textures[tid].width);
 }
 
 
@@ -1878,18 +1866,25 @@ float texture_t::get_component(float u, float v, int comp) const {
 	return data[ncolors*get_texel_ix(u, v) + comp]/255.0;
 }
 
-float get_texture_component(unsigned tid, float u, float v, int comp) {
+texture_t const &get_texture_by_id(unsigned tid) {
 	assert(tid < textures.size());
-	return textures[tid].get_component(u, v, comp);
+	return textures[tid];
+}
+colorRGBA texture_color(int tid) {
+	return ((tid < 0) ? WHITE : get_texture_by_id(tid).get_avg_color());
+}
+unsigned get_texture_size(int tid, bool dim) {
+	assert(tid >= 0);
+	return (dim ? get_texture_by_id(tid).height : get_texture_by_id(tid).width);
+}
+float get_texture_component(unsigned tid, float u, float v, int comp) {
+	return get_texture_by_id(tid).get_component(u, v, comp);
 }
 float get_texture_component_grayscale_pow2(unsigned tid, float u, float v) {
-	assert(tid < textures.size());
-	return textures[tid].get_component_grayscale_pow2(u, v);
+	return get_texture_by_id(tid).get_component_grayscale_pow2(u, v);
 }
-
 colorRGBA get_texture_color(unsigned tid, float u, float v) {
-	assert(tid < textures.size());
-	return textures[tid].get_texel(u, v);
+	return get_texture_by_id(tid).get_texel(u, v);
 }
 
 void texture_t::write_pixel_16_bits(unsigned ix, float val) { // Note: no error checking
