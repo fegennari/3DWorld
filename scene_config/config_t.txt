@@ -6,6 +6,7 @@ max_unique_trees 100
 tree_4th_branches 1
 nleaves_scale 2.0
 tree_coll_level 3
+tree_slope_thresh 5.0
 
 # enable these for dense tree coverage
 #ntrees 500

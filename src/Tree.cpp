@@ -66,7 +66,7 @@ extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lig
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
-extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
+extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tree_slope_thresh;
 extern double sim_ticks;
 extern vector3d wind;
 extern lightning l_strike;
@@ -1429,17 +1429,22 @@ float get_tree_size_scale(int tree_type, bool create_bush) {
 	return TREE_SIZE*tree_types[tree_type].branch_size/tree_scale * (create_bush ? 0.7 : 1.0);
 }
 
-void adjust_tree_zval(point &pos, int size, int type, bool create_bush) {
+bool adjust_tree_zval(point &pos, int size, int type, bool create_bush) {
 
 	int const size_est((size == 0) ? 60 : size); // use average of 40-80
 	float const size_scale(get_tree_size_scale(type, create_bush)), base_radius(size_est*(0.1*size_scale)), radius(2.0*base_radius);
 	float const cc(pos.z);
+	float mzmax(pos.z);
 
 	for (int dy = -1; dy <= 1; dy += 2) { // take max in 4 directions to prevent intersections with the terrain on steep slopes
 		for (int dx = -1; dx <= 1; dx += 2) {
-			min_eq(pos.z, interpolate_mesh_zval((pos.x + dx*radius), (pos.y + dy*radius), 0.0, 1, 1));
+			float const z(interpolate_mesh_zval((pos.x + dx*radius), (pos.y + dy*radius), 0.0, 1, 1));
+			min_eq(pos.z, z); // use min zval to ensure roots are below the soil
+			max_eq(mzmax, z);
+			if ((mzmax - pos.z) > tree_slope_thresh*radius) return 0; // drop trees on steep slopes
 		}
 	}
+	return 1;
 }
 
 
@@ -1483,7 +1488,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	
 		if (calc_z) {
 			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
-			adjust_tree_zval(tree_center, size, type, create_bush);
+			adjust_tree_zval(tree_center, size, type, create_bush); // ignore return value, as it's too late to drop the tree due to slope here
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
 		cube_t const cc(clip_cube - tree_center);
@@ -2219,7 +2224,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 				}
 			}
 			if (!check_valid_scenery_pos((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale, 1)) continue; // approximate bsphere; is_tall=1
-			adjust_tree_zval(pos, 0, ttype, 0); // create_bush=0
+			if (!adjust_tree_zval(pos, 0, ttype, 0)) continue; // create_bush=0
 			add_new_tree(rgen, ttype);
 			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
 		} // for j
