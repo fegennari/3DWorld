@@ -84,7 +84,11 @@ mat3 get_tbn(in float bscale, in vec3 n) {
 	return get_tbn_default(bscale, n);
 }
 vec3 get_bump_map_normal() {
+#ifdef USE_TILE_BLEND_NMAP
+	return normalize(ByExampleProceduralNoise(tc) * 2.0 - 1.0);
+#else
 	return normalize(texture(bump_map, tc).xyz * 2.0 - 1.0);
+#endif
 }
 #endif // !BUMP_MAP_CUSTOM
 

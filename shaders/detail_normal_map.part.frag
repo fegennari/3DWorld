@@ -3,10 +3,18 @@ uniform sampler2D detail_normal_tex;
 
 in vec2 tc;
 
+vec3 nmap_texture_lookup(in vec2 nm_tc) {
+#ifdef USE_TILE_BLEND_NMAP
+	return ByExampleProceduralNoise(nm_tc);
+#else
+	return texture(detail_normal_tex, nm_tc).rgb; // scaled detail texture
+#endif
+}
+
 vec3 get_bump_map_normal_dnm(in float bump_scale, in vec3 eye_pos) {
-	vec3 nmap = texture(detail_normal_tex, detail_normal_tex_scale*tc).rgb; // scaled detail texture
+	vec3 nmap  = nmap_texture_lookup(detail_normal_tex_scale*tc);
 #ifdef BLEND_DIST_DETAIL_NMAP // mix in a lower frequency normal map sample to break up tiling artifacts
-	vec3 nmap2= texture(detail_normal_tex, detail_normal_tex_scale*tc/6.0).rgb;
+	vec3 nmap2 = nmap_texture_lookup(detail_normal_tex_scale*tc/6.0);
 	nmap = mix(nmap, nmap2, clamp((length(eye_pos) - 0.8), 0.0, 1.0));
 #endif
 	return normalize(mix(vec3(0,0,1), (2.0*nmap - 1.0), bump_scale));
