@@ -404,10 +404,6 @@ float FilterLUTValueAtx(TextureDataFloat& LUT, float x, float std, int channel)
 // Main function of section 1.5
 void PrefilterLUT(TextureDataFloat& image_T_Input, TextureDataFloat& LUT_Tinv, int channel)
 {
-	// Compute number of prefiltered levels and resize LUT
-	LUT_Tinv.height = (int)(log((float)image_T_Input.width)/log(2.0f));
-	LUT_Tinv.data.resize(3 * LUT_Tinv.width * LUT_Tinv.height);
-	
 	// Prefilter 
 	for(int LOD = 1 ; LOD < LUT_Tinv.height ; LOD++)
 	{
@@ -445,30 +441,29 @@ void Precomputations(
 {	
 	// Section 1.4 Improvement: using a decorrelated color space
 	TextureDataFloat input_decorrelated = TextureDataFloat(input.width, input.height, 3);
-	DecorrelateColorSpace(input, 
-							input_decorrelated, 
-							colorSpaceVector1, 
-							colorSpaceVector2, 
-							colorSpaceVector3, 
-							colorSpaceOrigin);
+	DecorrelateColorSpace(input, input_decorrelated, colorSpaceVector1, colorSpaceVector2, colorSpaceVector3, colorSpaceOrigin);
 
 	// Section 1.3.2 Applying the histogram transformation T on the input
 	Tinput = TextureDataFloat(input.width, input.height, 3);
-	for(int channel = 0 ; channel < 3 ; channel++)
-	{
+#pragma omp parallel for schedule(static,1)
+	for(int channel = 0 ; channel < 3 ; channel++) {
 		ComputeTinput(input_decorrelated, Tinput, channel);
 	}
 
 	// Section 1.3.3 Precomputing the inverse histogram transformation T^{-1}
 	Tinv = TextureDataFloat(LUT_WIDTH, 1, 3);
-	for(int channel = 0 ; channel < 3 ; channel++)
-	{
+#pragma omp parallel for schedule(static,1)
+	for(int channel = 0 ; channel < 3 ; channel++) {
 		ComputeinvT(input_decorrelated, Tinv, channel);
 	}
 
 	// Section 1.5 Improvement: prefiltering the look-up table
-	for(int channel = 0 ; channel < 3 ; channel++)
-	{		
+	// Compute number of prefiltered levels and resize LUT
+	Tinv.height = (int)(log((float)Tinput.width)/log(2.0f));
+	Tinv.data.resize(3 * Tinv.width * Tinv.height);
+
+#pragma omp parallel for schedule(static,1)
+	for(int channel = 0 ; channel < 3 ; channel++) {		
 		PrefilterLUT(Tinput, Tinv, channel);
 	}
 }
