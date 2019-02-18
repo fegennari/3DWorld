@@ -592,7 +592,6 @@ void draw_sides_and_bottom(bool shadow_pass) {
 			s.check_for_fog_disabled();
 			s.begin_shader();
 			s.set_cur_color(WHITE);
-			s.add_uniform_int("tex0", 0);
 			if (fog_enabled) {s.setup_fog_scale();}
 			tbt_data.ensure_textures(texture);
 			tbt_data.bind_shader(s);

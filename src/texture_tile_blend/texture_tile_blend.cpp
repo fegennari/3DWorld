@@ -28,11 +28,11 @@ GLuint CreateGLTextureFromTextureDataStruct(const TextureDataFloat& im, GLenum w
 void tile_blend_tex_data_t::bind_shader(shader_t &s) const {
 
 	assert(textures_valid());
-	unsigned const lut_tu_id = 21; // use a value that won't conflict with other
-	bind_texture_tu(tid_tinput, 0);
-	bind_texture_tu(tid_lut,    lut_tu_id);
-	s.add_uniform_int("Tinput", 0);
-	s.add_uniform_int("invT",   lut_tu_id);
+	unsigned const tu_id = 21; // use a value that won't conflict with other
+	bind_texture_tu(tid_tinput, tu_id+1);
+	bind_texture_tu(tid_lut,    tu_id);
+	s.add_uniform_int("Tinput", tu_id+1);
+	s.add_uniform_int("invT",   tu_id);
 	s.add_uniform_vector3d("_colorSpaceVector1", colorSpaceVector1);
 	s.add_uniform_vector3d("_colorSpaceVector2", colorSpaceVector2);
 	s.add_uniform_vector3d("_colorSpaceVector3", colorSpaceVector3);
