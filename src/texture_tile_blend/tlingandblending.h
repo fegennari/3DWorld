@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <cfloat> // for FLT_MAX
 using namespace std;
 
 /*****************************************************************************/
