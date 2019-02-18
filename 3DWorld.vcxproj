@@ -567,6 +567,7 @@
     <ClCompile Include="src\teleporter.cpp" />
     <ClCompile Include="src\tessellate.cpp" />
     <ClCompile Include="src\Textures.cpp" />
+    <ClCompile Include="src\texture_tile_blend\texture_tile_blend.cpp" />
     <ClCompile Include="src\tiled_mesh.cpp" />
     <ClCompile Include="src\transform_obj.cpp" />
     <ClCompile Include="src\Tree.cpp" />
@@ -687,6 +688,8 @@
     <ClInclude Include="src\spillover.h" />
     <ClInclude Include="src\subdiv.h" />
     <ClInclude Include="src\Textures_3dw.h" />
+    <ClInclude Include="src\texture_tile_blend\jacobi.h" />
+    <ClInclude Include="src\texture_tile_blend\tlingandblending.h" />
     <ClInclude Include="src\tiled_mesh.h" />
     <ClInclude Include="src\timetest.h" />
     <ClInclude Include="src\transform_obj.h" />
@@ -875,6 +878,7 @@
     <None Include="shaders\tiled_shadow_map.part" />
     <None Include="shaders\tiled_tree_branches.frag" />
     <None Include="shaders\tiled_tree_branches.vert" />
+    <None Include="shaders\tiling_and_blending.part.frag" />
     <None Include="shaders\tree_billboard.geom" />
     <None Include="shaders\tree_billboard_gs.vert" />
     <None Include="shaders\tree_branches_billboard.frag" />

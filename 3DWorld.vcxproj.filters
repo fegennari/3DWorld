@@ -387,6 +387,9 @@
     <ClCompile Include="src\pedestrians.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\texture_tile_blend\texture_tile_blend.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
@@ -574,6 +577,12 @@
     </ClInclude>
     <ClInclude Include="src\city.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture_tile_blend\jacobi.h">
+      <Filter>Source Files\"Borrowed"\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture_tile_blend\tlingandblending.h">
+      <Filter>Source Files\"Borrowed"\Header</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -99,3 +99,5 @@ targa.o
 roads.o
 cars.o
 pedestrians.o
+texture_tile_blend.o
+

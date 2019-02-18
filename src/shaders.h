@@ -288,6 +288,18 @@ public:
 	}
 };
 
+struct tile_blend_tex_data_t {
+	unsigned tid_tinput, tid_lut, context_count;
+	vector3d colorSpaceVector1, colorSpaceVector2, colorSpaceVector3, colorSpaceOrigin;
+
+	tile_blend_tex_data_t() : tid_tinput(0), tid_lut(0), context_count(0) {}
+	bool textures_valid() const {return (tid_tinput > 0 && tid_lut > 0);}
+	void create_textures(texture_t const &texture);
+	void ensure_textures(unsigned tid);
+	void bind_shader(shader_t &s) const;
+	void clear_context();
+};
+
 
 unsigned get_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
 void bind_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
