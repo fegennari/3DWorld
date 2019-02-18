@@ -1438,7 +1438,6 @@ bool adjust_tree_zval(point &pos, int size, int type, bool create_bush) {
 
 	int const size_est((size == 0) ? 60 : size); // use average of 40-80
 	float const size_scale(get_tree_size_scale(type, create_bush)), base_radius(size_est*(0.1*size_scale)), radius(2.0*base_radius);
-	float const cc(pos.z);
 	float mzmax(pos.z);
 
 	for (int dy = -1; dy <= 1; dy += 2) { // take max in 4 directions to prevent intersections with the terrain on steep slopes
