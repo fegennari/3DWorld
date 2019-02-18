@@ -707,26 +707,33 @@ void draw_snow(bool shadow_only) {
 	if (!has_snow) return;
 	//RESET_TIME;
 	shader_t s;
+	static tile_blend_tex_data_t tbt_data;
 	bool const use_smap(!shadow_only && shadow_map_enabled());
-	bool const detail_normal_map(!shadow_only && camera_mode == 1); // aliasing when viewed from above, so only use for ground camera
+	bool const detail_normal_map(!shadow_only); //  && camera_mode == 1?
 	bool const enable_dlights(!shadow_only && ENABLE_SNOW_DLIGHTS);
 	s.setup_enabled_lights(2, 2); // FS
-	s.set_prefix("#define BLEND_DIST_DETAIL_NMAP", 1); // FS
+	//s.set_prefix("#define BLEND_DIST_DETAIL_NMAP", 1); // FS - this is optional when using tiling_and_blending
+	if (detail_normal_map) {s.set_prefix("#define USE_TILE_BLEND_NMAP", 1);} // FS
 	s.set_prefix("in vec3 eye_norm;", 1); // FS
 	set_dlights_booleans(s, enable_dlights, 1); // FS
 	s.check_for_fog_disabled();
 	setup_detail_normal_map_prefix(s, detail_normal_map);
 	s.set_prefixes(make_shader_bool_prefix("no_normalize", !use_smap), 3); // VS/FS
-	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_smap), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map",  use_smap), 1); // FS
 	s.set_vert_shader("texture_gen.part+snow");
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+detail_normal_map.part+per_pixel_lighting_textured");
+	s.set_frag_shader("linear_fog.part+tiling_and_blending.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+detail_normal_map.part+per_pixel_lighting_textured");
 	s.begin_shader();
 	s.setup_scene_bounds();
 	s.setup_fog_scale();
 	s.add_uniform_int("tex0", 0);
 	if (enable_dlights) {setup_dlight_textures(s);}
 	if (use_smap) {set_smap_shader_for_all_lights(s);}
-	if (detail_normal_map) {setup_detail_normal_map(s, 0.047);}
+
+	if (detail_normal_map) {
+		s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(0.047*X_SCENE_SIZE, 0.047*Y_SCENE_SIZE));
+		tbt_data.ensure_textures(ROCK_NORMAL_TEX);
+		tbt_data.bind_shader(s);
+	}
 	s.set_specular(0.5, 50.0);
 	s.set_cur_color(SNOW_COLOR);
 	select_texture(SNOW_TEX); // detail texture (or could use NOISE_TEX)
