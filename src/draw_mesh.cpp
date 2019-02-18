@@ -36,7 +36,7 @@ bool clear_landscape_vbo(0), clear_mvd_vbo(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava, fog_enabled;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt, CAMERA_RADIUS;
@@ -580,9 +580,24 @@ void draw_sides_and_bottom(bool shadow_pass) {
 		} // for d
 	}
 	else {
+		if (DISABLE_TEXTURES) {
+			s.begin_simple_textured_shader(0.0, 1, 0, &WHITE); // with lighting
+			select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
+		}
+		else {
+			static tile_blend_tex_data_t tbt_data;
+			s.setup_enabled_lights(2, 1); // sun and moon VS lighting
+			s.set_vert_shader("ads_lighting.part*+two_lights_texture");
+			s.set_frag_shader("linear_fog.part+tiling_and_blending.part+textured_with_tb");
+			s.check_for_fog_disabled();
+			s.begin_shader();
+			s.set_cur_color(WHITE);
+			s.add_uniform_int("tex0", 0);
+			if (fog_enabled) {s.setup_fog_scale();}
+			tbt_data.ensure_textures(texture);
+			tbt_data.bind_shader(s);
+		}
 		bool const back_face_cull = 1;
-		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE); // with lighting
-		select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
 		point const camera(get_camera_pos());
 		
 		if (!back_face_cull || camera.z < botz) {

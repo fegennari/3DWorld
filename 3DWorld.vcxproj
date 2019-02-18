@@ -872,6 +872,7 @@
     <None Include="shaders\sun_flare_with_clouds.frag" />
     <None Include="shaders\textured_with_fog.frag" />
     <None Include="shaders\textured_with_fog_opacity.frag" />
+    <None Include="shaders\textured_with_tb.frag" />
     <None Include="shaders\texture_tile_utils.part.frag" />
     <None Include="shaders\tiled_mesh.frag" />
     <None Include="shaders\tiled_mesh_shadow.vert" />

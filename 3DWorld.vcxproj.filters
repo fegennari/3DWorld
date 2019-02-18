@@ -1305,6 +1305,12 @@
     <None Include="README.md" />
     <None Include="README.defaults" />
     <None Include=".gitignore" />
+    <None Include="shaders\tiling_and_blending.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\textured_with_tb.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
