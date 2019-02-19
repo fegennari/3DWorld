@@ -209,10 +209,7 @@ public:
 		assert(strips);
 		assert(size <= block_pos);
 		block_pos -= size; // get starting position
-
-		for (unsigned i = 0; i < size; ++i) {
-			strips[i] = strip_vect[i];
-		}
+		for (unsigned i = 0; i < size; ++i) {strips[i] = strip_vect[i];}
 
 		// calculate normals
 		assert(size >= 4);
@@ -220,7 +217,7 @@ public:
 
 		for (unsigned i = 0; i < nt.size(); ++i) { // calculate triangle normals
 			nt[i] = cross_product((strips[i].p - strips[i+1].p), (strips[i+2].p - strips[i+1].p)).get_norm();
-			if (nt[i].z < 0.0) nt[i].negate(); // normal is always +z
+			if (nt[i].z < 0.0) {nt[i].negate();} // normal is always +z
 		}
 		for (unsigned i = 0; i < size; ++i) { // average triangle normals to get vertex normals
 			unsigned const k1((i > 2) ? i-2 : 0), k2(min((unsigned)nt.size()-1, i));
@@ -228,7 +225,7 @@ public:
 			vector3d &n(strips[i].n);
 			n = zero_vector;
 			for (unsigned k = k1; k <= k2; ++k) {n += nt[k];}
-			n /= (k2 - k1 + 1); // average triangle normals
+			n.normalize(); // average triangle normals
 		}
 	}
 };
