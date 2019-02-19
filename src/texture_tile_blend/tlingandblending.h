@@ -38,11 +38,11 @@ struct TextureDataFloat
 		data(w * h * c), width(w), height(h), channels(c)
 	{
 	}
-	float GetPixel(int w, int h, int c)
+	float GetPixel(int w, int h, int c) const
 	{
 		return data[h * width * channels + w * channels + c];
 	}
-	vec3 GetColorAt(int w, int h)
+	vec3 GetColorAt(int w, int h) const
 	{
 		return vec3(
 			data[h * width * channels + w * channels + 0],
@@ -150,20 +150,22 @@ float invCDF(float U, float mu, float sigma)
 /*****************************************************************************/
 /*****************************************************************************/
 
-void ComputeTinput(TextureDataFloat& input, TextureDataFloat& T_input, int channel)
-{	
+void GetSortedValues(TextureDataFloat const &input, vector<PixelSortStruct> &sortedInputValues, int channel)
+{
 	// Sort pixels of example image
-	vector<PixelSortStruct> sortedInputValues;
 	sortedInputValues.resize(input.width * input.height);
 	for (int y = 0; y < input.height; y++)
-	for (int x = 0; x < input.width; x++)
-	{
-		sortedInputValues[y * input.width + x].x = x;
-		sortedInputValues[y * input.width + x].y = y;
-		sortedInputValues[y * input.width + x].value = input.GetPixel(x, y, channel);
-	}
+		for (int x = 0; x < input.width; x++)
+		{
+			sortedInputValues[y * input.width + x].x = x;
+			sortedInputValues[y * input.width + x].y = y;
+			sortedInputValues[y * input.width + x].value = input.GetPixel(x, y, channel);
+		}
 	sort(sortedInputValues.begin(), sortedInputValues.end());
+}
 
+void ComputeTinput(vector<PixelSortStruct> const &sortedInputValues, TextureDataFloat& T_input, int channel)
+{	
 	// Assign Gaussian value to each pixel
 	for (unsigned int i = 0; i < sortedInputValues.size() ; i++)
 	{
@@ -185,18 +187,8 @@ void ComputeTinput(TextureDataFloat& input, TextureDataFloat& T_input, int chann
 /*****************************************************************************/
 /*****************************************************************************/
 
-void ComputeinvT(TextureDataFloat& input, TextureDataFloat& Tinv, int channel)
+void ComputeinvT(vector<PixelSortStruct> const &sortedInputValues, TextureDataFloat& Tinv, int channel)
 {
-	// Sort pixels of example image
-	vector<float> sortedInputValues;
-	sortedInputValues.resize(input.width * input.height);
-	for (int y = 0; y < input.height; y++)
-	for (int x = 0; x < input.width; x++)
-	{
-		sortedInputValues[y * input.width + x] = input.GetPixel(x, y, channel);
-	}
-	sort(sortedInputValues.begin(), sortedInputValues.end());
-
 	// Generate Tinv look-up table 
 	for (int i = 0; i < Tinv.width; i++)
 	{
@@ -207,7 +199,7 @@ void ComputeinvT(TextureDataFloat& input, TextureDataFloat& Tinv, int channel)
 		// Find quantile in sorted pixel values
 		int index = (int)floor(U * sortedInputValues.size());
 		// Get input value 
-		float I = sortedInputValues[index];
+		float I = sortedInputValues[index].value;
 		// Store in LUT
 		Tinv.SetPixel(i, 0, channel, I);
 	}
@@ -220,7 +212,7 @@ void ComputeinvT(TextureDataFloat& input, TextureDataFloat& Tinv, int channel)
 /*****************************************************************************/
 
 // Compute the eigen vectors of the histogram of the input
-void ComputeEigenVectors(TextureDataFloat& input, vec3 eigenVectors[3])
+void ComputeEigenVectors(TextureDataFloat const &input, vec3 eigenVectors[3])
 {
 	// First and second order moments
 	float R=0, G=0, B=0, RR=0, GG=0, BB=0, RG=0, RB=0, GB=0;
@@ -443,18 +435,16 @@ void Precomputations(
 	TextureDataFloat input_decorrelated = TextureDataFloat(input.width, input.height, 3);
 	DecorrelateColorSpace(input, input_decorrelated, colorSpaceVector1, colorSpaceVector2, colorSpaceVector3, colorSpaceOrigin);
 
-	// Section 1.3.2 Applying the histogram transformation T on the input
 	Tinput = TextureDataFloat(input.width, input.height, 3);
+	Tinv   = TextureDataFloat(LUT_WIDTH, 1, 3);
 #pragma omp parallel for schedule(static,1)
 	for(int channel = 0 ; channel < 3 ; channel++) {
-		ComputeTinput(input_decorrelated, Tinput, channel);
-	}
-
-	// Section 1.3.3 Precomputing the inverse histogram transformation T^{-1}
-	Tinv = TextureDataFloat(LUT_WIDTH, 1, 3);
-#pragma omp parallel for schedule(static,1)
-	for(int channel = 0 ; channel < 3 ; channel++) {
-		ComputeinvT(input_decorrelated, Tinv, channel);
+		vector<PixelSortStruct> sortedInputValues;
+		GetSortedValues(input_decorrelated, sortedInputValues, channel);
+		// Section 1.3.2 Applying the histogram transformation T on the input
+		ComputeTinput(sortedInputValues, Tinput, channel);
+		// Section 1.3.3 Precomputing the inverse histogram transformation T^{-1}
+		ComputeinvT(sortedInputValues, Tinv, channel);
 	}
 
 	// Section 1.5 Improvement: prefiltering the look-up table
