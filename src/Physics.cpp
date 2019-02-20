@@ -519,18 +519,30 @@ void init_objects() {
 	object_types[XLOCATOR].color           = LT_GRAY;
 	object_types[XLOCATOR].flags           = SPECULAR | SELECTABLE | NO_WATER_DAMAGE | NO_COLL_DAMAGE;
 
-	object_types[TELEPORTER].air_factor          = 0.0;
-	object_types[TELEPORTER].friction_factor     = 0.0;
-	object_types[TELEPORTER].gravity             = 0.1;
-	object_types[TELEPORTER].radius              = 0.05;
-	object_types[TELEPORTER].damage              = 0.0;
-	object_types[TELEPORTER].lifetime            = 300;
-	object_types[TELEPORTER].density             = 0.1;
-	object_types[TELEPORTER].elasticity          = 2.0; // 100% elastic collisions with any surface that has elasticity >= 0.5
-	object_types[TELEPORTER].health              = 10000.0;
-	object_types[TELEPORTER].color               = WHITE;
-	object_types[TELEPORTER].flags               = SELECTABLE | NO_COLL_DAMAGE | OBJ_NON_SOLID;
-	object_types[TELEPORTER].tid                 = -1;
+	object_types[TELEPORTER].air_factor      = 0.0;
+	object_types[TELEPORTER].friction_factor = 0.0;
+	object_types[TELEPORTER].gravity         = 0.1;
+	object_types[TELEPORTER].radius          = 0.05;
+	object_types[TELEPORTER].damage          = 0.0;
+	object_types[TELEPORTER].lifetime        = 300;
+	object_types[TELEPORTER].density         = 0.1;
+	object_types[TELEPORTER].elasticity      = 2.0; // 100% elastic collisions with any surface that has elasticity >= 0.5
+	object_types[TELEPORTER].health          = 10000.0;
+	object_types[TELEPORTER].color           = WHITE;
+	object_types[TELEPORTER].flags           = SELECTABLE | NO_COLL_DAMAGE | OBJ_NON_SOLID;
+	object_types[TELEPORTER].tid             = -1;
+
+	object_types[KEYCARD].air_factor      = 1.0;
+	object_types[KEYCARD].friction_factor = 0.2;
+	object_types[KEYCARD].gravity         = 1.0;
+	object_types[KEYCARD].radius          = 0.01;
+	object_types[KEYCARD].damage          = 0.0;
+	object_types[KEYCARD].lifetime        = 100000000; // should be infinite FIXME_KEYCARD: make a value of -1 infinite?
+	object_types[KEYCARD].density         = 0.2;
+	object_types[KEYCARD].elasticity      = 0.25;
+	object_types[KEYCARD].health          = 1.0E10; // infinite
+	object_types[KEYCARD].color           = WHITE; // color is per-object
+	object_types[KEYCARD].flags           = SELECTABLE | OBJ_IS_FLAT | SPECULAR | NO_WATER_DAMAGE | NO_COLL_DAMAGE;
 
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;
@@ -606,7 +618,7 @@ void change_timestep(float mult_factor) {
 		I_TIMESCALE2 = min(MAX_I_TIMESCALE, int(its + 0.5));
 	}
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {
-		if (object_types[i].lifetime/mult_factor > 10) object_types[i].lifetime = int(object_types[i].lifetime/mult_factor);
+		if (object_types[i].lifetime/mult_factor > 10) {object_types[i].lifetime = int(object_types[i].lifetime/mult_factor);}
 	}
 	orig_timestep = TIMESTEP;
 }

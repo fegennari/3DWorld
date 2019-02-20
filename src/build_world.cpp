@@ -33,7 +33,7 @@ float const ROTATE_RATE           = 25.0;
 // object variables
 bool printed_ngsp_warning(0), using_model_bcube(0);
 int num_groups(0), used_objs(0);
-unsigned next_cobj_group_id(0);
+unsigned next_cobj_group_id(0), num_keycards(0);
 float model_czmin(czmin), model_czmax(czmax);
 obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
@@ -46,6 +46,7 @@ vector<teleporter> teleporters[3]; // static, dynamic, in-hand
 vector<jump_pad> jump_pads;
 vector<obj_draw_group> obj_draw_groups;
 vector<sphere_t> cur_frame_explosions;
+vector<colorRGBA> colors_by_id; // for keycards
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc, reflect_dodgeballs, begin_motion, disable_fire_delay;
@@ -137,6 +138,7 @@ void create_object_groups() {
 	coll_id[XLOCATOR] = create_group(XLOCATOR, num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[TELEPORTER]=create_group(TELEPORTER, num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[MAT_SPHERE]=create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 0, 0);
+	coll_id[KEYCARD]   = create_group(KEYCARD, num_keycards, 0, 0, 0, 0, 0);
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
 }
 
@@ -372,6 +374,7 @@ void process_groups() {
 		case SKULL:    coll_func = skull_collision;     break;
 		case SAWBLADE: coll_func = sawblade_collision;  break;
 		case XLOCATOR: coll_func = translocator_collision; break;
+		case KEYCARD:  coll_func = keycard_collision;   break;
 		}
 		//cout << "group %d %d\n", i, GET_DELTA_TIME);
 		RESET_TIME;
@@ -1356,6 +1359,21 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 					if (place_radius <= 0.0 || min_radius <= 0.0 || max_radius < min_radius) {return read_error(fp, keyword, coll_obj_file);} // check for invalid values
 					gen_rand_spheres(num, center, place_radius, min_radius, max_radius);
+				}
+				else if (keyword == "keycard") {
+					unsigned id(0);
+					if (fscanf(fp, "%u%f%f", &ivals[0], &pos.x, &pos.y) != 3 || id > 1000) { // ID  x y [z]  [R G B]
+						return read_error(fp, "keycard", coll_obj_file);
+					}
+					if (id >= colors_by_id.size()) {colors_by_id.resize(id+1);}
+					colors_by_id[id] = WHITE; // FIXME_KEYCARD: read color
+					float const radius(object_types[KEYCARD].radius);
+					read_or_calc_zval(fp, pos, radius, radius, xf);
+					init_objects();
+					create_object_groups();
+					int const cid(coll_id[KEYCARD]);
+					assert(cid < NUM_TOT_OBJS);
+					obj_groups[cid].add_predef_obj(pos, KEYCARD, 0); // FIXME_KEYCARD: more parameters
 				}
 				else {
 					ostringstream oss;

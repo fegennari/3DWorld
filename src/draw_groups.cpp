@@ -33,6 +33,7 @@ extern point star_pts[];
 extern vector3d up_norm;
 extern vector<beam3d> beams;
 extern vector<spark_t> sparks;
+extern vector<colorRGBA> colors_by_id;
 extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern player_state *sstates;
@@ -61,6 +62,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate, int ndiv, bool bloody);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type, shader_t &shader);
+void draw_keycard(point const &pos, vector3d const &orient, unsigned color_id, float radius);
 colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale);
 
 int same_team(int source, int target); // gameplay
@@ -384,6 +386,9 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		break;
 	case XLOCATOR:
 		draw_translocator(pos, radius, ndiv, obj.source, shader);
+		break;
+	case KEYCARD:
+		draw_keycard(pos, obj.orientation, obj.direction, radius);
 		break;
 	default:
 		if (obj.vdeform != all_ones) {
@@ -1471,6 +1476,13 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	set_obj_specular(object_types[SHELLC].flags, 0.5*brightness, shader); // reset
 	if (point_size > 1.0) {draw_circle_normal(0, ((type == 0) ? 1.0 : 1.28), ndiv, 0, ((type == 0) ? 0.0 : -2.8));}
 	fgPopMatrix();
+}
+
+
+void draw_keycard(point const &pos, vector3d const &orient, unsigned color_id, float radius) {
+
+	colorRGBA const &color((color_id < colors_by_id.size()) ? colors_by_id[color_id] : WHITE);
+	// FIXME_KEYCARD
 }
 
 

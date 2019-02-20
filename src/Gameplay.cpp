@@ -1000,6 +1000,11 @@ bool translocator_collision(int index, int obj_index, vector3d const &velocity, 
 	return 1;
 }
 
+bool keycard_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+	if (type == CAMERA) {return smiley_collision(CAMERA_ID, index, velocity, position, energy, KEYCARD);} // only the player can pick up a keycard
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, KEYCARD);
+}
+
 bool health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, HEALTH);
 }
