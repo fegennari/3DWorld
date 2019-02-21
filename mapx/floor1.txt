@@ -41,6 +41,10 @@ cube_map_ref 0
 metalness 0.0
 r 0.0 1.0 # reset specularity
 
+# keycards on front desk: ID  R G B  x y [z]
+keycard  0  1.0 1.0 1.0  1.3 1.73 0.15
+keycard  1  0.6 0.8 1.0  1.7 1.74 0.15
+
 # fish on the table
 #t 0.0 0.0 0.0  s 1 2  M 0  m 0.1
 O "model_data/fish/fishOBJ.model3d" 4 0 0
