@@ -532,7 +532,7 @@ void init_objects() {
 	object_types[TELEPORTER].flags           = SELECTABLE | NO_COLL_DAMAGE | OBJ_NON_SOLID;
 	object_types[TELEPORTER].tid             = -1;
 
-	object_types[KEYCARD].air_factor      = 1.0;
+	object_types[KEYCARD].air_factor      = 0.25;
 	object_types[KEYCARD].friction_factor = 0.2;
 	object_types[KEYCARD].gravity         = 1.0;
 	object_types[KEYCARD].radius          = 0.01;
@@ -542,7 +542,7 @@ void init_objects() {
 	object_types[KEYCARD].elasticity      = 0.25;
 	object_types[KEYCARD].health          = 1.0E10; // infinite
 	object_types[KEYCARD].color           = WHITE; // color is per-object
-	object_types[KEYCARD].flags           = SELECTABLE | OBJ_IS_FLAT | SPECULAR | NO_WATER_DAMAGE | NO_COLL_DAMAGE;
+	object_types[KEYCARD].flags           = SELECTABLE | SPECULAR | NO_WATER_DAMAGE | NO_COLL_DAMAGE | OBJ_RAND_DIR_XY; // | OBJ_IS_FLAT
 
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;

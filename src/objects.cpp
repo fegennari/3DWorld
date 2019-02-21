@@ -884,13 +884,14 @@ bool coll_obj::sphere_intersects(point const &sc, float sr) const {
 // ******************* OBJ_GROUP MEMBERS ******************
 
 
-void obj_group::create(int obj_type_, unsigned max_objects_, unsigned init_objects_,
-					   unsigned app_rate_, bool init_enabled_, bool reorderable_, bool auto_max)
+void obj_group::create(int obj_type_, unsigned max_objects_, unsigned init_objects_, unsigned app_rate_,
+	bool init_enabled_, bool reorderable_, bool auto_max, bool predef_use_once_)
 {
 	flags        = JUST_INIT;
 	type         = obj_type_;
 	app_rate     = app_rate_;
 	reorderable  = reorderable_;
+	predef_use_once = predef_use_once_;
 	init_objects = init_objects_;
 	max_objs     = max_objects_;
 	end_id       = 0;
@@ -950,6 +951,7 @@ void obj_group::init_group() {
 void obj_group::add_predef_obj(point const &pos, int type, int rtime) {
 	
 	predef_objs.push_back(predef_obj(pos, type, rtime));
+	max_eq(max_objs, predef_objs.size());
 	reorderable = 0; // need to unset reorderable so that predef_objs indexes remain correct
 }
 
@@ -969,13 +971,15 @@ void obj_group::preproc_this_frame() {
 		sort(objects.begin(), (objects.begin() + saw_id));
 		for (unsigned j = 0; j < nobjs; ++j) {if (!objects[j].enabled()) {end_id = j; break;}} // Note: will likely exit before j reaches max_used_id
 	}
-	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
-		if (i->obj_used == -1) continue;
-		assert((unsigned)i->obj_used < max_objects());
+	if (!predef_use_once) {
+		for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
+			if (i->obj_used == -1) continue;
+			assert((unsigned)i->obj_used < max_objects());
 			
-		if (objects[i->obj_used].disabled()) { // unused object
-			i->obj_used = -1; // reset back to 'unused'
-			i->cur_time = tfticks;
+			if (objects[i->obj_used].disabled()) { // unused object
+				i->obj_used = -1; // reset back to 'unused'
+				i->cur_time = tfticks;
+			}
 		}
 	}
 }

@@ -75,8 +75,8 @@ extern vector<texture_t> textures;
 extern reflective_cobjs_t reflective_cobjs;
 
 
-int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
-				 unsigned app_rate, bool init_enabled, bool reorderable, bool auot_max);
+int create_group(int obj_type, unsigned max_objects, unsigned init_objects, unsigned app_rate,
+	bool init_enabled, bool reorderable, bool auot_max, bool predef_use_once=0);
 void add_all_coll_objects(const char *coll_obj_file, bool re_add);
 int read_coll_objects(const char *coll_obj_file);
 bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn);
@@ -138,13 +138,13 @@ void create_object_groups() {
 	coll_id[XLOCATOR] = create_group(XLOCATOR, num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[TELEPORTER]=create_group(TELEPORTER, num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[MAT_SPHERE]=create_group(MAT_SPHERE, max_num_mat_spheres, 0, 0, 0, 0, 0);
-	coll_id[KEYCARD]   = create_group(KEYCARD, num_keycards, 0, 0, 0, 0, 0);
+	coll_id[KEYCARD]   = create_group(KEYCARD, 0, 0, 1, 0, 0, 0, 1); // predef_use_once=1
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
 }
 
 
-int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
-				 unsigned app_rate, bool init_enabled, bool reorderable, bool auto_max)
+int create_group(int obj_type, unsigned max_objects, unsigned init_objects, unsigned app_rate,
+	bool init_enabled, bool reorderable, bool auto_max, bool predef_use_once)
 {
 	if (num_groups > NUM_TOT_OBJS) {
 		cerr << "Error: Exceeded max of " << NUM_TOT_OBJS << " object groups." << endl;
@@ -154,7 +154,7 @@ int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
 		cerr << "Error: Illegal object type: " << obj_type << "." << endl;
 		assert(0);
 	}
-	obj_groups[num_groups].create(obj_type, max_objects, init_objects, app_rate, init_enabled, reorderable, auto_max);
+	obj_groups[num_groups].create(obj_type, max_objects, init_objects, app_rate, init_enabled, reorderable, auto_max, predef_use_once);
 	return ++num_groups;
 }
 
@@ -440,6 +440,9 @@ void process_groups() {
 				if (otype.flags & OBJ_IS_FLAT) {
 					obj.init_dir = signed_rand_vector_norm();
 					obj.angle    = signed_rand_float();
+				}
+				else if (otype.flags & OBJ_RAND_DIR_XY) {
+					obj.init_dir = vector3d(signed_rand_float(), signed_rand_float(), 0.0).get_norm();
 				}
 				if (type == SNOW) {obj.angle = rand_uniform(0.7, 1.3);} // used as radius
 			} // end obj.status == 0
@@ -1356,20 +1359,23 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (place_radius <= 0.0 || min_radius <= 0.0 || max_radius < min_radius) {return read_error(fp, keyword, coll_obj_file);} // check for invalid values
 					gen_rand_spheres(num, center, place_radius, min_radius, max_radius);
 				}
-				else if (keyword == "keycard") {
+				else if (keyword == "keycard") { // ID  R G B  x y [z]
 					unsigned id(0);
-					if (fscanf(fp, "%u%f%f", &ivals[0], &pos.x, &pos.y) != 3 || id > 1000) { // ID  x y [z]  [R G B]
+					colorRGBA color(WHITE);
+
+					if (fscanf(fp, "%u%f%f%f%f%f", &id, &color.R, &color.G, &color.B, &pos.x, &pos.y) != 6 || id > 255) {
 						return read_error(fp, "keycard", coll_obj_file);
 					}
 					if (id >= colors_by_id.size()) {colors_by_id.resize(id+1);}
-					colors_by_id[id] = WHITE; // FIXME_KEYCARD: read color
+					colors_by_id[id] = color;
 					float const radius(object_types[KEYCARD].radius);
 					read_or_calc_zval(fp, pos, radius, radius, xf);
+					++num_keycards;
 					init_objects();
 					create_object_groups();
 					int const cid(coll_id[KEYCARD]);
 					assert(cid < NUM_TOT_OBJS);
-					obj_groups[cid].add_predef_obj(pos, KEYCARD, 0); // FIXME_KEYCARD: more parameters
+					obj_groups[cid].add_predef_obj(pos, id, 0);
 				}
 				else {
 					ostringstream oss;
@@ -2045,6 +2051,7 @@ int read_coll_objects(const char *coll_obj_file) {
 	if (EXPLODE_EVERYTHING) {cobj.destroy = EXPLODEABLE;}
 	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
 	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
+	if (num_keycards > 0) {obj_groups[coll_id[KEYCARD]].enable();}
 
 	if (using_model_bcube) {
 		cube_t const model_bcube(get_all_models_bcube());

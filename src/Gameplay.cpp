@@ -385,22 +385,21 @@ void update_kill_health(float &health) {
 // COLLISION DAMAGE CODE
 // ***********************************
 
+bool is_pickup_item(int type) {return (type == POWERUP || type == WEAPON || type == AMMO || type == WA_PACK || type == HEALTH || type == SHIELD || type == KEYCARD);}
 
 int proc_coll_types(int type, int obj_index, float &energy) {
 
 	int const ocid(coll_id[type]);
+	bool const is_typed_pickup(type == POWERUP || type == WEAPON || type == AMMO || type == WA_PACK || type == KEYCARD);
 
-	if (type == WEAPON || type == AMMO || type == WA_PACK || type == POWERUP || type == HEALTH || type == SHIELD) {
+	if (is_pickup_item(type)) {
 		obj_groups[ocid].get_obj(obj_index).disable();
 		energy = 0.0; // no damage done
 	}
 	else if ((type == GRENADE || type == CGRENADE) && (rand()&3) == 0) {
 		obj_groups[ocid].get_obj(obj_index).time = object_types[type].lifetime; // maybe explode on collision
 	}
-	if (type == POWERUP || type == WEAPON || type == AMMO || type == WA_PACK) {
-		return (int)obj_groups[ocid].get_obj(obj_index).direction;
-	}
-	return 0;
+	return (is_typed_pickup ? (int)obj_groups[ocid].get_obj(obj_index).direction : 0);
 }
 
 void freeze_player(player_state &sstate, float energy) {
@@ -479,6 +478,13 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			print_text_onscreen((weapons[wa_id].name + " pack with ammo " + make_string(pickup_ammo)), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 			camera_weapon_ammo_pickup(position, cam_filter_color);
 		}
+		break;
+
+	case KEYCARD:
+		sstate.keycards.insert(wa_id);
+		print_text_onscreen("You picked up a keycard", GREEN, 1.2, MESSAGE_TIME, 1);
+		cam_filter_color = GREEN;
+		gen_sound(SOUND_ITEM, position, 0.5);
 		break;
 
 	case BALL:
@@ -617,6 +623,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 
 	if (index == CAMERA_ID) {return camera_collision(type, obj_index, velocity, position, energy, type);}
 	if (type  == CAMERA   ) {return camera_collision(type, index, velocity, position, energy, SMILEY);}
+	if (type == KEYCARD) return 0; // smileys don't pick up keycards yet
 	int damage_type(0), cid(coll_id[SMILEY]);
 	assert(cid >= 0);
 	assert(obj_groups[cid].enabled);
@@ -831,12 +838,11 @@ string get_weapon_qualifier(int type, int index, int source) {
 
 bool dwobject::lm_coll_invalid() const {return (time < (int)LM_ACT_TIME);}
 
-
 int damage_done(int type, int index) {
 
 	int const cid(coll_id[type]);
 
-	if (cid >= 0 && index >= 0 && !(type >= HEALTH && type <= WA_PACK) && obj_groups[cid].is_enabled()) { // skip pickup items because they're not object-dependent
+	if (cid >= 0 && index >= 0 && !is_pickup_item(type) && obj_groups[cid].is_enabled()) { // skip pickup items because they're not object-dependent
 		dwobject &obj(obj_groups[cid].get_obj(index));
 		if ((obj.flags & (WAS_PUSHED | FLOATING)) && (type != BALL || game_mode != 2)) return 0; // floating on the water or pushed after stopping, can no longer do damage
 
@@ -1000,7 +1006,7 @@ bool translocator_collision(int index, int obj_index, vector3d const &velocity, 
 }
 
 bool keycard_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-	if (type == CAMERA) {return smiley_collision(CAMERA_ID, index, velocity, position, energy, KEYCARD);} // only the player can pick up a keycard
+	if (type == CAMERA) {return camera_collision(KEYCARD, index, velocity, position, energy, KEYCARD);} // only the player can pick up a keycard
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, KEYCARD);
 }
 
@@ -2498,6 +2504,12 @@ struct team_stats_t {
 };
 
 
+void draw_keycards(set<unsigned> const &keycards) {
+	for (auto i = keycards.begin(); i != keycards.end(); ++i) {
+		// FIXME_KEYCARD
+	}
+}
+
 void show_user_stats() {
 
 	bool const is_smiley0(spectate && num_smileys > 0 && obj_groups[coll_id[SMILEY]].enabled);
@@ -2519,6 +2531,7 @@ void show_user_stats() {
 			draw_text(get_powerup_color(sstate.powerup), -0.015, -0.012, -0.025, text);
 		}
 		draw_health_bar(chealth, sstate.shields, float(sstate.powerup_time)/POWERUP_TIME, get_powerup_color(sstate.powerup));
+		draw_keycards(sstate.keycards);
 	}
 	if (show_scores) {
 		team_stats_t tot_stats;
@@ -2832,7 +2845,7 @@ void gamemode_rand_appear() {
 
 void change_game_mode() {
 
-	int types[] = {HEALTH, SHIELD, POWERUP, WEAPON, AMMO};
+	int types[] = {HEALTH, SHIELD, POWERUP, WEAPON, AMMO}; // KEYCARD?
 	unsigned const ntypes(UNLIMITED_WEAPONS ? 3 : 5);
 	game_mode = game_mode % 3; // 0/1/2
 	for (unsigned i = 0; i < ntypes; ++i) {obj_groups[coll_id[types[i]]].set_enable(game_mode == 1);}

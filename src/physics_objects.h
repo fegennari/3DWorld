@@ -393,13 +393,13 @@ class obj_group { // size = 36
 
 public:
 	unsigned init_objects, max_objs, app_rate, end_id, new_id;
-	bool enabled, reorderable;
+	bool enabled, reorderable, predef_use_once;
 	short type;
 	unsigned char flags;
 
-	obj_group() : init_objects(0), max_objs(0), app_rate(0), end_id(0), new_id(0), enabled(0), reorderable(0), type(0), flags(0) {}
-	void create(int obj_type_, unsigned max_objects_, unsigned init_objects_,
-		unsigned app_rate_, bool init_enabled_, bool reorderable_, bool auto_max);
+	obj_group() : init_objects(0), max_objs(0), app_rate(0), end_id(0), new_id(0), enabled(0), reorderable(0), predef_use_once(0), type(0), flags(0) {}
+	void create(int obj_type_, unsigned max_objects_, unsigned init_objects_, unsigned app_rate_,
+		bool init_enabled_, bool reorderable_, bool auto_max, bool predef_use_once_);
 	unsigned get_updated_max_objs() const;
 	void update_app_rate(float const val, unsigned min_app, unsigned max_app);
 	void init_group();
@@ -484,6 +484,7 @@ public:
 #define OBJ_IS_CYLIN     0x40000
 #define NO_COLL_DAMAGE   0x80000
 #define OBJ_NON_SOLID    0x100000
+#define OBJ_RAND_DIR_XY  0x200000
 
 // object flag bits
 #define XY_STOPPED       0x01

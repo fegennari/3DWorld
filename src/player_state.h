@@ -178,6 +178,7 @@ struct player_state { // size = big
 	int p_weapons[NUM_WEAPONS], p_ammo[NUM_WEAPONS];
 	vector<unsigned char> tdata;
 	vector<int> balls;
+	set<unsigned> keycards;
 	vector<type_wt_t> target_types; // reused across frames in smiley_select_target()
 	map<unsigned, count_t> blocked_waypts;
 	waypt_used_set waypts_used;
@@ -298,6 +299,7 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned>
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal);
 bool can_make_progress(point const &pos, point const &opos, bool check_uw);
 bool is_valid_path(point const &start, point const &end, bool check_uw);
+colorRGBA get_keycard_color(unsigned color_id);
 
 
 #endif // _PLAYER_STATE_H_

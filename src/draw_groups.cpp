@@ -62,7 +62,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate, int ndiv, bool bloody);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type, shader_t &shader);
-void draw_keycard(point const &pos, vector3d const &orient, unsigned color_id, float radius);
+void draw_keycard(point const &pos, vector3d const &orient, vector3d const &init_dir, unsigned color_id, float radius, shader_t &shader);
 colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale);
 
 int same_team(int source, int target); // gameplay
@@ -386,7 +386,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_translocator(pos, radius, ndiv, obj.source, shader);
 		break;
 	case KEYCARD:
-		draw_keycard(pos, obj.orientation, obj.direction, radius);
+		draw_keycard(pos, obj.orientation, obj.init_dir, obj.direction, radius, shader);
 		break;
 	default:
 		if (obj.vdeform != all_ones) {
@@ -1477,10 +1477,23 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 }
 
 
-void draw_keycard(point const &pos, vector3d const &orient, unsigned color_id, float radius) {
+colorRGBA get_keycard_color(unsigned color_id) {
+	return ((color_id < colors_by_id.size()) ? colors_by_id[color_id] : WHITE);
+}
 
-	colorRGBA const &color((color_id < colors_by_id.size()) ? colors_by_id[color_id] : WHITE);
-	// FIXME_KEYCARD
+void draw_keycard(point const &pos, vector3d const &orient, vector3d const &init_dir, unsigned color_id, float radius, shader_t &shader) {
+
+	// Note: orient is currently unused, but could be used if we set the OBJ_IS_FLAT flag
+	shader.set_cur_color(get_keycard_color(color_id));
+	fgPushMatrix();
+	float const dx(1.7*radius), dy(1.0*radius), dz(0.1*radius);
+	translate_to(pos - vector3d(0.0, 0.0, (1.0 - dz)*radius));
+	rotate_from_v2v(init_dir, plus_x); // should rotate about z axis
+	//select_texture(WHITE_TEX);
+	//draw_cube(all_zeros, 2*dx, 2*dy, 2*dz, 1);
+	select_texture(KEYCARD_TEX);
+	draw_one_tquad(-dx, -dy, dx, dy, 0.0);
+	fgPopMatrix();
 }
 
 

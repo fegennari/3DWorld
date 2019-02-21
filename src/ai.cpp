@@ -1529,6 +1529,7 @@ void player_state::init(bool w_start) {
 	reset_wpt_state();
 	waypts_used.clear();
 	dest_mark.clear();
+	keycards.clear(); // FIXME_KEYCARD: allow player to keep these if they die?
 }
 
 

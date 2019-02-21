@@ -117,7 +117,7 @@ bool const damage_done_obj[NUM_TOT_OBJS] = {
 	1,1,1,1,0,0,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,
 	0,0,0,0,0,1,1,1,1,1,
-	1,0,1,0,0,0
+	1,0,1,0,0,1
 };
 
 string const obj_type_names[NUM_TOT_OBJS] = {
