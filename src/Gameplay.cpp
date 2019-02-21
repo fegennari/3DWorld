@@ -377,7 +377,6 @@ void player_coll(int type, int obj_index) {
 
 
 void update_kill_health(float &health) {
-
 	health = max(health, min(100.0f, (health + KILL_HEALTH)));
 }
 

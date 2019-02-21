@@ -434,12 +434,8 @@ void process_groups() {
 						assert(!is_nan(pos));
 						vadd_rand(obj.velocity, 1.0);
 					}
-					if (type != SMILEY && (otype.flags & NO_FALL)) {
-						pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
-					}
-					if (type == POWERUP || type == WEAPON || type == AMMO) {
-						obj.direction = (unsigned char)gen_game_obj(type);
-					}
+					if (type != SMILEY && (otype.flags & NO_FALL)) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;}
+					if (type == POWERUP || type == WEAPON || type == AMMO) {obj.direction = (unsigned char)gen_game_obj(type);}
 				}
 				if (otype.flags & OBJ_IS_FLAT) {
 					obj.init_dir = signed_rand_vector_norm();
@@ -1031,7 +1027,7 @@ void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geo
 	pos.z = 0.0;
 	bool const interpolate(!read_float(fp, pos.z));
 	xf.xform_pos(pos); // better not try to rotate z when interpolating
-	if (interpolate) pos.z = interpolate_mesh_zval(pos.x, pos.y, interp_rad, 0, 0) + radius;
+	if (interpolate) {pos.z = interpolate_mesh_zval(pos.x, pos.y, interp_rad, 0, 0) + radius;}
 }
 
 

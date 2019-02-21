@@ -264,9 +264,7 @@ void draw_select_groups(int solid, int reflection_pass) {
 		obj_group &objg(obj_groups[i]);
 
 		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) {
-			if ((!(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
-				draw_group(objg, s, lt_atten_manager);
-			}
+			if ((!(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {draw_group(objg, s, lt_atten_manager);}
 		}
 	}
 	if (!puddle_qbd.empty() || !obj_pld.empty()) { // use the same shader
@@ -1491,13 +1489,8 @@ colorRGBA get_glowing_obj_color(point const &pos, int time, int lifetime, float 
 	stime = ((float)time)/((float)lifetime)*(shrapnel_cscale ? 1.0 : 0.3);
 	if (is_underwater(pos)) stime *= 5.0;
 	stime = min(1.0f, 5.0f*stime);
-
-	if (fade) {
-		return colorRGBA(1.0, min(1.0, (2.0 - 2.0*stime)), max(0.0f, (1.0f - 1.5f*stime)), min(1.0, (4.0 - 4.0*stime)));
-	}
-	else {
-		return colorRGBA((1.0 - 0.9*stime), max(0.0f, (0.9f - 2.0f*stime)), max(0.0f, (0.6f - 4.0f*stime)), 1.0);
-	}
+	if (fade) {return colorRGBA(1.0, min(1.0, (2.0 - 2.0*stime)), max(0.0f, (1.0f - 1.5f*stime)), min(1.0, (4.0 - 4.0*stime)));}
+	else      {return colorRGBA((1.0 - 0.9*stime), max(0.0f, (0.9f - 2.0f*stime)), max(0.0f, (0.6f - 4.0f*stime)), 1.0);}
 }
 
 
