@@ -2862,10 +2862,9 @@ void change_game_mode() {
 }
 
 
-bool has_keycard_id(int smiley_id, unsigned keycard_id) {
-	assert(smiley_id >= CAMERA_ID && smiley_id < num_smileys); // too strong?
-	if (smiley_id < CAMERA_ID || smiley_id >= num_smileys) return 0;
-	set<unsigned> const &keycards(sstates[smiley_id].keycards);
+bool has_keycard_id(int source, unsigned keycard_id) {
+	if (source < CAMERA_ID || source >= num_smileys) return 0; // can be NO_SOURCE, etc.
+	set<unsigned> const &keycards(sstates[source].keycards);
 	return (keycards.find(keycard_id) != keycards.end());
 }
 

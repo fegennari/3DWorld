@@ -689,7 +689,7 @@ void init_smileys();
 void init_game_mode();
 void update_game_frame();
 void change_game_mode();
-bool has_keycard_id(int smiley_id, unsigned keycard_id);
+bool has_keycard_id(int source, unsigned keycard_id);
 void free_dodgeballs(bool camera, bool smileys);
 int gen_smiley_or_player_pos(point &pos, int index);
 colorRGBA get_smiley_team_color(int smiley_id, bool ignore_teams=0);
