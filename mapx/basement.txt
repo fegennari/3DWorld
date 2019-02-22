@@ -40,9 +40,9 @@ a 2 # destroyable/shatterable
 torus -6.55 4.8 -0.05  0 0 1  0.03 0.01
 torus -6.55 5.1 -0.05  0 0 1  0.03 0.01
 torus -6.55 5.4 -0.05  0 0 1  0.03 0.01
-# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
 #K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0 # 5s player auto trigger
-K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player auto trigger region
+K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0  -1  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player auto trigger region
 L 0.0 1.0  -6.55 4.8 -0.1  0.6 0.6 1.0 1.0  0 0 -1 # samples face down
 V -6.52 4.8 -0.054 # light fixture at this pos and light will be disabled if shattered
 L 0.0 1.0  -6.55 5.1 -0.1  0.6 0.6 1.0 1.0  0 0 -1

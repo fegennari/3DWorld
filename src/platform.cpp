@@ -27,6 +27,7 @@ unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int
 
 	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
 	if (player_only && activator != CAMERA_ID) return 0; // not activated by player
+	if (req_keycard_id >= 0 && !has_keycard_id(activator, req_keycard_id)) return 0; // activator doesn't have the required keycard
 	bool const is_explosion_action(activator == NO_SOURCE);
 
 	if (requires_action && !is_explosion_action) { // requires explicit player action
@@ -42,7 +43,8 @@ unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int
 }
 
 void trigger_t::write_to_cobj_file(std::ostream &out) const {
-	out << "trigger " << act_pos.raw_str() << " " << act_dist << " " << auto_on_time << " " << auto_off_time << " " << (player_only != 0) << " " << (requires_action != 0);
+	out << "trigger " << act_pos.raw_str() << " " << act_dist << " " << auto_on_time << " " << auto_off_time
+		<< " " << (player_only != 0) << " " << (requires_action != 0) << " " << req_keycard_id;
 	if (use_act_region) {out << " " << act_region.raw_str();}
 	out << endl;
 }

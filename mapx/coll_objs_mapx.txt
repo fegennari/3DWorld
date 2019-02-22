@@ -504,7 +504,7 @@ C -2.72 4.998  0.16  -2.72 5.0  0.16  0.01 0.01
 C -2.72 4.998  0.74  -2.72 5.0  0.74  0.01 0.01
 C -2.72 4.998  1.34  -2.72 5.0  1.34  0.01 0.01
 C -2.72 4.998  1.94  -2.72 5.0  1.94  0.01 0.01
-# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
 K -2.72 5.0 -0.26  0.06 0.0 0.0 1 1 # player manual toggle trigger
 K -2.72 5.0  0.16  0.06 0.0 0.0 1 1 # player manual toggle trigger
 K -2.72 5.0  0.74  0.06 0.0 0.0 1 1 # player manual toggle trigger
@@ -541,7 +541,7 @@ a 0 # non-destroyable
 destroy_prob 0 # reset to default
 #dynamic_indir 1
 #indir_dlight_group elevator_light 0.1
-K -3.0 5.25 -0.12  0.2 0.0 0.1 0 0  -3.35 -2.65 5.05 5.80 -0.40 -0.1 # additional player auto trigger region
+K -3.0 5.25 -0.12  0.2 0.0 0.1 0 0  -1  -3.35 -2.65 5.05 5.80 -0.40 -0.1 # additional player auto trigger region
 L 0.0 1.0  -3.0 5.25 -0.12  1.0 0.9 0.7 1.0  0 0 -1 0.4 0.0 0 1 #10000 # bottom hemisphere/facing down, with shadow
 L 0.0 1.0  -3.0 5.25 -0.12  1.0 0.9 0.7 1.0  0 0 -1 1.0 # bottom hemisphere/facing down
 V -3.0 5.25 -0.103

@@ -2814,7 +2814,7 @@ void player_state::free_balls() {
 	balls.clear();
 	p_weapons[W_BALL] = 0;
 	p_ammo[W_BALL]    = 0;
-	if (weapon == W_BALL) weapon = W_UNARMED;
+	if (weapon == W_BALL) {weapon = W_UNARMED;}
 }
 
 
@@ -2859,6 +2859,14 @@ void change_game_mode() {
 	}
 	if (game_mode) {init_game_mode();}
 	else {free_dodgeballs(1, 1);}
+}
+
+
+bool has_keycard_id(int smiley_id, unsigned keycard_id) {
+	assert(smiley_id >= CAMERA_ID && smiley_id < num_smileys); // too strong?
+	if (smiley_id < CAMERA_ID || smiley_id >= num_smileys) return 0;
+	set<unsigned> const &keycards(sstates[smiley_id].keycards);
+	return (keycards.find(keycard_id) != keycards.end());
 }
 
 

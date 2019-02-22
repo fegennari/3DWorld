@@ -200,7 +200,7 @@ B -3.1 -3.0  -1.1 -1.0  0.014 0.114
 damage 0.0
 movable 0
 
-# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
 K -3.05 -1.05 0.064  1.0  0.0  5.0  0 0 # 5s trigger
 # point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0 [num_dlight_rays=0]]]]]]
 #L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0 # point light

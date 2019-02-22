@@ -181,7 +181,8 @@ y 3.1
 B 2.55 2.9 -3.001 -2.999 2.6 2.8
 
 # rotating spotlights on post
-K 3.36 -3.4 0.13  0.08 0.0 0.0 0 1 # manual toggle trigger
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
+K 3.36 -3.4 0.13  0.08 0.0 0.0 0 1  1 # manual toggle trigger, keycard 1
 y 8.0
 l 0.8  1.0 1.0 1.0 1.0  hazard_stripes.jpg 1 1.0 0.0 1 # emissive hazard stripes
 B 3.36 3.38  -3.42 -3.38  0.11 0.15
