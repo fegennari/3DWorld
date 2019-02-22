@@ -176,7 +176,7 @@ void init_objects() {
 	object_types[SMILEY].gravity           = 0.4;
 	object_types[SMILEY].radius            = CAMERA_RADIUS;
 	object_types[SMILEY].damage            = 50.0;
-	object_types[SMILEY].lifetime          = 1000000;
+	object_types[SMILEY].lifetime          = 1000000; // nearly infinite, but smileys can still die of old age
 	object_types[SMILEY].density           = 1.2;
 	object_types[SMILEY].elasticity        = 0.4;
 	object_types[SMILEY].health            = 100.0;
@@ -512,7 +512,7 @@ void init_objects() {
 	object_types[XLOCATOR].friction_factor = 0.25;
 	object_types[XLOCATOR].gravity         = 1.0;
 	object_types[XLOCATOR].radius          = 0.02;
-	object_types[XLOCATOR].lifetime        = 1000000; // nearly infinite
+	object_types[XLOCATOR].lifetime        = -1; // infinite
 	object_types[XLOCATOR].density         = 2.0;
 	object_types[XLOCATOR].elasticity      = 0.25;
 	object_types[XLOCATOR].health          = 100.0;
@@ -537,7 +537,7 @@ void init_objects() {
 	object_types[KEYCARD].gravity         = 1.0;
 	object_types[KEYCARD].radius          = 0.01;
 	object_types[KEYCARD].damage          = 0.0;
-	object_types[KEYCARD].lifetime        = 100000000; // should be infinite FIXME_KEYCARD: make a value of -1 infinite?
+	object_types[KEYCARD].lifetime        = -1; // infinite
 	object_types[KEYCARD].density         = 0.2;
 	object_types[KEYCARD].elasticity      = 0.25;
 	object_types[KEYCARD].health          = 1.0E10; // infinite
@@ -560,18 +560,19 @@ void init_objects() {
 	object_types[PRECIP].flags   |= IS_PRECIP;
 
 	for (unsigned i = 0; i < NUM_TOT_OBJS; ++i) { // i <= CAMERA?
+		obj_type &otype(object_types[i]);
 		def_objects[i]        = obj;
 		def_objects[i].type   = i;
-		def_objects[i].health = object_types[i].health;
-		float const radius(object_types[i].radius);
+		def_objects[i].health = otype.health;
+		float const radius(otype.radius);
 		rmax = max(rmax, radius);
 
 		// objects are assumed to be spherical
-		object_types[i].surface_area = 4.0*PI*radius*radius;
-		object_types[i].volume       = (4.0/3.0)*PI*radius*radius*radius;
-		object_types[i].terminal_vel = 1.0/max(1.0E-6f, object_types[i].air_factor);
-		object_types[i].mass         = 150000.0*object_types[i].density*object_types[i].volume;
-		object_types[i].lifetime     = int((0.01/TIMESTEP)*object_types[i].lifetime);
+		otype.surface_area = 4.0*PI*radius*radius;
+		otype.volume       = (4.0/3.0)*PI*radius*radius*radius;
+		otype.terminal_vel = 1.0/max(1.0E-6f, otype.air_factor);
+		otype.mass         = 150000.0*otype.density*otype.volume;
+		if (otype.lifetime > 0) {otype.lifetime = int((0.01/TIMESTEP)*otype.lifetime);}
 	}
 	def_objects[SMILEY].orientation.assign(1.0, 0.0, 0.0); // start facing in +x
 	object_types[BALL].mass             = 1.0; // fudge the mass so that the splashes look better
@@ -618,7 +619,8 @@ void change_timestep(float mult_factor) {
 		I_TIMESCALE2 = min(MAX_I_TIMESCALE, int(its + 0.5));
 	}
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {
-		if (object_types[i].lifetime/mult_factor > 10) {object_types[i].lifetime = int(object_types[i].lifetime/mult_factor);}
+		int &lifetime(object_types[i].lifetime);
+		if (lifetime > 0 && lifetime/mult_factor > 10) {lifetime = int(lifetime/mult_factor);}
 	}
 	orig_timestep = TIMESTEP;
 }
@@ -723,7 +725,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 	verify_data();
 	obj_type const &otype(object_types[type]);
 
-	if (status == 0 || (ground_mode && pos.z < zmin) || time > otype.lifetime || (type == PARTICLE && is_underwater(pos))) {
+	if (status == 0 || (ground_mode && pos.z < zmin) || (otype.lifetime > 0 && time > otype.lifetime) || (type == PARTICLE && is_underwater(pos))) {
 		assert(type != SMILEY);
 		status = 0;
 		return;
