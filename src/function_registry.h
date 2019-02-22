@@ -672,6 +672,7 @@ void draw_scheduled_weapons(bool clear_after_draw);
 void add_weapon_lights(int shooter);
 void show_crosshair(colorRGBA const &color, int do_zoom);
 void draw_inventory();
+void show_player_keycards();
 void show_user_stats();
 void show_other_messages();
 void print_text_onscreen(std::string const &text, colorRGBA const &color, float size, int time, int priority=0);

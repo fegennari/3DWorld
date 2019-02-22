@@ -1013,6 +1013,7 @@ void display(void) {
 		if (display_framerate && !is_video_recording() && !game_mode && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && camera_mode == 1))) {
 			draw_compass_and_alt();
 		}
+		if (camera_mode == 1 && camera_surf_collide) {show_player_keycards();}
 		if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
 		tt_fire_button_down = 0;
 		if (TIMETEST) PRINT_TIME("X");

@@ -2503,13 +2503,6 @@ struct team_stats_t {
 	void add(player_state const &s) {kills += s.tot_kills; deaths += s.deaths; score += s.get_score();}
 };
 
-
-void draw_keycards(set<unsigned> const &keycards) {
-	for (auto i = keycards.begin(); i != keycards.end(); ++i) {
-		// FIXME_KEYCARD
-	}
-}
-
 void show_user_stats() {
 
 	bool const is_smiley0(spectate && num_smileys > 0 && obj_groups[coll_id[SMILEY]].enabled);
@@ -2531,7 +2524,6 @@ void show_user_stats() {
 			draw_text(get_powerup_color(sstate.powerup), -0.015, -0.012, -0.025, text);
 		}
 		draw_health_bar(chealth, sstate.shields, float(sstate.powerup_time)/POWERUP_TIME, get_powerup_color(sstate.powerup));
-		draw_keycards(sstate.keycards);
 	}
 	if (show_scores) {
 		team_stats_t tot_stats;
