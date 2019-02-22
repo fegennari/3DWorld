@@ -66,7 +66,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 // Note that these are all the default values when no config variable is specified.
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0), tiled_terrain_only(0);
 bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0), claim_planet(0), skip_light_vis_test(0);
-bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1), smoke_dlights(0);
+bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1), smoke_dlights(0), keep_keycards_on_death(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(1), invert_model_nmap_bscale(0);
 bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0), volume_lighting(0), no_subdiv_model(0);
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0), use_instanced_pine_trees(0);
@@ -1683,6 +1683,7 @@ int load_config(string const &config_file) {
 	kwmb.add("allow_shader_invariants", allow_shader_invariants);
 	kwmb.add("unlimited_weapons", config_unlimited_weapons);
 	kwmb.add("allow_model3d_quads", allow_model3d_quads);
+	kwmb.add("keep_keycards_on_death", keep_keycards_on_death);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);

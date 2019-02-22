@@ -27,7 +27,7 @@ vector<point> app_spots;
 vector<od_data> oddatav; // used as a temporary
 
 
-extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields, smileys_chase_player, enable_translocator;
+extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields, smileys_chase_player, enable_translocator, keep_keycards_on_death;
 extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
@@ -1529,7 +1529,7 @@ void player_state::init(bool w_start) {
 	reset_wpt_state();
 	waypts_used.clear();
 	dest_mark.clear();
-	keycards.clear(); // FIXME_KEYCARD: allow player to keep these if they die?
+	if (!keep_keycards_on_death) {keycards.clear();}
 }
 
 
