@@ -422,10 +422,9 @@ void camera_weapon_ammo_pickup(point const &position, colorRGBA &cam_filter_colo
 bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
 	if (type == DROPLET && get_blood_mix(position) > 0.5) {blood_on_camera(1);}
-	
-	if (type == CAMERA || type == SMILEY || !camera_mode || !game_mode || spectate || (type != SMILEY && !damage_done(type, obj_index))) {
-		return 1;
-	}
+	if (type == CAMERA || type == SMILEY || !camera_mode || spectate) return 1; // no collisions in these cases
+	if (!game_mode && type != KEYCARD) return 1; // only keycards can be interacted with in non-gameplay mode
+	if (!damage_done(type, obj_index)) return 1;
 	if (camera_health < 0.0) return 1; // already dead
 	int const source(get_damage_source(type, obj_index, CAMERA_ID));
 	assert(source >= CAMERA_ID && source < num_smileys);
@@ -2837,7 +2836,7 @@ void gamemode_rand_appear() {
 
 void change_game_mode() {
 
-	int types[] = {HEALTH, SHIELD, POWERUP, WEAPON, AMMO}; // KEYCARD?
+	int types[] = {HEALTH, SHIELD, POWERUP, WEAPON, AMMO};
 	unsigned const ntypes(UNLIMITED_WEAPONS ? 3 : 5);
 	game_mode = game_mode % 3; // 0/1/2
 	for (unsigned i = 0; i < ntypes; ++i) {obj_groups[coll_id[types[i]]].set_enable(game_mode == 1);}

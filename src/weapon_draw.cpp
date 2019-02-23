@@ -984,8 +984,7 @@ void draw_inventory() {
 
 void show_player_keycards() {
 
-	if (!game_mode) return; // even when not in game mode?
-	if (spectate)   return; // onlys show if player is alive and playing
+	if (spectate) return; // onlys show if player is alive and playing
 	if (sstates == nullptr) return;
 	set<unsigned> const &keycards(sstates[CAMERA_ID].keycards);
 	if (keycards.empty()) return;
