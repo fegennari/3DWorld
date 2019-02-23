@@ -1128,7 +1128,7 @@ void compute_shader_t::unset_fbo(bool keep_fbo_for_reuse) { // call once after r
 	disable_fbo();
 }
 
-void compute_shader_t::setup_matrices_and_run(unsigned &tid, bool is_R32F, bool is_first, bool is_last) {
+void compute_shader_t::setup_and_run(unsigned &tid, bool is_R32F, bool is_first, bool is_last) {
 	
 	setup_target_texture(tid, is_R32F);
 	
@@ -1162,7 +1162,7 @@ void compute_shader_t::run(unsigned &tid) { // call N times between pre_run() an
 // tid may or may not be setup prior to this call
 void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
 	
-	setup_matrices_and_run(tid, 0, is_first, is_last);
+	setup_and_run(tid, 0, is_first, is_last);
 	vals.resize(xsize*ysize);
 	vector<unsigned char> data(4*vals.size());
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -1180,10 +1180,11 @@ void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool
 
 // tid may or may not be setup prior to this call
 void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
-	setup_matrices_and_run(tid, 1, is_first, is_last);
+	setup_and_run(tid, 1, is_first, is_last);
 	prep_for_read_pixels(is_first);
 	read_float_vals(vals, is_last, keep_fbo_for_reuse);
 }
+
 void compute_shader_t::read_float_vals(vector<float> &vals, bool is_last, bool keep_fbo_for_reuse) {
 
 	bind_fbo(fbo_id);

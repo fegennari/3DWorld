@@ -227,7 +227,7 @@ public:
 	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
 	void begin();
 	void end_shader();
-	void setup_matrices_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
+	void setup_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
 	void run(unsigned &tid);
 	void prep_for_read_pixels(bool is_first=1);
 	void read_float_vals(vector<float> &vals, bool is_last=1, bool keep_fbo_for_reuse=0);

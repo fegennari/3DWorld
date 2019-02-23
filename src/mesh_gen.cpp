@@ -671,10 +671,9 @@ void mesh_xy_grid_cache_t::run_gpu_simplex() {
 	cshader->add_uniform_float("ry", ry);
 	cshader->add_uniform_float("zscale", /*zscale*/1.0);
 	//cshader->gen_matrix_R32F(cached_vals, tid, 1, 1, 1); // reuse FBO
-	cshader->setup_matrices_and_run(tid, 1, 1, 1); // R32F
+	cshader->setup_and_run(tid, 1, 1, 1); // R32F
 	cshader->disable();
 	cshader->prep_for_read_pixels(1);
-	disable_fbo();
 }
 
 void mesh_xy_grid_cache_t::cache_gpu_simplex_vals() {
