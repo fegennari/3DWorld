@@ -404,6 +404,7 @@ public:
 	void update_app_rate(float const val, unsigned min_app, unsigned max_app);
 	void init_group();
 	void preproc_this_frame();
+	void reap_predef_objs(set<unsigned> const *const only_of_type=nullptr);
 	void remove_reset_cobjs();
 	size_t max_objects() const {return objects.size();}
 	int choose_object(bool peek=0);

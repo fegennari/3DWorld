@@ -920,7 +920,7 @@ unsigned obj_group::get_updated_max_objs() const {
 void obj_group::update_app_rate(float const val, unsigned min_app, unsigned max_app) {
 
 	app_rate = max(min_app, unsigned(app_rate*val + 0.5));
-	if (max_app > 0) app_rate = min(app_rate, max_app);
+	if (max_app > 0) {app_rate = min(app_rate, max_app);}
 	unsigned const new_max_objs(get_updated_max_objs());
 
 	if (enabled) { // change capacity (increase or decrease)
@@ -950,7 +950,7 @@ void obj_group::init_group() {
 // normally called before using objects, but can be called dynamically later
 void obj_group::add_predef_obj(point const &pos, int type, int rtime) {
 	
-	predef_objs.push_back(predef_obj(pos, type, rtime));
+	predef_objs.emplace_back(pos, type, rtime);
 	max_eq(max_objs, predef_objs.size());
 	reorderable = 0; // need to unset reorderable so that predef_objs indexes remain correct
 }
@@ -971,15 +971,19 @@ void obj_group::preproc_this_frame() {
 		sort(objects.begin(), (objects.begin() + saw_id));
 		for (unsigned j = 0; j < nobjs; ++j) {if (!objects[j].enabled()) {end_id = j; break;}} // Note: will likely exit before j reaches max_used_id
 	}
-	if (!predef_use_once) {
-		for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
-			if (i->obj_used == -1) continue;
-			assert((unsigned)i->obj_used < max_objects());
+	if (!predef_use_once) {reap_predef_objs();}
+}
+
+void obj_group::reap_predef_objs(set<unsigned> const *const only_of_type) {
+
+	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
+		if (i->obj_used == -1) continue; // already unused/available
+		assert((unsigned)i->obj_used < max_objects());
+		if (only_of_type != nullptr && only_of_type->find(i->type) == only_of_type->end()) continue; // not a selected type
 			
-			if (objects[i->obj_used].disabled()) { // unused object
-				i->obj_used = -1; // reset back to 'unused'
-				i->cur_time = tfticks;
-			}
+		if (objects[i->obj_used].disabled()) { // unused object
+			i->obj_used = -1; // reset back to 'unused'
+			i->cur_time = tfticks;
 		}
 	}
 }

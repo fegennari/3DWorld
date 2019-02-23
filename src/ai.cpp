@@ -1529,7 +1529,12 @@ void player_state::init(bool w_start) {
 	reset_wpt_state();
 	waypts_used.clear();
 	dest_mark.clear();
-	if (!keep_keycards_on_death) {keycards.clear();}
+
+	if (!keep_keycards_on_death && !keycards.empty()) { // need to return our keycards to the game
+		// Note: assumes keycard IDs are unique; however, it should be okay if they're not, since picking up the same keycard ID more than once has no effect
+		obj_groups[coll_id[KEYCARD]].reap_predef_objs(&keycards);
+		keycards.clear();
+	}
 }
 
 
