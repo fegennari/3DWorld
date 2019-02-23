@@ -31,8 +31,9 @@ class mesh_xy_grid_cache_t {
 	int gen_mode, gen_shape;
 	bool do_glaciate;
 
-	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain (size not a multiple of block_size=16 and lack of async results read)
+	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain (size not a multiple of block_size=16)
 	typedef compute_shader_t grid_gen_shader_t;
+	//typedef compute_shader_comp_t grid_gen_shader_t;
 	grid_gen_shader_t *cshader;
 
 	void run_gpu_simplex();

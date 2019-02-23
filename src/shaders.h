@@ -247,7 +247,11 @@ public:
 	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), block_sz_x(bsx), block_sz_y(bsy), block_sz_z(bsz), comp_shader_str(cstr) {
 		  assert(zsize > 0 && block_sz_x > 0 && block_sz_y > 0 && block_sz_z > 0);
 	  }
+	bool is_3d() const {return (zsize > 1);}
 	void begin();
+	void setup_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
+	void prep_for_read_pixels(bool is_first=1) {} // does nothing
+	void read_float_vals(vector<float> &vals, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
 	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 5);} // CS
 };

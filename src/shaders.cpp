@@ -1242,12 +1242,12 @@ unsigned div_by_block_sz(unsigned sz, unsigned block_sz) {
 	return sz/block_sz;
 }
 
-void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
-	// Note: is_first and is_last are unused
-	check_gl_error(500);
-	bool const is_3d(zsize > 1);
+void compute_shader_comp_t::setup_and_run(unsigned &tid, bool is_R32F, bool is_first, bool is_last) { // Note: is_first and is_last are unused
 
-	if (is_3d) {
+	assert(is_R32F); // only supported mode
+	check_gl_error(500);
+
+	if (is_3d()) {
 		if (tid == 0) {
 			setup_3d_texture(tid, GL_NEAREST, GL_CLAMP_TO_EDGE);
 			glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, xsize, ysize, zsize, 0, GL_RED, GL_FLOAT, nullptr);
@@ -1258,13 +1258,25 @@ void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, 
 		setup_target_texture(tid, 1);
 		bind_2d_texture(tid);
 	}
-	glBindImageTexture(0, tid, 0, (is_3d ? GL_TRUE : GL_FALSE), 0, GL_WRITE_ONLY, GL_R32F); // use image unit 0, layered if 3D texture
+	glBindImageTexture(0, tid, 0, (is_3d() ? GL_TRUE : GL_FALSE), 0, GL_WRITE_ONLY, GL_R32F); // use image unit 0, layered if 3D texture
 	// num threads = div_by_block_sz(xsize, block_sz_x)*div_by_block_sz(ysize, block_sz_y)*div_by_block_sz(zsize, block_sz_z)
 	// block size  = block_sz_x*block_sz_y*block_sz_z
 	glDispatchCompute(div_by_block_sz(xsize, block_sz_x), div_by_block_sz(ysize, block_sz_y), div_by_block_sz(zsize, block_sz_z));
+	assert(!is_running);
+	is_running = 1;
+}
+
+void compute_shader_comp_t::read_float_vals(vector<float> &vals, bool is_last, bool keep_fbo_for_reuse) { // Note: is_last and keep_fbo_for_reuse are unused
+	assert(is_running);
+	is_running = 0;
 	vals.resize(xsize*ysize*zsize);
-	glGetTexImage((is_3d ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, &vals.front());
+	glGetTexImage((is_3d() ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, &vals.front());
 	check_gl_error(501);
+}
+
+void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
+	setup_and_run(tid, 1, is_first, is_last);
+	read_float_vals(vals);
 }
 
 
