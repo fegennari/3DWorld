@@ -459,7 +459,7 @@ void process_groups() {
 				if (obj.time >= 0) {
 					if (type == PLASMA && obj.velocity.mag_sq() < 1.0) {obj.disable();} // plasma dies when it stops
 					else {
-						if (large_radius) {
+						if (large_radius && type != KEYCARD) { // teleport large objects, except for keycards (so they don't get lost)
 							maybe_teleport_object(obj.pos, radius, NO_SOURCE, type); // teleport!
 							maybe_use_jump_pad(obj.pos, obj.velocity, radius, NO_SOURCE);
 						}
