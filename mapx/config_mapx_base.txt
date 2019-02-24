@@ -62,6 +62,7 @@ smiley_speed 1.8
 num_dodgeballs 20
 unlimited_weapons 1
 enable_translocator 1
+enable_grass_fire 0
 keep_keycards_on_death 0
 
 num_dynam_parts 200 # normal
