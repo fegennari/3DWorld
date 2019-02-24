@@ -718,13 +718,19 @@ float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d c
 
 bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const &cobjs, vector3d &delta, float tolerance=0.0) {
 
+	float const int_toler(1.5*tolerance); // larger tolerance to allow for slight movement
 	float step_thresh(0.001);
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(*i));
 		// moving object resting (stacked) on cobj, ignore it
 		if (cobj.has_flat_top_bot() && c.has_flat_top_bot() && c.is_movable() && c.get_cube_center().z > cobj.d[2][1]) continue;
-		if (cobj.intersects_cobj(c, 1.5*tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck) (larger tolerance to allow for slight movement)
+		
+		if (cobj.intersects_cobj(c, int_toler)) { // intersects at the starting location, don't allow it to move (stuck)
+			coll_obj cobj2(cobj); // deep copy so we can modify it
+			cobj2.translate(delta); // shift by to see if it gets unstuck - handle the touching case (floating-point error)
+			if (cobj2.intersects_cobj(c, int_toler)) return 0; // it's actually intersecting, fail
+		}
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
 		if (valid_t < TOLERANCE) return 0; // can't move (avoid div-by-zero and negative t)
 		step_thresh /= valid_t; // adjust thresh to avoid tiny steps for large number of cobjs
