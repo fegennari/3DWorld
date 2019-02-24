@@ -45,6 +45,9 @@ r 0.0 1.0 # reset specularity
 keycard  0  1.0 1.0 1.0  1.3 1.73 0.15
 keycard  1  0.6 0.8 1.0  1.7 1.74 0.15
 
+# popup_text text_str R G B size duration(s) X Y Z dist mode (mode: 0=one time, 1=on enter, 2=continuous)
+popup_text "Welcome to CommandCAD"  0.8 0.9 1.0  1.5 2.5  1.5 1.6 0.12  0.12 0
+
 # fish on the table
 #t 0.0 0.0 0.0  s 1 2  M 0  m 0.1
 O "model_data/fish/fishOBJ.model3d" 4 0 0
