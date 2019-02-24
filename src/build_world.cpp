@@ -900,6 +900,7 @@ int read_error(FILE *fp, const char *param, const char *filename, unsigned line_
 	fclose(fp);
 	return 0;
 }
+int read_error(FILE *fp, string const &param, const char *filename, unsigned line_num) {return read_error(fp, param.c_str(), filename, line_num);}
 
 void check_layer(bool has_layer) {
 	if (!has_layer) cout << "* Warning: Shape found before a layer specification in config file. Using default layer." << endl;
@@ -1034,7 +1035,7 @@ void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geo
 }
 
 
-string read_filename(FILE *fp, unsigned &line_num) {
+string read_quoted_string(FILE *fp, unsigned &line_num) {
 
 	assert(fp);
 	string str;
@@ -1235,54 +1236,54 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "teleporter") {letter = 'x';}
 				// long keywords
 				else if (keyword == "density") {
-					if (!read_float(fp, cobj.cp.density)) {return read_error(fp, "density", coll_obj_file);}
+					if (!read_float(fp, cobj.cp.density)) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "tj") {
 					if (!read_int(fp, ivals[0])) {return read_error(fp, "remove t junctions", coll_obj_file);}
 					remove_t_junctions = (ivals[0] != 0);
 				}
 				else if (keyword == "reflective") {
-					if (!read_int(fp, ivals[0])) {return read_error(fp, "reflective", coll_obj_file);}
+					if (!read_int(fp, ivals[0])) {return read_error(fp, keyword, coll_obj_file);}
 					reflective = ((ivals[0] != 0) ? 1 : 0);
 					cobj.set_reflective_flag(reflective == 2); // only for cube maps
 				}
 				else if (keyword == "cube_map_ref") {
-					if (!read_int(fp, ivals[0])) {return read_error(fp, "cube_map_ref", coll_obj_file);}
+					if (!read_int(fp, ivals[0])) {return read_error(fp, keyword, coll_obj_file);}
 					reflective = ((ivals[0] != 0) ? 2 : 0);
 					cobj.set_reflective_flag(reflective == 2); // only for cube maps
 				}
 				else if (keyword == "metalness") {
-					if (!read_zero_one_float(fp, cobj.cp.metalness)) {return read_error(fp, "metalness", coll_obj_file);}
+					if (!read_zero_one_float(fp, cobj.cp.metalness)) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "damage") {
-					if (!read_float(fp, cobj.cp.damage)) {return read_error(fp, "damage", coll_obj_file);}
+					if (!read_float(fp, cobj.cp.damage)) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "start_cobj_group") {cobj.cgroup_id = cobj_groups.new_group();}
 				else if (keyword == "end_cobj_group") {cobj.cgroup_id = -1;}
 				else if (keyword == "start_draw_group") {cobj.dgroup_id = cdraw_groups.new_group();}
 				else if (keyword == "end_draw_group") {cobj.dgroup_id = -1;}
 				else if (keyword == "destroy_prob") {
-					if (!read_int(fp, ivals[0])) {return read_error(fp, "destroy_prob", coll_obj_file);}
+					if (!read_int(fp, ivals[0])) {return read_error(fp, keyword, coll_obj_file);}
 					cobj.cp.destroy_prob = (unsigned char)max(0, min(255, ivals[0])); // 0 = default
 				}
 				else if (keyword == "sound_file") {
-					if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "sound_file", coll_obj_file, line_num);}
+					if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, keyword, coll_obj_file, line_num);}
 					platforms.read_sound_filename(str);
 				}
 				else if (keyword == "place_sound") {
-					if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "place_sound", coll_obj_file, line_num);}
+					if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, keyword, coll_obj_file, line_num);}
 					sound_params_t params;
 					if (!params.read_from_file(fp)) {return read_error(fp, "place_sound params", coll_obj_file, line_num);}
 					xf.xform_pos(params.pos);
 					add_placed_sound(str, params, cur_sensor);
 				}
 				else if (keyword == "sensor") {
-					if (!cur_sensor.read_from_file(fp, xf)) {return read_error(fp, "sensor", coll_obj_file);}
+					if (!cur_sensor.read_from_file(fp, xf)) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "transform_array_1d") {
 					unsigned num(0);
 					vector3d step(zero_vector);
-					if (fscanf(fp, "%u%f%f%f", &num, &step.x, &step.y, &step.z) != 4 || num == 0) {return read_error(fp, "transform_array_1d", coll_obj_file);}
+					if (fscanf(fp, "%u%f%f%f", &num, &step.x, &step.y, &step.z) != 4 || num == 0) {return read_error(fp, keyword, coll_obj_file);}
 					if (skip_cur_model) break; // don't apply the transform
 					if (!have_cur_model()) {cerr << "Error: No model loaded, can't apply transform_array_1d" << endl; break;}
 					model3d_xform_t model_xf_xlate(model_xf);
@@ -1296,7 +1297,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					unsigned num1(0), num2(0);
 					vector3d step1(zero_vector), step2(zero_vector);
 					if (fscanf(fp, "%u%u%f%f%f%f%f%f", &num1, &num2, &step1.x, &step1.y, &step1.z, &step2.x, &step2.y, &step2.z) != 8 || num1 == 0 || num2 == 0) {
-						return read_error(fp, "transform_array_2d", coll_obj_file);
+						return read_error(fp, keyword, coll_obj_file);
 					}
 					if (skip_cur_model) break; // don't apply the transform
 					if (!have_cur_model()) {cerr << "Error: No model loaded, can't apply transform_array_2d" << endl; break;}
@@ -1315,35 +1316,35 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "lighting_file_sky_model") {
 					int sz[3] = {0};
 					float weight(0.0);
-					if (fscanf(fp, "%255s%u%u%u%f", str, &sz[0], &sz[1], &sz[2], &weight) != 5) {return read_error(fp, "lighting_file_sky_model", coll_obj_file);}
+					if (fscanf(fp, "%255s%u%u%u%f", str, &sz[0], &sz[1], &sz[2], &weight) != 5) {return read_error(fp, keyword, coll_obj_file);}
 					set_sky_lighting_file_for_cur_model(str, weight, sz);
 				}
 				else if (keyword == "model_occlusion_cube") { // Note: in local model space, so tr
 					cube_t cube;
-					if (!read_cube(fp, geom_xform_t(), cube)) {return read_error(fp, "model_occlusion_cube", coll_obj_file);}
+					if (!read_cube(fp, geom_xform_t(), cube)) {return read_error(fp, keyword, coll_obj_file);}
 					set_occlusion_cube_for_cur_model(cube);
 				}
 				else if (keyword == "cube_light") { // ambient/precomputed light only
 					cube_t cube; // x1 y1 x2 y2 z1 z2 size color
 					float size(0.0);
-					if (!read_cube(fp, xf, cube)) {return read_error(fp, "cube_light", coll_obj_file);}
-					if (fscanf(fp, "%f%f%f%f%f", &size, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 5) {return read_error(fp, "cube_light", coll_obj_file);}
+					if (!read_cube(fp, xf, cube)) {return read_error(fp, keyword, coll_obj_file);}
+					if (fscanf(fp, "%f%f%f%f%f", &size, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 5) {return read_error(fp, keyword, coll_obj_file);}
 					light_sources_a.push_back(light_source(size*xf.scale, cube.get_llc(), cube.get_urc(), lcolor));
 					light_sources_a.back().mark_is_cube_light(cobj.cp.surfs);
 				}
 				else if (keyword == "light_rotate") { // axis.x axis.y axis.z rotate_rate
-					if (fscanf(fp, "%f%f%f%f", &light_axis.x, &light_axis.y, &light_axis.z, &light_rotate) != 4) {return read_error(fp, "light_rotate", coll_obj_file);}
+					if (fscanf(fp, "%f%f%f%f", &light_axis.x, &light_axis.y, &light_axis.z, &light_rotate) != 4) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "dynamic_indir") { // <enable> <num_rays>
-					if (!read_bool(fp, dynamic_indir)) {return read_error(fp, "dynamic_indir", coll_obj_file);}
+					if (!read_bool(fp, dynamic_indir)) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "outdoor_shadows") {
-					if (!read_bool(fp, outdoor_shadows)) {return read_error(fp, "outdoor_shadows", coll_obj_file);}
+					if (!read_bool(fp, outdoor_shadows)) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "jump_pad") { // jump_pad xpos ypos zpos radius vx vy vz
 					jump_pad jp;
 					if (fscanf(fp, "%f%f%f%f%f%f%f", &jp.pos.x, &jp.pos.y, &jp.pos.z, &jp.radius, &jp.velocity.x, &jp.velocity.y, &jp.velocity.z) != 7) {
-						return read_error(fp, "jump_pad", coll_obj_file);
+						return read_error(fp, keyword, coll_obj_file);
 					}
 					xf.xform_pos(jp.pos);
 					jump_pads.push_back(jp);
@@ -1364,12 +1365,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					colorRGBA color(WHITE);
 
 					if (fscanf(fp, "%u%f%f%f%f%f", &id, &color.R, &color.G, &color.B, &pos.x, &pos.y) != 6 || id > 255) {
-						return read_error(fp, "keycard", coll_obj_file);
+						return read_error(fp, keyword, coll_obj_file);
 					}
 					if (id >= colors_by_id.size()) {colors_by_id.resize(id+1);}
 					colors_by_id[id] = color;
 					float const radius(object_types[KEYCARD].radius);
-					read_or_calc_zval(fp, pos, radius, radius, xf);
+					read_or_calc_zval(fp, pos, radius, radius, xf); // and xform_pos()
 					++num_keycards;
 					init_objects();
 					create_object_groups();
@@ -1402,7 +1403,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'i': // include file (only translation and scale are saved state)
 			{
-				string const fn(read_filename(fp, line_num));
+				string const fn(read_quoted_string(fp, line_num));
 				if (fn.empty()) {return read_error(fp, "include file", coll_obj_file);}
 				if (!read_coll_obj_file(fn.c_str(), xf, cobj, has_layer, lcolor)) {return read_error(fp, "include file", coll_obj_file);}
 			}
@@ -1411,7 +1412,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'O': // load *.obj | *.3ds | *.model3d file: <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
 			{
 				model3d_xform_t model_xf;
-				string const fn(read_filename(fp, line_num));
+				string const fn(read_quoted_string(fp, line_num));
 				int recalc_normals(0), write_file(0);
 
 				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from quad polygons (voxels), 6=cubes from edges
