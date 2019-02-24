@@ -12,5 +12,3 @@ Cities:
 - Pedestrians:
   - More models
   - Walking animation
-  - Goals + pathfinding
-  - Cross roads at crosswalks
