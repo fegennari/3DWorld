@@ -843,6 +843,7 @@ void display(void) {
 
 		// camera position code
 		auto_advance_camera();
+		if (world_mode == WMODE_GROUND && camera_mode == 1 && !spectate) {check_popup_text();}
 
 		if (camera_mode == 1 && camera_surf_collide && !spectate) {
 			force_onto_surface_mesh(surface_pos);

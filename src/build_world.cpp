@@ -47,6 +47,7 @@ vector<jump_pad> jump_pads;
 vector<obj_draw_group> obj_draw_groups;
 vector<sphere_t> cur_frame_explosions;
 vector<colorRGBA> colors_by_id; // for keycards
+vector<popup_text_t> popup_text;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc, reflect_dodgeballs, begin_motion, disable_fire_delay;
@@ -1056,6 +1057,16 @@ string read_quoted_string(FILE *fp, unsigned &line_num) {
 	return str;
 }
 
+bool popup_text_t::read(FILE *fp, unsigned &line_num) { // text_str R G B size duration(s) X Y Z dist mode
+	str = read_quoted_string(fp, line_num);
+	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%u", &color.R, &color.G, &color.B, &size, &time, &pos.x, &pos.y, &pos.z, &dist, &mode) != 10) return 0;
+	color.A = 1.0;
+	return (mode <= 2); // 0=one time, 1=on enter, 2=continuous
+}
+void popup_text_t::write(std::ostream &out) const {
+	out << "popup_text \"" << str << "\" " << colorRGB(color).raw_str() << " " << size << " " << time << " " << pos.raw_str() << " " << dist << " " << mode << endl;
+}
+
 
 bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map, bool invert_y=0) {
 
@@ -1377,6 +1388,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					int const cid(coll_id[KEYCARD]);
 					assert(cid < NUM_TOT_OBJS);
 					obj_groups[cid].add_predef_obj(pos, id, 0);
+				}
+				else if (keyword == "popup_text") { // text_str R G B size duration(s) X Y Z dist mode
+					popup_text_t text;
+					if (!text.read(fp, line_num)) {return read_error(fp, keyword, coll_obj_file);} // mode: 0=one time, 1=on enter, 2=continuous
+					xf.xform_pos(text.pos);
+					popup_text.push_back(text);
 				}
 				else {
 					ostringstream oss;
@@ -2261,6 +2278,8 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 			//fscanf(fp, "%f%f%f%f%u%i%u", &cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0], &cls.disabled_edges);
 		}
 	}
+	for (auto t = popup_text.begin(); t != popup_text.end(); ++t) {t->write(out);} // add popup text
+	out << endl;
 	write_trees_to_cobj_file(out);
 	out << endl;
 	write_small_trees_to_cobj_file(out);

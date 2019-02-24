@@ -1558,8 +1558,21 @@ struct text_string_t {
 	float size;
 	colorRGBA color;
 
-	text_string_t() {}
+	text_string_t() : size(0.0), color(0,0,0,0) {}
 	text_string_t(std::string const &s, point const &p, float sz, colorRGBA const &c) : str(s), pos(p), size(sz), color(c) {}
+};
+
+class popup_text_t : public text_string_t {
+	float dist, time, tfticks_last_drawn;
+	unsigned mode; // 0=one time, 1=on enter, 2=continuous
+	bool any_active, prev_active;
+
+public:
+	popup_text_t() : dist(0.0), time(1.0), tfticks_last_drawn(0.0), mode(0), any_active(0), prev_active(0) {}
+	bool read(FILE *fp, unsigned &line_num);
+	void write(std::ostream &out) const;
+	void check_player_prox();
+	void draw() const;
 };
 
 struct text_drawer_t {

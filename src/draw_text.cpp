@@ -10,6 +10,8 @@ string const default_font_texture_atlas_fn = "textures/atlas/text_atlas.png";
 string font_texture_atlas_fn(default_font_texture_atlas_fn);
 
 extern int window_height, display_mode, draw_model;
+extern double tfticks;
+extern vector<popup_text_t> popup_text;
 
 
 struct per_char_data_t {
@@ -175,5 +177,30 @@ void text_drawer_t::draw() const {
 	td.begin_draw();
 	for (auto i = strs.begin(); i != strs.end(); ++i) {td.add_text(i->str, i->pos, i->size, tdir, up_vector, &i->color);}
 	td.end_draw();
+}
+
+
+void check_popup_text() {
+	for (auto t = popup_text.begin(); t != popup_text.end(); ++t) {t->check_player_prox();}
+}
+
+void popup_text_t::check_player_prox() { // mode: 0=one time, 1=on enter, 2=continuous
+	if (mode == 0 && any_active) return; // already activated
+	bool const active(dist_less_than(get_camera_pos(), pos, dist));
+	
+	if (active && (!prev_active || mode == 2)) {
+		float const ticks_since_drawn(tfticks - tfticks_last_drawn), secs_since_drawn(ticks_since_drawn/TICKS_PER_SECOND);
+
+		if (secs_since_drawn >= 0.9*time) { // allow for a bit of overlap to account for the next frame's time
+			draw();
+			tfticks_last_drawn = tfticks;
+		}
+	}
+	any_active |= active;
+	prev_active = active;
+}
+
+void popup_text_t::draw() const {
+	print_text_onscreen(str, color, size, time*TICKS_PER_SECOND, 2);
 }
 

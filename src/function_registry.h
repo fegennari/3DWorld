@@ -938,6 +938,7 @@ void update_deformation(dwobject &obj);
 void load_font_texture_atlas(std::string const &fn="");
 void free_font_texture_atlas();
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize=1.0);
+void check_popup_text();
 
 // function prototypes - postproc_effects
 void set_xy_step(shader_t &s);
