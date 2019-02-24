@@ -704,6 +704,8 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	bool const almost_dead(health_eq < 20.0);
 	pos_dir_up const pdu(get_smiley_pdu(obj.pos, obj.orientation));
 	vector3d const avoid_dir(get_avoid_dir(obj.pos, smiley_id, pdu));
+	int const orig_display_mode(display_mode);
+	display_mode |= 0x08; // enable occlusion culling if it was off - required for smileys
 
 	if (game_mode == 2 && !UNLIMITED_WEAPONS) { // want the ball
 		if (p_ammo[W_BALL] > 0) { // already have a ball
@@ -786,6 +788,7 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	if (on_waypt_path)       {blocked_waypts.clear();}
 	if (target_visible == 1) {assert(min_ie >= CAMERA_ID);}
 	target = min_ie;
+	display_mode = orig_display_mode; // restor orig value
 }
 
 
