@@ -876,7 +876,7 @@ void update_mesh(float dms, bool do_regen_trees) { // called when mesh_scale cha
 
 
 bool is_under_mesh(point const &p) {
-	return ((world_mode == WMODE_GROUND && p.z < zbottom) || p.z < int_mesh_zval_pt_off(p, 0, 1));
+	return ((world_mode == WMODE_GROUND && p.z < zbottom) || p.z < int_mesh_zval_pt_off(p, 0, 1, 1));
 }
 
 

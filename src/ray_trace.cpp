@@ -269,7 +269,8 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 
 	// find intersection point with scene cobjs
 	point orig_p1(p1);
-	if (!do_line_clip_scene(p1, p2, min(zbottom, czmin), max(ztop, czmax)) || ((display_mode & 0x01) && is_under_mesh(p1))) return;
+	if (!do_line_clip_scene(p1, p2, min(zbottom, czmin), max(ztop, czmax))) return;
+	if ((display_mode & 0x01) && is_under_mesh(p1)) return;
 	int cindex(-1), xpos(0), ypos(0);
 	point cpos(p2);
 	vector3d cnorm;
@@ -285,6 +286,8 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	coll |= model_coll;
 
 	// find intersection point with mesh (approximate)
+	// Note: the !coll test is a big optimization but not entirely correct, as we can have a ray that intersects the mesh and then hits a cobj below the mesh;
+	// however, if the scene is properly built, the cobj surface should not be visible anyway
 	if ((display_mode & 0x01) && !coll && p1.z != p2.z && line_intersect_mesh(p1, p2, xpos, ypos, zval, 0, 0)) {
 		assert(!point_outside_mesh(xpos, ypos));
 		
@@ -292,8 +295,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 			if (p2.z >= p1.z) return; // starts under mesh = bad
 			cpos  = (p1 + (p2 - p1)*(zval + SMALL_NUMBER - p1.z)/(p2.z - p1.z));
 			cnorm = vertex_normals[ypos][xpos];
-			coll  = 1;
-			mesh_coll = 1;
+			coll  = mesh_coll = 1;
 		}
 	}
 
