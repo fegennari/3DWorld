@@ -724,6 +724,7 @@ void do_rock_damage(point const &pos, float radius, float damage);
 void add_scenery_cobjs();
 void shift_scenery(vector3d const &vd);
 void add_plant(point const &pos, float height, float radius, int type, int calc_z);
+void add_leafy_plant(point const &pos, float radius, int type, int calc_z);
 
 // function prototypes - grass
 void setup_wind_for_shader(shader_t &s, unsigned tu_id);

@@ -944,15 +944,32 @@ int leafy_plant::create(int x, int y, int use_xy, float minz, unsigned plant_ix_
 	plant_ix   = plant_ix_;
 	int const ret(plant_base::create(x, y, use_xy, minz));
 	if (ret == 0) return 0;
-	if (ret == 2) {type = 0;} // underwater
+	if (ret == 2) {type = LEAFY_PLANT_UW;} // underwater
 	else {
 		float const relh(get_rel_height(pos.z, -zmax_est, zmax_est));
-		if      (relh < 0.46) {type = 1;} // dirt/sand
-		else if (relh < 0.60) {type = 2;} // grass
-		else if (relh < 0.75) {type = 3;} // rock
+		if      (relh < 0.46) {type = LEAFY_PLANT_DIRT;} // dirt/sand
+		else if (relh < 0.60) {type = LEAFY_PLANT_GRASS;} // grass
+		else if (relh < 0.75) {type = LEAFY_PLANT_ROCK;} // rock
 		else return 0; // snow
 	}
 	radius = rand_uniform2(0.06, 0.12)/tree_scale;
+	gen_leaves();
+	return 1;
+}
+
+void leafy_plant::create2(point const &pos_, float radius_, int type_, int calc_z, unsigned plant_ix_) {
+
+	vbo_mgr_ix = -1;
+	plant_ix   = plant_ix_;
+	type   = abs(type_)%NUM_LEAFY_PLANT_TYPES;
+	pos    = pos_;
+	radius = radius_;
+	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);}
+	gen_leaves();
+}
+
+void leafy_plant::gen_leaves() {
+
 	rand_gen_t rgen;
 	rgen.set_state(rand2(), 123);
 	leaves.resize(rgen.rand_uniform_uint(4, 8));
@@ -968,7 +985,6 @@ int leafy_plant::create(int x, int y, int use_xy, float minz, unsigned plant_ix_
 		i->m = glm::rotate(i->m, TO_RADIANS*135.0f, glm::vec3(0, 1, 0));
 		i->m = glm::rotate(i->m, angle, glm::vec3(-1, 0, -1));
 	}
-	return 1;
 }
 
 void leafy_plant::gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts) {
@@ -1011,7 +1027,7 @@ bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_man
 }
 
 int leafy_plant::get_tid() const {
-	unsigned const tids[4] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
+	unsigned const tids[NUM_LEAFY_PLANT_TYPES] = {LEAF2_TEX, PLANT3_TEX, LEAF_TEX, PAPAYA_TEX}; // LEAF3_TEX is okay but has artifacts at a distance; PALM_FROND_TEX needs clipping
 	return tids[type];
 }
 
@@ -1208,10 +1224,15 @@ void scenery_group::do_rock_damage(point const &pos, float radius, float damage)
 }
 
 void scenery_group::add_plant(point const &pos, float height, float radius, int type, int calc_z) {
-
 	assert(height > 0.0 && radius > 0.0);
 	plants.push_back(s_plant());
 	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager);
+}
+void scenery_group::add_leafy_plant(point const &pos, float radius, int type, int calc_z) {
+	assert(radius > 0.0);
+	unsigned const plant_ix(leafy_plants.size());
+	leafy_plants.push_back(leafy_plant());
+	leafy_plants.back().create2(pos, radius, type, calc_z, plant_ix);
 }
 
 bool check_valid_scenery_pos(scenery_obj const &obj) {return check_valid_scenery_pos(obj.get_pos(), obj.get_radius());}
@@ -1460,6 +1481,10 @@ void gen_scenery() {
 
 void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
 	all_scenery.add_plant(pos, height, radius, type, calc_z);
+	has_scenery2 = 1;
+}
+void add_leafy_plant(point const &pos, float radius, int type, int calc_z) {
+	all_scenery.add_leafy_plant(pos, radius, type, calc_z);
 	has_scenery2 = 1;
 }
 

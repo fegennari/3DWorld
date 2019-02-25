@@ -13,6 +13,7 @@
 
 
 enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, SEAWEED, NUM_PLANT_TYPES};
+enum {LEAFY_PLANT_UW = 0, LEAFY_PLANT_DIRT, LEAFY_PLANT_GRASS, LEAFY_PLANT_ROCK, NUM_LEAFY_PLANT_TYPES};
 unsigned const NUM_LAND_PLANT_TYPES  = 6;
 unsigned const NUM_WATER_PLANT_TYPES = NUM_PLANT_TYPES - NUM_LAND_PLANT_TYPES;
 
@@ -215,10 +216,13 @@ class leafy_plant : public plant_base {
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
+	void gen_leaves();
+
 public:
 	leafy_plant() : plant_ix(0), delta_z(0.0), motion_amt(0.0), cur_motion_energy(0.0), prev_motion_energy(0.0) {}
 	virtual float get_bsphere_radius() const {return radius;}
 	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
+	void create2(point const &pos_, float radius_, int type_, int calc_z, unsigned plant_ix_);
 	unsigned num_leaves() const {return leaves.size();}
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
 	void add_cobjs();
@@ -259,6 +263,7 @@ public:
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
+	void add_leafy_plant(point const &pos, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache);
 	void post_gen_setup();
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass=0);

@@ -1558,11 +1558,16 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'G': // place plant: xpos ypos height radius type [zpos], type: PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4
-			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5) {return read_error(fp, "plant", coll_obj_file);}
-			assert(fvals[0] > 0.0 && fvals[1] > 0.0);
+			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5 || fvals[0] <= 0.0 || fvals[1] <= 0.0) {return read_error(fp, "plant", coll_obj_file);}
 			use_z = read_float(fp, pos.z);
 			xf.xform_pos(pos);
-			add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
+
+			if (ivals[0] < 0) { // negative type = leafy plants
+				add_leafy_plant(pos, xf.scale*fvals[1], -ivals[0], !use_z); // Note: height is unused for leafy plants
+			}
+			else { // positive/zero type = normal plants
+				add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
+			}
 			break;
 
 		case 'A': // appearance spot: xpos ypos [zpos]
@@ -2074,6 +2079,7 @@ int read_coll_objects(const char *coll_obj_file) {
 	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
 	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
 	if (num_keycards > 0) {obj_groups[coll_id[KEYCARD]].enable();}
+	if (has_scenery2) {gen_scenery();} // need to call post_gen_setup() for leafy plants
 
 	if (using_model_bcube) {
 		cube_t const model_bcube(get_all_models_bcube());
