@@ -1486,5 +1486,8 @@
     <Text Include="scene_config\config_city.txt">
       <Filter>Input Files\config</Filter>
     </Text>
+    <Text Include="mapx\plant.txt">
+      <Filter>Input Files\mapx</Filter>
+    </Text>
   </ItemGroup>
 </Project>
