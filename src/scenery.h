@@ -157,8 +157,11 @@ public:
 };
 
 
-struct plant_base : public burnable_scenery_obj { // size = 28
+struct plant_base : public burnable_scenery_obj { // size = 32
 
+	int vbo_mgr_ix;
+
+	plant_base() : vbo_mgr_ix(-1) {}
 	int create(int x, int y, int use_xy, float minz);
 	void next_frame();
 	colorRGBA get_plant_color(vector3d const &xlate) const;
@@ -168,7 +171,7 @@ struct plant_base : public burnable_scenery_obj { // size = 28
 
 class s_plant : public plant_base { // size = 56
 
-	int coll_id2, vbo_mgr_ix;
+	int coll_id2;
 	float height;
 	vector<vert_wrap_t> berries;
 
@@ -185,7 +188,7 @@ public:
 		void set_wind_add(shader_t &s, float w_add);
 	};
 
-	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
+	s_plant() : coll_id2(-1), height(1.0) {}
 	virtual float get_bsphere_radius() const {return 0.5*(height + radius);}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
@@ -207,14 +210,13 @@ public:
 
 class leafy_plant : public plant_base {
 
-	int vbo_mgr_ix;
 	unsigned plant_ix;
 	float delta_z, motion_amt, cur_motion_energy, prev_motion_energy;
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 public:
-	leafy_plant() : vbo_mgr_ix(-1), plant_ix(0), delta_z(0.0), motion_amt(0.0), cur_motion_energy(0.0), prev_motion_energy(0.0) {}
+	leafy_plant() : plant_ix(0), delta_z(0.0), motion_amt(0.0), cur_motion_energy(0.0), prev_motion_energy(0.0) {}
 	virtual float get_bsphere_radius() const {return radius;}
 	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
 	unsigned num_leaves() const {return leaves.size();}
