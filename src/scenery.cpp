@@ -1223,7 +1223,6 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);
-	unsigned num_lp_leaves(0);
 	generated = 1;
 
 	for (int i = y1; i < y2; ++i) {
@@ -1240,7 +1239,6 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				if (veg && plant.create(j, i, 1, min_plant_z, leafy_plants.size())) {
 					if (!check_valid_scenery_pos(plant.get_pos(), plant.get_radius())) continue;
 					leafy_plants.push_back(plant);
-					num_lp_leaves += plant.num_leaves();
 				}
 			}
 			else if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
@@ -1292,15 +1290,22 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			}
 		} // for j
 	} // for i
+	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
+	post_gen_setup();
+}
+
+void scenery_group::post_gen_setup() {
+
 	if (!leafy_plants.empty()) {
 		bool const use_tri_strip = 1;
 		vector<vert_norm_tc> sphere_verts;
 		add_sphere_quads(sphere_verts, nullptr, all_zeros, 1.0, 16, use_tri_strip,  0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
 		if (use_tri_strip) {leafy_vbo_manager.set_prim_type(GL_TRIANGLE_STRIP);}
+		unsigned num_lp_leaves(0);
+		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {num_lp_leaves += i->num_leaves();}
 		leafy_vbo_manager.reserve_pts(num_lp_leaves*sphere_verts.size());
 		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {i->gen_points(leafy_vbo_manager, sphere_verts);}
 	}
-	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
 	sort(plants.begin(), plants.end()); // sort by type
 	if (!voxel_rocks.empty()) {voxel_rock_manager.build_models(VOX_ROCK_NUM_LOD);}
 		
@@ -1442,7 +1447,7 @@ scenery_group all_scenery;
 
 void gen_scenery() {
 
-	if (has_scenery2) return; // don't generate scenery if some has already been added
+	if (has_scenery2) {all_scenery.post_gen_setup(); return;} // don't generate scenery if some has already been added
 	all_scenery.clear();
 	all_scenery = scenery_group(); // really force a clear
 	has_scenery = 0;
