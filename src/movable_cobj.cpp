@@ -728,7 +728,7 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 		
 		if (cobj.intersects_cobj(c, int_toler)) { // intersects at the starting location, don't allow it to move (stuck)
 			coll_obj cobj2(cobj); // deep copy so we can modify it
-			cobj2.translate(delta); // shift by to see if it gets unstuck - handle the touching case (floating-point error)
+			cobj2.translate_pts_and_bcube(delta); // shift by to see if it gets unstuck - handle the touching case (floating-point error)
 			if (cobj2.intersects_cobj(c, int_toler)) return 0; // it's actually intersecting, fail
 		}
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));

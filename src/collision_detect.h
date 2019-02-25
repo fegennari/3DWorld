@@ -174,6 +174,7 @@ public:
 	void get_contact_points(coll_obj const &c, vector<point> &contact_pts, bool vert_only=0, float toler=0.0) const;
 	int  is_anchored() const;
 	void move_cobj(vector3d const &vd, bool update_colls=1);
+	void translate_pts_and_bcube(vector3d const &vd);
 	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
 	void rotate_about(point const &pt, vector3d const &axis, float angle, bool do_re_add=1);
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;

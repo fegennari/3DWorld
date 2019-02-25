@@ -725,11 +725,15 @@ void shift_all_objs(vector3d const &vd) {
 }
 
 
+void coll_obj::translate_pts_and_bcube(vector3d const &vd) {
+	for (unsigned j = 0; j < unsigned(npoints); ++j) {points[j] += vd;}
+	cube_t::translate(vd);
+}
+
 void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) {
 
 	if (!fixed && !force) return;
-	for (unsigned j = 0; j < unsigned(npoints); ++j) {points[j] += vd;}
-	cube_t::translate(vd);
+	translate_pts_and_bcube(vd);
 	if (!no_texture_offset && cp.tscale != 0.0 && !was_a_cube()) {texture_offset -= vd;}
 	if (cgroup_id >= 0) {cobj_groups.invalidate_group(cgroup_id);} // force recompute of center of mass, etc.
 	if (is_movable()) {last_coll = 8;} // mark as moving/collided to prevent the physics system from putting this cobj to sleep
