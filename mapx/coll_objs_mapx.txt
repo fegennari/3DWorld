@@ -147,9 +147,13 @@ a 2 # shatterable
 destroy_prob 100 # harder to destroy
 X normal_maps/wood_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.5 0.5 0.5 1.0 46 1 # 11/46 wood
-#Q 1  0.5 0.5 0.0 0.0  0.5 0.1   -8.0 5.2 -0.55  0 0 1  1 1 # rotation platform
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
+trigger -8.08 5.26 -0.3  0.15 0.0 0.0 1 1 # player manual trigger
+# enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
+Q 1  0.8 0.8 0.0 4.0  2.0 0.1   -8.0 5.2 -0.55  0 0 -1  0 1 # rotation platform - door closes (but texture coords change during rotate)
 P 4  -8.16 5.32 -0.4  -8.0 5.2 -0.4  -8.0 5.2 -0.07  -8.16 5.32 -0.07  0.02
 Q 0
+trigger # disable trigger
 X none # disable normal map
 a 0 # non-destroyable
 destroy_prob 0 # reset to default
