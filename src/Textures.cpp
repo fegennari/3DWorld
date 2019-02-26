@@ -37,6 +37,7 @@ texture_t def_textures[NUM_PREDEF_TEXTURES] = { // 4 colors without wrap sometim
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0: RGB RAW, 1: BMP, 2: RGB RAW, 3: RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generate (not loaded from file), 10: DDS, 11:ppm
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL, 4 = custom alpha OpenGL using average texture color for transparent pixels
+// wrap_mir: 0 = clamp, 1 = wrap, 2 = mirror
 // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 //texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
 texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png", 0, 1, LS_TEX_ANISO), // mipmap for small trees?
@@ -174,7 +175,7 @@ texture_t(0, 6, 16,   16,   1, 3, 0, "cyan.png"), // for normal maps
 texture_t(0, 6, 16,   16,   1, 3, 0, "red.png"), // for TT default sand weights texture
 texture_t(0, 5, 0,    0,    1, 3, 1, "hazard_stripes.jpg", 0, 0, 4.0), // 500x500
 texture_t(1, 9, 256,  256,  1, 4, 1, "@windows", 0, 0, 4.0),  // not real file
-texture_t(0, 6, 0,    0,    0, 3, 1, "keycard.png", 0, 1, 4.0), // 512x512
+texture_t(0, 6, 0,    0,    1, 3, 1, "keycard.png", 0, 1, 4.0), // 512x512
 // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 };
 
