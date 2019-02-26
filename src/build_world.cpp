@@ -1243,6 +1243,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "polygon") {letter = 'P';}
 				else if (keyword == "torus") {letter = 'z';}
 				else if (keyword == "trigger") {letter = 'K';}
+				else if (keyword == "platform") {letter = 'Q';}
 				else if (keyword == "light"  ) {letter = 'L';}
 				else if (keyword == "bind_light") {letter = 'V';}
 				else if (keyword == "indir_dlight_group") {letter = 'U';}
