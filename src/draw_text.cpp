@@ -103,6 +103,11 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 			line_start += line_delta; // LF
 			cursor      = line_start; // CR
 		}
+		else if (*i == '\\' && i+1 != text.end() && *(i+1) == 'n') { // newline embedded in a string
+			line_start += line_delta; // LF
+			cursor      = line_start; // CR
+			++i; // consume an extra character
+		}
 		else {
 			per_char_data_t const &pcd(font_texture_manager.lookup_ascii(*i));
 			if (pcd.width == 0.0) continue; // non-printable character, skip it (currently never get here, but left for future use)
