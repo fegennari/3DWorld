@@ -212,6 +212,86 @@ B -6.65 -6.45  2.6 4.5  -0.125 -0.12
 r 0.0 1.0 # reset specularity
 X none # disable normal map
 
+
+#######################################
+# secret room
+#######################################
+
+# bottom half of walls and floor
+e 3
+X normal_maps/cblock2_NRM.jpg 0 1 # normal map (swap binorm sign)
+l 0.9 0.6 0.6 0.6 1.0 cblock2.jpg 1 # concrete block (gray)
+y 8.0
+B -8.0   8.0  -6.5  -1.0  -0.5 -0.3  # bottom half
+e 0
+X none
+
+n 1 # negative cube
+B -5.5 -5.0  -1.4  -0.85 -0.4  -0.12
+B -7.2 -0.2  -5.2  -1.40 -0.4  -0.05
+n 0
+
+# keycard switches
+y 50.0
+l 0.8  1.0 1.0 1.0 1.0  keycard.png 1 1.0 0.0 1 # emissive keycard texture
+B -5.001 -5.0  -0.902 -0.88  -0.29 -0.272 # white
+l 0.8  0.5 0.7 1.0 1.0  keycard.png 1 1.0 0.0 1 # emissive keycard texture
+B -5.5 -5.499  -1.202 -1.18  -0.29 -0.272 # blue-white
+
+y 5.0
+Y 0.38 -0.3
+l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
+# X normal_maps/metal_plate_NRM.jpg # TODO
+metalness 1.0
+
+# doors/triggers
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
+trigger -5.0 -0.891 -0.28  0.06 0.0 0.0 1 1 0 # player manual keycard 0 trigger
+sound_file machine.wav
+# Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0]]]
+Q 1 0.08 0.08 0.1 -0.1 0.24 0.0   -5.25 -1.15 -0.3  -1 0 0  0 0 0 # platform left  - one shot
+B -5.50 -5.25  -1.1  -1.0 -0.4  -0.12
+Q 1 0.08 0.08 0.1 -0.1 0.24 0.0   -5.25 -1.15 -0.3   1 0 0  0 0 0 # platform right - one shot
+B -5.25 -5.00  -1.1  -1.0 -0.4  -0.12
+Q 0
+trigger # disable trigger
+
+# bars/triggers
+y 10.0
+r 0.8 80.0 # set specularity
+trigger -5.5 -1.191 -0.28  0.06 0.0 0.0 1 1 1 # player manual keycard 1 trigger
+sound_file machine.wav
+Q 1 0.02 0.0 0.25 -0.1 0.12 0.0   -5.25 -1.3 -0.3   0 0 1   0 0 0 # bars up   - one shot
+C -5.45 -1.3 -0.245  -5.45 -1.3 -0.12  0.01 0.01
+D 0.05 0.0 0.0 8 # place 8 more (9 total)
+Q 1 0.02 0.0  0.25  -0.1 0.15 0.0   -5.25 -1.3 -0.3   0 0 -1  0 0 0 # bars down - one shot
+C -5.45 -1.3 -0.40  -5.45 -1.3 -0.245  0.01 0.01
+D 0.05 0.0 0.0 8
+Q 0
+trigger # disable trigger
+r 0.0 1.0 # reset specularity
+
+metalness 0.0
+Y 0 0
+X none # disable normal map
+
+# room interior
+# extend the support downward
+e 3
+l 0.7 0.7 0.7 0.7 1.0 49 1 # concrete
+y 2.5
+B -4.35 -4.15  -2.5 -2.3  -0.4 -0.05
+e 0
+
+m 0.036
+T -5.25 -3.0 -0.69  i mapx/table.txt
+T 0.0  0.0 -0.29
+m 1.0
+
+#######################################
+# place objects
+#######################################
+
 # add some exploding tanks
 m 0.18
 T -6.7  4.55 -0.69  i mapx/exploding_tank.txt
