@@ -349,8 +349,9 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	float const thick(fabs(thickness));
+	bool const treat_as_cube(was_a_cube());
 	
-	if (!was_a_cube() && thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
+	if (!treat_as_cube && thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		draw_polygon(tid, points, npoints, norm, cdb);
 	}
 	else {
@@ -364,7 +365,7 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 		float tcs[2][2] = {0.0}; // {s,t} x {min,max}
 		vector3d cube_size(zero_vector);
 
-		if (was_a_cube()) {
+		if (treat_as_cube) {
 			cube_size.x = p2p_dist(points[0], points[1]);
 			cube_size.y = p2p_dist(points[1], points[2]);
 			cube_size.z = thickness;
@@ -376,7 +377,7 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 				if (bfc && (back_facing ^ (s == 0))) continue;
 				if (!s) {std::reverse(pts[s], pts[s]+npoints);}
 
-				if (was_a_cube()) { // the primary polygon faces were the original cube top and bottom faces
+				if (treat_as_cube) { // the primary polygon faces were the original cube top and bottom faces
 					assert(npoints == 4); // {x1,y1 x2,y1 x2,y2 x1,y2}
 					vector3d const normal(get_norm_camera_orient((s ? norm : -norm), get_center(pts[s], 4)));
 
@@ -398,7 +399,7 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 				if (!bfc || !camera_behind_polygon(side_pts, 4)) {
 					vector3d const side_norm(get_poly_norm(side_pts));
 
-					if (was_a_cube()) { // {x1,y1 x2,y1 x2,y2 x1,y2} => {-y +x +y -x}
+					if (treat_as_cube) { // {x1,y1 x2,y1 x2,y2 x1,y2} => {-y +x +y -x}
 						unsigned const dim((s&1) ? 0 : 1), t0((2-dim)>>1), t1(1+((2-dim)>0));
 						vector3d const normal(get_norm_camera_orient(side_norm, get_center(side_pts, 4)));
 

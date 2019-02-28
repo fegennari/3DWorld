@@ -989,11 +989,12 @@ void maybe_reserve_fixed_cobjs(size_t size) {
 }
 
 
-void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int const *group_ids, unsigned char cobj_type) {
+void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int const *group_ids, unsigned char cobj_type, bool add_as_rotated_cube) {
 
 	coll_obj poly(cobj);
 	poly.cp.cobj_type = cobj_type;
-	if (cobj_type != COBJ_TYPE_STD) poly.cp.draw = 0;
+	if (cobj_type != COBJ_TYPE_STD) {poly.cp.draw = 0;}
+	if (add_as_rotated_cube) {poly.cp.flags |= COBJ_WAS_CUBE;}
 	maybe_reserve_fixed_cobjs(ppts.size());
 	
 	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
@@ -1093,7 +1094,7 @@ void add_model_polygons_to_cobjs(vector<coll_tquad> const &ppts, coll_obj &cobj,
 	cobj.thickness *= scale;
 	if (cobj.thickness == 0.0) {cobj.thickness = MIN_POLY_THICK;} // optional - will be set to this value later anyway
 	else if (group_cobjs) {cobj.thickness = min(cobj.thickness, MIN_POLY_THICK);} // grouping code requires thin polygons
-	add_polygons_to_cobj_vector(ppts, cobj, group_ids, cobj_type);
+	add_polygons_to_cobj_vector(ppts, cobj, group_ids, cobj_type, 0);
 	cobj.group_id   = -1; // reset
 	cobj.thickness  = prev_thick;
 }
@@ -1815,7 +1816,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			cobj.add_to_vector(fixed_cobjs, COLL_TORUS);
 			break;
 
-		case 'P': // polygon: npts (x y z)* thickness
+		case 'P': // polygon: npts (x y z)* thickness [add_as_rotated_cube]
+		{
 			if (!read_uint(fp, npoints)) {return read_error(fp, "collision polygon npoints", coll_obj_file);}
 
 			if (npoints < 3) {
@@ -1835,13 +1837,16 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				xf.xform_pos(poly[i].v);
 			}
 			if (!read_float(fp, cobj.thickness)) {return read_error(fp, "collision polygon", coll_obj_file);}
+			bool add_as_rotated_cube(0);
+			read_bool(fp, add_as_rotated_cube); // okay if fails (optional)
+			if (add_as_rotated_cube && npoints != 4) {return read_error(fp, "collision polygon npts != 4", coll_obj_file);}
 			check_layer(has_layer);
 			cobj.thickness *= xf.scale;
 			ppts.resize(0);
 			split_polygon(poly, ppts, 0.99);
-			add_polygons_to_cobj_vector(ppts, cobj, NULL, cobj.cp.cobj_type);
+			add_polygons_to_cobj_vector(ppts, cobj, NULL, cobj.cp.cobj_type, add_as_rotated_cube);
 			break;
-
+		}
 		case 'c': // hollow cylinder (multisided): x1 y1 z1  x2 y2 z2  ro ri  nsides [start_ix [end_ix]]
 			{
 				point pt[2];
@@ -2205,7 +2210,9 @@ void coll_obj::write_to_cobj_file_int(ostream &out, coll_obj &prev) const {
 	case COLL_POLYGON: // 'P': polygon: npts (x y z)* thickness
 		out << "P " << npoints << " ";
 		for (int n = 0; n < npoints; ++n) {out << points[n].raw_str() << " ";}
-		out << thickness << endl;
+		out << thickness;
+		if (was_a_cube()) {cout << " 1";} // add_as_rotated_cube=1
+		out << endl;
 		break;
 	default: assert(0);
 	}
