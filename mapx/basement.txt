@@ -239,7 +239,6 @@ l 0.8  0.5 0.7 1.0 1.0  keycard.png 1 1.0 0.0 1 # emissive keycard texture
 B -5.5 -5.499  -1.202 -1.18  -0.29 -0.272 # blue-white
 
 y 5.0
-Y 0.38 -0.3
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 # X normal_maps/metal_plate_NRM.jpg # TODO
 metalness 1.0
@@ -254,9 +253,33 @@ B -5.50 -5.25  -1.1  -1.0 -0.4  -0.12
 Q 1 0.08 0.08 0.1 -0.1 0.24 0.0   -5.25 -1.15 -0.3   1 0 0  0 0 0 # platform right - one shot
 B -5.25 -5.00  -1.1  -1.0 -0.4  -0.12
 Q 0
+# lights
+l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
+a 2 # destroyable/shatterable
+# ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0 [num_dlight_rays=0]]]]]]
+L 0.0 1.0  -5.25 -0.95 -0.12  0.6 0.6 1.0 1.0  0 0 -1  0.3 0.0 0 1 # facing down, with shadows
+V -5.25 -0.95 -0.106 # light fixture at this pos and light will be disabled if shattered
+L 0.0 0.4  -5.25 -0.95 -0.18  0.6 0.6 1.0 1.0 # point light illuminating the light + ambient
+V -5.25 -0.95 -0.106
+S -5.25 -0.95 -0.105  0.03
+# second light
+L 0.0 1.0  -5.25 -1.25 -0.12  0.6 0.6 1.0 1.0  0 0 -1  0.3 0.0 0 1 # facing down, with shadows
+V -5.25 -1.25 -0.106
+L 0.0 0.4  -5.25 -1.25 -0.18  0.6 0.6 1.0 1.0 # point light illuminating the light + ambient
+V -5.25 -1.25 -0.106
+S -5.25 -1.25 -0.105  0.03
+# table light
+L 0.0 1.0  -5.25 -3.0 -0.1  0.0 1.0 0.0 1.0  0 0 -1  0.28 0.0 0 1 # facing down, with shadows
+V -5.25 -3.0 -0.06
+L 0.0 0.3  -5.25 -3.0 -0.18  0.0 1.0 0.0 1.0 # point light illuminating the light + ambient
+V -5.25 -3.0 -0.06
+l 0.8  0.0 1.0 0.0 1.0  -1 1 1.0 0.0 1 # emissive green glass
+C -5.25 -3.0 -0.05  -5.25 -3.0 -0.08  0.04 0.08
+a 0 # non-destroyable
 trigger # disable trigger
 
 # bars/triggers
+l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 y 10.0
 r 0.8 80.0 # set specularity
 trigger -5.5 -1.191 -0.28  0.06 0.0 0.0 1 1 1 # player manual keycard 1 trigger
@@ -271,6 +294,9 @@ Q 0
 trigger # disable trigger
 r 0.0 1.0 # reset specularity
 
+# popup_text text_str R G B size duration(s) X Y Z dist mode (mode: 0=one time, 1=on enter, 2=continuous)
+popup_text "You Found a Secret Room!"  0.7 1.0 0.2  1.5 2.5  -5.25 -1.5 -0.3  0.1 0
+
 metalness 0.0
 Y 0 0
 X none # disable normal map
@@ -284,7 +310,7 @@ B -4.35 -4.15  -2.5 -2.3  -0.4 -0.05
 e 0
 
 m 0.036
-T -5.25 -3.0 -0.69  i mapx/table.txt
+T -5.25 -3.0 -0.73  i mapx/table.txt # slightly below the floor for a low table
 T 0.0  0.0 -0.29
 m 1.0
 
