@@ -1226,6 +1226,26 @@ void compute_shader_t::read_pixels(vector<float> &vals, bool is_last) {
 }
 
 
+void pad_to_block_sz(unsigned &sz, unsigned block_sz) {
+	assert(block_sz > 0);
+	if (sz % block_sz) {sz += block_sz - (sz % block_sz);}
+}
+unsigned div_by_block_sz(unsigned sz, unsigned block_sz) {
+	//if (sz == 1) return 1;
+	assert(block_sz > 0);
+	assert((sz % block_sz) == 0);
+	return sz/block_sz;
+}
+
+compute_shader_comp_t::compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_, unsigned bsx, unsigned bsy, unsigned bsz) :
+	compute_shader_base_t(xsize_, ysize_), zsize(zsize_), zsize_req(zsize), block_sz_x(bsx), block_sz_y(bsy), block_sz_z(bsz), comp_shader_str(cstr)
+{
+	assert(zsize > 0 && block_sz_x > 0 && block_sz_y > 0 && block_sz_z > 0);
+	pad_to_block_sz(xsize, block_sz_x);
+	pad_to_block_sz(ysize, block_sz_y);
+	pad_to_block_sz(zsize, block_sz_z);
+}
+
 void compute_shader_comp_t::begin() {
 	ostringstream oss;
 	oss << "layout (local_size_x = " << block_sz_x << ", local_size_y = " << block_sz_y << ", local_size_z = " << block_sz_z << ") in;";
@@ -1233,13 +1253,6 @@ void compute_shader_comp_t::begin() {
 	set_comp_shader(comp_shader_str);
 	begin_shader();
 	add_uniform_int("dest_tex", 0);
-}
-
-unsigned div_by_block_sz(unsigned sz, unsigned block_sz) {
-	//if (sz == 1) return 1;
-	assert(block_sz > 0);
-	assert((sz % block_sz) == 0);
-	return sz/block_sz;
 }
 
 void compute_shader_comp_t::setup_and_run(unsigned &tid, bool is_R32F, bool is_first, bool is_last) { // Note: is_first and is_last are unused
@@ -1267,10 +1280,23 @@ void compute_shader_comp_t::setup_and_run(unsigned &tid, bool is_R32F, bool is_f
 }
 
 void compute_shader_comp_t::read_float_vals(vector<float> &vals, bool is_last, bool keep_fbo_for_reuse) { // Note: is_last and keep_fbo_for_reuse are unused
+
 	assert(is_running);
 	is_running = 0;
 	vals.resize(xsize*ysize*zsize);
 	glGetTexImage((is_3d() ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, &vals.front());
+
+	if (xsize != xsize_req || ysize != ysize_req || zsize != zsize_req) { // need to copy a smaller sub-range from a larger texture
+		vector<float> temp(xsize_req*ysize_req*zsize_req);
+
+		for (unsigned y = 0; y < ysize_req; ++y) {
+			for (unsigned x = 0; x < xsize_req; ++x) {
+				unsigned const temp_off((x + y*xsize_req)*zsize_req), vals_off((x + y*xsize)*zsize);
+				for (unsigned z = 0; z < zsize_req; ++z) {temp[z + temp_off] = vals[z + vals_off];}
+			}
+		}
+		vals.swap(temp);
+	}
 	check_gl_error(501);
 }
 

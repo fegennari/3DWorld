@@ -659,7 +659,7 @@ void mesh_xy_grid_cache_t::run_gpu_simplex() {
 		cshader->begin();
 	}
 	else {
-		assert(cshader->get_xsize() == cur_nx && cshader->get_ysize() == cur_ny); // can't reuse with different sizes
+		assert(cshader->get_xsize_req() == cur_nx && cshader->get_ysize_req() == cur_ny); // can't reuse with different sizes
 		cshader->enable();
 	}
 	// returns heights in approximately [-1,1] range

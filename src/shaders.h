@@ -199,16 +199,18 @@ public:
 
 class compute_shader_base_t : public shader_t {
 protected:
-	unsigned xsize, ysize;
+	unsigned xsize, ysize, xsize_req, ysize_req; // actual and requested sizes
 	bool is_running;
 
 	bool setup_target_texture(unsigned &tid, bool is_R32F) const;
 public:
 	compute_shader_base_t(unsigned xsize_, unsigned ysize_) :
-	  xsize(xsize_), ysize(ysize_), is_running(0) {assert(xsize > 0 && ysize > 0);}
+	  xsize(xsize_), ysize(ysize_), xsize_req(xsize), ysize_req(ysize), is_running(0) {assert(xsize > 0 && ysize > 0);}
 	bool get_is_running() const {return is_running;}
 	unsigned get_xsize() const {return xsize;}
 	unsigned get_ysize() const {return ysize;}
+	unsigned get_xsize_req() const {return xsize_req;}
+	unsigned get_ysize_req() const {return ysize_req;}
 };
 
 // "fake" compute shader implemented as a fragment shader
@@ -239,14 +241,11 @@ public:
 // "real" compute shader
 class compute_shader_comp_t : public compute_shader_base_t {
 
-	unsigned zsize, block_sz_x, block_sz_y, block_sz_z;
+	unsigned zsize, zsize_req, block_sz_x, block_sz_y, block_sz_z;
 	string comp_shader_str;
 
 public:
-	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1, unsigned bsx=2, unsigned bsy=2, unsigned bsz=1) :
-	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), block_sz_x(bsx), block_sz_y(bsy), block_sz_z(bsz), comp_shader_str(cstr) {
-		  assert(zsize > 0 && block_sz_x > 0 && block_sz_y > 0 && block_sz_z > 0);
-	  }
+	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1, unsigned bsx=2, unsigned bsy=2, unsigned bsz=1);
 	bool is_3d() const {return (zsize > 1);}
 	void begin();
 	void setup_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
