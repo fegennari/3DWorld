@@ -128,12 +128,7 @@ void draw_and_update_engine_trails(line_tquad_draw_t &drawer) {
 
 void usw_ray::draw(line_tquad_draw_t &drawer, point const *prev, point const *next, bool noise_mode) const {
 	// use single sided cylinder with 1D blur rotated towards camera
-	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, prev, next, 1, (0 && noise_mode));
-}
-
-bool usw_ray::either_end_visible() const {
-	return (player_pdu.point_visible_test(p1) || player_pdu.point_visible_test(p2));
-	//return (player_pdu.sphere_visible_test(p1, w1) || player_pdu.sphere_visible_test(p2, w2));
+	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, prev, next, 1, (0 && noise_mode)); // Note: should be visible to the player
 }
 
 void usw_ray_group::draw(float noise_scale) {
