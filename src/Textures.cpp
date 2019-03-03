@@ -1301,8 +1301,8 @@ int get_bare_ls_tid(float zval) {
 }
 
 void update_lttex_ix(int &ix) { // note: assumes lttex_dirt
-	if ((water_is_lava || DISABLE_WATER == 2) && lttex_dirt[ix].id == SNOW_TEX) {--ix;}
-	if (vegetation == 0.0  && lttex_dirt[ix].id == GROUND_TEX) {++ix;}
+	if ((water_is_lava || DISABLE_WATER == 2) && lttex_dirt[ix].id == SNOW_TEX) {--ix;} // convert snow to rock
+	if (vegetation == 0.0 && lttex_dirt[ix].id == GROUND_TEX) {++ix;} // convert ground/grass to rock
 }
 
 void get_tids(float relh, int &k1, int &k2, float *t) {

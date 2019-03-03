@@ -1004,11 +1004,15 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				weights[k2] += weight_scale*t;
 				weights[k1] += weight_scale*(1.0 - t);
 				float const xv(float(x)*xy_mult);
-				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv)); // slow
 
-				if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
-					weights[sand_tex_ix] += (1.0 - dirt_scale)*weights[dirt_tex_ix];
-					weights[dirt_tex_ix] *= dirt_scale;
+				// convert dirt to sand only when there is vegetation; even though it doesn't make sense to have dirt when there's no vegetation, it adds more texture variety
+				if (vegetation > 0.0) {
+					float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv)); // slow
+
+					if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
+						weights[sand_tex_ix] += (1.0 - dirt_scale)*weights[dirt_tex_ix];
+						weights[dirt_tex_ix] *= dirt_scale;
+					}
 				}
 				if (grass) {
 					float grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
