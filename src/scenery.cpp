@@ -11,7 +11,6 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 
-int      const USE_VOXEL_ROCKS  = 2; // 0=never, 1=always, 2=only when no vegetation
 bool const ENABLE_PLANT_SHADOWS = 1;
 unsigned const ROCK_NDIV        = 24;
 unsigned const ROCK_VOX_SZ      = 32;
@@ -41,7 +40,7 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 
 
 extern bool underwater, has_snow;
-extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER, animate2, frame_counter;
+extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER, animate2, frame_counter, use_voxel_rocks;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern voxel_params_t global_voxel_params;
@@ -1282,7 +1281,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				if (!check_valid_scenery_pos(surface_rocks.back())) {surface_rocks.pop_back(); continue;}
 				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
-			else if ((USE_VOXEL_ROCKS == 1 || (USE_VOXEL_ROCKS == 2 && vegetation == 0.0)) && val < 35) {
+			else if ((use_voxel_rocks == 1 || (use_voxel_rocks >= 2 && vegetation == 0.0)) && val < 35) { // 0=never, 1=always, 2=only when no vegetation
 				voxel_rocks.push_back(voxel_rock());
 				voxel_rocks.back().create(j, i, 1);
 				if (!check_valid_scenery_pos(voxel_rocks.back())) {voxel_rocks.pop_back(); continue;}

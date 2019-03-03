@@ -80,7 +80,7 @@ int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0),
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
 int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0), recreated(1), cloud_model(0), force_tree_class(-1);
-int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0), preproc_cube_cobjs(0);
+int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0), preproc_cube_cobjs(0), use_voxel_rocks(2);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0), use_smoke_for_fog(0);
 int window_width(0), window_height(0), init_window_width(512), init_window_height(512), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
@@ -1717,6 +1717,7 @@ int load_config(string const &config_file) {
 	kwmi.add("show_waypoints", show_waypoints);
 	kwmi.add("init_game_mode", game_mode);
 	kwmi.add("init_num_balls", init_num_balls);
+	kwmi.add("use_voxel_rocks", use_voxel_rocks); // 0=never, 1=always, 2=only when no vegetation
 
 	kw_to_val_map_t<unsigned> kwmu(error);
 	kwmu.add("grass_density", grass_density);
