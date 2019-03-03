@@ -1256,12 +1256,13 @@ struct ray3d { // size = 40
 
 class line_tquad_draw_t;
 
-struct beam3d : public ray3d { // size = 52
+struct beam3d : public ray3d { // size = 48
 
-	int distant, shooter;
+	bool distant;
+	short shooter;
 	float intensity;
 
-	beam3d(int dist, int shoot, point const &pt0, point const &pt1, colorRGBA const &c, float int_=1.0)
+	beam3d(bool dist, int shoot, point const &pt0, point const &pt1, colorRGBA const &c, float int_=1.0)
 		: ray3d(pt0, pt1, c), distant(dist), shooter(shoot), intensity(int_) {}
 	beam3d() {}
 	void draw(line_tquad_draw_t &drawer) const;

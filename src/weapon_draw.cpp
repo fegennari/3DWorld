@@ -52,7 +52,7 @@ void draw_beams(bool clear_at_end) {
 	static line_tquad_draw_t drawer;
 	glDepthMask(GL_FALSE);
 	set_additive_blend_mode();
-	for (unsigned i = 0; i < beams.size(); ++i) {beams[i].draw(drawer);}
+	for (auto i = beams.begin(); i != beams.end(); ++i) {i->draw(drawer);}
 	if (clear_at_end && !keep_beams) {beams.clear();}
 	drawer.draw_and_clear(0.0); // noise_scale=0.0
 	set_std_blend_mode();
