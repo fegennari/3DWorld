@@ -1434,11 +1434,12 @@ float get_tree_size_scale(int tree_type, bool create_bush) {
 	return TREE_SIZE*tree_types[tree_type].branch_size/tree_scale * (create_bush ? 0.7 : 1.0);
 }
 
-bool adjust_tree_zval(point &pos, int size, int type, bool create_bush) {
+bool adjust_tree_zval(point &pos, int size, int type, bool create_bush, tile_t const *const cur_tile=nullptr) {
 
 	int const size_est((size == 0) ? 60 : size); // use average of 40-80
 	float const size_scale(get_tree_size_scale(type, create_bush)), base_radius(size_est*(0.1*size_scale)), radius(2.0*base_radius);
 	float mzmax(pos.z);
+	//if (cur_tile) {} // TODO: use tile to more quickly evaluate min/max height
 
 	for (int dy = -1; dy <= 1; dy += 2) { // take max in 4 directions to prevent intersections with the terrain on steep slopes
 		for (int dx = -1; dx <= 1; dx += 2) {
@@ -2114,9 +2115,8 @@ void tree_cont_t::post_scroll_remove() {
 }
 
 
-void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_, float mesh_dz) { // default full tile generation function
-
-	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, 0, vegetation_, mesh_dz, 1); // not using bounding sphere
+void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_, float mesh_dz, tile_t const *const cur_tile) { // default full tile generation function
+	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, 0, mesh_dz, cur_tile, vegetation_, 1); // not using bounding sphere
 	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
@@ -2146,8 +2146,9 @@ void tree_placer_t::add(point const &pos, float size, int type) {
 	block.trees.emplace_back(pos, size, type);
 }
 
-void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square, float vegetation_, float mesh_dz, bool use_density) {
-
+void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square,
+	float mesh_dz, tile_t const *const cur_tile, float vegetation_, bool use_density)
+{
 	//timer_t timer("Gen Trees");
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
@@ -2231,7 +2232,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			if (!check_valid_scenery_pos((pos + vector3d(0.0, 0.0, 0.3*tree_scale)), 0.4*tree_scale, 1)) continue; // approximate bsphere; is_tall=1
 			// if terrain is highly varying in height, calculate surrounding mesh zvals and use the min for tree height; if slope is too high, skip this tree
 			if (mesh_dz < 0.0 || mesh_dz > 2.0) {
-				if (!adjust_tree_zval(pos, 0, ttype, 0)) continue; // create_bush=0
+				if (!adjust_tree_zval(pos, 0, ttype, 0, cur_tile)) continue; // create_bush=0
 			}
 			add_new_tree(rgen, ttype);
 			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes

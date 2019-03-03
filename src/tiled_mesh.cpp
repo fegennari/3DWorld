@@ -1253,7 +1253,7 @@ void tile_t::gen_decid_trees_if_needed() {
 	if (decid_trees.was_generated() || !can_have_decid_trees()) return; // already generated, elevation too high, or distant tile (no trees yet)
 	assert(decid_trees.empty());
 	dtree_off.set_from_xyoff2();
-	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg(), mesh_dz);
+	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg(), mesh_dz, this);
 	postproc_trees(decid_trees, dtzmax);
 }
 
@@ -3343,7 +3343,7 @@ template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &
 	unsigned const start_sz(trees.size());
 	int const orig_xoff2(xoff2), orig_yoff2(yoff2);
 	xoff2 = -toff.dxoff; yoff2 = -toff.dyoff; // translate so that trees are generated relative to toff, rather than current offset
-	trees.gen_trees_tt_within_radius(x1+toff.dxoff, y1+toff.dyoff, x2+toff.dxoff, y2+toff.dyoff, tpos, rradius, is_square, mesh_dz);
+	trees.gen_trees_tt_within_radius(x1+toff.dxoff, y1+toff.dyoff, x2+toff.dxoff, y2+toff.dyoff, tpos, rradius, is_square, mesh_dz, this);
 	xoff2 = orig_xoff2; yoff2 = orig_yoff2; // translate back
 	postproc_trees(trees, tzmax);
 	vector3d const xlate(toff.get_xlate());

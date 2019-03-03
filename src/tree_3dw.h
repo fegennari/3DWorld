@@ -18,6 +18,7 @@ struct tree_type;
 class tree_data_t;
 class cobj_bvh_tree;
 class tree;
+class tile_t;
 
 // small tree classes
 enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
@@ -404,9 +405,10 @@ public:
 	unsigned delete_all();
 	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
 	void post_scroll_remove();
-	void gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_, float mesh_dz);
+	void gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_, float mesh_dz, tile_t const *const cur_tile=nullptr);
 	void add_new_tree(rand_gen_t &rgen, int &ttype);
-	void gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square=0, float vegetation_=1.0, float mesh_dz=-1.0, bool use_density=0);
+	void gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square=0,
+		float mesh_dz=-1.0, tile_t const *const cur_tile=nullptr, float vegetation_=1.0, bool use_density=0);
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
 	void calc_bcube();

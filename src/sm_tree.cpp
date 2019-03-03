@@ -453,7 +453,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 }
 
 // Note: for user placed trees in tiled terrain mode with heightmap texture; ignores vegetation, tree density functions, slope, etc.
-void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square, float mesh_dz) {
+void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &pos, float radius, bool is_square, float mesh_dz, tile_t const *const cur_tile) {
 
 	generated = 1; // may already be set
 	assert(x1 < x2 && y1 < y2);
