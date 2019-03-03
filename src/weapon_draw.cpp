@@ -38,6 +38,7 @@ void beam3d::draw(line_tquad_draw_t &drawer) const {
 
 	if (shooter == CAMERA_ID)  return; // camera (skip for now)
 	if (intensity < TOLERANCE) return; // error?
+	if (!camera_pdu.line_visible_test(pts[0], pts[1])) return;
 	float const mag(sqrt(intensity));
 	colorRGBA c(color);
 	c.alpha = CLIP_TO_01(color.alpha*mag);

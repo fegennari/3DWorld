@@ -1267,7 +1267,7 @@ void decal_obj::maybe_draw_blood_trail(line_tquad_draw_t &blood_tqd) const {
 	if (!dist_less_than(cur_pos, get_camera_pos(), 0.7*view_thresh)) return; // distance culling
 	float const dz_max(min(min((cur_pos.z - cobj.d[2][0]), 100.0f*radius), 2.0f*CAMERA_RADIUS)), dz(((hashval&63)+1)/64.0 * dz_max);
 	if (dz < radius) return; // too small
-	if (!sphere_in_camera_view(cur_pos-vector3d(0,0, 0.5*dz), radius+0.5*dz, 0)) return; // VFC
+	if (!sphere_in_camera_view(cur_pos-vector3d(0,0, 0.5*dz), radius+0.5*dz, 0)) return; // VFC (better to call camera_pdu.line_visible()?)
 	colorRGBA const c(color, alpha_val);
 	float const width(0.15*radius);
 	point const start(cur_pos - vector3d(0,0, 1.0*radius)), end(cur_pos - vector3d(0,0, dz)), end2(end - vector3d(0,0, 0.15*radius));

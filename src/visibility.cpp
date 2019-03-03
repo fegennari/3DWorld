@@ -105,6 +105,19 @@ bool pos_dir_up::point_visible_test(point const &pos_) const { // simplified/opt
 	return (dist > near_ && dist < far_); // Note: approximate/conservative but fast
 }
 
+bool pos_dir_up::line_visible_test(point const &p1, point const &p2) const {
+
+	if (!valid) return 1; // invalid
+	vector3d const pv1(p1, pos), pv2(p2, pos);
+	if (dot_product(dir, pv1) < 0.0 && dot_product(dir, pv2) < 0.0) return 0; // both points behind - optimization
+	float const dist1(pv1.mag()), dist2(pv2.mag());
+	float const udp1(dot_product(upv_, pv1)), udp2(dot_product(upv_, pv2));
+	if (SIGN(udp1) == SIGN(udp2) && fabs(udp1) > dist1*  sterm && fabs(udp2) > dist2*  sterm) return 0; // same side y-direction (up)
+	float const cdp1(dot_product(cp, pv1)), cdp2(dot_product(cp, pv2));
+	if (SIGN(cdp1) == SIGN(cdp2) && fabs(cdp1) > dist1*x_sterm && fabs(cdp2) > dist2*x_sterm) return 0; // same side x-direction
+	return ((dist1 > near_ || dist2 > near_) && (dist1 < far_ || dist2 < far_)); // Note: approximate/conservative but fast
+}
+
 // view frustum check: dir and upv must be normalized - checks view frustum
 bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 

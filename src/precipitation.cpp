@@ -135,7 +135,7 @@ class rain_manager_t : public precip_manager_t<2> {
 		float const splash_size = 0.004; // 2x-8x rain line diameter
 
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs (0.07ms for default rain intensity)
-			if (dist_less_than(verts[i].v, camera, 0.5) && (camera_pdu.point_visible_test(verts[i].v) || camera_pdu.point_visible_test(verts[i+1].v))) {
+			if (dist_less_than(verts[i].v, camera, 0.5) && camera_pdu.line_visible_test(verts[i].v, verts[i+1].v)) {
 				drawer.add_line_as_tris(verts[i].v, verts[i+1].v, width, width, color, color);
 			}
 		}
