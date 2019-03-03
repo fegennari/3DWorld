@@ -162,7 +162,7 @@ void text_drawer::add_text(string const &text, point const &pos, float tsize, ve
 void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &text, float tsize) {
 
 	if (text.empty()) return; // error?
-	text_drawer td;
+	static text_drawer td;
 	td.begin_draw(&color);
 	td.add_text(text, pos, tsize);
 	td.end_draw();
