@@ -479,7 +479,7 @@ void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const
 	draw_sphere_vbo_raw(ndiv, 0);
 
 	if (add_halo) {
-		quad_batch_draw qbd;
+		static quad_batch_draw qbd;
 		qbd.add_xlated_billboard(pos, all_zeros, get_camera_pos(), up_vector, WHITE, 4.0, 4.0); // halo
 		qbd.draw_as_flares_and_clear(BLUR_TEX);
 	}

@@ -872,6 +872,7 @@ class lava_bubble_manager_t {
 	};
 	vector<bubble> bubbles;
 	vector<sphere_t> splashes;
+	quad_batch_draw splash_qbd;
 	rand_gen_t rgen;
 
 	void gen_bubble(bubble &b, float lava_zval) {
@@ -913,7 +914,7 @@ public:
 			}
 		}
 	}
-	void draw(shader_t &s) const {
+	void draw(shader_t &s) {
 		if (bubbles.empty()) return;
 
 		for (auto i = bubbles.begin(); i != bubbles.end(); ++i) {
@@ -925,7 +926,6 @@ public:
 			//draw_sphere_vbo(i->pos, radius, 16, 0); // no, we don't want the translate in here
 		}
 		if (splashes.empty()) return;
-		quad_batch_draw splash_qbd;
 		point const camera(get_camera_pos());
 		s.end_shader();
 		setup_smoke_shaders(s, 0.01, 0, 1, 0, 1, 0, 0);
@@ -934,7 +934,7 @@ public:
 		for (auto i = splashes.begin(); i != splashes.end(); ++i) {
 			splash_qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(1.0, 0.1, 0.0, 1.0), i->radius, i->radius, tex_range_t(), 0, &plus_z);
 		}
-		splash_qbd.draw();
+		splash_qbd.draw_and_clear();
 	}
 };
 

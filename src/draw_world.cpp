@@ -1466,11 +1466,11 @@ void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 void draw_cracks_and_decals() {
 
 	if (!decals.any_active()) return;
-	quad_batch_draw crack_qbd;
+	static quad_batch_draw crack_qbd;
 	create_and_draw_cracks(crack_qbd); // adds to beams
 	map<int, quad_batch_draw> batches; // maps from {tid, is_black} to quad batches
-	vector<pair<int, unsigned> > sorted_decals;
-	line_tquad_draw_t blood_tqd;
+	static vector<pair<int, unsigned> > sorted_decals;
+	static line_tquad_draw_t blood_tqd;
 
 	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
 		if (!i->status) continue;
@@ -1487,6 +1487,7 @@ void draw_cracks_and_decals() {
 		decal_obj const &d(decals[sorted_decals[i].second]);
 		d.draw(batches[(d.tid << 1) + (d.color == BLACK)]);
 	}
+	sorted_decals.clear();
 	glDepthMask(GL_FALSE);
 	enable_blend();
 	shader_t black_shader, lighting_shader, bullet_shader;
@@ -1573,11 +1574,11 @@ void draw_smoke_and_fires() {
 	if (!fire_order.empty()) {
 		if (use_depth_trans) {s.add_uniform_float("depth_trans_bias", 0.01);}
 		enable_blend();
-		quad_batch_draw qbd;
+		static quad_batch_draw qbd;
 		select_texture(FIRE_TEX);
 		int last_in_smoke(-1);
 		for (unsigned j = 0; j < fire_order.size(); ++j) {fires[fire_order[j].second].draw(qbd, last_in_smoke);}
-		qbd.draw();
+		qbd.draw_and_clear();
 		set_std_blend_mode();
 		disable_blend();
 	}
@@ -1678,9 +1679,9 @@ void draw_sparks(bool clear_at_end) { // projectile hit locations
 	shader_t s;
 	s.begin_simple_textured_shader(0.01);
 	select_texture(FLARE2_TEX);
-	quad_batch_draw qbd;
+	static quad_batch_draw qbd;
 	draw_objects(sparks, qbd);
-	qbd.draw();
+	qbd.draw_and_clear();
 	s.end_shader();
 	set_std_blend_mode();
 	disable_blend();

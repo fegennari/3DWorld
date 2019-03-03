@@ -287,7 +287,7 @@ void draw_blasts(shader_t &s) {
 		to_draw.push_back(ix_type_pair(i, br.type));
 	}
 	sort(to_draw.begin(), to_draw.end());
-	quad_batch_draw qbd;
+	static quad_batch_draw qbd;
 	vpc_shader_t vpc_shader;
 	vector<ix_type_pair>::const_iterator range_start(to_draw.begin());
 	point const camera(get_camera_pos());

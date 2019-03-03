@@ -250,14 +250,14 @@ void line3d::draw_lines() const {
 	if (points.empty()) return;
 	assert(points.size() >= 2);
 	assert(width > 0.0);
-	line_tquad_draw_t drawer;
+	static line_tquad_draw_t drawer;
 	float const w(0.01*width);
 
 	for (unsigned i = 1; i < points.size(); ++i) {
 		drawer.add_line_as_tris(points[i-1], points[i], w, w, color, color,
 			((i >= 2) ? &points[i-2] : NULL), ((i+1 < points.size()) ? &points[i+1] : NULL));
 	}
-	drawer.draw(); // uses a custom shader
+	drawer.draw_and_clear(); // uses a custom shader
 }
 
 

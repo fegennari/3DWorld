@@ -760,6 +760,7 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<parking_lot_t> parking_lots;
 	private:
 		vector<bench_t> benches;
+		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
 		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, vector<cube_t> &colliders, rand_gen_t &rgen) {
@@ -941,15 +942,14 @@ class city_road_gen_t : public road_gen_base_t {
 				colliders.push_back(bench.bcube);
 			} // for n
 		}
-		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) const {
+		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) {
 			if (objs.empty()) return;
 			T::pre_draw(dstate, shadow_only);
-			quad_batch_draw qbd;
 
 			for (auto i = objs.begin(); i != objs.end(); ++i) {
 				if (dstate.check_sphere_visible(i->pos, i->radius)) {i->draw(dstate, qbd, shadow_only);}
 			}
-			qbd.draw();
+			qbd.draw_and_clear();
 			T::post_draw(dstate, shadow_only);
 		}
 	public:
@@ -993,7 +993,7 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for i
 			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 		}
-		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) const {
+		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 			draw_objects(benches, dstate, shadow_only);
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
