@@ -1112,7 +1112,6 @@ void scenery_group::clear_vbos() {
 	plant_vbo_manager.clear_vbo();
 	rock_vbo_manager.clear_vbo();
 	leafy_vbo_manager.clear_vbo();
-	voxel_rock_manager.free_context();
 }
 
 void scenery_group::clear() {
@@ -1507,7 +1506,11 @@ bool update_scenery_zvals(int x1, int y1, int x2, int y2) {
 }
 
 void free_scenery_cobjs() {all_scenery.free_cobjs();}
-void clear_scenery_vbos() {all_scenery.clear_vbos();}
+
+void clear_scenery_vbos() {
+	all_scenery.clear_vbos();
+	voxel_rock_manager.free_context();
+}
 
 void do_rock_damage(point const &pos, float radius, float damage) {
 	all_scenery.do_rock_damage(pos, radius, damage);
