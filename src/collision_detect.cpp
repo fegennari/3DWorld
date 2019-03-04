@@ -1707,7 +1707,7 @@ void add_camera_cobj(point const &pos) {
 
 float get_max_mesh_height_within_radius(point const &pos, float radius, bool is_camera) {
 
-	float const mh_radius(is_camera ? max(radius, NEAR_CLIP) : radius); // include the near clipping plane for the camera/player
+	float const mh_radius(1.1*(is_camera ? max(radius, NEAR_CLIP) : radius)); // include the near clipping plane for the camera/player; 10% safety margin
 	float mh(int_mesh_zval_pt_off(pos, 1, 0));
 
 	for (int dy = -1; dy <= 1; dy += 2) { // take max in 4 directions to prevent intersections with the terrain on steep slopes
