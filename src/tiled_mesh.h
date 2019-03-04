@@ -279,6 +279,7 @@ public:
 	void clear_pine_tree_vbos() {pine_trees.clear_vbos();}
 	void invalidate_shadows() {shadows_invalid = 1;}
 	bool create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait);
+	void get_z_minmax_for_area(point const &pos, float radius, float &zmin, float &zmax) const;
 	float get_zval_at(float x, float y, bool in_global_space) const;
 
 	vector3d get_norm_not_normalized(unsigned ix) const {
