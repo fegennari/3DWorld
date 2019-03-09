@@ -473,7 +473,9 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 		float const dist(delta.mag());
 		if (dist > radius && dot_product_xy(vel, delta) < 0.01*speed*dist) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
 	}
-	pos += vel*(fticks*get_speed_mult());
+	float const timestep(fticks*get_speed_mult());
+	pos       += vel*timestep;
+	anim_time += timestep*speed;
 }
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
@@ -631,6 +633,7 @@ void ped_manager_t::init(unsigned num) {
 			if (city_params.ped_speed > 0.0) {
 				ped.speed = city_params.ped_speed*rgen.rand_uniform(0.5, 1.0);
 				ped.vel   = rgen.signed_rand_vector_spherical_xy().get_norm()*ped.speed;
+				ped.anim_time = 100.0*rgen.rand_float();
 			}
 			if (num_models > 0) {
 				ped.model_id = rgen.rand()%num_models;
@@ -950,6 +953,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
 	//timer_t timer("Ped Draw"); // ~1ms
+	bool const enable_animations = 0;
 	bool const use_models(ped_model_loader.num_models() > 0);
 	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : (use_models ? 500.0 : 2000.0)*get_ped_radius()), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
@@ -959,6 +963,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.set_enable_normal_map(use_model3d_bump_maps());
 	fgPushMatrix();
 	translate_to(xlate);
+	if (enable_animations) {dstate.s.add_property("animation_shader", "pedestrian_animation.part+");}
 	dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 	bool const textured(shadow_only && 0); // disabled for now
 	bool in_sphere_draw(0);
@@ -1003,6 +1008,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
 					end_sphere_draw(in_sphere_draw);
 					bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
+					if (enable_animations) {dstate.s.add_uniform_float("animation_time", ped.anim_time);}
 					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
 				}
 				if (dist_sq < 0.25*draw_dist_sq) { // fake AO shadow at below half draw distance

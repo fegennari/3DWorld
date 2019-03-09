@@ -1311,6 +1311,9 @@
     <None Include="shaders\textured_with_tb.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\pedestrian_animation.part.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
