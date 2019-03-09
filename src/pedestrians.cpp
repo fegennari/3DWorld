@@ -37,6 +37,7 @@ float pedestrian_t::get_speed_mult() const {return (in_the_road ? CROSS_SPEED_MU
 void pedestrian_t::stop() {
 	//dir = vel.get_norm(); // ???
 	vel = zero_vector;
+	anim_time  = 0.0; // reset animation so that ped is standing normally and not mid-stride - should really transition this gradually somehow
 	is_stopped = 1;
 }
 void pedestrian_t::go() {
@@ -633,7 +634,6 @@ void ped_manager_t::init(unsigned num) {
 			if (city_params.ped_speed > 0.0) {
 				ped.speed = city_params.ped_speed*rgen.rand_uniform(0.5, 1.0);
 				ped.vel   = rgen.signed_rand_vector_spherical_xy().get_norm()*ped.speed;
-				ped.anim_time = 100.0*rgen.rand_float();
 			}
 			if (num_models > 0) {
 				ped.model_id = rgen.rand()%num_models;
