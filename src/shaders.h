@@ -40,8 +40,22 @@ struct zi_unsigned_t {
 	zi_unsigned_t() : v(0) {}
 };
 
+class property_map_t { // for storing user-defined shader properties
+	map<string, string> prop_map;
+	static string empty_str;
+public:
+	void add_property(string const &key, string const &value) {prop_map[key] = value;}
+	bool has_property(string const &key) const {return (prop_map.find(key) != prop_map.end());}
+	
+	string const &get_property(string const &key) const {
+		auto it(prop_map.find(key));
+		return ((it == prop_map.end()) ? empty_str : it->second);
+	}
+	void clear_properties() {prop_map.clear();}
+};
 
-class shader_t {
+
+class shader_t : public property_map_t {
 
 	unsigned program; // active program
 	string prepend_string[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4, compute=5
@@ -68,6 +82,7 @@ class shader_t {
 	};
 	typedef map<unsigned, subroutine_val_t> subroutine_map_t;
 	subroutine_map_t subroutines;
+	property_map_t property_map;
 
 	int pm_loc, mvm_loc, mvmi_loc, mvpm_loc, nm_loc; // matrices
 

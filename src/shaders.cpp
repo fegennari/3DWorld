@@ -41,6 +41,8 @@ void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *cons
 	s.add_uniform_int(name, tu_id);
 }
 
+string property_map_t::empty_str;
+
 
 // *** uniform variables setup ***
 
@@ -927,6 +929,7 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	prog_name_prefix.clear();
 	attrib_locs.clear();
 	subroutines.clear();
+	clear_properties();
 	last_spec = ALPHA0;
 }
 
