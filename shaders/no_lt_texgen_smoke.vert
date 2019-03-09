@@ -25,6 +25,9 @@ void main() {
 
 	fg_Color_vf = fg_Color;
 	vec4 vertex = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
+#ifdef ENABLE_VERTEX_ANIMATION
+	apply_vertex_animation(vertex, tc);
+#endif
 	add_leaf_wind(vertex);
 	epos        = fg_ModelViewMatrix * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;

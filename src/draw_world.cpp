@@ -368,6 +368,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	bool use_smap(ground_mode ? (use_smap_in != 0) : (use_smap_in == 2)); // TT shadow maps are only enabled when use_smap_in == 2
 	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
+	string const &anim_shader(s.get_property("animation_shader")); // Note: if it exists, it should end with a '+'
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
 	if (use_depth_trans   ) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
@@ -375,6 +376,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
+	if (!anim_shader.empty()) {s.set_prefix("#define ENABLE_VERTEX_ANIMATION", 0);} // VS
 	//if (0) {s.set_prefix("#define SCREEN_SPACE_DLIGHTS",   1);} // FS
 	if (enable_reflect == 2 && use_bmap && (enable_cube_map_bump_maps || is_cobj)) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
@@ -382,7 +384,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const enable_sky_occlusion(sky_occlude_scale > 0.0 && direct_lighting && !indir_lighting); // Note: common_shader_block_pre() changes indir_lighting
 	if (enable_sky_occlusion) {s.set_prefix("#define ENABLE_SKY_OCCLUSION", 1);} // FS
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl, use_gloss_map);
-	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
+	s.set_vert_shader(anim_shader + "texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	string fstr("linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
 	if (smoke_en && use_smoke_noise()) {fstr += "perlin_clouds_3d.part*+";}
 	if (enable_reflect == 1) {fstr += "water_ripples.part+";}
