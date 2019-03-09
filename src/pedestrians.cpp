@@ -1009,7 +1009,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					end_sphere_draw(in_sphere_draw);
 					bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
 					if (enable_animations) {dstate.s.add_uniform_float("animation_time", ped.anim_time);}
-					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail);
+					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
 				}
 				if (dist_sq < 0.25*draw_dist_sq) { // fake AO shadow at below half draw distance
 					float const ao_radius(0.6*ped.radius);

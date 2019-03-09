@@ -266,7 +266,7 @@ void city_model_loader_t::load_models() {
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-	point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail)
+	point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations)
 {
 	assert(is_model_valid(model_id));
 	assert(size() == num_models()); // must be loaded
@@ -285,6 +285,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y
 	float const sz_scale(obj_bcube.get_size().sum() / bcube.get_size().sum());
+	if (enable_animations) {s.add_uniform_float("size_scale", sz_scale);}
 	fgPushMatrix();
 	translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
 	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}

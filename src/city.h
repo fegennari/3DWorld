@@ -207,7 +207,7 @@ public:
 	bool is_model_valid(unsigned id);
 	void load_models();
 	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-		point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail);
+		point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations=0);
 };
 
 class car_model_loader_t : public city_model_loader_t {
