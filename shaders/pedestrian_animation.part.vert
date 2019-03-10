@@ -39,7 +39,9 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 			float rot_height = 2.25*anim_scale + model_delta_height;
 			vertex.y += 0.8*anim_scale*sin(2.0*PI*v);
 			vertex.y -= rot_height; // rotate about this point
-			vertex   *= do_rotation(vec3(1,0,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
+			mat4 m    = do_rotation(vec3(1,0,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
+			vertex   *= m;
+			normal    = normalize(normal * mat3(m)); // is this okay, or do we need inverse transform?
 			vertex.y += rot_height;
 		}
 	}
@@ -47,7 +49,9 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		float v = fract(0.2*anim_val);
 		if (v < 0.5) {
 			vertex.y += 0.5*anim_scale*sin(2.0*PI*v);
-			vertex   *= do_rotation(vec3(0,1,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
+			mat4 m    = do_rotation(vec3(0,1,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
+			vertex   *= m;
+			normal    = normalize(normal * mat3(m));
 		}
 	}
 	else if (animation_id == 4) { // march
@@ -61,7 +65,9 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		if (vertex.y < rot_height) {
 			float v   = sin(2.5*anim_val);
 			vertex.y -= rot_height; // rotate about this point
-			vertex   *= do_rotation(vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0), ((animation_id == 5) ? 1.0 : 0.3)*v);
+			mat4 m    = do_rotation(vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0), ((animation_id == 5) ? 1.0 : 0.3)*v);
+			normal    = normalize(normal * mat3(m));
+			vertex   *= m;
 			vertex.y += rot_height;
 		}
 	}
