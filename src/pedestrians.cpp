@@ -950,7 +950,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 
 void ped_manager_t::next_animation() {
 	unsigned const NUM_ANIMATIONS = 7; // including null animation
-	string const animation_names[NUM_ANIMATIONS] = {"The Slide", "The Bunny Hop", "The Flip", "The Twirl", "Marching", "Walk Like an Alien", "Walking"};
+	string const animation_names[NUM_ANIMATIONS] = {"The Slide", "Walking", "The Bunny Hop", "The Flip", "The Twirl", "Marching", "Walk Like an Alien"};
 	animation_id = (animation_id + 1) % NUM_ANIMATIONS;
 	print_text_onscreen(animation_names[animation_id], WHITE, 1.5, 2*TICKS_PER_SECOND, 1);
 }
