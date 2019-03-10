@@ -870,8 +870,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (map_mode) {map_color = !map_color;} else {draw_model = !draw_model;}
 		break;
 
-	case 'i': // toggle autopilot
+	case 'i': // toggle autopilot / change pedestrian animation
 		if (world_mode == WMODE_UNIVERSE) {toggle_autopilot();}
+		else if (world_mode == WMODE_INF_TERRAIN) {next_pedestrian_animation();}
 		break;
 
 	case 'n': // toggle fog / reset player target

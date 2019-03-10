@@ -948,12 +948,19 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	s.end_shader();
 }
 
+void ped_manager_t::next_animation() {
+	unsigned const NUM_ANIMATIONS = 7; // including null animation
+	string const animation_names[NUM_ANIMATIONS] = {"The Slide", "The Bunny Hop", "The Flip", "The Twirl", "Marching", "Walk Like an Alien", "Walking"};
+	animation_id = (animation_id + 1) % NUM_ANIMATIONS;
+	print_text_onscreen(animation_names[animation_id], WHITE, 1.5, 2*TICKS_PER_SECOND, 1);
+}
+
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
 	//timer_t timer("Ped Draw"); // ~1ms
-	bool const enable_animations = 0;
+	bool const enable_animations = 1;
 	bool const use_models(ped_model_loader.num_models() > 0);
 	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : (use_models ? 500.0 : 2000.0)*get_ped_radius()), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
@@ -967,6 +974,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 	bool const textured(shadow_only && 0); // disabled for now
 	bool in_sphere_draw(0);
+	if (enable_animations) {dstate.s.add_uniform_int("animation_id", animation_id);}
 
 	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
 		if (!pdu.cube_visible(get_expanded_city_bcube_for_peds(city))) continue; // city not visible - skip

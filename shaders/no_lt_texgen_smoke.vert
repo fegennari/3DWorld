@@ -24,23 +24,24 @@ void main() {
 	else                      {tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);}
 
 	fg_Color_vf = fg_Color;
-	vec4 vertex = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
+	vec4 vertex    = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
+	vec3 normal_in = fg_Normal;
 #ifdef ENABLE_VERTEX_ANIMATION
-	apply_vertex_animation(vertex, tc);
+	apply_vertex_animation(vertex, normal_in, tc);
 #endif
 	add_leaf_wind(vertex);
 	epos        = fg_ModelViewMatrix * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;
 
 	if (use_fg_ViewMatrix) {
-		eye_norm = normalize(fg_NormalMatrix * fg_Normal);
+		eye_norm = normalize(fg_NormalMatrix * normal_in);
 		normal   = normalize((transpose(fg_ViewMatrix) * vec4(eye_norm, 1)).xyz);
 		vpos     = (inverse(fg_ViewMatrix) * epos).xyz; // world space
 	}
 	else {
-		eye_norm = normalize(mat3(fg_ModelViewMatrix) * fg_Normal); // Note: avoids the fg_NormalMatrix upload
+		eye_norm = normalize(mat3(fg_ModelViewMatrix) * normal_in); // Note: avoids the fg_NormalMatrix upload
 		vpos     = vertex.xyz + world_space_offset;
-		normal   = normalize(fg_Normal);
+		normal   = normalize(normal_in);
 	}
 #ifdef USE_BUMP_MAP
 	setup_tbn();

@@ -737,6 +737,7 @@ class ped_manager_t { // pedestrians
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
 	int selected_ped_ssn;
+	unsigned animation_id;
 	bool ped_destroyed, need_to_sort_peds;
 
 	bool gen_ped_pos(pedestrian_t &ped);
@@ -764,7 +765,8 @@ public:
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vector<cube_t> *dbg_cubes) const;
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :
-		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), ped_destroyed(0), need_to_sort_peds(0) {}
+		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), animation_id(0), ped_destroyed(0), need_to_sort_peds(0) {}
+	void next_animation();
 	static float get_ped_radius();
 	bool empty() const {return peds.empty();}
 	void clear() {peds.clear(); by_city.clear();}

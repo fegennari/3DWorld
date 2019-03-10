@@ -2936,6 +2936,7 @@ public:
 		upload_dlights_textures(lights_bcube);
 	}
 	bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());}
+	void next_ped_animation() {ped_manager.next_animation();}
 	void free_context() {car_manager.free_context(); ped_manager.free_context();}
 	cube_t get_lights_bcube() const {return lights_bcube;}
 }; // city_gen_t
@@ -2992,5 +2993,6 @@ bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tu
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
+void next_pedestrian_animation() {city_gen.next_ped_animation();}
 void free_city_context() {city_gen.free_context();}
 

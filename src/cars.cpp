@@ -285,7 +285,11 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y
 	float const sz_scale(obj_bcube.get_size().sum() / bcube.get_size().sum());
-	if (enable_animations) {s.add_uniform_float("size_scale", sz_scale);}
+	
+	if (enable_animations) {
+		s.add_uniform_float("animation_scale",    1.0/sz_scale);
+		s.add_uniform_float("model_delta_height", model_file.dz);
+	}
 	fgPushMatrix();
 	translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
 	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
