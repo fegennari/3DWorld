@@ -343,7 +343,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);
 void gen_city_details();
 void get_city_road_bcubes(vector<cube_t> &bcubes);
 void get_city_plot_bcubes(vector<cube_t> &bcubes);
-void next_city_frame();
+void next_city_frame(bool use_threads_2_3);
 void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap);
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 void setup_city_lights(vector3d const &xlate);

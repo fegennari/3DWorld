@@ -2891,8 +2891,8 @@ public:
 		car_manager.get_color_at_xy(pos, color, int_ret); // check cars next, but override the color
 		return 1;
 	}
-	void next_frame() { // Note: threads: 0=draw, 1=roads and cars, 2=pedestrians
-		if (omp_get_thread_num_3dw() == 1) {
+	void next_frame(bool use_threads_2_3) { // Note: threads: 0=draw, 1=roads and cars, 2=pedestrians
+		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 1) {
 			road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
 			car_manager.next_frame(ped_manager, city_params.car_speed);
 		} else {ped_manager.next_frame();} // thread=2
@@ -2957,7 +2957,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
 void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
-void next_city_frame() {city_gen.next_frame();}
+void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 

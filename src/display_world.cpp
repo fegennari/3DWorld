@@ -779,7 +779,7 @@ void display(void) {
 			update_cpos();
 			apply_camera_offsets(get_camera_pos());
 			check_xy_offsets();
-			next_city_frame(); // make sure the cars animate
+			next_city_frame(0); // make sure the cars animate
 		}
 		else if (world_mode == WMODE_GROUND) {
 			process_groups();
@@ -1207,9 +1207,10 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	// threads: 0=draw, 1=roads and cars, 2=pedestrians
 	// Note: it's questionable to update (move) cars between the opaque and transparent pass because the parts will be out of sync;
 	// however, only the headlight flares are drawn in the transparent pass, and it doesn't seem to be a problem, so we allow it
-#pragma omp parallel num_threads(3) if (have_cities())
+	bool const use_threads(have_cities());
+#pragma omp parallel num_threads(3) if (use_threads)
 	if (omp_get_thread_num_3dw() == 0) {draw_tiled_terrain(0);} // drawing must be on thread 0
-	else {next_city_frame();}
+	else {next_city_frame(use_threads);} // other threads (if threads enabled, else serial)
 
 	render_tt_models(0, 1); // transparent pass
 	run_tt_gameplay(); // enable limited gameplay elements in tiled terrain mode
