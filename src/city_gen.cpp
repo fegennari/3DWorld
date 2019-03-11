@@ -2892,6 +2892,8 @@ public:
 		return 1;
 	}
 	void next_frame(bool use_threads_2_3) { // Note: threads: 0=draw, 1=roads and cars, 2=pedestrians
+		if (!city_params.enabled()) return;
+
 		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 1) {
 			road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
 			car_manager.next_frame(ped_manager, city_params.car_speed);
