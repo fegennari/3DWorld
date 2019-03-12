@@ -76,6 +76,7 @@ bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_ma
 bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map_view_mandelbrot(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0);
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0), enable_translocator(0), enable_grass_fire(0);
 bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants(1), config_unlimited_weapons(0), disable_tt_water_reflect(0), allow_model3d_quads(1);
+bool enable_timing_profiler(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
@@ -1685,6 +1686,7 @@ int load_config(string const &config_file) {
 	kwmb.add("unlimited_weapons", config_unlimited_weapons);
 	kwmb.add("allow_model3d_quads", allow_model3d_quads);
 	kwmb.add("keep_keycards_on_death", keep_keycards_on_death);
+	kwmb.add("enable_timing_profiler", enable_timing_profiler);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
@@ -2228,7 +2230,7 @@ int main(int argc, char** argv) {
 		);
 		//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
 	}
-	//toggle_timing_profiler(); // uncomment to enable profiler logging on init without using the 'u' key
+	if (enable_timing_profiler) {toggle_timing_profiler();} // enable profiler logging on init without using the 'u' key
 	progress();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;

@@ -3,6 +3,7 @@ include config_city.txt
 start_in_inf_terrain 1
 start_maximized 1
 enable_mouse_look 1
+enable_timing_profiler 0
 disable_tt_water_reflect 1 # not neede for cities because cities aren't near water
 enable_model3d_bump_maps 1 # for pedestrians
 
