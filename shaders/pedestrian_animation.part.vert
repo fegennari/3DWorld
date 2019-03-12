@@ -24,6 +24,14 @@ mat3 do_rotation(vec3 a, float angle) { // Note: axis does not need to be normal
 	return mat3(vec3(ocxx+c, ocxy-sz, ocxz+sy), vec3(ocxy+sz, ocyy+c, ocyz-sx), vec3(ocxz-sy, ocyz+sx, oczz+c));
 }
 
+void rotate_about(inout vec3 vertex, inout vec3 normal, in float yval, in vec3 axis, in float angle) {
+	vertex.y -= yval; // rotate about this point
+	mat3 m    = do_rotation(axis, angle);
+	vertex   *= m;
+	normal   *= m; // rotate only, no scale - no inverse transpose needed
+	vertex.y += yval;
+}
+
 void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 	if (animation_id == 0 || animation_time == 0.0) return; // animation disabled
 	float anim_scale = 0.01*animation_scale;
@@ -37,20 +45,14 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 		if (v < 0.5) {
 			float rot_height = 2.25*anim_scale + model_delta_height;
 			vertex.y += 0.8*anim_scale*sin(2.0*PI*v);
-			vertex.y -= rot_height; // rotate about this point
-			mat3 m    = do_rotation(vec3(1,0,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
-			vertex.xyz *= m;
-			normal   *= m; // rotate only, no scale - no inverse transpose needed
-			vertex.y += rot_height;
+			rotate_about(vertex.xyz, normal, rot_height, vec3(1,0,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
 		}
 	}
 	else if (animation_id == 4) { // twirl
 		float v = fract(0.2*anim_val);
 		if (v < 0.5) {
 			vertex.y += 0.5*anim_scale*sin(2.0*PI*v);
-			mat3 m    = do_rotation(vec3(0,1,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
-			vertex.xyz *= m;
-			normal   *= m;
+			rotate_about(vertex.xyz, normal, 0.0, vec3(0,1,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
 		}
 	}
 	else if (animation_id == 5) { // march
@@ -60,14 +62,26 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 		}
 	}
 	else if (animation_id == 1 || animation_id == 6) { // walk
-		float rot_height = 1.3*anim_scale + model_delta_height*((animation_id == 6) ? -1.0 : 1.0);
-		if (vertex.y < rot_height) {
-			float v   = sin(2.5*anim_val);
-			vertex.y -= rot_height; // rotate about this point
-			mat3 m    = do_rotation(vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0), ((animation_id == 6) ? 1.0 : 0.3)*v);
-			normal   *= m;
-			vertex.xyz *= m;
-			vertex.y += rot_height;
+		float hip_height = 1.3*anim_scale + model_delta_height*((animation_id == 6) ? -1.0 : 1.0);
+		
+		if (vertex.y < hip_height) {
+			float time= 2.0*anim_val;
+			float v   = sin(time);
+			vec3 axis = vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0);
+			
+			if (animation_id == 1) { // normal walk
+				float dv = cos(time); // derivative of v
+
+				if (dv*axis.x < 0.0) { // moving forward, bend the knee
+					float knee_height = 0.55*hip_height;
+					if (vertex.y < knee_height) {rotate_about(vertex.xyz, normal, knee_height, axis, -0.8*dv);} // knee joint
+				}
+				if (v*axis.x > 0.0) {v *= 0.5;} // leg in back, half the angle
+				rotate_about(vertex.xyz, normal, hip_height, axis, 0.5*v); // hip joint
+			}
+			else {
+				rotate_about(vertex.xyz, normal, hip_height, axis, v); // alien
+			}
 		}
 	}
 }
