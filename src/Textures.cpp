@@ -489,7 +489,7 @@ void texture_t::do_gl_init(bool free_after_upload) {
 		if (use_mipmaps == 1 || use_mipmaps == 2) {gen_mipmaps();}
 		if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
 	}
-	assert(glIsTexture(tid));
+	//assert(glIsTexture(tid)); // for some reason this check is slow
 	if (free_after_upload) {free_client_mem();}
 	//PRINT_TIME("Texture Init");
 }
@@ -744,6 +744,7 @@ void texture_t::fix_word_alignment() {
 
 	unsigned const byte_align = 4;
 	if ((ncolors*width & (byte_align-1)) == 0) return; // nothing to do
+	//timer_t timer("Resize " + name);
 	assert(is_allocated());
 	float const ar(float(width)/float(height));
 	int const new_w(width - (width&(byte_align-1)) + byte_align); // round up to next highest multiple of byte_align
@@ -838,15 +839,15 @@ void texture_t::make_normal_map() {
 			max_delta = max(max_delta, abs((int)data[x+yp1*width] - (int)data[x+ym1*width]));
 		}
 	}
-	float max_delta_f(max_delta);
+	float max_delta_inv(1.0/float(max_delta));
 
 	for (int y = 0; y < height; ++y) { // assume texture wraps
 		int const ym1((y-1+height) % height), yp1((y+1) % height);
 
 		for (int x = 0; x < width; ++x) {
 			int const xm1((x-1+width) % width), xp1((x+1) % width), off(3*(x + y*width));
-			vector3d n(-((int)data[xp1+y*width] - (int)data[xm1+y*width])/max_delta_f,
-				        ((int)data[x+yp1*width] - (int)data[x+ym1*width])/max_delta_f, 1.0);
+			vector3d n(-((int)data[xp1+y*width] - (int)data[xm1+y*width])*max_delta_inv,
+				        ((int)data[x+yp1*width] - (int)data[x+ym1*width])*max_delta_inv, 1.0);
 			n.normalize();
 			if (invert_bump_maps) {n.x = -n.x; n.y = -n.y;}
 			UNROLL_3X(new_data[off+i_] = (unsigned char)(127.5*(n[i_]+1.0)););
