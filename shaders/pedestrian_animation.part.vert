@@ -5,7 +5,7 @@ uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
 uniform int animation_id = 0;
 
-mat4 do_rotation(vec3 a, float angle) { // Note: axis does not need to be normalized
+mat3 do_rotation(vec3 a, float angle) { // Note: axis does not need to be normalized
 	float s = sin(angle);
 	float c = cos(angle);
 	float oc = 1.0 - c;
@@ -21,10 +21,10 @@ mat4 do_rotation(vec3 a, float angle) { // Note: axis does not need to be normal
 	float ocyy = ocy * a.y;
 	float ocyz = ocy * a.z;
 	float oczz = ocz * a.z;
-	return mat4(vec4(ocxx+c, ocxy-sz, ocxz+sy, 0.0), vec4(ocxy+sz, ocyy+c, ocyz-sx, 0.0), vec4(ocxz-sy, ocyz+sx, oczz+c, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+	return mat3(vec3(ocxx+c, ocxy-sz, ocxz+sy), vec3(ocxy+sz, ocyy+c, ocyz-sx), vec3(ocxz-sy, ocyz+sx, oczz+c));
 }
 
-void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
+void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 	if (animation_id == 0 || animation_time == 0.0) return; // animation disabled
 	float anim_scale = 0.01*animation_scale;
 	float anim_val   = 150.0*animation_time;
@@ -38,9 +38,9 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 			float rot_height = 2.25*anim_scale + model_delta_height;
 			vertex.y += 0.8*anim_scale*sin(2.0*PI*v);
 			vertex.y -= rot_height; // rotate about this point
-			mat4 m    = do_rotation(vec3(1,0,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
-			vertex   *= m;
-			normal   *= mat3(m); // rotate only, no scale - no inverse transpose needed
+			mat3 m    = do_rotation(vec3(1,0,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
+			vertex.xyz *= m;
+			normal   *= m; // rotate only, no scale - no inverse transpose needed
 			vertex.y += rot_height;
 		}
 	}
@@ -48,9 +48,9 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		float v = fract(0.2*anim_val);
 		if (v < 0.5) {
 			vertex.y += 0.5*anim_scale*sin(2.0*PI*v);
-			mat4 m    = do_rotation(vec3(0,1,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
-			vertex   *= m;
-			normal   *= mat3(m);
+			mat3 m    = do_rotation(vec3(0,1,0), 2.0*PI*smoothstep(0.0, 1.0, 2.0*v));
+			vertex.xyz *= m;
+			normal   *= m;
 		}
 	}
 	else if (animation_id == 5) { // march
@@ -64,9 +64,9 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		if (vertex.y < rot_height) {
 			float v   = sin(2.5*anim_val);
 			vertex.y -= rot_height; // rotate about this point
-			mat4 m    = do_rotation(vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0), ((animation_id == 6) ? 1.0 : 0.3)*v);
-			normal   *= mat3(m);
-			vertex   *= m;
+			mat3 m    = do_rotation(vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0), ((animation_id == 6) ? 1.0 : 0.3)*v);
+			normal   *= m;
+			vertex.xyz *= m;
 			vertex.y += rot_height;
 		}
 	}

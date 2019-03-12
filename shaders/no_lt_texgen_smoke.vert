@@ -27,7 +27,7 @@ void main() {
 	vec4 vertex    = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
 	vec3 normal_in = fg_Normal;
 #ifdef ENABLE_VERTEX_ANIMATION
-	apply_vertex_animation(vertex, normal_in, tc);
+	apply_vertex_animation(vertex, normal_in);
 #endif
 	add_leaf_wind(vertex);
 	epos        = fg_ModelViewMatrix * vertex;
