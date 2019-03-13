@@ -15,6 +15,7 @@ unsigned const MAX_FRAMES_BUFFERED = 128;
 
 extern int window_width, window_height;
 extern unsigned video_framerate; // Note: should probably be either 30 or 60
+extern unsigned num_video_threads; // defaults to 0 = max
 
 void write_video();
 
@@ -129,7 +130,7 @@ public:
 		// however, more threads is less likely to fill the buffer and block, producing heavy lag
 		ostringstream oss;
 		oss << " -r " << video_framerate << " -f rawvideo -pix_fmt rgba -s " << window_width << "x" << window_height
-			<< " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << filename;
+			<< " -i - -threads " << num_video_threads << " -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << filename;
 		// open pipe to ffmpeg's stdin in binary write mode
 #ifdef _WIN32
 		string const cmd(string("ffmpeg.exe.lnk") + oss.str());
