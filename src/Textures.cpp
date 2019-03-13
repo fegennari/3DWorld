@@ -749,10 +749,11 @@ void texture_t::fix_word_alignment() {
 	float const ar(float(width)/float(height));
 	int const new_w(width - (width&(byte_align-1)) + byte_align); // round up to next highest multiple of byte_align
 	int const new_h(int(new_w/ar + 0.5)); // preserve aspect ratio
-	//cout << "resize " << name << " from " << width << " to " << new_w << endl;
+	//cout << "resize " << name << " from " << width << " to " << new_w << ", invert_y: " << invert_y << endl;
 	//timer_t timer("Texture Resize");
 	resize(new_w, new_h);
-	//write_to_jpg("textures\\"+name); // auto-update of resized textures
+	//if (ncolors == 3) {write_to_jpg(name);} // use this one when writing external textures; Warning: may need to set invert_y to get the orient to be correct
+	//if (ncolors == 3) {write_to_jpg("textures\\"+name);} // auto-update of resized textures
 }
 
 
