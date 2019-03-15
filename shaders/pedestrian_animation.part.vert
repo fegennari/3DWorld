@@ -62,12 +62,13 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 		}
 	}
 	else if (animation_id == 1 || animation_id == 6) { // walk
-		float hip_height = 1.3*anim_scale + model_delta_height*((animation_id == 6) ? -1.0 : 1.0);
+		float hip_height = 1.25*anim_scale + model_delta_height*((animation_id == 6) ? -1.0 : 1.0);
+		float hip_scale  = 1.0 - clamp((10.0*(vertex.y - hip_height) + 0.5), 0.0, 1.0);
 		
-		if (vertex.y < hip_height) {
-			float time= 2.0*anim_val;
-			float v   = sin(time);
-			vec3 axis = vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0);
+		if (hip_scale > 0.0) {
+			float time = 2.0*anim_val;
+			float v    = hip_scale * sin(time);
+			vec3 axis  = vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0);
 			
 			if (animation_id == 1) { // normal walk
 				float dv = cos(time); // derivative of v
