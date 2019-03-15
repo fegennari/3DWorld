@@ -72,7 +72,7 @@ struct city_params_t {
 	// cars
 	unsigned num_cars;
 	float car_speed, traffic_balance_val, new_city_prob, max_car_scale;
-	bool enable_car_path_finding;
+	bool enable_car_path_finding, convert_model_files;
 	vector<city_model_t> car_model_files, ped_model_files;
 	// parking lots
 	unsigned min_park_spaces, min_park_rows;
@@ -92,9 +92,9 @@ struct city_params_t {
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
 		num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0), car_speed(0.0),
-		traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), min_park_spaces(12), min_park_rows(1), min_park_density(0.0),
-		max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), smap_size(0), max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0),
-		num_peds(0), ped_speed(0.0), ped_respawn_at_dest(0) {}
+		traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), convert_model_files(0), min_park_spaces(12), min_park_rows(1),
+		min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), smap_size(0), max_trees_per_plot(0),
+		tree_spacing(1.0), max_benches_per_plot(0), num_peds(0), ped_speed(0.0), ped_respawn_at_dest(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple

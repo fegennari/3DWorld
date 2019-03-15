@@ -257,7 +257,7 @@ void city_model_loader_t::load_models() {
 		string const &fn(get_model(i).fn);
 		bool const recalc_normals = 1;
 
-		if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, 0, 1)) {
+		if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, city_params.convert_model_files, 1)) {
 			cerr << "Error: Failed to read model file '" << fn << "'; Skipping this model (will use default low poly model)." << endl;
 			push_back(model3d(fn, tmgr)); // add a placeholder dummy model
 			models_valid[i] = 0;

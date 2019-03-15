@@ -102,6 +102,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "enable_car_path_finding") {
 		if (!read_bool(fp, enable_car_path_finding)) {return read_error(str);}
 	}
+	else if (str == "convert_model_files") {
+		if (!read_bool(fp, convert_model_files)) {return read_error(str);}
+	}
 	else if (str == "car_model") {
 		city_model_t car_model;
 		if (!car_model.read(fp)) {return read_error(str);}
