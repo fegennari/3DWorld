@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -566,6 +566,7 @@
     <ClCompile Include="src\teleporter.cpp" />
     <ClCompile Include="src\tessellate.cpp" />
     <ClCompile Include="src\Textures.cpp" />
+    <ClCompile Include="src\texture_tile_blend\texture_tile_blend.cpp" />
     <ClCompile Include="src\tiled_mesh.cpp" />
     <ClCompile Include="src\transform_obj.cpp" />
     <ClCompile Include="src\Tree.cpp" />
@@ -686,6 +687,8 @@
     <ClInclude Include="src\spillover.h" />
     <ClInclude Include="src\subdiv.h" />
     <ClInclude Include="src\Textures_3dw.h" />
+     <ClInclude Include="src\texture_tile_blend\jacobi.h" />
+     <ClInclude Include="src\texture_tile_blend\tlingandblending.h" />
     <ClInclude Include="src\tiled_mesh.h" />
     <ClInclude Include="src\timetest.h" />
     <ClInclude Include="src\transform_obj.h" />
@@ -815,6 +818,7 @@
     <None Include="shaders\ocean.frag" />
     <None Include="shaders\output_textured_quad.part.geom" />
     <None Include="shaders\particle_draw.vert" />
+     <None Include="shaders\pedestrian_animation.part.vert" />
     <None Include="shaders\perlin_clouds.part" />
     <None Include="shaders\perlin_clouds_3d.part" />
     <None Include="shaders\pine_tree.frag" />
@@ -868,11 +872,13 @@
     <None Include="shaders\sun_flare_with_clouds.frag" />
     <None Include="shaders\textured_with_fog.frag" />
     <None Include="shaders\textured_with_fog_opacity.frag" />
+     <None Include="shaders\textured_with_tb.frag" />
     <None Include="shaders\texture_tile_utils.part.frag" />
     <None Include="shaders\tiled_mesh.frag" />
     <None Include="shaders\tiled_mesh_shadow.vert" />
     <None Include="shaders\tiled_shadow_map.part" />
     <None Include="shaders\tiled_tree_branches.frag" />
+     <None Include="shaders\tiling_and_blending.part.frag" />
     <None Include="shaders\tiled_tree_branches.vert" />
     <None Include="shaders\tree_billboard.geom" />
     <None Include="shaders\tree_billboard_gs.vert" />
@@ -974,6 +980,7 @@
     <Text Include="mapx\coll_objs_mapx.txt" />
     <Text Include="mapx\coll_objs_spheres.txt" />
     <Text Include="scene_config\buildings.txt" />
+     <Text Include="mapx\plant.txt" />
     <Text Include="scene_config\building_materials.txt" />
     <Text Include="scene_config\building_params.txt" />
     <Text Include="scene_config\config.txt" />
