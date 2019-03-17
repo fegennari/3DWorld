@@ -951,7 +951,7 @@ void obj_group::init_group() {
 void obj_group::add_predef_obj(point const &pos, int type, int rtime) {
 	
 	predef_objs.emplace_back(pos, type, rtime);
-	max_eq(max_objs, predef_objs.size());
+	max_eq(max_objs, (unsigned)predef_objs.size());
 	reorderable = 0; // need to unset reorderable so that predef_objs indexes remain correct
 }
 
