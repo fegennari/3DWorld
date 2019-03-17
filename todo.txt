@@ -11,4 +11,3 @@ Cities:
 - Railroad tracks
 - Pedestrians:
   - More models
-  - Walking animation
