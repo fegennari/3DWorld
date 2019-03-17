@@ -36,7 +36,7 @@ subroutine(do_lighting) void shadow_only(inout vec3 color, in vec4 texel, in vec
 	color += add_ship_light(n, 0).rgb; // light 0 is the system light
 }
 subroutine(do_lighting) void normal_lighting(inout vec3 color, in vec4 texel, in vec3 n) {
-	for (int i = 0; i < 8; ++i) {color += add_ship_light(n, i).rgb;}
+	for (int i = 0; i < MAX_LIGHTS; ++i) {color += add_ship_light(n, i).rgb;} // better to use a constant iteration rather than num_lights?
 	// add other emissive term based on texture luminance
 	color = mix(color, vec3(1.0), clamp(lum_scale*(texel.r + texel.g + texel.b + lum_offset), 0.0, 1.0));
 }
