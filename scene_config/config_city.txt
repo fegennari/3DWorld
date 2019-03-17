@@ -66,6 +66,7 @@ city ped_model ../models/people/Patrick/Patrick.model3d   0 -1 90   0.18 1.0 1.0
 #city ped_model ../models/people/Ana/Ana_Model.obj         0 -1 90   0.4  1.0 1.0  0 # arms out in odd position, low poly
 #city ped_model ../models/people/Belle/Belle.obj           0 -1 90  19.0  1.0 1.0  0 # too cartoonish (large head compared to body)
 city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 0 -1 90   19.0  0.8 1.0  0 # all one material
+#city ped_model ../models/people/HumanAlloy/00079_Nash002_Basics_Free.obj 0 -1 90   9.0  1.0 1.0  0 # odd initial pose, hard to animate
 # MakeHuman models
 city ped_model ../models/people/makehuman/Katie/Katie.model3d 0 -1 90   -1.0 0.7 1.0  0 3
 #city ped_model ../models/people/makehuman/Test/test.obj       0 -1 90   1.0 1.0 1.0  0
