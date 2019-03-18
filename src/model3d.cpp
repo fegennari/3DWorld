@@ -1528,7 +1528,6 @@ void model3d::bind_all_used_tids() {
 			}
 			else {
 				tmgr.ensure_tid_bound(m->bump_tid);
-				m->geom_tan.calc_tangents();
 			}
 			needs_bump_maps = 1;
 		}
@@ -1539,6 +1538,15 @@ void model3d::bind_all_used_tids() {
 			has_gloss_maps |= (m->ns_tid >= 0);
 		}
 		needs_alpha_test |= m->get_needs_alpha_test();
+	} // for m
+	calc_tangent_vectors();
+}
+
+void model3d::calc_tangent_vectors() {
+
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
+		if (!m->mat_is_used() || !m->use_bump_map()) continue;
+		m->geom_tan.calc_tangents();
 	}
 }
 

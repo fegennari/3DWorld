@@ -503,6 +503,7 @@ public:
 	void clear_smaps(); // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
+	void calc_tangent_vectors();
 	static void bind_default_flat_normal_map() {select_multitex(FLAT_NMAP_TEX, 5);}
 	void set_sky_lighting_file(string const &fn, float weight, int sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
