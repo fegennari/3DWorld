@@ -11,9 +11,6 @@
 #include <cctype> // for tolower()
 #include "fast_atof.h"
 
-#define TINYOBJLOADER_IMPLEMENTATION
-//#include "D:\Frank\Desktop\Open Source SW Code\tinyobjloader-master\tiny_obj_loader.h"
-
 
 extern bool use_obj_file_bump_grayscale;
 extern float model_auto_tc_scale, model_mat_lod_thresh;
@@ -827,21 +824,6 @@ bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t co
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
 
-void test_tiny_obj_loader(string const &filename) {
-#if 0
-	timer_t timer("Tiny Obj File Loader");
-	bool const triangulate = 1;
-	tinyobj::attrib_t attrib;
-	vector<tinyobj::shape_t> shapes;
-	vector<tinyobj::material_t> materials;
-	string err;
-	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename.c_str(), model_from_file_t::get_path(filename).c_str(), triangulate);
-	if (!err.empty()) {cerr << err << endl;}
-	if (!ret) {printf("Failed to load/parse .obj.\n");}
-#endif
-}
-
-
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
 {
@@ -861,7 +843,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 		}
 		else {
 			check_obj_file_ext(filename, ext);
-			test_tiny_obj_loader(filename);
+			//test_other_obj_loader(filename); // placeholder for testing other object file loaders (tinyobjloader, assimp, etc.)
 			if (!reader.read(xf, recalc_normals, verbose)) {models.pop_back(); return 0;}
 			if (write_file && !write_model3d_file(filename, cur_model)) return 0; // don't need to pop the model
 		}
