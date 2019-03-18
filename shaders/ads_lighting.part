@@ -19,7 +19,11 @@ struct fg_light_t {
 	vec3 atten; // {constant, linear, quadratic}
 };
 
+#ifdef ENABLE_16_LIGHTS
+const int MAX_LIGHTS = 16;
+#else
 const int MAX_LIGHTS = 8;
+#endif
 uniform fg_light_t fg_LightSource[MAX_LIGHTS];
 
 

@@ -8,6 +8,7 @@
 #include "universe_base.h"
 #include "mesh2d.h"
 #include "function_registry.h"
+#include "explosion.h" // for NUM_EXP_LIGHTS
 #include "string"
 #include "deque"
 #include <iostream>
@@ -657,7 +658,7 @@ protected:
 	point reset_pos;
 	vector3d velocity, upv, dir, dvel, rot_axis, gvect;
 	free_obj const *target_obj, *parent;
-	unsigned exp_lights[6], num_exp_lights; // NUM_EXP_LIGHTS=6 (explosion.h not included)
+	unsigned exp_lights[NUM_EXP_LIGHTS], num_exp_lights;
 	unsigned alignment;
 	float c_radius;
 
