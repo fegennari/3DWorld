@@ -927,12 +927,12 @@ void texture_t::load_from_gl() { // also set tid?
 
 void bind_1d_texture(unsigned tid, bool is_array) {
 	glBindTexture((is_array ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D), tid);
-	assert(glIsTexture(tid)); // too slow?
+	//assert(glIsTexture(tid)); // too slow?
 }
 
 void bind_2d_texture(unsigned tid, bool is_array, bool multisample) {
 	glBindTexture(get_2d_texture_target(is_array, multisample), tid);
-	assert(glIsTexture(tid)); // too slow?
+	//assert(glIsTexture(tid)); // too slow?
 }
 
 void bind_cube_map_texture(unsigned tid, bool is_array) {
