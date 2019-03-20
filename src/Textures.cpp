@@ -501,30 +501,35 @@ void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 	assert(is_allocated());
 	float colors[4] = {0.0}, weight(0.0);
 	unsigned const size(num_pixels());
-	bool const has_alpha_comp(ncolors == 4);
 	has_binary_alpha = 1;
-	if (!has_alpha_comp) {weight += size;} // all weights are 1.0
 
-	for(unsigned i = 0; i < size; ++i) {
-		int const offset(i*ncolors);
-
-		if (has_alpha_comp) { // RGBA
+	if (ncolors == 4) { // RGBA - with alpha component
+		for(unsigned i = 0; i < size; ++i) {
+			int const offset(i*ncolors);
 			unsigned char const alpha(data[offset+3]);
 			float const cscale(alpha); // alpha scale
 			UNROLL_3X(colors[i_] += cscale*data[offset+i_];);
 			colors[3] += alpha;
 			weight += cscale;
 			if (alpha > 0 && alpha < 255) {has_binary_alpha = 0;}
-		}
-		else if (ncolors == 1) { // grayscale luminance
-			UNROLL_3X(colors[i_] += data[offset];);
-		}
-		else {
-			UNROLL_3X(colors[i_] += data[offset+i_];);
-		}
-	} // for i
-	UNROLL_3X(color[i_] = colors[i_]/(255.0*weight);)
-	color.alpha = (has_alpha_comp ? CLIP_TO_01(colors[3]/(255.0f*size)) : 1.0);
+		} // for i
+		UNROLL_3X(color[i_] = colors[i_]/(255.0*weight);)
+		color.alpha = CLIP_TO_01(colors[3]/(255.0f*size));
+	}
+	else {
+		unsigned icolors[3] = {0};
+
+		for(unsigned i = 0; i < size; ++i) {
+			if (ncolors == 1) { // grayscale luminance
+				UNROLL_3X(icolors[i_] += data[i*ncolors];);
+			}
+			else { // RGB
+				UNROLL_3X(icolors[i_] += data[i*ncolors+i_];);
+			}
+		} // for i
+		UNROLL_3X(color[i_] = icolors[i_]/(255.0*size);) // all weights are 1.0
+		color.alpha = 1.0;
+	}
 }
 
 
@@ -541,10 +546,7 @@ void texture_t::copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_c
 	}
 	// alpha channel comes from either R or A in an RGBA texture, R in RGB texture, or R in grayscale texture
 	unsigned const npixels(num_pixels()), alpha_offset((at.ncolors < 4 || alpha_in_red_comp) ? 0 : 3);
-
-	for (unsigned i = 0; i < npixels; ++i) {
-		data[4*i+3] = at.data[at.ncolors*i+alpha_offset]; // copy alpha values
-	}
+	for (unsigned i = 0; i < npixels; ++i) {data[4*i+3] = at.data[at.ncolors*i+alpha_offset];} // copy alpha values
 }
 
 
@@ -832,10 +834,10 @@ void texture_t::make_normal_map() {
 	int max_delta(1);
 
 	for (int y = 0; y < height; ++y) { // assume texture wraps
-		int const ym1((y-1+height) % height), yp1((y+1) % height);
+		int const ym1((y == 0) ? height-1 : y-1), yp1((y+1 == height) ? 0 : y+1);
 
 		for (int x = 0; x < width; ++x) {
-			int const xm1((x-1+width) % width), xp1((x+1) % width);
+			int const xm1((x == 0) ? width-1 : x-1), xp1((x+1 == width) ? 0 : x+1);
 			max_delta = max(max_delta, abs((int)data[xp1+y*width] - (int)data[xm1+y*width]));
 			max_delta = max(max_delta, abs((int)data[x+yp1*width] - (int)data[x+ym1*width]));
 		}
@@ -843,10 +845,10 @@ void texture_t::make_normal_map() {
 	float max_delta_inv(1.0/float(max_delta));
 
 	for (int y = 0; y < height; ++y) { // assume texture wraps
-		int const ym1((y-1+height) % height), yp1((y+1) % height);
+		int const ym1((y == 0) ? height-1 : y-1), yp1((y+1 == height) ? 0 : y+1);
 
 		for (int x = 0; x < width; ++x) {
-			int const xm1((x-1+width) % width), xp1((x+1) % width), off(3*(x + y*width));
+			int const xm1((x == 0) ? width-1 : x-1), xp1((x+1 == width) ? 0 : x+1), off(3*(x + y*width));
 			vector3d n(-((int)data[xp1+y*width] - (int)data[xm1+y*width])*max_delta_inv,
 				        ((int)data[x+yp1*width] - (int)data[x+ym1*width])*max_delta_inv, 1.0);
 			n.normalize();
