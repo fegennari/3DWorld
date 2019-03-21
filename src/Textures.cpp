@@ -520,16 +520,13 @@ void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 		unsigned icolors[3] = {0};
 
 		for(unsigned i = 0; i < size; ++i) {
-			if (ncolors == 1) { // grayscale luminance
-				UNROLL_3X(icolors[i_] += data[i*ncolors];);
-			}
-			else { // RGB
-				UNROLL_3X(icolors[i_] += data[i*ncolors+i_];);
-			}
+			if (ncolors == 1) {UNROLL_3X(icolors[i_] += data[i*ncolors];);} // grayscale luminance
+			else {UNROLL_3X(icolors[i_] += data[i*ncolors+i_];);} // RGB
 		} // for i
 		UNROLL_3X(color[i_] = icolors[i_]/(255.0*size);) // all weights are 1.0
 		color.alpha = 1.0;
 	}
+	if (color.A == 1.0 && (use_mipmaps == 3 || use_mipmaps == 4)) {use_mipmaps = 1;} // no need for custom alpha mipmaps (alpha channel is always 1)
 }
 
 
@@ -910,13 +907,13 @@ void texture_t::create_custom_mipmaps() {
 						odata[ix1+3] = min(255U, min(max(max(a1, a2), max(a3, a4)), unsigned(mipmap_alpha_weight*a_sum)));
 					}
 				}
-			}
-		}
+			} // for x
+		} // for y
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
 		glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, format, get_data_format(), &odata.front());
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		idata.swap(odata);
-	}
+	} // for w
 }
 
 
