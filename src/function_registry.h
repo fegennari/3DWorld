@@ -347,7 +347,7 @@ void next_city_frame(bool use_threads_2_3);
 void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap);
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 void setup_city_lights(vector3d const &xlate);
-bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels);
+unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll=1, unsigned check_mask=3);
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars=0, vector3d *cnorm=nullptr);
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt=0);
 bool line_intersect_city(point const &p1, point const &p2, point &p_int);

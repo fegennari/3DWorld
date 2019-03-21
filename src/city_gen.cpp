@@ -2863,9 +2863,13 @@ public:
 	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes)       {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
 
-	bool check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
-		if (check_plot_sphere_coll(pos, radius, xy_only)) return 1;
-		return road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels);
+	// return: 0=no coll, 1=plot coll, 2=road coll, 3=both plot and road coll
+	unsigned check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) const {
+		int ret(0);
+		if ((check_mask & 1) && check_plot_sphere_coll(pos, radius, xy_only)) {ret |= 1;}
+		if (ret_first_coll && ret) return ret;
+		if ((check_mask & 2) && road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels)) {ret |= 2;}
+		return ret;
 	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const {
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
@@ -2966,9 +2970,9 @@ void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3)
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
-bool check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels) {
+unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {
 	if (!have_cities()) return 0;
-	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels); // apply xlate for all static objects
+	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;
