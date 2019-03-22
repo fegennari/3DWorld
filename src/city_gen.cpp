@@ -308,20 +308,27 @@ void draw_state_t::show_label_text() {
 }
 
 
-bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
-	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
-}
-bool check_bcube_sphere_coll(bridge_t const &bridge, point const &sc, float radius, bool xy_only) {
+cube_t const &get_bcube(cube_t const &bcube) {return bcube;}
+
+cube_t get_bcube(bridge_t const &bridge) {
 	cube_t bcube(bridge);
 	float const shrink(2.0*(bridge.dim ? DY_VAL : DX_VAL));
 	bcube.d[bridge.dim][0] += shrink; bcube.d[bridge.dim][1] -= shrink;
-	return check_bcube_sphere_coll(bcube, sc, radius, xy_only);
+	return bcube;
+}
+bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
+	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
 }
 template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only) {
 	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
-		if (check_bcube_sphere_coll(*i, sc, radius, xy_only)) return 1;
+		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) return 1;
 	}
 	return 0;
+}
+template<typename T> void get_bcubes_sphere_coll(vector<T> const &bcubes, vector<cube_t> &out, point const &sc, float radius, bool xy_only, vector3d const &xlate) {
+	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
+		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) {out.push_back(get_bcube(*i) + xlate);}
+	}
 }
 template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 	if (cubes.empty()) return cube_t(all_zeros);
@@ -655,6 +662,13 @@ public:
 		point const query_pos(pos - get_camera_coord_space_xlate());
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 		return check_bcubes_sphere_coll(plots, query_pos, radius, xy_only);
+	}
+	void get_plots_sphere_coll(point const &pos, float radius, bool xy_only, vector<cube_t> &out) const {
+		if (plots.empty()) return;
+		vector3d const xlate(get_camera_coord_space_xlate());
+		point const query_pos(pos - xlate);
+		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return;
+		get_bcubes_sphere_coll(plots, out, query_pos, radius, xy_only, xlate);
 	}
 }; // city_plot_gen_t
 
@@ -1659,6 +1673,25 @@ class city_road_gen_t : public road_gen_base_t {
 			if (check_bcubes_sphere_coll(tracks, query_pos, radius, xy_only)) return 1; // collision with a track
 			return 0;
 		}
+		// Note: returns cubes in local pos space
+		void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) const {
+			if (roads.empty()) return;
+			vector3d const xlate(get_camera_coord_space_xlate());
+			point const query_pos(pos - xlate);
+			if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return;
+			get_bcubes_sphere_coll(roads, out, query_pos, radius, xy_only, xlate);
+				
+			if (include_intersections) { // used for global road network
+				for (unsigned i = 0; i < 3; ++i) { // {2-way, 3-way, 4-way}
+					get_bcubes_sphere_coll(isecs[i], out, query_pos, radius, xy_only, xlate);
+				}
+			}
+			if (out_bt) {
+				get_bcubes_sphere_coll(bridges, *out_bt, query_pos, radius, xy_only, xlate);
+				get_bcubes_sphere_coll(tunnels, *out_bt, query_pos, radius, xy_only, xlate);
+			}
+			get_bcubes_sphere_coll(tracks, out, query_pos, radius, xy_only, xlate);
+		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
 			float const dist(p2p_dist(pos, p_last));
@@ -2569,6 +2602,9 @@ public:
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
 		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels);
 	}
+	void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) const {
+		global_rn.get_roads_sphere_coll(pos, radius, 1, xy_only, out, out_bt);
+	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
 
@@ -2871,6 +2907,10 @@ public:
 		if ((check_mask & 2) && road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels)) {ret |= 2;}
 		return ret;
 	}
+	void get_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) const {
+		get_plots_sphere_coll(pos, radius, xy_only, out);
+		road_gen.get_roads_sphere_coll(pos, radius, include_intersections, xy_only, out, out_bt);
+	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const {
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
 		if (!inc_cars) return 0;
@@ -2973,6 +3013,9 @@ void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate)
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {
 	if (!have_cities()) return 0;
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects
+}
+void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) {
+	city_gen.get_sphere_coll_cubes(pos, radius, include_intersections, xy_only, out, out_bt);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;

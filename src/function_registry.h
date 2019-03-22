@@ -334,6 +334,7 @@ bool save_state(const char *filename);
 void apply_erosion(float *heightmap, int xsize, int ysize, float min_zval, unsigned num_iters);
 
 // function prototypes - city_gen
+template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only);
 bool is_night(float adj=0.0);
 bool parse_city_option(FILE *fp);
 bool have_cities();
@@ -348,6 +349,7 @@ void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bma
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 void setup_city_lights(vector3d const &xlate);
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll=1, unsigned check_mask=3);
+void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt=nullptr);
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars=0, vector3d *cnorm=nullptr);
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt=0);
 bool line_intersect_city(point const &p1, point const &p2, point &p_int);
