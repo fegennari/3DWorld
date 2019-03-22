@@ -110,6 +110,9 @@ void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool v
 }
 
 
+float get_mh_texture_mult();
+float get_mh_texture_add ();
+
 void heightmap_t::postprocess_height() {
 
 	if (erosion_iters_tt == 0 && !have_cities()) return; // no erosion or cities
@@ -118,13 +121,14 @@ void heightmap_t::postprocess_height() {
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
 	vector<float> vals(num_pixels());
 	assert(!vals.empty());
+	float const val_mult(get_mh_texture_mult()), val_div(1.0/val_mult), val_add(get_mh_texture_add());
 
 #pragma omp parallel for schedule(static,64)
 	for (int i = 0; i < (int)vals.size(); ++i) { // convert from pixel to heightmap value; max value is 255.0
 		float &v(vals[i]);
 		if (ncolors == 2) {v = (data[i<<1]/256.0 + data[(i<<1)+1]);} // 16-bit
 		else {v = data[i];} // 8-bit
-		v = scale_mh_texture_val(v);
+		v = val_mult*v + val_add;
 	}
 	if (erosion_iters_tt > 0) {
 		float min_zval(vals.front());
@@ -135,7 +139,7 @@ void heightmap_t::postprocess_height() {
 
 #pragma omp parallel for schedule(static,64)
 	for (int i = 0; i < (int)vals.size(); ++i) { // convert from heightmap value to pixel
-		float v(unscale_mh_texture_val(vals[i]));
+		float v((vals[i] - val_add)*val_div);
 		assert(v >= 0.0 && v < 256.0); // must convert to [0,256) range
 		if (ncolors == 2) {write_pixel_16_bits(i, v);} // 16-bit
 		else {data[i] = (unsigned char)v;} // 8-bit
