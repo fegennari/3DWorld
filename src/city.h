@@ -557,33 +557,37 @@ public:
 	void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only);
 }; // road_draw_state_t
 
-struct ao_draw_state_t : public draw_state_t {
+class ao_draw_state_t : public draw_state_t {
+
+protected:
+	class occlusion_checker_t {
+		building_occlusion_state_t state;
+	public:
+		void set_camera(pos_dir_up const &pdu);
+		bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
+	};
+	occlusion_checker_t occlusion_checker;
+public:
 	quad_batch_draw ao_qbd;
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
+	bool is_occluded(cube_t const &bcube) {return (!shadow_only && occlusion_checker.is_occluded(bcube + xlate));} // Note: non-const - OC state temp_points is modified
 	void draw_ao_qbd();
 	virtual void draw_unshadowed() {draw_ao_qbd();}
 };
 
 class car_draw_state_t : public ao_draw_state_t {
 
-	class occlusion_checker_t {
-		building_occlusion_state_t state;
-	public:
-		void set_camera(pos_dir_up const &pdu);
-		bool is_occluded(cube_t const &c);
-	};
-
 	quad_batch_draw qbds[2]; // unshadowed, shadowed
 	car_model_loader_t &car_model_loader;
-	occlusion_checker_t occlusion_checker;
 public:
 	car_draw_state_t(car_model_loader_t &car_model_loader_) : car_model_loader(car_model_loader_) {}
 	static float get_headlight_dist();
 	colorRGBA get_headlight_color(car_t const &car) const;
-	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
 	virtual void draw_unshadowed();
 	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
 	void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const;
-	void draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows);
+	void draw_car(car_t const &car, bool is_dlight_shadows);
 	void add_car_headlights(car_t const &car, cube_t &lights_bcube);
 }; // car_draw_state_t
 

@@ -329,7 +329,7 @@ void ao_draw_state_t::draw_ao_qbd() {
 	disable_blend();
 }
 
-void car_draw_state_t::occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
+void ao_draw_state_t::occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
 	pos_dir_up near_pdu(pdu);
 	near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block
@@ -337,11 +337,16 @@ void car_draw_state_t::occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	//cout << "occluders: " << state.building_ids.size() << endl;
 }
 
-bool car_draw_state_t::occlusion_checker_t::is_occluded(cube_t const &c) {
+bool ao_draw_state_t::occlusion_checker_t::is_occluded(cube_t const &c) {
 	if (state.building_ids.empty()) return 0;
 	float const z(c.z2()); // top edge
 	point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
 	return check_pts_occluded(corners, 4, state);
+}
+
+void ao_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {
+	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only_, 1); // always_setup_shader=1 (required for model drawing)
+	if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
 }
 
 /*static*/ float car_draw_state_t::get_headlight_dist() {return 3.5*city_params.road_width;} // distance headlights will shine
@@ -350,11 +355,10 @@ colorRGBA car_draw_state_t::get_headlight_color(car_t const &car) const {
 	return colorRGBA(1.0, 1.0, (1.0 + 0.8*(fract(1000.0*car.max_speed) - 0.5)), 1.0); // slight yellow-blue tinting using max_speed as a hash
 }
 
-void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
+void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {
 	//set_enable_normal_map(use_model3d_bump_maps()); // used only for some car models, and currently doesn't work
-	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 1); // always_setup_shader=1 (required for model drawing)
+	ao_draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only_);
 	select_texture(WHITE_TEX);
-	if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
 }
 
 void car_draw_state_t::draw_unshadowed() {
@@ -397,7 +401,7 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
 
-void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlight_shadows) { // Note: all quads
+void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
 	if (car.destroyed) return;
 
 	if (is_dlight_shadows) { // dynamic spotlight shadow
@@ -421,7 +425,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool shadow_only, bool is_dlig
 	gen_car_pts(car, draw_top, pb, pt);
 
 	if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
-		if (!shadow_only && occlusion_checker.is_occluded(car.bcube + xlate)) return; // only check occlusion for expensive car models
+		if (is_occluded(car.bcube)) return; // only check occlusion for expensive car models
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
 	}
@@ -819,7 +823,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 
 			for (unsigned c = cb->start; c != end; ++c) {
 				if (only_parked && !cars[c].is_parked()) continue; // skip non-parked cars
-				dstate.draw_car(cars[c], shadow_only, is_dlight_shadows);
+				dstate.draw_car(cars[c], is_dlight_shadows);
 			}
 		} // for cb
 		dstate.post_draw();

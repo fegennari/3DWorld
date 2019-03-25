@@ -971,7 +971,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	fgPushMatrix();
 	translate_to(xlate);
 	if (enable_animations) {dstate.s.add_property("animation_shader", "pedestrian_animation.part+");}
-	dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
+	dstate.pre_draw(xlate, use_dlights, shadow_only);
 	bool const textured(shadow_only && 0); // disabled for now
 	bool in_sphere_draw(0);
 	if (enable_animations) {dstate.s.add_uniform_int("animation_id", animation_id);}
@@ -1014,6 +1014,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					bcube.z1() = ped.pos.z - ped.radius;
 					bcube.z2() = bcube.z1() + height;
 					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
+					if (dstate.is_occluded(bcube)) continue; // only check occlusion for expensive ped models
 					end_sphere_draw(in_sphere_draw);
 					bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
 					if (enable_animations) {dstate.s.add_uniform_float("animation_time", ped.anim_time);}
