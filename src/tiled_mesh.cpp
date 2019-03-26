@@ -1367,15 +1367,18 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 			cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
 			point const close_pt(bcube.closest_pt(camera));
 			if (!dist_less_than(camera, close_pt, block_grass_thresh) || !camera_pdu.cube_visible(bcube)) continue;
-			bool back_facing(1);
 
-			for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) {
-				for (unsigned xx = x*GRASS_BLOCK_SZ; xx <= (x+1)*GRASS_BLOCK_SZ && back_facing; ++xx) {
-					unsigned const ix(yy*zvsize + xx);
-					back_facing &= (dot_product(get_norm_not_normalized(ix), (adj_camera - point(llcx+xx*deltax, llcy+yy*deltay, zvals[ix]))) < 0.0);
+			if (dist_less_than(camera, close_pt, 0.75*block_grass_thresh)) { // only do back face culling on nearby blocks
+				bool back_facing(1);
+
+				for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) { // Note: could precompute avg normal per block, but it probably isn't necessary
+					for (unsigned xx = x*GRASS_BLOCK_SZ; xx <= (x+1)*GRASS_BLOCK_SZ && back_facing; ++xx) {
+						unsigned const ix(yy*zvsize + xx);
+						back_facing &= (dot_product(get_norm_not_normalized(ix), (adj_camera - point(llcx+xx*deltax, llcy+yy*deltay, zvals[ix]))) < 0.0);
+					}
 				}
+				if (back_facing) continue;
 			}
-			if (back_facing) continue;
 			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*distance_to_camera(close_pt))));
 			assert(insts != NULL);
 			insts[lod_level].resize(NUM_RND_GRASS_BLOCKS); // may already be the correct size
