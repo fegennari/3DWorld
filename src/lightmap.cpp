@@ -879,8 +879,9 @@ void upload_dlights_textures(cube_t const &bounds) {
 			unsigned const gb_ix(x + y*gbx); // {start, end, unused}
 			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
 			dls_cell const &dlsc(ldynamic[gb_ix]);
-			unsigned short const *const ixs(dlsc.get_src_ixs());
 			unsigned num_ixs(dlsc.size());
+			if (num_ixs == 0) continue; // no lights for this grid
+			unsigned short const *const ixs(dlsc.get_src_ixs());
 			assert(num_ixs < 256);
 			num_ixs = min(num_ixs, unsigned(max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
 			
