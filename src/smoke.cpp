@@ -138,13 +138,33 @@ void add_smoke(point const &pos, float val) {
 	smoke_grid.register_smoke(xpos, ypos, get_zpos(pos.z));
 }
 
-
-void diffuse_smoke(int x, int y, int z, lmcell &adj, float pos_rate, float neg_rate, int dim, int dir) {
+void diffuse_smoke_xy(int x, int y, int z, lmcell &adj, float rate, int dim, int dir) {
 
 	float delta(0.0); // Note: not using fticks due to instability
-	
-	if (lmap_manager.is_valid_cell(x, y, z)) {
-		lmcell &lmc(lmap_manager.get_lmcell(x, y, z));
+	lmcell *vldata(point_outside_mesh(x, y) ? nullptr : lmap_manager.get_column(x, y));
+
+	if (vldata) {
+		lmcell &lmc(vldata[z]);
+		unsigned char const flow(dir ? adj.pflow[dim] : lmc.pflow[dim]);
+		if (flow == 0) return;
+		float const cur_smoke(lmc.smoke);
+		delta  = rate*(flow/255.0)*(adj.smoke - cur_smoke); // diffusion out of current cell and into cell xyz (can be negative)
+		adjust_smoke_val(lmc.smoke, delta);
+		delta  = (lmc.smoke - cur_smoke); // actual change
+		if (lmc.smoke > 0.0) {smoke_grid.register_smoke(x, y, z);}
+	}
+	else { // edge cell has infinite smoke capacity and zero total smoke
+		delta = rate;
+	}
+	adjust_smoke_val(adj.smoke, -delta);
+}
+
+void diffuse_smoke_z(int x, int y, int z, lmcell &adj, lmcell *vldata, float pos_rate, float neg_rate, int dim, int dir) {
+
+	float delta(0.0); // Note: not using fticks due to instability
+
+	if (z >= 0 && z < MESH_SIZE[2]) {
+		lmcell &lmc(vldata[z]);
 		unsigned char const flow(dir ? adj.pflow[dim] : lmc.pflow[dim]);
 		if (flow == 0) return;
 		float const cur_smoke(lmc.smoke);
@@ -190,6 +210,7 @@ void distribute_smoke() { // called at most once per frame
 			lmcell *vldata(lmap_manager.get_column(x, y));
 			if (vldata == NULL) continue;
 			smoke_entry_t &zrange(smoke_grid.get_z_range(x, y));
+			//smoke_entry_t zrange; zrange.zmin = 0; zrange.zmax = MESH_Z_SIZE;
 			if (!zrange.valid()) continue;
 			bool any_z_has_smoke(0);
 			
@@ -199,12 +220,23 @@ void distribute_smoke() { // called at most once per frame
 				if (lmc.smoke == 0.0) continue;
 				//if (get_zval(z) > v_collision_matrix[y][x].zmax) {lmc.smoke = 0.0; continue;} // open space above - smoke goes up
 				next_smoke_man.add_smoke(x, y, z, lmc.smoke);
-				diffuse_smoke(x+(dx ?  1 : -1), y, z, lmc, xy_rate, xy_rate, 0,  dx);
-				diffuse_smoke(x+(dx ? -1 :  1), y, z, lmc, xy_rate, xy_rate, 0, !dx);
-				diffuse_smoke(x, y+(dy ?  1 : -1), z, lmc, xy_rate, xy_rate, 1,  dy);
-				diffuse_smoke(x, y+(dy ? -1 :  1), z, lmc, xy_rate, xy_rate, 1, !dy);
-				diffuse_smoke(x, y, (z - 1), lmc, SMOKE_DIS_ZD, SMOKE_DIS_ZU, 2, 0);
-				diffuse_smoke(x, y, (z + 1), lmc, SMOKE_DIS_ZU, SMOKE_DIS_ZD, 2, 1);
+
+				if (dx) {
+					diffuse_smoke_xy(x+1, y, z, lmc, xy_rate, 0, 1);
+					diffuse_smoke_xy(x-1, y, z, lmc, xy_rate, 0, 0);
+				} else {
+					diffuse_smoke_xy(x-1, y, z, lmc, xy_rate, 0, 0);
+					diffuse_smoke_xy(x+1, y, z, lmc, xy_rate, 0, 1);
+				}
+				if (dy) {
+					diffuse_smoke_xy(x, y+1, z, lmc, xy_rate, 1, 1);
+					diffuse_smoke_xy(x, y-1, z, lmc, xy_rate, 1, 0);
+				} else {
+					diffuse_smoke_xy(x, y-1, z, lmc, xy_rate, 1, 0);
+					diffuse_smoke_xy(x, y+1, z, lmc, xy_rate, 1, 1);
+				}
+				diffuse_smoke_z(x, y, (z - 1), lmc, vldata, SMOKE_DIS_ZD, SMOKE_DIS_ZU, 2, 0);
+				diffuse_smoke_z(x, y, (z + 1), lmc, vldata, SMOKE_DIS_ZU, SMOKE_DIS_ZD, 2, 1);
 				any_z_has_smoke = 1;
 			} // for z
 			if (!any_z_has_smoke) {zrange.clear();} // mark this xy as not having smoke
