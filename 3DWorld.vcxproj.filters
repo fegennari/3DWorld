@@ -1314,6 +1314,9 @@
     <None Include="shaders\pedestrian_animation.part.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\rainbow.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

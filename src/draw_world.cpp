@@ -988,6 +988,31 @@ void draw_earth() {
 }
 
 
+void maybe_draw_rainbow() {
+
+	//if (light_factor < 0.5 || !is_cloudy || is_rain_enabled()) return; // disabled for now for testing
+	point const camera(get_camera_pos()), spos(get_sun_pos());
+	vector3d const dir((camera - spos).get_norm());
+	float dist(12.0), size(8.0);
+	quad_batch_draw qbd;
+	point const pos(camera + dir*dist);
+	qbd.add_billboard(pos, camera, up_vector, WHITE, size, size);
+	enable_blend();
+	//set_additive_blend_mode();
+	glDepthMask(GL_FALSE); // disable depth writing
+	shader_t s;
+	s.set_cur_color(WHITE);
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("rainbow");
+	s.begin_shader();
+	qbd.draw();
+	s.end_shader();
+	glDepthMask(GL_TRUE); // re-enable depth writing
+	//set_std_blend_mode();
+	disable_blend();
+}
+
+
 void apply_red_sky(colorRGBA &color) {
 
 	if (light_factor > 0.45 && light_factor < 0.55) { // red sky at night/morning

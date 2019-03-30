@@ -135,6 +135,7 @@ void draw_stars(float alpha);
 void draw_sun();
 void draw_moon();
 void draw_earth();
+void maybe_draw_rainbow();
 void apply_red_sky(colorRGBA &color);
 colorRGBA get_cloud_color();
 void get_avg_sky_color(colorRGBA &avg_color);

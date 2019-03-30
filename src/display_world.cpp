@@ -477,7 +477,11 @@ void draw_sun_moon_stars(bool no_update) {
 	float star_alpha(get_star_alpha(is_cloudy != 0));
 	if (star_alpha > 0.0) {gen_and_draw_stars(star_alpha, 0, no_update);}
 	if (light_factor <= 0.6 || atmosphere <= 0.5) {draw_moon();} // moon
-	if (light_factor >= 0.4) {draw_sun ();} // sun
+
+	if (light_factor >= 0.4) { // sun
+		draw_sun();
+		maybe_draw_rainbow();
+	}
 }
 
 
