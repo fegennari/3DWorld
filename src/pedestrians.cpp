@@ -157,7 +157,6 @@ bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsign
 
 	// Note: shouldn't have to check peds in the next plot, assuming that if we're stopped, they likely are as well, and won't be walking toward us
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped until we exit target_plot
-		assert(ssn != i->ssn);
 		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		if (!dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) continue; // no collision
 		i->collided = i->ped_coll = 1; i->colliding_ped = pid;
