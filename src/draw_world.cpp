@@ -990,13 +990,21 @@ void draw_earth() {
 
 void maybe_draw_rainbow() {
 
-	//if (light_factor < 0.5 || !is_cloudy || is_rain_enabled()) return; // disabled for now for testing
+	static double last_rain_tick(0.0);
+	if (is_rain_enabled()) {last_rain_tick = tfticks;}
+	float const time_since_rain((tfticks - last_rain_tick)/TICKS_PER_SECOND);
+	if (light_factor < 0.4 || light_factor > 0.8 /*|| !is_cloudy*/ /*|| time_since_rain == 0.0*/) return;
 	point const camera(get_camera_pos()), spos(get_sun_pos());
 	vector3d const dir((camera - spos).get_norm());
-	float dist(12.0), size(8.0);
-	quad_batch_draw qbd;
-	point const pos(camera + dir*dist);
-	qbd.add_billboard(pos, camera, up_vector, WHITE, size, size);
+	if (dot_product(dir, cview_dir) < 0.0) return; // looking toward the sun
+	static quad_batch_draw qbd;
+	unsigned const num_steps = 8;
+
+	for (unsigned n = 0; n < num_steps; ++n) { // 8 passes at different depth values blended together back to front
+		float dist(0.25*FAR_CLIP*(float(num_steps - n)/float(num_steps))), size(tan(42*TO_RADIANS)*dist); // 42 degree angle
+		point const pos(camera + dir*dist);
+		qbd.add_billboard(pos, camera, up_vector, WHITE, size, size);
+	}
 	enable_blend();
 	//set_additive_blend_mode();
 	glDepthMask(GL_FALSE); // disable depth writing
@@ -1005,7 +1013,8 @@ void maybe_draw_rainbow() {
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader("rainbow");
 	s.begin_shader();
-	qbd.draw();
+	s.add_uniform_float("alpha_scale", brightness*(0.2 - fabs(light_factor - 0.6))/(0.2*num_steps)); // ramp from 0.4 to 0.8 with max at 0.6
+	qbd.draw_and_clear();
 	s.end_shader();
 	glDepthMask(GL_TRUE); // re-enable depth writing
 	//set_std_blend_mode();
