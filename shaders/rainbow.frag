@@ -20,8 +20,9 @@ void main() {
 	else              {color = mix(vec4(1,1,1,0),  vec4(.5,0,1,0), max(0, (val + 1.0)));}
 	color += vec4(0.1,0.1,0.1,0.0); // mix in a bit of white
 	color.a *= 0.4; // set transparency
-	color.a += 0.22*(min(1.0, (1.0 - radius)/thick)); // a bit of white in the center
+	color.a += 0.2*(min(1.0, (1.0 - radius)/thick)); // a bit of white in the center
 	color.a *= alpha_scale;
-	//float depth  = get_linear_depth_zval(scren_space_tc); // requires some complex matrix transform
+	float depth = get_linear_depth_01(gl_FragCoord.xy*xy_step);
+	color.a *= (depth - 0.1)/0.9; // multiply by depth to integrate drolet particle volume over distance
 	fg_FragColor = color;
 }

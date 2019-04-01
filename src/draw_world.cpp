@@ -46,7 +46,7 @@ extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cub
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
-extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale;
+extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale, cloud_cover;
 extern double tfticks;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
@@ -990,35 +990,34 @@ void draw_earth() {
 
 void maybe_draw_rainbow() {
 
+	if (light_factor < 0.4 || light_factor > 0.8 || !((((display_mode & 0x40) != 0) ^ is_cloudy) || cloud_cover > 0.5)) return;
 	static double last_rain_tick(0.0);
 	if (is_rain_enabled()) {last_rain_tick = tfticks;}
 	float const time_since_rain((tfticks - last_rain_tick)/TICKS_PER_SECOND);
-	if (light_factor < 0.4 || light_factor > 0.8 /*|| !is_cloudy*/ /*|| time_since_rain == 0.0*/) return;
+	float const intensity((time_since_rain > 2.0) ? (1.0 - 0.05*(time_since_rain - 2.0)) : 0.5*time_since_rain); // fast ramp up, slow ramp down
+	if (intensity <= 0.0) return;
 	point const camera(get_camera_pos()), spos(get_sun_pos());
 	vector3d const dir((camera - spos).get_norm());
 	if (dot_product(dir, cview_dir) < 0.0) return; // looking toward the sun
 	static quad_batch_draw qbd;
-	unsigned const num_steps = 8;
-
-	for (unsigned n = 0; n < num_steps; ++n) { // 8 passes at different depth values blended together back to front
-		float dist(0.25*FAR_CLIP*(float(num_steps - n)/float(num_steps))), size(tan(42*TO_RADIANS)*dist); // 42 degree angle
-		point const pos(camera + dir*dist);
-		qbd.add_billboard(pos, camera, up_vector, WHITE, size, size);
-	}
-	enable_blend();
-	//set_additive_blend_mode();
+	float dist(0.02*FAR_CLIP), size(tan(42*TO_RADIANS)*dist); // 42 degree angle
+	point const pos(camera + dir*dist);
+	qbd.add_billboard(pos, camera, up_vector, WHITE, size, size);
+	enable_blend(); //set_additive_blend_mode();
 	glDepthMask(GL_FALSE); // disable depth writing
+	unsigned depth_tid(0);
 	shader_t s;
 	s.set_cur_color(WHITE);
 	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("rainbow");
+	s.set_frag_shader("depth_utils.part+rainbow");
 	s.begin_shader();
-	s.add_uniform_float("alpha_scale", brightness*(0.2 - fabs(light_factor - 0.6))/(0.2*num_steps)); // ramp from 0.4 to 0.8 with max at 0.6
+	s.add_uniform_float("alpha_scale", brightness*intensity*5.0*(0.2 - fabs(light_factor - 0.6))); // ramp from 0.4 to 0.8 with max at 0.6
+	setup_depth_trans_texture(s, depth_tid);
 	qbd.draw_and_clear();
 	s.end_shader();
 	glDepthMask(GL_TRUE); // re-enable depth writing
-	//set_std_blend_mode();
-	disable_blend();
+	disable_blend(); //set_std_blend_mode();
+	free_texture(depth_tid);
 }
 
 

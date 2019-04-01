@@ -219,10 +219,14 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		draw_jump_pads();
 		draw_teleporters();
 		
-		if (!underwater && reflection_pass != 1) { // don't draw precip in planar reflections
-			draw_local_precipitation(reflection_pass != 0);
-			check_gl_error(23);
-			if (TIMETEST) PRINT_TIME("R");
+		if (!underwater) {
+			maybe_draw_rainbow();
+
+			if (reflection_pass != 1) { // don't draw precip in planar reflections
+				draw_local_precipitation(reflection_pass != 0);
+				check_gl_error(23);
+				if (TIMETEST) PRINT_TIME("R");
+			}
 		}
 		//draw_spotlight_cones();
 		draw_coll_surfaces(1, reflection_pass); // transparent
@@ -477,11 +481,7 @@ void draw_sun_moon_stars(bool no_update) {
 	float star_alpha(get_star_alpha(is_cloudy != 0));
 	if (star_alpha > 0.0) {gen_and_draw_stars(star_alpha, 0, no_update);}
 	if (light_factor <= 0.6 || atmosphere <= 0.5) {draw_moon();} // moon
-
-	if (light_factor >= 0.4) { // sun
-		draw_sun();
-		maybe_draw_rainbow();
-	}
+	if (light_factor >= 0.4) {draw_sun();} // sun
 }
 
 
@@ -1226,9 +1226,15 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	//if (underwater ) {draw_local_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, tt_reflection_tid);}
 	if (show_lightning) {end_tiled_terrain_lightning();}
-	if (!underwater) {draw_tiled_terrain_clouds(0);}
-	if (!underwater) {draw_local_precipitation();}
-	if ( underwater) {draw_underwater_particles(terrain_zmin);}
+
+	if (!underwater) {
+		maybe_draw_rainbow();
+		draw_tiled_terrain_clouds(0);
+		draw_local_precipitation();
+	}
+	else {
+		draw_underwater_particles(terrain_zmin);
+	}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	draw_game_elements(timer1);
 	draw_teleporters();
