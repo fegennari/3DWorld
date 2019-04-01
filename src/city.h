@@ -652,15 +652,16 @@ public:
 
 struct pedestrian_t : public waiting_obj_t {
 
-	point pos, target_pos;
-	vector3d vel, dir;
+	point target_pos;
+	vector3d dir, vel;
+	point pos;
 	float radius, speed, anim_time;
 	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city, model_id, ssn, colliding_ped;
 	unsigned char stuck_count;
 	bool collided, ped_coll, is_stopped, in_the_road, at_crosswalk, at_dest, destroyed;
 
-	pedestrian_t(float radius_) : pos(all_zeros), target_pos(all_zeros), vel(zero_vector), dir(zero_vector), radius(radius_), speed(0.0), anim_time(0.0), plot(0), next_plot(0), dest_plot(0),
+	pedestrian_t(float radius_) : target_pos(all_zeros), dir(zero_vector), vel(zero_vector), pos(all_zeros), radius(radius_), speed(0.0), anim_time(0.0), plot(0), next_plot(0), dest_plot(0),
 		dest_bldg(0), city(0), model_id(0), ssn(0), colliding_ped(0), stuck_count(0), collided(0), ped_coll(0), is_stopped(0), in_the_road(0), at_crosswalk(0), at_dest(0), destroyed(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
