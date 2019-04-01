@@ -124,9 +124,9 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	bool dim, dir, stopped_at_light;
 	unsigned char cur_road_type, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
-	float cur_speed, max_speed;
+	float max_speed, cur_speed;
 
-	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), cur_speed(0.0), max_speed(0.0) {}
+	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), max_speed(0.0), cur_speed(0.0) {}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
 	unsigned get_orient_in_isec() const {return (2*dim + (!dir));} // invert dir (incoming, not outgoing)
@@ -153,7 +153,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 92
 		model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	float get_max_lookahead_dist() const;
-	bool headlights_on() const {return (!is_parked() && (in_tunnel || is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed))));} // no headlights when parked
+	bool headlights_on() const;
 	float get_turn_rot_z(float dist_to_turn) const;
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 	void apply_scale(float scale);

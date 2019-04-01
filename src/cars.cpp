@@ -36,6 +36,10 @@ bool city_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 
+bool car_t::headlights_on() const { // no headlights when parked
+	return (!is_parked() && (in_tunnel || ((light_factor < (0.5 + HEADLIGHT_ON_RAND)) && is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed)))));
+}
+
 void car_t::apply_scale(float scale) {
 	if (scale == 1.0) return; // no scale
 	float const prev_height(height);
