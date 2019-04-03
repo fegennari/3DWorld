@@ -96,7 +96,7 @@ struct building_params_t {
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
-	vector<unsigned> mat_gen_ix, mat_gen_ix_city; // {any, city_only}
+	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0), num_place(num),
 		num_tries(10), cur_prob(1), ao_factor(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
@@ -112,7 +112,7 @@ struct building_params_t {
 		
 		for (unsigned n = 0; n < cur_prob; ++n) { // add more references to this mat for higher probability
 			mat_gen_ix.push_back(mat_ix);
-			if (!cur_mat.no_city) {mat_gen_ix_city.push_back(mat_ix);}
+			(cur_mat.no_city ? mat_gen_ix_nocity : mat_gen_ix_city).push_back(mat_ix);
 		}
 		materials.push_back(cur_mat);
 		materials.back().update_range(range_translate);
@@ -125,8 +125,8 @@ struct building_params_t {
 		assert(mat_ix < materials.size());
 		return materials[mat_ix];
 	}
-	unsigned choose_rand_mat(rand_gen_t &rgen, bool for_city=0) const {
-		vector<unsigned> const &mat_ix_list(for_city ? mat_gen_ix_city : mat_gen_ix);
+	unsigned choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only) const {
+		vector<unsigned> const &mat_ix_list(city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix));
 		assert(!mat_ix_list.empty());
 		return mat_ix_list[rgen.rand()%mat_ix_list.size()];
 	}
@@ -1524,7 +1524,7 @@ public:
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 
-	void gen(building_params_t const &params) {
+	void gen(building_params_t const &params, bool city_only, bool non_city_only) {
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		if (params.materials.empty()) return; // no materials
 		timer_t timer("Gen Buildings");
@@ -1545,7 +1545,7 @@ public:
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
 		vector<cube_t> city_plot_bcubes;
 		get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
-		bool const use_plots(!city_plot_bcubes.empty());
+		bool const has_plots(!city_plot_bcubes.empty()), check_plot_coll(non_city_only && has_plots), use_city_plots(city_only && has_plots);
 		point center(all_zeros);
 		bool zval_set(0);
 		bix_by_plot.resize(city_plot_bcubes.size());
@@ -1554,12 +1554,12 @@ public:
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
 				building_t b;
-				b.mat_ix = params.choose_rand_mat(rgen, use_plots); // set material
+				b.mat_ix = params.choose_rand_mat(rgen, use_city_plots, non_city_only); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
 				unsigned plot_ix(0);
 				
-				if (use_plots) { // select a random plot, if available
+				if (use_city_plots) { // select a random plot, if available
 					plot_ix   = rgen.rand()%city_plot_bcubes.size();
 					pos_range = city_plot_bcubes[plot_ix];
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
@@ -1584,13 +1584,13 @@ public:
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
-				if (use_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
+				if (use_city_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
 
 				if (!params.is_const_zval || !zval_set) { // only calculate when needed
 					center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
 					zval_set = 1;
 				}
-				float const hmin(use_plots ? pos_range.z1() : 0.0), hmax(use_plots ? pos_range.z2() : 1.0);
+				float const hmin(use_city_plots ? pos_range.z1() : 0.0), hmax(use_city_plots ? pos_range.z2() : 1.0);
 				assert(hmin <= hmax);
 				float const height_range(mat.sz_range.d[2][1] - mat.sz_range.d[2][0]);
 				assert(height_range >= 0.0);
@@ -1598,7 +1598,7 @@ public:
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
-				b.gen_rotation(rgen);
+				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated)
 				++num_gen;
 				
 				// check building for overlap with other buildings
@@ -1610,10 +1610,13 @@ public:
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by_xy(expand);
 
-				if (use_plots) {
+				if (use_city_plots) {
 					assert(plot_ix < bix_by_plot.size());
 					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, points)) continue;
 					bix_by_plot[plot_ix].push_back(buildings.size());
+				}
+				else if (check_plot_coll && has_bcube_int_xy(test_bc, city_plot_bcubes, max(expand.x, expand.y))) { // double the expand val
+					continue;
 				}
 				else {
 					unsigned ixr[2][2];
@@ -1644,7 +1647,7 @@ public:
 		for (auto i = bix_by_plot.begin(); i != bix_by_plot.end(); ++i) {sort(i->begin(), i->end(), cmp_x1);}
 		timer.end();
 
-		if (params.flatten_mesh) {
+		if (params.flatten_mesh && !use_city_plots) { // not needed for city plots, which are already flat
 			timer_t timer("Gen Building Zvals");
 			bool const do_flatten(using_tiled_terrain_hmap_tex());
 
@@ -1944,7 +1947,10 @@ building_creator_t building_creator;
 
 vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);}
 
-void gen_buildings() {building_creator.gen(global_building_params);}
+void gen_buildings() {
+	building_creator.gen(global_building_params, have_cities(), 0);
+	// second set of non-city buildings?
+}
 void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
 void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);}
 

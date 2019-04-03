@@ -337,6 +337,16 @@ template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 	return bcube;
 }
 
+bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist) {
+	cube_t tc(bcube);
+	tc.expand_by(pad_dist);
+
+	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
+		if (c->intersects_xy(tc)) return 1; // intersection
+	}
+	return 0;
+}
+
 point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 	return point(rgen.rand_uniform(c.x1()+radius, c.x2()-radius), rgen.rand_uniform(c.y1()+radius, c.y2()-radius), c.z1());
 }
@@ -973,15 +983,6 @@ class city_road_gen_t : public road_gen_base_t {
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
 		void clear() {parking_lots.clear(); num_spaces = filled_spaces = 0;}
 
-		static bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0) {
-			cube_t tc(bcube);
-			tc.expand_by(pad_dist);
-
-			for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-				if (c->intersects_xy(tc)) return 1; // intersection
-			}
-			return 0;
-		}
 		struct cube_by_x1 {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
 		};
@@ -1231,8 +1232,8 @@ class city_road_gen_t : public road_gen_base_t {
 					p1[dim]  = region.d[dim][0]; p2[dim] = seg_end; // full segment for blockers check
 					p1.z = p2.z = region.z1();
 					cube_t tracks_bcube(p1, p2);
-					if (city_obj_placer.has_bcube_int_xy(tracks_bcube, blockers,            width)) continue; // check cities
-					if (city_obj_placer.has_bcube_int_xy(tracks_bcube, dim_tracks[dim], 8.0*width)) continue; // check prev placed tracks in same dim
+					if (has_bcube_int_xy(tracks_bcube, blockers,            width)) continue; // check cities
+					if (has_bcube_int_xy(tracks_bcube, dim_tracks[dim], 8.0*width)) continue; // check prev placed tracks in same dim
 					dim_tracks[dim].push_back(tracks_bcube); // add to dim_tracks, but not to blockers, since we want roads to cross tracks
 					tracks.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n); // Note: zvals are at 0, but should be unused
 					p2[dim] = (p1[dim] + step_sz); // back to starting segment
@@ -2531,7 +2532,7 @@ public:
 	{
 		float const height(hq.get_height_at(xval, yval) + ROAD_HEIGHT), half_width(0.5*road_width);
 		cube_t const int_cube(xval-half_width, xval+half_width, yval-half_width, yval+half_width, height, height); // the candidate intersection point
-		if (city_obj_placer_t::has_bcube_int_xy(int_cube, blockers)) return; // bad intersection, fail
+		if (has_bcube_int_xy(int_cube, blockers)) return; // bad intersection, fail
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		float const cost1(global_rn.create_connector_road(rn1.get_bcube(), int_cube, blockers, &rn1, nullptr, city1,
 			CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? xval : yval), fdim, 1, is_4way, 0)); // check_only=1

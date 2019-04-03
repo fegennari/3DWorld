@@ -22,5 +22,6 @@ struct building_occlusion_state_t {
 
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
+bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist=0.0);
 
 #endif // _BUILDING_H_
