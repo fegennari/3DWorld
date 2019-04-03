@@ -436,6 +436,47 @@ public:
 building_window_gen_t building_window_gen;
 
 
+struct building_draw_utils {
+	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
+		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
+		assert(bg.alt_step_factor >= 0.0 && bg.alt_step_factor < 1.0);
+		if (bg.flat_side_amt > 0.0) {assert(ndiv > 4);} // should be at least 5 sides, 6-8 is better
+		float const ndiv_inv(1.0/ndiv), css(TWO_PI*ndiv_inv*(1.0f - bg.flat_side_amt));
+		float sin_ds[2], cos_ds[2];
+
+		if (bg.alt_step_factor > 0.0) { // alternate between large and small steps (cube with angled corners, etc.)
+			assert(!(ndiv&1));
+			float const css_v[2] = {css*(1.0f + bg.alt_step_factor), css*(1.0f - bg.alt_step_factor)};
+			UNROLL_2X(sin_ds[i_] = sin(css_v[i_]); cos_ds[i_] = cos(css_v[i_]);)
+		}
+		else { // uniform side length
+			sin_ds[0] = sin_ds[1] = sin(css);
+			cos_ds[0] = cos_ds[1] = cos(css);
+		}
+		float sin_s(0.0), cos_s(1.0), angle0(bg.start_angle); // start at 0.0
+		if (bg.half_offset) {angle0 = 0.5*css;} // for cube
+		if (angle0 != 0.0) {sin_s = sin(angle0); cos_s = cos(angle0);} // uncommon case
+		nv.resize(ndiv);
+
+		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
+			bool const d(S&1);
+			float const s(sin_s), c(cos_s);
+			nv[S].assign(s, c, 0.0);
+			sin_s = s*cos_ds[d] + c*sin_ds[d];
+			cos_s = c*cos_ds[d] - s*sin_ds[d];
+		}
+	}
+
+	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, float expand=0.0) {
+		calc_normals(bg, pts, bg.num_sides);
+		vector3d const sz(bcube.get_size());
+		point const cc(bcube.get_cube_center());
+		float const rx(0.5*sz.x + expand), ry(0.5*sz.y + expand); // expand polygon by sphere radius
+		for (unsigned i = 0; i < bg.num_sides; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
+	}
+};
+
+
 #define EMIT_VERTEX() \
 	vert.v = pt*sz + llc; \
 	vert.t[ st] = tscale[ st]*(vert.v[d] + tex_vert_off[d]); \
@@ -532,43 +573,6 @@ public:
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
 
-	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
-		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
-		assert(bg.alt_step_factor >= 0.0 && bg.alt_step_factor < 1.0);
-		if (bg.flat_side_amt > 0.0) {assert(ndiv > 4);} // should be at least 5 sides, 6-8 is better
-		float const ndiv_inv(1.0/ndiv), css(TWO_PI*ndiv_inv*(1.0f - bg.flat_side_amt));
-		float sin_ds[2], cos_ds[2];
-
-		if (bg.alt_step_factor > 0.0) { // alternate between large and small steps (cube with angled corners, etc.)
-			assert(!(ndiv&1));
-			float const css_v[2] = {css*(1.0f + bg.alt_step_factor), css*(1.0f - bg.alt_step_factor)};
-			UNROLL_2X(sin_ds[i_] = sin(css_v[i_]); cos_ds[i_] = cos(css_v[i_]);)
-		}
-		else { // uniform side length
-			sin_ds[0] = sin_ds[1] = sin(css);
-			cos_ds[0] = cos_ds[1] = cos(css);
-		}
-		float sin_s(0.0), cos_s(1.0), angle0(bg.start_angle); // start at 0.0
-		if (bg.half_offset) {angle0 = 0.5*css;} // for cube
-		if (angle0 != 0.0) {sin_s = sin(angle0); cos_s = cos(angle0);} // uncommon case
-		nv.resize(ndiv);
-
-		for (unsigned S = 0; S < ndiv; ++S) { // build normals table
-			bool const d(S&1);
-			float const s(sin_s), c(cos_s);
-			nv[S].assign(s, c, 0.0);
-			sin_s = s*cos_ds[d] + c*sin_ds[d];
-			cos_s = c*cos_ds[d] - s*sin_ds[d];
-		}
-	}
-	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, float expand=0.0) {
-		calc_normals(bg, pts, bg.num_sides);
-		vector3d const sz(bcube.get_size());
-		point const cc(bcube.get_cube_center());
-		float const rx(0.5*sz.x + expand), ry(0.5*sz.y + expand); // expand polygon by sphere radius
-		for (unsigned i = 0; i < bg.num_sides; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
-	}
-
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
 		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool no_ao)
 	{
@@ -581,7 +585,7 @@ public:
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube, pos.z, z_top, cw, vert, no_ao);
 		float tex_pos[2] = {0.0, 1.0};
-		calc_normals(bg, normals, ndiv);
+		building_draw_utils::calc_normals(bg, normals, ndiv);
 		if (!shadow_only) {UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcube.d[2][0]);)}
 
 		if (dim_mask & 3) { // draw sides
@@ -804,8 +808,6 @@ public:
 	}
 };
 
-building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights;
-
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
@@ -870,7 +872,7 @@ bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, 
 
 	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
 	if (is_simple_cube()) return 1; // that's it
-	building_draw.calc_poly_pts(*this, part, points);
+	building_draw_utils::calc_poly_pts(*this, part, points);
 	return point_in_polygon_2d(pt.x, pt.y, &points.front(), points.size(), 0, 1); // 2D x/y containment
 }
 
@@ -908,7 +910,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 
 bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
-	building_draw.calc_poly_pts(*this, part, points); // without the expand
+	building_draw_utils::calc_poly_pts(*this, part, points); // without the expand
 	point quad_pts[4]; // quads
 	bool updated(0);
 
@@ -1061,7 +1063,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			}
 		}
 		else if (num_sides != 4) {
-			building_draw.calc_poly_pts(*this, *i, points);
+			building_draw_utils::calc_poly_pts(*this, *i, points);
 			float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 
 			if (tz >= 0.0 && tz < t) {
@@ -1118,7 +1120,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 			return 1;
 		}
 		else if (num_sides != 4) {
-			building_draw.calc_poly_pts(*this, *i, points);
+			building_draw_utils::calc_poly_pts(*this, *i, points);
 
 			if (xy_radius > 0.0) { // cylinder case: expand polygon by xy_radius; assumes a convex polygon
 				point const center(i->get_cube_center());
@@ -1454,6 +1456,7 @@ class building_creator_t {
 	rand_gen_t rgen;
 	vector<building_t> buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
+	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights;
 
 	struct grid_elem_t {
 		vector<unsigned> ixs;
@@ -1524,6 +1527,20 @@ public:
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 
+	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
+		float t(0.0); // unused
+		unsigned hit_bix(0);
+		unsigned const ret(check_buildings_line_coll(p1, p2, t, hit_bix, 0)); // apply_tt_xlate=0; 0=no hit, 1=hit side, 2=hit roof
+		if (ret == 0) return 0;
+		building_t const &b(get_building(hit_bix));
+		switch (ret) {
+		case 1: color = b.get_avg_side_color  (); break;
+		case 2: color = b.get_avg_roof_color  (); break;
+		case 3: color = b.get_avg_detail_color(); break;
+		default: assert(0);
+		}
+		return 1;
+	}
 	void gen(building_params_t const &params, bool city_only, bool non_city_only) {
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		if (params.materials.empty()) return; // no materials
@@ -1694,7 +1711,7 @@ public:
 		create_vbos();
 	}
 
-	void draw(bool shadow_only, vector3d const &xlate) const {
+	void draw(bool shadow_only, vector3d const &xlate) { // Note: non-const; building_draw is modified
 		if (empty()) return;
 		if (!camera_pdu.cube_visible(buildings_bcube + xlate)) return; // no buildings visible
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 1.7ms, 2.3ms with shadow maps, 2.8ms with AO, 3.3s with rotations (currently 2.5)
@@ -1757,7 +1774,7 @@ public:
 		fgPopMatrix();
 	}
 
-	void get_all_drawn_verts() const {
+	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
 		building_draw_vbo.clear();
 		building_draw_windows.clear();
 		building_draw_wind_lights.clear();
@@ -1771,7 +1788,7 @@ public:
 		building_draw_windows.resize_to_cap();
 		building_draw_wind_lights.resize_to_cap();
 	}
-	void create_vbos() const {
+	void create_vbos() { // Note: non-const; building_draw is modified
 		building_window_gen.check_windows_texture();
 		timer_t timer("Create Building VBOs");
 		get_all_drawn_verts();
@@ -1780,6 +1797,12 @@ public:
 		building_draw_vbo.upload_to_vbos();
 		building_draw_windows.upload_to_vbos();
 		building_draw_wind_lights.upload_to_vbos();
+	}
+	void clear_vbos() {
+		building_draw.clear_vbos();
+		building_draw_vbo.clear_vbos();
+		building_draw_windows.clear_vbos();
+		building_draw_wind_lights.clear_vbos();
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr) const {
@@ -1943,63 +1966,52 @@ public:
 }; // building_creator_t
 
 
-building_creator_t building_creator;
+building_creator_t building_creator, building_creator_city;
 
 vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);}
 
 void gen_buildings() {
-	building_creator.gen(global_building_params, have_cities(), 0);
-	// second set of non-city buildings?
+	if (have_cities()) {
+		building_creator.gen(global_building_params, 1, 0); // city buildings
+		//building_creator_city.gen(global_building_params, 1, 0); // city buildings
+		//building_creator.gen     (global_building_params, 0, 1); // non-city buildings
+	}
+	else {building_creator.gen(global_building_params, 0, 0);} // mixed buildings
 }
-void draw_buildings(bool shadow_only, vector3d const &xlate) {building_creator.draw(shadow_only, xlate);}
-void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);}
-
-bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {
-	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only);
+void draw_buildings(bool shadow_only, vector3d const &xlate) {
+	building_creator_city.draw(shadow_only, xlate);
+	building_creator.draw     (shadow_only, xlate);
+}
+bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
+	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm); // TODO: building_creator_city
 }
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only) {
 	point center(pos);
 	if (apply_tt_xlate) {center += get_tt_xlate_val();} // apply xlate for all static objects - not the camera
-	return building_creator.check_sphere_coll(center, pos, radius, xy_only);
+	return proc_buildings_sphere_coll(center, pos, radius, xy_only, nullptr);
 }
-bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
-	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm);
+bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {
+	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only);
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) {
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
-	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt);
+	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt); // TODO: building_creator_city
 }
+bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {return building_creator.get_building_hit_color(p1, p2, color);} // map view TODO: building_creator_city
+bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty());} // for postproce effects
+vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds + map mode TODO: building_creator_city
+void clear_building_vbos() {building_creator.clear_vbos(); building_creator_city.clear_vbos();}
+
+// city interface
+void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);}
+void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
+// cars + peds
+void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator.get_occluders(pdu, state);}
+bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator.check_pts_occluded(pts, npts, state);}
+// used for pedestrians
 cube_t get_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);}
 bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator.check_line_coll_building(p1, p2, building_id);}
 int get_building_bcube_contains_pos(point const &pos) {return building_creator.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator.select_building_in_plot(plot_id, rand_val, building_id);}
-void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
-
-bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
-	float t(0.0); // unused
-	unsigned hit_bix(0);
-	unsigned const ret(check_buildings_line_coll(p1, p2, t, hit_bix, 0)); // apply_tt_xlate=0; 0=no hit, 1=hit side, 2=hit roof
-	if (ret == 0) return 0;
-	building_t const &b(building_creator.get_building(hit_bix));
-	switch (ret) {
-	case 1: color = b.get_avg_side_color  (); break;
-	case 2: color = b.get_avg_roof_color  (); break;
-	case 3: color = b.get_avg_detail_color(); break;
-	default: assert(0);
-	}
-	return 1;
-}
-bool have_buildings() {return !building_creator.empty();}
-vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds
-void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator.get_occluders(pdu, state);}
-bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator.check_pts_occluded(pts, npts, state);}
-
-void clear_building_vbos() {
-	building_draw.clear_vbos();
-	building_draw_vbo.clear_vbos();
-	building_draw_windows.clear_vbos();
-	building_draw_wind_lights.clear_vbos();
-}
-
 

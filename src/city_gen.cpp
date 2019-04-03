@@ -1942,7 +1942,7 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return global_next_plot;
 		}
-		bool choose_dest_building(unsigned &global_plot, unsigned &building, rand_gen_t &rgen) const {
+		bool choose_dest_building(unsigned &global_plot, unsigned &building, rand_gen_t &rgen) const { // for pedestrians
 			if (plots.empty()) return 0; // no plots
 			global_plot = (rgen.rand() % plots.size()) + plot_id_offset;
 			if (!select_building_in_plot(global_plot, rgen.rand(), building)) return 0; // no buildings in plot
