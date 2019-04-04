@@ -307,12 +307,14 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	}
 	float  dot  (pointT const &v) const {return (x*v.x + y*v.y + z*v.z);}
 	pointT cross(pointT const &v) const {return pointT((y*v.z - z*v.y), (z*v.x - x*v.z), (x*v.y - y*v.x));}
+	pointT min  (pointT const &v) const {return pointT(std::min(x, v.x), std::min(y, v.y), std::min(z, v.z));}
+	pointT max  (pointT const &v) const {return pointT(std::max(x, v.x), std::max(y, v.y), std::max(z, v.z));}
 	T mag_sq()    const {return (x*x + y*y + z*z);}
 	T mag()       const {return sqrt(mag_sq());}
 	T xy_mag_sq() const {return (x*x + y*y);}
 	T xy_mag()    const {return sqrt(xy_mag_sq());}
-	T get_min_val()   const {return min(x, min(y, z));}
-	T get_max_val()   const {return max(x, max(y, z));}
+	T get_min_val()   const {return std::min(x, std::min(y, z));}
+	T get_max_val()   const {return std::max(x, std::max(y, z));}
 	bool is_nonzero() const {return (x != 0.0 || y != 0.0 || z != 0.0);}
 
 	bool operator<(pointT const &p) const { // needed for maps and stuff
