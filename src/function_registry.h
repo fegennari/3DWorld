@@ -986,7 +986,7 @@ bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &buil
 void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
 bool have_buildings();
-vector3d const &get_buildings_max_extent();
+vector3d get_buildings_max_extent();
 void clear_building_vbos();
 
 #include "inlines.h"

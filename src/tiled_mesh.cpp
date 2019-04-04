@@ -857,7 +857,7 @@ void tile_shadow_map_manager::clear_context() {
 }
 
 cube_t tile_t::get_shadow_bcube() const {
-	vector3d const &b_ext(get_buildings_max_extent()); // what about bridges overlapping this tile?
+	vector3d const b_ext(get_buildings_max_extent()); // what about bridges overlapping this tile?
 	float const road_ext(0.5*get_road_max_len());
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
 	float const x_ext(max(max(road_ext, b_ext.x), trmax)), y_ext(max(max(road_ext, b_ext.y), trmax));
@@ -3125,7 +3125,7 @@ bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s) con
 }
 
 void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos, float radius) {
-	vector3d const &b_ext(get_buildings_max_extent());
+	vector3d const b_ext(get_buildings_max_extent());
 	radius += max(0.5f*get_road_max_len(), max(b_ext.x, b_ext.y)); // expand by city tile overlap (should also include trees?)
 
 	for (int y = 0; y < 2; ++y) { // try 4 corners, needed to handle objects that overlap more than one tile

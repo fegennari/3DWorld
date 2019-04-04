@@ -125,8 +125,11 @@ struct building_params_t {
 		assert(mat_ix < materials.size());
 		return materials[mat_ix];
 	}
+	vector<unsigned> const &get_mat_list(bool city_only, bool non_city_only) const {
+		return (city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix));
+	}
 	unsigned choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only) const {
-		vector<unsigned> const &mat_ix_list(city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix));
+		vector<unsigned> const &mat_ix_list(get_mat_list(city_only, non_city_only));
 		assert(!mat_ix_list.empty());
 		return mat_ix_list[rgen.rand()%mat_ix_list.size()];
 	}
@@ -1543,14 +1546,15 @@ public:
 	}
 	void gen(building_params_t const &params, bool city_only, bool non_city_only) {
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
-		if (params.materials.empty()) return; // no materials
+		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only));
+		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
 		timer_t timer("Gen Buildings");
 		float const def_water_level(get_water_z_height()), min_building_spacing(get_min_obj_spacing());
 		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
 		vector3d const delta_range((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
-		range = params.materials.front().pos_range; // range is union over all material ranges
-		for (auto i = params.materials.begin()+1; i != params.materials.end(); ++i) {range.union_with_cube(i->pos_range);}
+		range = params.materials[mat_ix_list.front()].pos_range; // range is union over all material ranges
+		for (auto i = mat_ix_list.begin()+1; i != mat_ix_list.end(); ++i) {range.union_with_cube(params.materials[*i].pos_range);}
 		range     += delta_range;
 		range_sz   = range.get_size(); // Note: place_radius is relative to range cube center
 		max_extent = zero_vector;
@@ -1972,8 +1976,7 @@ vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3
 
 void gen_buildings() {
 	if (have_cities()) {
-		building_creator.gen(global_building_params, 1, 0); // city buildings
-		//building_creator_city.gen(global_building_params, 1, 0); // city buildings
+		building_creator_city.gen(global_building_params, 1, 0); // city buildings
 		//building_creator.gen     (global_building_params, 0, 1); // non-city buildings
 	}
 	else {building_creator.gen(global_building_params, 0, 0);} // mixed buildings
@@ -1983,7 +1986,8 @@ void draw_buildings(bool shadow_only, vector3d const &xlate) {
 	building_creator.draw     (shadow_only, xlate);
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
-	return building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm); // TODO: building_creator_city
+	return (building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm) ||
+		         building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm));
 }
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only) {
 	point center(pos);
@@ -1995,23 +1999,31 @@ bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_o
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) {
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
-	return building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt); // TODO: building_creator_city
+	return (building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt) ||
+		         building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt));
 }
-bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {return building_creator.get_building_hit_color(p1, p2, color);} // map view TODO: building_creator_city
+bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
+	// only check city buildings in TT mode (too slow to check others)
+	return ((world_mode == WMODE_GROUND) ? building_creator : building_creator_city).get_building_hit_color(p1, p2, color);
+}
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty());} // for postproce effects
-vector3d const &get_buildings_max_extent() {return building_creator.get_max_extent();} // used for TT shadow bounds + map mode TODO: building_creator_city
+
+vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode TODO
+	vector3d extent(building_creator.get_max_extent());
+	return extent.max(building_creator_city.get_max_extent());
+}
 void clear_building_vbos() {building_creator.clear_vbos(); building_creator_city.clear_vbos();}
 
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);}
-void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
+void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 // cars + peds
-void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator.get_occluders(pdu, state);}
-bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator.check_pts_occluded(pts, npts, state);}
+void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
+bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
 // used for pedestrians
-cube_t get_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);}
-bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator.check_line_coll_building(p1, p2, building_id);}
-int get_building_bcube_contains_pos(point const &pos) {return building_creator.get_building_bcube_contains_pos(pos);}
-bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator.check_ped_coll(pos, radius, plot_id, building_id);}
-bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator.select_building_in_plot(plot_id, rand_val, building_id);}
+cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
+bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator_city.check_line_coll_building(p1, p2, building_id);}
+int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
+bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
+bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
 
