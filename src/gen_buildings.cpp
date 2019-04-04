@@ -1152,6 +1152,7 @@ void building_t::gen_geometry(unsigned ix) {
 
 	if (!is_valid()) return; // invalid building
 	cube_t const base(parts.empty() ? bcube : parts.back());
+	assert(base.is_strictly_normalized());
 	parts.clear();
 	details.clear();
 	roof_tquads.clear();
@@ -1197,6 +1198,7 @@ void building_t::gen_geometry(unsigned ix) {
 	// generate building levels and splits
 	parts.resize(num_levels);
 	float const height(base.get_dz()), dz(height/num_levels);
+	assert(height > 0.0);
 
 	if (rgen.rand_bool() && !do_split) { // oddly shaped multi-sided overlapping sections
 		point const llc(base.get_llc()), sz(base.get_size());
@@ -1558,7 +1560,8 @@ public:
 		range     += delta_range;
 		range_sz   = range.get_size(); // Note: place_radius is relative to range cube center
 		max_extent = zero_vector;
-		UNROLL_3X(range_sz_inv[i_] = 1.0/range_sz[i_];)
+		assert(range_sz.x > 0.0 && range_sz.y > 0.0);
+		UNROLL_2X(range_sz_inv[i_] = 1.0/range_sz[i_];) // xy only
 		clear();
 		buildings.reserve(params.num_place);
 		grid.resize(grid_sz*grid_sz); // square
@@ -1589,6 +1592,7 @@ public:
 					pos_range = mat.pos_range + delta_range;
 				}
 				vector3d const pos_range_sz(pos_range.get_size());
+				assert(pos_range_sz.x > 0.0 && pos_range_sz.y > 0.0);
 				point const place_center(pos_range.get_cube_center());
 				bool keep(0);
 				++num_tries;
@@ -1616,6 +1620,7 @@ public:
 				float const height_range(mat.sz_range.d[2][1] - mat.sz_range.d[2][0]);
 				assert(height_range >= 0.0);
 				float const height_val(mat.sz_range.d[2][0] + height_range*rgen.rand_uniform(hmin, hmax));
+				assert(height_val > 0.0);
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
@@ -1628,6 +1633,7 @@ public:
 				for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
 				b.bcube.d[2][0] = center.z; // zval
 				b.bcube.d[2][1] = center.z + 0.5*height_val;
+				assert(b.bcube.is_strictly_normalized());
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by_xy(expand);
 
@@ -1698,7 +1704,10 @@ public:
 						b.bcube.set_to_zeros();
 						++num_skip;
 					}
-					else if (!b.parts.empty()) {b.parts.back().d[2][0] = b.bcube.d[2][0];} // update base z1
+					else if (!b.parts.empty()) {
+						b.parts.back().d[2][0] = b.bcube.d[2][0]; // update base z1
+						assert(b.parts.back().dz() > 0.0);
+					}
 				}
 			} // for i
 			if (do_flatten) { // use conservative zmin for grid
