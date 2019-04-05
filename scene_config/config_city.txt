@@ -7,6 +7,7 @@ include building_params.txt
 buildings num_place 100000
 buildings place_radius  0.0 # no radius clipping - place in a square
 buildings max_altitude 6.00 # same for all buildings
+#buildings flatten_mesh 0 # doesn't work well with rotations in TT mode?
 include building_materials.txt
 buildings tt_only 1
 

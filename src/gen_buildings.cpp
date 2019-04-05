@@ -1535,7 +1535,7 @@ public:
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
 		float t(0.0); // unused
 		unsigned hit_bix(0);
-		unsigned const ret(check_buildings_line_coll(p1, p2, t, hit_bix, 0)); // apply_tt_xlate=0; 0=no hit, 1=hit side, 2=hit roof
+		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0)); // 0=no hit, 1=hit side, 2=hit roof
 		if (ret == 0) return 0;
 		building_t const &b(get_building(hit_bix));
 		switch (ret) {
@@ -1570,9 +1570,10 @@ public:
 		vector<cube_t> city_plot_bcubes;
 		get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
 		bool const has_plots(!city_plot_bcubes.empty()), check_plot_coll(non_city_only && has_plots), use_city_plots(city_only && has_plots);
+		if (check_plot_coll) {} // FIXME: include roads
+		if (use_city_plots) {bix_by_plot.resize(city_plot_bcubes.size());}
 		point center(all_zeros);
 		bool zval_set(0);
-		bix_by_plot.resize(city_plot_bcubes.size());
 		vector<point> points; // reused temporary
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
@@ -1632,7 +1633,8 @@ public:
 				
 				// check building for overlap with other buildings
 				float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
-				vector3d expand(expand_val*b.bcube.get_size());
+				vector3d const b_sz(b.bcube.get_size());
+				vector3d expand(expand_val*b_sz);
 				for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by_xy(expand);
@@ -1642,7 +1644,7 @@ public:
 					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, points)) continue;
 					bix_by_plot[plot_ix].push_back(buildings.size());
 				}
-				else if (check_plot_coll && has_bcube_int_xy(test_bc, city_plot_bcubes, max(expand.x, expand.y))) { // double the expand val
+				else if (check_plot_coll && has_bcube_int_xy(test_bc, city_plot_bcubes, max(b_sz.x, b_sz.y))) { // extra expand val
 					continue;
 				}
 				else {
@@ -1986,7 +1988,7 @@ vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3
 void gen_buildings() {
 	if (have_cities()) {
 		building_creator_city.gen(global_building_params, 1, 0); // city buildings
-		//building_creator.gen     (global_building_params, 0, 1); // non-city buildings
+		building_creator.gen     (global_building_params, 0, 1); // non-city buildings
 	}
 	else {building_creator.gen(global_building_params, 0, 0);} // mixed buildings
 }
