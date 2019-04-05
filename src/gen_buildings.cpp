@@ -1578,7 +1578,7 @@ public:
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
 				building_t b;
-				b.mat_ix = params.choose_rand_mat(rgen, use_city_plots, non_city_only); // set material
+				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
 				unsigned plot_ix(0);
@@ -1624,6 +1624,9 @@ public:
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
+				b.bcube.d[2][0] = center.z; // zval
+				b.bcube.d[2][1] = center.z + 0.5*height_val;
+				assert(b.bcube.is_strictly_normalized());
 				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated)
 				++num_gen;
 				
@@ -1631,9 +1634,6 @@ public:
 				float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
 				vector3d expand(expand_val*b.bcube.get_size());
 				for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
-				b.bcube.d[2][0] = center.z; // zval
-				b.bcube.d[2][1] = center.z + 0.5*height_val;
-				assert(b.bcube.is_strictly_normalized());
 				cube_t test_bc(b.bcube);
 				test_bc.expand_by_xy(expand);
 
