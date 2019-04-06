@@ -20,6 +20,8 @@ extern int rand_gen_index, display_mode;
 // Multilevel cylinders and N-gons shapes?
 // Texture alignment for windows
 
+void expand_cubes_by_xy(vector<cube_t> &cubes, float val); // for pedestrians.cpp
+
 struct tid_nm_pair_t {
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
@@ -1547,6 +1549,7 @@ public:
 		return 1;
 	}
 	void gen(building_params_t const &params, bool city_only, bool non_city_only) {
+		assert(!(city_only && non_city_only));
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
@@ -1567,11 +1570,16 @@ public:
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
-		vector<cube_t> city_plot_bcubes;
+		vector<cube_t> city_plot_bcubes, avoid_bcubes;
 		get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
 		bool const has_plots(!city_plot_bcubes.empty()), check_plot_coll(non_city_only && has_plots), use_city_plots(city_only && has_plots);
-		if (check_plot_coll) {} // FIXME: include roads
-		if (use_city_plots) {bix_by_plot.resize(city_plot_bcubes.size());}
+		
+		if (check_plot_coll) {
+			avoid_bcubes.swap(city_plot_bcubes);
+			get_city_road_bcubes(avoid_bcubes, 1); // connector roads only
+			expand_cubes_by_xy(avoid_bcubes, get_road_max_width());
+		}
+		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
 		bool zval_set(0);
 		vector<point> points; // reused temporary
@@ -1644,7 +1652,7 @@ public:
 					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, points)) continue;
 					bix_by_plot[plot_ix].push_back(buildings.size());
 				}
-				else if (check_plot_coll && has_bcube_int_xy(test_bc, city_plot_bcubes, max(b_sz.x, b_sz.y))) { // extra expand val
+				else if (check_plot_coll && has_bcube_int_xy(test_bc, avoid_bcubes, max(b_sz.x, b_sz.y))) { // extra expand val
 					continue;
 				}
 				else {

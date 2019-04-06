@@ -2593,8 +2593,9 @@ public:
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots_and_place_objects(cars, have_cars);}
 	}
-	void get_all_road_bcubes(vector<cube_t> &bcubes) const {
+	void get_all_road_bcubes(vector<cube_t> &bcubes, bool connector_only) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
+		if (connector_only) return;
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
 	}
 	void get_all_plot_bcubes(vector<cube_t> &bcubes) { // Note: no global_rn; caches plot_id_offset, so non-const
@@ -2897,8 +2898,8 @@ public:
 		car_manager.finalize_cars();
 		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
-	void get_all_road_bcubes(vector<cube_t> &bcubes) const {road_gen.get_all_road_bcubes(bcubes);}
-	void get_all_plot_bcubes(vector<cube_t> &bcubes)       {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
+	void get_all_road_bcubes(vector<cube_t> &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
+	void get_all_plot_bcubes(vector<cube_t> &bcubes) {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
 
 	// return: 0=no coll, 1=plot coll, 2=road coll, 3=both plot and road coll
 	unsigned check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) const {
@@ -2996,7 +2997,8 @@ city_gen_t city_gen;
 
 bool parse_city_option(FILE *fp) {return city_params.read_option(fp);}
 bool have_cities() {return city_params.enabled();}
-float get_road_max_len() {return city_params.road_spacing;}
+float get_road_max_len   () {return city_params.road_spacing;}
+float get_road_max_width () {return city_params.road_width;}
 float get_min_obj_spacing() {return 4.0*ped_manager_t::get_ped_radius();} // allow a ped to walk between objects (two side-by-side)
 
 void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
@@ -3005,7 +3007,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.gen_cities(city_params);
 }
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
-void get_city_road_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_road_bcubes(bcubes);}
+void get_city_road_bcubes(vector<cube_t> &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
 void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
