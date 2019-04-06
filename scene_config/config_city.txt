@@ -6,8 +6,10 @@ def_texture_aniso 4.0 # better quality over default value of 2.0
 include building_params.txt
 buildings num_place 100000
 buildings place_radius  0.0 # no radius clipping - place in a square
-buildings max_altitude 6.00 # same for all buildings
+buildings max_altitude 5.00 # same for all buildings
+buildings sec_extra_spacing 0.1
 #buildings flatten_mesh 0 # doesn't work well with rotations in TT mode?
+buildings max_rot_angle 0.0
 include building_materials.txt
 buildings tt_only 1
 
