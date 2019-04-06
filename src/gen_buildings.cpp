@@ -93,15 +93,15 @@ struct building_params_t {
 
 	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only, is_const_zval;
 	unsigned num_place, num_tries, cur_prob;
-	float ao_factor;
+	float ao_factor, sec_extra_spacing;
 	float window_width, window_height, window_xspace, window_yspace; // windows
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0), num_place(num),
-		num_tries(10), cur_prob(1), ao_factor(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0), num_place(num), num_tries(10),
+		cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled() const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	float get_window_width_fract () const {assert(windows_enabled()); return window_width /(window_width  + window_xspace);}
@@ -169,6 +169,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "ao_factor") {
 		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
+	}
+	else if (str == "sec_extra_spacing") {
+		if (!read_zero_one_float(fp, global_building_params.sec_extra_spacing)) {buildings_file_err(str, error);}
 	}
 	else if (str == "tt_only") {
 		if (!read_bool(fp, global_building_params.tt_only)) {buildings_file_err(str, error);}
@@ -891,7 +894,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
 		pts[0] = p1->get_cube_center();
 		cube_t c_exp(*p1);
-		c_exp.expand_by(expand*p1->get_size());
+		c_exp.expand_by_xy(expand*p1->get_size());
 
 		for (unsigned i = 0; i < 4; ++i) { // {00, 10, 01, 11}
 			pts[i+1].assign(c_exp.d[0][i&1], c_exp.d[1][i>>1], 0.0); // XY only
@@ -1640,7 +1643,7 @@ public:
 				++num_gen;
 				
 				// check building for overlap with other buildings
-				float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10%
+				float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10% (relative - multiplied by building size)
 				vector3d const b_sz(b.bcube.get_size());
 				vector3d expand(expand_val*b_sz);
 				for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
@@ -1656,8 +1659,9 @@ public:
 					continue;
 				}
 				else {
+					if (non_city_only) {test_bc.expand_by_xy(params.sec_extra_spacing);} // absolute value of expand; doesn't work for rotated buildings
 					unsigned ixr[2][2];
-					get_grid_range(b.bcube, ixr);
+					get_grid_range(test_bc, ixr);
 					bool overlaps(0);
 
 					for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
