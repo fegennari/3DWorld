@@ -3018,7 +3018,7 @@ unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bri
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects
 }
 void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) {
-	city_gen.get_sphere_coll_cubes(pos, radius, include_intersections, xy_only, out, out_bt);
+	city_gen.get_sphere_coll_cubes((pos + get_tt_xlate_val()), radius, include_intersections, xy_only, out, out_bt);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;

@@ -1042,7 +1042,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					bool replace_grass_with_dirt(0);
 
 					if (grass_scale > 0.0 && !exclude_cubes.empty()) { // exclude bridges and tunnels here
-						point const test_pt(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0);
+						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, 0.0);
 						replace_grass_with_dirt = (check_bcubes_sphere_coll(exclude_cubes, test_pt, HALF_DXY, 1) && !check_bcubes_sphere_coll(allow_cubes, test_pt, HALF_DXY, 1));
 					}
 					if (replace_grass_with_dirt) {
