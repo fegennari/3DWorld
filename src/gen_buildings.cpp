@@ -64,14 +64,14 @@ struct building_mat_t : public building_tex_params_t {
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
-	cube_t pos_range, sz_range; // pos_range z is unused?
+	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 	colorRGBA window_color;
 
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0), max_delta_z(0.0),
 		max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0),
 		min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0),
-		pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1), window_color(GRAY) {}
+		pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1), window_color(GRAY) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 
 	void update_range(vector3d const &range_translate) {
@@ -84,6 +84,13 @@ struct building_mat_t : public building_tex_params_t {
 			}
 		}
 		pos_range += range_translate;
+	}
+	void set_pos_range(cube_t const &new_pos_range) {
+		prev_pos_range = pos_range;
+		pos_range = new_pos_range;
+	}
+	void restore_prev_pos_range() {
+		if (!prev_pos_range.is_all_zeros()) {pos_range = prev_pos_range;}
 	}
 };
 
@@ -134,8 +141,13 @@ struct building_params_t {
 		return mat_ix_list[rgen.rand()%mat_ix_list.size()];
 	}
 	void set_pos_range(cube_t const &pos_range) {
-		cur_mat.pos_range = pos_range;
-		for (auto i = materials.begin(); i != materials.end(); ++i) {i->pos_range = pos_range;}
+		//cout << "pos_range: " << pos_range.str() << endl;
+		cur_mat.set_pos_range(pos_range);
+		for (auto i = materials.begin(); i != materials.end(); ++i) {i->set_pos_range(pos_range);}
+	}
+	void restore_prev_pos_range() {
+		cur_mat.restore_prev_pos_range();
+		for (auto i = materials.begin(); i != materials.end(); ++i) {i->restore_prev_pos_range();}
 	}
 };
 
@@ -1994,7 +2006,8 @@ vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3
 void gen_buildings() {
 	if (have_cities()) {
 		building_creator_city.gen(global_building_params, 1, 0); // city buildings
-		building_creator.gen     (global_building_params, 0, 1); // non-city buildings
+		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
+		building_creator.gen     (global_building_params, 0, 1); // non-city secondary buildings
 	}
 	else {building_creator.gen(global_building_params, 0, 0);} // mixed buildings
 }
@@ -2032,7 +2045,7 @@ vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode TO
 void clear_building_vbos() {building_creator.clear_vbos(); building_creator_city.clear_vbos();}
 
 // city interface
-void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);} // FIXME: only for city buildings
+void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 // cars + peds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
