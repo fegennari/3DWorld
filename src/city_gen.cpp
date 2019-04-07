@@ -2884,8 +2884,7 @@ public:
 			timer_t t("Choose City Location");
 			for (unsigned n = 0; n < params.num_cities; ++n) {gen_city(params, cities_bcube);}
 		}
-		bool const is_const_zval(cities_bcube.z1() == cities_bcube.z2());
-		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube, is_const_zval);}
+		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube);}
 		road_gen.connect_all_cities(heightmap, xsize, ysize, params.road_width, params.road_spacing);
 		road_gen.add_streetlights();
 		road_gen.gen_tile_blocks();

@@ -89,7 +89,7 @@ struct building_mat_t : public building_tex_params_t {
 
 struct building_params_t {
 
-	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only, is_const_zval;
+	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only;
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor, sec_extra_spacing;
 	float window_width, window_height, window_xspace, window_yspace; // windows
@@ -98,7 +98,7 @@ struct building_params_t {
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
 
-	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), is_const_zval(0), num_place(num), num_tries(10),
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), num_place(num), num_tries(10),
 		cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled() const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
@@ -133,8 +133,7 @@ struct building_params_t {
 		assert(!mat_ix_list.empty());
 		return mat_ix_list[rgen.rand()%mat_ix_list.size()];
 	}
-	void set_pos_range(cube_t const &pos_range, bool is_const_zval_) {
-		is_const_zval = is_const_zval_;
+	void set_pos_range(cube_t const &pos_range) {
 		cur_mat.pos_range = pos_range;
 		for (auto i = materials.begin(); i != materials.end(); ++i) {i->pos_range = pos_range;}
 	}
@@ -1583,7 +1582,6 @@ public:
 		bool const use_city_plots(!city_plot_bcubes.empty()), check_plot_coll(!avoid_bcubes.empty());
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
-		bool zval_set(0);
 		vector<point> points; // reused temporary
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
@@ -1622,11 +1620,7 @@ public:
 					b.bcube.d[d][1] = center[d] + sz;
 				}
 				if (use_city_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
-
-				if (!use_city_plots && (!params.is_const_zval || !zval_set)) { // only calculate when needed
-					center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
-					zval_set = 1;
-				}
+				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
 				float const hmin(use_city_plots ? pos_range.z1() : 0.0), hmax(use_city_plots ? pos_range.z2() : 1.0);
 				assert(hmin <= hmax);
 				float const height_range(mat.sz_range.d[2][1] - mat.sz_range.d[2][0]);
@@ -2038,7 +2032,7 @@ vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode TO
 void clear_building_vbos() {building_creator.clear_vbos(); building_creator_city.clear_vbos();}
 
 // city interface
-void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);} // FIXME: only for city buildings
+void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);} // FIXME: only for city buildings
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 // cars + peds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
