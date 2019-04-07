@@ -379,8 +379,8 @@ struct building_t : public building_geom_t {
 	unsigned mat_ix;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
-	vector<cube_t> parts;
-	vector<cube_t> details; // cubes on the roof - antennas, AC units, etc.
+	vect_cube_t parts;
+	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_t> roof_tquads;
 	mutable unsigned cur_draw_ix;
 
@@ -1573,7 +1573,7 @@ public:
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
-		vector<cube_t> city_plot_bcubes, avoid_bcubes;
+		vect_cube_t city_plot_bcubes, avoid_bcubes;
 		get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
 		bool const has_plots(!city_plot_bcubes.empty()), check_plot_coll(non_city_only && has_plots), use_city_plots(city_only && has_plots);
 		
@@ -1944,7 +1944,7 @@ public:
 		return 1;
 	}
 
-	void get_overlapping_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
+	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
 		get_grid_range(xy_range, ixr);
@@ -2038,8 +2038,8 @@ vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode TO
 void clear_building_vbos() {building_creator.clear_vbos(); building_creator_city.clear_vbos();}
 
 // city interface
-void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);}
-void get_building_bcubes(cube_t const &xy_range, vector<cube_t> &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
+void set_buildings_pos_range(cube_t const &pos_range, bool is_const_zval) {global_building_params.set_pos_range(pos_range, is_const_zval);} // FIXME: only for city buildings
+void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 // cars + peds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}

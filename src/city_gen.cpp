@@ -171,7 +171,7 @@ bool city_params_t::read_option(FILE *fp) {
 }
 
 
-template<typename T> void get_all_bcubes(vector<T> const &v, vector<cube_t> &bcubes) {
+template<typename T> void get_all_bcubes(vector<T> const &v, vect_cube_t &bcubes) {
 	for (auto i = v.begin(); i != v.end(); ++i) {bcubes.push_back(*i);}
 }
 
@@ -325,7 +325,7 @@ template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, poin
 	}
 	return 0;
 }
-template<typename T> void get_bcubes_sphere_coll(vector<T> const &bcubes, vector<cube_t> &out, point const &sc, float radius, bool xy_only, vector3d const &xlate) {
+template<typename T> void get_bcubes_sphere_coll(vector<T> const &bcubes, vect_cube_t &out, point const &sc, float radius, bool xy_only, vector3d const &xlate) {
 	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
 		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) {out.push_back(get_bcube(*i) + xlate);}
 	}
@@ -337,7 +337,7 @@ template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 	return bcube;
 }
 
-bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t> const &bcubes, float pad_dist) {
+bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_dist) {
 	cube_t tc(bcube);
 	tc.expand_by(pad_dist);
 
@@ -588,7 +588,7 @@ protected:
 	int last_rgi;
 	rand_gen_t rgen;
 	vector<rect_t> used;
-	vector<cube_t> plots; // same size as used
+	vect_cube_t plots; // same size as used
 	cube_t bcube;
 
 	bool overlaps_used(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
@@ -673,7 +673,7 @@ public:
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 		return check_bcubes_sphere_coll(plots, query_pos, radius, xy_only);
 	}
-	void get_plots_sphere_coll(point const &pos, float radius, bool xy_only, vector<cube_t> &out) const {
+	void get_plots_sphere_coll(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
 		if (plots.empty()) return;
 		vector3d const xlate(get_camera_coord_space_xlate());
 		point const query_pos(pos - xlate);
@@ -790,7 +790,7 @@ class city_road_gen_t : public road_gen_base_t {
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
-		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vector<cube_t> &bcubes, vector<cube_t> &colliders, rand_gen_t &rgen) {
+		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen) {
 			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
@@ -904,27 +904,27 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for c
 			return has_parking;
 		}
-		static bool check_pt_and_place_blocker(point const &pos, vector<cube_t> &blockers, float radius, float extra_spacing) {
+		static bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float extra_spacing) {
 			cube_t bc(pos);
 			if (has_bcube_int_xy(bc, blockers, radius)) return 0; // intersects a building or parking lot - skip
 			bc.expand_by_xy(extra_spacing);
 			blockers.push_back(bc); // prevent trees and benches from being too close to each other
 			return 1;
 		}
-		static bool try_place_obj(cube_t const &plot, vector<cube_t> &blockers, rand_gen_t &rgen, float radius, float extra_spacing, float num_tries, point &pos) {
+		static bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, float radius, float extra_spacing, float num_tries, point &pos) {
 			for (unsigned t = 0; t < num_tries; ++t) {
 				pos = rand_xy_pt_in_cube(plot, radius, rgen);
 				if (check_pt_and_place_blocker(pos, blockers, radius, extra_spacing)) return 1; // success
 			} // for t
 			return 0;
 		}
-		static void place_tree(point const &pos, float radius, int ttype, vector<cube_t> &colliders) {
+		static void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders) {
 			tree_placer.add(pos, 0, ttype); // use same tree type
 			cube_t bcube; bcube.set_from_sphere(pos, 0.1*radius); // use 10% of the placement radius for collision
 			bcube.z2() += radius; // increase cube height
 			colliders.push_back(bcube);
 		}
-		static void place_trees_in_plot(cube_t const &plot, vector<cube_t> &blockers, vector<cube_t> &colliders, rand_gen_t &rgen) {
+		static void place_trees_in_plot(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
 			if (city_params.max_trees_per_plot == 0) return;
 			float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
 			float const spacing(max(radius, get_min_obj_spacing())), radius_exp(2.0*spacing);
@@ -949,7 +949,7 @@ class city_road_gen_t : public road_gen_base_t {
 				} // for n
 			} // for n
 		}
-		void place_detail_objects(cube_t const &plot, vector<cube_t> &blockers, vector<cube_t> &colliders, rand_gen_t &rgen) {
+		void place_detail_objects(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
 			bench_t bench;
 			bench.radius = 0.3*city_params.get_nom_car_size().x;
 			float const spacing(max(bench.radius, get_min_obj_spacing()));
@@ -986,10 +986,10 @@ class city_road_gen_t : public road_gen_base_t {
 		struct cube_by_x1 {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
 		};
-		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vector<cube_t>> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
+		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
 			// Note: fills in plots.has_parking
 			//timer_t timer("Gen Parking Lots and Place Objects");
-			vector<cube_t> bcubes; // reused across calls
+			vect_cube_t bcubes; // reused across calls
 			rand_gen_t rgen, detail_rgen;
 			parking_lots.clear();
 			rgen.set_state(city_id, 123);
@@ -1003,7 +1003,7 @@ class city_road_gen_t : public road_gen_base_t {
 				get_building_bcubes(*i, bcubes);
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
-				vector<cube_t> &colliders(plot_colliders[plot_id]);
+				vect_cube_t &colliders(plot_colliders[plot_id]);
 				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, colliders, rgen);}
 				place_trees_in_plot (*i, bcubes, colliders, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, detail_rgen);
@@ -1062,7 +1062,7 @@ class city_road_gen_t : public road_gen_base_t {
 		set<unsigned> connected_to; // vector?
 		map<uint64_t, unsigned> tile_to_block_map;
 		map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
-		vector<vector<cube_t>> plot_colliders;
+		vector<vect_cube_t> plot_colliders;
 		plot_xy_t plot_xy;
 		unsigned city_id, cluster_id, plot_id_offset;
 		//string city_name; // future work
@@ -1214,11 +1214,11 @@ class city_road_gen_t : public road_gen_base_t {
 			plot_colliders.resize(plots.size());
 			return 1;
 		}
-		void gen_railroad_tracks(float width, unsigned num, cube_t const &region, vector<cube_t> const &blockers, heightmap_query_t &hq) {
+		void gen_railroad_tracks(float width, unsigned num, cube_t const &region, vect_cube_t const &blockers, heightmap_query_t &hq) {
 			rand_gen_t rgen;
 			assert(region.dx() > 0.0 && region.dy() > 0.0);
 			if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
-			vector<cube_t> dim_tracks[2]; // one in each dim, for collision detection with tracks going in the other dim
+			vect_cube_t dim_tracks[2]; // one in each dim, for collision detection with tracks going in the other dim
 
 			for (unsigned n = 0; n < num; ++n) {
 				for (unsigned tries = 0; tries < city_params.num_conn_tries; ++tries) {
@@ -1476,7 +1476,7 @@ class city_road_gen_t : public road_gen_base_t {
 				isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true, dest_city_id); // 3-way
 			}
 		}
-		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vector<cube_t> &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
+		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vect_cube_t &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
 			unsigned dest_city_id1, unsigned dest_city_id2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only, bool is_4_way1, bool is_4_way2)
 		{
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
@@ -1635,11 +1635,11 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			sort_streetlights_by_yx();
 		}
-		void get_road_bcubes(vector<cube_t> &bcubes) const {
+		void get_road_bcubes(vect_cube_t &bcubes) const {
 			get_all_bcubes(roads,  bcubes);
 			get_all_bcubes(tracks, bcubes);
 		}
-		void get_plot_bcubes(vector<cube_t> &bcubes) { // Note: z-values of cubes indicate building height ranges
+		void get_plot_bcubes(vect_cube_t &bcubes) { // Note: z-values of cubes indicate building height ranges
 			plot_id_offset = bcubes.size(); // cache offset into global plot bcubes vector; this makes the function non-const
 			if (plots.empty()) return; // connector road city
 			unsigned const start(bcubes.size());
@@ -1675,7 +1675,7 @@ class city_road_gen_t : public road_gen_base_t {
 			return 0;
 		}
 		// Note: returns cubes in local pos space
-		void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) const {
+		void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
 			if (roads.empty()) return;
 			vector3d const xlate(get_camera_coord_space_xlate());
 			point const query_pos(pos - xlate);
@@ -1901,7 +1901,7 @@ class city_road_gen_t : public road_gen_base_t {
 			return plot_id;
 		}
 		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {return plots[decode_plot_id(global_plot_id)];}
-		vector<cube_t> const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
+		vect_cube_t const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
 		// plot = current plot, dest_plot = final destination plot; returns next plot adj to cur plot on path to dest_plot
 		unsigned get_next_plot(unsigned global_plot, unsigned global_dest_plot, int exclude_plot) const {
@@ -2379,7 +2379,7 @@ public:
 	}
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
-	vector<cube_t> const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
+	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
 
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
@@ -2395,7 +2395,7 @@ public:
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back(); return;}
 		//cout << "Roads: " << road_networks.back().num_roads() << endl;
 	}
-	bool connect_two_cities(unsigned city1, unsigned city2, vector<cube_t> &blockers, heightmap_query_t &hq, float road_width) {
+	bool connect_two_cities(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 		//cout << "Connect city " << city1 << " and " << city2 << endl;
@@ -2527,7 +2527,7 @@ public:
 		return 0;
 	}
 	private:
-	void try_single_jog_conn_road(unsigned city1, unsigned city2, vector<cube_t> &blockers, heightmap_query_t &hq, float road_width,
+	void try_single_jog_conn_road(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width,
 		bool fdim, float xval, float yval, bool is_4way, float &best_xval, float &best_yval, float &best_cost, cube_t &best_int_cube)
 	{
 		float const height(hq.get_height_at(xval, yval) + ROAD_HEIGHT), half_width(0.5*road_width);
@@ -2553,7 +2553,7 @@ public:
 		heightmap_query_t hq(heightmap, xsize, ysize);
 		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected (0=unconnected, 1=connected, 2=done/connect failed
 		vector<pair<float, unsigned>> cands;
-		vector<cube_t> blockers; // existing cities and connector roads that we want to avoid intersecting
+		vect_cube_t blockers; // existing cities and connector roads that we want to avoid intersecting
 
 		// gather city blockers
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {
@@ -2593,18 +2593,18 @@ public:
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots_and_place_objects(cars, have_cars);}
 	}
-	void get_all_road_bcubes(vector<cube_t> &bcubes, bool connector_only) const {
+	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
 		if (connector_only) return;
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
 	}
-	void get_all_plot_bcubes(vector<cube_t> &bcubes) { // Note: no global_rn; caches plot_id_offset, so non-const
+	void get_all_plot_bcubes(vect_cube_t &bcubes) { // Note: no global_rn; caches plot_id_offset, so non-const
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
 		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels);
 	}
-	void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) const {
+	void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
 		global_rn.get_roads_sphere_coll(pos, radius, 1, xy_only, out, out_bt);
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
@@ -2812,7 +2812,7 @@ cube_t ped_manager_t::get_expanded_city_plot_bcube_for_peds(unsigned city_ix, un
 	bcube.expand_by_xy(city_params.road_width); // required to include pedestrians that are crossing the road and not contained in the plot bcube
 	return bcube;
 }
-vector<cube_t> const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
+vect_cube_t const &ped_manager_t::get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_colliders_for_plot(city_ix, plot_ix);}
 bool ped_manager_t::gen_ped_pos(pedestrian_t &ped) {return road_gen.gen_ped_pos(ped, rgen);} // Note: non-const because rgen is modified
 
 bool ped_manager_t::mark_crosswalk_in_use(pedestrian_t const &ped) {
@@ -2898,8 +2898,8 @@ public:
 		car_manager.finalize_cars();
 		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
-	void get_all_road_bcubes(vector<cube_t> &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
-	void get_all_plot_bcubes(vector<cube_t> &bcubes) {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
+	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
+	void get_all_plot_bcubes(vect_cube_t &bcubes) {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
 
 	// return: 0=no coll, 1=plot coll, 2=road coll, 3=both plot and road coll
 	unsigned check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) const {
@@ -2909,7 +2909,7 @@ public:
 		if ((check_mask & 2) && road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels)) {ret |= 2;}
 		return ret;
 	}
-	void get_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) const {
+	void get_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
 		get_plots_sphere_coll(pos, radius, xy_only, out);
 		road_gen.get_roads_sphere_coll(pos, radius, include_intersections, xy_only, out, out_bt);
 	}
@@ -3007,8 +3007,8 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.gen_cities(city_params);
 }
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
-void get_city_road_bcubes(vector<cube_t> &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
-void get_city_plot_bcubes(vector<cube_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
+void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
+void get_city_plot_bcubes(vect_cube_t &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
@@ -3017,7 +3017,7 @@ unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bri
 	if (!have_cities()) return 0;
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects
 }
-void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vector<cube_t> &out, vector<cube_t> *out_bt) {
+void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) {
 	city_gen.get_sphere_coll_cubes((pos + get_tt_xlate_val()), radius, include_intersections, xy_only, out, out_bt);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm) {

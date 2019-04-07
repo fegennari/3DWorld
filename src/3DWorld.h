@@ -605,6 +605,7 @@ struct cube_t { // size = 24
 	void get_points(point pts[8]) const;
 };
 
+typedef vector<cube_t> vect_cube_t;
 cube_t const all_zeros_cube(0,0,0,0,0,0);
 
 

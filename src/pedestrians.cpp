@@ -85,7 +85,7 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 	return 0;
 }
 
-bool pedestrian_t::is_valid_pos(vector<cube_t> const &colliders, bool &ped_at_dest) const {
+bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest) const {
 	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 
@@ -165,7 +165,7 @@ bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsign
 	return 0;
 }
 
-bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vector<cube_t> const &colliders, unsigned plot_id, rand_gen_t &rgen) {
+bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen) {
 	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
@@ -435,7 +435,7 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 	return 1; // success
 }
 
-void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vector<cube_t> const &colliders, point const &dest_pos, vector<cube_t> &avoid) const {
+void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, point const &dest_pos, vect_cube_t &avoid) const {
 	avoid.clear();
 	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
 	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
@@ -448,7 +448,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vector<cube_t> 
 	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by_xy(expand);} // expand colliders as well
 }
 
-bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vector<cube_t> *dbg_cubes) const {
+bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes) const {
 	if (!in_the_road || speed < TOLERANCE) return 1;
 	float const sw_width(get_sidewalk_width(plot_bcube));
 	if (!plot_bcube.closest_dist_xy_less_than(pos, sw_width)) return 1; // too far into the road to turn back
@@ -507,7 +507,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		}
 	}
 	at_crosswalk = in_the_road = 0; // reset state for next frame; these may be set back to 1 below
-	vector<cube_t> const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
+	vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 	bool outside_plot(0);
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
@@ -820,14 +820,14 @@ void ped_manager_t::get_peds_crossing_roads(ped_city_vect_t &pcv) const {
 	} // for i
 }
 
-bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vector<cube_t> *dbg_cubes) const {
+bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes) const {
 	int const road_ix(get_road_ix_for_ped_crossing(ped, road_dim));
 	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
 	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
 	return has_nearby_car_on_road(ped, road_dim, (unsigned)road_ix, delta_time, dbg_cubes);
 }
 
-bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vector<cube_t> *dbg_cubes) const {
+bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const {
 	if (ped.city >= cars_by_city.size()) return 0; // no cars in this city? should be rare, unless cars aren't enabled
 	car_city_vect_t const &cv(cars_by_city[ped.city]);
 	point const &pos(ped.pos);
@@ -900,7 +900,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
 	vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube));
 	if (dest_pos == pos) return; // no path, nothing to draw
-	vector<cube_t> dbg_cubes;
+	vect_cube_t dbg_cubes;
 	bool const safe_to_cross(check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube, &dbg_cubes));
 	if (!safe_to_cross) {assert(!dbg_cubes.empty());} // must find a blocking car
 	path_finder_t path_finder(1); // debug=1
