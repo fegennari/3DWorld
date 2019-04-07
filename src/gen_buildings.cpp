@@ -917,7 +917,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 		
 		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
 			for (unsigned i = 0; i < 9; ++i) {
-				if (check_part_contains_pt_xy(*p2, pts[i], points)) return 1; // Note: building geometry is likely not yet generated, below check should be sufficient
+				if (check_part_contains_pt_xy(*p2, pts[i], points)) return 1; // Note: building geometry is likely not yet generated, this check should be sufficient
 				//if (p2->contains_pt_xy(pts[i])) return 1;
 			}
 		}
@@ -1808,18 +1808,24 @@ public:
 	}
 
 	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
-		building_draw_vbo.clear();
-		building_draw_windows.clear();
-		building_draw_wind_lights.clear();
-
-		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
-			b->get_all_drawn_verts(building_draw_vbo);
-			b->get_all_drawn_window_verts(building_draw_windows,     0); // lights_pass=0
-			b->get_all_drawn_window_verts(building_draw_wind_lights, 1); // lights_pass=1
-		}
-		building_draw_vbo.resize_to_cap();
-		building_draw_windows.resize_to_cap();
-		building_draw_wind_lights.resize_to_cap();
+#pragma omp parallel for schedule(static)
+		for (int pass = 0; pass < 3; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
+			if (pass == 0) { // main pass
+				building_draw_vbo.clear();
+				for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_verts(building_draw_vbo);}
+				building_draw_vbo.resize_to_cap();
+			}
+			else if (pass == 1) { // lights_pass=0
+				building_draw_windows.clear();
+				for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_window_verts(building_draw_windows, 0);}
+				building_draw_windows.resize_to_cap();
+			}
+			else { // pass == 3; lights_pass=1
+				building_draw_wind_lights.clear();
+				for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_window_verts(building_draw_wind_lights, 1);}
+				building_draw_wind_lights.resize_to_cap();
+			}
+		} // for pass
 	}
 	void create_vbos() { // Note: non-const; building_draw is modified
 		building_window_gen.check_windows_texture();
