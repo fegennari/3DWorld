@@ -1338,7 +1338,9 @@ class city_road_gen_t : public road_gen_base_t {
 			return city_to_seg[city];
 		}
 	public:
-		void calc_ix_values(vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
+		void calc_ix_values(vector<road_network_t> const &road_networks, road_network_t const &global_rn, unsigned &global_plot_id) {
+			plot_id_offset  = global_plot_id; // cache offset into global plots vector
+			global_plot_id += plots.size();
 			// now that the segments and intersections are in order, we can fill in the IDs; first, create a mapping from road to segments and intersections
 			bool const is_global_rn(&global_rn == this);
 			assert(road_to_city.size() == (is_global_rn ? roads.size() : 0));
@@ -1639,8 +1641,7 @@ class city_road_gen_t : public road_gen_base_t {
 			get_all_bcubes(roads,  bcubes);
 			get_all_bcubes(tracks, bcubes);
 		}
-		void get_plot_bcubes(vect_cube_with_zval_t &bcubes) { // Note: z-values of cubes indicate building height ranges
-			plot_id_offset = bcubes.size(); // cache offset into global plot bcubes vector; this makes the function non-const
+		void get_plot_bcubes(vect_cube_with_zval_t &bcubes) const { // Note: z-values of cubes indicate building height ranges
 			if (plots.empty()) return; // connector road city
 			unsigned const start(bcubes.size());
 			get_all_bcubes(plots, bcubes);
@@ -1901,8 +1902,8 @@ class city_road_gen_t : public road_gen_base_t {
 			assert(plot_id < plots.size());
 			return plot_id;
 		}
-		cube_t const &get_plot_from_global_id(unsigned global_plot_id) const {return plots[decode_plot_id(global_plot_id)];}
-		vect_cube_t const &get_colliders_for_plot(unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
+		cube_t      const &get_plot_from_global_id(unsigned global_plot_id) const {return plots         [decode_plot_id(global_plot_id)];}
+		vect_cube_t const &get_colliders_for_plot (unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
 		// plot = current plot, dest_plot = final destination plot; returns next plot adj to cur plot on path to dest_plot
 		unsigned get_next_plot(unsigned global_plot, unsigned global_dest_plot, int exclude_plot) const {
@@ -2585,8 +2586,9 @@ public:
 		timer_t timer("Gen Tile Blocks");
 		global_rn.gen_tile_blocks(); // must be done first to fill in road_to_city and city_to_seg
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_tile_blocks();}
-		global_rn.calc_ix_values(road_networks, global_rn);
-		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->calc_ix_values(road_networks, global_rn);}
+		unsigned global_plot_id(0);
+		global_rn.calc_ix_values(road_networks, global_rn, global_plot_id);
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->calc_ix_values(road_networks, global_rn, global_plot_id);}
 	}
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots_and_place_objects(cars, have_cars);}
@@ -2599,7 +2601,7 @@ public:
 		if (connector_only) return;
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
 	}
-	void get_all_plot_bcubes(vect_cube_with_zval_t &bcubes) { // Note: no global_rn; caches plot_id_offset, so non-const
+	void get_all_plot_bcubes(vect_cube_with_zval_t &bcubes) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
