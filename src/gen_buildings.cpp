@@ -20,8 +20,6 @@ extern int rand_gen_index, display_mode;
 // Multilevel cylinders and N-gons shapes?
 // Texture alignment for windows
 
-void expand_cubes_by_xy(vector<cube_t> &cubes, float val); // for pedestrians.cpp
-
 struct tid_nm_pair_t {
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid

@@ -990,6 +990,12 @@ bool have_buildings();
 vector3d get_buildings_max_extent();
 void clear_building_vbos();
 
+// function prototypes - csg
+void expand_cubes_by_xy(vect_cube_t &cubes, float val);
+bool any_cube_contains_pt_xy(vect_cube_t const &cubes, vector3d const &pos);
+bool line_int_cubes_xy(point const &p1, point const &p2, vect_cube_t const &cubes);
+bool remove_cube_if_contains_pt_xy(vect_cube_t &cubes, vector3d const &pos);
+
 #include "inlines.h"
 
 

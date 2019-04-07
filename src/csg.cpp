@@ -315,6 +315,29 @@ void cube_t::get_points(point pts[8]) const {
 bool cube_t::line_intersects(point const &p1, point const &p2) const {return check_line_clip(p1, p2, d);}
 
 
+void expand_cubes_by_xy(vect_cube_t &cubes, float val) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {i->expand_by_xy(val);}
+}
+bool any_cube_contains_pt_xy(vect_cube_t const &cubes, vector3d const &pos) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		if (i->contains_pt_xy(pos)) return 1;
+	}
+	return 0;
+}
+bool line_int_cubes_xy(point const &p1, point const &p2, vect_cube_t const &cubes) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		if (check_line_clip_xy(p1, p2, i->d)) return 1;
+	}
+	return 0;
+}
+bool remove_cube_if_contains_pt_xy(vect_cube_t &cubes, vector3d const &pos) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		if (i->contains_pt_xy(pos)) {swap(*i, cubes.back()); cubes.pop_back(); return 1;}
+	}
+	return 0;
+}
+
+
 // *** CSG_CUBE IMPLEMENTATION ***
 
 
