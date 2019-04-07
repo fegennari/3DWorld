@@ -715,7 +715,7 @@ public:
 	}
 
 	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube, tid_nm_pair_t const &tex,
-		colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool skip_bottom, bool no_ao=0)
+		colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center((bg.rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -769,6 +769,7 @@ public:
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
+				if (skip_top    && n == 2 && j == 1) continue; // skip top    side
 
 				if (n < 2 && bg.rot_sin != 0.0) { // XY only
 					vector3d norm; norm.z = 0.0;
@@ -1389,14 +1390,15 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, mat.side_tex, side_color, shadow_only, &view_dir, 3, 0); // XY
-		if (!roof_tquads.empty() && (i+1 == parts.end())) continue; // don't draw the flat roof for the top part in this case
+		bdraw.add_section(*this, *i, xlate, bcube, mat.side_tex, side_color, shadow_only, &view_dir, 3, 0, 0, 0); // XY
+		bool const skip_top(!roof_tquads.empty() && (i+1 == parts.end())); // don't draw the flat roof for the top part in this case
 		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
+		if (is_stacked && skip_top) continue; // no top/bottom to draw
 		
 		if (is_stacked && camera.z < i->d[2][1]) { // stacked cubes viewed from below; cur corners can have overhangs
 			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, &view_dir, 4, is_stacked); // only Z dim
+		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, &view_dir, 4, is_stacked, skip_top, 0); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	} // for i
 	if (!roof_tquads.empty()) { // distance culling? only if camera is above the building?
@@ -1414,11 +1416,11 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 				if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 				view_dir = (ccenter + xlate - camera);
 			}
-			bdraw.add_section(bg, *i, xlate, bcube, tex, detail_color, shadow_only, &view_dir, 7, 1); // all dims
+			bdraw.add_section(bg, *i, xlate, bcube, tex, detail_color, shadow_only, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
 		} // for i
 	}
 	if (DEBUG_BCUBES && !shadow_only) {
-		bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1);
+		bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1, 0, 1);
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
@@ -1429,17 +1431,18 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	building_mat_t const &mat(get_material());
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, mat.side_tex, side_color, 0, nullptr, 3, 0); // XY
-		if (!roof_tquads.empty() && (i+1 == parts.end())) continue; // don't add the flat roof for the top part in this case
+		bdraw.add_section(*this, *i, zero_vector, bcube, mat.side_tex, side_color, 0, nullptr, 3, 0, 0, 0); // XY
+		bool const skip_top(!roof_tquads.empty() && (i+1 == parts.end())); // don't add the flat roof for the top part in this case
 		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
-		bdraw.add_section(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked); // only Z dim
+		if (is_stacked && skip_top) continue; // no top/bottom to draw
+		bdraw.add_section(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked, skip_top, 0); // only Z dim
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 		bdraw.add_roof_tquad(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0);
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 		building_geom_t const bg(4, rot_sin, rot_cos); // cube
-		bdraw.add_section(bg, *i, zero_vector, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, 0, nullptr, 7, 1); // all dims
+		bdraw.add_section(bg, *i, zero_vector, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, 0, nullptr, 7, 1, 0, 1); // all dims, skip_bottom, no AO
 	}
 }
 
@@ -1461,7 +1464,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	else {color = mat.window_color;}
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, tex, color, 0, nullptr, 3, 0, 1); // XY, no_ao=1
+		bdraw.add_section(*this, *i, zero_vector, bcube, tex, color, 0, nullptr, 3, 0, 0, 1); // XY, no_ao=1
 	}
 }
 
