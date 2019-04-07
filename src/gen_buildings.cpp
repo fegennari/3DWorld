@@ -1317,7 +1317,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		antenna.set_from_point(top.get_cube_center());
 		antenna.expand_by(vector3d(radius, radius, 0.0));
 		antenna.z1() = top.z2(); // z1
-		antenna.z2() = top.z2() + height; // z2
+		antenna.z2() = bcube.z2() + height; // z2 (use bcube to include sloped roof)
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	
