@@ -1811,21 +1811,22 @@ public:
 	}
 
 	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
-#pragma omp parallel for schedule(static)
-		for (int pass = 0; pass < 3; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
+#pragma omp parallel for schedule(static) num_threads(2)
+		for (int pass = 0; pass < 2; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
 			if (pass == 0) { // main pass
 				building_draw_vbo.clear();
 				for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_verts(building_draw_vbo);}
 				building_draw_vbo.resize_to_cap();
 			}
-			else if (pass == 1) { // lights_pass=0
+			else if (pass == 1) { // windows pass
 				building_draw_windows.clear();
-				for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_window_verts(building_draw_windows, 0);}
-				building_draw_windows.resize_to_cap();
-			}
-			else { // pass == 3; lights_pass=1
 				building_draw_wind_lights.clear();
-				for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_window_verts(building_draw_wind_lights, 1);}
+
+				for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+					b->get_all_drawn_window_verts(building_draw_windows, 0);
+					b->get_all_drawn_window_verts(building_draw_wind_lights, 1);
+				}
+				building_draw_windows.resize_to_cap();
 				building_draw_wind_lights.resize_to_cap();
 			}
 		} // for pass
