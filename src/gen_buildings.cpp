@@ -180,7 +180,7 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
 	}
 	else if (str == "sec_extra_spacing") {
-		if (!read_zero_one_float(fp, global_building_params.sec_extra_spacing)) {buildings_file_err(str, error);}
+		if (!read_float(fp, global_building_params.sec_extra_spacing)) {buildings_file_err(str, error);}
 	}
 	else if (str == "tt_only") {
 		if (!read_bool(fp, global_building_params.tt_only)) {buildings_file_err(str, error);}
