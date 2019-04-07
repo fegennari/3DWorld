@@ -1949,6 +1949,7 @@ public:
 		return 0;
 	}
 	bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) const {
+		if (bix_by_plot.empty()) return 0; // not setup / no buildings
 		assert(plot_id < bix_by_plot.size());
 		vector<unsigned> const &bixes(bix_by_plot[plot_id]);
 		if (bixes.empty()) return 0;

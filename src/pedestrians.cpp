@@ -90,7 +90,7 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest)
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
-		if (has_dest_bldg && building_id != dest_bldg) return 0;
+		if (!has_dest_bldg || building_id != dest_bldg) return 0;
 		bool const ret(!at_dest);
 		ped_at_dest = 1;
 		return ret; // only valid if we just reached our dest
