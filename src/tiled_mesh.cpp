@@ -186,10 +186,14 @@ public:
 	}
 	void flatten_region(cube_t const &cube) {
 		// Note: to be applied before tiles are generated so that they don't need to be invalidated
+		// Note: assumes unscaled mesh (mesh_scale == 1)
 		point const center(cube.get_cube_center());
-		int const xc(get_xpos(center.x)), yc(get_ypos(center.y));
 		int const x1(get_xpos(cube.d[0][0])), y1(get_ypos(cube.d[1][0])), x2(get_xpos(cube.d[0][1])), y2(get_ypos(cube.d[1][1]));
-		int const height_val(get_clamped_pixel_value(xc, yc, 0)); // at cube center, not wrapped
+		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
+		int const xlo(floor(xc)), ylo(floor(yc)), xhi(ceil(xc)), yhi(ceil(yc));
+		float const xv((xlo == xhi) ? 0.0 : (xc - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (yc - ylo)/float(yhi - ylo)); // avoid div-by-zero (use cubic_interpolate()?)
+		int const height_val(yv*(xv*get_clamped_pixel_value(xhi, yhi, 0) + (1.0-xv)*get_clamped_pixel_value(xlo, yhi, 0)) +
+			           (1.0-yv)*(xv*get_clamped_pixel_value(xhi, ylo, 0) + (1.0-xv)*get_clamped_pixel_value(xlo, ylo, 0))); // linear interpolation
 		int cx1(x1), cy1(y1), cx2(x2), cy2(y2);
 		if (!clamp_xy(cx1, cy1, 0.0, 0.0, 0) || !clamp_xy(cx2, cy2, 0.0, 0.0, 0)) return; // off the texture, skip
 		assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);
