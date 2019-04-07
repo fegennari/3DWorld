@@ -11,7 +11,7 @@ buildings sec_extra_spacing 0.1
 buildings pos_range -110.0 60.0  -65.0 30.0 # for secondary buildings
 buildings place_radius 80.0 # for secondary buildings
 #buildings flatten_mesh 0 # doesn't work well with rotations in TT mode?
-buildings max_rot_angle 0.0
+buildings max_rot_angle 0.0 # terrain flatten doesn't work well for rotated buildings because it uses their unrotated bbox
 include building_materials.txt
 buildings tt_only 1
 
