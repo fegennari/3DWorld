@@ -1571,15 +1571,16 @@ public:
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
-		vect_cube_t city_plot_bcubes, avoid_bcubes;
-		get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
-		bool const has_plots(!city_plot_bcubes.empty()), check_plot_coll(non_city_only && has_plots), use_city_plots(city_only && has_plots);
+		vect_cube_with_zval_t city_plot_bcubes;
+		vect_cube_t avoid_bcubes;
+		if (city_only) {get_city_plot_bcubes(city_plot_bcubes);} // Note: assumes approx equal area for placement distribution
 		
-		if (check_plot_coll) {
-			avoid_bcubes.swap(city_plot_bcubes);
+		if (non_city_only) {
+			get_city_bcubes(avoid_bcubes);
 			get_city_road_bcubes(avoid_bcubes, 1); // connector roads only
 			expand_cubes_by_xy(avoid_bcubes, get_road_max_width());
 		}
+		bool const use_city_plots(!city_plot_bcubes.empty()), check_plot_coll(!avoid_bcubes.empty());
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
 		bool zval_set(0);
@@ -1596,6 +1597,7 @@ public:
 				if (use_city_plots) { // select a random plot, if available
 					plot_ix   = rgen.rand()%city_plot_bcubes.size();
 					pos_range = city_plot_bcubes[plot_ix];
+					center.z  = city_plot_bcubes[plot_ix].zval; // optimization: take zval from plot rather than calling get_exact_zval()
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
 				}
 				else {
@@ -1621,7 +1623,7 @@ public:
 				}
 				if (use_city_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
 
-				if (!params.is_const_zval || !zval_set) { // only calculate when needed
+				if (!use_city_plots && (!params.is_const_zval || !zval_set)) { // only calculate when needed
 					center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);
 					zval_set = 1;
 				}
@@ -1634,8 +1636,8 @@ public:
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
-				b.bcube.d[2][0] = center.z; // zval
-				b.bcube.d[2][1] = center.z + 0.5*height_val;
+				b.bcube.z1() = center.z; // zval
+				b.bcube.z2() = center.z + 0.5*height_val;
 				assert(b.bcube.is_strictly_normalized());
 				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated)
 				++num_gen;
@@ -1653,7 +1655,7 @@ public:
 					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, points)) continue;
 					bix_by_plot[plot_ix].push_back(buildings.size());
 				}
-				else if (check_plot_coll && has_bcube_int_xy(test_bc, avoid_bcubes, max(b_sz.x, b_sz.y))) { // extra expand val
+				else if (check_plot_coll && has_bcube_int_xy(test_bc, avoid_bcubes, params.sec_extra_spacing)) { // extra expand val
 					continue;
 				}
 				else {
