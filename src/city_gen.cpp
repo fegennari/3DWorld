@@ -2832,7 +2832,8 @@ int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool ro
 // path finding
 bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const
 	ped.at_dest = 0; // will choose a new dest
-	if (!road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen)) return 0;
+	ped.has_dest_bldg = road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
+	if (!ped.has_dest_bldg) return 0;
 	ped.next_plot = get_next_plot(ped);
 	return 1;
 }

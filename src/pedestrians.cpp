@@ -90,7 +90,7 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest)
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
-		if (building_id != dest_bldg) return 0;
+		if (has_dest_bldg && building_id != dest_bldg) return 0;
 		bool const ret(!at_dest);
 		ped_at_dest = 1;
 		return ret; // only valid if we just reached our dest
@@ -364,7 +364,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 	if (is_stopped && target_valid()) {return target_pos;} // stay the course (this case only needed for debug drawing)
 
 	if (plot == dest_plot) { // this plot contains our dest building
-		if (!at_dest) { // not there yet
+		if (!at_dest && has_dest_bldg) { // not there yet
 			cube_t const dest_bcube(get_building_bcube(dest_bldg));
 			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // could set this here, but requiring a collision also works
 			point dest_pos(dest_bcube.get_cube_center()); // slowly adjust dir to move toward dest_bldg
