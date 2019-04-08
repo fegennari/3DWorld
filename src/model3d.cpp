@@ -1974,13 +1974,13 @@ void model3d::setup_shadow_maps() {
 cube_t model3d::calc_bcube_including_transforms() { // non-const because bcube_xf is cached
 
 	if (transforms.empty()) return bcube; // no transforms case
-	if (bcube_xf != all_zeros_cube) return bcube_xf; // already calculated
+	if (bcube_all_xf != all_zeros_cube) return bcube_all_xf; // already calculated
 	
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		cube_t const &bc(xf->get_xformed_bcube(bcube));
-		if (bcube_xf == all_zeros_cube) {bcube_xf = bc;} else {bcube_xf.union_with_cube(bc);}
+		if (bcube_all_xf == all_zeros_cube) {bcube_all_xf = bc;} else {bcube_all_xf.union_with_cube(bc);}
 	}
-	return bcube_xf;
+	return bcube_all_xf;
 }
 
 
