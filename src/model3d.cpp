@@ -2006,6 +2006,7 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 	if (!build_bvh_if_needed && coll_tree.is_empty()) return 0;
 	//timer_t timer("Check Coll Line");
 	if (transforms.empty()) {return check_coll_line_cur_xf(p1, p2, cpos, cnorm, color, exact);}
+	if (bcube_all_xf != all_zeros_cube && !check_line_clip(p1, p2, bcube_all_xf.d)) return 0; // use bcube of transformed bcubes
 	bool coll(0);
 	point cur(p2);
 
