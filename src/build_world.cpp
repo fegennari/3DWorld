@@ -2086,9 +2086,9 @@ int read_coll_objects(const char *coll_obj_file) {
 	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
 	if (num_keycards > 0) {obj_groups[coll_id[KEYCARD]].enable();}
 	if (has_scenery2) {gen_scenery();} // need to call post_gen_setup() for leafy plants
+	cube_t const model_bcube(calc_and_return_all_models_bcube()); // calculate even if not using; will force internal transform bcubes to be calculated
 
 	if (using_model_bcube) {
-		cube_t const model_bcube(get_all_models_bcube());
 		model_czmin = min(czmin, model_bcube.d[2][0]);
 		model_czmax = max(czmax, model_bcube.d[2][1]);
 		czmin = min(czmin, model_czmin);

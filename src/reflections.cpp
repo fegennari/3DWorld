@@ -78,7 +78,7 @@ bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
 		cc.d[2][0] = cc.d[2][1]; // shrink to top surface only
 		proc_refl_bcube(cc, bcube, min_camera_dist, bcube_set);
 	}
-	cube_t const models_refl_bcube(get_all_models_bcube(1));
+	cube_t const models_refl_bcube(calc_and_return_all_models_bcube(1));
 	
 	if (!models_refl_bcube.is_zero_area() && models_refl_bcube.intersects(reflect_planes.get_selected())) {
 		proc_refl_bcube(models_refl_bcube, bcube, min_camera_dist, bcube_set);

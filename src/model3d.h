@@ -560,7 +560,7 @@ struct model3ds : public deque<model3d> {
 	void ensure_reflection_cube_maps();
 	void set_xform_zval_from_tt_height(bool flatten_mesh);
 	bool has_any_transforms() const;
-	cube_t get_bcube(bool only_reflective);
+	cube_t calc_and_return_bcube(bool only_reflective);
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);
 	void write_to_cobj_file(std::ostream &out) const;
@@ -597,7 +597,7 @@ bool add_transform_for_cur_model(model3d_xform_t const &xf);
 void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[3]);
 void set_occlusion_cube_for_cur_model(cube_t const &cube);
 bool have_cur_model();
-cube_t get_all_models_bcube(bool only_reflective=0);
+cube_t calc_and_return_all_models_bcube(bool only_reflective=0);
 void write_models_to_cobj_file(std::ostream &out);
 void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height=0.0);
 void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius=0.0);

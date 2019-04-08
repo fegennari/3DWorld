@@ -2269,7 +2269,7 @@ bool model3ds::has_any_transforms() const {
 }
 
 
-cube_t model3ds::get_bcube(bool only_reflective) { // Note: calculates bcubes, so non-const
+cube_t model3ds::calc_and_return_bcube(bool only_reflective) { // Note: calculates bcubes, so non-const
 
 	cube_t bcube(all_zeros_cube); // will return this if empty()
 	bool bcube_set(0);
@@ -2443,7 +2443,7 @@ void set_occlusion_cube_for_cur_model(cube_t const &cube) {
 }
 bool have_cur_model() {return (!all_models.empty());}
 
-cube_t get_all_models_bcube(bool only_reflective) {return all_models.get_bcube(only_reflective);}
+cube_t calc_and_return_all_models_bcube(bool only_reflective) {return all_models.calc_and_return_bcube(only_reflective);}
 
 void write_models_to_cobj_file(ostream &out) {all_models.write_to_cobj_file(out);}
 
