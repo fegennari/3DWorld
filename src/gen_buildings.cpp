@@ -386,6 +386,12 @@ struct building_geom_t { // describes the physical shape of a building
 	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
 };
 
+struct tquad_with_ix_t : public tquad_t {
+	unsigned type;
+	tquad_with_ix_t() : type(0) {}
+	tquad_with_ix_t(tquad_t const &t, unsigned type_=0) : tquad_t(t), type(type_) {}
+};
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
@@ -393,7 +399,7 @@ struct building_t : public building_geom_t {
 	cube_t bcube;
 	vect_cube_t parts;
 	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
-	vector<tquad_t> roof_tquads;
+	vector<tquad_with_ix_t> roof_tquads;
 	mutable unsigned cur_draw_ix;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), cur_draw_ix(0) {bcube.set_to_zeros();}
@@ -415,8 +421,12 @@ struct building_t : public building_geom_t {
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void gen_geometry(unsigned ix);
+	void gen_house(cube_t const &base, rand_gen_t &rgen);
+	void gen_peaked_roof(cube_t const &top, rand_gen_t &rgen, bool dim);
 	void gen_details(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
+	void add_roof_to_bcube();
+	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
@@ -691,7 +701,7 @@ public:
 		} // end draw end(s)
 	}
 
-	void add_roof_tquad(building_geom_t const &bg, tquad_t const &tquad, point const &xlate, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only) {
+	void add_roof_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, point const &xlate, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only) {
 
 		assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
 		auto &verts(get_verts(tex, (tquad.npts == 3))); // 0=quads, 1=tris
@@ -709,8 +719,14 @@ public:
 			vert.v = tquad.pts[i];
 
 			if (!shadow_only) {
-				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
-				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
+				if (tquad.type) { // side/wall
+					vert.t[0] = ((tquad.pts[0].x == tquad.pts[1].x) ? vert.v.y : vert.v.x)*tsx; // use nonzero width dim
+					vert.t[1] = vert.v.z*tsy;
+				}
+				else { // roof
+					vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
+					vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
+				}
 			}
 			if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 			verts.push_back(vert);
@@ -1185,11 +1201,7 @@ void building_t::gen_geometry(unsigned ix) {
 	rgen.set_state(123+ix, 345*ix);
 
 	if (mat.is_house) {
-		// TODO: add house geometry: cube with maybe additional smaller cubes, pointed/sloped roof, windows and door
-		num_sides = 4;
-		parts.push_back(base);
-		gen_sloped_roof(rgen);
-		//gen_details(rgen);
+		gen_house(base, rgen);
 		return;
 	}
 
@@ -1293,6 +1305,47 @@ void building_t::gen_geometry(unsigned ix) {
 	}
 }
 
+void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
+
+	building_mat_t const &mat(get_material());
+	// TODO: prefer high aspect ratio, smaller buildings
+	num_sides = 4;
+	parts.push_back(base);
+	// TODO: add more sections/split base into parts
+
+	for (auto i = parts.begin(); i != parts.end(); ++i) {
+		vector3d const size(i->get_size());
+		bool const dim(size.y > size.x);
+		gen_peaked_roof(*i, rgen, dim);
+	}
+	add_roof_to_bcube();
+	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
+}
+
+void building_t::gen_peaked_roof(cube_t const &top, rand_gen_t &rgen, bool dim) { // roof made from two sloped quads
+
+	float const peak_height(rgen.rand_uniform(0.4, 0.6));
+	float const width(dim ? top.get_dx() : top.get_dy()), z1(top.z2()), z2(z1 + peak_height*width), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
+	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
+	if (dim == 0) {pts[4].y = pts[5].y = 0.5*(y1 + y2);} // yc
+	else          {pts[4].x = pts[5].x = 0.5*(x1 + x2);} // xc
+	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
+
+	// TODO: extent outside the wall a small amount?
+	for (unsigned n = 0; n < 2; ++n) { // roof
+		tquad_t tquad(4); // quad
+		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];)
+		roof_tquads.emplace_back(tquad, 0); // tag as roof
+	}
+	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
+
+	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
+		tquad_t tquad(3); // triangle
+		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];)
+		roof_tquads.emplace_back(tquad, 1); // tag as wall
+	}
+}
+
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	unsigned const num_blocks(roof_tquads.empty() ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads
@@ -1338,11 +1391,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		antenna.z2() = bcube.z2() + height; // z2 (use bcube to include sloped roof)
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
-	
-	if (roof_tquads.empty()) {
-		float const cscale(rgen.rand_uniform(0.2, 0.6));
-		detail_color = colorRGBA(cscale, cscale, cscale, 1.0); // grayscale; for antenna and roof
-	}
+	if (roof_tquads.empty()) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
 void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supported for rotated buildings
@@ -1376,10 +1425,17 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supp
 			UNROLL_4X(roof_tquads[n].pts[i_] = pts2[ixs[n][i_]];)
 		}
 	}
-	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {i->update_bcube(bcube);} // technically should only need to update z2
+	add_roof_to_bcube();
 	//max_eq(bcube.z2(), z2);
-	float const cscale(rgen.rand_uniform(0.4, 0.8));
-	detail_color = colorRGBA(cscale, cscale, cscale, 1.0); // grayscale; for antenna and roof
+	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for antenna and roof
+}
+
+void building_t::add_roof_to_bcube() {
+	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {i->update_bcube(bcube);} // technically should only need to update z2
+}
+void building_t::gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax) {
+	float const cscale(rgen.rand_uniform(imin, imax));
+	detail_color = colorRGBA(cscale, cscale, cscale, 1.0);
 }
 
 bool check_tile_smap(bool shadow_only) {
@@ -1421,7 +1477,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 	} // for i
 	if (!roof_tquads.empty()) { // distance culling? only if camera is above the building?
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			bdraw.add_roof_tquad(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only);
+			bdraw.add_roof_tquad(*this, *i, xlate, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), shadow_only); // use type to select roof vs. side
 		}
 	}
 	if (!details.empty() && (shadow_only || dist_less_than(camera, pos, 0.25*far_clip))) { // draw roof details
@@ -1456,7 +1512,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 		bdraw.add_section(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked, skip_top, 0); // only Z dim
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-		bdraw.add_roof_tquad(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0);
+		bdraw.add_roof_tquad(*this, *i, zero_vector, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), 0); // use type to select roof vs. side
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 		building_geom_t const bg(4, rot_sin, rot_cos); // cube
