@@ -400,9 +400,10 @@ struct building_t : public building_geom_t {
 	vect_cube_t parts;
 	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads;
+	float ao_bcz2;
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -589,10 +590,10 @@ class building_draw_t {
 		else {assert(block.tex.nm_tid == tex.nm_tid);} // else normal maps must agree
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
-	static void setup_ao_color(colorRGBA const &color, cube_t const &bcube, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
+	static void setup_ao_color(colorRGBA const &color, float bcz1, float ao_bcz2, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
 		if (!no_ao && global_building_params.ao_factor > 0.0) {
-			float const dz_mult(global_building_params.ao_factor/bcube.get_dz());
-			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcube.d[2][0])));)
+			float const dz_mult(global_building_params.ao_factor/(ao_bcz2 - bcz1));
+			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcz1)));)
 		} else {vert.set_c4(color);} // color is shared across all verts
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
@@ -604,7 +605,7 @@ public:
 	bool empty() const {return to_draw.empty();}
 
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
-		cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool no_ao)
+		float bcz1, float ao_bcz2, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool no_ao)
 	{
 		unsigned const ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
@@ -613,10 +614,10 @@ public:
 		bool const apply_ao(!no_ao && !shadow_only && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
-		setup_ao_color(color, bcube, pos.z, z_top, cw, vert, no_ao);
+		setup_ao_color(color, bcz1, ao_bcz2, pos.z, z_top, cw, vert, no_ao);
 		float tex_pos[2] = {0.0, 1.0};
 		building_draw_utils::calc_normals(bg, normals, ndiv);
-		if (!shadow_only) {UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcube.d[2][0]);)}
+		if (!shadow_only) {UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcz1);)}
 
 		if (dim_mask & 3) { // draw sides
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
@@ -733,7 +734,7 @@ public:
 		}
 	}
 
-	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube, tid_nm_pair_t const &tex,
+	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube, float ao_bcz2, tid_nm_pair_t const &tex,
 		colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
@@ -741,11 +742,10 @@ public:
 		vector3d const sz(cube.get_size());
 
 		if (bg.num_sides != 4) { // not a cube, use cylinder
-			vector3d const bcube_sz(bcube.get_size());
-			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.d[2][0]);
+			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, xlate, bcube, tex, color, shadow_only, view_dir, dim_mask, no_ao);
+			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, xlate, bcube.z1(), ao_bcz2, tex, color, shadow_only, view_dir, dim_mask, no_ao);
 			return;
 		}
 		// else draw as a cube (optimized flow)
@@ -777,7 +777,7 @@ public:
 		float const tscale[2] = {2.0f*tex.tscale_x, 2.0f*tex.tscale_y}; // adjust for local vs. global space change
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
-		setup_ao_color(color, bcube, cube.d[2][0], cube.d[2][1], cw, vert, no_ao);
+		setup_ao_color(color, bcube.z1(), ao_bcz2, cube.d[2][0], cube.d[2][1], cw, vert, no_ao);
 		vector3d const tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
@@ -1199,6 +1199,7 @@ void building_t::gen_geometry(unsigned ix) {
 	building_mat_t const &mat(get_material());
 	rand_gen_t rgen;
 	rgen.set_state(123+ix, 345*ix);
+	ao_bcz2 = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
 
 	if (mat.is_house) {
 		gen_house(base, rgen);
@@ -1464,15 +1465,15 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, mat.side_tex, side_color, shadow_only, &view_dir, 3, 0, 0, 0); // XY
+		bdraw.add_section(*this, *i, xlate, bcube, ao_bcz2, mat.side_tex, side_color, shadow_only, &view_dir, 3, 0, 0, 0); // XY
 		bool const skip_top(!roof_tquads.empty() && (i+1 == parts.end())); // don't draw the flat roof for the top part in this case
-		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
+		bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 		if (is_stacked && skip_top) continue; // no top/bottom to draw
 		
 		if (is_stacked && camera.z < i->d[2][1]) { // stacked cubes viewed from below; cur corners can have overhangs
 			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, mat.roof_tex, roof_color, shadow_only, &view_dir, 4, is_stacked, skip_top, 0); // only Z dim
+		bdraw.add_section(*this, *i, xlate, bcube, ao_bcz2, mat.roof_tex, roof_color, shadow_only, &view_dir, 4, is_stacked, skip_top, 0); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	} // for i
 	if (!roof_tquads.empty()) { // distance culling? only if camera is above the building?
@@ -1490,11 +1491,11 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 				if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 				view_dir = (ccenter + xlate - camera);
 			}
-			bdraw.add_section(bg, *i, xlate, bcube, tex, detail_color, shadow_only, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
+			bdraw.add_section(bg, *i, xlate, bcube, ao_bcz2, tex, detail_color, shadow_only, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
 		} // for i
 	}
 	if (DEBUG_BCUBES && !shadow_only) {
-		bdraw.add_section(building_geom_t(), bcube, xlate, bcube, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1, 0, 1);
+		bdraw.add_section(building_geom_t(), bcube, xlate, bcube, ao_bcz2, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1, 0, 1);
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
 }
@@ -1505,18 +1506,18 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	building_mat_t const &mat(get_material());
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, mat.side_tex, side_color, 0, nullptr, 3, 0, 0, 0); // XY
+		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, mat.side_tex, side_color, 0, nullptr, 3, 0, 0, 0); // XY
 		bool const skip_top(!roof_tquads.empty() && (i+1 == parts.end())); // don't add the flat roof for the top part in this case
 		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
 		if (is_stacked && skip_top) continue; // no top/bottom to draw
-		bdraw.add_section(*this, *i, zero_vector, bcube, mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked, skip_top, 0); // only Z dim
+		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked, skip_top, 0); // only Z dim
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 		bdraw.add_roof_tquad(*this, *i, zero_vector, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), 0); // use type to select roof vs. side
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 		building_geom_t const bg(4, rot_sin, rot_cos); // cube
-		bdraw.add_section(bg, *i, zero_vector, bcube, mat.roof_tex.get_scaled_version(0.5), detail_color, 0, nullptr, 7, 1, 0, 1); // all dims, skip_bottom, no AO
+		bdraw.add_section(bg, *i, zero_vector, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5), detail_color, 0, nullptr, 7, 1, 0, 1); // all dims, skip_bottom, no AO
 	}
 }
 
@@ -1538,7 +1539,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	else {color = mat.window_color;}
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, tex, color, 0, nullptr, 3, 0, 0, 1); // XY, no_ao=1
+		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, tex, color, 0, nullptr, 3, 0, 0, 1); // XY, no_ao=1
 	}
 }
 
