@@ -706,10 +706,20 @@ public:
 
 		assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
 		auto &verts(get_verts(tex, (tquad.npts == 3))); // 0=quads, 1=tris
-		float const denom(0.5*(bcube.get_dx() + bcube.get_dy())), tsx(tex.tscale_x/denom), tsy(tex.tscale_y/denom);
 		point const center((bg.rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
 		vert_norm_comp_tc_color vert;
+		float tsx(0.0), tsy(0.0), tex_off(0.0);
+		bool dim(0);
 
+		if (tquad.type) { // side/wall
+			tsx = 2.0f*tex.tscale_x; tsy = 2.0f*tex.tscale_y; // adjust for local vs. global space change
+			dim = (tquad.pts[0].x == tquad.pts[1].x);
+			if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
+		}
+		else { // roof
+			float const denom(0.5*(bcube.get_dx() + bcube.get_dy()));
+			tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
+		}
 		if (!shadow_only) {
 			vert.set_c4(color);
 			vector3d normal(tquad.get_norm());
@@ -719,15 +729,14 @@ public:
 		for (unsigned i = 0; i < tquad.npts; ++i) {
 			vert.v = tquad.pts[i];
 
-			if (!shadow_only) {
-				if (tquad.type) { // side/wall
-					vert.t[0] = ((tquad.pts[0].x == tquad.pts[1].x) ? vert.v.y : vert.v.x)*tsx; // use nonzero width dim
-					vert.t[1] = vert.v.z*tsy;
-				}
-				else { // roof
-					vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
-					vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
-				}
+			if (shadow_only) {} // no tc
+			else if (tquad.type) { // side/wall
+				vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
+				vert.t[1] = vert.v.z*tsy;
+			}
+			else { // roof
+				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
+				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 			}
 			if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 			verts.push_back(vert);
