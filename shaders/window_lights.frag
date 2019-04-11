@@ -1,5 +1,5 @@
 uniform sampler2D tex0;
-uniform float min_alpha = 0.0;
+uniform float min_alpha = 0.01;
 uniform float lit_thresh_mult = 1.0;
 
 in vec2 tc;

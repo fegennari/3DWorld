@@ -515,7 +515,6 @@ struct building_draw_utils {
 	vert.t[0] += tex.txoff; \
 	vert.t[1] += tex.tyoff; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
-	if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
 
 class building_draw_t {
@@ -604,8 +603,8 @@ public:
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
 
-	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate,
-		float bcz1, float ao_bcz2, tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool no_ao)
+	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, point const &xlate, float bcz1, float ao_bcz2,
+		tid_nm_pair_t const &tex, colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool no_ao, bool clip_windows)
 	{
 		unsigned const ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
@@ -665,7 +664,7 @@ public:
 
 						for (unsigned e = 0; e < 2; ++e) {
 							vert.v.z = ((d^e) ? z_top : pos.z);
-							vert.t[1] = tscale_y*tex_pos[d^e] + tex.tyoff;
+							vert.t[1] = tscale_y*tex_pos[d^e] + tex.tyoff; // TODO: clip_windows?
 							if (apply_ao) {vert.copy_color(cw[d^e]);}
 							verts.push_back(vert);
 						}
@@ -744,7 +743,7 @@ public:
 	}
 
 	void add_section(building_geom_t const &bg, cube_t const &cube, point const &xlate, cube_t const &bcube, float ao_bcz2, tid_nm_pair_t const &tex,
-		colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao)
+		colorRGBA const &color, bool shadow_only, vector3d const *const view_dir, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, bool clip_windows=0)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center((bg.rot_sin == 0.0) ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -754,7 +753,7 @@ public:
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, xlate, bcube.z1(), ao_bcz2, tex, color, shadow_only, view_dir, dim_mask, no_ao);
+			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, xlate, bcube.z1(), ao_bcz2, tex, color, shadow_only, view_dir, dim_mask, no_ao, clip_windows);
 			return;
 		}
 		// else draw as a cube (optimized flow)
@@ -790,10 +789,11 @@ public:
 		vector3d const tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-			unsigned const n((i+2)%3);
+			unsigned const n((i+2)%3); // direction of normal
 			if (!(dim_mask & (1<<n))) continue;
 			unsigned const d((i+1)%3);
 			bool const st(i&1);
+			float const offset(0.002*clip_windows/sz[n]); // to prevent z-fighting when drawing windows
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
@@ -813,20 +813,47 @@ public:
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
 				point pt;
-				pt[n] = j; // in direction or normal
+				pt[n] = j + (j ? offset : -offset); // in direction or normal
 				pt[d] = 0;
 				pt[i] = !j; // need to orient the vertices differently for each side
 				//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
-				EMIT_VERTEX();
+				unsigned const ix(verts.size()); // first vertex of this quad
+				EMIT_VERTEX(); // 0 !j
 				pt[i] = j;
-				EMIT_VERTEX();
+				EMIT_VERTEX(); // 0 j
 				pt[d] = 1;
-				EMIT_VERTEX();
+				EMIT_VERTEX(); // 1 j
 				pt[i] = !j;
-				EMIT_VERTEX();
+				EMIT_VERTEX(); // 1 !j
+
+				if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
+					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st], verts[ix+0].v[i], verts[ix+1].v[i]);
+					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st], verts[ix+2].v[i], verts[ix+3].v[i]);
+					clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st], verts[ix+0].v[d], verts[ix+3].v[d]);
+					clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st], verts[ix+1].v[d], verts[ix+2].v[d]);
+				}
+				if (bg.rot_sin != 0.0) {
+					for (unsigned k = ix; k < verts.size(); ++k) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, verts[k].v);}
+				}
 			} // for j
 		} // for i
 	}
+
+	static void clip_low (float &t0, float &t1, float &p0, float &p1) { // tc and pos on low/high sides
+		float const v(ceil(t0));
+		p0 += ((v - t0)/(t1 - t0))*(p1 - p0);
+		t0  = v;
+	}
+	static void clip_high(float &t0, float &t1, float &p0, float &p1) { // tc and pos on low/high sides
+		float const v(floor(t1));
+		p1 -= ((t1 - v)/(t1 - t0))*(p1 - p0);
+		t1  = v;
+	}
+	static void clip_low_high(float &t0, float &t1, float &p0, float &p1) {
+		if (t0 < t1) {clip_low(t0, t1, p0, p1); clip_high(t0, t1, p0, p1);}
+		else         {clip_low(t1, t0, p1, p0); clip_high(t1, t0, p1, p0);} // reversed
+	}
+
 	unsigned num_verts() const {
 		unsigned num(0);
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_verts();}
@@ -1548,7 +1575,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	else {color = mat.window_color;}
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, tex, color, 0, nullptr, 3, 0, 0, 1); // XY, no_ao=1
+		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, tex, color, 0, nullptr, 3, 0, 0, 1, 1); // XY, no_ao=1, clip_windows=1
 	}
 }
 
@@ -1873,6 +1900,7 @@ public:
 		if (!shadow_only && (!building_draw_windows.empty() || (night && !building_draw_wind_lights.empty()))) {
 			enable_blend();
 			glDepthFunc(GL_LEQUAL);
+			glDepthMask(GL_FALSE); // disable depth writing
 			building_draw_windows.draw(0); // draw windows on top of other buildings
 
 			if (night) { // add night time random lights in windows
@@ -1887,6 +1915,7 @@ public:
 				setup_tt_fog_post(s);
 				building_draw_wind_lights.draw(0); // add bloom?
 			}
+			glDepthMask(GL_TRUE); // re-enable depth writing
 			glDepthFunc(GL_LESS);
 			disable_blend();
 		}
