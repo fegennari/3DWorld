@@ -12,6 +12,7 @@ buildings window_color 0.5 0.5 0.5 1.0 # gray
 
 
 # brick buildings
+buildings house_prob 0.5 # 50%
 buildings no_city 1 # not used in cities
 buildings add_windows 1 # brick/block buildings need windows
 buildings add_window_lights 1
@@ -74,6 +75,7 @@ buildings add_material
 
 
 # concrete and metal buildings - slightly larger
+buildings house_prob 0.0 # no more houses
 buildings no_city 1 # not used in cities
 buildings window_xscale 5.0
 buildings min_levels 1
