@@ -1346,7 +1346,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 void building_t::gen_peaked_roof(cube_t const &top, rand_gen_t &rgen, bool dim) { // roof made from two sloped quads
 
-	float const peak_height(rgen.rand_uniform(0.4, 0.6));
+	float const peak_height(rgen.rand_uniform(0.2, 0.5));
 	float const width(dim ? top.get_dx() : top.get_dy()), z1(top.z2()), z2(z1 + peak_height*width), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5*(y1 + y2);} // yc
