@@ -515,6 +515,7 @@ struct building_draw_utils {
 	vert.t[0] += tex.txoff; \
 	vert.t[1] += tex.tyoff; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
+	if (bg.rot_sin != 0.0) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
 
 class building_draw_t {
@@ -793,7 +794,6 @@ public:
 			if (!(dim_mask & (1<<n))) continue;
 			unsigned const d((i+1)%3);
 			bool const st(i&1);
-			float const offset(0.002*clip_windows/sz[n]); // to prevent z-fighting when drawing windows
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
@@ -813,7 +813,7 @@ public:
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
 				point pt;
-				pt[n] = j + (j ? offset : -offset); // in direction or normal
+				pt[n] = j; // in direction or normal
 				pt[d] = 0;
 				pt[i] = !j; // need to orient the vertices differently for each side
 				//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
@@ -827,31 +827,18 @@ public:
 				EMIT_VERTEX(); // 1 !j
 
 				if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
-					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st], verts[ix+0].v[i], verts[ix+1].v[i]);
-					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st], verts[ix+2].v[i], verts[ix+3].v[i]);
-					clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st], verts[ix+0].v[d], verts[ix+3].v[d]);
-					clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st], verts[ix+1].v[d], verts[ix+2].v[d]);
-				}
-				if (bg.rot_sin != 0.0) {
-					for (unsigned k = ix; k < verts.size(); ++k) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, verts[k].v);}
+					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
+					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
+					clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
+					clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
 				}
 			} // for j
 		} // for i
 	}
 
-	static void clip_low (float &t0, float &t1, float &p0, float &p1) { // tc and pos on low/high sides
-		float const v(ceil(t0));
-		p0 += ((v - t0)/(t1 - t0))*(p1 - p0);
-		t0  = v;
-	}
-	static void clip_high(float &t0, float &t1, float &p0, float &p1) { // tc and pos on low/high sides
-		float const v(floor(t1));
-		p1 -= ((t1 - v)/(t1 - t0))*(p1 - p0);
-		t1  = v;
-	}
-	static void clip_low_high(float &t0, float &t1, float &p0, float &p1) {
-		if (t0 < t1) {clip_low(t0, t1, p0, p1); clip_high(t0, t1, p0, p1);}
-		else         {clip_low(t1, t0, p1, p0); clip_high(t1, t0, p1, p0);} // reversed
+	static void clip_low_high(float &t0, float &t1) {
+		if (t0 < t1) {t0 = ceil(t0); t1 = floor(t1);}
+		else         {t1 = ceil(t1); t0 = floor(t0);} // reversed
 	}
 
 	unsigned num_verts() const {
