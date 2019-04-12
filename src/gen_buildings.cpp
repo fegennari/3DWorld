@@ -828,6 +828,7 @@ public:
 				EMIT_VERTEX(); // 1 !j
 
 				if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
+					// FIXME: handle z-fighting on buildings with overlapping walls (probably should remove the overlaps)
 					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
 					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
 					clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
@@ -836,11 +837,7 @@ public:
 			} // for j
 		} // for i
 	}
-
-	static void clip_low_high(float &t0, float &t1) {
-		if (t0 < t1) {t0 = ceil(t0); t1 = floor(t1);}
-		else         {t1 = ceil(t1); t0 = floor(t0);} // reversed
-	}
+	static void clip_low_high(float &t0, float &t1) {t0 = nearbyint(t0); t1 = nearbyint(t1);}
 
 	unsigned num_verts() const {
 		unsigned num(0);
