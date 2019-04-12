@@ -1561,9 +1561,10 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
 	}
 	else {color = mat.window_color;}
+	bool const clip_windows(mat.no_city); // only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, tex, color, 0, nullptr, 3, 0, 0, 1, 1); // XY, no_ao=1, clip_windows=1
+		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, tex, color, 0, nullptr, 3, 0, 0, 1, clip_windows); // XY, no_ao=1
 	}
 }
 
