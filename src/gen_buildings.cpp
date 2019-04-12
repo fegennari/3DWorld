@@ -665,10 +665,11 @@ public:
 
 						for (unsigned e = 0; e < 2; ++e) {
 							vert.v.z = ((d^e) ? z_top : pos.z);
-							vert.t[1] = tscale_y*tex_pos[d^e] + tex.tyoff; // TODO: clip_windows?
+							vert.t[1] = tscale_y*tex_pos[d^e] + tex.tyoff;
 							if (apply_ao) {vert.copy_color(cw[d^e]);}
 							verts.push_back(vert);
 						}
+						if (clip_windows) {clip_low_high(verts[verts.size()-1].t[1], verts[verts.size()-2].t[1]);} // is this necessary?
 					} // for d
 				} // for S
 			}
