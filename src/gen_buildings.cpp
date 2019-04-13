@@ -1306,15 +1306,15 @@ void building_t::gen_geometry(unsigned ix) {
 					if (bc.d[d][1] - bc.d[d][0] < 0.2*bc_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
 				}
 			}
-			bc.d[2][0] = prev.d[2][1]; // z1
+			bc.z1() = prev.z2(); // z1
 		}
-		bc.d[2][1] = bc.d[2][0] + dz; // z2
+		bc.z2() = bc.z1() + dz; // z2
 		bc.normalize(); // handle XY inversion due to shift
 	} // for i
 	for (unsigned i = 1; i < num_levels; ++i) {
 		float const ddz(rgen.rand_uniform(-0.35*dz, 0.35*dz)); // random shift in z height
-		parts[i  ].d[2][0] += ddz;
-		parts[i-1].d[2][1] += ddz;
+		parts[i  ].z1() += ddz;
+		parts[i-1].z2() += ddz;
 	}
 	if (do_split) { // generate L, T, or U shape
 		cube_t const split_cube(parts.back());
