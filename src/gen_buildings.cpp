@@ -16,9 +16,7 @@ unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
 
-// TODO:
-// Multilevel cylinders and N-gons shapes?
-// Texture alignment for windows
+// TODO: Multilevel cylinders and N-gons shapes?
 
 struct tid_nm_pair_t {
 
@@ -1353,7 +1351,7 @@ void building_t::gen_peaked_roof(cube_t const &top, rand_gen_t &rgen, bool dim) 
 	else          {pts[4].x = pts[5].x = 0.5*(x1 + x2);} // xc
 	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
 
-	// TODO: extent outside the wall a small amount?
+	// TODO: extend outside the wall a small amount?
 	for (unsigned n = 0; n < 2; ++n) { // roof
 		tquad_t tquad(4); // quad
 		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];)
@@ -2149,7 +2147,7 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 }
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty());} // for postproce effects
 
-vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode TODO
+vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
 	vector3d extent(building_creator.get_max_extent());
 	return extent.max(building_creator_city.get_max_extent());
 }
