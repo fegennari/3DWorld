@@ -828,7 +828,6 @@ public:
 				EMIT_VERTEX(); // 1 !j
 
 				if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
-					// FIXME: handle z-fighting on buildings with overlapping walls (probably should remove the overlaps)
 					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
 					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
 					clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
@@ -871,9 +870,10 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
 	// generate L, T, U, or H shape
 	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
-	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // {x,y}, {neg,pos}
 	int const shape(rand()%8); // 0-7
 	bool const is_h(shape >= 7);
+	bool const dim(rgen.rand_bool()); // {x,y}
+	bool const dir(is_h ? 1 : rgen.rand_bool()); // {neg,pos} - H-shape is always pos
 	float const div(is_h ? rgen.rand_uniform(0.2, 0.4) : rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
 	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
 	unsigned const start(parts.size()), num((shape >= 6) ? 3 : 2);
@@ -1330,9 +1330,9 @@ void building_t::gen_geometry(unsigned ix) {
 void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 	building_mat_t const &mat(get_material());
-	// TODO: prefer high aspect ratio, smaller buildings
 	num_sides = 4;
 	parts.push_back(base);
+	// TODO: prefer high aspect ratio, smaller buildings
 	// TODO: add more sections/split base into parts
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
