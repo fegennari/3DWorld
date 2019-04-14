@@ -9,4 +9,3 @@ Load/display model3d models in tiled terrain mode
 Cities:
 - Wider connector roads/intersections
 - Railroad tracks
-- Houses
