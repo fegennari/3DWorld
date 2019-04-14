@@ -1338,7 +1338,6 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
 	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
 	num_sides = 4;
-	// TODO: prefer high aspect ratio, smaller buildings
 
 	if (type != 0) { // multi-part house
 		parts.push_back(base); // add second part
