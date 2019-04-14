@@ -1274,11 +1274,12 @@ void building_t::gen_geometry(unsigned ix) {
 			bc.z1() = base.z1(); // z1
 			bc.z2() = base.z1() + (i+1)*dz; // z2
 			if (i > 0) {bc.z2() += dz*rgen.rand_uniform(-0.5, 0.5); bc.z2() = min(bc.z2(), base.z2());}
+			float const min_edge_mode(mat.no_city ? 0.04*i : 0.0); // prevent z-fighting on non-city building windows (stretched texture)
 
 			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to generate a cube that doesn't contain any existing cubes (can occasionally still fail)
 				for (unsigned d = 0; d < 2; ++d) { // x,y
-					bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
-					bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), 0.0f)*sz[d];
+					bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), min_edge_mode)*sz[d];
+					bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), min_edge_mode)*sz[d];
 				}
 				assert(bc.is_strictly_normalized());
 				bool contains(0);
@@ -1286,6 +1287,8 @@ void building_t::gen_geometry(unsigned ix) {
 				if (!contains) break; // success
 			} // for n
 		} // for i
+		bcube = parts[0];
+		for (auto i = parts.begin()+1; i != parts.end(); ++i) {bcube.union_with_cube(*i);} // update bcube
 		return;
 	}
 	for (unsigned i = 0; i < num_levels; ++i) {
