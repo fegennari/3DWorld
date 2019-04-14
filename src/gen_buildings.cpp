@@ -60,17 +60,18 @@ struct building_mat_t : public building_tex_params_t {
 
 	bool no_city, add_windows, add_wind_lights;
 	unsigned min_levels, max_levels, min_sides, max_sides;
-	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt, house_prob;
+	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt, house_prob, house_scale_min, house_scale_max;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color;
 	colorRGBA window_color;
 
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0),
-		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), split_prob(0.0), cube_prob(1.0),
-		round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0), wind_yscale(1.0), wind_xoff(0.0),
-		wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1), window_color(GRAY) {}
+		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), house_scale_min(1.0), house_scale_max(1.0),
+		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
+		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1), window_color(GRAY) {}
 	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
+	float gen_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
 
 	void update_range(vector3d const &range_translate) {
 		if (place_radius > 0.0) { // clip range to place_radius
@@ -353,6 +354,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "house_prob") { // per-material
 		if (!read_float(fp, global_building_params.cur_mat.house_prob)) {buildings_file_err(str, error);}
 	}
+	else if (str == "house_scale_range") { // per-material
+	if (!read_float(fp, global_building_params.cur_mat.house_scale_min) || !read_float(fp, global_building_params.cur_mat.house_scale_max)) {buildings_file_err(str, error);}
+	}
 	else if (str == "window_color") { // per-material
 		if (!read_color(fp, global_building_params.cur_mat.window_color)) {buildings_file_err(str, error);}
 	}
@@ -393,6 +397,7 @@ struct tquad_with_ix_t : public tquad_t {
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
+	bool is_house;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
 	vect_cube_t parts;
@@ -401,7 +406,7 @@ struct building_t : public building_geom_t {
 	float ao_bcz2;
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -1219,11 +1224,7 @@ void building_t::gen_geometry(unsigned ix) {
 	rand_gen_t rgen;
 	rgen.set_state(123+ix, 345*ix);
 	ao_bcz2 = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
-
-	if (mat.house_prob > 0.0 && rgen.rand_float() < mat.house_prob) {
-		gen_house(base, rgen);
-		return;
-	}
+	if (is_house) {gen_house(base, rgen); return;}
 
 	// determine building shape (cube, cylinder, other)
 	if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
@@ -1757,10 +1758,12 @@ public:
 					if (mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;}
 				}
 				if (!keep) continue; // placement failed, skip
+				b.is_house = (mat.house_prob > 0.0 && rgen.rand_float() < mat.house_prob);
+				float const size_scale(b.is_house ? mat.gen_size_scale(rgen) : 1.0);
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y
-					float const sz(0.5*rgen.rand_uniform(min(mat.sz_range.d[d][0], 0.3f*pos_range_sz[d]),
-						                                 min(mat.sz_range.d[d][1], 0.5f*pos_range_sz[d]))); // use pos range size for max
+					float const sz(0.5*size_scale*rgen.rand_uniform(min(mat.sz_range.d[d][0], 0.3f*pos_range_sz[d]),
+						                                            min(mat.sz_range.d[d][1], 0.5f*pos_range_sz[d]))); // use pos range size for max
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
@@ -1768,9 +1771,9 @@ public:
 				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
 				float const hmin(use_city_plots ? pos_range.z1() : 0.0), hmax(use_city_plots ? pos_range.z2() : 1.0);
 				assert(hmin <= hmax);
-				float const height_range(mat.sz_range.d[2][1] - mat.sz_range.d[2][0]);
+				float const height_range(mat.sz_range.dz());
 				assert(height_range >= 0.0);
-				float const height_val(mat.sz_range.d[2][0] + height_range*rgen.rand_uniform(hmin, hmax));
+				float const height_val(size_scale*(mat.sz_range.z1() + height_range*rgen.rand_uniform(hmin, hmax)));
 				assert(height_val > 0.0);
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement

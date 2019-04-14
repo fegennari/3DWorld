@@ -12,12 +12,13 @@ buildings window_color 0.5 0.5 0.5 1.0 # gray
 
 
 # brick buildings
-buildings house_prob 0.5 # 50%
+buildings house_prob 0.67 # 67%
+buildings house_scale_range 0.4 1.0
 buildings no_city 1 # not used in cities
 buildings add_windows 1 # brick/block buildings need windows
 buildings add_window_lights 1
-buildings window_xscale 7.5
-buildings window_yscale 11.0
+buildings window_xscale 7.2
+buildings window_yscale 10.5
 buildings min_levels 1
 buildings max_levels 3
 buildings split_prob 0.70 # 70%
