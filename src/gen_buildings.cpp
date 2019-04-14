@@ -421,7 +421,7 @@ struct building_t : public building_geom_t {
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void gen_geometry(unsigned ix);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
-	void gen_peaked_roof(cube_t const &top, rand_gen_t &rgen, bool dim);
+	void gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
 	void gen_details(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
@@ -1325,27 +1325,62 @@ void building_t::gen_geometry(unsigned ix) {
 	}
 }
 
+bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
+
 void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
-	building_mat_t const &mat(get_material());
-	num_sides = 4;
+	assert(parts.empty());
 	parts.push_back(base);
+	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
+	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
+	num_sides = 4;
 	// TODO: prefer high aspect ratio, smaller buildings
-	// TODO: add more sections/split base into parts
+
+	if (type != 0) { // multi-part house
+		parts.push_back(base); // add second part
+		bool const dir(rgen.rand_bool()); // in dim
+		float const split(rgen.rand_uniform(0.4, 0.6)*(dir  ? -1.0 : 1.0));
+		float delta_height(0.0), shrink[2] = {0.0};
+		bool dim(0);
+
+		if (type == 1) { // L-shape
+			bool const dir2(rgen.rand_bool()); // in !dim
+			dim          = rgen.rand_bool();
+			shrink[dir2] = rgen.rand_uniform(0.4, 0.6)*(dir2 ? -1.0 : 1.0);
+			delta_height = max(0.0f, rand_uniform(-0.1, 0.5));
+		}
+		else if (type == 2) { // two-part
+			dim          = get_largest_xy_dim(base); // choose longest dim
+			delta_height = rand_uniform(0.1, 0.5);
+			
+			for (unsigned d = 0; d < 2; ++d) {
+				if (rgen.rand_bool()) {shrink[d] = rgen.rand_uniform(0.2, 0.35)*(d ? -1.0 : 1.0);}
+			}
+		}
+		vector3d const sz(base.get_size());
+		parts[0].d[ dim][ dir] += split*sz[dim]; // split in dim
+		parts[1].d[ dim][!dir]  = parts[0].d[dim][dir];
+		for (unsigned d = 0; d < 2; ++d) {parts[1].d[!dim][d] += shrink[d]*sz[!dim];} // shrink this part in the other dim
+		parts[1].z2() -= delta_height*parts[1].dz(); // lower height
+		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
+		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim
+		bcube = parts[0]; bcube.union_with_cube(parts[1]); // maybe calculate a tighter bounding cube
+	}
+	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
-		vector3d const size(i->get_size());
-		bool const dim(size.y > size.x);
-		gen_peaked_roof(*i, rgen, dim);
+		unsigned const fdim(force_dim[i - parts.begin()]);
+		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
+		gen_peaked_roof(*i, peak_height, dim);
 	}
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 }
 
-void building_t::gen_peaked_roof(cube_t const &top, rand_gen_t &rgen, bool dim) { // roof made from two sloped quads
+void building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim) { // roof made from two sloped quads
 
-	float const peak_height(rgen.rand_uniform(0.2, 0.5));
-	float const width(dim ? top.get_dx() : top.get_dy()), z1(top.z2()), z2(z1 + peak_height*width), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
+	float const width(dim ? top.get_dx() : top.get_dy()), roof_dz(min(peak_height*width, top.get_dz()));
+	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5*(y1 + y2);} // yc
 	else          {pts[4].x = pts[5].x = 0.5*(x1 + x2);} // xc
