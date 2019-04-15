@@ -651,7 +651,9 @@ public:
 	}
 
 	static void setup_shaders(shader_t &s, bool distant) { // per-pixel dynamic lighting
+		if (use_grass_tess && !check_for_tess_shader()) {use_grass_tess = 0;} // disable tess - not supported
 		setup_shaders_pre(s);
+		if (use_grass_tess) {s.set_prefix("#define NO_FOG_FRAG_COORD", 1);} // FS - needed on some drivers because TC/TE don't have fg_FogFragCoord
 		if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
 		if (use_grass_tess) {s.set_prefixes("#define INCLUDE_NORMALS", 24);} // TC/TE
 		else {s.set_prefix("#define NO_GRASS_TESS", 0);} // VS

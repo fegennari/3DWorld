@@ -267,6 +267,7 @@ public:
 					proc_detail_vs = 1;
 #if 1 // tessellation shaders
 					set_prefix("uniform sampler3D cloud_noise_tex;", 4); // TES
+					set_prefix("#define NO_GL_COLOR", 1); // FS - needed on some drivers because TC/TE don't have fg_Color_vf
 					set_tess_control_shader("planet_draw");
 					set_tess_eval_shader("procedural_planet.part*+planet_draw"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
 					glPatchParameteri(GL_PATCH_VERTICES, 3); // triangles; max is 32

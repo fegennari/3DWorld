@@ -51,16 +51,17 @@ vec4 apply_fog_ffc(in vec4 color, in float ffc, in vec4 fog_color) {
 	return fin_color;
 }
 
+#ifndef NO_FOG_FRAG_COORD
 vec4 apply_fog(in vec4 color) {
 	return apply_fog_ffc(color, gl_FogFragCoord, fog_color);
 }
+vec4 apply_fog_scaled(in vec4 color, in float world_z) {
+	return apply_fog_ffc(color, gl_FogFragCoord*get_custom_fog_scale(world_z), fog_color);
+}
+#endif
 
 vec4 apply_fog_epos(in vec4 color, in vec4 epos) {
 	return apply_fog_ffc(color, length(epos.xyz)*get_custom_fog_scale_epos(epos), fog_color);
-}
-
-vec4 apply_fog_scaled(in vec4 color, in float world_z) {
-	return apply_fog_ffc(color, gl_FogFragCoord*get_custom_fog_scale(world_z), fog_color);
 }
 
 vec4 apply_fog_colored(in vec4  color,    // original color of the pixel

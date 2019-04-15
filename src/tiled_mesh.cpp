@@ -2985,6 +2985,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			//if (!underwater) {s.set_prefix("#define NO_FOG", 1);} // FS - faster, but reduced quality grass/texture blend
 			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
 			s.set_prefix(make_shader_bool_prefix("enable_grass_wind", enable_wind), 0); // VS
+			if (use_grass_tess) {s.set_prefix("#define NO_FOG_FRAG_COORD", 1);} // FS - needed on some drivers because TC/TE don't have fg_FogFragCoord
 			if (!use_grass_tess) {s.set_prefix("#define NO_GRASS_TESS", 0);} // VS
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
