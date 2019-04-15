@@ -325,6 +325,8 @@ template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, poin
 	}
 	return 0;
 }
+template bool check_bcubes_sphere_coll(vector<cube_t> const &bcubes, point const &sc, float radius, bool xy_only); // explicit instantiation
+
 template<typename T> void get_bcubes_sphere_coll(vector<T> const &bcubes, vect_cube_t &out, point const &sc, float radius, bool xy_only, vector3d const &xlate) {
 	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
 		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) {out.push_back(get_bcube(*i) + xlate);}
@@ -1334,7 +1336,7 @@ class city_road_gen_t : public road_gen_base_t {
 			return -1; // not found
 		}
 		vector<unsigned> const &get_segs_connecting_to_city(unsigned city) const {
-			assert(city < city_to_seg.size());
+			assert(city < city_to_seg.size());
 			return city_to_seg[city];
 		}
 	public:
