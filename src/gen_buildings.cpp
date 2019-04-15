@@ -1775,7 +1775,8 @@ public:
 				assert(hmin <= hmax);
 				float const height_range(mat.sz_range.dz());
 				assert(height_range >= 0.0);
-				float const height_val(size_scale*(mat.sz_range.z1() + height_range*rgen.rand_uniform(hmin, hmax)));
+				float const z_size_scale(size_scale*(b.is_house ? rgen.rand_uniform(0.6, 0.8) : 1.0)); // make houses slightly shorter on average to offset extra height added by roof
+				float const height_val(z_size_scale*(mat.sz_range.z1() + height_range*rgen.rand_uniform(hmin, hmax)));
 				assert(height_val > 0.0);
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
