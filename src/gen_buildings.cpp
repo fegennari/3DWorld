@@ -1347,6 +1347,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
 	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
+	bool skip_last_roof(0);
 	num_sides = 4;
 
 	if (type != 0) { // multi-part house
@@ -1354,10 +1355,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		bool const dir(rgen.rand_bool()); // in dim
 		float const split(rgen.rand_uniform(0.4, 0.6)*(dir  ? -1.0 : 1.0));
 		float delta_height(0.0), shrink[2] = {0.0};
-		bool dim(0);
+		bool dim(0), dir2(0);
 
 		if (type == 1) { // L-shape
-			bool const dir2(rgen.rand_bool()); // in !dim
+			dir2         = rgen.rand_bool(); // in !dim
 			dim          = rgen.rand_bool();
 			shrink[dir2] = rgen.rand_uniform(0.4, 0.6)*(dir2 ? -1.0 : 1.0);
 			delta_height = max(0.0f, rand_uniform(-0.1, 0.5));
@@ -1373,15 +1374,47 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		vector3d const sz(base.get_size());
 		parts[0].d[ dim][ dir] += split*sz[dim]; // split in dim
 		parts[1].d[ dim][!dir]  = parts[0].d[dim][dir];
+		cube_t const pre_shrunk_p1(parts[1]); // save for use in details below
 		for (unsigned d = 0; d < 2; ++d) {parts[1].d[!dim][d] += shrink[d]*sz[!dim];} // shrink this part in the other dim
 		parts[1].z2() -= delta_height*parts[1].dz(); // lower height
 		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
 		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim
-		bcube = parts[0]; bcube.union_with_cube(parts[1]); // maybe calculate a tighter bounding cube
+		int const detail_type((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
+
+		if (detail_type != 0) { // add details to L-shaped house
+			cube_t c(pre_shrunk_p1);
+			c.d[!dim][!dir2] = parts[1].d[!dim][dir2]; // other half of the shrunk part1
+			float const dist1((c.d[!dim][!dir2] - base.d[!dim][dir2])*rgen.rand_uniform(0.4, 0.6));
+			float const dist2((c.d[ dim][!dir ] - base.d[ dim][dir ])*rgen.rand_uniform(0.4, 0.6));
+			float const height(rgen.rand_uniform(0.55, 0.7)*parts[1].dz());
+
+			if (detail_type == 1) { // porch
+				c.d[!dim][dir2] += dist1; // move away from bcube edge
+				c.d[ dim][ dir] += dist2; // move away from bcube edge
+				c.z1() += height; // move up
+				c.z2()  = c.z1() + 0.05*parts[1].dz();
+				parts.push_back(c); // porch roof
+				c.z2() = c.z1();
+				c.z1() = pre_shrunk_p1.z1(); // support pillar
+				float const width(0.05*(fabs(dist1) + fabs(dist2)));
+				c.d[!dim][!dir2] = c.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*width;
+				c.d[ dim][!dir ] = c.d[ dim][ dir] + (dir  ? -1.0 : 1.0)*width;
+				skip_last_roof = 1;
+			}
+			else if (detail_type == 2) { // detatched garage/shed
+				c.d[!dim][dir2 ]  = base.d[!dim][dir2]; // shove it into the opposite corner of the bcube
+				c.d[ dim][dir  ]  = base.d[ dim][dir ]; // shove it into the opposite corner of the bcube
+				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
+				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
+				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
+			}
+			parts.push_back(c);
+		}
+		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	}
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 
-	for (auto i = parts.begin(); i != parts.end(); ++i) {
+	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		unsigned const fdim(force_dim[i - parts.begin()]);
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
 		gen_peaked_roof(*i, peak_height, dim);
