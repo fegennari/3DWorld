@@ -1532,15 +1532,15 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 			view_dir = (ccenter + xlate - camera);
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, ao_bcz2, mat.side_tex, side_color, shadow_only, &view_dir, 3, 0, 0, 0); // XY
+		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, shadow_only, &view_dir, 3, 0, 0, 0); // XY
 		bool const skip_top(!roof_tquads.empty() && (i+1 == parts.end())); // don't draw the flat roof for the top part in this case
-		bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
+		bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 		if (is_stacked && skip_top) continue; // no top/bottom to draw
 		
 		if (is_stacked && camera.z < i->d[2][1]) { // stacked cubes viewed from below; cur corners can have overhangs
 			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, ao_bcz2, mat.roof_tex, roof_color, shadow_only, &view_dir, 4, is_stacked, skip_top, 0); // only Z dim
+		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, shadow_only, &view_dir, 4, is_stacked, skip_top, 0); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	} // for i
 	if (!roof_tquads.empty()) { // distance culling? only if camera is above the building?
