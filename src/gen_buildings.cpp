@@ -840,7 +840,11 @@ public:
 			} // for j
 		} // for i
 	}
-	static void clip_low_high(float &t0, float &t1) {t0 = nearbyint(t0); t1 = nearbyint(t1);}
+
+	static void clip_low_high(float &t0, float &t1) {
+		if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
+		else {t0 = nearbyint(t0); t1 = nearbyint(t1);}
+	}
 
 	unsigned num_verts() const {
 		unsigned num(0);
