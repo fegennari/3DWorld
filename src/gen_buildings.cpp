@@ -424,6 +424,7 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
+	void calc_bcube_from_parts();
 	void gen_geometry(unsigned ix);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
@@ -1212,6 +1213,12 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	return 0;
 }
 
+void building_t::calc_bcube_from_parts() {
+	assert(!parts.empty());
+	bcube = parts[0];
+	for (auto i = parts.begin()+1; i != parts.end(); ++i) {bcube.union_with_cube(*i);} // update bcube
+}
+
 void building_t::gen_geometry(unsigned ix) {
 
 	if (!is_valid()) return; // invalid building
@@ -1287,8 +1294,7 @@ void building_t::gen_geometry(unsigned ix) {
 				if (!contains) break; // success
 			} // for n
 		} // for i
-		bcube = parts[0];
-		for (auto i = parts.begin()+1; i != parts.end(); ++i) {bcube.union_with_cube(*i);} // update bcube
+		calc_bcube_from_parts(); // update bcube
 		return;
 	}
 	for (unsigned i = 0; i < num_levels; ++i) {
