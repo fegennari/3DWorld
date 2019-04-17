@@ -1548,9 +1548,9 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 	if (draw_ix == cur_draw_ix) return; // already drawn this pass
 	if (!is_valid()) return; // invalid building
 	cur_draw_ix = draw_ix;
-	point const center(bcube.get_cube_center()), pos(center + xlate), camera(get_camera_pos());
-	float const dmax(draw_dist + 0.5*bcube.get_size().get_max_val());
-	if (!shadow_only && !dist_less_than(camera, pos, dmax)) return; // dist clipping
+	point const camera(get_camera_pos());
+	if (!shadow_only && !bcube.closest_dist_less_than((camera - xlate), draw_dist)) return; // too far
+	point const center(bcube.get_cube_center()), pos(center + xlate);
 	if (!camera_pdu.sphere_and_cube_visible_test(pos, bcube.get_bsphere_radius(), (bcube + xlate))) return; // VFC
 	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
 	if (immediate_only && !immediate_mode) return; // not drawn in this pass
@@ -1949,8 +1949,8 @@ public:
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 			for (auto g = grid.begin(); g != grid.end(); ++g) {
+				if (!shadow_only && !g->bcube.closest_dist_less_than((camera - xlate), draw_dist)) continue; // too far
 				point const pos(g->bcube.get_cube_center() + xlate);
-				if (!shadow_only && !dist_less_than(camera, pos, (draw_dist + 0.5*g->bcube.get_size().get_max_val()))) continue; // too far
 				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, 1);}
 			}
