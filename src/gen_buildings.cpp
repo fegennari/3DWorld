@@ -433,7 +433,8 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-	void draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const;
+	bool draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw,
+		unsigned draw_ix, bool immediate_only, bool check_immediate_mode) const;
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
 private:
@@ -869,7 +870,7 @@ public:
 		pend_draw.swap(to_draw); // move current draw queue to pending queue
 	}
 	void end_immediate_building(bool shadow_only) { // to be matched with begin_building()
-		// Note: in this case, there generally aren't more than one building of the same material within the same tile, so batching doesn't help
+		// Note: there sometimes aren't more than one building of the same material within the same tile, so batching may or may not help
 		draw_and_clear(shadow_only); // draw current building - sparse iteration?
 		pend_draw.swap(to_draw); // restore draw queue
 	}
@@ -1545,17 +1546,18 @@ bool check_tile_smap(bool shadow_only) {
 	return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 }
 
-void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix, bool immediate_only) const {
-
-	if (draw_ix == cur_draw_ix) return; // already drawn this pass
-	if (!is_valid()) return; // invalid building
+bool building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw,
+	unsigned draw_ix, bool immediate_only, bool check_immediate_mode) const
+{
+	if (draw_ix == cur_draw_ix) return 0; // already drawn this pass
+	if (!is_valid()) return 0; // invalid building
 	cur_draw_ix = draw_ix;
 	point const camera(get_camera_pos());
-	if (!shadow_only && !bcube.closest_dist_less_than((camera - xlate), draw_dist)) return; // too far
+	if (!shadow_only && !bcube.closest_dist_less_than((camera - xlate), draw_dist)) return 0; // too far
 	point const center(bcube.get_cube_center()), pos(center + xlate);
-	if (!camera_pdu.sphere_and_cube_visible_test(pos, bcube.get_bsphere_radius(), (bcube + xlate))) return; // VFC
-	bool const immediate_mode(check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
-	if (immediate_only && !immediate_mode) return; // not drawn in this pass
+	if (!camera_pdu.sphere_and_cube_visible_test(pos, bcube.get_bsphere_radius(), (bcube + xlate))) return 0; // VFC
+	bool const immediate_mode(check_immediate_mode && check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
+	if (immediate_only && !immediate_mode) return 0; // not drawn in this pass
 	bool const is_close(dist_less_than(camera, pos, 0.1*far_clip));
 	building_mat_t const &mat(get_material());
 	if (immediate_mode) {bdraw.begin_immediate_building();}
@@ -1601,6 +1603,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 		bdraw.add_section(building_geom_t(), bcube, xlate, bcube, ao_bcz2, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1, 0, 1);
 	}
 	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
+	return 1;
 }
 
 void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
@@ -1667,7 +1670,7 @@ class building_creator_t {
 			ixs.push_back(ix);
 		}
 	};
-	vector<grid_elem_t> grid;
+	vector<grid_elem_t> grid, grid_by_tile;
 
 	grid_elem_t &get_grid_elem(unsigned gx, unsigned gy) {
 		assert(gx < grid_sz && gy < grid_sz);
@@ -1718,6 +1721,31 @@ class building_creator_t {
 			if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand_rel, expand_abs, points)) return 1;
 		}
 		return 0;
+	}
+
+	void build_grid_by_tile() {
+		grid_by_tile.clear();
+		if (world_mode != WMODE_INF_TERRAIN) return; // not used in this mode
+		//timer_t timer("build_grid_by_tile");
+		map<uint64_t, unsigned> tile_to_gbt;
+
+		for(unsigned bix = 0; bix < buildings.size(); ++bix) {
+			unsigned gix;
+			cube_t const &bcube(buildings[bix].bcube);
+			uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(bcube.get_cube_center()));
+			auto it(tile_to_gbt.find(tile_id));
+
+			if (it == tile_to_gbt.end()) { // new element
+				gix = grid_by_tile.size();
+				grid_by_tile.push_back(grid_elem_t());
+				tile_to_gbt[tile_id] = gix;
+			}
+			else { // existing element
+				gix = it->second;
+				assert(gix < grid_by_tile.size());
+			}
+			grid_by_tile[gix].add(bcube, bix);
+		} // for bix
 	}
 
 public:
@@ -1928,6 +1956,7 @@ public:
 		cout << "WM: " << world_mode << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 			 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
 		create_vbos();
+		build_grid_by_tile();
 	}
 
 	void draw(bool shadow_only, vector3d const &xlate) { // Note: non-const; building_draw is modified
@@ -1947,14 +1976,29 @@ public:
 
 		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
 		if (use_tt_smap) {
+			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.89 / 0.89
 			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
-			for (auto g = grid.begin(); g != grid.end(); ++g) {
-				if (!shadow_only && !g->bcube.closest_dist_less_than((camera - xlate), draw_dist)) continue; // too far
-				point const pos(g->bcube.get_cube_center() + xlate);
-				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, 1);}
+			if (world_mode == WMODE_INF_TERRAIN && !shadow_only) {
+				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) {
+					if (!g->bcube.closest_dist_less_than((camera - xlate), draw_dist)) continue; // too far
+					point const pos(g->bcube.get_cube_center() + xlate);
+					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					bool const immediate_mode(check_tile_smap(0) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
+					if (!immediate_mode) continue; // not drawn in this pass
+					bool drawn(0);
+					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, 0, far_clip, draw_dist, xlate, building_draw, draw_ix, 0, 0);}
+					if (drawn) {building_draw.end_immediate_building(0);}
+				}
+			}
+			else {
+				for (auto g = grid.begin(); g != grid.end(); ++g) {
+					if (!shadow_only && !g->bcube.closest_dist_less_than((camera - xlate), draw_dist)) continue; // too far
+					point const pos(g->bcube.get_cube_center() + xlate);
+					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, 1, 1);}
+				}
 			}
 			s.end_shader();
 		}
