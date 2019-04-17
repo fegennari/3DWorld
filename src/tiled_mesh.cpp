@@ -2120,7 +2120,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	// Note: could skip shadow computation (but not weight calc/texture upload) if (max(sun_pos.z,  last_sun.z) > zbottom) or (sun.get_norm().z > 0.9) or something like that
 	static point last_sun(all_zeros), last_moon(all_zeros);
 	bool const sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
-	bool const moon_change(moon_pos != last_moon && light_factor <= 0.6);
+	bool const moon_change(moon_pos != last_moon && light_factor <= 0.6 && max(moon_pos.z, last_moon.z) > zmin); // only when the moon is up
 
 	if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
 		if (auto_time_adv) {

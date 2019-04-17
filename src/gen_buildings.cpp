@@ -1935,7 +1935,7 @@ public:
 		float const far_clip(get_inf_terrain_fog_dist());
 		point const camera(get_camera_pos());
 		int const use_bmap(global_building_params.has_normal_map /*&& (display_mode & 0x20) == 0*/);
-		bool const use_tt_smap(check_tile_smap(shadow_only));
+		bool const use_tt_smap(check_tile_smap(shadow_only) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		static unsigned draw_ix(0); ++draw_ix;
 		shader_t s;
 		fgPushMatrix();
