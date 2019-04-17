@@ -15,6 +15,7 @@ bool const DEBUG_BCUBES        = 0;
 unsigned const MAX_CYLIN_SIDES = 36;
 
 extern int rand_gen_index, display_mode;
+extern point sun_pos;
 
 // TODO: Multilevel cylinders and N-gons shapes?
 
@@ -812,6 +813,7 @@ public:
 					vert.set_norm(j ? norm : -norm);
 				}
 				else {
+					//if ((display_mode & 0x10) && view_dir != nullptr && ((sun_pos[n] > 0.0) ^ j)) continue; // correct when no moon, but doesn't help much
 					if (view_dir != nullptr && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
 					vert.n[i] = 0;
 					vert.n[d] = 0;
