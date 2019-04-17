@@ -1964,7 +1964,7 @@ public:
 		if (!camera_pdu.cube_visible(buildings_bcube + xlate)) return; // no buildings visible
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 1.7ms, 2.3ms with shadow maps, 2.8ms with AO, 3.3s with rotations (currently 2.5)
 		float const far_clip(get_inf_terrain_fog_dist());
-		point const camera(get_camera_pos());
+		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map /*&& (display_mode & 0x20) == 0*/);
 		bool const use_tt_smap(check_tile_smap(shadow_only) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		static unsigned draw_ix(0); ++draw_ix;
@@ -1976,29 +1976,18 @@ public:
 
 		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
 		if (use_tt_smap) {
-			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.89 / 0.89
+			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.8 / 0.8
 			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
-			if (world_mode == WMODE_INF_TERRAIN && !shadow_only) {
-				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) {
-					if (!g->bcube.closest_dist_less_than((camera - xlate), draw_dist)) continue; // too far
-					point const pos(g->bcube.get_cube_center() + xlate);
-					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-					bool const immediate_mode(check_tile_smap(0) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
-					if (!immediate_mode) continue; // not drawn in this pass
-					bool drawn(0);
-					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, 0, far_clip, draw_dist, xlate, building_draw, draw_ix, 0, 0);}
-					if (drawn) {building_draw.end_immediate_building(0);}
-				}
-			}
-			else {
-				for (auto g = grid.begin(); g != grid.end(); ++g) {
-					if (!shadow_only && !g->bcube.closest_dist_less_than((camera - xlate), draw_dist)) continue; // too far
-					point const pos(g->bcube.get_cube_center() + xlate);
-					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {buildings[*i].draw(s, shadow_only, far_clip, draw_dist, xlate, building_draw, draw_ix, 1, 1);}
-				}
+			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) {
+				if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
+				point const pos(g->bcube.get_cube_center() + xlate);
+				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+				if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
+				bool drawn(0);
+				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, 0, far_clip, draw_dist, xlate, building_draw, draw_ix, 0, 0);}
+				if (drawn) {building_draw.end_immediate_building(0);}
 			}
 			s.end_shader();
 		}
