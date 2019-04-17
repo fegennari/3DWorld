@@ -1578,7 +1578,7 @@ void building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 	} // for i
 	if (!roof_tquads.empty()) { // distance culling? only if camera is above the building?
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			if (!shadow_only && dot_product(view_dir, i->get_norm(0)) > 0.0) continue; // back facing
+			if (!shadow_only && !is_rotated() && dot_product(view_dir, i->get_norm(0)) > 0.0) continue; // back facing
 			bdraw.add_roof_tquad(*this, *i, xlate, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), shadow_only); // use type to select roof vs. side
 		}
 	}
