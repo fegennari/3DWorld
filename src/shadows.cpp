@@ -47,4 +47,5 @@ bool light_valid(unsigned light_sources, int l, point &lpos) {
 bool light_valid_and_enabled(int l, point &lpos) {
 	return (light_valid(0xFF, l, lpos) && is_light_enabled(l));
 }
+bool light_valid_and_enabled(int l) {point lpos; return light_valid_and_enabled(l, lpos);}
 

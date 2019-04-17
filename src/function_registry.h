@@ -56,6 +56,7 @@ void update_sun_shadows();
 void update_sun_and_moon();
 bool light_valid(unsigned light_sources, int l, point &lpos);
 bool light_valid_and_enabled(int l, point &lpos);
+bool light_valid_and_enabled(int l);
 
 // function prototypes - mesh_intersect
 bool sphere_visible_to_pt(point const &pt, point const &center, float radius);
