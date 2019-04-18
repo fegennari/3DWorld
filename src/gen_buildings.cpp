@@ -624,6 +624,7 @@ public:
 		float tex_pos[2] = {0.0, 1.0};
 		building_draw_utils::calc_normals(bg, normals, ndiv);
 		if (!shadow_only) {UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcz1);)}
+		bool const do_bfc(view_dir != nullptr), sun_bfc(do_bfc && light_factor > 0.6);
 
 		if (dim_mask & 3) { // draw sides
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
@@ -653,7 +654,8 @@ public:
 					cur_perim[1] += p2p_dist(n1, n2);
 					vector3d normal(n1 + n2); normal.x *= ry; normal.y *= rx; // average the two vertex normals for the flat face normal
 					if (bg.is_rotated()) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
-					if (view_dir != nullptr && (view_dir->x*normal.x + view_dir->y*normal.y) > 0.0) continue; // back facing
+					if (sun_bfc && (sun_pos  .x*normal.x + sun_pos  .y*normal.y) < 0.0) continue; // sun bfc
+					if (do_bfc  && (view_dir->x*normal.x + view_dir->y*normal.y) > 0.0) continue; // back facing
 					bool const cur_smooth_normals(smooth_normals && (bg.flat_side_amt == 0.0 || S+1 != ndiv)); // flat side of cylindrical building is not smooth
 					if (!cur_smooth_normals) {vert.set_norm(normal.get_norm());}
 
@@ -684,7 +686,7 @@ public:
 			auto &tri_verts(get_verts(tex, 1));
 			
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
-				if (view_dir != nullptr && ((view_dir->z < 0.0) ^ d)) continue; // back facing
+				if (do_bfc && ((view_dir->z < 0.0) ^ d)) continue; // back facing (not done with sun_pos since sun is always above)
 				vert.set_norm(d ? plus_z : -plus_z);
 				if (apply_ao) {vert.copy_color(cw[d]);}
 				vert_norm_comp_tc_color center(vert);
@@ -795,6 +797,7 @@ public:
 		color_wrapper cw[2];
 		setup_ao_color(color, bcube.z1(), ao_bcz2, cube.d[2][0], cube.d[2][1], cw, vert, no_ao);
 		vector3d const tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
+		bool const do_bfc(view_dir != nullptr), sun_bfc(do_bfc && light_factor > 0.6);
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3); // direction of normal
@@ -810,12 +813,13 @@ public:
 					vector3d norm; norm.z = 0.0;
 					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
 					else        {norm.x = -bg.rot_sin; norm.y = bg.rot_cos;} // Y
-					if (view_dir != nullptr && ((view_dir->x*norm.x + view_dir->y*norm.y < 0.0) ^ j)) continue; // back facing
+					if (sun_bfc && ((sun_pos  .x*norm.x + sun_pos  .y*norm.y > 0.0) ^ j)) continue; // sun bfc
+					if (do_bfc  && ((view_dir->x*norm.x + view_dir->y*norm.y < 0.0) ^ j)) continue; // back facing
 					vert.set_norm(j ? norm : -norm);
 				}
 				else {
-					//if ((display_mode & 0x10) && view_dir != nullptr && ((sun_pos[n] > 0.0) ^ j)) continue; // correct when no moon, but doesn't help much
-					if (view_dir != nullptr && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
+					if (sun_bfc && ((sun_pos    [n] > 0.0) ^ j)) continue; // sun bfc
+					if (do_bfc  && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
 					vert.n[i] = 0;
 					vert.n[d] = 0;
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
