@@ -1980,7 +1980,7 @@ public:
 			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
-			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) {
+			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 				if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
 				point const pos(g->bcube.get_cube_center() + xlate);
 				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
@@ -2204,6 +2204,7 @@ public:
 		state.init(pdu.pos, get_camera_coord_space_xlate());
 		
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
+			if (g->ixs.empty()) continue;
 			point const pos(g->bcube.get_cube_center() + state.xlate);
 			if (!pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + state.xlate))) continue; // VFC
 			
