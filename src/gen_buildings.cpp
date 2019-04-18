@@ -1612,11 +1612,11 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	building_mat_t const &mat(get_material());
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, mat.side_tex, side_color, 0, nullptr, 3, 0, 0, 0); // XY
+		bdraw.add_section(*this, *i, zero_vector, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 0, nullptr, 3, 0, 0, 0); // XY
 		bool const skip_top(!roof_tquads.empty() && (i+1 == parts.end())); // don't add the flat roof for the top part in this case
 		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
 		if (is_stacked && skip_top) continue; // no top/bottom to draw
-		bdraw.add_section(*this, *i, zero_vector, bcube, ao_bcz2, mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked, skip_top, 0); // only Z dim
+		bdraw.add_section(*this, *i, zero_vector, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 0, nullptr, 4, is_stacked, skip_top, 0); // only Z dim
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 		bdraw.add_roof_tquad(*this, *i, zero_vector, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), 0); // use type to select roof vs. side
