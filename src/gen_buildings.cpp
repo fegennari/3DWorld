@@ -378,11 +378,11 @@ class building_draw_t;
 
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
-	bool half_offset;
+	bool half_offset, is_pointed;
 	float rot_sin, rot_cos, flat_side_amt, alt_step_factor, start_angle; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
 
-	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0) {}
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), is_pointed(0), rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0) {}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
 	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
@@ -398,7 +398,7 @@ struct tquad_with_ix_t : public tquad_t {
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
-	bool is_house;
+	bool is_house, has_antenna;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
 	vect_cube_t parts;
@@ -407,7 +407,7 @@ struct building_t : public building_geom_t {
 	float ao_bcz2;
 	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0), cur_draw_ix(0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -521,6 +521,11 @@ struct building_draw_utils {
 	vert.t[0] += tex.txoff; \
 	vert.t[1] += tex.tyoff; \
 	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
+	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
+	verts.push_back(vert);
+
+#define EMIT_SHADOW_VERTEX() \
+	vert.v = pt*sz + llc; \
 	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
 
@@ -767,25 +772,34 @@ public:
 			return;
 		}
 		// else draw as a cube (optimized flow)
-		auto &verts(get_verts(tex));
+		auto &verts(get_verts(tex, bg.is_pointed)); // bg.is_pointed ? tris : quads
 		vector3d const llc(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
+		if (bg.is_pointed) {dim_mask &= 3;} // mask off z-dim since pointed objects (antenna) have no horizontal surfaces
 
 		if (shadow_only) {
 			for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-				unsigned const n((i+2)%3);
-				if (!(dim_mask & (1<<n))) continue;
-				unsigned const d((i+1)%3);
+				unsigned const n((i+2)%3), d((i+1)%3);
+				if (!(dim_mask & (1<<n))) continue; // n=0, i=1, d=2 | n=1, i=2, d=0
+
 				for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-					point pt; pt[n] = j;
+					point pt; pt[n] = j; // in direction of normal
+
+					if (bg.is_pointed) {
+						pt[!n] = !j; pt.z = 0;
+						EMIT_SHADOW_VERTEX(); // bottom low
+						pt[!n] = j;
+						EMIT_SHADOW_VERTEX(); // bottom high
+						pt[!n] = 0.5; pt[n] = 0.5; pt.z = 1;
+						EMIT_SHADOW_VERTEX(); // top
+						continue;
+					}
 					//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
 					for (unsigned s1 = 0; s1 < 2; ++s1) {
 						pt[d] = s1;
 						for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-							pt[i]  = k^j^s1^1; // need to orient the vertices differently for each side
-							vert.v = pt*sz + llc;
-							if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
-							verts.push_back(vert);
+							pt[i] = k^j^s1^1; // need to orient the vertices differently for each side
+							EMIT_SHADOW_VERTEX();
 						}
 					}
 				} // for j
@@ -800,10 +814,8 @@ public:
 		bool const do_bfc(view_dir != nullptr), sun_bfc(do_bfc && light_factor > 0.6);
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-			unsigned const n((i+2)%3); // direction of normal
+			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // direction of normal
 			if (!(dim_mask & (1<<n))) continue;
-			unsigned const d((i+1)%3);
-			bool const st(i&1);
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
@@ -824,8 +836,17 @@ public:
 					vert.n[d] = 0;
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
-				point pt;
-				pt[n] = j; // in direction or normal
+				point pt; pt[n] = j; // in direction of normal
+
+				if (bg.is_pointed) { // Note: normal isn't quite correct, but it's close enough for antennas
+					pt[!n] = !j; pt.z = 0;
+					EMIT_VERTEX(); // bottom low
+					pt[!n] = j;
+					EMIT_VERTEX(); // bottom high
+					pt[!n] = 0.5; pt[n] = 0.5; pt.z = 1;
+					EMIT_VERTEX(); // top
+					continue; // no windows/clipping
+				}
 				pt[d] = 0;
 				pt[i] = !j; // need to orient the vertices differently for each side
 				//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
@@ -1457,8 +1478,8 @@ void building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim)
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	unsigned const num_blocks(roof_tquads.empty() ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads
-	bool const add_antenna(rgen.rand() & 1);
-	details.resize(num_blocks + add_antenna);
+	has_antenna = (rgen.rand() & 1);
+	details.resize(num_blocks + has_antenna);
 	assert(!parts.empty());
 	if (details.empty()) return; // nothing to do
 	cube_t const &top(parts.back()); // top/last part
@@ -1489,9 +1510,9 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 			c.z2() = top.z2() + height; // z2
 		} // for i
 	}
-	if (add_antenna) { // add antenna
-		float const radius(0.002*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
-		float const height(rgen.rand_uniform(0.1, 0.5)*top.get_dz());
+	if (has_antenna) { // add antenna
+		float const radius(0.003*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
+		float const height(rgen.rand_uniform(0.25, 0.5)*top.get_dz());
 		cube_t &antenna(details.back());
 		antenna.set_from_point(top.get_cube_center());
 		antenna.expand_by(vector3d(radius, radius, 0.0));
@@ -1592,7 +1613,7 @@ bool building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 	}
 	if (!details.empty() && (shadow_only || dist_less_than(camera, pos, 0.25*far_clip))) { // draw roof details
 		tid_nm_pair_t const tex(mat.roof_tex.get_scaled_version(0.5));
-		building_geom_t const bg(4, rot_sin, rot_cos); // cube
+		building_geom_t bg(4, rot_sin, rot_cos); // cube
 
 		for (auto i = details.begin(); i != details.end(); ++i) {
 			if (!shadow_only) {
@@ -1600,7 +1621,9 @@ bool building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 				if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
 				view_dir = (ccenter + xlate - camera);
 			}
-			bdraw.add_section(bg, *i, xlate, bcube, ao_bcz2, tex, detail_color, shadow_only, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
+			bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
+			bdraw.add_section(bg, *i, xlate, bcube, ao_bcz2, tex, detail_color*(bg.is_pointed ? 0.5 : 1.0),
+				shadow_only, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
 		} // for i
 	}
 	if (DEBUG_BCUBES && !shadow_only) {
@@ -1626,8 +1649,10 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 		bdraw.add_roof_tquad(*this, *i, zero_vector, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), 0); // use type to select roof vs. side
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-		building_geom_t const bg(4, rot_sin, rot_cos); // cube
-		bdraw.add_section(bg, *i, zero_vector, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5), detail_color, 0, nullptr, 7, 1, 0, 1); // all dims, skip_bottom, no AO
+		building_geom_t bg(4, rot_sin, rot_cos); // cube
+		bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
+		bdraw.add_section(bg, *i, zero_vector, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5),
+			detail_color*(bg.is_pointed ? 0.5 : 1.0), 0, nullptr, 7, 1, 0, 1); // all dims, skip_bottom, no AO
 	}
 }
 
