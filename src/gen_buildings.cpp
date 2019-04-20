@@ -836,21 +836,25 @@ public:
 					vert.n[d] = 0;
 					vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
+				unsigned const ix(verts.size()); // first vertex of this quad/triangle
 				point pt; pt[n] = j; // in direction of normal
 
-				if (bg.is_pointed) { // Note: normal isn't quite correct, but it's close enough for antennas
+				if (bg.is_pointed) {
 					pt[!n] = !j; pt.z = 0;
 					EMIT_VERTEX(); // bottom low
 					pt[!n] = j;
 					EMIT_VERTEX(); // bottom high
 					pt[!n] = 0.5; pt[n] = 0.5; pt.z = 1;
 					EMIT_VERTEX(); // top
+					vector3d normal;
+					get_normal(verts[ix+0].v, verts[ix+1].v, verts[ix+2].v, normal, 1); // update with correct normal
+					vert.set_norm(n ? -normal : normal);
+					UNROLL_3X(verts[ix+i_].set_norm(vert);)
 					continue; // no windows/clipping
 				}
 				pt[d] = 0;
 				pt[i] = !j; // need to orient the vertices differently for each side
 				//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
-				unsigned const ix(verts.size()); // first vertex of this quad
 				EMIT_VERTEX(); // 0 !j
 				pt[i] = j;
 				EMIT_VERTEX(); // 0 j
