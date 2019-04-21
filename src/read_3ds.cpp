@@ -350,7 +350,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 					if (!read_data(&num, sizeof(unsigned short), 1, "number of faces for material")) return 0;
 					faces_mat.resize(num);
 					if (num > 0 && !read_data(&faces_mat.front(), sizeof(unsigned short), num, "faces for material")) return 0;
-					if (verbose) {cout << "Material " << mat_name << " is used for " << num << " faces" << endl;}
+					if (verbose && num > 0) {cout << "Material " << mat_name << " is used for " << num << " faces" << endl;}
 					break;
 				}
 			case 0x4150: // Smoothing Group List (after mapping coords)
