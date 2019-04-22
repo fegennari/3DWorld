@@ -17,6 +17,8 @@ unsigned const MAX_CYLIN_SIDES = 36;
 extern int rand_gen_index, display_mode;
 extern point sun_pos;
 
+void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
+
 // TODO: Multilevel cylinders and N-gons shapes?
 
 struct tid_nm_pair_t {
@@ -1862,6 +1864,7 @@ public:
 		if (non_city_only) {
 			get_city_bcubes(avoid_bcubes);
 			get_city_road_bcubes(avoid_bcubes, 1); // connector roads only
+			get_all_model_bcubes(avoid_bcubes);
 			expand_cubes_by_xy(avoid_bcubes, get_road_max_width());
 		}
 		bool const use_city_plots(!city_plot_bcubes.empty()), check_plot_coll(!avoid_bcubes.empty());

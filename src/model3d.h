@@ -492,6 +492,7 @@ public:
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0, unsigned lod_level=0) const;
+	void get_transformed_bcubes(vector<cube_t> &bcubes) const;
 	void get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
@@ -561,6 +562,7 @@ struct model3ds : public deque<model3d> {
 	void set_xform_zval_from_tt_height(bool flatten_mesh);
 	bool has_any_transforms() const;
 	cube_t calc_and_return_bcube(bool only_reflective);
+	void get_all_model_bcubes(vector<cube_t> &bcubes) const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);
 	void write_to_cobj_file(std::ostream &out) const;
@@ -598,6 +600,7 @@ void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[
 void set_occlusion_cube_for_cur_model(cube_t const &cube);
 bool have_cur_model();
 cube_t calc_and_return_all_models_bcube(bool only_reflective=0);
+void get_all_model_bcubes(vector<cube_t> &bcubes);
 void write_models_to_cobj_file(std::ostream &out);
 void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height=0.0);
 void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius=0.0);

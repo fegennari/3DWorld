@@ -1236,6 +1236,11 @@ void model3d::update_bbox(polygon_t const &poly) {
 	if (bcube == all_zeros_cube) {bcube = bb;} else {bcube.union_with_cube(bb);}
 }
 
+void model3d::get_transformed_bcubes(vector<cube_t> &bcubes) const {
+	if (transforms.empty()) {bcubes.push_back(bcube); return;} // no transforms
+	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {bcubes.push_back(xf->get_xformed_cube(bcube));} // Note: const, non-cached call
+}
+
 
 void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool apply_transforms, unsigned lod_level) const {
 
@@ -2284,6 +2289,10 @@ cube_t model3ds::calc_and_return_bcube(bool only_reflective) { // Note: calculat
 	return bcube;
 }
 
+void model3ds::get_all_model_bcubes(vector<cube_t> &bcubes) const {
+	for (const_iterator m = begin(); m != end(); ++m) {m->get_transformed_bcubes(bcubes);}
+}
+
 
 void model3ds::build_cobj_trees(bool verbose) {
 	for (iterator m = begin(); m != end(); ++m) {m->build_cobj_tree(verbose);}
@@ -2446,6 +2455,7 @@ void set_occlusion_cube_for_cur_model(cube_t const &cube) {
 bool have_cur_model() {return (!all_models.empty());}
 
 cube_t calc_and_return_all_models_bcube(bool only_reflective) {return all_models.calc_and_return_bcube(only_reflective);}
+void get_all_model_bcubes(vector<cube_t> &bcubes) {all_models.get_all_model_bcubes(bcubes);}
 
 void write_models_to_cobj_file(ostream &out) {all_models.write_to_cobj_file(out);}
 
