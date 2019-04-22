@@ -1495,5 +1495,8 @@
     <Text Include="mapx\plant.txt">
       <Filter>Input Files\mapx</Filter>
     </Text>
+    <Text Include="coll_objs\coll_objs_heightmap.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
   </ItemGroup>
 </Project>

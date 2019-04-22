@@ -966,6 +966,7 @@
     <Text Include="coll_objs\COLL_OBJS1.TXT" />
     <Text Include="coll_objs\COLL_OBJS2.TXT" />
     <Text Include="coll_objs\COLL_OBJS3.TXT" />
+    <Text Include="coll_objs\coll_objs_heightmap.txt" />
     <Text Include="coll_objs\COLL_OBJS_Maze.TXT" />
     <Text Include="coll_objs\coll_objs_minecraft.txt" />
     <Text Include="coll_objs\COLL_OBJS_museum.txt" />
