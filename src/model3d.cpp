@@ -1833,6 +1833,7 @@ void model3d::set_xform_zval_from_tt_height(bool flatten_mesh) { // set zval to 
 	xform_zvals_set = 1;
 	timer_t timer("Calc Zvals");
 	vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0); // cancel out xoff2/yoff2 translate
+	if (transforms.empty()) {transforms.push_back(model3d_xform_t());} // no transforms case - insert identity transform
 
 #pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < (int)transforms.size(); ++i) {
