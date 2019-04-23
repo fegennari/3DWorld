@@ -14,6 +14,7 @@ using std::string;
 bool const DEBUG_BCUBES        = 0;
 unsigned const MAX_CYLIN_SIDES = 36;
 
+extern bool start_in_inf_terrain;
 extern int rand_gen_index, display_mode;
 extern point sun_pos;
 
@@ -1911,6 +1912,7 @@ public:
 					b.bcube.d[d][1] = center[d] + sz;
 				}
 				if (use_city_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
+				if (start_in_inf_terrain && b.bcube.contains_pt_xy(get_camera_pos())) continue; // don't place a building over the player appearance spot
 				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
 				float const hmin(use_city_plots ? pos_range.z1() : 0.0), hmax(use_city_plots ? pos_range.z2() : 1.0);
 				assert(hmin <= hmax);
