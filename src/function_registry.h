@@ -133,7 +133,7 @@ void setup_object_render_data();
 void end_group(int &last_group_id);
 bool check_cobj_vis_occlude(coll_obj const &c, pos_dir_up const &pdu, int reflection_pass, float ref_plane_z);
 void draw_coll_surfaces(bool draw_trans, int reflection_pass);
-void draw_stars(float alpha);
+void draw_stars(float alpha, bool no_update);
 void draw_sun();
 void draw_moon();
 void draw_earth();

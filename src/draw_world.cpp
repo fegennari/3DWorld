@@ -895,7 +895,7 @@ void portal::draw(vector<vert_wrap_t> &verts) const {
 };
 
 
-void draw_stars(float alpha) {
+void draw_stars(float alpha, bool no_update) {
 
 	if (alpha <= 0.0) return;
 	colorRGBA color(BLACK), bkg;
@@ -904,19 +904,23 @@ void draw_stars(float alpha) {
 	enable_blend();
 	glDisable(GL_DEPTH_TEST);
 	static point_sprite_drawer psd;
-	psd.reserve_pts(stars.size());
-	rand_gen_t rgen;
 
-	for (unsigned i = 0; i < stars.size(); ++i) {
-		if ((rgen.rand()&255) == 0) continue; // flicker out
+	if (psd.empty() || !no_update) { // first pass, or not reflection pass - generate stars; otherwise reuse buffer from previous draw
+		psd.clear();
+		psd.reserve_pts(stars.size());
+		rand_gen_t rgen;
 
-		for (unsigned j = 0; j < 3; ++j) {
-			float const c(stars[i].color[j]*stars[i].intensity);
-			color[j] = ((alpha >= 1.0) ? c : (alpha*c + bkg[j]));
+		for (unsigned i = 0; i < stars.size(); ++i) {
+			if ((rgen.rand()&255) == 0) continue; // flicker out
+
+			for (unsigned j = 0; j < 3; ++j) {
+				float const c(stars[i].color[j]*stars[i].intensity);
+				color[j] = ((alpha >= 1.0) ? c : (alpha*c + bkg[j]));
+			}
+			psd.add_pt(vert_color((stars[i].pos + xlate), color));
 		}
-		psd.add_pt(vert_color((stars[i].pos + xlate), color));
 	}
-	psd.draw_and_clear(BLUR_TEX, 2.0); // draw with points of size 2 pixels
+	psd.draw(BLUR_TEX, 2.0); // draw with points of size 2 pixels
 	glEnable(GL_DEPTH_TEST);
 	disable_blend();
 }

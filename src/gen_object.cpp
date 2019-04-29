@@ -65,7 +65,7 @@ void gen_and_draw_stars(float alpha, bool half_sphere, bool no_update) {
 			if (rnum%2000 == 0) {gen_star(stars[i], half_sphere);} // create a new star and destroy the old
 		}
 	}
-	draw_stars(alpha);
+	draw_stars(alpha, no_update);
 }
 
 
