@@ -451,10 +451,25 @@ void draw_cylindrical_section(float length, float r_inner, float r_outer, int nd
 // ******************** SPHERE ********************
 
 
+struct sphere_verts_t {
+	vector<vert_norm> vn;
+	vector<vert_norm_tc> vntc;
+
+	void draw(bool texture, bool use_quads=0, bool do_clear=1) {
+		if (use_quads) {
+			if (texture) {draw_quad_verts_as_tris(vntc);} else {draw_quad_verts_as_tris(vn);}
+		}
+		else {
+			if (texture) {draw_verts(vntc, GL_TRIANGLE_STRIP);} else {draw_verts(vn, GL_TRIANGLE_STRIP);}
+		}
+		if (do_clear) {vn.clear(); vntc.clear();}
+	}
+};
+
 // back face culling requires the sphere to be untransformed (or the vertices to be per-transformed)
 void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, unsigned char const *const render_map,
 									 float const *const exp_map, point const *const pt_shift, float expand,
-									 float s_beg, float s_end, float t_beg, float t_end) const
+									 float s_beg, float s_end, float t_beg, float t_end, bool back_to_front) const
 {
 	assert(!render_map || disable_bfc);
 	assert(ndiv > 0);
@@ -463,8 +478,7 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
 	if (expand != 0.0) {expand *= 0.25;} // 1/4, for normalization
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
-	static vector<vert_norm> vn;
-	static vector<vertex_type_t> vntc;
+	static sphere_verts_t sv;
 
 	for (unsigned s = s0; s < s1; ++s) {
 		unsigned const sn((s+1)%ndiv), snt(s+1);
@@ -483,8 +497,8 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				}
 				for (unsigned i = 0; i < 4; ++i) {
 					if (pt_shift) {pts[i] += pt_shift[ix];}
-					if (texture) {vntc.emplace_back(pts[i], normals[i], tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv));}
-					else {vn.emplace_back(pts[i], normals[i]);}
+					if (texture) {sv.vntc.emplace_back(pts[i], normals[i], tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv));}
+					else {sv.vn.emplace_back(pts[i], normals[i]);}
 				}
 			} // for t
 		}
@@ -492,11 +506,11 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 			if (s != s0) { // add degenerate triangles to preserve the triangle strip (only slightly faster than using multiple triangle strips)
 				for (unsigned d = 0; d < 2; ++d) {
 					unsigned const T(d ? t0 : t1);
-					if (texture) {vntc.emplace_back(points[s][T], norms[s][T], 0.0, 0.0);}
-					else {vn.emplace_back(points[s][T], norms[s][T]);}
+					if (texture) {sv.vntc.emplace_back(points[s][T], norms[s][T], 0.0, 0.0);}
+					else {sv.vn.emplace_back(points[s][T], norms[s][T]);}
 				}
 			}
-			float const tc1(tscale*(1.0f - s  *ndiv_inv)), tc2(tscale*(1.0f - snt*ndiv_inv));
+			float const tc1(tscale*(1.0f - s*ndiv_inv)), tc2(tscale*(1.0f - snt*ndiv_inv));
 
 			for (unsigned t = t0; t <= t1; ++t) {
 				if (!disable_bfc) {
@@ -515,23 +529,23 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 					if (!draw) {continue;}
 				}
 				if (!texture) {
-					vn.emplace_back(points[s ][t], norms[s ][t]);
-					vn.emplace_back(points[sn][t], norms[sn][t]);
+					sv.vn.emplace_back(points[s ][t], norms[s ][t]);
+					sv.vn.emplace_back(points[sn][t], norms[sn][t]);
 				}
 				else {
 					float const ts(tscale*(1.0f - t*ndiv_inv));
-					vntc.emplace_back(points[s ][t], norms[s ][t], tc1, ts);
-					vntc.emplace_back(points[sn][t], norms[sn][t], tc2, ts);
+					sv.vntc.emplace_back(points[s ][t], norms[s ][t], tc1, ts);
+					sv.vntc.emplace_back(points[sn][t], norms[sn][t], tc2, ts);
 				}
 			} // for t
 		}
 	} // for s
-	if (use_quads) {
-		if (texture) {draw_quad_verts_as_tris_and_clear(vntc);} else {draw_quad_verts_as_tris_and_clear(vn);}
+	if (back_to_front) {
+		glCullFace(GL_FRONT);
+		sv.draw(texture, use_quads, 0); // do_clear=0
+		glCullFace(GL_BACK);
 	}
-	else {
-		if (texture) {draw_and_clear_verts(vntc, GL_TRIANGLE_STRIP);} else {draw_and_clear_verts(vn, GL_TRIANGLE_STRIP);}
-	}
+	sv.draw(texture, use_quads);
 }
 
 
@@ -539,8 +553,7 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 
 	assert(radius > 0.0 && ndiv > 0);
 	float const tstep(1.0/ndiv), vstep(2.0*tstep);
-	static vector<vert_norm> verts;
-	static vector<vert_norm_tc> tverts;
+	static sphere_verts_t sv;
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d1(i), d2((i+1)%3), dn((i+2)%3);
@@ -560,12 +573,11 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 					for (unsigned k = 0; k < 2; ++k) {
 						vector3d const n(pt2.get_norm());
 						point const pos(center + n*radius);
-						if (texture) {tverts.emplace_back(pos, n, (s+k)*tstep, t*tstep);} else {verts.emplace_back(pos, n);}
+						if (texture) {sv.vntc.emplace_back(pos, n, (s+k)*tstep, t*tstep);} else {sv.vn.emplace_back(pos, n);}
 						pt2[d1] += vstep;
 					}
 				} // for t
-				if (texture) {draw_and_clear_verts(tverts, GL_TRIANGLE_STRIP);}
-				else {draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);}
+				sv.draw(texture);
 			} // for s
 		} // for j
 	} // for i
