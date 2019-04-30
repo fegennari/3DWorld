@@ -15,7 +15,7 @@
 float const NDIV_SCALE = 200.0;
 
 
-extern bool group_back_face_cull, has_any_billboard_coll, begin_motion;
+extern bool group_back_face_cull, has_any_billboard_coll, begin_motion, fast_transparent_spheres;
 extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
 extern float temperature, rain_wetness, snow_cov_amt;
 extern double tfticks;
@@ -580,10 +580,14 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		if (cp.light_atten > 0.0) {glEnable (GL_CULL_FACE);}
 		// Note: if using textures (and using MVM in the shader), draw_sphere_vbo() is faster and can be used
 		// Note: semi-transparent spheres must not use tex coords because the translate in draw_sphere_vbo() produces the wrong indir lighting vpos;
-		// the transparent pass is sorted back-to-front and not grouped by texgen vs. tex-coord shader
+		// the transparent pass is sorted back-to-front and not grouped by texgen vs. tex-coord shader;
+		// however, we allow VBO drawing when fast_transparent_spheres=1 because this will force use_mvm=1 in the untextured/no texgen case
 		bool const semi_trans(is_semi_trans());
-		if (use_tcs && !(semi_trans && cp.tid < 0)) {draw_sphere_vbo(points[0], radius, ndiv, use_tcs);}
-		else if (semi_trans) {draw_subdiv_sphere_back_to_front(points[0], radius, ndiv, use_tcs);}
+		if ((use_tcs || fast_transparent_spheres) && !(semi_trans && cp.tid < 0)) {draw_sphere_vbo(points[0], radius, ndiv, use_tcs);}
+		else if (semi_trans) { // draw back-to-front
+			if (fast_transparent_spheres) {draw_sphere_vbo_back_to_front(points[0], radius, ndiv, use_tcs);}
+			else {draw_subdiv_sphere_back_to_front(points[0], radius, ndiv, use_tcs);}
+		}
 		else {draw_subdiv_sphere(points[0], radius, ndiv, use_tcs, 1);}
 		if (cp.light_atten > 0.0) {glDisable(GL_CULL_FACE);}
 		break;

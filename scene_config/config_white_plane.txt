@@ -5,6 +5,7 @@ disable_water 1
 disable_scenery 1
 read_landscape 0
 read_heightmap 0
+fast_transparent_spheres 1 # much faster for this scene
 rand_seed 0
 toggle_reflections # reflections enabled by default
 toggle_mesh_enabled # disable mesh draw by default
