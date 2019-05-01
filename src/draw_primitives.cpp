@@ -116,12 +116,26 @@ void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, floa
 	assert(ndiv >= 3 && ndiv <= 512); // sanity check
 	bool const is_full(s_beg == 0.0 && s_end == 1.0 && t_beg == 0.0 && t_end == 1.0);
 
-	if (!perturb_map && !surf && cur_spn.points != nullptr && is_full && cur_spn.is_full && ndiv == cur_spn.ndiv && radius == cur_spn.radius) {
-		// in this case, the only thing that differs is pos, so we can reuse the normals and simply translate the points
-		vector3d const xlate(pos - cur_spn.center);
+	if (!perturb_map && !surf && cur_spn.points != nullptr && is_full && cur_spn.is_full && ndiv == cur_spn.ndiv) {
+		if (radius == cur_spn.radius) { // in this case, the only thing that differs is pos, so we can reuse the normals and simply translate the points
+			vector3d const xlate(pos - cur_spn.center);
 
-		for (unsigned s = 0; s < ndiv; ++s) {
-			for (unsigned t = 0; t <= ndiv; ++t) {cur_spn.points[s][t] += xlate;}
+			for (unsigned s = 0; s < ndiv; ++s) {
+				for (unsigned t = 0; t <= ndiv; ++t) {cur_spn.points[s][t] += xlate;}
+			}
+		}
+		else { // in this case, the only thing that differs is pos and radius, so we can reuse the normals and simply translate + scale the points
+			float const scale(radius/cur_spn.radius);
+
+			for (unsigned s = 0; s < ndiv; ++s) {
+				for (unsigned t = 0; t <= ndiv; ++t) {
+					point &p(cur_spn.points[s][t]);
+					p -= cur_spn.center; // translate to origin
+					p *= scale; // scale the point
+					p += pos; // translate to new pos
+				}
+			}
+			cur_spn.radius = radius;
 		}
 		cur_spn.center = pos;
 		points = cur_spn.points;
