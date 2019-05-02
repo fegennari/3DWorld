@@ -9,6 +9,8 @@ fast_transparent_spheres 1 # much faster for this scene
 rand_seed 0
 toggle_reflections # reflections enabled by default
 toggle_mesh_enabled # disable mesh draw by default
+num_items 1 0 0 0 0 # override to select a single item
+unlimited_weapons 1
 
 sun_rot 2.0
 moon_rot 2.0
