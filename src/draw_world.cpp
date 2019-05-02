@@ -49,7 +49,7 @@ extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, refle
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale, cloud_cover;
 extern double tfticks;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
-extern point light_pos, mesh_origin, flow_source, surface_pos;
+extern point light_pos, mesh_origin, flow_source, surface_pos, pre_ref_camera_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
 extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
@@ -175,6 +175,7 @@ void set_brass_material(shader_t &shader, float alpha, float brightness) {
 void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 
 	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans)) return;
+	if (reflection_pass && !camera_pdu.sphere_visible_test(pre_ref_camera_pos, 2.0*CAMERA_RADIUS)) return; // player + weapon not visible in reflection
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 0, 0); // no rain/snow
 	draw_weapon_in_hand(-1, s, reflection_pass);
