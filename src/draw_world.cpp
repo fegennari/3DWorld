@@ -557,6 +557,7 @@ coll_obj const &get_draw_cobj(unsigned index) {
 }
 
 void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
+	if (s.is_setup()) {s.enable(); return;} // already setup - enable/reuse
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0,
 		(fast_transparent_spheres || use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections, 0, 1, 1);
 }
@@ -583,8 +584,9 @@ void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id
 	if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
 }
 
-void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool has_lt_atten, int enable_reflections) {
-
+void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s,
+	int use_texgen, bool use_normal_map, bool has_lt_atten, int enable_reflections, bool reuse_shader=0)
+{
 	if (cobjs.empty()) return;
 	has_lt_atten |= (reflection_pass == 2); // need light atten flow to handle refraction through cubes and spheres
 	setup_cobj_shader(s, has_lt_atten, use_normal_map, use_texgen, enable_reflections, reflection_pass);
@@ -638,7 +640,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	cdb.flush();
 	s.clear_specular(); // may be unnecessary
 	if (use_normal_map) {s.add_uniform_float("bump_b_scale", -1.0);} // reset, may be unnecessary
-	s.end_shader();
+	if (reuse_shader) {s.disable();} else {s.end_shader();}
 }
 
 typedef vector<pair<float, int> > vect_sorted_ix;
@@ -848,14 +850,23 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
+	static shader_t shaders[9];
+	static int last_frame(0);
+	bool const reuse_shaders(reflection_pass == 2); // reuse shaders for cube map reflections
+	unsigned six(0);
 
-	for (unsigned d = 0; d < 2; ++d) {
-		draw_cobjs_group(pb.tex_coord_cobjs  [d], cdb, reflection_pass, s, 0, (d!=0), has_lt_atten, 0);
-		draw_cobjs_group(pb.reflect_cobjs    [d], cdb, reflection_pass, s, 2, (d!=0), has_lt_atten, 1);
-		draw_cobjs_group(pb.cube_map_cobjs[0][d], cdb, reflection_pass, s, 2, (d!=0), has_lt_atten, 2);
-		draw_cobjs_group(pb.cube_map_cobjs[1][d], cdb, reflection_pass, s, 0, (d!=0), has_lt_atten, 2);
+	// FIXME: also reuse shader above
+	if (reuse_shaders && frame_counter != last_frame) { // new frame, state may have changed, need to recreate all shaders
+		for (unsigned i = 0; i < 9; ++i) {shaders[i].end_shader();}
+		last_frame = frame_counter;
 	}
-	draw_cobjs_group(pb.normal_map_cobjs, cdb, reflection_pass, s, 2, 1, has_lt_atten, 0);
+	for (unsigned d = 0; d < 2; ++d) {
+		draw_cobjs_group(pb.tex_coord_cobjs  [d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 0, (d!=0), has_lt_atten, 0, reuse_shaders);
+		draw_cobjs_group(pb.reflect_cobjs    [d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 2, (d!=0), has_lt_atten, 1, reuse_shaders);
+		draw_cobjs_group(pb.cube_map_cobjs[0][d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 2, (d!=0), has_lt_atten, 2, reuse_shaders);
+		draw_cobjs_group(pb.cube_map_cobjs[1][d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 0, (d!=0), has_lt_atten, 2, reuse_shaders);
+	}
+	draw_cobjs_group(pb.normal_map_cobjs, cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 2, 1, has_lt_atten, 0, reuse_shaders);
 	
 	if (draw_trans) {
 		disable_blend();
