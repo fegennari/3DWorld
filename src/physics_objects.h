@@ -267,6 +267,7 @@ struct enabled_pos {
 template<typename T> class obj_vector_t : public vector<T> {
 
 	unsigned cur_avail;
+	bool enabled;
 
 	struct int_uint_pair {
 		int i;
@@ -283,7 +284,7 @@ template<typename T> class obj_vector_t : public vector<T> {
 public:
 	using vector<T>::size;
 	using vector<T>::empty;
-	obj_vector_t(unsigned sz=0) : vector<T>(sz), cur_avail(0) {}
+	obj_vector_t(unsigned sz=0) : vector<T>(sz), cur_avail(0), enabled(0) {}
 
 	unsigned choose_element(bool peek=0) {
 		assert(!empty());
@@ -300,6 +301,7 @@ public:
 		unsigned const chosen(cur_avail);
 		assert(chosen < size());
 		if (!peek) {inc_cur_avail();}
+		enabled = 1;
 		return chosen;
 	}
 	bool choose_element_not_newer_than(int min_time, unsigned &chosen) {
@@ -337,12 +339,16 @@ public:
 		assert(num_rem <= time_ixs.size());
 		sort(time_ixs.begin(), time_ixs.end()); // sort largest to smallest by time
 		for (unsigned i = 0; i < num_rem; ++i) {ixs.push_back(time_ixs[i].u);}
+		enabled = 1;
 	}
 
-	bool any_active() const {
+	bool any_active() {
+		if (!enabled) return 0; // fast cached case
+
 		for (unsigned i = 0; i < size(); ++i) {
  			if (vector<T>::operator[](i).status) return 1;
 		}
+		enabled = 0; // record inactive state, will be reset to 1 in choose_element[s]()
 		return 0;
 	}
 };
