@@ -557,9 +557,16 @@ coll_obj const &get_draw_cobj(unsigned index) {
 }
 
 void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
-	if (s.is_setup()) {s.enable(); return;} // already setup - enable/reuse
+	bool const use_mvm(fast_transparent_spheres || use_texgen == 0);
+
+	if (s.is_setup()) { // already setup - enable/reuse
+		s.enable();
+		if (use_mvm) {upload_mvm_to_shader(s, "fg_ViewMatrix");}
+		s.add_uniform_vector3d("camera_pos",  get_camera_pos()); // this should be the only other variable we need to update for reflections
+		return;
+	}
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0,
-		(fast_transparent_spheres || use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections, 0, 1, 1);
+		use_mvm, two_sided_lighting, 0.0, 0.0, 0, enable_reflections, 0, 1, 1);
 }
 
 void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id, shader_t &s, cobj_draw_buffer &cdb,
@@ -724,8 +731,19 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const use_ref_plane(reflection_pass == 1 || (reflection_pass != 2 && reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
-	shader_t s;
-	setup_cobj_shader(s, (draw_trans && has_lt_atten), 0, 2, 0, reflection_pass);
+
+	static shader_t shaders[10];
+	static int last_frame(0);
+	bool const reuse_shaders(reflection_pass == 2); // reuse shaders for cube map reflections
+	unsigned six(0);
+
+	if (reuse_shaders && frame_counter != last_frame) { // new frame, state may have changed, need to recreate all shaders
+		for (unsigned i = 0; i < 10; ++i) {shaders[i].end_shader();}
+		last_frame = frame_counter;
+	}
+	shader_t ss; // shared/reused shader
+	shader_t &shader(reuse_shaders ? shaders[six++] : ss);
+	setup_cobj_shader(shader, (draw_trans && has_lt_atten), 0, 2, 0, reflection_pass);
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
 	cdb.full_clear();
@@ -768,14 +786,14 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 
 					if (add_cobj_to_draw_list(ix, reflection_pass, use_ref_plane, draw_last, pb)) {
 						unsigned ix2(ix);
-						cobj.draw_cobj(ix2, last_tid, last_group_id, s, cdb, reflection_pass); // Note: ix should not be modified
+						cobj.draw_cobj(ix2, last_tid, last_group_id, shader, cdb, reflection_pass); // Note: ix should not be modified
 						assert(ix2 == ix); // should not have changed
 					}
 				}
 				continue; // don't draw c itself (only if group is nonempty?)
 			}
 			if (add_cobj_to_draw_list(cix, reflection_pass, use_ref_plane, draw_last, pb)) {
-				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass); // i may not be valid after this call
+				c.draw_cobj(cix, last_tid, last_group_id, shader, cdb, reflection_pass); // i may not be valid after this call
 				
 				if (cix != *i) {
 					assert(cix > *i);
@@ -789,7 +807,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 
 		for (auto i = pb.large_cobjs[0].begin(); i != pb.large_cobjs[0].end(); ++i) { // not normal mapped
 			unsigned cix(i->second);
-			get_draw_cobj(cix).draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
+			get_draw_cobj(cix).draw_cobj(cix, last_tid, last_group_id, shader, cdb, reflection_pass);
 		}
 		cdb.flush();
 		for (auto i = pb.large_cobjs[1].begin(); i != pb.large_cobjs[1].end(); ++i) {pb.normal_map_cobjs.push_back(i->second);} // normal mapped
@@ -803,7 +821,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 		}
 		sort(draw_last.begin(), draw_last.end()); // sort back to front for alpha blending
 		enable_blend();
-		lt_atten_manager_t lt_atten_manager(s);
+		lt_atten_manager_t lt_atten_manager(shader);
 		if (has_lt_atten) {lt_atten_manager.enable();}
 		vector<vert_wrap_t> portal_verts;
 		bool in_portal(0);
@@ -839,7 +857,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 					continue;
 				}
 				cdb.on_new_obj_layer(c.cp);
-				draw_cobj_with_light_atten(cix, last_tid, last_group_id, s, cdb, reflection_pass, 2, lt_atten_manager);
+				draw_cobj_with_light_atten(cix, last_tid, last_group_id, shader, cdb, reflection_pass, 2, lt_atten_manager);
 				assert((int)cix == ix); // should not have changed
 			}
 		} // for i
@@ -848,25 +866,16 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 		cdb.flush();
 		draw_last.resize(0);
 	} // end draw_trans
-	s.clear_specular(); // may be unnecessary
-	s.end_shader();
-	static shader_t shaders[9];
-	static int last_frame(0);
-	bool const reuse_shaders(reflection_pass == 2); // reuse shaders for cube map reflections
-	unsigned six(0);
-
-	// FIXME: also reuse shader above
-	if (reuse_shaders && frame_counter != last_frame) { // new frame, state may have changed, need to recreate all shaders
-		for (unsigned i = 0; i < 9; ++i) {shaders[i].end_shader();}
-		last_frame = frame_counter;
-	}
+	shader.clear_specular(); // may be unnecessary
+	if (reuse_shaders) {shader.disable();} else {shader.end_shader();}
+	
 	for (unsigned d = 0; d < 2; ++d) {
-		draw_cobjs_group(pb.tex_coord_cobjs  [d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 0, (d!=0), has_lt_atten, 0, reuse_shaders);
-		draw_cobjs_group(pb.reflect_cobjs    [d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 2, (d!=0), has_lt_atten, 1, reuse_shaders);
-		draw_cobjs_group(pb.cube_map_cobjs[0][d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 2, (d!=0), has_lt_atten, 2, reuse_shaders);
-		draw_cobjs_group(pb.cube_map_cobjs[1][d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 0, (d!=0), has_lt_atten, 2, reuse_shaders);
+		draw_cobjs_group(pb.tex_coord_cobjs  [d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : ss), 0, (d!=0), has_lt_atten, 0, reuse_shaders);
+		draw_cobjs_group(pb.reflect_cobjs    [d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : ss), 2, (d!=0), has_lt_atten, 1, reuse_shaders);
+		draw_cobjs_group(pb.cube_map_cobjs[0][d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : ss), 2, (d!=0), has_lt_atten, 2, reuse_shaders);
+		draw_cobjs_group(pb.cube_map_cobjs[1][d], cdb, reflection_pass, (reuse_shaders ? shaders[six++] : ss), 0, (d!=0), has_lt_atten, 2, reuse_shaders);
 	}
-	draw_cobjs_group(pb.normal_map_cobjs, cdb, reflection_pass, (reuse_shaders ? shaders[six++] : s), 2, 1, has_lt_atten, 0, reuse_shaders);
+	draw_cobjs_group(pb.normal_map_cobjs, cdb, reflection_pass, (reuse_shaders ? shaders[six++] : ss), 2, 1, has_lt_atten, 0, reuse_shaders);
 	
 	if (draw_trans) {
 		disable_blend();
