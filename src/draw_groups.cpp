@@ -251,9 +251,19 @@ void draw_player_model(point const &pos, vector3d const &dir, int time) {
 }
 
 
+bool is_group_enabled_this_pass(obj_group const &objg, bool solid) {
+	return (objg.enabled && objg.temperature_ok() && objg.end_id > 0 && (!(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid);
+}
+
 void draw_select_groups(int solid, int reflection_pass) {
 
 	if (!begin_motion) return;
+	bool any_enabled(0);
+
+	for (int i = 0; i < num_groups; ++i) {
+		if (is_group_enabled_this_pass(obj_groups[i], solid)) {any_enabled = 1; break;}
+	}
+	if (!any_enabled) return; // nothing to do
 	shader_t s;
 	setup_draw_groups_shader(s, solid, reflection_pass);
 	lt_atten_manager_t lt_atten_manager(s);
@@ -262,10 +272,7 @@ void draw_select_groups(int solid, int reflection_pass) {
 
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
-
-		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) {
-			if ((!(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {draw_group(objg, s, lt_atten_manager);}
-		}
+		if (is_group_enabled_this_pass(objg, solid)) {draw_group(objg, s, lt_atten_manager);}
 	}
 	if (!puddle_qbd.empty() || !obj_pld.empty()) { // use the same shader
 		enable_blend();
