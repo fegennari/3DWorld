@@ -704,8 +704,10 @@ void draw_sky_and_clouds(bool camera_side, bool no_update=0) {
 
 void create_reflection_and_portal_textures() {
 	if (enable_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
+	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamp if not yet enabled - useful for cube maps
 	ensure_model_reflection_cube_maps();
 	reflective_cobjs.create_textures();
+	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);} // restore orig value if needed
 	create_portal_textures();
 }
 
