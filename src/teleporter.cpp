@@ -251,6 +251,7 @@ bool jump_pad::maybe_jump(point &opos, vector3d &obj_velocity, float oradius, in
 
 void draw_jump_pads() {
 
+	if (jump_pads.empty()) return;
 	shader_t s;
 	s.begin_simple_textured_shader(); // no lighting
 	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {i->draw(s);}
