@@ -19,7 +19,7 @@ point pre_ref_camera_pos(zero_vector);
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
 
-extern bool combined_gu, show_lightning, begin_motion, use_interior_cube_map_refl, disable_tt_water_reflect;
+extern bool combined_gu, show_lightning, begin_motion, use_interior_cube_map_refl, disable_tt_water_reflect, force_ref_cmap_update;
 extern int display_mode, window_width, window_height, camera_coll_id;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern point cube_map_center, sun_pos, moon_pos;
@@ -459,6 +459,7 @@ void reflective_cobjs_t::free_textures() {
 
 bool enable_reflection_dynamic_updates() {
 
+	if (force_ref_cmap_update) return 1;
 	static point last_sun(sun_pos), last_moon(moon_pos);
 
 	if ((sun_pos != last_sun && light_factor >= 0.4) || (moon_pos != last_moon && light_factor <= 0.6)) { // light source change
