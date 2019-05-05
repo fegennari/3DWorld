@@ -166,7 +166,7 @@ void create_cobj_draw_streams(vector<face_draw_params_t> const &faces) { // refl
 	vector<unsigned> &to_draw(coll_objects.get_cur_draw_stream());
 	for (auto i = faces.begin()+1; i != faces.end(); ++i) {i->to_draw = to_draw;} // deep copy list of all drawable cobjs
 
-#pragma omp parallel for schedule(static,64) num_threads(3)
+#pragma omp parallel for schedule(static,64) num_threads(3) if (to_draw.size() > 256)
 	for (int i = 0; i < (int)to_draw.size(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(to_draw[i]));
 		assert(c.cp.draw);
