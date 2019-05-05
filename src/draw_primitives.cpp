@@ -1251,9 +1251,24 @@ void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, boo
 
 	glEnable(GL_CULL_FACE);
 
-	for (unsigned i = unsigned(!enable_back); i < unsigned(1+enable_front); ++i) { // kind of slow
-		glCullFace(i ? GL_BACK : GL_FRONT);
-		draw_sphere_vbo(pos, radius, ndiv, textured); // cull?, partial sphere?
+	if (ndiv <= (int)MAX_SPHERE_VBO_NDIV && (radius != 1.0 || pos != all_zeros)) { // optimization for common case (shared transforms and VBO bind)
+		bind_draw_sphere_vbo(textured, 1);
+		fgPushMatrix();
+		translate_to(pos);
+		uniform_scale(radius);
+
+		for (unsigned i = unsigned(!enable_back); i < unsigned(1+enable_front); ++i) { // kind of slow
+			glCullFace(i ? GL_BACK : GL_FRONT);
+			draw_sphere_vbo_pre_bound(ndiv, textured);
+		}
+		fgPopMatrix();
+		bind_vbo(0);
+	}
+	else {
+		for (unsigned i = unsigned(!enable_back); i < unsigned(1+enable_front); ++i) { // kind of slow
+			glCullFace(i ? GL_BACK : GL_FRONT);
+			draw_sphere_vbo(pos, radius, ndiv, textured); // cull?, partial sphere?
+		}
 	}
 	glDisable(GL_CULL_FACE);
 }
