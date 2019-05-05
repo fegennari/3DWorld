@@ -703,6 +703,7 @@ void draw_sky_and_clouds(bool camera_side, bool no_update=0) {
 }
 
 void create_reflection_and_portal_textures() {
+	//timer_t timer("Create Reflection Textures"); // 340 => 250 => 230 => 195 => 184 => 112 => 103 => 98 => 92 => 82 => 72 => 63 => 54 => 47
 	if (enable_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
 	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamp if not yet enabled - useful for cube maps
 	ensure_model_reflection_cube_maps();
