@@ -521,6 +521,7 @@ public:
 	void pause();
 	void unpause();
 	bool check_activate(point const &p, float radius, int activator);
+	void register_activate();
 	bool is_sensor_active() const {return (sensor.enabled() && sensor.check_active());}
 	void advance_timestep();
 	bool is_moving  () const {return (state == ST_FWD || state == ST_REV);}

@@ -257,6 +257,7 @@ public:
 	void set_rotate(vector3d const &axis, float rotate);
 	void enable_dynamic_indir() {dynamic_indir = 1;}
 	bool check_activate(point const &p, float radius, int activator);
+	void register_activate(bool player_triggered);
 	void advance_timestep();
 	bool is_enabled() {return (bind_point_t::is_valid() && light_source::is_enabled());}
 	void disable() {release_smap(); bind_point_t::disable();}

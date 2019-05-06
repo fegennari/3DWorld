@@ -13,7 +13,6 @@ platform_cont platforms;
 extern bool user_action_key;
 extern int display_mode;
 extern float fticks, CAMERA_RADIUS, temperature;
-extern int coll_id[];
 extern coll_obj_group coll_objects;
 extern set<unsigned> moving_cobjs;
 extern vector<light_source_trig> light_sources_d;
@@ -43,18 +42,9 @@ unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int
 	return (requires_action ? 2 : 1); // triggered by proximity = 1, triggered by player action = 2
 }
 
-unsigned trigger_t::check_for_activate_this_frame() {
-	if (obj_type_id < 0) return 0; // no object type
-	assert(obj_type_id < NUM_TOT_OBJS);
-	int const obj_group_id(coll_id[obj_type_id]);
-	if (obj_group_id < 0) return 0; // no objects of this type
-	// TODO: WRITE
-	return 0;
-}
-
 void trigger_t::write_to_cobj_file(std::ostream &out) const {
 	out << "trigger " << act_pos.raw_str() << " " << act_dist << " " << auto_on_time << " " << auto_off_time
-		<< " " << (player_only != 0) << " " << (requires_action != 0) << " " << req_keycard_id;
+		<< " " << (player_only != 0) << " " << (requires_action != 0) << " " << (player_only ? req_keycard_id : obj_type_id);
 	if (use_act_region) {out << " " << act_region.raw_str();}
 	out << endl;
 }
@@ -66,8 +56,10 @@ unsigned multi_trigger_t::register_activator_pos(point const &p, float act_radiu
 	return ret;
 }
 
-void multi_trigger_t::check_for_activate_this_frame() {
-	for (iterator i = begin(); i != end(); ++i) {i->check_for_activate_this_frame();}
+unsigned multi_trigger_t::check_for_activate_this_frame() {
+	unsigned ret(0);
+	for (iterator i = begin(); i != end(); ++i) {ret |= i->check_for_activate_this_frame();}
+	return ret;
 }
 
 void multi_trigger_t::shift_by(vector3d const &val) {
@@ -289,10 +281,14 @@ bool platform::check_activate(point const &p, float radius, int activator) {
 		return 1;
 	}
 	if (!triggers.register_activator_pos(p, radius, activator, 1)) return 0; // not yet triggered
+	register_activate();
+	return 1;
+}
+
+void platform::register_activate() {
 	if (is_stopped) {is_stopped = 0; check_play_sound();}
 	else if (is_paused) {unpause(); check_play_sound();}
 	else {activate();}
-	return 1;
 }
 
 void platform::move_platform(float dist_traveled) { // linear distance or rotation angle
@@ -312,7 +308,7 @@ void platform::check_play_sound() const {
 void platform::advance_timestep() {
 
 	if (fticks == 0.0 || empty() || is_paused) return; // no progress, no cobjs/lights, or paused
-	triggers.check_for_activate_this_frame(); // maybe put in platform::next_frame()?
+	if (state == ST_NOACT && triggers.check_for_activate_this_frame()) {register_activate();} // not active - check if activated by an object
 	if (is_stopped && !is_sensor_active()) return; // stopped and waiting for trigger re-activate
 	is_stopped = 0;
 	

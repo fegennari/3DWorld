@@ -1646,18 +1646,20 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
+		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_or_obj_id [act_cube_region x1 x2 y1 y2 z1 z2]]
 			{
 				trigger_t trigger;
 				long const fpos(ftell(fp));
+				ivals[2] = -1; // Note: req_keycard_or_obj_id is optional; if player_only==1, then req_keycard_or_obj_id is a keycard ID; else, req_keycard_or_obj_id is an object ID
 				int const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i%i", &trigger.act_pos.x, &trigger.act_pos.y, &trigger.act_pos.z,
-					&trigger.act_dist, &trigger.auto_on_time, &trigger.auto_off_time, &ivals[0], &ivals[1], &trigger.req_keycard_id)); // Note: req_keycard_id is optional
+					&trigger.act_dist, &trigger.auto_on_time, &trigger.auto_off_time, &ivals[0], &ivals[1], &ivals[2]));
 				if (num_read == 0) {fseek(fp, fpos, SEEK_SET); triggers.clear(); break;} // bare K, just reset params and disable the trigger, or EOF
 				if (num_read < 8) {return read_error(fp, "light source trigger", coll_obj_file, line_num);}
 				xf.xform_pos(trigger.act_pos);
 				trigger.act_dist       *= xf.scale;
 				trigger.player_only     = (ivals[0] != 0);
 				trigger.requires_action = (ivals[1] != 0);
+				trigger.set_keycard_or_obj_id(ivals[2]); // Note: must be after setting trigger.player_only
 				cube_t act_region;
 				int const num_read2(read_cube(fp, xf, act_region));
 				if (num_read2 == 6) {trigger.set_act_region(act_region);}

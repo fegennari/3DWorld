@@ -311,7 +311,6 @@ void light_source::pack_to_floatv(float *data) const {
 
 void light_source_trig::advance_timestep() {
 
-	triggers.check_for_activate_this_frame();
 	if (enabled && rot_rate != 0.0) {rotate_vector3d(rot_axis, rot_rate*fticks/TICKS_PER_SECOND, dir); dir.normalize();}
 
 	if (bind_point_t::valid && bound) { // shift light if bound to a movable cobj
@@ -320,6 +319,7 @@ void light_source_trig::advance_timestep() {
 	}
 	if (!bind_point_t::valid || bind_point_t::disabled) {release_smap();} // free shadow map if invalid as an optimization
 	if (!triggers.is_active() && !sensor.enabled()) return; // triggers and sensors not active
+	if (active_time == 0.0 && triggers.check_for_activate_this_frame()) {register_activate(0);} // not active - check if activated by a non-player object
 	enabled = (active_time > 0.0); // light on by default
 	// if both triggers and sensor are enabled, use sensor to determine enabled state (but still check auto on/off time for triggers in case sensor is deactivated later)
 	if (/*triggers.empty() &&*/ sensor.enabled()) {enabled = sensor.check_active();}
@@ -364,14 +364,19 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 	if (auto_on_time > 0.0 && inactive_time > TICKS_PER_SECOND*auto_on_time) {inactive_time = 0.0; trigger_mode = 4;} // turn on, reset inactive_time
 	trigger_mode |= triggers.register_activator_pos(p, radius, activator, 1);
 	if (trigger_mode == 0) return 0; // not yet triggered
+	register_activate((trigger_mode & 2) != 0);
+	return 1;
+}
+
+void light_source_trig::register_activate(bool player_triggered) {
+
 	float const auto_off_time(triggers.get_auto_off_time());
 	bool const is_off(active_time == 0.0);
 	//if (auto_off_time == 0.0 || trigger.requires_action) {active_time = (is_off ? ((auto_off_time == 0.0) ? 1.0 : auto_off_time) : 0.0);} // toggle mode
-	if (auto_off_time == 0.0)         {active_time = (is_off ? 1.0 : 0.0);} // toggle mode
-	else if ((trigger_mode & 2) != 0) {active_time = (is_off ? auto_off_time : 0.0);} // toggle mode from user action with auto off
+	if (auto_off_time == 0.0)  {active_time = (is_off ? 1.0 : 0.0);} // toggle mode
+	else if (player_triggered) {active_time = (is_off ? auto_off_time : 0.0);} // toggle mode from user action with auto off
 	else {active_time = auto_off_time;} // reset active time (on duration)
 	active_time *= TICKS_PER_SECOND; // convert from seconds to ticks
-	return 1;
 }
 
 

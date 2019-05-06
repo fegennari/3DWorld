@@ -17,6 +17,7 @@ struct trigger_t {
 
 	trigger_t(point const &ap=all_zeros, float ad=0.0, float off_t=0.0, float on_t=0.0, bool po=0) :
 	act_pos(ap), act_dist(ad), auto_off_time(off_t), auto_on_time(on_t), req_keycard_id(-1), obj_type_id(-1), player_only(po), use_act_region(0), requires_action(0) {}
+	void set_keycard_or_obj_id(int id) {(player_only ? req_keycard_id : obj_type_id) = id;}
 	void set_act_region(cube_t const ar) {act_region = ar; use_act_region = 1; act_dist = 0.0;}
 	unsigned register_activator_pos(point const &p, float act_radius, int activator, bool clicks=0) const;
 	unsigned check_for_activate_this_frame();
@@ -29,7 +30,7 @@ struct trigger_t {
 struct multi_trigger_t : public vector<trigger_t> {
 	void add_triggers(multi_trigger_t const &t) {copy(t.begin(), t.end(), back_inserter(*this));}
 	unsigned register_activator_pos(point const &p, float act_radius, int activator, bool clicks=0);
-	void check_for_activate_this_frame();
+	unsigned check_for_activate_this_frame();
 	bool is_active() const {return !empty();}
 	void shift_by(vector3d const &val);
 	float get_auto_on_time() const;

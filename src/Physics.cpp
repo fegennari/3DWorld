@@ -1284,6 +1284,29 @@ void reanimate_objects() {
 }
 
 
+unsigned trigger_t::check_for_activate_this_frame() {
+
+	if (obj_type_id < 0) return 0; // no object type
+	if (act_dist == 0.0 && !use_act_region) return 0; // act_dist of 0 and no act_region disables this trigger
+	assert(obj_type_id < NUM_TOT_OBJS);
+	int const obj_group_id(coll_id[obj_type_id]);
+	if (obj_group_id < 0) return 0; // no objects of this type
+	obj_group &objg(obj_groups[obj_group_id]);
+	if (!objg.enabled) return 0;
+	float const obj_radius(object_types[obj_type_id].radius);
+
+	for (unsigned j = 0; j < objg.end_id; ++j) {
+		dwobject &obj(objg.get_obj(j));
+		if (obj.disabled()) continue;
+		if (use_act_region) {
+			if (act_region.contains_pt(obj.pos)) return 1; // check active region containment
+		}
+		else if (dist_less_than(obj.pos, act_pos, (act_dist + obj_radius))) return 1; // close enough to activate
+	}
+	return 0;
+}
+
+
 void seed_water_on_mesh(float amount) {
 
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
