@@ -40,7 +40,7 @@ a 2 # destroyable/shatterable
 torus -6.55 4.8 -0.05  0 0 1  0.03 0.01
 torus -6.55 5.1 -0.05  0 0 1  0.03 0.01
 torus -6.55 5.4 -0.05  0 0 1  0.03 0.01
-# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_or_obj_id [act_cube_region x1 x2 y1 y2 z1 z2]]
 #K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0 # 5s player auto trigger
 K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0  -1  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player auto trigger region
 L 0.0 1.0  -6.55 4.8 -0.1  0.6 0.6 1.0 1.0  0 0 -1 # samples face down
@@ -61,6 +61,7 @@ S -6.55 3.5 -0.105  0.03
 S -6.55 4.0 -0.105  0.03
 a 0 # non-destroyable
 K -6.3 2.59 -0.29  0.06 0.0 60.0 0 1 # manual toggle trigger, off after 60s
+K 0 0 0  0  0.0 0.0  0 0  4  -7.5 -7.2  -0.85 -0.6  -0.4 -0.3 # second trigger enabled by object type = BALL in lava region
 y 100.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B -6.31 -6.29  2.59 2.60  -0.30 -0.28
@@ -119,6 +120,7 @@ indir_dlight_group none
 
 # crusher platform
 K -6.3 -0.849 -0.29  0.06 0.0 0.0 0 1 # manual toggle trigger
+K 0 0 0  0  0.06 0.0  0 0  4  -6.5 -6.1 -0.85 -0.45 -0.4 -0.3 # second trigger enabled by object type = BALL in crusher
 y 100.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B -6.31 -6.29  -0.85 -0.849  -0.30 -0.28
@@ -244,7 +246,7 @@ l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 metalness 1.0
 
 # doors/triggers
-# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_id [act_cube_region x1 x2 y1 y2 z1 z2]]
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [req_keycard_or_obj_id [act_cube_region x1 x2 y1 y2 z1 z2]]
 trigger -5.0 -0.891 -0.28  0.06 0.0 0.0 1 1 0 # player manual keycard 0 trigger
 sound_file machine.wav
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont [is_rotation=0 [update_light=0]]]
