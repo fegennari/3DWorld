@@ -1553,6 +1553,7 @@ void draw_cracks_and_decals() {
 	enable_blend();
 	shader_t black_shader, lighting_shader, bullet_shader;
 	bool is_emissive(0);
+	//glPolygonOffset(0.0, 1.0);
 
 	if (!blood_tqd.empty() || !crack_qbd.empty()) { // use normal lighting shader
 		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1); // no rain/snow
@@ -1593,6 +1594,7 @@ void draw_cracks_and_decals() {
 		select_texture(tid);
 		i->second.draw();
 	} // for i
+	//glPolygonOffset(0.0, 0.0);
 	disable_blend();
 	glDepthMask(GL_TRUE);
 	if (bullet_shader.is_setup()) {bullet_shader.enable(); bullet_shader.add_uniform_float("bump_tb_scale", 1.0);} // reset
