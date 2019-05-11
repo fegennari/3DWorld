@@ -437,8 +437,7 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-	bool draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw,
-		unsigned draw_ix, bool immediate_only, bool check_immediate_mode) const;
+	bool draw(shader_t &s, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
 private:
@@ -1599,30 +1598,24 @@ bool check_tile_smap(bool shadow_only) {
 	return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 }
 
-bool building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw,
-	unsigned draw_ix, bool immediate_only, bool check_immediate_mode) const
-{
+bool building_t::draw(shader_t &s, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
+
 	if (draw_ix == cur_draw_ix) return 0; // already drawn this pass
 	if (!is_valid()) return 0; // invalid building
 	cur_draw_ix = draw_ix;
 	point const camera(get_camera_pos());
-	if (!shadow_only && !bcube.closest_dist_less_than((camera - xlate), draw_dist)) return 0; // too far
+	if (!bcube.closest_dist_less_than((camera - xlate), draw_dist)) return 0; // too far
 	point const center(bcube.get_cube_center()), pos(center + xlate);
 	if (!camera_pdu.sphere_and_cube_visible_test(pos, bcube.get_bsphere_radius(), (bcube + xlate))) return 0; // VFC
-	bool const immediate_mode(check_immediate_mode && check_tile_smap(shadow_only) && try_bind_tile_smap_at_point(pos, s)); // for nearby TT tile shadow maps
-	if (immediate_only && !immediate_mode) return 0; // not drawn in this pass
 	bool const is_close(dist_less_than(camera, pos, 0.1*far_clip));
 	building_mat_t const &mat(get_material());
-	if (immediate_mode) {bdraw.begin_immediate_building();}
 	vector3d view_dir(zero_vector);
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		if (!shadow_only) {
-			point ccenter(i->get_cube_center());
-			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
-			view_dir = (ccenter + xlate - camera);
-		}
-		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, shadow_only, &view_dir, 3, 0, 0, 0); // XY
+		point ccenter(i->get_cube_center());
+		if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
+		view_dir = (ccenter + xlate - camera);
+		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 0, &view_dir, 3, 0, 0, 0); // XY
 		bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't draw the flat roof for the top part in this case
 		bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 		bool const skip_bot(1); // bottom surface is never lit, so doesn't need to be drawn in this pass
@@ -1631,40 +1624,34 @@ bool building_t::draw(shader_t &s, bool shadow_only, float far_clip, float draw_
 		if (is_stacked && camera.z < i->z2()) { // stacked cubes viewed from below; cur corners can have overhangs
 			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
 		}
-		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, shadow_only, &view_dir, 4, skip_bot, skip_top, 0); // only Z dim
+		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 0, &view_dir, 4, skip_bot, skip_top, 0); // only Z dim
 		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
 	} // for i
 	if (!roof_tquads.empty()) { // distance culling?
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			if (!shadow_only && !is_rotated() && dot_product(view_dir, i->get_norm(0)) > 0.0) continue; // back facing
-			bdraw.add_tquad(*this, *i, xlate, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), shadow_only); // use type to select roof vs. side
+			if (!is_rotated() && dot_product(view_dir, i->get_norm(0)) > 0.0) continue; // back facing
+			bdraw.add_tquad(*this, *i, xlate, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), 0); // use type to select roof vs. side
 		}
 	}
-	if (!shadow_only && !doors.empty()) { // doors don't contribute to shadows because they're always closed, making them part of the wall
+	if (!doors.empty()) { // doors don't contribute to shadows because they're always closed, making them part of the wall
 		for (auto i = doors.begin(); i != doors.end(); ++i) {
 			if (!is_rotated() && dot_product(view_dir, i->get_norm(0)) > 0.0) continue; // back facing
-			bdraw.add_tquad(*this, *i, xlate, bcube, tid_nm_pair_t(building_window_gen.get_door_tid(), -1, 1.0, 1.0), WHITE, shadow_only);
+			bdraw.add_tquad(*this, *i, xlate, bcube, tid_nm_pair_t(building_window_gen.get_door_tid(), -1, 1.0, 1.0), WHITE, 0);
 		}
 	}
-	if (!details.empty() && (shadow_only || dist_less_than(camera, pos, 0.25*far_clip))) { // draw roof details
+	if (!details.empty() && dist_less_than(camera, pos, 0.25*far_clip)) { // draw roof details
 		tid_nm_pair_t const tex(mat.roof_tex.get_scaled_version(0.5));
 		building_geom_t bg(4, rot_sin, rot_cos); // cube
 
 		for (auto i = details.begin(); i != details.end(); ++i) {
-			if (!shadow_only) {
-				point ccenter(i->get_cube_center());
-				if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
-				view_dir = (ccenter + xlate - camera);
-			}
+			point ccenter(i->get_cube_center());
+			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
+			view_dir = (ccenter + xlate - camera);
 			bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
-			bdraw.add_section(bg, *i, xlate, bcube, ao_bcz2, tex, detail_color*(bg.is_pointed ? 0.5 : 1.0),
-				shadow_only, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
+			bdraw.add_section(bg, *i, xlate, bcube, ao_bcz2, tex, detail_color*(bg.is_pointed ? 0.5 : 1.0), 0, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
 		} // for i
 	}
-	if (DEBUG_BCUBES && !shadow_only) {
-		bdraw.add_section(building_geom_t(), bcube, xlate, bcube, ao_bcz2, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), shadow_only, nullptr, 7, 1, 0, 1);
-	}
-	if (immediate_mode) {bdraw.end_immediate_building(shadow_only);}
+	if (DEBUG_BCUBES) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, ao_bcz2, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), 0, nullptr, 7, 1, 0, 1);}
 	return 1;
 }
 
@@ -2055,7 +2042,7 @@ public:
 				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 				if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
 				bool drawn(0);
-				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, 0, far_clip, draw_dist, xlate, building_draw, draw_ix, 0, 0);}
+				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, far_clip, draw_dist, xlate, building_draw, draw_ix);}
 				if (drawn) {building_draw.end_immediate_building(0);}
 			}
 			s.end_shader();
