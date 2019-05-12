@@ -13,6 +13,7 @@ float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2;
 extern float FAR_CLIP;
+extern point pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
@@ -421,14 +422,15 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	point const center(car.get_center());
 	begin_tile(center); // enable shadows
 	colorRGBA const &color(car.get_color());
-	float const dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/get_draw_tile_dist());
+	float const tile_draw_dist(get_draw_tile_dist()), dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/tile_draw_dist);
 	bool const is_truck(car.height > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
 	bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
+	bool const draw_model(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, (center + xlate), 0.05*tile_draw_dist) : (shadow_only || dist_val < 0.05));
 	float const sign((dim^dir) ? -1.0 : 1.0);
 	point pb[8], pt[8]; // bottom and top sections
 	gen_car_pts(car, draw_top, pb, pt);
 
-	if ((shadow_only || dist_val < 0.05) && car_model_loader.is_model_valid(car.model_id)) {
+	if (draw_model && car_model_loader.is_model_valid(car.model_id)) {
 		if (is_occluded(car.bcube)) return; // only check occlusion for expensive car models
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));

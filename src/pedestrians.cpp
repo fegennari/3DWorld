@@ -13,6 +13,7 @@ bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes prob
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter;
 extern float FAR_CLIP;
+extern point pre_smap_player_pos;
 extern city_params_t city_params;
 
 
@@ -939,7 +940,8 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	//timer_t timer("Ped Draw"); // ~1ms
 	bool const enable_animations = 1;
 	bool const use_models(ped_model_loader.num_models() > 0);
-	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : (use_models ? 500.0 : 2000.0)*get_ped_radius()), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
+	float const def_draw_dist((use_models ? 500.0 : 2000.0)*get_ped_radius());
+	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.far_ = draw_dist;
 	pdu.pos -= xlate; // adjust for local translate
@@ -976,6 +978,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				if (ped.destroyed) continue; // skip
 				float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
 				if (dist_sq > draw_dist_sq) continue; // too far - skip
+				if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, (ped.pos + xlate), 0.4*def_draw_dist))  continue; // too far from the player
 				if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) continue;
 				
 				if (!use_models) { // or distant?
