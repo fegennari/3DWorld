@@ -1898,7 +1898,6 @@ public:
 		build_grid_by_tile();
 		create_vbos();
 	}
-	static void set_depth_priority(int p) {glPolygonOffset(-1.0*p, -1.0*p);}
 
 	void draw(bool shadow_only, vector3d const &xlate) { // Note: non-const; building_draw is modified
 		if (empty()) return;
@@ -1913,14 +1912,33 @@ public:
 		fgPushMatrix();
 		translate_to(xlate);
 		if (!shadow_only) {building_draw.init_draw_frame();}
+		glDepthFunc(GL_LEQUAL);
 
-		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
+		// main/batched draw pass
+		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
+		else {
+			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
+			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+		}
+		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
+		float const WIND_LIGHT_ON_RAND = 0.08;
+		bool const night(is_night(WIND_LIGHT_ON_RAND));
+
+		if (!shadow_only && !building_draw_windows.empty()) { // draw windows
+			enable_blend();
+			glDepthMask(GL_FALSE); // disable depth writing
+			building_draw_windows.draw(0); // draw windows on top of other buildings
+			glDepthMask(GL_TRUE); // re-enable depth writing
+			disable_blend();
+		}
+		s.end_shader();
+
+		// post-pass to render buildings in nearby tiles that have shadow maps
 		if (use_tt_smap) {
 			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.3 / 0.3
 			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
-			set_depth_priority(2);
-			glEnable(GL_POLYGON_OFFSET_FILL);
+			glDepthMask(GL_FALSE); // disable depth writing
 
 			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 				if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
@@ -1931,55 +1949,31 @@ public:
 				building_draw_vbo.draw_tile(tile_id);
 
 				if (!building_draw_windows.empty()) {
-					glDepthMask(GL_FALSE); // disable depth writing
 					enable_blend();
-					set_depth_priority(3); // draw in front
 					building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
-					set_depth_priority(2);
 					disable_blend();
-					glDepthMask(GL_TRUE); // re-enable depth writing
 				}
 			} // for g
-			set_depth_priority(0); // reset to default
-			glDisable(GL_POLYGON_OFFSET_FILL);
 			s.end_shader();
+			glDepthMask(GL_TRUE); // re-enable depth writing
 		}
-		// main/batched draw pass
-		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
-		else {
-			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-		}
-		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
-		float const WIND_LIGHT_ON_RAND = 0.08;
-		bool const night(is_night(WIND_LIGHT_ON_RAND));
-		
-		if (!shadow_only && (!building_draw_windows.empty() || (night && !building_draw_wind_lights.empty()))) {
+		if (!shadow_only && night && !building_draw_wind_lights.empty()) { // add night time random lights in windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
-			set_depth_priority(1); // in front of unshadowed windows, but not in front of geometry or shadowed windows
-			glEnable(GL_POLYGON_OFFSET_FILL);
-			building_draw_windows.draw(0); // draw windows on top of other buildings
-
-			if (night) { // add night time random lights in windows
-				float const low_v(0.5 - WIND_LIGHT_ON_RAND), high_v(0.5 + WIND_LIGHT_ON_RAND), lit_thresh_mult(1.0 + 2.0*CLIP_TO_01((light_factor - low_v)/(high_v - low_v)));
-				s.end_shader();
-				s.set_vert_shader("window_lights");
-				s.set_frag_shader("linear_fog.part+window_lights");
-				s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);
-				setup_tt_fog_pre(s);
-				s.begin_shader();
-				s.add_uniform_float("lit_thresh_mult", lit_thresh_mult); // gradual transition of lit window probability around sunset
-				setup_tt_fog_post(s);
-				set_depth_priority(4); // in front of everything
-				building_draw_wind_lights.draw(0); // add bloom?
-			}
+			float const low_v(0.5 - WIND_LIGHT_ON_RAND), high_v(0.5 + WIND_LIGHT_ON_RAND), lit_thresh_mult(1.0 + 2.0*CLIP_TO_01((light_factor - low_v)/(high_v - low_v)));
+			s.end_shader();
+			s.set_vert_shader("window_lights");
+			s.set_frag_shader("linear_fog.part+window_lights");
+			s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);
+			setup_tt_fog_pre(s);
+			s.begin_shader();
+			s.add_uniform_float("lit_thresh_mult", lit_thresh_mult); // gradual transition of lit window probability around sunset
+			setup_tt_fog_post(s);
+			building_draw_wind_lights.draw(0); // add bloom?
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
-			set_depth_priority(0); // reset to default
-			glDisable(GL_POLYGON_OFFSET_FILL);
 		}
-		s.end_shader();
+		glDepthFunc(GL_LESS);
 		fgPopMatrix();
 	}
 
