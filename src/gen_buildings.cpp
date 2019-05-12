@@ -1981,8 +1981,7 @@ public:
 			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.3 / 0.3
 			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
-			enable_blend(); // needed for windows
-			set_depth_priority(1);
+			set_depth_priority(2);
 			glEnable(GL_POLYGON_OFFSET_FILL);
 
 			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -1994,14 +1993,17 @@ public:
 				building_draw_vbo.draw_tile(tile_id);
 
 				if (!building_draw_windows.empty()) {
+					glDepthMask(GL_FALSE); // disable depth writing
+					enable_blend();
 					set_depth_priority(3); // draw in front
 					building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
-					set_depth_priority(1);
+					set_depth_priority(2);
+					disable_blend();
+					glDepthMask(GL_TRUE); // re-enable depth writing
 				}
 			} // for g
 			set_depth_priority(0); // reset to default
 			glDisable(GL_POLYGON_OFFSET_FILL);
-			disable_blend();
 			s.end_shader();
 		}
 		// main/batched draw pass
@@ -2017,7 +2019,7 @@ public:
 		if (!shadow_only && (!building_draw_windows.empty() || (night && !building_draw_wind_lights.empty()))) {
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
-			set_depth_priority(2); // in front of unshadowed windows, but not in front of geometry or shadowed windows
+			set_depth_priority(1); // in front of unshadowed windows, but not in front of geometry or shadowed windows
 			glEnable(GL_POLYGON_OFFSET_FILL);
 			building_draw_windows.draw(0); // draw windows on top of other buildings
 
