@@ -11,7 +11,6 @@
 
 using std::string;
 
-bool const DEBUG_BCUBES        = 0;
 unsigned const MAX_CYLIN_SIDES = 36;
 
 extern bool start_in_inf_terrain;
@@ -408,9 +407,8 @@ struct building_t : public building_geom_t {
 	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	float ao_bcz2;
-	mutable unsigned cur_draw_ix;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0), cur_draw_ix(0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -437,7 +435,6 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-	bool draw(shader_t &s, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const;
 	void get_all_drawn_verts(building_draw_t &bdraw) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
 private:
@@ -545,68 +542,48 @@ class building_draw_t {
 			vert_ix_pair(unsigned qix_, unsigned tix_) : qix(qix_), tix(tix_) {}
 			bool operator==(vert_ix_pair const &v) const {return (qix == v.qix && tix == v.tix);}
 		};
-		bool use_vbos;
-		unsigned num_qv, num_tv;
 		vbo_wrap_t qvbo, tvbo;
 		tid_nm_pair_t tex;
 		vector<vert_norm_comp_tc_color> quad_verts, tri_verts;
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 
-		draw_block_t() : use_vbos(0), num_qv(0), num_tv(0) {}
-
-		void draw_geom_range(bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) {
-			if (empty() /*|| vstart == vend*/) return; // empty range - no verts for this tile
+		void draw_geom_range(bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
+			if (vstart == vend) return; // empty range - no verts for this tile
 			if (!shadow_only) {tex.set_gl();}
+			ensure_vbos();
 
-			if (use_vbos) { // use VBO rendering
-				if (vstart == vend) return; // FIXME: do this check above
-				ensure_vbos();
-
-				if (qvbo.vbo_valid() && vstart.qix != vend.qix) {
-					qvbo.pre_render();
-					vert_norm_comp_tc_color::set_vbo_arrays();
-					assert(vstart.qix < vend.qix && vend.qix <= num_qv);
-					draw_quads_as_tris((vend.qix - vstart.qix), vstart.qix);
-				}
-				if (tvbo.vbo_valid() && vstart.tix != vend.tix) {
-					tvbo.pre_render();
-					vert_norm_comp_tc_color::set_vbo_arrays();
-					assert(vstart.tix < vend.tix && vend.tix <= num_tv);
-					glDrawArrays(GL_TRIANGLES, vstart.tix, (vend.tix - vstart.tix));
-				}
-				vbo_wrap_t::post_render();
+			if (qvbo.vbo_valid() && vstart.qix != vend.qix) {
+				qvbo.pre_render();
+				vert_norm_comp_tc_color::set_vbo_arrays();
+				assert(vstart.qix < vend.qix);
+				draw_quads_as_tris((vend.qix - vstart.qix), vstart.qix);
 			}
-			else {
-				//assert(0);
-				draw_quad_verts_as_tris(quad_verts);
-				draw_verts(tri_verts, GL_TRIANGLES);
+			if (tvbo.vbo_valid() && vstart.tix != vend.tix) {
+				tvbo.pre_render();
+				vert_norm_comp_tc_color::set_vbo_arrays();
+				assert(vstart.tix < vend.tix);
+				glDrawArrays(GL_TRIANGLES, vstart.tix, (vend.tix - vstart.tix));
 			}
+			vbo_wrap_t::post_render();
 		}
 		void draw_all_geom(bool shadow_only) {
-			draw_geom_range(shadow_only, vert_ix_pair(0, 0), vert_ix_pair(num_qv, num_tv));
+			assert(!pos_by_tile.empty());
+			draw_geom_range(shadow_only, pos_by_tile.front(), pos_by_tile.back());
 		}
 		void draw_geom_tile(unsigned tile_id) {
-			assert(use_vbos);
 			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
 			draw_geom_range(0, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
 		void ensure_vbos() {
-			num_qv = quad_verts.size();
-			num_tv = tri_verts.size();
-			assert((num_qv%4) == 0);
-			assert((num_tv%3) == 0);
+			assert((quad_verts.size()%4) == 0);
+			assert((tri_verts.size()%3) == 0);
 			if (!quad_verts.empty()) {qvbo.create_and_upload(quad_verts, 0, 1);}
 			if (! tri_verts.empty()) {tvbo.create_and_upload( tri_verts, 0, 1);}
 		}
 		void upload_to_vbos() {
-			use_vbos = 1;
 			ensure_vbos();
 			//clear_cont(quad_verts); // no longer needed - unless VBO needs to be recreated
 			//clear_cont(tri_verts);
-		}
-		void draw_and_clear(bool shadow_only) {
-			draw_all_geom(shadow_only);
-			clear_verts();
 		}
 		void register_tile_id(unsigned tid) {
 			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
@@ -619,14 +596,14 @@ class building_draw_t {
 			remove_excess_cap(tri_verts);
 			remove_excess_cap(pos_by_tile);
 		}
-		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear(); num_qv = num_tv = 0;}
+		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear();}
 		void clear_vbos() {qvbo.clear(); tvbo.clear();}
 		void clear() {clear_vbos(); clear_verts();}
-		bool empty() const {return (quad_verts.empty() && tri_verts.empty() && num_qv == 0 && num_tv == 0);}
+		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
 		unsigned num_tris () const {return (quad_verts.size()/2 + tri_verts.size()/3);} // Note: 1 quad = 4 verts = 2 triangles
 	}; // end draw_block_t
-	vector<draw_block_t> to_draw, pend_draw; // one per texture, assumes tids are dense
+	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
 	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
 		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
@@ -929,18 +906,8 @@ public:
 	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
-	void draw_and_clear(bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}}
 	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom (shadow_only);}}
 	void draw_tile     (unsigned tile_id) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id);}}
-
-	void begin_immediate_building() { // to be called before any add_section() calls
-		pend_draw.swap(to_draw); // move current draw queue to pending queue
-	}
-	void end_immediate_building(bool shadow_only) { // to be matched with begin_building()
-		// Note: there sometimes aren't more than one building of the same material within the same tile, so batching may or may not help
-		draw_and_clear(shadow_only); // draw current building - sparse iteration?
-		pend_draw.swap(to_draw); // restore draw queue
-	}
 };
 
 
@@ -1628,63 +1595,6 @@ bool check_tile_smap(bool shadow_only) {
 	return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 }
 
-bool building_t::draw(shader_t &s, float far_clip, float draw_dist, vector3d const &xlate, building_draw_t &bdraw, unsigned draw_ix) const {
-
-	if (draw_ix == cur_draw_ix) return 0; // already drawn this pass
-	if (!is_valid()) return 0; // invalid building
-	cur_draw_ix = draw_ix;
-	point const camera(get_camera_pos());
-	if (!bcube.closest_dist_less_than((camera - xlate), draw_dist)) return 0; // too far
-	point const center(bcube.get_cube_center()), pos(center + xlate);
-	if (!camera_pdu.sphere_and_cube_visible_test(pos, bcube.get_bsphere_radius(), (bcube + xlate))) return 0; // VFC
-	bool const is_close(dist_less_than(camera, pos, 0.1*far_clip));
-	building_mat_t const &mat(get_material());
-	vector3d view_dir(zero_vector);
-
-	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		point ccenter(i->get_cube_center());
-		if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
-		view_dir = (ccenter + xlate - camera);
-		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 0, &view_dir, 3, 0, 0, 0); // XY
-		bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't draw the flat roof for the top part in this case
-		bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
-		bool const skip_bot(1); // bottom surface is never lit, so doesn't need to be drawn in this pass
-		if (skip_bot && skip_top) continue; // no top/bottom to draw
-		
-		if (is_stacked && camera.z < i->z2()) { // stacked cubes viewed from below; cur corners can have overhangs
-			continue; // top surface not visible, bottom surface occluded, skip (even for shadow pass)
-		}
-		bdraw.add_section(*this, *i, xlate, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 0, &view_dir, 4, skip_bot, skip_top, 0); // only Z dim
-		if (is_close) {} // placeholder for drawing of building interiors, windows, detail, etc.
-	} // for i
-	if (!roof_tquads.empty()) { // distance culling?
-		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			if (!is_rotated() && dot_product(view_dir, i->get_norm(0)) > 0.0) continue; // back facing
-			bdraw.add_tquad(*this, *i, xlate, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color), 0); // use type to select roof vs. side
-		}
-	}
-	if (!doors.empty()) { // doors don't contribute to shadows because they're always closed, making them part of the wall
-		for (auto i = doors.begin(); i != doors.end(); ++i) {
-			if (!is_rotated() && dot_product(view_dir, i->get_norm(0)) > 0.0) continue; // back facing
-			bdraw.add_tquad(*this, *i, xlate, bcube, tid_nm_pair_t(building_window_gen.get_door_tid(), -1, 1.0, 1.0), WHITE, 0);
-		}
-	}
-	if (!details.empty() && dist_less_than(camera, pos, 0.25*far_clip)) { // draw roof details
-		tid_nm_pair_t const tex(mat.roof_tex.get_scaled_version(0.5));
-		building_geom_t bg(4, rot_sin, rot_cos); // cube
-
-		for (auto i = details.begin(); i != details.end(); ++i) {
-			point ccenter(i->get_cube_center());
-			if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, center, ccenter);}
-			view_dir = (ccenter + xlate - camera);
-			bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
-			bdraw.add_section(bg, *i, xlate, bcube, ao_bcz2, tex, detail_color*(bg.is_pointed ? 0.5 : 1.0), 0, &view_dir, 7, 1, 0, 1); // all dims, skip_bottom, no AO
-		} // for i
-	}
-	if (DEBUG_BCUBES) {bdraw.add_section(building_geom_t(), bcube, xlate, bcube, ao_bcz2, mat.side_tex, colorRGBA(1.0, 0.0, 0.0, 0.5), 0, nullptr, 7, 1, 0, 1);}
-	return 1;
-}
-
 void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 
 	if (!is_valid()) return; // invalid building
@@ -2047,9 +1957,10 @@ public:
 		} // close the scope
 		cout << "WM: " << world_mode << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 			 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
-		create_vbos();
 		build_grid_by_tile();
+		create_vbos();
 	}
+	static void set_depth_priority(int p) {glPolygonOffset(-1.0*p, -1.0*p);}
 
 	void draw(bool shadow_only, vector3d const &xlate) { // Note: non-const; building_draw is modified
 		if (empty()) return;
@@ -2064,15 +1975,14 @@ public:
 		fgPushMatrix();
 		translate_to(xlate);
 		if (!shadow_only) {building_draw.init_draw_frame();}
-		if (DEBUG_BCUBES && !shadow_only) {enable_blend();}
 
 		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
 		if (use_tt_smap) {
-			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.8 / 0.8 => 0.3 / 0.3
+			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.3 / 0.3
 			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			enable_blend(); // needed for windows
-			glPolygonOffset(0.0, -1.0);
+			set_depth_priority(1);
 			glEnable(GL_POLYGON_OFFSET_FILL);
 
 			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -2080,24 +1990,16 @@ public:
 				point const pos(g->bcube.get_cube_center() + xlate);
 				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 				if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
+				unsigned const tile_id(g - grid_by_tile.begin());
+				building_draw_vbo.draw_tile(tile_id);
 
-				if (display_mode & 0x10) {
-					unsigned const tile_id(g - grid_by_tile.begin());
-					building_draw_vbo.draw_tile(tile_id);
-
-					if (!building_draw_windows.empty()) {
-						glPolygonOffset(0.0, -3.0); // draw in front
-						building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
-						glPolygonOffset(0.0, -1.0);
-					}
-				}
-				else {
-					bool drawn(0);
-					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, far_clip, draw_dist, xlate, building_draw, draw_ix);}
-					if (drawn) {building_draw.end_immediate_building(0);}
+				if (!building_draw_windows.empty()) {
+					set_depth_priority(3); // draw in front
+					building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
+					set_depth_priority(1);
 				}
 			} // for g
-			glPolygonOffset(0.0, 0.0); // reset to default
+			set_depth_priority(0); // reset to default
 			glDisable(GL_POLYGON_OFFSET_FILL);
 			disable_blend();
 			s.end_shader();
@@ -2115,7 +2017,7 @@ public:
 		if (!shadow_only && (!building_draw_windows.empty() || (night && !building_draw_wind_lights.empty()))) {
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
-			glPolygonOffset(0.0, -2.0); // in front of unshadowed windows, but not in front of geometry or shadowed windows
+			set_depth_priority(2); // in front of unshadowed windows, but not in front of geometry or shadowed windows
 			glEnable(GL_POLYGON_OFFSET_FILL);
 			building_draw_windows.draw(0); // draw windows on top of other buildings
 
@@ -2129,15 +2031,14 @@ public:
 				s.begin_shader();
 				s.add_uniform_float("lit_thresh_mult", lit_thresh_mult); // gradual transition of lit window probability around sunset
 				setup_tt_fog_post(s);
-				glPolygonOffset(0.0, -4.0); // in front of everything
+				set_depth_priority(4); // in front of everything
 				building_draw_wind_lights.draw(0); // add bloom?
 			}
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
-			glPolygonOffset(0.0, 0.0); // reset to default
+			set_depth_priority(0); // reset to default
 			glDisable(GL_POLYGON_OFFSET_FILL);
 		}
-		if (DEBUG_BCUBES && !shadow_only) {disable_blend();}
 		s.end_shader();
 		fgPopMatrix();
 	}
