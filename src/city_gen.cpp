@@ -198,11 +198,11 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	}
 }
 
-void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap) {
+void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap, float min_alpha) {
 
 	cube_t const lights_bcube(get_city_lights_bcube());
 	use_dlights &= !lights_bcube.is_zero_area();
-	setup_smoke_shaders(s, 0.01, 0, 0, 0, 1, use_dlights, 0, 0, (use_smap ? 2 : 0), use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+	setup_smoke_shaders(s, min_alpha, 0, 0, 0, 1, use_dlights, 0, 0, (use_smap ? 2 : 0), use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
 }
 
@@ -217,7 +217,7 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	use_smap    = (shadow_map_enabled() && !shadow_only);
 	if (!use_smap && !always_setup_shader) return;
 	if (shadow_only) {s.begin_simple_textured_shader();}
-	else {city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only));}
+	else {city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only), 0.01);}
 }
 void draw_state_t::end_draw() {
 	emit_now = 0;
@@ -232,7 +232,7 @@ void draw_state_t::end_draw() {
 void draw_state_t::ensure_shader_active() {
 	if (s.is_setup()) return; // already active
 	if (shadow_only) {s.begin_color_only_shader();}
-	else {city_shader_setup(s, use_dlights, 0, use_bmap);} // no smap
+	else {city_shader_setup(s, use_dlights, 0, use_bmap, 0.01);} // no smap
 }
 void draw_state_t::draw_and_clear_light_flares() {
 	if (light_psd.empty()) return; // no lights to draw

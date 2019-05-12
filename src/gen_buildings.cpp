@@ -1936,7 +1936,7 @@ public:
 		// post-pass to render buildings in nearby tiles that have shadow maps
 		if (use_tt_smap) {
 			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.3 / 0.3
-			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
+			city_shader_setup(s, 1, 1, use_bmap, 0.0); // use_smap=1, use_dlights=1, min_alpha=0.0 to avoid alpha test
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			glDepthMask(GL_FALSE); // disable depth writing
 
