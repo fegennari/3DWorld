@@ -540,38 +540,55 @@ struct building_draw_utils {
 class building_draw_t {
 
 	struct draw_block_t {
+		struct vert_ix_pair {
+			unsigned qix, tix; // {quads, tris}
+			vert_ix_pair(unsigned qix_, unsigned tix_) : qix(qix_), tix(tix_) {}
+			bool operator==(vert_ix_pair const &v) const {return (qix == v.qix && tix == v.tix);}
+		};
 		bool use_vbos;
 		unsigned num_qv, num_tv;
 		vbo_wrap_t qvbo, tvbo;
 		tid_nm_pair_t tex;
 		vector<vert_norm_comp_tc_color> quad_verts, tri_verts;
+		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 
 		draw_block_t() : use_vbos(0), num_qv(0), num_tv(0) {}
 
-		void draw_geom(bool shadow_only, int force_tid=-1) {
-			if (empty()) return;
-			if (force_tid >= 0) {select_texture(force_tid); select_multitex(FLAT_NMAP_TEX, 5);} // no normal map
-			else if (!shadow_only) {tex.set_gl();}
-			
+		void draw_geom_range(bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) {
+			if (empty() /*|| vstart == vend*/) return; // empty range - no verts for this tile
+			if (!shadow_only) {tex.set_gl();}
+
 			if (use_vbos) { // use VBO rendering
+				if (vstart == vend) return; // FIXME: do this check above
 				ensure_vbos();
 
-				if (qvbo.vbo_valid()) {
+				if (qvbo.vbo_valid() && vstart.qix != vend.qix) {
 					qvbo.pre_render();
 					vert_norm_comp_tc_color::set_vbo_arrays();
-					draw_quads_as_tris(num_qv);
+					assert(vstart.qix < vend.qix && vend.qix <= num_qv);
+					draw_quads_as_tris((vend.qix - vstart.qix), vstart.qix);
 				}
-				if (tvbo.vbo_valid()) {
+				if (tvbo.vbo_valid() && vstart.tix != vend.tix) {
 					tvbo.pre_render();
 					vert_norm_comp_tc_color::set_vbo_arrays();
-					glDrawArrays(GL_TRIANGLES, 0, num_tv);
+					assert(vstart.tix < vend.tix && vend.tix <= num_tv);
+					glDrawArrays(GL_TRIANGLES, vstart.tix, (vend.tix - vstart.tix));
 				}
 				vbo_wrap_t::post_render();
 			}
 			else {
+				//assert(0);
 				draw_quad_verts_as_tris(quad_verts);
 				draw_verts(tri_verts, GL_TRIANGLES);
 			}
+		}
+		void draw_all_geom(bool shadow_only) {
+			draw_geom_range(shadow_only, vert_ix_pair(0, 0), vert_ix_pair(num_qv, num_tv));
+		}
+		void draw_geom_tile(unsigned tile_id) {
+			assert(use_vbos);
+			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
+			draw_geom_range(0, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
 		void ensure_vbos() {
 			num_qv = quad_verts.size();
@@ -587,24 +604,35 @@ class building_draw_t {
 			//clear_cont(quad_verts); // no longer needed - unless VBO needs to be recreated
 			//clear_cont(tri_verts);
 		}
-		void draw_and_clear(bool shadow_only, int force_tid=-1) {
-			draw_geom(shadow_only, force_tid);
+		void draw_and_clear(bool shadow_only) {
+			draw_all_geom(shadow_only);
 			clear_verts();
 		}
-		void clear_verts() {quad_verts.clear(); tri_verts.clear(); num_qv = num_tv = 0;}
+		void register_tile_id(unsigned tid) {
+			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
+			assert(tid >= pos_by_tile.size()); // tid must be strictly increasing
+			pos_by_tile.resize(tid+1, vert_ix_pair(quad_verts.size(), tri_verts.size())); // push start of new range back onto all previous tile slots
+		}
+		void finalize(unsigned num_tiles) {
+			register_tile_id(num_tiles); // add terminator
+			remove_excess_cap(quad_verts);
+			remove_excess_cap(tri_verts);
+			remove_excess_cap(pos_by_tile);
+		}
+		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear(); num_qv = num_tv = 0;}
 		void clear_vbos() {qvbo.clear(); tvbo.clear();}
 		void clear() {clear_vbos(); clear_verts();}
-		void resize_to_cap() {remove_excess_cap(quad_verts); remove_excess_cap(tri_verts);}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty() && num_qv == 0 && num_tv == 0);}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
 		unsigned num_tris () const {return (quad_verts.size()/2 + tri_verts.size()/3);} // Note: 1 quad = 4 verts = 2 triangles
-	};
+	}; // end draw_block_t
 	vector<draw_block_t> to_draw, pend_draw; // one per texture, assumes tids are dense
 
 	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
 		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
+		block.register_tile_id(cur_tile_id);
 		if (block.empty()) {block.tex = tex;} // copy material first time
 		else {assert(block.tex.nm_tid == tex.nm_tid);} // else normal maps must agree
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
@@ -619,7 +647,8 @@ class building_draw_t {
 	point cur_camera_pos;
 
 public:
-	building_draw_t() : cur_camera_pos(zero_vector) {}
+	unsigned cur_tile_id;
+	building_draw_t() : cur_camera_pos(zero_vector), cur_tile_id(0) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
 
@@ -899,10 +928,11 @@ public:
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
 	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
-	void resize_to_cap () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->resize_to_cap();}}
+	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	void draw_and_clear(bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_and_clear(shadow_only);}}
-	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom(shadow_only);}}
-	
+	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom (shadow_only);}}
+	void draw_tile     (unsigned tile_id) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id);}}
+
 	void begin_immediate_building() { // to be called before any add_section() calls
 		pend_draw.swap(to_draw); // move current draw queue to pending queue
 	}
@@ -1779,7 +1809,13 @@ class building_creator_t {
 
 	void build_grid_by_tile() {
 		grid_by_tile.clear();
-		if (world_mode != WMODE_INF_TERRAIN) return; // not used in this mode
+
+		if (world_mode != WMODE_INF_TERRAIN) { // not used in this mode - add all buildings to the first tile
+			grid_by_tile.resize(1);
+			grid_by_tile.front().ixs.reserve(buildings.size());
+			for(unsigned bix = 0; bix < buildings.size(); ++bix) {grid_by_tile.front().add(buildings[bix].bcube, bix);}
+			return;
+		}
 		//timer_t timer("build_grid_by_tile");
 		map<uint64_t, unsigned> tile_to_gbt;
 
@@ -2032,19 +2068,38 @@ public:
 
 		// pre-pass to render buildings in nearby tiles that have shadow maps; also builds draw list for main pass below
 		if (use_tt_smap) {
-			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.8 / 0.8
+			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.8 / 0.8 => 0.3 / 0.3
 			city_shader_setup(s, 1, 1, use_bmap); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
+			enable_blend(); // needed for windows
+			glPolygonOffset(0.0, -1.0);
+			glEnable(GL_POLYGON_OFFSET_FILL);
 
 			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 				if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
 				point const pos(g->bcube.get_cube_center() + xlate);
 				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 				if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
-				bool drawn(0);
-				for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, far_clip, draw_dist, xlate, building_draw, draw_ix);}
-				if (drawn) {building_draw.end_immediate_building(0);}
-			}
+
+				if (display_mode & 0x10) {
+					unsigned const tile_id(g - grid_by_tile.begin());
+					building_draw_vbo.draw_tile(tile_id);
+
+					if (!building_draw_windows.empty()) {
+						glPolygonOffset(0.0, -3.0); // draw in front
+						building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
+						glPolygonOffset(0.0, -1.0);
+					}
+				}
+				else {
+					bool drawn(0);
+					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {drawn |= buildings[*i].draw(s, far_clip, draw_dist, xlate, building_draw, draw_ix);}
+					if (drawn) {building_draw.end_immediate_building(0);}
+				}
+			} // for g
+			glPolygonOffset(0.0, 0.0); // reset to default
+			glDisable(GL_POLYGON_OFFSET_FILL);
+			disable_blend();
 			s.end_shader();
 		}
 		// main/batched draw pass
@@ -2059,8 +2114,9 @@ public:
 		
 		if (!shadow_only && (!building_draw_windows.empty() || (night && !building_draw_wind_lights.empty()))) {
 			enable_blend();
-			glDepthFunc(GL_LEQUAL);
 			glDepthMask(GL_FALSE); // disable depth writing
+			glPolygonOffset(0.0, -2.0); // in front of unshadowed windows, but not in front of geometry or shadowed windows
+			glEnable(GL_POLYGON_OFFSET_FILL);
 			building_draw_windows.draw(0); // draw windows on top of other buildings
 
 			if (night) { // add night time random lights in windows
@@ -2073,11 +2129,13 @@ public:
 				s.begin_shader();
 				s.add_uniform_float("lit_thresh_mult", lit_thresh_mult); // gradual transition of lit window probability around sunset
 				setup_tt_fog_post(s);
+				glPolygonOffset(0.0, -4.0); // in front of everything
 				building_draw_wind_lights.draw(0); // add bloom?
 			}
 			glDepthMask(GL_TRUE); // re-enable depth writing
-			glDepthFunc(GL_LESS);
 			disable_blend();
+			glPolygonOffset(0.0, 0.0); // reset to default
+			glDisable(GL_POLYGON_OFFSET_FILL);
 		}
 		if (DEBUG_BCUBES && !shadow_only) {disable_blend();}
 		s.end_shader();
@@ -2089,19 +2147,27 @@ public:
 		for (int pass = 0; pass < 2; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
 			if (pass == 0) { // main pass
 				building_draw_vbo.clear();
-				for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->get_all_drawn_verts(building_draw_vbo);}
-				building_draw_vbo.resize_to_cap();
+
+				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					building_draw_vbo.cur_tile_id = (g - grid_by_tile.begin());
+					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {get_building(*i).get_all_drawn_verts(building_draw_vbo);}
+				}
+				building_draw_vbo.finalize(grid_by_tile.size());
 			}
 			else if (pass == 1) { // windows pass
 				building_draw_windows.clear();
 				building_draw_wind_lights.clear();
 
-				for (auto b = buildings.begin(); b != buildings.end(); ++b) {
-					b->get_all_drawn_window_verts(building_draw_windows, 0);
-					b->get_all_drawn_window_verts(building_draw_wind_lights, 1);
-				}
-				building_draw_windows.resize_to_cap();
-				building_draw_wind_lights.resize_to_cap();
+				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					building_draw_windows.cur_tile_id = building_draw_wind_lights.cur_tile_id = (g - grid_by_tile.begin());
+
+					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {
+						get_building(*i).get_all_drawn_window_verts(building_draw_windows, 0);
+						get_building(*i).get_all_drawn_window_verts(building_draw_wind_lights, 1);
+					}
+				} // for g
+				building_draw_windows.finalize(grid_by_tile.size());
+				building_draw_wind_lights.finalize(grid_by_tile.size());
 			}
 		} // for pass
 	}
