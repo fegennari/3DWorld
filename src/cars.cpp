@@ -442,6 +442,8 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		if (draw_top) {draw_cube(qbd, cw, center, pt, 1, (dim^dir));} // top (skip_bottom=1)
 		if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 	}
+	if (shadow_only) return; // shadow pass - done
+
 	if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
 		float const length(car.get_length());
 		point pao[4];
@@ -455,14 +457,14 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 			v.z += 0.02*car.height; // shift up slightly to avoid z-fighting
 		}
 		/*if (!car.headlights_on()) { // daytime, adjust shadow to match sun pos
-		vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
-		vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
-		for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
+			vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
+			vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
+			for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
 		}*/
 		ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
 	}
 	if (dist_val > 0.3)  return; // to far - no lights to draw
-	if (shadow_only || car.is_parked()) return; // no lights when parked, or in shadow pass
+	if (car.is_parked()) return; // no lights when parked
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
 	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
