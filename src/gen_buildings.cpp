@@ -529,11 +529,6 @@ struct building_draw_utils {
 	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
 
-#define EMIT_SHADOW_VERTEX() \
-	vert.v = pt*sz + llc; \
-	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
-	verts.push_back(vert);
-
 class building_draw_t {
 
 	struct draw_block_t {
