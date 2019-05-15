@@ -392,9 +392,10 @@ struct building_geom_t { // describes the physical shape of a building
 };
 
 struct tquad_with_ix_t : public tquad_t {
+	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_DOOR};
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(0) {}
-	tquad_with_ix_t(tquad_t const &t, unsigned type_=0) : tquad_t(t), type(type_) {}
+	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
 struct building_t : public building_geom_t {
@@ -712,12 +713,12 @@ public:
 		float tsx(0.0), tsy(0.0), tex_off(0.0);
 		bool dim(0);
 
-		if (tquad.type) { // side/wall
+		if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
 			tsx = 2.0f*tex.tscale_x; tsy = 2.0f*tex.tscale_y; // adjust for local vs. global space change
 			dim = (tquad.pts[0].x == tquad.pts[1].x);
 			if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 		}
-		else { // roof
+		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF) { // roof
 			float const denom(0.5*(bcube.get_dx() + bcube.get_dy()));
 			tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
 		}
@@ -729,14 +730,19 @@ public:
 		for (unsigned i = 0; i < tquad.npts; ++i) {
 			vert.v = tquad.pts[i];
 
-			if (tquad.type) { // side/wall
+			if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
 				vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
 				vert.t[1] = vert.v.z*tsy;
 			}
-			else { // roof
+			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF) { // roof
 				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
 				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 			}
+			else if (tquad.type == tquad_with_ix_t::TYPE_DOOR) { // door - textured from (0,0) to (1,1)
+				vert.t[0] = float(i == 1 || i == 2);
+				vert.t[1] = float(i == 2 || i == 3);
+			}
+			else {assert(0);}
 			if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 			verts.push_back(vert);
 		}
@@ -1361,14 +1367,27 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			float const height(rgen.rand_uniform(0.55, 0.7)*parts[1].dz());
 
 			if (detail_type == 1) { // porch
+				float const width(0.05*(fabs(dist1) + fabs(dist2))); // width of support pillar
 				c.d[!dim][dir2] += dist1; // move away from bcube edge
 				c.d[ dim][ dir] += dist2; // move away from bcube edge
 				c.z1() += height; // move up
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
 				parts.push_back(c); // porch roof
+
+				if (1) { // add door in interior of L if L-shaped, under porch roof if present
+					bool const door_dim(rgen.rand_bool()), door_dir((door_dim == dim) ? dir : dir2);
+					cube_t door(c);
+					door.z1() = pre_shrunk_p1.z1(); // same bottom as house
+					door.z2() = 0.25*door.z1() + 0.75*c.z1(); // 75% the height of the porch roof
+					door.d[ door_dim][!door_dir] += 0.1*(door_dir ? 1.0 : -1.0)*width; // move slightly away from the house to prevent z-fighting
+					door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
+					float const center(0.5*(c.d[!door_dim][0] + c.d[!door_dim][1])), half_width(0.25*door.dz());
+					door.d[!door_dim][0] = center - half_width; // left
+					door.d[!door_dim][1] = center + half_width; // right
+					add_door(door, door_dim, door_dir);
+				}
 				c.z2() = c.z1();
 				c.z1() = pre_shrunk_p1.z1(); // support pillar
-				float const width(0.05*(fabs(dist1) + fabs(dist2)));
 				c.d[!dim][!dir2] = c.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*width;
 				c.d[ dim][!dir ] = c.d[ dim][ dir] + (dir  ? -1.0 : 1.0)*width;
 				skip_last_roof = 1;
@@ -1384,7 +1403,6 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	}
-	// TODO: add_door(); in interior of L if L-shaped, under porch roof if present
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
@@ -1400,7 +1418,7 @@ void building_t::add_door(cube_t const &c, bool dim, bool dir) {
 
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
-	tquad_with_ix_t door(4); // quad
+	tquad_with_ix_t door(4, tquad_with_ix_t::TYPE_DOOR); // quad
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
 	door.pts[0][!dim] = door.pts[3][!dim] = c.d[!dim][ dir]; //  dir side
@@ -1422,14 +1440,14 @@ void building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim)
 	for (unsigned n = 0; n < 2; ++n) { // roof
 		tquad_t tquad(4); // quad
 		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];)
-		roof_tquads.emplace_back(tquad, 0); // tag as roof
+		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_ROOF); // tag as roof
 	}
 	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
 
 	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
 		tquad_t tquad(3); // triangle
 		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];)
-		roof_tquads.emplace_back(tquad, 1); // tag as wall
+		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_WALL); // tag as wall
 	}
 }
 
@@ -1542,7 +1560,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 		bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-		bdraw.add_tquad(*this, *i, bcube, (i->type ? mat.side_tex : mat.roof_tex), (i->type ? side_color : roof_color)); // use type to select roof vs. side
+		bool const is_wall(i->type == tquad_with_ix_t::TYPE_WALL);
+		bdraw.add_tquad(*this, *i, bcube, (is_wall ? mat.side_tex : mat.roof_tex), (is_wall ? side_color : roof_color)); // use type to select roof vs. side texture
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(building_window_gen.get_door_tid(), -1, 1.0, 1.0), WHITE);
