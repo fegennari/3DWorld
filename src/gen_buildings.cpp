@@ -1537,7 +1537,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
 		bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 		bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
-		bool const is_stacked(num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
+		bool const is_stacked(!is_house && num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
 		if (is_stacked && skip_top) continue; // no top/bottom to draw
 		bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
 	}
