@@ -1358,6 +1358,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
 		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim
 		int const detail_type((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
+		bool const door_dim(rgen.rand_bool()), door_dir((door_dim == dim) ? dir : dir2);
+		float door_height(0.45/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
+		float door_center(0.0), door_pos(0.0);
 
 		if (detail_type != 0) { // add details to L-shaped house
 			cube_t c(pre_shrunk_p1);
@@ -1373,19 +1376,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.z1() += height; // move up
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
 				parts.push_back(c); // porch roof
-
-				if (1) { // add door in interior of L if L-shaped, under porch roof if present
-					bool const door_dim(rgen.rand_bool()), door_dir((door_dim == dim) ? dir : dir2);
-					cube_t door(c);
-					door.z1() = pre_shrunk_p1.z1(); // same bottom as house
-					door.z2() = 0.25*door.z1() + 0.75*c.z1(); // 75% the height of the porch roof
-					door.d[ door_dim][!door_dir] += 0.1*(door_dir ? 1.0 : -1.0)*width; // move slightly away from the house to prevent z-fighting
-					door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
-					float const center(0.5*(c.d[!door_dim][0] + c.d[!door_dim][1])), half_width(0.25*door.dz());
-					door.d[!door_dim][0] = center - half_width; // left
-					door.d[!door_dim][1] = center + half_width; // right
-					add_door(door, door_dim, door_dir);
-				}
+				door_center = 0.5*(c.d[!door_dim][0] + c.d[!door_dim][1]); // add door in interior of L, centered under porch roof
+				door_pos    = c.d[door_dim][!door_dir];
+				min_eq(door_height, 0.95f*height);
 				c.z2() = c.z1();
 				c.z1() = pre_shrunk_p1.z1(); // support pillar
 				c.d[!dim][!dir2] = c.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*width;
@@ -1398,8 +1391,23 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
+				// TODO: set door_center and door_pos
 			}
 			parts.push_back(c);
+		}
+		else { // not an L-shaped house
+			// TODO: set door_center and door_pos?
+		}
+		if (door_center != 0.0 && global_building_params.windows_enabled()) { // add door
+			float const door_half_width(0.25*door_height);
+			cube_t door;
+			door.z1() = pre_shrunk_p1.z1(); // same bottom as house
+			door.z2() = door.z1() + door_height;
+			door.d[ door_dim][!door_dir] = door_pos + 0.005*base.dz()*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
+			door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
+			door.d[!door_dim][0] = door_center - door_half_width; // left
+			door.d[!door_dim][1] = door_center + door_half_width; // right
+			add_door(door, door_dim, door_dir);
 		}
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	}
