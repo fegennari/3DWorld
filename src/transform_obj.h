@@ -19,7 +19,7 @@ inline vector3d  vector3d_from_vec3(glm::vec3 const &v) {return vector3d (v.x, v
 void print_matrix(float const *const m, std::string const &prefix=std::string());
 
 
-struct xform_matrix : public glm::mat4 {
+struct xform_matrix : public glm::mat4 { // Note: maybe better to use glm::gtx::simd_mat4?
 
 	xform_matrix() : glm::mat4(1.0) {} // identity
 	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}

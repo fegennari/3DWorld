@@ -19,7 +19,6 @@ extern point sun_pos;
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
-// TODO: Multilevel cylinders and N-gons shapes?
 
 struct tid_nm_pair_t {
 
