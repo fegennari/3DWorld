@@ -490,12 +490,7 @@ public:
 		map<string, program_t>::clear();
 	}
 	void free_data() {
-		for (const_iterator s = begin(); s != end(); ++s) {
-			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
-				if (s->second.sixs[i]) {glDetachShader(s->second.p, s->second.sixs[i]);}
-			}
-			glDeleteProgram(s->second.p);
-		}
+		for (const_iterator s = begin(); s != end(); ++s) {glDeleteProgram(s->second.p);}
 	}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~string_prog_map() {free_data();}
@@ -862,6 +857,9 @@ bool shader_t::begin_shader(bool do_enable) {
 		get_program_binary(binary_data, binary_format);
 		set_program_binary(binary_data, binary_format);
 #endif
+		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
+			if (shader_ixs[i]) {glDetachShader(program, shader_ixs[i]);}
+		}
 		prog = program_t(program, shader_ixs); // cache the program
 		//PRINT_TIME("Create Program");
 	}
