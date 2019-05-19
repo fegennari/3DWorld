@@ -337,13 +337,13 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 }
 
 
-void check_init_texture(int id) {textures[id].check_init();}
+void check_init_texture(int id, bool free_after_upload) {textures[id].check_init(free_after_upload);}
 
 void force_upload_all_textures() {
 
 	RESET_TIME;
-	for (unsigned i = 0; i < textures.size(); ++i) {check_init_texture(i);}
-	PRINT_TIME("All Texture Upload"); // 8s
+	for (unsigned i = 0; i < textures.size(); ++i) {check_init_texture(i, 0);} // free_after_upload=0
+	PRINT_TIME("All Texture Upload"); // 2.2s
 	// bind none at end?
 }
 
@@ -353,7 +353,7 @@ bool select_texture(int id) {
 	bool const no_tex(id < 0);
 	if (no_tex) {id = WHITE_TEX;} //glBindTexture(GL_TEXTURE_2D, 0); // bind to none
 	assert((unsigned)id < textures.size());
-	check_init_texture(id);
+	check_init_texture(id, 0); // free_after_upload=0
 	textures[id].bind_gl();
 	return !no_tex;
 }
