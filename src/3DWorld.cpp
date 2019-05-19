@@ -315,7 +315,6 @@ void maximize() { // fullscreen
 	nop_frame     = 1;
 }
 
-
 void un_maximize() { // windowed
 
 	assert(maximized);
@@ -330,6 +329,15 @@ void un_maximize() { // windowed
 	//nop_frame = 1;
 }
 
+void toggle_maximized() {
+
+	if (!displayed) return; // not until display() is called at least once
+	int mtime2(GET_TIME_MS());
+	if (min_time != 0 && (mtime2 - min_time) < MIN_TIME_MS) return; // ignore if toggled multiple times quickly
+	min_time = mtime2;
+	if (maximized) {un_maximize();} else {maximize();}
+	displayed = 0;
+}
 
 void toggle_fullscreen() {
 
@@ -815,8 +823,6 @@ void toggle_camera_mode() {
 // x and y are the location of the mouse, which generally aren't used but are part of the callback function
 void keyboard_proc(unsigned char key, int x, int y) {
 
-	int mtime2;
-
     switch (key) { // available: O,. somtimes Zi
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
@@ -839,13 +845,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		else if (world_mode == WMODE_GROUND) {undo_voxel_brush();}
 		break;
 	
-	case 'm': // maximize/minimize
-		if (!displayed) break;
-		mtime2 = GET_TIME_MS();
-		if (min_time != 0 && (mtime2 - min_time) < MIN_TIME_MS) break;
-		min_time = mtime2;
-		if (maximized) {un_maximize();} else {maximize();}
-		displayed = 0;
+	case 'm': // toggle fullscreen mode
+		toggle_fullscreen();
 		break;
 
 	case 'r': // run mode (always move forward)
@@ -1389,8 +1390,8 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		spectate = !spectate;
 		break;
 
-	case GLUT_KEY_F9: // toggle fullscreen mode
-		toggle_fullscreen();
+	case GLUT_KEY_F9: // maximize/minimize
+		toggle_maximized();
 		break;
 	case GLUT_KEY_F10: // switch cloud model / toggle smoke_dlights
 		cloud_model = !cloud_model;
