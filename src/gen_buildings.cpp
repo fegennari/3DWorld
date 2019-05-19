@@ -1324,8 +1324,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
 	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
-	bool skip_last_roof(0);
+	bool skip_last_roof(0), door_dir(0);
 	num_sides = 4;
+	// add a door
+	bool const gen_door(global_building_params.windows_enabled());
+	bool const door_dim(rgen.rand_bool());
+	float door_height(0.45/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
+	float door_center(0.0), door_pos(0.0);
 
 	if (type != 0) { // multi-part house
 		parts.push_back(base); // add second part
@@ -1357,9 +1362,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
 		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim
 		int const detail_type((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
-		bool const door_dim(rgen.rand_bool()), door_dir((door_dim == dim) ? dir : dir2);
-		float door_height(0.45/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
-		float door_center(0.0), door_pos(0.0);
+		door_dir = ((door_dim == dim) ? dir : dir2); // if we have a porch/shed/garage, put the door on that side
+		if (door_dim == dim && detail_type == 0) {door_dir ^= 1;} // put it on the opposite side so that the second part isn't in the way
 
 		if (detail_type != 0) { // add details to L-shaped house
 			cube_t c(pre_shrunk_p1);
@@ -1367,11 +1371,12 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			float const dist1((c.d[!dim][!dir2] - base.d[!dim][dir2])*rgen.rand_uniform(0.4, 0.6));
 			float const dist2((c.d[ dim][!dir ] - base.d[ dim][dir ])*rgen.rand_uniform(0.4, 0.6));
 			float const height(rgen.rand_uniform(0.55, 0.7)*parts[1].dz());
-			// add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
-			door_center = 0.5*(c.d[!door_dim][0] + c.d[!door_dim][1] + ((door_dim == dim) ? dist1 : dist2));
-			door_pos    = c.d[door_dim][!door_dir];
-			min_eq(door_height, 0.95f*height);
-
+			
+			if (gen_door) { // add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
+				door_center = 0.5*(c.d[!door_dim][0] + c.d[!door_dim][1] + ((door_dim == dim) ? dist1 : dist2));
+				door_pos    = c.d[door_dim][!door_dir];
+				min_eq(door_height, 0.95f*height);
+			}
 			if (detail_type == 1) { // porch
 				float const width(0.05*(fabs(dist1) + fabs(dist2))); // width of support pillar
 				c.d[!dim][dir2] += dist1; // move away from bcube edge
@@ -1393,22 +1398,28 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
 			}
 			parts.push_back(c);
-		}
-		else { // not an L-shaped house
-			// TODO: set door_center and door_pos?
-		}
-		if (door_center != 0.0 && global_building_params.windows_enabled()) { // add door
-			float const door_half_width(0.25*door_height);
-			cube_t door;
-			door.z1() = pre_shrunk_p1.z1(); // same bottom as house
-			door.z2() = door.z1() + door_height;
-			door.d[ door_dim][!door_dir] = door_pos + 0.005*base.dz()*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
-			door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
-			door.d[!door_dim][0] = door_center - door_half_width; // left
-			door.d[!door_dim][1] = door_center + door_half_width; // right
-			add_door(door, door_dim, door_dir);
-		}
+		} // end house details
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
+	} // end type != 0
+	else if (gen_door) { // single cube house
+		door_dir = rgen.rand_bool(); // select a random dir
+	}
+	if (gen_door) { // add door
+		if (door_center == 0.0) { // door not yet calculated
+			cube_t const &c(parts[0]); // add door to first part of house
+			float const offset(rgen.rand_uniform(0.25, 0.75));
+			door_center = offset*c.d[!door_dim][0] + (1.0 - offset)*c.d[!door_dim][1];
+			door_pos    = c.d[door_dim][door_dir];
+		}
+		float const door_half_width(0.25*door_height);
+		cube_t door;
+		door.z1() = base.z1(); // same bottom as house
+		door.z2() = door.z1() + door_height;
+		door.d[ door_dim][!door_dir] = door_pos + 0.005*base.dz()*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
+		door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
+		door.d[!door_dim][0] = door_center - door_half_width; // left
+		door.d[!door_dim][1] = door_center + door_half_width; // right
+		add_door(door, door_dim, door_dir);
 	}
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 
