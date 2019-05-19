@@ -1367,6 +1367,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			float const dist1((c.d[!dim][!dir2] - base.d[!dim][dir2])*rgen.rand_uniform(0.4, 0.6));
 			float const dist2((c.d[ dim][!dir ] - base.d[ dim][dir ])*rgen.rand_uniform(0.4, 0.6));
 			float const height(rgen.rand_uniform(0.55, 0.7)*parts[1].dz());
+			// add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
+			door_center = 0.5*(c.d[!door_dim][0] + c.d[!door_dim][1] + ((door_dim == dim) ? dist1 : dist2));
+			door_pos    = c.d[door_dim][!door_dir];
+			min_eq(door_height, 0.95f*height);
 
 			if (detail_type == 1) { // porch
 				float const width(0.05*(fabs(dist1) + fabs(dist2))); // width of support pillar
@@ -1375,9 +1379,6 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.z1() += height; // move up
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
 				parts.push_back(c); // porch roof
-				door_center = 0.5*(c.d[!door_dim][0] + c.d[!door_dim][1]); // add door in interior of L, centered under porch roof
-				door_pos    = c.d[door_dim][!door_dir];
-				min_eq(door_height, 0.95f*height);
 				c.z2() = c.z1();
 				c.z1() = pre_shrunk_p1.z1(); // support pillar
 				c.d[!dim][!dir2] = c.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*width;
@@ -1390,7 +1391,6 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
-				// TODO: set door_center and door_pos
 			}
 			parts.push_back(c);
 		}
