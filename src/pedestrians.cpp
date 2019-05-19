@@ -1003,7 +1003,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				}
 				if (dist_sq < 0.25*draw_dist_sq) { // fake AO shadow at below half draw distance
 					float const ao_radius(0.6*ped.radius);
-					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.05*ped.radius); // at the feet
+					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.02*ped.radius); // at the feet
 					point pao[4];
 					
 					for (unsigned i = 0; i < 4; ++i) {
