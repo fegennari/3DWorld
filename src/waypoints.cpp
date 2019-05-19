@@ -547,22 +547,24 @@ public:
 	}
 
 	// is check_visible==1, only consider visible and reachable (at least one incoming edge) waypoints
-	int find_closest_waypoint(point const &pos, bool check_visible) const {
-		int closest(-1), cindex(-1);
+bool find_closest_waypoint(point const &pos, unsigned &closest, bool check_visible) const {
+		int cindex(-1);
 		float closest_dsq(0.0);
+		bool found(0);
 
 		// inefficient to iterate, might need acceleration structure
 		for (unsigned i = 0; i < waypoints.size(); ++i) {
 			if (waypoints[i].disabled) continue;
 			float const dist_sq(p2p_dist_sq(pos, waypoints[i].pos));
 
-			if (closest < 0 || dist_sq < closest_dsq) { // skip dynamic/movable
+			if (!found || dist_sq < closest_dsq) { // skip dynamic/movable
 				if (check_visible && (waypoints[i].unreachable() || check_coll_line(pos, waypoints[i].pos, cindex, -1, 1, 0, 1, 0, 1))) continue; // not visible/reachable
 				closest_dsq = dist_sq;
 				closest     = i;
+				found       = 1;
 			}
 		}
-		return closest;
+		return found;
 	}
 };
 
@@ -622,13 +624,21 @@ public:
 		if (!goal.is_reachable()) return 0.0; // nothing to do
 		assert(path.empty());
 		bool const orig_has_wpt_goal(has_wpt_goal);
-		if (goal.mode == 4) {goal.pos = waypoints[goal.wpt].pos;} // specific waypoint
-		if (goal.mode == 5) {goal.wpt = wb.find_closest_waypoint(goal.pos, 0);}
-		if (goal.mode == 6) {goal.wpt = wb.find_closest_waypoint(goal.pos, 1);}
+		
+		if (goal.mode == 4) { // specific waypoint
+		  assert(goal.wpt < waypoints.size());
+		  goal.pos = waypoints[goal.wpt].pos;
+		}
+		if (goal.mode == 5) {
+		  if (!wb.find_closest_waypoint(goal.pos, goal.wpt, 0)) return 0.0;
+		}
+		if (goal.mode == 6) {
+		  if (!wb.find_closest_waypoint(goal.pos, goal.wpt, 1)) return 0.0;
+		}
 		if (goal.mode == 7) {goal.wpt = wb.add_new_waypoint(goal.pos, -1, 1, 1, 1, 1);} // goal position - add temp waypoint
 		if (goal.mode == 7) {has_wpt_goal = 1;}
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: " << goal.pos.str() << ", wpt: " << goal.wpt << endl;
-		if (goal.wpt < 0) return 0.0; // no current waypoint (maybe none visible)
+		if (int(goal.wpt) < 0) return 0.0; // no current waypoint, maybe none visible (this code may be unreachable)
 		std::priority_queue<pair<float, unsigned> > open_queue;
 		wc.open.resize(waypoints.size(), 0); // already resized after the first call
 		wc.closed.resize(waypoints.size(), 0);
@@ -651,7 +661,10 @@ public:
 			wc.open[ix] = wc.call_ix;
 			open_queue.push(make_pair(-w.f_score, ix));
 		}
-		if (goal.mode >= 4 && waypoints[goal.wpt].unreachable()) return 0.0; // goal has no incoming edges - unreachable
+		if (goal.mode >= 4) { // FIXME: remove temp waypoint if (goal.mode == 7)?
+			assert(goal.wpt < waypoints.size());
+			if (waypoints[goal.wpt].unreachable()) return 0.0; // goal has no incoming edges - unreachable
+		}
 		float min_dist(0.0);
 
 		while (!open_queue.empty()) {
