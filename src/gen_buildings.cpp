@@ -13,7 +13,7 @@ using std::string;
 
 unsigned const MAX_CYLIN_SIDES = 36;
 
-extern bool start_in_inf_terrain;
+extern bool start_in_inf_terrain, no_store_model_textures_in_memory;
 extern int rand_gen_index, display_mode;
 extern point sun_pos;
 
@@ -577,8 +577,11 @@ class building_draw_t {
 		}
 		void upload_to_vbos() {
 			ensure_vbos();
-			//clear_cont(quad_verts); // no longer needed - unless VBO needs to be recreated
-			//clear_cont(tri_verts);
+
+			if (no_store_model_textures_in_memory) { // no longer needed, unless VBO needs to be recreated for maximize/F9; use same condition as model textures
+				clear_cont(quad_verts);
+				clear_cont(tri_verts);
+			}
 		}
 		void register_tile_id(unsigned tid) {
 			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
