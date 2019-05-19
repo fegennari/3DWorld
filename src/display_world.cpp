@@ -44,7 +44,7 @@ colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUN
 
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
-extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons;
+extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
@@ -71,6 +71,7 @@ void run_postproc_effects();
 void play_camera_footstep_sound();
 void draw_voxel_edit_volume();
 void play_switch_weapon_sound();
+void toggle_fullscreen();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -728,6 +729,12 @@ void display(void) {
 	check_gl_error(0);
 	if (glutGetWindow() != curr_window) return; // only process the current window
 
+	if (start_maximized) {
+		toggle_fullscreen();
+		swap_buffers_and_redraw();
+		start_maximized = 0;
+		return;
+	}
 	if (nop_frame) { // force display sync after enter/leave game mode (or something like that)
 		nop_frame = 0;
 		return;

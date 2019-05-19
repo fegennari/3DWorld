@@ -333,17 +333,20 @@ void un_maximize() { // windowed
 
 void toggle_fullscreen() {
 
-	static int xsz(0), ysz(0);
+	static int xsz(init_window_width), ysz(init_window_height);
 
 	if (!fullscreen) { // make fullscreen
-		xsz = window_width;
-		ysz = window_height;
+		if (window_width  > 0) {xsz = window_width;}
+		if (window_height > 0) {ysz = window_height;}
 		glutFullScreen();
+		glutSetCursor(GLUT_CURSOR_NONE);
 	}
-	else {
+	else { // make windowed
 		glutReshapeWindow(xsz, ysz);
-	} // make windowed
-	fullscreen ^= 1;
+		resize(xsz, ysz);
+	}
+	screen_reset = 1;
+	fullscreen  ^= 1;
 }
 
 
@@ -663,7 +666,7 @@ void mouseMotion(int x, int y) {
 
 	int button(m_button);
 
-	if (screen_reset) {
+	if (screen_reset || start_maximized) {
 		last_mouse_x = x;
 		last_mouse_y = y;
 		screen_reset = 0;
@@ -2260,7 +2263,7 @@ int main(int argc, char** argv) {
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();
 	--frame_counter;
-	if (start_maximized) {maximize();}
+	//if (start_maximized) {maximize();}
 	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // OpenGL 4.5 only
 	load_textures();
 	load_flare_textures(); // Sun Flare
