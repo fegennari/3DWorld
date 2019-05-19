@@ -1629,6 +1629,7 @@ class building_creator_t {
 	struct grid_elem_t {
 		vector<unsigned> ixs;
 		cube_t bcube;
+		grid_elem_t() : bcube(all_zeros) {}
 		void add(cube_t const &c, unsigned ix) {
 			if (ixs.empty()) {bcube = c;} else {bcube.union_with_cube(c);}
 			ixs.push_back(ix);
