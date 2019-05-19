@@ -352,6 +352,7 @@ void toggle_fullscreen() {
 	else { // make windowed
 		glutReshapeWindow(xsz, ysz);
 		resize(xsz, ysz);
+		glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	}
 	screen_reset = 1;
 	fullscreen  ^= 1;
