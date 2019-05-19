@@ -615,6 +615,12 @@ class waypoint_search {
 		if (waypoints[cur].came_from >= 0) {reconstruct_path(waypoints[cur].came_from, path);}
 		path.push_back(cur);
 	}
+	void on_a_star_return(wpt_goal const &goal, bool orig_has_wpt_goal) {
+		if (goal.mode == 7) {
+			wb.remove_last_waypoint(); // goal position - remove temp waypoint
+			has_wpt_goal = orig_has_wpt_goal;
+		}
+	}
 
 public:
 	waypoint_search(wpt_goal const &goal_, waypoint_cache &wc_) : goal(goal_), wc(wc_) {}
@@ -626,14 +632,14 @@ public:
 		bool const orig_has_wpt_goal(has_wpt_goal);
 		
 		if (goal.mode == 4) { // specific waypoint
-		  assert(goal.wpt < waypoints.size());
-		  goal.pos = waypoints[goal.wpt].pos;
+			assert(goal.wpt < waypoints.size());
+			goal.pos = waypoints[goal.wpt].pos;
 		}
 		if (goal.mode == 5) {
-		  if (!wb.find_closest_waypoint(goal.pos, goal.wpt, 0)) return 0.0;
+			if (!wb.find_closest_waypoint(goal.pos, goal.wpt, 0)) return 0.0;
 		}
 		if (goal.mode == 6) {
-		  if (!wb.find_closest_waypoint(goal.pos, goal.wpt, 1)) return 0.0;
+			if (!wb.find_closest_waypoint(goal.pos, goal.wpt, 1)) return 0.0;
 		}
 		if (goal.mode == 7) {goal.wpt = wb.add_new_waypoint(goal.pos, -1, 1, 1, 1, 1);} // goal position - add temp waypoint
 		if (goal.mode == 7) {has_wpt_goal = 1;}
@@ -656,14 +662,15 @@ public:
 
 			if (is_goal(ix)) { // already at the goal
 				path.push_back(ix);
+				on_a_star_return(goal, orig_has_wpt_goal);
 				return w.f_score;
 			}
 			wc.open[ix] = wc.call_ix;
 			open_queue.push(make_pair(-w.f_score, ix));
 		}
-		if (goal.mode >= 4) { // FIXME: remove temp waypoint if (goal.mode == 7)?
+		if (goal.mode >= 4) {
 			assert(goal.wpt < waypoints.size());
-			if (waypoints[goal.wpt].unreachable()) return 0.0; // goal has no incoming edges - unreachable
+			if (waypoints[goal.wpt].unreachable()) {on_a_star_return(goal, orig_has_wpt_goal); return 0.0;} // goal has no incoming edges - unreachable
 		}
 		float min_dist(0.0);
 
@@ -706,10 +713,7 @@ public:
 				}
 			} // for i
 		}
-		if (goal.mode == 7) {
-			wb.remove_last_waypoint(); // goal position - remove temp waypoint
-			has_wpt_goal = orig_has_wpt_goal;
-		}
+		on_a_star_return(goal, orig_has_wpt_goal);
 		return min_dist;
 	}
 };
