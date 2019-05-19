@@ -299,10 +299,10 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
 	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
 	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
-	fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);
-	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);}
-	fgRotate(90.0, 1.0, 0.0, 0.0);
-	uniform_scale(sz_scale);
+	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
+	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis
+	fgRotate(90.0, 1.0, 0.0, 0.0); // swap Y and Z dirs; models have up=Y, but we want up=Z
+	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	translate_to(-bcube.get_cube_center()); // cancel out model local translate
 
 	if ((low_detail || is_shadow_pass) && !model_file.shadow_mat_ids.empty()) { // low detail pass, normal maps disabled
