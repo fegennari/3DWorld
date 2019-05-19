@@ -603,23 +603,23 @@ void ped_manager_t::init(unsigned num) {
 	if (num == 0) return;
 	timer_t timer("Gen Peds");
 	peds.reserve(num);
-	float const radius(get_ped_radius()); // currently, all pedestrians are the same size
+	float const radius(get_ped_radius()); // base radius
 	unsigned const num_models(ped_model_loader.num_models());
 
 	for (unsigned n = 0; n < num; ++n) {
 		pedestrian_t ped(radius); // start with a constant radius
 
+		if (num_models > 0) {
+			ped.model_id = rgen.rand()%num_models;
+			ped.radius  *= ped_model_loader.get_model(ped.model_id).scale;
+			assert(ped.radius > 0.0); // no zero/negative model scales
+		}
+		else {ped.model_id = 0;} // will be unused
 		if (gen_ped_pos(ped)) {
 			if (city_params.ped_speed > 0.0) {
 				ped.speed = city_params.ped_speed*rgen.rand_uniform(0.5, 1.0);
 				ped.vel   = rgen.signed_rand_vector_spherical_xy().get_norm()*ped.speed;
 			}
-			if (num_models > 0) {
-				ped.model_id = rgen.rand()%num_models;
-				ped.radius  *= ped_model_loader.get_model(ped.model_id).scale;
-				assert(ped.radius > 0.0); // no zero/negative model scales
-			}
-			else {ped.model_id = 0;} // will be unused
 			ped.ssn = (unsigned short)peds.size(); // assign init peds index so that all are unique; won't change if peds are reordered
 			peds.push_back(ped);
 		}
