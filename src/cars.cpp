@@ -25,7 +25,6 @@ bool city_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id 
 	if (!read_int(fp, body_mat_id)) return 0;
 	if (!read_int(fp, fixed_color_id)) return 0;
 	if (!read_float(fp, xy_rot)) return 0;
-	if (!read_float(fp, dz)) return 0;
 	if (!read_float(fp, scale)) return 0;
 	if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
 	unsigned shadow_mat_id;
@@ -290,14 +289,15 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y
 	float const sz_scale(obj_bcube.get_size().sum() / bcube.get_size().sum());
+	float const z_offset(0.5*bcube.dy() - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
 	
 	if (enable_animations) {
-		s.add_uniform_float("animation_scale",    1.0/sz_scale);
-		s.add_uniform_float("model_delta_height", model_file.dz);
+		s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally
+		s.add_uniform_float("model_delta_height", (0.1*bcube.dy() + bcube.y1()));
 	}
 	fgPushMatrix();
-	translate_to(pos + vector3d(0.0, 0.0, model_file.dz*sz_scale));
-	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);}
+	translate_to(pos + vector3d(0.0, 0.0, z_offset*sz_scale)); // z_offset is in model space, scale to world space
+	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);} // orient facing front
 	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis
