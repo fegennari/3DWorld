@@ -1909,10 +1909,6 @@ int load_config(string const &config_file) {
 				}
 			}
 		}
-		else if (str == "game_mode_string") {
-			if (fscanf(fp, "%255s%i%i", game_mode_string, &gmww, &gmwh) != 3 || gmww <= 0 || gmwh <= 0) cfg_err("game mode string", error);
-			gms_set = 1;
-		}
 		else if (str == "window_width") {
 			if (!read_int(fp, gmww) || gmww < 1) cfg_err("window_width command", error);
 		}
