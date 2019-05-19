@@ -121,7 +121,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 		if (dist_sq < r_sum*r_sum) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
 		if (speed < TOLERANCE) continue;
-		vector3d const delta_v(vel - i->vel), delta_p(pos - i->pos);
+		vector3d const delta_v(vel - i->vel), delta_p((pos.x - i->pos.x), (pos.y - i->pos.y), 0.0);
 		float const dp(-dot_product_xy(delta_v, delta_p));
 		if (dp <= 0.0) continue; // diverging, no avoidance needed
 		float const dv_mag(delta_v.mag()), dist(sqrt(dist_sq)), fmag(dist/(dist - 0.9*r_sum));
@@ -558,6 +558,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	if (vel != zero_vector) { // if stopped, don't update dir
 		if (!collided && target_valid()) {delta_dir = min(1.0f, 4.0f*delta_dir);} // use a tighter turning radius when there's an unobstructed target_pos
 		dir = (delta_dir/speed)*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
+		dir.z = 0.0; // should be zero, but set just in case
 		dir.normalize();
 	}
 	collided = ped_coll = 0; // reset for next frame
