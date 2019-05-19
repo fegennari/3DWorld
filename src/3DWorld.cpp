@@ -85,7 +85,7 @@ int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framer
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0), use_smoke_for_fog(0);
 int window_width(0), window_height(0), init_window_width(512), init_window_height(512), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
-int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), verbose_mode(0), leaf_color_changed(0);
+int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), fullscreen(0), verbose_mode(0), leaf_color_changed(0);
 int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0);
 int num_trees(0), num_smileys(1), gmww(1920), gmwh(1080), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
@@ -328,6 +328,22 @@ void un_maximize() { // windowed
 	maximized     = 0;
 	init_context();
 	//nop_frame = 1;
+}
+
+
+void toggle_fullscreen() {
+
+	static int xsz(0), ysz(0);
+
+	if (!fullscreen) { // make fullscreen
+		xsz = window_width;
+		ysz = window_height;
+		glutFullScreen();
+	}
+	else {
+		glutReshapeWindow(xsz, ysz);
+	} // make windowed
+	fullscreen ^= 1;
 }
 
 
@@ -1370,8 +1386,8 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		spectate = !spectate;
 		break;
 
-	case GLUT_KEY_F9: // switch to fullscreen mode
-		glutFullScreen();
+	case GLUT_KEY_F9: // toggle fullscreen mode
+		toggle_fullscreen();
 		break;
 	case GLUT_KEY_F10: // switch cloud model / toggle smoke_dlights
 		cloud_model = !cloud_model;
