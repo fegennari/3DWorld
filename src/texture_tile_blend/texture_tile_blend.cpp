@@ -7,7 +7,6 @@
 #include "../gl_ext_arb.h"
 #include "../shaders.h"
 
-extern unsigned context_clear_count;
 
 GLuint CreateGLTextureFromTextureDataStruct(const TextureDataFloat& im, GLenum wrapMode, bool generateMips) {
 
@@ -54,10 +53,6 @@ void tile_blend_tex_data_t::create_textures(texture_t const &texture) {
 }
 
 void tile_blend_tex_data_t::ensure_textures(unsigned tid) {
-	if (context_count != context_clear_count) {
-		clear_context();
-		context_count = context_clear_count;
-	}
 	if (!textures_valid()) {create_textures(get_texture_by_id(tid));}
 }
 

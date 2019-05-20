@@ -695,7 +695,12 @@ void gen_snow_coverage() {
 }
 
 
-void reset_snow_vbos() {snow_draw.free_vbos();}
+tile_blend_tex_data_t snow_tbt_data;
+
+void reset_snow_vbos() {
+	snow_draw.free_vbos();
+	snow_tbt_data.clear_context();
+}
 
 
 void draw_snow(bool shadow_only) {
@@ -704,7 +709,6 @@ void draw_snow(bool shadow_only) {
 	if (!has_snow) return;
 	//RESET_TIME;
 	shader_t s;
-	static tile_blend_tex_data_t tbt_data;
 	bool const use_smap(!shadow_only && shadow_map_enabled());
 	bool const detail_normal_map(!shadow_only); //  && camera_mode == 1?
 	bool const enable_dlights(!shadow_only && ENABLE_SNOW_DLIGHTS);
@@ -728,8 +732,8 @@ void draw_snow(bool shadow_only) {
 
 	if (detail_normal_map) {
 		s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(0.047*X_SCENE_SIZE, 0.047*Y_SCENE_SIZE));
-		tbt_data.ensure_textures(ROCK_NORMAL_TEX);
-		tbt_data.bind_shader(s);
+		snow_tbt_data.ensure_textures(ROCK_NORMAL_TEX);
+		snow_tbt_data.bind_shader(s);
 	}
 	s.set_specular(0.5, 50.0);
 	s.set_cur_color(SNOW_COLOR);
