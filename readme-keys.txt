@@ -36,7 +36,7 @@ h	toggle camera collision detection in ground mode (default = OFF)
 j	toggle camera real physics/collision (default = OFF)
 k	switch between filled polygon and wireframe mesh in normal mode (default = filled), switch between color and grayscale in mapmode (default = COLOR)
 l	toggle lightning OFF, ON, NO_SHADOWS (default = OFF)
-m	toggle display fullscreen/windowed with a min time delay of 5 seconds between switch
+m	toggle display fullscreen/windowed modes
 n	toggle fog (default = OFF)
 o	increase shadow detail
 p	reset camera position and orientation

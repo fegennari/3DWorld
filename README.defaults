@@ -34,7 +34,7 @@ Notes:
 * Use 'v' key to switch from orbit camera to ground / first person camera
 * Use 'b' key to enable enemy smileys and pickup items, most of which fall from the sky
 * The player is on red team; blue team smileys are the enemy
-* Scenes start out maximized / full screen
+* Scenes start out maximized / full screen only when start_maximized is set to 1
 house/config_house.txt - Model of my parents' house; Need to pick up weapons
 house/config_house_winter.txt - Same as above but with snow on the ground
 mapx/config_mapx.txt - Office building scene; My primary test environment; Start out with unlimited weapons and ammo; Look for yellow switches around the scene that control lights and moving platforms
