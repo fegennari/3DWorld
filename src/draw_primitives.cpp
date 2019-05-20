@@ -1154,7 +1154,6 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // s
 
 
 void free_sphere_vbos() {
-
 	delete_and_zero_vbo(predef_sphere_vbo);
 }
 

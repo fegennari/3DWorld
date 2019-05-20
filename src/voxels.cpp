@@ -1736,7 +1736,6 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 
 
 void voxel_model::free_context() {
-
 	for (unsigned i = 0; i < tri_data.size(); ++i) {tri_data[i].free_vbos();}
 	if (noise_tex_gen) {noise_tex_gen->clear();}
 }

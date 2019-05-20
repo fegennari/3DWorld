@@ -2228,10 +2228,7 @@ void universe_t::free_context() { // should be OK even if universe isn't setup
 						for (unsigned k = 0; k < sol.planets.size(); ++k) {
 							uplanet &planet(sol.planets[k]);
 							planet.free_texture();
-							
-							for (unsigned l = 0; l < planet.moons.size(); ++l) {
-								planet.moons[l].free_texture();
-							}
+							for (unsigned l = 0; l < planet.moons.size(); ++l) {planet.moons[l].free_texture();}
 						}
 					}
 				}

@@ -391,10 +391,7 @@ void reset_textures() {
 	free_texture(empty_smap_tid);
 	free_texture(frame_buffer_RGB_tid);
 	free_font_texture_atlas();
-
-	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {
-		free_texture(i->second);
-	}
+	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {free_texture(i->second);}
 	noise_tex_3ds.clear();
 }
 

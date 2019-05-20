@@ -608,18 +608,12 @@ void gen_small_trees() {
 
 
 void clear_sm_tree_vbos() {
-
 	small_trees.clear_vbos();
 	tree_instances.clear_vbos();
 }
 
-void add_small_tree_coll_objs() { // doesn't handle rotation angle
-	small_trees.add_cobjs();
-}
-
-void remove_small_tree_cobjs() {
-	small_trees.remove_cobjs();
-}
+void add_small_tree_coll_objs() {small_trees.add_cobjs();} // doesn't handle rotation angle
+void remove_small_tree_cobjs () {small_trees.remove_cobjs();}
 
 void shift_small_trees(vector3d const &vd) {
 	if (num_trees > 0) return; // dynamically created, not placed

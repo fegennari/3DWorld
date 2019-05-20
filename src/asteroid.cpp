@@ -720,7 +720,6 @@ ast_belt_part_manager_t ast_belt_part[2]; // full, partial segment
 
 
 void clear_asteroid_contexts() {
-
 	asteroid_model_gen.clear_contexts();
 	for (unsigned d = 0; d < 2; ++d) {ast_belt_part[d].clear_vbo();}
 }

@@ -2165,14 +2165,12 @@ void model3d::write_to_cobj_file(ostream &out) const {
 // ************ model3ds ************
 
 void model3ds::clear() {
-
 	for (iterator m = begin(); m != end(); ++m) {m->clear();}
 	deque<model3d>::clear();
 	tmgr.clear();
 }
 
 void model3ds::free_context() {
-
 	for (iterator m = begin(); m != end(); ++m) {m->free_context();}
 	tmgr.free_tids();
 }
