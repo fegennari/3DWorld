@@ -27,7 +27,7 @@ int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_S
 shader_t *cur_shader(NULL);
 
 extern bool fog_enabled, mvm_changed, use_core_context;
-extern int is_cloudy, display_mode, maximized;
+extern int is_cloudy, display_mode, fullscreen;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
 extern colorRGBA cur_fog_color;
@@ -752,7 +752,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 
 	while (1) { // retry loop
 		if (failed) {
-			if (maximized || !yes_no_query("Retry?")) { // don't query the user when maximized
+			if (fullscreen || !yes_no_query("Retry?")) { // don't query the user when maximized
 				cerr << "Exiting." << endl;
 				exit(1);
 			}

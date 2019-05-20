@@ -1,5 +1,8 @@
-window_width 1920
-window_height 1080 # 1080p
+window_width 512
+window_height 512
+
+#window_width 1920
+#window_height 1080 # 1080p
 
 #window_width 1280
 #window_height 720 # 720p

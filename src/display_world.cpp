@@ -43,11 +43,11 @@ upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
+extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS;
-extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
+extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale;
 extern double camera_zh;
@@ -727,16 +727,11 @@ void flashlight_next_frame() {
 void display(void) {
 
 	check_gl_error(0);
-	if (glutGetWindow() != curr_window) return; // only process the current window
 
 	if (start_maximized) {
 		toggle_fullscreen();
 		swap_buffers_and_redraw();
 		start_maximized = 0;
-		return;
-	}
-	if (nop_frame) { // force display sync after enter/leave game mode (or something like that)
-		nop_frame = 0;
 		return;
 	}
 	RESET_TIME;
@@ -804,7 +799,6 @@ void display(void) {
 		swap_buffers_and_redraw();
 		return;
 	}
-	displayed = 1;
 	up_vector.assign(0.0, sinf(up_theta), camera_y*cosf(up_theta));
 	setup_sphere_vbos();
 	check_gl_error(2);

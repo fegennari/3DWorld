@@ -64,7 +64,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 // I decided to use global variables here rather than a global config class to avoid frequent recompile of all code
 // every time a config option is added/changed, because almost every file would need to include the class definition/header.
 // Note that these are all the default values when no config variable is specified.
-bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0), tiled_terrain_only(0);
+bool combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0), tiled_terrain_only(0);
 bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0), claim_planet(0), skip_light_vis_test(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1), smoke_dlights(0), keep_keycards_on_death(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(1), invert_model_nmap_bscale(0);
@@ -81,13 +81,13 @@ int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0),
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
 int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0), recreated(1), cloud_model(0), force_tree_class(-1);
-int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0), preproc_cube_cobjs(0), use_voxel_rocks(2);
+int invert_mh_image(0), voxel_editing(0), min_time(0), show_framerate(0), preproc_cube_cobjs(0), use_voxel_rocks(2);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0), use_smoke_for_fog(0);
-int window_width(0), window_height(0), init_window_width(512), init_window_height(512), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
+int window_width(512), window_height(512), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
 int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), fullscreen(0), verbose_mode(0), leaf_color_changed(0);
 int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0);
-int num_trees(0), num_smileys(1), gmww(1920), gmwh(1080), srand_param(3), left_handed(0), mesh_scale_change(0);
+int num_trees(0), num_smileys(1), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
 int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0);
@@ -111,7 +111,6 @@ string user_text, cobjs_out_fn, sphere_materials_fn, hmap_out_fn;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color, flower_color(ALPHA0);
 set<unsigned char> keys, keyset;
-char game_mode_string[MAX_CHARS] = {"1920x1080"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;
 
@@ -120,7 +119,6 @@ double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF
 float sun_rot(0.2), moon_rot(-0.2), sun_theta(1.2), moon_theta(0.3), light_factor, ball_velocity(15.0), cview_radius(1.0), player_speed(1.0);
 vector3d up_vector(plus_y), cview_dir(all_zeros);
 point camera_origin(all_zeros), surface_pos(all_zeros), cpos2;
-int orig_window, curr_window;
 char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
@@ -202,10 +200,10 @@ bool check_gl_error(unsigned loc_id) {
 
 
 void display_window_resized() {invalidate_cached_stars();}
-void post_window_redisplay () {glutPostWindowRedisplay(curr_window);} // Schedule a new display event
+void post_window_redisplay () {glutPostRedisplay();} // Schedule a new display event
 
 
-void clear_context() { // free all textures, shaders, VBOs, etc.; used on context switch between windowed and fullscreen mode and at shutdown
+void clear_context() { // free all textures, shaders, VBOs, etc.; used on context switch and at shutdown
 
 	reset_textures();
 	free_universe_context();
@@ -234,13 +232,6 @@ void clear_context() { // free all textures, shaders, VBOs, etc.; used on contex
 	clear_building_vbos();
 	free_city_context();
 	++context_clear_count;
-}
-
-
-void init_context() {
-
-	screen_reset = 1;
-	glFinish();
 }
 
 
@@ -280,7 +271,7 @@ void init_window() { // register all glut callbacks
     glutMotionFunc(mouseMotion);
     glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboard2);
-	//glutCloseFunc(quit_3dworld); // can't do this because minimize/maximize() close the context, and we don't want to quit
+	//glutCloseFunc(quit_3dworld); // can't do this because we don't want to quit when destroying the context
 	//glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS); // doesn't work?
 
 	// init keyboard and mouse callbacks
@@ -296,52 +287,9 @@ void init_window() { // register all glut callbacks
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 }
 
-
-void maximize() { // fullscreen
-
-	assert(!maximized);
-	//glutHideWindow();
-	clear_context();
-	glutGameModeString(game_mode_string);
-	curr_window   = glutEnterGameMode();
-	init_window();
-	ww2           = window_width;
-	wh2           = window_height;
-	window_width  = gmww;
-	window_height = gmwh;
-	maximized     = 1;
-	init_context();
-	glutSetCursor(GLUT_CURSOR_NONE);
-	nop_frame     = 1;
-}
-
-void un_maximize() { // windowed
-
-	assert(maximized);
-	//glutShowWindow();
-	clear_context();
-	glutLeaveGameMode();
-	curr_window   = orig_window;
-	window_width  = (ww2 ? ww2 : init_window_width);
-	window_height = (wh2 ? wh2 : init_window_height);
-	maximized     = 0;
-	init_context();
-	//nop_frame = 1;
-}
-
-void toggle_maximized() {
-
-	if (!displayed) return; // not until display() is called at least once
-	int mtime2(GET_TIME_MS());
-	if (min_time != 0 && (mtime2 - min_time) < MIN_TIME_MS) return; // ignore if toggled multiple times quickly
-	min_time = mtime2;
-	if (maximized) {un_maximize();} else {maximize();}
-	displayed = 0;
-}
-
 void toggle_fullscreen() {
 
-	static int xsz(init_window_width), ysz(init_window_height);
+	static int xsz(window_width), ysz(window_height);
 
 	if (!fullscreen) { // make fullscreen
 		if (window_width  > 0) {xsz = window_width;}
@@ -616,14 +564,8 @@ void switch_weapon(bool prev) {
 // Parameters are the new dimentions of the window
 void resize(int x, int y) {
 
-	if (glutGetWindow() != curr_window) return; // only process the current window
-
-	if (init_resize) {
-		init_resize = 0;
-	}
-	else {
-		add_uevent_resize(x, y);
-	}
+	if (init_resize) {init_resize = 0;}
+	else {add_uevent_resize(x, y);}
 	y = y & (~1); // make sure y is even (required for video encoding)
     glViewport(0, 0, x, y);
     window_width  = x;
@@ -1330,7 +1272,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 	add_uevent_keyboard_special(key, x, y);
 	ctrl_key_pressed = is_ctrl_key_pressed();
 
-	switch (key) {
+	switch (key) { // unused: F9
 	case GLUT_KEY_UP:
 	case GLUT_KEY_DOWN:
 		if (map_mode) {map_y += ((key == GLUT_KEY_UP) ? 1 : -1)*(get_map_shift_val() + 0);}
@@ -1391,9 +1333,9 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		spectate = !spectate;
 		break;
 
-	case GLUT_KEY_F9: // maximize/minimize
-		toggle_maximized();
+	case GLUT_KEY_F9: // unused
 		break;
+
 	case GLUT_KEY_F10: // switch cloud model / toggle smoke_dlights
 		cloud_model = !cloud_model;
 		smoke_dlights ^= 1;
@@ -1628,7 +1570,7 @@ int load_config(string const &config_file) {
 
 	FILE *fp(open_config_file(config_file));
 	if (fp == nullptr) return 0;
-	int gms_set(0), error(0);
+	int error(0);
 	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
 
 	// Note: all of these maps bind variable addresses into the config file system by name
@@ -1915,16 +1857,10 @@ int load_config(string const &config_file) {
 			}
 		}
 		else if (str == "window_width") {
-			if (!read_int(fp, gmww) || gmww < 1) cfg_err("window_width command", error);
+			if (!read_int(fp, window_width ) || window_width  < 1) cfg_err("window_width command", error);
 		}
 		else if (str == "window_height") {
-			if (!read_int(fp, gmwh) || gmwh < 1) cfg_err("window_height command", error);
-		}
-		else if (str == "init_window_width") {
-			if (!read_int(fp, init_window_width) || init_window_width < 1) cfg_err("init_window_width command", error);
-		}
-		else if (str == "init_window_height") {
-			if (!read_int(fp, init_window_height) || init_window_height < 1) cfg_err("init_window_height command", error);
+			if (!read_int(fp, window_height) || window_height < 1) cfg_err("window_height command", error);
 		}
 		else if (str == "mesh_size") {
 			if (fscanf(fp, "%i%i%i", &MESH_X_SIZE, &MESH_Y_SIZE, &MESH_Z_SIZE) != 3) cfg_err("mesh size command", error);
@@ -2156,7 +2092,6 @@ int load_config(string const &config_file) {
 	//if (read_heightmap && dynamic_mesh_scroll) cout << "Warning: read_heightmap and dynamic_mesh_scroll are currently incompatible options as the heightmap does not scroll." << endl;
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation
-	if (!gms_set) {sprintf(game_mode_string, "%ix%i", gmww, gmwh);}
 	if (!bmp_file_to_binary_array(md_fname, mesh_draw    )) {error = 1;}
 	if (!bmp_file_to_binary_array(we_fname, water_enabled)) {error = 1;}
 	if (!bmp_file_to_binary_array(fw_fname, flower_weight)) {error = 1;}
@@ -2221,7 +2156,7 @@ void init_debug_callback() {
 int main(int argc, char** argv) {
 
 	cout << "Starting 3DWorld" << endl;
-	if (argc == 2) read_ueventlist(argv[1]);
+	if (argc == 2) {read_ueventlist(argv[1]);}
 	int rs(1);
 	if      (srand_param == 1) {rs = GET_TIME_MS();}
 	else if (srand_param != 0) {rs = srand_param;}
@@ -2239,7 +2174,7 @@ int main(int argc, char** argv) {
 	progress();
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	//glutInitDisplayString("rgba double depth>=16 samples>=8");
-	glutInitWindowSize(init_window_width, init_window_height);
+	glutInitWindowSize(window_width, window_height);
 
 	if (use_core_context) {
 		glutInitContextVersion(4, 2);
@@ -2252,8 +2187,7 @@ int main(int argc, char** argv) {
 	}
 	if (enable_timing_profiler) {toggle_timing_profiler();} // enable profiler logging on init without using the 'u' key
 	progress();
-	orig_window = glutCreateWindow("3D World");
-	curr_window = orig_window;
+	/*int const cur_window =*/ glutCreateWindow("3D World");
 	progress();
 	init_openal(argc, argv);
 	progress();
@@ -2265,7 +2199,6 @@ int main(int argc, char** argv) {
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();
 	--frame_counter;
-	//if (start_maximized) {maximize();}
 	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // OpenGL 4.5 only
 	load_textures();
 	load_flare_textures(); // Sun Flare
