@@ -537,7 +537,7 @@ class asteroid_model_gen_t {
 	typedef unique_ptr<uobj_asteroid> p_uobj_asteroid;
 	vector<p_uobj_asteroid> asteroids;
 	vector<asteroid_belt_cloud> cloud_models;
-	vbo_wrap_t cloud_vbo;
+	vao_manager_t cloud_vao;
 	colorRGBA tex_color;
 
 public:
@@ -597,7 +597,7 @@ public:
 	}
 	void clear_contexts() {
 		for (vector<p_uobj_asteroid>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {(*i)->clear_context();}
-		cloud_vbo.clear_vbo();
+		cloud_vao.clear();
 	}
 
 	// cloud models
@@ -610,23 +610,21 @@ public:
 		rand_gen_t rgen;
 		for (auto i = cloud_models.begin(); i != cloud_models.end(); ++i) {i->gen(rgen, 1.0);} // create cloud models
 	}
-	void create_cloud_vbo() {
+	void create_cloud_vao() {
 		vector<volume_part_cloud::vert_type_t> all_cloud_verts;
 	
 		for (auto i = cloud_models.begin(); i != cloud_models.end(); ++i) { // create cloud models
 			i->vbo_pos = all_cloud_verts.size();
 			all_cloud_verts.insert(all_cloud_verts.end(), i->get_points().begin(), i->get_points().end());
 		}
-		cloud_vbo.create_and_upload(all_cloud_verts, 0, 1);
+		cloud_vao.create_and_upload(all_cloud_verts, 0, 1);
 	}
 	void cloud_pre_draw() {
-		if (!cloud_vbo.vbo) {create_cloud_vbo();}
-		cloud_vbo.pre_render();
-		asteroid_belt_cloud::vert_type_t::set_vbo_arrays();
+		if (!cloud_vao.vbo) {create_cloud_vao();}
+		cloud_vao.pre_render();
 	}
 	void cloud_post_draw() const {
-		asteroid_belt_cloud::vert_type_t::unset_attrs();
-		cloud_vbo.post_render();
+		cloud_vao.post_render();
 	}
 	void draw_cloud_model(vpc_shader_t &s, unsigned ix, point const &pos, float radius, float shadow_atten) const {
 		assert(ix < cloud_models.size());
