@@ -97,7 +97,7 @@ struct building_mat_t : public building_tex_params_t {
 
 struct building_params_t {
 
-	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only;
+	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only, infinite_buildings;
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor, sec_extra_spacing;
 	float window_width, window_height, window_xspace, window_yspace; // windows
@@ -109,7 +109,8 @@ struct building_params_t {
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), num_place(num), num_tries(10),
 		cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
-	bool windows_enabled() const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
+	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
+	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);} // TODO: for future use
 	float get_window_width_fract () const {assert(windows_enabled()); return window_width /(window_width  + window_xspace);}
 	float get_window_height_fract() const {assert(windows_enabled()); return window_height/(window_height + window_yspace);}
 	float get_window_tx() const {assert(windows_enabled()); return 1.0/(window_width  + window_xspace);}
@@ -185,6 +186,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "tt_only") {
 		if (!read_bool(fp, global_building_params.tt_only)) {buildings_file_err(str, error);}
+	}
+	else if (str == "infinite_buildings") {
+		if (!read_bool(fp, global_building_params.infinite_buildings)) {buildings_file_err(str, error);}
 	}
 	// material parameters
 	else if (str == "range_translate") { // x,y only
