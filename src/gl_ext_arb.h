@@ -114,7 +114,7 @@ struct vbo_wrap_t { // Note: not for use with index vbo
 
 struct indexed_vbo_manager_t : public vbo_wrap_t {
 
-	unsigned ivbo, gpu_mem;
+	unsigned ivbo, gpu_mem; // aka EBO
 
 	indexed_vbo_manager_t() : ivbo(0), gpu_mem(0) {}
 	void reset_vbos_to_zero() {vbo = ivbo = gpu_mem = 0;}
@@ -191,7 +191,7 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t, public vao_wrap_t {
 };
 
 
-template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_manager_t {
+template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_manager_t { // unused
 
 	vao_wrap_t vaos[N];
 
