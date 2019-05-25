@@ -1242,7 +1242,10 @@ void building_t::gen_geometry(unsigned ix) {
 
 	// determine the number of levels and splits
 	unsigned num_levels(mat.min_levels);
-	if (mat.min_levels < mat.max_levels && was_cube) {num_levels += rgen.rand()%(mat.max_levels - mat.min_levels + 1);} // only cubes are multilevel (unless min_level > 1)
+	
+	if (mat.min_levels < mat.max_levels) { // have a range of levels
+		if (was_cube || rgen.rand_bool()) {num_levels += rgen.rand() % (mat.max_levels - mat.min_levels + 1);} // only half of non-cubes are multilevel (unless min_level > 1)
+	}
 	if (mat.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.get_size().z/mat.min_level_height)));}
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	bool const do_split(num_levels < 4 && is_cube() && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
@@ -1261,7 +1264,7 @@ void building_t::gen_geometry(unsigned ix) {
 	float const height(base.get_dz()), dz(height/num_levels);
 	assert(height > 0.0);
 
-	if (rgen.rand_bool() && !do_split) { // oddly shaped multi-sided overlapping sections
+	if (!do_split && (rgen.rand()&3) < (was_cube ? 2 : 3)) { // oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
 		point const llc(base.get_llc()), sz(base.get_size());
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels
@@ -1283,6 +1286,7 @@ void building_t::gen_geometry(unsigned ix) {
 			} // for n
 		} // for i
 		calc_bcube_from_parts(); // update bcube
+		gen_details(rgen);
 		return;
 	}
 	for (unsigned i = 0; i < num_levels; ++i) {
@@ -1290,6 +1294,8 @@ void building_t::gen_geometry(unsigned ix) {
 		if (i == 0) {bc = base;} // use full building footprint
 		else {
 			cube_t const &prev(parts[i-1]);
+			float const shift_mult(was_cube ? 1.0 : 0.5); // half the shift for non-cube buildings
+
 			for (unsigned d = 0; d < 2; ++d) {
 				float const len(prev.d[d][1] - prev.d[d][0]), bc_len(bcube.d[d][1] - bcube.d[d][0]);
 				bool const inv(rgen.rand_bool());
@@ -1297,9 +1303,9 @@ void building_t::gen_geometry(unsigned ix) {
 				for (unsigned E = 0; E < 2; ++E) {
 					bool const e((E != 0) ^ inv); // no dir favoritism for 20% check
 					float delta(0.0);
-					if (rgen.rand()&3) {delta = rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
+					if (rgen.rand()&3) {delta = shift_mult*rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
 					bc.d[d][e] = prev.d[d][e] + (e ? -delta : delta)*len;
-					if (bc.d[d][1] - bc.d[d][0] < 0.2*bc_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
+					if (bc.d[d][1] - bc.d[d][0] < (0.2/shift_mult)*bc_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
 				}
 			}
 			bc.z1() = prev.z2(); // z1
@@ -1318,7 +1324,7 @@ void building_t::gen_geometry(unsigned ix) {
 		split_in_xy(split_cube, rgen);
 	}
 	else {
-		if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 70% chance
+		if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 67% chance
 		if (num_levels <= 3) {gen_details(rgen);}
 	}
 }
@@ -1487,15 +1493,16 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	if (num_blocks > 0) {
 		float const xy_sz(top.get_size().xy_mag());
+		float const height_scale(0.01*min(top.get_dz(), 0.4f*bcube.dz()));
 		cube_t rbc(top);
 		vector<point> points; // reused across calls
 		
 		for (unsigned i = 0; i < num_blocks; ++i) {
 			cube_t &c(details[i]);
-			float const height(0.01*rgen.rand_uniform(1.0, 4.0)*top.get_dz());
+			float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
 
 			while (1) {
-				c.set_from_point(point(rgen.rand_uniform(rbc.d[0][0], rbc.d[0][1]), rgen.rand_uniform(rbc.d[1][0], rbc.d[1][1]), 0.0));
+				c.set_from_point(point(rgen.rand_uniform(rbc.x1(), rbc.x2()), rgen.rand_uniform(rbc.y1(), rbc.y2()), 0.0));
 				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.08), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
 				if (!rbc.contains_cube_xy(c)) continue; // not contained
 				if (is_simple_cube()) break; // success/done

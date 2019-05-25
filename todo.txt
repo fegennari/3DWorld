@@ -10,5 +10,5 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 
-* Multilevel cylinders and N-gons shapes
 * Infinite buildings
+* CSMs for TT mode
