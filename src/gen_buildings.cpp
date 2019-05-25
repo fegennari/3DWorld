@@ -1493,7 +1493,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	if (num_blocks > 0) {
 		float const xy_sz(top.get_size().xy_mag());
-		float const height_scale(0.01*min(top.get_dz(), 0.4f*bcube.dz()));
+		float const height_scale(0.0035*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
 		cube_t rbc(top);
 		vector<point> points; // reused across calls
 		
