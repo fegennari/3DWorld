@@ -543,7 +543,9 @@ class building_draw_t {
 			vert_ix_pair(unsigned qix_, unsigned tix_) : qix(qix_), tix(tix_) {}
 			bool operator==(vert_ix_pair const &v) const {return (qix == v.qix && tix == v.tix);}
 		};
-		vbo_wrap_t qvbo, tvbo; // Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass + use of quads ivbo
+		// Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass
+		// Note: not easy to use vao_wrap_t directly due to use of quads ivbo
+		vbo_wrap_t qvbo, tvbo;
 		tid_nm_pair_t tex;
 		vector<vert_norm_comp_tc_color> quad_verts, tri_verts;
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}

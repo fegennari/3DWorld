@@ -752,12 +752,14 @@ void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
 
 void sd_sphere_vbo_d::ensure_vbos() {
 
+	// Note: because this is called outside of a shader, we can't call vertex_type_t::set_vbo_arrays() at this point,
+	// so we have to re-bind the VBO and call it during draw_setup() each time
 	if (!vbo) {
 		assert(!ivbo);
-		ensure_vao_bound();
 		vector<vertex_type_t> verts;
 		if (faceted) {get_faceted_triangles(verts);} else {get_triangle_vertex_list(verts);}
-		create_vbo_and_upload(vbo, verts, 0, 1);
+		ensure_vao_bound();
+		create_vbo_and_upload(vbo, verts, 0, 0);
 	}
 	if (!faceted && !ivbo) {
 		assert(ix_offsets.empty());
@@ -768,7 +770,7 @@ void sd_sphere_vbo_d::ensure_vbos() {
 			get_triangle_index_list_pow2(indices, skip);
 			ix_offsets.push_back(indices.size());
 		}
-		create_vbo_and_upload(ivbo, indices, 1, 1);
+		create_vbo_and_upload(ivbo, indices, 1, 0);
 	}
 	assert(faceted || !ix_offsets.empty());
 }
