@@ -123,7 +123,7 @@ struct indexed_vbo_manager_t : public vbo_wrap_t {
 	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool end_with_bind0=0) {
 		vbo_wrap_t::create_and_upload(data, dynamic_level, end_with_bind0);
 		if (!vbo ) {gpu_mem += data.size() *sizeof(vert_type_t );}
-		if (!ivbo) {create_vbo_and_upload(ivbo, idata, 1, end_with_bind0, dynamic_level); gpu_mem += idata.size()*sizeof(index_type_t);}
+		if (!ivbo && !idata.empty()) {create_vbo_and_upload(ivbo, idata, 1, end_with_bind0, dynamic_level); gpu_mem += idata.size()*sizeof(index_type_t);}
 	}
 	void clear_vbos() {
 		vbo_wrap_t::clear();

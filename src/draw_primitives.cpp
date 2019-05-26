@@ -752,36 +752,31 @@ void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
 
 void sd_sphere_vbo_d::ensure_vbos() {
 
-	// Note: because this is called outside of a shader, we can't call vertex_type_t::set_vbo_arrays() at this point,
-	// so we have to re-bind the VBO and call it during draw_setup() each time
+	// Note: have to re-bind VBO and call vertex_type_t::set_vbo_arrays() during draw_setup() each time because it's drawn with different shaders (asteroids and comets)
 	if (!vbo) {
 		assert(!ivbo);
 		vector<vertex_type_t> verts;
-		if (faceted) {get_faceted_triangles(verts);} else {get_triangle_vertex_list(verts);}
-		ensure_vao_bound();
-		create_vbo_and_upload(vbo, verts, 0, 0);
-	}
-	if (!faceted && !ivbo) {
-		assert(ix_offsets.empty());
 		vector<index_type_t> indices;
-		ix_offsets.push_back(0);
-		
-		for (unsigned n = ndiv, skip = 1, ix_ix = 0; n >= 4; n >>= 1, skip <<= 1, ++ix_ix) {
-			get_triangle_index_list_pow2(indices, skip);
-			ix_offsets.push_back(indices.size());
+		if (faceted) {get_faceted_triangles(verts);} else {get_triangle_vertex_list(verts);}
+
+		if (!faceted) {
+			assert(ix_offsets.empty());
+			ix_offsets.push_back(0);
+
+			for (unsigned n = ndiv, skip = 1, ix_ix = 0; n >= 4; n >>= 1, skip <<= 1, ++ix_ix) {
+				get_triangle_index_list_pow2(indices, skip);
+				ix_offsets.push_back(indices.size());
+			}
 		}
-		create_vbo_and_upload(ivbo, indices, 1, 0);
+		create_and_upload(verts, indices);
 	}
 	assert(faceted || !ix_offsets.empty());
 }
 
-
 void sd_sphere_vbo_d::clear_vbos() {
-
 	indexed_vao_manager_t::clear_vbos();
 	ix_offsets.clear();
 }
-
 
 unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 
@@ -791,7 +786,6 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 	return lod;
 }
 
-
 unsigned sd_sphere_vbo_d::draw_setup(unsigned draw_ndiv) {
 
 	ensure_vbos();
@@ -800,31 +794,19 @@ unsigned sd_sphere_vbo_d::draw_setup(unsigned draw_ndiv) {
 	return (faceted ? 0 : calc_lod_pow2(ndiv, draw_ndiv));
 }
 
-
 void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned draw_ndiv) {
 
 	unsigned const lod(draw_setup(draw_ndiv));
-
-	if (faceted) { // ndiv is ignored
-		glDrawArrays(GL_TRIANGLES, 0, 6*ndiv*ndiv);
-	}
-	else {
-		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (ndiv+1)*(ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod));
-	}
+	if (faceted) {glDrawArrays(GL_TRIANGLES, 0, 6*ndiv*ndiv);} // ndiv is ignored
+	else {glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (ndiv+1)*(ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod));}
 	post_render();
 }
-
 
 void sd_sphere_vbo_d::draw_instances(unsigned draw_ndiv, instance_render_t &inst_render) {
 
 	unsigned const lod(draw_setup(draw_ndiv));
-
-	if (faceted) { // ndiv is ignored
-		inst_render.draw_and_clear(GL_TRIANGLES, 6*ndiv*ndiv, vbo);
-	}
-	else {
-		inst_render.draw_and_clear(GL_TRIANGLE_STRIP, get_count(lod), vbo, get_index_type_enum(), get_index_ptr(lod));
-	}
+	if (faceted) {inst_render.draw_and_clear(GL_TRIANGLES, 6*ndiv*ndiv, vbo);} // ndiv is ignored
+	else {inst_render.draw_and_clear(GL_TRIANGLE_STRIP, get_count(lod), vbo, get_index_type_enum(), get_index_ptr(lod));}
 	post_render();
 }
 
@@ -855,22 +837,16 @@ void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &v
 	sd.draw_subdiv_sphere(vfrom, texture, disable_bfc, render_map, exp_map, pt_shift, expand, s_beg, s_end, t_beg, t_end);
 }
 
-
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, int texture, bool disable_bfc) {
-
 	draw_subdiv_sphere(pos, radius, ndiv, (disable_bfc ? all_zeros : get_camera_all()), NULL, texture, disable_bfc);
 }
 
-
-void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int texture,
-								float s_beg, float s_end, float t_beg, float t_end)
-{
+void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int texture, float s_beg, float s_end, float t_beg, float t_end) {
 	draw_subdiv_sphere(pos, radius, ndiv, all_zeros, NULL, texture, 1, NULL, NULL, NULL, 0.0, s_beg, s_end, t_beg, t_end);
 }
 
 
 void rotate_sphere_tex_to_dir(vector3d const &dir) { // dir must be normalized
-
 	fgRotate(atan2(-dir.y, -dir.x)*TO_DEG-90.0, 0.0, 0.0, 1.0); // negate because dir was backwards
 	fgRotate(asinf(-dir.z)*TO_DEG, 1.0, 0.0, 0.0);
 }

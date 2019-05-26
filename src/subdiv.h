@@ -64,10 +64,7 @@ public:
 	void get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const;
 	void get_faceted_triangles(vector<vertex_type_t> &verts) const;
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);
-
-	bool equal(point const &p, float r, int n) const {
-		return (p == pos && r == radius && n == (int)ndiv && points != NULL);
-	}
+	bool equal(point const &p, float r, int n) const {return (p == pos && r == radius && n == (int)ndiv && points != NULL);}
 };
 
 
@@ -77,6 +74,10 @@ class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vao_manager_t {
 	bool faceted;
 
 	void ensure_vbos();
+	unsigned draw_setup(unsigned draw_ndiv);
+	unsigned get_index_type_enum()          const {return ((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);}
+	unsigned get_count       (unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (ix_offsets[lod+1] - ix_offsets[lod]);}
+	void *const get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void *const)(ix_offsets[lod]*sizeof(index_type_t));}
 
 public:
 	sd_sphere_vbo_d() : faceted(0) {}
@@ -84,12 +85,8 @@ public:
 		: sd_sphere_d(p, r, n, pm, dp, s), faceted(0) {}
 	void make_faceted() {faceted = 1;}
 	void clear_vbos();
-	unsigned draw_setup(unsigned draw_ndiv);
 	void draw_ndiv_pow2_vbo(unsigned draw_ndiv);
 	void draw_instances(unsigned draw_ndiv, instance_render_t &inst_render);
-	unsigned get_index_type_enum()          const {return ((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);}
-	unsigned get_count       (unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (ix_offsets[lod+1] - ix_offsets[lod]);}
-	void *const get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void *const)(ix_offsets[lod]*sizeof(index_type_t));}
 };
 
 
