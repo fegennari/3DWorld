@@ -384,10 +384,12 @@ class building_draw_t;
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
 	bool half_offset, is_pointed;
+	bool door_dim, door_dir, door_part; // for door/window placement
 	float rot_sin, rot_cos, flat_side_amt, alt_step_factor, start_angle; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
 
-	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), is_pointed(0), rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0) {}
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), is_pointed(0), door_dim(0), door_dir(0), door_part(0),
+		rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0) {}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
 	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
@@ -755,13 +757,14 @@ public:
 	}
 
 	void add_section(building_geom_t const &bg, cube_t const &cube, cube_t const &bcube, float ao_bcz2, tid_nm_pair_t const &tex,
-		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, bool clip_windows)
+		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, bool clip_windows, float door_ztop=0.0)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size());
 
 		if (bg.num_sides != 4) { // not a cube, use cylinder
+			assert(door_ztop == 0.0); // not supported
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
@@ -786,7 +789,7 @@ public:
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
 				if (skip_top    && n == 2 && j == 1) continue; // skip top    side
-
+				
 				if (n < 2 && bg.is_rotated()) { // XY only
 					vector3d norm; norm.z = 0.0;
 					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
@@ -800,6 +803,7 @@ public:
 				point pt; pt[n] = j; // in direction of normal
 
 				if (bg.is_pointed) {
+					assert(door_ztop == 0.0); // not supported
 					pt[!n] = !j; pt.z = 0;
 					EMIT_VERTEX(); // bottom low
 					pt[!n] = j;
@@ -823,6 +827,17 @@ public:
 				pt[i] = !j;
 				EMIT_VERTEX(); // 1 !j
 
+				if (door_ztop != 0.0 && n == unsigned(bg.door_dim) && j == unsigned(bg.door_dir)) { // not the cleanest way to do this ...
+					float const door_height(door_ztop - cube.z1()), offset(0.005*(bg.door_dir ? 1.0 : -1.0)*door_height);
+
+					for (unsigned k = ix; k < ix+4; ++k) {
+						auto &v(verts[k]);
+						float const delta(door_ztop - v.v.z);
+						max_eq(v.v.z, door_ztop); // make all windows start above the door
+						v.v[bg.door_dim] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
+						if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
+					}
+				}
 				if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
 					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
 					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
@@ -1337,13 +1352,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
 	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
-	bool skip_last_roof(0), door_dir(0);
+	bool skip_last_roof(0);
 	num_sides = 4;
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
-	bool const door_dim(rgen.rand_bool());
 	float door_height(0.45/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
 	float door_center(0.0), door_pos(0.0);
+	door_dim = rgen.rand_bool();
 
 	if (type != 0) { // multi-part house
 		parts.push_back(base); // add second part
@@ -1388,6 +1403,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			if (gen_door) { // add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
 				door_center = 0.5*(c.d[!door_dim][0] + c.d[!door_dim][1] + ((door_dim == dim) ? dist1 : dist2));
 				door_pos    = c.d[door_dim][!door_dir];
+				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 				min_eq(door_height, 0.95f*height);
 			}
 			if (detail_type == 1) { // porch
@@ -1415,7 +1431,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	} // end type != 0
 	else if (gen_door) { // single cube house
-		door_dir = rgen.rand_bool(); // select a random dir
+		door_dir  = rgen.rand_bool(); // select a random dir
+		door_part = 0; // only one part
 	}
 	if (gen_door) { // add door
 		if (door_center == 0.0) { // door not yet calculated
@@ -1423,6 +1440,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			float const offset(rgen.rand_uniform(0.25, 0.75));
 			door_center = offset*c.d[!door_dim][0] + (1.0 - offset)*c.d[!door_dim][1];
 			door_pos    = c.d[door_dim][door_dir];
+			door_part   = 0;
 		}
 		float const door_half_width(0.25*door_height);
 		cube_t door;
@@ -1584,7 +1602,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
 
-	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
 		bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 		bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
 		bool const is_stacked(!is_house && num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
@@ -1623,8 +1641,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	else {color = mat.window_color;}
 	bool const clip_windows(mat.no_city); // only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 
-	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels case
-		bdraw.add_section(*this, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows); // XY, no_ao=1
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
+		float const door_ztop((!doors.empty() && (i - parts.begin()) == unsigned(door_part)) ? doors.front().pts[2].z : 0.0);
+		bdraw.add_section(*this, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop); // XY, no_ao=1
 	}
 }
 
