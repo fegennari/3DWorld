@@ -1965,17 +1965,24 @@ public:
 		create_vbos();
 	}
 
-	void draw(bool shadow_only, vector3d const &xlate) { // Note: non-const; building_draw is modified
-		if (empty()) return;
-		if (!camera_pdu.cube_visible(buildings_bcube + xlate)) return; // no buildings visible
+	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
+
+	static void multi_draw(bool shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
+		if (bcs.empty()) return;
+		bool have_windows(0), have_wind_lights(0);
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
+
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+			assert(*i);
+			have_windows     |= !(*i)->building_draw_windows.empty();
+			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
+		}
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map /*&& (display_mode & 0x20) == 0*/);
 		bool const use_tt_smap(check_tile_smap(shadow_only) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		shader_t s;
 		fgPushMatrix();
 		translate_to(xlate);
-		if (!shadow_only) {building_draw.init_draw_frame();}
 		glDepthFunc(GL_LEQUAL);
 
 		// main/batched draw pass
@@ -1983,15 +1990,16 @@ public:
 		else {
 			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 		}
-		building_draw_vbo.draw(shadow_only); // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(shadow_only);} // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
 		float const WIND_LIGHT_ON_RAND = 0.08;
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 
-		if (!shadow_only && !building_draw_windows.empty()) { // draw windows
+		if (!shadow_only && have_windows) { // draw windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
-			building_draw_windows.draw(0); // draw windows on top of other buildings
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
@@ -2004,24 +2012,26 @@ public:
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			glDepthMask(GL_FALSE); // disable depth writing
 
-			for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-				if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
-				point const pos(g->bcube.get_cube_center() + xlate);
-				if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-				if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
-				unsigned const tile_id(g - grid_by_tile.begin());
-				building_draw_vbo.draw_tile(tile_id);
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
+					point const pos(g->bcube.get_cube_center() + xlate);
+					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
+					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
+					(*i)->building_draw_vbo.draw_tile(tile_id);
 
-				if (!building_draw_windows.empty()) {
-					enable_blend();
-					building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
-					disable_blend();
-				}
-			} // for g
+					if (!(*i)->building_draw_windows.empty()) {
+						enable_blend();
+						(*i)->building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
+						disable_blend();
+					}
+				} // for g
+			}
 			s.end_shader();
 			glDepthMask(GL_TRUE); // re-enable depth writing
 		}
-		if (!shadow_only && night && !building_draw_wind_lights.empty()) { // add night time random lights in windows
+		if (!shadow_only && night && have_wind_lights) { // add night time random lights in windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
 			float const low_v(0.5 - WIND_LIGHT_ON_RAND), high_v(0.5 + WIND_LIGHT_ON_RAND), lit_thresh_mult(1.0 + 2.0*CLIP_TO_01((light_factor - low_v)/(high_v - low_v)));
@@ -2033,7 +2043,7 @@ public:
 			s.begin_shader();
 			s.add_uniform_float("lit_thresh_mult", lit_thresh_mult); // gradual transition of lit window probability around sunset
 			setup_tt_fog_post(s);
-			building_draw_wind_lights.draw(0); // add bloom?
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_wind_lights.draw(0);} // add bloom?
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
@@ -2263,8 +2273,10 @@ void gen_buildings() {
 	else {building_creator.gen(global_building_params, 0, 0);} // mixed buildings
 }
 void draw_buildings(bool shadow_only, vector3d const &xlate) {
-	building_creator_city.draw(shadow_only, xlate);
-	building_creator.draw     (shadow_only, xlate);
+	vector<building_creator_t *> bcs;
+	if (building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
+	if (building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
+	building_creator_t::multi_draw(shadow_only, xlate, bcs);
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
 	return (building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm) ||
