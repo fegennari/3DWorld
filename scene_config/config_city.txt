@@ -1,7 +1,6 @@
 # Note: these must be specified before including buildings.txt since they set texture load state
 #def_texture_compress 0 # disable for faster load but higher graphics memory; should re-enable later
 def_texture_aniso 4.0 # better quality over default value of 2.0
-no_store_model_textures_in_memory 1 # Note: saves CPU side memory
 
 # buildings
 include building_params.txt
