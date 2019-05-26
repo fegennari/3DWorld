@@ -473,7 +473,11 @@ void process_univ_objects() {
 				
 				if (clobj.val > 0) {
 					float min_sf(0.25*SLOW_SPEED_FACTOR);
-					if (lod_coll && dot_product_ptv(upos_point_type(uobj->get_velocity()), obj_pos, clobj.object->get_pos()) < 0.0) {min_sf = (has_rings ? 0.0025 : 0.001);} // only on approach
+					
+					if (lod_coll && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON)) {
+						assert(clobj.object != nullptr);
+						if (dot_product_ptv(upos_point_type(uobj->get_velocity()), obj_pos, clobj.object->get_pos()) < 0.0) {min_sf = (has_rings ? 0.0025 : 0.001);} // only on approach
+					}
 					speed_factor2 = max(min_sf, min(1.0f, 0.7f*limit_speed_dist)); // clip to [0.01, 1.0]
 				}
 				if (min(speed_factor, speed_factor2) > SLOW_SPEED_FACTOR) { // faster than slow speed
