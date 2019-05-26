@@ -571,7 +571,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		if (npts == 4) {prim_type = GL_QUADS;}
 		this->create_and_upload(*this, indices);
 	}
-	this->pre_render();
+	this->pre_render(1, 1); // using_index=1, do_bind_vbo=1 (due to below issue)
 	// Note: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
 	//if (is_shadow_pass) {T::set_vbo_arrays_shadow(0);} else
 	T::set_vbo_arrays(); // calls check_mvm_update()

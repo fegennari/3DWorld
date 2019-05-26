@@ -677,7 +677,7 @@ cube_map_sphere_drawer_t::cube_map_sphere_drawer_t(unsigned ndiv) {
 
 void cube_map_sphere_drawer_t::draw() const {
 
-	pre_render();
+	pre_render(1, 1); // using_index, do_bind_vbo=1
 	vert_wrap_t::set_vbo_arrays();
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
@@ -701,7 +701,7 @@ icosphere_drawer_t::icosphere_drawer_t(unsigned ndiv) {
 
 void icosphere_drawer_t::draw() const {
 
-	pre_render();
+	pre_render(1, 1); // using_index, do_bind_vbo=1
 	vert_wrap_t::set_vbo_arrays();
 	glDrawRangeElements((using_tess_shader ? GL_PATCHES : GL_TRIANGLES), 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
 	post_render();

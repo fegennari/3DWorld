@@ -795,7 +795,7 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 unsigned sd_sphere_vbo_d::draw_setup(unsigned draw_ndiv) {
 
 	ensure_vbos();
-	pre_render(!faceted);
+	pre_render(!faceted, 1); // do_bind_vbo=1
 	vertex_type_t::set_vbo_arrays();
 	return (faceted ? 0 : calc_lod_pow2(ndiv, draw_ndiv));
 }

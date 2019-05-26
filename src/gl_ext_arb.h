@@ -155,21 +155,27 @@ struct vao_wrap_t {
 	}
 	void enable_vao() const {check_bind_vao(vao);}
 	static void disable_vao() {bind_vao(0);}
+
+	template<typename vert_type_t> void create_from_vbo(vbo_wrap_t const &vbo, bool setup_pointers=0) {
+		if (vao) {return;} // already set
+		ensure_vao_bound();
+		vbo.pre_render();
+		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
+	}
 };
 
 
 struct vao_manager_t : public vbo_wrap_t, public vao_wrap_t {
 
-	template<typename vert_type_t>
-	void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool setup_pointers=0) {
+	template<typename vert_type_t> void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool setup_pointers=0) {
 		if (vao) {assert(vbo); return;} // already set
 		ensure_vao_bound();
-		vbo_wrap_t::create_and_upload(data, dynamic_level);
+		if (vbo) {vbo_wrap_t::pre_render();} else {vbo_wrap_t::create_and_upload(data, dynamic_level);}
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
 	void clear() {vbo_wrap_t::clear(); vao_wrap_t::clear();}
-	void pre_render() const {enable_vao(); vbo_wrap_t::pre_render();}
-	static void post_render() {disable_vao(); indexed_vbo_manager_t::post_render();}
+	void pre_render(bool do_bind_vbo=0) const {enable_vao(); if (do_bind_vbo) {vbo_wrap_t::pre_render();}}
+	static void post_render() {disable_vao(); vbo_wrap_t::post_render();}
 };
 
 
@@ -182,11 +188,13 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t, public vao_wrap_t {
 	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
 		if (vao) return; // already set
 		ensure_vao_bound();
-		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
-		//indexed_vbo_manager_t::pre_render(1); // binds vbo/ivbo - may not be necessary
+		if (vbo) {indexed_vbo_manager_t::pre_render(1);} else {indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);}
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
-	void pre_render(bool using_index=1) const {enable_vao(); indexed_vbo_manager_t::pre_render(using_index);}
+	void pre_render(bool using_index=1, bool do_bind_vbo=0) const {
+		enable_vao();
+		if (do_bind_vbo) {indexed_vbo_manager_t::pre_render(using_index);}
+	}
 	static void post_render() {disable_vao(); indexed_vbo_manager_t::post_render();}
 };
 
@@ -208,7 +216,7 @@ template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_man
 		assert(ix < N);
 		if (vaos[ix]) return; // already set
 		ensure_vao_bound(ix);
-		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
+		if (vbo) {indexed_vbo_manager_t::pre_render(1);} else {indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);}
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
 	void enable_vao(unsigned ix) const {assert(ix < N); vaos[ix].enable_vao();}
