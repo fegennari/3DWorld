@@ -543,9 +543,9 @@ class building_draw_t {
 			vert_ix_pair(unsigned qix_, unsigned tix_) : qix(qix_), tix(tix_) {}
 			bool operator==(vert_ix_pair const &v) const {return (qix == v.qix && tix == v.tix);}
 		};
-		// Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass
-		// Note: not easy to use vao_wrap_t directly due to use of quads ivbo
+		// Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass, but we can use vao_wrap_t's directly
 		vbo_wrap_t qvbo, tvbo;
+		vao_wrap_t qvao, tvao, sqvao, stvao; // regular + shadow
 		tid_nm_pair_t tex;
 		vector<vert_norm_comp_tc_color> quad_verts, tri_verts;
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
@@ -556,18 +556,16 @@ class building_draw_t {
 			ensure_vbos();
 
 			if (qvbo.vbo_valid() && vstart.qix != vend.qix) {
-				qvbo.pre_render();
-				vert_norm_comp_tc_color::set_vbo_arrays();
+				(shadow_only ? sqvao : qvao).create_from_vbo<vert_norm_comp_tc_color>(qvbo, 1, 1); // setup_pointers=1, always_bind=1
 				assert(vstart.qix < vend.qix);
 				draw_quads_as_tris((vend.qix - vstart.qix), vstart.qix);
 			}
 			if (tvbo.vbo_valid() && vstart.tix != vend.tix) {
-				tvbo.pre_render();
-				vert_norm_comp_tc_color::set_vbo_arrays();
+				(shadow_only ? stvao : tvao).create_from_vbo<vert_norm_comp_tc_color>(tvbo, 1, 1); // setup_pointers=1, always_bind=1
 				assert(vstart.tix < vend.tix);
 				glDrawArrays(GL_TRIANGLES, vstart.tix, (vend.tix - vstart.tix));
 			}
-			vbo_wrap_t::post_render();
+			vao_manager_t::post_render();
 		}
 		void draw_all_geom(bool shadow_only) {
 			assert(!pos_by_tile.empty());
@@ -603,7 +601,7 @@ class building_draw_t {
 			remove_excess_cap(pos_by_tile);
 		}
 		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear();}
-		void clear_vbos() {qvbo.clear(); tvbo.clear();}
+		void clear_vbos () {qvbo.clear(); tvbo.clear(); qvao.clear(); tvao.clear(); sqvao.clear(); stvao.clear();}
 		void clear() {clear_vbos(); clear_verts();}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
@@ -1980,7 +1978,7 @@ public:
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
 		}
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
-		int const use_bmap(global_building_params.has_normal_map /*&& (display_mode & 0x20) == 0*/);
+		int const use_bmap(global_building_params.has_normal_map);
 		bool const use_tt_smap(check_tile_smap(shadow_only) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		shader_t s;
 		fgPushMatrix();

@@ -156,8 +156,8 @@ struct vao_wrap_t {
 	void enable_vao() const {check_bind_vao(vao);}
 	static void disable_vao() {bind_vao(0);}
 
-	template<typename vert_type_t> void create_from_vbo(vbo_wrap_t const &vbo, bool setup_pointers=0) {
-		if (vao) {return;} // already set
+	template<typename vert_type_t> void create_from_vbo(vbo_wrap_t const &vbo, bool setup_pointers=0, bool always_bind=0) {
+		if (vao) {if (always_bind) {enable_vao();} return;} // already set
 		ensure_vao_bound();
 		vbo.pre_render();
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
