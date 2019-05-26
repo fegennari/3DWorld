@@ -1776,6 +1776,7 @@ public:
 	}
 	void gen(building_params_t const &params, bool city_only, bool non_city_only) {
 		assert(!(city_only && non_city_only));
+		clear();
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
@@ -1791,7 +1792,6 @@ public:
 		max_extent = zero_vector;
 		assert(range_sz.x > 0.0 && range_sz.y > 0.0);
 		UNROLL_2X(range_sz_inv[i_] = 1.0/range_sz[i_];) // xy only
-		clear();
 		buildings.reserve(params.num_place);
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
