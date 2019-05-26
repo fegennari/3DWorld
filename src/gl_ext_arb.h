@@ -228,10 +228,6 @@ class subdiv_sphere_drawer_t : public indexed_vao_manager_t {
 protected:
 	unsigned nverts, nindices;
 };
-struct cube_map_sphere_drawer_t : public subdiv_sphere_drawer_t {
-	cube_map_sphere_drawer_t(unsigned ndiv);
-	void draw() const;
-};
 struct icosphere_drawer_t : public subdiv_sphere_drawer_t {
 	icosphere_drawer_t(unsigned ndiv);
 	void draw() const;
@@ -245,7 +241,6 @@ public:
 	void clear();
 };
 
-typedef subdiv_sphere_manager_t<cube_map_sphere_drawer_t> cube_map_sphere_manager_t;
 typedef subdiv_sphere_manager_t<icosphere_drawer_t> icosphere_manager_t;
 
 

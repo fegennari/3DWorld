@@ -635,58 +635,6 @@ public:
 
 
 // Note: these classes are actually declared in gl_ext_arb.h
-// simplified and optimized version of draw_cube_mapped_sphere() (no center, tex coords, or normals, and radius=1.0)
-cube_map_sphere_drawer_t::cube_map_sphere_drawer_t(unsigned ndiv) {
-
-	assert(!vbo);
-	assert(ndiv > 0);
-	nverts   = 6*(ndiv+1)*(ndiv+1);
-	nindices = 6*ndiv*(2*(ndiv+1)+1);
-	vector<vert_wrap_t> verts; verts.reserve(nverts);
-	vector<unsigned> indices; indices.reserve(nindices);
-	float const vstep(2.0/ndiv);
-
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			unsigned const d1(i), d2((i+1)%3), dn((i+2)%3), start_vix(verts.size());
-			point pt;
-			pt[dn] = (j ? 1.0 : -1.0);
-				
-			for (unsigned s = 0; s <= ndiv; ++s) { // create vertex data
-				pt[d1] = -1.0 + s*vstep;
-
-				for (unsigned T = 0; T <= ndiv; ++T) {
-					pt[d2] = -1.0 + T*vstep;
-					verts.push_back(pt.get_norm()); // Note: could also normalize in the shader
-				}
-			} // for s
-			for (unsigned s = 0; s < ndiv; ++s) { // create indices
-				for (unsigned T = 0; T <= ndiv; ++T) {
-					unsigned const ix_off(start_vix + s*(ndiv+1) + (j ? T : ndiv-T)); // reverse between sides
-					indices.push_back(ix_off); // current s row
-					indices.push_back(ix_off + ndiv+1); // next s row
-				}
-				indices.push_back(PRIMITIVE_RESTART_IX); // restart the strip
-			} // for s
-		} // for j
-	} // for i
-	assert(verts.size()   == nverts);
-	assert(indices.size() == nindices);
-	create_and_upload(verts, indices);
-}
-
-void cube_map_sphere_drawer_t::draw() const {
-
-	pre_render(1, 1); // using_index, do_bind_vbo=1
-	vert_wrap_t::set_vbo_arrays();
-	glEnable(GL_PRIMITIVE_RESTART);
-	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
-	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
-	glDisable(GL_PRIMITIVE_RESTART);
-	post_render();
-}
-
-
 icosphere_drawer_t::icosphere_drawer_t(unsigned ndiv) {
 
 	assert(!vbo);
@@ -720,8 +668,7 @@ void subdiv_sphere_manager_t<T>::clear() {
 	cached.clear();
 }
 
-// explicit template instantiations
-template class subdiv_sphere_manager_t<cube_map_sphere_drawer_t>;
+// explicit template instantiation
 template class subdiv_sphere_manager_t<icosphere_drawer_t>;
 
 
