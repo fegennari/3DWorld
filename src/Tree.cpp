@@ -853,7 +853,7 @@ void tree_data_t::check_render_textures() {
 		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
 		renderer.render_tree(*this, render_leaf_texture);
 	}
-	if (!render_branch_texture.is_valid()) {
+	if (!render_branch_texture.is_valid() && !all_cylins.empty()) {
 #ifdef USE_TREE_BB_TEX_ATLAS
 		render_branch_texture.nx = 2;
 #endif
@@ -1033,6 +1033,7 @@ template<typename branch_index_t> void tree_data_t::create_branch_vbo() {
 	vector<branch_index_t> idata;
 	unsigned const numcylin((unsigned)all_cylins.size());
 	unsigned cylin_id(0), data_pos(0), quad_id(0), dix(0), idix(0);
+	assert(numcylin > 0);
 	branch_index_bytes = sizeof(branch_index_t);
 	assert(num_unique_pts < (1ULL << 8*branch_index_bytes));
 	data.resize(num_unique_pts);
@@ -2337,9 +2338,9 @@ void tree_data_manager_t::ensure_init() {
 	}
 	else if (tree_scale != last_tree_scale || rand_gen_index != last_rgi) {
 		for (iterator i = begin(); i != end(); ++i) {i->clear_data();}
-		last_tree_scale = tree_scale;
-		last_rgi        = rand_gen_index;
 	}
+	last_tree_scale = tree_scale;
+	last_rgi        = rand_gen_index;
 }
 
 void tree_data_manager_t::clear_context() {

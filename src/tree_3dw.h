@@ -353,6 +353,8 @@ public:
 	point sphere_center()     const {return (tree_center + tdata().get_center());}
 	point const &get_center() const {return tree_center;}
 	unsigned get_gpu_mem()    const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}
+	unsigned get_num_leaves() const {return tdata().get_leaves().size();}
+	unsigned get_num_branch_cylins() const {return tdata().get_all_cylins().size();}
 	bool get_no_delete()      const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 	bool operator<(tree const &t) const {return ((type != t.type) ? (type < t.type) : (tree_data < t.tree_data));}
