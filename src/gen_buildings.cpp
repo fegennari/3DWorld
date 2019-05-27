@@ -828,7 +828,7 @@ public:
 				EMIT_VERTEX(); // 1 !j
 
 				if (door_ztop != 0.0 && n == unsigned(bg.door_dim) && j == unsigned(bg.door_dir)) { // not the cleanest way to do this ...
-					float const door_height(door_ztop - cube.z1()), offset(0.005*(bg.door_dir ? 1.0 : -1.0)*door_height);
+					float const door_height(door_ztop - cube.z1()), offset(0.02*(bg.door_dir ? 1.0 : -1.0)*door_height);
 
 					for (unsigned k = ix; k < ix+4; ++k) {
 						auto &v(verts[k]);
