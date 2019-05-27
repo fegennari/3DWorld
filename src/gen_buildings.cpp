@@ -1649,10 +1649,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 }
 
 
-unsigned const grid_sz = 32;
-
 class building_creator_t {
 
+	unsigned grid_sz;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
 	rand_gen_t rgen;
@@ -1754,7 +1753,7 @@ class building_creator_t {
 	}
 
 public:
-	building_creator_t() : max_extent(zero_vector) {}
+	building_creator_t() : grid_sz(1), max_extent(zero_vector) {}
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear();}
 	vector3d const &get_max_extent() const {return max_extent;}
@@ -1775,7 +1774,7 @@ public:
 		}
 		return 1;
 	}
-	void gen(building_params_t const &params, bool city_only, bool non_city_only, bool is_tile) {
+	void gen(building_params_t const &params, bool city_only, bool non_city_only, bool is_tile, int rseed=123) {
 		assert(!(city_only && non_city_only));
 		clear();
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
@@ -1795,9 +1794,10 @@ public:
 		assert(range_sz.x > 0.0 && range_sz.y > 0.0);
 		UNROLL_2X(range_sz_inv[i_] = 1.0/range_sz[i_];) // xy only
 		if (!is_tile) {buildings.reserve(params.num_place);}
+		grid_sz = (is_tile ? 1 : 32); // tiles are small enough that they don't need grids
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
-		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
+		rgen.set_state(rand_gen_index, rseed); // update when mesh changes, otherwise determinstic
 		vect_cube_with_zval_t city_plot_bcubes;
 		vect_cube_t avoid_bcubes;
 		if (city_only) {get_city_plot_bcubes(city_plot_bcubes);} // Note: assumes approx equal area for placement distribution
@@ -1921,7 +1921,7 @@ public:
 				max_eq(max_consec_fail, num_consec_fail);
 
 				if (num_consec_fail >= (is_tile ? 100U : 5000U)) { // too many failures - give up
-					cout << "Failed to place a building after " << num_consec_fail << " tries, giving up after " << i << " iterations" << endl;
+					if (!is_tile) {cout << "Failed to place a building after " << num_consec_fail << " tries, giving up after " << i << " iterations" << endl;}
 					break;
 				}
 			}
@@ -1934,7 +1934,7 @@ public:
 			timer_t timer("Gen Building Zvals");
 			bool const do_flatten(using_tiled_terrain_hmap_tex());
 
-#pragma omp parallel for schedule(static,1)
+#pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {
 				building_t &b(buildings[i]);
 
@@ -1972,13 +1972,15 @@ public:
 		} // if flatten_mesh
 		{ // open a scope
 			timer_t timer2("Gen Building Geometry");
-#pragma omp parallel for schedule(static,1)
+#pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
 		} // close the scope
-		cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
-			 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
+		if (!is_tile) {
+			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
+				 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
+		}
 		build_grid_by_tile();
-		create_vbos();
+		create_vbos(is_tile);
 	}
 
 	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
@@ -2096,12 +2098,12 @@ public:
 			}
 		} // for pass
 	}
-	void create_vbos() { // Note: non-const; building_draw is modified
+	void create_vbos(bool is_tile) { // Note: non-const; building_draw is modified
 		building_window_gen.check_windows_texture();
 		timer_t timer("Create Building VBOs");
 		get_all_drawn_verts();
 		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
-		cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;
+		if (!is_tile) {cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;}
 		building_draw_vbo.upload_to_vbos();
 		building_draw_windows.upload_to_vbos();
 		building_draw_wind_lights.upload_to_vbos();
@@ -2293,7 +2295,9 @@ public:
 		bcube.x2() = get_xval((x+1)*MESH_X_SIZE);
 		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
 		global_building_params.set_pos_range(bcube);
-		bc.gen(global_building_params, 0, 1, 1);
+		// TODO: No timers + Optimize
+		int const rseed(x + (y << 16));
+		bc.gen(global_building_params, 0, 1, 1, rseed);
 		global_building_params.restore_prev_pos_range();
 		return 1;
 	}
@@ -2304,9 +2308,6 @@ public:
 		it->second.clear(); // free VBOs/VAOs
 		tiles.erase(it);
 		return 1;
-	}
-	void create_vbos() { // is this needed?
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.create_vbos();}
 	}
 	void clear_vbos() {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.clear_vbos();}
