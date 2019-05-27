@@ -8,6 +8,7 @@
 #include "gl_ext_arb.h"
 #include "file_utils.h"
 #include "buildings.h"
+#include "mesh.h"
 
 using std::string;
 
@@ -1774,10 +1775,11 @@ public:
 		}
 		return 1;
 	}
-	void gen(building_params_t const &params, bool city_only, bool non_city_only) {
+	void gen(building_params_t const &params, bool city_only, bool non_city_only, bool is_tile) {
 		assert(!(city_only && non_city_only));
 		clear();
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
+		if (params.gen_inf_buildings() && !is_tile) return; // not added here
 		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
 		timer_t timer("Gen Buildings");
@@ -1792,7 +1794,7 @@ public:
 		max_extent = zero_vector;
 		assert(range_sz.x > 0.0 && range_sz.y > 0.0);
 		UNROLL_2X(range_sz_inv[i_] = 1.0/range_sz[i_];) // xy only
-		buildings.reserve(params.num_place);
+		if (!is_tile) {buildings.reserve(params.num_place);}
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
 		rgen.set_state(rand_gen_index, 123); // update when mesh changes, otherwise determinstic
@@ -1839,7 +1841,7 @@ public:
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
 					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pos_range.d[d][0], pos_range.d[d][1]);} // x,y
-					if (mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;}
+					if (is_tile || mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;} // place_radius ignored for tiles
 				}
 				if (!keep) continue; // placement failed, skip
 				b.is_house = (mat.house_prob > 0.0 && rgen.rand_float() < mat.house_prob);
@@ -1918,7 +1920,7 @@ public:
 				++num_consec_fail;
 				max_eq(max_consec_fail, num_consec_fail);
 
-				if (num_consec_fail >= 5000) { // too many failures - give up
+				if (num_consec_fail >= (is_tile ? 100U : 5000U)) { // too many failures - give up
 					cout << "Failed to place a building after " << num_consec_fail << " tries, giving up after " << i << " iterations" << endl;
 					break;
 				}
@@ -2274,27 +2276,94 @@ public:
 }; // building_creator_t
 
 
+class building_tiles_t {
+	map<pair<int, int>, building_creator_t> tiles; // key is {x, y} pair
+public:
+	bool empty() const {return tiles.empty();}
+
+	bool create_tile(int x, int y) {
+		auto it(tiles.find(make_pair(x, y)));
+		if (it != tiles.end()) return 0; // already exists
+		//cout << "Create building tile " << x << "," << y << ", tiles: " << tiles.size() << endl;
+		building_creator_t &bc(tiles[make_pair(x, y)]); // insert it
+		assert(bc.empty());
+		cube_t bcube(all_zeros);
+		bcube.x1() = get_xval(x*MESH_X_SIZE);
+		bcube.y1() = get_yval(y*MESH_Y_SIZE);
+		bcube.x2() = get_xval((x+1)*MESH_X_SIZE);
+		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
+		global_building_params.set_pos_range(bcube);
+		bc.gen(global_building_params, 0, 1, 1);
+		global_building_params.restore_prev_pos_range();
+		return 1;
+	}
+	bool remove_tile(int x, int y) {
+		auto it(tiles.find(make_pair(x, y)));
+		//cout << "Remove building tile " << x << "," << y << ", tiles: " << tiles.size() << endl;
+		if (it == tiles.end()) return 0; // not found
+		it->second.clear(); // free VBOs/VAOs
+		tiles.erase(it);
+		return 1;
+	}
+	void create_vbos() { // is this needed?
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.create_vbos();}
+	}
+	void clear_vbos() {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.clear_vbos();}
+	}
+	void clear() {
+		clear_vbos();
+		tiles.clear();
+	}
+	vector3d get_max_extent() const {
+		vector3d max_extent(zero_vector);
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {max_extent = max_extent.max(i->second.get_max_extent());}
+		return max_extent;
+	}
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr) const {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
+			if (i->second.check_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;
+		}
+		return 0;
+	}
+	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
+			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);} // TODO: distance check?
+		}
+	}
+}; // end building_tiles_t
+
+
 building_creator_t building_creator, building_creator_city;
+building_tiles_t building_tiles;
+
+void create_buildings_tile(int x, int y) {
+	if (global_building_params.gen_inf_buildings()) {building_tiles.create_tile(x, y);}
+}
+void remove_buildings_tile(int x, int y) {
+	if (global_building_params.gen_inf_buildings()) {building_tiles.remove_tile(x, y);}
+}
 
 vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);}
 
 void gen_buildings() {
 	if (have_cities()) {
-		building_creator_city.gen(global_building_params, 1, 0); // city buildings
+		building_creator_city.gen(global_building_params, 1, 0, 0); // city buildings
 		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
-		building_creator.gen     (global_building_params, 0, 1); // non-city secondary buildings
-	}
-	else {building_creator.gen(global_building_params, 0, 0);} // mixed buildings
+		building_creator.gen     (global_building_params, 0, 1, 0); // non-city secondary buildings
+	} else {building_creator.gen (global_building_params, 0, 0, 0);} // mixed buildings
 }
 void draw_buildings(bool shadow_only, vector3d const &xlate) {
 	vector<building_creator_t *> bcs;
 	if (building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
 	if (building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
+	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, xlate, bcs);
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
 	return (building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm) ||
-		         building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm));
+		         building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm) ||
+		           building_tiles.check_sphere_coll(pos, p_int, radius, xy_only, cnorm));
 }
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only) {
 	point center(pos);
@@ -2304,7 +2373,7 @@ bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_x
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {
 	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only);
 }
-unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) {
+unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) { // for line_intersect_city()
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
 	return (building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt) ||
 		         building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt));
@@ -2313,13 +2382,16 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	// only check city buildings in TT mode (too slow to check others)
 	return ((world_mode == WMODE_GROUND) ? building_creator : building_creator_city).get_building_hit_color(p1, p2, color);
 }
-bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty());} // for postproce effects
+bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproce effects
 
 vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
-	vector3d extent(building_creator.get_max_extent());
-	return extent.max(building_creator_city.get_max_extent());
+	return building_creator.get_max_extent().max(building_creator_city.get_max_extent()).max(building_tiles.get_max_extent());
 }
-void clear_building_vbos() {building_creator.clear_vbos(); building_creator_city.clear_vbos();}
+void clear_building_vbos() {
+	building_creator.clear_vbos();
+	building_creator_city.clear_vbos();
+	building_tiles.clear_vbos();
+}
 
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}

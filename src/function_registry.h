@@ -993,6 +993,8 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 bool have_buildings();
 vector3d get_buildings_max_extent();
 void clear_building_vbos();
+void create_buildings_tile(int x, int y);
+void remove_buildings_tile(int x, int y);
 
 // function prototypes - csg
 void expand_cubes_by_xy(vect_cube_t &cubes, float val);

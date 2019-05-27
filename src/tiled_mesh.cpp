@@ -2053,6 +2053,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
 		if (!i->second->update_range(smap_manager)) { // delete this tile
 			i->second->clear();
+			remove_buildings_tile(i->first.x, i->first.y);
 			tiles.erase(i++);
 			++num_erased;
 		} else {++i;}
@@ -2065,7 +2066,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
 			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
-			//tiles[txy].reset(new_tile);
+			create_buildings_tile(x, y);
 		}
 	}
 	//if (to_gen_zvals.size() < max_cpu_tiles) {to_gen_zvals.clear();} // block until at least max_cpu_tiles tiles to generate (lower average gen time, but causes more slow frames/lag)
