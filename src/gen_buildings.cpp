@@ -1810,8 +1810,11 @@ public:
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
 		vector<point> points; // reused temporary
+		unsigned num_consec_fail(0), max_consec_fail(0);
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
+			bool success(0);
+
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
 				building_t b;
 				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only); // set material
@@ -1907,8 +1910,19 @@ public:
 				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
 				if (buildings.empty()) {buildings_bcube = b.bcube;} else {buildings_bcube.union_with_cube(b.bcube);}
 				buildings.push_back(b);
+				success = 1;
 				break; // done
 			} // for n
+			if (success) {num_consec_fail = 0;}
+			else {
+				++num_consec_fail;
+				max_eq(max_consec_fail, num_consec_fail);
+
+				if (num_consec_fail >= 5000) { // too many failures - give up
+					cout << "Failed to place a building after " << num_consec_fail << " tries, giving up after " << i << " iterations" << endl;
+					break;
+				}
+			}
 		} // for i
 		bix_by_x1 cmp_x1(buildings);
 		for (auto i = bix_by_plot.begin(); i != bix_by_plot.end(); ++i) {sort(i->begin(), i->end(), cmp_x1);}
@@ -1959,7 +1973,7 @@ public:
 #pragma omp parallel for schedule(static,1)
 			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
 		} // close the scope
-		cout << "WM: " << world_mode << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
+		cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 			 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
 		build_grid_by_tile();
 		create_vbos();
