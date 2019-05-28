@@ -10,5 +10,4 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 
-* Infinite buildings
 * CSMs for TT mode

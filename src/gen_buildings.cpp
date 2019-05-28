@@ -439,7 +439,7 @@ struct building_t : public building_geom_t {
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void calc_bcube_from_parts();
-	void gen_geometry(unsigned ix);
+	void gen_geometry(int rseed1, int rseed2);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void add_door(cube_t const &c, bool dim, bool dir);
 	void gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
@@ -1227,7 +1227,7 @@ void building_t::calc_bcube_from_parts() {
 	for (auto i = parts.begin()+1; i != parts.end(); ++i) {bcube.union_with_cube(*i);} // update bcube
 }
 
-void building_t::gen_geometry(unsigned ix) {
+void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (!is_valid()) return; // invalid building
 	cube_t const base(parts.empty() ? bcube : parts.back());
@@ -1238,7 +1238,7 @@ void building_t::gen_geometry(unsigned ix) {
 	doors.clear();
 	building_mat_t const &mat(get_material());
 	rand_gen_t rgen;
-	rgen.set_state(123+ix, 345*ix);
+	rgen.set_state(123+rseed1, 345*rseed2);
 	ao_bcz2 = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
 	if (is_house) {gen_house(base, rgen); return;}
 
@@ -1838,7 +1838,8 @@ public:
 		grid_sz = (is_tile ? 4 : 32); // tiles are small enough that they don't need grids
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
-		rgen.set_state(rand_gen_index, ((rseed == 0) ? 123 : rseed)); // update when mesh changes, otherwise determinstic
+		if (rseed == 0) {rseed = 123;} // 0 is a bad value
+		rgen.set_state(rand_gen_index, rseed); // update when mesh changes, otherwise determinstic
 		vect_cube_with_zval_t city_plot_bcubes;
 		vect_cube_t avoid_bcubes;
 		if (city_only) {get_city_plot_bcubes(city_plot_bcubes);} // Note: assumes approx equal area for placement distribution
@@ -1981,7 +1982,7 @@ public:
 		{ // open a scope
 			timer_t timer2("Gen Building Geometry", !is_tile);
 #pragma omp parallel for schedule(static,1) if (!is_tile)
-			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
+			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i, 1337*i+rseed);}
 		} // close the scope
 		if (!is_tile) {
 			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
@@ -2303,7 +2304,7 @@ public:
 		bcube.x2() = get_xval((x+1)*MESH_X_SIZE);
 		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
 		global_building_params.set_pos_range(bcube);
-		// TODO: Optimize Gen + Optimize Draw + Cylin Buildings
+		// TODO: Optimize Gen + Optimize Draw
 		int const rseed(x + (y << 16) + 12345); // should not be zero
 		bc.gen(global_building_params, 0, 0, 1, rseed);
 		global_building_params.restore_prev_pos_range();
