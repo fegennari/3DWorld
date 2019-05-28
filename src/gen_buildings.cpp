@@ -1931,7 +1931,7 @@ public:
 		timer.end();
 
 		if (params.flatten_mesh && !use_city_plots) { // not needed for city plots, which are already flat
-			timer_t timer("Gen Building Zvals");
+			timer_t timer("Gen Building Zvals", !is_tile);
 			bool const do_flatten(using_tiled_terrain_hmap_tex());
 
 #pragma omp parallel for schedule(static,1) if (!is_tile)
@@ -1971,7 +1971,7 @@ public:
 			}
 		} // if flatten_mesh
 		{ // open a scope
-			timer_t timer2("Gen Building Geometry");
+			timer_t timer2("Gen Building Geometry", !is_tile);
 #pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i);}
 		} // close the scope
@@ -2100,7 +2100,7 @@ public:
 	}
 	void create_vbos(bool is_tile) { // Note: non-const; building_draw is modified
 		building_window_gen.check_windows_texture();
-		timer_t timer("Create Building VBOs");
+		timer_t timer("Create Building VBOs", !is_tile);
 		get_all_drawn_verts();
 		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
 		if (!is_tile) {cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;}

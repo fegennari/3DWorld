@@ -1673,11 +1673,12 @@ void timing_profiler_stats();
 class timer_t {
 	std::string name;
 	int timer1;
+	bool enabled;
 public:
-	timer_t(char const *const name_) : name(name_), timer1(GET_TIME_MS()) {}
-	timer_t(std::string const &name_) : name(name_), timer1(GET_TIME_MS()) {}
+	timer_t(char const *const name_,  bool enabled_=1) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_) {}
+	timer_t(std::string const &name_, bool enabled_=1) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_) {}
 	~timer_t() {end();}
-	void end() {if (!name.empty()) {register_timing_value(name.c_str(), GET_DELTA_TIME); name.clear();}}
+	void end() {if (enabled && !name.empty()) {register_timing_value(name.c_str(), GET_DELTA_TIME); name.clear();}}
 };
 
 
