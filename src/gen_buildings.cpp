@@ -2297,7 +2297,7 @@ public:
 		global_building_params.set_pos_range(bcube);
 		// TODO: No timers + Optimize
 		int const rseed(x + (y << 16));
-		bc.gen(global_building_params, 0, 1, 1, rseed);
+		bc.gen(global_building_params, 0, 0, 1, rseed);
 		global_building_params.restore_prev_pos_range();
 		return 1;
 	}
