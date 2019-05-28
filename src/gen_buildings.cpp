@@ -422,6 +422,11 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
 	void gen_rotation(rand_gen_t &rgen);
+
+	void set_z_range(float z1, float z2) {
+		bcube.z1() = z1; bcube.z2() = z2;
+		if (!parts.empty()) {parts[0].z1() = z1; parts[0].z2() = z2;}
+	}
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
 		return (check_bcube_overlap_xy_one_dir(b, expand_rel, expand_abs, points) || b.check_bcube_overlap_xy_one_dir(*this, expand_rel, expand_abs, points));
@@ -829,7 +834,7 @@ public:
 				EMIT_VERTEX(); // 1 !j
 
 				if (door_ztop != 0.0 && n == unsigned(bg.door_dim) && j == unsigned(bg.door_dir)) { // not the cleanest way to do this ...
-					float const door_height(door_ztop - cube.z1()), offset(0.02*(bg.door_dir ? 1.0 : -1.0)*door_height);
+					float const door_height(door_ztop - cube.z1()), offset(0.03*(bg.door_dir ? 1.0 : -1.0)*door_height);
 
 					for (unsigned k = ix; k < ix+4; ++k) {
 						auto &v(verts[k]);
@@ -1658,6 +1663,7 @@ class building_creator_t {
 	vector<building_t> buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights;
+	vector<point> points; // reused temporary
 
 	struct grid_elem_t {
 		vector<unsigned> ixs;
@@ -1752,6 +1758,41 @@ class building_creator_t {
 		} // for bix
 	}
 
+	bool check_valid_building_placement(building_params_t const &params, building_t const &b, vect_cube_t const &avoid_bcubes,
+		float min_building_spacing, unsigned plot_ix, bool non_city_only, bool use_city_plots, bool check_plot_coll)
+	{
+		float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10% (relative - multiplied by building size)
+		vector3d const b_sz(b.bcube.get_size());
+		vector3d expand(expand_val*b_sz);
+		for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
+		cube_t test_bc(b.bcube);
+		test_bc.expand_by_xy(expand);
+
+		if (use_city_plots) {
+			assert(plot_ix < bix_by_plot.size());
+			if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, min_building_spacing, points)) return 0;
+			bix_by_plot[plot_ix].push_back(buildings.size());
+		}
+		else if (check_plot_coll && has_bcube_int_xy(test_bc, avoid_bcubes, params.sec_extra_spacing)) { // extra expand val
+			return 0;
+		}
+		else {
+			float const extra_spacing(non_city_only ? params.sec_extra_spacing : 0.0); // absolute value of expand
+			test_bc.expand_by_xy(extra_spacing);
+			unsigned ixr[2][2];
+			get_grid_range(test_bc, ixr);
+
+			for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+				for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+					grid_elem_t const &ge(get_grid_elem(x, y));
+					if (!test_bc.intersects_xy(ge.bcube)) continue;
+					if (check_for_overlaps(ge.ixs, test_bc, b, expand_val, max(min_building_spacing, extra_spacing), points)) {return 0;}
+				} // for x
+			} // for y
+		}
+		return 1;
+	}
+
 public:
 	building_creator_t() : grid_sz(1), max_extent(zero_vector) {}
 	bool empty() const {return buildings.empty();}
@@ -1794,10 +1835,10 @@ public:
 		assert(range_sz.x > 0.0 && range_sz.y > 0.0);
 		UNROLL_2X(range_sz_inv[i_] = 1.0/range_sz[i_];) // xy only
 		if (!is_tile) {buildings.reserve(params.num_place);}
-		grid_sz = (is_tile ? 1 : 32); // tiles are small enough that they don't need grids
+		grid_sz = (is_tile ? 4 : 32); // tiles are small enough that they don't need grids
 		grid.resize(grid_sz*grid_sz); // square
 		unsigned num_tries(0), num_gen(0), num_skip(0);
-		rgen.set_state(rand_gen_index, rseed); // update when mesh changes, otherwise determinstic
+		rgen.set_state(rand_gen_index, ((rseed == 0) ? 123 : rseed)); // update when mesh changes, otherwise determinstic
 		vect_cube_with_zval_t city_plot_bcubes;
 		vect_cube_t avoid_bcubes;
 		if (city_only) {get_city_plot_bcubes(city_plot_bcubes);} // Note: assumes approx equal area for placement distribution
@@ -1811,7 +1852,6 @@ public:
 		bool const use_city_plots(!city_plot_bcubes.empty()), check_plot_coll(!avoid_bcubes.empty());
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
-		vector<point> points; // reused temporary
 		unsigned num_consec_fail(0), max_consec_fail(0);
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
@@ -1853,9 +1893,16 @@ public:
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
-				if (use_city_plots && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot
+				if ((use_city_plots || is_tile) && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot/tile (pre-rot)
+				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
+				if (is_tile && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in tile
 				if (start_in_inf_terrain && b.bcube.contains_pt_xy(get_camera_pos())) continue; // don't place a building over the player appearance spot
+				if (!check_valid_building_placement(params, b, avoid_bcubes, min_building_spacing, plot_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap
+				++num_gen;
 				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
+				float const z_sea_level(center.z - def_water_level);
+				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
+				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
 				float const hmin(use_city_plots ? pos_range.z1() : 0.0), hmax(use_city_plots ? pos_range.z2() : 1.0);
 				assert(hmin <= hmax);
 				float const height_range(mat.sz_range.dz());
@@ -1863,47 +1910,8 @@ public:
 				float const z_size_scale(size_scale*(b.is_house ? rgen.rand_uniform(0.6, 0.8) : 1.0)); // make houses slightly shorter on average to offset extra height added by roof
 				float const height_val(z_size_scale*(mat.sz_range.z1() + height_range*rgen.rand_uniform(hmin, hmax)));
 				assert(height_val > 0.0);
-				float const z_sea_level(center.z - def_water_level);
-				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
-				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
-				b.bcube.z1() = center.z; // zval
-				b.bcube.z2() = center.z + 0.5*height_val;
+				b.set_z_range(center.z, (center.z + 0.5*height_val));
 				assert(b.bcube.is_strictly_normalized());
-				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated)
-				++num_gen;
-				
-				// check building for overlap with other buildings
-				float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10% (relative - multiplied by building size)
-				vector3d const b_sz(b.bcube.get_size());
-				vector3d expand(expand_val*b_sz);
-				for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
-				cube_t test_bc(b.bcube);
-				test_bc.expand_by_xy(expand);
-
-				if (use_city_plots) {
-					assert(plot_ix < bix_by_plot.size());
-					if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, min_building_spacing, points)) continue;
-					bix_by_plot[plot_ix].push_back(buildings.size());
-				}
-				else if (check_plot_coll && has_bcube_int_xy(test_bc, avoid_bcubes, params.sec_extra_spacing)) { // extra expand val
-					continue;
-				}
-				else {
-					float const extra_spacing(non_city_only ? params.sec_extra_spacing : 0.0); // absolute value of expand
-					test_bc.expand_by_xy(extra_spacing);
-					unsigned ixr[2][2];
-					get_grid_range(test_bc, ixr);
-					bool overlaps(0);
-
-					for (unsigned y = ixr[0][1]; y <= ixr[1][1] && !overlaps; ++y) {
-						for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
-							grid_elem_t const &ge(get_grid_elem(x, y));
-							if (!test_bc.intersects_xy(ge.bcube)) continue;
-							if (check_for_overlaps(ge.ixs, test_bc, b, expand_val, max(min_building_spacing, extra_spacing), points)) {overlaps = 1; break;}
-						} // for x
-					} // for y
-					if (overlaps) continue;
-				}
 				mat.side_color.gen_color(b.side_color, rgen);
 				mat.roof_color.gen_color(b.roof_color, rgen);
 				add_to_grid(b.bcube, buildings.size());
@@ -2295,8 +2303,8 @@ public:
 		bcube.x2() = get_xval((x+1)*MESH_X_SIZE);
 		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
 		global_building_params.set_pos_range(bcube);
-		// TODO: No timers + Optimize
-		int const rseed(x + (y << 16));
+		// TODO: Optimize Gen + Optimize Draw + Cylin Buildings
+		int const rseed(x + (y << 16) + 12345); // should not be zero
 		bc.gen(global_building_params, 0, 0, 1, rseed);
 		global_building_params.restore_prev_pos_range();
 		return 1;
@@ -2355,6 +2363,7 @@ void gen_buildings() {
 	} else {building_creator.gen (global_building_params, 0, 0, 0);} // mixed buildings
 }
 void draw_buildings(bool shadow_only, vector3d const &xlate) {
+	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
 	if (building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
 	if (building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
