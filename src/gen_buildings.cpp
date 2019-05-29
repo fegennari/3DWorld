@@ -1795,6 +1795,12 @@ class building_creator_t {
 		return 1;
 	}
 
+	struct building_cand_t : public building_t {
+		vect_cube_t &temp_parts;
+		building_cand_t(vect_cube_t &temp_parts_) : temp_parts(temp_parts_) {temp_parts.clear(); parts.swap(temp_parts);} // parts takes temp_parts memory
+		~building_cand_t() {parts.swap(temp_parts);} // memory returned from parts to temp_parts
+	};
+
 public:
 	building_creator_t() : grid_sz(1), max_extent(zero_vector) {}
 	bool empty() const {return buildings.empty();}
@@ -1858,12 +1864,13 @@ public:
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
 		unsigned num_consec_fail(0), max_consec_fail(0);
+		vect_cube_t temp_parts;
 
 		for (unsigned i = 0; i < params.num_place; ++i) {
 			bool success(0);
 
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
-				building_t b;
+				building_cand_t b(temp_parts);
 				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
