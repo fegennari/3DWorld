@@ -1355,11 +1355,12 @@ bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
 void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 	assert(parts.empty());
-	parts.push_back(base);
 	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
 	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
 	bool skip_last_roof(0);
 	num_sides = 4;
+	if (type != 0) {parts.reserve(4);} // two house sections + porch roof + porch support (upper bound)
+	parts.push_back(base);
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
 	float door_height(0.45/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
@@ -1490,6 +1491,7 @@ void building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim)
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5*(y1 + y2);} // yc
 	else          {pts[4].x = pts[5].x = 0.5*(x1 + x2);} // xc
 	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
+	roof_tquads.reserve(4); // 2 roof quads + 2 side triangles
 
 	// TODO: extend outside the wall a small amount? may require updating bcube for drawing
 	for (unsigned n = 0; n < 2; ++n) { // roof
