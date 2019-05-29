@@ -1802,6 +1802,8 @@ public:
 	vector3d const &get_max_extent() const {return max_extent;}
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
+	cube_t const &get_bcube() const {return buildings_bcube;}
+	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
 
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
 		float t(0.0); // unused
@@ -1993,8 +1995,6 @@ public:
 		build_grid_by_tile();
 		create_vbos(is_tile);
 	}
-
-	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
 
 	static void multi_draw(bool shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
@@ -2297,7 +2297,7 @@ public:
 	bool create_tile(int x, int y) {
 		auto it(tiles.find(make_pair(x, y)));
 		if (it != tiles.end()) return 0; // already exists
-		//cout << "Create building tile " << x << "," << y << ", tiles: " << tiles.size() << endl;
+		//cout << "Create building tile " << x << "," << y << ", tiles: " << tiles.size() << endl; // 299 tiles
 		building_creator_t &bc(tiles[make_pair(x, y)]); // insert it
 		assert(bc.empty());
 		cube_t bcube(all_zeros);
@@ -2339,8 +2339,12 @@ public:
 		return 0;
 	}
 	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
+		float const draw_dist(get_draw_tile_dist());
+		point const camera(get_camera_pos() - xlate);
+
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
-			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);} // TODO: distance check?
+			if (!i->second.get_bcube().closest_dist_xy_less_than(camera, draw_dist)) continue; // distance test
+			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);}
 		}
 	}
 }; // end building_tiles_t

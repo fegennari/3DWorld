@@ -2053,7 +2053,6 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
 		if (!i->second->update_range(smap_manager)) { // delete this tile
 			i->second->clear();
-			remove_buildings_tile(i->first.x, i->first.y);
 			tiles.erase(i++);
 			++num_erased;
 		} else {++i;}
@@ -2066,7 +2065,6 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
 			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
-			create_buildings_tile(x, y);
 		}
 	}
 	//if (to_gen_zvals.size() < max_cpu_tiles) {to_gen_zvals.clear();} // block until at least max_cpu_tiles tiles to generate (lower average gen time, but causes more slow frames/lag)
@@ -2109,11 +2107,15 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		to_gen_zvals.clear();
 		mesh_gen_mode = prev_mesh_gen_mode;
 	}
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin
-		if (i->second->get_rel_dist_to_camera() <= DRAW_DIST_TILES) {
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin and updated building tiles
+		float const rel_dist(i->second->get_rel_dist_to_camera());
+
+		if (rel_dist <= DRAW_DIST_TILES) {
 			terrain_zmin = min(terrain_zmin, i->second->get_zmin());
 			if (!camera_surf_collide) {min_camera_dist = min(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));}
+			create_buildings_tile(i->first.x, i->first.y);
 		}
+		else if (rel_dist > CLEAR_DIST_TILES) {remove_buildings_tile(i->first.x, i->first.y);}
 	}
 	if (DEBUG_TILES && (tiles.size() != init_tiles || num_erased > 0)) {
 		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << num_erased << endl;
