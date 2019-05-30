@@ -541,6 +541,8 @@ struct building_draw_utils {
 	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
 
+typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
+
 class building_draw_t {
 
 	struct draw_block_t {
@@ -553,7 +555,7 @@ class building_draw_t {
 		vbo_wrap_t qvbo, tvbo;
 		vao_wrap_t qvao, tvao, sqvao, stvao; // regular + shadow
 		tid_nm_pair_t tex;
-		vector<vert_norm_comp_tc_color> quad_verts, tri_verts;
+		vect_vnctcc_t quad_verts, tri_verts;
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 
 		void draw_geom_range(bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
@@ -615,7 +617,7 @@ class building_draw_t {
 	}; // end draw_block_t
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
-	vector<vert_norm_comp_tc_color> &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
+	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
 		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
@@ -1729,10 +1731,10 @@ class building_creator_t {
 		return 0;
 	}
 
-	void build_grid_by_tile() {
+	void build_grid_by_tile(bool single_tile) {
 		grid_by_tile.clear();
 
-		if (world_mode != WMODE_INF_TERRAIN) { // not used in this mode - add all buildings to the first tile
+		if (single_tile || world_mode != WMODE_INF_TERRAIN) { // not used in this mode - add all buildings to the first tile
 			grid_by_tile.resize(1);
 			grid_by_tile.front().ixs.reserve(buildings.size());
 			for(unsigned bix = 0; bix < buildings.size(); ++bix) {grid_by_tile.front().add(buildings[bix].bcube, bix);}
@@ -1999,7 +2001,7 @@ public:
 			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 				 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
 		}
-		build_grid_by_tile();
+		build_grid_by_tile(is_tile);
 		create_vbos(is_tile);
 	}
 
@@ -2028,7 +2030,7 @@ public:
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 		}
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(shadow_only);} // Note: use_tt_smap mode buildings were drawn first and should prevent overdraw
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(shadow_only);}
 		float const WIND_LIGHT_ON_RAND = 0.08;
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 
@@ -2043,7 +2045,7 @@ public:
 
 		// post-pass to render buildings in nearby tiles that have shadow maps
 		if (use_tt_smap) {
-			//timer_t timer2((buildings.size() > 5000) ? "Draw Buildings Smap" : "Draw City Smap"); // 0.3 / 0.3
+			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			city_shader_setup(s, 1, 1, use_bmap, 0.0); // use_smap=1, use_dlights=1, min_alpha=0.0 to avoid alpha test
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			glDepthMask(GL_FALSE); // disable depth writing
