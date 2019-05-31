@@ -97,7 +97,7 @@ struct city_params_t {
 		tree_spacing(1.0), max_benches_per_plot(0), num_peds(0), ped_speed(0.0), ped_respawn_at_dest(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
-	float get_road_ar() const {return nearbyint(road_spacing/road_width);} // round to nearest texture multiple
+	float get_road_ar() const {return round(road_spacing/road_width);} // round to nearest texture multiple
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
 	bool read_option(FILE *fp);
 	vector3d get_nom_car_size() const {return CAR_SIZE*road_width;}

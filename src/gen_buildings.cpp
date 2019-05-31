@@ -858,7 +858,7 @@ public:
 
 	static void clip_low_high(float &t0, float &t1) {
 		if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
-		else {t0 = nearbyint(t0); t1 = nearbyint(t1);}
+		else {t0 = round(t0); t1 = round(t1);} // Note: round() is much faster than nearbyint()
 	}
 
 	unsigned num_verts() const {
@@ -1950,7 +1950,7 @@ public:
 		} // for i
 		bix_by_x1 cmp_x1(buildings);
 		for (auto i = bix_by_plot.begin(); i != bix_by_plot.end(); ++i) {sort(i->begin(), i->end(), cmp_x1);}
-		timer.end();
+		if (!is_tile) {timer.end();} // use a single timer for tile mode
 
 		if (params.flatten_mesh && !use_city_plots) { // not needed for city plots, which are already flat
 			timer_t timer("Gen Building Zvals", !is_tile);
