@@ -877,9 +877,11 @@ public:
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
 	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
+	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom (shadow_only);}}
 	void draw_tile     (unsigned tile_id) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id);}}
+	void draw_block(unsigned ix, bool shadow_only) {if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(shadow_only);}}
 };
 
 
@@ -1816,7 +1818,7 @@ public:
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 	cube_t const &get_bcube() const {return buildings_bcube;}
 	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
-
+	
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
 		float t(0.0); // unused
 		unsigned hit_bix(0);
@@ -2012,12 +2014,14 @@ public:
 	static void multi_draw(bool shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		bool have_windows(0), have_wind_lights(0);
+		unsigned max_draw_ix(0);
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
 			have_windows     |= !(*i)->building_draw_windows.empty();
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
+			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
 		}
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -2034,7 +2038,9 @@ public:
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 		}
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(shadow_only);}
+		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw_block(ix, shadow_only);}
+		}
 		float const WIND_LIGHT_ON_RAND = 0.08;
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 
