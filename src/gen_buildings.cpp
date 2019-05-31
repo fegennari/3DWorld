@@ -2356,7 +2356,8 @@ public:
 		point const camera(get_camera_pos() - xlate);
 
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
-			if (!i->second.get_bcube().closest_dist_xy_less_than(camera, draw_dist)) continue; // distance test
+			//if (!i->second.get_bcube().closest_dist_xy_less_than(camera, draw_dist)) continue; // distance test (conservative)
+			if (!dist_xy_less_than(camera, i->second.get_bcube().get_cube_center(), draw_dist)) continue; // distance test (aggressive)
 			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);}
 		}
 	}
