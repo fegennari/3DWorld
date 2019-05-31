@@ -604,9 +604,12 @@ class building_draw_t {
 		}
 		void finalize(unsigned num_tiles) {
 			register_tile_id(num_tiles); // add terminator
-			remove_excess_cap(quad_verts);
-			remove_excess_cap(tri_verts);
 			remove_excess_cap(pos_by_tile);
+
+			if (!no_store_model_textures_in_memory) {
+				remove_excess_cap(quad_verts);
+				remove_excess_cap(tri_verts);
+			}
 		}
 		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear();}
 		void clear_vbos () {qvbo.clear(); tvbo.clear(); qvao.clear(); tvao.clear(); sqvao.clear(); stvao.clear();}
@@ -858,7 +861,7 @@ public:
 
 	static void clip_low_high(float &t0, float &t1) {
 		if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
-		else {t0 = round(t0); t1 = round(t1);} // Note: round() is much faster than nearbyint()
+		else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
 	}
 
 	unsigned num_verts() const {
@@ -953,6 +956,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
+	//if (b.bcube.contains_pt_xy(center2) || bcube.contains_pt_xy(center1)) return 1; // slightly faster?
 	
 	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
 		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
@@ -982,7 +986,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 				//if (p2->contains_pt_xy(pts[i])) return 1;
 			}
 		}
-	}
+	} // for p1
 	return 0;
 }
 
@@ -1694,7 +1698,7 @@ class building_creator_t {
 		bool operator()(unsigned const a, unsigned const b) const {return (buildings[a].bcube.x1() < buildings[b].bcube.x1());}
 	};
 	unsigned get_grid_ix(point pos) const {
-		range.clamp_pt(pos);
+		range.clamp_pt_xy(pos);
 		unsigned gxy[2];
 		for (unsigned d = 0; d < 2; ++d) {
 			float const v((pos[d] - range.d[d][0])*range_sz_inv[d]);
@@ -1705,8 +1709,8 @@ class building_creator_t {
 	}
 	void get_grid_range(cube_t const &bcube, unsigned ixr[2][2]) const { // {lo,hi}x{x,y}
 		point llc(bcube.get_llc()), urc(bcube.get_urc());
-		range.clamp_pt(llc);
-		range.clamp_pt(urc);
+		range.clamp_pt_xy(llc);
+		range.clamp_pt_xy(urc);
 		for (unsigned d = 0; d < 2; ++d) {
 			float const v1((llc[d] - range.d[d][0])*range_sz_inv[d]), v2((urc[d] - range.d[d][0])*range_sz_inv[d]);
 			ixr[0][d] = unsigned(v1*(grid_sz-1));
