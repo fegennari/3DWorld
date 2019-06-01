@@ -13,6 +13,7 @@
 using std::string;
 
 unsigned const MAX_CYLIN_SIDES = 36;
+float const WIND_LIGHT_ON_RAND = 0.08;
 
 extern bool start_in_inf_terrain, no_store_model_textures_in_memory;
 extern int rand_gen_index, display_mode;
@@ -2013,15 +2014,17 @@ public:
 
 	static void multi_draw(bool shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
+		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
 		bool have_windows(0), have_wind_lights(0);
 		unsigned max_draw_ix(0);
-		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
+		bool const night(is_night(WIND_LIGHT_ON_RAND));
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
+			if (night) {(*i)->ensure_window_lights_vbos();}
 			have_windows     |= !(*i)->building_draw_windows.empty();
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
-			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
+			max_eq(max_draw_ix,  (*i)->building_draw_vbo.get_num_draw_blocks());
 		}
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -2041,9 +2044,6 @@ public:
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw_block(ix, shadow_only);}
 		}
-		float const WIND_LIGHT_ON_RAND = 0.08;
-		bool const night(is_night(WIND_LIGHT_ON_RAND));
-
 		if (!shadow_only && have_windows) { // draw windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
@@ -2099,6 +2099,15 @@ public:
 		fgPopMatrix();
 	}
 
+	void get_all_window_verts(building_draw_t &bdraw, bool light_pass) {
+		bdraw.clear();
+
+		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+			bdraw.cur_tile_id = (g - grid_by_tile.begin());
+			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {get_building(*i).get_all_drawn_window_verts(bdraw, light_pass);}
+		}
+		bdraw.finalize(grid_by_tile.size());
+	}
 	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
 #pragma omp parallel for schedule(static) num_threads(2)
 		for (int pass = 0; pass < 2; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
@@ -2112,19 +2121,8 @@ public:
 				building_draw_vbo.finalize(grid_by_tile.size());
 			}
 			else if (pass == 1) { // windows pass
-				building_draw_windows.clear();
-				building_draw_wind_lights.clear();
-
-				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					building_draw_windows.cur_tile_id = building_draw_wind_lights.cur_tile_id = (g - grid_by_tile.begin());
-
-					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {
-						get_building(*i).get_all_drawn_window_verts(building_draw_windows, 0);
-						get_building(*i).get_all_drawn_window_verts(building_draw_wind_lights, 1);
-					}
-				} // for g
-				building_draw_windows.finalize(grid_by_tile.size());
-				building_draw_wind_lights.finalize(grid_by_tile.size());
+				get_all_window_verts(building_draw_windows, 0);
+				if (is_night(WIND_LIGHT_ON_RAND)) {get_all_window_verts(building_draw_wind_lights, 1);} // only generate window verts at night
 			}
 		} // for pass
 	}
@@ -2136,6 +2134,12 @@ public:
 		if (!is_tile) {cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;}
 		building_draw_vbo.upload_to_vbos();
 		building_draw_windows.upload_to_vbos();
+		building_draw_wind_lights.upload_to_vbos(); // Note: may be empty if not night time
+	}
+	void ensure_window_lights_vbos() {
+		if (!building_draw_wind_lights.empty()) return; // already calculated
+		building_window_gen.check_windows_texture();
+		get_all_window_verts(building_draw_wind_lights, 1);
 		building_draw_wind_lights.upload_to_vbos();
 	}
 	void clear_vbos() {
@@ -2383,6 +2387,8 @@ void remove_buildings_tile(int x, int y) {
 vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);}
 
 void gen_buildings() {
+	update_sun_and_moon(); // need to update light_factor from sun to know if we need to generate window light geometry
+
 	if (have_cities()) {
 		building_creator_city.gen(global_building_params, 1, 0, 0); // city buildings
 		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
