@@ -958,28 +958,21 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	
 	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
 		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
-		cube_t c_exp, c_exp_rot;
 
-		if (b.parts.size() == 1) { // single cube
-			// don't need to calculate rotation because we know we're rotating about its center and bcube is correct; results are slightly different from the code below
-			pts[0] = center1; // no need to rotate
-			c_exp = b.bcube; // no need to rotate
-			c_exp.expand_by_xy(expand_rel*p1->get_size() + vector3d(expand_abs, expand_abs, expand_abs));
-			for (unsigned i = 0; i < 4; ++i) {pts[i+1].assign(c_exp.d[0][i&1], c_exp.d[1][i>>1], 0.0);} // XY only
-		}
+		if (b.parts.size() == 1) {pts[0] = center1;} // single cube: we know we're rotating about its center
 		else {
 			pts[0] = p1->get_cube_center();
 			do_xy_rotate(b.rot_sin, b.rot_cos, center1, pts[0]); // rotate into global space
-			c_exp = cube_t(*p1);
-			c_exp.expand_by_xy(expand_rel*p1->get_size() + vector3d(expand_abs, expand_abs, expand_abs));
+		}
+		cube_t c_exp(*p1);
+		c_exp.expand_by_xy(expand_rel*p1->get_size() + vector3d(expand_abs, expand_abs, expand_abs));
 
-			for (unsigned i = 0; i < 4; ++i) { // {00, 10, 01, 11}
-				pts[i+1].assign(c_exp.d[0][i&1], c_exp.d[1][i>>1], 0.0); // XY only
-				do_xy_rotate(b.rot_sin, b.rot_cos, center1, pts[i+1]); // rotate into global space
-			}
+		for (unsigned i = 0; i < 4; ++i) { // {00, 10, 01, 11}
+			pts[i+1].assign(c_exp.d[0][i&1], c_exp.d[1][i>>1], 0.0); // XY only
+			do_xy_rotate(b.rot_sin, b.rot_cos, center1, pts[i+1]); // rotate into global space
 		}
 		for (unsigned i = 0; i < 5; ++i) {do_xy_rotate(-rot_sin, rot_cos, center2, pts[i]);} // inverse rotate into local coord space - negate the sine term
-		c_exp_rot.set_from_points(pts+1, 4); // use points 1-4
+		cube_t c_exp_rot(pts+1, 4); // use points 1-4
 		pts[5] = 0.5*(pts[1] + pts[3]); // x0 edge center
 		pts[6] = 0.5*(pts[2] + pts[4]); // x1 edge center
 		pts[7] = 0.5*(pts[1] + pts[2]); // y0 edge center
