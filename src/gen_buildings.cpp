@@ -546,7 +546,7 @@ typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 
 class building_draw_t {
 
-	struct draw_block_t {
+	class draw_block_t {
 		struct vert_ix_pair {
 			unsigned qix, tix; // {quads, tris}
 			vert_ix_pair(unsigned qix_, unsigned tix_) : qix(qix_), tix(tix_) {}
@@ -555,9 +555,10 @@ class building_draw_t {
 		// Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass, but we can use vao_wrap_t's directly
 		vbo_wrap_t qvbo, tvbo;
 		vao_wrap_t qvao, tvao, sqvao, stvao; // regular + shadow
+		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
+	public:
 		tid_nm_pair_t tex;
 		vect_vnctcc_t quad_verts, tri_verts;
-		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 
 		void draw_geom_range(bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
 			if (vstart == vend) return; // empty range - no verts for this tile
@@ -577,10 +578,11 @@ class building_draw_t {
 			vao_manager_t::post_render();
 		}
 		void draw_all_geom(bool shadow_only) {
-			assert(!pos_by_tile.empty());
+			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 			draw_geom_range(shadow_only, pos_by_tile.front(), pos_by_tile.back());
 		}
 		void draw_geom_tile(unsigned tile_id) {
+			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
 			draw_geom_range(0, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
@@ -604,6 +606,7 @@ class building_draw_t {
 			pos_by_tile.resize(tid+1, vert_ix_pair(quad_verts.size(), tri_verts.size())); // push start of new range back onto all previous tile slots
 		}
 		void finalize(unsigned num_tiles) {
+			if (empty()) return; // nothing to do
 			register_tile_id(num_tiles); // add terminator
 			remove_excess_cap(pos_by_tile);
 
