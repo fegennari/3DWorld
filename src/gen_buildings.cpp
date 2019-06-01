@@ -15,7 +15,7 @@ using std::string;
 unsigned const MAX_CYLIN_SIDES = 36;
 float const WIND_LIGHT_ON_RAND = 0.08;
 
-extern bool start_in_inf_terrain, no_store_model_textures_in_memory;
+extern bool start_in_inf_terrain;
 extern int rand_gen_index, display_mode;
 extern point sun_pos;
 
@@ -553,27 +553,29 @@ class building_draw_t {
 			bool operator==(vert_ix_pair const &v) const {return (qix == v.qix && tix == v.tix);}
 		};
 		// Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass, but we can use vao_wrap_t's directly
-		vbo_wrap_t qvbo, tvbo;
-		vao_wrap_t qvao, tvao, sqvao, stvao; // regular + shadow
+		vbo_wrap_t vbo;
+		vao_wrap_t vao, svao; // regular + shadow
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
+		unsigned tri_vbo_off;
 	public:
 		tid_nm_pair_t tex;
 		vect_vnctcc_t quad_verts, tri_verts;
 
+		draw_block_t() : tri_vbo_off(0) {}
+
 		void draw_geom_range(bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
 			if (vstart == vend) return; // empty range - no verts for this tile
 			if (!shadow_only) {tex.set_gl();}
-			ensure_vbos();
+			assert(vbo.vbo_valid());
+			(shadow_only ? svao : vao).create_from_vbo<vert_norm_comp_tc_color>(vbo, 1, 1); // setup_pointers=1, always_bind=1
 
-			if (qvbo.vbo_valid() && vstart.qix != vend.qix) {
-				(shadow_only ? sqvao : qvao).create_from_vbo<vert_norm_comp_tc_color>(qvbo, 1, 1); // setup_pointers=1, always_bind=1
+			if (vstart.qix != vend.qix) {
 				assert(vstart.qix < vend.qix);
 				draw_quads_as_tris((vend.qix - vstart.qix), vstart.qix);
 			}
-			if (tvbo.vbo_valid() && vstart.tix != vend.tix) {
-				(shadow_only ? stvao : tvao).create_from_vbo<vert_norm_comp_tc_color>(tvbo, 1, 1); // setup_pointers=1, always_bind=1
+			if (vstart.tix != vend.tix) {
 				assert(vstart.tix < vend.tix);
-				glDrawArrays(GL_TRIANGLES, vstart.tix, (vend.tix - vstart.tix));
+				glDrawArrays(GL_TRIANGLES, (vstart.tix + tri_vbo_off), (vend.tix - vstart.tix));
 			}
 			vao_manager_t::post_render();
 		}
@@ -586,19 +588,14 @@ class building_draw_t {
 			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
 			draw_geom_range(0, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
-		void ensure_vbos() {
+		void upload_to_vbos() {
 			assert((quad_verts.size()%4) == 0);
 			assert((tri_verts.size()%3) == 0);
-			if (!quad_verts.empty()) {qvbo.create_and_upload(quad_verts, 0, 1);}
-			if (! tri_verts.empty()) {tvbo.create_and_upload( tri_verts, 0, 1);}
-		}
-		void upload_to_vbos() {
-			ensure_vbos();
-
-			if (no_store_model_textures_in_memory) { // no longer needed, unless VBO needs to be recreated for maximize/F9; use same condition as model textures
-				clear_cont(quad_verts);
-				clear_cont(tri_verts);
-			}
+			tri_vbo_off = quad_verts.size(); // triangles start after quads
+			quad_verts.insert(quad_verts.end(), tri_verts.begin(), tri_verts.end()); // add tri_verts to quad_verts
+			clear_cont(tri_verts); // no longer needed
+			if (!quad_verts.empty()) {vbo.create_and_upload(quad_verts, 0, 1);}
+			clear_cont(quad_verts); // no longer needed
 		}
 		void register_tile_id(unsigned tid) {
 			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
@@ -609,14 +606,9 @@ class building_draw_t {
 			if (empty()) return; // nothing to do
 			register_tile_id(num_tiles); // add terminator
 			remove_excess_cap(pos_by_tile);
-
-			if (!no_store_model_textures_in_memory) {
-				remove_excess_cap(quad_verts);
-				remove_excess_cap(tri_verts);
-			}
 		}
 		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear();}
-		void clear_vbos () {qvbo.clear(); tvbo.clear(); qvao.clear(); tvao.clear(); sqvao.clear(); stvao.clear();}
+		void clear_vbos () {vbo.clear(); vao.clear(); svao.clear();}
 		void clear() {clear_vbos(); clear_verts();}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
