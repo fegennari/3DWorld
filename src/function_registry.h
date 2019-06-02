@@ -268,7 +268,7 @@ void clear_tiled_terrain(bool no_regen_buildings=0);
 void reset_tiled_terrain_state();
 void clear_tiled_terrain_shaders();
 float get_tiled_terrain_water_level();
-bool try_bind_tile_smap_at_point(point const &pos, shader_t &s);
+bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only=0);
 void invalidate_tile_smap_at_pt(point const &pos, float radius);
 uint64_t get_tile_id_containing_point(point const &pos);
 uint64_t get_tile_id_containing_point_no_xyoff(point const &pos);

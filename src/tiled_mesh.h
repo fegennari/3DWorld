@@ -390,7 +390,7 @@ public:
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
 	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
 	void bind_and_setup_shadow_map(shader_t &s) const;
-	bool try_bind_shadow_map(shader_t &s) const;
+	bool try_bind_shadow_map(shader_t &s, bool check_only) const;
 	void bind_textures() const;
 	void draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], unsigned lod_level) const;
 	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const;
@@ -481,7 +481,7 @@ public:
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp) const;
 	tile_t *get_tile_containing_point(point const &pos) const;
 	void invalidate_tile_smap_at_pt(point const &pos, float radius);
-	bool try_bind_tile_smap_at_point(point const &pos, shader_t &s) const;
+	bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) const;
 	bool check_sphere_collision(point &pos, float radius) const;
 	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;

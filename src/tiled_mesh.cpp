@@ -1667,10 +1667,10 @@ void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm)
 void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
 	if (shadow_map_enabled()) {shader_shadow_map_setup(s);}
 }
-bool tile_t::try_bind_shadow_map(shader_t &s) const {
+bool tile_t::try_bind_shadow_map(shader_t &s, bool check_only) const {
 	if (!shadow_map_enabled() || smap_data.empty()) return 0;
 	if (get_dist_to_camera_in_tiles(1) > SMAP_FADE_THRESH*smap_thresh_scale) return 0; // too far to need smap, even if it exists
-	smap_data.set_for_all_lights(s, nullptr);
+	if (!check_only) {smap_data.set_for_all_lights(s, nullptr);}
 	return 1;
 }
 
@@ -3127,9 +3127,9 @@ uint64_t get_tile_id_containing_point_no_xyoff(point const &pos) {
 	return (tp.x + (uint64_t(tp.y) << 32));
 }
 
-bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s) const {
+bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) const {
 	tile_t const *const tile(get_tile_containing_point(pos));
-	return (tile != nullptr && tile->try_bind_shadow_map(s));
+	return (tile != nullptr && tile->try_bind_shadow_map(s, check_only));
 }
 
 void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos, float radius) {
@@ -3309,7 +3309,7 @@ void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_w
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
 bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_draw.check_sphere_collision(pos, radius);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
-bool try_bind_tile_smap_at_point(point const &pos, shader_t &s) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s);}
+bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s, check_only);}
 void invalidate_tile_smap_at_pt(point const &pos, float radius) {terrain_tile_draw.invalidate_tile_smap_at_pt(pos, radius);}
 
 
