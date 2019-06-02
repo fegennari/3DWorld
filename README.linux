@@ -14,13 +14,8 @@ sudo apt install libxi-dev
 
 *************************
 
-Note: These steps are done in a directory at the same level as the top level 3DWorld git directory.
-GLUI and GLI should be accessed back one directory from 3DWorld/.
-
-Clone + Setup glui:
-git clone https://github.com/libglui/glui
-cd glui
-make
+Note: This step is done in a directory at the same level as the top level 3DWorld git directory.
+GLI should be accessed back one directory from 3DWorld/.
 
 Clone gli:
 git clone https://github.com/g-truc/gli

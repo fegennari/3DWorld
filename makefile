@@ -1,16 +1,15 @@
 VPATH=../src
-GLUI=../../glui
 TARGA=../Targa
 GLI=../../gli
-CPPFLAGS=-g -Wall -O3 -fopenmp -I$(TARGA) -I$(GLUI)/include -I$(GLI) -I../src/texture_tile_blend -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
+CPPFLAGS=-g -Wall -O3 -fopenmp -I$(TARGA) -I$(GLI) -I../src/texture_tile_blend -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
 TARGET=../obj/3dworld
 OBJS=$(shell cat ../obj_list)
 
 CPP=g++
 #LINK=$(CPP) $(CPPFLAGS) -lz -lpng -lpthread -L/usr/X11R6/lib64 -lglut -lGL -lGLU
-LINK=$(CPP) $(CPPFLAGS) -L$(GLUI)/lib
+LINK=$(CPP) $(CPPFLAGS)
 
-LFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglui -lglut -lGLEW -lGLU -lGL -lopenal -lalut
+LFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglut -lGLEW -lGLU -lGL -lopenal -lalut
 
 #  In most cases, you should not change anything below this line.
 ifeq ($(shell test -L makefile ; echo $$? ),1)
