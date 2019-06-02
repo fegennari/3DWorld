@@ -1989,6 +1989,7 @@ public:
 				}
 			}
 		} // for i
+		if (buildings.capacity() > 2*buildings.size()) {buildings.shrink_to_fit();}
 		bix_by_x1 cmp_x1(buildings);
 		for (auto i = bix_by_plot.begin(); i != bix_by_plot.end(); ++i) {sort(i->begin(), i->end(), cmp_x1);}
 		if (!is_tile) {timer.end();} // use a single timer for tile mode
