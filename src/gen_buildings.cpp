@@ -1811,6 +1811,7 @@ public:
 	building_creator_t() : grid_sz(1), max_extent(zero_vector) {}
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear();}
+	unsigned get_num_buildings() const {return buildings.size();}
 	vector3d const &get_max_extent() const {return max_extent;}
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
@@ -2368,6 +2369,11 @@ public:
 			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);}
 		}
 	}
+	unsigned get_tot_num_buildings() const {
+		unsigned num(0);
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {num += i->second.get_num_buildings();}
+		return num;
+	}
 }; // end building_tiles_t
 
 
@@ -2393,6 +2399,7 @@ void gen_buildings() {
 	} else {building_creator.gen (global_building_params, 0, 0, 0);} // mixed buildings
 }
 void draw_buildings(bool shadow_only, vector3d const &xlate) {
+	//cout << "Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl; // for debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
 	if (building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
