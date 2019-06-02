@@ -3,18 +3,14 @@ GLUI=../../glui
 TARGA=../Targa
 GLI=../../gli
 CPPFLAGS=-g -Wall -O3 -fopenmp -I$(TARGA) -I$(GLUI)/include -I$(GLI) -I../src/texture_tile_blend -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
-TARGET=../lib/3dworld
+TARGET=../obj/3dworld
 OBJS=$(shell cat ../obj_list)
-TARGET2=
-OBJS2=
 
-LIB_TARGET=
-LIB_OBJS=
+CPP=g++
+#LINK=$(CPP) $(CPPFLAGS) -lz -lpng -lpthread -L/usr/X11R6/lib64 -lglut -lGL -lGLU
+LINK=$(CPP) $(CPPFLAGS) -L$(GLUI)/lib
 
-#LINK=g++ $(CPPFLAGS) -lz -lpng -lpthread -L/usr/X11R6/lib64 -lglut -lGL -lGLU
-LINK=g++ $(CPPFLAGS) -L$(GLUI)/lib
-
-LFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglui -lglut -lGLEW -lGLU -lGL -lopenal -lalut $(LIB_TARGET)
+LFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglui -lglut -lGLEW -lGLU -lGL -lopenal -lalut
 
 #  In most cases, you should not change anything below this line.
 ifeq ($(shell test -L makefile ; echo $$? ),1)
@@ -22,7 +18,6 @@ all :
 	@echo "makefile should be a symbolic link to avoid accidentally building in the src directory ... attempting to create ../obj,../lib,../run, symlink makefile in ../obj, and recurse make into ../obj"
 	-mkdir ../obj
 	-mkdir ../run
-	-mkdir ../lib
 	-ln -s ../makefile ../obj/makefile
 	cd ../obj && $(MAKE)
 else
@@ -37,8 +32,6 @@ else
 %.o : %.cpp
 	$(CPP) $(CPPFLAGS) -MMD -c $<
 
-CPP=g++
-
 %.d: %.C
 	touch $@
 %.d: %.cc
@@ -46,31 +39,21 @@ CPP=g++
 %.d: %.cpp
 	touch $@
 
-DEPENDENCIES = $(OBJS2:.o=.d) $(OBJS:.o=.d) $(LIB_OBJS:.o=.d)
+DEPENDENCIES = $(OBJS:.o=.d)
 
 # 
 # Targets:
 # 
 
-all : $(TARGET) $(TARGET2)
+all : $(TARGET)
 
-ifneq ($(LIB_TARGET),"")
-$(LIB_TARGET): $(LIB_OBJS) 
-	$(LINK) $(FLAGS) -shared -o $(LIB_TARGET) $(LIB_OBJS)
-endif
-
-$(TARGET): $(OBJS) $(LIB_TARGET)
+$(TARGET): $(OBJS)
 	$(LINK) $(FLAGS) -o $(TARGET) $(OBJS) $(LFLAGS)
-
-ifneq ($(TARGET2),"")
-$(TARGET2): $(OBJS2) $(LIB_TARGET)
-	$(LINK) $(FLAGS) -o $(TARGET2) $(OBJS2) $(LFLAGS)
-endif
 
 .PHONY : clean
 
 clean:
-	-rm -f $(TARGET) $(TARGET2) $(OBJS) $(OBJS2) $(LIB_TARGET) $(LIB_OBJS) $(DEPENDENCIES) make.dep
+	-rm -f $(TARGET) $(OBJS) $(DEPENDENCIES) make.dep
 
 make.dep: $(DEPENDENCIES)
 	-cat $(DEPENDENCIES) > make.dep
