@@ -12,15 +12,26 @@ sudo apt install libxrender-dev
 sudo apt install libxmu-dev
 sudo apt install libxi-dev
 
-Setup glui:
+*************************
+
+Note: These steps are done in a directory at the same level as the top level 3DWorld git directory.
+GLUI and GLI should be accessed back one directory from 3DWorld/.
+
+Clone + Setup glui:
 git clone https://github.com/libglui/glui
 cd glui
 make
 
+Clone gli:
 git clone https://github.com/g-truc/gli
 
-Build setup:
-mkdir lib
+**************************
+
+Clone 3DWorld:
+git clone https://github.com/fegennari/3DWorld.git
+
+3DWorld Build setup:
+cd 3DWorld
 mkdir obj
 cd obj
 ln -s ../makefile .
