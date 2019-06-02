@@ -1810,7 +1810,7 @@ class building_creator_t {
 public:
 	building_creator_t() : grid_sz(1), max_extent(zero_vector) {}
 	bool empty() const {return buildings.empty();}
-	void clear() {buildings.clear(); grid.clear();}
+	void clear() {buildings.clear(); grid.clear(); clear_vbos();}
 	unsigned get_num_buildings() const {return buildings.size();}
 	vector3d const &get_max_extent() const {return max_extent;}
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
@@ -2313,7 +2313,8 @@ public:
 class building_tiles_t {
 	map<pair<int, int>, building_creator_t> tiles; // key is {x, y} pair
 public:
-	bool empty() const {return tiles.empty();}
+	bool     empty() const {return tiles.empty();}
+	unsigned size()  const {return tiles.size();}
 
 	bool create_tile(int x, int y) {
 		auto it(tiles.find(make_pair(x, y)));
@@ -2337,7 +2338,7 @@ public:
 		auto it(tiles.find(make_pair(x, y)));
 		//cout << "Remove building tile " << x << "," << y << ", tiles: " << tiles.size() << endl;
 		if (it == tiles.end()) return 0; // not found
-		it->second.clear(); // free VBOs/VAOs
+		it->second.clear_vbos(); // free VBOs/VAOs
 		tiles.erase(it);
 		return 1;
 	}
@@ -2399,7 +2400,7 @@ void gen_buildings() {
 	} else {building_creator.gen (global_building_params, 0, 0, 0);} // mixed buildings
 }
 void draw_buildings(bool shadow_only, vector3d const &xlate) {
-	//cout << "Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl; // for debugging
+	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
 	if (building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
