@@ -1672,6 +1672,7 @@ class building_creator_t {
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights;
 	vector<point> points; // reused temporary
+	bool use_smap_this_frame;
 
 	struct grid_elem_t {
 		vector<unsigned> ixs;
@@ -1808,7 +1809,7 @@ class building_creator_t {
 	};
 
 public:
-	building_creator_t() : grid_sz(1), max_extent(zero_vector) {}
+	building_creator_t() : grid_sz(1), max_extent(zero_vector), use_smap_this_frame(0) {}
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear(); clear_vbos();}
 	unsigned get_num_buildings() const {return buildings.size();}
@@ -1817,6 +1818,7 @@ public:
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 	cube_t const &get_bcube() const {return buildings_bcube;}
 	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
+	bool is_single_tile() const {return (grid_by_tile.size() == 1);}
 	
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
 		float t(0.0); // unused
@@ -2013,9 +2015,13 @@ public:
 	static void multi_draw(bool shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
+		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
+		int const use_bmap(global_building_params.has_normal_map);
+		bool const use_tt_smap(check_tile_smap(shadow_only) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
+		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		bool have_windows(0), have_wind_lights(0);
 		unsigned max_draw_ix(0);
-		bool const night(is_night(WIND_LIGHT_ON_RAND));
+		shader_t s;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
@@ -2023,11 +2029,11 @@ public:
 			have_windows     |= !(*i)->building_draw_windows.empty();
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
 			max_eq(max_draw_ix,  (*i)->building_draw_vbo.get_num_draw_blocks());
+
+			if ((*i)->is_single_tile()) { // only for tiled buildings
+				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
+			}
 		}
-		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
-		int const use_bmap(global_building_params.has_normal_map);
-		bool const use_tt_smap(check_tile_smap(shadow_only) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
-		shader_t s;
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL);
@@ -2040,7 +2046,9 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 		}
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw_block(ix, shadow_only);}
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, shadow_only);} // non-smap pass, can skip tiles that will be drawn below
+			}
 		}
 		if (!shadow_only && have_windows) { // draw windows
 			enable_blend();
@@ -2056,9 +2064,11 @@ public:
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			city_shader_setup(s, 1, 1, use_bmap, 0.0); // use_smap=1, use_dlights=1, min_alpha=0.0 to avoid alpha test
 			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
-			glDepthMask(GL_FALSE); // disable depth writing
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				bool const no_depth_write(!(*i)->is_single_tile());
+				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
+
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
 					point const pos(g->bcube.get_cube_center() + xlate);
@@ -2069,13 +2079,15 @@ public:
 
 					if (!(*i)->building_draw_windows.empty()) {
 						enable_blend();
+						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
 						(*i)->building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
+						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						disable_blend();
 					}
 				} // for g
-			}
+				if (no_depth_write) {glDepthMask(GL_TRUE);} // re-enable depth writing
+			} // for i
 			s.end_shader();
-			glDepthMask(GL_TRUE); // re-enable depth writing
 		}
 		if (!shadow_only && night && have_wind_lights) { // add night time random lights in windows
 			enable_blend();
