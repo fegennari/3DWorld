@@ -2324,9 +2324,12 @@ public:
 
 class building_tiles_t {
 	map<pair<int, int>, building_creator_t> tiles; // key is {x, y} pair
+	vector3d max_extent;
 public:
+	building_tiles_t() : max_extent(zero_vector) {}
 	bool     empty() const {return tiles.empty();}
 	unsigned size()  const {return tiles.size();}
+	vector3d get_max_extent() const {return max_extent;}
 
 	bool create_tile(int x, int y) {
 		auto it(tiles.find(make_pair(x, y)));
@@ -2344,6 +2347,7 @@ public:
 		int const rseed(x + (y << 16) + 12345); // should not be zero
 		bc.gen(global_building_params, 0, 0, 1, rseed);
 		global_building_params.restore_prev_pos_range();
+		max_extent = max_extent.max(bc.get_max_extent());
 		return 1;
 	}
 	bool remove_tile(int x, int y) {
@@ -2360,11 +2364,6 @@ public:
 	void clear() {
 		clear_vbos();
 		tiles.clear();
-	}
-	vector3d get_max_extent() const {
-		vector3d max_extent(zero_vector);
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {max_extent = max_extent.max(i->second.get_max_extent());}
-		return max_extent;
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr) const {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
