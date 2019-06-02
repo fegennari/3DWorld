@@ -22,7 +22,7 @@ extern point sun_pos;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
 
-struct tid_nm_pair_t {
+struct tid_nm_pair_t { // size=24
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
 	float tscale_x, tscale_y, txoff, tyoff;
@@ -491,6 +491,39 @@ public:
 building_window_gen_t building_window_gen;
 
 
+class texture_id_mapper_t {
+	vector<unsigned> tid_to_slot_ix;
+	unsigned next_slot_ix;
+
+	void register_tid(int tid) {
+		if (tid < 0) return; // not allocated
+		if (tid >= (int)tid_to_slot_ix.size()) {tid_to_slot_ix.resize(tid+1, 0);}
+		if (tid_to_slot_ix[tid] == 0) {tid_to_slot_ix[tid] = next_slot_ix++;}
+	}
+public:
+	texture_id_mapper_t() : next_slot_ix(1) {} // slots start at 1; slot 0 is for untextured
+
+	void init() {
+		if (!tid_to_slot_ix.empty()) return; // already inited
+		tid_to_slot_ix.push_back(0); // untextured case
+		register_tid(building_window_gen.get_window_tid());
+		register_tid(building_window_gen.get_door_tid());
+
+		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
+			register_tid(i->side_tex.tid);
+			register_tid(i->roof_tex.tid);
+		}
+		cout << "Used " << (next_slot_ix-1) << " slots for texture IDs up to " << (tid_to_slot_ix.size()-1) << endl;
+	}
+	unsigned get_slot_ix(int tid) const {
+		if (tid < 0) return 0; // untextured - slot 0
+		assert(tid < (int)tid_to_slot_ix.size());
+		return tid_to_slot_ix[tid];
+	}
+};
+texture_id_mapper_t tid_mapper;
+
+
 struct building_draw_utils {
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 		assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
@@ -603,7 +636,7 @@ class building_draw_t {
 			pos_by_tile.resize(tid+1, vert_ix_pair(quad_verts.size(), tri_verts.size())); // push start of new range back onto all previous tile slots
 		}
 		void finalize(unsigned num_tiles) {
-			if (empty()) return; // nothing to do
+			if (pos_by_tile.empty()) return; // nothing to do
 			register_tile_id(num_tiles); // add terminator
 			remove_excess_cap(pos_by_tile);
 		}
@@ -611,13 +644,14 @@ class building_draw_t {
 		void clear_vbos () {vbo.clear(); vao.clear(); svao.clear();}
 		void clear() {clear_vbos(); clear_verts();}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
+		bool has_drawn() const {return !pos_by_tile.empty();}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
 		unsigned num_tris () const {return (quad_verts.size()/2 + tri_verts.size()/3);} // Note: 1 quad = 4 verts = 2 triangles
 	}; // end draw_block_t
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
 	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
-		unsigned const ix((tex.tid >= 0) ? (tex.tid+1) : 0);
+		unsigned const ix(tid_mapper.get_slot_ix(tex.tid));
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
 		block.register_tile_id(cur_tile_id);
@@ -2138,6 +2172,7 @@ public:
 	}
 	void create_vbos(bool is_tile) { // Note: non-const; building_draw is modified
 		building_window_gen.check_windows_texture();
+		tid_mapper.init();
 		timer_t timer("Create Building VBOs", !is_tile);
 		get_all_drawn_verts();
 		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
@@ -2343,7 +2378,6 @@ public:
 		bcube.x2() = get_xval((x+1)*MESH_X_SIZE);
 		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
 		global_building_params.set_pos_range(bcube);
-		// TODO: Optimize Gen + Optimize Draw
 		int const rseed(x + (y << 16) + 12345); // should not be zero
 		bc.gen(global_building_params, 0, 0, 1, rseed);
 		global_building_params.restore_prev_pos_range();
