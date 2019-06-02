@@ -954,7 +954,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
-	//if (b.bcube.contains_pt_xy(center2) || bcube.contains_pt_xy(center1)) return 1; // slightly faster?
+	if (b.bcube.contains_pt_xy(center2) || bcube.contains_pt_xy(center1)) return 1; // slightly faster
 	
 	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
 		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
@@ -1946,7 +1946,7 @@ public:
 				++num_consec_fail;
 				max_eq(max_consec_fail, num_consec_fail);
 
-				if (num_consec_fail >= (is_tile ? 100U : 5000U)) { // too many failures - give up
+				if (num_consec_fail >= (is_tile ? 50U : 5000U)) { // too many failures - give up
 					if (!is_tile) {cout << "Failed to place a building after " << num_consec_fail << " tries, giving up after " << i << " iterations" << endl;}
 					break;
 				}
