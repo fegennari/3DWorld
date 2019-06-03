@@ -3,9 +3,9 @@
 // https://eheitzresearch.wordpress.com/738-2/
 // 2/16/19
 #include "tlingandblending.h"
-#include "../function_registry.h"
-#include "../gl_ext_arb.h"
-#include "../shaders.h"
+#include "function_registry.h"
+#include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 GLuint CreateGLTextureFromTextureDataStruct(const TextureDataFloat& im, GLenum wrapMode, bool generateMips) {
