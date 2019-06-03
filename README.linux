@@ -14,27 +14,23 @@ sudo apt install libxi-dev
 
 *************************
 
-Note: This step is done in a directory at the same level as the top level 3DWorld git directory.
-GLI should be accessed back one directory from 3DWorld/.
-
-Clone gli:
-git clone https://github.com/g-truc/gli
-
-**************************
-
 Clone 3DWorld:
 git clone https://github.com/fegennari/3DWorld.git
 
-3DWorld Build setup:
+3DWorld Build:
 cd 3DWorld
-mkdir obj
-cd obj
-ln -s ../makefile .
 make -j4 -k
 
+(You can ignore the gli and targa warnings.)
+
 Run (bash):
-MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450 lib/3dworld
+obj/3dworld
+
+If you have an older version of MESA:
+MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450 obj/3dworld
 or
 export MESA_GL_VERSION_OVERRIDE=4.5
 export MESA_GLSL_VERSION_OVERRIDE=450
-lib/3dworld
+obj/3dworld
+
+The default scene can be changed by editing defaults.txt

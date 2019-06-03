@@ -1,62 +1,46 @@
-VPATH=../src
-TARGA=../Targa
-GLI=../../gli
-CPPFLAGS=-g -Wall -O3 -fopenmp -I$(TARGA) -I$(GLI) -I../src/texture_tile_blend -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
-TARGET=../obj/3dworld
-OBJS=$(shell cat ../obj_list)
-
 CPP=g++
-#LINK=$(CPP) $(CPPFLAGS) -lz -lpng -lpthread -L/usr/X11R6/lib64 -lglut -lGL -lGLU
-LINK=$(CPP) $(CPPFLAGS)
 
+BUILD=obj
+TARGA=Targa
+GLI=dependencies/gli
+CPPFLAGS=-g -Wall -O3 -fopenmp -Isrc/texture_tile_blend -I$(TARGA) -I$(GLI) -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
+TARGET=3dworld
+OBJS=$(shell cat obj_list)
+VPATH=$(BUILD):src:src/texture_tile_blend
+
+LINK=g++ $(CPPFLAGS)
 LFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglut -lGLEW -lGLU -lGL -lopenal -lalut
 
 #  In most cases, you should not change anything below this line.
-ifeq ($(shell test -L makefile ; echo $$? ),1)
-all : 
-	@echo "makefile should be a symbolic link to avoid accidentally building in the src directory ... attempting to create ../obj,../lib,../run, symlink makefile in ../obj, and recurse make into ../obj"
-	-mkdir ../obj
-	-mkdir ../run
-	-ln -s ../makefile ../obj/makefile
-	cd ../obj && $(MAKE)
-else
+all : $(TARGET)
 
 # disable old-style .SUFFIXES rules. this may not be needed?
 .SUFFIXES:
 
-%.o : %.C
-	$(CPP) $(CPPFLAGS) -MMD -c $<
-%.o : %.cc
-	$(CPP) $(CPPFLAGS) -MMD -c $<
-%.o : %.cpp
-	$(CPP) $(CPPFLAGS) -MMD -c $<
+%.o : %.C $(BUILD)/%.d
+	$(CPP) $(CPPFLAGS) -MMD -c $< -o $(abspath $(BUILD)/$@)
+%.o : %.cc $(BUILD)/%.d
+	$(CPP) $(CPPFLAGS) -MMD -c $< -o $(abspath $(BUILD)/$@)
+%.o : %.cpp $(BUILD)/%.d
+	$(CPP) $(CPPFLAGS) -MMD -c $< -o $(abspath $(BUILD)/$@)
 
-%.d: %.C
-	touch $@
-%.d: %.cc
-	touch $@
-%.d: %.cpp
-	touch $@
-
-DEPENDENCIES = $(OBJS:.o=.d)
+# DEPENDENCIES = $(OBJS:.o=.d)
 
 # 
 # Targets:
 # 
 
-all : $(TARGET)
-
 $(TARGET): $(OBJS)
-	$(LINK) $(FLAGS) -o $(TARGET) $(OBJS) $(LFLAGS)
+	cd $(BUILD) && $(LINK) $(FLAGS) -o $(TARGET) $(OBJS) $(LFLAGS)
 
 .PHONY : clean
-
 clean:
-	-rm -f $(TARGET) $(OBJS) $(DEPENDENCIES) make.dep
+	-rm -fr $(BUILD)
 
-make.dep: $(DEPENDENCIES)
-	-cat $(DEPENDENCIES) > make.dep
+$(OBJS): | $(BUILD)
+$(BUILD):
+	@mkdir -p $(BUILD)
 
-include make.dep
-
-endif
+$(BUILD)/%.d: ;
+.PRECIOUS: $(BUILD)/%.d
+-include $(patsubst %,$(BUILD)/%.d,$(basename $(OBJS)))
