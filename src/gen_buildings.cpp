@@ -429,9 +429,8 @@ struct building_t : public building_geom_t {
 		if (!parts.empty()) {parts[0].z1() = z1; parts[0].z2() = z2;}
 	}
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
-	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
-		return (check_bcube_overlap_xy_one_dir(b, expand_rel, expand_abs, points) || b.check_bcube_overlap_xy_one_dir(*this, expand_rel, expand_abs, points));
-	}
+	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
+
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
 		point pos2(pos);
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
@@ -974,6 +973,14 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	}
 }
 
+bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
+
+	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
+	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
+	if (b.bcube.contains_pt_xy(bcube.get_cube_center()) || bcube.contains_pt_xy(b.bcube.get_cube_center())) return 1; // slightly faster to include this check
+	return (check_bcube_overlap_xy_one_dir(b, expand_rel, expand_abs, points) || b.check_bcube_overlap_xy_one_dir(*this, expand_rel, expand_abs, points));
+}
+
 // Note: only checks for point (x,y) value contained in one cube/N-gon/cylinder; assumes pt has already been rotated into local coordinate frame
 bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const {
 
@@ -985,10 +992,8 @@ bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, 
 
 bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const { // can be called before levels/splits are created
 
-	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
-	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
+	// Note: easy cases are handled by check_bcube_overlap_xy() above
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
-	if (b.bcube.contains_pt_xy(center2) || bcube.contains_pt_xy(center1)) return 1; // slightly faster
 	
 	for (auto p1 = b.parts.begin(); p1 != b.parts.end(); ++p1) {
 		point pts[9]; // {center, 00, 10, 01, 11, x0, x1, y0, y1}
@@ -1875,7 +1880,7 @@ public:
 		if (params.gen_inf_buildings() && !is_tile) return; // not added here
 		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
-		timer_t timer("Gen Buildings");
+		timer_t timer("Gen Buildings", !is_tile);
 		float const def_water_level(get_water_z_height()), min_building_spacing(get_min_obj_spacing());
 		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
