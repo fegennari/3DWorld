@@ -3,13 +3,15 @@ CPP=g++
 BUILD=obj
 TARGA=Targa
 GLI=dependencies/gli
-CPPFLAGS=-g -Wall -O3 -fopenmp -Isrc -Isrc/texture_tile_blend -I$(TARGA) -I$(GLI) -DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
+INCLUDES=-Isrc -Isrc/texture_tile_blend -I$(TARGA) -I$(GLI)
+DEFINES=-DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
+CPPFLAGS=-g -Wall -O3 -fopenmp $(INCLUDES) $(DEFINES)
 TARGET=3dworld
 OBJS=$(shell cat obj_list)
 VPATH=$(BUILD):src:src/texture_tile_blend
 
-LINK=g++ $(CPPFLAGS)
-LFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglut -lGLEW -lGLU -lGL -lopenal -lalut
+LINK=$(CPP) -fopenmp $(INCLUDES)
+LDFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglut -lGLEW -lGLU -lGL -lopenal -lalut
 
 #  In most cases, you should not change anything below this line.
 all : $(TARGET)
@@ -31,7 +33,7 @@ all : $(TARGET)
 # 
 
 $(TARGET): $(OBJS)
-	cd $(BUILD) && $(LINK) $(FLAGS) -o $(TARGET) $(OBJS) $(LFLAGS)
+	cd $(BUILD) && $(LINK) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
 .PHONY : clean
 clean:
