@@ -264,10 +264,10 @@ void init_window() { // register all glut callbacks
 	set_vsync();
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	glutDisplayFunc(display);
-    glutReshapeFunc(resize);
-    glutMouseFunc(mouseButton);
-    glutMotionFunc(mouseMotion);
-    glutKeyboardFunc(keyboard);
+ 	glutReshapeFunc(resize);
+ 	glutMouseFunc(mouseButton);
+ 	glutMotionFunc(mouseMotion);
+ 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboard2);
 	//glutCloseFunc(quit_3dworld); // can't do this because we don't want to quit when destroying the context
 	//glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS); // doesn't work?
@@ -279,9 +279,9 @@ void init_window() { // register all glut callbacks
 	init_keyset();
 	glutPassiveMotionFunc(mousePassiveMotion);
 
-    // Initialize GL
+ 	// Initialize GL
 	fgMatrixMode(FG_PROJECTION);
-    fgLoadIdentity();
+ 	fgLoadIdentity();
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 }
 
@@ -565,9 +565,9 @@ void resize(int x, int y) {
 	if (init_resize) {init_resize = 0;}
 	else {add_uevent_resize(x, y);}
 	y = y & (~1); // make sure y is even (required for video encoding)
-    glViewport(0, 0, x, y);
-    window_width  = x;
-    window_height = y;
+ 	glViewport(0, 0, x, y);
+ 	window_width  = x;
+ 	window_height = y;
 	set_perspective(PERSP_ANGLE, 1.0);
 	set_gl_params();
 	post_window_redisplay();
@@ -2166,11 +2166,11 @@ int main(int argc, char** argv) {
 	gen_gauss_rand_arr(); // after reading seed from config file
 	cout << "Loading."; cout.flush();
 	
-    // Initialize GLUT
+ 	// Initialize GLUT
 	progress();
-    glutInit(&argc, argv);
+ 	glutInit(&argc, argv);
 	progress();
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
+ 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	//glutInitDisplayString("rgba double depth>=16 samples>=8");
 	glutInitWindowSize(window_width, window_height);
 
