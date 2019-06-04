@@ -2192,15 +2192,19 @@ int main(int argc, char** argv) {
 	init_glew();
 	progress();
 	init_window();
+	check_gl_error(7770);
 	if (use_core_context) {init_debug_callback();}
 	cout << ".GL Initialized." << endl;
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();
 	--frame_counter;
 	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // OpenGL 4.5 only
+	check_gl_error(7771);
 	load_textures();
 	load_flare_textures(); // Sun Flare
+	check_gl_error(7772);
 	setup_shaders();
+	check_gl_error(7773);
 	//cout << "Extensions: " << get_all_gl_extensions() << endl;
 
 	if (!universe_only) { // universe mode should be able to do without these initializations
@@ -2211,11 +2215,14 @@ int main(int argc, char** argv) {
 		init_models();
 		init_terrain_mesh();
 		init_lights();
+		check_gl_error(7774);
 		gen_scene(1, (world_mode == WMODE_GROUND), 0, 0, 0);
+		check_gl_error(7775);
 		gen_snow_coverage();
 		if (enable_grass_fire) {init_ground_fire();}
 		create_object_groups();
 		init_game_state();
+		check_gl_error(7776);
 
 		if (game_mode) {
 			gamemode_rand_appear();
@@ -2224,6 +2231,7 @@ int main(int argc, char** argv) {
 		get_landscape_texture_color(0, 0); // hack to force creation of the cached_ls_colors vector in the master thread (before build_lightmap())
 		build_lightmap(1);
 	}
+	check_gl_error(7777);
 	glutMainLoop(); // Switch to main loop
 	quit_3dworld(); // never actually gets here
     return 0;
