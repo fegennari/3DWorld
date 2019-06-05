@@ -1,48 +1,55 @@
-CPP=g++
-
+TARGET=3dworld
 BUILD=obj
+VPATH=$(BUILD) src src/texture_tile_blend
+
 TARGA=Targa
 GLI=dependencies/gli
 INCLUDES=-Isrc -Isrc/texture_tile_blend -I$(TARGA) -I$(GLI)
 DEFINES=-DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
-CPPFLAGS=-g -Wall -O3 -fopenmp $(INCLUDES) $(DEFINES)
-TARGET=3dworld
+# Note: extra warnings can be useful, but GLI and Targa generate too many warnings
+CXXFLAGS=-g -Wall -O3 -fopenmp $(INCLUDES) $(DEFINES) #-Wextra -Wno-unused-parameter -Wno-implicit-fallthrough
 OBJS=$(shell cat obj_list)
-VPATH=$(BUILD):src:src/texture_tile_blend
 
 LINK=$(CPP) -fopenmp $(INCLUDES)
-LDFLAGS=-lz -lpng -ljpeg -ltiff -lpthread $(shell pkg-config --libs xrender) -lglut -lGLEW -lGLU -lGL -lopenal -lalut
+LDFLAGS=-lpthread `pkg-config --libs zlib libpng libjpeg libtiff-4 xrender glew freealut` -lglut -fopenmp
 
-#  In most cases, you should not change anything below this line.
-all : $(TARGET)
+# For creating dependencies files
+DEPFLAGS = -MT $@ -MMD -MP -MF $(BUILD)/$*.Td
+POSTCOMPILE = mv -f $(BUILD)/$*.Td $(BUILD)/$*.d
 
-# disable old-style .SUFFIXES rules. this may not be needed?
-.SUFFIXES:
+# Change the verbosity of the makefile.
+ifeq ($(VERBOSE),1)
+Q :=
+else
+Q := @
+endif
 
-%.o : %.C $(BUILD)/%.d
-	$(CPP) $(CPPFLAGS) -MMD -c $< -o $(abspath $(BUILD)/$@)
-%.o : %.cc $(BUILD)/%.d
-	$(CPP) $(CPPFLAGS) -MMD -c $< -o $(abspath $(BUILD)/$@)
-%.o : %.cpp $(BUILD)/%.d
-	$(CPP) $(CPPFLAGS) -MMD -c $< -o $(abspath $(BUILD)/$@)
+# Compile 3dworld
+all: $(TARGET)
 
-# DEPENDENCIES = $(OBJS:.o=.d)
-
-# 
-# Targets:
-# 
-
+# Link the target
 $(TARGET): $(OBJS)
-	cd $(BUILD) && $(LINK) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	@echo "Linking $<"
+	$(Q)cd $(BUILD) && $(CXX) $(INCLUDES) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
-.PHONY : clean
+# Compile source files
+%.o : %.cpp $(BUILD)/%.d
+	@echo "Compiling $<"
+	$(Q)$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFINES) -c $(abspath $<) -o $(abspath $(BUILD)/$@)
+	@$(POSTCOMPILE)
+
+# Delete compiled files
+.PHONY: clean
 clean:
 	-rm -fr $(BUILD)
 
+# Create the directory before compiling sources
 $(OBJS): | $(BUILD)
 $(BUILD):
 	@mkdir -p $(BUILD)
 
+# Create the dependency files
 $(BUILD)/%.d: ;
 .PRECIOUS: $(BUILD)/%.d
+
 -include $(patsubst %,$(BUILD)/%.d,$(basename $(OBJS)))
