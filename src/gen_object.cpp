@@ -341,7 +341,6 @@ void gen_leaf_at(point const *const points, vector3d const &normal, int type, co
 	if (objg.max_objs == 0) return;
 	int const max_t_i(objg.choose_object());
 	point const pos(get_center(points, 4));
-	float const leaf_size();
 	objg.create_object_at(max_t_i, pos);
 	dwobject &obj(objg.get_obj(max_t_i));
 	obj.init_dir.z = 0.5*p2p_dist(points[0], points[1]); // sets leaf size

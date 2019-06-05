@@ -586,7 +586,7 @@ void gen_rx_ry(float &rx, float &ry) {
 bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	unsigned nx, unsigned ny, bool cache_values, bool force_sine_mode, bool no_wait)
 {
-	assert(nx >= 0 && ny >= 0);
+	assert(nx > 0 && ny > 0);
 	assert(start_eval_sin <= F_TABLE_SIZE);
 	cur_nx = nx; cur_ny = ny; mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
 	gen_mode  = (force_sine_mode ? MGEN_SINE : mesh_gen_mode);

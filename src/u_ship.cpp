@@ -1138,7 +1138,7 @@ void u_ship::ai_action() {
 			if (lead_shot) {
 				unsigned const wid(weapons[targ_weap].wclass);
 				bool const s_turret(weap_turret(wid)); // curr_weapon can change
-				vector3d const tdir(predict_target_dir(pos, cur_targ, (s_turret ? UWEAP_NONE : wid)));
+				vector3d const tdir(predict_target_dir(pos, cur_targ, (s_turret ? (unsigned)UWEAP_NONE : wid)));
 				
 				if (is_valid_fire_dir(target_dir, tdir)) { // only lead shot if in a similar direction
 					target_dir = tdir; // can catch the target
@@ -1462,7 +1462,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	ship_weapon const &weapon(get_weapon());
 	unsigned const wcount(weapon.wcount);
 	if (!use_query && (reset_timer > 0 || wcount == 0)) return 0; // can't fire when dying or have no weapon
-	unsigned const weapon_id(use_query ? UWEAP_QUERY : weapon.wclass); // player control click => query
+	unsigned const weapon_id(use_query ? (unsigned)UWEAP_QUERY : weapon.wclass); // player control click => query
 	assert(weapon_id < us_weapons.size());
 	us_weapon const &weap(us_weapons[weapon_id]);
 	if (!weap.hyper_fire && !check_fire_speed()) return 0;
@@ -2426,7 +2426,7 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	if (VERIFY_REFS && source) source->verify_status();
 	bool const is_kill(!shield_d_only && val > hit_points);
 	int const src_sclass(source ? source->get_src_sclass() : SWCLASS_UNDEF);
-	unsigned const src_align(source ? source->get_align()  : NUM_ALIGNMENT);
+	unsigned const src_align(source ? source->get_align()  : (unsigned)NUM_ALIGNMENT);
 	// make sure to report the real damage done (before or after various subtractions?)
 	register_damage(src_sclass, sclass, wc, min(val, hit_points), src_align, get_align(), is_kill, (source == this));
 	

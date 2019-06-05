@@ -2047,7 +2047,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 		case 'a': // set destroyability
 			if (!read_int(fp, ivals[0])) {return read_error(fp, "destroy shape", coll_obj_file);}
-			cobj.destroy = (EXPLODE_EVERYTHING ? EXPLODEABLE : (char)ivals[0]);
+			cobj.destroy = (EXPLODE_EVERYTHING ? (char)EXPLODEABLE : (char)ivals[0]);
 			break;
 		case 'd': // toggle movable
 			if (!read_int(fp, ivals[0])) {return read_error(fp, "movable", coll_obj_file);}

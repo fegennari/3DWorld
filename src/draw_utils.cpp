@@ -163,14 +163,14 @@ void vert_norm_texp::set_vbo_arrays(bool set_state, void const *vbo_ptr_offset) 
 	set_vn_ptrs(stride, 0, vbo_ptr_offset);
 	
 	for (unsigned d = 0; d < 2; ++d) {
-		unsigned const loc(cur_shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR));
+		int const loc(cur_shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR));
 		if (loc >= 0) {glEnableVertexAttribArray(loc);}
 		if (loc >= 0) {glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)+4*d*sizeof(float)));}
 	}
 }
 void vert_norm_texp::unset_attrs() {
 	for (unsigned d = 0; d < 2; ++d) {
-		unsigned const loc(cur_shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR));
+		int const loc(cur_shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR));
 		if (loc >= 0) {glDisableVertexAttribArray(loc);}
 	}
 }

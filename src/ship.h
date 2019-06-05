@@ -429,7 +429,7 @@ public:
 	void get_bounding_sphere(point &c, float &r) const;
 	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player,  free_obj const *const obj=NULL) const;
 	string get_name()   const {return "Cube";}
-	float const delta(unsigned i) const {return fabs(d[i][1] - d[i][0]);}
+	float delta(unsigned i) const {return fabs(d[i][1] - d[i][0]);}
 	float get_volume() const {return cube_t::get_volume();}
 	float get_s_area() const {return 2.0*(delta(0)*delta(1) + delta(0)*delta(2) + delta(1)*delta(2));}
 };

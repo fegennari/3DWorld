@@ -26,7 +26,7 @@ bool sphere_t::contains_point(point const &p) const {return dist_less_than(pos, 
 
 rect::rect(float const r[3][2], unsigned d0, unsigned d1) { // projection from 3D => 2D
 
-	assert(d0 >= 0 && d0 <= 3 && d1 >= 0 && d1 <= 3 && d0 != d1);
+	assert(d0 <= 3 && d1 <= 3 && d0 != d1);
 	d[0][0] = r[d0][0]; d[0][1] = r[d0][1]; d[1][0] = r[d1][0]; d[1][1] = r[d1][1];
 	//assert(nonzero());
 }

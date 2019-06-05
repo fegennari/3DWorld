@@ -27,7 +27,7 @@ float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader ast
 float    const AST_CLOUD_DIST_SCALE = 64.0;
 float    const AST_CLOUD_POS_RAND   = 0.75;
 
-unsigned const DEFAULT_AST_TEX  = MOON_TEX; // ROCK_TEX or MOON_TEX
+auto const DEFAULT_AST_TEX      = MOON_TEX; // ROCK_TEX or MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
 colorRGBA const ICE_ROCK_COLOR(0.6, 1.2, 1.5);

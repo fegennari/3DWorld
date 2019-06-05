@@ -218,7 +218,7 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 			get_all_connected(cur, out);
 
 			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
-				assert(*i >= 0 && *i != cur);
+				assert(*i != cur);
 				//assert(coll_objects[*i].counter != cobj_counter); // may be too strong - we might want to allow duplicates and just continue here
 				if (coll_objects[*i].counter == cobj_counter) continue; // not sure we can actually get here
 				open.push_back(*i); // need to do this first

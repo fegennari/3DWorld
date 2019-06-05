@@ -290,11 +290,11 @@ bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsign
 	maybe_swap_rb(data, width*height, ncolors); // Note: data not const because of this line
 	unsigned char pad[4] = {0};
 	unsigned const row_sz(width*ncolors), row_sz_mod(row_sz&3), row_pad(row_sz_mod ? 4-row_sz_mod : 0);
-	bmp_header header = {0};
+	bmp_header header = {};
 	header.type = 19778; // bitmap
 	//header.size = 54 + (row_sz + row_pad)*height + ((ncolors == 1) ? 1024 : 0); // optional
 	//header.offset = 54; // optional
-	bmp_infoheader infoheader = {0};
+	bmp_infoheader infoheader = {};
 	infoheader.width  = width;
 	infoheader.height = height;
 	infoheader.bits   = ncolors << 3;
