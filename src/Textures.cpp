@@ -296,6 +296,7 @@ void load_textures() {
 	}
 	for (unsigned i = 0; i < textures.size(); ++i) {
 		if (is_tex_disabled(i)) continue; // skip
+		if (i == BLDG_WINDOW_TEX) continue; // not yet generated
 		textures[i].init();
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
@@ -1212,6 +1213,7 @@ void gen_building_window_texture(float width_frac, float height_frac) { // Note:
 			tex_data[offset+3] = ((i > h1b && i <= h2b && j > w1b && j <= w2b) ? 255 : 0); // opaque inside window and border, transparent outside
 		}
 	}
+	tex.init(); // called later in the flow, init it now
 }
 
 
