@@ -4,7 +4,7 @@ VPATH=$(BUILD) src src/texture_tile_blend
 
 TARGA=Targa
 GLI=dependencies/gli
-INCLUDES=-Isrc -Isrc/texture_tile_blend -I$(TARGA) -I$(GLI)
+INCLUDES=-Isrc -Isrc/texture_tile_blend -I$(TARGA) -I$(GLI) -I$(GLI)/external
 DEFINES=-DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
 # Note: extra warnings can be useful, but GLI and Targa generate too many warnings
 CXXFLAGS=-g -Wall -O3 -fopenmp $(INCLUDES) $(DEFINES) #-Wextra -Wno-unused-parameter -Wno-implicit-fallthrough
