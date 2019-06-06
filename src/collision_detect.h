@@ -377,6 +377,7 @@ public:
 
 struct cobj_query_callback {
 	virtual bool register_cobj(coll_obj const &cobj) = 0;
+ 	virtual ~cobj_query_callback() {}
 };
 
 

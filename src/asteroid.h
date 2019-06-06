@@ -80,6 +80,7 @@ protected:
 
 public:
 	uasteroid_cont() : rseed(0) {}
+	virtual ~uasteroid_cont() {}
 	void init(point const &pos, float radius);
 	virtual bool get_is_ice() const {return 0;}
 	virtual void gen_asteroids();

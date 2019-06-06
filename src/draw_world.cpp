@@ -899,22 +899,17 @@ bool portal::is_visible(int reflection_pass) const {
 }
 
 void portal::pre_draw(vector<vert_wrap_t> &verts) {
-
 	select_texture(WHITE_TEX);
 	ALPHA0.set_for_cur_shader();
 	assert(verts.empty());
 }
-
 void portal::post_draw(vector<vert_wrap_t> &verts) {
-
 	draw_verts(verts, GL_TRIANGLES);
 	verts.clear();
 }
-
 void portal::draw(vector<vert_wrap_t> &verts) const {
-
 	for (unsigned i = 0; i < 6; ++i) {verts.push_back(pts[quad_to_tris_ixs[i]]);}
-};
+}
 
 
 void draw_stars(float alpha, bool no_update) {

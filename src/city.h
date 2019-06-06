@@ -109,6 +109,7 @@ struct car_base_t;
 
 struct road_gen_base_t {
 	virtual cube_t get_bcube_for_car(car_base_t const &car) const = 0;
+ 	virtual ~road_gen_base_t() {}
 };
 
 
@@ -392,6 +393,7 @@ protected:
 	point label_pos;
 public:
 	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
+ 	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0);

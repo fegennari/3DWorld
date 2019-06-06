@@ -80,7 +80,7 @@ public:
 		texture.check_init();
 		texture.bind_gl();
 	}
-	per_char_data_t const &lookup_ascii(unsigned char val) const {assert(val < 256); return pcd[val];}
+	per_char_data_t const &lookup_ascii(unsigned char val) const {return pcd[val];}
 	void free_gl_state() {texture.gl_delete();}
 };
 
