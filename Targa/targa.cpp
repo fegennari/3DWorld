@@ -860,6 +860,7 @@ tga_result tga_unpack_pixel(const uint8_t *src, const uint8_t bits,
         break;
 
     default:
+        *a = *b = *r = *g = 0;
         return TGAERR_PIXEL_DEPTH;
     }
     return TGA_NOERR;
