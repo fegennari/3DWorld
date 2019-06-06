@@ -834,6 +834,7 @@ bool shader_t::begin_shader(bool do_enable) {
 			glLinkProgram(program);
 			int status(0);
 			glGetProgramiv(program, GL_LINK_STATUS, &status);
+			check_gl_error(298);
 			if (status == GL_TRUE) break; // success
 			cerr << "Linking of program ";
 			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {cout << shader_names[i] + " ";}
