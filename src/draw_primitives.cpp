@@ -886,7 +886,7 @@ void draw_rot_torus(point const &center, vector3d const &dir, float ri, float ro
 	assert(ndivi > 2 && ndivo > 2);
 	float const ts(tex_scale_o/ndivo), tt(tex_scale_i/ndivi), ds(TWO_PI/ndivo), cds(cos(ds)), sds(sin(ds));
 	static vector<vert_norm_tc> verts;
-	verts.resize(2*(ndivi+1));
+	verts.resize(2*(ndivi+1), vert_norm_tc(all_zeros, zero_vector, 0.0, 0.0));
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndivi));
 	vector3d vab[2];
 	get_ortho_vectors(dir, vab);
