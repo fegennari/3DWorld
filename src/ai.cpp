@@ -290,7 +290,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 }
 
 
-void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &pos2, float radius, int id, int hitter, int killer) {
+void add_target(pos_dir_up const &pdu, point const &pos2, float radius, int id, int hitter, int killer) {
 
 	if (!sphere_in_view(pdu, pos2, radius, 0)) return; // fast view culling, no ray casting
 	float dist_sq(p2p_dist_sq(pdu.pos, pos2));
@@ -320,12 +320,12 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 			if (obj.disabled() || i == smiley_id || same_team(smiley_id, i))      continue;
 			if (last_hitter != i && sstates[i].powerup == PU_INVISIBILITY)        continue; // invisible
 			if (last_hitter != i && is_in_darkness(obj.pos, radius, obj.coll_id)) continue; // too dark to be visible
-			add_target(oddatav, pdu, obj.pos, radius, i, last_hitter, killer);
+			add_target(pdu, obj.pos, radius, i, last_hitter, killer);
 		}
 	}
 	if (camera_mode != 0 && !spectate && !same_team(smiley_id, CAMERA_ID) && (sstates[CAMERA_ID].powerup != PU_INVISIBILITY || last_hitter == CAMERA_ID)) {
 		if (!is_in_darkness(camera, radius, camera_coll_id)) {
-			add_target(oddatav, pdu, camera, radius, CAMERA_ID, last_hitter, killer); // camera IN_DARKNESS?
+			add_target(pdu, camera, radius, CAMERA_ID, last_hitter, killer); // camera IN_DARKNESS?
 		}
 	}
 	sort(oddatav.begin(), oddatav.end());
@@ -369,7 +369,7 @@ int find_nearest_enemy_translocator(int smiley_id, pos_dir_up const &pdu) { // u
 
 // i = cand waypoint; curw = prev cand waypoint; sstates[smiley_id].last_waypoint is prev waypoint
 void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
-	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next, float max_dist_sq)
+	unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next, float max_dist_sq)
 {
 	assert(i < waypoints.size());
 	point const &wp(waypoints[i].pos);
@@ -462,7 +462,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 						curw = next_path_wpt = find_optimal_next_waypoint(curw, goal, wps_used); // can return -1
 
 						for (unsigned i = 0; i < next.size(); ++i) {
-							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1, 0.0);
+							check_cand_waypoint(pos, avoid_dir, smiley_id, next[i], curw, dmult, pdu, 1, 0.0);
 						}
 						continue;
 					}
@@ -477,7 +477,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
 				if (waypoints[i].disabled || (int)i == ignore_w) continue;
-				check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0, max_dist_sq);
+				check_cand_waypoint(pos, avoid_dir, smiley_id, i, curw, dmult, pdu, 0, max_dist_sq);
 			}
 			if (curw < 0) {find_optimal_waypoint(pos, oddatav, goal);}
 		}

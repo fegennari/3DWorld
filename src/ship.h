@@ -476,7 +476,7 @@ class ship_bounded_cylinder : public ship_cylinder { // cylinder AND cube (can a
 
 public:
 	ship_bounded_cylinder() {}
-	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube, float dscale=1.0)
+	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube)
 		: ship_cylinder(cylin), bcube(cube) {}
 	ship_bounded_cylinder* clone() const {return new ship_bounded_cylinder(*this);}
 	void translate(point const &p) {ship_cylinder::translate(p); bcube.translate(p);}
@@ -1380,7 +1380,7 @@ private:
 public:
 	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
 		vector3d const &axis_, point const &start_pos, float rad, float start_ang, float rate);
-	void set_angle(float angle) {start_angle = angle;}
+	void set_angle(float s_angle) {start_angle = s_angle;}
 	void update_state();
 	void set_pos_from_sobj(urev_body const *const sobj);
 	void apply_physics();
