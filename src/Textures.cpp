@@ -63,7 +63,7 @@ texture_t(0, 5, 512,  512,  1, 3, 1, "manhole.jpg", 1),
 texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/palm_frond_diff.jpg", 0, 1, 4.0), // 512x1024
 texture_t(1, 9, 256,  256,  1, 4, 1, "@smoke"),  // not real file
 texture_t(1, 9, 64,   64,   1, 4, 1, "@plasma"), // not real file
-texture_t(1, 9, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
+texture_t(1, 9, 8,    8,    0, 3, 0, "@gen"),    // not real file - unused placeholder
 texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex"), // for loading real landscape texture
 texture_t(1, 9, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
 texture_t(1, 9, 1024, 1024, 1, 4, 1, "@tree_hemi", 0, 1), // not real file, compression is too slow, mipmap for trees?
@@ -227,7 +227,7 @@ int get_bare_ls_tid(float zval);
 
 
 bool is_tex_disabled(int i) {
-	return (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX || i == TREE_END_TEX || i == TREE_HEMI_TEX));
+	return (i == GEN_TEX || (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX || i == TREE_END_TEX || i == TREE_HEMI_TEX)));
 }
 
 
