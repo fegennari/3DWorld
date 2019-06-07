@@ -288,7 +288,7 @@ template<class vert_type_t> void sized_vert_t<vert_type_t>::set_size_attr(unsign
 	int const loc(cur_shader->get_attrib_loc("point_size"));
 	assert(loc > 0);
 	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_type_t)));
+	glVertexAttribPointer(loc, 1, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_type_t)));
 }
 template<class vert_type_t> void sized_vert_t<vert_type_t>::unset_attrs() {
 	int const loc(cur_shader->get_attrib_loc("point_size"));
