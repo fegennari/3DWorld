@@ -106,8 +106,7 @@ point get_final_pos(point const &pos, vector3d const &dir, float radius, float s
 }
 
 
-float const get_bbbat_angle(float fire_val) {
-
+float get_bbbat_angle(float fire_val) {
 	return (-30.0 + ((fire_val > 0.95) ? 1120.0*(fire_val - 0.95) : 70.0*(0.95 - fire_val)));
 }
 

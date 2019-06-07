@@ -1127,7 +1127,7 @@ us_class const &get_sclass_obj(unsigned sclass) {
 }
 
 struct null_deleter {
-    template<typename T> void operator()(T *) {};
+    template<typename T> void operator()(T *) {}
 };
 
 // Note: must be here where all ship_coll_obj derived classes have complete types

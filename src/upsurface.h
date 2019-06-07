@@ -23,6 +23,7 @@ unsigned const SUBDIV_SECTS    = 8;
 class color_gen_class {
 
 public:
+	virtual ~color_gen_class() {}
 	virtual void get_surface_color(unsigned char *data, float val, float phi) const = 0;
 };
 

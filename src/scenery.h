@@ -106,6 +106,7 @@ protected:
 	virtual point get_center() const = 0;
 public:
 	burnable_scenery_obj() : fire_amt(0.0), burn_amt(0.0) {}
+	virtual ~burnable_scenery_obj() {}
 	void next_frame();
 	void draw_fire(fire_drawer_t &fire_drawer, float rscale, unsigned ix) const;
 };

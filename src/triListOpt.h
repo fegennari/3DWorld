@@ -104,7 +104,7 @@ namespace TriListOpt
 		const F32 ValenceBoostPower = 0.5f;
 
 		F32 score(const VertData &vertexData);
-	};
-};
+	}
+}
 
 #endif
