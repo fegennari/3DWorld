@@ -347,11 +347,11 @@ void add_coll_torus_to_matrix(int index, int dhcm) {
 	coll_obj &cobj(coll_objects[index]);
 	coll_obj const orig_cobj(cobj); // make a copy of the cobj so that we can modify it then restore it
 	cylinder_3dw const cylin(cobj.get_bounding_cylinder());
-	cobj.type = (cobj.is_cylin_vertical() ? COLL_CYLINDER : COLL_CYLINDER_ROT);
 	cobj.points[0] = cylin.p1;
 	cobj.points[1] = cylin.p2;
 	cobj.radius    = cylin.r1;
 	cobj.radius2   = cylin.r2;
+	cobj.type = (cobj.is_cylin_vertical() ? COLL_CYLINDER : COLL_CYLINDER_ROT);
 	cobj.calc_bcube();
 	add_coll_cylinder_to_matrix(index, dhcm);
 	cobj = orig_cobj; // restore the original
@@ -363,7 +363,7 @@ int add_coll_torus(point const &p1, vector3d const &dir, float ro, float ri, cob
 	assert(dir != zero_vector);
 	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
-	cobj.points[0] = p1;
+	cobj.points[0] = cobj.points[1] = p1; // set both points to the same - some drawing code treats the torus as a cylinder
 	cobj.norm      = dir.get_norm();
 	coll_objects.set_coll_obj_props(index, COLL_TORUS, ro, ri, platform_id, cparams);
 	add_coll_torus_to_matrix(index, dhcm);
