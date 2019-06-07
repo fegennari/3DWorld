@@ -22,7 +22,11 @@ void wrap_png_error(png_structp, png_const_charp) {
 #endif
 
 #ifdef ENABLE_DDS
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <gli/gli.hpp> // Note: must be after tiffio.h include due to conflicting uint32_t typedef
+#pragma GCC diagnostic pop
 #endif
 
 #ifdef ENABLE_TIFF
