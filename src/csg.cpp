@@ -1142,7 +1142,7 @@ bool comp_cobjs_by_draw_params(coll_obj const &a, coll_obj const &b) {
 	if (b.cp.shine    < a.cp.shine)    return 0;
 	if (a.type        < b.type)        return 1;
 	if (b.type        < a.type)        return 0;
-	return (a.points[0] < b.points[0]);
+	return a.cube_t::operator<(b); // Note: unclear if we even need to compare coords
 }
 
 void coll_obj_group::sort_cobjs_for_rendering() {
