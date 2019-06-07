@@ -247,9 +247,7 @@ void quit_3dworld() { // called once at the end for proper cleanup
 	}
 	//_CrtDumpMemoryLeaks();
 	//glutLeaveMainLoop();
-#ifndef _WIN32
-	glutExit(); // seems to need this in linux, but not on Windows
-#endif
+	glutExit();
 	//throw exit_except();
 	exit(0); // quit
 }
