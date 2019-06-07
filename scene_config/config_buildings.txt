@@ -4,7 +4,7 @@ def_texture_aniso 4.0 # better quality over default value of 2.0
 
 include config.txt
 include buildings.txt
-buildings infinite_buildings 0
+buildings infinite_buildings 1
 
 ntrees 50 # fewer trees
 inf_terrain_scenery 0 # off for now
