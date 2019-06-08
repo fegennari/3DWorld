@@ -79,6 +79,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 
 	if (type > 0) { // generated texture
 		alloc();
+		memset(data, 0, num_bytes()); // zero the values to make sure we don't accidentally use it uninitialized before the texture is generated
 	}
 	else {
 		if (format == 7) { // auto

@@ -296,7 +296,7 @@ void load_textures() {
 	}
 	for (unsigned i = 0; i < textures.size(); ++i) {
 		if (is_tex_disabled(i)) continue; // skip
-		if (i == BLDG_WINDOW_TEX) continue; // not yet generated
+		if (i == BLDG_WINDOW_TEX || i == LANDSCAPE_TEX) continue; // not yet generated
 		textures[i].init();
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
@@ -1499,6 +1499,7 @@ void create_landscape_texture() {
 	else {
 		tex.gl_delete(); // should we try to update rather than recreating from scratch?
 		tex.do_gl_init();
+		tex.calc_color();
 	}
 	if (!scrolling) {PRINT_TIME(" Gen Landscape Texture");}
 }
