@@ -1498,5 +1498,11 @@
     <Text Include="coll_objs\coll_objs_heightmap.txt">
       <Filter>Input Files\coll_objs</Filter>
     </Text>
+    <Text Include="scene_config\config_post.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="scene_config\config_pre.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
   </ItemGroup>
 </Project>

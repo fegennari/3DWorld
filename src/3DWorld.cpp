@@ -1459,24 +1459,36 @@ void alloc_if_req(char *&fn, const char *def_fn=nullptr) {
 	}
 }
 
-int load_top_level_config(const char *def_file) {
+bool load_config_file(const char *fn) {
+
+	string config_file;
+	ifstream in(fn);
+	if (!in.good()) return 0;
+
+	while (in >> config_file) {
+		if (!config_file.empty() && config_file[0] != '#') { // not commented out
+			cout << "Using config file " << config_file << "." << endl;
+
+			if (!load_config(config_file)) {
+				cerr << "Error: Failed to open config file " << config_file << " for read" << endl;
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+
+int load_top_level_config(const char *def_file) { // defaults.txt
 
 	assert(def_file != NULL);
 	alloc_if_req(state_file, dstate_file);
 	alloc_if_req(mesh_file, dmesh_file);
 	alloc_if_req(coll_obj_file, dcoll_obj_file);
 	alloc_if_req(ship_def_file, dship_def_file);
-	string config_file;
-	ifstream in(def_file);
-	if (!in.good()) return 0;
-
-	while (in >> config_file) {
-		if (!config_file.empty() && config_file[0] != '#') { // not commented out
-			cout << "Using config file " << config_file << "." << endl;
-			load_config(config_file);
-		}
-	}
-	return 1;
+	load_config("config_pre.txt"); // defaults
+	bool const ret(load_config_file(def_file));
+	load_config("config_post.txt"); // overrides (load even if main config file failed)
+	return ret;
 }
 
 

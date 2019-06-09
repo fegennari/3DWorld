@@ -1002,6 +1002,8 @@
     <Text Include="scene_config\config_minecraft.txt" />
     <Text Include="scene_config\config_museum.txt" />
     <Text Include="scene_config\config_museum_tt_model.txt" />
+    <Text Include="scene_config\config_post.txt" />
+    <Text Include="scene_config\config_pre.txt" />
     <Text Include="scene_config\config_puget_sound.txt" />
     <Text Include="scene_config\config_puget_sound_tt.txt" />
     <Text Include="scene_config\config_puzzle.txt" />
