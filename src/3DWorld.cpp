@@ -95,7 +95,7 @@ int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2), num_birds_per_tile(2), num_fish_per_tile(15);
 unsigned erosion_iters(0), erosion_iters_tt(0), video_framerate(60), num_video_threads(0);
-float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0);
+float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0), biome_x_offset(0.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), dodgeball_metalness(1.0), ray_step_size_mult(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0), cloud_height_offset(0.0);
@@ -609,7 +609,10 @@ void mouseButton(int button, int state, int x, int y) {
 }
 
 
-void clamp_mouse_delta(int delta, int dmax) {delta = min(dmax, max(-dmax, delta));}
+void clamp_and_scale_mouse_delta(int &delta, int dmax) {
+	delta = min(dmax, max(-dmax, delta));
+	if (abs(delta) > 1) {delta = round_fp(mouse_sensitivity*delta);} // don't round +/-1 down to 0
+}
 
 // This function is called whenever the mouse is moved with a mouse button held down.
 // x and y are the location of the mouse (in window-relative coordinates)
@@ -626,8 +629,8 @@ void mouseMotion(int x, int y) {
 	add_uevent_mmotion(x, y);
 	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
 	int dx(x - last_mouse_x), dy(y - last_mouse_y);
-	clamp_mouse_delta(dx, window_width/10); // limit to a reasonable delta in case the frame rate is very low
-	clamp_mouse_delta(dy, window_height/10);
+	clamp_and_scale_mouse_delta(dx, window_width/20); // limit to a reasonable delta in case the frame rate is very low
+	clamp_and_scale_mouse_delta(dy, window_height/20);
 	if (camera_mode == 1 && enable_mouse_look && !map_mode) {button = GLUT_LEFT_BUTTON;}
 
 	switch (button) {
@@ -1779,6 +1782,7 @@ int load_config(string const &config_file) {
 	kwmf.add("ray_step_size_mult", ray_step_size_mult);
 	kwmf.add("system_max_orbit", system_max_orbit);
 	kwmf.add("sky_occlude_scale", sky_occlude_scale);
+	kwmf.add("mouse_sensitivity", mouse_sensitivity);
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);
