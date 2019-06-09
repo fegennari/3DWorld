@@ -390,7 +390,7 @@ public:
 			create_and_upload(data, 2, 1); // streaming
 		}
 		else {
-			pre_render();
+			pre_render(1);
 			upload_vbo_sub_data(&data.front(), 0, c*sizeof(vert_norm_color));
 		}
 		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) {
