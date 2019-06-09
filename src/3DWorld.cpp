@@ -1480,6 +1480,9 @@ bool load_config_file(const char *fn) {
 
 int load_top_level_config(const char *def_file) { // defaults.txt
 
+#ifndef _WIN32
+	allow_shader_invariants = 0; // Note: I've seen shader invariant errors multiple times on linux but never on Windows, so I guess we disable it by default when not Windows
+#endif
 	assert(def_file != NULL);
 	alloc_if_req(state_file, dstate_file);
 	alloc_if_req(mesh_file, dmesh_file);

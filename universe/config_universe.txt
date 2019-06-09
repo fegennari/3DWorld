@@ -3,7 +3,7 @@ rand_seed 0
 universe_only 1
 disable_universe 0
 enable_depth_clamp 1
-allow_shader_invariants 1 # disable if driver doesn't support this
+#allow_shader_invariants 0 # disable if driver doesn't support this
 num_threads 8 # enable multithreading
 include config_gameplay.txt
 player_damage 0.5
