@@ -609,6 +609,8 @@ void mouseButton(int button, int state, int x, int y) {
 }
 
 
+void clamp_mouse_delta(int delta, int dmax) {delta = min(dmax, max(-dmax, delta));}
+
 // This function is called whenever the mouse is moved with a mouse button held down.
 // x and y are the location of the mouse (in window-relative coordinates)
 void mouseMotion(int x, int y) {
@@ -624,6 +626,8 @@ void mouseMotion(int x, int y) {
 	add_uevent_mmotion(x, y);
 	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
 	int dx(x - last_mouse_x), dy(y - last_mouse_y);
+	clamp_mouse_delta(dx, window_width/10); // limit to a reasonable delta in case the frame rate is very low
+	clamp_mouse_delta(dy, window_height/10);
 	if (camera_mode == 1 && enable_mouse_look && !map_mode) {button = GLUT_LEFT_BUTTON;}
 
 	switch (button) {
