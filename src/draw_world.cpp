@@ -1465,7 +1465,7 @@ void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 			float const center(0.5*(cube.d[dim][0] + cube.d[dim][1]));
 			float const x1(cpt1.pos[d1]), y1(cpt1.pos[d2]);
 			rand_gen_t rgen;
-			rgen.set_state(*(int *)&cpt1.orig_pos[d1], *(int *)&cpt1.orig_pos[d2]); // hash floats as ints	
+			rgen.set_state(*(int const*)&cpt1.orig_pos[d1], *(int const*)&cpt1.orig_pos[d2]); // hash floats as ints	
 			point epts[ncracks];
 
 			for (unsigned n = 0; n < ncracks; ++n) {

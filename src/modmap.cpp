@@ -63,7 +63,7 @@ bool import_modmap(string const &filename) {
 bool export_modmap(string const &filename) {
 
 	ofstream out(filename.c_str());
-	if (!out.good() || !(out << N_UMODS << endl)) return 0;
+	if (!out.good() || !(out << (unsigned)N_UMODS << endl)) return 0;
 
 	for (unsigned i = 0; i < N_UMODS; ++i) {
 		if (!out.good() || !(out << property_tag << " " << modmaps[i].size() << endl)) return 0;

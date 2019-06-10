@@ -326,7 +326,7 @@ void render_to_texture_t::post_render() {
 void set_temp_clear_color(colorRGBA const &clear_color) {
 
 	colorRGBA orig_clear_color(BLACK);
-	glGetFloatv(GL_COLOR_CLEAR_VALUE, (float *)&orig_clear_color);
+	glGetFloatv(GL_COLOR_CLEAR_VALUE, (float *)&orig_clear_color.R);
 	glClearColor_rgba(clear_color);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glClearColor_rgba(orig_clear_color);

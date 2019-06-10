@@ -506,7 +506,7 @@ public:
 	void bind_all_used_tids();
 	void calc_tangent_vectors();
 	static void bind_default_flat_normal_map() {select_multitex(FLAT_NMAP_TEX, 5);}
-	void set_sky_lighting_file(string const &fn, float weight, int sz[3]);
+	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
@@ -596,7 +596,7 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 bool add_transform_for_cur_model(model3d_xform_t const &xf);
-void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[3]);
+void set_sky_lighting_file_for_cur_model(string const &fn, float weight, unsigned sz[3]);
 void set_occlusion_cube_for_cur_model(cube_t const &cube);
 bool have_cur_model();
 cube_t calc_and_return_all_models_bcube(bool only_reflective=0);

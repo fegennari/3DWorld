@@ -158,8 +158,6 @@ void clear_default_vao();
 
 void create_sin_table();
 
-void init_openal(int &argc, char** argv);
-
 void clear_sm_tree_vbos();
 void clear_scenery_vbos();
 void clear_asteroid_contexts();
@@ -689,6 +687,9 @@ void mouseMotion(int x, int y) {
 			update_cpos();
 		}
 		break;
+
+	default: // is there any other mouse button? error?
+	  break;
 	}
 	last_mouse_x = x;
 	last_mouse_y = y;

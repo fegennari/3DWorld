@@ -39,7 +39,7 @@ int read_ueventlist(char *arg) {
 			unsigned const nparams(std::min((unsigned)ue_nparams[cur_event.type], UE_MAX_PARAMS));
 
 			for (unsigned i = 0; i < nparams; ++i) {
-				if (fscanf(fp, "%u", &(cur_event.params[i])) != 1) {
+				if (fscanf(fp, "%i", &(cur_event.params[i])) != 1) {
 					cout << "Error reading user event file: event # " << eventlist.size() << ", type " << cur_event.type << ", param " << i << endl;
 					eventlist.clear();
 					fclose(fp);

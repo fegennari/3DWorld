@@ -223,7 +223,6 @@ void gen_wind_texture();
 void gen_noise_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
-int get_bare_ls_tid(float zval);
 
 
 bool is_tex_disabled(int i) {
@@ -655,7 +654,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 		if (index == CLOUD_TEX || index == CLOUD_RAW_TEX) {
 			// white -> alpha = 255
 			// blue  -> alpha = 0
-			float const val(float(buf[0]) + float(buf[1]));
+			float const val((float)buf[0] + (float)buf[1]);
 			alpha = ((val <= 340.0) ? 0 : ((unsigned char)1.0*(val - 340.0)));
 
 			if (SMOOTH_SKY_POLES > 0.0 && index == CLOUD_TEX) {
@@ -665,7 +664,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 			}
 		}
 		else { // make white/black part transparent, for example leaves
-			float const val(float(buf[0]) + float(buf[1]) + float(buf[2]));
+			float const val((float)buf[0] + (float)buf[1] + (float)buf[2]);
 				
 			if (is_alpha_tex) { // animated/multipart textures
 				alpha = (unsigned char)(0.333*val);

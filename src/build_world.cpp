@@ -148,7 +148,7 @@ int create_group(int obj_type, unsigned max_objects, unsigned init_objects, unsi
 	bool init_enabled, bool reorderable, bool auto_max, bool predef_use_once)
 {
 	if (num_groups > NUM_TOT_OBJS) {
-		cerr << "Error: Exceeded max of " << NUM_TOT_OBJS << " object groups." << endl;
+		cerr << "Error: Exceeded max of " << (unsigned)NUM_TOT_OBJS << " object groups." << endl;
 		exit(1);
 	}
 	if (obj_type >= NUM_TOT_OBJS) {
@@ -1331,7 +1331,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					} // for n
 				}
 				else if (keyword == "lighting_file_sky_model") {
-					int sz[3] = {0};
+					unsigned sz[3] = {0};
 					float weight(0.0);
 					if (fscanf(fp, "%255s%u%u%u%f", str, &sz[0], &sz[1], &sz[2], &weight) != 5) {return read_error(fp, keyword, coll_obj_file);}
 					set_sky_lighting_file_for_cur_model(str, weight, sz);

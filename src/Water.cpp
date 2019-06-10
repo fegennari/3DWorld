@@ -117,7 +117,6 @@ void init_water_springs(int nws);
 void process_water_springs();
 void add_waves();
 void update_accumulation(int xpos, int ypos);
-void shift_water_springs(vector3d const &vd);
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend);
 void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water);

@@ -56,7 +56,6 @@ bool no_sparse_smap_update();
 bool draw_distant_water();
 bool use_water_plane_tess();
 bool enable_ocean_waves();
-void setup_tile_shader_shadow_map(shader_t &s);
 void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type);
 void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water);
 

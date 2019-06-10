@@ -63,7 +63,7 @@ private:
 		float val;
 
 		cache_entry(point const &pt=all_zeros) : p(pt), val(0.0) {}
-		size_t hash() const {return (10831*(*(int *)(&p[0])) + 15601*(*(int *)(&p[1])) + 21401*(*(int *)(&p[2])));}
+		size_t hash() const {return (10831*(*(int const*)(&p[0])) + 15601*(*(int const*)(&p[1])) + 21401*(*(int const*)(&p[2])));}
 	};
 
 	mutable vector<cache_entry> val_cache;

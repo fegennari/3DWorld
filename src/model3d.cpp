@@ -1851,7 +1851,7 @@ void model3d::set_xform_zval_from_tt_height(bool flatten_mesh) { // set zval to 
 	}
 }
 
-void model3d::set_sky_lighting_file(string const &fn, float weight, int sz[3]) {
+void model3d::set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]) {
 	sky_lighting_fn = fn;
 	sky_lighting_weight = weight;
 	assert(weight > 0.0);
@@ -2444,7 +2444,7 @@ bool add_transform_for_cur_model(model3d_xform_t const &xf) {
 	get_cur_model("transform").add_transform(xf);
 	return 1;
 }
-void set_sky_lighting_file_for_cur_model(string const &fn, float weight, int sz[3]) {
+void set_sky_lighting_file_for_cur_model(string const &fn, float weight, unsigned sz[3]) {
 	get_cur_model("sky_lighting_file").set_sky_lighting_file(fn, weight, sz);
 }
 void set_occlusion_cube_for_cur_model(cube_t const &cube) {

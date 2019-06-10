@@ -457,7 +457,7 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	while (cinfo.next_scanline < cinfo.image_height) {
 		JSAMPROW row_pointer[1];
 		unsigned const yval(invert_y ? (height-cinfo.next_scanline-1) : cinfo.next_scanline);
-		row_pointer[0] = (unsigned char *)&data[yval*step_size]; // cast away the const (we know the data won't be modified)
+		row_pointer[0] = const_cast<unsigned char *>(&data[yval*step_size]); // cast away the const (we know the data won't be modified)
 		jpeg_write_scanlines(&cinfo, row_pointer, 1);
 	}
 	jpeg_finish_compress(&cinfo);
