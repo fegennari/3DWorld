@@ -311,7 +311,7 @@ namespace detail
 
 		std::vector<char> Data(static_cast<std::size_t>(End - Beg));
 
-		std::fread(&Data[0], 1, Data.size(), File);
+		if (std::fread(&Data[0], 1, Data.size(), File) != Data.size()) {return texture();} // FG
 		std::fclose(File);
 
 		return load_dds(&Data[0], Data.size());
