@@ -1352,8 +1352,8 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 }
 
 // explicit instantiations
-template class shader_float_matrix_uploader<4, 4>;
-template class shader_float_matrix_uploader<3, 1>;
+template struct shader_float_matrix_uploader<4, 4>;
+template struct shader_float_matrix_uploader<3, 1>;
 
 
 void set_point_sprite_mode(bool enabled) { // Note: to be removed when using a core profile
