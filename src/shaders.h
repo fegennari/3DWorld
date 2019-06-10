@@ -16,7 +16,6 @@ unsigned const NUM_SHADER_TYPES  = 6;
 
 #define make_shader_bool_prefix(name, val) ((val) ? ("const bool " name " = true;") : ("const bool " name " = false;"))
 
-void disable_instancing_for_shader_loc(int loc);
 bool check_for_tess_shader();
 
 
@@ -273,19 +272,8 @@ public:
 
 template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 
-	static void enable(int start_loc, int divisor, float const *const data=NULL) {
-		assert(start_loc >= 0 && divisor >= 0);
-
-		for (unsigned i = 0; i < N; ++i) {
-			int const loc(start_loc + i);
-			glEnableVertexAttribArray(loc);
-			glVertexAttribPointer(loc, M, GL_FLOAT, GL_FALSE, M*N*sizeof(float), (const void *)(data + M*i));
-			glVertexAttribDivisor(loc, divisor);
-		}
-	}
-	static void disable(int start_loc) {
-		for (unsigned i = 0; i < N; ++i) {disable_instancing_for_shader_loc(start_loc + i);}
-	}
+	static void enable(int start_loc, int divisor, float const *const data=NULL);
+	static void disable(int start_loc);
 };
 
 

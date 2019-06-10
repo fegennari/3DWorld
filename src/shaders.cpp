@@ -1337,6 +1337,24 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 	inst_xforms.clear();
 }
 
+/*static*/ template<unsigned M, unsigned N> void shader_float_matrix_uploader<M, N>::enable(int start_loc, int divisor, float const *const data) {
+	assert(start_loc >= 0 && divisor >= 0);
+  
+	for (unsigned i = 0; i < N; ++i) {
+		int const loc(start_loc + i);
+		glEnableVertexAttribArray(loc);
+		glVertexAttribPointer(loc, M, GL_FLOAT, GL_FALSE, M*N*sizeof(float), (const void *)(data + M*i));
+		glVertexAttribDivisor(loc, divisor);
+	}
+}
+/*static*/ template<unsigned M, unsigned N> void shader_float_matrix_uploader<M, N>::disable(int start_loc) {
+	for (unsigned i = 0; i < N; ++i) {disable_instancing_for_shader_loc(start_loc + i);}
+}
+
+// explicit instantiations
+template class shader_float_matrix_uploader<4, 4>;
+template class shader_float_matrix_uploader<3, 1>;
+
 
 void set_point_sprite_mode(bool enabled) { // Note: to be removed when using a core profile
 
