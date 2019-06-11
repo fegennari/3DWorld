@@ -386,6 +386,7 @@ struct cube_t { // size = 24
 	float d[3][2]; // {x,y,z},{min,max}
 
 	cube_t() {}
+	//cube_t() {d[0][0] = 1; d[0][1] = 0; d[1][0] = 1; d[1][1] = 0; d[2][0] = 1; d[2][1] = 0;} // initialize to invalid values for testing purposes
 	
 	cube_t(float x1, float x2, float y1, float y2, float z1, float z2) {
 		d[0][0] = x1; d[0][1] = x2;

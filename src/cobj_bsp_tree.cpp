@@ -697,8 +697,14 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 	// split in this dimension: use upper 2 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {
 		unsigned bix(2);
-		float const *vals(get_cobj(i).d[dim]);
-		assert(vals[0] <= vals[1]);
+		coll_obj const &cobj(get_cobj(i));
+		float const *vals(cobj.d[dim]);
+		
+		if (vals[0] > vals[1]) {
+			std::cerr << "Invalid collision object bounding cube in BVH tree: " << TXT(is_static) << TXT(is_dynamic) << TXT(i) << TXT(cixs[i]) << TXT(dim)
+				      << TXT(vals[0]) << TXT(vals[1]) << TXTi(cobj.type) << TXTi(cobj.status) << " bcube=" << cobj.str() << endl;
+			assert(0);
+		}
 		if (vals[1] <= sval_lo) {bix =  (depth&1);} // ends   before the split, put in bin 0
 		if (vals[0] >= sval_hi) {bix = !(depth&1);} // starts after  the split, put in bin 1
 		if (bix == 0) {cixs[pos++] = cixs[i];} else {ptd.temp_bins[bix].push_back(cixs[i]);}

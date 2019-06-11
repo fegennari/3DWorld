@@ -123,7 +123,7 @@ class cobj_bvh_tree : public cobj_tree_base {
 		void increment_node_ix() {assert(cur_nix >= start_nix); cur_nix++;}
 	};
 
-	void add_cobj(unsigned ix) {if (obj_ok((*cobjs)[ix])) cixs.push_back(ix);}
+	void add_cobj(unsigned ix) {if (obj_ok((*cobjs)[ix])) {cixs.push_back(ix);}}
 	coll_obj const &get_cobj(unsigned ix) const {return (*cobjs)[cixs[ix]];}
 	bool create_cixs();
 	void calc_node_bbox(tree_node &n) const;
@@ -131,14 +131,14 @@ class cobj_bvh_tree : public cobj_tree_base {
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd);
 
 	bool obj_ok(coll_obj const &c) const {
-		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) || (!is_static && !is_dynamic)) &&
+		return (((!is_dynamic && c.status == COLL_STATIC) || (!is_static && c.status == COLL_DYNAMIC)) &&
 			(!occluders_only || c.is_occluder()) && !(c.cp.flags & COBJ_NO_COLL) && (!cubes_only || c.type == COLL_CUBE) &&
 			(inc_voxel_cobjs || c.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN));
 	}
 
 public:
-	cobj_bvh_tree(coll_obj_group const *cobjs_, bool s, bool d, bool o, bool c, bool v)
-		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c), inc_voxel_cobjs(v) {assert(cobjs);}
+	cobj_bvh_tree(coll_obj_group const *cobjs_, bool st, bool dy, bool oo, bool co, bool vc)
+		: cobjs(cobjs_), is_static(st), is_dynamic(dy), occluders_only(oo), cubes_only(co), inc_voxel_cobjs(vc) {assert(cobjs);}
 
 	unsigned get_num_objs() const {return cixs.size();}
 	void clear();
