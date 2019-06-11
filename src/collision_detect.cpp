@@ -639,9 +639,7 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 
 void coll_cell::clear(bool clear_vectors) {
 
-	if (clear_vectors) {
-		if (cvals.capacity() > INIT_CCELL_SIZE) {cvals.clear();} else {cvals.resize(0);}
-	}
+	if (clear_vectors) {cvals.clear();}
 	zmin =  FAR_DISTANCE;
 	zmax = -FAR_DISTANCE;
 }
