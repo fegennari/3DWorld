@@ -190,8 +190,11 @@ unsigned cube_t::get_split_dim(float &max_sz, float &sval, unsigned skip_dims) c
 	for (unsigned i = 0; i < 3; ++i) {
 		if (skip_dims & (1 << i)) continue;
 		float const dim_sz(d[i][1] - d[i][0]);
-		assert(dim_sz >= 0.0);
 		
+		if (dim_sz < 0.0) {
+			std::cerr << "Invalid cube in get_split_dim(): " << str() << endl;
+			assert(0);
+		}
 		if (dim_sz > max_sz) {
 			max_sz = dim_sz;
 			dim    = i;

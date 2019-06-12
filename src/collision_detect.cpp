@@ -378,7 +378,7 @@ void add_coll_capsule_to_matrix(int index, int dhcm) {
 	cobj.type = ((cobj.is_cylin_vertical() && cobj.radius == cobj.radius2) ? COLL_CYLINDER : COLL_CYLINDER_ROT);
 	vector3d const dir(cobj.points[1] - cobj.points[0]);
 	float const len(dir.mag());
-	assert(len > 0.0);
+	assert(len > TOLERANCE);
 	cobj.points[0] -= (cobj.radius /len)*dir; // extend cylinder out by radius to get a bounding cylinder for this capsule
 	cobj.points[1] += (cobj.radius2/len)*dir;
 	bool const swap_r(cobj.radius2 < cobj.radius);
@@ -1185,7 +1185,7 @@ bool sphere_sphere_int(point const &sc1, point const &sc2, float sr1, float sr2,
 	
 	float dist_sq(p2p_dist_sq(sc1, sc2)), radius(sr1 + sr2);
 	if (dist_sq > radius*radius) return 0;
-	cnorm  = (sc1 - sc2)/sqrt(dist_sq);
+	cnorm  = ((dist_sq == 0.0) ? plus_z : (sc1 - sc2)/sqrt(dist_sq)); // arbitrarily choose +z to avoid divide-by-zero
 	new_sc = sc2 + cnorm*radius;
 	return 1;
 }

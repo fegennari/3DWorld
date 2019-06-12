@@ -929,10 +929,11 @@ bool sphere_cube_intersect_xy(point const &pos, float radius, cube_t const &cube
 
 void cylinder_3dw::calc_bcube(cube_t &bcube) const {
 
+	assert(p1 != p2);
 	vector3d const norm(get_norm_dir_vect());
 			
 	for (unsigned i = 0; i < 3; ++i) {
-		float const ni(sqrt(1.0 - norm[i]*norm[i]));
+		float const ni(sqrt(max(0.0, (1.0 - norm[i]*norm[i]))));
 		bcube.d[i][0] = min((p1[i] - ni*r1), (p2[i] - ni*r2));
 		bcube.d[i][1] = max((p1[i] + ni*r1), (p2[i] + ni*r2));
 	}

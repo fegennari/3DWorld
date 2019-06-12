@@ -123,10 +123,12 @@ void coll_obj::calc_bcube() {
 	case COLL_CUBE:
 		break; // already set
 	case COLL_SPHERE:
+		assert(radius > 0.0);
 		set_from_sphere(points[0], radius);
 		break;
 	case COLL_POLYGON:
 		if (norm == zero_vector) {norm = get_poly_norm(points);} // Note: doesn't check for non-coplanar or degenerate polygons
+		assert(!is_nan(norm));
 		set_from_points(points, npoints); // set cube_t
 
 		for (unsigned p = 0; p < 3; ++p) {
@@ -141,6 +143,7 @@ void coll_obj::calc_bcube() {
 		get_bounding_cylinder().calc_bcube(*this);
 		break;
 	case COLL_CAPSULE: {
+		assert(radius > 0.0 && radius2 > 0.0);
 		cube_t bcube2;
 		set_from_sphere(points[0], radius);
 		bcube2.set_from_sphere(points[1], radius2);
@@ -806,6 +809,8 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 }
 
 cylinder_3dw coll_obj::get_bounding_cylinder() const { // Note: only valid for torus, capsule, and cylinder
+
+	assert(radius >= 0.0 && radius2 >= 0.0);
 	
 	switch (type) {
 	case COLL_TORUS:
