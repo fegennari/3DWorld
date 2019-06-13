@@ -1502,7 +1502,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			adjust_tree_zval(tree_center, size, type, create_bush); // ignore return value, as it's too late to drop the tree due to slope here
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
-		cube_t const cc(clip_cube - tree_center);
+		cube_t const cc(clip_cube - tree_center); // Note: cc is only used if use_clip_cube==1
 		float const hscale((height_scale == 1.0) ? treetype.height_scale : height_scale);
 		float const br_scale((br_scale_mult == 1.0) ? treetype.branch_radius : br_scale_mult);
 		float const bbo_scale((height_scale == 1.0) ? treetype.branch_break_off : 1.0);

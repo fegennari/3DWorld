@@ -1088,10 +1088,12 @@ void add_dynamic_lights_ground() {
 		dl_sources.push_back(*i);
 		dl_smap_enabled |= i->smap_enabled();
 	}
+#if 0
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		point const pos(gen_rand_scene_pos());
 		dl_sources.push_back(light_source(0.94, pos, pos, BLUE, 1));
 	}
+#endif
 	// Note: do we want to sort by y/x position to minimize cache misses?
 	stable_sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(get_grid_xsize()), gby(get_grid_ysize());

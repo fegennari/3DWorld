@@ -208,7 +208,7 @@ public:
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 	cube_t leaves_bcube, branches_bcube;
 
-	tree_data_t() : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), branch_index_bytes(0), tree_type(-1),
+	tree_data_t() : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), branch_index_bytes(0), tree_type(-1), base_color(WHITE), leaf_color(WHITE),
 		render_leaf_texture(TREE_BILLBOARD_MULTISAMPLE), render_branch_texture(TREE_BILLBOARD_MULTISAMPLE), last_update_frame(0),
 		leaf_change_start(0), leaf_change_end(0), reset_leaves(0), has_4th_branches(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
 		br_scale(1.0), b_tex_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
@@ -331,7 +331,7 @@ class tree {
 
 public:
 	tree(bool en_lw=1) : tree_data(NULL), type(-1), created(0), leaf_burn_ix(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
-		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0), last_size_scale(0.0), tree_nl_scale(1.0) {}
+	  enable_leaf_wind(en_lw), use_clip_cube(0), tree_center(all_zeros), damage(0.0), damage_scale(0.0), last_size_scale(0.0), tree_nl_scale(1.0), tree_color(WHITE), clip_cube(all_zeros) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
