@@ -8,7 +8,8 @@ GLM=dependencies/glm
 INCLUDES=-Isrc -Isrc/texture_tile_blend -I$(TARGA) -I$(GLI) -I$(GLM)
 DEFINES=-DENABLE_JPEG -DENABLE_PNG -DENABLE_TIFF -DENABLE_DDS
 # Note: extra warnings can be useful, but GLI and Targa generate too many warnings
-CXXFLAGS=-g -Wall -O3 -fopenmp $(INCLUDES) $(DEFINES) #-Wextra -Wno-unused-parameter -Wno-implicit-fallthrough
+CXXFLAGS=-g -Wall -O3 -fopenmp $(INCLUDES) $(DEFINES) -Wextra -Wno-unused-parameter -Wno-implicit-fallthrough \
+#-Wstrict-aliasing=2 -Wunreachable-code -Wcast-align -Wcast-qual -Wsign-compare -Wsign-promo -Wdisabled-optimization -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Woverloaded-virtual -Wredundant-decls -Wstrict-null-sentinel -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -fasynchronous-unwind-tables -fexceptions -Werror=implicit-function-declaration -pedantic -pedantic-errors -Wformat=2 -Wformat-nonliteral -Wformat-security -Wformat-y2k -Wimport -Winvalid-pch -Wmissing-field-initializers -Wmissing-format-attribute -Wpacked -Wpointer-arith -Wstack-protector -fstack-protector-strong -D_FORTIFY_SOURCE=2 -Wunused -Wvariadic-macros -Wwrite-strings -Werror=return-type -D_GLIBCXX_ASSERTIONS -fexceptions -fasynchronous-unwind-tables -Wctor-dtor-privacy -Wnon-virtual-dtor
 OBJS=$(shell cat obj_list)
 
 LINK=$(CPP) -fopenmp $(INCLUDES)
