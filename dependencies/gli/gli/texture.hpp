@@ -142,7 +142,7 @@ namespace gli
 		void* data(size_type Layer, size_type Face, size_type Level);
 
 		/// Return a pointer to the beginning of the texture instance data.
-		void const* const data(size_type Layer, size_type Face, size_type Level) const;
+		void const* data(size_type Layer, size_type Face, size_type Level) const;
 
 		/// Return a pointer of type genType which size must match the texture format block size
 		template <typename gen_type>
@@ -150,7 +150,7 @@ namespace gli
 
 		/// Return a pointer of type genType which size must match the texture format block size
 		template <typename gen_type>
-		gen_type const* const data(size_type Layer, size_type Face, size_type Level) const;
+		gen_type const* data(size_type Layer, size_type Face, size_type Level) const;
 
 		/// Clear the entire texture storage_linear with zeros
 		void clear();

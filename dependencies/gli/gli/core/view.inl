@@ -25,9 +25,9 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
-		GLI_ASSERT(BaseFace >= 0 && BaseFace < Texture.faces() && MaxFace >= 0 && MaxFace < Texture.faces() && BaseFace <= MaxFace);
-		GLI_ASSERT(BaseLayer >= 0 && BaseLayer < Texture.layers() && MaxLayer >= 0 && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseFace < Texture.faces() && MaxFace < Texture.faces() && BaseFace <= MaxFace);
+		GLI_ASSERT(BaseLayer < Texture.layers() && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
 
 		return texture(
 			Texture, Texture.target(), Texture.format(),
@@ -52,7 +52,7 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
 
 		return texture(
 			Texture, TARGET_1D, Texture.format(),
@@ -69,8 +69,8 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
-		GLI_ASSERT(BaseLayer >= 0 && BaseLayer < Texture.layers() && MaxLayer >= 0 && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseLayer < Texture.layers() && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
 
 		return texture(
 			Texture, TARGET_1D_ARRAY, Texture.format(),
@@ -86,7 +86,7 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
 
 		return texture(
 			Texture, TARGET_2D, Texture.format(),
@@ -103,8 +103,8 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
-		GLI_ASSERT(BaseLayer >= 0 && BaseLayer < Texture.layers() && MaxLayer >= 0 && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseLayer < Texture.layers() && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
 
 		return texture(
 			Texture, TARGET_2D_ARRAY, Texture.format(),
@@ -120,7 +120,7 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
 
 		return texture(
 			Texture, TARGET_3D, Texture.format(),
@@ -137,8 +137,8 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
-		GLI_ASSERT(BaseFace >= 0 && BaseFace < Texture.faces() && MaxFace >= 0 && MaxFace < Texture.faces() && BaseFace <= MaxFace);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseFace < Texture.faces() && MaxFace < Texture.faces() && BaseFace <= MaxFace);
 
 		return texture(
 			Texture, TARGET_CUBE, Texture.format(),
@@ -156,9 +156,9 @@ namespace gli
 	)
 	{
 		GLI_ASSERT(!Texture.empty());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < Texture.levels() && MaxLevel >= 0 && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
-		GLI_ASSERT(BaseFace >= 0 && BaseFace < Texture.faces() && MaxFace >= 0 && MaxFace < Texture.faces() && BaseFace <= MaxFace);
-		GLI_ASSERT(BaseLayer >= 0 && BaseLayer < Texture.layers() && MaxLayer >= 0 && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
+		GLI_ASSERT(BaseLevel < Texture.levels() && MaxLevel < Texture.levels() && BaseLevel <= MaxLevel);
+		GLI_ASSERT(BaseFace < Texture.faces() && MaxFace < Texture.faces() && BaseFace <= MaxFace);
+		GLI_ASSERT(BaseLayer < Texture.layers() && MaxLayer < Texture.layers() && BaseLayer <= MaxLayer);
 
 		return texture(
 			Texture, TARGET_CUBE_ARRAY, Texture.format(),

@@ -54,7 +54,7 @@ namespace gli
 		extent_type extent(size_type Level) const;
 
 		data_type* data();
-		data_type const* const data() const;
+		data_type const* data() const;
 
 		/// Compute the relative memory offset to access the data for a specific layer, face and level
 		size_type base_offset(

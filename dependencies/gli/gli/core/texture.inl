@@ -189,7 +189,7 @@ namespace gli
 	inline texture::size_type texture::size(size_type Level) const
 	{
 		GLI_ASSERT(!this->empty());
-		GLI_ASSERT(Level >= 0 && Level < this->levels());
+		GLI_ASSERT(Level < this->levels());
 
 		return this->Cache.get_memory_size(Level);
 	}
@@ -235,15 +235,15 @@ namespace gli
 	inline void* texture::data(size_type Layer, size_type Face, size_type Level)
 	{
 		GLI_ASSERT(!this->empty());
-		GLI_ASSERT(Layer >= 0 && Layer < this->layers() && Face >= 0 && Face < this->faces() && Level >= 0 && Level < this->levels());
+		GLI_ASSERT(Layer < this->layers() && Face < this->faces() && Level < this->levels());
 
 		return this->Cache.get_base_address(Layer, Face, Level);
 	}
 
-	inline void const* const texture::data(size_type Layer, size_type Face, size_type Level) const
+	inline void const* texture::data(size_type Layer, size_type Face, size_type Level) const
 	{
 		GLI_ASSERT(!this->empty());
-		GLI_ASSERT(Layer >= 0 && Layer < this->layers() && Face >= 0 && Face < this->faces() && Level >= 0 && Level < this->levels());
+		GLI_ASSERT(Layer < this->layers() && Face < this->faces() && Level < this->levels());
 
 		return this->Cache.get_base_address(Layer, Face, Level);
 	}
@@ -257,7 +257,7 @@ namespace gli
 	}
 
 	template <typename gen_type>
-	inline gen_type const* const texture::data(size_type Layer, size_type Face, size_type Level) const
+	inline gen_type const* texture::data(size_type Layer, size_type Face, size_type Level) const
 	{
 		GLI_ASSERT(block_size(this->format()) >= sizeof(gen_type));
 
@@ -267,7 +267,7 @@ namespace gli
 	inline texture::extent_type texture::extent(size_type Level) const
 	{
 		GLI_ASSERT(!this->empty());
-		GLI_ASSERT(Level >= 0 && Level < this->levels());
+		GLI_ASSERT(Level < this->levels());
 
 		return this->Cache.get_extent(Level);
 	}

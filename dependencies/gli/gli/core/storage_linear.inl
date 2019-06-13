@@ -59,14 +59,14 @@ namespace gli
 
 	inline storage_linear::extent_type storage_linear::block_count(size_type Level) const
 	{
-		GLI_ASSERT(Level >= 0 && Level < this->Levels);
+		GLI_ASSERT(Level < this->Levels);
 
 		return glm::ceilMultiple(this->extent(Level), BlockExtent) / BlockExtent;
 	}
 
 	inline storage_linear::extent_type storage_linear::extent(size_type Level) const
 	{
-		GLI_ASSERT(Level >= 0 && Level < this->Levels);
+		GLI_ASSERT(Level < this->Levels);
 
 		return glm::max(this->Extent >> storage_linear::extent_type(static_cast<storage_linear::extent_type::value_type>(Level)), storage_linear::extent_type(1));
 	}
@@ -85,7 +85,7 @@ namespace gli
 		return &this->Data[0];
 	}
 
-	inline storage_linear::data_type const* const storage_linear::data() const
+	inline storage_linear::data_type const* storage_linear::data() const
 	{
 		GLI_ASSERT(!this->empty());
 
@@ -95,7 +95,7 @@ namespace gli
 	inline storage_linear::size_type storage_linear::base_offset(size_type Layer, size_type Face, size_type Level) const
 	{
 		GLI_ASSERT(!this->empty());
-		GLI_ASSERT(Layer >= 0 && Layer < this->layers() && Face >= 0 && Face < this->faces() && Level >= 0 && Level < this->levels());
+		GLI_ASSERT(Layer < this->layers() && Face < this->faces() && Level < this->levels());
 
 		size_type const LayerSize = this->layer_size(0, this->faces() - 1, 0, this->levels() - 1);
 		size_type const FaceSize = this->face_size(0, this->levels() - 1);
@@ -150,15 +150,15 @@ namespace gli
 
 	inline storage_linear::size_type storage_linear::level_size(size_type Level) const
 	{
-		GLI_ASSERT(Level >= 0 && Level < this->levels());
+		GLI_ASSERT(Level < this->levels());
 
 		return this->BlockSize * glm::compMul(this->block_count(Level));
 	}
 
 	inline storage_linear::size_type storage_linear::face_size(size_type BaseLevel, size_type MaxLevel) const
 	{
-		GLI_ASSERT(MaxLevel >= 0 && MaxLevel < this->levels());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < this->levels());
+		GLI_ASSERT(MaxLevel < this->levels());
+		GLI_ASSERT(BaseLevel < this->levels());
 		GLI_ASSERT(BaseLevel <= MaxLevel);
 
 		size_type FaceSize(0);
@@ -174,10 +174,10 @@ namespace gli
 		size_type BaseFace, size_type MaxFace,
 		size_type BaseLevel, size_type MaxLevel) const
 	{
-		GLI_ASSERT(MaxFace >= 0 && MaxFace < this->faces());
-		GLI_ASSERT(BaseFace >= 0 && BaseFace < this->faces());
-		GLI_ASSERT(MaxLevel >= 0 && MaxLevel < this->levels());
-		GLI_ASSERT(BaseLevel >= 0 && BaseLevel < this->levels());
+		GLI_ASSERT(MaxFace < this->faces());
+		GLI_ASSERT(BaseFace < this->faces());
+		GLI_ASSERT(MaxLevel < this->levels());
+		GLI_ASSERT(BaseLevel < this->levels());
 
 		// The size of a layer is the sum of the size of each face.
 		// All the faces have the same size.
