@@ -1695,7 +1695,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	bool const clip_windows(mat.no_city); // only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
-		float const door_ztop((!doors.empty() && (i - parts.begin()) == unsigned(door_part)) ? doors.front().pts[2].z : 0.0);
+		float const door_ztop((!doors.empty() && (i - parts.begin()) == int(door_part)) ? doors.front().pts[2].z : 0.0);
 		bdraw.add_section(*this, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop); // XY, no_ao=1
 	}
 }

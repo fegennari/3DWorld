@@ -798,7 +798,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		}
 		if (on_conn_road) { // on connector road, check before entering intersection to a city
 			for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
-				if (*ix != (i - cars.begin())) {check_collision(*i, cars[*ix]);}
+				if (*ix != unsigned(i - cars.begin())) {check_collision(*i, cars[*ix]);}
 			}
 			//++num_on_conn_road;
 		}
