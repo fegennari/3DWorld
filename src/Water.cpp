@@ -119,7 +119,7 @@ void add_waves();
 void update_accumulation(int xpos, int ypos);
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend);
-void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water);
+void setup_mesh_and_water_shader(shader_t &s, bool use_detail_normal_map, bool is_water);
 
 
 

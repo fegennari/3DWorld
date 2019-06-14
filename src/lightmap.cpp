@@ -712,8 +712,8 @@ void build_lightmap(bool verbose) {
 			cube_t bcube; // unused
 			int bnds[3][2], cent[3], cobj(-1), last_cobj(-1);
 			
-			for (unsigned i = 0; i < 3; ++i) {
-				cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(lposc[i], i))); // clamp to mesh bounds
+			for (unsigned j = 0; j < 3; ++j) {
+				cent[j] = max(0, min(MESH_SIZE[j]-1, get_dim_pos(lposc[j], j))); // clamp to mesh bounds
 			}
 			ls.get_bounds(bcube, bnds, SQRT_CTHRESH);
 			check_coll_line(lpos1, lpos2, cobj, -1, 1, 2, 1); // check cobj containment and ignore that shape (ignore voxels)

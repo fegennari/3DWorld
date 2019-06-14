@@ -766,14 +766,14 @@ bool ship_defs_file_reader::read_string(ifstream &in, string &str) { // can be c
 		return 0;
 	}
 	while (1) {
-		int const c(in.get());
-		if (c == '"') break;
+		int const c2(in.get());
+		if (c2 == '"') break;
 		
-		if (is_EOF(c)) {
+		if (is_EOF(c2)) {
 			cerr << "Error: Unterminated string." << endl;
 			return 0;
 		}
-		str.push_back(char(c));
+		str.push_back(char(c2));
 	}
 	return 1;
 }

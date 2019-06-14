@@ -290,10 +290,10 @@ inline float fast_atof(const char* c)
 }
 
 
-inline float fast_atof( const char* c, const char** cout)
+inline float fast_atof( const char* c, const char** c_out)
 {
 	float ret;
-	*cout = fast_atoreal_move<float>(c, ret);
+	*c_out = fast_atoreal_move<float>(c, ret);
 
 	return ret;
 }
@@ -315,10 +315,10 @@ inline double fast_atod(const char* c)
 }
 
 
-inline double fast_atod( const char* c, const char** cout)
+inline double fast_atod( const char* c, const char** c_out)
 {
 	double ret;
-	*cout = fast_atoreal_move<double>(c, ret);
+	*c_out = fast_atoreal_move<double>(c, ret);
 
 	return ret;
 }

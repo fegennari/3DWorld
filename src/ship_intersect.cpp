@@ -187,7 +187,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 		vector3d const delta(cross_product(pos, plus_z).get_norm() * step);
 		cylinder_quad_projection(pts_, cylinder_3dw(p-delta, p+delta, ri_mod, ri_mod), (p - spos_xf), npts);
 		upos_point_type pts[4]; // 3 or 4
-		for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
+		for (int n = 0; n < npts; ++n) pts[n] = pts_[n];
 		ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj, min_sdist).draw_geom(tpos);
 	}
 

@@ -78,8 +78,8 @@ extern reflective_cobjs_t reflective_cobjs;
 
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects, unsigned app_rate,
 	bool init_enabled, bool reorderable, bool auot_max, bool predef_use_once=0);
-void add_all_coll_objects(const char *coll_obj_file, bool re_add);
-int read_coll_objects(const char *coll_obj_file);
+void add_all_coll_objects(const char *filename, bool re_add);
+int read_coll_objects(const char *filename);
 bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn);
 void gen_star_points();
 int gen_game_obj(int type);
@@ -843,13 +843,13 @@ void coll_obj_group::finalize() {
 }
 
 
-void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
+void add_all_coll_objects(const char *filename, bool re_add) {
 
 	static int init(0);
 
 	if (!init) {
 		if (load_coll_objs) {
-			if (!read_coll_objects(coll_obj_file)) {exit(1);}
+			if (!read_coll_objects(filename)) {exit(1);}
 			fixed_cobjs.finalize();
 			bool const has_voxel_cobjs(gen_voxels_from_cobjs(fixed_cobjs));
 			unsigned const ncobjs(fixed_cobjs.size());
@@ -1434,29 +1434,29 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'O': // load *.obj | *.3ds | *.model3d file: <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
 			{
-				model3d_xform_t model_xf;
+				model3d_xform_t model_xf2;
 				string const fn(read_quoted_string(fp, line_num));
 				int recalc_normals(0), write_file(0);
 
 				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from quad polygons (voxels), 6=cubes from edges
-				if (fn.empty() || fscanf(fp, "%i%i%i%f", &model_xf.group_cobjs_level, &recalc_normals, &write_file, &model_xf.voxel_spacing) < 3) {
+				if (fn.empty() || fscanf(fp, "%i%i%i%f", &model_xf2.group_cobjs_level, &recalc_normals, &write_file, &model_xf2.voxel_spacing) < 3) {
 					return read_error(fp, "load model file command", coll_obj_file);
 				}
-				if (model_xf.group_cobjs_level < 0 || model_xf.group_cobjs_level > 6) {return read_error(fp, "load model file command group_cobjs_level", coll_obj_file);}
+				if (model_xf2.group_cobjs_level < 0 || model_xf2.group_cobjs_level > 6) {return read_error(fp, "load model file command group_cobjs_level", coll_obj_file);}
 				if (recalc_normals < 0 || recalc_normals > 2) {return read_error(fp, "recalc_normals must be between 0 and 2", coll_obj_file);}
-				bool const use_model3d(model_xf.group_cobjs_level >= 3), no_cobjs(model_xf.group_cobjs_level >= 4);
+				bool const use_model3d(model_xf2.group_cobjs_level >= 3), no_cobjs(model_xf2.group_cobjs_level >= 4);
 				ppts.clear();
 				RESET_TIME;
 				
 				if (!read_model_file(fn, (no_cobjs ? nullptr : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness,
-					use_model3d, recalc_normals, model_xf.group_cobjs_level, (write_file != 0), 1))
+					use_model3d, recalc_normals, model_xf2.group_cobjs_level, (write_file != 0), 1))
 				{
 					//return read_error(fp, "model file data", coll_obj_file);
 					cerr << "Error reading model file data from file " << fn << "; Model will be skipped" << endl; // make it nonfatal
 					skip_cur_model = 1;
 					break;
 				}
-				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf));
+				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf2));
 				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
 				skip_cur_model = 0;
 				PRINT_TIME("Model File Load/Process");
@@ -2076,7 +2076,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	return 1;
 }
 
-int read_coll_objects(const char *coll_obj_file) {
+int read_coll_objects(const char *filename) {
 
 	geom_xform_t xf;
 	coll_obj cobj;
@@ -2085,7 +2085,7 @@ int read_coll_objects(const char *coll_obj_file) {
 	cobj.cp.draw    = 1;   // default
 	if (EXPLODE_EVERYTHING) {cobj.destroy = EXPLODEABLE;}
 	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
-	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
+	if (!read_coll_obj_file(filename, xf, cobj, 0, WHITE)) return 0;
 	if (num_keycards > 0) {obj_groups[coll_id[KEYCARD]].enable();}
 	if (has_scenery2) {gen_scenery();} // need to call post_gen_setup() for leafy plants
 	cube_t const model_bcube(calc_and_return_all_models_bcube()); // calculate even if not using; will force internal transform bcubes to be calculated

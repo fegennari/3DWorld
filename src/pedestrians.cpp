@@ -1006,10 +1006,10 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.02*ped.radius); // at the feet
 					point pao[4];
 					
-					for (unsigned i = 0; i < 4; ++i) {
-						point &v(pao[i]);
-						v.x = ped.pos.x + (((i&1)^(i>>1)) ? -ao_radius : ao_radius);
-						v.y = ped.pos.y + ((i>>1)         ? -ao_radius : ao_radius);
+					for (unsigned n = 0; n < 4; ++n) {
+						point &v(pao[n]);
+						v.x = ped.pos.x + (((n&1)^(n>>1)) ? -ao_radius : ao_radius);
+						v.y = ped.pos.y + ((n>>1)         ? -ao_radius : ao_radius);
 						v.z = zval;
 					}
 					dstate.ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.4), plus_z);

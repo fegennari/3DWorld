@@ -300,8 +300,8 @@ bool voxel_map::read(char const *const fn) {
 	
 	for (unsigned i = 0; i < map_size; ++i) {
 		data_block data;
-		size_t const n(fread(&data, sizeof(data_block), 1, fp));
-		assert(n == 1);
+		size_t const nr(fread(&data, sizeof(data_block), 1, fp));
+		assert(nr == 1);
 		data.add_to_map(*this);
 	}
 	fclose(fp);
@@ -324,8 +324,8 @@ bool voxel_map::write(char const *const fn) const {
 	for (const_iterator i = begin(); i != end(); ++i) {
 		data_block data;
 		data.set_from_map_iter(i);
-		size_t const n(fwrite(&data, sizeof(data_block), 1, fp));
-		assert(n == 1);
+		size_t const nw(fwrite(&data, sizeof(data_block), 1, fp));
+		assert(nw == 1);
 	}
 	fclose(fp);
 	return 1;

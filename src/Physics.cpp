@@ -1485,8 +1485,8 @@ void particle_cloud::apply_physics(unsigned i) {
 		if (coll && radius >= MAX_PART_CLOUD_RAD && (rand()&7) == 0) {gen_fire(pos, 1.0, source);} // will be destoyed next frame
 	}
 	if (damage_type == GASSED) { // check for gas ignition near fire
-		for (unsigned i = 0; i < fires.size(); ++i) {
-			if (fires[i].enabled() && dist_less_than(fires[i].pos, pos, radius)) {
+		for (unsigned f = 0; f < fires.size(); ++f) {
+			if (fires[f].enabled() && dist_less_than(fires[f].pos, pos, radius)) {
 				create_explosion(pos, source, 0, 10*damage*rscale, 4*radius, BLAST_RADIUS, 0);
 				status = 0;
 				return;

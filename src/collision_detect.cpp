@@ -1002,8 +1002,8 @@ bool is_point_interior(point const &pos, float radius) { // is query point inter
 
 					if (cobj.type == COLL_CUBE) { // cube
 						unsigned const dim(get_max_dim(cnorm)); // cube intersection dim
-						bool const dir(cnorm[dim] > 0); // cube intersection dir
-						inside_count += ((cobj.cp.surfs & EFLAGS[dim][dir]) ? 1 : -1); // inside if cube side is disabled
+						bool const idir(cnorm[dim] > 0); // cube intersection dir
+						inside_count += ((cobj.cp.surfs & EFLAGS[dim][idir]) ? 1 : -1); // inside if cube side is disabled
 					}
 					else if (cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK) { // planar/thin polygon
 						inside_count += ((dot_product(cnorm, cobj.norm) > 0.0) ? 1 : -1); // inside if hit the polygon back face

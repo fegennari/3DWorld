@@ -34,15 +34,15 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 			if (thickness > MIN_POLY_THICK) { // thick polygon
 				if (ppts.empty()) {thick_poly_to_sides(points, npoints, norm, thickness, ppts);}
 
-				for (unsigned i = 0; i < ppts.size(); ++i) {
-					for (unsigned j = 0; j < ppts[i].npts; ++j) {
-						if (dot_product_ptv(pts_norm, center, ppts[i][j]) > 0.0) return 0;
+				for (unsigned k = 0; k < ppts.size(); ++k) {
+					for (unsigned j = 0; j < ppts[k].npts; ++j) {
+						if (dot_product_ptv(pts_norm, center, ppts[k][j]) > 0.0) return 0;
 					}
 				}
 			}
 			else { // thin polygon
-				for (unsigned i = 0; i < unsigned(npoints); ++i) {
-					if (dot_product_ptv(pts_norm, center, points[i]) > 0.0) return 0;
+				for (unsigned k = 0; k < unsigned(npoints); ++k) {
+					if (dot_product_ptv(pts_norm, center, points[k]) > 0.0) return 0;
 				}
 			}
 		}

@@ -844,9 +844,9 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			set_universe_ambient_color(galaxy.color);
 			uasteroid_field::begin_render(usg.asteroid_shader, 0, 1);
 
-			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
-				i->apply_physics(pos, camera);
-				i->draw(pos, camera, usg.asteroid_shader, 0);
+			for (vector<uasteroid_field>::iterator f = galaxy.asteroid_fields.begin(); f != galaxy.asteroid_fields.end(); ++f) {
+				f->apply_physics(pos, camera);
+				f->draw(pos, camera, usg.asteroid_shader, 0);
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
 		}

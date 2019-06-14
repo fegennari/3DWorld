@@ -57,7 +57,7 @@ bool draw_distant_water();
 bool use_water_plane_tess();
 bool enable_ocean_waves();
 void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type);
-void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water);
+void setup_mesh_and_water_shader(shader_t &s, bool use_detail_normal_map, bool is_water);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -259,7 +259,7 @@ void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled
 
 
 // tu_ids used: 0: diffuse map, 1: indir lighting, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: cloud shadow texture, 10: detail map, 11: detail normal map
-void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water) {
+void setup_mesh_and_water_shader(shader_t &s, bool use_detail_normal_map, bool is_water) {
 
 	bool const cloud_shadows(!has_snow && atmosphere > 0.0 && ground_effects_level >= 2);
 	bool const indir_lighting(using_lightmap && have_indir_smoke_tex);
@@ -268,7 +268,7 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_wa
 	s.check_for_fog_disabled();
 	if (cloud_shadows) {s.set_prefix("#define ENABLE_CLOUD_SHADOWS", 1);} // FS
 	s.set_prefix("in vec3 eye_norm;", 1); // FS
-	setup_detail_normal_map_prefix(s, detail_normal_map);
+	setup_detail_normal_map_prefix(s, use_detail_normal_map);
 	s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("hemi_lighting",  0), 1); // FS (disabled)
 	s.set_prefix(make_shader_bool_prefix("use_shadow_map", shadow_map_enabled()), 1); // FS
@@ -282,8 +282,8 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_wa
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 10);
 	s.add_uniform_float("snow_cov_amt", ((is_water && temperature >= W_FREEZE_POINT) ? 0.0 : snow_cov_amt)); // 0 for water; should this be set to 0 for ice?
-	if (detail_normal_map) {setup_detail_normal_map(s, 2.0);}
-	if (cloud_shadows    ) {set_cloud_intersection_shader(s);}
+	if (use_detail_normal_map) {setup_detail_normal_map(s, 2.0);}
+	if (cloud_shadows        ) {set_cloud_intersection_shader(s);}
 }
 
 

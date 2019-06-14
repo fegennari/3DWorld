@@ -1213,8 +1213,8 @@ class keyboard_remap_t {
 		cerr << "Error extracting char or hex number from string '" << str << "'" << endl;
 		return -1;
 	}
-	static void add_keys_to_set(string const &keys, set<int> &key_set) { // char vs. int?
-		for (string::const_iterator i = keys.begin(); i != keys.end(); ++i) {key_set.insert(*i);}
+	static void add_keys_to_set(string const &keys_to_add, set<int> &key_set) { // char vs. int?
+		for (string::const_iterator i = keys_to_add.begin(); i != keys_to_add.end(); ++i) {key_set.insert(*i);}
 	}
 
 public:
@@ -1258,13 +1258,13 @@ public:
 		if (enabled_keys.empty()) return 1; // no enabled keys => all keys are enabled
 		return (enabled_keys.find(key) != enabled_keys.end()); // check enabled set
 	}
-	void enable_only_keys(string const &keys) { // empty keys = all
+	void enable_only_keys(string const &ekeys) { // empty keys = all
 		enabled_keys.clear();
-		add_keys_to_set(keys, enabled_keys);
+		add_keys_to_set(ekeys, enabled_keys);
 	}
-	void set_disabled_keys(string const &keys) {
+	void set_disabled_keys(string const &dkeys) {
 		disabled_keys.clear();
-		add_keys_to_set(keys, disabled_keys);
+		add_keys_to_set(dkeys, disabled_keys);
 	}
 };
 

@@ -1246,10 +1246,10 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 			if (xy_radius > 0.0) { // cylinder case: expand polygon by xy_radius; assumes a convex polygon
 				point const center(i->get_cube_center());
 
-				for (auto i = points.begin(); i != points.end(); ++i) {
-					vector3d dir(*i - center);
+				for (auto p = points.begin(); p != points.end(); ++p) {
+					vector3d dir(*p - center);
 					dir.z = 0.0; // only want XY component
-					*i += dir*(xy_radius/dir.mag());
+					*p += dir*(xy_radius/dir.mag());
 				}
 			}
 			if (point_in_polygon_2d(pr.x, pr.y, &points.front(), points.size(), 0, 1)) return 1; // XY plane test for top surface
@@ -1579,8 +1579,8 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 				if (is_simple_cube()) break; // success/done
 				bool contained(1);
 
-				for (unsigned i = 0; i < 4; ++i) { // check cylinder/ellipse
-					point const pt(c.d[0][i&1], c.d[1][i>>1], 0.0); // XY only
+				for (unsigned j = 0; j < 4; ++j) { // check cylinder/ellipse
+					point const pt(c.d[0][j&1], c.d[1][j>>1], 0.0); // XY only
 					if (!check_part_contains_pt_xy(rbc, pt, points)) {contained = 0; break;}
 				}
 				if (contained) break; // success/done

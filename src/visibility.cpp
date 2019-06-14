@@ -197,8 +197,8 @@ bool pos_dir_up::projected_cube_visible(cube_t const &cube, point const &proj_pt
 	dmax = sqrt(dmax) + far_; // upper bound: (max_dist_to_furstum_origin + far_clip_dist) usually > max_dist_to_frustum_corner
 
 	for (unsigned i = 0; i < 8; ++i) {
-		vector3d const dir(cube_pts[i] - proj_pt);
-		cube_pts[i+8] = cube_pts[i] + dir*(dmax/dir.mag()); // projected point = dmax*normalized_dir
+		vector3d const pdir(cube_pts[i] - proj_pt);
+		cube_pts[i+8] = cube_pts[i] + pdir*(dmax/pdir.mag()); // projected point = dmax*normalized_dir
 	}
 	return pt_set_visible<16>(cube_pts);
 }

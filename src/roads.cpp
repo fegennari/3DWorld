@@ -831,8 +831,8 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 				if (dot_product((cpos - pts[0]), fn) > 0) { // BFC
 					vector3d const fn_prev(cross_product((pts[0] - prev_pt), v_shared)), fn_next(cross_product((next_pt - pts[1]), v_shared));
 					vector3d const vn_prev((fn + fn_prev).get_norm()), vn_next((fn + fn_next).get_norm()); // average of both face normals
-					vector3d const n[4] = {vn_prev, vn_next, vn_next, vn_prev};
-					qbd_bridge.add_quad_pts_vert_norms(pts, n, cw_main);
+					vector3d const normals[4] = {vn_prev, vn_next, vn_next, vn_prev};
+					qbd_bridge.add_quad_pts_vert_norms(pts, normals, cw_main);
 				}
 			}
 			for (unsigned f = 0; f < 2; ++f) { // side surfaces
