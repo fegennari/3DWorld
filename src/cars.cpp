@@ -547,7 +547,7 @@ void car_manager_t::finalize_cars() {
 		int fixed_color(-1);
 
 		if (num_models > 0) {
-			if (FORCE_MODEL_ID >= 0) {i->model_id = FORCE_MODEL_ID;}
+			if (FORCE_MODEL_ID >= 0) {i->model_id = (unsigned char)FORCE_MODEL_ID;}
 			else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
 			city_model_t const &model(car_model_loader.get_model(i->model_id));
 			fixed_color = model.fixed_color_id;

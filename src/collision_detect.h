@@ -23,7 +23,7 @@ enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
 enum {NON_DEST=0, DESTROYABLE, SHATTERABLE, SHATTER_TO_PORTAL, EXPLODEABLE, NUM_DESTROY_LEVELS};
 
 unsigned const OBJ_CNT_REM_TJ   = 1;
-unsigned const TO_DRAW_SKIP_VAL = (1<<31);
+unsigned const TO_DRAW_SKIP_VAL = (1U<<31);
 
 struct geom_xform_t;
 
