@@ -92,6 +92,8 @@ Here are some screenshots linked from my blog:
 
 ![alt text](https://2.bp.blogspot.com/-f07b_YCw-7Q/XFd5v1jazTI/AAAAAAAAByk/r1xQ0zgTnmUT-ONsv4y7W1X9LwEtQdJuACLcBGAs/s640/peds_waiting.jpg)
 
+Procedural city with buildings, roads, cars, and pedestrians (config_heightmap.txt).
+
 ![alt text](https://1.bp.blogspot.com/-acI3Ly40-Hk/WzSWMckhOiI/AAAAAAAABlg/KvzdEJ9qEjUJPOF7kYvh1RpELBSnnQXtgCEwYBhgL/s640/bridge_night1.jpg)
 
 ![alt text](https://1.bp.blogspot.com/-H3QY3vua23s/WovTmQk8I6I/AAAAAAAABRE/KSFYKSdDRAAVPA7NcZEQXCpKJJaUY9hWQCLcBGAs/s640/connected_cities_trees.jpg)
