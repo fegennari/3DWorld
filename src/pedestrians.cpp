@@ -982,7 +982,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, (ped.pos + xlate), 0.4*def_draw_dist))  continue; // too far from the player
 				if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) continue;
 				
-				if (!use_models) { // or distant?
+				if (!use_models || !ped_model_loader.is_model_valid(ped.model_id)) {
 					if (!pdu.sphere_visible_test(ped.pos, ped.radius)) continue; // not visible - skip
 					begin_ped_sphere_draw(dstate.s, YELLOW, in_sphere_draw, textured);
 					int const ndiv = 16; // currently hard-coded
