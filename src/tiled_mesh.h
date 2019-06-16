@@ -267,6 +267,8 @@ public:
 	bool contains_point(point const &pos) const {return get_bcube().contains_pt_xy(pos);}
 	bool contains_camera() const {return contains_point(get_camera_pos());}
 	unsigned get_gpu_mem() const;
+	unsigned get_smap_mem() const;
+	unsigned count_shadow_maps() const;
 
 	unsigned get_tree_mem() const { // only accounts for top-level class memory + palm verts
 		return (pine_trees.capacity()*sizeof(small_tree) + decid_trees.capacity()*sizeof(tree) + pine_trees.palm_vbo_mem);

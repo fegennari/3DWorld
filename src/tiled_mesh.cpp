@@ -333,11 +333,22 @@ unsigned tile_t::get_gpu_mem() const {
 	if (height_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (F32)
 	if (normal_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (RGBA8)
 	if (shadow_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (RGBA8)
-	
-	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		if (smap_data[i].is_allocated()) {mem += 4*shadow_map_sz*shadow_map_sz;} // FBO textures
-	}
+	mem += get_smap_mem(); // FBO textures
 	return mem;
+}
+
+unsigned tile_t::get_smap_mem() const {
+	
+	unsigned mem(0);
+	for (unsigned i = 0; i < smap_data.size(); ++i) {mem += smap_data[i].get_gpu_mem();}
+	return mem;
+}
+
+unsigned tile_t::count_shadow_maps() const {
+
+	unsigned num(0);
+	for (unsigned i = 0; i < smap_data.size(); ++i) {num += smap_data[i].is_allocated();}
+	return num;
 }
 
 
@@ -2456,8 +2467,8 @@ unsigned in_mb(unsigned long long v) {return v/1024/1024;}
 void tile_draw_t::draw(bool reflection_pass) {
 
 	//timer_t timer("TT Draw");
-	unsigned num_trees(0);
-	unsigned long long mem(0), tree_mem(0);
+	unsigned num_trees(0), num_smaps(0);
+	unsigned long long mem(0), tree_mem(0), smap_mem(0);
 	to_draw.clear();
 	occluded_tiles.clear();
 
@@ -2478,8 +2489,13 @@ void tile_draw_t::draw(bool reflection_pass) {
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second.get());
-		if (DEBUG_TILES) {mem      += tile->get_gpu_mem ();}
-		if (DEBUG_TILES) {tree_mem += tile->get_tree_mem();}
+
+		if (DEBUG_TILES) {
+			mem       += tile->get_gpu_mem ();
+			tree_mem  += tile->get_tree_mem();
+			smap_mem  += tile->get_smap_mem();
+			num_smaps += tile->count_shadow_maps();
+		}
 		float const dist(tile->get_rel_dist_to_camera());
 		if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
 		if (tile->was_last_occluded()) continue; // occluded in the shadow pass
@@ -2538,9 +2554,9 @@ void tile_draw_t::draw(bool reflection_pass) {
 	}
 	if (DEBUG_TILES) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
-		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size()
-			 << ", trees drawn: " << num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem)
-			 << ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
+		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
+			 << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem) << ", tree mem: " << in_mb(tree_mem)
+			 << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << ", smap mem: " << in_mb(smap_mem) << endl;
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}

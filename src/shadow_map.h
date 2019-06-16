@@ -58,6 +58,7 @@ struct smap_data_t : public smap_data_state_t {
 	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
 	bool bind_smap_texture(bool light_valid=1) const;
 	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds=nullptr, bool use_world_space=0, bool no_update=0, bool force_update=0);
+	unsigned get_gpu_mem() const {return (is_allocated() ? 4*smap_sz*smap_sz : 0);}
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);
 	virtual bool is_local() const {return 0;} // for debugging only
