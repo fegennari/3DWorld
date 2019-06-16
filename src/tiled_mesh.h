@@ -23,6 +23,7 @@ bool const GRASS_CLOUD_SHADOWS= 1; // slow, but looks nice
 bool const USE_TREE_BILLBOARDS= 1; // decidious trees: faster but lower quality
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
+unsigned const NUM_SMAP_LODS  = 3;
 float const TREE_LOD_THRESH   = 6.0;
 float const GEOMORPH_THRESH   = 6.0;
 float const PALM_DIST_SCALE   = 0.75;
@@ -72,10 +73,11 @@ class tile_t;
 struct tile_smap_data_t : public smap_data_t {
 
 	int dxoff, dyoff;
+	unsigned lod_level;
 	tile_t *tile;
 
-	tile_smap_data_t(unsigned tu_id_, unsigned smap_sz_, tile_t *tile_, smap_data_state_t const &init_state=smap_data_state_t())
-		: smap_data_t(tu_id_, smap_sz_, init_state), dxoff(0), dyoff(0), tile(tile_) {}
+	tile_smap_data_t(unsigned tu_id_, unsigned smap_sz_, unsigned lod_level_, tile_t *tile_, smap_data_state_t const &init_state=smap_data_state_t())
+		: smap_data_t(tu_id_, smap_sz_, init_state), dxoff(0), dyoff(0), lod_level(lod_level_), tile(tile_) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
 };
@@ -83,9 +85,9 @@ struct tile_smap_data_t : public smap_data_t {
 
 class tile_shadow_map_manager {
 
-	vector<smap_data_state_t> free_list[NUM_LIGHT_SRC];
+	vector<smap_data_state_t> free_list[NUM_LIGHT_SRC][NUM_SMAP_LODS];
 public:
-	tile_smap_data_t new_smap_data(unsigned tu_id, tile_t *tile, unsigned light);
+	tile_smap_data_t new_smap_data(unsigned tu_id, tile_t *tile, unsigned light, unsigned lod_level);
 	void release_smap_data(tile_smap_data_t &smd, unsigned light);
 	void clear_context();
 };
@@ -163,7 +165,7 @@ public:
 private:
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, normal_tid, shadow_tid;
-	unsigned size, stride, zvsize, base_tsize, gen_tsize;
+	unsigned size, stride, zvsize, base_tsize, gen_tsize, smap_lod_level;
 	float radius, mzmin, mzmax, mesh_dz, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	bool is_distant, no_trees, just_cleared, has_tunnel;

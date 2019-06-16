@@ -242,10 +242,10 @@ bool write_default_hmap_modmap() {
 // *** tile_t ***
 
 tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0), size(0), stride(0),
-	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
+	zvsize(0), gen_tsize(0), smap_lod_level(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), mesh_dz(0.0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
+	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), smap_lod_level(0), mesh_dz(0.0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
 	is_distant(0), no_trees(0), just_cleared(0), has_tunnel(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
@@ -848,26 +848,33 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 }
 
 
-tile_smap_data_t tile_shadow_map_manager::new_smap_data(unsigned tu_id, tile_t *tile, unsigned light) {
+tile_smap_data_t tile_shadow_map_manager::new_smap_data(unsigned tu_id, tile_t *tile, unsigned light, unsigned lod_level) {
 	assert(tile != nullptr);
 	assert(light < NUM_LIGHT_SRC);
-	if (free_list[light].empty()) {return tile_smap_data_t(tu_id, shadow_map_sz, tile);}
-	smap_data_state_t const state(free_list[light].back());
-	free_list[light].pop_back();
-	return tile_smap_data_t(tu_id, shadow_map_sz, tile, state);
+	assert(lod_level < NUM_SMAP_LODS);
+	unsigned const target_smap_sz(max(256U, (shadow_map_sz >> lod_level)));
+	auto &cur_free_list(free_list[light][lod_level]);
+	if (cur_free_list.empty()) {return tile_smap_data_t(tu_id, target_smap_sz, lod_level, tile);}
+	smap_data_state_t const state(cur_free_list.back());
+	cur_free_list.pop_back();
+	return tile_smap_data_t(tu_id, target_smap_sz, lod_level, tile, state);
 }
 
 void tile_shadow_map_manager::release_smap_data(tile_smap_data_t &smd, unsigned light) {
 	if (!smd.is_allocated()) return;
 	assert(light < NUM_LIGHT_SRC);
-	free_list[light].push_back(smd); // adds the base class, which contains the GL state
+	assert(smd.lod_level < NUM_SMAP_LODS);
+	free_list[light][smd.lod_level].push_back(smd); // adds the base class, which contains the GL state
 	smd.disown(); // no longer owned by smd
 }
 
 void tile_shadow_map_manager::clear_context() {
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-		for (auto i = free_list[l].begin(); i != free_list[l].end(); ++i) {i->free_gl_state();}
-		free_list[l].clear();
+		for (unsigned L = 0; L < NUM_SMAP_LODS; ++L) {
+			auto &cur_free_list(free_list[l][L]);
+			for (auto i = cur_free_list.begin(); i != cur_free_list.end(); ++i) {i->free_gl_state();}
+			cur_free_list.clear();
+		}
 	}
 }
 
@@ -882,11 +889,20 @@ cube_t tile_t::get_shadow_bcube() const {
 void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 
 	if (!shadow_map_enabled()) return; // disabled
-
 	//timer_t timer("Create Tile Shadow Maps");
-	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH*smap_thresh_scale && smap_data.empty()) { // allocate new shadow maps
-		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
-			smap_data.push_back(smap_manager.new_smap_data(TILE_SMAP_START_TU_ID+i, this, i));
+	float const smap_dist_scale(get_dist_to_camera_in_tiles(1)/(SMAP_NEW_THRESH*smap_thresh_scale));
+
+	if (smap_dist_scale < 1.0) { // allocate new shadow maps
+		float const lod_level_f(min(4.0f*smap_dist_scale, float(NUM_SMAP_LODS-1U))); // clamp to max supported LOD
+		unsigned const lod_level(floor(lod_level_f));
+		if (lod_level < smap_lod_level || floor(lod_level_f - 0.1) > smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD change with hysteresis
+
+		if (smap_data.empty()) {
+			for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
+				smap_data.push_back(smap_manager.new_smap_data(TILE_SMAP_START_TU_ID+i, this, i, lod_level));
+			}
+			//cout << "*** LOD: " << lod_level << " curLOD: " << smap_lod_level << " LODf: " << lod_level_f << " dist: " << smap_dist_scale << endl;
+			smap_lod_level = lod_level;
 		}
 	}
 	cube_t bcube(get_shadow_bcube());
