@@ -62,6 +62,7 @@ struct city_model_t {
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
 		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), shadow_mat_ids(smids) {}
 	bool read(FILE *fp);
+	bool file_exists() const;
 };
 
 struct city_params_t {

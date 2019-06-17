@@ -32,6 +32,10 @@ bool city_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id 
 	return 1;
 }
 
+bool city_model_t::file_exists() const {
+	return ifstream(fn).good(); // try to open model file for reading, but don't actually read anything; also, let the caller handle error printing
+}
+
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
