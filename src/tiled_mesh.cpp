@@ -848,11 +848,18 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 }
 
 
+unsigned calc_max_smap_lod() {
+	unsigned const min_smap_sz(have_buildings() ? 1024U : 512U); // 1024x1024 seems to be required to prevent shadow artifacts on the sides of buildings
+	unsigned lod_level(0);
+	for (unsigned smap_sz = shadow_map_sz; (smap_sz > min_smap_sz && lod_level+1 < NUM_SMAP_LODS); ++lod_level) {smap_sz >>= 1;}
+	return lod_level;
+}
+
 tile_smap_data_t tile_shadow_map_manager::new_smap_data(unsigned tu_id, tile_t *tile, unsigned light, unsigned lod_level) {
 	assert(tile != nullptr);
 	assert(light < NUM_LIGHT_SRC);
 	assert(lod_level < NUM_SMAP_LODS);
-	unsigned const target_smap_sz(max(256U, (shadow_map_sz >> lod_level)));
+	unsigned const target_smap_sz(shadow_map_sz >> lod_level);
 	auto &cur_free_list(free_list[light][lod_level]);
 	if (cur_free_list.empty()) {return tile_smap_data_t(tu_id, target_smap_sz, lod_level, tile);}
 	smap_data_state_t const state(cur_free_list.back());
@@ -898,16 +905,19 @@ cube_t tile_t::get_shadow_bcube() const {
 	return cube_t(xv1-x_ext, xv1+(x2-x1)*deltax+x_ext, yv1-y_ext, yv1+(y2-y1)*deltay+y_ext, mzmin-BCUBE_ZTOLER, max(get_tile_zmax()+BCUBE_ZTOLER, mzmax+b_ext.z));
 }
 
-void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
+void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool cleanup_only) {
 
 	if (!shadow_map_enabled()) return; // disabled
 	//timer_t timer("Create Tile Shadow Maps");
 	float const smap_dist_scale(get_dist_to_camera_in_tiles(1)/(SMAP_NEW_THRESH*smap_thresh_scale));
 
-	if (smap_dist_scale < 1.0) { // allocate new shadow maps
-		float const lod_level_f(min(4.0f*smap_dist_scale, float(NUM_SMAP_LODS-1U))); // clamp to max supported LOD
+	if (smap_dist_scale < 1.0) { // allocate new shadow maps or change shadow map LOD levels
+		unsigned const max_lod_level(calc_max_smap_lod());
+		float const lod_level_f(min(4.0f*smap_dist_scale, float(max_lod_level))); // clamp to max supported LOD
 		unsigned const lod_level(floor(lod_level_f));
-		if (lod_level < smap_lod_level || floor(lod_level_f - 0.1) > smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD change with hysteresis
+		if (floor(lod_level_f - 0.1) > smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD decrease with hysteresis
+		if (cleanup_only) return; // done
+		if (lod_level < smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD increase
 
 		if (smap_data.empty()) {
 			for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
@@ -917,6 +927,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 			smap_lod_level = lod_level;
 		}
 	}
+	if (cleanup_only) return; // done
 	cube_t bcube(get_shadow_bcube());
 	// extend bcube upwards to include any models above the mesh that cast shadows on this tile
 	// FIXME: still not correct for low sun pos - need a more accurate way to determine which models can shadow this tile
@@ -2446,8 +2457,11 @@ void tile_draw_t::pre_draw(bool reflection_pass) { // view-dependent updates/GPU
 		tile_t *const tile(i->second.get());
 		assert(tile);
 		if (tile->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue; // too far to draw
-		if (!tile->is_visible()) continue; // Note: using current camera view frustum
-
+		
+		if (!tile->is_visible()) { // Note: using current camera view frustum
+			tile->setup_shadow_maps(smap_manager, 1); // cleanup_only=1 (only clear shadow maps to increase LOD levels)
+			continue;
+		}
 		if (tile->can_have_trees()) { // no trees in water or distant tiles
 			if (tile->can_have_pine_palm_trees() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
 			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
@@ -2472,7 +2486,7 @@ void tile_draw_t::pre_draw(bool reflection_pass) { // view-dependent updates/GPU
 		(*i)->update_scenery();
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) { // after everything has been setup
-		(*i)->setup_shadow_maps(smap_manager);
+		(*i)->setup_shadow_maps(smap_manager, 0); // cleanup_only=0
 	}
 }
 

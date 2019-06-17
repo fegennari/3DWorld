@@ -23,7 +23,7 @@ bool const GRASS_CLOUD_SHADOWS= 1; // slow, but looks nice
 bool const USE_TREE_BILLBOARDS= 1; // decidious trees: faster but lower quality
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
-unsigned const NUM_SMAP_LODS  = 3;
+unsigned const NUM_SMAP_LODS  = 4;
 float const TREE_LOD_THRESH   = 6.0;
 float const GEOMORPH_THRESH   = 6.0;
 float const PALM_DIST_SCALE   = 0.75;
@@ -318,7 +318,7 @@ public:
 	void check_shadow_map_and_normal_texture();
 	void upload_normal_texture(bool tid_is_valid);
 	void upload_shadow_map_texture(bool tid_is_valid);
-	void setup_shadow_maps(tile_shadow_map_manager &smap_manager);
+	void setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool cleanup_only);
 	bool shadow_maps_allocated() const;
 	bool using_shadow_maps() const {return !smap_data.empty();}
 
