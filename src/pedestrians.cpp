@@ -978,7 +978,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				if (ped.destroyed) continue; // skip
 				float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
 				if (dist_sq > draw_dist_sq) continue; // too far - skip
-				if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, (ped.pos + xlate), 0.4*def_draw_dist))  continue; // too far from the player
+				if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist))  continue; // too far from the player
 				if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) continue;
 				
 				if (!use_models || !ped_model_loader.is_model_valid(ped.model_id)) {

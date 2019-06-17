@@ -2788,7 +2788,8 @@ struct city_smap_manager_t {
 		cmp_light_source_sz_dist sz_cmp(cpos);
 		unsigned num_used(0);
 		unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
-		pre_smap_player_pos = get_camera_pos(); // capture player pos before replacing with light pos so it can be used for LOD during model drawing
+		// capture player pos in global coordinate space before replacing with light pos so it can be used for LOD during model drawing
+		pre_smap_player_pos = get_camera_pos() - get_camera_coord_space_xlate();
 		// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
 		
 		// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway

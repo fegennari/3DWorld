@@ -429,7 +429,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	float const tile_draw_dist(get_draw_tile_dist()), dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/tile_draw_dist);
 	bool const is_truck(car.height > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
 	bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
-	bool const draw_model(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, (center + xlate), 0.05*tile_draw_dist) : (shadow_only || dist_val < 0.05));
+	bool const draw_model(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, center, 0.05*tile_draw_dist) : (shadow_only || dist_val < 0.05));
 	float const sign((dim^dir) ? -1.0 : 1.0);
 	point pb[8], pt[8]; // bottom and top sections
 	gen_car_pts(car, draw_top, pb, pt);
