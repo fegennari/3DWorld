@@ -1363,15 +1363,17 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			float const shift_mult(was_cube ? 1.0 : 0.5); // half the shift for non-cube buildings
 
 			for (unsigned d = 0; d < 2; ++d) {
-				float const len(prev.d[d][1] - prev.d[d][0]), bc_len(bcube.d[d][1] - bcube.d[d][0]);
+				float const len(prev.d[d][1] - prev.d[d][0]), min_edge_len((0.2/shift_mult)*(bcube.d[d][1] - bcube.d[d][0]));
 				bool const inv(rgen.rand_bool());
 
-				for (unsigned E = 0; E < 2; ++E) {
-					bool const e((E != 0) ^ inv); // no dir favoritism for 20% check
+				for (unsigned e = 0; e < 2; ++e) {
 					float delta(0.0);
 					if (rgen.rand()&3) {delta = shift_mult*rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
 					bc.d[d][e] = prev.d[d][e] + (e ? -delta : delta)*len;
-					if (bc.d[d][1] - bc.d[d][0] < (0.2/shift_mult)*bc_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
+				}
+				for (unsigned E = 0; E < 2; ++E) {
+					bool const e((E != 0) ^ inv); // no dir favoritism for 20% check
+					if (bc.d[d][1] - bc.d[d][0] < min_edge_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
 				}
 			}
 			bc.z1() = prev.z2(); // z1
