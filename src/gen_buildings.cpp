@@ -2054,12 +2054,12 @@ public:
 		create_vbos(is_tile);
 	}
 
-	static void multi_draw(bool shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
+	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
-		bool const use_tt_smap(check_tile_smap(shadow_only) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
+		bool const use_tt_smap(check_tile_smap(shadow_only != 0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		bool have_windows(0), have_wind_lights(0);
 		unsigned max_draw_ix(0);
@@ -2089,7 +2089,7 @@ public:
 		}
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, shadow_only);} // non-smap pass, can skip tiles that will be drawn below
+				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, (shadow_only != 0));} // non-smap pass, can skip tiles that will be drawn below
 			}
 		}
 		if (!shadow_only && have_windows) { // draw windows
@@ -2452,12 +2452,12 @@ void gen_buildings() {
 		building_creator.gen     (global_building_params, 0, 1, 0); // non-city secondary buildings
 	} else {building_creator.gen (global_building_params, 0, 0, 0);} // mixed buildings
 }
-void draw_buildings(bool shadow_only, vector3d const &xlate) {
+void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
 	if (building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
-	if (building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
+	if (shadow_only != 2 && building_creator.is_visible(xlate)) {bcs.push_back(&building_creator);} // don't draw secondary buildings for dynamic shadows
 	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, xlate, bcs);
 }
