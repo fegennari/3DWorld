@@ -90,6 +90,7 @@ public:
 	tile_smap_data_t new_smap_data(unsigned tu_id, tile_t *tile, unsigned light, unsigned lod_level);
 	void release_smap_data(tile_smap_data_t &smd, unsigned light);
 	void clear_context();
+	unsigned get_free_list_mem_usage() const;
 };
 
 

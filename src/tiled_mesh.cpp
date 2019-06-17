@@ -878,6 +878,18 @@ void tile_shadow_map_manager::clear_context() {
 	}
 }
 
+unsigned tile_shadow_map_manager::get_free_list_mem_usage() const {
+	unsigned mem(0);
+
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		for (unsigned L = 0; L < NUM_SMAP_LODS; ++L) {
+			unsigned const tex_size(shadow_map_sz >> L);
+			mem += 4*tex_size*tex_size*free_list[l][L].size();
+		}
+	}
+	return mem;
+}
+
 cube_t tile_t::get_shadow_bcube() const {
 	vector3d const b_ext(get_buildings_max_extent()); // what about bridges overlapping this tile?
 	float const road_ext(0.5*get_road_max_len());
@@ -2570,9 +2582,11 @@ void tile_draw_t::draw(bool reflection_pass) {
 	}
 	if (DEBUG_TILES) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
+		unsigned const smap_free_list_mem(smap_manager.get_free_list_mem_usage());
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
-			 << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem) << ", tree mem: " << in_mb(tree_mem)
-			 << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << ", smap mem: " << in_mb(smap_mem) << endl;
+			 << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem) << ", tree mem: " << in_mb(tree_mem)
+			 << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << ", smap mem: " << in_mb(smap_mem)
+			 << ", smap free list mem: " << in_mb(smap_free_list_mem) << endl;
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
