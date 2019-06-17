@@ -939,15 +939,14 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
 	//timer_t timer("Ped Draw"); // ~1ms
-	bool const enable_animations = 1;
-	bool const use_models(ped_model_loader.num_models() > 0);
+	bool const use_models(ped_model_loader.num_models() > 0), enable_animations(use_models);
 	float const def_draw_dist((use_models ? 500.0 : 2000.0)*get_ped_radius());
 	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.far_ = draw_dist;
 	pdu.pos -= xlate; // adjust for local translate
 	dstate.xlate = xlate;
-	dstate.set_enable_normal_map(use_model3d_bump_maps());
+	dstate.set_enable_normal_map(use_models && use_model3d_bump_maps());
 	fgPushMatrix();
 	translate_to(xlate);
 	if (enable_animations) {dstate.s.add_property("animation_shader", "pedestrian_animation.part+");}
@@ -984,6 +983,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				
 				if (!use_models || !ped_model_loader.is_model_valid(ped.model_id)) {
 					if (!pdu.sphere_visible_test(ped.pos, ped.radius)) continue; // not visible - skip
+					if (enable_animations) {dstate.s.add_uniform_float("animation_time", 0.0);}
 					begin_ped_sphere_draw(dstate.s, YELLOW, in_sphere_draw, textured);
 					int const ndiv = 16; // currently hard-coded
 					draw_sphere_vbo(ped.pos, ped.radius, ndiv, textured);
