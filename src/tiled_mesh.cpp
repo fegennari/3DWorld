@@ -913,7 +913,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool clean
 
 	if (smap_dist_scale < 1.0) { // allocate new shadow maps or change shadow map LOD levels
 		unsigned const max_lod_level(calc_max_smap_lod());
-		float const lod_level_f(min(4.0f*smap_dist_scale, float(max_lod_level))); // clamp to max supported LOD
+		float const lod_level_f(min(5.0f*smap_dist_scale, float(max_lod_level))); // clamp to max supported LOD
 		unsigned const lod_level(floor(lod_level_f));
 		if (floor(lod_level_f - 0.1) > smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD decrease with hysteresis
 		if (cleanup_only) return; // done
