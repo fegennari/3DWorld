@@ -8,7 +8,9 @@
 #include "asteroid.h"
 #include "timetest.h"
 #include "openal_wrap.h"
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 
 bool const TIMETEST           = (GLOBAL_TIMETEST || 0);
@@ -59,8 +61,11 @@ point get_scaled_upt();
 void add_player_ship_engine_light();
 
 
-
+#ifdef _OPENMP
 int omp_get_thread_num_3dw() {return omp_get_thread_num();} // where does this belong?
+#else
+int omp_get_thread_num_3dw() {return 0;}
+#endif
 
 void init_universe_display() {
 
@@ -69,9 +74,7 @@ void init_universe_display() {
 	check_shift_universe();
 }
 
-
 void set_univ_pdu() {
-
 	u_ship const &player(player_ship());
 	player_pdu = pos_dir_up(player.get_pos(), player.get_dir(), player.get_up(), 0.0, 0.0, U_VIEW_DIST);
 }

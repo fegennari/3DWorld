@@ -6,7 +6,6 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "model3d.h"
-#include <omp.h>
 
 
 unsigned const VOXELS_PER_DIV = 8; // 1024 for 128 vertex mesh
@@ -498,7 +497,7 @@ void create_snow_map(voxel_map &vmap) {
 
 #pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < num_per_dim; ++y) {
-		if (omp_get_thread_num() == 0) {increment_printed_number(y);} // progress for thread 0
+		if (omp_get_thread_num_3dw() == 0) {increment_printed_number(y);} // progress for thread 0
 		rand_gen_t rgen;
 		rgen.set_state(123, y);
 
