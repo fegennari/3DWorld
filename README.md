@@ -96,11 +96,19 @@ Procedural city with buildings, roads, cars, and pedestrians (config_heightmap.t
 
 ![alt text](https://1.bp.blogspot.com/-acI3Ly40-Hk/WzSWMckhOiI/AAAAAAAABlg/KvzdEJ9qEjUJPOF7kYvh1RpELBSnnQXtgCEwYBhgL/s640/bridge_night1.jpg)
 
+Procedural city at night with bridge in the foreground (config_heightmap.txt).
+
 ![alt text](https://1.bp.blogspot.com/-H3QY3vua23s/WovTmQk8I6I/AAAAAAAABRE/KSFYKSdDRAAVPA7NcZEQXCpKJJaUY9hWQCLcBGAs/s640/connected_cities_trees.jpg)
+
+Early procedural city with pine trees.
 
 ![alt text](https://1.bp.blogspot.com/-4PWdGiTpsfw/WrdOCFbjxnI/AAAAAAAABWo/O0pT-TfRxMMaCNDnxs0UdSayEpU3y-XWACLcBGAs/s640/city_cars3.jpg)
 
+Early procedural city.
+
 ![alt text](https://1.bp.blogspot.com/-orCzK6w5xEM/WjmW-0kXVXI/AAAAAAAABN8/Sa73QhiUnvwC0CqC_ZSAPnT1KX8miu85gCLcBGAs/s640/erosion_from_above.jpg)
+
+Terrain using domain warp noise with hydraulic erosion simulation before city has been placed (config_heightmap.txt).
 
 ![alt text](https://4.bp.blogspot.com/-_yqljuQRYFA/WjN0WlQXxyI/AAAAAAAABMo/VLQbV8HF9nMlh0yoqUS57vxr6uer2RrswCEwYBhgL/s640/river.jpg)
 
