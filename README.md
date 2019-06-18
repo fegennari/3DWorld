@@ -90,6 +90,10 @@ https://3dworldgen.blogspot.com/
 
 Here are some screenshots linked from my blog:
 
+![alt text](https://1.bp.blogspot.com/-sGemMLy_VXc/Wx10wAEwSxI/AAAAAAAABj8/FKLHXZ27qBsNPXE7fZU1vXo-N06NjV5EQCLcBGAs/s640/spheres_low_noise.jpg)
+
+Reflective (metal), refractive (glass), emissive, and translucent spheres in night time scene with indirect lighting. Drawn in realtime; spheres can be moved interactively. (config_white_plane.txt)
+
 ![alt text](https://2.bp.blogspot.com/-f07b_YCw-7Q/XFd5v1jazTI/AAAAAAAAByk/r1xQ0zgTnmUT-ONsv4y7W1X9LwEtQdJuACLcBGAs/s640/peds_waiting.jpg)
 
 Procedural city with buildings, roads, cars, and pedestrians. (config_heightmap.txt)
