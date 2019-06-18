@@ -1391,6 +1391,8 @@ public:
 	unsigned num_pixels() const {return unsigned(width*height);}
 	unsigned num_bytes()  const {return ncolors*num_pixels();}
 	unsigned bytes_per_channel() const {return (is_16_bit_gray ? 2U : 1U);}
+	unsigned get_cpu_mem() const {return (is_allocated() ? num_bytes() : 0);} // Note: ignores other data; excludes deferred load/DDS textures
+	unsigned get_gpu_mem() const {return (is_bound() ? (num_bytes() + (use_mipmaps ? num_bytes()/3 : 0)) : 0);} // Note: ignores texture compression
 	void set_color_alpha_to_one() {color.alpha = 1.0;} // to make has_alpha() return 0
 	bool has_alpha()    const {return (color.alpha < 1.0 || alpha_tid >= 0);}
 	bool is_bound()     const {return (tid > 0);}

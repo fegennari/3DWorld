@@ -591,6 +591,8 @@ void compute_volume_matrix();
 // function prototypes - textures
 void load_texture_names();
 void load_textures();
+unsigned get_loaded_textures_cpu_mem();
+unsigned get_loaded_textures_gpu_mem();
 int texture_lookup(std::string const &name);
 int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1, float aniso=0.0);
 bool select_texture(int id);

@@ -308,6 +308,19 @@ void load_textures() {
 }
 
 
+unsigned get_loaded_textures_cpu_mem() {
+	unsigned mem(0);
+	for (auto i = textures.begin(); i != textures.end(); ++i) {mem += i->get_cpu_mem();}
+	return mem;
+}
+
+unsigned get_loaded_textures_gpu_mem() { // Note: ignores texture compression
+	unsigned mem(0);
+	for (auto i = textures.begin(); i != textures.end(); ++i) {mem += i->get_gpu_mem();}
+	return mem;
+}
+
+
 int texture_lookup(string const &name) {
 	
 	name_map_t::const_iterator it(texture_name_map.find(name));
