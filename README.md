@@ -92,11 +92,11 @@ Here are some screenshots linked from my blog:
 
 ![alt text](https://2.bp.blogspot.com/-f07b_YCw-7Q/XFd5v1jazTI/AAAAAAAAByk/r1xQ0zgTnmUT-ONsv4y7W1X9LwEtQdJuACLcBGAs/s640/peds_waiting.jpg)
 
-Procedural city with buildings, roads, cars, and pedestrians (config_heightmap.txt).
+Procedural city with buildings, roads, cars, and pedestrians. (config_heightmap.txt)
 
 ![alt text](https://1.bp.blogspot.com/-acI3Ly40-Hk/WzSWMckhOiI/AAAAAAAABlg/KvzdEJ9qEjUJPOF7kYvh1RpELBSnnQXtgCEwYBhgL/s640/bridge_night1.jpg)
 
-Procedural city at night with bridge in the foreground (config_heightmap.txt).
+Procedural city at night with bridge in the foreground. (config_heightmap.txt)
 
 ![alt text](https://1.bp.blogspot.com/-H3QY3vua23s/WovTmQk8I6I/AAAAAAAABRE/KSFYKSdDRAAVPA7NcZEQXCpKJJaUY9hWQCLcBGAs/s640/connected_cities_trees.jpg)
 
@@ -108,52 +108,100 @@ Early procedural city.
 
 ![alt text](https://1.bp.blogspot.com/-orCzK6w5xEM/WjmW-0kXVXI/AAAAAAAABN8/Sa73QhiUnvwC0CqC_ZSAPnT1KX8miu85gCLcBGAs/s640/erosion_from_above.jpg)
 
-Terrain using domain warp noise with hydraulic erosion simulation before city has been placed (config_heightmap.txt).
+Terrain using domain warp noise with hydraulic erosion simulation before city has been placed. (config_heightmap.txt)
 
 ![alt text](https://4.bp.blogspot.com/-_yqljuQRYFA/WjN0WlQXxyI/AAAAAAAABMo/VLQbV8HF9nMlh0yoqUS57vxr6uer2RrswCEwYBhgL/s640/river.jpg)
 
+Tiled terrain mode with river, trees, grass, etc. (config_t.txt)
+
 ![alt text](https://4.bp.blogspot.com/-ZqmYa0act0w/We1_2z6l1VI/AAAAAAAABKU/uXNawQ9xwnAqD0E8pCdz7MouyXVYEdczgCEwYBhgL/s640/fires3.jpg)
+
+Realtime interactive destructive fire/smoke simulation involving trees, plants, and grass. (config_trees.txt)
 
 ![alt text](https://2.bp.blogspot.com/-h9eUV4FiM28/WZKe4pr7YpI/AAAAAAAABGE/pXBPNL0OJi48ErNDS6RH0IprW7V_W5XtACLcBGAs/s640/nebula_rings_asteroids.jpg)
 
+Procedural universe solar system with asteroid belt. (universe/config_universe.txt)
+
 ![alt text](https://4.bp.blogspot.com/-5dr80n928lw/WT9t81moCVI/AAAAAAAAA_s/YldLPL_Y__gB4q4QtrVrAflmhl2X17qEgCLcB/s640/sponza2.jpg)
+
+Crytek Sponza atrium scene with dynamic shadow casting light source and indirect lighting. (sponza/config_sponza2.txt)
 
 ![alt text](https://4.bp.blogspot.com/-kY8qCSsE0ck/WQbOLeCBVtI/AAAAAAAAA9E/SYUEjT1YGEgllNZiaf-bU3JWg5lta0pNACEw/s640/museums_120.jpg)
 
+10,000 instances of a highly detailed museum model placed in tiled terrain mode (Puget Sound heightmap) and drawn in realtime with shadows and indirect lighting. (config_museum_tt_model.txt)
+
 ![alt text](https://2.bp.blogspot.com/-MSjc6z9NjRc/WQYkxjOEOuI/AAAAAAAAA74/mrXX01ljwZMkkx1kwlGP4sztMKv7dMTmwCEw/s640/sponza.jpg)
+
+Crytek Sponza atrium with reflective floors and 200 dynamic point light sources in realtime. (sponza/config_sponza2.txt)
 
 ![alt text](https://3.bp.blogspot.com/-Ys37EWGm-PU/WKv1nh2y6tI/AAAAAAAAA5A/X4zcAp2f-Y8UD5vIT7-n7AJMwTUjZQSBACEw/s640/many_objects.jpg)
 
+Many reflective/refractive spheres and cubes with density-based light attenuation in the office building courtyard. (mapx/config_mapx.txt)
+
 ![alt text](https://4.bp.blogspot.com/-TktxFf1hZ_o/WI14nt33o_I/AAAAAAAAA3Y/DhkJmBlRzuECI4lRdBGDgrikGlarUA_WQCLcB/s640/snow_mask_hr.jpg)
+
+San Miguel scene with dynamic snowfall and path traced snow coverage map rendered with a custom shader. (config_san_miguel.txt)
 
 ![alt text](https://1.bp.blogspot.com/-g8X-SATTjbM/WHKTPJ3EURI/AAAAAAAAA2E/18Nf3oK0ZkUoPh_H6_VBzqssbsjdIhLKwCLcB/s640/bright1.jpg)
 
+San Miguel scene rendered in realtime with path traced precomputed indirect lighting, normal maps, and cube mapped reflective surfaces. (config_san_miguel.txt)
+
 ![alt text](https://4.bp.blogspot.com/-uxrpc3f1IEY/WCgqzNFqCvI/AAAAAAAAAzs/6lmvfaEJ_dU5MSPpdZgwVyo2EgmIWH0kgCLcB/s640/all_pine_trees.jpg)
+
+2M procedurally generated + placed pine trees (500K visible) drawn in realtime in tiled terrain mode using instanced billboards. (config_t.txt)
 
 ![alt text](https://4.bp.blogspot.com/-yP383fqlaRk/V_8JfWkjyWI/AAAAAAAAAxY/2eH5WnWktgwyFUwhRRYGAnT9trfjkFRswCEw/s640/cubes_10k.jpg)
 
+Interactive stacking of 10,000 dynamic boxes in mapx scene. Stacks can be moved and knocked over, and scene can be saved/reloaded/edited. (mapx/config_mapx.txt)
+
 ![alt text](https://3.bp.blogspot.com/-8CIw4xIUMdk/V8KKax0v7GI/AAAAAAAAAvc/_PtkZvOaY5IiptMUGgKa4fVKsJKs1kOWwCLcB/s640/ringed_planet.jpg)
+
+Procedurally generated planet with rings containing small asteroids. (universe/config_universe.txt)
 
 ![alt text](https://3.bp.blogspot.com/-jWcp7MUFoeU/V4czYLPtHVI/AAAAAAAAAsw/B8x0U9QaGiEnKNcDDoEQRcy4WYCbIermQCEw/s640/asteroid_belt_inside.jpg)
 
+Asteroid belt with 10,000 dynamic (rotating and orbiting) asteroids, 100,000 point sprite particles, and volume billboard clouds for dust. (universe/config_universe.txt)
+
 ![alt text](https://2.bp.blogspot.com/-lEunlK-ZyT8/V1EkIeSttaI/AAAAAAAAArQ/X7G170MT_6IfDd74WSyY_biN_dIQEzCsQCLcB/s640/trees_above.jpg)
+
+Tiled terrain mode, showing various forms of procedurally generated vegetation, including grass, flowers, pine trees, palm trees, and deciduous trees. These are actually polygon models that cast shadows. (config_t.txt)
 
 ![alt text](https://3.bp.blogspot.com/-1kFHDCXg65Y/VzgfWd1phkI/AAAAAAAAAqA/7rrUIxsVH-Ea2p_NkbRYuyeUZuuj0cejgCKgB/s640/vfog_smoke_rays.jpg)
 
+Realtime, dynamic light shafts through noise-based volumetric smoke in the Crytek Sponza scene. (sponza/config_sponza2.txt)
+
 ![alt text](https://4.bp.blogspot.com/-mk9EA7i_3LU/VuoVYWaz4oI/AAAAAAAAAnw/DHnb2yr_v0scME_D8DRdIsiyl6a8AMOyA/s640/sponza_metal_floor3.jpg)
+
+Reflective, metallic floors in the Crytek Sponza scene, with indirect sun + sky lighting. (sponza/config_sponza2.txt)
 
 ![alt text](https://3.bp.blogspot.com/-lCw93zflw0k/Vt6EOqYZUZI/AAAAAAAAAlY/yvfndWb5Okw/s1600/reflective_objects_front.jpg)
 
+Reflective spheres, torus, and cube drawn in realtime in a dynamic scene using cube map reflection textures in the office building lobby. Materials are a mix of metals and dielectrics using physically-based models. (mapx/config_mapx.txt)
+
 ![alt text](https://4.bp.blogspot.com/-TueDAN3BGEw/VsbLtNP0dwI/AAAAAAAAAjg/-kBjm4EQDd0/s640/museum2.jpg)
+
+Museum scene with indirect lighting, reflective surfaces, and shadow mapping. This model is procedurally textured. (config_museum.txt)
 
 ![alt text](https://1.bp.blogspot.com/-2AzAKVCUhvw/VpGvWG6uQwI/AAAAAAAAAgM/3QLnzeiaeCw/s1600/snow_scene.jpg)
 
+Snowy house scene generated by dropping a billion snow particles and accumlating snow. Snow is precomputed but can be rendered in realtime. (house/config_house_winter.txt)
+
 ![alt text](https://1.bp.blogspot.com/-2LlXIzcVDnA/VmUt8R4cwGI/AAAAAAAAAeY/Mx_xy30eVCQ/s640/house_rain.jpg)
+
+Rain simulation and rendering, including collision detection for each raindrop and wet/reflective surfaces. (house/config_house.txt)
 
 ![alt text](https://3.bp.blogspot.com/-PaceyCZ6W6M/VcmIQAHy8gI/AAAAAAAAARU/DnDUnSyewVs/s1600/dir_plus_indir.jpg)
 
+Indirect lighting and shadows from overlapping spotlights applied to dynamic objects. (mapx/config_mapx.txt)
+
 ![alt text](https://3.bp.blogspot.com/-kzdVvau1pM4/VP6DGtZZg9I/AAAAAAAAALM/xxxIH2H_byM/s1600/waves.jpg)
+
+Water simulation with waves using hardware tessellation in tiled terrain mode. (config_t.txt)
 
 ![alt text](https://4.bp.blogspot.com/-iQt6mdroDTY/VMQIqQ2PiJI/AAAAAAAAAJE/0TVtUzsvdqM/s1600/voxel_snow_ao.jpg)
 
+Procedurally generated 3D voxel ice caves with indirect lighting. This terrain can be edited in realtime with brushes and weapon fire. (config_ice_caves.txt)
+
 ![alt text](https://3.bp.blogspot.com/-nyVNDhCQKvo/VKnl-TOYsrI/AAAAAAAAAGs/UDBBNEQGRBk/s1600/terran_planet.jpg)
+
+Procedurally generated planet drawn entirely in the fragment shader with no textures. This includes terrain generation (ice, snow, rock, forest, desert, dirt), water, clouds, and atmosphere. (universe/config_universe.txt)
