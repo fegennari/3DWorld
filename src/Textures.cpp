@@ -1881,6 +1881,14 @@ float texture_t::get_component(float u, float v, int comp) const {
 	return data[ncolors*get_texel_ix(u, v) + comp]/255.0;
 }
 
+unsigned texture_t::get_gpu_mem() const {
+	if (!is_bound()) return 0;
+	unsigned mem(num_bytes());
+	if (use_mipmaps) {mem += mem/3;} // 33% overhead
+	if (do_compress) {mem /= 4;} // assumes DXT2-DXT5 4:1 compression
+	return mem;
+}
+
 texture_t const &get_texture_by_id(unsigned tid) {
 	assert(tid < textures.size());
 	return textures[tid];
