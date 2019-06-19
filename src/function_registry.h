@@ -365,6 +365,7 @@ bool tile_contains_tunnel(cube_t const &bcube);
 void destroy_city_in_radius(point const &pos, float radius);
 bool get_city_color_at_xy(float x, float y, colorRGBA &color);
 void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap);
+unsigned get_city_model_gpu_mem();
 cube_t get_city_lights_bcube();
 void next_pedestrian_animation();
 void free_city_context();
@@ -993,6 +994,7 @@ bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &buil
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
 bool have_buildings();
+unsigned get_buildings_gpu_mem_usage();
 vector3d get_buildings_max_extent();
 void clear_building_vbos();
 void create_buildings_tile(int x, int y);

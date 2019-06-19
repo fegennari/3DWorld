@@ -2598,10 +2598,13 @@ void tile_draw_t::draw(bool reflection_pass) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
 		unsigned const smap_free_list_mem(smap_manager.get_free_list_mem_usage());
 		unsigned const texture_mem(get_loaded_textures_gpu_mem());
+		unsigned const building_mem(get_buildings_gpu_mem_usage());
+		unsigned const city_model_mem(get_city_model_gpu_mem());
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
-			 << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem)
+			 << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + city_model_mem)
 			 << ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem)
-			 << ", smap mem: " << in_mb(smap_mem) << ", smap free list mem: " << in_mb(smap_free_list_mem) << ", texture mem: " << in_mb(texture_mem) << endl;
+			 << ", smap mem: " << in_mb(smap_mem) << ", smap free list mem: " << in_mb(smap_free_list_mem)
+			 << ", texture mem: " << in_mb(texture_mem) << ", building mem: " << in_mb(building_mem) << ", city model mem: " << in_mb(city_model_mem) << endl;
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}

@@ -1705,7 +1705,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 class building_creator_t {
 
-	unsigned grid_sz;
+	unsigned grid_sz, gpu_mem_usage;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
 	rand_gen_t rgen;
@@ -1850,10 +1850,11 @@ class building_creator_t {
 	};
 
 public:
-	building_creator_t() : grid_sz(1), max_extent(zero_vector), use_smap_this_frame(0) {}
+	building_creator_t() : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector), use_smap_this_frame(0) {}
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear(); clear_vbos();}
 	unsigned get_num_buildings() const {return buildings.size();}
+	unsigned get_gpu_mem_usage() const {return gpu_mem_usage;}
 	vector3d const &get_max_extent() const {return max_extent;}
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
@@ -2184,7 +2185,8 @@ public:
 		timer_t timer("Create Building VBOs", !is_tile);
 		get_all_drawn_verts();
 		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
-		if (!is_tile) {cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << num_verts*sizeof(vert_norm_comp_tc_color) << endl;}
+		gpu_mem_usage = num_verts*sizeof(vert_norm_comp_tc_color);
+		if (!is_tile) {cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << gpu_mem_usage << endl;}
 		building_draw_vbo.upload_to_vbos();
 		building_draw_windows.upload_to_vbos();
 		building_draw_wind_lights.upload_to_vbos(); // Note: may be empty if not night time
@@ -2484,6 +2486,7 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	return ((world_mode == WMODE_GROUND) ? building_creator : building_creator_city).get_building_hit_color(p1, p2, color);
 }
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproce effects
+unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage());}
 
 vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
 	return building_creator.get_max_extent().max(building_creator_city.get_max_extent()).max(building_tiles.get_max_extent());
