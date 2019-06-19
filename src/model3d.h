@@ -287,7 +287,7 @@ public:
 	float get_prim_area(unsigned i, unsigned npts) const;
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
-	unsigned get_gpu_mem() const {return (vntc_vect_t<T>::get_gpu_mem() + (ivbo_valid() ? indices.size()*sizeof(unsigned) : 0));}
+	unsigned get_gpu_mem() const {return (vntc_vect_t<T>::get_gpu_mem() + (this->ivbo_valid() ? indices.size()*sizeof(unsigned) : 0));}
 	void invert_tcy();
 	void write(ostream &out) const;
 	void read(istream &in);
