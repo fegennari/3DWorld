@@ -817,6 +817,12 @@ template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
 	return bcube;
 }
 
+template<typename T> unsigned vntc_vect_block_t<T>::get_gpu_mem() const {
+	unsigned mem(0);
+	for (auto i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
+	return mem;
+}
+
 template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 
 	unsigned s(0);
@@ -1419,6 +1425,13 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const 
 	}
 	PRINT_TIME("Get Cubes");
 	cout << "polygons: " << num_polys << ", hquads: " << num_horiz_quads << ", pre_merged_cubes: " << num_pre_merged_cubes << ", cubes: " << cubes.size() << endl;
+}
+
+
+unsigned model3d::get_gpu_mem() const {
+	unsigned mem(unbound_geom.get_gpu_mem());
+	for (auto m = materials.begin(); m != materials.end(); ++m) {mem += m->get_gpu_mem();}
+	return mem;
 }
 
 
@@ -2291,6 +2304,11 @@ void model3ds::get_all_model_bcubes(vector<cube_t> &bcubes) const {
 	for (const_iterator m = begin(); m != end(); ++m) {m->get_transformed_bcubes(bcubes);}
 }
 
+unsigned model3ds::get_gpu_mem() const {
+	unsigned mem(0);
+	for (const_iterator m = begin(); m != end(); ++m) {mem += m->get_gpu_mem();}
+	return mem;
+}
 
 void model3ds::build_cobj_trees(bool verbose) {
 	for (iterator m = begin(); m != end(); ++m) {m->build_cobj_tree(verbose);}

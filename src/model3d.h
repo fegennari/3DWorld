@@ -223,6 +223,7 @@ public:
 	cube_t get_bcube () const {return get_polygon_bbox(*this);}
 	point get_center () const {return bsphere.pos;}
 	float get_bradius() const {return bsphere.radius;}
+	unsigned get_gpu_mem() const {return (vbo_valid() ? size()*sizeof(T) : 0);}
 	void optimize(unsigned npts) {remove_excess_cap();}
 	void remove_excess_cap() {if (20*vector<T>::size() < 19*vector<T>::capacity()) {vector<T>::shrink_to_fit();}}
 	void write(ostream &out) const;
@@ -286,6 +287,7 @@ public:
 	float get_prim_area(unsigned i, unsigned npts) const;
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
+	unsigned get_gpu_mem() const {return (vntc_vect_t<T>::get_gpu_mem() + (ivbo_valid() ? indices.size()*sizeof(unsigned) : 0));}
 	void invert_tcy();
 	void write(ostream &out) const;
 	void read(istream &in);
@@ -303,6 +305,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();
 	cube_t get_bcube() const;
+	unsigned get_gpu_mem() const;
 	float calc_draw_order_score() const;
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
@@ -324,6 +327,7 @@ template<typename T> struct geometry_t {
 	void render_blocks(shader_t &shader, bool is_shadow_pass, point const *const xlate, vntc_vect_block_t<T> &blocks, unsigned npts);
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate);
 	bool empty() const {return (triangles.empty() && quads.empty());}
+	unsigned get_gpu_mem() const {return (triangles.get_gpu_mem() + quads.get_gpu_mem());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
 	void get_polygons(get_polygon_args_t &args) const;
@@ -397,6 +401,7 @@ struct material_t : public material_params_t {
 	bool mat_is_used () const {return is_used;}
 	bool use_bump_map() const;
 	bool use_spec_map() const;
+	unsigned get_gpu_mem() const {return (geom.get_gpu_mem() + geom_tan.get_gpu_mem());}
 	void finalize() {geom.finalize(); geom_tan.finalize();}
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
@@ -494,6 +499,7 @@ public:
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0, unsigned lod_level=0) const;
 	void get_transformed_bcubes(vector<cube_t> &bcubes) const;
 	void get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const;
+	unsigned get_gpu_mem() const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
@@ -563,6 +569,7 @@ struct model3ds : public deque<model3d> {
 	bool has_any_transforms() const;
 	cube_t calc_and_return_bcube(bool only_reflective);
 	void get_all_model_bcubes(vector<cube_t> &bcubes) const;
+	unsigned get_gpu_mem() const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);
 	void write_to_cobj_file(std::ostream &out) const;

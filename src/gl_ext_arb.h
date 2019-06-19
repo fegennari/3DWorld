@@ -117,6 +117,7 @@ struct indexed_vbo_manager_t : public vbo_wrap_t {
 	unsigned ivbo, gpu_mem; // aka EBO
 
 	indexed_vbo_manager_t() : ivbo(0), gpu_mem(0) {}
+	bool ivbo_valid() const {return (ivbo > 0);}
 	void reset_vbos_to_zero() {vbo = ivbo = gpu_mem = 0;}
 
 	template<typename vert_type_t, typename index_type_t>
