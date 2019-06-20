@@ -494,7 +494,7 @@ void change_terrain_zoom(float val) {
 
 void change_world_mode() { // switch terrain mode: 0 = normal, 1 = universe, 3 = tiled terrain
 
-	if (map_mode || universe_only || (disable_universe && disable_inf_terrain)) return;
+	if (map_mode || universe_only || tiled_terrain_only || (disable_universe && disable_inf_terrain)) return;
 	static int xoff_(0), yoff_(0), xoff2_(0), yoff2_(0);
 	static point camera_pos_(all_zeros);
 	last_temp = -100.0; // force update
@@ -2108,9 +2108,8 @@ int load_config(string const &config_file) {
 	teams          = max(teams,          1);
 	tree_mode      = tree_mode % 4;
 	if (shadow_map_sz > 0 && shadow_map_pcf_offset == 0.0) {shadow_map_pcf_offset = 40.0/shadow_map_sz;}
-	if (universe_only     )   {world_mode = WMODE_UNIVERSE;}
-	if (tiled_terrain_only)   {world_mode = WMODE_INF_TERRAIN;}
-	if (start_in_inf_terrain) {world_mode = WMODE_INF_TERRAIN;}
+	if (universe_only)   {world_mode = WMODE_UNIVERSE;}
+	if (tiled_terrain_only || start_in_inf_terrain) {world_mode = WMODE_INF_TERRAIN;}
 	//if (read_heightmap && dynamic_mesh_scroll) cout << "Warning: read_heightmap and dynamic_mesh_scroll are currently incompatible options as the heightmap does not scroll." << endl;
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation
