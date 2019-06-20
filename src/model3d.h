@@ -367,6 +367,8 @@ public:
 	bool might_have_alpha_comp(int tid) const {return (tid >= 0 && get_texture(tid).ncolors == 4);}
 	texture_t const &get_texture(int tid) const;
 	texture_t &get_texture(int tid);
+	unsigned get_cpu_mem() const;
+	unsigned get_gpu_mem() const;
 };
 
 

@@ -132,6 +132,17 @@ texture_t &texture_manager::get_texture(int tid) {
 	return textures[tid]; // local textures lookup
 }
 
+unsigned texture_manager::get_cpu_mem() const {
+	unsigned mem(0);
+	for (auto t = textures.begin(); t != textures.end(); ++t) {mem += t->get_cpu_mem();}
+	return mem;
+}
+unsigned texture_manager::get_gpu_mem() const {
+	unsigned mem(0);
+	for (auto t = textures.begin(); t != textures.end(); ++t) {mem += t->get_gpu_mem();}
+	return mem;
+}
+
 
 // ************ read/write code ************
 
@@ -2305,7 +2316,7 @@ void model3ds::get_all_model_bcubes(vector<cube_t> &bcubes) const {
 }
 
 unsigned model3ds::get_gpu_mem() const {
-	unsigned mem(0);
+	unsigned mem(tmgr.get_gpu_mem());
 	for (const_iterator m = begin(); m != end(); ++m) {mem += m->get_gpu_mem();}
 	return mem;
 }
