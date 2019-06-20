@@ -2357,20 +2357,15 @@ void model3d_stats_t::print() const {
 // ************ Free Functions ************
 
 
-void free_model_context() {
-	all_models.free_context();
-}
+void free_model_context() {all_models.free_context();}
+
 void render_models(int shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow
 	all_models.render((shadow_pass != 0), reflection_pass, trans_op_mask, xlate);
 	if (trans_op_mask & 1) {draw_buildings(shadow_pass, xlate);} // opaque pass
 	if (world_mode == WMODE_INF_TERRAIN) {draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);}
 }
-void ensure_model_reflection_cube_maps() {
-	all_models.ensure_reflection_cube_maps();
-}
-void auto_calc_model_zvals() {
-	all_models.set_xform_zval_from_tt_height(flatten_tt_mesh_under_models);
-}
+void ensure_model_reflection_cube_maps() {all_models.ensure_reflection_cube_maps();}
+void auto_calc_model_zvals() {all_models.set_xform_zval_from_tt_height(flatten_tt_mesh_under_models);}
 
 model3d &get_cur_model(string const &operation) {
 
@@ -2390,6 +2385,8 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf,
 	xform_polygons(ppts, xf, start_ix);
 	PRINT_TIME("Create and Xform Model3d Polygons");
 }
+
+unsigned get_loaded_models_gpu_mem() {return all_models.get_gpu_mem();}
 
 cube_t get_polygons_bcube(vector<coll_tquad> const &ppts) {
 

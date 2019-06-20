@@ -52,7 +52,7 @@ tile_offset_t model3d_offset;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt;
-extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
+extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
@@ -2599,12 +2599,13 @@ void tile_draw_t::draw(bool reflection_pass) {
 		unsigned const smap_free_list_mem(smap_manager.get_free_list_mem_usage());
 		unsigned const texture_mem(get_loaded_textures_gpu_mem());
 		unsigned const building_mem(get_buildings_gpu_mem_usage());
-		unsigned const city_model_mem(get_city_model_gpu_mem());
+		unsigned const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem());
+		unsigned const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
-			 << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + city_model_mem)
-			 << ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem)
-			 << ", smap mem: " << in_mb(smap_mem) << ", smap free list mem: " << in_mb(smap_free_list_mem)
-			 << ", texture mem: " << in_mb(texture_mem) << ", building mem: " << in_mb(building_mem) << ", city model mem: " << in_mb(city_model_mem) << endl;
+			 << ", gpu MB: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + models_mem + frame_buf_mem)
+			 << ", tile MB: " << in_mb(mem) << ", tree MB: " << in_mb(tree_mem) << ", decid tree MB: " << in_mb(dtree_mem) << ", grass MB: " << in_mb(grass_mem)
+			 << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem) << ", frame buf MB: " << in_mb(frame_buf_mem)
+			 << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem) << ", model MB: " << in_mb(models_mem) << endl;
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}

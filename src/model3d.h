@@ -602,6 +602,7 @@ void render_models(int shadow_pass, int reflection_pass, int trans_op_mask=3, ve
 void ensure_model_reflection_cube_maps();
 void auto_calc_model_zvals();
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
+unsigned get_loaded_models_gpu_mem();
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 bool add_transform_for_cur_model(model3d_xform_t const &xf);
