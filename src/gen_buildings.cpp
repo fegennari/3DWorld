@@ -2448,7 +2448,7 @@ vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3
 void gen_buildings() {
 	update_sun_and_moon(); // need to update light_factor from sun to know if we need to generate window light geometry
 
-	if (have_cities()) {
+	if (world_mode == WMODE_INF_TERRAIN && have_cities()) {
 		building_creator_city.gen(global_building_params, 1, 0, 0); // city buildings
 		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
 		building_creator.gen     (global_building_params, 0, 1, 0); // non-city secondary buildings
@@ -2458,7 +2458,7 @@ void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
-	if (building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
+	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
 	if (shadow_only != 2 && building_creator.is_visible(xlate)) {bcs.push_back(&building_creator);} // don't draw secondary buildings for dynamic shadows
 	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, xlate, bcs);
