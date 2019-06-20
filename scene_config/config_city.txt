@@ -87,3 +87,5 @@ city car_shadows 1
 city max_trees_per_plot 20
 city tree_spacing 1.0
 
+enable_model3d_tex_comp 1 # slower but less graphics memory usage
+
