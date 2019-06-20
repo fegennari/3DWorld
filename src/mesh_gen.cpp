@@ -133,6 +133,7 @@ bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 		std::cerr << "Error: No mh_filename spcified in the config file." << endl;
 		return 0;
 	}
+	//timer_t timer("Read Mesh Heightmap");
 	cout << "Reading mesh heightmap " << mh_filename << endl;
 	heightmap_t hmap(0, 7, MESH_X_SIZE, MESH_Y_SIZE, fn, (invert_mh_image != 0));
 	hmap.load(-1, allow_resize, 1, 1); // allow 2-byte grayscale (currently only works for PNGs)
