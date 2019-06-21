@@ -327,7 +327,7 @@ float tile_t::get_bsphere_radius_inc_water() const {
 
 unsigned tile_t::get_gpu_mem() const {
 
-	unsigned mem(pine_trees.get_gpu_mem() + decid_trees.get_gpu_mem() + scenery.get_gpu_mem());
+	unsigned mem(pine_trees.get_gpu_mem() + decid_trees.get_gpu_mem() + scenery.get_gpu_mem() + flowers.get_gpu_mem());
 	unsigned const num_texels(stride*stride);
 	if (weight_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (RGBA8)
 	if (height_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (F32)
@@ -2533,7 +2533,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 		tile_t *const tile(i->second.get());
 
 		if (DEBUG_TILES) {
-			mem       += tile->get_gpu_mem ();
+			mem       += tile->get_gpu_mem (); // Note: includes smap_mem
 			tree_mem  += tile->get_tree_mem();
 			smap_mem  += tile->get_smap_mem();
 			num_smaps += tile->count_shadow_maps();
@@ -2602,8 +2602,8 @@ void tile_draw_t::draw(bool reflection_pass) {
 		unsigned const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem());
 		unsigned const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
-			 << ", gpu MB: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + models_mem + frame_buf_mem)
-			 << ", tile MB: " << in_mb(mem) << ", tree MB: " << in_mb(tree_mem) << ", decid tree MB: " << in_mb(dtree_mem) << ", grass MB: " << in_mb(grass_mem)
+			 << ", gpu MB: " << in_mb(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + models_mem + frame_buf_mem)
+			 << ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem) << ", tree GPU MB: " << in_mb(dtree_mem + ptree_mem) << ", grass MB: " << in_mb(grass_mem)
 			 << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem) << ", frame buf MB: " << in_mb(frame_buf_mem)
 			 << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem) << ", model MB: " << in_mb(models_mem) << endl;
 	}
