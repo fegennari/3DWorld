@@ -78,6 +78,24 @@ It seems like some systems require an OpenGL core context. This can be selected 
 This can also be enabled in scene_config/config_post.txt, which is a file that applies after reading all other top-level config files.
 In some situations, using a core context can be slower, which is why I don't have it enabled by default.
 
+Useful Keys (see readme-keys.txt for more key bindings):
+* a,s,d,w: Movement
+* q,e: Change weapon (gameplay mode)
+* 'space': Jump/fire
+* 'esc': Quit
+* 'tab': Onscreen menu (navigate with arrow keys and 'X' to switch menus)
+* b: Enable objects/physics/AI (for ground mode and universe mode gameplay)
+* F1: Switch between ground/universe/tiled terrain modes
+* F2: Toggle gameplay mode
+* m: Toggle fullscreen mode
+* h: Toggle flight move
+* v: Change camera mode (crystal ball/orbit vs. first person)
+* V: Toggle mouse look
+* K: Toggle overhead map mode
+* x: Pause
+* Mouse Left: Turn/Action
+* Mouse Right: Fire
+
 I currently have this repo up for educational purposes under the GPL license.
 It's not meant as a commercial tool and I'm not trying to make money here.
 I'm also not looking for others to work on the project at this early stage, though I'm accepting feedback and suggestions.
