@@ -492,7 +492,7 @@ void change_terrain_zoom(float val) {
 }
 
 
-void change_world_mode() { // switch terrain mode: 0 = normal, 1 = universe, 3 = tiled terrain
+void change_world_mode() { // switch terrain mode: 0 = normal/ground, 1 = universe, 2 = tiled terrain
 
 	if (map_mode || universe_only || tiled_terrain_only || (disable_universe && disable_inf_terrain)) return;
 	static int xoff_(0), yoff_(0), xoff2_(0), yoff2_(0);
@@ -1297,7 +1297,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		}
 		break;
 
-	case GLUT_KEY_F1: // switch terrain mode: 0 = normal, 1 = planet, 2 = no redraw, 3 = dynamic terrain
+	case GLUT_KEY_F1: // switch terrain mode: 0 = normal/ground, 1 = universe, 2 = infinite terrain
 		change_world_mode();
 		break;
 
