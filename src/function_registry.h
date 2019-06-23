@@ -295,7 +295,6 @@ void draw_overhead_map();
 
 // function prototypes - gen_obj
 void gen_and_draw_stars(float alpha, bool half_sphere=0, bool no_update=0);
-void gen_star(star &star1, int half_sphere=0);
 void rand_xy_point(float zval, point &pt, unsigned flags);
 void gen_object_pos(point &position, unsigned flags);
 void gen_bubble(point const &pos, float r=0.0, colorRGBA const &c=WATER_C);

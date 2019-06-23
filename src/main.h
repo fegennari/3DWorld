@@ -19,7 +19,6 @@ extern float temperature, water_plane_z, sm_green_int;
 extern float zcenter, leaf_color_coherence, tree_color_coherence, sun_radius, moon_radius, earth_radius, map_zoom;
 extern vector3d wind;
 extern colorRGBA leaf_base_color;
-extern lightning l_strike;
 extern obj_group obj_groups[];
 
 // camera variables

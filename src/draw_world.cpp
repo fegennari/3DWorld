@@ -53,7 +53,7 @@ extern point light_pos, mesh_origin, flow_source, surface_pos, pre_ref_camera_po
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
 extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
-extern lightning l_strike;
+extern lightning_t l_strike;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
 extern vector<beam3d> beams;

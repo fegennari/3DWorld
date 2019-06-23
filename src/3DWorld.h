@@ -610,15 +610,6 @@ typedef vector<cube_t> vect_cube_t;
 cube_t const all_zeros_cube(0,0,0,0,0,0);
 
 
-template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
-
-	if (p.empty()) return all_zeros_cube;
-	cube_t bbox(p.front().v, p.front().v);
-	for (unsigned i = 1; i < p.size(); ++i) {bbox.union_with_pt(p[i].v);}
-	return bbox;
-}
-
-
 vector3d get_poly_norm(point const *const points, bool normalize=1);
 
 struct tquad_t { // size = 52
@@ -649,7 +640,6 @@ struct line_3dw {
 
 
 struct vector_point_norm {
-
 	vector<point>    p;
 	vector<vector3d> n;
 };
@@ -1130,28 +1120,6 @@ struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
 };
 
 
-template<typename T> uint32_t jenkins_one_at_a_time_hash(const T* key, size_t length) { // T is an unsigned integer type
-
-	size_t i = 0;
-	uint32_t hash = 0;
-
-	while (i != length) {
-		hash += key[i++];
-		hash += hash << 10;
-		hash ^= hash >> 6;
-	}
-	hash += hash << 3;
-	hash ^= hash >> 11;
-	hash += hash << 15;
-	return hash;
-}
-
-template<typename T> struct hash_by_bytes { // should work with all packed vertex types
-	uint32_t operator()(T const &v) const {return jenkins_one_at_a_time_hash((const uint8_t*)&v, sizeof(T));} // slower but better quality hash
-	//uint32_t operator()(T const &v) const {return jenkins_one_at_a_time_hash((const uint32_t*)&v, sizeof(T)>>2);} // faster but lower quality hash
-};
-
-
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset);
 void unbind_temp_vbo();
 
@@ -1251,10 +1219,7 @@ struct ray3d { // size = 40
 	point pts[2];
 	colorRGBA color;
 	
-	ray3d(point const &pt0, point const &pt1, colorRGBA const &c) : color(c) {
-		pts[0] = pt0;
-		pts[1] = pt1;
-	}
+	ray3d(point const &pt0, point const &pt1, colorRGBA const &c) : color(c) {pts[0] = pt0; pts[1] = pt1;}
 	ray3d() {}
 };
 
@@ -1287,25 +1252,6 @@ public:
 };
 
 
-struct lightning { // size = 40
-
-	int time, enabled;
-	point start, end;
-	vector<line3d> path;
-	typedef unsigned long long cell_ix_t;
-	set<cell_ix_t> cells_seen;
-
-	lightning() : time(0), enabled(-1) {}
-	void gen();
-	void gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter);
-	void draw() const;
-	
-	cell_ix_t get_cell_ix(unsigned const x, unsigned const y, unsigned const z) const {
-		return (x + (cell_ix_t(y) << 16) + (cell_ix_t(z) << 32)); // x, y, z < 2^16
-	}
-};
-
-
 colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black with alpha of 0.0
 
 
@@ -1323,7 +1269,6 @@ protected:
 	unsigned tid;
 	colorRGBA color;
 	vector<unsigned> mm_offsets;
-
 	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, NUM_DEFER_TYPE};
 
 	void maybe_swap_rb(unsigned char *ptr) const;
@@ -1479,7 +1424,7 @@ inline uint32_t pcg32_random_r(pcg32_random_t* rng) {
 
 class rgen_pregen_t : public rgen_core_t {
 
-	std::shared_ptr<vector<double>> pregen_rand_reals;
+	std::shared_ptr<std::vector<double>> pregen_rand_reals;
 	unsigned cur_pos;
 
 public:
@@ -1491,9 +1436,9 @@ public:
 template<typename base> class rand_gen_template_t : public base {
 
 public:
- 	using rgen_core_t::rseed1;
+	using rgen_core_t::rseed1;
 	using rgen_core_t::rseed2;
-	
+
 	int rand() {
 		int rand_num;
 		base::randome_int(rand_num);
@@ -1536,10 +1481,8 @@ public:
 typedef rand_gen_template_t<rgen_core_t> rand_gen_t;
 typedef rand_gen_template_t<rgen_pregen_t> rand_gen_pregen_t;
 
-
 class shader_t;
 class vpc_shader_t;
-
 
 class volume_part_cloud {
 
@@ -1598,7 +1541,6 @@ public:
 };
 
 struct text_drawer_t {
-
 	vector<text_string_t> strs;
 	void draw() const;
 };
@@ -1767,12 +1709,10 @@ struct base_mat_t;
 class  sd_sphere_d;
 struct dwobject;
 class  obj_group;
-struct star;
 struct cobj_params;
 class  coll_obj;
 class  coll_obj_group;
 class  shape3d;
-struct lightning;
 struct color_tid_vol;
 class  vert_coll_detector;
 struct cobj_query_callback;

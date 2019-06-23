@@ -55,6 +55,7 @@ extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_po
 extern vector3d total_wind;
 extern colorRGBA sun_color, bkg_color;
 extern water_params_t water_params;
+extern lightning_t l_strike;
 extern vector<camera_filter> cfilters;
 extern reflective_cobjs_t reflective_cobjs;
 

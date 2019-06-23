@@ -37,6 +37,8 @@ extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 
 
+void gen_star(star &star1, int half_sphere=0);
+
 
 void gen_and_draw_stars(float alpha, bool half_sphere, bool no_update) {
 

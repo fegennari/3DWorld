@@ -69,7 +69,7 @@ extern unsigned smoke_tid;
 extern float zmin, zmax, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tree_slope_thresh;
 extern double sim_ticks;
 extern vector3d wind;
-extern lightning l_strike;
+extern lightning_t l_strike;
 extern coll_obj_group coll_objects;
 
 void set_indir_color(shader_t &s);

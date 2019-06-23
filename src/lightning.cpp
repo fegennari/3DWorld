@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "openal_wrap.h"
 #include "shaders.h"
+#include "physics_objects.h" // for lightning_t
 
 
 int    const FORK_PROB            = 50;
@@ -24,7 +25,7 @@ unsigned const MAX_LITN_FORKS     = 100;
 int vmatrix_valid(0);
 float L_STRENGTH_MULT, L_DAMAGE_MULT;
 point litning_pos;
-lightning l_strike;
+lightning_t l_strike;
 
 extern int is_cloudy, game_mode, world_mode, iticks, DISABLE_WATER, animate2;
 extern float zmin, temperature, lt_green_int, water_plane_z, ztop, fticks;
@@ -89,7 +90,7 @@ void compute_volume_matrix_if_invalid() {
 }
 
 
-void lightning::gen() {
+void lightning_t::gen() {
 
 	if (MESH_Z_SIZE == 0) return; // disabled
 	L_STRENGTH_MULT = BASE_L_STRENGTH_MULT*(MESH_Z_SIZE/50.0);
@@ -188,7 +189,7 @@ void add_forks(int lforks[5][2], int &nforks, int val, int zpos, int x, int y) {
 }
 
 
-void lightning::gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter) {
+void lightning_t::gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter) {
 
 	int i(0), hit_water(0), lforks[5][2];
 	unsigned const path_id((unsigned)path.size());
@@ -299,7 +300,7 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 }
 
 
-void lightning::draw() const {
+void lightning_t::draw() const {
 
 	float const lscale(LITNING_LINEAR_I);
 	enable_blend();

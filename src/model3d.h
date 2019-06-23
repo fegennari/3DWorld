@@ -167,6 +167,22 @@ struct weighted_normal : public vector3d { // size = 16
 };
 
 
+template<typename T> uint32_t jenkins_one_at_a_time_hash(const T* key, size_t length) { // T is an unsigned integer type
+
+	size_t i = 0;
+	uint32_t hash = 0;
+	while (i != length) {hash += key[i++]; hash += hash << 10; hash ^= hash >> 6;}
+	hash += hash << 3;
+	hash ^= hash >> 11;
+	hash += hash << 15;
+	return hash;
+}
+
+template<typename T> struct hash_by_bytes { // should work with all packed vertex types
+	uint32_t operator()(T const &v) const {return jenkins_one_at_a_time_hash((const uint8_t*)&v, sizeof(T));} // slower but better quality hash
+	//uint32_t operator()(T const &v) const {return jenkins_one_at_a_time_hash((const uint32_t*)&v, sizeof(T)>>2);} // faster but lower quality hash
+};
+
 //template<typename T> class vertex_map_t : public unordered_map<T, unsigned, hash_by_bytes<T>> {
 template<typename T> class vertex_map_t : public map<T, unsigned> {
 
@@ -199,6 +215,14 @@ struct get_polygon_args_t {
 	get_polygon_args_t(vector<coll_tquad> &polygons_, colorRGBA const &color_, bool quads_only_=0, unsigned lod_level_=0)
 		: polygons(polygons_), color(color_), quads_only(quads_only_), lod_level(lod_level_) {}
 };
+
+
+template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
+	if (p.empty()) return all_zeros_cube;
+	cube_t bbox(p.front().v, p.front().v);
+	for (unsigned i = 1; i < p.size(); ++i) {bbox.union_with_pt(p[i].v);}
+	return bbox;
+}
 
 
 template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_t {

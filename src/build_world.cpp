@@ -64,7 +64,7 @@ extern coll_obj_group coll_objects;
 extern cobj_groups_t cobj_groups;
 extern cobj_draw_groups cdraw_groups;
 extern platform_cont platforms;
-extern lightning l_strike;
+extern lightning_t l_strike;
 extern vector<int> hmv_coll_obj;
 extern char *coll_obj_file;
 extern vector<point> app_spots;

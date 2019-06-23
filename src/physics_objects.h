@@ -124,6 +124,25 @@ struct fire : public basic_physics_obj { // size = 60
 };
 
 
+struct lightning_t { // size = 40
+
+	int time, enabled;
+	point start, end;
+	vector<line3d> path;
+	typedef unsigned long long cell_ix_t;
+	set<cell_ix_t> cells_seen;
+
+	lightning_t() : time(0), enabled(-1) {}
+	void gen();
+	void gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter);
+	void draw() const;
+
+	cell_ix_t get_cell_ix(unsigned const x, unsigned const y, unsigned const z) const {
+		return (x + (cell_ix_t(y) << 16) + (cell_ix_t(z) << 32)); // x, y, z < 2^16
+	}
+};
+
+
 class physics_particle_manager {
 
 protected:
