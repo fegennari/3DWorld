@@ -32,8 +32,13 @@ bool city_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id 
 	return 1;
 }
 
-bool city_model_t::file_exists() const {
-	return ifstream(fn).good(); // try to open model file for reading, but don't actually read anything; also, let the caller handle error printing
+bool city_model_t::check_filename() {
+	// if converting files, check if user specified the post-converted model3d filename rather than the input obj file
+	if (city_params.convert_model_files && get_file_extension(fn, 0, 1) == "model3d" && !check_file_exists(fn)) {
+		string const fn_as_obj(fn.substr(0, (fn.size() - 7)) + "obj"); // strip off 'model3d' and add 'obj'
+		if (check_file_exists(fn_as_obj)) {fn = fn_as_obj; return 1;}
+	}
+	return check_file_exists(fn); // try to open model file for reading, but don't actually read anything; also, let the caller handle error printing
 }
 
 

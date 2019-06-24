@@ -109,7 +109,7 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "car_model") {
 		city_model_t car_model;
 		if (!car_model.read(fp)) {return read_error(str);}
-		if (!car_model.file_exists()) {cerr << "Error: car_model file '" << car_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+		if (!car_model.check_filename()) {cerr << "Error: car_model file '" << car_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
 		car_model_files.push_back(car_model);
 		max_eq(max_car_scale, car_model.scale);
 	}
@@ -123,7 +123,7 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "ped_model") {
 		city_model_t ped_model;
 		if (!ped_model.read(fp)) {return read_error(str);}
-		if (!ped_model.file_exists()) {cerr << "Error: ped_model file '" << ped_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+		if (!ped_model.check_filename()) {cerr << "Error: ped_model file '" << ped_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
 		ped_model_files.push_back(ped_model); // Note: no ped_model_scale
 	}
 	else if (str == "ped_respawn_at_dest") {

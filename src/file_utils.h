@@ -19,6 +19,8 @@ inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) 
 inline bool read_zero_one_float(FILE *fp, float &val) {return (read_float(fp, val) && val >= 0.0 && val <= 1.0);}
 inline bool read_str  (FILE *fp, char     *val) {return (fscanf(fp, "%255s", val) == 1);}
 
+inline bool check_file_exists(std::string const &fn) {return std::ifstream(fn).good();}
+
 inline unsigned read_binary_uint(FILE *fp) {
 	unsigned v(0);
 	unsigned const v_read(fread(&v, sizeof(unsigned), 1, fp));
