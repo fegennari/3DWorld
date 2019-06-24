@@ -44,7 +44,7 @@ FILE *open_texture_file(string const &filename) {
 	fp = fopen(filename.c_str(), "rb");
 
 	if (fp == NULL) {
-		cerr << "Error loading image " << filename << endl;
+		cerr << endl << "Error loading image " << filename << endl;
 		exit(1);
 	}
 	return fp;
