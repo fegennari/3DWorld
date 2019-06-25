@@ -42,7 +42,7 @@ using std::min;
 using std::max;
 
 #ifndef PI
-#define PI 3.141592654
+#define PI 3.141592654f
 #endif
 
 int      const CAMERA_ID        = -1;
@@ -217,7 +217,7 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 
 	T x, y, z;
 
-	pointT() {}
+	pointT() : x(0.0), y(0.0), z(0.0) {}
 	//pointT(T v) : x(v), y(v), z(v) {} // unsafe?
 	pointT(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {}
 	pointT(pointT const &p1, pointT const &p2) : x(p1.x-p2.x), y(p1.y-p2.y), z(p1.z-p2.z) {} // take the difference (vector)
@@ -349,7 +349,7 @@ vector3d const all_ones(1, 1, 1);
 struct vector4d : public vector3d { // size = 16
 	float w;
 
-	vector4d() {}
+	vector4d() : w(0.0) {}
 	vector4d(float x_, float y_, float z_, float w_) : vector3d(x_, y_, z_), w(w_) {}
 	vector4d(vector3d const &v, float w_) : vector3d(v), w(w_) {}
 	void assign(float x_, float y_, float z_, float w_)    {x = x_; y = y_; z = z_; w = w_;}
@@ -385,7 +385,7 @@ struct cube_t { // size = 24
 
 	float d[3][2]; // {x,y,z},{min,max}
 
-	cube_t() {}
+	cube_t() {set_to_zeros();}
 	//cube_t() {d[0][0] = 1; d[0][1] = 0; d[1][0] = 1; d[1][1] = 0; d[2][0] = 1; d[2][1] = 0;} // initialize to invalid values for testing purposes
 	
 	cube_t(float x1, float x2, float y1, float y2, float z1, float z2) {
@@ -430,9 +430,9 @@ struct cube_t { // size = 24
 	float &y2() {return d[1][1];}
 	float &z1() {return d[2][0];}
 	float &z2() {return d[2][1];}
-	float xc() const {return 0.5*(x1() + y2());}
-	float yc() const {return 0.5*(y1() + y2());}
-	float zc() const {return 0.5*(z1() + z2());}
+	float xc() const {return 0.5f*(x1() + y2());}
+	float yc() const {return 0.5f*(y1() + y2());}
+	float zc() const {return 0.5f*(z1() + z2());}
 	float dx() const {return (x2() - x1());}
 	float dy() const {return (y2() - y1());}
 	float dz() const {return (z2() - z1());}
@@ -542,9 +542,9 @@ struct cube_t { // size = 24
 		return fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]);
 	}
 	float get_area() const {
-		return 2.0*(fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0]) +
-			        fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]) +
-			        fabs(d[2][1] - d[2][0])*fabs(d[0][1] - d[0][0]));
+		return 2.0f*(fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0]) +
+			         fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]) +
+			         fabs(d[2][1] - d[2][0])*fabs(d[0][1] - d[0][0]));
 	}
 	float max_len() const {
 		return max((d[0][1] - d[0][0]), max((d[1][1] - d[1][0]), (d[2][1] - d[2][0])));
@@ -558,7 +558,7 @@ struct cube_t { // size = 24
 			       max((d[2][1] - d[2][0]), (d[0][1] - d[0][0]))));
 	}
 	point get_cube_center() const {
-		return point(0.5*(d[0][0]+d[0][1]), 0.5*(d[1][0]+d[1][1]), 0.5*(d[2][0]+d[2][1]));
+		return point(0.5f*(d[0][0]+d[0][1]), 0.5f*(d[1][0]+d[1][1]), 0.5f*(d[2][0]+d[2][1]));
 	}
 	float get_bsphere_radius() const {
 		return 0.5*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]) + (d[2][1]-d[2][0])*(d[2][1]-d[2][0]));
@@ -653,7 +653,7 @@ struct pos_dir_up { // defines a view frustum
 	double A; // aspect ratio x/y
 	bool valid;
 
-	pos_dir_up(void) : valid(0) {}
+	pos_dir_up(void) : angle(0.0f), tterm(0.0f), sterm(0.0f), x_sterm(0.0f), behind_sphere_mult(0.0f), near_(0.0f), far_(0.0f), A(0.0), valid(0) {}
 	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float angle_, float n, float f, float a=0.0, bool no_zoom=0);
 	void orthogonalize_up_dir();
 	bool point_visible_test(point const &pos_) const;
@@ -682,10 +682,10 @@ struct cylinder_3dw : public line_3dw { // size = 32
 	cylinder_3dw() : r1(0.0), r2(0.0) {}
 	cylinder_3dw(point const &p1_, point const &p2_, float r1_, float r2_) : line_3dw(p1_, p2_), r1(r1_), r2(r2_) {}
 	void calc_bcube(cube_t &bcube) const;
-	float get_volume() const {return PI*(r1*r1 + r1*r2 + r2*r2)*get_length()/3.0;}
+	float get_volume() const {return PI*(r1*r1 + r1*r2 + r2*r2)*get_length()/3.0f;}
 	float get_surface_area() const;
-	point get_center() const {return 0.5*(p1 + p2);}
-	float get_avg_radius() const {return 0.5*(r1 + r2);}
+	point get_center() const {return 0.5f*(p1 + p2);}
+	float get_avg_radius() const {return 0.5f*(r1 + r2);}
 	float get_bounding_radius() const;
 };
 
@@ -693,7 +693,7 @@ struct cylinder_3dw : public line_3dw { // size = 32
 struct colorRGB { // size = 12
 
 	float R, G, B;
-	colorRGB() {}
+	colorRGB() : R(0.0f), G(0.0f), B(0.0f) {}
 	colorRGB(float r, float g, float b) : R(r), G(g), B(b) {}
 	void assign(float r, float g, float b) {R = r; G = g; B = b;}
 	void set_to_val(float val) {R = G = B = val;}
@@ -752,7 +752,7 @@ struct colorRGB { // size = 12
 	}
 	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B; return oss.str();}
 	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B; return oss.str();}
-	float get_luminance() const {return (R + G + B)/3.0;}
+	float get_luminance() const {return (R + G + B)/3.0f;}
 	float get_max_component() const {return max(R, max(G, B));}
 	void set_for_cur_shader() const;
 };
@@ -854,7 +854,7 @@ struct vert_norm { // size = 24
 struct norm_comp { // size = 4
 	char n[3];
 	char pad; // unused padding
-	norm_comp() : pad(0) {}
+	norm_comp() : pad(0) {n[0] = n[1] = n[2] = 0;}
 	norm_comp(vector3d const &n_) : pad(0) {set_norm(n_);}
 	void set_norm(norm_comp const &n_) {UNROLL_3X(n[i_] = n_.n[i_];)}
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = char(max(-128, min(127, int(127.0*n_[i_]))));)}
@@ -866,11 +866,11 @@ struct norm_comp { // size = 4
 // unused
 struct norm_xy { // size = 8
 	float x, y; // z can be calculated in the shader as sqrt(1 - x*x - y*y), as long as z >= 0.0
-	norm_xy() {}
+	norm_xy() : x(0.0f), y(0.0f) {}
 	norm_xy(vector3d const &n) {set_norm(n);}
 	void set_norm(vector3d const &n) {assert(n.z >= 0.0); x = n.x; y = n.y;} 
 	void ensure_normalized_and_set(vector3d const &n) {assert(n.z >= 0.0); float const mag(n.mag()); x = n.x/mag; y = n.y/mag;}
-	vector3d get_norm() const {return vector3d(x, y, sqrt(1.0 - x*x - y*y));}
+	vector3d get_norm() const {return vector3d(x, y, sqrt(max(0.0f, (1.0f - x*x - y*y))));}
 };
 
 
@@ -885,7 +885,7 @@ struct vert_wrap_t { // size = 12; so we can put the vertex first
 
 struct vert_tc_t : public vert_wrap_t { // size = 20
 	float t[2];
-	vert_tc_t() {}
+	vert_tc_t() {t[0] = t[1] = 0.0f;}
 	vert_tc_t(point const &v_, float ts, float tt) : vert_wrap_t(v_) {t[0] = ts; t[1] = tt;}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
@@ -903,7 +903,7 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	float t[2];
 	typedef vert_norm_comp_tc non_color_class;
-	vert_norm_comp_tc() {}
+	vert_norm_comp_tc() {t[0] = t[1] = 0.0f;}
 	vert_norm_comp_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
 	vert_norm_comp_tc(point const &v_, vector3d const &n_, float const tc[2] ) : vert_norm_comp(v_, n_) {t[0] = tc[0]; t[1] = tc[1];}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
@@ -912,7 +912,7 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 
 struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 	short t[2]; // could even use char
-	vert_norm_comp_tc_comp() {}
+	vert_norm_comp_tc_comp() {t[0] = t[1] = 0;}
 	vert_norm_comp_tc_comp(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = 32767*ts; t[1] = 32767*tt;}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
@@ -921,7 +921,7 @@ struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 struct vert_norm_tc : public vert_norm { // size = 32
 	float t[2];
 	typedef vert_norm_tc non_color_class;
-	vert_norm_tc() {}
+	vert_norm_tc() {t[0] = t[1] = 0.0f;}
 	vert_norm_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm(v_, n_) {t[0] = ts;    t[1] = tt;   }
 	vert_norm_tc(point const &v_, vector3d const &n_, float const t_[2])  : vert_norm(v_, n_) {t[0] = t_[0]; t[1] = t_[1];}
 	vert_norm_tc(vert_norm const &vn, float ts=0.0, float tt=1.0) : vert_norm(vn) {t[0] = ts; t[1] = tt;}
@@ -972,7 +972,7 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 struct color_wrapper { // size = 4, can be used in a union
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
-	color_wrapper() {}
+	color_wrapper() {c[0] = c[1] = c[2] = c[3] = 0;}
 	color_wrapper(colorRGBA const &c_) {set_c4(c_);}
 	color_wrapper(colorRGB  const &c_) {set_c3(c_);}
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
@@ -1234,7 +1234,7 @@ struct beam3d : public ray3d { // size = 48
 
 	beam3d(bool dist, int shoot, point const &pt0, point const &pt1, colorRGBA const &c, float int_=1.0)
 		: ray3d(pt0, pt1, c), distant(dist), shooter(shoot), intensity(int_) {}
-	beam3d() {}
+	beam3d() : distant(0), shooter(0), intensity(0.0f) {}
 	void draw(line_tquad_draw_t &drawer) const;
 };
 
