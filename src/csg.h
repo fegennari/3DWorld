@@ -17,7 +17,7 @@ class rect {
 public:
 	float d[2][2];
 
-	rect() {}
+	rect() {d[0][0] = d[0][1] = d[1][0] = d[1][1] = 0.0f;}
 
 	rect(float const r[2][2]) {
 		d[0][0] = r[0][0]; d[0][1] = r[0][1]; d[1][0] = r[1][0]; d[1][1] = r[1][1];
@@ -28,7 +28,7 @@ public:
 	bool nonzero() const {return (d[0][1] > d[0][0] && d[1][1] > d[1][0]);}
 	
 	float clipped_area(float const c[2]) const {
-		return ((d[0][0] >= c[1] || d[0][1] <= c[0]) ? 0.0 : (min(c[1], d[0][1]) - max(c[0], d[0][0]))*(d[1][1] - d[1][0]));
+		return ((d[0][0] >= c[1] || d[0][1] <= c[0]) ? 0.0f : (min(c[1], d[0][1]) - max(c[0], d[0][0]))*(d[1][1] - d[1][0]));
 	}
 	bool is_near_zero_area() const {
 		return (fabs(d[0][0] - d[0][1]) < TOLER || fabs(d[1][0] - d[1][1]) < TOLER);

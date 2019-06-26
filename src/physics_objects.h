@@ -26,7 +26,7 @@ struct spark_t {
 	static float const radius;
 	point const &get_pos() const {return pos;}
 
-	spark_t() {}
+	spark_t() : s(0.0f), pos(all_zeros), c(BLACK) {}
 	spark_t(point const &p_, colorRGBA const &c_, float s_) : s(s_), pos(p_), c(c_) {}
 	void draw(quad_batch_draw &qbd) const;
 };
@@ -89,6 +89,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 
 	struct part : public sphere_t {
 		bool status;
+		part() : status(0) {}
 	};
 	bool acc_smoke, no_lighting, red_only;
 	int source, damage_type;
@@ -99,6 +100,8 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	mutable vector<part> render_parts;
 	static order_vect_t order;
 
+	particle_cloud() : acc_smoke(0), no_lighting(0), red_only(0), source(-1), damage_type(0), radius(0.0f), init_radius(0.0f),
+		density(0.0f), darkness(0.0f), damage(0.0f), init_vel(zero_vector), base_color(BLACK) {}
 	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r, float den, float dark, float dam,
 		int src, int dt, bool as, bool use_parts=1, bool nl=0, float spread=1.0);
 	void draw(quad_batch_draw &qbd) const;

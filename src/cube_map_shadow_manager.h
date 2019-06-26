@@ -8,7 +8,7 @@
 
 struct cube_map_lix_t {
 	int ixs[6]; // one per cube face, -1 is disabled
-	cube_map_lix_t() {for (unsigned i = 0; i < 6; ++i) {ixs[i] = -1;}}
+	cube_map_lix_t() {ixs[0] = ixs[1] = ixs[2] = ixs[3] = ixs[4] = ixs[5] = -1;}
 	void add_cube_face_lights(point const &pos, float radius, colorRGBA const &color, float near_clip);
 };
 

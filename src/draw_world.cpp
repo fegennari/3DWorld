@@ -191,7 +191,7 @@ void disable_light   (int l) {assert(l < (int)MAX_SHADER_LIGHTS); enabled_lights
 void calc_cur_ambient_diffuse() {
 
 	unsigned ncomp(0);
-	cur_ambient = cur_diffuse = BLACK;
+	cur_ambient = cur_diffuse = colorRGB(0,0,0);
 	if (l_strike.enabled) {cur_ambient += LITN_C*0.25;}
 
 	for (unsigned i = 0; i < 2; ++i) { // sun, moon
@@ -1096,7 +1096,7 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 void draw_sky(bool camera_side, bool no_update) {
 
 	if (atmosphere < 0.01) return; // no atmosphere
-	float radius(0.55*(FAR_CLIP+X_SCENE_SIZE));
+	float radius(0.55f*(FAR_CLIP+X_SCENE_SIZE));
 	point center((camera_mode == 1) ? surface_pos : mesh_origin);
 	center.z -= 0.727*radius;
 	if ((distance_to_camera(center) > radius) != camera_side) return;
@@ -1105,7 +1105,7 @@ void draw_sky(bool camera_side, bool no_update) {
 	float const wmag(sqrt(wind.x*wind.x + wind.y*wind.y));
 
 	if (!no_update && wmag > TOLERANCE) {
-		for (unsigned d = 0; d < 2; ++d) {sky_rot_xy[d] -= fticks*CLOUD_WIND_SPEED*(wmag + 0.5*WIND_ADJUST)*wind[d]/wmag;}
+		for (unsigned d = 0; d < 2; ++d) {sky_rot_xy[d] -= fticks*CLOUD_WIND_SPEED*(wmag + 0.5f*WIND_ADJUST)*wind[d]/wmag;}
 	}
 	cur_spo = sky_pos_orient(center, radius, sky_rot_xy[0], sky_rot_xy[1]);
 	int const light_id(4);
@@ -1321,7 +1321,7 @@ void decal_obj::maybe_draw_blood_trail(line_tquad_draw_t &blood_tqd) const {
 	if (!cobj.cp.is_glass() && dot_product_ptv(orient, cur_pos, camera) > 0.0) return; // back face culling
 	float const alpha_val(get_alpha()), view_thresh(max(window_width, window_height)*radius*alpha_val);
 	if (!dist_less_than(cur_pos, get_camera_pos(), 0.7*view_thresh)) return; // distance culling
-	float const dz_max(min(min((cur_pos.z - cobj.d[2][0]), 100.0f*radius), 2.0f*CAMERA_RADIUS)), dz(((hashval&63)+1)/64.0 * dz_max);
+	float const dz_max(min(min((cur_pos.z - cobj.d[2][0]), 100.0f*radius), 2.0f*CAMERA_RADIUS)), dz(((hashval&63)+1)/64.0f * dz_max);
 	if (dz < radius) return; // too small
 	if (!sphere_in_camera_view(cur_pos-vector3d(0,0, 0.5*dz), radius+0.5*dz, 0)) return; // VFC (better to call camera_pdu.line_visible()?)
 	colorRGBA const c(color, alpha_val);
@@ -1404,7 +1404,7 @@ struct crack_point {
 	float alpha;
 	colorRGBA color;
 	
-	crack_point() {}
+	crack_point() : pos(all_zeros), orig_pos(all_zeros), cid(0), face(0), time(0), alpha(0.0f), color(BLACK) {}
 	crack_point(point const &pos_, point const &opos, int cid_, int face_, int time_, float alpha_, colorRGBA const &color_)
 		: pos(pos_), orig_pos(opos), cid(cid_), face(face_), time(time_), alpha(alpha_), color(color_) {}
 	
@@ -1462,7 +1462,7 @@ void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 			crack_point const &cpt1(cpts[j]);
 			int const dim(cpt1.face >> 1), d1((dim+1)%3), d2((dim+2)%3);
 			unsigned const ncracks(4); // one for each quadrant
-			float const center(0.5*(cube.d[dim][0] + cube.d[dim][1]));
+			float const center(0.5f*(cube.d[dim][0] + cube.d[dim][1]));
 			float const x1(cpt1.pos[d1]), y1(cpt1.pos[d2]);
 			rand_gen_t rgen;
 			rgen.set_state(*(int const*)&cpt1.orig_pos[d1], *(int const*)&cpt1.orig_pos[d2]); // hash floats as ints	

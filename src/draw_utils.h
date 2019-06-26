@@ -12,7 +12,7 @@
 template<class vert_type_t> struct sized_vert_t : public vert_type_t { // size = 20-32
 	float size;
 
-	sized_vert_t() {}
+	sized_vert_t() : size(0.0f) {}
 	sized_vert_t(vert_type_t const &v, float size_) : vert_type_t(v), size(size_) {}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 	static void set_size_attr(unsigned stride, void const *vbo_ptr_offset);
@@ -233,7 +233,7 @@ class lt_atten_manager_t {
 
 public:
 	lt_atten_manager_t(shader_t &shader_) : shader(shader_), last_light_atten(-2.0), last_refract_ix(0.0) // set to invalid values to start
-	{for (unsigned i = 0; i < 5; ++i) {ulocs[i] = -1;}}
+	{ulocs[0] = ulocs[1] = ulocs[2] = ulocs[3] = ulocs[4] = -1;}
 	void enable();
 	void next_object(float light_atten, float refract_ix);
 	void next_cube(float light_atten, float refract_ix, cube_t const &cube);
@@ -253,7 +253,7 @@ public:
 	bool enabled() const {return (!empty() && sel_cube >= 0);}
 	void add(cube_t const &c) {bcubes.push_back(c);}
 	cube_t const &get_selected() const {assert(enabled()); assert(sel_cube < (int)bcubes.size()); return bcubes[sel_cube];}
-	float get_refl_plane() const {cube_t const &c(get_selected()); return 0.5*(c.d[2][0] + c.d[2][1]);}
+	float get_refl_plane() const {cube_t const &c(get_selected()); return 0.5f*(c.d[2][0] + c.d[2][1]);}
 	void select_best_reflection_plane();
 };
 

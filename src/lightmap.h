@@ -95,7 +95,8 @@ class light_volume_local : public light_grid_base {
 	void compress(bool verbose);
 public:
 
-	light_volume_local(unsigned tag_ix_) : changed(0), compressed(0), tag_ix(tag_ix_), scale(0.0) {}
+	light_volume_local(unsigned tag_ix_) : changed(0), compressed(0), tag_ix(tag_ix_), scale(0.0)
+	{bounds[0][0] = bounds[0][1] = bounds[1][0] = bounds[1][1] = bounds[2][0] = bounds[2][1] = 0;}
 	void set_bounds(int x1, int x2, int y1, int y2, int z1, int z2);
 	void set_scale(float scale_) {changed |= (scale != scale_); scale = scale_;} // changing the scale counts as changed
 	bool is_allocated() const {return !data.empty();}
@@ -167,7 +168,8 @@ protected:
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), smap_index(0), cube_eflags(0), num_dlight_rays(0) {}
+	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
+	radius(0.0f), radius_inv(0.0f), r_inner(0.0f), bwidth(0.0f), near_clip(0.0f), pos(all_zeros), pos2(all_zeros), dir(zero_vector), color(BLACK) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
 	void set_dynamic_state(point const &pos_, vector3d const &dir_, colorRGBA const &color_, bool enabled_) {pos = pos2 = pos_; dir = dir_; color = color_; enabled = enabled_;}
@@ -189,8 +191,8 @@ public:
 	unsigned get_cube_eflags() const {return cube_eflags;}
 	unsigned get_num_rays()    const {return num_dlight_rays;}
 	bool is_visible()     const;
-	bool is_directional() const {return (bwidth < 1.0);}
-	bool is_very_directional() const {return ((bwidth + LT_DIR_FALLOFF) < 0.5);}
+	bool is_directional() const {return (bwidth < 1.0f);}
+	bool is_very_directional() const {return ((bwidth + LT_DIR_FALLOFF) < 0.5f);}
 	bool is_line_light()  const {return (pos != pos2 && !is_cube_light);} // technically cylinder light
 	bool get_is_cube_light() const {return is_cube_light;}
 	bool is_dynamic()     const {return dynamic;}
@@ -276,7 +278,7 @@ unsigned const MAX_LSRC = 256; // max of 255 lights per bin
 
 class dls_cell {
 
-	unsigned short lsrc[MAX_LSRC];
+	unsigned short lsrc[MAX_LSRC] = {0};
 	unsigned sz;
 
 public:

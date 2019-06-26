@@ -66,7 +66,7 @@ class shader_t : public property_map_t {
 	struct light_loc_t {
 		int v[5];
 		bool valid;
-		light_loc_t() : valid(0) {}
+		light_loc_t() : valid(0) {v[0] = v[1] = v[2] = v[3] = v[4] = -1;}
 	};
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
