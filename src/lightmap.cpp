@@ -835,7 +835,10 @@ void upload_dlights_textures(cube_t const &bounds) {
 	unsigned const max_floats_per_light  = base_floats_per_light + 1; // add one for shadow map index
 	//unsigned const max_floats_per_light      = base_floats_per_light + dl_smap_enabled;
 	unsigned const ysz((max_floats_per_light+3)/4); // round up to nearest power of 2
-	float dl_data[max_dlights*(4*ysz)] = {0.0}; // use max possible size
+	unsigned const data_sz(max_dlights*(4*ysz));
+	std::unique_ptr<float> dl_data(new float[data_sz]); // use max possible size
+	float *dl_data_ptr(dl_data.get());
+	memset(dl_data_ptr, 0, data_sz*sizeof(float));
 	if (dl_sources.size() > max_dlights) {cerr << "Warning: Exceeded max lights of " << max_dlights << endl;}
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
 	float const radius_scale(1.0/(0.5*bounds.get_dx())); // bounds x radius inverted
@@ -845,7 +848,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		bool const line_light(dl_sources[i].is_line_light());
-		float *data(dl_data + 4*i*ysz); // stride is texel RGBA
+		float *data(dl_data_ptr + 4*i*ysz); // stride is texel RGBA
 		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
 		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
@@ -856,11 +859,11 @@ void upload_dlights_textures(cube_t const &bounds) {
 	}
 	if (dl_tid == 0) {
 		setup_2d_texture(dl_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data); // 2 x M
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data_ptr); // 2 x M
 	}
 	else {
 		bind_2d_texture(dl_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ysz, ndl, GL_RGBA, GL_FLOAT, dl_data);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ysz, ndl, GL_RGBA, GL_FLOAT, dl_data_ptr);
 	}
 
 	// step 2: grid bag entries
