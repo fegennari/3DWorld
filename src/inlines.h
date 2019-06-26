@@ -371,12 +371,12 @@ inline bool line_poly_intersect(vector3d const &v1, point const &p1, point const
 }
 
 inline bool point_in_ellipse(point const &p, point const &center, float rx, float ry) {
-	float const dx(center.x - p.x), dy(center.y - p.y);
-	return (double(dx*dx/(rx*rx)) + double(dy*dy/(ry*ry)) <= 1.0);
+	double const dx(center.x - p.x), dy(center.y - p.y);
+	return (dx*dx/((double)rx*rx) + dy*dy/((double)ry*ry) <= 1.0);
 }
 inline bool point_in_ellipse_risq(point const &p, point const &center, float rx_inv_sq, float ry_inv_sq) {
-	float const dx(center.x - p.x), dy(center.y - p.y);
-	return (double(dx*dx*rx_inv_sq) + double(dy*dy*ry_inv_sq) <= 1.0);
+	double const dx(center.x - p.x), dy(center.y - p.y);
+	return (dx*dx*(double)rx_inv_sq + dy*dy*(double)ry_inv_sq <= 1.0);
 }
 
 
