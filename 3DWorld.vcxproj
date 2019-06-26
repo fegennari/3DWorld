@@ -99,7 +99,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>jpeg-9a;glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;dependencies\glm;freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\jpeg-9a;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut-1.1.0-bin\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -130,7 +130,7 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>jpeg-9a\Release;glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86;D:\Frank\Desktop\Graphics\bullet3-master\bin</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut-1.1.0-bin\lib;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
@@ -201,7 +201,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>jpeg-9a;glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;dependencies\glm;freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\jpeg-9a;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut-1.1.0-bin\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -230,7 +230,7 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Release/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>jpeg-9a\Release;glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86;D:\Frank\Desktop\Graphics\bullet3-master\bin</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut-1.1.0-bin\lib;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <SubSystem>Console</SubSystem>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
