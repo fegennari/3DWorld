@@ -141,8 +141,8 @@ void gen_uw_lighting() {
 				bnds[1][d] = min(MESH_SIZE[d]-1, int(ceil ((rng[1][d] + SCENE_SIZE[d])*dxy_val_inv[d])));
 				assert(bnds[0][d] <= bnds[1][d]); // can this fail?
 			}
-			float const weight_n(1.0/((rng[1][0] - rng[0][0])*(rng[1][1] - rng[0][1]))); // weight of this patch of light
-			float const weight_d(1.0/(DX_VAL*DY_VAL));
+			float const weight_n(1.0f/((rng[1][0] - rng[0][0])*(rng[1][1] - rng[0][1]))); // weight of this patch of light
+			float const weight_d(1.0f/(DX_VAL*DY_VAL));
 			float const init_cr[2] = {(-X_SCENE_SIZE + DX_VAL*bnds[0][0]), (-Y_SCENE_SIZE + DY_VAL*bnds[0][1])};
 			float crng[2][2]; // {min,max} x {x,y} - range of this mesh quad
 			crng[0][1] = init_cr[1];
@@ -550,7 +550,7 @@ void add_vertex(vector<vert_norm_tc> &verts, vector3d const &n, float x, float y
 void draw_sides_and_bottom(bool shadow_pass) {
 
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
-	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
+	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5f*(zbottom + ztop)), ts(4.0f/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
 	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
 	shader_t s;
@@ -614,7 +614,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 			float const xlimit(d ? x2 : x1), ylimit(d ? y2 : y1);
 			vector3d const &n1(d ? plus_y : -plus_y), &n2(d ? plus_x : -plus_x);
 
-			if (!back_face_cull || (camera.y - ylimit)*n1.y > 0.0) { // camera facing this side
+			if (!back_face_cull || (camera.y - ylimit)*n1.y > 0.0f) { // camera facing this side
 				for (int i = 0; i < MESH_X_SIZE; ++i) { // y sides
 					float const xv(get_xval(i));
 					add_vertex(verts, n1, xv, ylimit, botz, 0, ts);
@@ -622,7 +622,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 				}
 				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
-			if (!back_face_cull || (camera.x - xlimit)*n2.x > 0.0) { // camera facing this side
+			if (!back_face_cull || (camera.x - xlimit)*n2.x > 0.0f) { // camera facing this side
 				for (int i = 0; i < MESH_Y_SIZE; ++i) { // x sides
 					float const yv(get_yval(i));
 					add_vertex(verts, n2, xlimit, yv, botz, 1, ts);
@@ -660,7 +660,7 @@ void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_ed
 	colorRGBA c(color);
 	point p(x, y, z), v(get_camera_pos());
 
-	if (bool((v[!in_y] - p[!in_y]) < 0.0) ^ neg_edge) { // camera viewing the inside face of the water side
+	if (bool((v[!in_y] - p[!in_y]) < 0.0f) ^ neg_edge) { // camera viewing the inside face of the water side
 		do_line_clip_scene(p, v, zbottom, z);
 		float const atten(WATER_COL_ATTEN*p2p_dist(p, v));
 		atten_by_water_depth(&c.R, atten);
@@ -878,7 +878,7 @@ class lava_bubble_manager_t {
 
 	void gen_bubble(bubble &b, float lava_zval) {
 		point const center(get_camera_pos());
-		float const range(1.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		float const range(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		b.pos.assign((center.x + range*rgen.rand_uniform(-1.0, 1.0)), (center.y + range*rgen.rand_uniform(-1.0, 1.0)), lava_zval);
 		b.radius = rgen.rand_uniform(0.3, 0.6)*CAMERA_RADIUS;
 		b.time   = 0.0;
@@ -1014,7 +1014,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 	}
 	static lava_bubble_manager_t lava_bubble_manager;
 
-	if (water_is_lava && !camera_underwater && (camera.z - zval) < 50.0*CAMERA_RADIUS) { // camera just above lava surface
+	if (water_is_lava && !camera_underwater && (camera.z - zval) < 50.0f*CAMERA_RADIUS) { // camera just above lava surface
 		select_texture(WHITE_TEX); // no reflections
 		setup_water_plane_shader(s, no_specular, 0, 0, 0, 0, 0, color, BLACK, 0); // reflections=0, add_waves=0, rain_mode=0, use_depth=0, use_tess=0
 		// Note: bound uniforms and textures should be set to valid values from above
