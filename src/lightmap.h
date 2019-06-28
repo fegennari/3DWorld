@@ -284,7 +284,11 @@ class dls_cell {
 public:
 	dls_cell() : sz(0) {}
 	void clear() {sz = 0;}
-	void add_light(unsigned ix) {if (sz+1 < MAX_LSRC) {lsrc[sz++] = ix;}}
+	
+	void add_light(unsigned ix, unsigned char &enabled_flag) {
+		if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
+		if (sz+1 < MAX_LSRC) {lsrc[sz++] = ix;}
+	}
 	bool check_add_light(unsigned ix) const;
 	size_t size() const {return sz;}
 	bool empty()  const {return (sz == 0);}

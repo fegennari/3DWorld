@@ -31,6 +31,7 @@ float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 cube_t dlight_bcube(all_zeros_cube);
 vector<dls_cell> ldynamic;
+vector<unsigned char> ldynamic_enabled;
 vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 vector<light_source_trig> light_sources_d;
 lmap_manager_t lmap_manager;
@@ -628,6 +629,7 @@ void build_lightmap(bool verbose) {
 	czmin0      = czmin;//max(czmin, zbottom);
 	assert(lm_dz_adj >= 0.0);
 	ldynamic.resize(get_grid_xsize()*get_grid_ysize());
+	ldynamic_enabled.resize(ldynamic.size(), 0);
 	if (MESH_Z_SIZE == 0) return;
 
 	RESET_TIME;
@@ -821,7 +823,7 @@ void setup_2d_texture(unsigned &tid) {
 // 7: reserved for shadow map moon
 // 8: reserved for specular maps
 // 11: reserved for detail normal map
-void upload_dlights_textures(cube_t const &bounds) {
+void upload_dlights_textures(cube_t const &bounds) { // 0.21ms => 0.05ms with dlights_enabled
 
 	//RESET_TIME;
 	static bool last_dlights_empty(0);
@@ -881,6 +883,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 		for (unsigned x = 0; x < gbx && elem_data.size() < max_gb_entries; ++x) {
 			unsigned const gb_ix(x + y*gbx); // {start, end, unused}
 			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
+			if (!ldynamic_enabled[gb_ix]) continue; // no lights for this grid
 			dls_cell const &dlsc(ldynamic[gb_ix]);
 			unsigned num_ixs(dlsc.size());
 			if (num_ixs == 0) continue; // no lights for this grid
@@ -1058,7 +1061,7 @@ void clear_dynamic_lights() {
 
 	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
-	for (auto i = ldynamic.begin(); i != ldynamic.end(); ++i) {i->clear();}
+	for (auto i = ldynamic_enabled.begin(); i != ldynamic_enabled.end(); ++i) {*i = 0;} // 0.015ms
 	dl_sources.clear();
 }
 
@@ -1080,6 +1083,7 @@ void add_dynamic_lights_ground() {
 	sync_flashlight();
 	if (!animate2) return;
 	assert(!ldynamic.empty());
+	assert(ldynamic_enabled.size() == ldynamic.size());
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
 	dl_smap_enabled = 0;
@@ -1116,7 +1120,11 @@ void add_dynamic_lights_ground() {
 		point const &lpos(ls.get_pos()), &lpos2(ls.get_pos2());
 		bool const line_light(ls.is_line_light());
 		int const xcent(get_xpos(lpos.x) >> DL_GRID_BS), ycent(get_ypos(lpos.y) >> DL_GRID_BS);
-		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby && !ldynamic[ycent*gbx + xcent].check_add_light(ix)) continue;
+		
+		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby) {
+			unsigned const gb_ix(ycent*gbx + xcent);
+			if (ldynamic_enabled[gb_ix] && !ldynamic[gb_ix].check_add_light(ix)) continue; // merged into existing light, skip
+		}
 		cube_t bcube;
 		int bnds[3][2];
 		ls.get_bounds(bcube, bnds, sqrt_dlight_add_thresh, 1, dlight_shift); // clip_to_scene_bcube=1
@@ -1143,7 +1151,7 @@ void add_dynamic_lights_ground() {
 					if (!pdu.cube_visible_for_light_cone(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, z1, z2))) continue; // tile not in spotlight cylinder
 				}
 				//if (DL_GRID_BS == 0 && bcube.z1() > v_collision_matrix[y << DL_GRID_BS][x << DL_GRID_BS].zmax) continue; // should be legal, but doesn't seem to help
-				ldynamic[offset + x].add_light(ix); // could do flow clipping here?
+				ldynamic[offset + x].add_light(ix, ldynamic_enabled[offset + x]); // could do flow clipping here?
 			} // for x
 		} // for y
 	} // for ix (light index)
@@ -1190,7 +1198,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube) {
 					float const px(x*grid_dx + scene_llc.x), py(y*grid_dy + scene_llc.y);
 					if (!pdu.cube_visible(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, scene_bcube.z1(), scene_bcube.z2()))) continue; // tile not in spotlight cylinder
 				}*/
-				ldynamic[offset + x].add_light(ix);
+				ldynamic[offset + x].add_light(ix, ldynamic_enabled[offset + x]);
 			} // for x
 		} // for y
 	} // for ix (light index)
@@ -1230,19 +1238,22 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 			cscale *= val;
 		}
 		if (!dl_sources.empty() && dlight_bcube.contains_pt(p)) {
-			dls_cell const &ldv(ldynamic[get_ldynamic_ix(x, y)]);
-			unsigned const lsz((unsigned)ldv.size());
+			unsigned const gb_ix(get_ldynamic_ix(x, y));
 
-			for (unsigned l = 0; l < lsz; ++l) {
-				unsigned const ls_ix(ldv.get(l));
-				assert(ls_ix < dl_sources.size());
-				light_source const &lsrc(dl_sources[ls_ix]);
-				point lpos;
-				float color_scale(lsrc.get_intensity_at(p, lpos));
-				if (color_scale < CTHRESH) continue;
-				if (lsrc.is_directional()) {color_scale *= lsrc.get_dir_intensity(lpos - p);}
-				cscale += lsrc.get_color()*color_scale;
-			} // for l
+			if (ldynamic_enabled[gb_ix]) {
+				dls_cell const &ldv(ldynamic[gb_ix]);
+
+				for (unsigned l = 0; l < (unsigned)ldv.size(); ++l) {
+					unsigned const ls_ix(ldv.get(l));
+					assert(ls_ix < dl_sources.size());
+					light_source const &lsrc(dl_sources[ls_ix]);
+					point lpos;
+					float color_scale(lsrc.get_intensity_at(p, lpos));
+					if (color_scale < CTHRESH) continue;
+					if (lsrc.is_directional()) {color_scale *= lsrc.get_dir_intensity(lpos - p);}
+					cscale += lsrc.get_color()*color_scale;
+				} // for l
+			}
 		}
 	}
 	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_]);)
@@ -1253,10 +1264,11 @@ bool is_any_dlight_visible(point const &p) {
 	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y));
 	if (point_outside_mesh(x, y)) return 0; // outside the mesh range
 	if (dl_sources.empty() || !dlight_bcube.contains_pt(p)) return 0;
-	dls_cell const &ldv(ldynamic[get_ldynamic_ix(x, y)]);
-	unsigned const lsz((unsigned)ldv.size());
+	unsigned const gb_ix(get_ldynamic_ix(x, y));
+	if (!ldynamic_enabled[gb_ix]) return 0;
+	dls_cell const &ldv(ldynamic[gb_ix]);
 
-	for (unsigned l = 0; l < lsz; ++l) {
+	for (unsigned l = 0; l < (unsigned)ldv.size(); ++l) {
 		unsigned const ls_ix(ldv.get(l));
 		assert(ls_ix < dl_sources.size());
 		light_source const &lsrc(dl_sources[ls_ix]);
