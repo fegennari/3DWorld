@@ -67,7 +67,7 @@ void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subt
 		for (i2[1] = 0; i2[1] < n[1]; ++i2[1]) {
 			float pt[2];
 			for (unsigned l = 0; l < 2; ++l) { // pt is the center of this pixel
-				pt[l] = 0.5*(vals[l][i2[l]] + vals[l][i2[l]+1]);
+				pt[l] = 0.5f*(vals[l][i2[l]] + vals[l][i2[l]+1]);
 			}
 			vox[i2[0]][i2[1]] = !contains_pt(pt);
 		}
@@ -370,7 +370,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 			for (i3[2] = 0; i3[2] < n[2]; ++i3[2]) {
 				point pt;
 				for (unsigned l = 0; l < 3; ++l) { // pt is the center of this voxel
-					pt[l] = 0.5*(vals[l][i3[l]] + vals[l][i3[l]+1]);
+					pt[l] = 0.5f*(vals[l][i3[l]] + vals[l][i3[l]+1]);
 				}
 				vox[i3[0]][i3[1]][i3[2]] = !contains_pt(pt);
 			}
@@ -1163,7 +1163,7 @@ color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thicknes
 {
 	if (cobj.type == COLL_CUBE) {modify_alpha_for_cube_light_atten(color.alpha, cobj.cp.light_atten, thickness);}
 	if (tscale == 0.0) { // calculate tscale from object size (assuming a cube)
-		tscale = 3.0/(fabs(cobj.get_dx()) + fabs(cobj.get_dy()) + fabs(cobj.get_dz()));
+		tscale = 3.0f/(fabs(cobj.get_dx()) + fabs(cobj.get_dy()) + fabs(cobj.get_dz()));
 	}
 	copy_from(cobj);
 	if (cobj.type == COLL_SPHERE || cobj.type == COLL_CAPSULE || cobj.is_cylinder()) {max_frag_sz = 0.5*max(cobj.radius, cobj.radius2);}
