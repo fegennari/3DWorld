@@ -656,7 +656,8 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 
 	if (!c.is_big_occluder() || c.group_id >= 0) return 0;
 	float const dist_sq(distance_to_camera_sq(c.get_center_pt()));
-	if (c.get_area() < 0.005*dist_sq) return 0;
+	// use higher thresh for core context mode because buffer updates are slower and batch size is more important than early z-culling from z-prepass
+	if (c.get_area() < (use_core_context ? 0.5 : 0.05)*dist_sq) return 0;
 	out.push_back(make_pair(dist_sq, cix));
 	return 1;
 }
