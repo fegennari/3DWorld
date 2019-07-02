@@ -565,9 +565,10 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			float const tscale((cp.tscale == 0.0) ? 1.0 : cp.tscale); // always textured, use tscale of 1.0 if not set
 			draw_rot_torus(points[0], norm, radius2, radius, ndiv, 3*ndiv/2, tscale, tscale);
 		}
-		else { // cylinder
+		else { // cylinder (Note: use_tcs is usually 0 - using texgen, not textured)
 			bool const draw_ends(!(cp.surfs & 1));
-			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends); // Note: using texgen, not textured
+			//cdb.draw_cylin_cdb(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends); // Note: requires a flush after this call if use_tcs==1
+			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends);
 			if (draw_ends && !use_tcs) {draw_cylin_ends(tid, ndiv, cdb);}
 		}
 		break;

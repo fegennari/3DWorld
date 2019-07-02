@@ -104,7 +104,7 @@ class cobj_draw_buffer {
 
 	obj_layer last_layer;
 	vector<vert_norm_texp> tri_verts, quad_verts;
-	vector<vert_norm_tc> tc_verts;
+	vector<vert_norm_tc> tc_verts, tc_tri_verts;
 
 public:
 	int is_wet; // 0=no, 1=yes, 2=unknown
@@ -114,9 +114,10 @@ public:
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp, bool is_quad=0) {(is_quad ? quad_verts : tri_verts).emplace_back(vn, tp);}
 	void add_vert_quad_tc(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
 	template<unsigned NUM> void add_polygon(vert_norm_texp const &vnt, point const *const pts);
+	void draw_cylin_cdb(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture, bool draw_sides_ends, bool two_sided_lighting);
 	bool on_new_obj_layer(obj_layer const &l);
 	void full_clear() {clear(); is_wet = 2;}
-	void clear() {tri_verts.clear(); quad_verts.clear(); tc_verts.clear();}
+	void clear() {tri_verts.clear(); quad_verts.clear(); tc_verts.clear(); tc_tri_verts.clear();}
 	void draw() const;
 	void flush() {draw(); clear();}
 	obj_layer const &get_last_layer() const {return last_layer;}

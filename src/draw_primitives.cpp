@@ -338,6 +338,25 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 	}
 }
 
+void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting) {
+
+	unsigned const ndiv(vpn.n.size());
+	float const ndiv_inv(1.0/ndiv);
+	unsigned vix(verts.size());
+	verts.resize(vix + 4*ndiv);
+
+	for (unsigned i = 0; i < ndiv; ++i) { // Note: always has tex coords
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			float const ts(1.0f - S*ndiv_inv);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), 0);
+			create_vert(verts[vix++], vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), 0);
+		}
+	}
+	assert(vix == verts.size());
+}
+
 
 class cylin_vertex_buffer_t {
 
@@ -363,6 +382,34 @@ void begin_cylin_vertex_buffering() {cylin_vertex_buffer.begin_buffering();}
 void flush_cylin_vertex_buffer   () {cylin_vertex_buffer.draw_and_clear_buffers();}
 
 
+void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends,
+	vector3d const &v12, point const ce[2], point const &xlate, vector_point_norm const &vpn)
+{
+	if (draw_sides_ends == 0) return;
+	cylin_vertex_buffer_t &cvb(cylin_vertex_buffer);
+	float const theta_mult(TWO_PI/ndiv);
+
+	for (unsigned i = 0; i < 2; ++i) {
+		if ((i ? radius2 : radius1) == 0.0 || (draw_sides_ends == 3+(!i))) continue;
+		vector3d const normal(i ? v12 : -v12);
+		cvb.cverts.resize(ndiv+2);
+		cvb.cverts[0].assign(ce[i]+xlate, normal, 0.5, 0.5);
+
+		for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
+			unsigned const ss(S%ndiv), s(i ? (ndiv - ss - 1) : ss);
+			float ts(0.0), tt(0.0);
+
+			if (texture) { // inefficient, but uncommon
+				float const theta(theta_mult*s);
+				ts = 0.5*(1.0 + sinf(theta));
+				tt = 0.5*(1.0 + cosf(theta));
+			}
+			cvb.cverts[S+1].assign(vpn.p[(s<<1)+i]+xlate, normal, ts, tt);
+		}
+		draw_and_clear_verts(cvb.cverts, GL_TRIANGLE_FAN); // triangle fans can't be buffered
+	}
+}
+
 // draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = pt1 end, 4 = pt2 end
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends,
 	bool two_sided_lighting, float const *const perturb_map, float tex_scale_len, float tex_t_start, point const *inst_pos, unsigned num_insts)
@@ -385,29 +432,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		else {
 			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, inst_pos[inst]);
 		}
-		if (draw_sides_ends != 0) { // Note: two_sided_lighting doesn't apply here
-			float const theta_mult(TWO_PI/ndiv);
-
-			for (unsigned i = 0; i < 2; ++i) {
-				if ((i ? radius2 : radius1) == 0.0 || (draw_sides_ends == 3+(!i))) continue;
-				vector3d const normal(i ? v12 : -v12);
-				cvb.cverts.resize(ndiv+2);
-				cvb.cverts[0].assign(ce[i]+inst_pos[inst], normal, 0.5, 0.5);
-
-				for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
-					unsigned const ss(S%ndiv), s(i ? (ndiv - ss - 1) : ss);
-					float ts(0.0), tt(0.0);
-				
-					if (texture) { // inefficient, but uncommon
-						float const theta(theta_mult*s);
-						ts = 0.5*(1.0 + sinf(theta));
-						tt = 0.5*(1.0 + cosf(theta));
-					}
-					cvb.cverts[S+1].assign(vpn.p[(s<<1)+i]+inst_pos[inst], normal, ts, tt);
-				}
-				draw_and_clear_verts(cvb.cverts, GL_TRIANGLE_FAN); // triangle fans can't be buffered
-			}
-		}
+		if (draw_sides_ends != 0) {add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, inst_pos[inst], vpn);} // Note: TSL doesn't apply here
 	} // for inst
 	cvb.end_cylinder();
 }

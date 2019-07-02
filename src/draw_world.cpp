@@ -704,6 +704,7 @@ bool add_cobj_to_draw_list(unsigned cix, int reflection_pass, bool use_ref_plane
 void cobj_draw_buffer::draw() const {
 	
 	draw_verts(tri_verts, GL_TRIANGLES);
+	draw_verts(tc_tri_verts, GL_TRIANGLES);
 	draw_quad_verts_as_tris(quad_verts);
 	draw_quad_verts_as_tris(tc_verts);
 }
