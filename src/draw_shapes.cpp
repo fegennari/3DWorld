@@ -135,7 +135,7 @@ void coll_obj::setup_cube_face_texgen(texgen_params_t &tp, unsigned tdim0, unsig
 		float const t_off(e ? cp.tdy : cp.tdx);
 
 		if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
-			tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
+			tg[tdim] = 1.0f/(d[tdim][1] - d[tdim][0]);
 			tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim] + t_off;
 		}
 		else {
@@ -171,8 +171,8 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 			unsigned const dim(i>>1), dir(i&1), d0((dim+1)%3), d1((dim+2)%3);
 			point pos;
 			pos[dim] = d[dim][dir];
-			pos[d0]  = 0.5*(d[d0][0] + d[d0][1]);
-			pos[d1]  = 0.5*(d[d1][0] + d[d1][1]);
+			pos[d0]  = 0.5f*(d[d0][0] + d[d0][1]);
+			pos[d1]  = 0.5f*(d[d1][0] + d[d1][1]);
 			faces[i].first = -p2p_dist_sq(pos, camera); // draw ordered furthest to closest to camera
 		}
 		sort(faces, (faces+6));
@@ -385,7 +385,7 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 						bool const s_or_t(cp.swap_txy() ^ (e != 0));
 						float const tex_off(texture_offset[e]*tscale[e]);
 						tcs[s_or_t][!s] = tex_off;
-						tcs[s_or_t][ s] = tex_off + ((tscale[e] == 0.0) ? 1.0 : tscale[e]*cube_size[e]);
+						tcs[s_or_t][ s] = tex_off + ((tscale[e] == 0.0f) ? 1.0f : tscale[e]*cube_size[e]);
 					}
 					cdb_add_quad_tc(pts[s], normal, tcs, cdb);
 				}
@@ -408,7 +408,7 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 							bool const s_or_t(cp.swap_txy() ^ (e != 0));
 							float const tex_off(texture_offset[tdim]*tscale[e]);
 							tcs[s_or_t][1] = tex_off;
-							tcs[s_or_t][0] = tex_off + ((tscale[e] == 0.0) ? 1.0 : tscale[e]*cube_size[tdim]);
+							tcs[s_or_t][0] = tex_off + ((tscale[e] == 0.0f) ? 1.0f : tscale[e]*cube_size[tdim]);
 						}
 						cdb_add_quad_tc(side_pts, normal, tcs, cdb);
 					}

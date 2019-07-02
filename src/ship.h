@@ -487,8 +487,8 @@ public:
 	void get_bounding_sphere(point &c, float &r) const;
 	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Bounded Cylinder";}
-	float get_volume() const {return min(ship_cylinder::get_volume(),   bcube.get_volume());} // ???
-	float get_s_area() const {return 0.5*(ship_cylinder::get_s_area() + bcube.get_s_area());} // ???
+	float get_volume() const {return min(  ship_cylinder::get_volume(),  bcube.get_volume());} // ???
+	float get_s_area() const {return 0.5f*(ship_cylinder::get_s_area() + bcube.get_s_area());} // ???
 };
 
 // Note: we generally use r1 == r1 for a true cylinder (not a truncated cone)

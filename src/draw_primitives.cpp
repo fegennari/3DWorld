@@ -577,7 +577,7 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 			pt[dn] = (j ? 1.0 : -1.0);
 
 			for (unsigned s = 0; s < ndiv; ++s) {
-				pt[d1] = -1.0 + s*vstep;
+				pt[d1] = -1.0f + s*vstep;
 
 				for (unsigned T = 0; T <= ndiv; ++T) {
 					unsigned const t(j ? T : ndiv-T); // reverse between sides

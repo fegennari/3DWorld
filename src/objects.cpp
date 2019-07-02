@@ -181,7 +181,7 @@ float coll_obj::get_min_dist_to_pt(point const &pt) const {
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
 	case COLL_CAPSULE:
-		return max(0.0f, (p2p_dist(pt, get_closest_pt_on_line(pt, points[0], points[1]) - 0.5*(radius + radius2)))); // approximate
+		return max(0.0f, (p2p_dist(pt, get_closest_pt_on_line(pt, points[0], points[1]) - 0.5f*(radius + radius2)))); // approximate
 	case COLL_TORUS: {
 		float const dp(fabs(dot_product_ptv(norm, pt, points[0])));
 		return max(0.0f, (p2p_dist(pt, points[0]) - radius2 - (1.0f - dp)*radius)); // approximate (ri when parallel to axis and ri+ro when perpendicular to axis)
@@ -274,7 +274,7 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 		}
 		else { // unused, untested
 			int const bb_z((d1 == 2) ? d1 : d2);
-			float const z(0.5*(bb[bb_z][0] + bb[bb_z][1]));
+			float const z(0.5f*(bb[bb_z][0] + bb[bb_z][1]));
 			float const t((z - points[0].z)/(points[1].x - points[0].z));
 			float const r(radius + t*(radius2 - radius));
 			val = points[0][d3] + sqrt(PI/4.0)*(dir ? r : -r); // approximate with a square of the same cross sectional area
@@ -376,7 +376,7 @@ void coll_obj::check_indoors_outdoors() {
 
 	switch (type) {
 	case COLL_CUBE:
-		test_pts[npts++].assign(0.5*(d[0][0] + d[0][1]), 0.5*(d[1][0] + d[1][1]), d[2][1]); // cube center
+		test_pts[npts++].assign(0.5f*(d[0][0] + d[0][1]), 0.5f*(d[1][0] + d[1][1]), d[2][1]); // cube center
 
 		if (radius > HALF_DXY) { // large cube
 			for (unsigned i = 0; i < 4; ++i) {
@@ -830,7 +830,7 @@ point coll_obj::get_center_pt() const {
 	case COLL_CUBE:         return points[0];
 	case COLL_SPHERE:       return points[0];
 	case COLL_TORUS:        return points[0];
-	case COLL_CYLINDER:     return point(points[0].x, points[0].y, 0.5*(points[0].z + points[1].z));
+	case COLL_CYLINDER:     return point(points[0].x, points[0].y, 0.5f*(points[0].z + points[1].z));
 	case COLL_CYLINDER_ROT: return get_center_n2(points);
 	case COLL_CAPSULE:      return get_center_n2(points); // approximate
 	case COLL_POLYGON:      return get_center(points, npoints);

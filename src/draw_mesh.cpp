@@ -294,7 +294,7 @@ protected:
 		color_wrapper c;
 		int ix;
 		norm_color_ix() : ix(-1) {}
-		void assign(vert_norm_color const &vnc, int ix_) {n = vnc.n; c = vnc; ix = ix_;}
+		void assign(vert_norm_color const &vnc, int ix_) {n = vnc.n; c = (color_wrapper)vnc; ix = ix_;}
 	};
 
 	vector<vert_norm_color> data;
