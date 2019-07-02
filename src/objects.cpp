@@ -825,6 +825,11 @@ cylinder_3dw coll_obj::get_bounding_cylinder() const { // Note: only valid for t
 	return cylinder_3dw(); // never gets here
 }
 
+bool coll_obj::use_tex_coords() const {
+	if (was_a_cube() && cp.tid >= 0) return 1; // textured cube
+	return (cp.tscale == 0.0 && (is_cylinder() || type == COLL_SPHERE || type == COLL_CAPSULE || type == COLL_TORUS)); // default curved shape
+}
+
 point coll_obj::get_center_pt() const {
 
 	switch (type) {
