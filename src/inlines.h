@@ -63,7 +63,8 @@ template<typename T> inline T interpolate_3d(T const *v, unsigned npts, float s,
 inline float cubic_interpolate  (float x) {return ((3 - 2*x)*x*x);}
 inline float quintic_interpolate(float x) {return ((5*x*x - 15*x + 10)*x*x*x);}
 
-inline int round_fp(double val) {return ((val > 0.0) ? int(val + 0.5) : int(val - 0.5));}
+inline int round_fp(float  val) {return ((val > 0.0f) ? int(val + 0.5f) : int(val - 0.5f));}
+inline int round_fp(double val) {return ((val > 0.0 ) ? int(val + 0.5 ) : int(val - 0.5 ));}
 
 template<typename T> T lerp(T const &a, T const &b, float val) {return (a*(1.0-val) + b*val);}
 

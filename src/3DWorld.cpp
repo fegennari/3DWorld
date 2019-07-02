@@ -682,7 +682,7 @@ void mouseMotion(int x, int y) {
 		if (!camera_view) {
 			up_theta += MOUSE_ANG_ADJ*dx;
 			up_theta  = fix_angle(up_theta);
-			c_radius  = c_radius*(1.0 + MOUSE_R_ADJ*dy);
+			c_radius  = c_radius*(1.0f + MOUSE_R_ADJ*dy);
 			if (c_radius <= 0.05*MOUSE_R_ADJ) {c_radius = 0.05*MOUSE_R_ADJ;}
 			update_cpos();
 		}

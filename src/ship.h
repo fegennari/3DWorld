@@ -413,7 +413,7 @@ public:
 	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Cylinder";}
 	float get_volume() const {return cylinder_3dw::get_volume();}
-	float get_s_area() const {return PI*((check_ends ? (r1*r1 + r2*r2) : 0.0) + (r1 + r2)*get_length());}
+	float get_s_area() const {return PI*((check_ends ? (r1*r1 + r2*r2) : 0.0f) + (r1 + r2)*get_length());}
 };
 
 class ship_cube : public ship_coll_obj, public cube_t {
@@ -431,7 +431,7 @@ public:
 	string get_name()   const {return "Cube";}
 	float delta(unsigned i) const {return fabs(d[i][1] - d[i][0]);}
 	float get_volume() const {return cube_t::get_volume();}
-	float get_s_area() const {return 2.0*(delta(0)*delta(1) + delta(0)*delta(2) + delta(1)*delta(2));}
+	float get_s_area() const {return 2.0f*(delta(0)*delta(1) + delta(0)*delta(2) + delta(1)*delta(2));}
 };
 
 class ship_sphere : public sphere_t, public ship_coll_obj {
@@ -506,8 +506,8 @@ public:
 	void get_bounding_sphere(point &c, float &r) const;
 	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Capsule";}
-	float get_volume() const {return cylinder_3dw::get_volume() + (2.0/3.0)*PI*(r1*r1*r1 + r2*r2*r2);} // cylinder + two hemispheres
-	float get_s_area() const {return PI*(r1 + r2)*get_length() + 2.0*PI*(r1*r1 + r2*r2);}
+	float get_volume() const {return cylinder_3dw::get_volume() + (2.0f/3.0f)*PI*(r1*r1*r1 + r2*r2*r2);} // cylinder + two hemispheres
+	float get_s_area() const {return PI*(r1 + r2)*get_length() + 2.0f*PI*(r1*r1 + r2*r2);}
 };
 
 // triangle_list inherits from sphere (used as bounding sphere) and only overrides some functions

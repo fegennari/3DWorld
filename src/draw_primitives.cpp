@@ -87,7 +87,7 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 		vpn.n[S] *= nmag_inv; //norms[S].normalize();
 	}
 	if (perturb_map != NULL) { // add in perturbations
-		float const ravg(0.5*(r[0] + r[1]));
+		float const ravg(0.5f*(r[0] + r[1]));
 		float const pscale[2] = {r[0]/ravg, r[1]/ravg};
 
 		for (unsigned S = s0; S < s1; ++S) {
@@ -271,7 +271,7 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s);
-		if (disk) {verts.emplace_back((pos + point(r_inner*s, r_inner*c, 0.0)), n, 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c)));}
+		if (disk) {verts.emplace_back((pos + point(r_inner*s, r_inner*c, 0.0)), n, 0.5f*(1.0f + inner_tscale*s), (0.5f*(1.0f + inner_tscale*c)));}
 		verts.emplace_back((pos + point(r_outer*s, r_outer*c, 0.0)), n, 0.5*(1.0 + s), (0.5*(1.0 + c)));
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
@@ -327,7 +327,7 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 
 	for (unsigned S = 0; S <= ndiv; ++S) { // Note: always has tex coords
 		unsigned const s(S%ndiv), vix(2*S + ixoff);
-		float const ts(1.0 - S*ndiv_inv);
+		float const ts(1.0f - S*ndiv_inv);
 		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
 		create_vert(verts[vix+0], vpn.p[(s<<1)+0]+xlate, normal, ts, tc_t0, two_sided_lighting);
 		create_vert(verts[vix+1], vpn.p[(s<<1)+1]+xlate, normal, ts, tc_t1, two_sided_lighting);
@@ -581,7 +581,7 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 
 				for (unsigned T = 0; T <= ndiv; ++T) {
 					unsigned const t(j ? T : ndiv-T); // reverse between sides
-					pt[d2] = -1.0 + t*vstep;
+					pt[d2] = -1.0f + t*vstep;
 					point pt2(pt);
 
 					for (unsigned k = 0; k < 2; ++k) {

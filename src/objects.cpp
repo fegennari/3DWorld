@@ -97,20 +97,20 @@ void coll_obj::calc_volume() {
 		volume = get_volume();
 		break;
 	case COLL_SPHERE:
-		volume = (4.0/3.0)*PI*radius*radius*radius;
+		volume = (4.0f/3.0f)*PI*radius*radius*radius;
 		break;
 	case COLL_POLYGON:
 		volume = polygon_area(points, npoints)*thickness; // Note: thickness is 0 for voxel polygons
 		break;
 	case COLL_CAPSULE:
-		volume = (2.0/3.0)*PI*(radius*radius*radius + radius2*radius2*radius2); // two hemispheres
+		volume = (2.0f/3.0f)*PI*(radius*radius*radius + radius2*radius2*radius2); // two hemispheres
 		// fallthrough
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		volume += PI*(radius*radius+radius*radius2+radius2*radius2)*p2p_dist(points[0], points[1])/3.0;
+		volume += PI*(radius*radius+radius*radius2+radius2*radius2)*p2p_dist(points[0], points[1])/3.0f;
 		break;
 	case COLL_TORUS:
-		volume = (PI*radius2*radius2)*(2.0*PI*radius);
+		volume = (PI*radius2*radius2)*(2.0f*PI*radius);
 		break;
 	default: assert(0);
 	}
