@@ -353,8 +353,25 @@ void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), 0);
 			create_vert(verts[vix++], vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), 0);
 		}
-	}
+	} // for i
 	assert(vix == verts.size());
+}
+
+void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, texgen_params_t const &tp, bool two_sided_lighting) {
+
+	unsigned const ndiv(vpn.n.size());
+	float const ndiv_inv(1.0/ndiv);
+
+	for (unsigned i = 0; i < ndiv; ++i) { // Note: always has tex coords
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			float const ts(1.0f - S*ndiv_inv);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			point const &p1(vpn.p[(s<<1)+!j]), &p2(vpn.p[(s<<1)+ j]);
+			verts.emplace_back(p1, ((two_sided_lighting && dot_product_ptv(normal, get_camera_pos(), p1) < 0.0) ? -normal : normal), tp);
+			verts.emplace_back(p2, ((two_sided_lighting && dot_product_ptv(normal, get_camera_pos(), p2) < 0.0) ? -normal : normal), tp);
+		}
+	} // for i
 }
 
 
