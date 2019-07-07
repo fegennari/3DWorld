@@ -578,11 +578,8 @@ void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id
 	if (lt_atten_manager.is_enabled()) { // we only support cubes and spheres for now (Note: may not be compatible with groups)
 		float light_atten(c.cp.light_atten); // assign a tiny light atten value to reflective cobjs to enable correct refraction
 		if (enable_reflections == 2 && c.is_reflective() && c.is_semi_trans()) {light_atten = max(light_atten, 0.001f);}
-
-		if (c.type == COLL_CUBE || c.type == COLL_SPHERE) {
-			using_lt_atten = (light_atten > 0.0);
-			if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
-		}
+		using_lt_atten = ((c.type == COLL_CUBE || c.type == COLL_SPHERE) && light_atten > 0.0);
+		// Note: we don't need to flush cdb when using_lt_atten==1 because we must either have a material change, or cdb was flushed due to light atten on the previous cobj
 		if      (c.type == COLL_CUBE  ) {lt_atten_manager.next_cube(light_atten, c.cp.refract_ix, c);}
 		else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(light_atten, c.cp.refract_ix, c.points[0], c.radius);}
 		else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset

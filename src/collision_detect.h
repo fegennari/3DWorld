@@ -110,6 +110,7 @@ public:
 	int is_wet; // 0=no, 1=yes, 2=unknown
 
 	cobj_draw_buffer() : is_wet(2) {} // initial value of is_wet is unknown
+	bool empty() const {return (tri_verts.empty() && quad_verts.empty() && tc_verts.empty() && tc_tri_verts.empty());}
 	void add_vert(vert_norm_texp const &vnt, bool is_quad=0) {(is_quad ? quad_verts : tri_verts).push_back(vnt);}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp, bool is_quad=0) {(is_quad ? quad_verts : tri_verts).emplace_back(vn, tp);}
 	void add_vert_quad_tc(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
