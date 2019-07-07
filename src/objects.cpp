@@ -584,8 +584,13 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		}
 		else { // cylinder (Note: use_tcs is usually 0 - using texgen, not textured)
 			bool const draw_ends(!(cp.surfs & 1));
-			//cdb.draw_cylin_cdb(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends); // Note: requires a flush after this call if use_tcs==1
+#if 0
+			texgen_params_t tp;
+			get_sphere_cylin_tparams((points[1] - points[0]).get_norm(), tp);
+			cdb.draw_cylin_cdb(points[0], points[1], tp, radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends); // Note: requires a flush after this call if use_tcs==1
+#else
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends);
+#endif
 			if (draw_ends && !use_tcs) {draw_cylin_ends(tid, ndiv, cdb);}
 		}
 		break;
