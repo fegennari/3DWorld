@@ -258,7 +258,7 @@ public:
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 	vector<unsigned> indices;
-	bool need_normalize, optimized;
+	bool need_normalize, optimized, prev_ucc;
 	float avg_area_per_tri, amin, amax;
 
 	struct geom_block_t {
@@ -290,7 +290,7 @@ public:
 	using vntc_vect_t<T>::bcube;
 	using vntc_vect_t<T>::bsphere;
 	
-	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_), need_normalize(0), optimized(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
+	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_), need_normalize(0), optimized(0), prev_ucc(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
