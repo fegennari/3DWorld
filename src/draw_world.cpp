@@ -862,10 +862,13 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 			int const ix(draw_last[i].second);
 
 			if (ix < 0) { // portal
-				end_group(last_group_id);
-				cdb.flush();
-				lt_atten_manager.next_object(0.0, 1.0);
-				if (!in_portal) {portal::pre_draw(portal_verts); in_portal = 1;}
+				if (!in_portal) {
+					end_group(last_group_id);
+					cdb.flush();
+					lt_atten_manager.next_object(0.0, 1.0);
+					portal::pre_draw(portal_verts);
+					in_portal = 1;
+				}
 				unsigned const pix(-(ix+1));
 				assert(pix < portals.size());
 				portals[pix].draw(portal_verts);
