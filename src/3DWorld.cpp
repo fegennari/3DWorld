@@ -69,14 +69,14 @@ bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1), smoke_dlights(0), keep_keycards_on_death(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(1), invert_model_nmap_bscale(0);
 bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0), volume_lighting(0), no_subdiv_model(0);
-bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0), use_instanced_pine_trees(0);
+bool detail_normal_map(0), init_core_context(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0);
 bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only_pine_palm_trees(0), enable_gamma_correct(0), use_z_prepass(0), reflect_dodgeballs(0);
 bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_motion(0), enable_mouse_look(MOUSE_LOOK_DEF), enable_init_shields(1), tt_triplanar_tex(0);
 bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_maps(0), use_interior_cube_map_refl(0), enable_cube_map_bump_maps(1), no_store_model_textures_in_memory(0);
 bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map_view_mandelbrot(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0);
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0), enable_translocator(0), enable_grass_fire(0);
 bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants(1), config_unlimited_weapons(0), disable_tt_water_reflect(0), allow_model3d_quads(1);
-bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0);
+bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0), use_instanced_pine_trees(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
@@ -1618,7 +1618,7 @@ int load_config(string const &config_file) {
 	kwmb.add("start_maximized", start_maximized);
 	kwmb.add("enable_depth_clamp", enable_depth_clamp);
 	kwmb.add("detail_normal_map", detail_normal_map);
-	kwmb.add("use_core_context", use_core_context);
+	kwmb.add("use_core_context", init_core_context);
 	kwmb.add("enable_multisample", enable_multisample);
 	kwmb.add("dynamic_smap_bias", dynamic_smap_bias);
 	kwmb.add("model3d_winding_number_normal", model3d_wn_normal);
@@ -2107,6 +2107,7 @@ int load_config(string const &config_file) {
 	num_smileys    = max(num_smileys,    0);
 	teams          = max(teams,          1);
 	tree_mode      = tree_mode % 4;
+	use_core_context = init_core_context;
 	if (shadow_map_sz > 0 && shadow_map_pcf_offset == 0.0) {shadow_map_pcf_offset = 40.0/shadow_map_sz;}
 	if (universe_only)   {world_mode = WMODE_UNIVERSE;}
 	if (tiled_terrain_only || start_in_inf_terrain) {world_mode = WMODE_INF_TERRAIN;}
@@ -2197,7 +2198,7 @@ int main(int argc, char** argv) {
 	//glutInitDisplayString("rgba double depth>=16 samples>=8");
 	glutInitWindowSize(window_width, window_height);
 
-	if (use_core_context) {
+	if (init_core_context) {
 		glutInitContextVersion(4, 2);
 		glutInitContextFlags(GLUT_CORE_PROFILE
 #if _DEBUG
@@ -2216,7 +2217,7 @@ int main(int argc, char** argv) {
 	progress();
 	init_window();
 	check_gl_error(7770);
-	if (use_core_context) {init_debug_callback();}
+	if (init_core_context) {init_debug_callback();}
 	cout << ".GL Initialized." << endl;
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();

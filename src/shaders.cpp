@@ -26,7 +26,7 @@ int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_S
 
 shader_t *cur_shader(NULL);
 
-extern bool fog_enabled, mvm_changed, use_core_context;
+extern bool fog_enabled, mvm_changed, init_core_context;
 extern int is_cloudy, display_mode, fullscreen;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
@@ -1359,11 +1359,11 @@ template struct shader_float_matrix_uploader<3, 1>;
 void set_point_sprite_mode(bool enabled) { // Note: to be removed when using a core profile
 
 	if (enabled) {
-		if (!use_core_context) {glEnable(GL_POINT_SPRITE);}
+		if (!init_core_context) {glEnable(GL_POINT_SPRITE);}
 		glEnable(GL_PROGRAM_POINT_SIZE);
 	}
 	else {
-		if (!use_core_context) {glDisable(GL_POINT_SPRITE);}
+		if (!init_core_context) {glDisable(GL_POINT_SPRITE);}
 		glDisable(GL_PROGRAM_POINT_SIZE);
 	}
 }
