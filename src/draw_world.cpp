@@ -615,7 +615,7 @@ void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id
 		else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
 	}
 	c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
-	if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube/sphere
+	// Note: we don't need to flush cdb here when using_lt_atten==1 because we must either have a material change, or cdb was flushed due to light atten on the previous cobj
 }
 
 void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s,
