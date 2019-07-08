@@ -108,6 +108,7 @@ class cobj_draw_buffer {
 
 public:
 	int is_wet; // 0=no, 1=yes, 2=unknown
+	cube_t light_atten_cube;
 
 	cobj_draw_buffer() : is_wet(2) {} // initial value of is_wet is unknown
 	bool empty() const {return (tri_verts.empty() && quad_verts.empty() && tc_verts.empty() && tc_tri_verts.empty());}
@@ -117,7 +118,7 @@ public:
 	template<unsigned NUM> void add_polygon(vert_norm_texp const &vnt, point const *const pts);
 	void draw_cylin_cdb(point const &p1, point const &p2, texgen_params_t const &tp, float radius1, float radius2, int ndiv, bool texture, bool draw_sides_ends, bool two_sided_lighting);
 	bool on_new_obj_layer(obj_layer const &l);
-	void full_clear() {clear(); is_wet = 2;}
+	void full_clear() {clear(); is_wet = 2; light_atten_cube.set_to_zeros();}
 	void clear() {tri_verts.clear(); quad_verts.clear(); tc_verts.clear(); tc_tri_verts.clear();}
 	void draw() const;
 	void flush() {draw(); clear();}

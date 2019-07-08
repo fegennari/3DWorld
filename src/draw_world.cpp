@@ -576,12 +576,42 @@ void draw_cobj_with_light_atten(unsigned &cix, int &last_tid, int &last_group_id
 	coll_obj const &c(get_draw_cobj(cix));
 
 	if (lt_atten_manager.is_enabled()) { // we only support cubes and spheres for now (Note: may not be compatible with groups)
+		cube_t &lac(cdb.light_atten_cube);
 		float light_atten(c.cp.light_atten); // assign a tiny light atten value to reflective cobjs to enable correct refraction
 		if (enable_reflections == 2 && c.is_reflective() && c.is_semi_trans()) {light_atten = max(light_atten, 0.001f);}
 		using_lt_atten = ((c.type == COLL_CUBE || c.type == COLL_SPHERE) && light_atten > 0.0);
-		// Note: we don't need to flush cdb when using_lt_atten==1 because we must either have a material change, or cdb was flushed due to light atten on the previous cobj
-		if      (c.type == COLL_CUBE  ) {lt_atten_manager.next_cube(light_atten, c.cp.refract_ix, c);}
-		else if (c.type == COLL_SPHERE) {lt_atten_manager.next_sphere(light_atten, c.cp.refract_ix, c.points[0], c.radius);}
+		
+		if (c.type == COLL_CUBE) {
+			// Note: merging of cubes reduces draw calls, which makes more of a difference in core context mode, so we allow it even though there are minor artifacts
+			if (using_lt_atten && use_core_context) { // allow merging of cubes
+				if (lac.is_all_zeros()) {/*assert(cdb.empty());*/ cdb.flush(); lac.copy_from(c);} // first cobj with this light_atten value
+				else { // lac is already valid
+					vector3d const csz(c.get_size());
+					int dim(3); // start with invalid dim value
+					if      (csz.x < 0.1*min(csz.y, csz.z)) {dim = 0;} // plate/window facing in X
+					else if (csz.y < 0.1*min(csz.x, csz.z)) {dim = 1;} // plate/window facing in Y
+					else if (csz.z < 0.1*min(csz.x, csz.y)) {dim = 2;} // plate/window facing in X
+					
+					if (dim < 3 && lac.d[dim][0] == c.d[dim][0] && lac.d[dim][1] == c.d[dim][1]) { // can merge c with prev cubes
+						lac.union_with_cube(c);
+					}
+					else { // new cube, can't merge
+						cdb.flush(); // must flush with prev lac because ulocs[2] is per-cube
+						lac.copy_from(c); // set to new value
+					}
+				}
+				assert(lac.is_strictly_normalized());
+				lt_atten_manager.next_cube(light_atten, c.cp.refract_ix, lac); // Note: cube may be overwritten before the next flush/draw call
+			}
+			else { // no cube merge / always flush
+				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-sphere
+				lt_atten_manager.next_cube(light_atten, c.cp.refract_ix, c);
+			}
+		}
+		else if (c.type == COLL_SPHERE) {
+			if (using_lt_atten) {cdb.flush(); lac.set_to_zeros();} // must flush because ulocs[2] is per-sphere
+			lt_atten_manager.next_sphere(light_atten, c.cp.refract_ix, c.points[0], c.radius);
+		}
 		else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
 	}
 	c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
