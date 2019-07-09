@@ -571,7 +571,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		}
 	}
 	if (npts == 4 && prev_ucc != use_core_context) { // need to rebuild VBOs on core context mode change
-		clear_vbos();
+		this->clear_vbos();
 		prev_ucc = use_core_context;
 	}
 	if (use_core_context && npts == 4) {
