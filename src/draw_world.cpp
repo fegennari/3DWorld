@@ -783,6 +783,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	float const clip_plane_z_bias = -0.005; // 10.0*cobj_z_bias? 0.2/window_height?
 	clip_plane_z += clip_plane_z_bias;
 	//if (enable_clip_plane_z) {glEnable(GL_CLIP_DISTANCE0);}
+	//timer_t timer(draw_trans ? "Draw Trans" : "Draw Solid"); // 1.83 / 2.85 => 1.73 / 2.16 => 1.65 / 1.97
 	
 	if (!draw_trans) { // draw solid
 		draw_last.clear();
