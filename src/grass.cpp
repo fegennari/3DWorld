@@ -54,7 +54,7 @@ void grass_manager_t::grass_t::merge(grass_t const &g) {
 
 	p   = (p + g.p)*0.5; // average locations
 	float const dmag1(dir.mag()), dmag2(g.dir.mag());
-	dir = (dir/dmag1 + g.dir/dmag2).get_norm() * (0.5*(dmag1 + dmag2)); // average directions and lengths independently
+	dir = (dir/dmag1 + g.dir/dmag2).get_norm() * (0.5f*(dmag1 + dmag2)); // average directions and lengths independently
 	n   = (n + g.n).get_norm(); // average normals
 	w  += g.w; // add widths to preserve surface area
 	//UNROLL_3X(c[i_] = (unsigned char)(unsigned(c[i_]) + unsigned(g.c[i_]))/2;) // don't average colors because they're used for the density filtering hash
@@ -92,7 +92,7 @@ void grass_manager_t::add_grass_blade_int(point const &pos, float cscale, bool o
 
 	for (unsigned i = 0; i < 3; ++i) {
 		float const ccomp(CLIP_TO_01(cscale*(base_color[i] + grass_color_var*lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen_.rand_float())));
-		color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
+		color[i] = (unsigned char)(255.0f*(dead_scale*dead_color[i] + (1.0f - dead_scale)*ccomp));
 	}
 	float const length(grass_length*rgen_.rand_uniform(0.7, 1.3));
 	float const width( grass_width *rgen_.rand_uniform(0.7, 1.3));
@@ -166,7 +166,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 	assert(bix+1 < vbo_offsets[lod].size());
 	unsigned const search_dist(1*grass_density); // enough for one cell
 	unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
-	float const dmax(2.5*grass_width*(1 << lod));
+	float const dmax(2.5*grass_width*(1U << lod));
 	vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused
 	
 	for (unsigned i = start_ix; i < end_ix; ++i) {
@@ -292,7 +292,7 @@ public:
 
 	void gen_grass() {
 		RESET_TIME;
-		float const dz_inv(1.0/(zmax - zmin));
+		float const dz_inv(1.0f/(zmax - zmin));
 		object_types[GRASS].radius = 0.0;
 		rgen.pregen_floats(10000);
 		unsigned num_voxel_polys(0), num_voxel_blades(0);
@@ -355,7 +355,7 @@ public:
 						if (cobj.norm.z < nz_thresh)     continue; // not oriented upward
 						if (!cobj.intersects(test_cube)) continue;
 						assert(cobj.npoints == 3 || cobj.npoints == 4); // triangles and quads
-						float const density_scale((cobj.norm.z - nz_thresh)/(1.0 - nz_thresh)); // better to use vertex normals and interpolate?
+						float const density_scale((cobj.norm.z - nz_thresh)/(1.0f - nz_thresh)); // better to use vertex normals and interpolate?
 						unsigned const num_blades(blades_per_area*density_scale*polygon_area(cobj.points, cobj.npoints) + 0.5);
 						++num_voxel_polys;
 
@@ -587,7 +587,7 @@ public:
 						float const length(g.dir.mag());
 
 						if (fabs(dot_product(g.dir, sn)) > 0.1*length) { // update if not flat against the mesh
-							float const om_reld(1.0 - sqrt(dsq)*rad_inv), dx(g.p.x - pos.x), dy(g.p.y - pos.y), atten_val(1.0 - om_reld*om_reld);
+							float const om_reld(1.0f - sqrt(dsq)*rad_inv), dx(g.p.x - pos.x), dy(g.p.y - pos.y), atten_val(1.0 - om_reld*om_reld);
 							vector3d const new_dir(vector3d(dx, dy, -(sn.x*dx + sn.y*dy)/sn.z).get_norm()); // point away from crushing point
 
 							if (dot_product(g.dir, new_dir) < 0.95*length) { // update if not already aligned
@@ -601,12 +601,12 @@ public:
 						UNROLL_3X(updated |= (g.c[i_] != cw.c[i_]);) // not already this color
 						
 						if (updated) {
-							float const om_reld(1.0 - sqrt(dsq)*rad_inv), atten_val(1.0 - color.alpha*om_reld*om_reld);
+							float const om_reld(1.0f - sqrt(dsq)*rad_inv), atten_val(1.0f - color.alpha*om_reld*om_reld);
 							UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_] + (1.0 - atten_val)*cw.c[i_]);)
 						}
 					}
 					if (burn && !underwater) {
-						float const om_reld(1.0 - sqrt(dsq)*rad_inv), atten_val(1.0 - ((burn == 2) ? om_reld : om_reld*om_reld));
+						float const om_reld(1.0f - sqrt(dsq)*rad_inv), atten_val(1.0 - ((burn == 2) ? om_reld : om_reld*om_reld));
 						UNROLL_3X(updated |= (g.c[i_] > 0);)
 						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_]);)}
 					}
@@ -691,7 +691,7 @@ public:
 		point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
 		float const close_dist(2.0*vector3d(DX_VAL, DY_VAL, grass_length).mag());
 		float const scene_size(vector3d(X_SCENE_SIZE, Y_SCENE_SIZE, (ztop - zbottom)).mag());
-		bool const no_clip(camera_pdu.sphere_visible_test(point(0.0, 0.0, 0.5*(ztop + zbottom)), -0.5*scene_size)); // scene mostly visible
+		bool const no_clip(camera_pdu.sphere_visible_test(point(0.0, 0.0, 0.5f*(ztop + zbottom)), -0.5*scene_size)); // scene mostly visible
 		vector<unsigned> nearby_ixs;
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {

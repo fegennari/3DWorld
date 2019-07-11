@@ -224,7 +224,7 @@ public:
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	bool has_valid_shadow_map() const {return !smap_data.empty();}
 	void invalidate_mesh_height() {mesh_height_invalid = 1;}
-	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
+	float get_avg_veg() const {return 0.25f*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
 	bool was_last_occluded  () const {return (last_occluded_frame == frame_counter &&  last_occluded);}
 	bool was_last_unoccluded() const {return (last_occluded_frame == frame_counter && !last_occluded);}
@@ -232,7 +232,7 @@ public:
 
 	// all of these are in the current camera's local coordinate space (based on xoff/yoff/xoff2/yoff2)
 	point get_center() const {
-		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
+		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5f*(mzmin + mzmax));
 	}
 	cube_t get_bcube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));

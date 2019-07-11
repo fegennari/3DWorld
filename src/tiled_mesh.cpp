@@ -96,7 +96,7 @@ bool enable_ocean_waves   () {return ((display_mode & 0x0100) != 0 && wind.mag()
 bool draw_distant_water   () {return (is_water_enabled() && is_distance_mode() && far_clip_ratio > 1.1);}
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
-float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
+float get_tt_cloud_level  () {return 0.5f*(get_tt_fog_bot() + get_tt_fog_top());}
 float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile_width();}
 float get_tile_smap_dist  () {return get_smap_atten_val();}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
@@ -132,7 +132,7 @@ float get_tt_fog_based_far_clip(float min_camera_dist) {
 		dfavg = (2*z0 - zf - zc)/(2*(z0 - zf))*(zc - zf) + (zf - zm);
 	}
 	else { // camera above fog/atmosphere
-		dfavg = 0.5*(zf + z0) - zm;
+		dfavg = 0.5f*(zf + z0) - zm;
 	}
 	float const fog_dist((zc - zm)*sqrt(max((FD*FD/(dfavg*dfavg) - 1.0), 0.0)));
 	//cout << "FD: " << FD << ", fog_dist: " << fog_dist << ", FAR_CLIP: " << FAR_CLIP << ", final: " << max(FAR_CLIP, 1.1f*fog_dist) << endl;
@@ -146,7 +146,7 @@ void update_tiled_terrain_grass_vbos() {grass_tile_manager.clear_vbo();}
 void update_tiled_grass_colors() {grass_tile_manager.clear();} // regenerate grass
 
 
-#define BILINEAR_INTERP(arr, var, x, y) (y*(x*arr[1][1].var + (1.0-x)*arr[1][0].var) + (1.0-y)*(x*arr[0][1].var + (1.0-x)*arr[0][0].var))
+#define BILINEAR_INTERP(arr, var, x, y) (y*(x*arr[1][1].var + (1.0f-x)*arr[1][0].var) + (1.0f-y)*(x*arr[0][1].var + (1.0f-x)*arr[0][0].var))
 
 
 // *** heightmap management ***
@@ -999,11 +999,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
 		float const MESH_NOISE_SCALE = 0.003;
 		float const MESH_NOISE_FREQ  = 80.0;
-		float const dz_inv(1.0/(zmax - zmin));
+		float const dz_inv(1.0f/(zmax - zmin));
 		float const noise_scale(((mesh_gen_shape == 2) ? 2.0 : 1.0)*MESH_NOISE_SCALE*mesh_scale_z); // add more noise for ridged
-		float const steep_mult_grass(1.0/(sthresh[0][1] - sthresh[0][0]));
-		float const steep_mult_snow (1.0/(sthresh[1][1] - sthresh[1][0]));
-		float const steep_mult_rock (1.0/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
+		float const steep_mult_grass(1.0f/(sthresh[0][1] - sthresh[0][0]));
+		float const steep_mult_snow (1.0f/(sthresh[1][1] - sthresh[1][0]));
+		float const steep_mult_rock (1.0f/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
 		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0);
