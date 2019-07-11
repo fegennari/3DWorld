@@ -95,7 +95,7 @@ int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2), num_birds_per_tile(2), num_fish_per_tile(15);
 unsigned erosion_iters(0), erosion_iters_tt(0), video_framerate(60), num_video_threads(0);
-float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0);
+float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0), tt_grass_scale_factor(1.0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0), biome_x_offset(0.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), dodgeball_metalness(1.0), ray_step_size_mult(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0), cloud_height_offset(0.0);
@@ -170,6 +170,9 @@ void free_animal_context();
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 
 void write_map_mode_heightmap_image();
+
+void apply_grass_scale();
+
 
 // all OpenGL error handling goes through these functions
 bool get_gl_error(unsigned loc_id) {
@@ -523,6 +526,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal/ground, 1 = univer
 	if (!map_mode) {reset_offsets();} // ???
 	init_x        = 1;
 	camera_change = 1;
+	if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) {apply_grass_scale();}
 	reset_fog();
 	clear_tiled_terrain();
 	update_grass_vbos();
@@ -1492,6 +1496,7 @@ int load_top_level_config(const char *def_file) { // defaults.txt
 	load_config("config_pre.txt"); // defaults
 	bool const ret(load_config_file(def_file));
 	load_config("config_post.txt"); // overrides (load even if main config file failed)
+	apply_grass_scale();
 	return ret;
 }
 
@@ -1799,6 +1804,7 @@ int load_config(string const &config_file) {
 	kwmf.add("system_max_orbit", system_max_orbit);
 	kwmf.add("sky_occlude_scale", sky_occlude_scale);
 	kwmf.add("mouse_sensitivity", mouse_sensitivity);
+	kwmf.add("tt_grass_scale_factor", tt_grass_scale_factor);
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);

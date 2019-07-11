@@ -56,7 +56,7 @@ extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_ef
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
-extern float smap_thresh_scale;
+extern float smap_thresh_scale, tt_grass_scale_factor;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
@@ -78,7 +78,7 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
-float get_grass_thresh    () {return GRASS_THRESH*get_tile_width();}
+float get_grass_thresh    () {return GRASS_THRESH*tt_grass_scale_factor*get_tile_width();}
 float get_grass_thresh_pad() {return (get_grass_thresh() + 1.0/GRASS_DIST_SLOPE);}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
@@ -1409,7 +1409,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
 	float const llcx(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	float const dx_step(GRASS_BLOCK_SZ*deltax), dy_step(GRASS_BLOCK_SZ*deltay);
-	float const lod_scale(GRASS_LOD_SCALE/get_scaled_tile_radius());
+	float const lod_scale(GRASS_LOD_SCALE/(tt_grass_scale_factor*get_scaled_tile_radius()));
 	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim);
 	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
 	unsigned num_drawn(0);

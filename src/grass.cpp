@@ -18,7 +18,7 @@ float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 
 extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter, draw_model;
 extern unsigned create_voxel_landscape;
-extern float vegetation, zmin, zmax, fticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est, snow_cov_amt;
+extern float vegetation, zmin, zmax, fticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est, snow_cov_amt, tt_grass_scale_factor;
 extern double tfticks;
 extern colorRGBA leaf_base_color, flower_color;
 extern vector3d wind;
@@ -1136,4 +1136,22 @@ float get_grass_density(point const &pos) {
 }
 
 
+void apply_grass_scale() {
+
+	static float init_glen(0.0), init_gwidth(0.0);
+	static unsigned init_gden(0);
+	if (tt_grass_scale_factor <= 0.0) {tt_grass_scale_factor = 1.0;} // ignore invalid values (make this an error?)
+
+	if (init_glen == 0.0) { // capture orig values on first call before tt_grass_scale_factor is applied
+		init_glen = grass_length; init_gwidth = grass_width; init_gden = grass_density;
+	}
+	else { // restore init values before modifications
+		grass_length = init_glen; grass_width = init_gwidth; grass_density = init_gden;
+	}
+	if (world_mode == WMODE_INF_TERRAIN) { // apply tt_grass_scale_factor
+		grass_length  *= tt_grass_scale_factor;
+		grass_width   *= tt_grass_scale_factor;
+		grass_density  = round_fp(grass_density/(tt_grass_scale_factor*tt_grass_scale_factor)); // scale number of grass blades with inverse area
+	}
+}
 
