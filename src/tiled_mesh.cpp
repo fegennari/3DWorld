@@ -79,7 +79,8 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
 float get_grass_thresh    () {return GRASS_THRESH*tt_grass_scale_factor*get_tile_width();}
-float get_grass_thresh_pad() {return (get_grass_thresh() + 1.0/GRASS_DIST_SLOPE);}
+float get_grass_blend_dist() {return tt_grass_scale_factor/GRASS_DIST_SLOPE;}
+float get_grass_thresh_pad() {return (get_grass_thresh() + get_grass_blend_dist());}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool decid_trees_enabled  () {return ((tree_mode & 1) && vegetation > 0.0);}
@@ -3027,7 +3028,7 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 	s.add_uniform_int("normal_tex", 4);
 	s.add_uniform_int("shadow_tex", 6);
 	s.add_uniform_float("dist_const", dist_const_mult*get_grass_thresh());
-	s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
+	s.add_uniform_float("dist_slope", 1.0/get_grass_blend_dist());
 	setup_tt_fog_post(s);
 	setup_cloud_plane_uniforms(s);
 	set_tile_xy_vals(s);
@@ -3070,14 +3071,17 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			s.add_uniform_float("height", grass_length);
 			s.set_specular(0.1, 20.0);
 			grass_tile_manager.begin_draw();
-			if (use_grass_tess) {s.add_uniform_float("min_tess_level", 1.0);}
 
+			if (use_grass_tess) {
+				s.add_uniform_float("min_tess_level", 1.0);
+				s.add_uniform_float("tess_lod_scale", tt_grass_scale_factor);
+			}
 			int const lt_loc(s.get_attrib_loc("local_translate"));
 			enable_instancing_for_shader_loc(lt_loc);
 
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
 				if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
-				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) != (int)wpass) continue; // xyz dist
+				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5*tt_grass_scale_factor) != (int)wpass) continue; // xyz dist
 				num_grass_drawn += to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
 			disable_instancing_for_shader_loc(lt_loc);

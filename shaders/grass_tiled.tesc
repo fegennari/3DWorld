@@ -2,6 +2,7 @@
 layout (vertices = 3) out;
 
 uniform float min_tess_level = 1.0;
+uniform float tess_lod_scale = 1.0;
 uniform mat4 fg_ViewMatrix;
 
 // attributes of the input CPs
@@ -35,7 +36,7 @@ void main() {
 	float dist = length(epos.xyz);
 
 	// Calculate the tessellation levels
-	float level = max(min_tess_level, min(8, 3.0/dist));
+	float level = max(min_tess_level, min(8, tess_lod_scale*(3.0/dist)));
 	gl_TessLevelOuter[0] = level;
 	gl_TessLevelOuter[1] = level;
 	gl_TessLevelOuter[2] = 1;
