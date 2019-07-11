@@ -225,6 +225,7 @@ void grass_tile_manager_t::gen_grass() {
 	RESET_TIME;
 	assert(NUM_GRASS_LODS > 0);
 	assert((MESH_X_SIZE % GRASS_BLOCK_SZ) == 0 && (MESH_Y_SIZE % GRASS_BLOCK_SZ) == 0);
+	grass.reserve(5*grass_density*GRASS_BLOCK_SZ*GRASS_BLOCK_SZ*NUM_RND_GRASS_BLOCKS/2);
 
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
 		vbo_offsets[lod].resize(NUM_RND_GRASS_BLOCKS+1);
