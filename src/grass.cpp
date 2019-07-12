@@ -166,7 +166,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 	assert(bix+1 < vbo_offsets[lod].size());
 	unsigned const search_dist(1*grass_density); // enough for one cell
 	unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
-	float const dmax(2.5*grass_width*(1U << lod));
+	float const dmax(2.5*grass_width*(1U << lod)), dkeep(0.2*grass_width*(1U << lod));
 	vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused
 	
 	for (unsigned i = start_ix; i < end_ix; ++i) {
@@ -177,11 +177,12 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 		unsigned const end_val(min(i+search_dist, end_ix));
 
 		for (unsigned cur = i+1; cur < end_val; ++cur) {
-			float const dist_sq(p2p_dist_sq(grass[i].p, grass[cur].p));
+			float const dist_sq(p2p_dist_xy_sq(grass[i].p, grass[cur].p));
 					
 			if (dist_sq < dmin_sq) {
 				dmin_sq  = dist_sq;
 				merge_ix = cur;
+				if (dmin_sq < dkeep*dkeep) break; // good enough
 			}
 		}
 		if (merge_ix > i) {
