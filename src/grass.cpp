@@ -13,7 +13,7 @@
 
 
 bool grass_enabled(1), use_grass_tess(0);
-unsigned grass_density(0);
+unsigned grass_density(0), num_rnd_grass_blocks(16);
 float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 
 extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter, draw_model;
@@ -226,12 +226,12 @@ void grass_tile_manager_t::gen_grass() {
 	RESET_TIME;
 	assert(NUM_GRASS_LODS > 0);
 	assert((MESH_X_SIZE % GRASS_BLOCK_SZ) == 0 && (MESH_Y_SIZE % GRASS_BLOCK_SZ) == 0);
-	grass.reserve(5*grass_density*GRASS_BLOCK_SZ*GRASS_BLOCK_SZ*NUM_RND_GRASS_BLOCKS/2);
+	grass.reserve(5*grass_density*GRASS_BLOCK_SZ*GRASS_BLOCK_SZ*num_rnd_grass_blocks/2);
 
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
-		vbo_offsets[lod].resize(NUM_RND_GRASS_BLOCKS+1);
+		vbo_offsets[lod].resize(num_rnd_grass_blocks+1);
 		vbo_offsets[lod][0] = grass.size(); // start
-		for (unsigned i = 0; i < NUM_RND_GRASS_BLOCKS; ++i) {gen_lod_block(i, lod);}
+		for (unsigned i = 0; i < num_rnd_grass_blocks; ++i) {gen_lod_block(i, lod);}
 	}
 	PRINT_TIME("Grass Tile Gen");
 }
@@ -1141,11 +1141,11 @@ float get_grass_density(point const &pos) {
 void apply_grass_scale() {
 
 	static float init_glen(0.0), init_gwidth(0.0);
-	static unsigned init_gden(0);
+	static unsigned init_gden(0), init_nrgb(0);
 	if (tt_grass_scale_factor <= 0.0) {tt_grass_scale_factor = 1.0;} // ignore invalid values (make this an error?)
 
 	if (init_glen == 0.0) { // capture orig values on first call before tt_grass_scale_factor is applied
-		init_glen = grass_length; init_gwidth = grass_width; init_gden = grass_density;
+		init_glen = grass_length; init_gwidth = grass_width; init_gden = grass_density; init_nrgb = num_rnd_grass_blocks;
 	}
 	else { // restore init values before modifications
 		grass_length = init_glen; grass_width = init_gwidth; grass_density = init_gden;
@@ -1154,6 +1154,7 @@ void apply_grass_scale() {
 		grass_length  *= tt_grass_scale_factor;
 		grass_width   *= tt_grass_scale_factor;
 		grass_density  = round_fp(grass_density/(tt_grass_scale_factor*tt_grass_scale_factor)); // scale number of grass blades with inverse area
+		num_rnd_grass_blocks = max(4, min(32, round_fp(tt_grass_scale_factor*num_rnd_grass_blocks)));
 	}
 }
 

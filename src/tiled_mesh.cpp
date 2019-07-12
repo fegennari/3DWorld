@@ -51,7 +51,7 @@ tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down;
-extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt;
+extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt, num_rnd_grass_blocks;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
@@ -1148,8 +1148,8 @@ void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax
 	grass_block_t &gb(grass_blocks[bix]);
 
 	if (gb.ix == 0) { // not yet set
-		gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
-		//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+		gb.ix = (((x1 + x) + 1567*(y1 + y)) % num_rnd_grass_blocks) + 1; // select a random block
+		//gb.ix = (rand() % num_rnd_grass_blocks) + 1; // select a random block
 		gb.zmin = mhmin;
 		gb.zmax = mhmax;
 	}
@@ -1436,9 +1436,9 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 			}
 			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*distance_to_camera(close_pt))));
 			assert(insts != NULL);
-			insts[lod_level].resize(NUM_RND_GRASS_BLOCKS); // may already be the correct size
+			insts[lod_level].resize(num_rnd_grass_blocks); // may already be the correct size
 			unsigned const bix(gb.ix - 1);
-			assert(bix < NUM_RND_GRASS_BLOCKS);
+			assert(bix < num_rnd_grass_blocks);
 			insts[lod_level][bix].push_back(vector2d(x*dx_step, y*dy_step));
 		} // for x
 	} // for y

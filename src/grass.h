@@ -9,10 +9,9 @@
 #include "gl_ext_arb.h"
 
 
-unsigned const NUM_GRASS_LODS       = 6;
-unsigned const NUM_RND_GRASS_BLOCKS = 16;
-unsigned const GRASS_BLOCK_SZ       = 4;
-float const TT_GRASS_COLOR_SCALE    = 0.5;
+unsigned const NUM_GRASS_LODS    = 6;
+unsigned const GRASS_BLOCK_SZ    = 4;
+float const TT_GRASS_COLOR_SCALE = 0.5;
 
 
 struct detail_scenery_t : public vbo_wrap_t {
