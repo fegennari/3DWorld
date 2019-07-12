@@ -182,7 +182,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 			if (dist_sq < dmin_sq) {
 				dmin_sq  = dist_sq;
 				merge_ix = cur;
-				if (dmin_sq < dkeep*dkeep) break; // good enough
+				if (tt_grass_scale_factor < 1.0 && dmin_sq < dkeep*dkeep) break; // good enough
 			}
 		}
 		if (merge_ix > i) {
