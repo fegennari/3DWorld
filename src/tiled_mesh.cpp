@@ -3050,7 +3050,8 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			shader_t s;
 			bool const enable_wind((display_mode & 0x0100) && wpass == 0);
 			lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
-			if (wpass == 1) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
+			// Note: when tt_grass_scale_factor is small, we can have a transition from nearby wind to distant within the same tile, so we need to enable height adjust in both cases
+			if (wpass == 1 || tt_grass_scale_factor < 1.0) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
 			//if (!underwater) {s.set_prefix("#define NO_FOG", 1);} // FS - faster, but reduced quality grass/texture blend
 			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
 			s.set_prefix(make_shader_bool_prefix("enable_grass_wind", enable_wind), 0); // VS
