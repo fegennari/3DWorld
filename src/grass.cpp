@@ -233,6 +233,8 @@ void grass_tile_manager_t::gen_grass() {
 		vbo_offsets[lod][0] = grass.size(); // start
 		for (unsigned i = 0; i < num_rnd_grass_blocks; ++i) {gen_lod_block(i, lod);}
 	}
+	cout << "Grass Blades: " << size() << ", Cap: " << grass.capacity()
+		 << ", CPU Mem: " << 3*grass.capacity()*sizeof(grass_t) << ", GPU Mem: " << 3*size()*sizeof(grass_data_t) << endl;
 	PRINT_TIME("Grass Tile Gen");
 }
 
