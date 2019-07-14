@@ -164,7 +164,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 		return;
 	}
 	assert(bix+1 < vbo_offsets[lod].size());
-	unsigned const search_dist(1*grass_density); // enough for one cell
+	unsigned const search_dist(1*grass_density/pow(1.5f, float(lod-1))); // enough for one cell (assumes grass blades scale down with LOD by at least 1.5x)
 	unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
 	float const dmax(2.5*grass_width*(1U << lod)), dkeep(0.2*grass_width*(1U << lod));
 	vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused
@@ -192,7 +192,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 			used[merge_ix-start_ix] = 1;
 		}
 	} // for i
-	//cout << "level " << lod << " num: " << (grass.size() - vbo_offsets[lod][bix]) << endl;
+	//cout << TXT(lod) << TXT(search_dist) << "num=" << (grass.size() - vbo_offsets[lod][bix]) << endl;
 	vbo_offsets[lod][bix+1] = grass.size(); // end of current LOD block/beginning of next LOD block
 }
 
