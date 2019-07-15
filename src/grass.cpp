@@ -1143,11 +1143,11 @@ float get_grass_density(point const &pos) {
 void apply_grass_scale() {
 
 	static float init_glen(0.0), init_gwidth(0.0);
-	static unsigned init_gden(0), init_nrgb(0);
+	static unsigned init_gden(0);
 	if (tt_grass_scale_factor <= 0.0) {tt_grass_scale_factor = 1.0;} // ignore invalid values (make this an error?)
 
 	if (init_glen == 0.0) { // capture orig values on first call before tt_grass_scale_factor is applied
-		init_glen = grass_length; init_gwidth = grass_width; init_gden = grass_density; init_nrgb = num_rnd_grass_blocks;
+		init_glen = grass_length; init_gwidth = grass_width; init_gden = grass_density;
 	}
 	else { // restore init values before modifications
 		grass_length = init_glen; grass_width = init_gwidth; grass_density = init_gden;
