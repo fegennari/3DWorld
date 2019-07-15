@@ -1851,7 +1851,7 @@ void draw_compass_and_alt() { // and temperature
 	char text[64];
 	float const aspect_ratio((float)window_width/(float)window_height);
 	string const dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
-	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+(xoff2-xoff)*DX_VAL), (camera_origin.y+(yoff2-yoff)*DY_VAL), camera_origin.z);
+	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+double(int64_t(xoff2)-xoff)*DX_VAL), (camera_origin.y+double(int64_t(yoff2)-yoff)*DY_VAL), camera_origin.z);
 	draw_text(YELLOW, -0.005*aspect_ratio, -0.01, -0.02, text);
 	float const theta(safe_acosf(cview_dir.x)*TO_DEG);
 	int const octant(int(((cview_dir.y < 0) ? (360.0 - theta) : theta)/45.0 + 22.5)&7);

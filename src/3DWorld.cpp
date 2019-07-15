@@ -649,7 +649,7 @@ void mouseMotion(int x, int y) {
 			if (mouse_state == 0) {map_drag_x -= dx; map_drag_y += dy;} // mouse down
 		}
 		else {
-			float c_phi2(c_phi - MOUSE_ANG_ADJ*dy);
+			float c_phi2(c_phi - double(MOUSE_ANG_ADJ)*dy);
 			if (camera_mode && world_mode != WMODE_UNIVERSE) {c_phi2 = max(0.01f, min((float)PI-0.01f, c_phi2));} // walking on ground
 			
 			if (dy > 0) { // change camera y direction when camera moved through poles and jump over poles (x=0,z=0) to eliminate "singularity"
@@ -660,7 +660,7 @@ void mouseMotion(int x, int y) {
 				if (c_phi2 > TWO_PI || (c_phi < PI && c_phi2 > PI)) {camera_y *= -1.0;}
 				if (fabs(c_phi2 - TWO_PI) < MA_TOLERANCE || fabs(c_phi2 - PI) < MA_TOLERANCE) {--dy;}
 			}
-			c_theta -= MOUSE_ANG_ADJ*dx*camera_y;
+			c_theta -= double(MOUSE_ANG_ADJ)*dx*camera_y;
 			c_theta  = fix_angle(c_theta);
 			c_phi    = fix_angle(c_phi2);
 			update_cpos();
@@ -684,9 +684,9 @@ void mouseMotion(int x, int y) {
 		if (camera_mode == 1) break;
 
 		if (!camera_view) {
-			up_theta += MOUSE_ANG_ADJ*dx;
+			up_theta += double(MOUSE_ANG_ADJ)*dx;
 			up_theta  = fix_angle(up_theta);
-			c_radius  = c_radius*(1.0f + MOUSE_R_ADJ*dy);
+			c_radius  = c_radius*(1.0 + double(MOUSE_R_ADJ)*dy);
 			if (c_radius <= 0.05*MOUSE_R_ADJ) {c_radius = 0.05*MOUSE_R_ADJ;}
 			update_cpos();
 		}
@@ -1185,7 +1185,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 
 void print_wind() {cout << "wind: " << wind.str() << endl;}
-double get_map_shift_val() {return map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1);}
+double get_map_shift_val() {return map_zoom*double(MAP_SHIFT)*(is_shift_key_pressed() ? 8 : 1);}
 
 
 // handles user key remapping and disabling of keys in gameplay mode

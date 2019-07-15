@@ -353,7 +353,7 @@ struct temp_source {
 	point pos;
 	free_obj const *source;
 
-	temp_source() {}
+	temp_source() : temp(0.0f), radius(0.0f), source(nullptr) {}
 	temp_source(point const &pos_, float radius_, float temp_, free_obj const *source_)
 		: temp(temp_), radius(radius_), pos(pos_), source(source_)
 	{
@@ -399,7 +399,7 @@ class ship_cylinder : public cylinder_3dw, public ship_coll_obj { // more accura
 	bool check_ends;
 
 public:
-	ship_cylinder() {}
+	ship_cylinder() : check_ends(0) {}
 	ship_cylinder(cylinder_3dw const &c, bool check_ends_) : cylinder_3dw(c), check_ends(check_ends_) {}
 	ship_cylinder(point const &p1_, point const &p2_, float r1_, float r2_, bool check_ends_, float ds=1.0)
 		: cylinder_3dw(p1_, p2_, r1_, r2_), ship_coll_obj(ds), check_ends(check_ends_) {}

@@ -34,7 +34,7 @@ class usw_ray : public line_3dw {
 	colorRGBA color1, color2;
 
 public:
-	usw_ray() {}
+	usw_ray() : w1(0.0f), w2(0.0f) {}
 	usw_ray(float w1_, float w2_, point const &p1_, point const &p2_, colorRGBA const &c1, colorRGBA const &c2)
 		: line_3dw(p1_, p2_), w1(w1_), w2(w2_), color1(c1), color2(c2)
 	{
@@ -65,7 +65,7 @@ public:
 	u_ship *flagship;
 	vector<pair<unsigned, unsigned> > ships; // sclass, count
 
-	us_fleet() {}
+	us_fleet() : align(0), ai(0), targ(0), spread(0.0f), flagship(nullptr) {}
 	us_fleet(string const &name_, unsigned align_, unsigned ai_, unsigned targ_, float spread_,
 		point const &pos_, unsigned counts[], unsigned multiplier=0);
 	void set_flagship(unsigned sclass, float child_stray_dist);

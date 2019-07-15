@@ -193,8 +193,8 @@ public:
 		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
 		int const xlo(floor(xc)), ylo(floor(yc)), xhi(ceil(xc)), yhi(ceil(yc));
 		float const xv((xlo == xhi) ? 0.0 : (xc - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (yc - ylo)/float(yhi - ylo)); // avoid div-by-zero (use cubic_interpolate()?)
-		int const height_val(yv*(xv*get_clamped_pixel_value(xhi, yhi, 0) + (1.0-xv)*get_clamped_pixel_value(xlo, yhi, 0)) +
-			           (1.0-yv)*(xv*get_clamped_pixel_value(xhi, ylo, 0) + (1.0-xv)*get_clamped_pixel_value(xlo, ylo, 0))); // linear interpolation
+		int const height_val(yv*(xv*get_clamped_pixel_value(xhi, yhi, 0) + (1.0f-xv)*get_clamped_pixel_value(xlo, yhi, 0)) +
+			          (1.0f-yv)*(xv*get_clamped_pixel_value(xhi, ylo, 0) + (1.0f-xv)*get_clamped_pixel_value(xlo, ylo, 0))); // linear interpolation
 		int cx1(x1), cy1(y1), cx2(x2), cy2(y2);
 		if (!clamp_xy(cx1, cy1, 0.0, 0.0, 0) || !clamp_xy(cx2, cy2, 0.0, 0.0, 0)) return; // off the texture, skip
 		assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);
@@ -516,7 +516,7 @@ float tile_t::get_zval_at(float x, float y, bool in_global_space) const {
 	float const xpi(xp - (float)x0), ypi(yp - (float)y0); // always positive
 	assert(x0 >= 0 && y0 >= 0 && x0+1 < (int)zvsize && y0+1 < (int)zvsize); //return zvals[y*zvsize + x];
 	unsigned const ix(y0*zvsize + x0);
-	return (1.0 - xpi)*((1.0 - ypi)*zvals[ix] + ypi*zvals[ix + zvsize]) + xpi*((1.0 - ypi)*zvals[ix + 1] + ypi*zvals[ix + zvsize + 1]);
+	return (1.0f - xpi)*((1.0f - ypi)*zvals[ix] + ypi*zvals[ix + zvsize]) + xpi*((1.0f - ypi)*zvals[ix + 1] + ypi*zvals[ix + zvsize + 1]);
 }
 
 
@@ -1093,7 +1093,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					}
 				}
 				if (grass) {
-					float grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
+					float grass_scale((mhmin < water_level) ? 0.0f : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
 					bool replace_grass_with_dirt(0);
 
 					if (grass_scale > 0.0 && !exclude_cubes.empty()) { // exclude bridges and tunnels here
@@ -1181,7 +1181,7 @@ void tile_t::calc_avg_mesh_color() {
 
 	// determine average mesh color - doesn't work well due to discontinuities at the tile boundaries, would be better if adjacent tile was known
 	int tot_weights[NTEX_DIRT] = {0}; // use a signed value to avoid wrapping around to const max when there's an error
-	avg_mesh_tex_color = BLACK;
+	avg_mesh_tex_color = colorRGB(0,0,0); // black
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 
 	for (unsigned i = 0; i < num_texels; ++i) {
@@ -1476,7 +1476,7 @@ void tile_cloud_t::draw(vpc_shader_t &s, vector3d const &xlate, float alpha_mult
 	vector3d const view_dir(get_camera_pos() - (pos + xlate));
 	float const view_dist(view_dir.mag()), max_dist(max(get_draw_tile_dist(), get_inf_terrain_fog_dist()));
 	if (view_dist >= max_dist) return; // too distant to draw
-	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(alpha_mult*(1.0 - val*val));
+	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(alpha_mult*(1.0f - val*val));
 	colorRGBA const cloud_color(get_cloud_color());
 	s.set_uniform_color(s.c1i_loc, colorRGBA(cloud_color*0.75, alpha)); // inner color
 	s.set_uniform_color(s.c1o_loc, colorRGBA(cloud_color*1.00, alpha)); // outer color
@@ -1566,7 +1566,7 @@ void tile_cloud_manager_t::move_by_wind(tile_t const &tile) {
 	bcube.set_to_zeros();
 
 	for (auto i = begin(); i != end(); ++i) {
-		float const wscale(1.5 - ws_mult*(i->pos.z - range.d[2][0])); // lower clouds have higher wind speed
+		float const wscale(1.5f - ws_mult*(i->pos.z - range.d[2][0])); // lower clouds have higher wind speed
 		i->pos      += wscale*move_amt;
 		i->pos_hash += 0.15*move_amt_mag;
 		int dx(0), dy(0);
@@ -1946,7 +1946,7 @@ bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int
 	int const xp1(get_xpos(v1c.x) - x1 - xoff + xoff2), yp1(get_ypos(v1c.y) - y1 - yoff + yoff2);
 	int const xp2(get_xpos(v2c.x) - x1 - xoff + xoff2), yp2(get_ypos(v2c.y) - y1 - yoff + yoff2);
 	int const dx(xp2 - xp1), dy(yp2 - yp1), steps(max(1, max(abs(dx), abs(dy))));
-	double const dz(v2c.z - v1c.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
+	double const dz((double)v2c.z - (double)v1c.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
 	double x(xp1), y(yp1), z(v1c.z - 0.1*fabs(zinc)); // z offset required to avoid problems with zval at bcube.z1
 
 	for (int k = 0; k <= steps; ++k) {
@@ -1954,7 +1954,7 @@ bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int
 
 		if (ix >= 0 && iy >= 0 && ix <= (int)size && iy <= (int)size && zvals[iy*zvsize + ix] > z) {
 			// Note: we use z instead of zvals here because zvals may be much too high if we enter this tile while the line is under the mesh
-			float const cur_t(((z - 0.5*zinc) - v1.z)/(v2.z - v1.z)); // t relative to original v1, v2
+			float const cur_t(((z - 0.5*zinc) - v1.z)/(double(v2.z) - double(v1.z))); // t relative to original v1, v2
 
 			if (cur_t >= 0.0 && cur_t <= 1.0) {
 				xpos = x1 + ix;
@@ -2024,7 +2024,7 @@ void lightning_strike_t::draw() const {
 	colorRGBA const ambient(path.color*0.2);
 	float const radius(0.4*get_scaled_tile_radius());
 	set_colors_and_enable_light(LIGHTNING_LIGHT, ambient, path.color);
-	setup_gl_light_atten(LIGHTNING_LIGHT, 0.1, 0.0, 1.0/(radius*radius));
+	setup_gl_light_atten(LIGHTNING_LIGHT, 0.1, 0.0, 1.0f/(radius*radius));
 	set_gl_light_pos(LIGHTNING_LIGHT, get_pos(), 1.0); // point light source position
 	tt_lightning_enabled = 1;
 }
@@ -2040,6 +2040,7 @@ void lightning_strike_t::end_draw() const {
 
 
 tile_draw_t::tile_draw_t() : buildings_valid(0), tiles_gen_prev_frame(0), terrain_zmin(0.0), lod_renderer(USE_TREE_BILLBOARDS) {
+	for (unsigned i = 0; i <= NUM_LODS; ++i) {ivbo_ixs[i] = 0;}
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 
@@ -2279,7 +2280,7 @@ void setup_cloud_plane_uniforms(shader_t &s, float cloud_cover_factor=0.535, boo
 
 	float cloud_zmax;
 	if (match_cloud_layer) {cloud_zmax = get_cloud_zmax();} // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
-	else {cloud_zmax = 0.5*(zmin + zmax) + max(zmax, CLOUD_CEILING);} // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
+	else {cloud_zmax = 0.5f*(zmin + zmax) + max(zmax, CLOUD_CEILING);} // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
 	set_cloud_uniforms(s, 9);
 	s.add_uniform_float("cloud_scale",   get_cloud_coverage(cloud_cover_factor));
 	s.add_uniform_float("cloud_alpha",   (is_cloudy ? 0.8 : 0.75)*atmosphere);
@@ -2364,7 +2365,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 		s.add_uniform_float("water_plane_z", (reflection_pass ? water_plane_z : get_actual_zmin())); // used for fog calculation/clipping
 	}
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s, 1);
-	s.add_uniform_float("triplanar_texture_scale", 1.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
+	s.add_uniform_float("triplanar_texture_scale", 1.0f/(X_SCENE_SIZE + Y_SCENE_SIZE));
 }
 
 
@@ -2517,8 +2518,8 @@ void tile_draw_t::draw(bool reflection_pass) {
 
 	if (DEBUG_TILES && vbo) {
 		unsigned const tile_size(get_tile_size());
-		mem += 2*tile_size*(tile_size+1)*sizeof(point);
-		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
+		mem += 2ULL*tile_size*(tile_size+1ULL)*sizeof(point);
+		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4ULL*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 	}
 
 	// determine potential occluders
@@ -2604,7 +2605,8 @@ void tile_draw_t::draw(bool reflection_pass) {
 		unsigned const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
 			 << ", gpu MB: " << in_mb(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + models_mem + frame_buf_mem)
-			 << ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem) << ", tree GPU MB: " << in_mb(dtree_mem + ptree_mem) << ", grass MB: " << in_mb(grass_mem)
+			 << ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem)
+			 << ", tree GPU MB: " << in_mb((unsigned long long)dtree_mem + ptree_mem) << ", grass MB: " << in_mb(grass_mem)
 			 << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem) << ", frame buf MB: " << in_mb(frame_buf_mem)
 			 << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem) << ", model MB: " << in_mb(models_mem) << endl;
 	}
@@ -3186,10 +3188,10 @@ tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) const {
 	return ((it != tiles.end()) ? it->second.get() : nullptr);
 }
 tile_t *tile_draw_t::get_tile_containing_point(point const &pos) const {
-	return get_tile_from_xy(tile_xy_pair(round_fp(0.5*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE)));
+	return get_tile_from_xy(tile_xy_pair(round_fp(0.5f*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5f*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE)));
 }
 uint64_t get_tile_id_containing_point(point const &pos) {
-	tile_xy_pair const tp(round_fp(0.5*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE));
+	tile_xy_pair const tp(round_fp(0.5f*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5f*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE));
 	return (tp.x + (uint64_t(tp.y) << 32));
 }
 uint64_t get_tile_id_containing_point_no_xyoff(point const &pos) {
@@ -3307,7 +3309,7 @@ int get_tiled_terrain_tid_under_point(point const &pos) {
 void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, bool is_square) {
 
 	if (is_square) { // square, projected to cube
-		draw_cube(point(xval, yval, 0.5*(z1 + z2)), 2.0*radius, 2.0*radius, z2-z1, 0);
+		draw_cube(point(xval, yval, 0.5f*(z1 + z2)), 2.0f*radius, 2.0f*radius, z2-z1, 0);
 	}
 	else { // circle, projected to cylinder
 		draw_cylinder_at(point(xval, yval, z1), z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
@@ -3498,7 +3500,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 	get_texture_ixs(sand_tex_ix, dirt_tex_ix, grass_tex_ix, rock_tex_ix, snow_tex_ix);
 	bool const is_square(brush_shape == BSHAPE_CONST_SQ);
 	unsigned const grass_block_dim(get_grass_block_dim());
-	float const r_inv(1.0/rradius), dz_inv(1.0/(zmax - zmin)), xy_mult(1.0/float(size));
+	float const r_inv(1.0/rradius), dz_inv(1.0f/(zmax - zmin)), xy_mult(1.0/float(size));
 	float const bweight(10.0*brush_weight); // normal brush weight is 0.001 to 0.512
 	float const llc_x(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	point pt(llc_x, llcy, 0.0); // z is unused

@@ -90,7 +90,7 @@ protected:
 		float radius, height;
 		colorRGBA color;
 
-		flower_t() {}
+		flower_t() : radius(0.0f), height(0.0f) {}
 		flower_t(point const &p, vector3d const &n, float r, float h, colorRGBA const &c) : pos(p), normal(n), radius(r), height(h), color(c) {}
 	};
 

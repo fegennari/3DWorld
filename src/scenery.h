@@ -191,7 +191,7 @@ public:
 	};
 
 	s_plant() : coll_id2(-1), height(1.0) {}
-	virtual float get_bsphere_radius() const {return 0.5*(height + radius);}
+	virtual float get_bsphere_radius() const {return 0.5f*(height + radius);}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);

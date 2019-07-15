@@ -97,7 +97,7 @@ struct rotation_t {
 	bool operator< (rotation_t const &r) const {return ((angle == r.angle) ? (axis < r.axis) : (angle < r.angle));}
 	void apply_gl() const {if (angle != 0.0) {rotate_about(angle, axis);}}
 	void rotate_point(point &pos, float sign) const {
-		if (angle != 0.0) {rotate_vector3d(axis, sign*TO_RADIANS*angle, pos);}
+		if (angle != 0.0) {rotate_vector3d(axis, sign*double(TO_RADIANS)*angle, pos);}
 	}
 };
 

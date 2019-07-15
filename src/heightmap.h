@@ -56,7 +56,7 @@ public:
 
 	struct mod_elem_t : public tex_xy_t {
 		hmap_val_t delta;
-		mod_elem_t() {}
+		mod_elem_t() : delta(0) {}
 		mod_elem_t(tex_ix_t x_, tex_ix_t y_, hmap_val_t d) : tex_xy_t(x_, y_), delta(d) {}
 		mod_elem_t(pair<tex_xy_t, mod_map_val_t> const &v) : tex_xy_t(v.first), delta(v.second.val) {}
 	};

@@ -37,7 +37,7 @@ struct interval {
 	float val;
 	unsigned ix;
 
-	interval() {}
+	interval() : val(0.0f), ix(0) {}
 	interval(float v, unsigned i, bool l) : val(v), ix(i) {if (l) ix |= LEFT_EDGE_BIT;}
 	bool operator<(interval const &iv) const {return (val < iv.val);}
 };
