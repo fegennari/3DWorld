@@ -10,4 +10,3 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 
-* CSMs for TT mode
