@@ -53,11 +53,10 @@ class mesh_bsp_tree {
 	vector<bsp_tree_node> bsp_data;
 	vector<bsp_tree_node *> tree; // {level, y/x}
 
-	mesh_bsp_tree(mesh_bsp_tree const &); // forbidden
-	void operator=(mesh_bsp_tree const &); // forbidden
+	mesh_bsp_tree(mesh_bsp_tree const &) = delete; // forbidden
+	void operator=(mesh_bsp_tree const &) = delete; // forbidden
 
 	bool search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level, mesh_query_ret &ret) const; // Note: thread safe
-
 public:
 	mesh_bsp_tree();
 	bool search(point const &v1, point const &v2, mesh_query_ret &ret) const {return search_recur(v1, v2, 0, 0, 0, ret);} // Note: thread safe

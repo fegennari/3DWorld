@@ -49,8 +49,8 @@ class lmap_manager_t {
 	unsigned lm_xsize, lm_ysize, lm_zsize;
 	lmcell ***vlmap; // y, x, z (size is determined by {MESH_Y_SIZE, MESH_X_SIZE, MESH_Z_SIZE}
 
-	lmap_manager_t(lmap_manager_t const &); // forbidden
-	void operator=(lmap_manager_t const &); // forbidden
+	lmap_manager_t(lmap_manager_t const &) = delete; // forbidden
+	void operator=(lmap_manager_t const &) = delete; // forbidden
 
 public:
 	bool was_updated;

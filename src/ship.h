@@ -260,8 +260,7 @@ public:
 	void enable_normal_map(string const &name) const;
 	void disable_normal_map() const;
 	void set_uobj_specular(float spec, float shine) const;
-	void end_specular()    const {set_uobj_specular(0.0, 1.0);}
-	void inverse_rotate()  const;
+	void end_specular() const {set_uobj_specular(0.0, 1.0);}
 	void draw_engine(int eix, colorRGBA const &trail_color, point const &draw_pos, float escale=1.0,
 		float ar=1.0, vector3d const &stretch_dir=all_zeros) const;
 	void draw_engine_trail(int eix, point const &offset, float width, float w2s, float len, colorRGBA const &color) const;
@@ -673,9 +672,8 @@ protected:
 	mutable vector3d rv1, rv2;
 	void invalidate_rotv() {rv1 = rv2 = zero_vector;}
 
-private:
-	free_obj(free_obj const &); // forbidden
-	void operator=(free_obj const &); // forbidden
+	free_obj(free_obj const &) = delete; // forbidden
+	void operator=(free_obj const &) = delete; // forbidden
 
 public:
 	free_obj(point const &init_pos=all_zeros) : flags(OBJ_FLAGS_TARG), speed_factor(1.0), max_sfactor(1.0),
@@ -1172,7 +1170,6 @@ public:
 
 class u_ship : public free_obj, public u_ship_base {
 
-private:
 	unsigned ai_type; // us_class of this ship
 	bool lhyper, damaged, target_set, fire_primary, has_obstacle, captured, dest_override, is_flagship;
 	float tow_mass, exp_val, cloaked, roll_val, pitch_r, yaw_r, roll_r, cached_rsv, child_stray_dist;
@@ -1183,8 +1180,8 @@ private:
 	string name;
 	mesh2d surface_mesh;
 
-	u_ship(u_ship const &); // forbidden
-	void operator=(u_ship const &); // forbidden
+	u_ship(u_ship const &) = delete; // forbidden
+	void operator=(u_ship const &) = delete; // forbidden
 
 protected:
 	sobj_manager dest_mgr, homeworld;

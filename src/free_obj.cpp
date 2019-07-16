@@ -29,7 +29,7 @@ float const MAX_ROT_RATE     = 0.03;
 float const BLACK_HOLE_GRAV  = 2000.0;
 float const ASTEROID_DENSITY = 0.1; // lower density/gravity than planets/moons/stars due to incorrect relative size
 float const DEF_AMBIENT_SCALE= 3.2; // hack to increase light on ships (isn't ambient reset below in some cases?)
-float const ao_d_time(float(ao_e_time - ao_s_time));
+float const ao_d_time(float(ao_e_time) - float(ao_s_time));
 
 vector3d const init_dir(1.0, 0.0, 0.0);
 vector3d const init_up(0.0, 1.0, 0.0); // must be orthogonal to init_dir
@@ -1070,8 +1070,8 @@ void us_projectile::ai_action() {
 			if (smag_sq > TOLERANCE && smag_sq < max_dist*max_dist) {
 				float const turn_radius_factor = 0.4; // for all projectiles
 				float const smag(sqrt(smag_sq)), vmag(velocity.mag()), ss(max(smag/max_dist, 0.1f));
-				float const seek_amt(turn_radius_factor*(0.0625*(1.0 - ss) + 0.25*(1.0 - ss*ss) + (1.0 - ss*ss*ss)));
-				float const vmax(vmag*(1.0 - seek_amt) + specs().speed*seek_amt);
+				float const seek_amt(turn_radius_factor*(0.0625f*(1.0f - ss) + 0.25f*(1.0f - ss*ss) + (1.0f - ss*ss*ss)));
+				float const vmax(vmag*(1.0f - seek_amt) + specs().speed*seek_amt);
 				velocity += seek_dir*(fticks*seek_amt*vmag/smag); // apply as an acceleration normalized to velocity mag
 				velocity.set_max_mag(vmax); // normalize to original velocity combined with seek amount times speed spec
 			}
@@ -1097,10 +1097,10 @@ void us_projectile::apply_physics() {
 	else {
 		if (specs().const_dam) {
 			float const tval(((float)time+1)/((float)specs().lifetime+1));
-			radius   = (1.0 - tval)*specs().radius + tval*specs().bradius;
+			radius   = (1.0f - tval)*specs().radius + tval*specs().bradius;
 			c_radius = (specs().c_radius/specs().radius)*radius;
-			float const damage((0.25 + 0.75*fticks)*(1.0 - tval)*specs().damage); // hard to model this correctly since some damage is absorbed
-			float const exp_size(1.5*radius);
+			float const damage((0.25f + 0.75f*fticks)*(1.0f - tval)*specs().damage); // hard to model this correctly since some damage is absorbed
+			float const exp_size(1.5f*radius);
 			register_explosion(pos, exp_size, damage, (get_eflags() | EXP_FLAGS_NO_PART), wclass, this, parent);
 
 			if (exp_type != ETYPE_NONE) {
