@@ -31,7 +31,7 @@ struct uevent {
 
 	int type, frame, params[UE_MAX_PARAMS];
 
-	uevent() : type(0), frame(0) {}
+	uevent() : type(0), frame(0) {for (unsigned i = 0; i < UE_MAX_PARAMS; ++i) {params[i] = 0;}}
 	uevent(int type_, int frame_) : type(type_), frame(frame_) {}
 };
 

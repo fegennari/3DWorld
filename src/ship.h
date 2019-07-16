@@ -543,8 +543,7 @@ public:
 	mutable float offense, defense, weap_range; // cached
 	bool reversible, stoppable, has_hyper, has_fast_speed, mpredict, has_cloak, regen_fighters, regen_ammo, regen_crew;
 	bool parallel_fire, symmetric, self_shadow, cont_frag, for_boarding, can_board, orbiting_dock, dynamic_cobjs, uses_tdir;
-	bool emits_light, suicides, kamikaze, no_disable, uses_mesh2d, mesh_deform, mesh_remove, mesh_expand;
-	bool mu_expand, mesh_trans, exp_disint;
+	bool emits_light, suicides, kamikaze, no_disable, uses_mesh2d, mesh_deform, mesh_remove, mesh_expand, mu_expand, mesh_trans, exp_disint;
 	int turreted;
 	unsigned sclass, weap_spread, shield_sects, draw_passes, fire_speed, exp_type, exp_subtype, death_delay, regen_delay;
 	unsigned cost, ncrew, nengines, engine_lights;
@@ -554,7 +553,13 @@ public:
 	vector<triangle> cobj_triangles;
 	vector<ship_weapon> weapons;
 
-	us_class() : inited(0), has_pt_def(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW) {}
+	us_class() : inited(0), has_pt_def(0), radius(0), cr_scale(0), mass(0), cargo(0), exp_scale(0), accel(0), decel(0), roll_rate(0), max_speed(0), max_turn(0), stability(0),
+		max_shields(0), max_armor(0), shield_re(0), armor_re(0), max_t(0), hull_str(0), damage_abs(0), min_att_dist(0), min_app_dist(0), sensor_dist(0), fire_dist(0), stray_dist(0),
+		offense(-1.0), defense(-1.0), weap_range(-1.0), reversible(0), stoppable(0), has_hyper(0), has_fast_speed(0), mpredict(0), has_cloak(0), regen_fighters(0), regen_ammo(0), regen_crew(0),
+		parallel_fire(0), symmetric(0), self_shadow(0), cont_frag(0), for_boarding(0), can_board(0), orbiting_dock(0), dynamic_cobjs(0), uses_tdir(0),
+		emits_light(0), suicides(0), kamikaze(0), no_disable(0), uses_mesh2d(0), mesh_deform(0), mesh_remove(0), mesh_expand(0), mu_expand(0), mesh_trans(0), exp_disint(0),
+		turreted(0), sclass(0), weap_spread(0), shield_sects(0), draw_passes(0), fire_speed(FSPEED_SLOW), exp_type(0), exp_subtype(0), death_delay(0), regen_delay(0),
+		cost(0), ncrew(0), nengines(0), engine_lights(0) {}
 	void clear_cobjs();
 	bool read_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned sclass_);
@@ -612,7 +617,12 @@ public:
 	bool det_on_exp, no_ship_vel;
 	int turreted, auto_orient;
 
-	us_weapon() : inited(0) {}
+	us_weapon() : inited(0), btime(0), wclass(0), def_ammo(0), ammo_type(0), exp_type(0), nshots(0), cost(0), ammo_cost(0),
+		lifetime(0), radius(0), c_radius(0), bradius(0), damage(0), range(0), speed(0), seek_dist(0), fire_delay(0), firing_error(0), regen_time(0),
+		max_t(0), mass(0), w_mass(0), a_mass(0), force(0), f_inv(0), armor(0), preference(0),
+		seeking(0), hit_proj(0), hit_all(0), c2_flag(0), no_exp_dam(0), is_beam(0), secondary(0), hyper_fire(0), symmetric(0), is_fighter(0), do_regen(0),
+		no_coll(0), const_dam(0), no_ffire(0), point_def(0), is_decoy(0), ignores_shields(0), shield_d_only(0), no_light(0), parallel_fire(0),
+		det_on_exp(0), no_ship_vel(0), turreted(0), auto_orient(0) {}
 	bool read_from_ifstream(ifstream &in);
 	bool read_beam_params_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned wclass_);
@@ -966,7 +976,7 @@ public:
 	friend class free_obj_allocator<uparticle>;
 	static unsigned const max_type = NUM_PTYPES;
 
-	uparticle() : alloc_block(NULL) {}
+	uparticle() : ptype(0), lifetime(0), texture_id(-1), angle(0), rrate(0), damage_v(0), alloc_block(NULL) {}
 	uparticle(unsigned ptype_, point const &pos_, vector3d const &vel, vector3d const &d, float radius_, colorRGBA const &c1,
 		colorRGBA const &c2, unsigned lt, float damage_, unsigned align, bool coll_, int tid) : alloc_block(NULL) {
 		set_params(ptype_, pos_, vel, d, radius_, c1, c2, lt, damage_, align, coll_, tid);
@@ -998,7 +1008,7 @@ class uparticle_cloud : public free_obj, public volume_part_cloud {
 	colorRGBA colors[2][2]; // {inner, outer} x {start, end}
 
 public:
-	uparticle_cloud() {}
+	uparticle_cloud() : lifetime(0), rmin(0), rmax(0), damage_v(0), expand_exp(0), noise_scale(0), hashval(0) {}
 	uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1, colorRGBA const &ci2,
 		colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_, float noise_scale_);
 	float get_lt_scale() const {return CLIP_TO_01((float)time/(float)lifetime);}

@@ -97,6 +97,8 @@ struct tree_cylin : public draw_cylin { // size = 55 (56)
 	float length, deg_rotate;
 	vector3d rotate;
 
+	tree_cylin() : length(0.0f), deg_rotate(0.0f) {}
+
 	void assign_params(unsigned char lev, unsigned short bid, float r1_, float r2_, float len, float drot) {
 		level = lev; branch_id = bid; r1 = r1_; r2 = r2_; length = len; deg_rotate = drot;
 	}
@@ -109,6 +111,7 @@ struct tree_branch { // size = 12
 	float total_length;
 	short num_cylins, num_branches;
 
+	tree_branch() : cylin(nullptr), total_length(0.0f), num_cylins(0), num_branches(0) {}
 	void clear_num() {num_cylins = num_branches = 0;}
 };
 
@@ -164,7 +167,14 @@ class tree_builder_t : public tree_xform_t {
 	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
 
 public:
-	tree_builder_t(cube_t const *clip_cube_, rand_gen_t &rgen_) : branches(NULL), clip_cube(clip_cube_), rgen(rgen_) {branches_34[0] = branches_34[1] = NULL;}
+	tree_builder_t(cube_t const *clip_cube_, rand_gen_t &rgen_) :
+		branches(NULL), base_num_cylins(0), root_num_cylins(0), ncib(0), num_1_branches(0), num_big_branches_min(0), num_big_branches_max(0),
+		num_2_branches_min(0), num_2_branches_max(0), num_3_branches_min(0), num_3_branches_max(0), tree_slimness(0), tree_wideness(0), base_break_off(0),
+		base_radius(0), base_length_min(0), base_length_max(0), base_curveness(0), num_leaves_per_occ(0),
+		branch_curveness(0), branch_upwardness(0), branch_distribution(0), branch_1_distribution(0), num_cylin_factor(0), base_cylin_factor(0),
+		branch_1_var(0), branch_1_rad_var(0), branch_1_start(0), branch_2_var(0), branch_2_rad_var(0), branch_2_start(0), branch_4_max_radius(0), rotate_factor(0),
+		angle_rotate(0), branch_min_angle(0), branch_max_angle(0), branch_4_length(0), leaf_acc(0), max_2_angle_rotate(0), max_3_angle_rotate(0), clip_cube(clip_cube_), rgen(rgen_)
+	{num_34_branches[0] = num_34_branches[1] = 0; branches_34[0] = branches_34[1] = nullptr;}
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
 		float height_scale, float br_scale, float nl_scale, float bbo_scale, bool has_4th_branches, bool create_bush);
 	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,

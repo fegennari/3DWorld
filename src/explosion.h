@@ -57,7 +57,7 @@ struct blastr { // size = 118 (120)
 	bool one_frame_only, one_frame_seen, emits_light;
 	cloud_explosion cloud_exp; // not always used
 
-	blastr() {}
+	blastr() : time(0), st_time(0), type(0), src(-1), size(0), cur_size(0), damage(0), exp_sphere_scale(0), parent(nullptr), one_frame_only(0), one_frame_seen(0), emits_light(0) {}
 	blastr(int tm, int ty, int sr, float sz, float dam, point const &p, vector3d const &d,
 		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0, bool elight=0, float esc=0.0)
 		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), exp_sphere_scale(esc), pos(p), dir(d.get_norm()), up_vector(plus_y),

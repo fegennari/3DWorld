@@ -163,7 +163,7 @@ template<typename T> struct point2d { // size = 8
 
 	T x, y;
 
-	point2d() {}
+	point2d() : x(0.0), y(0.0) {}
 	point2d(T x_, T y_) : x(x_), y(y_) {}
 	point2d(point2d const &a, point2d const &b) : x(a.x - b.x), y(a.y - b.y) {}
 	T mag_sq() const {return (x*x + y*y);}
