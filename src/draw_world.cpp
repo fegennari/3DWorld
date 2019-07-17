@@ -1207,9 +1207,10 @@ template<typename S, typename T> void get_draw_order(vector<T> const &objs, vect
 	point const camera(get_camera_pos());
 	
 	for (unsigned i = 0; i < objs.size(); ++i) {
-		if (!objs[i].status) continue;
-		point const pos(objs[i].get_pos());
-		if (sphere_in_camera_view(pos, objs[i].radius, 0)) {order.push_back(make_pair(-p2p_dist_sq(pos, camera), i));}
+		auto const &obj(objs[i]);
+		if (obj.status == 0) continue;
+		point const pos(obj.get_pos());
+		if (sphere_in_camera_view(pos, obj.radius, 0)) {order.push_back(make_pair(-p2p_dist_sq(pos, camera), i));}
 	}
 	sort(order.begin(), order.end()); // sort back to front
 }

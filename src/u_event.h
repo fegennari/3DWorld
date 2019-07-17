@@ -28,11 +28,8 @@ int const ue_nparams[NUM_UE_TYPES] = {1, 2, 4, 2, 3, 0, 2, 0, 3};
 
 
 struct uevent {
-
 	int type, frame, params[UE_MAX_PARAMS];
-
-	uevent() : type(0), frame(0) {for (unsigned i = 0; i < UE_MAX_PARAMS; ++i) {params[i] = 0;}}
-	uevent(int type_, int frame_) : type(type_), frame(frame_) {}
+	uevent(int type_=0, int frame_=0) : type(type_), frame(frame_) {params[0] = params[1] = params[2] = params[3] = 0;}
 };
 
 
