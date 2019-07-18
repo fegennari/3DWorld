@@ -115,8 +115,8 @@ struct building_params_t {
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);} // TODO: for future use
 	float get_window_width_fract () const {assert(windows_enabled()); return window_width /(window_width  + window_xspace);}
 	float get_window_height_fract() const {assert(windows_enabled()); return window_height/(window_height + window_yspace);}
-	float get_window_tx() const {assert(windows_enabled()); return 1.0/(window_width  + window_xspace);}
-	float get_window_ty() const {assert(windows_enabled()); return 1.0/(window_height + window_yspace);}
+	float get_window_tx() const {assert(windows_enabled()); return 1.0f/(window_width  + window_xspace);}
+	float get_window_ty() const {assert(windows_enabled()); return 1.0f/(window_height + window_yspace);}
 	
 	void add_cur_mat() {
 		unsigned const mat_ix(materials.size());
@@ -661,7 +661,7 @@ class building_draw_t {
 	static void setup_ao_color(colorRGBA const &color, float bcz1, float ao_bcz2, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
 		if (!no_ao && global_building_params.ao_factor > 0.0) {
 			float const dz_mult(global_building_params.ao_factor/(ao_bcz2 - bcz1));
-			UNROLL_2X(cw[i_].set_c4(color*((1.0 - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcz1)));)
+			UNROLL_2X(cw[i_].set_c4(color*((1.0f - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcz1)));)
 		} else {vert.set_c4(color);} // color is shared across all verts
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
@@ -692,7 +692,7 @@ public:
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
 			float tot_perim(0.0), cur_perim[2] = {0.0, 0.0};
 			for (unsigned S = 0; S < ndiv; ++S) {tot_perim += p2p_dist(normals[S], normals[(S+1)%ndiv]);}
-			float const tscale_mult(TWO_PI*sqrt((rx*rx + ry*ry)/2.0)/tot_perim);
+			float const tscale_mult(TWO_PI*sqrt((rx*rx + ry*ry)/2.0f)/tot_perim);
 				
 			for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
 				vector3d const &n1(normals[S]), &n2(normals[(S+1)%ndiv]);
@@ -767,7 +767,7 @@ public:
 			if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF) { // roof
-			float const denom(0.5*(bcube.get_dx() + bcube.get_dy()));
+			float const denom(0.5f*(bcube.get_dx() + bcube.get_dy()));
 			tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
 		}
 		vert.set_c4(color);
@@ -1237,7 +1237,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 			point const cc(i->get_cube_center());
 			vector3d const csz(i->get_size());
 			float const dx(cc.x - pr.x), dy(cc.y - pr.y), rx(0.5*csz.x + xy_radius), ry(0.5*csz.y + xy_radius);
-			if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0) continue; // no intersection (below test should return true as well)
+			if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0f) continue; // no intersection (below test should return true as well)
 			return 1;
 		}
 		else if (num_sides != 4) {
@@ -1363,7 +1363,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			float const shift_mult(was_cube ? 1.0 : 0.5); // half the shift for non-cube buildings
 
 			for (unsigned d = 0; d < 2; ++d) {
-				float const len(prev.d[d][1] - prev.d[d][0]), min_edge_len((0.2/shift_mult)*(bcube.d[d][1] - bcube.d[d][0]));
+				float const len(prev.d[d][1] - prev.d[d][0]), min_edge_len((0.2f/shift_mult)*(bcube.d[d][1] - bcube.d[d][0]));
 				bool const inv(rgen.rand_bool());
 
 				for (unsigned e = 0; e < 2; ++e) {
@@ -1410,7 +1410,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
-	float door_height(0.45/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
+	float door_height(0.45f/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
 	float door_center(0.0), door_pos(0.0);
 	door_dim = rgen.rand_bool();
 
@@ -1455,13 +1455,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			float const height(rgen.rand_uniform(0.55, 0.7)*parts[1].dz());
 			
 			if (gen_door) { // add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
-				door_center = 0.5*(c.d[!door_dim][0] + c.d[!door_dim][1] + ((door_dim == dim) ? dist1 : dist2));
+				door_center = 0.5f*(c.d[!door_dim][0] + c.d[!door_dim][1] + ((door_dim == dim) ? dist1 : dist2));
 				door_pos    = c.d[door_dim][!door_dir];
 				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 				min_eq(door_height, 0.95f*height);
 			}
 			if (detail_type == 1) { // porch
-				float const width(0.05*(fabs(dist1) + fabs(dist2))); // width of support pillar
+				float const width(0.05f*(fabs(dist1) + fabs(dist2))); // width of support pillar
 				c.d[!dim][dir2] += dist1; // move away from bcube edge
 				c.d[ dim][ dir] += dist2; // move away from bcube edge
 				c.z1() += height; // move up
@@ -1535,8 +1535,8 @@ void building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim)
 	float const width(dim ? top.get_dx() : top.get_dy()), roof_dz(min(peak_height*width, top.get_dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
-	if (dim == 0) {pts[4].y = pts[5].y = 0.5*(y1 + y2);} // yc
-	else          {pts[4].x = pts[5].x = 0.5*(x1 + x2);} // xc
+	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
+	else          {pts[4].x = pts[5].x = 0.5f*(x1 + x2);} // xc
 	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
 	roof_tquads.reserve(4); // 2 roof quads + 2 side triangles
 
@@ -1566,7 +1566,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	if (num_blocks > 0) {
 		float const xy_sz(top.get_size().xy_mag());
-		float const height_scale(0.0035*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
+		float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
 		cube_t rbc(top);
 		vector<point> points; // reused across calls
 		
@@ -1592,7 +1592,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		} // for i
 	}
 	if (has_antenna) { // add antenna
-		float const radius(0.003*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
+		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
 		float const height(rgen.rand_uniform(0.25, 0.5)*top.get_dz());
 		cube_t &antenna(details.back());
 		antenna.set_from_point(top.get_cube_center());
@@ -1690,7 +1690,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	colorRGBA color;
 
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
-		float const tint(0.2*fract(100.0*(bcube.x1() + bcube.y1())));
+		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
 	}
 	else {color = mat.window_color;}
@@ -2106,7 +2106,7 @@ public:
 		if (use_tt_smap) {
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			city_shader_setup(s, 1, 1, use_bmap, 0.0); // use_smap=1, use_dlights=1, min_alpha=0.0 to avoid alpha test
-			float const draw_dist(get_tile_smap_dist() + 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE));
+			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				bool const no_depth_write(!(*i)->is_single_tile());

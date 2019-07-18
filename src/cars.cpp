@@ -79,7 +79,7 @@ void car_t::destroy() { // Note: not calling create_explosion(), so no chain rea
 }
 
 float car_t::get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len) const {
-	float const avg_len(0.5*(get_length() + c.get_length())); // average length of the two cars
+	float const avg_len(0.5f*(get_length() + c.get_length())); // average length of the two cars
 	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
 	return avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed + (add_one_car_len ? 1.0 : 0.0)); // 25% to 125% car length, depending on speed (2x on connector roads)
 }
@@ -399,12 +399,12 @@ void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[
 		set_cube_pts(top_part, zmid, z2, dim, dir, pt); // top
 	}
 	if (car.dz != 0.0) { // rotate all points about dim !d
-		float const sine_val((dir ? 1.0 : -1.0)*car.dz/length), cos_val(sqrt(1.0 - sine_val*sine_val));
+		float const sine_val((dir ? 1.0f : -1.0f)*car.dz/length), cos_val(sqrt(1.0f - sine_val*sine_val));
 		rotate_pts(center, sine_val, cos_val, dim, 2, pb);
 		if (include_top) {rotate_pts(center, sine_val, cos_val, dim, 2, pt);}
 	}
 	if (car.rot_z != 0.0) { // turning about the z-axis: rot_z of [0.0, 1.0] maps to angles of [0.0, PI/2=90 degrees]
-		float const sine_val(sinf(0.5*PI*car.rot_z)), cos_val(sqrt(1.0 - sine_val*sine_val));
+		float const sine_val(sinf(0.5f*PI*car.rot_z)), cos_val(sqrt(1.0f - sine_val*sine_val));
 		rotate_pts(center, sine_val, cos_val, 0, 1, pb);
 		if (include_top) {rotate_pts(center, sine_val, cos_val, 0, 1, pt);}
 	}
@@ -476,7 +476,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	if (dist_val > 0.3)  return; // to far - no lights to draw
 	if (car.is_parked()) return; // no lights when parked
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0);
+	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0f);
 	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
 
 	if (headlights_on && dist_val < 0.3) { // night time headlights
@@ -497,7 +497,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	}
 	if (car.turn_dir != TURN_NONE && car.cur_city != CONN_CITY_IX && dist_val < 0.1) { // turn signals (not on connector road bends)
 		float const ts_period = 1.5; // in seconds
-		double const time(fract((tfticks + 1000.0*car.max_speed)/(ts_period*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
+		double const time(fract((tfticks + 1000.0*car.max_speed)/(double(ts_period)*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
 
 		if (time > 0.5) { // flash on and off
 			bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir); // R=1,2,5,6 or L=0,3,4,7

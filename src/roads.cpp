@@ -535,7 +535,7 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 
 			if (cw_state == stoplight_ns::CW_WARN) { // flashing
 				float const flash_period = 0.5; // in seconds
-				double const time(fract(tfticks/(flash_period*TICKS_PER_SECOND)));
+				double const time(fract(tfticks/(double(flash_period)*TICKS_PER_SECOND)));
 				if (time > 0.5) {cw_color = BLACK;}
 			}
 			float const cw_dim_pos(dim_pos + 0.7*(dir ? sz : -sz)); // location in road dim
@@ -773,7 +773,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
 	if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 	point const cpos(camera_pdu.pos - xlate);
-	float const center(0.5*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
+	float const center(0.5f*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
 	point p1, p2; // centerline end points
 	p1.z = bridge.get_start_z();
 	p2.z = bridge.get_end_z();
@@ -797,8 +797,8 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	if (!shadow_only) {select_texture(WHITE_TEX);}
 
 	for (unsigned n = 0; n <= num_segs; ++n) { // populate zvals and dvals
-		float const t(n*step_sz), v(2.0*fabs(t - 0.5)), zpos(p1.z + delta.z*t);
-		zvals[n] = zpos + 0.3*len*(1.0 - v*v) - 0.5*scale;
+		float const t(n*step_sz), v(2.0f*fabs(t - 0.5f)), zpos(p1.z + delta.z*t);
+		zvals[n] = zpos + 0.3f*len*(1.0f - v*v) - 0.5f*scale;
 	}
 	for (unsigned n = 0; n < num_segs; ++n) { // add arches
 		float const zval(zvals[n+1]), next_dval(cur_dval + delta_d);
@@ -807,7 +807,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		pts[1][d] = pts[2][d] = next_dval;
 
 		if (!shadow_only) {
-			query_pt[d] = 0.5*(cur_dval + next_dval); // center point of this segment
+			query_pt[d] = 0.5f*(cur_dval + next_dval); // center point of this segment
 			uint64_t const tile_id(get_tile_id_containing_point(query_pt + xlate));
 
 			if (n == 0 || tile_id != prev_tile_id) { // first segment, or new tile for this segment
@@ -898,7 +898,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		if (dir) {swap(extend_dz1, extend_dz2);}
 		float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
 		point bot_center(bot_bc.get_cube_center());
-		bot_center.z = 0.5*(z1 + z2) - 0.5*wall_width;
+		bot_center.z = 0.5f*(z1 + z2) - 0.5f*wall_width;
 
 		if (!sm_split_pos.empty()) { // multiple tiles, must select a new shadow map set
 			query_pt[d] = cur_dval;
@@ -908,12 +908,12 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		set_cube_pts(bot_bc, z1-wall_width, z2-wall_width, z1, z2, (d != 0), dir, pts);
 		draw_cube(qbd_bridge, cw_concrete, bot_center, pts, 0, invert_normals, tscale); // skip_bottom=0
 
-																						// add guardrails/walls
+		// add guardrails/walls
 		for (unsigned e = 0; e < 2; ++e) { // two sides
 			cube_t side_bc(bot_bc);
 			side_bc.d[!d][!e] = side_bc.d[!d][e] + (e ? -wall_width : wall_width);
 			point side_center(side_bc.get_cube_center());
-			side_center.z = 0.5*(z1 + z2) + 0.5*wall_height;
+			side_center.z = 0.5f*(z1 + z2) + 0.5f*wall_height;
 			set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, (d != 0), dir, pts);
 			draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, invert_normals, tscale); // skip_bottom=1
 		}
@@ -952,7 +952,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 		tscale = 1.0/scale; // scale texture to match road width
 	}
 	for (unsigned s = 0; s < num_segs; ++s) { // split into segments, one per tile shadow map
-		float const t1(s*dt), t2((s+1)*dt), tmid(0.5*(t1 + t2)); // in range [0.0, 1.0]
+		float const t1(s*dt), t2((s+1)*dt), tmid(0.5f*(t1 + t2)); // in range [0.0, 1.0]
 		point center(tunnel.get_cube_center());
 		center[d] = xy1 + tmid*length; // halfway between the end points
 		begin_tile(center, 1);
@@ -963,7 +963,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 			c.d[d][1] = xy1 + t2*length;
 			float const dz(zb - zf), zft(zf + t1*dz), zbt(zf + t2*dz);
 			point center(c.get_cube_center());
-			center.z += 0.5*(zft + zbt);
+			center.z += 0.5f*(zft + zbt);
 			// Note: could use draw_cylindrical_section() or draw_circle_normal() for cylindrical tunnel
 			set_cube_pts(c, c.z1()+zft, c.z1()+zbt, c.z2()+zft, c.z2()+zbt, d, 0, pts); // dir=0 here
 			draw_cube(qbd, cw_concrete, center, pts, (!shadow_only && i != 1), invert_normals, tscale); // skip_bottom=1 for all but the top cube unless shadowed

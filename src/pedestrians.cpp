@@ -118,7 +118,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		if (i->plot != target_plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		float const dist_sq(p2p_dist_xy_sq(pos, i->pos));
 		if (dist_sq > prox_radius_sq) continue; // proximity test
-		float const r_sum(0.6*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
+		float const r_sum(0.6f*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 		if (dist_sq < r_sum*r_sum) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
 		if (speed < TOLERANCE) continue;
 		vector3d const delta_v(vel - i->vel), delta_p((pos.x - i->pos.x), (pos.y - i->pos.y), 0.0);
@@ -159,7 +159,7 @@ bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsign
 	// Note: shouldn't have to check peds in the next plot, assuming that if we're stopped, they likely are as well, and won't be walking toward us
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped until we exit target_plot
 		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
-		if (!dist_xy_less_than(pos, i->pos, 0.6*(radius + i->radius))) continue; // no collision
+		if (!dist_xy_less_than(pos, i->pos, 0.6f*(radius + i->radius))) continue; // no collision
 		i->collided = i->ped_coll = 1; i->colliding_ped = pid;
 		return 1; // Note: could omit this return and continue processing peds
 	} // for i
@@ -437,7 +437,7 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 	// just exited the plot and about the cross the road - check for cars; use speed rather than vel in case we're already stopped and vel==zero_vector
 	float const dx(min((pos.x - plot_bcube.x1()), (plot_bcube.x2() - pos.x))), dy(min((pos.y - plot_bcube.y1()), (plot_bcube.y2() - pos.y)));
 	bool const road_dim(dx < dy); // if at crosswalk, need to know which direction/road the ped is crossing
-	float const time_to_cross((city_params.road_width - 2.0*sw_width)/(speed*get_speed_mult())); // road area where cars can drive excluding sidewalks on each side
+	float const time_to_cross((city_params.road_width - 2.0f*sw_width)/(speed*get_speed_mult())); // road area where cars can drive excluding sidewalks on each side
 	//cout << "plot_bcube: " << plot_bcube.str() << " " << TXT(dx) << TXT(dy) << TXT(road_dim) << TXT(time_to_cross) << endl;
 	return !ped_mgr.has_nearby_car(*this, road_dim, time_to_cross, dbg_cubes);
 }
