@@ -295,7 +295,7 @@ void cobj_draw_buffer::draw_cylin_cdb(point const &p1, point const &p2, texgen_p
 	point const ce[2] = {p1, p2};
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
-	if (radius2 == 0.0) {gen_cone_triangles(tc_tri_verts, vpn, two_sided_lighting);} // cone FIXME: tp
+	if (radius2 == 0.0) {gen_cone_triangles_tp(tri_verts, vpn, two_sided_lighting, tp);}
 	else {gen_cylinder_quads(quad_verts, vpn, tp, two_sided_lighting);}
 	if (draw_sides_ends != 0) {add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, all_zeros, vpn);} // Note: TSL doesn't apply here
 }

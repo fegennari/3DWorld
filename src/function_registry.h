@@ -192,6 +192,7 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 void begin_cylin_vertex_buffering();
 void flush_cylin_vertex_buffer();
 void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting=0, float tc_t0=0.0, float tc_t1=1.0, vector3d const &xlate=zero_vector);
+void gen_cone_triangles_tp(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, bool two_sided_lighting, texgen_params_t const &tp);
 void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting=0, float tc_t0=0.0, float tc_t1=1.0, vector3d const &xlate=zero_vector);
 void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting);
 void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, texgen_params_t const &tp, bool two_sided_lighting);

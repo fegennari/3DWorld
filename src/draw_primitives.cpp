@@ -299,8 +299,14 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool dr
 
 
 // Note: two_sided_lighting is not entirely correct since it operates on the vertices instead of the faces/fragments
+vector3d calc_oriented_normal(point const &p, vector3d const &n, bool two_sided_lighting) {
+	return ((two_sided_lighting && dot_product_ptv(n, get_camera_pos(), p) < 0.0) ? -n : n);
+}
 void create_vert(vert_norm_tc &v, point const &p, vector3d const &n, float ts, float tt, bool two_sided_lighting) {
-	v.assign(p, ((two_sided_lighting && dot_product_ptv(n, get_camera_pos(), p) < 0.0) ? -n : n), ts, tt);
+	v.assign(p, calc_oriented_normal(p, n, two_sided_lighting), ts, tt);
+}
+void create_vert(vert_norm_texp &v, point const &p, vector3d const &n, texgen_params_t const &tp, bool two_sided_lighting) {
+	v = vert_norm_texp(p, calc_oriented_normal(p, n, two_sided_lighting), tp);
 }
 
 void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting, float tc_t0, float tc_t1, vector3d const &xlate) {
@@ -311,10 +317,23 @@ void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 
 	for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
 		unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
-		//create_vert(verts[vix+0], vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
-		create_vert(verts[vix+0], vpn.p[(s <<1)+1]+xlate, vpn.n[s], 0.5, tc_t1, two_sided_lighting); // one big discontinuity at one position
+		//create_vert(verts[vix+0], vpn.p[(s <<1)+1],        vpn.n[s],              (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
+		create_vert(verts[vix+0], vpn.p[(s <<1)+1]+xlate,  vpn.n[s],               0.5,                     tc_t1, two_sided_lighting); // one big discontinuity at one position
 		create_vert(verts[vix+1], vpn.p[(sn<<1)+0]+xlate, (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
 		create_vert(verts[vix+2], vpn.p[(s <<1)+0]+xlate, (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+	}
+}
+
+void gen_cone_triangles_tp(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, bool two_sided_lighting, texgen_params_t const &tp) {
+
+	unsigned const ixoff(verts.size()), ndiv(vpn.n.size());
+	verts.resize(3*ndiv + ixoff);
+
+	for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
+		unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
+		create_vert(verts[vix+0], vpn.p[(s <<1)+1],  vpn.n[s],              tp, two_sided_lighting);
+		create_vert(verts[vix+1], vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), tp, two_sided_lighting);
+		create_vert(verts[vix+2], vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), tp, two_sided_lighting);
 	}
 }
 
@@ -366,8 +385,8 @@ void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &
 			unsigned const S(i + j), s(S%ndiv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
 			point const &p1(vpn.p[(s<<1)+!j]), &p2(vpn.p[(s<<1)+ j]);
-			verts.emplace_back(p1, ((two_sided_lighting && dot_product_ptv(normal, get_camera_pos(), p1) < 0.0) ? -normal : normal), tp);
-			verts.emplace_back(p2, ((two_sided_lighting && dot_product_ptv(normal, get_camera_pos(), p2) < 0.0) ? -normal : normal), tp);
+			verts.emplace_back(p1, calc_oriented_normal(p1, normal, two_sided_lighting), tp);
+			verts.emplace_back(p2, calc_oriented_normal(p2, normal, two_sided_lighting), tp);
 		}
 	} // for i
 }
