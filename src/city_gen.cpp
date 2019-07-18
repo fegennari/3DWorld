@@ -1120,7 +1120,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	public:
 		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {} // global road network ctor
-		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), tot_road_len(0.0), num_cars(0) {
+		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {
 			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
 		cube_t const &get_bcube() const {return bcube;}

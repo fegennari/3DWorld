@@ -60,7 +60,7 @@ struct city_model_t {
 
 	city_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
-		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), shadow_mat_ids(smids) {}
+		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
 	bool read(FILE *fp);
 	bool check_filename();
 };
@@ -231,7 +231,7 @@ class road_mat_mgr_t {
 	unsigned tids[NUM_RD_TIDS], sl_tid;
 
 public:
-	road_mat_mgr_t() : inited(0), sl_tid(0) {}
+	road_mat_mgr_t();
 	void ensure_road_textures();
 	void set_texture(unsigned type);
 	void set_stoplight_texture();
@@ -256,7 +256,7 @@ struct flatten_op_t : public rect_t {
 	float z1, z2;
 	bool dim;
 	unsigned border, skip_six, skip_eix;
-	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0) {}
+	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0), skip_six(0), skip_eix(0) {}
 	flatten_op_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_, float z1_, float z2_, bool dim_, unsigned border_) :
 		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_), skip_six(0), skip_eix(0) {}
 };
@@ -510,7 +510,7 @@ struct tunnel_t : public road_connector_t {
 	cube_t ends[2];
 	float radius, height, facade_height[2];
 
-	tunnel_t(road_t const &road) : road_connector_t(road), radius(0.0), height(0.0) {}
+	tunnel_t(road_t const &road) : road_connector_t(road), radius(0.0), height(0.0) {facade_height[0] = facade_height[1] = 0.0f;}
 	bool enabled() const {return (radius > 0.0);}
 	void init(point const &start, point const &end, float radius_, bool dim);
 	void add_streetlights() {road_connector_t::add_streetlights(2, 1, -0.15, ends[0].z1(), ends[1].z1());} // 2 per side, staggered
@@ -720,7 +720,7 @@ class path_finder_t {
 	void find_best_path_recur(path_t const &cur_path, unsigned depth);
 	bool shorten_path(path_t &path) const;
 public:
-	path_finder_t(bool debug_=0) : debug(debug_) {}
+	path_finder_t(bool debug_=0) : gap(0.0f), debug(debug_) {}
 	vect_cube_t &get_avoid_vector() {return avoid;}
 	vector<point> const &get_best_path() const {return (found_complete_path() ? best_path : partial_path);}
 	bool found_complete_path() const {return (!best_path.empty());}

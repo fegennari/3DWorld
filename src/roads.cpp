@@ -14,6 +14,10 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
+road_mat_mgr_t::road_mat_mgr_t() : inited(0), sl_tid(0) {
+	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = 0;}
+}
+
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
 	timer_t timer("Load Road Textures");
@@ -332,7 +336,7 @@ bool streetlights_t::line_intersect_streetlights(point const &p1, point const &p
 
 
 road_isec_t::road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, short conn_to_city_) :
-	cube_t(c), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road)
+	cube_t(c), num_conn(0), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road)
 {
 	rix_xy[0] = rix_xy[1] = rx; rix_xy[2] = rix_xy[3] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
 	if (conn == 15) {num_conn = 4;} // 4-way
