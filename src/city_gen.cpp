@@ -2333,11 +2333,6 @@ class city_road_gen_t : public road_gen_base_t {
 				if (bcube.contains_pt_xy(pos)) {return (r - roads.begin());}
 			}
 			return -1; // should never get here, but occasionally can due to bad collisions between peds, floating-point error, etc.
-			// debug printouts below
-			cout << "pos: " << pos.str() << ", dim: " << road_dim << endl;
-			for (auto r = roads.begin(); r != roads.end(); ++r) {cout << TXT(r->dim) << "bcube: " << r->str() << endl;}
-			assert(0);
-			return -1;
 		}
 	}; // road_network_t
 
