@@ -696,6 +696,7 @@ bool u_ship::can_return_to_parent() const {
 
 bool u_ship::check_return_to_parent() const {
 
+	if (parent == nullptr)       return 0; // for safety, likely unreachable
 	if (last_hit > 0)            return 0; // under attack
 	if (!can_return_to_parent()) return 0;
 	if (dock_fighters && parent != NULL && parent->is_player_ship()) return 1; // dock with parent
@@ -2423,7 +2424,7 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	bool const shield_d_only(valid_wc && us_weapons[wc].shield_d_only);
 	
 	float const hit_points((shield_d_only ? 0.0 : armor) + (ignores_shields ? 0.0 : shields));
-	if (VERIFY_REFS && source) source->verify_status();
+	if (VERIFY_REFS && source) {source->verify_status();}
 	bool const is_kill(!shield_d_only && val > hit_points);
 	int const src_sclass(source ? source->get_src_sclass() : SWCLASS_UNDEF);
 	unsigned const src_align(source ? source->get_align()  : (unsigned)NUM_ALIGNMENT);
@@ -2436,7 +2437,7 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	float damage_amt(0.0);
 	bool const friendly(source == this || ((type == DAMAGE_COLL || alignment == ALIGN_PLAYER) && src_align == alignment)); // accidental collision, etc.
 	bool const attack(!friendly && (wc != WCLASS_EXPLODE || (source && source->hostile_explode())) &&
-		(wc != WCLASS_HEAT || source->is_ship()) && register_attacker(source));
+		(wc != WCLASS_HEAT || (source && source->is_ship())) && register_attacker(source));
 	if (attack && wc != WCLASS_COLLISION && is_player_ship()) send_warning_message("Under Attack");
 	
 	if (!ignores_shields) { // determine damage absorbed by shields
