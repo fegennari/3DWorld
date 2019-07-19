@@ -147,8 +147,8 @@ void create_object_groups() {
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects, unsigned app_rate,
 	bool init_enabled, bool reorderable, bool auto_max, bool predef_use_once)
 {
-	if (num_groups > NUM_TOT_OBJS) {
-		cerr << "Error: Exceeded max of " << (unsigned)NUM_TOT_OBJS << " object groups." << endl;
+	if (num_groups >= NUM_TOT_OBJS) {
+		cerr << "Error: Exceeded max of " << (unsigned)(NUM_TOT_OBJS - 1) << " object groups." << endl;
 		exit(1);
 	}
 	if (obj_type >= NUM_TOT_OBJS) {
