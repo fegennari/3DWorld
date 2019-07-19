@@ -1055,8 +1055,8 @@ class city_road_gen_t : public road_gen_base_t {
 
 		vector<road_t> roads; // full overlapping roads, for collisions, etc.
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
-		vector<road_isec_t> isecs[3]; // for drawing with textures: {4-way, 3-way, 2-way}
-		vector<road_plot_t> plots; // plots of land that can hold buildings
+		vector<road_isec_t> isecs[3]; // for drawing with textures: {2-way, 3-way, 4-way}
+		vector<road_plot_t> plots; // plots of land that can hold buildings (city blocks)
 		vector<bridge_t> bridges; // bridges, part of global road network
 		vector<tunnel_t> tunnels; // tunnels, part of global road network
 		vector<road_t> tracks, track_segs; // railroad tracks (for global road network)
