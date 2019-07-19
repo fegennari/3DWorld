@@ -167,7 +167,7 @@ string const sensor_type_names[NUM_SENSOR_TYPES] = {"disabled", "off", "on", "li
 bool sensor_t::read_from_file(FILE *fp, geom_xform_t const &xf) {
 	// sensor type [pos.x pos.y pos.z [invert [radius [thresh]]]]
 	int inv(0);
-	char str[MAX_CHARS];
+	char str[MAX_CHARS] = {0};
 	if (fscanf(fp, "%255s", str) < 1) return 0;
 	int const ix(atoi(str));
 	if (ix > 0) {type = ix;} // a number was specified

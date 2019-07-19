@@ -32,7 +32,7 @@ struct text_message_params {
 	int itime, mtime, priority;
 	float size, yval;
 	colorRGBA color;
-	text_message_params() : fade(0), itime(0), mtime(0), priority(0), size(0.0), color(WHITE) {}
+	text_message_params() : fade(0), itime(0), mtime(0), priority(0), size(0.0f), yval(0.0f), color(WHITE) {}
 	text_message_params(int t, float s, colorRGBA const &c, int p, bool fade_=0)
 		: fade(fade_), itime(fade ? 3*t/2 : t), mtime(itime), priority(p), size(s), yval(0.0), color(c) {}
 };

@@ -1200,7 +1200,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	assert(coll_obj_file != NULL);
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
-	char str[MAX_CHARS];
+	char str[MAX_CHARS] = {0};
 	unsigned line_num(1), npoints(0), indir_dlight_ix(0), prev_light_ix_start(0);
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[3], light_rotate(0.0);

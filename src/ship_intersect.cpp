@@ -492,6 +492,7 @@ bool u_ship::cobjs_int_obj(cobj_vector_t const &cobjs2, free_obj const *const ob
 ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, upos_point_type const &cur_pos, float cur_radius,
 							   point const &sun_pos, int ndiv, bool player, free_obj const *const obj, float rmin) : nsides(ndiv), pmap(NULL)
 {
+	rad[0] = rad[1] = 0.0;
 	assert(sobj_r > TOLERANCE && cur_radius > TOLERANCE);
 	float sphere_r(sobj_r);
 	upos_point_type sphere_pos(sobj_pos);

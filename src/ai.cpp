@@ -386,7 +386,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	}
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
 	auto it(blocked_waypts.find(i));
-	if (it != blocked_waypts.end())     {dmult *= (1.0 + (1 << it->second.c));} // exponential increase in cost for blocked waypoints
+	if (it != blocked_waypts.end())     {dmult *= (1.0 + (1ULL << it->second.c));} // exponential increase in cost for blocked waypoints
 	if (!waypts_used.is_valid(i))       {dmult *= 100.0;}
 	if (waypoints[i].next_wpts.empty()) {dmult *= 10.0;} // increase the cost of waypoints disconnected from the rest of the waypoint graph
 	if ((int)i == curw)                 {dmult *= 1.0E-6;} // prefer the current waypoint to avoid indecision and force next connections
@@ -834,10 +834,10 @@ float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, po
 
 		if (is_targeting_smiley(target, smiley_id, pos)) { // enemy (or camera) is targeting me
 			float const enemy_range(sstates[target].weapon_range(1)); // use sstates[target].target_in_range?
-			if (range > 2.0*enemy_range && dist < enemy_range) return (2.5 + 0.01*(enemy_range - dist)); // too close to enemy weapon range
+			if (range > 2.0*enemy_range && dist < enemy_range) return (2.5f + 0.01f*(enemy_range - dist)); // too close to enemy weapon range
 		}
 		float const min_dist(min(0.25*range, 8.0*radius));
-		if (weapon != W_BBBAT && dist < min_dist) return (2.0 + 0.01*(min_dist - dist)); // too close to enemy
+		if (weapon != W_BBBAT && dist < min_dist) return (2.0f + 0.01f*(min_dist - dist)); // too close to enemy
 	}
 	// enforce turn speed?
 	return 0.0; // good
@@ -901,7 +901,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 				xt = 1 + (player_rgen.rand() % (MESH_X_SIZE-2));
 				yt = 1 + (player_rgen.rand() % (MESH_Y_SIZE-2));
 			}
-			float const depth(has_water(xt, yt) ? (water_matrix[yt][xt] - mesh_height[yt][xt]) : 0.0);
+			float const depth(has_water(xt, yt) ? (water_matrix[yt][xt] - mesh_height[yt][xt]) : 0.0f);
 			dest_mark.add_candidate(xpos, ypos, xt, yt, depth, radius);
 		}
 		if (dest_mark.valid) {
@@ -1151,7 +1151,7 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 			int const x((xx + SMILEY_TEX_SIZE) % SMILEY_TEX_SIZE);
 
 			if (((xx-tx)*(xx-tx) << 2) + yterm <= radsq) {
-				double const dist(sqrt(double((xx-tx)*(xx-tx) + yterm)));
+				double const dist(sqrt(((double)xx-(double)tx)*((double)xx-(double)tx) + (double)yterm));
 				double const blend(1.0/(dist + 2.0));
 				assert(offset+x < tex_size);
 				int const index(3*(offset+x));
@@ -1186,7 +1186,7 @@ void add_damage_to_smiley_surface(vector3d const &dir, float size, int smiley_id
 			int const x((xx + PMAP_SIZE) % PMAP_SIZE);
 
 			if (((xx-tx)*(xx-tx) << 2) + yterm <= radsq) {
-				double const dist(sqrt(double((xx-tx)*(xx-tx) + yterm)));
+				double const dist(sqrt(((double)xx-(double)tx)*((double)xx-(double)tx) + (double)yterm));
 				td->add_perturb_at(x, y, smiley_id, -0.02/(dist + 2.0), -0.5*radius, 0.5*radius);
 			}
 		}
@@ -1320,7 +1320,7 @@ int player_state::target_in_range(point const &pos) const {
 	if (gravity == 0.0) return dist_less_than(target_pos, pos, range); // no gravity, use simple distance test
 	float const xy_dist_sq(p2p_dist_xy_sq(target_pos, pos)); // xy distance
 	if (target_pos.z <= pos.z) return (xy_dist_sq < range*range); // shooting down, ignore the z (height) distance
-	float const eff_dz((1.0 + gravity)*(target_pos.z - pos.z)); // increase the cost of the z distance due to gravity (approximate)
+	float const eff_dz((1.0f + gravity)*(target_pos.z - pos.z)); // increase the cost of the z distance due to gravity (approximate)
 	return ((xy_dist_sq + eff_dz*eff_dz) < range*range);
 }
 

@@ -210,7 +210,7 @@ void update_blasts() {
 
 struct ix_type_pair {
 	unsigned ix, type;
-	ix_type_pair() {}
+	ix_type_pair() : ix(0), type(0) {}
 	ix_type_pair(unsigned ix_, unsigned type_) : ix(ix_), type(type_) {}
 	bool operator<(ix_type_pair const &p) const {return ((type == p.type) ? (ix < p.ix) : (type < p.type));}
 };

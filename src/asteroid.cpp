@@ -699,8 +699,8 @@ public:
 		spos  = spos*size;
 		rotate_norm_vector3d_into_plus_z(rot_axis, spos, -1.0); // inverse rotate
 		spos += center;
-		if (!univ_sphere_vis(spos, bradius))          return 0; // VFC
-		if (distance_to_camera(spos) - bradius > 1.0) return 0; // distance/size culling
+		if (!univ_sphere_vis(spos, bradius))           return 0; // VFC
+		if (distance_to_camera(spos) - bradius > 1.0f) return 0; // distance/size culling
 		
 		create_and_upload(pts); // non-const due to this call
 		fgPushMatrix();
@@ -945,7 +945,7 @@ float calc_sphere_shadow_atten(point const &pos, point const &lpos, float lradiu
 			atten *= 1.0 - PI*min(r,R)*min(r,R)/(PI*R*R);
 		}
 		else if (d < (r + R)) { // partially overlapped
-			float shadowed_area = r*r*acos((d*d+r*r-R*R)/(2.0*d*r)) + R*R*acos((d*d+R*R-r*r)/(2.0*d*R)) - 0.5*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R));
+			float shadowed_area(r*r*acos((d*d+r*r-R*R)/(2.0*d*r)) + R*R*acos((d*d+R*R-r*r)/(2.0f*d*R)) - 0.5f*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R)));
 			atten *= 1.0 - CLIP_TO_01(shadowed_area/float(PI*R*R)); // shadowed_area/total_area
 		}
 	}

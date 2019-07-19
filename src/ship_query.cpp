@@ -400,7 +400,8 @@ void calc_lit_uobjects() {
 
 void add_br_light(unsigned index, point const &pos, float radius, free_obj const *const parent) {
 
-	if (!EXPLODE_LIGHTING || NUM_EXP_LIGHTS == 0) return;
+	if (!EXPLODE_LIGHTING)   return;
+	if (NUM_EXP_LIGHTS == 0) return;
 	query_data qdata(&c_uobjs_lit, pos, radius, uobjs_lit_rmax);
 	qdata.index  = index;
 	qdata.parent = parent;

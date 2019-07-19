@@ -219,7 +219,8 @@ public:
 	string comment;
 
 	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0), rev_rate(0.0), atmos(0.0),
-		water(0.0), lava(0.0), resources(0.0), cloud_density(1.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0), prev_pop(0.0), orbit_scale(all_ones) {}
+		water(0.0), lava(0.0), resources(0.0), cloud_density(1.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0), prev_pop(0.0), orbit_scale(all_ones)
+	{a[0] = a[1] = a[2] = b[0] = b[1] = b[2] = 0;}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
@@ -550,7 +551,7 @@ struct coll_test { // size = 16
 
 	int index;
 	float dist, rad, t;
-	coll_test() : index(0) {}
+	coll_test() : index(0), dist(0.0f), rad(0.0f), t(0.0f) {}
 	bool operator<(const coll_test &A) const {return dist < A.dist;}
 };
 

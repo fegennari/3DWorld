@@ -40,7 +40,7 @@ class engine_trail_drawer_t {
 		float radius;
 		colorRGBA color;
 
-		trail_pt() {}
+		trail_pt() : radius(0.0f) {}
 		trail_pt(point const &p, float r, colorRGBA const &c) : pos(p), radius(r), color(c) {assert(radius > 0.0 && color.A > 0.0);}
 	};
 

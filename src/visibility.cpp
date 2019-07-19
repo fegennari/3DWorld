@@ -453,7 +453,7 @@ class mesh_shadow_gen {
 
 public:
 	mesh_shadow_gen(float const *const h, unsigned char *sm, int xsz, int ysz, float const *shix, float const *shiy, float *shox, float *shoy)
-		: mh(h), smask(sm), sh_in_x(shix), sh_in_y(shiy), sh_out_x(shox), sh_out_y(shoy), xsize(xsz), ysize(ysz) {
+		: mh(h), smask(sm), sh_in_x(shix), sh_in_y(shiy), sh_out_x(shox), sh_out_y(shoy), dist(0.0f), xsize(xsz), ysize(ysz) {
 		assert(mh != NULL && smask != NULL);
 	}
 

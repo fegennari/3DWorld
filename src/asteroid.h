@@ -16,6 +16,7 @@ struct asteroid_belt_cloud : public volume_part_cloud {
 	float radius;
 	unsigned vbo_pos;
 
+	asteroid_belt_cloud() : radius(0.0f), vbo_pos(0) {}
 	void gen(rand_gen_t &rgen, float def_radius);
 	static void pre_draw(vpc_shader_t &s, colorRGBA const &color, float noise_scale);
 	static void post_draw(vpc_shader_t &s);
