@@ -137,7 +137,7 @@ bool u_ship_base::build_fighter(unsigned fsclass) {
 
 	for (unsigned k = 0; k < sc_weap.size(); ++k) {
 		// if ammo is needed for this weapon, and it isn't automatically regenerated, and this weapon exists on the dock
-		if (sc_weap[k].get_usw().need_ammo() && !sc_weap[k].get_usw().do_regen, find_weapon_wclass(sc_weap[k].wclass, w)) { // else no weapon, just create the ammo
+		if (sc_weap[k].get_usw().need_ammo() && !sc_weap[k].get_usw().do_regen && find_weapon_wclass(sc_weap[k].wclass, w)) { // else no weapon, just create the ammo
 			if (weapons[w].ammo < sc_weap[k].init_ammo) return 0; // no ammo for this weapon
 		}
 	}
