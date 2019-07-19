@@ -762,7 +762,7 @@ tga_result tga_color_unmap(tga_image *img)
 {
     uint8_t bpp = img->color_map_depth / 8; /* bytes per pixel */
     int pos;
-    void *tmp;
+    void *tmp = 0;
 
     if (!tga_is_colormapped(img)) return TGAERR_NOT_CMAP;
     if (img->pixel_depth != 8) return TGAERR_PIXEL_DEPTH;
