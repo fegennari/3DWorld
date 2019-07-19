@@ -38,6 +38,7 @@ struct scolor { // size = 28
 	int tid;
 	float spec1, spec2;
 	colorRGBA c;
+	scolor() : tid(-1), spec1(0.0f), spec2(0.0f) {}
 };
 
 
@@ -45,6 +46,7 @@ struct face3d { // size = 28
 
 	unsigned v[3], color_id;
 	vector3d norm;
+	face3d() : color_id(0) {v[0] = v[1] = v[2] = 0;}
 };
 
 

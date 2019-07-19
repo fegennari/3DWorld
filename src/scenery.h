@@ -92,6 +92,7 @@ class voxel_rock : public scenery_obj {
 	unsigned get_tid() const;
 
 public:
+	voxel_rock() : model_ix(0), rseed(0) {}
 	void create(int x, int y, int use_xy);
 	void build_model();
 	void add_cobjs();

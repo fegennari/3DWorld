@@ -47,6 +47,9 @@ struct obj_type { // size = 88
 	float mass, radius, volume, surface_area, density, air_factor, terminal_vel, friction_factor;
 	float health, damage, min_t, max_t, elasticity, gravity, deform, def_recover;
 	colorRGBA color;
+
+	obj_type() : lifetime(0), tid(-1), flags(0), mass(0), radius(0), volume(0), surface_area(0), density(0), air_factor(0), terminal_vel(0), friction_factor(0),
+		health(0), damage(0), min_t(0), max_t(0), elasticity(0), gravity(0), deform(0), def_recover(0) {}
 };
 
 
