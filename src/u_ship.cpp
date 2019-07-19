@@ -274,7 +274,7 @@ float u_ship::get_real_speed_val() const {
 	float const cscale(min(1.0, (get_crew_scale() + 0.5*SHIP_REQ_CREW))); // slightly slower with fewer crew
 	float const trm_scale(min(1.0f, get_true_rel_mass_scale())); // max is 1.0 in case ship has special weapons/ammo (player ship)
 	assert(trm_scale > TOLERANCE);
-	return get_engine_status()*cscale*over_mass_factor/(0.5 + 0.5*trm_scale); // use trm_scale in other mass calculations?
+	return get_engine_status()*cscale*over_mass_factor/(0.5f + 0.5f*trm_scale); // use trm_scale in other mass calculations?
 }
 
 
@@ -1346,7 +1346,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		if (!uw.is_beam   && !uw.is_fighter && !uw.is_decoy && uw.damage > 0.0 && uw.damage <= target_obj->get_min_damage()) continue; // can't damage target
 		float const range(uw.range);
 		
-		if (!uw.is_decoy && !uw.is_fighter && range > 0.0 && (range + c_radius) > 0.0) {
+		if (!uw.is_decoy && !uw.is_fighter && range > 0.0f && (range + c_radius) > 0.0f) {
 			float tdist(target_dist);
 
 			if (sw.weap_pts.size() == 1) {
@@ -1390,7 +1390,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		value -= 2.0*overrange/(0.5*range + rsum) + 8.0*overrange; // overrange penalty
 		value -= 5.0*(sw.init_ammo - sw.ammo)/((float)sw.init_ammo + 1.0); // used ammo penalty
 		value -= 8.0*(uw.range > 0.0 && target_dist > range); // out of range penalty
-		value -= 6.0*d_angle*(1 - weap_turret(sw.wclass))*(uw.seeking ? 0.5 : 1.0); // bad aim penalty
+		value -= 6.0f*d_angle*(1 - weap_turret(sw.wclass))*(uw.seeking ? 0.5f : 1.0f); // bad aim penalty
 
 		if (uw.is_beam) {
 			beam_weap_params const &bwp(uw.get_beam_params());
@@ -1398,8 +1398,8 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			if (bwp.temp_src) {value *= 0.5*(1.0 + get_max_t()/max(target_obj->get_max_t(), TOLERANCE));}
 			
 			if (bwp.mind_control) { // prefers a mostly undamaged target
-				value += 40.0*(1.0 - target_obj->get_damage())*(target_obj->get_cost() +
-					10.0*(target_obj->offense() + target_obj->defense()))/max(1U, target_crew);
+				value += 40.0f*(1.0f - target_obj->get_damage())*(target_obj->get_cost() +
+					10.0f*(target_obj->offense() + target_obj->defense()))/max(1U, target_crew);
 			}
 		}
 		value *= 1.0 + 0.5*uw.no_coll; // can hit multiple targets and can't be destroyed easily
@@ -1837,7 +1837,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 
 			for (unsigned d = 0; d < 2; ++d) {
 				float const val(float(i+d)/float(segments));
-				bw[d] = beamwidth*(val*bwp.bw_escale + (1.0 - val)*sscale);
+				bw[d] = beamwidth*(val*bwp.bw_escale + (1.0f - val)*sscale);
 				pt[d] = (p2*val + p1*(1.0 - val)) + deltas[i+d];
 				blend_color(c[d], bwp.beamc[1], bwp.beamc[0], val, 1);
 			}
@@ -2311,7 +2311,7 @@ void u_ship::apply_physics() {
 
 	// rand() mod should be f(fticks), but leave as is for improved performance when framerate is low
 	if (ENABLE_PARTS && animate2 && is_powered && sc.nengines > 0 && cloaked < 0.5 && (rand()%6) == 0 &&
-		fticks*velocity.mag() > 0.1*radius && univ_sphere_vis(pos, 2.0*c_radius))
+		fticks*velocity.mag() > 0.1f*radius && univ_sphere_vis(pos, 2.0f*c_radius))
 	{ 
 		float const pscale(0.1*min(5.0f*MAX_PARTICLE_SIZE, radius));
 
@@ -2327,7 +2327,7 @@ void u_ship::apply_physics() {
 
 		for (unsigned i = 0; i < niters; ++i) {
 			point const bpos(pos + gen_rand_vector_uniform(radius));
-			float const brad(0.5*(radius + c_radius)*(((specs().death_delay > 0) ? 0.4*get_t_exp() : 0.2) + rand_uniform(0.2, 0.5)));
+			float const brad(0.5f*(radius + c_radius)*(((specs().death_delay > 0) ? 0.4f*get_t_exp() : 0.2f) + rand_uniform(0.2, 0.5)));
 			int const btime(int(TICKS_PER_SECOND*rand_uniform(0.5, 0.9)));
 			add_blastr(bpos, (bpos - pos).get_norm(), brad, 0.0, btime, alignment, YELLOW, RED, specs().exp_subtype, this);
 		}
@@ -2570,7 +2570,7 @@ void u_ship::do_structure_damage(float val) {
 
 
 float u_ship::get_def_explode_damage() const {
-	return ((specs().exp_type == ETYPE_NONE) ? 0.0 : specs().exp_scale*(0.9f + max(min(0.5f, 0.01f*exp_val), 0.1f)));
+	return ((specs().exp_type == ETYPE_NONE) ? 0.0f : specs().exp_scale*(0.9f + max(min(0.5f, 0.01f*exp_val), 0.1f)));
 }
 
 

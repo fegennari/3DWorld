@@ -164,8 +164,8 @@ void shape3d::get_triangle_center(point &center, unsigned face_id) {
 	point m1, m2;
 
 	for (unsigned i = 0; i < 3; ++i) {
-		m1[i] = 0.5*(p1[i] + p2[i]);
-		m2[i] = 0.5*(p1[i] + p3[i]);
+		m1[i] = 0.5f*(p1[i] + p2[i]);
+		m2[i] = 0.5f*(p1[i] + p3[i]);
 	}
 	vector3d const v1(vector3d(m1, p3).get_norm()), v2(vector3d(m2, p2).get_norm());
 	vector3d const v12(cross_product(v1, v2).get_norm()), vp2p3(p2, p3);
@@ -173,7 +173,7 @@ void shape3d::get_triangle_center(point &center, unsigned face_id) {
 	float const s2(vector_determinant(vp2p3, v1, v12));///magsq12;
 
 	for (unsigned i = 0; i < 3; ++i) {
-		center[i] = 0.5*(p3[i] + v1[i]*s1 + p2[i] + v2[i]*s2);
+		center[i] = 0.5f*(p3[i] + v1[i]*s1 + p2[i] + v2[i]*s2);
 	}
 }
 

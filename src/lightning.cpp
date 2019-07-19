@@ -269,8 +269,8 @@ void lightning_t::gen_recur(point const &start, float strength, int xpos, int yp
 void do_lightning_damage(point &pos, float damage, int hit_water) {
 
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-	if (point_outside_mesh(xpos, ypos))         return; // object off edge
-	if (pos.z - mesh_height[ypos][xpos] > 0.05) return; // didn't strike the mesh
+	if (point_outside_mesh(xpos, ypos))          return; // object off edge
+	if (pos.z - mesh_height[ypos][xpos] > 0.05f) return; // didn't strike the mesh
 	
 	if (!DISABLE_WATER && wminside[ypos][xpos] == 1) { // interior water
 		int const wsi(watershed_matrix[ypos][xpos].wsi);

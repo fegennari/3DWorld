@@ -386,7 +386,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	}
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
 	auto it(blocked_waypts.find(i));
-	if (it != blocked_waypts.end())     {dmult *= (1.0 + (1ULL << it->second.c));} // exponential increase in cost for blocked waypoints
+	if (it != blocked_waypts.end())     {dmult *= (1.0f + (1ULL << it->second.c));} // exponential increase in cost for blocked waypoints
 	if (!waypts_used.is_valid(i))       {dmult *= 100.0;}
 	if (waypoints[i].next_wpts.empty()) {dmult *= 10.0;} // increase the cost of waypoints disconnected from the rest of the waypoint graph
 	if ((int)i == curw)                 {dmult *= 1.0E-6;} // prefer the current waypoint to avoid indecision and force next connections
@@ -473,7 +473,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 					curw     = -1;
 				}
 			}
-			float const max_dist(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE)), max_dist_sq(max_dist*max_dist);
+			float const max_dist(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)), max_dist_sq(max_dist*max_dist);
 
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
 				if (waypoints[i].disabled || (int)i == ignore_w) continue;
@@ -1127,7 +1127,7 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 	vector3d sdir(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);
 	assert(!sstates[smiley_id].tdata.empty());
 	unsigned char *tdata(&sstates[smiley_id].tdata.front());
-	int const tsize(int(size*SMILEY_TEX_SIZE/100.0 + 0.5)), radsq(4*tsize*tsize);
+	int const tsize(int(size*SMILEY_TEX_SIZE/100.0f + 0.5f)), radsq(4*tsize*tsize);
 	int const tex_size(SMILEY_TEX_SIZE*SMILEY_TEX_SIZE);
 	int tx, ty;
 	get_tex_coord(dir, sdir, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, tx, ty, 0);
@@ -1174,7 +1174,7 @@ void add_damage_to_smiley_surface(vector3d const &dir, float size, int smiley_id
 	p_transform_data td(obj_groups[coll_id[SMILEY]].get_td());
 	td->set_perturb_size(smiley_id, PMAP_SIZE);
 	vector3d sdir(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);
-	int const tsize(int(size*PMAP_SIZE/60.0 + 0.5)), radsq(4*tsize*tsize);
+	int const tsize(int(size*PMAP_SIZE/60.0f + 0.5f)), radsq(4*tsize*tsize);
 	int tx, ty;
 	get_tex_coord(dir, sdir, PMAP_SIZE, PMAP_SIZE, tx, ty, 1);
 	int x1(tx - tsize), y1(ty - 2*tsize), x2(tx + tsize), y2(ty + 2*tsize);
@@ -1405,8 +1405,8 @@ int gen_smiley_or_player_pos(point &pos, int index) {
 	pos.assign(0.0, 0.0, 0.0);
 	
 	for (unsigned i = 0; i < MAX_ITER; ++i) {
-		pos.x = 0.5*(xc + xd*signed_rand_float());
-		pos.y = 0.5*(yc + yd*signed_rand_float());
+		pos.x = 0.5f*(xc + xd*signed_rand_float());
+		pos.y = 0.5f*(yc + yd*signed_rand_float());
 		
 		if (is_good_smiley_pos(get_xpos(pos.x), get_ypos(pos.y))) {
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + radius;

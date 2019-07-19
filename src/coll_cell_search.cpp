@@ -417,7 +417,7 @@ bool coll_obj::is_occluder() const {
 	if (type == COLL_CUBE && cp.cobj_type != COBJ_TYPE_MODEL3D) return 1;
 	if (type != COLL_POLYGON) return 0;
 	unsigned big_dims(0);
-	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.15*SCENE_SIZE[i_]) ++big_dims;)
+	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.15f*SCENE_SIZE[i_]) ++big_dims;)
 	return (big_dims >= 2);
 }
 

@@ -176,13 +176,13 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 	point pts_[4];
 	point spos_xf(spos);
 	obj->xform_point(spos_xf);
-	double const ndiv_inv(1.0/double(ndiv)), step(PI*ro*ndiv_inv + 2.0*ri*sin(PI*ndiv_inv));
+	double const ndiv_inv(1.0/double(ndiv)), step(PI*(double)ro*ndiv_inv + 2.0*ri*sin(PI*ndiv_inv));
 	bool const self_shadow(dist_less_than(obj->get_pos(), tpos, 0.01*cur_radius));
 	float const min_sdist(self_shadow ? 0.1*cur_radius : 0.0);
 	float const ri_mod(0.97*ri); // slightly smaller than actual ri to avoid self-shadowing artifacts
 
 	for (int i = 0; i < ndiv; ++i) {
-		double const theta(TWO_PI*i*ndiv_inv);
+		double const theta(TWO_PI*(double)i*ndiv_inv);
 		point const pos(ro*cos(theta), ro*sin(theta), 0.0), p(center + pos);
 		vector3d const delta(cross_product(pos, plus_z).get_norm() * step);
 		cylinder_quad_projection(pts_, cylinder_3dw(p-delta, p+delta, ri_mod, ri_mod), (p - spos_xf), npts);
@@ -193,7 +193,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 
 	// determine the tangent points from spos to center with radius ro
 	// http://mathworld.wolfram.com/CircleTangentLine.html
-	double const x0(center.x - spos_xf.x), y0(center.y - spos_xf.y), xy_sq(x0*x0 + y0*y0), r_sq(ro*ro);
+	double const x0((double)center.x - (double)spos_xf.x), y0((double)center.y - (double)spos_xf.y), xy_sq(x0*x0 + y0*y0), r_sq((double)ro*ro);
 
 	if (xy_sq > r_sq) {
 		double const term1(-ro*x0/xy_sq), term2(y0*sqrt(xy_sq - r_sq)/xy_sq);
@@ -503,8 +503,9 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 	}
 	// reduce nsides if sphere_r is small?
 	vector3d_d const shadow_dir((sphere_pos - sun_pos).get_norm());
+	double const rsum((double)cur_radius + (double)sphere_r);
 
-	if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, double(cur_radius + sphere_r)*(cur_radius + sphere_r))) { // self shadow test?
+	if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, rsum*rsum)) { // self shadow test?
 		invalid = 1;
 		return;
 	}
@@ -553,8 +554,9 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 
 	if (!dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
 		vector3d_d const shadow_dir((center - sun_pos).get_norm());
+		double const rsum((double)cur_radius + (double)radius);
 		
-		if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, double(cur_radius + radius)*(cur_radius + radius))) {
+		if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, rsum*rsum)) {
 			invalid = 1;
 			return;
 		}
@@ -615,7 +617,7 @@ ushadow_triangle_mesh::ushadow_triangle_mesh(vector<triangle> const &triangles, 
 	point center(obj_center);
 	if (obj) {obj->xform_point_inv(center);}
 	upos_point_type const dir(center - sun_pos);
-	double const min_dist(MIN_SHADOW_DIST*obj_radius);
+	double const min_dist(MIN_SHADOW_DIST*(double)obj_radius);
 
 	for (unsigned t = 0; t < triangles.size(); ++t) {
 		upos_point_type pts[3];
@@ -643,7 +645,7 @@ ushadow_triangle_mesh::ushadow_triangle_mesh(point const &circle_center, float c
 		circle_radius *= obj->get_radius();
 	}
 	vector3d const dir(center - sun_pos);
-	double const dp(dot_product(normal, dir)), min_dist(MIN_SHADOW_DIST*circle_radius);
+	double const dp(dot_product(normal, dir)), min_dist(MIN_SHADOW_DIST*(double)circle_radius);
 	vector3d vref(zero_vector);
 	vref[fabs(normal.x) > fabs(normal.y)] = 1.0;
 	point const cp1(cross_product(normal, vref).get_norm()), cp2(cross_product(normal, cp1).get_norm());

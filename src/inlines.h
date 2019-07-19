@@ -415,7 +415,7 @@ template <typename T> void get_sphere_mov_sphere_int_pt(pointT<T> const &p1, poi
 	if (vmag_sq < TOLERANCE) {cpos = p2; return;}
 	double const t1(-dot_product(norm, v)); // negate?
 	pointT<T> const q(p2 + v*(t1/vmag_sq));
-	double const d_sq(p2p_dist_sq(p1, q)), ival(rsum*rsum - d_sq), t2((ival > 0.0) ? sqrt(ival) : 0.0);
+	double const d_sq(p2p_dist_sq(p1, q)), ival((double)rsum*rsum - d_sq), t2((ival > 0.0) ? sqrt(ival) : 0.0);
 	cpos = q - v*(t2/sqrt(vmag_sq));
 }
 

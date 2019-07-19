@@ -364,7 +364,7 @@ void platform::advance_timestep() {
 					float dist_traveled(rspeed*ns_time), cur_dist(get_dist_traveled()); // dist is neg
 					assert(dist_traveled < 0.0);
 					
-					if (dist_traveled + cur_dist < 0.0) { // traveled past the start
+					if (dist_traveled + cur_dist < 0.0f) { // traveled past the start
 						// we might have some time left over this frame: (ns_time - cur_dist/fspeed)
 						// if in continuous mode, we can have multiple iterations per frame if fticks is large
 						// but we don't want to do this for efficiency/complexity reasons

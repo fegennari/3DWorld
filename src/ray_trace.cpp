@@ -191,8 +191,8 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 cobj_ray_accum_map_t merged_accum_map;
 
 
-float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
-float get_step_size()    {return 0.3*ray_step_size_mult*(DX_VAL + DY_VAL + DZ_VAL);}
+float get_scene_radius() {return sqrt(2.0f*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
+float get_step_size()    {return 0.3f*ray_step_size_mult*(DX_VAL + DY_VAL + DZ_VAL);}
 
 void increment_printed_number(unsigned num) {
 
@@ -461,7 +461,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 			}
 			weight *= rweight; // reflected weight
 		}
-		weight *= (DIFFUSE_REFL*(1.0 - specular) + SPEC_REFL*specular);
+		weight *= (DIFFUSE_REFL*(1.0f - specular) + SPEC_REFL*specular);
 	}
 	//if (rgen.rand_float() < fabs(weight)/last_weight) return; weight = last_weight; // end the ray (Russian roulette)
 	if (fabs(weight) < WEIGHT_THRESH*weight0) return;

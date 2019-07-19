@@ -149,7 +149,7 @@ void blastr::process() const { // land mode
 	if (!point_interior_to_mesh(x0, y0)) return;
 	if (emits_light) {add_as_dynamic_light();}
 	if (!animate2 || damage == 0.0) return;
-	float rad(3.0*cur_size/(DX_VAL + DY_VAL));
+	float rad(3.0f*cur_size/(DX_VAL + DY_VAL));
 	int const irad(ceil(rad));
 	int const x1(max(x0 - irad, 1)), x2(min(x0 + irad, MESH_X_SIZE-1));
 	int const y1(max(y0 - irad, 1)), y2(min(y0 + irad, MESH_Y_SIZE-1));
@@ -434,7 +434,7 @@ void setup_point_light(point const &pos, colorRGBA const &color, float radius, u
 	colorRGBA const uambient(color*0.2);
 	set_colors_and_enable_light(gl_light, uambient, color, shader);
 	assert(radius > 0.0);
-	float const atten2(0.1/(EXP_LIGHT_SCALE*radius));
+	float const atten2(0.1f/(EXP_LIGHT_SCALE*radius));
 	setup_gl_light_atten(gl_light, 0.5, 20.0*atten2, 5000.0*atten2, shader);
 	set_gl_light_pos(gl_light, pos, 1.0, shader); // point light source position
 }

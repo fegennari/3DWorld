@@ -68,20 +68,20 @@ void set_scene_constants() {
 	XY_SUM_SIZE   = MESH_X_SIZE + MESH_Y_SIZE;
 	I_TIMESCALE   = min(MAX_I_TIMESCALE, max(1, int(XY_SUM_SIZE/128)));
 	I_TIMESCALE2  = I_TIMESCALE;
-	MESH_HEIGHT   = 0.10*Z_SCENE_SIZE;
-	XY_SCENE_SIZE = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE);
-	TWO_XSS       = 2.0*X_SCENE_SIZE;
-	TWO_YSS       = 2.0*Y_SCENE_SIZE;
+	MESH_HEIGHT   = 0.10f*Z_SCENE_SIZE;
+	XY_SCENE_SIZE = 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE);
+	TWO_XSS       = 2.0f*X_SCENE_SIZE;
+	TWO_YSS       = 2.0f*Y_SCENE_SIZE;
 	DX_VAL        = TWO_XSS/(float)MESH_X_SIZE;
 	DY_VAL        = TWO_YSS/(float)MESH_Y_SIZE;
-	HALF_DXY      = 0.5*(DX_VAL + DY_VAL);
-	DX_VAL_INV    = 1.0/DX_VAL;
-	DY_VAL_INV    = 1.0/DY_VAL;
-	DZ_VAL        = float(2.0*Z_SCENE_SIZE)/(float)max(MESH_Z_SIZE, 1);
+	HALF_DXY      = 0.5f*(DX_VAL + DY_VAL);
+	DX_VAL_INV    = 1.0f/DX_VAL;
+	DY_VAL_INV    = 1.0f/DY_VAL;
+	DZ_VAL        = float(2.0f*Z_SCENE_SIZE)/(float)max(MESH_Z_SIZE, 1);
 	dxdy          = DX_VAL*DY_VAL;
 	MAX_RUN_DIST  = min(MESH_X_SIZE, MESH_Y_SIZE)/2;
 	CLOUD_CEILING = CLOUD_CEILING0*Z_SCENE_SIZE;
-	LARGE_ZVAL    = 100.0*CLOUD_CEILING;
+	LARGE_ZVAL    = 100.0f*CLOUD_CEILING;
 }
 
 
@@ -202,10 +202,10 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 			float delta_h;
 
 			if (mode == 0) { // crater
-				delta_h = offset + 0.9*rad - dh; // push the mesh up along the lip of the crater
+				delta_h = offset + 0.9f*rad - dh; // push the mesh up along the lip of the crater
 			}
 			else { // erosion
-				delta_h = 1.0/(offset + dh);
+				delta_h = 1.0f/(offset + dh);
 			}
 			float const mh2(max(zbot, (mh - scale*delta_h)));
 			mesh_height[i][j] = mh2;//min(mh, mh2);
@@ -322,7 +322,7 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 	}
 	else {
 		float const xpi(xp - (float)x0), ypi(yp - (float)y0); // always positive
-		zval = (1.0 - xpi)*((1.0 - ypi)*mesh_height[y0][x0] + ypi*mesh_height[y0+1][x0]) + xpi*((1.0 - ypi)*mesh_height[y0][x0+1] + ypi*mesh_height[y0+1][x0+1]);
+		zval = (1.0f - xpi)*((1.0f - ypi)*mesh_height[y0][x0] + ypi*mesh_height[y0+1][x0]) + xpi*((1.0f - ypi)*mesh_height[y0][x0+1] + ypi*mesh_height[y0+1][x0+1]);
 	}
 	if (rad > 0.0 && !xy0_bad) {
 		float hcm(min(h_collision_matrix[y0][x0], h_collision_matrix[y0+1][x0+1]));

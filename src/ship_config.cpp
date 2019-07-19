@@ -1047,7 +1047,7 @@ void us_weapon::calc_preference() {
 	preference += 400.0*bradius; // blast radius bonus
 	preference += 1.5*seeking; // seeking bonus
 	preference += 1.8*turreted; // turreted bonus
-	preference += 2.0*(1 - secondary); // primary weapon bonus (multiple weapons can fire)
+	preference += 2.0f*(1 - secondary); // primary weapon bonus (multiple weapons can fire)
 	preference += 1.4*do_regen; // regen bonus
 	preference += 1000.0*is_fighter; // fighter bonus
 	preference += 0.05*armor; // weapon armor bonus

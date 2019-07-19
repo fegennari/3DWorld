@@ -21,10 +21,10 @@ extern string hmap_out_fn;
 
 void adjust_brush_weight(float &delta, float dval, int shape) {
 
-	if      (shape == BSHAPE_LINEAR   ) {delta *= 1.0 - dval;} // linear
-	else if (shape == BSHAPE_QUADRATIC) {delta *= 1.0 - dval*dval;} // quadratic
-	else if (shape == BSHAPE_COSINE   ) {delta *= COSF(0.5*PI*dval);} // cosine
-	else if (shape == BSHAPE_SINE     ) {delta *= 0.5*(1.0 + SINF(PI*dval + 0.5*PI));} // sine
+	if      (shape == BSHAPE_LINEAR   ) {delta *= 1.0f - dval;} // linear
+	else if (shape == BSHAPE_QUADRATIC) {delta *= 1.0f - dval*dval;} // quadratic
+	else if (shape == BSHAPE_COSINE   ) {delta *= COSF(0.5f*PI*dval);} // cosine
+	else if (shape == BSHAPE_SINE     ) {delta *= 0.5f*(1.0f + SINF(PI*dval + 0.5f*PI));} // sine
 	// else constant
 }
 
@@ -318,8 +318,8 @@ float terrain_hmap_manager_t::interpolate_height(float x, float y) const { // bi
 	int xlo(floor(sx)), ylo(floor(sy)), xhi(ceil(sx)), yhi(ceil(sy));
 	float const xv((xlo == xhi) ? 0.0 : (sx - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (sy - ylo)/float(yhi - ylo)); // avoid div-by-zero (use cubic_interpolate()?)
 	if (!clamp_no_scale(xlo, ylo) || !clamp_no_scale(xhi, yhi)) {return scale_mh_texture_val(0.0);}
-	return   yv *(xv*get_raw_height(xhi, yhi) + (1.0-xv)*get_raw_height(xlo, yhi)) +
-		(1.0-yv)*(xv*get_raw_height(xhi, ylo) + (1.0-xv)*get_raw_height(xlo, ylo));
+	return    yv *(xv*get_raw_height(xhi, yhi) + (1.0f-xv)*get_raw_height(xlo, yhi)) +
+		(1.0f-yv)*(xv*get_raw_height(xhi, ylo) + (1.0f-xv)*get_raw_height(xlo, ylo));
 }
 
 vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {

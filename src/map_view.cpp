@@ -81,9 +81,9 @@ void colorize(float val, unsigned char *rgb) {
 
 	//rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val); return;
 	float const a(5*val), b(7*val), c(11*val);
-	rgb[0] = 255.0*(a - int(a));
-	rgb[1] = 255.0*(b - int(b));
-	rgb[2] = 255.0*(c - int(c));
+	rgb[0] = (unsigned char)(255.0f*(a - int(a)));
+	rgb[1] = (unsigned char)(255.0f*(b - int(b)));
+	rgb[2] = (unsigned char)(255.0f*(c - int(c)));
 }
 
 
@@ -136,16 +136,16 @@ void draw_overhead_map() {
 		}
 	}
 	else {
-		float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
+		float x0((float)map_x + xoff2*DX_VAL), y0((float)map_y + yoff2*DY_VAL);
 		float const relh_water(get_rel_height_no_clamp(water_plane_z, -zmax_est, zmax_est));
 		point const camera(get_camera_pos());
 		float map_heights[6];
-		map_heights[0] = 0.9*lttex_dirt[3].zval  + 0.1*lttex_dirt[4].zval;
-		map_heights[1] = 0.5*(lttex_dirt[2].zval + lttex_dirt[3].zval);
-		map_heights[2] = 0.5*(lttex_dirt[1].zval + lttex_dirt[2].zval);
-		map_heights[3] = 0.5*(lttex_dirt[0].zval + lttex_dirt[1].zval);
+		map_heights[0] = 0.9f*lttex_dirt[3].zval  + 0.1f*lttex_dirt[4].zval;
+		map_heights[1] = 0.5f*(lttex_dirt[2].zval + lttex_dirt[3].zval);
+		map_heights[2] = 0.5f*(lttex_dirt[1].zval + lttex_dirt[2].zval);
+		map_heights[3] = 0.5f*(lttex_dirt[0].zval + lttex_dirt[1].zval);
 		map_heights[4] = relh_water; // Note: can be negative
-		map_heights[5] = min(0.5*relh_water, relh_water-0.01); // handle negative case
+		map_heights[5] = min(0.5f*relh_water, relh_water-0.01f); // handle negative case
 		
 		for (unsigned i = 0; i < 6; ++i) {
 			if (map_heights[i] > 0.0) {map_heights[i] = pow(map_heights[i], glaciate_exp);} // handle negative case
@@ -187,7 +187,7 @@ void draw_overhead_map() {
 #pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < ny; ++i) {
 			int const inx(i*nx);
-			int64_t const iyy(int64_t(i - yy)*int64_t(i - yy)), icy(int64_t(i - cy)*int64_t(i - cy));
+			int64_t const iyy(((int64_t)i - (int64_t)yy)*((int64_t)i - (int64_t)yy)), icy(((int64_t)i - (int64_t)cy)*((int64_t)i - (int64_t)cy));
 			float last_height(0.0);
 			point cpos;
 			vector3d cnorm;
@@ -196,7 +196,7 @@ void draw_overhead_map() {
 			for (int j = 0; j < nx; ++j) {
 				int const offset(3*(inx + j));
 				unsigned char *rgb(&buf[offset]);
-				int64_t const jxx(j - xx), jcx(j - cx);
+				int64_t const jxx((int64_t)j - (int64_t)xx), jcx((int64_t)j - (int64_t)cx);
 
 				if (iyy + jxx*jxx <= 4) {
 					rgb[0] = rgb[1] = rgb[2] = 0; // camera direction
@@ -292,7 +292,7 @@ void draw_overhead_map() {
 							}
 						}
 						if (height <= map_heights[4] && height > map_heights[5]) { // shallow water
-							float const h(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(cubic_interpolate(h));
+							float const h(0.5f*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(cubic_interpolate(h));
 							blend_color(color, color, map_colors[5], v);
 						}
 						if (MAP_VIEW_LIGHTING && !uses_hmap && !(display_mode & 0x20)) {
@@ -348,7 +348,7 @@ void write_map_mode_heightmap_image() {
 
 	float const window_ar((float(window_width)*window_height)/(float(window_height)*window_width));
 	float const xscale(2.0*map_zoom*window_ar*HALF_DXY), yscale(2.0*map_zoom*(X_SCENE_SIZE/Y_SCENE_SIZE)*HALF_DXY);
-	float const xstart(map_x + xoff2*DX_VAL - (window_width/2)*xscale), ystart(map_y + yoff2*DY_VAL - (window_height/2)*yscale);
+	float const xstart((float)map_x + xoff2*DX_VAL - (window_width/2)*xscale), ystart((float)map_y + yoff2*DY_VAL - (window_height/2)*yscale);
 	int const x1(get_xpos(xstart)), y1(get_ypos(ystart)), x2(get_xpos(xstart + window_width*xscale)), y2(get_ypos(ystart + window_height*yscale)), width(x2 - x1), height(y2 - y1);
 	cout << "Heightmap image size: " << width << "x" << height << " = " << width*height/1024 << "K" << endl;
 	if (width > 16384 || height > 16384) {std::cerr << "Error: heightmap image is too large, max size is 16384 pixels" << endl; return;} // fail

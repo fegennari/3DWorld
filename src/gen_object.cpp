@@ -73,7 +73,7 @@ void gen_and_draw_stars(float alpha, bool half_sphere, bool no_update) {
 
 void gen_star(star &star1, int half_sphere) {
 
-	float const radius(0.7*(FAR_CLIP+X_SCENE_SIZE)), theta(rand_uniform(0.0, TWO_PI));
+	float const radius(0.7f*(FAR_CLIP+X_SCENE_SIZE)), theta(rand_uniform(0.0, TWO_PI));
 	float phi(gen_rand_phi<rand_uniform>());
 	if (!half_sphere && (rand()&1) == 0) phi = PI - phi;
 	star1.pos       = rtp_to_xyz(radius, theta, phi);
@@ -461,7 +461,7 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_s
 
 template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_spherical_noloop(float scale) {
 	// uniform distribution of points about a sphere from http://mathworld.wolfram.com/SpherePointPicking.html
-	float const u(signed_rand_float()), theta(TWO_PI*signed_rand_float()), xy_term(sqrt(1.0-u*u));
+	float const u(signed_rand_float()), theta(TWO_PI*signed_rand_float()), xy_term(sqrt(1.0f-u*u));
 	return scale*vector3d(xy_term*cos(theta), xy_term*sin(theta), u);
 }
 

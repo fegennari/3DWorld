@@ -235,7 +235,7 @@ void run_postproc_effects() {
 	}
 	else {
 		float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
-		float const dist_to_lava((water_is_lava && world_mode == WMODE_INF_TERRAIN) ? (camera.z - water_plane_z) : 0.0), lava_max_dist(16.0*CAMERA_RADIUS);
+		float const dist_to_lava((water_is_lava && world_mode == WMODE_INF_TERRAIN) ? (camera.z - water_plane_z) : 0.0f), lava_max_dist(16.0*CAMERA_RADIUS);
 		if      (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
 		else if (dist_to_lava > 0.0 && dist_to_lava < lava_max_dist) {add_color_only_effect("heat_waves", (lava_max_dist - dist_to_lava)/lava_max_dist);}
 	}

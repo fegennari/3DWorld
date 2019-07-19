@@ -36,7 +36,7 @@ protected:
 		oss << '+';
 		for (unsigned n = pos+1; n < ndiv; ++n) {oss << '-';}
 		oss << "  " << name << ": " << cur_value;
-		float const mag(0.01/scale), y_step(0.0014*scale), yval(1.0*mag - y_step*(num_controls - control_ix)), zval(-2.0*mag);
+		float const mag(0.01f/scale), y_step(0.0014f*scale), yval(1.0f*mag - y_step*(num_controls - control_ix)), zval(-2.0f*mag);
 		text_draw.add_text((selected ? ORANGE : YELLOW), -1.0*mag, yval, zval, oss.str().c_str(), MENU_TEXT_SIZE);
 		if (color.A > 0.0) {text_draw.add_text(color, -1.06*mag, yval, zval, "O", MENU_TEXT_SIZE);} // draw color indicator
 
@@ -181,7 +181,7 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 			value << brush.get_world_space_radius() << " (" << brush.radius << " units)";
 			break;
 		case VOXEL_WEIGHT:
-			spos = 0.5*(brush.weight_exp + MAX_VB_WEIGHT_EXP)/MAX_VB_WEIGHT_EXP;
+			spos = 0.5f*(brush.weight_exp + MAX_VB_WEIGHT_EXP)/MAX_VB_WEIGHT_EXP;
 			value << pow(2.0f, brush.weight_exp) * ((voxel_editing == 2) ? -1.0 : 1.0);
 			break;
 		default: assert(0);
@@ -489,7 +489,7 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 			break;
 		case CM_MIP_BIAS:
 			value << def_cube_map_reflect_mipmap_level;
-			spos = (def_cube_map_reflect_mipmap_level + 10)/20.0; // -10 to 10
+			spos = (def_cube_map_reflect_mipmap_level + 10)/20.0f; // -10 to 10
 			break;
 		default:
 			assert(0);

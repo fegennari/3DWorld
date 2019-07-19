@@ -96,12 +96,12 @@ bool mesh_intersector::line_intersect_surface() {
 
 	while ((abs(xpos - x1) < x_comp) && (abs(ypos - y1) < y_comp)) {
 		if (line_mode == 0) { // horizontal segment
-			xval = ((sval == 0 || (xpos > (x1 + (ypos - y1)*s_inv))) ? xs1 : xs2);
+			xval = ((sval == 0 || (xpos > (x1 + ((double)ypos - y1)*s_inv))) ? xs1 : xs2);
 			if (line_intersect_plane(xpos, xpos+xval, ypos-1, ypos)) return 1;
 			xpos += xval;
 		}
 		else { // vertical segment
-			yval = ((sval == 1 || (ypos > (y1 + (xpos - x1)*slope))) ? ys1 : ys2);
+			yval = ((sval == 1 || (ypos > (y1 + ((double)xpos - x1)*slope))) ? ys1 : ys2);
 			if (line_intersect_plane(xpos-1, xpos, ypos, ypos+yval)) return 1;
 			ypos += yval;
 		}
@@ -116,7 +116,7 @@ bool mesh_intersector::line_intersect_surface_fast() { // DDA
 	if (!check_iter_clip(0)) return 0;
 	int const x1(get_xpos(v1.x)), y1(get_ypos(v1.y)), x2(get_xpos(v2.x)), y2(get_ypos(v2.y));
 	int const dx(x2 - x1), dy(y2 - y1), steps(max(1, max(abs(dx), abs(dy))));
-	double const dz(v2.z - v1.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
+	double const dz((double)v2.z - (double)v1.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
 	double x(x1), y(y1), z(v1.z - zinc); // -zinc is kind of strange but necessary for proper functioning
 	double const z_min(min(v1.z, v2.z)), z_max(max(v1.z, v2.z));
 
@@ -201,7 +201,7 @@ bool mesh_intersector::intersect_plane(point const &mesh_pt, vector3d const &nor
 	if (t <= 0.0 || t >= 1.0)    return 0;
 	double const px(v1.x + v2_v1.x*t + (sign ? DX_VAL : 0.0)), py(v1.y + v2_v1.y*t + (sign ? DY_VAL : 0.0));
 	double const T(0.00001); // tolerance
-	if (px < mesh_pt.x-T || px > (mesh_pt.x + DX_VAL)+T || py < mesh_pt.y-T || py > (mesh_pt.y + DY_VAL)+T) return 0;
+	if (px < mesh_pt.x-T || px > (mesh_pt.x + (double)DX_VAL)+T || py < mesh_pt.y-T || py > (mesh_pt.y + (double)DY_VAL)+T) return 0;
 	ret.zval = float(v1.z + v2_v1.z*t);
 	return 1;
 }

@@ -759,7 +759,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 void draw_low_res_sphere_pair(point const &pos, float radius, vector3d const &v, vector3d const &vdeform,
 	colorRGBA const *c1, colorRGBA const *c2, int ndiv, bool do_texture, shader_t &shader)
 {
-	ndiv = min(ndiv, max(3, int(3 + 1.5*(v.x + v.y + v.z))));
+	ndiv = min(ndiv, max(3, int(3 + 1.5f*(v.x + v.y + v.z))));
 	translate_to(pos);
 	vector3d scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
 	scale *= radius;
@@ -770,13 +770,13 @@ void draw_low_res_sphere_pair(point const &pos, float radius, vector3d const &v,
 		if (vdmin < 1.0) {scale *= pow(1.0/vdmin, 1.0/3.0);}
 	}
 	scale_by(scale);
-	fgRotate(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
+	fgRotate(360.0f*(v.x - v.y), v.x, v.y, (v.z+0.01f));
 	if (c1) {shader.set_cur_color(*c1);}
 	bind_draw_sphere_vbo(do_texture, 1);
 	draw_sphere_vbo_pre_bound(ndiv, do_texture);
 	if (c2) {shader.set_cur_color(*c2);}
-	fgTranslate(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
-	fgRotate(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
+	fgTranslate(0.1f*(v.x-v.y), 0.1f*(v.y-v.z), 0.1f*(v.x-v.z));
+	fgRotate(360.0f*(v.z - v.x), v.y, v.z, (v.x+0.01f));
 	draw_sphere_vbo_pre_bound(ndiv, do_texture);
 	bind_vbo(0);
 }
@@ -1056,8 +1056,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 		case PU_INVISIBILITY: {
 				float const put(float(sstates[id].powerup_time)/TICKS_PER_SECOND), init_put(float(POWERUP_TIME)/TICKS_PER_SECOND);
-				if ((init_put - put) < 1.0) {alpha = (1.0 - (init_put - put));} // fading out
-				else if (put < 1.0)         {alpha = (1.0 - put);} // fading in
+				if ((init_put - put) < 1.0f) {alpha = (1.0f - (init_put - put));} // fading out
+				else if (put < 1.0f)         {alpha = (1.0f - put);} // fading in
 				else { // fully invisible
 					fgPopMatrix();
 					return;
@@ -1263,7 +1263,7 @@ colorRGBA const &get_landmine_light_color(int time) {
 
 float get_landmine_sensor_height(float radius, int time) {
 
-	return ((time <= 6) ? 0 : ((time > 16) ? 1.5*radius : (radius + 0.05*radius*(time - 6))));
+	return ((time <= 6) ? 0 : ((time > 16) ? 1.5f*radius : (radius + 0.05f*radius*(time - 6))));
 }
 
 
@@ -1303,7 +1303,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 			val = 0.42*radius;
 		}
 		else {
-			val = 0.04*radius*(time - 26) + 0.02*radius;
+			val = 0.04f*radius*(time - 26) + 0.02f*radius;
 		}
 		if (teams > 1) {shader.set_cur_color(get_smiley_team_color(source));} // use team color
 		draw_cylinder(0.4*radius, 0.0, val, ndiv); // sensor

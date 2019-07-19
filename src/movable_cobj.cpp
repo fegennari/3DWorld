@@ -1026,7 +1026,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 		if (prev_v_fall < 10.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.2, 0.8);}
 		delta.z = mesh_dz; // don't let it go below the mesh
 		bool const dim(abs(delta.y) < abs(delta.x));
-		float radius(0.5*(cobj.d[dim][1] - cobj.d[dim][0])); // perpendicular to direction of movement
+		float radius(0.5f*(cobj.d[dim][1] - cobj.d[dim][0])); // perpendicular to direction of movement
 		if      (cobj.type == COLL_CUBE    ) {radius *= 1.4;}
 		else if (cobj.type == COLL_SPHERE  ) {radius *= 0.2;} // smaller since bottom surface area is small (maybe also not-vert cylinder?)
 		else if (cobj.type == COLL_CYLINDER) {radius  = min(radius, cobj.radius);}
@@ -1221,7 +1221,7 @@ int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point 
 
 			if (abs_torque > friction_factor) { // pushed near the end of the cylinder, so there is some torque
 				point const closest_pt(cobj.points[0] + line_t*cdir);
-				float const net_torque((abs_torque - friction_factor)/(1.0 - friction_factor)); // shift the torque curve
+				float const net_torque((abs_torque - friction_factor)/(1.0f - friction_factor)); // shift the torque curve
 				float const angle(0.01*net_torque*SIGN(torque)*SIGN(cross_product(cdir, pushed_from-closest_pt).z));
 				coll_obj const before_rotate(cobj);
 				cobj.rotate_about(cobj.get_center_of_mass(), plus_z, angle, 0); // don't re-add yet

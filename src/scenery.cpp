@@ -204,7 +204,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 			unsigned const face_id(rand2()%face_counter);
 			get_face_normal(face_id);
 			get_triangle_center(center, face_id);
-			for (unsigned j = 0; j < 3; ++j) {points[i][j] = center[j] + faces[face_id].norm[j]*size*rand2d();}
+			for (unsigned j = 0; j < 3; ++j) {points[i][j] = center[j] + faces[face_id].norm[j]*size*(float)rand2d();}
 			add_vertex(i, face_id, face_counter);
 		}
 	}
@@ -256,7 +256,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 						if ((dp < 0.0) ^ e.dir) continue;
 					}
 					vector3d const A(pv0, points[i]), B(pv1, points[i]), cp(cross_product(A, B));
-					float const d((A.mag_sq() + B.mag_sq()) - 0.05*size*fabs(dot_product(pv1, cp))/(pv1_mag*cp.mag()));
+					float const d((A.mag_sq() + B.mag_sq()) - 0.05f*size*fabs(dot_product(pv1, cp))/(pv1_mag*cp.mag()));
 					if (dmin == 0.0 || d < dmin) {dmin = d; v[2] = i;}
 				}
 				assert(dmin != 0.0);
@@ -447,7 +447,7 @@ void s_rock::create(int x, int y, int use_xy) {
 	if ((rand2()&3) == 0) size *= rand_uniform2(1.2, 8.0);
 	dir    = signed_rand_vector2_norm();
 	angle  = rand_uniform2(0.0, 360.0);
-	radius = size*(scale.x + scale.y + scale.z)/3.0;
+	radius = size*(scale.x + scale.y + scale.z)/3.0f;
 	pos.z += radius*rand_uniform2(-0.1, 0.25);
 }
 
@@ -629,7 +629,7 @@ void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d 
 	if (type < 0) return;
 	point const center((pos + pt2)*0.5 + xlate);
 	if (!check_visible(shadow_only, get_bsphere_radius(), center)) return;
-	if (reflection_pass && 0.5*(pos.z + pt2.z) < water_plane_z) return;
+	if (reflection_pass && 0.5f*(pos.z + pt2.z) < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_bark_color(xlate));
 	float const dist(distance_to_camera(center));
 
@@ -762,7 +762,7 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 void s_plant::add_cobjs() {
 
 	point cpos(pos), cpos2(pos), bpos(pos);
-	float const wscale(radius*tree_scale/0.004), r2(radius+0.07*wscale*(height+0.03));
+	float const wscale(radius*tree_scale/0.004f), r2(radius+0.07f*wscale*(height+0.03f));
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
 	bpos.z  -= 0.1*height;
@@ -789,9 +789,9 @@ void s_plant::create_leaf_points(vector<vert_norm_comp> &points) const {
 
 		for (unsigned k = 0; k < nrings; ++k) {
 			float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
-			int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
-			rdeg += 0.01*(val - 150);
-			add_rotated_quad_pts(&points.front(), ix, theta, z, pos, sz*blwidth, sz*elwidth, sz*llen, sz*rdeg/45.0);
+			int const val(int(((int(1.0E6f*height))*(5463*j + 537879*k))%301));
+			rdeg += 0.01f*(val - 150);
+			add_rotated_quad_pts(&points.front(), ix, theta, z, pos, sz*blwidth, sz*elwidth, sz*llen, sz*rdeg/45.0f);
 		}
 	}
 }
@@ -897,7 +897,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	bool const is_water_plant(type >= (int)NUM_LAND_PLANT_TYPES);
 	if (world_mode == WMODE_INF_TERRAIN && is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (!check_visible(shadow_only, 0.5*(height + radius), pos2)) return;
+	if (!check_visible(shadow_only, 0.5f*(height + radius), pos2)) return;
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
 	float const wind_scale(berries.empty() ? (is_water_plant ? 5.0 : 1.0) : 0.0); // no wind if this plant type has berries
 	bool const set_color(!shadow_only && (is_water_plant || burn_amt > 0.0));
@@ -915,7 +915,7 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 
 	if (berries.empty() || burn_amt > 0.5) return;
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (!sphere_in_camera_view(pos2, 0.5*(height + radius), 2)) return;
+	if (!sphere_in_camera_view(pos2, 0.5f*(height + radius), 2)) return;
 	float const size_scale(get_pt_line_thresh()*radius/distance_to_camera(pos2));
 	if (size_scale < 1.2) return; // too small/far away
 	int const ndiv(max(4, min(16, int(2.0*size_scale))));
@@ -1238,7 +1238,7 @@ bool check_valid_scenery_pos(scenery_obj const &obj) {return check_valid_scenery
 void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache) {
 
 	//RESET_TIME;
-	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(tree_scale+1))));
+	unsigned const smod(max(200U, unsigned(3.321f*XY_MULT_SIZE/(tree_scale+1))));
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);

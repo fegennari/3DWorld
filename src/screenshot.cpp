@@ -52,7 +52,7 @@ void read_depth_buffer(unsigned window_width, unsigned window_height, vector<flo
 	float dmin(1.0), dmax(0.0);
 	for (auto i = depth.begin(); i != depth.end(); ++i) {dmin = min(*i, dmin); dmax = max(*i, dmax);}
 	if (dmax == dmin) return; // all the same depth, can't normalize
-	float const dmult(1.0/(dmax - dmin));
+	float const dmult(1.0f/(dmax - dmin));
 	for (auto i = depth.begin(); i != depth.end(); ++i) {*i = (*i - dmin)*dmult;}
 }
 

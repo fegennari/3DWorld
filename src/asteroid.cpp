@@ -274,7 +274,7 @@ public:
 		if (!dist_less_than(pos, c, (r + asteroid_radius))) return 0;
 	
 		if (ip.calc_int) {
-			get_sphere_mov_sphere_int_pt(point(pos), c, (c - ip.p_last), 1.01*(r + asteroid_radius), ip.p_int);
+			get_sphere_mov_sphere_int_pt(point(pos), c, (c - ip.p_last), 1.01f*(r + asteroid_radius), ip.p_int);
 			ip.norm = (ip.p_int - pos).get_norm();
 			//ip.norm  = (c - pos).get_norm();
 			//ip.p_int = pos + ip.norm*(1.01*(r + asteroid_radius));
@@ -695,7 +695,7 @@ public:
 		if (empty() || density == 0) return 0;
 		float const bradius(bsphere.radius*max(max(size.x, size.y), size.z));
 		point spos(bsphere.pos);
-		rotate_vector3d(plus_z, -TO_RADIANS*rot_degrees, spos); // rotation is backwards from GL
+		rotate_vector3d(plus_z, -TO_RADIANS*(double)rot_degrees, spos); // rotation is backwards from GL
 		spos  = spos*size;
 		rotate_norm_vector3d_into_plus_z(rot_axis, spos, -1.0); // inverse rotate
 		spos += center;
@@ -945,7 +945,7 @@ float calc_sphere_shadow_atten(point const &pos, point const &lpos, float lradiu
 			atten *= 1.0 - PI*min(r,R)*min(r,R)/(PI*R*R);
 		}
 		else if (d < (r + R)) { // partially overlapped
-			float shadowed_area(r*r*acos((d*d+r*r-R*R)/(2.0*d*r)) + R*R*acos((d*d+R*R-r*r)/(2.0f*d*R)) - 0.5f*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R)));
+			float shadowed_area(r*r*acos((d*d+r*r-R*R)/(2.0f*d*r)) + R*R*acos((d*d+R*R-r*r)/(2.0f*d*R)) - 0.5f*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R)));
 			atten *= 1.0 - CLIP_TO_01(shadowed_area/float(PI*R*R)); // shadowed_area/total_area
 		}
 	}
@@ -1019,8 +1019,8 @@ void uasteroid_belt_planet::init_rings(point const &pos) {
 	assert(planet);
 	//float const rscale(planet->rscale.xy_mag()/SQRT2), ri(planet->ring_ri*rscale), ro(planet->ring_ro*rscale);
 	float const ri(planet->ring_ri), ro(planet->ring_ro);
-	bwidth = 0.25*(ro - ri); // divide by 4 to account for the clamping of the gaussian distance function to 2*radius, and for radius vs. diameter
-	init(pos, 0.5*(ro + ri)); // center of the rings
+	bwidth = 0.25f*(ro - ri); // divide by 4 to account for the clamping of the gaussian distance function to 2*radius, and for radius vs. diameter
+	init(pos, 0.5f*(ro + ri)); // center of the rings
 }
 
 
@@ -1124,7 +1124,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 						UNROLL_3X(norm_dir[i_] /= (i->get_scale()[i_]*j.get_scale()[i_]);)
 						if (norm_dir.mag_sq() < dmin*dmin) continue;
 						// see free_obj::coll_physics(): v1' = v1*(m1 - m2)/(m1 + m2) + v2*2*m2/(m1 + m2)
-						float const mi(i->get_rel_mass()), mj(j.get_rel_mass()), m_sum_inv(1.0/(mi + mj));
+						float const mi(i->get_rel_mass()), mj(j.get_rel_mass()), m_sum_inv(1.0f/(mi + mj));
 						vector3d const &vi(i->get_velocity()), &vj(j.get_velocity());
 						vector3d const vin(vi*(mi - mj)*m_sum_inv + vj*2*mj*m_sum_inv);
 						vector3d const vjn(vj*(mj - mi)*m_sum_inv + vi*2*mi*m_sum_inv);
@@ -1178,7 +1178,7 @@ void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point con
 void uasteroid_belt_system::add_potential_collider(point const &cpos, float cradius) {
 
 	if (!dist_less_than(cpos, get_camera_pos(), 250*max_asteroid_radius)) return; // too far away to notice
-	if (!univ_sphere_vis(cpos, 2.0*(cradius + max_asteroid_radius)))      return; // expand radius somewhat
+	if (!univ_sphere_vis(cpos, 2.0f*(cradius + max_asteroid_radius)))     return; // expand radius somewhat
 	if (!sphere_might_intersect(cpos, cradius)) return;
 	colliders.push_back(sphere_t(cpos, cradius));
 }

@@ -1863,7 +1863,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				check_layer(has_layer);
 				for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(pt[i]);}
 				cobj.thickness = xf.scale*(ro - ri);
-				float const r(0.5*xf.scale*(ro + ri)), step(TWO_PI/float(npoints)), edist(0.5*cobj.thickness*tanf(0.5*step));
+				float const r(0.5f*xf.scale*(ro + ri)), step(TWO_PI/float(npoints)), edist(0.5f*cobj.thickness*tanf(0.5f*step));
 				vector3d const vc((pt[1] - pt[0]).get_norm());
 				unsigned const dmin((vc.x < vc.y) ? ((vc.x < vc.z) ? 0 : 2) : ((vc.y < vc.z) ? 1 : 2));
 				vector3d vn(zero_vector), dirs[2];

@@ -896,7 +896,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 		if (rsc_val > 0.0 && t == 0) { // planets only - colonies (first homeworld only?)
 			unsigned const colony_types[5] = {USC_COLONY, USC_ARMED_COL, USC_HW_COL, USC_STARPORT, USC_HW_SPORT};
 			unsigned start_val(0);
-			for (start_val = 0; start_val < 4 && world.resources > 10.0*(start_val+1); ++start_val) {}
+			for (start_val = 0; start_val < 4 && world.resources > 10.0f*(start_val+1); ++start_val) {}
 			if (start_val == 3 || (start_val == 2 && (rand()&1))) {++start_val;}
 			orbiting_ship const *oship(NULL);
 
@@ -905,7 +905,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 				
 				if (oship != NULL) {
 					upos_point_type const dir((own->pos - oship->pos).get_norm());
-					own->move_to(oship->get_pos() + dir*(1.1*(own->get_c_radius() + oship->get_c_radius()))); // move away from object
+					own->move_to(oship->get_pos() + dir*(1.1*((double)own->get_c_radius() + oship->get_c_radius()))); // move away from object
 					break;
 				}
 			}
@@ -927,7 +927,7 @@ bool uobj_solid::collision(upos_point_type const &p, float rad, vector3d const &
 	coll_r = radius;
 	if (!surface_test(rad, p, coll_r, simple)) return 0;
 	upos_point_type const norm(p, pos);
-	double const rsum(coll_r + rad), nmag(norm.mag());
+	double const rsum((double)coll_r + (double)rad), nmag(norm.mag());
 	if (nmag > rsum) return 0;
 	double const vmag(v.mag());
 
@@ -1182,7 +1182,7 @@ void orbiting_ship::set_pos_from_sobj(urev_body const *const sobj) {
 		delta.normalize();
 	}
 	else {
-		angle = (GSO ? (start_angle + sobj->rot_ang/TO_DEG) : (angle + fticks*rot_rate));
+		angle = (GSO ? (start_angle + sobj->rot_ang/TO_DEG) : ((double)angle + fticks*(double)rot_rate));
 		rotate_norm_vector3d_into_plus_z(axis, delta, -1.0); // switch to local coordinate system (inverse rotate)
 		rotate_vector3d_norm (axis, -angle, delta); // negate angle?
 	}

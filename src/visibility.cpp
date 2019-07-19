@@ -83,7 +83,7 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 		if (atan_val < 0.0) {atan_val += PI;}
 		x_sterm = (atan_val/angle)*sterm; // ratio of X-angle to Y-angle
 	}
-	behind_sphere_mult = max(1.0, A*A)*max(1.0, 2.0/(tterm*tterm*(1.0 + A*A))); // clamp to at least 1.0 for very wide spotlight frustums
+	behind_sphere_mult = max(1.0, A*A)*max(1.0, 2.0f/((double)tterm*tterm*(1.0 + A*A))); // clamp to at least 1.0 for very wide spotlight frustums
 	orthogonalize_up_dir();
 }
 
@@ -214,7 +214,7 @@ void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but coul
 
 	if (angle == 0.0) return;
 	vector3d v[2] = {dir, upv};
-	rotate_vector3d_multi(axis, TO_RADIANS*angle, v, 2); // angle is in degrees
+	rotate_vector3d_multi(axis, TO_RADIANS*(double)angle, v, 2); // angle is in degrees
 	dir = v[0]; upv = v[1]; // renormalize?
 	orthogonalize_up_dir();
 	// FIXME: what about pos?
@@ -232,7 +232,7 @@ void pos_dir_up::apply_z_mirror(float zval) {
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
 	if (!have_occluders() || dist_less_than(viewer, sc, radius)) return 0; // no occluders, or viewer is inside the sphere
-	if (radius*radius < 1.0E-6*p2p_dist_sq(viewer, sc)) {return cobj_contained(viewer, &sc, 1, -1);} // small and far away
+	if (radius*radius < 1.0E-6f*p2p_dist_sq(viewer, sc)) {return cobj_contained(viewer, &sc, 1, -1);} // small and far away
 	vector3d const vdir(viewer - sc);
 	vector3d dirs[2];
 	get_ortho_vectors(vdir, dirs);
@@ -422,7 +422,7 @@ class mesh_shadow_gen {
 				int const xp1(min(xsize-1, xp+1)), yp1(min(ysize-1, yp+1));
 				float const xpi(x - (float)xp), ypi(y - (float)yp);
 				float const mh00(mh[yp*xsize+xp]), mh01(mh[yp*xsize+xp1]), mh10(mh[yp1*xsize+xp]), mh11(mh[yp1*xsize+xp1]);
-				float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
+				float const mh((1.0f - xpi)*((1.0f - ypi)*mh00 + ypi*mh10) + xpi*((1.0f - ypi)*mh01 + ypi*mh11));
 				point const pt((-X_SCENE_SIZE + DX_VAL*x), (-Y_SCENE_SIZE + DY_VAL*y), mh);
 
 				// use starting shadow height value

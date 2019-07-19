@@ -461,7 +461,7 @@ float u_ship_base::get_damage_after_time(float time_seconds) const {
 		fin_shields = min(max_shields, (shields + time_ticks*specs().shield_re));
 		fin_armor   = min(max_armor,   (armor   + time_ticks*specs().armor_re));
 	}
-	return (1.0 - (fin_shields + fin_armor + 1.0)/(max_shields + max_armor + 1.0));
+	return (1.0f - (fin_shields + fin_armor + 1.0f)/(max_shields + max_armor + 1.0f));
 }
 
 

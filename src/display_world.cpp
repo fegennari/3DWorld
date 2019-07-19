@@ -282,7 +282,7 @@ float get_framerate(int &timer_b) {
 	timer_b = GET_TIME_MS();
 
 	if (timer_b > timer_a) { // skip zero time frames
-		float const framerate(1000.0/float(timer_b - timer_a));
+		float const framerate(1000.0f/float(timer_b - timer_a));
 		timer_a = timer_b;
 		//return framerate;
 		float const NUM_AVG = 5; // average over several frames
@@ -320,7 +320,7 @@ float get_moon_light_factor()  {return fabs(moon_rot/PI - 1.0);}
 
 float get_star_alpha(bool obscured_by_clouds) {
 
-	float star_alpha(obscured_by_clouds ? 0.0 : (1.0f - get_light_factor_scale()));
+	float star_alpha(obscured_by_clouds ? 0.0f : (1.0f - get_light_factor_scale()));
 	if (star_alpha >= 1.0) {return 1.0;}
 	//if (world_mode != WMODE_INF_TERRAIN) {return star_alpha;}
 	float const dist_above_clouds(get_camera_pos().z - get_tt_cloud_level());
@@ -605,8 +605,8 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 	if (underwater) { // under water/ice
 		float const camera_z(get_camera_pos().z);
 		fog_color = colorRGBA(get_tt_water_color(), 1.0); // alpha = 1.0
-		atten_uw_fog_color(fog_color, 2.0*water_params.alpha*(water_plane_z - camera_z)); // more opaque = effectively deeper
-		fog_dist = (water_is_lava ? 0.5 : 1.0)*(0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * max(0.1, (1.5 - water_params.alpha));
+		atten_uw_fog_color(fog_color, 2.0f*water_params.alpha*(water_plane_z - camera_z)); // more opaque = effectively deeper
+		fog_dist = (water_is_lava ? 0.5f : 1.0f)*(0.3f + 1.5f*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * max(0.1f, (1.5f - water_params.alpha));
 	}
 	else {
 		get_avg_sky_color(fog_color);
@@ -748,7 +748,7 @@ void display(void) {
 	else if (animate && !DETERMINISTIC_TIME) {
 		double ftick(0.0);
 		static float carry(0.0);
-		double const time_delta((TICKS_PER_SECOND*(timer1 - time0))/1000.0);
+		double const time_delta((TICKS_PER_SECOND*(timer1 - time0))/1000.0f);
 
 		if (reset_timing) {
 			iticks  = 0;
@@ -836,7 +836,7 @@ void display(void) {
 		if (show_framerate == 2) {
 			cout << used_objs << " objects, time = " << (timer_b - global_time) << endl;
 			cout << "Elapsed frames = " << (frame_counter - frame_index) << ", elapsed time = " << (timer_b - time_index)
-				 << ", avg framerate = " << 1000.0*float(frame_counter - frame_index)/float(timer_b - time_index) << endl;
+				 << ", avg framerate = " << 1000.0f*((float)frame_counter - (float)frame_index)/((float)timer_b - (float)time_index) << endl;
 			frame_index    = frame_counter;
 			time_index     = timer_b;
 			show_framerate = 0;
@@ -874,7 +874,7 @@ void display(void) {
 		}
 		if (camera_view) {
 			if (c_radius >= C_RADIUS0) {temp_c_radius = c_radius;}
-			c_radius      = CR_SCALE*C_RADIUS0;
+			c_radius      = (double)CR_SCALE*C_RADIUS0;
 			camera_origin = cpos2;
 			if (camera_mode == 1 && !spectate) {camera_origin.z += camera_zh;}
 		}
@@ -952,7 +952,7 @@ void display(void) {
 				colorRGBA fog_color(((water_is_lava ? LAVA_COLOR : (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C)), 1.0); // under ice/water, alpha = 1.0
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
-				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
+				float const fog_dist(0.2f + (0.25f + 0.75f*fog_color.B)*(1.5f*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
 				setup_linear_fog(fog_color, (water_is_lava ? 0.5 : 1.0)*fog_dist);
 			}
 

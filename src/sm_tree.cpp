@@ -334,7 +334,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, bool draw_palm, bo
 }
 
 
-float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0;}
+float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0f;}
 float calc_tree_size () {return SM_TREE_SIZE*Z_SCENE_SIZE/calc_tree_scale();}
 
 float rand_tree_height(rand_gen_t &rgen) {return rgen.rand_uniform(0.4, 1.0);}
@@ -429,15 +429,15 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1), 0, 1); // force_sine_mode=1
 	
 	if (approx_zval) {
-		height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5), DX_VAL, DY_VAL, (x2-x1), (y2-y1));
+		height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5f), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5f), DX_VAL, DY_VAL, (x2-x1), (y2-y1));
 		height_gen.enable_glaciate();
 	}
-	float const dxv(skip_val/(x2 - x1 - 1.0)), dyv(skip_val/(y2 - y1 - 1.0));
+	float const dxv(skip_val/(x2 - x1 - 1.0f)), dyv(skip_val/(y2 - y1 - 1.0f));
 	float xv(0.0), yv(0.0);
 
 	for (int i = y1; i < y2; i += skip_val, yv += dyv) {
 		for (int j = x1; j < x2; j += skip_val, xv += dxv) {
-			float const cur_density(yv*(xv*density[3] + (1.0-xv)*density[2]) + (1.0-yv)*(xv*density[1] + (1.0-xv)*density[0]));
+			float const cur_density(yv*(xv*density[3] + (1.0f-xv)*density[2]) + (1.0f-yv)*(xv*density[1] + (1.0f-xv)*density[0]));
 			int const trees_this_xy(get_ntrees_for_mesh_xy(i, j, cur_density*ntrees_mult));
 			if (trees_this_xy == 0) continue;
 			float const hval(density_gen.eval_index(j-x1, i-y1));
@@ -555,8 +555,8 @@ bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max) {
 	if (z_max < water_plane_z) return 0; // underwater
 	if (force_tree_class >= 0) {return (force_tree_class != TREE_CLASS_NONE);}
 	float relh1(get_rel_height(z_min, -zmax_est, zmax_est)), relh2(get_rel_height(z_max, -zmax_est, zmax_est));
-	if (relh1 - tree_type_rand_zone > 0.9) return 0; // too high
-	if (relh2 + tree_type_rand_zone > 0.6) return 1; // can have pine trees
+	if (relh1 - tree_type_rand_zone > 0.9f) return 0; // too high
+	if (relh2 + tree_type_rand_zone > 0.6f) return 1; // can have pine trees
 	if (tree_mode != 3) return 1; // no decid trees
 	return (z_min < 0.85*water_plane_z && relh1 - 0.2*tree_type_rand_zone < 0.435); // can have palm trees
 }
@@ -566,7 +566,7 @@ bool can_have_decid_trees_in_zrange(float z_min, float z_max) {
 	if (!(tree_mode&1)) return 0;
 	if (z_max < water_plane_z) return 0; // underwater
 	float relh1(get_rel_height(z_min, -zmax_est, zmax_est));
-	if (relh1 - tree_type_rand_zone > 0.6) return 0; // must have pine trees, or too high
+	if (relh1 - tree_type_rand_zone > 0.6f) return 0; // must have pine trees, or too high
 	return 1; // not worth checking plam tree case, since the rand zone overlaps with the water plane
 }
 
@@ -765,7 +765,7 @@ cylinder_3dw small_tree::get_trunk_cylin() const {
 	if (r_angle != 0.0) {rotate_vector3d(vector3d(rx, ry, 0.0), -r_angle/TO_DEG, dir);} // oops, rotation is backwards
 	bool const is_pine(is_pine_tree());
 	float const hval(is_pine ? 1.0 : 0.8), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
-	float const mod_width(width*(is_pine ? 0.8*len/(hval*height) : 1.0));
+	float const mod_width(width*(is_pine ? 0.8f*len/(hval*height) : 1.0f));
 	point const p1((pos + dir*(zbot - pos.z)));
 	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*mod_width, stt[type].w2*mod_width);
 }
@@ -917,7 +917,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	if (!low_detail) { // high detail
 		rand_gen_t rgen;
 		rgen.set_state(long(10000*height), long(10000*leaf_color.B));
-		float const rd(0.45), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*(height0 + leaf_color.B))%360)*TO_RADIANS);
+		float const rd(0.45), height0(((type == T_PINE) ? 0.75f : 1.0f)*height), theta0((int(1.0E6f*(height0 + leaf_color.B))%360)*TO_RADIANS);
 		float level_dz(height0/(N_PT_LEVELS + 1.2)), rd_scale(1.0), height_off(1.8*level_dz);
 		point const center(pos + point(0.0, 0.0, dz));
 		vert_norm_comp points[PINE_TREE_NPTS];
@@ -948,7 +948,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	else { // low detail billboard
 		assert(!update_mode);
 		float const zv1(0.75*dz); // shift slightly down to account for sparse tree texture image
-		vert_norm_comp const vn((pos + point(0.0, 0.0, zv1)), vector3d(2.0*sz_scale/calc_tree_size(), 0.9*(height - zv1), 0.0)); // 0.9x to prevent clipping above 1.0
+		vert_norm_comp const vn((pos + point(0.0, 0.0, zv1)), vector3d(2.0f*sz_scale/calc_tree_size(), 0.9f*(height - zv1), 0.0f)); // 0.9x to prevent clipping above 1.0
 		vbo_manager.add_points(&vn, 1, leaf_color);
 	}
 }

@@ -665,7 +665,7 @@ vector3d get_local_wind(int xpos, int ypos, float zval, bool no_use_mesh) {
 		vector3d v_ortho;
 		orthogonalize_dir(wind, vertex_normals[ypos][xpos], v_ortho, 0);
 		v_ortho.z *= 0.1; // z component of velocity is much smaller
-		pressure   = min(2.0, 0.5*(zmax - zbottom)/(zmax - mh)); // pressure is higher at the top of hills
+		pressure   = min(2.0f, 0.5f*(zmax - zbottom)/(zmax - mh)); // pressure is higher at the top of hills
 		hval       = (1.0 - rel_height)*(1.0 - rel_height); // at surface: 1.0, middle: 0.25, top: 0.0
 		local_wind = v_ortho*hval + wind*(1.0 - hval); // wind follows the surface contour when close to the mesh
 	}
@@ -673,7 +673,7 @@ vector3d get_local_wind(int xpos, int ypos, float zval, bool no_use_mesh) {
 	float const tx((xpos + xoff2 - total_wind.x/TWO_XSS)/MESH_X_SIZE);
 	float const ty((ypos + yoff2 - total_wind.y/TWO_YSS)/MESH_Y_SIZE);
 	float const wind_intensity(CLIP_TO_01(1.0f - 2.0f*get_texture_component_grayscale_pow2(WIND_TEX, tx, ty))); // roughly (0.0, 0.5)
-	return local_wind*(pressure*(hval*wind_intensity + (1.0 - hval)));
+	return local_wind*(pressure*(hval*wind_intensity + (1.0f - hval)));
 }
 
 vector3d get_local_wind(point const &pt, bool no_use_mesh) {
@@ -800,14 +800,14 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if ((flags & IN_WATER) && density > WATER_DENSITY) {gscale *= (density - WATER_DENSITY)/density;}
 
 			if (enable_fsource) {
-				double const grav_well(min(1.0f, 0.1f*v_flow.mag()));
+				float const grav_well(min(1.0f, 0.1f*v_flow.mag()));
 
 				if (-velocity.z < otype.terminal_vel) {
 					velocity.z -= (1.0 - grav_well)*base_gravity*gscale*GRAVITY*tstep*otype.gravity;
-					velocity.z  = grav_well*velocity.z - (1.0 - grav_well)*min(-velocity.z, otype.terminal_vel);
+					velocity.z  = grav_well*velocity.z - (1.0f - grav_well)*min(-velocity.z, otype.terminal_vel);
 				}
-				if (fabs(air_factor*vtot.z) > fabs(velocity.z) || ((vtot.z < 0) != (velocity.z < 0))) {
-					velocity.z = (1.0 - grav_well*air_factor)*velocity.z + air_factor*vtot.z; // wind?
+				if (fabs(air_factor*vtot.z) > fabs(velocity.z) || ((vtot.z < 0.0f) != (velocity.z < 0.0f))) {
+					velocity.z = (1.0f - grav_well*air_factor)*velocity.z + air_factor*vtot.z; // wind?
 				}
 			}
 			else {
@@ -823,7 +823,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (!(flags & XY_STOPPED)) {
 			for (unsigned d = 0; d < 2; ++d) {
 				if (fabs(air_factor*vtot[d]) > fabs(velocity[d]) || ((vtot[d] < 0) != (velocity[d] < 0))) {
-					velocity[d] = (1.0 - air_factor)*velocity[d] + air_factor*vtot[d];
+					velocity[d] = (1.0f - air_factor)*velocity[d] + air_factor*vtot[d];
 				}
 				if (collided && iter == 0 && !(flags | IN_WATER)) { // apply static friction
 					bool const stopped(friction >= 2.0*STICK_THRESHOLD || fabs(velocity[d]) <= friction);
@@ -1020,7 +1020,7 @@ int dwobject::surface_advance() {
 
 	if (dzn > TOLERANCE && dzn > friction) {
 		float const density(get_true_density());
-		float vel((SURF_ADV_STEP/XY_SCENE_SIZE)*dzn*(1.0 - 0.5*friction)/DEF_TIMESTEP);
+		float vel((SURF_ADV_STEP/XY_SCENE_SIZE)*dzn*(1.0f - 0.5f*friction)/DEF_TIMESTEP);
 		assert(density > 0.0);
 		if ((flags & IN_WATER) && density >= WATER_DENSITY) {vel *= (density - WATER_DENSITY)/density;}
 
@@ -1119,7 +1119,7 @@ int dwobject::check_water_collision(float vz_old) {
 				if (density < WATER_DENSITY || (density == WATER_DENSITY && velocity.z >= 0)) { // floats
 					float const zpos(max(water_height + radius*(1.0f - 2.0f*density), ground_height));
 
-					if ((zpos - pos.z) > 2.0*radius) { // under the surface
+					if ((zpos - pos.z) > 2.0f*radius) { // under the surface
 						velocity.z  = vz_old;
 						velocity.z -= ((density - WATER_DENSITY)/density)*base_gravity*GRAVITY*tstep;
 						flags      |= Z_STOPPED;
@@ -1161,9 +1161,9 @@ int dwobject::check_water_collision(float vz_old) {
 				if (surf_coll) splash = 1; // first time
 				vector3d norm(wat_vert_normals[ypos][xpos]);
 				
-				if (coll_angle < CRITICAL_ANGLE/den_ratio || (zpos - pos.z) > 6.0*radius || !object_bounce(2, norm, 0.0, 0.0)) {
+				if (coll_angle < CRITICAL_ANGLE/den_ratio || (zpos - pos.z) > 6.0f*radius || !object_bounce(2, norm, 0.0, 0.0)) {
 					// object enters water
-					velocity *= (1.0 - WATER_DAMPING*den_ratio);
+					velocity *= (1.0f - WATER_DAMPING*den_ratio);
 			
 					if (density >= WATER_DENSITY) {
 						flags |= UNDERWATER; // will stay below the surface (what about water evaporating?)
@@ -1530,7 +1530,7 @@ void fire::apply_physics(unsigned i) {
 			velocity = zero_vector; // above ground - no movement
 			float const zval(int_mesh_zval_pt_off(pos, 0, 0));
 
-			if (pos.z - zval > 1.5*radius) {
+			if (pos.z - zval > 1.5f*radius) {
 				dwobject obj(FIRE, pos, zero_vector, 1, 10000.0); // make a FIRE object for collision detection
 				obj.source = source;
 

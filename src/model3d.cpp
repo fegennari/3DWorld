@@ -158,13 +158,13 @@ unsigned read_uint(istream &in) {
 
 template<typename V> void write_vector(ostream &out, V const &v) {
 	write_uint(out, (unsigned)v.size());
-	out.write((const char *)&v.front(), v.size()*sizeof(typename V::value_type));
+	out.write((const char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
 }
 
 template<typename V> void read_vector(istream &in, V &v) {
 	v.clear();
 	v.resize(read_uint(in));
-	in.read((char *)&v.front(), v.size()*sizeof(typename V::value_type));
+	in.read((char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
 }
 
 
@@ -1685,7 +1685,7 @@ void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: R
 
 void model3d_xform_t::apply_to_tquad(coll_tquad &tquad) const {
 	for (unsigned i = 0; i < tquad.npts; ++i) {xform_pos_rms(tquad.pts[i]);}
-	if (angle != 0.0) {rotate_vector3d_multi(axis, -TO_RADIANS*angle, tquad.pts, tquad.npts);} // negative rotate?
+	if (angle != 0.0) {rotate_vector3d_multi(axis, -TO_RADIANS*(double)angle, tquad.pts, tquad.npts);} // negative rotate?
 	for (unsigned i = 0; i < tquad.npts; ++i) {tquad.pts[i] += tv;}
 	tquad.update_normal(); // simplest to recalculate it
 }

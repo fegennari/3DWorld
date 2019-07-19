@@ -55,7 +55,7 @@ void cloud_manager_t::create_clouds() { // 3D cloud puffs
 			}
 			if (pos.z < 0.0) pos.z *= 0.5; // compressed on the bottom
 			pos += center;
-			float const radius(0.045*(xsz + ysz)*rand_uniform(0.5, 1.0));
+			float const radius(0.045f*(xsz + ysz)*rand_uniform(0.5, 1.0));
 			float const density(rand_uniform(0.05, 0.12));
 			(*this)[ix + p].gen(pos, WHITE, zero_vector, radius, density, 0.0, 0.0, -((int)c+2), 0, 0, 1, 1); // no lighting
 		}

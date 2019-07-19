@@ -1220,7 +1220,7 @@ bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnor
 		if (thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
 			if (!get_sphere_poly_int_val(sc, sr, points, npoints, norm, thickness, val, cnorm)) return 0;
 		}
-		else {val = 1.01*(thick - rdist);} // non-thick polygon
+		else {val = 1.01f*(thick - rdist);} // non-thick polygon
 		new_sc += cnorm*val; // calculate intersection point
 		return 1;
 	}
@@ -1241,7 +1241,7 @@ void coll_obj::convert_cube_to_ext_polygon() {
 	cp.surfs  = 0;
 	cp.flags |= COBJ_WAS_CUBE;
 	if (cp.tscale != 0.0) {texture_offset += get_llc();}
-	float const z(0.5*(d[2][1] + d[2][0]));
+	float const z(0.5f*(d[2][1] + d[2][0]));
 	for (unsigned i = 0; i < 4; ++i) {points[i].assign(d[0][(i>>1)^(i&1)], d[1][i>>1], z);} // CCW: {x1,y1 x2,y1 x2,y2 x1,y2}
 	// Note: bounding cube, volume, area, vcm, cobj bvh, etc. remain unchanged
 }
@@ -1392,7 +1392,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 				if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
 					if (!get_sphere_poly_int_val(pos, o_radius, cobj.points, cobj.npoints, cobj.norm, cobj.thickness, val, norm)) break;
 				}
-				else {val = 1.01*(thick - rdist);} // non-thick polygon
+				else {val = 1.01f*(thick - rdist);} // non-thick polygon
 
 				if (fabs(norm.z) < 0.5 && player_step) { // more horizontal than vertical edge
 					norm = zero_vector;
@@ -1659,7 +1659,7 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 
 			if (type == CAMERA && !camera_change) {
 				for (unsigned d = 0; d < 2; ++d) { // x,y
-					if (dpos[d]*(pos[d] - lpos[d]) < 0.0) pos[d] = lpos[d]; // negative progress in this dimension, revert
+					if (dpos[d]*(pos[d] - lpos[d]) < 0.0f) {pos[d] = lpos[d];} // negative progress in this dimension, revert
 				}
 			}
 		}

@@ -1093,18 +1093,18 @@ void create_ground_rubble(point pos, int shooter, float hv, float close, int cal
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	bool const outside(point_outside_mesh(xpos, ypos));
 	if ((is_in_ice(xpos, ypos) && is_underwater(pos)) || is_mesh_disabled(xpos, ypos)) return;
-	if (!outside && wminside[ypos][xpos] && (water_matrix[ypos][xpos] - mesh_height[ypos][xpos]) > 0.25*MAX_SPLASH_DEPTH) return;
+	if (!outside && wminside[ypos][xpos] && (water_matrix[ypos][xpos] - mesh_height[ypos][xpos]) > 0.25f*MAX_SPLASH_DEPTH) return;
 	
 	if (calc_hv) {
 		hv = (outside ? 0.5 : get_rel_height(mesh_height[ypos][xpos], zmin, zmax));
 	}
 	if (hv < 0.57) { // dirt
-		int const num(int(close*(1.0 - 3.0*fabs(hv - 0.3))*(75 + rand()%150)));
+		int const num(int(close*(1.0f - 3.0f*fabs(hv - 0.3f))*(75 + rand()%150)));
 		float const params[7] = {3.5, 5.5, 5.0, 0.3, 0.7, 0.6, 0.4};
 		gen_rubble(DIRT, num, pos, shooter, params); // or SAND
 	}
 	if (hv > 0.5) { // rocks
-		int const num(int(close*(3.0*min(0.3, (hv - 0.5)) + 0.1)*(30 + rand()%60)));
+		int const num(int(close*(3.0f*min(0.3f, (hv - 0.5f)) + 0.1f)*(30 + rand()%60)));
 		float const params[7] = {3.0, 6.0, 4.5, 0.2, 1.0, 0.5, 0.5};
 		gen_rubble(ROCK, num, pos, shooter, params);
 	}
@@ -1384,7 +1384,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 				close = 1.1 - fabs(zval - pos.z)/crater_dist;
 				size *= close*sqrt(XY_SCENE_SIZE);
 				hv    = add_crater_to_landscape_texture(pos.x, pos.y, size);
-				update_mesh_height(xpos, ypos, int(crater_dist/HALF_DXY), damage2, 0.0, 0, (crater_radius*crater_depth > 0.25));
+				update_mesh_height(xpos, ypos, int(crater_dist/HALF_DXY), damage2, 0.0, 0, (crater_radius*crater_depth > 0.25f));
 			}
 			if ((h_collision_matrix[ypos][xpos] - mesh_height[ypos][xpos]) < SMALL_NUMBER) {
 				create_ground_rubble(pos, shooter, hv, close, !crater);
@@ -1709,7 +1709,7 @@ void create_shell_casing(point const &fpos, vector3d const &dir, int shooter, fl
 	dwobject &obj(objg.get_obj(i));
 	obj.pos.z      -= 0.8*radius;
 	obj.pos        += dir*(1.2*radius);
-	obj.velocity    = gen_rand_vector(rand_uniform(0.0, 0.25*(type + 1)), 3.0, PI) + vector3d(dir.y*0.7, -dir.x*0.7, 5.0);
+	obj.velocity    = gen_rand_vector(rand_uniform(0.0, 0.25f*(type + 1)), 3.0, PI) + vector3d(dir.y*0.7f, -dir.x*0.7f, 5.0);
 	obj.orientation = signed_rand_vector_norm();
 	obj.angle       = rand_uniform(0.0, TWO_PI);
 	//obj.init_dir    = dir;
@@ -2002,7 +2002,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		obj.time      = -1;
 		obj.source    = shooter;
 		obj.flags    |= WAS_FIRED;
-		if (rapid_fire) {obj.time = int((1.0 - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);}
+		if (rapid_fire) {obj.time = int((1.0f - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);}
 		shot_offset += shot_delta; // move to next shot pos
 
 		switch (weapon_id) {
@@ -2222,7 +2222,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			float visibility(1.0);
 
 			for (unsigned i = 0; i < nsteps; ++i) {
-				visibility *= (1.0 - SMOKE_SCALE*get_smoke_at_pos(cur_pos));
+				visibility *= (1.0f - SMOKE_SCALE*get_smoke_at_pos(cur_pos));
 
 				if (visibility < 0.25) { // mostly smoke, laser beam ends here (dissipates in the smoke)
 					range = p2p_dist(pos, cur_pos);
@@ -2453,7 +2453,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 		int coll(0), cindex(-1);
 		int const fdir(fframe > (delay/2)), ff(fdir ? (delay - fframe) : fframe); // fdir = forward
 		float const ext_scale(cradius/0.06), max_ext(ext_scale*CBLADE_EXT_PT*ff); // ext_scale = CAMERA_RADIUS/DEF_CAMERA_RADIUS
-		float range(get_projectile_range(pos, dir, 1.1*cradius, (1.5*cradius + ext_scale*CBLADE_EXT), coll_pos, coll_norm, coll, cindex, shooter, 0));
+		float range(get_projectile_range(pos, dir, 1.1*cradius, (1.5f*cradius + ext_scale*CBLADE_EXT), coll_pos, coll_norm, coll, cindex, shooter, 0));
 		bool cobj_coll(coll && cindex >= 0);
 
 		if (get_range_to_mesh(pos, dir, coll_pos)) {
@@ -2478,7 +2478,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 		point pos2(pos + dir*(1.25*cradius));
 		int const xpos(get_xpos(pos2.x)), ypos(get_ypos(pos2.y));
 		
-		if (!point_outside_mesh(xpos, ypos) && (pos.z - mesh_height[ypos][xpos]) < 0.5*cradius) {
+		if (!point_outside_mesh(xpos, ypos) && (pos.z - mesh_height[ypos][xpos]) < 0.5f*cradius) {
 			surface_damage[ypos][xpos] += 1.0;
 
 			if (rand()%5 == 0) {
@@ -2528,7 +2528,7 @@ void show_user_stats() {
 		team_stats_t tot_stats;
 
 		for (int i = CAMERA_ID; i < num_smileys; ++i) {
-			float const yval(0.01 - 0.0014*(i+1));
+			float const yval(0.01f - 0.0014f*(i+1));
 			sprintf(text, "%s: K: %i D: %i S: %i TK: %i Score: %i\n",
 				sstates[i].name.c_str(), sstates[i].tot_kills, sstates[i].deaths, sstates[i].suicides, sstates[i].team_kills, sstates[i].get_score());
 			draw_text(get_smiley_team_color(i), -0.008, yval, -0.02, text);
@@ -2544,11 +2544,11 @@ void show_user_stats() {
 			for (unsigned i = 0; i < (unsigned)teams; ++i) {
 				sprintf(text, "Team %u: Kills: %i Deaths: %i Score: %i\n",
 					i, team_stats[i].kills, team_stats[i].deaths, team_stats[i].score);
-				draw_text(get_smiley_team_color(i), -0.008, 0.01-0.0014*(i+num_smileys+1)-0.0008, -0.02, text);
+				draw_text(get_smiley_team_color(i), -0.008, 0.01f-0.0014f*(i+num_smileys+1)-0.0008f, -0.02, text);
 			}
 		} // teams > 1
 		sprintf(text, "Total: Kills: %i Deaths: %i Score: %i\n", tot_stats.kills, tot_stats.deaths, tot_stats.score);
-		draw_text(WHITE, -0.008, 0.01-0.0014*(num_smileys+teams+1)-0.0016, -0.02, text);
+		draw_text(WHITE, -0.008, 0.01f-0.0014f*(num_smileys+teams+1)-0.0016f, -0.02, text);
 	} // show_scores
 }
 

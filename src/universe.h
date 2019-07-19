@@ -89,7 +89,7 @@ float const STAR_QUAD_SCALED(STAR_QUAD/(PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_
 float const MAX_PLANET_EXTENT(MOON_TO_PLANET_MAX_SPACING + MOON_MAX_SIZE);
 float const MAX_SYSTEM_EXTENT(PLANET_TO_SUN_MAX_SPACING + MAX_PLANET_EXTENT);
 float const MAX_GALAXY_EXTENT(GALAXY_MAX_SIZE + MAX_SYSTEM_EXTENT);
-float const AVG_STAR_SIZE(0.5*(STAR_MAX_SIZE + STAR_MIN_SIZE));
+float const AVG_STAR_SIZE(0.5f*(STAR_MAX_SIZE + STAR_MIN_SIZE));
 
 unsigned const U_BLOCKS      = 7;
 unsigned const U_BLOCKS_SQ   = U_BLOCKS*U_BLOCKS;
@@ -361,7 +361,7 @@ public:
 	colorRGBA get_light_color() const;
 	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant, bool closest);
 	void draw_flares(int ndiv, bool texture);
-	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
+	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0f);}
 	float get_temperature_at_dist_sq(float dist_sq) const {return get_energy()/max(TOLERANCE, dist_sq);}
 	float get_temperature_at_dist(float dist)       const {return get_temperature_at_dist_sq(dist*dist);}
 	float get_temperature_at_pt(point const &pt)    const;

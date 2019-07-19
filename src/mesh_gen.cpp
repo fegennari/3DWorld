@@ -334,7 +334,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 	if (surface_type != 5) {
 		if (!keep_sin_table || !init || update_zvals) {
 			if (AUTOSCALE_HEIGHT && world_mode == WMODE_GROUND) {
-				mesh_origin.z = camera_origin.z = surface_pos.z = 0.5*(zmin + zmax);
+				mesh_origin.z = camera_origin.z = surface_pos.z = 0.5f*(zmin + zmax);
 			}
 			estimate_zminmax(surface_type < 3);
 		}
@@ -346,7 +346,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 	gen_terrain_map();
 
 	if (GLACIATE && world_mode == WMODE_GROUND && (!keep_sin_table || !init || update_zvals) && AUTOSCALE_HEIGHT) {
-		mesh_origin.z = camera_origin.z = surface_pos.z = 0.5*(zbottom + ztop); // readjust camera height
+		mesh_origin.z = camera_origin.z = surface_pos.z = 0.5f*(zbottom + ztop); // readjust camera height
 	}
 	if (surface_generated) init = 1;
 }
@@ -414,7 +414,7 @@ void init_terrain_mesh() {
 			h = def_h*rel_wpz/W_PLANE_Z;
 		}
 		else { // above water
-			float const rel_h((def_h - W_PLANE_Z)/(1.0 - W_PLANE_Z));
+			float const rel_h((def_h - W_PLANE_Z)/(1.0f - W_PLANE_Z));
 			h = rel_wpz + rel_h*(1.0 - rel_wpz);
 				
 			if (mesh_tids_dirt[i] == SNOW_TEX) {
@@ -490,7 +490,7 @@ float get_median_height(float distribution_pos) {
 
 void set_zvals() {
 
-	zcenter       = 0.5*(zmax + zmin);
+	zcenter       = 0.5f*(zmax + zmin);
 	zbottom       = zmin;
 	ztop          = zmax;
 	zmin          = -zmax_est;
@@ -523,7 +523,7 @@ void update_temperature(bool verbose) {
 		temperature = alt_temp;
 		return;
 	}
-	float const cur_z((camera_mode == 1) ? get_camera_pos().z : 0.5*(ztop + zbottom));
+	float const cur_z((camera_mode == 1) ? get_camera_pos().z : 0.5f*(ztop + zbottom));
 	float const rel_h((cur_z - zmin)/(zmax - zmin));
 	//cout << "z: " << cur_z << ", rh: " << rel_h << ", wpz: " << water_plane_z << ", zmin: " << zmin << ", zmax: " << zmax << ", ztop: " << ztop << ", zbot: " << zbottom << endl;
 

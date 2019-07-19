@@ -159,8 +159,8 @@ void ship_cube::draw(unsigned ndiv) const { // ndiv is unused
 	float sz[3];
 
 	for (unsigned i = 0; i < 3; ++i) {
-		pt[i] = 0.5*(d[i][0] + d[i][1]);
-		sz[i] =     (d[i][1] - d[i][0]);
+		pt[i] = 0.5f*(d[i][0] + d[i][1]);
+		sz[i] =      (d[i][1] - d[i][0]);
 	}
 	draw_cube(pt, sz[0], sz[1], sz[2], 0);
 }
@@ -629,7 +629,7 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 		for (unsigned d = 0; d < 2; ++d) {
 			blend_color(c[d], ALPHA0, LITN_C, (i+d)*ns_inv, 1);
 			c[d].set_valid_color();
-			w[d] = (1.0 - 0.5*(i+d)*ns_inv)*width;
+			w[d] = (1.0f - 0.5f*(i+d)*ns_inv)*width;
 		}
 		point const next(cur + delta);
 		if (cur != next) {beam_rays.push_back(usw_ray(w[0], w[1], cur, next, c[0], c[1]));}
@@ -1208,7 +1208,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 		float zval(z_start - 0.5*w);
 
 		for (unsigned i = 0; i < nbands; ++i) { // draw bands
-			float const zpos(i*z_step + z_start), r(fabs(zpos)/crs), radius(xys*sqrt(1.0 - r*r));
+			float const zpos(i*z_step + z_start), r(fabs(zpos)/crs), radius(xys*sqrt(max(0.0f, (1.0f - r*r))));
 			set_color(cgray);
 
 			if (ndiv > 9) {
@@ -1773,7 +1773,7 @@ void uobj_draw_data::draw_dwexterm() const {
 			set_color(LT_GRAY);
 
 			for (unsigned i = 0; i < 8; ++i) { // weapon barrels
-				float const theta(TWO_PI*i/8.0), x(0.028*sinf(theta)), y(0.028*cosf(theta)); // are x and y backwards?
+				float const theta(TWO_PI*i/8.0f), x(0.028f*sinf(theta)), y(0.028f*cosf(theta)); // are x and y backwards?
 				draw_cylinder_at(point(x, y, 1.28), 0.06, 0.006, 0.006, ndiv4, (ndiv > 8));
 			}
 			for (unsigned i = 0; i < 2; ++i) { // connectors
@@ -1823,8 +1823,8 @@ void uobj_draw_data::draw_wraith_tail(float r, int ndiv2, float rscale) const {
 
 	for (unsigned i = 0; i < 26; ++i) { // default is a semicircle in the yz plane
 		float const val(i/25.0), iscale(val*rscale + (1.0 - val)), iscal_inv(1.2/iscale);
-		float const theta(iscale*TWO_PI*(i + 4.0)/36.0), rs(r*(1.0 - 0.02*i));
-		point const pos(0.0, iscal_inv*(sinf(theta)-0.5), iscal_inv*(cosf(theta)-0.75));
+		float const theta(iscale*TWO_PI*(i + 4.0f)/36.0f), rs(r*(1.0f - 0.02f*i));
+		point const pos(0.0, iscal_inv*(sinf(theta)-0.5f), iscal_inv*(cosf(theta)-0.75f));
 
 		if (i == 25) { // last segment
 			end_sphere_draw();
@@ -2056,8 +2056,8 @@ void uobj_draw_data::draw_anti_miss() const {
 
 	if (ndiv > 4) {
 		for (unsigned i = 0; i < 3; ++i) { // tripod
-			float const theta(i*TWO_PI/3.0);
-			point const pt(0.84*cosf(theta), -0.8, 0.84*sinf(theta));
+			float const theta(i*TWO_PI/3.0f);
+			point const pt(0.84f*cosf(theta), -0.8f, 0.84f*sinf(theta));
 			set_color(color_a);
 			draw_sphere_vbo(pt, 0.25, ndiv2, 1);
 			
@@ -2394,7 +2394,7 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 	}
 	if (hw && ndiv > 3) {
 		for (unsigned i = 0; i < 3; ++i) {
-			float const theta(TWO_PI*i/3.0), x(1.05*cosf(theta)), y(1.05*sinf(theta));
+			float const theta(TWO_PI*i/3.0f), x(1.05f*cosf(theta)), y(1.05f*sinf(theta));
 			draw_cylinder_at(point(x, y, -0.6), 1.1, 0.2, 0.2, ndiv2, 1, 1, 0);
 			draw_sphere_vbo( point(x, y, -0.6), 0.2, ndiv2, 1);
 			draw_sphere_vbo( point(x, y,  0.5), 0.2, ndiv2, 1);
