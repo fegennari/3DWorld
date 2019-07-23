@@ -454,20 +454,20 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, texture_offset), p2.x, p2.y, p2.z, dot_product(p2, texture_offset), shader, 1);
 }
 
-void coll_obj::get_sphere_cylin_tparams(vector3d const &dir, texgen_params_t &tp) const {
+void coll_obj::get_sphere_cylin_tparams(vector3d const &dir, texgen_params_t &tp, float tscale0_mult) const {
 
-	float const tscale(((cp.tid >= 0) ? get_tex_ar(cp.tid) : 1.0)*cp.tscale);
+	float const tscale0(tscale0_mult*cp.tscale), tscale1(((cp.tid >= 0) ? get_tex_ar(cp.tid) : 1.0)*cp.tscale);
 	int const dim(::get_max_dim(dir));
 	point p[2];
 
 	for (int i = 0; i < 3; ++i) {
-		p[0][i] = (i == dim) ? cp.tscale : 0.0;
-		p[1][i] = (i == dim) ? 0.0       : tscale;
+		p[0][i] = (i == dim) ? tscale0 : 0.0;
+		p[1][i] = (i == dim) ? 0.0     : tscale1;
 	}
 	for (unsigned i = 0; i < 2; ++i) {
 		bool const d((i != 0) ^ cp.swap_txy());
-		UNROLL_3X(tp.st[d][i_] = tscale*p[i][i_];)
-		tp.st[d][3] = tscale*dot_product(texture_offset, p[i]);
+		UNROLL_3X(tp.st[d][i_] = tscale1*p[i][i_];)
+		tp.st[d][3] = tscale1*dot_product(texture_offset, p[i]);
 	}
 }
 
