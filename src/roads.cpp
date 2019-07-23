@@ -14,10 +14,6 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
-road_mat_mgr_t::road_mat_mgr_t() : inited(0), sl_tid(0) {
-	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = 0;}
-}
-
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
 	timer_t timer("Load Road Textures");

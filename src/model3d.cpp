@@ -342,9 +342,9 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 
 template<unsigned N> struct vert_to_tri_t {
 
-	unsigned t[N], n; // if this vertex is used in more than N triangles we give up and never remove it
+	unsigned t[N] = {0}, n; // if this vertex is used in more than N triangles we give up and never remove it
 
-	vert_to_tri_t() : n(0) {for (unsigned i = 0; i < N; ++i) {t[i] = 0;}}
+	vert_to_tri_t() : n(0) {}
 	void add(unsigned ix) {if (n < N) {t[n] = ix;} ++n;} // only add if it fits, but always increment n
 	void remove(unsigned tix) {assert(tix < min(n, N)); t[tix] = t[n-1]; --n;} // move last element to position tix
 	unsigned get_first_index_ix(unsigned tix) const {assert(tix < min(n, N)); return 3*t[tix];} // multiply by 3 to convert from triangle to index

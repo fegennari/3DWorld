@@ -471,15 +471,11 @@ void shader_t::set_material(base_mat_t const &mat) {
 
 
 struct program_t {
-	unsigned p, sixs[NUM_SHADER_TYPES];
+	unsigned p, sixs[NUM_SHADER_TYPES] = {0};
 	bool valid;
 
-	program_t() : p(0), valid(0) {
-		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {sixs[i] = 0;}
-	}
-	program_t(unsigned p_, unsigned sixs_[NUM_SHADER_TYPES]) : p(p_), valid(1) {
-		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {sixs[i] = sixs_[i];}
-	}
+	program_t() : p(0), valid(0) {}
+	program_t(unsigned p_, unsigned sixs_[NUM_SHADER_TYPES]) : p(p_), valid(1) {}
 };
 
 

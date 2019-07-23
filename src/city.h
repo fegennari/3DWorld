@@ -228,10 +228,10 @@ public:
 class road_mat_mgr_t {
 
 	bool inited;
-	unsigned tids[NUM_RD_TIDS], sl_tid;
+	unsigned tids[NUM_RD_TIDS] = {0}, sl_tid;
 
 public:
-	road_mat_mgr_t();
+	road_mat_mgr_t() : inited(0), sl_tid(0) {}
 	void ensure_road_textures();
 	void set_texture(unsigned type);
 	void set_stoplight_texture();

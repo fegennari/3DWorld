@@ -43,7 +43,7 @@ public:
 class noise_gen_3d {
 public:
 	unsigned num_sines;
-	float rdata[SINE_DATA_SIZE];
+	float rdata[SINE_DATA_SIZE] = {0};
 	rand_gen_t rgen;
 
 	noise_gen_3d() : num_sines(0) {}
