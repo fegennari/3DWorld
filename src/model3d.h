@@ -238,10 +238,8 @@ public:
 	unsigned obj_id;
 
 	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), obj_id(obj_id_) {bcube.set_to_zeros();}
-	void render(shader_t &shader, bool is_shadow_pass, unsigned npts);
 	void clear();
 	void make_private_copy() {vbo = ivbo = 0;} // Note: to be called *only* after a deep copy
-	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();
 	void ensure_bounding_volumes() {if (bsphere.radius == 0.0) {calc_bounding_volumes();}}
 	cube_t get_bcube () const {return get_polygon_bbox(*this);}
