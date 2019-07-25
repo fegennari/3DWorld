@@ -46,7 +46,7 @@ public:
 		if (cur_zmin >= cur_zmax) {clear(); return;} // invalid range (water particles with no water?)
 
 		// if zmin or zmax changes by more than some amount, then clear and regen point z-values so that rain/snow stays uniformly spaced in z
-		if (fabs(prev_zmin - cur_zmin) > 0.05*(get_zmax() - cur_zmin) || fabs(prev_zmax - cur_zmax) > 0.25*(get_zmax() - cur_zmin)) {
+		if (fabs(prev_zmin - cur_zmin) > 0.05f*(get_zmax() - cur_zmin) || fabs(prev_zmax - cur_zmax) > 0.25f*(get_zmax() - cur_zmin)) {
 			clear();
 			prev_zmin = cur_zmin;
 			prev_zmax = cur_zmax;

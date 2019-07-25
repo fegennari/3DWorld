@@ -93,7 +93,7 @@ point get_scaled_upt() {return point(CELL_SIZE*uxyz[0], CELL_SIZE*uxyz[1], CELL_
 void offset_pos    (point &pos) {pos += get_scaled_upt();}
 void offset_pos_inv(point &pos) {pos -= get_scaled_upt();}
 
-float temp_to_deg_c(float temp) {return (100.0*(temp - FREEZE_TEMP)/(BOIL_TEMP - FREEZE_TEMP));} // 10 => 0, 20 => 100
+float temp_to_deg_c(float temp) {return (100.0f*(temp - FREEZE_TEMP)/(BOIL_TEMP - FREEZE_TEMP));} // 10 => 0, 20 => 100
 float temp_to_deg_f(float temp) {return (1.8*temp_to_deg_c(temp) + 32.0);}
 
 //float get_screen_width() {return (float)window_width;}
@@ -112,7 +112,7 @@ float get_pixel_size(float radius, float dist) {
 }
 
 bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
-	return (get_pixel_size(1.0, dist)*cross_product(get_player_velocity(), vcp).mag() > 1.0*vcp_mag);
+	return (get_pixel_size(1.0, dist)*cross_product(get_player_velocity(), vcp).mag() > 1.0f*vcp_mag);
 }
 
 void set_star_light_atten(int light, float atten, shader_t *shader=NULL) {
@@ -470,7 +470,7 @@ public:
 void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const &pos, float radius, int ndiv, bool add_halo) {
 
 	static int lfc(0);
-	if (animate2 && frame_counter > lfc) {cloud_time += 8.0*fticks; lfc = frame_counter;} // at most once per frame
+	if (animate2 && frame_counter > lfc) {cloud_time += 8.0f*fticks; lfc = frame_counter;} // at most once per frame
 	ushader_group usg;
 	usg.enable_star_shader(colorA, colorB, radius);
 	set_additive_blend_mode();
@@ -584,7 +584,7 @@ bool is_shadowed(point const &pos, float radius, bool expand, ussystem const &so
 
 	float const exp(expand ? radius : 0.0);
 	vector3d const dir((sol.sun.pos - pos).get_norm());
-	point const pos2(pos + dir*(1.1*(radius + exp))); // extend beyond the object radius so that we don't get a collision with it
+	point const pos2(pos + dir*(1.1f*(radius + exp))); // extend beyond the object radius so that we don't get a collision with it
 	point const spos(sol.sun.pos - dir*(1.1*sol.sun.radius));
 
 	for (unsigned k = 0; k < sol.planets.size(); ++k) {
@@ -863,7 +863,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 				ussystem &sol(galaxy.sols[j]);
 				float const sradius(sol.sun.radius);
 
-				if (max_size*sradius < 0.1*STAR_MAX_SIZE) {
+				if (max_size*sradius < 0.1f*STAR_MAX_SIZE) {
 					if (!sel_g) sol.free_uobj();
 					continue;
 				}
@@ -879,7 +879,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 				bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
 				bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
 				bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
-				bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3*sradius || !sclip);
+				bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3f*sradius || !sclip);
 				bool draw_asteroid_belt(0);
 				current.system  = j;
 				current.cluster = sol.cluster_id;
@@ -1193,7 +1193,7 @@ bool ugalaxy::create(ucell const &cell, int index) {
 		assert(galaxy_ext[j] >= 0.0);
 	}
 	for (unsigned i = 0; i < MAX_TRIES; ++i) {
-		for (unsigned j = 0; j < 3; ++j) {pos[j] = galaxy_ext[j]*signed_rand_float2();}
+		for (unsigned j = 0; j < 3; ++j) {pos[j] = double(galaxy_ext[j])*signed_rand_float2();}
 		bool too_close(0);
 
 		for (int j = 0; j < index && !too_close; ++j) {
@@ -1475,7 +1475,7 @@ void ussystem::calc_color() { // delayed until the color is actually needed
 		}
 	}
 	if (sum == 0.0) return; // no other systems
-	galaxy_color *= 1.5/((sum/sols.size())*MAX_SYSTEMS_PER_GALAXY); // remember to normalize
+	galaxy_color *= 1.5f/((sum/sols.size())*MAX_SYSTEMS_PER_GALAXY); // remember to normalize
 	galaxy_color.set_valid_color();
 }
 
@@ -1541,7 +1541,7 @@ void ussystem::process() {
 		for (unsigned i = 0; i < planets.size(); ++i) {orbits[i] = planets[i].orbit;}
 		sort(orbits.begin(), orbits.end()); // smallest to largest
 		unsigned const inner_planet(rand2() % (orbits.size()-1)); // between two planet orbits, so won't increase system radius
-		float const ab_radius(0.5*(orbits[inner_planet] + orbits[inner_planet+1])); // halfway between two planet orbits
+		float const ab_radius(0.5f*(orbits[inner_planet] + orbits[inner_planet+1])); // halfway between two planet orbits
 		asteroid_belt.reset(new uasteroid_belt_system(sun.rot_axis, this));
 		asteroid_belt->init(pos, ab_radius); // gen_asteroids() will be called when drawing
 	}
@@ -1758,8 +1758,8 @@ void uplanet::gen_prings() {
 		alpha = CLIP_TO_01(alpha*(1.0f + rand_uniform2(-0.1, 0.1)));
 
 		for (unsigned j = tri; j < tro; ++j) {
-			float const v(fabs(j - 0.5*(tri + tro))/(0.5*(tro - tri)));
-			rcolor.A = alpha*(1.0 - v*v);
+			float const v(fabs(j - 0.5f*(tri + tro))/(0.5f*(tro - tri)));
+			rcolor.A = alpha*(1.0f - v*v);
 			ring_data[j].add_c4(rcolor);
 		}
 	}
@@ -2170,8 +2170,8 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 			}
 		}
 		else {
-			float const st((1.0 - coldness*coldness)*snow_thresh);
-			if (val > (st + 1.0E-6)) {BLEND_COLOR(data, white, data, (val - st)/(1.0 - st));} // blend in some snow
+			float const st((1.0f - coldness*coldness)*snow_thresh);
+			if (val > (st + 1.0E-6f)) {BLEND_COLOR(data, white, data, (val - st)/(1.0f - st));} // blend in some snow
 		}
 	}
 }
@@ -2351,7 +2351,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
 	if (size < 0.02) return 0; // too small
 	float const st_prod(STAR_BRIGHTNESS*size*temp);
-	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
+	if (st_prod < 2.0f || st_prod*temp < 4.0f) return 0; // too dim
 	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
 	colorRGBA ocolor(color);
 
@@ -2575,7 +2575,7 @@ void urev_body::draw_surface(point_d const &pos_, float size, int ndiv) {
 				//unsigned const ix((j*ssize)/(ndiv+1));
 				unsigned const ix((j == ndiv) ? (ssize-1) : (j*ssize)/ndiv);
 				float const val(surface->heightmap[iy + ssize*ix]); // x and y are swapped
-				perturb_map[j + offset] = hmap_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5); // duplicated with urev_body::surface_test()
+				perturb_map[j + offset] = hmap_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5f); // duplicated with urev_body::surface_test()
 			}
 		}
 		surface->setup_draw_sphere(all_zeros, 1.0, -0.5*hmap_scale, ndiv, &perturb_map.front());
@@ -3206,7 +3206,7 @@ float get_temp_in_system(s_object const &clobj, point const &pos, point &sun_pos
 	point pos2(pos);
 	offset_pos(pos2);
 	float const sr(sun.radius), rdist_sq(p2p_dist_sq((pos2 - clobj.get_ucell().pos), system.pos));
-	return ((rdist_sq < sr*sr) ? 4.0 : 1.0)*sun.get_energy()*min(1.0/rdist_sq, 10.0/(sr*sr)); // Note: same as sun.get_temperature_at_pt(pos), unless inside the sun
+	return ((rdist_sq < sr*sr) ? 4.0f : 1.0f)*sun.get_energy()*min(1.0f/rdist_sq, 10.0f/(sr*sr)); // Note: same as sun.get_temperature_at_pt(pos), unless inside the sun
 }
 
 
@@ -3263,12 +3263,12 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	// set color
 	for (unsigned i = 0; i < 3; ++i) {
 		float const ci(WHITE_COMP_D + OM_WCD*color[i]);
-		uambient[i]  = (no_ambient ? 0.0 : ambient_scale*color[i]);
-		udiffuse[i]  = (shadowed   ? 0.0 : d_scale*ci);
+		uambient[i]  = (no_ambient ? 0.0f : ambient_scale*color[i]);
+		udiffuse[i]  = (shadowed   ? 0.0f : d_scale*ci);
 		sun_color[i] = ci;
 	}
-	uambient[3] = (no_ambient ? 0.0 : 1.0);
-	udiffuse[3] = (shadowed   ? 0.0 : 1.0);
+	uambient[3] = (no_ambient ? 0.0f : 1.0f);
+	udiffuse[3] = (shadowed   ? 0.0f : 1.0f);
 	set_colors_and_enable_light(light, uambient, udiffuse, shader);
 	// set position
 	set_gl_light_pos(light, lpos, 1.0, shader); // point light source

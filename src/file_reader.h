@@ -18,8 +18,8 @@ protected:
 	FILE *fp; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
 	static unsigned const MAX_CHARS = 1024;
 	bool verbose;
-	char buffer[MAX_CHARS];
-	char file_buf[FILE_BUF_SZ];
+	char buffer[MAX_CHARS] = {0};
+	char file_buf[FILE_BUF_SZ] = {0};
 	unsigned file_buf_pos, file_buf_end;
 
 	bool open_file(bool binary=0);

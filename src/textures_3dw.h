@@ -26,11 +26,11 @@ extern ttex lttex_dirt[];
 
 // fixed-point math
 #define BLEND_COLOR(dst, s1, s2, bv) \
-	unsigned const bvi(unsigned(256.0*bv)), om_bvi(256 - bvi); \
+	unsigned const bvi(unsigned(256.0f*bv)), om_bvi(256 - bvi); \
 	UNROLL_3X(dst[i_] = (unsigned char)((bvi*s1[i_] + om_bvi*s2[i_]) >> 8);)
 
 inline void unpack_color(unsigned char dst[3], colorRGBA const &src) {
-	UNROLL_3X(dst[i_] = (unsigned char)(255.0*src[i_]);)
+	UNROLL_3X(dst[i_] = (unsigned char)(255.0f*src[i_]);)
 }
 
 
