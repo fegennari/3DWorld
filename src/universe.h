@@ -563,6 +563,7 @@ struct line_query_state {
 class universe_t : protected cell_block {
 
 	icosphere_manager_t planet_manager;
+	cell_block temp; // used for shift_cells
 
 public:
 	void init();

@@ -391,16 +391,27 @@ public:
 };
 
 
-class ushader_group {
+class star_shader_t {
+	universe_shader_t star_shader;
+public:
+	void enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius, float intensity=1.0) {
+		star_shader.enable_star(colorA, colorB, radius);
+		set_star_intensity(intensity);
+	}
+	void set_star_intensity(float intensity) {star_shader.add_uniform_float("intensity", intensity);}
+	void disable_star_shader() {star_shader.disable_star();}
+};
+
+class ushader_group : public star_shader_t {
+
 	universe_shader_t planet_shader[2][5][2]; // {without/with rings}x{rocky, procedural, all water, gas giant, proc + vert hmap}x{without/with craters} - not all variations used
-	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
+	universe_shader_t ring_shader, cloud_shader, atmospheric_shader;
 	shader_t color_only_shader, planet_colored_shader, point_sprite_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
 		unsigned const type(body.gas_giant ? 3 : (body.use_procedural_shader() ? ((body.water >= 1.0) ? 2 : (body.use_vert_shader_offset() ? 4 : 1)) : 0));
 		return planet_shader[svars.ring_ro > 0.0][type][body.has_craters()];
 	}
-
 public:
 	vpc_shader_t nebula_shader;
 	shader_t asteroid_shader;
@@ -412,12 +423,7 @@ public:
 		get_planet_shader(body, svars).enable_planet(body, svars, use_light2);
 	}
 	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
-	void enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius, float intensity=1.0) {
-		star_shader.enable_star(colorA, colorB, radius);
-		set_star_intensity(intensity);
-	}
-	void set_star_intensity(float intensity) {star_shader.add_uniform_float("intensity", intensity);}
-	void disable_star_shader() {star_shader.disable_star();}
+	
 	void enable_ring_shader(uplanet const &planet, point const &planet_pos, float back_face_mult, bool a2c) {
 		ring_shader.enable_ring(planet, planet_pos, back_face_mult, a2c);
 	}
@@ -471,8 +477,8 @@ void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const
 
 	static int lfc(0);
 	if (animate2 && frame_counter > lfc) {cloud_time += 8.0f*fticks; lfc = frame_counter;} // at most once per frame
-	ushader_group usg;
-	usg.enable_star_shader(colorA, colorB, radius);
+	star_shader_t ss;
+	ss.enable_star_shader(colorA, colorB, radius);
 	set_additive_blend_mode();
 	fgPushMatrix();
 	translate_to(pos);
@@ -486,7 +492,7 @@ void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const
 	}
 	fgPopMatrix();
 	set_std_blend_mode();
-	usg.disable_star_shader();
+	ss.disable_star_shader();
 }
 
 
@@ -500,7 +506,8 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	if (animate2) {cloud_time += fticks;}
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
-	ushader_group usg(&planet_manager);
+	std::unique_ptr<ushader_group> usg_ptr(new ushader_group(&planet_manager)); // allocate on the heap since this object is large
+	ushader_group &usg(*usg_ptr);
 
 	if (no_distant < 2 || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
 		// gather together the set of cells that are visible and need to be drawn
@@ -1090,7 +1097,6 @@ void universe_t::shift_cells(int dx, int dy, int dz) {
 
 	assert((abs(dx) + abs(dy) + abs(dz)) == 1);
 	vector3d const vxyz((float)dx, (float)dy, (float)dz);
-	cell_block temp;
 
 	for (unsigned i = 0; i < U_BLOCKS; ++i) { // z
 		for (unsigned j = 0; j < U_BLOCKS; ++j) { // y
