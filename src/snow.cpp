@@ -51,7 +51,7 @@ struct zval_avg {
 
 
 struct voxel_t {
-	coord_type p[3];
+	coord_type p[3] = {0};
 
 	voxel_t(void) {}
 	voxel_t(coord_type x, coord_type y, coord_type z) {p[0] = x; p[1] = y; p[2] = z;}
@@ -490,7 +490,7 @@ void create_snow_map(voxel_map &vmap) {
 
 	// distribute snowflakes over the scene and build the voxel map of hits
 	int const num_per_dim(1024*(unsigned)sqrt((float)num_snowflakes)); // in M, so sqrt div by 1024
-	float const zval(max(ztop, czmax)), zv_scale(1.0/(zval - zbottom));
+	float const zval(max(ztop, czmax)), zv_scale(1.0f/(zval - zbottom));
 	float const xscale(2.0*X_SCENE_SIZE/num_per_dim), yscale(2.0*Y_SCENE_SIZE/num_per_dim);
 	all_models.build_cobj_trees(1);
 	cout << "Snow accumulation progress (out of " << num_per_dim << "):     0";
@@ -559,7 +559,7 @@ void create_snow_strips(voxel_map &vmap) {
 	// create strips of snow for rendering
 	voxel_map cur_x_map, last_x_map;
 	unsigned const num_xy_voxels(VOXELS_PER_DIV*VOXELS_PER_DIV*XY_MULT_SIZE);
-	float const delta_depth(snow_depth*num_xy_voxels/(1024.0*1024.0*num_snowflakes));
+	float const delta_depth(snow_depth*num_xy_voxels/(1024.0f*1024.0f*num_snowflakes));
 	unsigned n_strips(0), n_edge_strips(0), strip_len(0), edge_strip_len(0);
 	int last_x(0);
 	strip_vect_t strip, edge_strip;

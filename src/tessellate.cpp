@@ -55,7 +55,7 @@ void fgCALLBACK do_coord(vert_norm_tc *coord) {
 	assert(vertex <= 3);
 	cur_triangle.pts[vertex] = *coord;
 	bool const emit_tri(vertex == 2);
-	if (emit_tri) triangles.push_back(cur_triangle);
+	if (emit_tri) {triangles.push_back(cur_triangle);}
 
 	switch (mode) {
 	case GL_TRIANGLES:

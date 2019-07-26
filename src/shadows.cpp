@@ -25,7 +25,7 @@ void fix_sun_moon_rot(float &angle) {angle = fix_angle(angle);}
 
 void update_sun_and_moon() {
 
-	float const radius(0.6*(FAR_CLIP+X_SCENE_SIZE));
+	float const radius(0.6f*(FAR_CLIP+X_SCENE_SIZE));
 	fix_sun_moon_rot(sun_rot);
 	fix_sun_moon_rot(moon_rot);
 	light_factor = fabs(sun_rot/PI - 1.0);

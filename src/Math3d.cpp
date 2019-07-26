@@ -37,7 +37,7 @@ bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d cons
 
 	assert(n2 != 0.0);
 	float const cos_t1(-dot_product(norm, v_inc)), n_ratio(n1/n2);
-	float const arg(1.0 - n_ratio*n_ratio*(1.0 - cos_t1*cos_t1));
+	float const arg(1.0f - n_ratio*n_ratio*(1.0f - cos_t1*cos_t1));
 	if (arg < 0.0) return 0; // total internal reflection - no refraction angle
 	float const cos_t2(sqrt(arg));
 	v_ref = v_inc*n_ratio + norm*(n_ratio*cos_t1 - fabs(cos_t2));
@@ -49,10 +49,10 @@ float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float 
 
 	// http://en.wikipedia.org/wiki/Fresnel_equations
 	float const cos_theta_i(dot_product(v_inc, norm)), sin_theta_i(cross_product(v_inc, norm).mag());
-	float const val((n1/n2)*sin_theta_i), cos_theta_t(sqrt(1.0 - val*val));
+	float const val((n1/n2)*sin_theta_i), cos_theta_t(sqrt(1.0f - val*val));
 	float const rs_sqrt((n1*cos_theta_i - n2*cos_theta_t)/(n1*cos_theta_i + n2*cos_theta_t));
 	float const rp_sqrt((n1*cos_theta_t - n2*cos_theta_i)/(n1*cos_theta_t + n2*cos_theta_i));
-	float const r(0.5*(rs_sqrt*rs_sqrt + rp_sqrt*rp_sqrt)); // average of rs and rp
+	float const r(0.5f*(rs_sqrt*rs_sqrt + rp_sqrt*rp_sqrt)); // average of rs and rp
 	return r;
 }
 
@@ -367,7 +367,7 @@ bool sphere_ext_poly_intersect(point const * const points, unsigned npoints, vec
 	thick_poly_to_sides(points, npoints, norm, thickness, pts); // slow
 
 	for (unsigned i = 0; i < pts.size(); ++i) { // adapted from sphere_intersect_poly_sides()
-		if ((radius - dot_product_ptv(pts[i].get_norm(), pos, pts[i][0])) < 0.0) return 0;
+		if ((radius - dot_product_ptv(pts[i].get_norm(), pos, pts[i][0])) < 0.0f) return 0;
 	}
 	return 1;
 }
@@ -547,8 +547,8 @@ int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1
 	double M[3][3];
 
 	for (unsigned i = 0; i < 3; ++i) {
-		UNROLL_3X(M[i][i_] = A[i]*A[i_];)
-		M[i][i] -= g*g;
+		UNROLL_3X(M[i][i_] = double(A[i])*A[i_];)
+		M[i][i] -= double(g)*g;
 	}
 	vector3d Md, MD;
 	matrix_mult(d, Md, M);
@@ -782,7 +782,7 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 		float const t_clamped(CLIP_TO_01(t)), tv(d ? (1.0f - t) : t), tv_clamped(d ? (1.0f - t_clamped) : t_clamped);
 
 		if (((d ? r2 : r1) > 0.0) && (fabs(tv_clamped)*len < min(sr, rdist))) { // collision with p1/p2
-			float const adj((len > TOLERANCE) ? (tv + (sr + toler)/len) : 0.0);
+			float const adj((len > TOLERANCE) ? (tv + (sr + toler)/len) : 0.0f);
 
 			if (adj >= 0.0) { // otherwise not a real intersection (due to fp error, etc.)
 				if (!calc_int) return 1;
@@ -933,7 +933,7 @@ void cylinder_3dw::calc_bcube(cube_t &bcube) const {
 	vector3d const norm(get_norm_dir_vect());
 			
 	for (unsigned i = 0; i < 3; ++i) {
-		float const ni(sqrt(max(0.0, (1.0 - norm[i]*norm[i]))));
+		float const ni(sqrt(max(0.0f, (1.0f - norm[i]*norm[i]))));
 		bcube.d[i][0] = min((p1[i] - ni*r1), (p2[i] - ni*r2));
 		bcube.d[i][1] = max((p1[i] + ni*r1), (p2[i] + ni*r2));
 	}
@@ -1182,9 +1182,9 @@ void add_rotated_quad_pts(vert_norm_comp *points, unsigned &ix, float theta, flo
 void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // project vector v onto plane with normal n
 
 	double const m[3][3] = {
-		{ n.y*n.y+n.z*n.z, -n.x*n.y,         -n.x*n.z},
-		{-n.y*n.x,          n.x*n.x+n.z*n.z, -n.y*n.z},
-		{-n.z*n.x,         -n.z*n.y,          n.x*n.x+n.y*n.y}
+		{ (double)n.y*n.y+(double)n.z*n.z, -(double)n.x*n.y,                 -(double)n.x*n.z},
+		{-(double)n.y*n.x,                  (double)n.x*n.x+(double)n.z*n.z, -(double)n.y*n.z},
+		{-(double)n.z*n.x,                 -(double)n.z*n.y,                  (double)n.x*n.x+(double)n.y*n.y}
 	};
 	matrix_mult(vin, vout, m);
 }
@@ -1347,7 +1347,7 @@ vector3d lead_target(point const &ps, point const &pt, vector3d const &vs, vecto
 	if (vt0.mag_sq() < TOLERANCE*TOLERANCE) return pt0.get_norm(); // target is stopped, aim right at it
 
 	// quadratic equation - solve for time t
-	double const a(vt0.mag_sq() - vweap*vweap);
+	double const a(vt0.mag_sq() - (double)vweap*vweap);
 
 	if (fabs(a) < TOLERANCE || fabs(a) < 0.01*vweap*vweap) {
 		// velocities are too close - prediction will be inaccurate and unstable

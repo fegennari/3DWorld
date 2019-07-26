@@ -172,7 +172,7 @@ private:
 	bool is_distant, no_trees, just_cleared, has_tunnel;
 	colorRGB avg_mesh_tex_color;
 	tile_offset_t mesh_off, ptree_off, dtree_off, scenery_off;
-	float sub_zmin[4][4], sub_zmax[4][4];
+	float sub_zmin[4][4] = {0}, sub_zmax[4][4] = {0};
 	vector<float> zvals, ao_zvals;
 	vector<tree_map_val> tree_map;
 	vector<unsigned char> mesh_weight_data, weight_data, ao_lighting;
@@ -417,7 +417,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 
 	tile_map tiles;
 	bool buildings_valid;
-	unsigned ivbo_ixs[NUM_LODS+1];
+	unsigned ivbo_ixs[NUM_LODS+1] = {0};
 	unsigned tiles_gen_prev_frame;
 	float terrain_zmin;
 	draw_vect_t to_draw;

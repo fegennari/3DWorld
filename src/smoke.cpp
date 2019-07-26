@@ -149,7 +149,7 @@ void diffuse_smoke_xy(int x, int y, int z, lmcell &adj, float rate, int dim, int
 		unsigned char const flow(dir ? adj.pflow[dim] : lmc.pflow[dim]);
 		if (flow == 0) return;
 		float const cur_smoke(lmc.smoke);
-		delta  = rate*(flow/255.0)*(adj.smoke - cur_smoke); // diffusion out of current cell and into cell xyz (can be negative)
+		delta  = rate*(flow/255.0f)*(adj.smoke - cur_smoke); // diffusion out of current cell and into cell xyz (can be negative)
 		adjust_smoke_val(lmc.smoke, delta);
 		delta  = (lmc.smoke - cur_smoke); // actual change
 		if (lmc.smoke > 0.0) {smoke_grid.register_smoke(x, y, z);}
@@ -169,14 +169,14 @@ void diffuse_smoke_z(int x, int y, int z, lmcell &adj, lmcell *vldata, float pos
 		unsigned char const flow(dir ? adj.pflow[dim] : lmc.pflow[dim]);
 		if (flow == 0) return;
 		float const cur_smoke(lmc.smoke);
-		delta  = (flow/255.0)*(adj.smoke - cur_smoke); // diffusion out of current cell and into cell xyz (can be negative)
+		delta  = (flow/255.0f)*(adj.smoke - cur_smoke); // diffusion out of current cell and into cell xyz (can be negative)
 		delta *= ((delta < 0.0) ? neg_rate : pos_rate);
 		adjust_smoke_val(lmc.smoke, delta);
 		delta  = (lmc.smoke - cur_smoke); // actual change
 		if (lmc.smoke > 0.0) {smoke_grid.register_smoke(x, y, z);}
 	}
 	else { // edge cell has infinite smoke capacity and zero total smoke
-		delta = 0.5*(pos_rate + neg_rate);
+		delta = 0.5f*(pos_rate + neg_rate);
 	}
 	adjust_smoke_val(adj.smoke, -delta);
 }

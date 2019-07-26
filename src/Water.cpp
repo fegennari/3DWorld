@@ -60,7 +60,7 @@ struct water_spring { // size = 40;
 	point pos;
 	vector3d vel;
 
-	water_spring() {}
+	water_spring() : enabled(0), dpf(0.0f), diff(0.0f), acc(0.0f) {}
 
 	water_spring(int en, float dpf_, float diff_, float acc_, point const &pos_, vector3d const &vel_)
 		: enabled(en), dpf(dpf_), diff(diff_), acc(acc_), pos(pos_), vel(vel_) {}
@@ -72,7 +72,7 @@ struct water_section {
 	float zval, wvol;
 	int x1, y1, x2, y2;
 
-	water_section() {}
+	water_section() : zval(0.0f), wvol(0.0f), x1(0), y1(0), x2(0), y2(0) {}
 
 	water_section(float x1_, float y1_, float x2_, float y2_, float zval_, float wvol_) : zval(zval_), wvol(wvol_),
 		x1(get_xpos_clamp(x1_)), y1(get_ypos_clamp(y1_)), x2(get_xpos_clamp(x2_)), y2(get_ypos_clamp(y2_))
@@ -880,7 +880,7 @@ void add_splash(point const &pos, int xpos, int ypos, float energy, float radius
 	energy = min(energy, 10000.0f);
 	float const splash_size(min(0.006f*(0.5f + water_mix)*sqrt((4.0f/XY_SCENE_SIZE)*energy), MAX_SPLASH_SIZE));
 	if (splash_size < TOLERANCE) return;
-	float const rad(min(4, (int)ceil(0.5*radius/(DX_VAL + DY_VAL)))), radsq(rad*rad);
+	float const rad(min(4, (int)ceil(0.5f*radius/(DX_VAL + DY_VAL)))), radsq(rad*rad);
 	int const droplet_id(coll_id[DROPLET]);
 
 	if (add_droplets && energy > 5.0 && droplet_id >= 0 && temperature > W_FREEZE_POINT && point_interior_to_mesh(xpos, ypos)) {
@@ -1015,7 +1015,7 @@ void update_valleys_and_draw_spillover() {
 		v.w_volume += v.fvol;
 		v.fvol      = 0.0;
 		v.blood_mix = CLIP_TO_01(v.blood_mix);
-		v.mud_mix   = ((v.mud_mix < 0.0001) ? 0.0 : CLIP_TO_01(v.mud_mix)*pow(0.998f, fticks)); // slowly settles
+		v.mud_mix   = ((v.mud_mix < 0.0001f) ? 0.0f : CLIP_TO_01(v.mud_mix)*pow(0.998f, fticks)); // slowly settles
 		float const dv(min((v.w_volume - v.lwv), MAX_WATER_ACC));
 		float delta_z(v.get_volume()*dv/v.area); // this is inaccurate because v.area is not constant
 		//if (v.old_area > 0.0 && v.area > 0.0 && v.area != v.old_area) delta_z -= (1.0 - v.old_area/(0.5*(v.area + v.old_area)))*v.dz;
@@ -1243,7 +1243,7 @@ void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj
 	bool last_iteration(0);
 	float z1(mesh_height[i][j]);
 	float const zval(nov ? zmin : valleys[index].zval);
-	float const width(min(0.012, 0.1*(DX_VAL + DY_VAL)*(sqrt((float)vol_over) + 1.0)));
+	float const width(min(0.012f, 0.1f*(DX_VAL + DY_VAL)*(sqrt((float)vol_over) + 1.0f)));
 	float const v_splash(min(10.0f, (float)vol_over));
 	int const xs(nov ? -1 : valleys[index].x), ys(nov ? -1 : valleys[index].y);
 	int count(0);
@@ -1274,7 +1274,7 @@ void float_downstream(point &pos, float radius) {
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos) || wminside[ypos][xpos] != 1) return; // not in an inside pool
 	if (!mesh_is_underwater(xpos, ypos)) return; // no longer floating?
-	if ((pos.z - radius) < (mesh_height[ypos][xpos] + 0.5*radius))   return; // too close to the bottom of the pool
+	if ((pos.z - radius) < (mesh_height[ypos][xpos] + 0.5f*radius))   return; // too close to the bottom of the pool
 	int const wsi(watershed_matrix[ypos][xpos].wsi);
 	assert(size_t(wsi) < valleys.size());
 	valley::spill_func const &sf(valleys[wsi].sf);
@@ -1282,7 +1282,7 @@ void float_downstream(point &pos, float radius) {
 	point const spill_pt(get_xval(sf.sj), get_yval(sf.si), pos.z);
 	float const dist(p2p_dist(pos, spill_pt));
 	if (dist < SMALL_NUMBER) return; // avoid divide-by-zeros
-	float const vel(5.0E-5*valleys[wsi].spill_integral/(DX_VAL + DY_VAL + dist));
+	float const vel(5.0E-5f*valleys[wsi].spill_integral/(DX_VAL + DY_VAL + dist));
 	pos += (spill_pt - pos)*(min(0.005f, vel)/dist);
 }
 

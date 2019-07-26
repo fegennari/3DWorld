@@ -352,7 +352,7 @@ void add_static_material_object(cobj_params &cp, sphere_mat_t const &mat, point 
 bool throw_sphere(bool mode) {
 
 	static double prev_fticks(0.0);
-	if ((tfticks - prev_fticks) < sphere_mat_fire_delay*TICKS_PER_SECOND) return 0; // 20 ticks = 0.5s fire delay
+	if ((tfticks - prev_fticks) < sphere_mat_fire_delay*double(TICKS_PER_SECOND)) return 0; // 20 ticks = 0.5s fire delay
 	prev_fticks = tfticks;
 
 	if (max_num_mat_spheres == 0) return 0;

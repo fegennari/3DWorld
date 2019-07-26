@@ -2043,7 +2043,6 @@ void lightning_strike_t::end_draw() const {
 
 
 tile_draw_t::tile_draw_t() : buildings_valid(0), tiles_gen_prev_frame(0), terrain_zmin(0.0), lod_renderer(USE_TREE_BILLBOARDS) {
-	for (unsigned i = 0; i <= NUM_LODS; ++i) {ivbo_ixs[i] = 0;}
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 

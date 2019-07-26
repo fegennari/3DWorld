@@ -614,10 +614,11 @@ void texture_t::set_to_color(colorRGBA const &c) {
 		build_mipmaps();
 		return;
 	}
+	assert(ncolors == 3 || ncolors == 4);
 	color_wrapper c4;
 	c4.set_c4(c);
 	unsigned const size(num_pixels());
-	float const cw_scale(1.0/(float(c4.c[0]) + float(c4.c[1]) + float(c4.c[2])));
+	float const cw_scale(1.0f/(float(c4.c[0]) + float(c4.c[1]) + float(c4.c[2])));
 	if (colored_data == NULL) colored_data = new unsigned char[num_bytes()];
 	if (orig_data    == NULL) orig_data    = data; // make a copy
 	data = colored_data;
@@ -629,7 +630,7 @@ void texture_t::set_to_color(colorRGBA const &c) {
 		float const cscale(min(1.0f, (unsigned(d[0]) + unsigned(d[1]) + unsigned(d[2]))*cw_scale));
 		
 		for (int n = 0; n < ncolors; ++n) {
-			d[n] = (unsigned char)min(255.0, (0.5*cscale*c4.c[n] + 0.5*orig_data[pos+n]));
+			d[n] = (unsigned char)min(255.0f, (0.5f*cscale*c4.c[n] + 0.5f*orig_data[pos+n]));
 		}
 	}
 	free_mm_data();
@@ -692,7 +693,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 				}
 				else if (alpha_white) {
 					float const thresh((index == PLANT4_TEX) ? 660 : 600.0);
-					alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
+					alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55f*(thresh - val))));
 				}
 				else {
 					alpha = ((val < ((index == PINE_TEX || index == PINE_TREE_TEX) ? 65 : 32)) ? 0 : 255);
@@ -860,7 +861,7 @@ void texture_t::make_normal_map() {
 				        ((int)data[x+yp1*width] - (int)data[x+ym1*width])*max_delta_inv, 1.0);
 			n.normalize();
 			if (invert_bump_maps) {n.x = -n.x; n.y = -n.y;}
-			UNROLL_3X(new_data[off+i_] = (unsigned char)(127.5*(n[i_]+1.0)););
+			UNROLL_3X(new_data[off+i_] = (unsigned char)(127.5f*(n[i_]+1.0)););
 		}
 	}
 	free_data();
@@ -1418,7 +1419,7 @@ void create_landscape_texture() {
 			else {
 				if (tids[ypos][xpos] < 0) {
 					float const mh00(mesh_height[ypos][xpos]), mh01(mesh_height[ypos][xpos1]), mh10(mesh_height[ypos1][xpos]), mh11(mesh_height[ypos1][xpos1]);
-					float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
+					float const mh((1.0f - xpi)*((1.0f - ypi)*mh00 + ypi*mh10) + xpi*((1.0f - ypi)*mh01 + ypi*mh11));
 					float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 					get_tids(relh, k1, k2, &t);
 					if (k1 != k2) assert(k2 == k1+1 || vegetation == 0.0);
@@ -1450,7 +1451,7 @@ void create_landscape_texture() {
 			float const vnz00(vertex_normals[ypos][xpos].z);
 			if (vnz00 > sti[1]+0.1) continue; // not steep enough
 			float const vnz01(vertex_normals[ypos][xpos1].z), vnz10(vertex_normals[ypos1][xpos].z), vnz11(vertex_normals[ypos1][xpos1].z);
-			float const vnz((1.0 - xpi)*((1.0 - ypi)*vnz00 + ypi*vnz10) + xpi*((1.0 - ypi)*vnz01 + ypi*vnz11));
+			float const vnz((1.0f - xpi)*((1.0f - ypi)*vnz00 + ypi*vnz10) + xpi*((1.0f - ypi)*vnz01 + ypi*vnz11));
 
 			if (grass && vnz < sti[1]) { // ground/grass
 				texture_t const &ta(textures[DIRT_TEX]);
@@ -1666,7 +1667,7 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 	int const xpos(int((xval + X_SCENE_SIZE)/(((float)xscale)*DX_VAL) + 0.5));
 	int const ypos(int((yval + Y_SCENE_SIZE)/(((float)yscale)*DY_VAL) + 0.5));
 	if (xpos < 0 || ypos < 0 || xpos >= tex.width || ypos >= tex.height) return;
-	int const rad(max(0, int(5.0*radius/((xscale + yscale)*(DX_VAL + DY_VAL))) - 1)), rad_sq(max(1, rad*rad)); // size in texture space
+	int const rad(max(0, int(5.0f*radius/((xscale + yscale)*(DX_VAL + DY_VAL))) - 1)), rad_sq(max(1, rad*rad)); // size in texture space
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad)), x2(min(tex.width-1, xpos+rad)), y2(min(tex.height-1, ypos+rad));
 	float const blend_scale(1.0/float(rad_sq));
 	unsigned char color_i[3];
@@ -1680,7 +1681,7 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 
 			if (dist_sq < rad_sq) {
 				assert(offset + j <= tsize);
-				float const blend(0.8*color.alpha*(1.0 - float(dist_sq)*blend_scale));
+				float const blend(0.8f*color.alpha*(1.0f - float(dist_sq)*blend_scale));
 				int const o2(3*(offset + j));
 				assert(o2 + 3 <= maxsize);
 				BLEND_COLOR((tex_data + o2), color_i, (tex_data + o2), blend); // test if this texel is enabled for draw?
@@ -1724,7 +1725,7 @@ void add_snow_to_landscape_texture(point const &pos, float acc) {
 				continue;
 			}
 			// somewhat white
-			float const mult((frad - (float)dist)*inv_frad), acc255s(acc255*mult), omacc(1.0 - acc*mult);
+			float const mult((frad - (float)dist)*inv_frad), acc255s(acc255*mult), omacc(1.0f - acc*mult);
 			UNROLL_3X(tex_data[offset+i_] = (unsigned char)min(255, int(tex_data[offset+i_]*omacc + acc255s));)
 		}
 	}
@@ -1777,7 +1778,7 @@ int snow_height(point pos) {
 
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 0;
-	double const relh(relh_adj_tex + (mesh_height[ypos][xpos] - zmin)/(zmax - zmin));
+	float const relh(relh_adj_tex + (mesh_height[ypos][xpos] - zmin)/(zmax - zmin));
 	return (relh > h_dirt[3]);
 }
 
@@ -1927,8 +1928,8 @@ vector2d get_billboard_texture_uv(point const *const points, point const &pos) {
 		unsigned const in((i+1)&3);
 		d[i] = cross_product((pos - points[i]), (pos - points[in])).mag()/p2p_dist(points[i], points[in]);
 	}
-	assert(d[0] + d[2] > 0.0);
-	assert(d[1] + d[3] > 0.0);
+	assert(d[0] + d[2] > 0.0f);
+	assert(d[1] + d[3] > 0.0f);
 	vector2d uv(d[0]/(d[0] + d[2]), d[1]/(d[1] + d[3])); // y is upside down
 	uv.x = CLIP_TO_01(uv.x); uv.y = CLIP_TO_01(uv.y); // clamp uv to account for fp rounding errors (and incorrect pos?)
 	//assert(uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0); // more restrictive case

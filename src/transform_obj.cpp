@@ -260,7 +260,7 @@ void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0) { // ap
 	vector3d const vd(obj.velocity, v0);
 	float const vthresh(base_gravity*GRAVITY*tstep*object_types[obj.type].gravity), vd_mag(vd.mag());
 
-	if (vd_mag > max(2.0f*vthresh, 12.0f/fticks) && (fabs(v0.x) + fabs(v0.y)) > 0.01) { // what about when it hits the ground/mesh?
+	if (vd_mag > max(2.0f*vthresh, 12.0f/fticks) && (fabs(v0.x) + fabs(v0.y)) > 0.01f) { // what about when it hits the ground/mesh?
 		float const deform_mag(SQRT3*deform*min(1.0, 0.05*vd_mag));
 		UNROLL_3X(obj.vdeform[i_] -= fabs(norm[i_])*deform_mag;)
 		obj.vdeform *= SQRT3/obj.vdeform.mag(); // normalize the volume

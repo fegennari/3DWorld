@@ -242,15 +242,15 @@ void ComputeEigenVectors(TextureDataFloat const &input, vec3 eigenVectors[3])
 	
 	// Covariance matrix
 	double covarMat[3][3];
-	covarMat[0][0] = RR - R*R;
-	covarMat[0][1] = RG - R*G;
-	covarMat[0][2] = RB - R*B;
-	covarMat[1][0] = RG - R*G;
-	covarMat[1][1] = GG - G*G;
-	covarMat[1][2] = GB - G*B;
-	covarMat[2][0] = RB - R*B;
-	covarMat[2][1] = GB - G*B;
-	covarMat[2][2] = BB - B*B;
+	covarMat[0][0] = RR - (double)R*R;
+	covarMat[0][1] = RG - (double)R*G;
+	covarMat[0][2] = RB - (double)R*B;
+	covarMat[1][0] = RG - (double)R*G;
+	covarMat[1][1] = GG - (double)G*G;
+	covarMat[1][2] = GB - (double)G*B;
+	covarMat[2][0] = RB - (double)R*B;
+	covarMat[2][1] = GB - (double)G*B;
+	covarMat[2][2] = BB - (double)B*B;
 
 	// Find eigen values and vectors using Jacobi algorithm
 	double eigenVectorsTemp[3][3];

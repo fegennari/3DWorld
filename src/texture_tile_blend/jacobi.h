@@ -72,7 +72,7 @@ int ComputeEigenValuesAndVectors(double A[3][3], double Q[3][3], double w[3])
 			return 0;
 
 		if (nIter < 4)
-			thresh = 0.2 * so / (n * n);
+			thresh = 0.2 * so / (double(n) * n);
 		else
 			thresh = 0.0;
 

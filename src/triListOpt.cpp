@@ -300,7 +300,7 @@ namespace TriListOpt
 		}
 
 		// NULL out the pointer to the next entry on the last valid entry
-		last->next = NULL;
+		if (last) {last->next = NULL;}
 
 		// If next != NULL, than we need to prune entries from the tail of the cache
 		while(next != NULL)

@@ -86,8 +86,8 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 
 	if (!is_directional()) return 1.0;
 	float const dp(dot_product(obj_dir, dir));
-	if (dp >= 0.0 && (bwidth + LT_DIR_FALLOFF) < 0.5) return 0.0;
-	float const dp_norm(0.5*(-dp*InvSqrt(obj_dir.mag_sq()) + 1.0)); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
+	if (dp >= 0.0f && (bwidth + LT_DIR_FALLOFF) < 0.5f) return 0.0;
+	float const dp_norm(0.5f*(-dp*InvSqrt(obj_dir.mag_sq()) + 1.0f)); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
 	return CLIP_TO_01(2.0f*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0f)*LT_DIR_FALLOFF_INV);
 }
 
@@ -128,8 +128,8 @@ void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, 
 }
 
 float light_source::calc_cylin_end_radius() const {
-	float const d(1.0 - 2.0*(bwidth + LT_DIR_FALLOFF));
-	return radius*sqrt(1.0/(d*d) - 1.0);
+	float const d(1.0f - 2.0f*(bwidth + LT_DIR_FALLOFF));
+	return radius*sqrt(1.0f/(d*d) - 1.0f);
 }
 cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_scene_bcube) const {
 
@@ -221,8 +221,8 @@ bool light_source::is_visible() const {
 			while (1) {
 				if (cur_dir >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
 				ray_dir = dirs[cur_dir++];
-				if ((bwidth + LT_DIR_FALLOFF) < 0.5 && dot_product(ray_dir, dir) < 0.0) {ray_dir = -ray_dir;} // backwards
-				if (get_dir_intensity(-ray_dir) > 0.0) break;
+				if ((bwidth + LT_DIR_FALLOFF) < 0.5f && dot_product(ray_dir, dir) < 0.0f) {ray_dir = -ray_dir;} // backwards
+				if (get_dir_intensity(-ray_dir) > 0.0f) break;
 			}
 		}
 		else { // randomly spaced around the unit sphere
@@ -305,7 +305,7 @@ void light_source::pack_to_floatv(float *data) const {
 		assert(dl_smap_enabled);
 		// the smap index is stored as a float in [0,1] and converted to an 8-bit int by multiplying by 255;
 		// the int contains 7 index bits for up to 127 shadow maps + the 8th bit stores is_cube_face
-		*(data++) = float(smap_index + (is_cube_face ? 128 : 0))/255.0;
+		*(data++) = float(smap_index + (is_cube_face ? 128 : 0))/255.0f;
 	}
 }
 

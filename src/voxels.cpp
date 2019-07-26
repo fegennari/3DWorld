@@ -128,7 +128,7 @@ template<> void voxel_grid<float>::init_from_heightmap(float **height, unsigned 
 	}
 	assert(mzmin < mzmax); // can't be completely flat
 	value_type const under_mesh_val(invert ? 1.0 : -1.0), over_mesh_val(1.0 - under_mesh_val);
-	point const mesh_center(0.0, 0.0, 0.5*(mzmin + mzmax));
+	point const mesh_center(0.0, 0.0, 0.5f*(mzmin + mzmax));
 	vector3d const voxel_sz(mesh_xsize/mesh_nx, mesh_ysize/mesh_ny, (mzmax - mzmin)/zsteps);
 	init(mesh_nx, mesh_ny, zsteps, voxel_sz, mesh_center, over_mesh_val, num_blocks); // init with air
 
@@ -408,7 +408,7 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 			float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx)); // 0 at edges, 1 at center
 
 			for (unsigned z = 0; z < nz; ++z) {
-				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25 - vx*vy*vz);
+				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25f - vx*vy*vz);
 				if (v > 0.0) get_ref(x, y, z) += 8.0*val*v;
 			}
 		}
@@ -468,7 +468,7 @@ void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_in
 				float adj(0.0);
 				
 				if (radius > inner_radius) {
-					adj = (radius - inner_radius)/(1.0 - inner_radius);
+					adj = (radius - inner_radius)/(1.0f - inner_radius);
 				}
 				else if (atten_inner) {
 					adj = (radius - inner_radius)/inner_radius;
@@ -697,7 +697,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool postproc_brush
 		// however, this could only happen for low framerates anyway
 		int const levels_to_drop(min(int(levels_per_sec*elapsed_time), 1)); // take floor, max is 1
 		if (levels_to_drop < 1) return; // don't drop yet
-		time_at_drop += (levels_to_drop/levels_per_sec)*TICKS_PER_SECOND; // advance levels_to_drop timesteps
+		time_at_drop += float((levels_to_drop/levels_per_sec)*TICKS_PER_SECOND); // advance levels_to_drop timesteps
 		assert(time_at_drop <= tfticks);
 
 		for (vector<pt_ix_t>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
@@ -1864,7 +1864,7 @@ void setup_voxel_landscape(voxel_params_t const &params, float default_val) {
 	float const xsz((2.0*(1.0 - 0.05/MESH_X_SIZE)*X_SCENE_SIZE - DX_VAL)/(nx-1));
 	float const ysz((2.0*(1.0 - 0.05/MESH_Y_SIZE)*Y_SCENE_SIZE - DY_VAL)/(ny-1));
 	vector3d const vsz(xsz, ysz, (zhi - zlo)/nz);
-	point const center(-0.5*DX_VAL, -0.5*DY_VAL, 0.5*(zlo + zhi));
+	point const center(-0.5f*DX_VAL, -0.5f*DY_VAL, 0.5f*(zlo + zhi));
 	terrain_voxel_model.clear();
 	terrain_voxel_model.set_params(params);
 	terrain_voxel_model.init(nx, ny, nz, vsz, center, default_val, params.num_blocks);
@@ -1900,8 +1900,8 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 	}
 	if (!has_voxel_cobjs) return 0; // nothing to do
 	voxel_params_t params(global_voxel_params);
-	params.ao_atten_power = 0.7; // user-specified?
-	params.ao_radius      = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE);
+	params.ao_atten_power = 0.7f; // user-specified?
+	params.ao_radius      = 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE);
 	setup_voxel_landscape(params, -1.0);
 	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
 	PRINT_TIME(" Cobjs Voxel Gen");

@@ -220,7 +220,7 @@ class waypoint_builder {
 
 	void add_waypoint_rect(float x1, float y1, float x2, float y2, float z, int coll_id, bool connect) {
 		if (min(x2-x1, y2-y1) < size_thresh) return; // too small to stand on
-		point const center(0.5*(x1+x2), 0.5*(y1+y2), z+radius);
+		point const center(0.5f*(x1+x2), 0.5f*(y1+y2), z+radius);
 		add_if_valid(center, coll_id, connect);
 		// try more points if a large rectangle?
 	}
@@ -428,7 +428,7 @@ public:
 		unsigned to_end, bool verbose, bool fast)
 	{
 		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
-		float const fast_dmax(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		float const fast_dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		for (int i = from_start; i < (int)from_end; ++i) {waypoints[i].next_valid = 0;}
 		vector<pair<float, unsigned> > cands;
 
@@ -481,7 +481,7 @@ public:
 					for (unsigned m = 0; m < next_next.size() && !redundant; ++m) {
 						assert(next_next[m] < waypoints.size());
 						point const &wm(waypoints[next_next[m]].pos);
-						redundant = (next_next[m] == k && (p2p_dist(start, wl) + p2p_dist(wl, wm) < 1.02*p2p_dist(start, wm)));
+						redundant = (next_next[m] == k && (p2p_dist(start, wl) + p2p_dist(wl, wm) < 1.02f*p2p_dist(start, wm)));
 					}
 				}
 				if (redundant) continue;

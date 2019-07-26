@@ -18,7 +18,7 @@ protected:
 	string name; // unused?
 
 	struct face_t {
-		unsigned short ix[3], flags;
+		unsigned short ix[3] = {0}, flags;
 		int mat;
 		face_t() : flags(0), mat(-1) {}
 	};
