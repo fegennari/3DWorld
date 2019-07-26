@@ -1914,7 +1914,7 @@ colorRGBA get_texture_color(unsigned tid, float u, float v) {
 void texture_t::write_pixel_16_bits(unsigned ix, float val) { // Note: no error checking
 	unsigned char const high_bits(val); // high bits - truncate
 	data[(ix<<1)+1] = high_bits;
-	data[ix<<1]     = (unsigned char)(256.0*(val - float(high_bits))); // low bits - remainder
+	data[ix<<1]     = (unsigned char)(256.0f*(val - float(high_bits))); // low bits - remainder
 }
 
 

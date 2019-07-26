@@ -697,7 +697,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool postproc_brush
 		// however, this could only happen for low framerates anyway
 		int const levels_to_drop(min(int(levels_per_sec*elapsed_time), 1)); // take floor, max is 1
 		if (levels_to_drop < 1) return; // don't drop yet
-		time_at_drop += float((levels_to_drop/levels_per_sec)*TICKS_PER_SECOND); // advance levels_to_drop timesteps
+		time_at_drop += (float(levels_to_drop)/levels_per_sec)*float(TICKS_PER_SECOND); // advance levels_to_drop timesteps
 		assert(time_at_drop <= tfticks);
 
 		for (vector<pt_ix_t>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
