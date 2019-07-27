@@ -98,6 +98,7 @@ struct ellipsoid_t {
 
 	float xy_angle;
 	vector3d scale, axis;
+	ellipsoid_t() : xy_angle(0.0f) {}
 };
 
 

@@ -21,7 +21,7 @@ class vert_optimizer {
 	template<unsigned N> struct vert_block_t {
 		unsigned v[N];
 
-		unsigned min_ix() const {return min(min(v[0], v[1]), ((N == 3) ? v[2] : min(v[2], v[3])));}
+		unsigned min_ix() const {assert(N == 3 || N == 4); return min(min(v[0], v[1]), ((N == 3) ? v[2] : min(v[2], v[3])));}
 		bool operator<(vert_block_t<N> const &b) const {return (min_ix() < b.min_ix());}
 		
 		static void sort_by_min_ix(vector<unsigned> &ixs) {

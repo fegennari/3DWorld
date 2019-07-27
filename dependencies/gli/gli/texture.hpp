@@ -214,7 +214,7 @@ namespace gli
 				DEFAULT
 			};
 
-			explicit cache(ctor)
+			explicit cache(ctor) : Faces(0), Levels(0), GlobalMemorySize(0)
 			{}
 
 			cache
