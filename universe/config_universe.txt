@@ -1,5 +1,5 @@
 verbose 0
-rand_seed 0
+rand_seed 0 # for global random number generator
 universe_only 1
 disable_universe 0
 enable_depth_clamp 1
@@ -13,7 +13,7 @@ use_core_context 0
 universe_ambient_scale 0.5 # smaller is more physically correct, but makes ships and planets difficult to see from the unlit side
 planet_update_rate 1.0
 system_max_orbit 1.0 # values > 1.0 will produce elliptical orbits
-rgen_seed 21 # 1 is also good
+rgen_seed 21 # for universe generation; 1 is also good
 include config_resolution.txt
 ship_def_file universe/ship_defs_fight.txt
 #ship_def_file universe/ship_defs_assault.txt
