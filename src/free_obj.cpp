@@ -106,17 +106,11 @@ void free_obj::check_ref_objs() {
 		{
 			target_obj = target_obj->parent; // now go after the ship's parent
 		}
-		else {
-			target_obj = NULL;
-		}
+		else {target_obj = NULL;}
 	}
 	while (parent != NULL && parent->invalid()) { // find a valid parent/ancestor to be our new parent
-		if (is_ship()) {
-			parent = parent->parent; // take orders from parent's parent now, can't add to new parent's fighter list
-		}
-		else {
-			parent = NULL;
-		}
+		if (is_ship()) {parent = parent->parent;} // take orders from parent's parent now, can't add to new parent's fighter list
+		else {parent = NULL;}
 	}
 	if (VERIFY_REFS) {
 		assert(!target_obj || (!target_obj->invalid() && !target_obj->to_be_removed()));
@@ -1041,7 +1035,7 @@ void us_projectile::ai_action() {
 		missile_lock = 1;
 	}
 	else {
-		if (target_obj != NULL && target_dist > 2.0*max_dist) target_obj = NULL; // too far - loose target
+		if (target_obj != NULL && target_dist > 2.0*max_dist) {target_obj = NULL;} // too far - loose target
 		
 		if (target_obj == NULL || (!target_obj->is_decoy() && time > (tup_time + SEEK_CTIME)) || target_dist > max_dist) { // execute seeking code
 			float seek_dist(max_dist);

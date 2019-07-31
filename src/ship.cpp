@@ -997,12 +997,8 @@ void draw_univ_objects() {
 		else if (univ_sphere_vis(co.pos, max_radius)) { // Note: VFC must be conservative, so use larger radius
 			// make static objects (such as asteroids) have a large distance so that they're drawn first;
 			// this is okay as they should be opaque, and will make good occluders
-			if (co.flags & OBJ_FLAGS_STAT) { // add other cases (sphere/tri particles, etc.)?
-				unsorted.push_back(co.obj);
-			}
-			else {
-				sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));
-			}
+			if (co.flags & OBJ_FLAGS_STAT) {unsorted.push_back(co.obj);} // add other cases (sphere/tri particles, etc.)?
+			else {sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));}
 			draw_obj = 1;
 		}
 		if (!draw_obj && co.obj->has_lights()) {co.obj->reset_lights();} // reset for next frame

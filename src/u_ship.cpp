@@ -479,12 +479,8 @@ void u_ship::acquire_target(float min_dist) {
 				find_closest = (target_obj == NULL);
 				break;
 			case TARGET_PARENT:
-				if (parent != NULL && target_valid(parent->get_target()) && !parent->get_target()->is_invisible()) {
-					target_obj = parent->get_target();
-				}
-				else {
-					find_closest = 1;
-				}
+				if (parent != NULL && target_valid(parent->get_target()) && !parent->get_target()->is_invisible()) {target_obj = parent->get_target();}
+				else {find_closest = 1;}
 				break;
 			default:
 				assert(0);
@@ -497,13 +493,13 @@ void u_ship::acquire_target(float min_dist) {
 					if (alignment == ALIGN_NEUTRAL && ai_base_type == AI_ATT_ENEMY && (rand() % NEUT_CHASE_T) == 0) {
 						target_obj = NULL; // give up the chase after awhile
 					}
-					if (tdist > 2.0*search_dist) target_obj = NULL; // (tdist < min_dist) is ignored for now, out of range
+					if (tdist > 2.0*search_dist) {target_obj = NULL;} // (tdist < min_dist) is ignored for now, out of range
 				}
 				float eff_search_dist(search_dist);
 				if (has_dest) eff_search_dist = min(search_dist, p2p_dist(pos, dest_mgr.get_pos()));
 				if (target_obj != NULL && tdist >= min_dist) eff_search_dist = min(search_dist, 0.8f*tdist);
 				new_target_obj = find_closest_target(pos, min_dist, eff_search_dist, 0);
-				if (new_target_obj == NULL) new_target_obj = target_obj; // keep the same target
+				if (new_target_obj == NULL) {new_target_obj = target_obj;} // keep the same target
 
 				if (new_target_obj == NULL && alignment != ALIGN_NEUTRAL) { // no target, choose to attack same target as teammates
 					assert(alignment < a_targets.size());
@@ -1617,12 +1613,8 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 					}
 					if (fobj != NULL && !fobj->invalid()) { // can query projectiles for now
 						string msg;
-						if (target) {
-							msg = string("Target Acquired: ") + fobj->get_name();
-						}
-						else {
-							msg = fobj->get_name() + "\n" + fobj->get_info() + "  Dist: " + make_string(li_data.dist);
-						}
+						if (target) {msg = string("Target Acquired: ") + fobj->get_name();}
+						else {msg = fobj->get_name() + "\n" + fobj->get_info() + "  Dist: " + make_string(li_data.dist);}
 						print_text_onscreen(msg, PURPLE, 0.5, TICKS_PER_SECOND, 1);
 
 						if (target && fobj->is_target() && target_valid(fobj)) {
