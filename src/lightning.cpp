@@ -9,12 +9,12 @@
 #include "physics_objects.h" // for lightning_t
 
 
-int    const FORK_PROB            = 50;
+int    const FORK_PROB            = 50; // for 64 z stacks
 float  const FORK_ATTEN           = 0.8;
 float  const BASE_L_STRENGTH_MULT = 150.0;
 float  const BASE_L_DAMAGE_MULT   = 80.0;
 int    const L_FORK_END_PARAM     = 20;
-float  const LIGHTNING_FREQ       = 100.0;
+float  const LIGHTNING_PERIOD     = 100.0; // average time between strikes in ticks
 int    const DISCHARGE_RAD        = 20;
 double const CHARGE_HALF_D        = 5.0;
 float  const EVAP_AMOUNT          = 10.0;
@@ -35,7 +35,6 @@ extern vector<valley> valleys;
 void do_lightning_damage(point &pos, float damage, int hit_water);
 
 
-
 inline float get_lit_h(int xpos, int ypos) {
 
 	float h(h_collision_matrix[ypos][xpos]);
@@ -45,7 +44,6 @@ inline float get_lit_h(int xpos, int ypos) {
 
 
 void compute_volume_matrix() {
-
 	vmatrix_valid = 0; // just mark it as invalid
 }
 
@@ -64,10 +62,7 @@ void compute_volume_matrix_if_invalid() {
 	}
 	for (int i = 0; i < MESH_Y_SIZE; ++i) { // compute lightning strike heights
 		int const yoff(i*MESH_X_SIZE);
-		
-		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			lh[yoff + j] = get_lit_h(j, i);
-		}
+		for (int j = 0; j < MESH_X_SIZE; ++j) {lh[yoff + j] = get_lit_h(j, i);}
 	}
 	for (int i = 1; i < MESH_Z_SIZE; ++i) { // calculate volume matrix shortest paths
 		for (int j = 0; j < MESH_Y_SIZE; ++j) {
@@ -106,18 +101,16 @@ void lightning_t::gen() {
 		draw();
 		return;
 	}
-	int const rnum(int(fticks*LIGHTNING_FREQ));
+	int const rnum(int(LIGHTNING_PERIOD/fticks));
 
 	if (rnum <= 1 || (rand()%rnum) != 0) {
 		if (enabled == 1) {
-			if (time < int(fticks*((float)LITNING_TIME))) {
+			if (time < int(0.1f*LITNING_TIME/fticks)) {
 				draw();
 				if (!animate2) return;
 				time += iticks;
 			}
-			else {
-				enabled = 0;
-			}
+			else {enabled = 0;}
 		}
 		return;
 	}
@@ -155,9 +148,7 @@ void lightning_t::gen() {
 	float const d_charge(charge/XY_MULT_SIZE);
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) { // redistribute charge
-		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			charge_dist[i][j] += d_charge;
-		}
+		for (int j = 0; j < MESH_X_SIZE; ++j) {charge_dist[i][j] += d_charge;}
 	}
 	enabled = 1;
 	cells_seen.clear();
