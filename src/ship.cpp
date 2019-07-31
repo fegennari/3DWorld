@@ -937,7 +937,7 @@ void setup_ship_draw_shader(shader_t &s) {
 }
 
 
-void disable_exp_lights(shader_t *s=NULL) {
+void disable_exp_lights(shader_t *s) {
 
 	for (unsigned i = 0; i < NUM_EXP_LIGHTS; ++i) {
 		enable_light(EXPLOSION_LIGHT + i); // enable it first to force updating of shader uniforms if it was left disabled but not black
@@ -1036,7 +1036,7 @@ void draw_univ_objects() {
 	for (auto i = sorted.begin();   i != sorted.end();   ++i) {i->second->draw_and_reset_lights(s, upc_shader);}
 	emissive_shader.end_shader();
 	upc_shader.end_shader(); // leaves program==0
-	disable_exp_lights(); // make sure the explosion lights end cleared
+	disable_exp_lights(nullptr); // make sure the explosion lights end cleared
 	enable_blend(); // redundant?
 
 	if (!particle_pld.empty()) {
