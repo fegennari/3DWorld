@@ -355,6 +355,7 @@ void set_player_pos(point const &pos_)    {player_ship().set_pos(pos_);}
 void set_player_dir(vector3d const &dir_) {player_ship().set_dir(dir_);}
 void set_player_up(vector3d const &upv_)  {player_ship().set_upv(upv_);}
 void stop_player_ship()                   {player_ship().set_vel(zero_vector);}
+void set_player_target(free_obj const *target) {player_ship().set_target(target);}
 
 
 void change_speed_mode(int val) {
@@ -399,6 +400,25 @@ void toggle_hold_fighters() {
 
 void toggle_autopilot() {
 	player_autopilot = !player_autopilot;
+}
+
+void auto_target_player_closest_enemy() {
+
+	free_obj const *target(nullptr);
+	u_ship const *const player(&player_ship());
+	point const player_pos(player->get_pos());
+	float dmin_sq(0.0);
+	
+	for (unsigned i = 0; i < all_ships.size(); ++i) {
+		free_obj const *const obj(all_ships[i].obj);
+		assert(obj != nullptr);
+		if (!obj->is_hostile_to(player)) continue;
+		float const dist_sq(p2p_dist_sq(obj->get_pos(), player_pos));
+		if (dmin_sq == 0.0 || dist_sq < dmin_sq) {dmin_sq = dist_sq; target = obj;}
+	}
+	if (target == nullptr) return; // no targets found
+	print_text_onscreen((string("Target Acquired: ") + target->get_name()), PURPLE, 0.5, TICKS_PER_SECOND, 1);
+	set_player_target(target);
 }
 
 

@@ -739,6 +739,7 @@ public:
 	void move_reset_by(point const &pos_) {reset_pos   += pos_;}
 	void add_mass(float const m)          {extra_mass  += m; assert(extra_mass >= 0.0);} // can this be negative?
 	virtual void add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh);
+	void set_target(free_obj const *target) {target_obj = target;} // overwrites previous value
 
 	vector3d const &get_velocity() const {return velocity;}
 	vector3d const &get_dir()      const {return dir;}
@@ -859,6 +860,7 @@ public:
 	virtual string get_name()   const = 0;
 	virtual string get_info()   const {return "";}
 	virtual bool rename(std::string const &name_) {return 0;} // do nothing
+	virtual bool is_hostile_to(free_obj const *obj) const {return (target_obj == obj || (parent != nullptr && parent == obj));}
 	
 	// assumes a spherical object, and line/sphere or sphere/sphere intersect has already been tested before these are called
 	virtual bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const {return 1;}
@@ -1370,6 +1372,7 @@ public:
 private:
 	bool out_of_ammo(bool current_only) const {return out_of_ammo_for(curr_weapon, current_only);}
 	bool is_enemy(free_obj const *obj) const;
+	bool is_hostile_to(free_obj const *obj) const;
 	float get_min_att_dist() const;
 }; // end u_ship
 

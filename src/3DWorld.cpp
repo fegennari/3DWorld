@@ -1040,9 +1040,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (mesh_seed != 0 || read_heightmap) break;
 		if (world_mode != WMODE_UNIVERSE) {change_terrain_zoom(2.0);}
 		break;
-	case 'Y': // decrease terrain zoom
-		if (mesh_seed != 0 || read_heightmap) break;
-		if (world_mode != WMODE_UNIVERSE) {change_terrain_zoom(0.5);}
+	case 'Y': // decrease terrain zoom / select closest target ship
+		if (world_mode == WMODE_UNIVERSE) {auto_target_player_closest_enemy();}
+		else if (!(mesh_seed != 0 || read_heightmap)) {change_terrain_zoom(0.5);}
 		break;
 
 	// object enables

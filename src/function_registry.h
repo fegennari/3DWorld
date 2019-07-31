@@ -786,6 +786,7 @@ void set_player_pos(point const &pos_);
 void set_player_dir(vector3d const &dir_);
 void set_player_up(vector3d const &upv_);
 void stop_player_ship();
+void auto_target_player_closest_enemy();
 void init_universe_display();
 void set_univ_pdu();
 void setup_current_system(float sun_intensity=1.0);

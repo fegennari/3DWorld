@@ -2218,6 +2218,10 @@ inline bool u_ship::is_enemy(free_obj const *obj) const {
 	return (alignment != oal);
 }
 
+bool u_ship::is_hostile_to(free_obj const *obj) const {
+	return (free_obj::is_hostile_to(obj) || is_enemy(obj));
+}
+
 
 void u_ship::get_fighter_target(u_ship const *ship) { // recursive
 
