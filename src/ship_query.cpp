@@ -456,23 +456,21 @@ free_obj *free_obj::get_closest_ship(point const &pos, float min_dist, float max
 		case ALIGN_NEUTRAL:
 			return NULL; // no enemies
 		case ALIGN_GOV:
-			if (!enemy) testset[alignment] = 1; // friend
+			if (!enemy) {testset[alignment] = 1;} // friend
 			break;
 		case ALIGN_PIRATE:
 			if (!enemy) break; // no friends
-			for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) testset[i] = 1; // all enemies
+			for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {testset[i] = 1;} // all enemies
 			break;
 		case ALIGN_PLAYER:
 			if (enemy && !player_enemy) break; // no enemies
 		default: // ALIGN_RED, ALIGN_BLUE, etc.
 			if (enemy) {
 				for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
-					if (TEAM_ALIGNED(i) && i != alignment) testset[i] = 1;
+					if (TEAM_ALIGNED(i) && i != alignment) {testset[i] = 1;}
 				}
 			}
-			else {
-				testset[alignment] = 1;
-			}
+			else {testset[alignment] = 1;}
 		}
 		for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 			if (!testset[i]) continue;

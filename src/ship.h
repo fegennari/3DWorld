@@ -866,7 +866,7 @@ public:
 	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=def_int_params) const;
 	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=def_int_params) const;
 	virtual bool sphere_intersection(point const &c, float r) const {return sphere_int_obj(c, r);} // inherited from uobject
-};
+}; // end free_obj
 
 
 class stationary_obj : public free_obj { // a free_obj that doesn't actually move?
@@ -1371,7 +1371,7 @@ private:
 	bool out_of_ammo(bool current_only) const {return out_of_ammo_for(curr_weapon, current_only);}
 	bool is_enemy(free_obj const *obj) const;
 	float get_min_att_dist() const;
-};
+}; // end u_ship
 
 
 class orbiting_ship : public u_ship { // planetary defense, defense sat, antimiss drone

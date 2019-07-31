@@ -368,15 +368,11 @@ void change_speed_mode(int val) {
 	print_text_onscreen(strs[val], GREEN, 1.0, ((3*TICKS_PER_SECOND)/2));
 }
 
-
 void toggle_player_ship_stop() {
-
 	player_auto_stop = !player_auto_stop;
 }
 
-
 void change_fire_primary() {
-
 	static bool fire_primary(0);
 	fire_primary = !fire_primary;
 	string const msg(string("Fire All Primary Weapons: ") + (fire_primary ? "ON" : "OFF"));
@@ -384,32 +380,24 @@ void change_fire_primary() {
 	player_ship().set_fire_primary(fire_primary);
 }
 
-
 void reset_player_target() {
-
 	player_ship().reset_target();
 	print_text_onscreen("Target Reset", PURPLE, 0.8, TICKS_PER_SECOND);
 }
 
-
 void toggle_dock_fighters() {
-
 	dock_fighters = !dock_fighters;
 	hold_fighters = 0;
 	print_text_onscreen((dock_fighters ? "Dock Fighters: On" : "Dock Fighters: Off"), PURPLE, 0.8, TICKS_PER_SECOND);
 }
 
-
 void toggle_hold_fighters() {
-
 	hold_fighters = !hold_fighters;
 	dock_fighters = 0;
 	print_text_onscreen((hold_fighters ? "Hold Fighters: On" : "Hold Fighters: Off"), PURPLE, 0.8, TICKS_PER_SECOND);
 }
 
-
 void toggle_autopilot() {
-
 	player_autopilot = !player_autopilot;
 }
 

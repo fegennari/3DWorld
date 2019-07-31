@@ -453,11 +453,9 @@ void u_ship::acquire_target(float min_dist) {
 
 	if (!can_move() && fighters.empty()) { // if can't move, then there is no point to acquiring a target out of weapons range
 		float const weap_range(specs().get_weap_range());
-		if (weap_range > 0.0) search_dist = min(search_dist, (1.1f*weap_range + c_radius));
+		if (weap_range > 0.0) {search_dist = min(search_dist, (1.1f*weap_range + c_radius));}
 	}
-	if (target_obj != NULL && (target_obj->is_resetting() || target_obj->is_invisible() ||
-		(COMMON_TARGETS < 2 && tdist > search_dist)))
-	{
+	if (target_obj != NULL && (target_obj->is_resetting() || target_obj->is_invisible() || (COMMON_TARGETS < 2 && tdist > search_dist))) {
 		target_obj = NULL; // don't target a ship that's out of sensor range or already dead
 	}
 
@@ -486,7 +484,7 @@ void u_ship::acquire_target(float min_dist) {
 				assert(0);
 			}
 			bool const has_dest(dest_mgr.is_valid());
-			if (has_dest && (rand()&3)) find_closest = 0; // every 4th frame if already have a destination
+			if (has_dest && (rand()&3)) {find_closest = 0;} // every 4th frame if already have a destination
 			
 			if (find_closest) {
 				if (target_obj != NULL) {
@@ -496,8 +494,8 @@ void u_ship::acquire_target(float min_dist) {
 					if (tdist > 2.0*search_dist) {target_obj = NULL;} // (tdist < min_dist) is ignored for now, out of range
 				}
 				float eff_search_dist(search_dist);
-				if (has_dest) eff_search_dist = min(search_dist, p2p_dist(pos, dest_mgr.get_pos()));
-				if (target_obj != NULL && tdist >= min_dist) eff_search_dist = min(search_dist, 0.8f*tdist);
+				if (has_dest) {eff_search_dist = min(search_dist, p2p_dist(pos, dest_mgr.get_pos()));}
+				if (target_obj != NULL && tdist >= min_dist) {eff_search_dist = min(search_dist, 0.8f*tdist);}
 				new_target_obj = find_closest_target(pos, min_dist, eff_search_dist, 0);
 				if (new_target_obj == NULL) {new_target_obj = target_obj;} // keep the same target
 
@@ -533,7 +531,7 @@ void u_ship::acquire_target(float min_dist) {
 					send_warning_message(string("Enemy Ship Detected: ") + get_name());
 				}
 			}
-			if (target_obj != NULL && target_mode == TARGET_LAST) target_set = 1;
+			if (target_obj != NULL && target_mode == TARGET_LAST) {target_set = 1;}
 		}
 	}
 	if ((ai_type & AI_GUARDIAN) && target_obj != NULL && target_obj->get_align() == alignment) {
