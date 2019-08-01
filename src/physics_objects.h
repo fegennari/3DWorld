@@ -135,12 +135,13 @@ struct lightning_t { // size = 40
 	int time, enabled;
 	point start, end;
 	vector<line3d> path;
-	typedef unsigned long long cell_ix_t;
+	typedef uint64_t cell_ix_t;
 	set<cell_ix_t> cells_seen;
+	rand_gen_t rgen;
 
 	lightning_t() : time(0), enabled(-1) {}
 	void gen();
-	void gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter);
+	void gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval);
 	void draw() const;
 
 	cell_ix_t get_cell_ix(unsigned const x, unsigned const y, unsigned const z) const {
