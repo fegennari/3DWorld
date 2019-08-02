@@ -287,8 +287,10 @@ void lightning_t::gen_recur_v2(point const &start, float strength) {
 			break;
 		}
 		points.push_back(pos);
-		delta  += rgen.signed_rand_vector_spherical(0.75*step_sz); // add in random dir change
-		delta  *= step_sz*rgen.rand_uniform(0.5, 1.0)/delta.mag(); // recompute length
+		vector3d prev_delta(delta);
+		delta += rgen.signed_rand_vector_spherical(0.75*step_sz); // add in random dir change
+		delta *= step_sz*rgen.rand_uniform(0.5, 1.0)/delta.mag(); // recompute length
+		if (dot_product(prev_delta, delta) < 0.0) {delta = -delta;} // too sharp a turn, switch direction
 		delta.z = -fabs(delta.z); // must be negative
 		if (!is_over_mesh(pos + delta)) {delta.x *= -1.0; delta.y *= -1.0;} // if this delta takes us outside the mesh, invert the xy vals
 		pos += delta;
