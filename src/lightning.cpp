@@ -264,7 +264,13 @@ void lightning_t::gen_recur_v2(point const &start, float strength) {
 	for (unsigned step = 0; step < max_steps; ++step) {
 		if (step > 1 && (rgen.rand()%max(1, 3*FORK_PROB/2)) == 0) {gen_recur_v2(pos, FORK_ATTEN*strength);}
 		float depth(0.0);
-		if (is_underwater(pos, 0, &depth)) {pos.z += depth; hit_water = 1; break;} // terminate path - hit water
+		
+		if (is_underwater(pos, 0, &depth)) { // terminate path - hit water
+			pos.z += depth;
+			points.push_back(pos);
+			hit_water = 1;
+			break;
+		}
 		int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
 		if (point_outside_mesh(xpos, ypos)) { // outside mesh
@@ -272,7 +278,14 @@ void lightning_t::gen_recur_v2(point const &start, float strength) {
 			else {full_path = 0; break;} // terminate path
 		}
 		float const zval(get_lit_h(xpos, ypos));
-		if (pos.z <= zval) {pos.z = zval; break;} // terminate path - hit something
+
+		if (pos.z <= zval) { // terminate path - hit something
+			if (!points.empty() && (points.back().z - zval) > 0.5*step_sz) { // hit top of an object, add a line segment down
+				pos.z = zval;
+				points.push_back(pos);
+			} // else hit side of an object, end path here
+			break;
+		}
 		points.push_back(pos);
 		delta  += rgen.signed_rand_vector_spherical(0.75*step_sz); // add in random dir change
 		delta  *= step_sz*rgen.rand_uniform(0.5, 1.0)/delta.mag(); // recompute length
@@ -282,7 +295,6 @@ void lightning_t::gen_recur_v2(point const &start, float strength) {
 	} // for step
 	//cout << TXT(path_id) << TXT(points.size()) << TXT(hit_water) << TXT(full_path) << endl;
 	assert(path_id < path.size());
-	while (points.size() > 2 && points.back().z < pos.z) {points.pop_back();} // remove any points below the end point to prevent upward paths
 	if (full_path) {points.push_back(pos);} // add lightning path end point
 	if (points.size() < 2) {path.pop_back();} // small segment, discard
 	else {add_path(points, path_id, strength, full_path, hit_water);}
