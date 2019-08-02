@@ -9,7 +9,7 @@
 #include "physics_objects.h" // for lightning_t
 
 
-int    const FORK_PROB            = 50; // tuned for 64 z stacks
+int    const FORK_PROB            = 75; // tuned for 64 z stacks
 float  const FORK_ATTEN           = 0.8;
 float  const BASE_L_STRENGTH_MULT = 150.0;
 float  const BASE_L_DAMAGE_MULT   = 80.0;
@@ -19,7 +19,6 @@ double const CHARGE_HALF_D        = 5.0;
 float  const EVAP_AMOUNT          = 10.0;
 float  const LITNING_ICE_EFF      = 0.5;
 unsigned const MAX_LITN_FORKS     = 8;
-bool const NEW_GEN_MODE           = 1;
 
 
 int vmatrix_valid(0);
@@ -43,14 +42,12 @@ inline float get_lit_h(int xpos, int ypos) {
 }
 
 
-void compute_volume_matrix() {
-	vmatrix_valid = 0; // just mark it as invalid
-}
+void compute_volume_matrix() {vmatrix_valid = 0;} // just mark it as invalid
 
 
 void compute_volume_matrix_if_invalid() {
 
-	if (vmatrix_valid /*|| NEW_GEN_MODE*/) return;
+	if (vmatrix_valid) return;
 	short minval(0);
 	float const dz((CLOUD_CEILING + ztop - zmin)/MESH_Z_SIZE);
 	float zval(zmin + dz);
@@ -150,10 +147,8 @@ void lightning_t::gen() {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {charge_dist[i][j] += d_charge;}
 	}
 	enabled = 1;
-	cells_seen.clear();
 	start.assign(get_xval(xpos), get_yval(ypos), (CLOUD_CEILING + ztop));
-	if (NEW_GEN_MODE) {gen_recur_v2(start, max_e);}
-	else {gen_recur(start, max_e, xpos, ypos, MESH_Z_SIZE-1, (CLOUD_CEILING + ztop));}
+	gen_recur(start, max_e);
 	litning_pos    = end;
 	litning_pos.z += 0.01;
 	draw();
@@ -161,94 +156,7 @@ void lightning_t::gen() {
 }
 
 
-void add_forks(int lforks[5][2], int &nforks, int val, int zpos, int x, int y) {
-
-	int const val2(volume_matrix[zpos-1][y][x]);
-
-	if (val2 < val) {
-		nforks = 1;
-		val    = val2;
-		lforks[0][0] = x;
-		lforks[0][1] = y;
-	}
-	else if (val2 == val) {
-		lforks[nforks][0] = x;
-		lforks[nforks][1] = y;
-		++nforks;
-	}
-}
-
-
-void lightning_t::gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval) {
-
-	int i(0), hit_water(0), full_path(1), lforks[5][2];
-	unsigned const path_id((unsigned)path.size());
-	if (path_id >= MAX_LITN_FORKS) return;
-	if (zpos < 0 || zpos >= MESH_Z_SIZE || point_outside_mesh(xpos, ypos)) return; // note this will return if MESH_Z_SIZE == 1
-	path.push_back(line3d());
-	int const max_points(MESH_X_SIZE + MESH_Y_SIZE + MESH_Z_SIZE);
-	vector<point> points(max_points);
-	int ptx(xpos), pty(ypos);
-	float const dz((CLOUD_CEILING + ztop - zmin)/MESH_Z_SIZE);
-	points[0] = start;
-
-	for (; zpos > 0 && i < max_points-2; --zpos, ++i) {
-		if (i > 0) {points[i].assign(get_xval(ptx), get_yval(pty), zval);}
-		int val(volume_matrix[zpos-1][pty][ptx]), nforks(1), nforks2(0), x0(0);
-		lforks[0][0] = ptx;
-		lforks[0][1] = pty;
-		if (pty > 0)             {add_forks(lforks, nforks, val, zpos, ptx,   pty-1);}
-		if (pty < MESH_Y_SIZE-1) {add_forks(lforks, nforks, val, zpos, ptx,   pty+1);}
-		if (ptx > 0)             {add_forks(lforks, nforks, val, zpos, ptx-1, pty  );}
-		if (ptx < MESH_X_SIZE-1) {add_forks(lforks, nforks, val, zpos, ptx+1, pty  );}
-
-		for (int j = 0; j < nforks; ++j) {
-			cell_ix_t const cix(get_cell_ix(lforks[j][0], lforks[j][1], zpos));
-
-			if (cells_seen.insert(cix).second) { // if new	
-				if (nforks2 < j) {
-					for (unsigned d = 0; d < 2; ++d) {lforks[nforks2][d] = lforks[j][d];}
-				}
-				++nforks2;
-			}
-		}
-		if (nforks2 == 0) {
-			x0  = ((unsigned)rgen.rand())%nforks;
-			ptx = lforks[x0][0];
-			pty = lforks[x0][1];
-			if (path_id != 0) {full_path = 0;} // truncate/merge non-main path fork
-			break;
-		}
-		x0  = ((unsigned)rgen.rand())%nforks2;
-		ptx = lforks[x0][0];
-		pty = lforks[x0][1];
-
-		for (int j = 0; j < nforks2; ++j) {
-			if (j != x0 && i >= 2 && (rgen.rand()%max(1, FORK_PROB)) == 0) {
-				gen_recur(points[i], FORK_ATTEN*strength, lforks[j][0], lforks[j][1], zpos, zval);
-			}
-		}
-		if (val == 0) break;
-		if (zval <= water_matrix[pty][ptx]) {hit_water = 1; break;}
-		if (zval <= get_lit_h(ptx, pty))  break;
-		if (rgen.rand()%MESH_Z_SIZE == 0) break;
-		zval -= dz;
-	} // for i
-	assert(path_id < path.size());
-
-	if (full_path) { // add lightning path end point
-		points[++i].assign(get_xval(ptx), get_yval(pty), (hit_water ? water_matrix[pty][ptx] : get_lit_h(ptx, pty)));
-	}
-	else if (i < 2) { // small segment, discard
-		path.pop_back();
-		return;
-	}
-	points.resize(i+full_path);
-	add_path(points, path_id, strength, full_path, hit_water);
-}
-
-
-void lightning_t::gen_recur_v2(point const &start, float strength) {
+void lightning_t::gen_recur(point const &start, float strength) {
 
 	int hit_water(0), full_path(1);
 	unsigned const path_id((unsigned)path.size());
@@ -262,7 +170,7 @@ void lightning_t::gen_recur_v2(point const &start, float strength) {
 	point pos(start);
 
 	for (unsigned step = 0; step < max_steps; ++step) {
-		if (step > 1 && (rgen.rand()%max(1, 3*FORK_PROB/2)) == 0) {gen_recur_v2(pos, FORK_ATTEN*strength);}
+		if (step > 1 && (rgen.rand()%max(1, FORK_PROB)) == 0) {gen_recur(pos, FORK_ATTEN*strength);}
 		float depth(0.0);
 		
 		if (is_underwater(pos, 0, &depth)) { // terminate path - hit water
@@ -280,7 +188,7 @@ void lightning_t::gen_recur_v2(point const &start, float strength) {
 		float const zval(get_lit_h(xpos, ypos));
 
 		if (pos.z <= zval) { // terminate path - hit something
-			if (!points.empty() && (points.back().z - zval) > 0.5*step_sz) { // hit top of an object, add a line segment down
+			if (!points.empty() && (points.back().z - zval) > 0.5f*step_sz) { // hit top of an object, add a line segment down
 				pos.z = zval;
 				points.push_back(pos);
 			} // else hit side of an object, end path here
@@ -295,16 +203,9 @@ void lightning_t::gen_recur_v2(point const &start, float strength) {
 		if (!is_over_mesh(pos + delta)) {delta.x *= -1.0; delta.y *= -1.0;} // if this delta takes us outside the mesh, invert the xy vals
 		pos += delta;
 	} // for step
-	//cout << TXT(path_id) << TXT(points.size()) << TXT(hit_water) << TXT(full_path) << endl;
 	assert(path_id < path.size());
 	if (full_path) {points.push_back(pos);} // add lightning path end point
-	if (points.size() < 2) {path.pop_back();} // small segment, discard
-	else {add_path(points, path_id, strength, full_path, hit_water);}
-}
-
-
-void lightning_t::add_path(vector<point> &points, unsigned path_id, float strength, bool do_damage, bool hit_water) {
-
+	if (points.size() < 2) {path.pop_back(); return;} // small segment, discard
 	float const dist_ratio(1.0/distance_to_camera(points.back()));
 	path[path_id].color  = LITN_C;
 	path[path_id].points = points;
@@ -314,7 +215,7 @@ void lightning_t::add_path(vector<point> &points, unsigned path_id, float streng
 		end = points.back(); // main branch
 		path[0].width *= 2.0;
 	}
-	if (do_damage) {do_lightning_damage(points.back(), L_DAMAGE_MULT*strength, hit_water);}
+	if (full_path) {do_lightning_damage(points.back(), L_DAMAGE_MULT*strength, hit_water);}
 }
 
 
