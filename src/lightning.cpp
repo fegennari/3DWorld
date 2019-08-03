@@ -9,7 +9,8 @@
 #include "physics_objects.h" // for lightning_t
 
 
-int    const FORK_PROB            = 75; // tuned for 64 z stacks
+int    const PATH_FORK_MOD        = 20;
+int    const PATH_END_MOD         = 20;
 float  const FORK_ATTEN           = 0.8;
 float  const BASE_L_STRENGTH_MULT = 150.0;
 float  const BASE_L_DAMAGE_MULT   = 80.0;
@@ -18,7 +19,7 @@ int    const DISCHARGE_RAD        = 20;
 double const CHARGE_HALF_D        = 5.0;
 float  const EVAP_AMOUNT          = 10.0;
 float  const LITNING_ICE_EFF      = 0.5;
-unsigned const MAX_LITN_FORKS     = 8;
+unsigned const MAX_LITN_FORKS     = 20;
 
 
 int vmatrix_valid(0);
@@ -35,7 +36,6 @@ void do_lightning_damage(point &pos, float damage, int hit_water);
 
 
 inline float get_lit_h(int xpos, int ypos) {
-
 	float h(h_collision_matrix[ypos][xpos]);
 	if (!v_collision_matrix[ypos][xpos].cvals.empty()) {h = max(h, v_collision_matrix[ypos][xpos].zmax);}
 	return h;
@@ -91,7 +91,7 @@ void lightning_t::gen() {
 
 	if (enabled == -1) {
 		enabled = 0;
-		path.clear();
+		paths.clear();
 		return;
 	}
 	if (!animate2) {
@@ -114,7 +114,7 @@ void lightning_t::gen() {
 	compute_volume_matrix_if_invalid();
 	enabled = 0;
 	time    = 0;
-	path.clear();
+	paths.clear();
 	int xpos(0), ypos(0);
 	float max_e(0.0), charge(0);
 	int const zpos(MESH_Z_SIZE - 1);
@@ -122,12 +122,7 @@ void lightning_t::gen() {
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			float const this_e(charge_dist[i][j]/((float)volume_matrix[zpos][i][j]));
-
-			if (this_e > max_e) {
-				max_e = this_e;
-				xpos  = j;
-				ypos  = i;
-			}
+			if (this_e > max_e) {max_e = this_e; xpos = j; ypos = i;}
 		}
 	}
 	int const x0(max(0, (xpos - DISCHARGE_RAD))), x1(min(MESH_X_SIZE-1, (xpos + DISCHARGE_RAD)));
@@ -147,30 +142,39 @@ void lightning_t::gen() {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {charge_dist[i][j] += d_charge;}
 	}
 	enabled = 1;
-	start.assign(get_xval(xpos), get_yval(ypos), (CLOUD_CEILING + ztop));
-	gen_recur(start, max_e);
-	litning_pos    = end;
+	gen_recur(point(get_xval(xpos), get_yval(ypos), (CLOUD_CEILING + ztop)), -plus_z, max_e, 0);
+	assert(!paths.empty());
+	unsigned pri_path(0), min_len(0);
+
+	for (auto p = paths.begin(); p != paths.end(); ++p) {
+		if (!p->full_path) continue;
+		unsigned const len(p->get_len());
+		assert(len >= 2);
+		if (min_len == 0 || len < min_len) {min_len = len; pri_path = (p - paths.begin());}
+	}
+	paths[pri_path].width *= 2.0; // main branch
+	litning_pos    = hit_pos = paths[pri_path].points.back();
 	litning_pos.z += 0.01;
 	draw();
 	play_thunder(litning_pos, 4.0, 0.0);
 }
 
 
-void lightning_t::gen_recur(point const &start, float strength) {
+void lightning_t::gen_recur(point const &start, vector3d const &start_dir, float strength, unsigned parent_len) {
 
 	int hit_water(0), full_path(1);
-	unsigned const path_id((unsigned)path.size());
+	unsigned const path_id((unsigned)paths.size());
 	if (path_id >= MAX_LITN_FORKS) return;
 	if (path_id > 0 && !is_over_mesh(start)) return; // bad fork - skip
-	path.push_back(line3d());
+	paths.push_back(lseg_t(parent_len));
 	vector<point> points;
 	unsigned const max_steps(MESH_X_SIZE + MESH_Y_SIZE);
 	float const step_sz(2.0*HALF_DXY);
-	vector3d delta(0.0, 0.0, step_sz);
+	vector3d delta(step_sz*start_dir);
 	point pos(start);
 
 	for (unsigned step = 0; step < max_steps; ++step) {
-		if (step > 1 && (rgen.rand()%max(1, FORK_PROB)) == 0) {gen_recur(pos, FORK_ATTEN*strength);}
+		if (step > 1 && (rgen.rand()%PATH_FORK_MOD) == 0) {gen_recur(pos, delta.get_norm(), FORK_ATTEN*strength, (parent_len + step));} // create a fork
 		float depth(0.0);
 		
 		if (is_underwater(pos, 0, &depth)) { // terminate path - hit water
@@ -195,6 +199,7 @@ void lightning_t::gen_recur(point const &start, float strength) {
 			break;
 		}
 		points.push_back(pos);
+		if (path_id > 0 && (rgen.rand()%PATH_END_MOD) == 0) {full_path = 0; break;} // end path early
 		vector3d prev_delta(delta);
 		delta += rgen.signed_rand_vector_spherical(0.75*step_sz); // add in random dir change
 		delta *= step_sz*rgen.rand_uniform(0.5, 1.0)/delta.mag(); // recompute length
@@ -203,18 +208,14 @@ void lightning_t::gen_recur(point const &start, float strength) {
 		if (!is_over_mesh(pos + delta)) {delta.x *= -1.0; delta.y *= -1.0;} // if this delta takes us outside the mesh, invert the xy vals
 		pos += delta;
 	} // for step
-	assert(path_id < path.size());
+	assert(path_id < paths.size());
 	if (full_path) {points.push_back(pos);} // add lightning path end point
-	if (points.size() < 2) {path.pop_back(); return;} // small segment, discard
+	if (points.size() < 2) {paths.pop_back(); return;} // small segment, discard
 	float const dist_ratio(1.0/distance_to_camera(points.back()));
-	path[path_id].color  = LITN_C;
-	path[path_id].points = points;
-	path[path_id].width  = max(rgen.rand_uniform(1.0, 2.0), min(4.0f, L_STRENGTH_MULT*strength*dist_ratio));
-
-	if (path_id == 0) {
-		end = points.back(); // main branch
-		path[0].width *= 2.0;
-	}
+	paths[path_id].color  = LITN_C;
+	paths[path_id].points = points;
+	paths[path_id].width  = max(rgen.rand_uniform(1.0, 2.0), min(4.0f, L_STRENGTH_MULT*strength*dist_ratio));
+	paths[path_id].full_path = full_path;
 	if (full_path) {do_lightning_damage(points.back(), L_DAMAGE_MULT*strength, hit_water);}
 }
 
@@ -261,10 +262,10 @@ void lightning_t::draw() const {
 	shader_t s;
 	s.begin_simple_textured_shader();
 
-	for (unsigned i = 0; i < path.size(); ++i) {
-		assert(!path[i].points.empty());
-		if (animate2) {add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back(), LITN_C);}
-		path[i].draw_lines();
+	for (auto i = paths.begin(); i != paths.end(); ++i) {
+		assert(i->points.size() >= 2);
+		if (animate2) {add_dynamic_light(0.6*i->width*lscale, i->points.back(), LITN_C);}
+		i->draw_lines();
 	}
 	s.end_shader();
 	set_std_blend_mode();
