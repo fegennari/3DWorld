@@ -9,17 +9,18 @@
 #include "physics_objects.h" // for lightning_t
 
 
-int    const PATH_FORK_MOD        = 20;
-int    const PATH_END_MOD         = 20;
+int    const PATH_FORK_MOD        = 15;
+int    const PATH_END_MOD         = 15;
 float  const FORK_ATTEN           = 0.8;
 float  const BASE_L_STRENGTH_MULT = 150.0;
 float  const BASE_L_DAMAGE_MULT   = 80.0;
 float  const LIGHTNING_PERIOD     = 100.0; // average time between strikes in ticks
+float  const STEP_VARIANCE        = 0.5;
 int    const DISCHARGE_RAD        = 20;
 double const CHARGE_HALF_D        = 5.0;
 float  const EVAP_AMOUNT          = 10.0;
 float  const LITNING_ICE_EFF      = 0.5;
-unsigned const MAX_LITN_FORKS     = 20;
+unsigned const MAX_LITN_FORKS     = 25;
 
 
 int vmatrix_valid(0);
@@ -146,27 +147,35 @@ void lightning_t::gen() {
 	assert(!paths.empty());
 	unsigned pri_path(0), min_len(0);
 
-	for (auto p = paths.begin(); p != paths.end(); ++p) {
+	for (auto p = paths.begin(); p != paths.end(); ++p) { // find primary path
 		if (!p->full_path) continue;
 		unsigned const len(p->get_len());
 		assert(len >= 2);
 		if (min_len == 0 || len < min_len) {min_len = len; pri_path = (p - paths.begin());}
 	}
+	for (auto p = paths.begin(); p != paths.end(); ++p) {
+		if (!p->full_path) continue;
+		unsigned const len(p->get_len());
+		assert(len >= min_len);
+		unsigned const to_trim(p->has_child ? 0 : (len - min_len)); // only trim leaf path segments
+		if (to_trim > 0 && to_trim+2 <= p->points.size()-2) {p->points.resize(p->points.size() - to_trim);} // shorten non-primary paths to length of primary path
+		else {do_lightning_damage(p->points.back(), p->damage, p->hit_water);} // do damage
+	}
 	paths[pri_path].width *= 2.0; // main branch
 	litning_pos    = hit_pos = paths[pri_path].points.back();
 	litning_pos.z += 0.01;
-	draw();
 	play_thunder(litning_pos, 4.0, 0.0);
+	draw();
 }
 
 
 void lightning_t::gen_recur(point const &start, vector3d const &start_dir, float strength, unsigned parent_len) {
 
-	int hit_water(0), full_path(1);
+	bool hit_water(0), full_path(1), has_child(0);
 	unsigned const path_id((unsigned)paths.size());
 	if (path_id >= MAX_LITN_FORKS) return;
 	if (path_id > 0 && !is_over_mesh(start)) return; // bad fork - skip
-	paths.push_back(lseg_t(parent_len));
+	paths.push_back(lseg_t());
 	vector<point> points;
 	unsigned const max_steps(MESH_X_SIZE + MESH_Y_SIZE);
 	float const step_sz(2.0*HALF_DXY);
@@ -174,7 +183,10 @@ void lightning_t::gen_recur(point const &start, vector3d const &start_dir, float
 	point pos(start);
 
 	for (unsigned step = 0; step < max_steps; ++step) {
-		if (step > 1 && (rgen.rand()%PATH_FORK_MOD) == 0) {gen_recur(pos, delta.get_norm(), FORK_ATTEN*strength, (parent_len + step));} // create a fork
+		if (step > 1 && (rgen.rand()%PATH_FORK_MOD) == 0) { // create a fork
+			gen_recur(pos, delta.get_norm(), FORK_ATTEN*strength, (parent_len + step));
+			has_child = 1;
+		}
 		float depth(0.0);
 		
 		if (is_underwater(pos, 0, &depth)) { // terminate path - hit water
@@ -200,23 +212,26 @@ void lightning_t::gen_recur(point const &start, vector3d const &start_dir, float
 		}
 		points.push_back(pos);
 		if (path_id > 0 && (rgen.rand()%PATH_END_MOD) == 0) {full_path = 0; break;} // end path early
-		vector3d prev_delta(delta);
-		delta += rgen.signed_rand_vector_spherical(0.75*step_sz); // add in random dir change
-		delta *= step_sz*rgen.rand_uniform(0.5, 1.0)/delta.mag(); // recompute length
-		if (dot_product(prev_delta, delta) < 0.0) {delta = -delta;} // too sharp a turn, switch direction
+
+		for (unsigned n = 0; n < 20; ++n) { // make several attempts to find a delta that keeps the line inside the mesh
+			vector3d new_delta(delta);
+			new_delta += rgen.signed_rand_vector_spherical(STEP_VARIANCE*step_sz); // add in random dir change
+			float const mag(new_delta.mag());
+			if (mag < TOLERANCE) continue;
+			new_delta *= step_sz*rgen.rand_uniform(0.5, 1.0)/mag; // recompute length
+			if (dot_product(new_delta, delta) < 0.0) {new_delta = -new_delta;} // too sharp a turn, switch direction
+			if (is_over_mesh(pos + new_delta) || n+1 == 20) {delta = new_delta; break;} // inside the mesh, keep it
+		}
 		delta.z = -fabs(delta.z); // must be negative
-		if (!is_over_mesh(pos + delta)) {delta.x *= -1.0; delta.y *= -1.0;} // if this delta takes us outside the mesh, invert the xy vals
 		pos += delta;
 	} // for step
 	assert(path_id < paths.size());
 	if (full_path) {points.push_back(pos);} // add lightning path end point
 	if (points.size() < 2) {paths.pop_back(); return;} // small segment, discard
 	float const dist_ratio(1.0/distance_to_camera(points.back()));
-	paths[path_id].color  = LITN_C;
 	paths[path_id].points = points;
 	paths[path_id].width  = max(rgen.rand_uniform(1.0, 2.0), min(4.0f, L_STRENGTH_MULT*strength*dist_ratio));
-	paths[path_id].full_path = full_path;
-	if (full_path) {do_lightning_damage(points.back(), L_DAMAGE_MULT*strength, hit_water);}
+	paths[path_id].set_params(parent_len, L_DAMAGE_MULT*strength, full_path, hit_water, has_child);
 }
 
 

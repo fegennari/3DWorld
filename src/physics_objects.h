@@ -134,10 +134,12 @@ struct lightning_t { // size = 40
 
 	struct lseg_t : public line3d {
 		unsigned parent_len;
-		bool full_path;
+		float damage;
+		bool full_path, hit_water, has_child;
 
-		lseg_t(unsigned pl=0) : parent_len(pl), full_path(1) {}
+		lseg_t() : parent_len(), damage(0.0f), full_path(1), hit_water(0), has_child(0) {color = LITN_C;}
 		unsigned get_len() const {return (points.size() + parent_len);}
+		void set_params(unsigned pl, float d, bool fp, bool hw, bool hc) {parent_len = pl; damage = d; full_path = fp; hit_water = hw; has_child = hc;}
 	};
 	int time, enabled;
 	point hit_pos;
