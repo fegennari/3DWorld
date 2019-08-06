@@ -130,7 +130,6 @@ extern ripple_state **ripples;
 extern unsigned char **mesh_draw;
 extern unsigned char **water_enabled;
 extern unsigned char **flower_weight;
-extern short     ***volume_matrix;
 
 
 inline float get_xval(int xpos)  {return -X_SCENE_SIZE + DX_VAL*xpos;}

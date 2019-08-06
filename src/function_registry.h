@@ -589,9 +589,6 @@ void add_water_spring(point const &pos, vector3d const &vel, float rate, float d
 void shift_water_springs(vector3d const &vd);
 void update_water_zval(int x, int y, float old_mh);
 
-// function prototypes - lightning
-void compute_volume_matrix();
-
 // function prototypes - textures
 void load_texture_names();
 void load_textures();

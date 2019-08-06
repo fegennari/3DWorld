@@ -646,7 +646,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		has_accumulation = 0;
 		start_ripple     = 0;
 	}
-	compute_volume_matrix();
 	calc_motion_direction();
 	PRINT_TIME("Volume+Motion matrix generation");
 	

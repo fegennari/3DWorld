@@ -490,7 +490,6 @@ void change_terrain_zoom(float val) {
 		clear_tiled_terrain();
 		calc_watershed();
 	}
-	compute_volume_matrix(); // make lightning strike the new tree(s)
 	scene_smap_vbo_invalid = 2; // full rebuild of shadowers
 }
 
@@ -970,7 +969,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			if (world_mode == WMODE_GROUND) {
 				//gen_scenery();
 				//regen_trees(0);
-				//compute_volume_matrix(); // make lightning strike the new tree(s)
 				gen_scene(0, 1, 1, 0, 1);
 			}
 			else {

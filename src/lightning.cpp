@@ -9,22 +9,20 @@
 #include "physics_objects.h" // for lightning_t
 
 
-int    const PATH_FORK_MOD        = 15;
-int    const PATH_END_MOD         = 15;
-float  const FORK_ATTEN           = 0.8;
-float  const BASE_L_STRENGTH_MULT = 150.0;
-float  const BASE_L_DAMAGE_MULT   = 80.0;
-float  const LIGHTNING_PERIOD     = 100.0; // average time between strikes in ticks
-float  const STEP_VARIANCE        = 0.5;
-int    const DISCHARGE_RAD        = 20;
-double const CHARGE_HALF_D        = 5.0;
-float  const EVAP_AMOUNT          = 10.0;
-float  const LITNING_ICE_EFF      = 0.5;
-unsigned const MAX_LITN_FORKS     = 25;
+int    const PATH_FORK_MOD    = 15;
+int    const PATH_END_MOD     = 15;
+float  const FORK_ATTEN       = 0.8;
+float  const L_STRENGTH_MULT  = 150.0;
+float  const L_DAMAGE_MULT    = 80.0;
+float  const LIGHTNING_PERIOD = 100.0; // average time between strikes in ticks
+float  const STEP_VARIANCE    = 0.5;
+int    const DISCHARGE_RAD    = 20;
+double const CHARGE_HALF_D    = 5.0;
+float  const EVAP_AMOUNT      = 10.0;
+float  const LITNING_ICE_EFF  = 0.5;
+unsigned const MAX_LITN_FORKS = 25;
 
 
-int vmatrix_valid(0);
-float L_STRENGTH_MULT, L_DAMAGE_MULT;
 point litning_pos;
 lightning_t l_strike;
 
@@ -43,52 +41,9 @@ inline float get_lit_h(int xpos, int ypos) {
 }
 
 
-void compute_volume_matrix() {vmatrix_valid = 0;} // just mark it as invalid
-
-
-void compute_volume_matrix_if_invalid() {
-
-	if (vmatrix_valid) return;
-	short minval(0);
-	float const dz((CLOUD_CEILING + ztop - zmin)/MESH_Z_SIZE);
-	float zval(zmin + dz);
-	vector<float> lh(XY_MULT_SIZE);
-	vmatrix_valid = 1;
-
-	for (int i = 0; i < MESH_Z_SIZE; ++i) { // clear volume matrix
-		matrix_clear_2d(volume_matrix[i]);
-	}
-	for (int i = 0; i < MESH_Y_SIZE; ++i) { // compute lightning strike heights
-		int const yoff(i*MESH_X_SIZE);
-		for (int j = 0; j < MESH_X_SIZE; ++j) {lh[yoff + j] = get_lit_h(j, i);}
-	}
-	for (int i = 1; i < MESH_Z_SIZE; ++i) { // calculate volume matrix shortest paths
-		for (int j = 0; j < MESH_Y_SIZE; ++j) {
-			int const yoff(j*MESH_X_SIZE);
-			short **const vm = volume_matrix[i-1];
-
-			for (int k = 0; k < MESH_X_SIZE; ++k) {
-				if (lh[yoff + k] < zval) {
-					minval = vm[j][k]+2;
-					if (j > 0)             {min_eq(minval, short(vm[j-1][k] + 3));}
-					if (j < MESH_Y_SIZE-1) {min_eq(minval, short(vm[j+1][k] + 3));}
-					if (k > 0)             {min_eq(minval, short(vm[j][k-1] + 3));}
-					if (k < MESH_X_SIZE-1) {min_eq(minval, short(vm[j][k+1] + 3));}
-					volume_matrix[i][j][k] = minval;
-				}
-			}
-		}
-		zval += dz;
-	}
-}
-
-
 void lightning_t::gen() {
 
-	if (MESH_Z_SIZE == 0) return; // disabled
-	L_STRENGTH_MULT = BASE_L_STRENGTH_MULT*(MESH_Z_SIZE/50.0);
-	L_DAMAGE_MULT   = BASE_L_DAMAGE_MULT  *(MESH_Z_SIZE/50.0);
-	is_cloudy       = 1;
+	is_cloudy = 1;
 
 	if (enabled == -1) {
 		enabled = 0;
@@ -112,17 +67,17 @@ void lightning_t::gen() {
 		}
 		return;
 	}
-	compute_volume_matrix_if_invalid();
 	enabled = 0;
 	time    = 0;
 	paths.clear();
+	float const cloud_zval(CLOUD_CEILING + ztop);
 	int xpos(0), ypos(0);
 	float max_e(0.0), charge(0);
-	int const zpos(MESH_Z_SIZE - 1);
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			float const this_e(charge_dist[i][j]/((float)volume_matrix[zpos][i][j]));
+			float const dist_to_ground(max(0.5f*CLOUD_CEILING, (cloud_zval - get_lit_h(j, i)))); // make sure it's positive
+			float const this_e(0.03*charge_dist[i][j]/dist_to_ground); // higher potential for discharge when ground is closer
 			if (this_e > max_e) {max_e = this_e; xpos = j; ypos = i;}
 		}
 	}
@@ -143,7 +98,7 @@ void lightning_t::gen() {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {charge_dist[i][j] += d_charge;}
 	}
 	enabled = 1;
-	gen_recur(point(get_xval(xpos), get_yval(ypos), (CLOUD_CEILING + ztop)), -plus_z, max_e, 0);
+	gen_recur(point(get_xval(xpos), get_yval(ypos), cloud_zval), -plus_z, max_e, 0);
 	assert(!paths.empty());
 	unsigned pri_path(0), min_len(0);
 

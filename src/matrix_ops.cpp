@@ -45,7 +45,6 @@ ripple_state **ripples = NULL;
 unsigned char **mesh_draw = NULL;
 unsigned char **water_enabled = NULL;
 unsigned char **flower_weight = NULL;
-short     ***volume_matrix = NULL;
 
 extern bool last_int, mesh_invalidated;
 extern int world_mode, MAX_RUN_DIST, xoff, yoff, I_TIMESCALE2, DISABLE_WATER;
@@ -111,11 +110,9 @@ void alloc_matrices() { // called at the beginning of main()
 	matrix_gen_2d(charge_dist);
 	matrix_gen_2d(surface_damage);
 	matrix_gen_2d(ripples);
-	matrix_gen_3d(volume_matrix, MESH_Z_SIZE);
 	matrix_gen_2d(wat_surf_normals, MESH_X_SIZE, 2); // only two rows
 	matrix_alloced = 1;
 }
-
 
 void delete_matrices() { // called at the end of main()
 
@@ -137,15 +134,12 @@ void delete_matrices() { // called at the end of main()
 	matrix_delete_2d(charge_dist);
 	matrix_delete_2d(surface_damage);
 	matrix_delete_2d(ripples);
-	matrix_delete_3d(volume_matrix, MESH_Z_SIZE);
 	matrix_alloced = 0;
 }
-
 
 void compute_matrices() {
 
 	last_int = 0;
-
 	// initialize objects
 	reset_other_objects_status();
 	matrix_clear_2d(accumulation_matrix);
@@ -155,9 +149,7 @@ void compute_matrices() {
 	remove_all_coll_obj();
 
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			update_matrix_element(x, y);
-		}
+		for (int x = 0; x < MESH_X_SIZE; ++x) {update_matrix_element(x, y);}
 	}
 	gen_mesh_bsp_tree();
 }
