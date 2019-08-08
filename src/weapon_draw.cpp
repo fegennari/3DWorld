@@ -823,10 +823,10 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and 
 	glDisable(GL_CULL_FACE);
 	if (psize < 0.9*MAX_PLASMA_SIZE) return;
 
-	// lightning eminating from plasma
-	if (is_underwater(spos, 1)) { // under water - suicide
+	if (is_underwater(spos, 1)) { // under water - suicide from lightning
 		smiley_collision(shooter, shooter, zero_vector, pos0, PLASMA_LT_DAMAGE, PLASMA_LT_D);
 	}
+	// lightning eminating from plasma
 	radius *= psize;
 	vector3d target(zero_vector);
 	float min_dist(4.0*radius + object_types[SMILEY].radius);
@@ -841,7 +841,7 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and 
 		}
 	}
 	if (shooter != CAMERA_ID && !same_team(CAMERA_ID, shooter)) { // test player
-		if (p2p_dist(spos, player) < min_dist) min_i = CAMERA_ID; // close enough to hit a the player?
+		if (p2p_dist(spos, player) < min_dist) {min_i = CAMERA_ID;} // close enough to hit a the player?
 	}
 	if (min_i >= CAMERA_ID) {
 		vector3d const v(get_sstate_dir(shooter));
