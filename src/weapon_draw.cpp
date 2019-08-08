@@ -877,7 +877,7 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and 
 			UNROLL_3X(pos2[i_] *= rand_uniform(1.01, 1.2);)
 			line.points[j+2] = pos2;
 		}
-		line.draw_lines(1); // uses a custom shader; fade_ends=1
+		line.draw_lines(1, (i+1 < num_rays)); // uses a custom shader; fade_ends=1, end draw on last ray
 	}
 	set_std_blend_mode();
 	shader.enable(); // re-enable after line drawing (which uses a different shader)

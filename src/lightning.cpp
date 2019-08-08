@@ -236,7 +236,7 @@ void lightning_t::draw() const {
 	for (auto i = paths.begin(); i != paths.end(); ++i) {
 		assert(i->points.size() >= 2);
 		if (animate2) {add_dynamic_light(0.6*i->width*lscale, i->points.back(), LITN_C);}
-		i->draw_lines(1); // fade_ends=1
+		i->draw_lines(1, (i+1 != paths.end())); // fade_ends=1
 	}
 	s.end_shader();
 	glDepthMask(GL_TRUE);

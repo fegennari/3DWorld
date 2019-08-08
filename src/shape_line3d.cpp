@@ -245,10 +245,9 @@ void shape3d::destroy() {
 // ************** LINE3D *************
 
 
-void line3d::draw_lines(bool fade_ends) const {
+void line3d::draw_lines(bool fade_ends, bool no_end_draw) const {
 
-	if (points.empty()) return;
-	assert(points.size() >= 2);
+	assert(points.size() != 1); // empty or at least one line
 	assert(width > 0.0);
 	static line_tquad_draw_t drawer;
 	float const w(0.01*width);
@@ -259,7 +258,7 @@ void line3d::draw_lines(bool fade_ends) const {
 		drawer.add_line_as_tris(points[i-1], points[i], w, w, ((fade_ends && first) ? end_color : color), ((fade_ends && last) ? end_color : color),
 			(first ? nullptr : &points[i-2]), (last ? nullptr : &points[i+1]));
 	}
-	drawer.draw_and_clear(); // uses a custom shader
+	if (!no_end_draw) {drawer.draw_and_clear();} // uses a custom shader; if no_end_draw=1, will append but not draw
 }
 
 
