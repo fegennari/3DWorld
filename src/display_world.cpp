@@ -220,7 +220,8 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		if (TIMETEST) PRINT_TIME("P");
 		draw_jump_pads();
 		draw_teleporters();
-		
+		if (show_lightning) {l_strike.gen();} // after the water?
+
 		if (!underwater) {
 			maybe_draw_rainbow();
 
@@ -976,21 +977,18 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("L");
 
 			draw_stuff(!underwater, timer1);
-
-			if (show_lightning) { // after the water?
-				l_strike.gen();
-
-				if (l_strike.enabled == 1 && animate2) {
-					if ((rand()&1) == 0) {gen_smoke(l_strike.hit_pos);}
-					if ((rand()&7) == 0) {gen_fire(l_strike.hit_pos, 1.0, NO_SOURCE);}
-				}
-			}
 			if (TIMETEST) PRINT_TIME("M");
+
 			if (display_mode & 0x04) {draw_water();} // must be after process_groups()
 			check_gl_error(9);
 			if (TIMETEST) PRINT_TIME("N");
 			draw_stuff(underwater, timer1);
 			if (TIMETEST) PRINT_TIME("T");
+
+			if (show_lightning && l_strike.enabled == 1 && animate2) {
+				if ((rand()&1) == 0) {gen_smoke(l_strike.hit_pos);}
+				if ((rand()&7) == 0) {gen_fire(l_strike.hit_pos, 1.0, NO_SOURCE);}
+			}
 			update_blasts(); // not really an update, but needed for draw_blasts
 			draw_game_elements(timer1);
 			setup_basic_fog();
