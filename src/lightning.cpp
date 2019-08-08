@@ -174,9 +174,20 @@ void lightning_t::gen_recur(point const &start, vector3d const &start_dir, float
 			float const mag(new_delta.mag());
 			if (mag < TOLERANCE) continue;
 			new_delta *= step_sz*rgen.rand_uniform(0.5, 1.0)/mag; // recompute length
-			if (dot_product(new_delta, delta) < 0.0) {new_delta = -new_delta;} // too sharp a turn, switch direction
-			if (is_over_mesh(pos + new_delta) || n+1 == 20) {delta = new_delta; break;} // inside the mesh, keep it
-		}
+			if (dot_product(new_delta, delta) < 0.0f) {new_delta = -new_delta;} // too sharp a turn, switch direction
+			if (n+1 == 20) {delta = new_delta; break;} // last attempt, keep it
+
+			if (is_over_mesh(pos)) { // starts inside the scene, so keep it inside the scene
+				if (is_over_mesh(pos + new_delta)) {delta = new_delta; break;} // inside the mesh, keep it
+			}
+			else {
+				point pos_clamp(pos);
+				pos_clamp.x = max(-X_SCENE_SIZE, min(X_SCENE_SIZE, pos_clamp.x)); // clamp to scene x bounds
+				pos_clamp.y = max(-Y_SCENE_SIZE, min(Y_SCENE_SIZE, pos_clamp.y)); // clamp to scene y bounds
+				vector3d const target_dir(pos_clamp - pos);
+				if (dot_product(new_delta, target_dir) > 0.0f) {delta = new_delta; break;} // moving toward interior of scene, keep it
+			}
+		} // for n
 		delta.z = -fabs(delta.z); // must be negative
 		pos += delta;
 	} // for step
