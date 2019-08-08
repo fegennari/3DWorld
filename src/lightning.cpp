@@ -229,6 +229,7 @@ void lightning_t::draw() const {
 	float const lscale(LITNING_LINEAR_I);
 	enable_blend();
 	set_additive_blend_mode();
+	glDepthMask(GL_FALSE); // no depth writing
 	shader_t s;
 	s.begin_simple_textured_shader();
 
@@ -238,6 +239,7 @@ void lightning_t::draw() const {
 		i->draw_lines();
 	}
 	s.end_shader();
+	glDepthMask(GL_TRUE);
 	set_std_blend_mode();
 	disable_blend();
 	if (animate2) {add_dynamic_light(7.8*lscale, litning_pos, LITN_C);}
