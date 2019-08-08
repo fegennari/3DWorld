@@ -2023,7 +2023,7 @@ void lightning_strike_t::update() {
 void lightning_strike_t::draw() const {
 
 	if (!enabled()) return;
-	path.draw_lines(); // uses a custom shader with no fog
+	path.draw_lines(1); // uses a custom shader with no fog; fade_ends=1
 	colorRGBA const ambient(path.color*0.2);
 	float const radius(0.4*get_scaled_tile_radius());
 	set_colors_and_enable_light(LIGHTNING_LIGHT, ambient, path.color);

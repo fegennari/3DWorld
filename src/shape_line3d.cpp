@@ -245,17 +245,19 @@ void shape3d::destroy() {
 // ************** LINE3D *************
 
 
-void line3d::draw_lines() const {
+void line3d::draw_lines(bool fade_ends) const {
 
 	if (points.empty()) return;
 	assert(points.size() >= 2);
 	assert(width > 0.0);
 	static line_tquad_draw_t drawer;
 	float const w(0.01*width);
+	colorRGBA const end_color(color, 0.0); // fade to alpha of 0
 
 	for (unsigned i = 1; i < points.size(); ++i) {
-		drawer.add_line_as_tris(points[i-1], points[i], w, w, color, color,
-			((i >= 2) ? &points[i-2] : NULL), ((i+1 < points.size()) ? &points[i+1] : NULL));
+		bool const first(i == 1), last(i+1 == points.size());
+		drawer.add_line_as_tris(points[i-1], points[i], w, w, ((fade_ends && first) ? end_color : color), ((fade_ends && last) ? end_color : color),
+			(first ? nullptr : &points[i-2]), (last ? nullptr : &points[i+1]));
 	}
 	drawer.draw_and_clear(); // uses a custom shader
 }

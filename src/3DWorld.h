@@ -1247,7 +1247,7 @@ public:
 	colorRGBA color;
 
 	line3d() : width(0.0), color(0,0,0,0) {}
-	void draw_lines() const;
+	void draw_lines(bool fade_ends) const;
 	bool empty() const {return points.empty();}
 };
 
