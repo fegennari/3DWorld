@@ -8,7 +8,8 @@
 
 // fixes for MS Visual Studio 2005 performance problems
 #define _HAS_ITERATOR_DEBUGGING 0
-//#define _ITERATOR_DEBUG_LEVEL 0
+// MSVS 2017 and above
+#define _ITERATOR_DEBUG_LEVEL 0
 //#define _SECURE_SCL 0
 
 #endif // _GLOBALS_H_
