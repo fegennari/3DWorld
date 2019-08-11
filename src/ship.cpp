@@ -580,11 +580,9 @@ void apply_univ_physics() {
 					// nothing
 				}
 				else if (uobjs[i]->get_flags() & (OBJ_FLAGS_DIST | OBJ_FLAGS_ORBT)) {
-					if (t == 0) uobjs[i]->advance_time(fticks);
+					if (t == 0) {uobjs[i]->advance_time(fticks);}
 				}
-				else {
-					uobjs[i]->advance_time(timestep);
-				}
+				else {uobjs[i]->advance_time(timestep);}
 			}
 		}
 		if (TIMETEST) PRINT_TIME("  Advance + Collision");
@@ -1011,7 +1009,7 @@ void draw_univ_objects() {
 			else {sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));}
 			draw_obj = 1;
 		}
-		if (!draw_obj && co.obj->has_lights()) {co.obj->reset_lights();} // reset for next frame
+		if (!draw_obj) {co.obj->reset_lights();} // reset for next frame
 		bool const show_crosshair(onscreen_display || co.obj == player_target);
 		
 		if ((show_crosshair || show_scores) && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(co.pos, max_radius) && !co.obj->is_player_ship()) {		
@@ -1095,14 +1093,9 @@ void purge_old_objs() {
 		if (attackers[i] != NULL && attackers[i]->not_a_target()) attackers[i] = NULL;
 	}
 	for (unsigned i = 0; i < nobjs; ++i) {
-		if (VERIFY_REFS) uobjs[i]->verify_status();
-
-		if (uobjs[i]->to_be_removed()) {
-			++nbad;
-		}
-		else {
-			uobjs[i]->check_ref_objs(); // allow everyone to remove their references to objects that are about to be removed
-		}
+		if (VERIFY_REFS) {uobjs[i]->verify_status();}
+		if (uobjs[i]->to_be_removed()) {++nbad;}
+		else {uobjs[i]->check_ref_objs();} // allow everyone to remove their references to objects that are about to be removed
 	}
 	if (nbad == 0) return; // no bad objects
 	static vector<free_obj *> uobjs2;
