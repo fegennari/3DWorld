@@ -440,6 +440,7 @@ struct coll_cell { // size = 52
 	float zmin, zmax;
 	vector<int> cvals;
 
+	coll_cell() : zmin(FAR_DISTANCE), zmax(-FAR_DISTANCE) {}
 	void clear(bool clear_vectors);
 
 	void update_zmm(float zmin_, float zmax_) {

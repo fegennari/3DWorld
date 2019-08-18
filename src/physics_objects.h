@@ -37,6 +37,7 @@ struct star { // size = 32
 	float intensity;
 	colorRGBA color;
 	point pos;
+	star() : intensity(1.0) {}
 };
 
 
@@ -79,6 +80,7 @@ struct bubble : public basic_physics_obj { // size = 44
 	float radius, velocity;
 	colorRGBA color;
 
+	bubble() : radius(0), velocity(0) {}
 	void gen(point const &p, float r=0.0, colorRGBA const &c=WATER_C);
 	void draw(bool set_liquid_color) const;
 	void apply_physics(unsigned i);
@@ -122,6 +124,7 @@ struct fire : public basic_physics_obj { // size = 60
 	float radius, heat, cval, inten, light_bwidth;
 	vector3d velocity;
 
+	fire() : source(-1), is_static(0), radius(0), heat(0), cval(0), inten(0), light_bwidth(0) {}
 	void gen(point const &p, float size, float intensity, int src, bool is_static_, float light_bw);
 	void draw(quad_batch_draw &qbd, int &last_in_smoke) const;
 	void apply_physics(unsigned i);

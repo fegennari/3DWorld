@@ -228,6 +228,8 @@ template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_man
 class subdiv_sphere_drawer_t : public indexed_vao_manager_t {
 protected:
 	unsigned nverts, nindices;
+public:
+	subdiv_sphere_drawer_t() : nverts(0), nindices(0) {}
 };
 struct icosphere_drawer_t : public subdiv_sphere_drawer_t {
 	icosphere_drawer_t(unsigned ndiv);

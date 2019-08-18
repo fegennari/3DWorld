@@ -52,7 +52,7 @@ void fgCALLBACK do_coord(vert_norm_tc *coord) {
 
 	assert(coord);
 	assert(mode_valid);
-	assert(vertex <= 3);
+	assert(vertex < 3);
 	cur_triangle.pts[vertex] = *coord;
 	bool const emit_tri(vertex == 2);
 	if (emit_tri) {triangles.push_back(cur_triangle);}
@@ -70,7 +70,7 @@ void fgCALLBACK do_coord(vert_norm_tc *coord) {
 	default:
 		assert(0);
 	}
-	if (!emit_tri) ++vertex;
+	if (!emit_tri) {++vertex;}
 }
 
 

@@ -1397,7 +1397,7 @@ protected:
 	template<typename T> inline void randome_int(T &ranptr) {
 		if ((rseed1 = 40014*(rseed1%53668) - 12211*(rseed1/53668)) < 0) rseed1 += 2147483563;
 		if ((rseed2 = 40692*(rseed2%52774) - 3791 *(rseed2/52774)) < 0) rseed2 += 2147483399;
-		if ((ranptr = rseed1 - rseed2) < 1) ranptr += 2147483562;
+		if ((ranptr = (T)rseed1 - (T)rseed2) < 1) ranptr += 2147483562;
 	}
 
 public:
