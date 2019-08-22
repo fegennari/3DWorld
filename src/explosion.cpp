@@ -199,8 +199,10 @@ bool blastr::next_frame(unsigned i) {
 void update_blasts() {
 
 	//RESET_TIME;
-	cur_explosion_sphere = sphere_t(); // reset for next iteration
-	cur_explosion_weight = 0.0;
+	if (animate2) {
+		cur_explosion_sphere = sphere_t(); // reset for next iteration
+		cur_explosion_weight = 0.0;
+	}
 	unsigned const nbr((unsigned)blastrs.size());
 	if (world_mode == WMODE_UNIVERSE) {calc_lit_uobjects();}
 	for (unsigned i = 0; i < nbr; ++i) {blastrs[i].next_frame(i);}
