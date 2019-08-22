@@ -10,3 +10,5 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 
+* Scene cube map skybox
+* Moving reflective objects (platforms?)
