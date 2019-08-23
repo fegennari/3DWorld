@@ -132,6 +132,7 @@ void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader("sphere_refract_screen");
+	s.set_prefix("#define CHROMATIC_REFRACT", 1); // FS
 	s.begin_shader();
 	s.add_uniform_int("frame_buffer_tex", 0);
 	//s.add_uniform_float("time", time); // unused in shader
