@@ -918,12 +918,13 @@ void shader_t::end_shader() { // ok to call if not in a shader
 		shader_names[i].clear();
 	}
 	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
-		light_locs[i].valid = 0;
+		light_locs[i].invalidate();
 		prev_lps[i] = gl_light_params_t(); // reset
 	}
 	prog_name_prefix.clear();
 	attrib_locs.clear();
 	subroutines.clear();
+	clear_vntc_locs();
 	clear_properties();
 	last_spec = ALPHA0;
 }

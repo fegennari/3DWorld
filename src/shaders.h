@@ -66,7 +66,8 @@ class shader_t : public property_map_t {
 	struct light_loc_t {
 		int v[5];
 		bool valid;
-		light_loc_t() : valid(0) {v[0] = v[1] = v[2] = v[3] = v[4] = -1;}
+		light_loc_t() {invalidate();}
+		void invalidate() {v[0] = v[1] = v[2] = v[3] = v[4] = -1; valid = 0;}
 	};
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
@@ -90,10 +91,11 @@ class shader_t : public property_map_t {
 	void print_program_info_log() const;
 	void cache_vnct_locs();
 	void cache_matrix_locs();
+	void clear_vntc_locs() {vnct_locs[0] = vnct_locs[1] = vnct_locs[2] = vnct_locs[3] = -1;}
 
 public:
 	shader_t() : program(0), last_spec(ALPHA0), emission_loc(-1), specular_color_loc(-1), pm_loc(-1), mvm_loc(-1), mvmi_loc(-1), mvpm_loc(-1), nm_loc(-1) {
-		vnct_locs[0] = vnct_locs[1] = vnct_locs[2] = vnct_locs[3] = -1;
+		clear_vntc_locs();
 	}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 	unsigned get_program() const {return program;} // semi-private, for internal use as map key in vao_cache_t
