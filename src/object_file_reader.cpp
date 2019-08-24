@@ -855,7 +855,6 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, bool load_models, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
 {
-	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
