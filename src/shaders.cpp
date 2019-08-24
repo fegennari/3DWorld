@@ -948,9 +948,9 @@ void shader_t::enable() {
 
 void shader_t::disable() {
 	
+	cur_shader = NULL; // must be done first to prevent check_mvm_update() from trying to upload a new MVM in enable_vnct_atribs()
 	if (is_setup()) {enable_vnct_atribs(0, 0, 0, 0);} // disable all
 	glUseProgram(0);
-	cur_shader = NULL;
 }
 
 
