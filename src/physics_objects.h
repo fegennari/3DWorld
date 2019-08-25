@@ -477,11 +477,10 @@ template<typename T> void reset_status(vector<T> &objs) {
 class reflective_cobjs_t {
 
 	struct map_val_t {
-		unsigned tid, tsize, faces_valid;
+		unsigned tid, tsize, last_size, faces_valid;
 		cube_t bcube; // cached bcube to determine when the cobj is moved
-		map_val_t() : tid(0), tsize(0), faces_valid(0) {}
+		map_val_t() : tid(0), tsize(0), last_size(0), faces_valid(0) {}
 	};
-
 	map<unsigned, map_val_t> cobjs; // maps cid to tid
 
 public:

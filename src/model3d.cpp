@@ -1946,7 +1946,7 @@ void model3d::ensure_reflection_cube_map() {
 		point const test_pt(bcube_xf.get_cube_center());
 		indoors = ::check_coll_line(point(test_pt.x, test_pt.y, bcube_xf.d[2][1]+SMALL_NUMBER), point(test_pt.x, test_pt.y, czmax), cindex, -1, 1, 0, 1, 0);
 	}
-	create_cube_map_reflection(model_refl_tid, model_refl_tsize, -1, bcube_xf, (model_refl_tid != 0 && !all_model3d_ref_update), (indoors == 1));
+	create_cube_map_reflection(model_refl_tid, model_refl_tsize, model_refl_last_tsize, -1, bcube_xf, (model_refl_tid != 0 && !all_model3d_ref_update), (indoors == 1));
 }
 
 cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {

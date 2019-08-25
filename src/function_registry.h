@@ -975,8 +975,10 @@ bool use_reflect_plane_for_cobj(coll_obj const &c);
 void create_camera_view_texture(unsigned tid, unsigned tex_size, pos_dir_up const &pdu, bool is_indoors);
 unsigned create_gm_z_reflection();
 unsigned create_tt_reflection(float terrain_zmin);
-unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing=0, bool is_indoors=0, unsigned skip_mask=0);
-unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, cube_t const &cube, bool only_front_facing=0, bool is_indoors=0, unsigned skip_mask=0);
+unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &last_size, int cobj_id, point const &center,
+	float near_plane, float far_plane, bool only_front_facing=0, bool is_indoors=0, unsigned skip_mask=0);
+unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &last_size, int cobj_id, cube_t const &cube,
+	bool only_front_facing=0, bool is_indoors=0, unsigned skip_mask=0);
 void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid, unsigned tsize);
 
 // function prototypes - gen_buildings

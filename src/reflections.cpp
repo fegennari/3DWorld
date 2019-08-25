@@ -349,9 +349,7 @@ void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
 	assert(glIsTexture(tid));
 }
 
-void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size) {
-
-	static unsigned last_size(0);
+void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size, unsigned &last_size) {
 
 	if (last_size != tex_size) {
 		free_texture(tid);
@@ -375,24 +373,25 @@ unsigned create_gm_z_reflection() {
 	return reflection_tid;
 }
 
-unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
-
+unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &last_size, int cobj_id, point const &center,
+	float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask)
+{
 	unsigned const max_tex_size(min(window_width, window_height));
 	assert(max_tex_size > 0);
 	tsize = 1;
 	while (2*tsize <= max_tex_size) {tsize *= 2;} // find the max power of 2 <= max_tex_size
 	tsize = min(tsize, max_cube_map_tex_sz); // clamp to limit runtime and memory usage
-	setup_cube_map_reflection_texture(tid, tsize);
+	setup_cube_map_reflection_texture(tid, tsize, last_size);
 	unsigned const faces_drawn(create_reflection_cube_map(tid, tsize, cobj_id, center, near_plane, FAR_CLIP, only_front_facing, is_indoors, skip_mask));
 	check_gl_error(998);
 	return faces_drawn;
 }
 
-unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
+unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &last_size, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
 	bool const is_cobj(cobj_id >= 0); // !is_model3d
 	float const nclip((use_interior_cube_map_refl && !is_cobj) ? NEAR_CLIP : max(NEAR_CLIP, 0.5f*cube.max_len())); // slightly more than the cube half width in max dim
 	point const center((cube_map_center == all_zeros || is_cobj) ? cube.get_cube_center() : cube_map_center);
-	return create_cube_map_reflection(tid, tsize, cobj_id, center, nclip, FAR_CLIP, only_front_facing, is_indoors, skip_mask);
+	return create_cube_map_reflection(tid, tsize, last_size, cobj_id, center, nclip, FAR_CLIP, only_front_facing, is_indoors, skip_mask);
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {
@@ -504,7 +503,7 @@ void reflective_cobjs_t::create_textures() {
 		// also, curved objects (sphere, cylinder, torus, capsule) can reflect in back facing directions and need to have all faces updated
 		bool const bfc(tid && !cobj_moved && !no_update_needed && !cobj.is_semi_trans() && cobj.has_hard_edges());
 		unsigned skip_mask(0); // {z1, z2, y1, y2, x1, x2}
-		i->second.faces_valid = create_cube_map_reflection(tid, i->second.tsize, i->first, bcube, bfc, cobj.is_indoors(), skip_mask);
+		i->second.faces_valid = create_cube_map_reflection(tid, i->second.tsize, i->second.last_size, i->first, bcube, bfc, cobj.is_indoors(), skip_mask);
 		i->second.bcube       = bcube;
 	} // for i
 	for (auto i = to_remove.begin(); i != to_remove.end(); ++i) {remove_cobj(*i);}
