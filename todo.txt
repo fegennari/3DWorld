@@ -11,4 +11,3 @@ Cities:
 - Railroad tracks
 
 * Scene cube map skybox
-* Moving reflective objects (platforms?)

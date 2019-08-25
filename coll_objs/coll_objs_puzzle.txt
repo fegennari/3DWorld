@@ -127,6 +127,7 @@ damage 0.0
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
 r 1.0 100.0 # set specularity
 metalness 1.0
+#cube_map_ref 1
 y 8.0
 Q 1  2.0 0.25 0.0 0.2  0.2 0.0   1.75 -2.0 1.75  0 0 -1  1 # platform
 B  1.7 1.8  -2.05 -1.95  1.5 2.0
@@ -137,6 +138,7 @@ Q 1  1.4 0.50 0.0 0.3  0.3 0.0   2.03 -2.45 1.35  0 1 0  1 # platform
 B  2.0 2.06 -2.7 -2.2  1.3 1.4
 Q 1  0.4 0.3  0.0 0.0  0.2 0.0   2.25 -1.625 1.31  0 -1 0  1 # platform
 B  2.2 2.3  -1.3 -1.95 1.3 1.32
+#cube_map_ref 0
 metalness 0.0
 r 0.5 100.0 # set specularity
 Q 0
@@ -291,6 +293,9 @@ metalness 1.0
 Q 1  2.5 2.5 0.0 0.0  1000.0 1.0  -0.2 2.1 1.9  0 0 1  0 1 # rotating platform
 #P 4  -0.2 2.1 1.9  -0.2 2.1 2.0  -0.2 1.9 2.0  -0.2 1.9 1.9  0.01
 B -0.21 -0.19  1.9 2.1  1.9 2.0
+#cube_map_ref 1
+torus -0.2 2.1 1.95  1 0 0  0.03 0.008
+#cube_map_ref 0
 Q 0
 
 # 3 spinning things
