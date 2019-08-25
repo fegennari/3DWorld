@@ -562,6 +562,7 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 	if (s.is_setup()) { // already setup - enable/reuse
 		s.enable();
 		if (use_mvm) {upload_mvm_to_shader(s, "fg_ViewMatrix");}
+		if (shadow_map_enabled()) {upload_shadow_data_to_shader(s);} // need to redo this because MVM has likely changed
 		s.add_uniform_vector3d("camera_pos",  get_camera_pos()); // this should be the only other variable we need to update for reflections
 		return;
 	}

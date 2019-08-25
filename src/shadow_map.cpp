@@ -355,14 +355,14 @@ bool smap_data_t::bind_smap_texture(bool light_valid) const {
 }
 
 
-void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
+void upload_shadow_data_to_shader(shader_t &s) {
+	for (unsigned l = 0; l < smap_data.size(); ++l) {smap_data[l].set_smap_shader_for_light(s, l);} // {sun, moon}
+}
 
+void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 	s.add_uniform_float("z_bias", z_bias);
 	s.add_uniform_float("pcf_offset", shadow_map_pcf_offset);
-
-	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
-		smap_data[l].set_smap_shader_for_light(s, l);
-	}
+	upload_shadow_data_to_shader(s);
 }
 
 
