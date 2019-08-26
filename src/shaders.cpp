@@ -909,8 +909,12 @@ void shader_t::print_program_info_log() const {
 
 
 void shader_t::end_shader() { // ok to call if not in a shader
-
 	disable();
+	clear();
+}
+
+void shader_t::clear() {
+
 	program = 0;
 	
 	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {

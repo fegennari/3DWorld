@@ -768,7 +768,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	unsigned six(0);
 
 	if (reuse_shaders && frame_counter != last_frame) { // new frame, state may have changed, need to recreate all shaders
-		for (unsigned i = 0; i < 10; ++i) {shaders[i].end_shader();}
+		for (unsigned i = 0; i < 10; ++i) {shaders[i].clear();}
 		last_frame = frame_counter;
 	}
 	shader_t ss; // shared/reused shader

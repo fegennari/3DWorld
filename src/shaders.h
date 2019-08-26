@@ -114,6 +114,7 @@ public:
 	bool is_setup() const {return (program > 0);}
 	void enable();
 	void disable();
+	void clear();
 	void make_current();
 	bool begin_shader(bool do_enable=1);
 	void end_shader();
