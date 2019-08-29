@@ -750,6 +750,8 @@ bool ucell::is_visible() const {
 
 void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 
+	enable_blend();
+	set_additive_blend_mode();
 	set_multisample(0);
 
 	if (!star_pld.empty()) {
@@ -759,6 +761,8 @@ void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 	}
 	star_psd.draw_and_clear(WHITE_TEX, 1.0); // unblended
 	set_multisample(1);
+	set_std_blend_mode();
+	disable_blend();
 }
 
 
