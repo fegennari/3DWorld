@@ -45,7 +45,7 @@ extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_dept
 extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps, enable_tt_model_indir, fast_transparent_spheres;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
-extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
+extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, skybox_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale, cloud_cover;
 extern double tfticks;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
@@ -1130,8 +1130,24 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 void draw_sky(bool camera_side, bool no_update) {
 
 	if (atmosphere < 0.01) return; // no atmosphere
-	float radius(0.55f*(FAR_CLIP+X_SCENE_SIZE));
+	float radius(0.55f*(FAR_CLIP + max(X_SCENE_SIZE, Y_SCENE_SIZE)));
 	point center((camera_mode == 1) ? surface_pos : mesh_origin);
+
+	if (skybox_tid > 0) { // use sky box texture
+		cube_t c; c.set_from_sphere(center, 0.5*radius);
+		if (!c.contains_pt(get_camera_pos())) return; // camera outside cube
+		//if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
+		glDepthMask(GL_FALSE); // disable depth writing
+		select_texture(skybox_tid); // TODO: cube map support
+		shader_t s;
+		s.begin_simple_textured_shader(0);
+		s.set_cur_color(WHITE);
+		draw_cube(center, radius, radius, radius, 1);
+		s.end_shader();
+		glDepthMask(GL_TRUE); // enable depth writing
+		//if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
+		return;
+	}
 	center.z -= 0.727*radius;
 	if ((distance_to_camera(center) > radius) != camera_side) return;
 	colorRGBA const cloud_color(get_cloud_color());
