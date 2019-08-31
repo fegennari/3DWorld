@@ -2034,6 +2034,10 @@ int load_config(string const &config_file) {
 			if (!read_str(fp, strc)) cfg_err("mesh_detail_tex", error);
 			mesh_detail_tex = get_texture_by_name(std::string(strc));
 		}
+		else if (str == "skybox_tex") {
+			if (!read_str(fp, strc)) cfg_err("mesh_detail_tex", error);
+			skybox_tid = get_texture_by_name(std::string(strc));
+		}
 		else if (str == "ship_def_file") {
 			if (!read_str(fp, ship_def_file)) cfg_err("ship_def_file command", error);
 		}
