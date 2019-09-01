@@ -579,6 +579,7 @@ public:
 	float used_mass()      const;
 	bool can_attack()      const;
 	bool can_move()        const {return (max_speed > 0.0 && accel > 0.0);}
+	bool has_health()      const {return (ncrew == 0 && can_move());} // moving organics
 	unsigned req_crew()    const;
 	float get_weap_range() const;
 	float get_min_weap_range() const;
