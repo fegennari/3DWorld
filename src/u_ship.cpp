@@ -2306,14 +2306,14 @@ void u_ship::apply_physics() {
 	// rand() mod should be f(fticks), but leave as is for improved performance when framerate is low
 	if (ENABLE_PARTS && animate2 && is_powered && sc.nengines > 0 && cloaked < 0.5 && (rand()%6) == 0 &&
 		fticks*velocity.mag() > 0.1f*radius && univ_sphere_vis(pos, 2.0f*c_radius))
-	{ 
+	{
 		float const pscale(0.1*min(5.0f*MAX_PARTICLE_SIZE, radius));
 
 		if (!is_distant(pos, 2.0*pscale)) {
 			point const pos2(pos + gen_rand_vector_uniform(0.5*radius) - dir*(1.5*c_radius));
 			float const psize(pscale*rand_uniform(0.5, 1.0));
 			vector3d const vel(velocity*-0.2);
-			gen_particle(PTYPE_GLOW, LT_GRAY, colorRGBA(0.75, 0.75, 0.75, 0.0), ((5*TICKS_PER_SECOND)/2), pos2, vel, psize, 0.0, alignment, 0);
+			gen_particle(PTYPE_GLOW, LT_GRAY, colorRGBA(0.75, 0.75, 0.75, 0.0), ((5*TICKS_PER_SECOND)/2), pos2, vel, psize, 0.0, alignment, 0, SMOKE_PUFF_TEX);
 		}
 	}
 	if (exploding && specs().exp_subtype != ETYPE_NONE) { // many small explosions

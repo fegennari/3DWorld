@@ -37,7 +37,7 @@ usw_ray_group trail_rays, beam_rays; // engine trails, beams
 vector<temp_source> temp_sources;
 vector<hyper_inhibit_t> hyper_inhibits;
 pt_line_drawer particle_pld;
-point_sprite_drawer_sized glow_psd;
+point_sprite_drawer_sized glow_psd, smoke_psd;
 shader_t emissive_shader;
 
 float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
@@ -1053,7 +1053,8 @@ void draw_univ_objects() {
 	}
 	s.end_shader();
 	glDepthMask(GL_FALSE);
-	glow_psd.draw_and_clear(BLUR_TEX); // uses a point sprite shader internally
+	smoke_psd.draw_and_clear(SMOKE_PUFF_TEX); // uses a point sprite shader internally
+	glow_psd .draw_and_clear(BLUR_TEX      ); // uses a point sprite shader internally
 	glDepthMask(GL_TRUE);
 
 	disable_blend();

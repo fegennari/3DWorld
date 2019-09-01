@@ -45,7 +45,7 @@ extern pos_dir_up player_pdu;
 extern vector<us_weapon> us_weapons;
 extern exp_type_params et_params[];
 extern pt_line_drawer particle_pld;
-extern point_sprite_drawer_sized glow_psd;
+extern point_sprite_drawer_sized glow_psd, smoke_psd;
 
 
 // ************ FREE_OBJ ************
@@ -872,13 +872,14 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
 	switch (ptype) {
 	case PTYPE_GLOW:
-		if ((texture_id == BLUR_TEX || texture_id == BLUR_CENT_TEX) && ((texture_id == BLUR_TEX) ? 60.0 : 90.0)*radius < ddata.dist) {
+		if ((texture_id == BLUR_TEX || texture_id == BLUR_CENT_TEX || texture_id == SMOKE_PUFF_TEX) && ((texture_id == BLUR_TEX) ? 60.0 : 90.0)*radius < ddata.dist) { // far
 			// Note: may not be in correct back to front ordering for alpha blending
-			glow_psd.add_pt(sized_vert_t<vert_color>(vert_color(make_pt_global(pos), color), ((texture_id == BLUR_TEX) ? 2.0 : 3.0)*radius));
+			sized_vert_t<vert_color> const p(vert_color(make_pt_global(pos), color), ((texture_id == BLUR_CENT_TEX) ? 3.0 : 2.0)*radius);
+			((texture_id == SMOKE_PUFF_TEX) ? smoke_psd : glow_psd).add_pt(p);
 		}
-		else {
+		else { // near
 			assert(texture_id >= 0);
-			ddata.setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color, texture_id);
+			ddata.setup_colors_draw_flare(pos, all_zeros, 2.25, 2.25, color, texture_id, 1); // inverted (needed to match orient of asymmetric textures such as smoke)
 		}
 		break;
 
