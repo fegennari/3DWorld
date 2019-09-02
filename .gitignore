@@ -24,5 +24,6 @@ video_out*.mp4
 positions.log.txt
 state.txt
 shaders/generated/*
+textures/skybox/skybox*.png
 TAGS
 *~

@@ -104,5 +104,9 @@ water_enabled_bmp mapx/water_enable128.bmp
 # mesh_draw_bmp mapx/mesh_draw256.bmp
 # water_enabled_bmp mapx/water_enable256.bmp
 
+#skybox_tex skybox/kisspng_skybox2.png
+# from http://scmapdb.com/wad:skybox-skies
+#skybox_tex skybox/skybox2.png
+
 end
 

@@ -1129,7 +1129,8 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 
 void draw_skybox_cube(cube_t const &c) {
 
-	float const x1(0.0), x2(0.25), x3(0.5), x4(0.75), x5(1.0), y1(0.0), y2(0.3333), y3(0.6667), y4(1.0);
+	//float const x1(0.0), x2(0.25), x3(0.5), x4(0.75), x5(1.0), y1(0.0), y2(0.3333), y3(0.6667), y4(1.0);
+	float const x1(0.0), x2(0.251), x3(0.499), x4(0.75), x5(1.0), y1(0.0), y2(0.334), y3(0.666), y4(1.0); // bias slightly to avoid face edges
 	point const A(c.x1(), c.y1(), c.z1());
 	point const B(c.x2(), c.y1(), c.z1());
 	point const C(c.x1(), c.y2(), c.z1());
@@ -1183,7 +1184,7 @@ void draw_sky(bool camera_side, bool no_update) {
 		if (!c.contains_pt(get_camera_pos())) return; // camera outside cube
 		//if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 		glDepthMask(GL_FALSE); // disable depth writing
-		select_texture(skybox_tid); // TODO: cube map support
+		select_texture(skybox_tid);
 		shader_t s;
 		s.begin_simple_textured_shader(0);
 		s.set_cur_color(WHITE);
