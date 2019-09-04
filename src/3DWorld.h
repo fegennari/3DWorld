@@ -885,8 +885,12 @@ struct vert_wrap_t { // size = 12; so we can put the vertex first
 
 struct vert_tc_t : public vert_wrap_t { // size = 20
 	float t[2];
+	typedef vert_tc_t non_color_class;
 	vert_tc_t() {t[0] = t[1] = 0.0f;}
 	vert_tc_t(point const &v_, float ts, float tt) : vert_wrap_t(v_) {t[0] = ts; t[1] = tt;}
+	vert_tc_t(float x, float y, float z, float ts, float tt) : vert_wrap_t(point(x, y, z)) {t[0] = ts; t[1] = tt;}
+	void assign(point const &v_, float ts, float tt) {v = v_; t[0] = ts; t[1] = tt;}
+	bool operator==(vert_tc_t const &p) const {return (v == p.v && t[0] == p.t[0] && t[1] == p.t[1]);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 

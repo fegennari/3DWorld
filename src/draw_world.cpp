@@ -1139,37 +1139,37 @@ void draw_skybox_cube(cube_t const &c) {
 	point const F(c.x2(), c.y1(), c.z2());
 	point const G(c.x1(), c.y2(), c.z2());
 	point const H(c.x2(), c.y2(), c.z2());
-	vert_norm_tc verts[24];
+	vert_tc_t verts[24];
 	// -z
-	verts[ 0].assign(A, -plus_z, x2, y1);
-	verts[ 1].assign(B, -plus_z, x3, y1);
-	verts[ 2].assign(D, -plus_z, x3, y2);
-	verts[ 3].assign(C, -plus_z, x2, y2);
+	verts[ 0].assign(A, x2, y1);
+	verts[ 1].assign(B, x3, y1);
+	verts[ 2].assign(D, x3, y2);
+	verts[ 3].assign(C, x2, y2);
 	// +z
-	verts[ 4].assign(E,  plus_z, x2, y4);
-	verts[ 5].assign(F,  plus_z, x3, y4);
-	verts[ 6].assign(H,  plus_z, x3, y3);
-	verts[ 7].assign(G,  plus_z, x2, y3);
+	verts[ 4].assign(E, x2, y4);
+	verts[ 5].assign(F, x3, y4);
+	verts[ 6].assign(H, x3, y3);
+	verts[ 7].assign(G, x2, y3);
 	// -y
-	verts[ 8].assign(A, -plus_y, x5, y2);
-	verts[ 9].assign(B, -plus_y, x4, y2);
-	verts[10].assign(F, -plus_y, x4, y3);
-	verts[11].assign(E, -plus_y, x5, y3);
+	verts[ 8].assign(A, x5, y2);
+	verts[ 9].assign(B, x4, y2);
+	verts[10].assign(F, x4, y3);
+	verts[11].assign(E, x5, y3);
 	// +y
-	verts[12].assign(C,  plus_y, x2, y2);
-	verts[13].assign(D,  plus_y, x3, y2);
-	verts[14].assign(H,  plus_y, x3, y3);
-	verts[15].assign(G,  plus_y, x2, y3);
+	verts[12].assign(C, x2, y2);
+	verts[13].assign(D, x3, y2);
+	verts[14].assign(H, x3, y3);
+	verts[15].assign(G, x2, y3);
 	// -x
-	verts[16].assign(A, -plus_x, x1, y2);
-	verts[17].assign(C, -plus_x, x2, y2);
-	verts[18].assign(G, -plus_x, x2, y3);
-	verts[19].assign(E, -plus_x, x1, y3);
+	verts[16].assign(A, x1, y2);
+	verts[17].assign(C, x2, y2);
+	verts[18].assign(G, x2, y3);
+	verts[19].assign(E, x1, y3);
 	// +x
-	verts[20].assign(B,  plus_x, x4, y2);
-	verts[21].assign(D,  plus_x, x3, y2);
-	verts[22].assign(H,  plus_x, x3, y3);
-	verts[23].assign(F,  plus_x, x4, y3);
+	verts[20].assign(B, x4, y2);
+	verts[21].assign(D, x3, y2);
+	verts[22].assign(H, x3, y3);
+	verts[23].assign(F, x4, y3);
 	draw_quad_verts_as_tris(verts, 24);
 }
 
