@@ -36,7 +36,7 @@ int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
 int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(MGEN_SINE), mesh_gen_shape(0), mesh_freq_filter(FREQ_FILTER);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
-float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
+float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), mesh_scale_z_inv(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
 vector<float> sin_table;
 float sinTable[F_TABLE_SIZE][5];
@@ -119,10 +119,10 @@ bool bmp_to_chars(char const *const fname, unsigned char **&data) { // Note: sup
 }
 
 
-float scale_mh_texture_val  (float val) {return (READ_MESH_H_SCALE*mesh_height_scale*mesh_file_scale*val + mesh_file_tz)/mesh_scale_z;}
+float scale_mh_texture_val  (float val) {return (READ_MESH_H_SCALE*mesh_height_scale*mesh_file_scale*val + mesh_file_tz)*mesh_scale_z_inv;}
 float unscale_mh_texture_val(float val) {return (mesh_scale_z*val - mesh_file_tz)/(READ_MESH_H_SCALE*mesh_height_scale*mesh_file_scale);}
-float get_mh_texture_mult() {return READ_MESH_H_SCALE*mesh_height_scale*mesh_file_scale/mesh_scale_z;}
-float get_mh_texture_add () {return mesh_file_tz/mesh_scale_z;}
+float get_mh_texture_mult() {return READ_MESH_H_SCALE*mesh_height_scale*mesh_file_scale*mesh_scale_z_inv;}
+float get_mh_texture_add () {return mesh_file_tz*mesh_scale_z_inv;}
 float get_heightmap_scale() {return 256.0*READ_MESH_H_SCALE;}
 
 
@@ -364,13 +364,13 @@ float get_volcano_height(float xi, float yi) {
 	float const val(COSF(x)*COSF(y)), hole(max(0.0, 400.0*(val - 0.999)));
 	//float const peak(150.0*(val - 0.99)); // cos function - discontinuous at the edges, repating for each island
 	float const peak(0.08*val/max(0.04f, dist)); // sinc function - steep with flat top and wide base - only on center island
-	return hmap_params.volcano_height*max(0.0f, (peak - hole))/mesh_scale_z;
+	return hmap_params.volcano_height*max(0.0f, (peak - hole))*mesh_scale_z_inv;
 }
 
 void apply_mesh_sine(float &zval, float x, float y) {
 	if (hmap_params.sine_mag > 0.0) { // Note: snow thresh is still off when highly zoomed in
 		float const freq(mesh_scale*hmap_params.sine_freq);
-		zval += (hmap_params.sine_mag*COSF(x*freq)*COSF(y*freq) + hmap_params.sine_bias)/mesh_scale_z;
+		zval += (hmap_params.sine_mag*COSF(x*freq)*COSF(y*freq) + hmap_params.sine_bias)*mesh_scale_z_inv;
 		if (hmap_params.volcano_width > 0.0 && hmap_params.volcano_height > 0.0) {zval += get_volcano_height(x, y);}
 	}
 }
@@ -547,7 +547,7 @@ void compute_scale() {
 
 float get_hmap_scale(int mode) {
 	float const scale((mode == MGEN_SIMPLEX || mode == MGEN_SIMPLEX_GPU || mode == MGEN_DWARP_GPU) ? 16.0 : 32.0); // simplex vs. perlin
-	return scale*MESH_HEIGHT*mesh_height_scale/mesh_scale_z;
+	return scale*MESH_HEIGHT*mesh_height_scale*mesh_scale_z_inv;
 }
 
 void postproc_noise_zval(float &zval) {
@@ -604,10 +604,10 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	}
 	yterms_start = nx*F_TABLE_SIZE;
 	xyterms.resize((nx + ny)*F_TABLE_SIZE, 0.0);
-	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale), msz_inv(1.0/mesh_scale_z);
+	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale);
 
 	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
-		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(msz_inv*sinTable[k][0]);
+		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(mesh_scale_z_inv*sinTable[k][0]);
 		float const x_const(ms2*sinTable[k][4] + sinTable[k][2] + x_mult*x0), y_const(ms2*sinTable[k][3] + sinTable[k][1] + y_mult*y0);
 		float const xmdx(x_mult*dx), ymdy(y_mult*dy);
 
@@ -641,8 +641,8 @@ void mesh_xy_grid_cache_t::enable_glaciate() {
 	if (hmap_params.sine_mag == 0.0) return;
 	assert(cur_nx > 0 && cur_ny > 0); // build_arrays() must have been called first
 	sine_mag_terms.resize(cur_nx*cur_ny);
-	sine_offset = hmap_params.sine_bias/mesh_scale_z;
-	float const sm_scale(hmap_params.sine_mag/mesh_scale_z), freq(mesh_scale*hmap_params.sine_freq);
+	sine_offset = hmap_params.sine_bias*mesh_scale_z_inv;
+	float const sm_scale(hmap_params.sine_mag*mesh_scale_z_inv), freq(mesh_scale*hmap_params.sine_freq);
 	for (unsigned x = 0; x < cur_nx; ++x) {sine_mag_terms[x] = sm_scale*COSF((x*mdx + mx0)*DX_VAL_INV*freq);}
 	for (unsigned y = 0; y < cur_ny; ++y) {sine_mag_terms[cur_nx + y] = COSF((y*mdy + my0)*DY_VAL_INV*freq);}
 }
@@ -808,7 +808,7 @@ float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
 
 	float const xv(xy_scale*(xval - (MESH_X_SIZE >> 1))), yv(xy_scale*(yval - (MESH_Y_SIZE >> 1)));
 	if (mesh_gen_mode != MGEN_SINE) {return get_noise_zval(xv, yv, mesh_gen_mode, mesh_gen_shape);}
-	float val(eval_mesh_sin_terms(mesh_scale*xv, mesh_scale*yv)/mesh_scale_z);
+	float val(eval_mesh_sin_terms(mesh_scale*xv, mesh_scale*yv)*mesh_scale_z_inv);
 	apply_noise_shape_final(val, mesh_gen_shape);
 	return val;
 }
@@ -862,7 +862,8 @@ void update_mesh(float dms, bool do_regen_trees) { // called when mesh_scale cha
 	xoff2       = int(xoff2*dms);
 	yoff2       = int(yoff2*dms);
 	set_zmax_est(zmax_est*pow(dms, (float)MESH_SCALE_Z_EXP));
-	mesh_scale_z = pow(mesh_scale, (float)MESH_SCALE_Z_EXP);
+	mesh_scale_z     = pow(mesh_scale, (float)MESH_SCALE_Z_EXP);
+	mesh_scale_z_inv = 1.0/mesh_scale_z;
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		zmax = -LARGE_ZVAL;
