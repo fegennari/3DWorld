@@ -2232,16 +2232,30 @@ public:
 
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt) const {
 		if (empty()) return 0;
-		bool const is_vertical(p1.x == p2.x && p1.y == p2.y); // vertical lines can only intersect one building
 		vector3d const xlate(get_camera_coord_space_xlate());
 		point const p1x(p1 - xlate);
+		vector<point> points; // reused across calls
+		t = 1.0; // start at end point
+
+		if (p1.x == p2.x && p1.y == p2.y) { // vertical line special case optimization (for example map mode)
+			unsigned const gix(get_grid_ix(p1x));
+			grid_elem_t const &ge(grid[gix]);
+			if (ge.ixs.empty()) return 0; // skip empty grid
+			if (!check_line_clip(p1x, (p2 - xlate), ge.bcube.d)) return 0; // no intersection - skip this grid
+
+			for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
+				building_t const &building(get_building(*b));
+				if (!building.bcube.contains_pt_xy(p1x)) continue;
+				unsigned const ret(building.check_line_coll(p1, p2, xlate, t, points, 0, ret_any_pt));
+				if (ret) {hit_bix = *b; return ret;} // can only intersect one building
+			} // for b
+			return 0; // no coll
+		}
 		cube_t bcube(p1x, p2-xlate);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
-		point end_pos(p2);
 		unsigned coll(0); // 0=none, 1=side, 2=roof
-		vector<point> points; // reused across calls
-		t = 1.0; // start at end point
+		point end_pos(p2);
 
 		// for now, just do a slow iteration over every grid element within the line's bbox in XY
 		// Note: should probably iterate over the grid in XY order from the start to the end of the line, or better yet use a line drawing algorithm
@@ -2258,13 +2272,11 @@ public:
 					unsigned const ret(building.check_line_coll(p1, p2, xlate, t_new, points, 0, ret_any_pt));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
-						t       = t_new;
-						hit_bix = *b;
-						coll    = ret;
+						t = t_new; hit_bix = *b; coll = ret;
 						end_pos = p1 + t*(p2 - p1);
-						if (ret_any_pt || is_vertical) return coll;
+						if (ret_any_pt) return coll;
 					}
-				}
+				} // for b
 			} // for x
 		} // for y
 		return coll;
