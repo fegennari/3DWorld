@@ -89,20 +89,17 @@ void colorize(float val, unsigned char *rgb) {
 
 void draw_overhead_map() {
 
-	//RESET_TIME
 	unsigned tid(0);
 	if (map_mode == 0) return;
-	
-	if (map_mode == 2) {
-		map_mode = 1;
-		return;
-	}
+	if (map_mode == 2) {map_mode = 1; return;}
 	if (map_zoom == 0.0) {map_zoom = ((world_mode == WMODE_GROUND) ? 0.08 : 0.8);} // set reasonable defaults based on mode
 	int bx1(0), by1(0), bx2(0), by2(0), nx(1), ny(1);
 	while (window_width  > 2*nx) {nx *= 2;}
 	while (window_height > 2*ny) {ny *= 2;}
 	//nx = (window_width & 0xFFFC); ny = (window_height & 0xFFFC); // looks nicer, but slower
 	if (nx < 4 || ny < 4) return;
+
+	//timer_t timer("Map Draw");
 	int const nx2(nx/2), ny2(ny/2);
 	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04));
 	bool const is_ice(((world_mode == WMODE_GROUND) ? temperature : get_cur_temperature()) <= W_FREEZE_POINT);
@@ -340,7 +337,6 @@ void draw_overhead_map() {
 	reset_fill_mode();
 	free_texture(tid);
 	s.end_shader();
-	//PRINT_TIME("draw map")
 }
 
 
