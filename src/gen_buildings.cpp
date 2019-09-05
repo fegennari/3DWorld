@@ -2241,7 +2241,7 @@ public:
 			unsigned const gix(get_grid_ix(p1x));
 			grid_elem_t const &ge(grid[gix]);
 			if (ge.ixs.empty()) return 0; // skip empty grid
-			if (!check_line_clip(p1x, (p2 - xlate), ge.bcube.d)) return 0; // no intersection - skip this grid
+			if (!ge.bcube.contains_pt_xy(p1x)) return 0; // no intersection - skip this grid
 
 			for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
 				building_t const &building(get_building(*b));
