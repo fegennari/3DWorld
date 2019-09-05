@@ -2482,8 +2482,8 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 		         building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt));
 }
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
-	// only check city buildings in TT mode (too slow to check others)
-	return ((world_mode == WMODE_GROUND) ? building_creator : building_creator_city).get_building_hit_color(p1, p2, color);
+	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;
+	return building_creator.get_building_hit_color(p1, p2, color);
 }
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproce effects
 unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage());}
