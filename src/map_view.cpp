@@ -21,7 +21,7 @@ double map_x(0.0), map_y(0.0);
 extern bool water_is_lava, begin_motion, show_map_view_mandelbrot;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex;
-extern float zmax_est, zmin, zmax, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale;
+extern float zmax_est, zmin, zmax, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale, mesh_scale;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
@@ -57,10 +57,10 @@ double eval_mandelbrot_set(complex_num const &c) {
 }
 
 
-float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, float ystart, float xscale, float yscale, int i, int j) {
+float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, float ystart, float xscale, float yscale, int i, int j, bool nearest_texel=0) {
 
 	if (using_tiled_terrain_hmap_tex()) {
-		float zval(get_tiled_terrain_height_tex((xstart + X_SCENE_SIZE + j*xscale)*DX_VAL_INV, (ystart + Y_SCENE_SIZE + i*yscale)*DY_VAL_INV));
+		float zval(get_tiled_terrain_height_tex((xstart + X_SCENE_SIZE + j*xscale)*DX_VAL_INV, (ystart + Y_SCENE_SIZE + i*yscale)*DY_VAL_INV, nearest_texel));
 		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*height_gen.eval_index(j, i);}
 		return zval;
 	}
@@ -180,6 +180,8 @@ void draw_overhead_map() {
 		if (!uses_hmap && !show_map_view_mandelbrot) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
 		point const lpos(get_light_pos());
 		vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
+		float const texels_per_pixel(mesh_scale*0.5f*(xscale*DX_VAL_INV + yscale*DY_VAL_INV));
+		bool const nearest_texel(texels_per_pixel >= 1.0);
 
 #pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < ny; ++i) {
@@ -261,7 +263,7 @@ void draw_overhead_map() {
 						unpack_color(rgb, ground_color*(shadowed ? 0.5 : 1.0));
 						continue;
 					}
-					if (!mh_set) {mh = get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j);} // calculate mesh height here if not yet set
+					if (!mh_set) {mh = get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j, nearest_texel);} // calculate mesh height here if not yet set
 					float height(min(1.0f, hscale*(mh + zmax2))); // can be negative
 
 					if (!map_color) { // grayscale
@@ -297,7 +299,7 @@ void draw_overhead_map() {
 
 							if (height > map_heights[4]) {
 								float const hx((j == 0) ? height : last_height);
-								float const hy(CLIP_TO_01(hscale*(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, max(i-1, 0), j) + zmax2)));
+								float const hy(CLIP_TO_01(hscale*(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, max(i-1, 0), j, nearest_texel) + zmax2)));
 								normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
 							}
 							last_height = height;

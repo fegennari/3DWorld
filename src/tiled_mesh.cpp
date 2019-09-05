@@ -220,8 +220,11 @@ tiled_terrain_hmap_manager_t terrain_hmap_manager;
 
 bool using_tiled_terrain_hmap_tex() {return (world_mode == WMODE_INF_TERRAIN && terrain_hmap_manager.enabled());}
 bool using_hmap_with_detail      () {return (using_tiled_terrain_hmap_tex() && mesh_scale < 0.75);}
-float get_tiled_terrain_height_tex(float xval, float yval) {return terrain_hmap_manager.interpolate_height(xval, yval);}
-vector3d get_tiled_terrain_height_tex_norm(int x, int y)   {return terrain_hmap_manager.get_norm(x, y);}
+
+float get_tiled_terrain_height_tex(float xval, float yval, bool nearest_texel) {
+	return (nearest_texel ? terrain_hmap_manager.get_nearest_height(xval, yval) : terrain_hmap_manager.interpolate_height(xval, yval));
+}
+vector3d get_tiled_terrain_height_tex_norm(int x, int y) {return terrain_hmap_manager.get_norm(x, y);}
 
 bool read_default_hmap_modmap() {
 

@@ -120,6 +120,7 @@ public:
 	float get_raw_height(int x, int y) const {return scale_mh_texture_val(hmap.get_heightmap_value(x, y));}
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
+	float get_nearest_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;
 
 	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x=0.0, float fract_y=0.0, bool allow_wrap=1) { // unused

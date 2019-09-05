@@ -322,6 +322,11 @@ float terrain_hmap_manager_t::interpolate_height(float x, float y) const { // bi
 		(1.0f-yv)*(xv*get_raw_height(xhi, ylo) + (1.0f-xv)*get_raw_height(xlo, ylo));
 }
 
+float terrain_hmap_manager_t::get_nearest_height(float x, float y) const {
+	int xv(round_fp(mesh_scale*x)), yv(round_fp(mesh_scale*y));
+	return (clamp_no_scale(xv, yv) ? get_raw_height(xv, yv) : scale_mh_texture_val(0.0));
+}
+
 vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {
 	return vector3d(DY_VAL*(get_clamped_height(x, y) - get_clamped_height(x+1, y)),
 			        DX_VAL*(get_clamped_height(x, y) - get_clamped_height(x, y+1)), dxdy).get_norm();
