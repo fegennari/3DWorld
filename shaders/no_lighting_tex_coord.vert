@@ -4,8 +4,7 @@ uniform vec4 color_modulate = vec4(1.0);
 
 out vec2 tc;
 
-void main()
-{
+void main() {
 	tc          = fg_TexCoord;
 	gl_Position = fg_ModelViewProjectionMatrix * (vec4(xlate, 0.0) + (vec4(scale, 1.0) * fg_Vertex));
 	fg_Color_vf = fg_Color * color_modulate;

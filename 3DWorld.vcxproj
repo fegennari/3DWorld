@@ -777,6 +777,8 @@
     <None Include="shaders\common_header.vert" />
     <None Include="shaders\common_header_shared.part" />
     <None Include="shaders\craters.part.frag" />
+    <None Include="shaders\cube_map.frag" />
+    <None Include="shaders\cube_map.vert" />
     <None Include="shaders\depth_of_field.frag" />
     <None Include="shaders\depth_utils.part.frag" />
     <None Include="shaders\detail_normal_map.part.frag" />

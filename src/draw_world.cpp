@@ -1182,16 +1182,22 @@ void draw_sky(bool camera_side, bool no_update) {
 	if (skybox_tid > 0) { // use sky box texture
 		cube_t c; c.set_from_sphere(center, 0.5*radius);
 		if (!c.contains_pt(get_camera_pos())) return; // camera outside cube
-		//if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 		glDepthMask(GL_FALSE); // disable depth writing
 		select_texture(skybox_tid);
 		shader_t s;
-		s.begin_simple_textured_shader(0);
+#if 0 // actual cube map
+		s.set_vert_shader("cube_map");
+		s.set_frag_shader("cube_map");
+		s.begin_shader();
 		s.set_cur_color(WHITE);
-		draw_skybox_cube(c);
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_vector3d("center", center);
+#else // cube with texture coordinates
+		s.begin_simple_textured_shader(0.0, 0, 0, &WHITE);
+#endif
+		draw_skybox_cube(c); // GL_DEPTH_CLAMP?
 		s.end_shader();
 		glDepthMask(GL_TRUE); // enable depth writing
-		//if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 		return;
 	}
 	center.z -= 0.727*radius;
