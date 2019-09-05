@@ -192,7 +192,7 @@ public:
 		int const x1(get_xpos(cube.d[0][0])), y1(get_ypos(cube.d[1][0])), x2(get_xpos(cube.d[0][1])), y2(get_ypos(cube.d[1][1]));
 		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
 		int const xlo(floor(xc)), ylo(floor(yc)), xhi(ceil(xc)), yhi(ceil(yc));
-		float const xv((xlo == xhi) ? 0.0 : (xc - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (yc - ylo)/float(yhi - ylo)); // avoid div-by-zero (use cubic_interpolate()?)
+		float const xv(xc - xlo), yv(yc - ylo); // use cubic_interpolate()?
 		int const height_val(yv*(xv*get_clamped_pixel_value(xhi, yhi, 0) + (1.0f-xv)*get_clamped_pixel_value(xlo, yhi, 0)) +
 			          (1.0f-yv)*(xv*get_clamped_pixel_value(xhi, ylo, 0) + (1.0f-xv)*get_clamped_pixel_value(xlo, ylo, 0))); // linear interpolation
 		int cx1(x1), cy1(y1), cx2(x2), cy2(y2);

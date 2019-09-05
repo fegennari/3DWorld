@@ -316,26 +316,23 @@ float terrain_hmap_manager_t::interpolate_height(float x, float y) const { // bi
 
 	float const sx(mesh_scale*x), sy(mesh_scale*y);
 	int xlo(floor(sx)), ylo(floor(sy)), xhi(ceil(sx)), yhi(ceil(sy));
-	float const xv((xlo == xhi) ? 0.0 : (sx - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (sy - ylo)/float(yhi - ylo)); // avoid div-by-zero (use cubic_interpolate()?)
+	float const xv(sx - xlo), yv(sy - ylo); // use cubic_interpolate()?
 	if (!clamp_no_scale(xlo, ylo) || !clamp_no_scale(xhi, yhi)) {return scale_mh_texture_val(0.0);}
 	return    yv *(xv*get_raw_height(xhi, yhi) + (1.0f-xv)*get_raw_height(xlo, yhi)) +
 		(1.0f-yv)*(xv*get_raw_height(xhi, ylo) + (1.0f-xv)*get_raw_height(xlo, ylo));
 }
 
 vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {
-
 	return vector3d(DY_VAL*(get_clamped_height(x, y) - get_clamped_height(x+1, y)),
 			        DX_VAL*(get_clamped_height(x, y) - get_clamped_height(x, y+1)), dxdy).get_norm();
 }
 
 void terrain_hmap_manager_t::modify_height(mod_elem_t const &elem, bool is_delta) {
-
 	assert((unsigned)max(hmap.width, hmap.height) <= max_tex_ix());
 	hmap.modify_heightmap_value(elem.x, elem.y, elem.delta, is_delta);
 }
 
 tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::scale_delta(float delta) const {
-
 	int const scale_factor(1 << (hmap.bytes_per_channel() << 3));
 	return scale_factor*CLIP_TO_pm1(delta);
 }
