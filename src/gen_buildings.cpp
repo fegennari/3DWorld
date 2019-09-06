@@ -1703,6 +1703,13 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 }
 
 
+struct cube_with_ix_t : public cube_t {
+	unsigned ix;
+	cube_with_ix_t(unsigned ix_=0) : ix(ix_) {}
+	cube_with_ix_t(cube_t const &c, unsigned ix_=0) : cube_t(c), ix(ix_) {}
+};
+
+
 class building_creator_t {
 
 	unsigned grid_sz, gpu_mem_usage;
@@ -1716,12 +1723,13 @@ class building_creator_t {
 	bool use_smap_this_frame;
 
 	struct grid_elem_t {
-		vector<unsigned> ixs;
+		vector<cube_with_ix_t> bc_ixs;
 		cube_t bcube;
 		grid_elem_t() : bcube(all_zeros) {}
+
 		void add(cube_t const &c, unsigned ix) {
-			if (ixs.empty()) {bcube = c;} else {bcube.union_with_cube(c);}
-			ixs.push_back(ix);
+			if (bc_ixs.empty()) {bcube = c;} else {bcube.union_with_cube(c);}
+			bc_ixs.emplace_back(c, ix);
 		}
 	};
 	vector<grid_elem_t> grid, grid_by_tile;
@@ -1764,9 +1772,7 @@ class building_creator_t {
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
-			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
-				get_grid_elem(x, y).add(bcube, bix);
-			}
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {get_grid_elem(x, y).add(bcube, bix);}
 		}
 	}
 	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
@@ -1776,13 +1782,19 @@ class building_creator_t {
 		}
 		return 0;
 	}
+	bool check_for_overlaps(vector<cube_with_ix_t> const &bc_ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
+		for (auto i = bc_ixs.begin(); i != bc_ixs.end(); ++i) {
+			if (test_bc.intersects_xy(*i) && get_building(i->ix).check_bcube_overlap_xy(b, expand_rel, expand_abs, points)) return 1;
+		}
+		return 0;
+	}
 
 	void build_grid_by_tile(bool single_tile) {
 		grid_by_tile.clear();
 
 		if (single_tile || world_mode != WMODE_INF_TERRAIN) { // not used in this mode - add all buildings to the first tile
 			grid_by_tile.resize(1);
-			grid_by_tile.front().ixs.reserve(buildings.size());
+			grid_by_tile.front().bc_ixs.reserve(buildings.size());
 			for(unsigned bix = 0; bix < buildings.size(); ++bix) {grid_by_tile.front().add(buildings[bix].bcube, bix);}
 			return;
 		}
@@ -1836,7 +1848,7 @@ class building_creator_t {
 				for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 					grid_elem_t const &ge(get_grid_elem(x, y));
 					if (!test_bc.intersects_xy(ge.bcube)) continue;
-					if (check_for_overlaps(ge.ixs, test_bc, b, expand_val, max(min_building_spacing, extra_spacing), points)) {return 0;}
+					if (check_for_overlaps(ge.bc_ixs, test_bc, b, expand_val, max(min_building_spacing, extra_spacing), points)) {return 0;}
 				} // for x
 			} // for y
 		}
@@ -2157,7 +2169,7 @@ public:
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 			bdraw.cur_tile_id = (g - grid_by_tile.begin());
-			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {get_building(*i).get_all_drawn_window_verts(bdraw, light_pass);}
+			for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_window_verts(bdraw, light_pass);}
 		}
 		bdraw.finalize(grid_by_tile.size());
 	}
@@ -2169,7 +2181,7 @@ public:
 
 				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					building_draw_vbo.cur_tile_id = (g - grid_by_tile.begin());
-					for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {get_building(*i).get_all_drawn_verts(building_draw_vbo);}
+					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_verts(building_draw_vbo);}
 				}
 				building_draw_vbo.finalize(grid_by_tile.size());
 			}
@@ -2216,14 +2228,13 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.ixs.empty()) continue; // skip empty grid
+				if (ge.bc_ixs.empty()) continue; // skip empty grid
 				if (!sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate))) continue; // Note: makes little difference
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
-				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-					building_t const &building(get_building(*b));
-					if (!building.bcube.intersects_xy(bcube)) continue;
-					if (building.check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm)) return 1;
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+					if (!b->intersects_xy(bcube)) continue;
+					if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm)) return 1;
 				}
 			} // for x
 		} // for y
@@ -2241,14 +2252,13 @@ public:
 			if (!get_bcube().contains_pt_xy(p1x)) return 0;
 			unsigned const gix(get_grid_ix(p1x));
 			grid_elem_t const &ge(grid[gix]);
-			if (ge.ixs.empty()) return 0; // skip empty grid
+			if (ge.bc_ixs.empty()) return 0; // skip empty grid
 			if (!ge.bcube.contains_pt_xy(p1x)) return 0; // no intersection - skip this grid
 
-			for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-				building_t const &building(get_building(*b));
-				if (!building.bcube.contains_pt_xy(p1x)) continue;
-				unsigned const ret(building.check_line_coll(p1, p2, xlate, t, points, 0, ret_any_pt));
-				if (ret) {hit_bix = *b; return ret;} // can only intersect one building
+			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+				if (!b->contains_pt_xy(p1x)) continue;
+				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t, points, 0, ret_any_pt));
+				if (ret) {hit_bix = b->ix; return ret;} // can only intersect one building
 			} // for b
 			return 0; // no coll
 		}
@@ -2263,17 +2273,16 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.ixs.empty()) continue; // skip empty grid
+				if (ge.bc_ixs.empty()) continue; // skip empty grid
 				if (!check_line_clip(p1x, (end_pos - xlate), ge.bcube.d)) continue; // no intersection - skip this grid
 
-				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) { // Note: okay to check the same building more than once
-					building_t const &building(get_building(*b));
-					if (!building.bcube.intersects(bcube)) continue;
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
+					if (!b->intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(building.check_line_coll(p1, p2, xlate, t_new, points, 0, ret_any_pt));
+					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t_new, points, 0, ret_any_pt));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
-						t = t_new; hit_bix = *b; coll = ret;
+						t = t_new; hit_bix = b->ix; coll = ret;
 						end_pos = p1 + t*(p2 - p1);
 						if (ret_any_pt) return coll;
 					}
@@ -2295,11 +2304,11 @@ public:
 		if (empty()) return -1;
 		unsigned const gix(get_grid_ix(pos));
 		grid_elem_t const &ge(grid[gix]);
-		if (ge.ixs.empty() || !ge.bcube.contains_pt(pos)) return -1; // skip empty or non-containing grid
+		if (ge.bc_ixs.empty() || !ge.bcube.contains_pt(pos)) return -1; // skip empty or non-containing grid
 		static vector<point> points; // reused across calls
 
-		for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-			if (get_building(*b).bcube.contains_pt(pos)) {return *b;} // found
+		for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+			if (b->contains_pt(pos)) {return b->ix;} // found
 		}
 		return -1;
 	}
@@ -2338,14 +2347,13 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (!xy_range.intersects_xy(ge.bcube)) continue;
+				if (ge.bc_ixs.empty() || !xy_range.intersects_xy(ge.bcube)) continue;
 
-				for (auto b = ge.ixs.begin(); b != ge.ixs.end(); ++b) {
-					building_t const &building(get_building(*b));
-					if (!xy_range.intersects_xy(building.bcube)) continue;
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+					if (!xy_range.intersects_xy(*b)) continue;
 					cube_t shared(xy_range);
-					shared.intersect_with_cube(building.bcube);
-					if (get_grid_ix(shared.get_llc()) == y*grid_sz + x) {bcubes.push_back(building.bcube);} // add only if in home grid (to avoid duplicates)
+					shared.intersect_with_cube(*b);
+					if (get_grid_ix(shared.get_llc()) == y*grid_sz + x) {bcubes.push_back(*b);} // add only if in home grid (to avoid duplicates)
 				}
 			} // for x
 		} // for y
@@ -2355,12 +2363,12 @@ public:
 		state.init(pdu.pos, get_camera_coord_space_xlate());
 		
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
-			if (g->ixs.empty()) continue;
+			if (g->bc_ixs.empty()) continue;
 			point const pos(g->bcube.get_cube_center() + state.xlate);
 			if (!pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + state.xlate))) continue; // VFC
 			
-			for (auto i = g->ixs.begin(); i != g->ixs.end(); ++i) {
-				if (pdu.cube_visible(buildings[*i].bcube + state.xlate)) {state.building_ids.push_back(*i);}
+			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
+				if (pdu.cube_visible(*b + state.xlate)) {state.building_ids.push_back(b->ix);}
 			}
 		}
 	}
