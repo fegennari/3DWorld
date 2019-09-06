@@ -2284,14 +2284,14 @@ public:
 	}
 
 	// Note: we can get building_id by calling check_ped_coll() or get_building_bcube_at_pos()
-	bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) const { // Note: not thread safe sue to static points
+	bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) const { // Note: not thread safe due to static points
 		assert(building_id < buildings.size());
 		static vector<point> points; // reused across calls
 		float t_new(1.0);
 		return buildings[building_id].check_line_coll(p1, p2, zero_vector, t_new, points, 0, 1);
 	}
 
-	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe sue to static points
+	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe due to static points
 		if (empty()) return -1;
 		unsigned const gix(get_grid_ix(pos));
 		grid_elem_t const &ge(grid[gix]);
@@ -2304,7 +2304,7 @@ public:
 		return -1;
 	}
 
-	bool check_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe sue to static points
+	bool check_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe due to static points
 		if (empty()) return 0;
 		assert(plot_id < bix_by_plot.size());
 		vector<unsigned> const &bixes(bix_by_plot[plot_id]); // should be populated in gen()
