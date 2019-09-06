@@ -2238,6 +2238,7 @@ public:
 		t = 1.0; // start at end point
 
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line special case optimization (for example map mode)
+			if (!get_bcube().contains_pt_xy(p1x)) return 0;
 			unsigned const gix(get_grid_ix(p1x));
 			grid_elem_t const &ge(grid[gix]);
 			if (ge.ixs.empty()) return 0; // skip empty grid
