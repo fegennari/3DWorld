@@ -1053,8 +1053,9 @@ class city_road_gen_t : public road_gen_base_t {
 
 	class road_network_t : public streetlights_t {
 
-		vector<road_t> roads; // full overlapping roads, for collisions, etc.
+		vector<road_t> roads; // full overlapping roads with constant slope, for collisions, etc.
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
+		vector<cube_t> conn_roads; // connector road bounding cubes (contain multiple adjacent connected roads with different slopes/zvals)
 		vector<road_isec_t> isecs[3]; // for drawing with textures: {2-way, 3-way, 4-way}
 		vector<road_plot_t> plots; // plots of land that can hold buildings (city blocks)
 		vector<bridge_t> bridges; // bridges, part of global road network
@@ -1141,6 +1142,7 @@ class city_road_gen_t : public road_gen_base_t {
 		void clear() {
 			roads.clear();
 			segs.clear();
+			conn_roads.clear();
 			plots.clear();
 			bridges.clear();
 			tunnels.clear();
@@ -1519,6 +1521,7 @@ class city_road_gen_t : public road_gen_base_t {
 				float const blocker_padding(max(city_params.road_spacing, 2.0f*city_params.road_border*max(DX_VAL, DY_VAL)));
 				blockers.push_back(road);
 				blockers.back().expand_by(blocker_padding); // add extra padding
+				conn_roads.push_back(road);
 			}
 			if (road_len <= city_params.conn_road_seg_len) { // simple single road segment case
 				if (!check_only) {
@@ -1778,8 +1781,15 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
 				if (i->contains_pt_xy(pos)) {color = BROWN; return INT_ROAD;}
 			}
-			for (auto i = roads.begin(); i != roads.end(); ++i) { // use an acceleration structure?
-				if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
+			if (!conn_roads.empty()) { // global_rn connector roads - use this vector because we only care about XY projection (not Z), and conn_roads is smaller than roads
+				for (auto i = conn_roads.begin(); i != conn_roads.end(); ++i) { // use an acceleration structure?
+					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
+				}
+			}
+			else {
+				for (auto i = roads.begin(); i != roads.end(); ++i) { // use an acceleration structure?
+					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
+				}
 			}
 			for (auto i = tracks.begin(); i != tracks.end(); ++i) {
 				if (i->contains_pt_xy(pos)) {color = LT_BROWN; return INT_ROAD;} // counts as road intersection (for now)
@@ -1795,6 +1805,7 @@ class city_road_gen_t : public road_gen_base_t {
 			return INT_NONE;
 		}
 		bool cube_overlaps_road_xy(cube_t const &c) const {
+			// can we use conn_roads here for global_rn?
 			for (auto i = roads.begin(); i != roads.end(); ++i) {if (i->intersects(c)) return 1;}
 			return 0;
 		}
