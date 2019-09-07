@@ -436,7 +436,7 @@ struct building_t : public building_geom_t {
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const;
-	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0) const;
+	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void calc_bcube_from_parts();
 	void gen_geometry(int rseed1, int rseed2);
@@ -1134,8 +1134,9 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	return had_coll;
 }
 
-unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only, bool ret_any_pt) const {
-
+unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points,
+	bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const
+{
 	if (!check_line_clip(p1-xlate, p2-xlate, bcube.d)) return 0; // no intersection
 	point p1r(p1), p2r(p2);
 	float tmin(0.0), tmax(1.0);
@@ -1220,8 +1221,10 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 	for (auto i = details.begin(); i != details.end(); ++i) {
 		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // details cube
 	}
-	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-		if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), tmin) && tmin < t) {t = tmin; coll = 2;} // roof quad
+	if (!no_coll_pt || !vert) { // vert line already tested building cylins/cubes, and marked coll roof, no need to test again unless we need correct coll_pt t-val
+		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+			if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), tmin) && tmin < t) {t = tmin; coll = 2;} // roof quad
+		}
 	}
 	return coll; // Note: no collisions with windows or doors, since they're colinear with walls
 }
@@ -1880,7 +1883,7 @@ public:
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
 		float t(0.0); // unused
 		unsigned hit_bix(0);
-		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0)); // 0=no hit, 1=hit side, 2=hit roof
+		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1)); // no_coll_pt=1; returns: 0=no hit, 1=hit side, 2=hit roof
 		if (ret == 0) return 0;
 		building_t const &b(get_building(hit_bix));
 		switch (ret) {
@@ -2244,7 +2247,7 @@ public:
 		return 0;
 	}
 
-	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt) const {
+	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt, bool no_coll_pt) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
 		point const p1x(p1 - xlate);
@@ -2260,7 +2263,7 @@ public:
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!b->contains_pt_xy(p1x)) continue;
-				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t, points, 0, ret_any_pt));
+				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t, points, 0, ret_any_pt, no_coll_pt));
 				if (ret) {hit_bix = b->ix; return ret;} // can only intersect one building
 			} // for b
 			return 0; // no coll
@@ -2282,7 +2285,7 @@ public:
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
 					if (!b->intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t_new, points, 0, ret_any_pt));
+					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t_new, points, 0, ret_any_pt, no_coll_pt));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
 						t = t_new; hit_bix = b->ix; coll = ret;
@@ -2502,8 +2505,8 @@ bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_o
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) { // for line_intersect_city()
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
-	return (building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt) ||
-		         building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt));
+	return (building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 0) ||
+		         building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 1));
 }
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
 	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;
