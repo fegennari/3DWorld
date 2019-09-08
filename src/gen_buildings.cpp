@@ -1709,13 +1709,6 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 }
 
 
-struct cube_with_ix_t : public cube_t {
-	unsigned ix;
-	cube_with_ix_t(unsigned ix_=0) : ix(ix_) {}
-	cube_with_ix_t(cube_t const &c, unsigned ix_=0) : cube_t(c), ix(ix_) {}
-};
-
-
 class building_creator_t {
 
 	unsigned grid_sz, gpu_mem_usage;

@@ -609,6 +609,12 @@ struct cube_t { // size = 24
 typedef vector<cube_t> vect_cube_t;
 cube_t const all_zeros_cube(0,0,0,0,0,0);
 
+struct cube_with_ix_t : public cube_t {
+	unsigned ix;
+	cube_with_ix_t(unsigned ix_=0) : ix(ix_) {}
+	cube_with_ix_t(cube_t const &c, unsigned ix_=0) : cube_t(c), ix(ix_) {}
+};
+
 
 vector3d get_poly_norm(point const *const points, bool normalize=1);
 
