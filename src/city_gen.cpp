@@ -1796,7 +1796,8 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
-		int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
+		int get_color_at_xy(point const &pos, colorRGBA &color) const {
+			// Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 			if (!bcube.contains_pt_xy(pos)) return 0;
 			
 			for (auto i = bridges.begin(); i != bridges.end(); ++i) {
@@ -1806,12 +1807,12 @@ class city_road_gen_t : public road_gen_base_t {
 				if (i->contains_pt_xy(pos)) {color = BROWN; return INT_ROAD;}
 			}
 			if (!conn_roads.empty()) { // global_rn connector roads - use this vector because we only care about XY projection (not Z), and conn_roads is smaller than roads
-				for (auto i = conn_roads.begin(); i != conn_roads.end(); ++i) { // use an acceleration structure?
+				for (auto i = conn_roads.begin(); i != conn_roads.end(); ++i) {
 					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 				}
 			}
 			else {
-				for (auto i = roads.begin(); i != roads.end(); ++i) { // use an acceleration structure?
+				for (auto i = roads.begin(); i != roads.end(); ++i) {
 					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 				}
 			}
