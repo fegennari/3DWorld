@@ -792,10 +792,11 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<parking_lot_t> parking_lots;
 	private:
 		vector<bench_t> benches;
+		vector<cube_with_ix_t> parking_lot_groups, bench_groups; // index is last object in group
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
-		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen) {
+		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
@@ -843,6 +844,9 @@ class city_road_gen_t : public road_gen_base_t {
 				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 				bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
 				//colliders.push_back(park); // added per-filled space below
+				if (parking_lot_groups.empty() || is_new_tile) {parking_lot_groups.push_back(cube_with_ix_t(park));}
+				else {parking_lot_groups.back().union_with_cube(park);}
+				parking_lot_groups.back().ix = parking_lots.size();
 				unsigned const nspaces(park.row_sz*park.num_rows);
 				num_spaces += nspaces;
 
@@ -954,7 +958,7 @@ class city_road_gen_t : public road_gen_base_t {
 				} // for n
 			} // for n
 		}
-		void place_detail_objects(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
+		void place_detail_objects(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 			bench_t bench;
 			bench.radius = 0.3*city_params.get_nom_car_size().x;
 			float const spacing(max(bench.radius, get_min_obj_spacing()));
@@ -972,6 +976,9 @@ class city_road_gen_t : public road_gen_base_t {
 				bench.calc_bcube();
 				benches.push_back(bench);
 				colliders.push_back(bench.bcube);
+				if (bench_groups.empty() || is_new_tile) {bench_groups.push_back(cube_with_ix_t(bench.bcube));}
+				else {bench_groups.back().union_with_cube(bench.bcube);}
+				bench_groups.back().ix = benches.size();
 			} // for n
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) {
@@ -986,7 +993,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	public:
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
-		void clear() {parking_lots.clear(); num_spaces = filled_spaces = 0;}
+		void clear() {parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); bench_groups.clear(); num_spaces = filled_spaces = 0;}
 
 		struct cube_by_x1 {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
@@ -1002,17 +1009,21 @@ class city_road_gen_t : public road_gen_base_t {
 			clear();
 			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block();}
 			bool const add_parking_lots(have_cars && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
+			uint64_t prev_tile_id(0);
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
+				uint64_t const tile_id(road_network_t::get_tile_id_for_cube(*i));
+				bool const is_new_tile(tile_id != prev_tile_id);
 				bcubes.clear();
 				get_building_bcubes(*i, bcubes);
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
 				vect_cube_t &colliders(plot_colliders[plot_id]);
-				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, colliders, rgen);}
+				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, colliders, rgen, is_new_tile);}
 				place_trees_in_plot (*i, bcubes, colliders, detail_rgen);
-				place_detail_objects(*i, bcubes, colliders, detail_rgen);
+				place_detail_objects(*i, bcubes, colliders, detail_rgen, is_new_tile);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
+				prev_tile_id = tile_id;
 			} // for i
 			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 		}
@@ -1022,7 +1033,7 @@ class city_road_gen_t : public road_gen_base_t {
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
 
-			for (auto i = benches.begin(); i != benches.end(); ++i) {
+			for (auto i = benches.begin(); i != benches.end(); ++i) { // Note: could use bench_groups
 				if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 			}
 			return 0;
@@ -1033,18 +1044,32 @@ class city_road_gen_t : public road_gen_base_t {
 			return ret;
 		}
 		bool pt_in_parking_lot_xy(point const &pos) const {
-			for (auto p = parking_lots.begin(); p != parking_lots.end(); ++p) {
-				if (p->contains_pt_xy(pos)) return 1;
+			unsigned start_ix(0);
+
+			for (auto i = parking_lot_groups.begin(); i != parking_lot_groups.end(); start_ix = i->ix, ++i) {
+				if (!i->contains_pt_xy(pos)) continue;
+				for (unsigned b = start_ix; b < i->ix; ++b) {if (parking_lots[b].contains_pt_xy(pos)) return 1;}
 			}
 			return 0;
 		}
 		bool cube_overlaps_parking_lot_xy(cube_t const &c) const {
-			for (auto p = parking_lots.begin(); p != parking_lots.end(); ++p) {if (p->intersects(c)) return 1;}
+			unsigned start_ix(0);
+
+			for (auto i = parking_lot_groups.begin(); i != parking_lot_groups.end(); start_ix = i->ix, ++i) {
+				if (!i->intersects(c)) continue;
+				for (unsigned b = start_ix; b < i->ix; ++b) {if (parking_lots[b].intersects(c)) return 1;}
+			}
 			return 0;
 		}
 		bool get_color_at_xy(point const &pos, colorRGBA &color) const {
-			for (auto i = benches.begin(); i != benches.end(); ++i) {
-				if (i->bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
+			unsigned start_ix(0);
+
+			for (auto i = bench_groups.begin(); i != bench_groups.end(); start_ix = i->ix, ++i) {
+				if (!i->contains_pt_xy(pos)) continue;
+					
+				for (unsigned b = start_ix; b < i->ix; ++b) {
+					if (benches[b].bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
+				}
 			}
 			return 0;
 		}
@@ -1082,8 +1107,6 @@ class city_road_gen_t : public road_gen_base_t {
 		};
 		vector<city_id_pair_t> road_to_city; // indexed by road ID
 		vector<vector<unsigned>> city_to_seg; // maps city_id to set of road segments connecting to that city
-
-		static uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
 
 		struct cmp_by_tile { // not the most efficient solution, but no memory overhead
 			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
@@ -1124,6 +1147,7 @@ class city_road_gen_t : public road_gen_base_t {
 		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {
 			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
+		static uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
 		cube_t const &get_bcube() const {return bcube;}
 		cube_t const &get_plot_bcube(unsigned plot_ix) const {assert(plot_ix < plots.size()); return plots[plot_ix];}
 		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
