@@ -796,7 +796,7 @@ class city_road_gen_t : public road_gen_base_t {
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
-		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
@@ -812,6 +812,7 @@ class city_road_gen_t : public road_gen_base_t {
 			car_t car;
 			car.park();
 			car.cur_city = city_id;
+			car.cur_road = plot_ix; // store plot_ix in road field
 			car.cur_road_type = TYPE_PLOT;
 
 			for (unsigned c = 0; c < 4; ++c) { // generate 0-4 parking lots per plot, starting at the corners, in random order
@@ -840,6 +841,7 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 				assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 				assert(park.get_dx() > 0.0 && park.get_dy() > 0.0);
+				car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
 				parking_lots.push_back(park);
 				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 				bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
@@ -1019,7 +1021,7 @@ class city_road_gen_t : public road_gen_base_t {
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
 				vect_cube_t &colliders(plot_colliders[plot_id]);
-				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, bcubes, colliders, rgen, is_new_tile);}
+				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, (i - plots.begin()), bcubes, colliders, rgen, is_new_tile);}
 				place_trees_in_plot (*i, bcubes, colliders, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, detail_rgen, is_new_tile);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
