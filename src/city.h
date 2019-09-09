@@ -616,7 +616,8 @@ class car_manager_t {
 	};
 	city_road_gen_t const &road_gen;
 	vector<car_t> cars;
-	vector<car_block_t> car_blocks;
+	vector<car_block_t> car_blocks, car_blocks_by_road;
+	vector<cube_with_ix_t> cars_by_road;
 	ped_city_vect_t peds_crossing_roads;
 	car_draw_state_t dstate;
 	rand_gen_t rgen;

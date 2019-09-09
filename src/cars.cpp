@@ -11,7 +11,7 @@
 float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
 
 extern bool tt_fire_button_down;
-extern int display_mode, game_mode, animate2;
+extern int display_mode, game_mode, map_mode, animate2;
 extern float FAR_CLIP;
 extern point pre_smap_player_pos;
 extern vector<light_source> dl_sources;
@@ -633,16 +633,24 @@ bool car_manager_t::get_color_at_xy(point const &pos, colorRGBA &color, int int_
 	if (cars.empty()) return 0;
 	if (int_ret != INT_ROAD && int_ret != INT_PARKING) return 0; // not a road or a parking lot - no car intersections
 
-	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+	for (auto cb = car_blocks_by_road.begin(); cb+1 < car_blocks_by_road.end(); ++cb) { // use cars_by_road to accelerate query
 		if (!get_cb_bcube(*cb).contains_pt_xy(pos)) continue; // skip
 		unsigned start(cb->start), end((cb+1)->start);
-		assert(end <= cars.size());
+		assert(end <= cars_by_road.size());
 		if      (int_ret == INT_ROAD)    {end   = cb->first_parked;} // moving cars only (beginning of range)
 		else if (int_ret == INT_PARKING) {start = cb->first_parked;} // parked cars only (end of range)
 		assert(start <= end);
+		assert(end < cars_by_road.size()); // strictly less
 
-		for (unsigned c = start; c != end; ++c) { // Note: slow, could use road as accel structure
-			if (cars[c].bcube.contains_pt_xy(pos)) {color = cars[c].get_color(); return 1;}
+		for (unsigned i = start; i != end; ++i) {
+			cube_with_ix_t const &v(cars_by_road[i]);
+			if (!v.contains_pt_xy(pos)) continue; // skip
+			unsigned const ix_end(cars_by_road[i+1].ix);
+			assert(ix_end <= cars.size());
+
+			for (unsigned c = v.ix; c != ix_end; ++c) {
+				if (cars[c].bcube.contains_pt_xy(pos)) {color = cars[c].get_color(); return 1;}
+			}
 		}
 	} // for cb
 	return 0;
@@ -819,6 +827,31 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		if (!peds_crossing_roads.peds.empty()) {check_car_for_ped_colls(*i);}
 	} // for i
 	update_cars(); // run update logic
+
+	if (map_mode) { // create cars_by_road
+		car_blocks_by_road.clear();
+		cars_by_road.clear();
+		unsigned cur_city(1<<31), cur_road(1<<31); // start at invalid values
+		bool saw_parked(0);
+
+		for (auto i = cars.begin(); i != cars.end(); ++i) {
+			if (i->cur_city != cur_city || i->cur_road != cur_road) { // new city/road
+				if (i->cur_city != cur_city) { // new city
+					if (!saw_parked && !car_blocks_by_road.empty()) {car_blocks_by_road.back().first_parked = cars_by_road.size();}
+					saw_parked = 0;
+					car_blocks_by_road.emplace_back(cars_by_road.size(), i->cur_city);
+				}
+				cars_by_road.emplace_back(i->bcube, (i - cars.begin()));
+				cur_city = i->cur_city;
+				cur_road = i->cur_road;
+			}
+			else {cars_by_road.back().union_with_cube(i->bcube);}
+			if (i->is_parked() && !saw_parked) {car_blocks_by_road.back().first_parked = cars_by_road.size(); saw_parked = 1;}
+		} // for i
+		if (!saw_parked && !car_blocks_by_road.empty()) {car_blocks_by_road.back().first_parked = cars_by_road.size();}
+		car_blocks_by_road.emplace_back(cars_by_road.size(), 0); // add terminator
+		cars_by_road.emplace_back(cube_t(), cars.size()); // add terminator
+	}
 	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
 }
 
