@@ -2717,7 +2717,7 @@ public:
 	cube_t const &get_plot_from_global_id(unsigned city_id, unsigned global_plot_id) const {return get_city(city_id).get_plot_from_global_id(global_plot_id);}
 	unsigned get_next_plot(unsigned city_id, unsigned plot, unsigned dest_plot, int exclude_plot) const {return get_city(city_id).get_next_plot(plot, dest_plot, exclude_plot);}
 	bool choose_dest_building(unsigned city_id, unsigned &plot, unsigned &building, rand_gen_t &rgen) const {return get_city(city_id).choose_dest_building(plot, building, rgen);}
-		
+	
 	bool update_car_dest(car_t &car) const {
 		if (car.is_parked()) return 0; // no dest for parked cars
 		if (car.dest_valid && !car_at_dest(car)) return 0; // not yet at destination, keep existing dest
@@ -2873,10 +2873,17 @@ int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool ro
 }
 
 // path finding
-bool ped_manager_t::choose_dest_building(pedestrian_t &ped) { // modifies rgen, non-const
-	ped.at_dest = 0; // will choose a new dest
-	ped.has_dest_bldg = road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
-	if (!ped.has_dest_bldg) return 0;
+bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // modifies rgen, non-const
+	ped.has_dest_bldg = ped.has_dest_car = ped.at_dest = 0; // will choose a new dest
+
+	if (1) { // choose a dest building
+		ped.has_dest_bldg = road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
+		if (!ped.has_dest_bldg) return 0;
+	}
+	else { // chose a dest parked car (not yet implemented)
+		ped.has_dest_car = car_manager.choose_dest_parked_car(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
+		if (!ped.has_dest_car) return 0;
+	}
 	ped.next_plot = get_next_plot(ped);
 	return 1;
 }
@@ -2892,7 +2899,7 @@ void ped_manager_t::choose_new_ped_plot_pos(pedestrian_t &ped) {
 		}
 		register_ped_new_plot(ped);
 	}
-	choose_dest_building(ped);
+	choose_dest_building_or_parked_car(ped);
 }
 unsigned ped_manager_t::get_next_plot(pedestrian_t &ped, int exclude_plot) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot, exclude_plot);}
 

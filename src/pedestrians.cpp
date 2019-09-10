@@ -28,7 +28,7 @@ string pedestrian_t::get_name() const {
 string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
 	oss << get_name() << ": " << TXTn(ssn) << TXT(speed) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
-		<< TXTi(stuck_count) << TXT(collided) << TXTn(in_the_road) << TXT(is_stopped) << TXTn(at_dest) << TXT(target_valid())
+		<< TXTi(stuck_count) << TXT(collided) << TXTn(in_the_road) << TXT(is_stopped) << TXT(at_dest) << TXTn(has_dest_car) << TXT(target_valid())
 		<< "wait_time=" << get_wait_time_secs(); // Note: pos, vel, dir not printed
 	return oss.str();
 }
@@ -371,6 +371,9 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 			point dest_pos(dest_bcube.get_cube_center()); // slowly adjust dir to move toward dest_bldg
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
+		}
+		else if (!at_dest && has_dest_car) {
+			// TODO - WRITE
 		}
 	}
 	else if (next_plot != plot) { // move toward next plot
@@ -764,7 +767,7 @@ void ped_manager_t::next_frame() {
 	static bool first_frame(1);
 
 	if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
-		for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building(*i);}
+		for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building_or_parked_car(*i);}
 	}
 	for (auto i = peds.begin(); i != peds.end(); ++i) {i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);}
 	if (need_to_sort_peds) {sort_by_city_and_plot();}

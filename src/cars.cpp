@@ -763,6 +763,22 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 	return 0;
 }
 
+bool car_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, rand_gen_t &rgen) const { // for pedestrians
+	if (cars.empty()) return 0; // no cars
+	
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		if (cb->cur_city != city_id) continue; // incorrect city - skip
+		unsigned start(cb->first_parked), end((cb+1)->start);
+		if (start == end) continue; // no parked cars
+		assert(start < end && end <= cars.size());
+		car_ix  = rgen.rand_int(start, end-1);
+		assert(cars[car_ix].is_parked());
+		plot_id = cars[car_ix].cur_road; // plot_id is stored in cur_road for parked cars
+		return 1;
+	}
+	return 0;
+}
+
 void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed) {
 	if (cars.empty() || !animate2) return;
 	// Warning: not really thread safe, but should be okay; the ped state should valid at all points (thought maybe inconsistent) and we don't need it to be exact every frame
