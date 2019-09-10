@@ -2652,14 +2652,11 @@ public:
 	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
 
 	int get_color_at_xy(point const &pos, colorRGBA &color) const {
-		int const ret(global_rn.get_color_at_xy(pos, color));
-		if (ret) return ret;
-
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			int const ret(r->get_color_at_xy(pos, color));
 			if (ret) return ret;
 		}
-		return INT_NONE;
+		return global_rn.get_color_at_xy(pos, color);
 	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
