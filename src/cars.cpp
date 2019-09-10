@@ -844,6 +844,8 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	update_cars(); // run update logic
 
 	if (map_mode) { // create cars_by_road
+		// cars have moved since the last sort and may no longer be in city/road order, but this algorithm doesn't require that;
+		// out-of-order cars will end up in their own blocks, which is less efficient but still correct
 		car_blocks_by_road.clear();
 		cars_by_road.clear();
 		unsigned cur_city(1<<31), cur_road(1<<31); // start at invalid values
