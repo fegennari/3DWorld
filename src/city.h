@@ -646,6 +646,7 @@ public:
 	void destroy_cars_in_radius(point const &pos_in, float radius);
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
 	car_t const *get_car_at(point const &p1, point const &p2) const;
+	cube_t const &get_car_bcube(unsigned car_id) const {assert(car_id < cars.size()); return cars[car_id].bcube;}
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
 	bool check_car_for_ped_colls(car_t &car) const;
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, rand_gen_t &rgen) const;
@@ -685,9 +686,9 @@ struct pedestrian_t : public waiting_obj_t {
 	bool check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid);
 	bool check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	bool check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const;
-	bool is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest) const;
+	bool is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, car_manager_t const *const car_manager) const;
 	bool try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen);
-	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube) const;
+	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr) const;
 	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
 	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, point const &dest_pos, vect_cube_t &avoid) const;
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
@@ -766,6 +767,7 @@ public:
 	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	car_manager_t const &get_car_manager() const {return car_manager;}
 	void choose_new_ped_plot_pos(pedestrian_t &ped);
 	bool check_isec_sphere_coll(pedestrian_t const &ped) const;
 	bool check_streetlight_sphere_coll(pedestrian_t const &ped) const;
