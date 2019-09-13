@@ -575,7 +575,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 void pedestrian_t::register_at_dest() {
 	assert(plot == dest_plot);
-	//cout << get_name() << " at destination building " << dest_bldg << " in plot " << dest_plot << endl; // placeholder for something better
+	//cout << get_name() << " at destination " << (has_dest_car ? "car " : (has_dest_bldg ? "building " : "")) << dest_bldg << " in plot " << dest_plot << endl; // placeholder
 }
 
 

@@ -1945,6 +1945,7 @@ class city_road_gen_t : public road_gen_base_t {
 			assert(plot_id < plots.size());
 			return plot_id;
 		}
+		unsigned encode_plot_id(unsigned local_plot_id) const {return (local_plot_id + plot_id_offset);}
 		cube_t      const &get_plot_from_global_id(unsigned global_plot_id) const {return plots         [decode_plot_id(global_plot_id)];}
 		vect_cube_t const &get_colliders_for_plot (unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
@@ -2880,6 +2881,7 @@ bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // m
 	else { // chose a dest parked car (not yet implemented)
 		ped.has_dest_car = car_manager.choose_dest_parked_car(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
 		if (!ped.has_dest_car) return 0;
+		ped.dest_plot = road_gen.get_city(ped.city).encode_plot_id(ped.dest_plot);
 	}
 	ped.next_plot = get_next_plot(ped);
 	return 1;
