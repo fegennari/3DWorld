@@ -874,7 +874,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 void begin_ped_sphere_draw(shader_t &s, colorRGBA const &color, bool &in_sphere_draw, bool textured) {
 	if (in_sphere_draw) return;
 	if (!textured) {select_texture(WHITE_TEX);} // currently not textured
-	s.set_cur_color(color); // smileys
+	s.set_cur_color(color);
 	begin_sphere_draw(textured);
 	in_sphere_draw = 1;
 }
@@ -887,7 +887,8 @@ void end_sphere_draw(bool &in_sphere_draw) {
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
-	vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr));
+	point const orig_dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr));
+	point dest_pos(orig_dest_pos);
 	if (dest_pos == pos) return; // no path, nothing to draw
 	vect_cube_t dbg_cubes;
 	bool const safe_to_cross(check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube, &dbg_cubes));
@@ -899,13 +900,14 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	vector<point> path;
 	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
 	if (ret == 0) return; // no path found
-	colorRGBA line_color((plot == dest_plot) ? RED : YELLOW); // paths
-	colorRGBA node_color(path_finder.found_complete_path() ? YELLOW : ORANGE);
+	bool const at_dest_plot(plot == dest_plot), complete(path_finder.found_complete_path());
+	colorRGBA line_color(at_dest_plot ? RED : YELLOW); // paths
+	colorRGBA node_color(complete ? YELLOW : ORANGE);
 
 	if (ret == 3) { // straight line
 		path.push_back(pos);
 		path.push_back(dest_pos);
-		if (plot != dest_plot) {line_color = ORANGE; node_color = (safe_to_cross ? GREEN : RED);} // straight line
+		if (!at_dest_plot) {line_color = ORANGE; node_color = (safe_to_cross ? GREEN : RED);} // straight line
 	}
 	else {path = path_finder.get_best_path();} // found a path
 	vector<vert_color> line_pts;
@@ -914,7 +916,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	bool in_sphere_draw(0);
 	begin_ped_sphere_draw(s, node_color, in_sphere_draw, 0);
 
-	if (ret == 2) { // show segment from current pos to edge of building
+	if (ret == 2) { // show segment from current pos to edge of building/car
 		assert(!path.empty());
 		draw_sphere_vbo(path[0], radius, 16, 0);
 		line_pts.emplace_back(pos, BLUE);
@@ -925,6 +927,10 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		draw_sphere_vbo(n, radius, 16, 0);
 		line_pts.emplace_back(*p, line_color);
 		line_pts.emplace_back(n,  line_color);
+	}
+	if (at_dest_plot && (has_dest_car || !complete)) { // show destination when in dest plot with incomplete path or car
+		s.set_cur_color(PURPLE);
+		draw_sphere_vbo(orig_dest_pos, 1.5*radius, 16, 0);
 	}
 	end_sphere_draw(in_sphere_draw);
 
