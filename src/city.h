@@ -649,7 +649,7 @@ public:
 	cube_t const &get_car_bcube(unsigned car_id) const {assert(car_id < cars.size()); return cars[car_id].bcube;}
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
 	bool check_car_for_ped_colls(car_t &car) const;
-	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, rand_gen_t &rgen) const;
+	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center, rand_gen_t &rgen) const;
 	void next_frame(ped_manager_t const &ped_manager, float car_speed);
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
@@ -659,7 +659,7 @@ public:
 
 struct pedestrian_t : public waiting_obj_t {
 
-	point target_pos;
+	point target_pos, dest_car_center; // since cars are sorted each frame, we can't find their positions by index so we need to cache them here
 	vector3d dir, vel;
 	point pos;
 	float radius, speed, anim_time;

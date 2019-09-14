@@ -102,12 +102,14 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 		if (i->x2() < xmin) continue; // to the left
 		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
 		if (!sphere_cube_intersect(pos, radius, *i)) continue;
-		if (!has_dest_car) return 0;
+		if (!has_dest_car || !car_manager || plot != dest_plot) return 0; // not looking for car intersection
+		
 		// check if collider is a parking lot car group that contains the dest car; if so, mark as at_dest, even if we haven't quite hit the correct car
-		if (!(car_manager && i->intersects_xy(car_manager->get_car_bcube(dest_bldg)))) return 0; // car_id == dest_bldg
-		bool const ret(!at_dest);
-		ped_at_dest = 1;
-		return ret; // only valid if we just reached our dest
+		if (i->intersects_xy(dest_car_center)) {
+			bool const ret(!at_dest);
+			ped_at_dest = 1;
+			return ret; // only valid if we just reached our dest
+		}
 	}
 	return 1;
 }
@@ -370,17 +372,14 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr) const {
 	if (is_stopped && target_valid()) {return target_pos;} // stay the course (this case only needed for debug drawing)
 
-	if (plot == dest_plot) { // this plot contains our dest building
+	if (plot == dest_plot) { // this plot contains our dest building/car
 		if (!at_dest && has_dest_bldg) { // not there yet
 			cube_t const dest_bcube(get_building_bcube(dest_bldg));
 			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // could set this here, but requiring a collision also works
 			point const dest_pos(dest_bcube.get_cube_center()); // slowly adjust dir to move toward dest_bldg
 			return point(dest_pos.x, dest_pos.y, pos.z); // same zval
 		}
-		else if (!at_dest && has_dest_car) {
-			point const dest_pos(ped_mgr.get_car_manager().get_car_bcube(dest_bldg).get_cube_center());
-			return point(dest_pos.x, dest_pos.y, pos.z); // same zval
-		}
+		else if (!at_dest && has_dest_car) {return point(dest_car_center.x, dest_car_center.y, pos.z);} // same zval
 	}
 	else if (next_plot != plot) { // move toward next plot
 		if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
@@ -429,10 +428,10 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
 	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
-	// exclude our dest building, since we do want to collide with it
-	if (plot == dest_plot) {remove_cube_if_contains_pt_xy(avoid, dest_pos);}
+	if (plot == dest_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
 	size_t const num_building_cubes(avoid.size());
 	vector_add_to(colliders, avoid);
+	if (plot == dest_plot && has_dest_car ) {remove_cube_if_contains_pt_xy(avoid, dest_pos, num_building_cubes);} // exclude our dest car, we do want to collide with it
 	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by_xy(expand);} // expand colliders as well
 }
 

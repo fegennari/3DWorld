@@ -763,7 +763,7 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 	return 0;
 }
 
-bool car_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, rand_gen_t &rgen) const { // for pedestrians
+bool car_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center, rand_gen_t &rgen) const { // for pedestrians
 	if (cars.empty()) return 0; // no cars
 	
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
@@ -773,7 +773,8 @@ bool car_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, 
 		assert(start < end && end <= cars.size());
 		car_ix  = rgen.rand_int(start, end-1);
 		assert(cars[car_ix].is_parked());
-		plot_id = cars[car_ix].cur_road; // plot_id is stored in cur_road for parked cars
+		plot_id    = cars[car_ix].cur_road; // plot_id is stored in cur_road for parked cars
+		car_center = cars[car_ix].get_center();
 		return 1;
 	}
 	return 0;
