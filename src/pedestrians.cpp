@@ -110,7 +110,8 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 			ped_at_dest = 1;
 			return ret; // only valid if we just reached our dest
 		}
-	}
+		return 0; // bad collision
+	} // for i
 	return 1;
 }
 
