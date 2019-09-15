@@ -1521,7 +1521,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
 		roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim);
 	}
-	if (rgen.rand_bool()) { // maybe add a chimney
+	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned const part_ix(two_parts ? rgen.rand_bool() : 0); // start by selecting a random part (if two parts)
 		unsigned const fdim(force_dim[part_ix]);
 		cube_t const &part(parts[part_ix]);
@@ -1530,14 +1530,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
 		cube_t c(part);
 		float const sz1(c.d[!dim][1] - c.d[!dim][0]), sz2(c.d[!dim][1] - c.d[!dim][0]);
-		float const shift(rgen.rand_bool() ? 0.25*sz1*rgen.signed_rand_float() : 0.0); // make the chimney non-centered half the time
+		float const shift(((rgen.rand()%3) != 0) ? 0.25*sz1*rgen.signed_rand_float() : 0.0); // make the chimney non-centered 67% of the time
 		float const center(0.5f*(c.d[!dim][0] + c.d[!dim][1]) + shift);
 		c.d[dim][!dir]  = c.d[dim][ dir] + (dir ? -0.03f : 0.03f)*(sz1 + sz2); // chimney depth
 		c.d[dim][ dir] += (dir ? -0.01 : 0.01)*sz2; // slight shift from edge of house to avoid z-fighting
-		c.d[!dim][0] = center - 0.05*sz1;
-		c.d[!dim][1] = center + 0.05*sz1;
+		c.d[!dim][0] = center - 0.04*sz1;
+		c.d[!dim][1] = center + 0.04*sz1;
 		c.z1()  = c.z2();
-		c.z2() += (rgen.rand_uniform(1.2, 1.5) - abs(shift))*roof_dz[part_ix];
+		c.z2() += rgen.rand_uniform(1.25, 1.5)*roof_dz[part_ix] - 0.5f*abs(shift);
 		parts.push_back(c);
 		// add top quad to cap chimney (will also update bcube to contain chimney)
 		tquad_t tquad(4); // quad
