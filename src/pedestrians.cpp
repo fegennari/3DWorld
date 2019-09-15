@@ -104,8 +104,10 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 		if (!sphere_cube_intersect(pos, radius, *i)) continue;
 		if (!has_dest_car || !car_manager || plot != dest_plot) return 0; // not looking for car intersection
 		
-		// check if collider is a parking lot car group that contains the dest car; if so, mark as at_dest, even if we haven't quite hit the correct car
-		if (i->intersects_xy(dest_car_center)) {
+		if (i->intersects_xy(dest_car_center)) { // check if collider is a parking lot car group that contains the dest car
+			// Note: here we consider a collision with any car in this block as at destination, even if it's not the dest car;
+			// it's possible that the dest car is walled in and surrounded by cars (which may be poorly parked) such that the ped can't reach it without a collision
+			if (car_manager->get_car_at_pt(pos, 1) == nullptr) continue; // no car at this location, continue into parking lot (slow, but not called very often)
 			bool const ret(!at_dest);
 			ped_at_dest = 1;
 			return ret; // only valid if we just reached our dest
