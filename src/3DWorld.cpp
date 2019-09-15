@@ -94,7 +94,7 @@ int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0);
 int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2), num_birds_per_tile(2), num_fish_per_tile(15);
-unsigned erosion_iters(0), erosion_iters_tt(0), video_framerate(60), num_video_threads(0), skybox_tid(0);
+unsigned erosion_iters(0), erosion_iters_tt(0), video_framerate(60), num_video_threads(0), skybox_tid(0), skybox_cube_tid(0);
 float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0), tt_grass_scale_factor(1.0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0), biome_x_offset(0.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), dodgeball_metalness(1.0), ray_step_size_mult(1.0);
@@ -2028,15 +2028,19 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "default_ground_tex") {
 			if (!read_str(fp, strc)) cfg_err("default_ground_tex", error);
-			default_ground_tex = get_texture_by_name(std::string(strc));
+			default_ground_tex = get_texture_by_name(string(strc));
 		}
 		else if (str == "mesh_detail_tex") {
 			if (!read_str(fp, strc)) cfg_err("mesh_detail_tex", error);
-			mesh_detail_tex = get_texture_by_name(std::string(strc));
+			mesh_detail_tex = get_texture_by_name(string(strc));
 		}
 		else if (str == "skybox_tex") {
-			if (!read_str(fp, strc)) cfg_err("mesh_detail_tex", error);
-			skybox_tid = get_texture_by_name(std::string(strc), 0, 0, 0); // clamp
+			if (!read_str(fp, strc)) cfg_err("skybox_tex", error);
+			skybox_tid = get_texture_by_name(string(strc), 0, 0, 0); // clamp
+		}
+		else if (str == "skybox_cube_map") {
+			if (!read_str(fp, strc)) cfg_err("skybox_cube_map", error);
+			skybox_cube_tid = load_cube_map_texture(string(strc));
 		}
 		else if (str == "ship_def_file") {
 			if (!read_str(fp, ship_def_file)) cfg_err("ship_def_file command", error);

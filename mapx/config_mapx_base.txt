@@ -105,8 +105,11 @@ water_enabled_bmp mapx/water_enable128.bmp
 # water_enabled_bmp mapx/water_enable256.bmp
 
 #skybox_tex skybox/kisspng_skybox2.png
-# from http://scmapdb.com/wad:skybox-skies
+# From http://scmapdb.com/wad:skybox-skies
 #skybox_tex skybox/skybox2.png
+
+# From http://www.custommapmakers.org/skyboxes.php
+#skybox_cube_map skybox/ely_hills2/hills2
 
 end
 

@@ -349,6 +349,10 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	return tid;
 }
 
+int load_cube_map_texture(string const &name) {
+	return -1; // FIXME: WRITE
+}
+
 
 void check_init_texture(int id, bool free_after_upload) {textures[id].check_init(free_after_upload);}
 
