@@ -399,7 +399,7 @@ struct building_geom_t { // describes the physical shape of a building
 };
 
 struct tquad_with_ix_t : public tquad_t {
-	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_DOOR};
+	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_DOOR};
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(0) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
@@ -442,7 +442,7 @@ struct building_t : public building_geom_t {
 	void gen_geometry(int rseed1, int rseed2);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void add_door(cube_t const &c, bool dim, bool dir);
-	void gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
+	float gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
 	void gen_details(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
@@ -766,7 +766,7 @@ public:
 			dim = (tquad.pts[0].x == tquad.pts[1].x);
 			if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 		}
-		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF) { // roof
+		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
 			float const denom(0.5f*(bcube.get_dx() + bcube.get_dy()));
 			tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
 		}
@@ -782,7 +782,7 @@ public:
 				vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
 				vert.t[1] = vert.v.z*tsy;
 			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF) { // roof
+			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
 				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
 				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 			}
@@ -1409,10 +1409,11 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 	assert(parts.empty());
 	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
+	bool const two_parts(type != 0);
 	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
 	bool skip_last_roof(0);
 	num_sides = 4;
-	if (type != 0) {parts.reserve(4);} // two house sections + porch roof + porch support (upper bound)
+	parts.reserve(two_parts ? 5 : 2); // two house sections + porch roof + porch support + chimney (upper bound)
 	parts.push_back(base);
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
@@ -1420,7 +1421,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	float door_center(0.0), door_pos(0.0);
 	door_dim = rgen.rand_bool();
 
-	if (type != 0) { // multi-part house
+	if (two_parts) { // multi-part house
 		parts.push_back(base); // add second part
 		bool const dir(rgen.rand_bool()); // in dim
 		float const split(rgen.rand_uniform(0.4, 0.6)*(dir  ? -1.0 : 1.0));
@@ -1486,10 +1487,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
 			}
-			parts.push_back(c);
+			parts.push_back(c); // support column or shed/garage
 		} // end house details
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
-	} // end type != 0
+	} // end type != 0  (multi-part house)
 	else if (gen_door) { // single cube house
 		door_dir  = rgen.rand_bool(); // select a random dir
 		door_part = 0; // only one part
@@ -1513,11 +1514,38 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		add_door(door, door_dim, door_dir);
 	}
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
+	float roof_dz[3] = {0.0f};
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
-		unsigned const fdim(force_dim[i - parts.begin()]);
+		unsigned const ix(i - parts.begin()), fdim(force_dim[ix]);
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
-		gen_peaked_roof(*i, peak_height, dim);
+		roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim);
+	}
+	if (rgen.rand_bool()) { // maybe add a chimney
+		unsigned const part_ix(two_parts ? rgen.rand_bool() : 0); // start by selecting a random part (if two parts)
+		unsigned const fdim(force_dim[part_ix]);
+		cube_t const &part(parts[part_ix]);
+		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
+		bool dir(rgen.rand_bool());
+		if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
+		cube_t c(part);
+		float const sz1(c.d[!dim][1] - c.d[!dim][0]), sz2(c.d[!dim][1] - c.d[!dim][0]);
+		float const shift(rgen.rand_bool() ? 0.25*sz1*rgen.signed_rand_float() : 0.0); // make the chimney non-centered half the time
+		float const center(0.5f*(c.d[!dim][0] + c.d[!dim][1]) + shift);
+		c.d[dim][!dir]  = c.d[dim][ dir] + (dir ? -0.03f : 0.03f)*(sz1 + sz2); // chimney depth
+		c.d[dim][ dir] += (dir ? -0.01 : 0.01)*sz2; // slight shift from edge of house to avoid z-fighting
+		c.d[!dim][0] = center - 0.05*sz1;
+		c.d[!dim][1] = center + 0.05*sz1;
+		c.z1()  = c.z2();
+		c.z2() += (rgen.rand_uniform(1.2, 1.5) - abs(shift))*roof_dz[part_ix];
+		parts.push_back(c);
+		// add top quad to cap chimney (will also update bcube to contain chimney)
+		tquad_t tquad(4); // quad
+		tquad.pts[0].assign(c.x1(), c.y1(), c.z2());
+		tquad.pts[1].assign(c.x2(), c.y1(), c.z2());
+		tquad.pts[2].assign(c.x2(), c.y2(), c.z2());
+		tquad.pts[3].assign(c.x1(), c.y2(), c.z2());
+		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
 	}
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
@@ -1536,7 +1564,7 @@ void building_t::add_door(cube_t const &c, bool dim, bool dir) {
 	doors.push_back(door);
 }
 
-void building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim) { // roof made from two sloped quads
+float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim) { // roof made from two sloped quads
 
 	float const width(dim ? top.get_dx() : top.get_dy()), roof_dz(min(peak_height*width, top.get_dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
@@ -1559,6 +1587,7 @@ void building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim)
 		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];)
 		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_WALL); // tag as wall
 	}
+	return roof_dz;
 }
 
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
@@ -1671,8 +1700,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 		bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-		bool const is_wall(i->type == tquad_with_ix_t::TYPE_WALL);
-		bdraw.add_tquad(*this, *i, bcube, (is_wall ? mat.side_tex : mat.roof_tex), (is_wall ? side_color : roof_color)); // use type to select roof vs. side texture
+		bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF);
+		bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(building_window_gen.get_door_tid(), -1, 1.0, 1.0), WHITE);
