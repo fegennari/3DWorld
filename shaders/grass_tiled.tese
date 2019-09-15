@@ -29,14 +29,14 @@ void main() {
 	tc          = interpolate2D(    tc_ES[0],     tc_ES[1],     tc_ES[2]);
 	vec3 vertex = interpolate3D(vertex_ES[0], vertex_ES[1], vertex_ES[2]);
 	epos        = fg_ModelViewMatrix * vec4(vertex, 1.0); // use epos before modifying vertex
-	vec3 delta  = vertex - 0.5*(vertex_ES[0] + vertex_ES[1]); // delta from base of grass
-	vertex     -= delta;
+	vec3 base   = 0.5*(vertex_ES[0] + vertex_ES[1]);
+	vec3 delta  = vertex - base + vec3(0.0, 0.0, 0.0000001); // delta from base of grass; add tiny value to z so that cross product is not zero at base of grass
 	float dist  = length(delta);
 	vec3 dir    = normalize(cross(delta, (vertex_ES[0] - vertex_ES[1]))); // direction of bend motion
 	float mval  = clamp((2.0 - length(epos.xyz)), 0.0, 1.0)*(0.6 - pow(tc[0], 0.4)); // more curvature at the tip and near the camera (tip=0.6 to base=-0.4)
 	delta       = mix(delta, dist*dir, mval);
 	delta      *= dist/length(delta); // renormalize to original length
-	vertex     += delta;
+	vertex      = base + delta;
 	gl_Position = fg_ModelViewProjectionMatrix * vec4(vertex, 1.0);
 	fg_Color_vf = interpolate4D(fg_Color_vf_ES[0], fg_Color_vf_ES[1], fg_Color_vf_ES[2]); // could also use tip color
 
