@@ -408,7 +408,7 @@ struct tquad_with_ix_t : public tquad_t {
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
-	bool is_house, has_antenna;
+	bool is_house, has_antenna, has_chimney;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
 	vect_cube_t parts;
@@ -416,7 +416,8 @@ struct building_t : public building_geom_t {
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	float ao_bcz2;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), has_chimney(0),
+		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color  () const {return side_color.modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -1522,7 +1523,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim);
 	}
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
-		unsigned const part_ix(two_parts ? rgen.rand_bool() : 0); // start by selecting a random part (if two parts)
+		unsigned part_ix(0);
+
+		if (two_parts) { // start by selecting a part (if two parts)
+			float const v0(parts[0].get_volume()), v1(parts[1].get_volume());
+			if      (v0 > 2.0*v1) {part_ix = 0;} // choose larger part 0
+			else if (v1 > 2.0*v0) {part_ix = 1;} // choose larger part 1
+			else {part_ix = rgen.rand_bool();} // close in area - choose a random part
+		}
 		unsigned const fdim(force_dim[part_ix]);
 		cube_t const &part(parts[part_ix]);
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
@@ -1530,14 +1538,19 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
 		cube_t c(part);
 		float const sz1(c.d[!dim][1] - c.d[!dim][0]), sz2(c.d[!dim][1] - c.d[!dim][0]);
-		float const shift(((rgen.rand()%3) != 0) ? 0.25*sz1*rgen.signed_rand_float() : 0.0); // make the chimney non-centered 67% of the time
+		float shift(0.0);
+
+		if ((rgen.rand()%3) != 0) { // make the chimney non-centered 67% of the time
+			shift = sz1*rgen.rand_uniform(0.1, 0.25); // select a shift in +/- (0.1, 0.25) - no small offset from center
+			if (rgen.rand_bool()) {shift = -shift;}
+		}
 		float const center(0.5f*(c.d[!dim][0] + c.d[!dim][1]) + shift);
 		c.d[dim][!dir]  = c.d[dim][ dir] + (dir ? -0.03f : 0.03f)*(sz1 + sz2); // chimney depth
 		c.d[dim][ dir] += (dir ? -0.01 : 0.01)*sz2; // slight shift from edge of house to avoid z-fighting
-		c.d[!dim][0] = center - 0.04*sz1;
-		c.d[!dim][1] = center + 0.04*sz1;
+		c.d[!dim][0] = center - 0.05*sz1;
+		c.d[!dim][1] = center + 0.05*sz1;
 		c.z1()  = c.z2();
-		c.z2() += rgen.rand_uniform(1.25, 1.5)*roof_dz[part_ix] - 0.5f*abs(shift);
+		c.z2() += rgen.rand_uniform(1.25, 1.5)*roof_dz[part_ix] - 0.4f*abs(shift);
 		parts.push_back(c);
 		// add top quad to cap chimney (will also update bcube to contain chimney)
 		tquad_t tquad(4); // quad
@@ -1546,6 +1559,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		tquad.pts[2].assign(c.x2(), c.y2(), c.z2());
 		tquad.pts[3].assign(c.x1(), c.y2(), c.z2());
 		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
+		has_chimney = 1;
 	}
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
@@ -1731,7 +1745,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	else {color = mat.window_color;}
 	bool const clip_windows(mat.no_city); // only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 
-	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
+	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		float const door_ztop((!doors.empty() && (i - parts.begin()) == int(door_part)) ? doors.front().pts[2].z : 0.0);
 		bdraw.add_section(*this, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop); // XY, no_ao=1
 	}
