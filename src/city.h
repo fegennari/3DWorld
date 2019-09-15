@@ -645,6 +645,7 @@ public:
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
 	void destroy_cars_in_radius(point const &pos_in, float radius);
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
+	car_t const *get_car_at_pt(point const &pos, bool is_parked) const;
 	car_t const *get_car_at(point const &p1, point const &p2) const;
 	cube_t const &get_car_bcube(unsigned car_id) const {assert(car_id < cars.size()); return cars[car_id].bcube;}
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;

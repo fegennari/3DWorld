@@ -655,6 +655,21 @@ bool car_manager_t::get_color_at_xy(point const &pos, colorRGBA &color, int int_
 	return 0;
 }
 
+car_t const *car_manager_t::get_car_at_pt(point const &pos, bool is_parked) const {
+	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+		if (!get_cb_bcube(*cb).contains_pt_xy(pos)) continue; // skip
+		unsigned start(cb->start), end((cb+1)->start);
+		if (!is_parked) {end   = cb->first_parked;} // moving cars only (beginning of range)
+		else            {start = cb->first_parked;} // parked cars only (end of range)
+		assert(start <= end && end <= cars.size());
+
+		for (unsigned c = start; c != end; ++c) {
+			if (cars[c].bcube.contains_pt_xy(pos)) {return &cars[c];}
+		}
+	} // for cb
+	return nullptr; // no car found
+}
+
 car_t const *car_manager_t::get_car_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 		if (!get_cb_bcube(*cb).line_intersects(p1, p2)) continue; // skip
