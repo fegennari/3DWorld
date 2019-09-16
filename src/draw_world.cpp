@@ -1197,7 +1197,7 @@ void draw_sky(bool camera_side, bool no_update) {
 			s.set_cur_color(WHITE);
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_vector3d("center", center);
-			select_texture(skybox_cube_tid);
+			bind_cube_map_texture(skybox_cube_tid);
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		}
 		else { // cube with texture coordinates
