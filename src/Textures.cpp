@@ -202,7 +202,7 @@ unsigned char *landscape0 = NULL;
 
 
 extern bool mesh_difuse_tex_comp, water_is_lava, invert_bump_maps;
-extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid, depth_tid, empty_smap_tid, frame_buffer_RGB_tid;
+extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid, depth_tid, empty_smap_tid, frame_buffer_RGB_tid, skybox_tid, skybox_cube_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only, window_width, window_height;
 extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation, fticks;
@@ -223,6 +223,7 @@ void gen_wind_texture();
 void gen_noise_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
+bool endswith(string const &value, string const &ending);
 
 
 bool is_tex_disabled(int i) {
@@ -349,8 +350,44 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	return tid;
 }
 
-int load_cube_map_texture(string const &name) {
-	return -1; // FIXME: WRITE
+unsigned load_cube_map_texture(string const &name) {
+
+	// Rather than specify each of the 6 textures (one per side), we're going to specify the top texture and try to guess the names of the others
+	// There doesn't seem to be any well defined specs for which face corresponds to which direction, other than that Y is up (vs. Z being up in 3DWorld),
+	// so we'll just hard-code the direction to face mapping that seems to look correct for each of our test image sets
+	size_t const dot_pos(name.find_last_of("."));
+	if (dot_pos == string::npos) {std::cerr << "Failed to find file extension in cube map texture name" << endl; return 0;}
+	string const ext(name.substr(dot_pos)), prefix(name.substr(0, (name.size() - ext.size())));
+	string names[6];
+
+	if (endswith(prefix, "top")) {
+		string const base(prefix.substr(0, (prefix.size() - 3)));
+		string const dirs[6] = {"right", "left", "bottom", "top", "front", "back"};
+		for (unsigned n = 0; n < 6; ++n) {names[n] = base + dirs[n] + ext;}
+	}
+	else if (endswith(prefix, "up")) {
+		string const base(prefix.substr(0, (prefix.size() - 2)));
+		string const dirs[6] = {"ft", "bk", "dn", "up", "rt", "lf"};
+		for (unsigned n = 0; n < 6; ++n) {names[n] = base + dirs[n] + ext;}
+	}
+	else {
+		std::cerr << "Expecting cube map texture filename to end with 'top' or 'up': " << prefix << endl;
+		return 0;
+	}
+	//for (unsigned n = 0; n < 6; ++n) {cout << names[n] << endl;}
+	unsigned tid(0), tex_size(0);
+	bool const allocate(0), use_mipmaps(0), do_compress(1);
+	setup_cube_map_texture(tid, tex_size, allocate, use_mipmaps, 1.0);
+	texture_t texture(0, 7, 0, 0, 0, 3, use_mipmaps, "skybox", 0, do_compress); // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1]]
+
+	for (unsigned n = 0; n < 6; ++n) {
+		texture.name = names[n];
+		texture.load(0);
+		texture.upload_cube_map_face(n);
+		texture.free_data();
+	}
+	if (use_mipmaps) {gen_mipmaps(6);}
+	return tid;
 }
 
 
@@ -407,6 +444,8 @@ void reset_textures() {
 	free_texture(sky_zval_tid);
 	free_texture(empty_smap_tid);
 	free_texture(frame_buffer_RGB_tid);
+	free_texture(skybox_tid);
+	free_texture(skybox_cube_tid);
 	free_font_texture_atlas();
 	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {free_texture(i->second);}
 	noise_tex_3ds.clear();
@@ -506,6 +545,12 @@ void texture_t::do_gl_init(bool free_after_upload) {
 	//assert(glIsTexture(tid)); // for some reason this check is slow
 	if (free_after_upload) {free_client_mem();}
 	//PRINT_TIME("Texture Init");
+}
+
+void texture_t::upload_cube_map_face(unsigned ix) {
+	assert(ix < 6);
+	assert(ncolors == 3);
+	glTexImage2D((GL_TEXTURE_CUBE_MAP_POSITIVE_X + ix), 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
 }
 
 
@@ -998,13 +1043,7 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 
 void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, bool use_mipmaps, float aniso) { // Note: no mipmaps
 
-	assert(tex_size > 0);
 	assert(tid == 0);
-	unsigned num_levels(1);
-
-	if (use_mipmaps) { // determine the number of mipmap levels needed
-		for (unsigned sz = tex_size; sz > 1; sz >>= 1) {++num_levels;}
-	}
 	glGenTextures(1, &tid);
 	bind_cube_map_texture(tid);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, (use_mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR));
@@ -1013,7 +1052,16 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, boo
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
-	if (allocate) {glTexStorage2D(GL_TEXTURE_CUBE_MAP, num_levels, GL_RGB8, tex_size, tex_size);}
+	
+	if (allocate) {
+		assert(tex_size > 0);
+		unsigned num_levels(1);
+
+		if (use_mipmaps) { // determine the number of mipmap levels needed
+			for (unsigned sz = tex_size; sz > 1; sz >>= 1) {++num_levels;}
+		}
+		glTexStorage2D(GL_TEXTURE_CUBE_MAP, num_levels, GL_RGB8, tex_size, tex_size);
+	}
 	//gluBuild2DMipmaps(GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_RGB8, tex_size, tex_size, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	check_gl_error(520);

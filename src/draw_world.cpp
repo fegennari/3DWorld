@@ -29,7 +29,7 @@ struct sky_pos_orient {
 
 
 int def_cube_map_reflect_mipmap_level(-4);
-unsigned depth_tid(0), frame_buffer_RGB_tid(0);
+unsigned depth_tid(0), frame_buffer_RGB_tid(0), skybox_cube_tid(0);
 float sun_radius(0.0), moon_radius(0.0), earth_radius(0.0), brightness(1.0);
 colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
@@ -45,7 +45,7 @@ extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_dept
 extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps, enable_tt_model_indir, fast_transparent_spheres;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
-extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, skybox_tid, skybox_cube_tid;
+extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, skybox_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale, cloud_cover;
 extern double tfticks;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
@@ -53,6 +53,7 @@ extern point light_pos, mesh_origin, flow_source, surface_pos, pre_ref_camera_po
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
 extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
+extern string skybox_cube_map_name;
 extern lightning_t l_strike;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
@@ -1179,6 +1180,10 @@ void draw_sky(bool camera_side, bool no_update) {
 	float radius(0.55f*(FAR_CLIP + max(X_SCENE_SIZE, Y_SCENE_SIZE)));
 	point center((camera_mode == 1) ? surface_pos : mesh_origin);
 
+	if (!skybox_cube_map_name.empty() && skybox_cube_tid == 0) { // load skybox cube map if needed
+		skybox_cube_tid = load_cube_map_texture(skybox_cube_map_name);
+		if (skybox_cube_tid == 0) {skybox_cube_map_name.clear();} // if load fails, clear filename so that we don't try to load it again
+	}
 	if (skybox_tid > 0 || skybox_cube_tid > 0) { // use sky box texture
 		cube_t c; c.set_from_sphere(center, 0.5*radius);
 		if (!c.contains_pt(get_camera_pos())) return; // camera outside cube
@@ -1193,6 +1198,7 @@ void draw_sky(bool camera_side, bool no_update) {
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_vector3d("center", center);
 			select_texture(skybox_cube_tid);
+			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		}
 		else { // cube with texture coordinates
 			s.begin_simple_textured_shader(0.0, 0, 0, &WHITE);
