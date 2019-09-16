@@ -1185,7 +1185,7 @@ void draw_sky(bool camera_side, bool no_update) {
 		if (skybox_cube_tid == 0) {skybox_cube_map_name.clear();} // if load fails, clear filename so that we don't try to load it again
 	}
 	if (skybox_tid > 0 || skybox_cube_tid > 0) { // use sky box texture
-		cube_t c; c.set_from_sphere(center, 0.5*radius);
+		cube_t c; c.set_from_sphere(center, 0.55*radius);
 		if (!c.contains_pt(get_camera_pos())) return; // camera outside cube
 		glDepthMask(GL_FALSE); // disable depth writing
 		shader_t s;
