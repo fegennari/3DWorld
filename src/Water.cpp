@@ -281,7 +281,8 @@ struct water_vertex_calc_t {
 			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
 		}
 		if (rcolor.alpha > 0.0) {
-			float r(CLIP_TO_01(get_fresnel_reflection(-view_dir, n, 1.0, WATER_INDEX_REFRACT))); // maybe incorrect if out of the [0.0, 1.0] range?
+			float const refract_ix((temperature <= W_FREEZE_POINT) ? ICE_INDEX_REFRACT : WATER_INDEX_REFRACT);
+			float r(CLIP_TO_01(get_fresnel_reflection(-view_dir, n, 1.0, refract_ix))); // maybe incorrect if out of the [0.0, 1.0] range?
 			rcolor.alpha = 1.0; // transparent objects
 			blend_color(color, rcolor, color, r*rcolor.alpha, 1);
 		}

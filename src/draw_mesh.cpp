@@ -108,6 +108,7 @@ void gen_uw_lighting() {
 	vector<point> rows[2]; // {last, current} y rows
 	for (unsigned i = 0; i < 2; ++i) rows[i].resize(MESH_X_SIZE, all_zeros);
 	float const dxy_val_inv[2] = {DX_VAL_INV, DY_VAL_INV};
+	float const refract_ix((temperature <= W_FREEZE_POINT) ? ICE_INDEX_REFRACT : WATER_INDEX_REFRACT);
 
 	for (vector<fp_ratio>::iterator i = uw_mesh_lighting.begin(); i != uw_mesh_lighting.end(); ++i) {
 		i->n = i->d = 0.0; // initialize
@@ -118,7 +119,7 @@ void gen_uw_lighting() {
 			point const p1(get_xval(x), get_yval(y), water_matrix[y][x]); // point on water surface
 			vector3d const dir(p1 - lpos);
 			vector3d v_refract(dir);
-			bool const refracted(calc_refraction_angle(dir, v_refract, wat_vert_normals[y][x], 1.0, WATER_INDEX_REFRACT));
+			bool const refracted(calc_refraction_angle(dir, v_refract, wat_vert_normals[y][x], 1.0, refract_ix));
 			assert(refracted); // can't have total internal reflection going into the water if the physics are sane
 			point const p2(p1 + v_refract.get_norm()*ssize); // distant point along refraction vector
 			point cpos;

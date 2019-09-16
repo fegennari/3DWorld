@@ -62,6 +62,7 @@ void main() {
 	vec3 norm        = normal;
 	float city_light = 0.0;
 	float spec_mag   = 0.0;
+	float refract_ix = 1.333; // water
 
 #ifdef GAS_GIANT
 	float tc_adj = tc.t;
@@ -97,6 +98,7 @@ void main() {
 
 #ifdef PROCEDURAL_DETAIL
 	float coldness = cold_scale*pow(abs(normalize(vertex).z), 2.0); // 0 at equator and 1 at the poles
+	if (coldness > 0.75) {refract_ix = 1.309;} // ice
 #ifdef ALL_WATER_ICE
 	vec4 texel = water_color;
 	if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp(4.0*(coldness - 0.75f), 0.0, 1.0));} // ice/snow
@@ -286,7 +288,7 @@ void main() {
 	color += rim_color * rim_light_scale * smoothstep(0.0, 0.4, dot(frag_normal, ldir0));
 #else
 	float specval  = get_spec_intensity(norm, ldir0, eye_dir);
-	specval       *= min(1.0, 20.0*get_fresnel_reflection(eye_dir, norm, 1.0, 1.333)); // water/ice fresnel reflection (heavily biased)
+	specval       *= min(1.0, 20.0*get_fresnel_reflection(eye_dir, norm, 1.0, refract_ix)); // water/ice fresnel reflection (heavily biased)
 	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * spec_mag * sscale;
 
 	if (lava_val > 0.0) {

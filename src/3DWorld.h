@@ -53,6 +53,7 @@ float    const TOLERANCE        = 1.0E-12;
 float    const ABSOLUTE_ZERO    = -273; // in degrees C
 float    const MAX_SPLASH_DEPTH = 0.1;
 float    const WATER_INDEX_REFRACT = 1.333;
+float    const ICE_INDEX_REFRACT   = 1.309;
 float    const WATER_COL_ATTEN  = 0.6;
 
 float    const MESH_BOT_QUAD_DZ = 0.050; // measured from zbottom
