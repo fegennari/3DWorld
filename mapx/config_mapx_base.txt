@@ -106,10 +106,13 @@ water_enabled_bmp mapx/water_enable128.bmp
 
 #skybox_tex skybox/kisspng_skybox2.png
 # From http://scmapdb.com/wad:skybox-skies
-#skybox_tex skybox/skybox2.png
+#skybox_tex skybox/skybox2.png # looks okay but there are some artifacts at the seams
 
-# From http://www.custommapmakers.org/skyboxes.php
-#skybox_cube_map skybox/ely_hills2/hills2
+# From http://www.custommapmakers.org/skyboxes.php ; specify the "*_up.*" file
+#skybox_cube_map skybox/craterlake/craterlake_up.tga # low res pixelated
+
+# From https://learnopengl.com/Advanced-OpenGL/Cubemaps  ; specify the "*top.*" file
+#skybox_cube_map skybox/water_scene/top.jpg # high quality, but water doesn't match the scene
 
 end
 
