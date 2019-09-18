@@ -40,6 +40,7 @@ grass_density 120
 grass_size 0.03 0.002
 flower_density 2.0
 use_grass_tess 1
+#tt_grass_scale_factor 0.25
 
 tree_deadness 0.0 # 0.0 = alive, 1.0 = dead (winter)
 tree_dead_prob 0.0

@@ -1403,7 +1403,7 @@ void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 }
 
 
-unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc) {
+unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, bool enable_tess, int lt_loc) {
 
 	if (!has_grass()) return 0; // or can test has_any_grass
 	float const grass_thresh(get_grass_thresh_pad());
@@ -1453,7 +1453,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 			vector<vector2d> &v(insts[lod][bix]);
 			if (v.empty()) continue;
 			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(vector2d)));
-			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size(), use_grass_tess);
+			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size(), enable_tess);
 			v.clear();
 		} // for bix
 	} // for lod
@@ -3056,19 +3056,19 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			if (spass == 0 && !shadow_map_enabled()) continue;
 			shader_t s;
 			bool const enable_wind((display_mode & 0x0100) && wpass == 0);
+			bool const enable_tess(use_grass_tess && wpass == 0); // only for nearby grass (use same logic as wind)
 			lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
 			// Note: when tt_grass_scale_factor is small, we can have a transition from nearby wind to distant within the same tile, so we need to enable height adjust in both cases
 			if (wpass == 1 || tt_grass_scale_factor < 1.0) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
 			//if (!underwater) {s.set_prefix("#define NO_FOG", 1);} // FS - faster, but reduced quality grass/texture blend
 			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
 			s.set_prefix(make_shader_bool_prefix("enable_grass_wind", enable_wind), 0); // VS
-			if (use_grass_tess) {s.set_prefix("#define NO_FOG_FRAG_COORD", 1);} // FS - needed on some drivers because TC/TE don't have fg_FogFragCoord
-			if (!use_grass_tess) {s.set_prefix("#define NO_GRASS_TESS", 0);} // VS
+			if (enable_tess) {s.set_prefix("#define NO_FOG_FRAG_COORD", 1);} // FS - needed on some drivers because TC/TE don't have fg_FogFragCoord
+			if (!enable_tess) {s.set_prefix("#define NO_GRASS_TESS", 0);} // VS
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
-			//s.set_geom_shader("grass_tiled"); // triangle => triangle - too slow
 
-			if (use_grass_tess) {
+			if (enable_tess) {
 				s.set_tess_control_shader("grass_tiled");
 				s.set_tess_eval_shader("grass_tiled"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
 				glPatchParameteri(GL_PATCH_VERTICES, 3); // triangles
@@ -3080,7 +3080,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			s.set_specular(0.1, 20.0);
 			grass_tile_manager.begin_draw();
 
-			if (use_grass_tess) {
+			if (enable_tess) {
 				s.add_uniform_float("min_tess_level", 1.0);
 				s.add_uniform_float("tess_lod_scale", tt_grass_scale_factor);
 			}
@@ -3088,9 +3088,11 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			enable_instancing_for_shader_loc(lt_loc);
 
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
-				if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
-				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5*tt_grass_scale_factor) != (int)wpass) continue; // xyz dist
-				num_grass_drawn += to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
+				tile_t *const tile(to_draw[i].second);
+				if (!tile->has_grass()) continue;
+				if (tile->using_shadow_maps() != (spass == 0)) continue;
+				if ((tile->get_dist_to_camera_in_tiles(0) > 0.5*tt_grass_scale_factor) != (int)wpass) continue; // xyz dist
+				num_grass_drawn += tile->draw_grass(s, insts, use_cloud_shadows, enable_tess, lt_loc);
 			}
 			disable_instancing_for_shader_loc(lt_loc);
 			grass_tile_manager.end_draw();

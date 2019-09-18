@@ -376,7 +376,7 @@ public:
 	void update_scenery();
 	void draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass=0, bool enable_shadow_maps=0);
 	void pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const;
-	unsigned draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
+	unsigned draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, bool enable_tess, int lt_loc);
 	unsigned draw_flowers(shader_t &s, bool use_cloud_shadows);
 
 	// *** clouds ***

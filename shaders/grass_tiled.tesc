@@ -36,7 +36,8 @@ void main() {
 	float dist = length(epos.xyz);
 
 	// Calculate the tessellation levels
-	float level = max(min_tess_level, min(8, tess_lod_scale*(3.0/dist)));
+	// Multiply tess level by alpha so that disabled/transparent grass blades use min_tess_level? Seems to cause level mismatch for verts: fg_Color_vf[gl_InvocationID].a
+	float level = max(min_tess_level, min(8, tess_lod_scale*(2.5/dist)));
 	gl_TessLevelOuter[0] = level;
 	gl_TessLevelOuter[1] = level;
 	gl_TessLevelOuter[2] = 1;
