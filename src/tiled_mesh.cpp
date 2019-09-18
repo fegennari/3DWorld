@@ -1405,7 +1405,7 @@ void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 
 unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc) {
 
-	if (grass_blocks.empty()) return 0; // or can test has_any_grass
+	if (!has_grass()) return 0; // or can test has_any_grass
 	float const grass_thresh(get_grass_thresh_pad());
 	point const camera(get_camera_pos());
 	if (get_min_dist_to_pt(camera) > grass_thresh) return 0; // too far away to draw
@@ -1463,7 +1463,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 
 unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
-	if (grass_blocks.empty()) return 0; // no grass, no flowers
+	if (!has_grass()) return 0; // no grass, no flowers
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return 0; // too far away to draw
 	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2); // mesh weight + tree dirt
@@ -3584,13 +3584,13 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		point const flower_xlate(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2), 0.0);
 		flowers.clear_within((pos - flower_xlate), rradius, is_square);
 	}
-	if (!add_grass && !grass_blocks.empty()) { // increases edit time slightly but decreased draw time slightly
-		bool has_grass(0);
+	if (!add_grass && has_grass()) { // increases edit time slightly but decreased draw time slightly
+		bool has_any_grass(0);
 
 		for (unsigned i = 0; i < num_texels; ++i) {
-			if (weight_data[4*i + grass_tex_ix] > 0) {has_grass = 1; break;}
+			if (weight_data[4*i + grass_tex_ix] > 0) {has_any_grass = 1; break;}
 		}
-		if (!has_grass) {grass_blocks.clear();} // clear all grass blocks when there is no more grass
+		if (!has_any_grass) {grass_blocks.clear();} // clear all grass blocks when there is no more grass
 	}
 	create_or_update_weight_tex();
 	calc_avg_mesh_color(); // optional

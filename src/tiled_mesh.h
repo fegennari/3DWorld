@@ -213,7 +213,7 @@ public:
 	float calc_radius() const {return 0.5*sqrt(deltax*deltax + deltay*deltay)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
-	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), max(ptzmax, dtzmax));}
+	float get_tile_zmax() const {return max((mzmax + (has_grass() ? grass_length : 0.0f)), max(ptzmax, dtzmax));}
 	float get_zval(int x, int y) const {assert(!zvals.empty()); assert(x >= 0 && y >= 0 && x < (int)zvsize && y < (int)zvsize); return zvals[y*zvsize + x];}
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()? - grass and trees should not be underwater
@@ -223,6 +223,7 @@ public:
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	bool has_valid_shadow_map() const {return !smap_data.empty();}
+	bool has_grass() const {return !grass_blocks.empty();}
 	void invalidate_mesh_height() {mesh_height_invalid = 1;}
 	float get_avg_veg() const {return 0.25f*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
