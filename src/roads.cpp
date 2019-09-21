@@ -628,11 +628,11 @@ bool bridge_t::proc_sphere_coll(point &center, point const &prev, float sradius,
 }
 
 
-void tunnel_t::init(point const &start, point const &end, float radius_, bool dim) {
+void tunnel_t::init(point const &start, point const &end, float radius_, float end_length, bool dim) {
 	radius = radius_;
 	height = (1.0 + TUNNEL_WALL_THICK)*radius;
 	vector3d const dir((end - start).get_norm());
-	point const extend[2] = {(start + dir*radius), (end - dir*radius)};
+	point const extend[2] = {(start + dir*end_length), (end - dir*end_length)}; // extend toward the tunnel interior
 	ends[0].set_from_point(start);
 	ends[1].set_from_point(end);
 
@@ -712,7 +712,7 @@ bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const 
 		c.z2() += facade_height[n]; // high enough to cover the hole in the mesh
 		c.d[d][0] -= 0.9*end_ext; c.d[d][1] += 0.9*end_ext; // extend to cover the gaps in the mesh (both dirs) - slightly less than interior so that it sticks out
 		ret |= check_line_clip_update_t(p1, p2, t, c);
-		c.z1() = ends[n].z1() - wall_thick; // extend to the bottom
+		c.z1() = ends[n].z1() - 2.0*wall_thick; // extend below the bottom to cover any gaps at the corners
 		c.d[!d][0] = ends[n].d[!d][0] - width; c.d[!d][1] = tend.d[!d][0]; // left side
 		ret |= check_line_clip_update_t(p1, p2, t, c);
 		c.d[!d][1] = ends[n].d[!d][1] + width; c.d[!d][0] = tend.d[!d][1]; // right side
@@ -979,7 +979,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 		c.d[d][0] -= 0.9*end_ext; c.d[d][1] += 0.9*end_ext; // extend to cover the gaps in the mesh (both dirs) - slightly less than interior so that it sticks out
 		begin_tile(c.get_cube_center(), 1); // required for long tunnels where facade is in a different tile from the tunnel center
 		draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0
-		c.z1() = tunnel.ends[n].z1() - wall_thick; // extend to the bottom
+		c.z1() = tunnel.ends[n].z1() - 2.0*wall_thick; // extend below the bottom to cover any gaps at the corners
 		c.d[!d][0] = tunnel.ends[n].d[!d][0] - width; c.d[!d][1] = tend.d[!d][0]; // left side
 		draw_cube(qbd, c, cw_concrete, 1, tscale); // skip_bottom=1
 		c.d[!d][1] = tunnel.ends[n].d[!d][1] + width; c.d[!d][0] = tend.d[!d][1]; // right side

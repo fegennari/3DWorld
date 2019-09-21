@@ -529,7 +529,8 @@ public:
 				float const len(fabs(ps[dim] - pe[dim]));
 				
 				if (len > 4.0*radius) { // don't make the tunnel too short
-					tunnel->init(ps, pe, radius, dim);
+					tunnel->init(ps, pe, radius, 0.5*radius, dim);
+					unsigned const tunnel_border((unsigned)ceil(radius/(dim ? DY_VAL : DX_VAL)));
 					seg_min_dh = tunnel->height + TUNNEL_WALL_THICK*radius; // add another wall thickness to account for sloped terrain minima
 					skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
 					tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
@@ -539,11 +540,11 @@ public:
 						unsigned qpt[2] = {(x1 + x2)/2, (y1 + y2)/2}; // start at center
 						qpt[!dim] += dxy;
 
-						for (unsigned n = 0; n < 4; ++n) { // take several samples and find the peak mesh height for the tunnel facades
+						for (unsigned n = 0; n < tunnel_border; ++n) { // take several samples and find the peak mesh height for the tunnel facades
 							qpt[dim] = six + n;
-							max_eq(tunnel->facade_height[0], (get_height(qpt[0], qpt[1]) - ps.z));
+							max_eq(tunnel->facade_height[0], (get_height(qpt[0], qpt[1]) - ps.z - radius)); // effectively adds an additional wall height (= tunnel->height - radius)
 							qpt[dim] = eix - n;
-							max_eq(tunnel->facade_height[1], (get_height(qpt[0], qpt[1]) - pe.z));
+							max_eq(tunnel->facade_height[1], (get_height(qpt[0], qpt[1]) - pe.z - radius));
 						} // for n
 					} // for dxy
 				}

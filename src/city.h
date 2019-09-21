@@ -512,7 +512,7 @@ struct tunnel_t : public road_connector_t {
 
 	tunnel_t(road_t const &road) : road_connector_t(road), radius(0.0), height(0.0) {facade_height[0] = facade_height[1] = 0.0f;}
 	bool enabled() const {return (radius > 0.0);}
-	void init(point const &start, point const &end, float radius_, bool dim);
+	void init(point const &start, point const &end, float radius_, float end_length, bool dim);
 	void add_streetlights() {road_connector_t::add_streetlights(2, 1, -0.15, ends[0].z1(), ends[1].z1());} // 2 per side, staggered
 	cube_t get_tunnel_bcube() const;
 	void calc_top_bot_side_cubes(cube_t cubes[4]) const;
