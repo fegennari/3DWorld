@@ -146,7 +146,8 @@ void main() {
 
 	// sand, dirt, grass, rock, snow
 	vec4 weights   = texture(weights_tex, tc);
-	if (weights.r + weights.g > 1.5) {discard;} // if first two weights sum to more than 1.5, treat this as a special flag to skip drawing this mesh region
+	// if first two weights sum to more than 1.5, treat this as a special flag to skip drawing this mesh region (2.0 would be exactly at the skipped vertex)
+	if (weights.r + weights.g > 1.5) {discard;}
 	float weights4 = clamp((1.0 - weights.r - weights.g - weights.b - weights.a), 0.0, 1.0);
 	weights  = smoothstep(0.0, 1.0, weights);
 	weights4 = smoothstep(0.0, 1.0, weights4);
