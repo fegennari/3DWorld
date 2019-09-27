@@ -1740,7 +1740,7 @@ void create_shrapnel(point const &pos, vector3d const &dir, float firing_error, 
 	}
 }
 
-
+// delayed projectiles are intended for use with fast projectiles (M16 and shotgun) that are not infinite speed, none of which are currently enabled
 struct delayed_proj_t {
 	point pos;
 	vector3d dir;
@@ -1755,7 +1755,7 @@ vector<delayed_proj_t> delayed_projs;
 void projectile_test_delayed(point const &pos, vector3d const &dir, float firing_error, float damage,
 	int shooter, float &range, float intensity, int ignore_cobj, float velocity, vector3d *dir_used_ptr=nullptr)
 {
-	float const max_range(velocity*fticks); // Note: velocity=0.0 => infinite speed/instant hit (FIXME: use tstep instead of fticks here?)
+	float const max_range(velocity*fticks); // Note: velocity=0.0 => infinite speed/instant hit (use tstep instead of fticks here?)
 	vector3d dir_used(dir);
 	point const ret(projectile_test(pos, dir, firing_error, damage, shooter, range, intensity, ignore_cobj, max_range, &dir_used));
 	if (dir_used_ptr) {*dir_used_ptr = dir_used;}
