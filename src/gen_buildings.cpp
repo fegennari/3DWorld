@@ -112,7 +112,7 @@ struct building_params_t {
 		cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
-	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);} // TODO: for future use
+	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
 	float get_window_width_fract () const {assert(windows_enabled()); return window_width /(window_width  + window_xspace);}
 	float get_window_height_fract() const {assert(windows_enabled()); return window_height/(window_height + window_yspace);}
 	float get_window_tx() const {assert(windows_enabled()); return 1.0f/(window_width  + window_xspace);}
