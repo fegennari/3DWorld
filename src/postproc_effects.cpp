@@ -8,7 +8,7 @@
 #include "transform_obj.h"
 
 
-extern bool water_is_lava;
+extern bool water_is_lava, enable_postproc_recolor;
 extern unsigned depth_tid, frame_buffer_RGB_tid;
 extern int frame_counter, display_mode, show_fog, camera_coll_id, window_width, window_height, animate2;
 extern float NEAR_CLIP, FAR_CLIP, fticks, dist_to_fire_sq, water_plane_z, CAMERA_RADIUS;
@@ -240,7 +240,7 @@ void run_postproc_effects() {
 		if      (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
 		else if (dist_to_lava > 0.0 && dist_to_lava < lava_max_dist) {add_color_only_effect("heat_waves", (lava_max_dist - dist_to_lava)/lava_max_dist);}
 	}
-	if (display_mode & 0x80) {
+	if (display_mode & 0x80) { // DOF
 		point const pos2(camera + cview_dir*FAR_CLIP);
 		point cpos(pos2);
 		vector3d cnorm; // unused
@@ -257,6 +257,8 @@ void run_postproc_effects() {
 		if (world_mode != WMODE_INF_TERRAIN) {add_bloom();}
 		else if (have_buildings() && is_night()) {add_2d_bloom();} // allow bloom for building windows at night in TT mode
 	}
+	if (enable_postproc_recolor) {add_color_only_effect("recolor", 0.0);} // add recolor at the very end
+
 	if (0 && !prev_mat_valid) { // capture matrices from this frame for use with next frame (if needed in the future)
 		prev_mvm = fgGetMVM();
 		prev_pjm = fgGetPJM();

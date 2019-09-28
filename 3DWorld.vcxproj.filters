@@ -1323,6 +1323,9 @@
     <None Include="shaders\cube_map.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\recolor.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
