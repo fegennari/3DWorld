@@ -1811,12 +1811,12 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	}
 	else if (world_mode == WMODE_INF_TERRAIN) {
 		//timer_t timer("Draw Models");
-		float const view_dist(get_inf_terrain_fog_dist() + bcube.get_max_extent()); // or get_draw_tile_dist()?
+		float const view_dist(get_inf_terrain_fog_dist() + bcube.get_max_extent()), view_dist_sq(view_dist*view_dist); // or get_draw_tile_dist()?
 		to_draw_xf.clear();
 		
 		for (unsigned i = 0; i < transforms.size(); ++i) {
-			float const dist(distance_to_camera(transforms[i].tv + xlate)); // only use translate; assumes models are approx centered and rotated about their centers
-			if (dist < view_dist) {to_draw_xf.emplace_back(dist, i);} // add if not too far away
+			float const dist_sq(distance_to_camera_sq(transforms[i].tv + xlate)); // only use translate; assumes models are approx centered and rotated about their centers
+			if (dist_sq < view_dist_sq) {to_draw_xf.emplace_back(dist_sq, i);} // add if not too far away
 		}
 		if (trans_op_mask < 3) {sort(to_draw_xf.begin(), to_draw_xf.end());} // drawing opaque and trans in separate passes, sort by dist
 		vector<cube_t> occluders;
