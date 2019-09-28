@@ -308,8 +308,11 @@ void streetlights_t::add_streetlight_dlights(vector3d const &xlate, cube_t &ligh
 }
 
 bool streetlights_t::proc_streetlight_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
+	float const pradius(streetlight_ns::get_streetlight_pole_radius()), rtot(pradius + radius), y_end(center.y + rtot - xlate.y);
+
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-		if (i->proc_sphere_coll(center, radius, xlate, cnorm)) return 1; // TODO: optimize this like we did with check_streetlight_sphere_coll_xy() below
+		if (i->pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
+		if (i->proc_sphere_coll(center, radius, xlate, cnorm)) return 1;
 	}
 	return 0;
 }
