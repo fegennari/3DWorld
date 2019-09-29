@@ -279,7 +279,7 @@ public:
 	}
 	void clear();
 	void clear_flowers() {flowers.clear();}
-	void clear_shadows(bool clear_sun=1, bool clear_moon=1);
+	void clear_shadows(bool clear_sun=1, bool clear_moon=1, bool no_clear_adj=0);
 	void clear_shadow_map(tile_shadow_map_manager *smap_manager);
 	void clear_vbo_tid(tile_shadow_map_manager *smap_manager);
 	void clear_pine_tree_vbos() {pine_trees.clear_vbos();}

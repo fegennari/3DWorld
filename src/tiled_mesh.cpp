@@ -374,12 +374,15 @@ void tile_t::clear() {
 	clear_flowers();
 }
 
-void tile_t::clear_shadows(bool clear_sun, bool clear_moon) {
+void tile_t::clear_shadows(bool clear_sun, bool clear_moon, bool no_clear_adj) {
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if ((l == LIGHT_SUN && !clear_sun) || (l == LIGHT_MOON && !clear_moon)) continue;
 		smask[l].clear();
-		for (unsigned d = 0; d < 2; ++d) {sh_out[l][d].clear();}
+		
+		if (!no_clear_adj) { // this is not necessary, but is an optimization for low sun angles to avoid recomputation of shadows on a tile when its neighbors have changed
+			for (unsigned d = 0; d < 2; ++d) {sh_out[l][d].clear();}
+		}
 	}
 	sun_shadows_invalid  = clear_sun;
 	moon_shadows_invalid = clear_moon;
@@ -2184,20 +2187,29 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << num_erased << endl;
 	}
 	// Note: could skip shadow computation (but not weight calc/texture upload) if (max(sun_pos.z,  last_sun.z) > zbottom) or (sun.get_norm().z > 0.9) or something like that
-	static point last_sun(all_zeros), last_moon(all_zeros);
-	bool const sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
-	bool const moon_change(moon_pos != last_moon && light_factor <= 0.6 && max(moon_pos.z, last_moon.z) > zmin); // only when the moon is up
+	static point last_sun(all_zeros), last_moon(all_zeros), last_ata_sun(all_zeros), last_ata_moon(all_zeros);
+	bool sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
+	bool moon_change(moon_pos != last_moon && light_factor <= 0.6 && max(moon_pos.z, last_moon.z) > zmin); // only when the moon is up
 
 	if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
-		if (auto_time_adv) {
+		if (auto_time_adv) { // cycle through tiles and invalidate shadows for 1/8 of them each frame
+			// only update when sun/moon has changed significantly
+			float const toler = 0.99999;
+			sun_change  &= (dot_product(sun_pos.get_norm(),  last_ata_sun.get_norm())  < toler);
+			moon_change &= (dot_product(moon_pos.get_norm(), last_ata_moon.get_norm()) < toler);
 			int const skip_factor = 8;
 
-			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-				tile_xy_pair const tp(i->second->get_tile_xy_pair());
-				if (((tp.x + tp.y + frame_counter) % skip_factor) == 0) {i->second->clear_shadows(sun_change, moon_change);} // cycle through tiles and update 1/8 of them each frame
+			if (sun_change || moon_change) {
+				for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+					if (!i->second->is_visible()) continue; // let this tile be updated in some later frame when it becomes visible, assuming we're still in auto time advance mode
+					tile_xy_pair const tp(i->second->get_tile_xy_pair());
+					if (((tp.y + frame_counter) % skip_factor) == 0) {i->second->clear_shadows(sun_change, moon_change);}
+				}
 			}
+			if (sun_change ) {last_ata_sun  = sun_pos;}
+			if (moon_change) {last_ata_moon = moon_pos;}
 		}
-		else {
+		else { // invalidate and recompute all shadows
 			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadows(sun_change, moon_change);}
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
