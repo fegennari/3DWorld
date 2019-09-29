@@ -168,7 +168,7 @@ private:
 	unsigned weight_tid, height_tid, normal_tid, shadow_tid;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize, smap_lod_level;
 	float radius, mzmin, mzmax, mesh_dz, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
-	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
+	bool sun_shadows_invalid, moon_shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	bool is_distant, no_trees, just_cleared, has_tunnel;
 	colorRGB avg_mesh_tex_color;
 	tile_offset_t mesh_off, ptree_off, dtree_off, scenery_off;
@@ -279,11 +279,10 @@ public:
 	}
 	void clear();
 	void clear_flowers() {flowers.clear();}
-	void clear_shadows();
+	void clear_shadows(bool clear_sun=1, bool clear_moon=1);
 	void clear_shadow_map(tile_shadow_map_manager *smap_manager);
 	void clear_vbo_tid(tile_shadow_map_manager *smap_manager);
 	void clear_pine_tree_vbos() {pine_trees.clear_vbos();}
-	void invalidate_shadows() {shadows_invalid = 1;}
 	bool create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait);
 	void get_z_minmax_for_area(point const &pos, float radius, float &zmin, float &zmax) const;
 	float get_zval_at(float x, float y, bool in_global_space) const;

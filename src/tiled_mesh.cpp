@@ -248,12 +248,12 @@ bool write_default_hmap_modmap() {
 tile_t::tile_t() : x1(0), y1(0), x2(0), y2(0), wx1(0), wy1(0), wx2(0), wy2(0),
 	last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0), size(0), stride(0), zvsize(0), base_tsize(0), gen_tsize(0), smap_lod_level(0),
 	radius(0), mzmin(0), mzmax(0), mesh_dz(0), ptzmax(0), dtzmax(0), trmax(0), xstart(0), ystart(0), min_normal_z(0.0), deltax(0.0), deltay(0.0),
-	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
+	sun_shadows_invalid(1), moon_shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
 	is_distant(0), no_trees(0), just_cleared(0), has_tunnel(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), smap_lod_level(0), mesh_dz(0.0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
-	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
+	sun_shadows_invalid(1), moon_shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
 	is_distant(0), no_trees(0), just_cleared(0), has_tunnel(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
@@ -374,13 +374,15 @@ void tile_t::clear() {
 	clear_flowers();
 }
 
-void tile_t::clear_shadows() {
+void tile_t::clear_shadows(bool clear_sun, bool clear_moon) {
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		if ((l == LIGHT_SUN && !clear_sun) || (l == LIGHT_MOON && !clear_moon)) continue;
 		smask[l].clear();
 		for (unsigned d = 0; d < 2; ++d) {sh_out[l][d].clear();}
 	}
-	invalidate_shadows();
+	sun_shadows_invalid  = clear_sun;
+	moon_shadows_invalid = clear_moon;
 }
 
 void tile_t::clear_vbo_tid(tile_shadow_map_manager *smap_manager) {
@@ -635,7 +637,7 @@ void tile_t::calc_shadows_for_light(unsigned l) {
 	// calculate shadows of current tile
 	calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
 		sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
-	invalidate_shadows();
+	((l == LIGHT_SUN) ? sun_shadows_invalid : moon_shadows_invalid) = 1;
 }
 
 
@@ -724,7 +726,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_tes
 		}
 	}
 	if (updated) { // tree_map was modified, so we need to recalculate both weights (grass replaced with dirt) and shadows
-		invalidate_shadows();
+		sun_shadows_invalid = moon_shadows_invalid = 1;
 		if (has_any_grass) {recalc_tree_grass_weights = 1;} // Note: may be slow, and doesn't have a big impact
 	}
 }
@@ -781,16 +783,18 @@ void tile_t::check_shadow_map_and_normal_texture() {
 		setup_texture(normal_tid, 0, 0, 0, 0, 0);
 		upload_normal_texture(0); // created once, never updated (so never valid here)
 	}
-	if (shadow_tid && !shadows_invalid) return; // up-to-date
-	//timer_t timer("Shadow Map Texture Update");
 	bool const tid_is_valid(shadow_tid != 0);
-	if (!tid_is_valid) {setup_texture(shadow_tid, 0, 0, 0, 0, 0);}
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
+	bool const update_sun (has_sun  && (sun_shadows_invalid  || smask[LIGHT_SUN ].empty()));
+	bool const update_moon(has_moon && (moon_shadows_invalid || smask[LIGHT_MOON].empty()));
+	if (tid_is_valid && !(update_sun || update_moon)) return; // up-to-date
+	//timer_t timer("Shadow Map Texture Update");
+	if (!tid_is_valid) {setup_texture(shadow_tid, 0, 0, 0, 0, 0); sun_shadows_invalid = moon_shadows_invalid = 1;}
 	assert(has_sun || has_moon);
-	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
+	if (mesh_shadows) {calc_shadows(update_sun, update_moon);}
 	if (enable_tiled_mesh_ao && ao_lighting.empty()) {calc_mesh_ao_lighting();}
 	upload_shadow_map_texture(tid_is_valid);
-	shadows_invalid = 0;
+	sun_shadows_invalid = moon_shadows_invalid = 0;
 }
 
 
@@ -830,6 +834,8 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	vector<unsigned char> shadow_data(4*stride*stride, 0);
 	vector<unsigned char> const &cur_smask(smask[has_sun ? LIGHT_SUN : LIGHT_MOON]);
+	if (mesh_shadows && has_sun ) {assert(!smask[LIGHT_SUN ].empty());}
+	if (mesh_shadows && has_moon) {assert(!smask[LIGHT_MOON].empty());}
 
 	for (unsigned y = 0; y < stride; ++y) { // Note: shadow texture is stored as {mesh_shadow, tree_shadow, ambient_occlusion}
 		for (unsigned x = 0; x < stride; ++x) {
@@ -2188,11 +2194,11 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 
 			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				tile_xy_pair const tp(i->second->get_tile_xy_pair());
-				if (((tp.x + tp.y + frame_counter) % skip_factor) == 0) {i->second->clear_shadows();} // cycle through tiles and update 1/8 of them each frame
+				if (((tp.x + tp.y + frame_counter) % skip_factor) == 0) {i->second->clear_shadows(sun_change, moon_change);} // cycle through tiles and update 1/8 of them each frame
 			}
 		}
 		else {
-			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadows();}
+			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadows(sun_change, moon_change);}
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}

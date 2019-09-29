@@ -456,8 +456,8 @@ public:
 		: mh(h), smask(sm), sh_in_x(shix), sh_in_y(shiy), sh_out_x(shox), sh_out_y(shoy), dist(0.0f), xsize(xsz), ysize(ysz) {
 		assert(mh != NULL && smask != NULL);
 	}
-
 	void run(point const &lpos) { // assumes light source directional/at infinity
+		//timer_t timer("Shadow Gen");
 		assert(smask != NULL);
 		dir  = (all_zeros - lpos).get_norm();
 		dist = 2.0*XY_SUM_SIZE/sqrt(dir.x*dir.x + dir.y*dir.y);
