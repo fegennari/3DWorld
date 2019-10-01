@@ -1246,5 +1246,6 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	check_xy_offsets();
 	init_x = 0;
 	if (TIMETEST) PRINT_TIME("3.9");
+	//timing_profiler_stats();
 }
 

@@ -669,7 +669,7 @@ void tile_t::proc_tile_queue(tile_t *init_tile, unsigned l) {
 			tile_queue.push_front(adj_tile); // changed, push to adjacent tiles
 			adj_tile->in_queue = 1;
 		}
-	}
+	} // end while()
 }
 
 
@@ -780,7 +780,7 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 }
 
 
-void tile_t::check_shadow_map_and_normal_texture() {
+void tile_t::check_shadow_map_and_normal_texture(bool no_push) {
 
 	if (!normal_tid) {
 		setup_texture(normal_tid, 0, 0, 0, 0, 0);
@@ -794,7 +794,7 @@ void tile_t::check_shadow_map_and_normal_texture() {
 	//timer_t timer("Shadow Map Texture Update");
 	if (!tid_is_valid) {setup_texture(shadow_tid, 0, 0, 0, 0, 0); sun_shadows_invalid = moon_shadows_invalid = 1;}
 	assert(has_sun || has_moon);
-	if (mesh_shadows) {calc_shadows(update_sun, update_moon);}
+	if (mesh_shadows) {calc_shadows(update_sun, update_moon, no_push);}
 	if (enable_tiled_mesh_ao && ao_lighting.empty()) {calc_mesh_ao_lighting();}
 	upload_shadow_map_texture(tid_is_valid);
 	sun_shadows_invalid = moon_shadows_invalid = 0;
@@ -2064,6 +2064,7 @@ void tile_draw_t::clear(bool no_regen_buildings) {
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
 	tiles.clear();
+	shadow_recomp_queue.clear();
 	if (!no_regen_buildings && !have_cities()) {buildings_valid = 0;} // can't regenerate buildings after cities and cars have been placed
 }
 
@@ -2187,33 +2188,37 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << num_erased << endl;
 	}
 	// Note: could skip shadow computation (but not weight calc/texture upload) if (max(sun_pos.z,  last_sun.z) > zbottom) or (sun.get_norm().z > 0.9) or something like that
-	static point last_sun(all_zeros), last_moon(all_zeros), last_ata_sun(all_zeros), last_ata_moon(all_zeros);
+	static point last_sun(all_zeros), last_moon(all_zeros);
 	bool sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
 	bool moon_change(moon_pos != last_moon && light_factor <= 0.6 && max(moon_pos.z, last_moon.z) > zmin); // only when the moon is up
+	float const toler = 0.9999; // only update when sun/moon has changed significantly
+	sun_change  &= (dot_product(sun_pos.get_norm(),  last_sun.get_norm())  < toler);
+	moon_change &= (dot_product(moon_pos.get_norm(), last_moon.get_norm()) < toler);
 
-	if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
-		if (auto_time_adv) { // cycle through tiles and invalidate shadows for 1/8 of them each frame
-			// only update when sun/moon has changed significantly
-			float const toler = 0.99999;
-			sun_change  &= (dot_product(sun_pos.get_norm(),  last_ata_sun.get_norm())  < toler);
-			moon_change &= (dot_product(moon_pos.get_norm(), last_ata_moon.get_norm()) < toler);
-			int const skip_factor = 8;
-
-			if (sun_change || moon_change) {
-				for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-					if (!i->second->is_visible()) continue; // let this tile be updated in some later frame when it becomes visible, assuming we're still in auto time advance mode
-					tile_xy_pair const tp(i->second->get_tile_xy_pair());
-					if (((tp.y + frame_counter) % skip_factor) == 0) {i->second->clear_shadows(sun_change, moon_change);}
-				}
+	if (mesh_shadows_enabled() && (sun_change || moon_change) && shadow_recomp_queue.empty()) { // light source change
+		if (auto_time_adv && !moon_change) { // auto time advance shadow map update for sun change only - triger a shadow recompute
+			for (auto i = tiles.begin(); i != tiles.end(); ++i) { // triger a shadow recompute
+				shadow_recomp_queue.emplace_back(-p2p_dist(sun_pos, i->second->get_center()), i->second->get_tile_xy_pair());
 			}
-			if (sun_change ) {last_ata_sun  = sun_pos;}
-			if (moon_change) {last_ata_moon = moon_pos;}
+			sort(shadow_recomp_queue.begin(), shadow_recomp_queue.end()); // sort by decreasing distance to light source
 		}
-		else { // invalidate and recompute all shadows
+		else { // invalidate and recompute all shadows on moon change (infrequent) or user sun pos change
 			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadows(sun_change, moon_change);}
-			last_sun  = sun_pos;
-			last_moon = moon_pos;
 		}
+		last_sun  = sun_pos;
+		last_moon = moon_pos;
+	}
+	unsigned num_shadow_updates = 12; // hard max per frame
+
+	while (!shadow_recomp_queue.empty() && num_shadow_updates > 0) { // perform some queued shadow map updates, starting at light source
+		tile_xy_pair const tp(shadow_recomp_queue.back().second);
+		shadow_recomp_queue.pop_back();
+		tile_map::const_iterator it(tiles.find(tp));
+		if (it == tiles.end()) continue; // tile no longer exists/was deleted
+		// recompute shadows; tiles feeding in (closer to the light) should have already been calculated
+		it->second->clear_shadows(1, 0); // update sun shadows only
+		it->second->check_shadow_map_and_normal_texture(1); // no_push=1
+		--num_shadow_updates;
 	}
 	// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Tiled Terrain Update");}

@@ -315,7 +315,7 @@ public:
 	template<typename T> void apply_ao_shadows_for_tree_group(T const &trees, tile_offset_t const &toff, bool no_adj_test, float rscale);
 	void apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test);
 	void apply_tree_ao_shadows();
-	void check_shadow_map_and_normal_texture();
+	void check_shadow_map_and_normal_texture(bool no_push=0);
 	void upload_normal_texture(bool tid_is_valid);
 	void upload_shadow_map_texture(bool tid_is_valid);
 	void setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool cleanup_only);
@@ -430,6 +430,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	tree_lod_render_t lod_renderer;
 	crack_ibuf_t crack_ibuf;
 	tile_shadow_map_manager smap_manager;
+	vector<pair<float, tile_xy_pair>> shadow_recomp_queue;
 
 	struct occluder_pts_t {
 		point cube_pts[4];
