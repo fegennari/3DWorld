@@ -839,6 +839,7 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 	vector<unsigned char> const &cur_smask(smask[has_sun ? LIGHT_SUN : LIGHT_MOON]);
 	if (mesh_shadows && has_sun ) {assert(!smask[LIGHT_SUN ].empty());}
 	if (mesh_shadows && has_moon) {assert(!smask[LIGHT_MOON].empty());}
+	float const lfs(5.0*(light_factor - 0.4)); // 0: all moon, 1: all sun
 
 	for (unsigned y = 0; y < stride; ++y) { // Note: shadow texture is stored as {mesh_shadow, tree_shadow, ambient_occlusion}
 		for (unsigned x = 0; x < stride; ++x) {
@@ -851,9 +852,9 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 
 			if (!mesh_shadows) {} // do nothing
 			else if (has_sun && has_moon) {
-				bool const no_sun( (smask[LIGHT_SUN ][ix2] & SHADOWED_ALL) != 0);
-				bool const no_moon((smask[LIGHT_MOON][ix2] & SHADOWED_ALL) != 0);
-				shadow_val *= blend_light(light_factor, !no_sun, !no_moon);
+				bool const sun_en( (smask[LIGHT_SUN ][ix2] & SHADOWED_ALL) == 0);
+				bool const moon_en((smask[LIGHT_MOON][ix2] & SHADOWED_ALL) == 0);
+				shadow_val *= (lfs*sun_en + (1.0 - lfs)*moon_en);
 			}
 			else if (cur_smask[ix2] & SHADOWED_ALL) {shadow_val = 0;} // fully in shadow
 			shadow_data[ix_off+0] = shadow_val; // mesh shadow

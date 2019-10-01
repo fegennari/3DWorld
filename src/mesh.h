@@ -162,7 +162,6 @@ inline float get_dim_val(int val, unsigned dim) {
 	return 0;
 }
 
-
 inline int get_dim_pos(float val, unsigned dim) {
 	switch (dim) {
 		case 0: return get_xpos(val);
@@ -180,12 +179,6 @@ inline point get_xyz_pos(int x, int y, int z) {
 
 inline point get_mesh_xyz_pos(int x, int y) { // Note: not bounds checked
 	return point(get_xval(x), get_yval(y), mesh_height[y][x]);
-}
-
-
-inline float blend_light(float lfactor, bool has_sun, bool has_moon) {
-	float const lfs(5.0*(lfactor - 0.4)); // 0: all moon, 1: all sun
-	return lfs*has_sun + (1.0 - lfs)*has_moon;
 }
 
 
