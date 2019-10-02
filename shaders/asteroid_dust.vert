@@ -1,4 +1,4 @@
-uniform mat4 fg_ViewMatrix;
+uniform mat4 fg_ViewMatrixInv;
 uniform float sphere_size = 1.0;
 uniform vec4 color = vec4(1.0);
 
@@ -9,7 +9,7 @@ void main()
 {
 	epos = fg_ModelViewMatrix * fg_Vertex;
 #ifdef ENABLE_SHADOWS
-	world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
+	world_space_pos = (fg_ViewMatrixInv * epos).xyz;
 #endif
 	gl_Position  = fg_ProjectionMatrix * epos;
 	fg_Color_vf  = color;

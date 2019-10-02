@@ -3,7 +3,7 @@ uniform float planet_radius, ring_ri, ring_ro, bf_draw_sign;
 uniform float alpha_scale = 1.0;
 uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
-uniform mat4 fg_ViewMatrix;
+uniform mat4 fg_ViewMatrixInv;
 
 in vec3 normal, vertex;
 in vec2 tc;
@@ -27,7 +27,7 @@ vec3 add_light_rings(in vec3 n, in vec4 epos, in vec3 world_space_pos) {
 void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
-	vec3 world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
+	vec3 world_space_pos = (fg_ViewMatrixInv * epos).xyz;
 	float ws_cdist = distance(world_space_pos, camera_pos);
 	float pp_cdist = distance(planet_pos, camera_pos);
 	if (bf_draw_sign != 0.0 && bf_draw_sign*(ws_cdist - pp_cdist) < -0.01*pp_cdist) discard; // on the wrong side of the planet

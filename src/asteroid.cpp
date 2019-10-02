@@ -12,6 +12,7 @@
 #include "asteroid.h"
 #include "ship_util.h" // for gen_particle
 #include "transform_obj.h"
+#include <glm/gtc/matrix_inverse.hpp>
 
 
 bool     const ENABLE_AF_INSTS  = 1; // more efficient on large asteroid fields, but less efficient when close/sparse (due to overhead), and normals are incorrect
@@ -1297,7 +1298,7 @@ void shadowed_uobject::upload_shadow_casters(shader_t &s) const {
 	s.add_uniform_int("num_shadow_casters", shadow_casters.size());
 	s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
 	s.add_uniform_float("sun_radius", sun_pos_radius.radius);
-	upload_mvm_to_shader(s, "fg_ViewMatrix");
+	s.add_uniform_matrix_4x4("fg_ViewMatrixInv", xform_matrix(glm::affineInverse((glm::mat4)fgGetMVM())).get_ptr(), 0);
 }
 
 

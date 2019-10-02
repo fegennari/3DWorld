@@ -1,4 +1,4 @@
-uniform mat4 fg_ViewMatrix;
+uniform mat4 fg_ViewMatrixInv;
 uniform vec4 color = vec4(1.0);
 uniform float depth_bias = 0.0;
 
@@ -20,7 +20,7 @@ void main()
 	eye_norm = normalize(fg_NormalMatrix * fg_Normal); // for lighting
 #endif
 #ifdef ENABLE_SHADOWS
-	world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
+	world_space_pos = (fg_ViewMatrixInv * epos).xyz;
 #endif
 	gl_Position   = fg_ProjectionMatrix * epos;
 	gl_Position.z += depth_bias;
