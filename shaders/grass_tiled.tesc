@@ -3,7 +3,6 @@ layout (vertices = 3) out;
 
 uniform float min_tess_level = 1.0;
 uniform float tess_lod_scale = 1.0;
-uniform mat4 fg_ViewMatrix;
 
 // attributes of the input CPs
 in vec3 vertex_from_vs[];
