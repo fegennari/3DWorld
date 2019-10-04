@@ -217,13 +217,13 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 }
 
 
-class water_spalsh_search { // for projectiles, etc.
+class water_splash_search { // for projectiles, etc.
 
 	point const &pos1, &pos2;
 	float splash_val;
 
 public:
-	water_spalsh_search(point const &pos1_, point const &pos2_, float splash_val_) :
+	water_splash_search(point const &pos1_, point const &pos2_, float splash_val_) :
 	   pos1(pos1_), pos2(pos2_), splash_val(splash_val_) {}
 
 	bool do_iter() const {
@@ -280,10 +280,10 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 		if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex2, ignore_cobj, 1, test_alpha, 0, 0, skip_init_colls, 0, no_stat_moving)) {cindex = cindex2;}
 	}
 	if (splash_val > 0.0) { // handle water splashes
-		if (cindex >= 0) pos2 = cpos;
+		if (cindex >= 0) {pos2 = cpos;}
 		
 		if (do_line_clip_scene(pos1, pos2, zbottom, max(ztop, water_plane_z))) { // max of dynamic and static water
-			water_spalsh_search wss(pos1, pos2, splash_val);
+			water_splash_search wss(pos1, pos2, splash_val);
 			wss.do_iter();
 		}
 	}
