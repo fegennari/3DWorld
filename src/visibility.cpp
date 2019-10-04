@@ -404,13 +404,65 @@ class mesh_shadow_gen {
 		point v2(v1 + vector3d(dir.x*dist, dir.y*dist, 0.0));
 		float const d[3][2] = {{-X_SCENE_SIZE, get_xval(xsize)}, {-Y_SCENE_SIZE, get_yval(ysize)}, {zmin, zmax}};
 		if (!do_line_clip(v1, v2, d)) return; // edge case ([zmin, zmax] should contain 0.0)
-		int const xa(get_xpos(v1.x)), ya(get_ypos(v1.y)), xb(get_xpos(v2.x)), yb(get_ypos(v2.y));
-		int const dx(xb - xa), dy(yb - ya), steps(max(abs(dx), abs(dy)));
+		int const xa(get_xpos(v1.x)), ya(get_ypos(v1.y)), xb(get_xpos(v2.x)), yb(get_ypos(v2.y)), dx(xb - xa), dy(yb - ya);
 		bool const dim(fabs(dir.x) < fabs(dir.y));
-		double const xinc(dx/(double)steps), yinc(dy/(double)steps), dir_ratio(dir.z/dir[dim]);
-		double x(xa), y(ya);
+		double const dir_ratio(dir.z/dir[dim]);
 		bool inited(0);
 		point cur(all_zeros);
+
+#if 1 // Bresenham's line drawing algorithm
+		int x(xa), y(ya);
+		int dx1(0), dy1(0), dx2(0), dy2(0);
+		if (dx < 0) {dx1 = -1; dx2 = -1;} else if (dx > 0) {dx1 = 1; dx2 = 1;}
+		if (dy < 0) {dy1 = -1;} else if (dy > 0) {dy1 = 1;}
+		int longest(abs(dx)), shortest(abs(dy));
+
+		if (longest <= shortest) {
+			swap(longest, shortest);
+			if (dy < 0) {dy2 = -1;} else if (dy > 0) {dy2 = 1;}
+			dx2 = 0;
+		}
+		int numerator(longest >> 1);
+
+		for (int i = 0; i <= longest; i++) {
+			if (x >= 0 && y >= 0 && x < xsize && y < ysize) {
+				point const pt((-X_SCENE_SIZE + DX_VAL*x), (-Y_SCENE_SIZE + DY_VAL*y), mh[y*xsize+x]);
+
+				// use starting shadow height value
+				if (sh_in_y != NULL && x == xa && sh_in_y[y] > MESH_MIN_Z) {
+					cur.assign(pt.x, pt.y, sh_in_y[y]);
+					inited = 1;
+				}
+				else if (sh_in_x != NULL && y == ya && sh_in_x[x] > MESH_MIN_Z) {
+					cur.assign(pt.x, pt.y, sh_in_x[x]);
+					inited = 1;
+				}
+				float const shadow_z((pt[dim] - cur[dim])*dir_ratio + cur.z);
+
+				if (inited && shadow_z > pt.z) { // shadowed
+					smask[y*xsize+x] |= MESH_SHADOW;
+					// set ending shadow height value
+					if (sh_out_y != NULL && x == xb) {sh_out_y[y] = shadow_z;}
+					if (sh_out_x != NULL && y == yb) {sh_out_x[x] = shadow_z;}
+				}
+				else {cur = pt;} // update point
+				inited = 1;
+			}
+			numerator += shortest;
+
+			if (numerator >= longest) {
+				numerator -= longest;
+				x += dx1;
+				y += dy1;
+			} else {
+				x += dx2;
+				y += dy2;
+			}
+		} // for i
+#else
+		int const steps(max(abs(dx), abs(dy)));
+		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
+		double x(xa), y(ya);
 		int xstart(0), ystart(0), xend(xsize-1), yend(ysize-1);
 		if (dir.x <= 0.0) {swap(xstart, xend);}
 		if (dir.y <= 0.0) {swap(ystart, yend);}
@@ -422,8 +474,8 @@ class mesh_shadow_gen {
 				int const xp1(min(xsize-1, xp+1)), yp1(min(ysize-1, yp+1));
 				float const xpi(x - (float)xp), ypi(y - (float)yp);
 				float const mh00(mh[yp*xsize+xp]), mh01(mh[yp*xsize+xp1]), mh10(mh[yp1*xsize+xp]), mh11(mh[yp1*xsize+xp1]);
-				float const mh((1.0f - xpi)*((1.0f - ypi)*mh00 + ypi*mh10) + xpi*((1.0f - ypi)*mh01 + ypi*mh11));
-				point const pt((-X_SCENE_SIZE + DX_VAL*x), (-Y_SCENE_SIZE + DY_VAL*y), mh);
+				float const mhv((1.0f - xpi)*((1.0f - ypi)*mh00 + ypi*mh10) + xpi*((1.0f - ypi)*mh01 + ypi*mh11));
+				point const pt((-X_SCENE_SIZE + DX_VAL*x), (-Y_SCENE_SIZE + DY_VAL*y), mhv);
 
 				// use starting shadow height value
 				if (sh_in_y != NULL && xp == xstart && sh_in_y[yp] > MESH_MIN_Z) {
@@ -449,6 +501,7 @@ class mesh_shadow_gen {
 			x += xinc;
 			y += yinc;
 		} // for k
+#endif
 	}
 
 public:
@@ -485,8 +538,7 @@ public:
 void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask, int xsize, int ysize,
 					   float const *sh_in_x, float const *sh_in_y, float *sh_out_x, float *sh_out_y)
 {
-	bool const no_shadow(l == LIGHT_MOON && combined_gu);
-	bool const all_shadowed(!no_shadow && lpos.z < zmin);
+	bool const no_shadow(l == LIGHT_MOON && combined_gu), all_shadowed(!no_shadow && lpos.z < zmin);
 	unsigned char const val(all_shadowed ? MESH_SHADOW : 0);
 	for (int i = 0; i < xsize*ysize; ++i) {smask[i] = val;}
 	if (no_shadow || FAST_VISIBILITY_CALC == 3) return;
