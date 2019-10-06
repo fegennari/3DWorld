@@ -3080,7 +3080,9 @@ bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float 
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt) {
 	unsigned hit_bix(0); // unused
-	return (check_buildings_line_coll(p1, p2, t, hit_bix, 0, ret_any_pt) || city_gen.line_intersect(p1, p2, t)); // apply_tt_xlate=0
+	bool ret(check_buildings_line_coll(p1, p2, t, hit_bix, 0, ret_any_pt)); // apply_tt_xlate=0
+	ret |= city_gen.line_intersect(p1, p2, t);
+	return ret;
 }
 bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 	float t(1.0);
