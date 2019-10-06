@@ -86,7 +86,7 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 	return 0;
 }
 
-bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, car_manager_t const *const car_manager) const {
+bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const {
 	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 
@@ -102,12 +102,13 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 		if (i->x2() < xmin) continue; // to the left
 		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
 		if (!sphere_cube_intersect(pos, radius, *i)) continue;
-		if (!has_dest_car || !car_manager || plot != dest_plot) return 0; // not looking for car intersection
+		if (!has_dest_car || !ped_mgr || plot != dest_plot) return 0; // not looking for car intersection
 		
 		if (i->intersects_xy(dest_car_center)) { // check if collider is a parking lot car group that contains the dest car
 			// Note: here we consider a collision with any car in this block as at destination, even if it's not the dest car;
 			// it's possible that the dest car is walled in and surrounded by cars (which may be poorly parked) such that the ped can't reach it without a collision
-			if (car_manager->get_car_at_pt(pos, 1) == nullptr) continue; // no car at this location, continue into parking lot (slow, but not called very often)
+			if (!ped_mgr->has_car_at_pt(pos, city, 1)) continue; // no car at this location, continue into parking lot (thread safe and faster version)
+			//if (ped_mgr->get_car_manager().get_car_at_pt(pos, 1) == nullptr) continue; // no car at this location, continue into parking lot (slow, but not called very often)
 			bool const ret(!at_dest);
 			ped_at_dest = 1;
 			return ret; // only valid if we just reached our dest
@@ -502,7 +503,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
 	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube)) {collided = outside_plot = 1;} // outside the plot, treat as a collision with the plot bounds
-	else if (!is_valid_pos(colliders, at_dest, &ped_mgr.get_car_manager())) {collided = 1;} // collided with a static collider
+	else if (!is_valid_pos(colliders, at_dest, &ped_mgr)) {collided = 1;} // collided with a static collider
 	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
 	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir)) {collided = 1;} // collided with another pedestrian
 	else { // no collisions
@@ -544,7 +545,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			point const cur_pos(pos);
 			pos = prev_pos; // restore to previous valid pos unless we're outside the plot
 			// if prev pos is also invalid, undo the restore to avoid getting this ped stuck in a collision object
-			if (!is_valid_pos(colliders, at_dest, &ped_mgr.get_car_manager()) || check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {pos = cur_pos;}
+			if (!is_valid_pos(colliders, at_dest, &ped_mgr) || check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {pos = cur_pos;}
 		}
 		vector3d new_dir;
 
@@ -869,6 +870,30 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 		}
 		if (lo < pos_max && hi > pos_min) return 1; // overlaps current or future car in dim
 	} // for dir
+	return 0;
+}
+
+bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parked) const {
+	
+	assert(city < cars_by_city.size());
+	car_city_vect_t const &cv(cars_by_city[city]);
+
+	if (is_parked) { // handle parked cars case
+		for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
+			if (c->contains_pt_xy(pos)) return 1;
+		}
+	}
+	else { // check all dims/dirs of non-parked cars
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				auto const &cars(cv.cars[dim][dir]);
+
+				for (auto c = cars.begin(); c != cars.end(); ++c) {
+					if (c->bcube.contains_pt_xy(pos)) return 1;
+				}
+			}
+		}
+	}
 	return 0;
 }
 

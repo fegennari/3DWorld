@@ -569,19 +569,23 @@ void car_manager_t::finalize_cars() {
 	cout << "Total Cars: " << cars.size() << endl;
 }
 
-void car_city_vect_t::clear() {
+void car_city_vect_t::clear_cars() {
 	for (unsigned d = 0; d < 2; ++d) {cars[d][0].clear(); cars[d][1].clear();}
 }
 
 void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const {
 	if (cars.empty()) return;
 	//timer_t timer("Extract Car Data");
-	for (auto i = cars_by_city.begin(); i != cars_by_city.end(); ++i) {i->clear();} // clear prev frame's state
+	// create parked cars vectors on first call; this is used for pedestrian navigation within parking lots;
+	// it won't be rebuilt on car destruction, but that should be okay
+	bool const add_parked_cars(cars_by_city.empty());
+	for (auto i = cars_by_city.begin(); i != cars_by_city.end(); ++i) {i->clear_cars();} // clear prev frame's state
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) {
-		if (i->is_parked()) continue; // skip parked cars
 		if (i->cur_city >= cars_by_city.size()) {cars_by_city.resize(i->cur_city+1);}
-		cars_by_city[i->cur_city].cars[i->dim][i->dir].push_back(*i);
+		auto &dest(cars_by_city[i->cur_city]);
+		if (!i->is_parked()) {dest.cars[i->dim][i->dir].push_back(*i);} // moving on road
+		else if (add_parked_cars) {dest.parked_car_bcubes.push_back(i->bcube);} // parked, not yet updated
 	}
 }
 
@@ -661,6 +665,7 @@ car_t const *car_manager_t::get_car_at_pt(point const &pos, bool is_parked) cons
 		unsigned start(cb->start), end((cb+1)->start);
 		if (!is_parked) {end   = cb->first_parked;} // moving cars only (beginning of range)
 		else            {start = cb->first_parked;} // parked cars only (end of range)
+		if (start > end || end > cars.size()) {cout << TXT(start) << TXT(end) << TXT(cars.size()) << TXT(is_parked) << endl;}
 		assert(start <= end && end <= cars.size());
 
 		for (unsigned c = start; c != end; ++c) {

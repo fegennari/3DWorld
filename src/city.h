@@ -184,7 +184,9 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 92
 
 struct car_city_vect_t {
 	vector<car_base_t> cars[2][2]; // {dim x dir}
-	void clear();
+	vect_cube_t parked_car_bcubes;
+	void clear_cars();
+	void clear() {clear_cars(); parked_car_bcubes.clear();}
 };
 
 
@@ -687,7 +689,7 @@ struct pedestrian_t : public waiting_obj_t {
 	bool check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid);
 	bool check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube);
 	bool check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const;
-	bool is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, car_manager_t const *const car_manager) const;
+	bool is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const;
 	bool try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr) const;
 	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
@@ -778,6 +780,7 @@ public:
 	void move_ped_to_next_plot(pedestrian_t &ped);
 	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes=nullptr) const;
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const;
+	bool has_car_at_pt(point const &pos, unsigned city, bool is_parked) const;
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :
 		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), animation_id(1), ped_destroyed(0), need_to_sort_peds(0) {}
