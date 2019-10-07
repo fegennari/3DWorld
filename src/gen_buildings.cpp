@@ -1906,7 +1906,7 @@ class building_creator_t {
 public:
 	building_creator_t() : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector), use_smap_this_frame(0) {}
 	bool empty() const {return buildings.empty();}
-	void clear() {buildings.clear(); grid.clear(); clear_vbos();}
+	void clear() {buildings.clear(); grid.clear(); clear_vbos(); buildings_bcube = cube_t();}
 	unsigned get_num_buildings() const {return buildings.size();}
 	unsigned get_gpu_mem_usage() const {return gpu_mem_usage;}
 	vector3d const &get_max_extent() const {return max_extent;}
@@ -2035,7 +2035,6 @@ public:
 				vector3d const sz(b.bcube.get_size());
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
 				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
-				if (buildings.empty()) {buildings_bcube = b.bcube;} else {buildings_bcube.union_with_cube(b.bcube);}
 				buildings.push_back(b);
 				success = 1;
 				break; // done
@@ -2101,6 +2100,14 @@ public:
 #pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i, 1337*i+rseed);}
 		} // close the scope
+		for (auto g = grid.begin(); g != grid.end(); ++g) { // update grid bcube zvals to include building roofs
+			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
+				cube_t &bbc(*b);
+				bbc = get_building(b->ix).bcube;
+				buildings_bcube.assign_or_union_with_cube(bbc);
+				g->bcube.union_with_cube(bbc);
+			}
+		}
 		if (!is_tile) {
 			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 				 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
