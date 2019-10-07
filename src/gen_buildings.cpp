@@ -1917,7 +1917,7 @@ public:
 	bool is_single_tile() const {return (grid_by_tile.size() == 1);}
 	
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
-		float t(0.0); // unused
+		float t(1.0); // unused
 		unsigned hit_bix(0);
 		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1)); // no_coll_pt=1; returns: 0=no hit, 1=hit side, 2=hit roof
 		if (ret == 0) return 0;
@@ -2288,7 +2288,6 @@ public:
 		vector3d const xlate(get_camera_coord_space_xlate());
 		point const p1x(p1 - xlate);
 		vector<point> points; // reused across calls
-		t = 1.0; // start at end point
 
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line special case optimization (for example map mode)
 			if (!get_bcube().contains_pt_xy(p1x)) return 0;
@@ -2331,7 +2330,7 @@ public:
 				} // for b
 			} // for x
 		} // for y
-		return coll;
+		return coll; // 0=none, 1=side, 2=roof, 3=details
 	}
 
 	// Note: we can get building_id by calling check_ped_coll() or get_building_bcube_at_pos()
@@ -2527,6 +2526,7 @@ void draw_buildings(int shadow_only, vector3d const &xlate) {
 	building_creator_t::multi_draw(shadow_only, xlate, bcs);
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
+	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
 	return (building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm) ||
 		         building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm) ||
 		           building_tiles.check_sphere_coll(pos, p_int, radius, xy_only, cnorm));
@@ -2541,8 +2541,10 @@ bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_o
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) { // for line_intersect_city()
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
-	return (building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 0) ||
-		         building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 1));
+	unsigned const coll1(building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 0));
+	if (coll1 && ret_any_pt) return coll1;
+	unsigned const coll2(building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 1));
+	return (coll2 ? coll2 : coll1);
 }
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
 	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;
