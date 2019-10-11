@@ -55,12 +55,12 @@ class video_capture_t {
 	class video_buffer {
 		typedef vector<unsigned char> frame_t;
 		typedef shared_ptr<frame_t> p_frame_t;
-		thread_safe_queue<p_frame_t> frames; // queue of frames to compress
+		thread_safe_queue<p_frame_t> frames, free_list; // queue of frames to compress
 
 	public:
 		void push_frame(void const *const data, unsigned data_sz) {
 			assert(data_sz > 0);
-			p_frame_t frame(new frame_t(data_sz));
+			p_frame_t frame(free_list.empty() ? p_frame_t(new frame_t(data_sz)) : free_list.remove()); // take a frame from the free list if nonempty
 			memcpy(&frame->front(), data, data_sz);
 			frames.add(frame);
 		}
@@ -68,6 +68,7 @@ class video_capture_t {
 			assert(fp != nullptr);
 			p_frame_t const frame(frames.remove());
 			fwrite(&frame->front(), frame->size(), 1, fp);
+			if (free_list.size() < MAX_FRAMES_BUFFERED/4) {free_list.add(frame);} // recycle it
 		}
 		void write_frames(FILE *fp) {
 			while (!frames.empty()) {pop_and_send_frame(fp);}
@@ -169,16 +170,15 @@ public:
 		if (!is_recording) return;
 		assert(pbo != 0);
 		assert(start_sz == get_num_bytes()); // make sure the resolution hasn't changed since recording started
-		//RESET_TIME;
+		//timer_t timer("Video Capture Frame"); // 13.7ms for 1920x1024, 10.9ms with free list
 		glReadBuffer(GL_FRONT);
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
 		glReadPixels(0, 0, window_width, window_height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); // use PBO
-		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, start_sz, GL_MAP_READ_BIT);
+		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, start_sz, GL_MAP_READ_BIT); // this line takes most of the time
 		queue_frame(ptr);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		//PRINT_TIME("Frame");
 	}
 	bool is_video_recording() const {return is_recording;}
 	~video_capture_t() {wait_for_write_complete();} // wait for write to complete; don't try to free the pbo
