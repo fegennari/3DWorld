@@ -1065,8 +1065,8 @@ public:
 	float offense()     const {return specs().offense_rating();}
 	float defense()     const {return specs().defense_rating();}
 	unsigned get_cost() const {return 0;} // specs().cost?
-	unsigned get_ai_type() const {return (specs().seeking ? AI_SEEKING : AI_NONE);}
-	float get_damage()  const {return ((specs().armor > 0.0) ? (1.0 - armor/specs().armor) : 0.0);}
+	unsigned get_ai_type() const {return (specs().seeking ? (int)AI_SEEKING : (int)AI_NONE);}
+	float get_damage()  const {return ((specs().armor > 0.0f) ? (1.0f - armor/specs().armor) : 0.0);}
 	void draw_obj(uobj_draw_data &ddata) const;
 	void draw_flares_only() const;
 	int auto_orient()   const {return  specs().auto_orient;}

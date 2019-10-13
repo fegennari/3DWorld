@@ -644,8 +644,8 @@ inline int get_max_dim(vector3d const &v) {
 inline int get_min_dim(cube_t const &c) {return get_min_dim(c.get_size());}
 
 
-inline int get_light()          {return ((light_factor >= 0.5) ? LIGHT_SUN : LIGHT_MOON);}
-inline int get_specular_light() {return ((light_factor >= 0.4) ? LIGHT_SUN : LIGHT_MOON);} // sun takes priority
+inline int get_light()          {return ((light_factor >= 0.5f) ? (int)LIGHT_SUN : (int)LIGHT_MOON);}
+inline int get_specular_light() {return ((light_factor >= 0.4f) ? (int)LIGHT_SUN : (int)LIGHT_MOON);} // sun takes priority
 
 inline point get_light_pos(int light=-1) {
 

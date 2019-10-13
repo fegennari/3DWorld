@@ -769,7 +769,7 @@ struct colorRGBA : public colorRGB { // size = 16
 
 	union {float A; float alpha;}; // A and alpha are both valid components
 
-	colorRGBA() {}
+	colorRGBA() : alpha(1.0) {}
 	colorRGBA(float r, float g, float b, float a=1.0) : colorRGB(r, g, b), A(a) {}
 	colorRGBA(colorRGB const &color, float a=1.0) : colorRGB(color), A(a) {}
 	void assign(float r, float g, float b, float a=1.0) {R = r; G = g; B = b; A = a;}

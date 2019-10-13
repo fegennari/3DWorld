@@ -410,7 +410,7 @@ struct coll_tquad : public tquad_t { // size = 68
 		unsigned cid;
 		color_wrapper color;
 	};
-	coll_tquad() {}
+	coll_tquad() : cid(0) {}
 	coll_tquad(coll_obj const &c);
 	coll_tquad(polygon_t const &p);
 	coll_tquad(triangle const &t, colorRGBA const &c=WHITE);
