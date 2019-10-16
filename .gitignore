@@ -10,6 +10,7 @@ Release/
 Samples/
 obj/
 lib/
+noback/
 ffmpeg.exe.lnk
 freealut-1.1.0-bin/
 freeglut-2.8.1/
