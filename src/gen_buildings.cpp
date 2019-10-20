@@ -385,12 +385,13 @@ class building_draw_t;
 
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
+	unsigned char door_sides; // bit mask for 4 door sides
 	bool half_offset, is_pointed;
-	bool door_dim, door_dir, door_part; // for door/window placement
+	bool door_part; // for door/window placement
 	float rot_sin, rot_cos, flat_side_amt, alt_step_factor, start_angle; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
 
-	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), is_pointed(0), door_dim(0), door_dir(0), door_part(0),
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), door_sides(0), half_offset(0), is_pointed(0), door_part(0),
 		rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0) {}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
@@ -442,7 +443,7 @@ struct building_t : public building_geom_t {
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void calc_bcube_from_parts();
 	void gen_geometry(int rseed1, int rseed2);
-	cube_t place_door(cube_t const &base, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen);
+	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void add_door(cube_t const &c, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
@@ -877,14 +878,14 @@ public:
 				pt[i] = !j;
 				EMIT_VERTEX(); // 1 !j
 
-				if (door_ztop != 0.0 && n == unsigned(bg.door_dim) && j == unsigned(bg.door_dir)) { // not the cleanest way to do this ...
-					float const door_height(door_ztop - cube.z1()), offset(0.03*(bg.door_dir ? 1.0 : -1.0)*door_height);
+				if (door_ztop != 0.0 && (bg.door_sides & (1 << (2*n + j)))) {
+					float const door_height(door_ztop - cube.z1()), offset(0.03*(j ? 1.0 : -1.0)*door_height);
 
 					for (unsigned k = ix; k < ix+4; ++k) {
 						auto &v(verts[k]);
 						float const delta(door_ztop - v.v.z);
 						max_eq(v.v.z, door_ztop); // make all windows start above the door
-						v.v[bg.door_dim] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
+						v.v[n] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
 						if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
 					}
 				}
@@ -1418,12 +1419,12 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 
 bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
 
-cube_t building_t::place_door(cube_t const &base, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen) {
+cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen) {
 
 	if (door_center == 0.0) { // door not yet calculated; add door to first part of house
 		float const offset((door_center_shift == 0.0) ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
-		door_center = offset*base.d[!door_dim][0] + (1.0 - offset)*base.d[!door_dim][1];
-		door_pos    = base.d[door_dim][door_dir];
+		door_center = offset*base.d[!dim][0] + (1.0 - offset)*base.d[!dim][1];
+		door_pos    = base.d[dim][dir];
 		door_part   = 0;
 	}
 	float const door_half_width(0.5*width_scale*door_height);
@@ -1431,10 +1432,10 @@ cube_t building_t::place_door(cube_t const &base, float door_height, float door_
 	cube_t door;
 	door.z1() = base.z1(); // same bottom as house
 	door.z2() = door.z1() + door_height;
-	door.d[ door_dim][!door_dir] = door_pos + door_shift*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
-	door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
-	door.d[!door_dim][0] = door_center - door_half_width; // left
-	door.d[!door_dim][1] = door_center + door_half_width; // right
+	door.d[ dim][!dir] = door_pos + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
+	door.d[ dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
+	door.d[!dim][0] = door_center - door_half_width; // left
+	door.d[!dim][1] = door_center + door_half_width; // right
 	return door;
 }
 
@@ -1451,7 +1452,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0);
-	door_dim = rgen.rand_bool();
+	bool door_dim(rgen.rand_bool()), door_dir(0);
 
 	if (two_parts) { // multi-part house
 		parts.push_back(base); // add second part
@@ -1527,7 +1528,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		door_dir  = rgen.rand_bool(); // select a random dir
 		door_part = 0; // only one part
 	}
-	if (gen_door) {add_door(place_door(base, door_height, door_center, door_pos, 0.25, 0.5, rgen), door_dim, door_dir, 0);} // add door
+	if (gen_door) {add_door(place_door(base, door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, rgen), door_dim, door_dir, 0);} // add door
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};
 
@@ -1590,6 +1591,7 @@ void building_t::add_door(cube_t const &c, bool dim, bool dir, bool for_building
 	door.pts[1][!dim] = door.pts[2][!dim] = c.d[!dim][!dir]; // !dir side
 	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][ dim] = door.pts[3][ dim] = c.d[dim][0] + 0.01*sz[!dim]*(dir ? 1.0 : -1.0); // move away from wall slightly
 	doors.push_back(door);
+	door_sides |= 1 << (2*dim + dir);
 }
 
 float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim) { // roof made from two sloped quads
@@ -1625,12 +1627,13 @@ void building_t::gen_building_door_if_needed(rand_gen_t &rgen) {
 	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 	bool const has_windows(get_material().add_windows);
 	bool used[4] = {0,0,0,0}; // per-side, not per-base cube
-	unsigned const num_doors(1 + (has_windows ? 0 : (rgen.rand()&3))); // 1-4; buildings with windows always have 1 door due to window adjustment dim/dir logic
+	unsigned const num_doors(1 + (rgen.rand() % (has_windows ? 3 : 4))); // 1-4; buildings with windows have at most 3 doors since they're smaller
 
 	for (unsigned num = 0; num < num_doors; ++num) {
 		bool placed(0);
 
 		for (auto b = parts.begin(); b != parts.end() && !placed; ++b) { // try all different ground floor parts
+			if (has_windows && (b - parts.begin()) != (unsigned)door_part) continue; // only this part can have doors - must match first floor window removal logic
 			if (b->z1() > bcube.z1()) break; // moved off the ground floor - done
 
 			for (unsigned n = 0; n < 4; ++n) {
@@ -1638,8 +1641,7 @@ void building_t::gen_building_door_if_needed(rand_gen_t &rgen) {
 				if (b->d[dim][dir] != bcube.d[dim][dir]) continue; // find a side on the exterior to ensure door isn't obstructed by a building cube
 				if (used[2*dim + dir]) continue; // door already placed on this side
 				used[2*dim + dir] = 1; // mark used
-				door_dim = dim; door_dir = dir;
-				add_door(place_door(*b, 1.2*get_door_height(), 0.0, 0.0, 0.1, 0.75, rgen), door_dim, door_dir, 1); // a bit taller and a lot wider than house doors
+				add_door(place_door(*b, dim, dir, 1.2*get_door_height(), 0.0, 0.0, 0.1, 0.75, rgen), dim, dir, 1); // a bit taller and a lot wider than house doors
 				placed = 1;
 				break;
 			} // for n
