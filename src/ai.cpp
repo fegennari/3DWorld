@@ -296,7 +296,7 @@ void add_target(pos_dir_up const &pdu, point const &pos2, float radius, int id, 
 	float dist_sq(p2p_dist_sq(pdu.pos, pos2));
 	if (hitter == id) {dist_sq *= 0.25;} // prefer to attack your attacker
 	if (killer == id) {dist_sq *= 0.5;}  // prefer to attack your last killer in revenge
-	oddatav.push_back(od_data(((id == CAMERA_ID) ? CAMERA : SMILEY), id, dist_sq));
+	oddatav.push_back(od_data(((id == CAMERA_ID) ? (int)CAMERA : (int)SMILEY), id, dist_sq));
 }
 
 
@@ -618,7 +618,7 @@ void player_state::drop_pack(point const &pos) {
 	bool const dodgeball(game_mode == 2 && weapon == W_BALL); // drop their balls
 	if (dodgeball) {assert(ammo == (int)balls.size());}
 	unsigned const num(dodgeball ? ammo : 1);
-	int const type(dodgeball ? BALL : WA_PACK), cid(coll_id[type]);
+	int const type(dodgeball ? (int)BALL : (int)WA_PACK), cid(coll_id[type]);
 	obj_group &objg(obj_groups[cid]);
 
 	for (unsigned i = 0; i < num; ++i) {
@@ -1259,7 +1259,7 @@ void player_state::check_switch_weapon(int smiley_id) { // called by smileys
 	wmode = ((player_rgen.rand()&3) == 0);
 
 	if (game_mode == 2) { // dodgeball mode
-		weapon     = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? W_BALL : W_UNARMED);
+		weapon     = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? (int)W_BALL : (int)W_UNARMED);
 		fire_frame = 0;
 		return;
 	}
@@ -1485,7 +1485,7 @@ void player_state::init(bool w_start) {
 			p_weapons[W_BBBAT]   = 2;
 			p_weapons[W_SBALL]   = 1;
 			p_ammo[W_SBALL]      = ((init_num_balls < 0) ? weapons[W_SBALL].def_ammo : init_num_balls);
-			weapon               = ((p_ammo[W_SBALL] > 0) ? W_SBALL : W_UNARMED);
+			weapon               = ((p_ammo[W_SBALL] > 0) ? (int)W_SBALL : (int)W_UNARMED);
 		}
 		else {
 			weapon = W_UNARMED;
@@ -1519,7 +1519,7 @@ void player_state::init(bool w_start) {
 
 	if (game_mode == 1 && enable_init_shields) {
 		shields       = INIT_SHIELDS;
-		powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : PU_NONE);
+		powerup       = ((INIT_PU_SH_TIME > 0) ? (int)PU_SHIELD : (int)PU_NONE);
 		powerup_time  = INIT_PU_SH_TIME;
 	}
 	else {

@@ -1558,7 +1558,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		tquad.pts[1].assign(c.x2(), c.y1(), c.z2());
 		tquad.pts[2].assign(c.x2(), c.y2(), c.z2());
 		tquad.pts[3].assign(c.x1(), c.y2(), c.z2());
-		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
+		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
 		has_chimney = 1;
 	}
 	add_roof_to_bcube();
@@ -1592,14 +1592,14 @@ float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim
 	for (unsigned n = 0; n < 2; ++n) { // roof
 		tquad_t tquad(4); // quad
 		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];)
-		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_ROOF); // tag as roof
+		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF); // tag as roof
 	}
 	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
 
 	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
 		tquad_t tquad(3); // triangle
 		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];)
-		roof_tquads.emplace_back(tquad, tquad_with_ix_t::TYPE_WALL); // tag as wall
+		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_WALL); // tag as wall
 	}
 	return roof_dz;
 }
