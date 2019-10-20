@@ -1427,10 +1427,11 @@ cube_t building_t::place_door(cube_t const &base, float door_height, float door_
 		door_part   = 0;
 	}
 	float const door_half_width(0.5*width_scale*door_height);
+	float const door_shift((is_house ? 0.005 : 0.001)*base.dz());
 	cube_t door;
 	door.z1() = base.z1(); // same bottom as house
 	door.z2() = door.z1() + door_height;
-	door.d[ door_dim][!door_dir] = door_pos + 0.005*base.dz()*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
+	door.d[ door_dim][!door_dir] = door_pos + door_shift*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
 	door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
 	door.d[!door_dim][0] = door_center - door_half_width; // left
 	door.d[!door_dim][1] = door_center + door_half_width; // right
@@ -1621,16 +1622,29 @@ void building_t::gen_building_door_if_needed(rand_gen_t &rgen) {
 
 	if (!is_cube()) return; // for now, only cube buildings can have doors; doors can be added to N-gon (non cylinder) buildings later
 	assert(!parts.empty());
-	cube_t const &base(parts.front()); // base cube, or one of the base cubes (for some building types)
 	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
+	bool const has_windows(get_material().add_windows);
+	bool used[4] = {0,0,0,0}; // per-side, not per-base cube
+	unsigned const num_doors(1 + (has_windows ? 0 : (rgen.rand()&3))); // 1-4; buildings with windows always have 1 door due to window adjustment dim/dir logic
 
-	for (unsigned n = 0; n < 4; ++n) {
-		door_dim = pref_dim ^ bool(n>>1);
-		door_dir = pref_dir ^ bool(n&1);
-		if (base.d[door_dim][door_dir] != bcube.d[door_dim][door_dir]) continue; // find a side on the exterior to ensure door isn't obstructed by a building cube
-		add_door(place_door(base, get_door_height(), 0.0, 0.0, 0.1, 0.75, rgen), door_dim, door_dir, 1);
-		break;
-	}
+	for (unsigned num = 0; num < num_doors; ++num) {
+		bool placed(0);
+
+		for (auto b = parts.begin(); b != parts.end() && !placed; ++b) { // try all different ground floor parts
+			if (b->z1() > bcube.z1()) break; // moved off the ground floor - done
+
+			for (unsigned n = 0; n < 4; ++n) {
+				bool const dim(pref_dim ^ bool(n>>1)), dir(pref_dir ^ bool(n&1));
+				if (b->d[dim][dir] != bcube.d[dim][dir]) continue; // find a side on the exterior to ensure door isn't obstructed by a building cube
+				if (used[2*dim + dir]) continue; // door already placed on this side
+				used[2*dim + dir] = 1; // mark used
+				door_dim = dim; door_dir = dir;
+				add_door(place_door(*b, 1.2*get_door_height(), 0.0, 0.0, 0.1, 0.75, rgen), door_dim, door_dir, 1); // a bit taller and a lot wider than house doors
+				placed = 1;
+				break;
+			} // for n
+		} // for b
+	} // for num
 }
 
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
