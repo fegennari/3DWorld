@@ -399,7 +399,7 @@ struct building_geom_t { // describes the physical shape of a building
 };
 
 struct tquad_with_ix_t : public tquad_t {
-	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_DOOR};
+	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR};
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(0) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
@@ -423,6 +423,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_roof_color  () const {return roof_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
+	float get_door_height() const {return 0.45f/(get_material().wind_yscale*global_building_params.get_window_ty());} // set height based on window spacing
 	void gen_rotation(rand_gen_t &rgen);
 
 	void set_z_range(float z1, float z2) {
@@ -441,10 +442,12 @@ struct building_t : public building_geom_t {
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void calc_bcube_from_parts();
 	void gen_geometry(int rseed1, int rseed2);
+	cube_t place_door(cube_t const &base, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
-	void add_door(cube_t const &c, bool dim, bool dir);
+	void add_door(cube_t const &c, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
 	void gen_details(rand_gen_t &rgen);
+	void gen_building_door_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
@@ -470,15 +473,20 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 
 
 class building_window_gen_t { // and doors?
-	int window_tid, door_tid;
+	int window_tid, hdoor_tid, bdoor_tid;
 public:
-	building_window_gen_t() : window_tid(-1), door_tid(-1) {}
+	building_window_gen_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1) {}
 	int get_window_tid() const {return window_tid;}
 	
-	int get_door_tid() {
-		if (door_tid < 0) {door_tid = get_texture_by_name("textures/white_door.jpg");}
-		if (door_tid < 0) {door_tid = WHITE_TEX;} // failed to load door texture - use a simple white texture
-		return door_tid;
+	int get_hdoor_tid() { // house door
+		if (hdoor_tid < 0) {hdoor_tid = get_texture_by_name("textures/white_door.jpg");}
+		if (hdoor_tid < 0) {hdoor_tid = WHITE_TEX;} // failed to load door texture - use a simple white texture
+		return hdoor_tid;
+	}
+	int get_bdoor_tid() { // building door
+		if (bdoor_tid < 0) {bdoor_tid = get_texture_by_name("textures/buildings/building_door.jpg");}
+		if (bdoor_tid < 0) {bdoor_tid = WHITE_TEX;} // failed to load door texture - use a simple white texture
+		return bdoor_tid;
 	}
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -507,7 +515,8 @@ public:
 		if (!tid_to_slot_ix.empty()) return; // already inited
 		tid_to_slot_ix.push_back(0); // untextured case
 		register_tid(building_window_gen.get_window_tid());
-		register_tid(building_window_gen.get_door_tid());
+		register_tid(building_window_gen.get_hdoor_tid());
+		register_tid(building_window_gen.get_bdoor_tid());
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
 			register_tid(i->side_tex.tid);
@@ -787,7 +796,7 @@ public:
 				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
 				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_DOOR) { // door - textured from (0,0) to (1,1)
+			else if (tquad.type == tquad_with_ix_t::TYPE_HDOOR || tquad.type == tquad_with_ix_t::TYPE_BDOOR) { // door - textured from (0,0) to (1,1)
 				vert.t[0] = float(i == 1 || i == 2);
 				vert.t[1] = float(i == 2 || i == 3);
 			}
@@ -1330,6 +1339,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 75% chance
 			gen_details(rgen);
 		}
+		gen_building_door_if_needed(rgen);
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
@@ -1360,6 +1370,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		} // for i
 		calc_bcube_from_parts(); // update bcube
 		gen_details(rgen);
+		gen_building_door_if_needed(rgen);
 		return;
 	}
 	for (unsigned i = 0; i < num_levels; ++i) {
@@ -1402,9 +1413,29 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 67% chance
 		if (num_levels <= 3) {gen_details(rgen);}
 	}
+	gen_building_door_if_needed(rgen);
 }
 
 bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
+
+cube_t building_t::place_door(cube_t const &base, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen) {
+
+	if (door_center == 0.0) { // door not yet calculated; add door to first part of house
+		float const offset((door_center_shift == 0.0) ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
+		door_center = offset*base.d[!door_dim][0] + (1.0 - offset)*base.d[!door_dim][1];
+		door_pos    = base.d[door_dim][door_dir];
+		door_part   = 0;
+	}
+	float const door_half_width(0.5*width_scale*door_height);
+	cube_t door;
+	door.z1() = base.z1(); // same bottom as house
+	door.z2() = door.z1() + door_height;
+	door.d[ door_dim][!door_dir] = door_pos + 0.005*base.dz()*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
+	door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
+	door.d[!door_dim][0] = door_center - door_half_width; // left
+	door.d[!door_dim][1] = door_center + door_half_width; // right
+	return door;
+}
 
 void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
@@ -1418,8 +1449,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
-	float door_height(0.45f/(get_material().wind_yscale*global_building_params.get_window_ty())); // set height based on window spacing
-	float door_center(0.0), door_pos(0.0);
+	float door_height(get_door_height()), door_center(0.0), door_pos(0.0);
 	door_dim = rgen.rand_bool();
 
 	if (two_parts) { // multi-part house
@@ -1496,24 +1526,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		door_dir  = rgen.rand_bool(); // select a random dir
 		door_part = 0; // only one part
 	}
-	if (gen_door) { // add door
-		if (door_center == 0.0) { // door not yet calculated
-			cube_t const &c(parts[0]); // add door to first part of house
-			float const offset(rgen.rand_uniform(0.25, 0.75));
-			door_center = offset*c.d[!door_dim][0] + (1.0 - offset)*c.d[!door_dim][1];
-			door_pos    = c.d[door_dim][door_dir];
-			door_part   = 0;
-		}
-		float const door_half_width(0.25*door_height);
-		cube_t door;
-		door.z1() = base.z1(); // same bottom as house
-		door.z2() = door.z1() + door_height;
-		door.d[ door_dim][!door_dir] = door_pos + 0.005*base.dz()*(door_dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
-		door.d[ door_dim][ door_dir] = door.d[door_dim][!door_dir]; // make zero size in this dim
-		door.d[!door_dim][0] = door_center - door_half_width; // left
-		door.d[!door_dim][1] = door_center + door_half_width; // right
-		add_door(door, door_dim, door_dir);
-	}
+	if (gen_door) {add_door(place_door(base, door_height, door_center, door_pos, 0.25, 0.5, rgen), door_dim, door_dir, 0);} // add door
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};
 
@@ -1565,11 +1578,11 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 }
 
-void building_t::add_door(cube_t const &c, bool dim, bool dir) {
+void building_t::add_door(cube_t const &c, bool dim, bool dir, bool for_building) {
 
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
-	tquad_with_ix_t door(4, tquad_with_ix_t::TYPE_DOOR); // quad
+	tquad_with_ix_t door(4, (for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR)); // quad
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
 	door.pts[0][!dim] = door.pts[3][!dim] = c.d[!dim][ dir]; //  dir side
@@ -1602,6 +1615,22 @@ float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_WALL); // tag as wall
 	}
 	return roof_dz;
+}
+
+void building_t::gen_building_door_if_needed(rand_gen_t &rgen) {
+
+	if (!is_cube()) return; // for now, only cube buildings can have doors; doors can be added to N-gon (non cylinder) buildings later
+	assert(!parts.empty());
+	cube_t const &base(parts.front()); // base cube, or one of the base cubes (for some building types)
+	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
+
+	for (unsigned n = 0; n < 4; ++n) {
+		door_dim = pref_dim ^ bool(n>>1);
+		door_dir = pref_dir ^ bool(n&1);
+		if (base.d[door_dim][door_dir] != bcube.d[door_dim][door_dir]) continue; // find a side on the exterior to ensure door isn't obstructed by a building cube
+		add_door(place_door(base, get_door_height(), 0.0, 0.0, 0.1, 0.75, rgen), door_dim, door_dir, 1);
+		break;
+	}
 }
 
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
@@ -1718,7 +1747,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 		bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
-		bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(building_window_gen.get_door_tid(), -1, 1.0, 1.0), WHITE);
+		int const door_tid((i->type == tquad_with_ix_t::TYPE_BDOOR) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
+		bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(door_tid, -1, 1.0, 1.0), WHITE);
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 		building_geom_t bg(4, rot_sin, rot_cos); // cube
