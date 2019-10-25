@@ -1593,6 +1593,7 @@ void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	door.pts[0][!dim] = door.pts[3][!dim] = c.d[!dim][ dir]; //  dir side
 	door.pts[1][!dim] = door.pts[2][!dim] = c.d[!dim][!dir]; // !dir side
 	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][ dim] = door.pts[3][ dim] = c.d[dim][0] + 0.01*sz[!dim]*(dir ? 1.0 : -1.0); // move away from wall slightly
+	if (dim == 0) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap two corner points to flip windowing dir and invert normal for doors oriented in X
 	doors.push_back(door);
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 }
