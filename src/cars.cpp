@@ -492,7 +492,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor);
 			point const pos((lr ? 0.2 : 0.8)*(0.2*pb[2] + 0.8*pb[6]) + (lr ? 0.8 : 0.2)*(0.2*pb[3] + 0.8*pb[7]));
-			add_light_flare(pos, -front_n, RED, (brake_lights_on ? 1.0 : 0.5), 0.5*car.height); // pb 2,3,6,7
+			add_light_flare(pos, -front_n, colorRGBA(1.0, 0.1, 0.05, 1.0), (brake_lights_on ? 1.0 : 0.5), 0.5*car.height); // near red; pb 2,3,6,7
 		}
 	}
 	if (car.turn_dir != TURN_NONE && car.cur_city != CONN_CITY_IX && dist_val < 0.1) { // turn signals (not on connector road bends)

@@ -1609,6 +1609,7 @@ colorRGBA const BRASS_C  (0.7,  0.65, 0.25, 1.0);
 colorRGBA const BRONZE_C (0.52, 0.23, 0.17, 1.0);
 colorRGBA const COPPER_C (0.7,  0.3,  0.05,  1.0);
 colorRGBA const MED_GREEN(0.2,  0.7,  0.2,  1.0);
+colorRGBA const LT_YELLOW(1.0,  1.0,  0.1,  1.0);
 colorRGBA const SNOW_COLOR(1.0, 1.0,  1.4,  1.0); // slightly bluish (saturated)
 colorRGBA const LAVA_COLOR(1.0, 0.15, 0.05, 1.0); // red-orange
 colorRGBA const FREEZE_COLOR(0.3, 0.3, 1.0, 1.0);

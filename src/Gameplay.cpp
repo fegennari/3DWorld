@@ -1288,14 +1288,14 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	}
 	else if (type == GRENADE || type == CGRENADE) {
 		bradius = 0.9*size;
-		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB, nullptr, 1, ((type == CGRENADE) ? 1.0 : 0.0));
+		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, LT_YELLOW, RED, ETYPE_STARB, nullptr, 1, ((type == CGRENADE) ? 1.0 : 0.0));
 	}
 	else {
 		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
 		bool const create_exp_sphere(is_rocket_type(type) || type == LANDMINE);
-		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(2.3*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
-		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
+		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(2.3*time), shooter, LT_YELLOW, RED, ETYPE_ANIM_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
+		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, LT_YELLOW, RED, ETYPE_FIRE, nullptr, 1, (create_exp_sphere ? 1.0 : 0.0));
 	}
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame
 	exp_damage_groups(pos, shooter, chain_level, damage, size, type, cview);
@@ -1303,7 +1303,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	if (world_mode == WMODE_INF_TERRAIN) {destroy_city_in_radius(pos, 0.5*bradius);}
 
 	if (damage > 500.0 || is_rocket_type(type)) { // everything except for plasma
-		gen_delayed_from_player_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
+		gen_delayed_from_player_sound((underwater? (unsigned)SOUND_SPLASH2 : (unsigned)SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
 		float const blast_force(size/distance_to_camera(pos));
 		if (!underwater && blast_force > 0.5) {camera_shake = min(1.0, 2.0*blast_force);}
 	}

@@ -2323,7 +2323,7 @@ void u_ship::apply_physics() {
 			point const bpos(pos + gen_rand_vector_uniform(radius));
 			float const brad(0.5f*(radius + c_radius)*(((specs().death_delay > 0) ? 0.4f*get_t_exp() : 0.2f) + rand_uniform(0.2, 0.5)));
 			int const btime(int(TICKS_PER_SECOND*rand_uniform(0.5, 0.9)));
-			add_blastr(bpos, (bpos - pos).get_norm(), brad, 0.0, btime, alignment, YELLOW, RED, specs().exp_subtype, this);
+			add_blastr(bpos, (bpos - pos).get_norm(), brad, 0.0, btime, alignment, LT_YELLOW, RED, specs().exp_subtype, this);
 		}
 	}
 	if (eflags != 0)      set_max_sf(SLOW_SPEED_FACTOR); // can only move at slow speed when an engine is disabled
