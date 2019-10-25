@@ -370,7 +370,7 @@ void draw_blasts(shader_t &s) {
 		case ETYPE_SIEGE:
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? FLARE5_TEX : ((br.type == ETYPE_STARB) ? STARBURST_TEX : BLUR_TEX)), 0);
+				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? (int)FLARE5_TEX : ((br.type == ETYPE_STARB) ? (int)STARBURST_TEX : (int)BLUR_TEX)), 0);
 			}
 			draw_billboard_explosion(br, qbd, camera, (br.type == ETYPE_FUSION_ROT)); // only ETYPE_FUSION_ROT aligns to the camera
 
@@ -385,7 +385,7 @@ void draw_blasts(shader_t &s) {
 			if (begin_type) {cloud_explosion::draw_setup(vpc_shader);}
 			vpc_shader.add_uniform_color("color_mult", br.cur_color);
 			vpc_shader.add_uniform_float("noise_scale", 0.1/br.size);
-			br.cloud_exp.draw(vpc_shader, br.pos, br.cur_size, ((br.type == ETYPE_PC_ICE) ? CLOUD_EXP_ICE : CLOUD_EXP_FIRE)); // Note: no ground mode depth-based attenuation
+			br.cloud_exp.draw(vpc_shader, br.pos, br.cur_size, ((br.type == ETYPE_PC_ICE) ? (int)CLOUD_EXP_ICE : (int)CLOUD_EXP_FIRE)); // Note: no ground mode depth-based attenuation
 			
 			if (end_type) {
 				vpc_shader.add_uniform_color("color_mult", WHITE); // restore default

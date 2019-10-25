@@ -320,7 +320,7 @@ unsigned create_blood(int index, int amt_denom, point const &pos, float obj_radi
 					  vector3d const &coll_dir, float blood_v, int damage_type, float health, bool burned, bool frozen)
 {
 	assert(amt_denom > 0);
-	int const cid(coll_id[burned ? CHARRED : /*(frozen ? WDROPLET : BLOOD)*/BLOOD]);
+	int const cid(coll_id[burned ? (unsigned)CHARRED : /*(frozen ? (unsigned)WDROPLET : (unsigned)BLOOD)*/(unsigned)BLOOD]);
 	obj_group &objg(obj_groups[cid]);
 	unsigned const blood_amt(objg.max_objs/(obj_groups[coll_id[SMILEY]].max_objs+1));
 	unsigned const start_ix(blood_amt*index);
@@ -1448,7 +1448,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 		}
 	}
 	if (create_sound && sound_gain > 0.0) {
-		gen_sound(((weapon == W_BBBAT) ? SOUND_HURT : SOUND_SQUISH2), pos, sound_gain);
+		gen_sound(((weapon == W_BBBAT) ? (int)SOUND_HURT : (int)SOUND_SQUISH2), pos, sound_gain);
 	}
 	damage *= sstates[shooter].get_damage_scale();
 	if (weapon != W_BLADE || rand()%20 == 0) {do_rock_damage(pos, radius, damage);}
@@ -1582,7 +1582,7 @@ void switch_player_weapon(int val) {
 void player_state::switch_weapon(int val, int verbose) {
 
 	if (game_mode == 2) {
-		weapon = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? W_BALL : W_UNARMED);
+		weapon = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? (int)W_BALL : (int)W_UNARMED);
 		return;
 	}
 	do {

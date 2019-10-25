@@ -500,7 +500,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_RAPTOR: { // similar to rocket
-			radius = 0.95*object_types[(wmode&1) ? FREEZE_BOMB : RAPT_PROJ].radius;
+			radius = 0.95*object_types[(wmode&1) ? (unsigned)FREEZE_BOMB : (unsigned)RAPT_PROJ].radius;
 			if (wmode&1) {shader.set_cur_color(colorRGBA(FREEZE_COLOR, alpha)); shader.set_specular(0.8, 80.0);} // freeze mode
 			else {set_gold_material(shader, alpha);}
 			rot_angle = max(0.0f, 8.0f*(fire_val - 0.6f)); // recoil
@@ -613,7 +613,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_BBBAT:
 			radius = 0.004;
 			shader.set_cur_color(colorRGBA(LT_BROWN, alpha));
-			select_texture(is_camera ? PLAYER_BBB_TEX : WOOD_TEX); // customize the player's baseball bat
+			select_texture(is_camera ? (int)PLAYER_BBB_TEX : (int)WOOD_TEX); // customize the player's baseball bat
 			fgRotate(45.0, -dir.y, dir.x, 0.0);
 			fgTranslate(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera

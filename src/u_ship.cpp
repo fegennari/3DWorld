@@ -134,7 +134,7 @@ void u_ship::reset() {
 	obs_orient   = zero_vector;
 	target_dir   = zero_vector;
 	time         = rand() % (SHIP_AI_DELAY/2 + 1); // to randomize startups
-	if (rand()&1) dest_mgr.clear(); // sometimes clear the destination (and possibly choose a new one) and sometimes keep it
+	if (rand()&1) {dest_mgr.clear();} // sometimes clear the destination (and possibly choose a new one) and sometimes keep it
 	
 	if (!is_orbiting()) {
 		if (has_homeworld()) { // respawn at homeworld
@@ -1176,7 +1176,7 @@ void u_ship::ai_action() {
 			roll_val  = CLIP_TO_pm1(roll_val);
 			roll_amt  = roll_val;
 		}
-		if (roll_amt != 0.0) thrust(((roll_amt < 0.0) ? MOVE_LEFT : MOVE_RIGHT), fabs(roll_amt), 0);
+		if (roll_amt != 0.0) {thrust(((roll_amt < 0.0) ? (int)MOVE_LEFT : (int)MOVE_RIGHT), fabs(roll_amt), 0);}
 	}
 
 	// move
@@ -1858,7 +1858,7 @@ void u_ship::spawn_fighter(point const &fpos, vector3d const &fire_dir) {
 	unsigned const wid(get_weapon_id()), type(us_weapons[wid].ammo_type);
 	assert(type < sclasses.size() && type < us_weapons.size());
 	bool const boarding(sclasses[type].for_boarding); //specs().for_boarding
-	unsigned const targeting((boarding && !player_controlled()) ? TARGET_CLOSEST : TARGET_PARENT);
+	unsigned const targeting((boarding && !player_controlled()) ? (unsigned)TARGET_CLOSEST : (unsigned)TARGET_PARENT);
 	u_ship *ship(create_ship(type, fpos, alignment, AI_ATT_ENEMY, targeting, 0, is_rand_spawn()));
 	ship->target_obj = NULL;
 	ship->velocity   = zero_vector; // probably unnecessary
@@ -2657,7 +2657,7 @@ void u_ship::fragment(vector3d const &edir, float num, bool outside_cr) const { 
 		}
 		else {
 			colorRGBA const pcolor((rand()&1) ? specs().base_color : alignment_colors[alignment]);
-			unsigned const ptype((rand()&1) ? PTYPE_SPHERE : PTYPE_TRIANGLE);
+			unsigned const ptype((rand()&1) ? (unsigned)PTYPE_SPHERE : (unsigned)PTYPE_TRIANGLE);
 			gen_particle(ptype, pcolor, pcolor, plifetime, ppos, vel, sz, 0.0, alignment, 1);
 		}
 	}

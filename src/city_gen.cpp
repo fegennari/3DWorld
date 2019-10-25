@@ -2072,7 +2072,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 			if (car.turn_dir == TURN_LEFT || car.turn_dir == TURN_RIGHT) { // turning left/right at intersection
 				assert(isec.num_conn > 2); // must not be a bend (can't go straight, but can't be blocked)
-				if (isec.is_orient_currently_valid(car.get_orient(), TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
+				if (isec.is_orient_currently_valid(car.get_orient(), (unsigned)TURN_NONE)) {car.turn_dir = TURN_NONE;} // give up on the left turn and go straight instead
 				else {car.turn_dir = ((car.turn_dir == TURN_LEFT) ? TURN_RIGHT : TURN_LEFT);} // can't go straight - then go right/left instead
 			}
 			else if (car.turn_dir == TURN_NONE && car.turn_val != 0.0) { // was going straight, just entered the isec, turn not yet completed

@@ -743,7 +743,7 @@ void add_parts_projs(point const &pos, float radius, vector3d const &dir, colorR
 				int const num(min(40, int(fticks*((rand()&7) + 12))));
 
 				for (int i = 0; i < num; ++i) {
-					unsigned const type((rand() & 1) ? UWEAP_ATOMIC : UWEAP_ENERGY);
+					unsigned const type((rand() & 1) ? (unsigned)UWEAP_ATOMIC : (unsigned)UWEAP_ENERGY);
 					vector3d const vel((signed_rand_vector(rand_uniform(0.5, 1.0)) + dir)*0.0006);
 					vector3d const v(vel.get_norm());
 					vector3d const dir(v), upv(signed_rand_vector_norm());

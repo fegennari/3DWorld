@@ -1246,7 +1246,7 @@ void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int 
 	translate_to(pos);
 	rotate_by_vector(orient);
 	uniform_scale(radius);
-	shader.set_cur_color(object_types[(type == FREEZE_BOMB) ? FREEZE_BOMB : RAPT_PROJ].color); // frozen or regular
+	shader.set_cur_color(object_types[(type == FREEZE_BOMB) ? (unsigned)FREEZE_BOMB : (unsigned)RAPT_PROJ].color); // frozen or regular
 	fgScale(1.0, 1.0, 2.0);
 	draw_sphere_vbo_raw(ndiv, 0);
 	draw_cylinder(-1.1, 1.0, 1.0, ndiv);
@@ -1449,7 +1449,7 @@ void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &ini
 		rotate_by_vector(init_dir, -90.0);
 		rotate_about(angle, orient);
 	}
-	select_texture(bloody ? SAW_B_TEX : SAW_TEX);
+	select_texture(bloody ? (int)SAW_B_TEX : (int)SAW_TEX);
 	draw_circle_normal(0.0, radius, ndiv, 0);
 	fgPopMatrix();
 }

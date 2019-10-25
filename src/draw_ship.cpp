@@ -1401,7 +1401,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 	if (is_cube && obj) obj->rotate_point(view_dir);
 
 	if (phase1) {
-		select_texture((is_cube && is_small) ? BCUBE_T_TEX : BCUBE_TEX);
+		select_texture((is_cube && is_small) ? (int)BCUBE_T_TEX : (int)BCUBE_TEX);
 		enable_normal_map((is_cube && is_small) ? "normal_maps/bcube_tactical_NRM.jpg" : "normal_maps/bcube_NRM.jpg");
 		set_color(color_b);
 		draw_borg_layer(is_cube, is_small, 0.97, ndiv, view_dir);
