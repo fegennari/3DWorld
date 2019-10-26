@@ -1798,7 +1798,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	float const door_ztop(doors.empty() ? 0.0f : doors.front().pts[2].z);
 
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
-		unsigned const part_ix(i - parts.begin()), door_sides((part_ix < 4) ? door_sides[part_ix] : 0);
+		unsigned const part_ix(i - parts.begin());
+		unsigned const door_sides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
 		bdraw.add_section(*this, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, door_sides); // XY, no_ao=1
 	}
 }
