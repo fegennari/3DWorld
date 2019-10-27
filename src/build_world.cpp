@@ -212,7 +212,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 
 bool is_rain_enabled() {return (temperature >  W_FREEZE_POINT && precip_mode != 0);}
 bool is_snow_enabled() {return (temperature <= W_FREEZE_POINT && precip_mode != 0);}
-int get_precip_type () {return ((temperature > RAIN_MIN_TEMP) ? RAIN : ((temperature > SNOW_MAX_TEMP) ? HAIL : SNOW));}
+int get_precip_type () {return ((temperature > RAIN_MIN_TEMP) ? (int)RAIN : ((temperature > SNOW_MAX_TEMP) ? (int)HAIL : (int)SNOW));}
 
 int obj_group::get_ptype() const {return ((flags & PRECIPITATION) ? get_precip_type() : type);}
 
@@ -830,7 +830,7 @@ void coll_obj_group::finalize() {
 		any_drawn |= i->cp.draw;
 	}
 	if (has_cubes) { // Note: important to do this test on large polygon-only models
-		remove_overlapping_cubes((preproc_cube_cobjs == 1) ? NON_DEST : SHATTERABLE); // always remove overlaps with >= shatterable cobjs
+		remove_overlapping_cubes((preproc_cube_cobjs == 1) ? (int)NON_DEST : (int)SHATTERABLE); // always remove overlaps with >= shatterable cobjs
 
 		if (preproc_cube_cobjs) {
 			merge_cubes(); // and alpha sort
@@ -1110,7 +1110,7 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float sca
 	bool const cube_edges (model_xf.group_cobjs_level >= 6);
 	
 	if (!no_cobjs) { // add cobjs for collision detection
-		add_model_polygons_to_cobjs(ppts, cobj, group_cobjs, use_vbo, (use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD), has_layer, scale);
+		add_model_polygons_to_cobjs(ppts, cobj, group_cobjs, use_vbo, (use_model3d ? (unsigned)COBJ_TYPE_MODEL3D : (unsigned)COBJ_TYPE_STD), has_layer, scale);
 	}
 	else if (use_cubes) {
 		model3d_xform_t model_xf_scaled(model_xf);
@@ -1800,7 +1800,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			cobj.radius2 *= xf.scale;
 			for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(cobj.points[i]);}
 			// cylinder surfs: 0 = draw ends + bfc (solid), 1 = no draw ends + no bfc (hollow), 3 = no draw ends + bfc (ends are hidden)
-			cobj.add_to_vector(fixed_cobjs, ((letter == 'k') ? COLL_CAPSULE : COLL_CYLINDER));
+			cobj.add_to_vector(fixed_cobjs, ((letter == 'k') ? (int)COLL_CAPSULE : (int)COLL_CYLINDER));
 			break;
 
 		case 'z': // torus: x y z dir_x dir_y dir_z ro ri
@@ -2055,7 +2055,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'v': // set voxel mode
 			if (!read_int(fp, ivals[0])) {return read_error(fp, "set voxel mode", coll_obj_file);}
-			cobj.cp.cobj_type = (ivals[0] ? COBJ_TYPE_VOX_TERRAIN : COBJ_TYPE_STD);
+			cobj.cp.cobj_type = (ivals[0] ? (unsigned)COBJ_TYPE_VOX_TERRAIN : (unsigned)COBJ_TYPE_STD);
 			break;
 
 		case 'q': // quit reading object file
@@ -2071,7 +2071,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			return 0;
 		}
 	}
-	if (fp != NULL) fclose(fp);
+	if (fp != NULL) {fclose(fp);}
 	return 1;
 }
 
