@@ -1109,7 +1109,7 @@ void obj_group::disable() {
 	if (enabled == 0) return;
 	remove_reset_cobjs();
 	objects.clear();
-	if (!large_radius()) remove_excess_cap(objects); // free
+	if (!large_radius()) {remove_excess_cap(objects);} // free the memory
 	if ((object_types[type].flags & (OBJ_ROLLS | VERTEX_DEFORM))) {td.reset();}
 	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {i->obj_used = -1;}
 	end_id  = 0;

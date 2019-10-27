@@ -744,6 +744,7 @@ template<typename T> void matrix_clear_2d(T **data) {
 }
 
 template<typename T> void remove_excess_cap(vector<T> &v) {v.shrink_to_fit();}
+template<typename T> void clear_container  (vector<T> &v) {v.clear(); v.shrink_to_fit();}
 
 template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 	swap(v[ix], v.back());

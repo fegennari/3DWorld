@@ -863,8 +863,7 @@ void add_all_coll_objects(const char *filename, bool re_add) {
 				}
 			}
 			PRINT_TIME(" Add Fixed Cobjs");
-			fixed_cobjs.clear();
-			remove_excess_cap(fixed_cobjs); // free the memory
+			clear_container(fixed_cobjs); // clear and free the memory
 			if (!cobjs_out_fn.empty()) {write_coll_objects_file(coll_objects, cobjs_out_fn);} // after fixed cobjs processing
 		}
 		init = 1;

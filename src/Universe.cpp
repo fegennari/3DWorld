@@ -1334,8 +1334,7 @@ void ugalaxy::process(ucell const &cell) {
 			sols[cur].create(cl.systems[i]);
 			cl.color += sols[cur].sun.get_ambient_color_val();
 		}
-		cl.systems.clear();
-		remove_excess_cap(cl.systems);
+		clear_container(cl.systems);
 		cl.color    *= 1.0/nsystems;
 		cl.color.set_valid_color();
 		cl.radius    = sqrt(cl.radius);
