@@ -1,3 +1,7 @@
+![REPO SIZE](https://img.shields.io/github/repo-size/fegennari/3DWorld.svg) 
+![CODE SIZE](https://img.shields.io/github/languages/code-size/fegennari/3DWorld.svg) 
+![License](https://img.shields.io/github/license/fegennari/3DWorld.svg)
+
 3DWorld is a cross-platform OpenGL-based 3D Game Engine that I've been working on since I took the CS184 computer graphics course at UC Berkeley in 2001.
 It has the following features:
 * 3D graphics functions, classes, and wrappers around OpenGL
