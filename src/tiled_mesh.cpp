@@ -836,7 +836,7 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 	//timer_t timer("Create Shadow Map Texture");
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	vector<unsigned char> shadow_data(4*stride*stride, 0);
-	vector<unsigned char> const &cur_smask(smask[has_sun ? LIGHT_SUN : LIGHT_MOON]);
+	vector<unsigned char> const &cur_smask(smask[has_sun ? (unsigned)LIGHT_SUN : (unsigned)LIGHT_MOON]);
 	if (mesh_shadows && has_sun ) {assert(!smask[LIGHT_SUN ].empty());}
 	if (mesh_shadows && has_moon) {assert(!smask[LIGHT_MOON].empty());}
 	float const lfs(5.0*(light_factor - 0.4)); // 0: all moon, 1: all sun
@@ -847,18 +847,18 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
 			unsigned char const base_ao(ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
 			if (tree_map.empty() || tree_map[ix].ao == 255) {shadow_data[ix_off+2] = base_ao;} // no tree AO
-			else {shadow_data[ix_off+2] = (unsigned char)(base_ao * (0.3 + 0.7*tree_map[ix].ao/255.0));}
+			else {shadow_data[ix_off+2] = (unsigned char)(base_ao * (0.3f + 0.7f*tree_map[ix].ao/255.0f));}
 			unsigned char shadow_val(255);
 
 			if (!mesh_shadows) {} // do nothing
 			else if (has_sun && has_moon) {
 				bool const sun_en( (smask[LIGHT_SUN ][ix2] & SHADOWED_ALL) == 0);
 				bool const moon_en((smask[LIGHT_MOON][ix2] & SHADOWED_ALL) == 0);
-				shadow_val *= (lfs*sun_en + (1.0 - lfs)*moon_en);
+				shadow_val *= (lfs*sun_en + (1.0f - lfs)*moon_en);
 			}
 			else if (cur_smask[ix2] & SHADOWED_ALL) {shadow_val = 0;} // fully in shadow
 			shadow_data[ix_off+0] = shadow_val; // mesh shadow
-			shadow_data[ix_off+1] = (tree_map.empty() ? 255 : (unsigned char)(63.75 + 0.75*tree_map[ix].sh)); // 75% tree shadow: fully lit if not nearby trees
+			shadow_data[ix_off+1] = (tree_map.empty() ? 255 : (unsigned char)(63.75f + 0.75f*tree_map[ix].sh)); // 75% tree shadow: fully lit if not nearby trees
 		}
 	}
 	create_or_update_texture(shadow_tid, tid_is_valid, stride, shadow_data);
@@ -3638,7 +3638,7 @@ void change_inf_terrain_fire_mode(int val) {
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
 	
 	if (!using_tiled_terrain_hmap_tex() && inf_terrain_fire_mode >= FM_INC_MESH && inf_terrain_fire_mode <= FM_FLATTEN) {
-		inf_terrain_fire_mode = ((val > 0) ? FM_REM_TREES : FM_NONE); // skip over mesh heightmap edit modes, which won't work in this case
+		inf_terrain_fire_mode = ((val > 0) ? (unsigned)FM_REM_TREES : (unsigned)FM_NONE); // skip over mesh heightmap edit modes, which won't work in this case
 	}
 	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh", "Remove Trees", "Add Trees", "Remove Grass", "Add Grass"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
@@ -3688,7 +3688,7 @@ void inf_terrain_fire_weapon() {
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
 	// Note: update is slow when trees are enabled
 	unsigned shape(cur_brush_param.shape);
-	if (inf_terrain_fire_mode == FM_FLATTEN) {shape = ((shape == BSHAPE_CONST_SQ) ? BSHAPE_FLAT_SQ : BSHAPE_FLAT_CIR);} // enable a flattening shape
+	if (inf_terrain_fire_mode == FM_FLATTEN) {shape = ((shape == BSHAPE_CONST_SQ) ? (unsigned)BSHAPE_FLAT_SQ : (unsigned)BSHAPE_FLAT_CIR);} // enable a flattening shape
 	float const delta_mag(cur_brush_param.get_delta_mag()*((inf_terrain_fire_mode == FM_INC_MESH) ? 1.0 : -1.0));
 	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag));
 	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, bradius, shape);
