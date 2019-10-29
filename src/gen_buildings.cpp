@@ -9,6 +9,7 @@
 #include "file_utils.h"
 #include "buildings.h"
 #include "mesh.h"
+#include "draw_utils.h" // for point_sprite_drawer_sized
 
 using std::string;
 
@@ -1815,6 +1816,7 @@ class building_creator_t {
 	vector<building_t> buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights;
+	point_sprite_drawer_sized building_lights;
 	vector<point> points; // reused temporary
 	bool use_smap_this_frame;
 
@@ -2266,6 +2268,46 @@ public:
 		glDepthFunc(GL_LESS);
 		fgPopMatrix();
 	}
+	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights
+		if (empty() || !is_night(WIND_LIGHT_ON_RAND)) return;
+		//timer_t timer("Building Lights"); // 0.06ms
+		set_additive_blend_mode();
+		enable_blend();
+		glDepthMask(GL_FALSE); // disable depth writing
+		vector3d const max_extent(get_buildings_max_extent());
+		float const draw_dist(20.0*max_extent.mag());
+		point const camera(get_camera_pos() - xlate); // in building space
+		colorRGBA const light_colors[16] = {RED,RED,RED,RED,RED,RED,RED,RED, BLUE,BLUE,BLUE,BLUE, WHITE,WHITE, YELLOW, GREEN};
+
+		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) {
+			if (!g->bcube.closest_dist_less_than(camera, draw_dist)) continue; // too far away
+			if (!camera_pdu.cube_visible(g->bcube + xlate)) continue;
+
+			for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
+				building_t const &b(get_building(i->ix));
+				if (!b.has_antenna) continue;
+				if (!is_night((((321*i->ix) & 7)/7.0)*WIND_LIGHT_ON_RAND)) continue; // gradually turn on
+				if (!b.bcube.closest_dist_less_than(camera, draw_dist)) continue; // too far away
+				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
+				cube_t const &antenna(b.details.back());
+				unsigned const num_segs(max(1U, (((123*i->ix) & 3) + unsigned(6.0*antenna.dz()/max_extent.z)))); // some mix of height and randomness
+				point const center(antenna.get_cube_center());
+				point pos(point(center.x, center.y, antenna.z2()) + xlate);
+				float const radius(1.2f*(antenna.dx() + antenna.dy())), z_step(0.6*antenna.dz()/num_segs);
+				float const alpha(min(1.0f, 1.5f*(1.0f - p2p_dist(camera, center)/draw_dist))); // fade with distance
+				colorRGBA const color(light_colors[i->ix & 15], alpha);
+
+				for (unsigned n = 0; n < num_segs; ++n) { // distribute lights along top half of antenna
+					building_lights.add_pt(sized_vert_t<vert_color>(vert_color(pos, color), radius));
+					pos.z -= z_step;
+				}
+			} // for i
+		} // for g
+		building_lights.draw_and_clear(BLUR_TEX, 0.0, 0, 1, 0.005); // use geometry shader for unlimited point size
+		glDepthMask(GL_TRUE); // re-enable depth writing
+		disable_blend();
+		set_std_blend_mode();
+	}
 
 	void get_all_window_verts(building_draw_t &bdraw, bool light_pass) {
 		bdraw.clear();
@@ -2585,6 +2627,10 @@ void draw_buildings(int shadow_only, vector3d const &xlate) {
 	if (shadow_only != 2 && building_creator.is_visible(xlate)) {bcs.push_back(&building_creator);} // don't draw secondary buildings for dynamic shadows
 	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, xlate, bcs);
+}
+void draw_building_lights(vector3d const &xlate) {
+	building_creator_city.draw_building_lights(xlate);
+	//building_creator.draw_building_lights(xlate); // only city buildings for now
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm) {
 	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
