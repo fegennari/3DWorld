@@ -42,7 +42,10 @@ struct tid_nm_pair_t { // size=24
 };
 
 struct building_tex_params_t {
-	tid_nm_pair_t side_tex, roof_tex;
+	tid_nm_pair_t side_tex, roof_tex; // exterior
+	tid_nm_pair_t wall_tex, ceil_tex, floor_tex; // interior
+
+	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0 || wall_tex.nm_tid >= 0 || ceil_tex.nm_tid >= 0 || floor_tex.nm_tid >= 0);}
 };
 
 struct color_range_t {
@@ -68,14 +71,14 @@ struct building_mat_t : public building_tex_params_t {
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt, house_prob, house_scale_min, house_scale_max;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
-	color_range_t side_color, roof_color;
+	color_range_t side_color, roof_color; // exterior
+	//color_range_t wall_color, ceil_color, floor_color; // are these needed for the interior?
 	colorRGBA window_color;
 
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0),
 		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), house_scale_min(1.0), house_scale_max(1.0),
 		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
 		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1), window_color(GRAY) {}
-	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0);}
 	float gen_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
 
 	void update_range(vector3d const &range_translate) {
@@ -163,6 +166,12 @@ void buildings_file_err(string const &str, int &error) {
 	error = 1;
 }
 bool check_01(float v) {return (v >= 0.0 && v <= 1.0);}
+
+int read_building_texture(FILE *fp, string const &str, int &error) {
+	char strc[MAX_CHARS] = {0};
+	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
+	return get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
+}
 
 bool parse_buildings_option(FILE *fp) {
 
@@ -285,22 +294,18 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_float(fp, global_building_params.cur_mat.roof_tex.tscale_x)) {buildings_file_err(str, error);}
 		global_building_params.cur_mat.roof_tex.tscale_y = global_building_params.cur_mat.roof_tex.tscale_x; // uniform
 	}
-	else if (str == "side_tid") {
-		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.side_tex.tid = get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
-	}
-	else if (str == "side_nm_tid") { // Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
-		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.side_tex.nm_tid = get_texture_by_name(std::string(strc), 1, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
-	}
-	else if (str == "roof_tid") {
-		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.roof_tex.tid = get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
-	}
-	else if (str == "roof_nm_tid") {
-		if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.roof_tex.nm_tid = get_texture_by_name(std::string(strc), 1, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
-	}
+	// building textures
+	// Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
+	else if (str == "side_tid"    ) {global_building_params.cur_mat.side_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "side_nm_tid" ) {global_building_params.cur_mat.side_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "roof_tid"    ) {global_building_params.cur_mat.roof_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "roof_nm_tid" ) {global_building_params.cur_mat.roof_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "wall_tid"    ) {global_building_params.cur_mat.wall_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "wall_nm_tid" ) {global_building_params.cur_mat.wall_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "floor_tid"   ) {global_building_params.cur_mat.floor_tex.tid    = read_building_texture(fp, str, error);}
+	else if (str == "floor_nm_tid") {global_building_params.cur_mat.floor_tex.nm_tid = read_building_texture(fp, str, error);}
+	else if (str == "ceil_tid"    ) {global_building_params.cur_mat.ceil_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "ceil_nm_tid" ) {global_building_params.cur_mat.ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
 	// material colors
 	else if (str == "side_color") {
 		if (!read_color(fp, global_building_params.cur_mat.side_color.cmin)) {buildings_file_err(str, error);}
@@ -417,6 +422,7 @@ struct building_t : public building_geom_t {
 	cube_t bcube;
 	vect_cube_t parts;
 	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
+	vect_cube_t interior; // building interior
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	float ao_bcz2;
 
@@ -451,6 +457,7 @@ struct building_t : public building_geom_t {
 	void add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
 	void gen_details(rand_gen_t &rgen);
+	void gen_interior(rand_gen_t &rgen);
 	void gen_building_door_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
@@ -1242,7 +1249,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), tmin) && tmin < t) {t = tmin; coll = 2;} // roof quad
 		}
 	}
-	return coll; // Note: no collisions with windows or doors, since they're colinear with walls
+	return coll; // Note: no collisions with windows or doors, since they're colinear with walls; no collision with interior for now
 }
 
 // Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test
@@ -1301,6 +1308,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	assert(base.is_strictly_normalized());
 	parts.clear();
 	details.clear();
+	interior.clear();
 	roof_tquads.clear();
 	doors.clear();
 	building_mat_t const &mat(get_material());
@@ -1346,6 +1354,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			gen_details(rgen);
 		}
 		gen_building_door_if_needed(rgen);
+		gen_interior(rgen);
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
@@ -1377,6 +1386,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		calc_bcube_from_parts(); // update bcube
 		gen_details(rgen);
 		gen_building_door_if_needed(rgen);
+		// no interior for these types of buildings for now
 		return;
 	}
 	for (unsigned i = 0; i < num_levels; ++i) {
@@ -1420,6 +1430,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if (num_levels <= 3) {gen_details(rgen);}
 	}
 	gen_building_door_if_needed(rgen);
+	gen_interior(rgen);
 }
 
 bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
@@ -1705,6 +1716,17 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 	if (roof_tquads.empty()) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
+
+void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building bcube, so no bcube update is needed
+
+	if (!is_cube()) return; // only generate interiors for cube buildings for now
+	// defer this until the building is close to the player?
+	if (!doors.empty()) { // doors were placed in the previous step; use them to create initial hallways
+		// TODO: WRITE
+	}
+	// TODO: WRITE
+}
+
 void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supported for rotated buildings
 
 	assert(!parts.empty());
@@ -1777,6 +1799,13 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw) const {
 		building_geom_t bg(4, rot_sin, rot_cos); // cube
 		bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
 		bdraw.add_section(bg, *i, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5), detail_color*(bg.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
+	}
+	for (auto i = interior.begin(); i != interior.end(); ++i) {
+		// should we defer this until the player is near/inside the building?
+		// how do we skip drawing of the building exterior when the player is close to and enters the building?
+		// - make windows transparent?
+		// - perform collision detection against the interior rather than the building exterior?
+		// TODO: WRITE
 	}
 }
 
