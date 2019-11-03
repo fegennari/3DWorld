@@ -179,6 +179,10 @@ int read_building_texture(FILE *fp, string const &str, int &error) {
 	//cout << "texture filename: " << str << ", ID: " << ret << endl;
 	return ret;
 }
+void read_building_tscale(FILE *fp, tid_nm_pair_t &tex, string const &str, int &error) {
+	if (!read_float(fp, tex.tscale_x)) {buildings_file_err(str, error);}
+	tex.tscale_y = tex.tscale_x; // uniform
+}
 
 bool parse_buildings_option(FILE *fp) {
 
@@ -287,20 +291,17 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "texture_inv_y") {
 		if (!read_bool(fp, global_building_params.tex_inv_y)) {buildings_file_err(str, error);}
 	}
-	else if (str == "side_tscale") { // both X and Y
-		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_x)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.side_tex.tscale_y = global_building_params.cur_mat.side_tex.tscale_x; // uniform
-	}
+	else if (str == "side_tscale") {read_building_tscale(fp, global_building_params.cur_mat.side_tex, str, error);} // both X and Y
 	else if (str == "side_tscale_x") {
 		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_x)) {buildings_file_err(str, error);}
 	}
 	else if (str == "side_tscale_y") {
 		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_y)) {buildings_file_err(str, error);}
 	}
-	else if (str == "roof_tscale") { // both X and Y
-		if (!read_float(fp, global_building_params.cur_mat.roof_tex.tscale_x)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.roof_tex.tscale_y = global_building_params.cur_mat.roof_tex.tscale_x; // uniform
-	}
+	else if (str == "roof_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.roof_tex,  str, error);} // both X and Y
+	else if (str == "wall_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.wall_tex,  str, error);} // both X and Y
+	else if (str == "ceil_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.ceil_tex,  str, error);} // both X and Y
+	else if (str == "floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.floor_tex, str, error);} // both X and Y
 	// building textures
 	// Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
 	else if (str == "side_tid"    ) {global_building_params.cur_mat.side_tex.tid     = read_building_texture(fp, str, error);}
