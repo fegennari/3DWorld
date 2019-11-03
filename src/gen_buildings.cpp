@@ -2274,12 +2274,23 @@ public:
 		create_vbos(is_tile);
 	}
 
+	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
+		//timer_t timer("Draw Buildings Shadow");
+		fgPushMatrix();
+		translate_to(xlate);
+		shader_t s;
+		s.begin_color_only_shader(); // really don't even need colors
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(1);}
+		s.end_shader();
+		fgPopMatrix();
+	}
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
-		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
+		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
+		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
-		bool const use_tt_smap(check_tile_smap(shadow_only != 0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
+		bool const use_tt_smap(check_tile_smap(0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		bool have_windows(0), have_wind_lights(0), have_interior(0);
 		unsigned max_draw_ix(0);
@@ -2287,19 +2298,17 @@ public:
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
+			have_windows     |= !(*i)->building_draw_windows.empty();
+			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
+			have_interior    |= (draw_building_interiors && !(*i)->building_draw_interior.empty());
 			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
-
-			if (!shadow_only) {
-				if (night) {(*i)->ensure_window_lights_vbos();}
-				have_windows     |= !(*i)->building_draw_windows.empty();
-				have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
-				have_interior    |= (draw_building_interiors && !(*i)->building_draw_interior.empty());
-			}
+			if (night) {(*i)->ensure_window_lights_vbos();}
+			
 			if ((*i)->is_single_tile()) { // only for tiled buildings
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		}
-		bool const transparent_windows(0 && !shadow_only && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
+		bool const transparent_windows(0 && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL);
@@ -2312,18 +2321,16 @@ public:
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		}
 		// main/batched draw pass
-		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
-		else {
-			bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
-		}
+		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
+		setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
+		
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, (shadow_only != 0));} // non-smap pass, can skip tiles that will be drawn below
+				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, 0);} // non-smap pass, can skip tiles that will be drawn below
 			}
 		}
-		if (!shadow_only && have_windows && !transparent_windows) { // draw windows
+		if (have_windows && !transparent_windows) { // draw windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
@@ -2378,7 +2385,7 @@ public:
 			} // for i
 			s.end_shader();
 		}
-		if (!shadow_only && night && have_wind_lights) { // add night time random lights in windows
+		if (night && have_wind_lights) { // add night time random lights in windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
 			float const low_v(0.5 - WIND_LIGHT_ON_RAND), high_v(0.5 + WIND_LIGHT_ON_RAND), lit_thresh_mult(1.0 + 2.0*CLIP_TO_01((light_factor - low_v)/(high_v - low_v)));
