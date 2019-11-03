@@ -72,13 +72,13 @@ struct building_mat_t : public building_tex_params_t {
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color; // exterior
-	//color_range_t wall_color, ceil_color, floor_color; // are these needed for the interior?
-	colorRGBA window_color;
+	colorRGBA window_color, wall_color, ceil_color, floor_color;
 
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0),
 		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), house_scale_min(1.0), house_scale_max(1.0),
 		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
-		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1), window_color(GRAY) {}
+		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1),
+		window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY) {}
 	float gen_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
 
 	void update_range(vector3d const &range_translate) {
@@ -381,6 +381,15 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "window_color") { // per-material
 		if (!read_color(fp, global_building_params.cur_mat.window_color)) {buildings_file_err(str, error);}
 	}
+	else if (str == "wall_color") { // per-material
+	if (!read_color(fp, global_building_params.cur_mat.wall_color)) {buildings_file_err(str, error);}
+	}
+	else if (str == "ceil_color") { // per-material
+	if (!read_color(fp, global_building_params.cur_mat.ceil_color)) {buildings_file_err(str, error);}
+	}
+	else if (str == "floor_color") { // per-material
+	if (!read_color(fp, global_building_params.cur_mat.floor_color)) {buildings_file_err(str, error);}
+	}
 	// special commands
 	else if (str == "probability") {
 		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
@@ -421,20 +430,31 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
+// may as well make this its own class, since it could get large and it won't be used for every building
+struct building_interior_t {
+	vect_cube_t floors, ceilings, walls;
+
+	void clear() {
+		floors.clear();
+		ceilings.clear();
+		walls.clear();
+	}
+};
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
 	bool is_house, has_antenna, has_chimney;
-	colorRGBA side_color, roof_color, detail_color, floor_color, ceil_color, wall_color;
+	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
 	vect_cube_t parts;
 	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
-	vect_cube_t floors, ceilings, walls; // building interior
 	vector<tquad_with_ix_t> roof_tquads, doors;
+	std::shared_ptr<building_interior_t> interior;
 	float ao_bcz2;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), has_chimney(0), side_color(WHITE), roof_color(WHITE),
-		detail_color(BLACK), floor_color(WHITE), ceil_color(WHITE), wall_color(WHITE), ao_bcz2(0.0) {bcube.set_to_zeros();}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), has_chimney(0),
+		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
@@ -469,7 +489,7 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-	void get_all_drawn_verts(building_draw_t &bdraw, bool exterior, bool interior) const;
+	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
@@ -539,6 +559,9 @@ public:
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
 			register_tid(i->side_tex.tid);
 			register_tid(i->roof_tex.tid);
+			register_tid(i->wall_tex.tid);
+			register_tid(i->ceil_tex.tid);
+			register_tid(i->floor_tex.tid);
 		}
 		cout << "Used " << (next_slot_ix-1) << " slots for texture IDs up to " << (tid_to_slot_ix.size()-1) << endl;
 	}
@@ -1321,11 +1344,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	assert(base.is_strictly_normalized());
 	parts.clear();
 	details.clear();
-	floors.clear();
-	ceilings.clear();
-	walls.clear();
 	roof_tquads.clear();
 	doors.clear();
+	interior.reset();
 	building_mat_t const &mat(get_material());
 	rand_gen_t rgen;
 	rgen.set_state(123+rseed1, 345*rseed2);
@@ -1734,10 +1755,11 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building bcube, so no bcube update is needed
 
-	return; // TODO: enable this when it's working
+	return; // disabled until this is ready
 	if (!global_building_params.windows_enabled()) return; // no windows, can't assign floors and generate interior
 	if (is_house)   return; // not generating interior for houses now, only office buildings
 	if (!is_cube()) return; // only generate interiors for cube buildings for now
+	interior.reset(new building_interior_t);
 	building_mat_t const &mat(get_material());
 	// defer this until the building is close to the player?
 	
@@ -1754,15 +1776,15 @@ void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building
 		// we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		for (unsigned f = 0; f <= num_floors; ++f, z += window_spacing) {
 			cube_t c(*p);
-			if (f > 0         ) {c.z1() = z + fc_thick; c.z2() = z; ceilings.push_back(c);}
-			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; floors  .push_back(c);}
+			if (f > 0         ) {c.z1() = z + fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
+			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; interior->floors  .push_back(c);}
 
 			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {
 				// doors were placed in the previous step; use them to create initial hallways on the first floor
-				// TODO: WRITE
+				// TODO_INT: WRITE
 			}
 			c.z1() = z + fc_thick; c.z2() = z + window_spacing - fc_thick;
-			// TODO: add walls
+			// TODO_INT: add to interior->walls
 		} // for f
 	} // for p
 }
@@ -1815,13 +1837,13 @@ bool check_tile_smap(bool shadow_only) {
 	return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 }
 
-void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool exterior, bool interior) const {
+void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const {
 
-	assert(exterior || interior); // must be at least one of these
+	assert(get_exterior || get_interior); // must be at least one of these
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
 
-	if (exterior) { // exterior building parts
+	if (get_exterior) { // exterior building parts
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
 			bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
@@ -1838,25 +1860,24 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool exterior, bool
 			bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
 			bdraw.add_section(bg, *i, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5), detail_color*(bg.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
 		}
+		// doors are both interior and exterior so are always drawn; but maybe they should be drawn only in the exterior block to avoid drawing twice when both passes are enabled?
+		for (auto i = doors.begin(); i != doors.end(); ++i) {
+			int const door_tid((i->type == tquad_with_ix_t::TYPE_BDOOR) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(door_tid, -1, 1.0, 1.0), WHITE);
+		}
 	}
-	// doors are both interior and exterior so are always drawn; but maybe they should be drawn only in the exterior block to avoid drawing twice when both passes are enabled?
-	for (auto i = doors.begin(); i != doors.end(); ++i) {
-		int const door_tid((i->type == tquad_with_ix_t::TYPE_BDOOR) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
-		bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(door_tid, -1, 1.0, 1.0), WHITE);
-	}
-	if (interior) { // interior building parts
+	if (get_interior && interior != nullptr) { // interior building parts
 		// should we defer this until the player is near/inside the building?
 		// how do we skip drawing of the building exterior when the player is close to and enters the building?
-		// - make windows transparent?
-		// - perform collision detection against the interior rather than the building exterior?
-		for (auto i = floors.begin(); i != floors.end(); ++i) {
-			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
+		// make windows transparent?
+		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
+			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
 		}
-		for (auto i = ceilings.begin(); i != ceilings.end(); ++i) {
-			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.ceil_tex, ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
+		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
+			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
 		}
-		for (auto i = walls.begin(); i != walls.end(); ++i) {
-			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // no AO; XY dims only
+		for (auto i = interior->walls.begin(); i != interior->walls.end(); ++i) {
+			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; XY dims only
 		}
 	}
 }
@@ -1896,7 +1917,7 @@ class building_creator_t {
 	rand_gen_t rgen;
 	vector<building_t> buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
-	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights;
+	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior;
 	point_sprite_drawer_sized building_lights;
 	vector<point> points; // reused temporary
 	bool use_smap_this_frame;
@@ -2255,12 +2276,13 @@ public:
 
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
+		bool const draw_interior = 0; // TODO_INT: user option or keyboard key
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const use_tt_smap(check_tile_smap(shadow_only != 0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
-		bool have_windows(0), have_wind_lights(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
 
@@ -2269,7 +2291,9 @@ public:
 			if (night) {(*i)->ensure_window_lights_vbos();}
 			have_windows     |= !(*i)->building_draw_windows.empty();
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
+			have_interior    |= (draw_interior && !(*i)->building_draw_interior.empty());
 			max_eq(max_draw_ix,  (*i)->building_draw_vbo.get_num_draw_blocks());
+			if (draw_interior) {max_eq(max_draw_ix,  (*i)->building_draw_interior.get_num_draw_blocks());}
 
 			if ((*i)->is_single_tile()) { // only for tiled buildings
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
@@ -2297,6 +2321,22 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
+		}
+		if (have_interior) { // draw building interiors with standard shader and now shadow maps
+			timer_t timer2("Draw Building Interiors");
+			// TODO_INT: all shadowed, but add room lights?
+			// TODO_INT: somehow not draw exterior of these buildings, or at least make windows transparent so the interior can be seen
+			float const draw_dist(0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
+					point const pos(g->bcube.get_cube_center() + xlate);
+					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
+					(*i)->building_draw_interior.draw_tile(tile_id);
+				} // for g
+			} // for i
 		}
 		s.end_shader();
 
@@ -2399,22 +2439,26 @@ public:
 		}
 		bdraw.finalize(grid_by_tile.size());
 	}
-	void get_all_drawn_verts(bool exterior, bool interior) { // Note: non-const; building_draw is modified
+	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
+		// TODO_INT: third pass for interior?
 #pragma omp parallel for schedule(static) num_threads(2)
 		for (int pass = 0; pass < 2; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
 			if (pass == 0) { // main pass
 				building_draw_vbo.clear();
+				building_draw_interior.clear();
 
 				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					building_draw_vbo.cur_tile_id = (g - grid_by_tile.begin());
+					building_draw_vbo.cur_tile_id = building_draw_interior.cur_tile_id = (g - grid_by_tile.begin());
 					
 					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
-						get_building(i->ix).get_all_drawn_verts(building_draw_vbo, exterior, interior);
+						get_building(i->ix).get_all_drawn_verts(building_draw_vbo,      1, 0); // exterior
+						get_building(i->ix).get_all_drawn_verts(building_draw_interior, 0, 1); // interior
 					}
 				}
 				building_draw_vbo.finalize(grid_by_tile.size());
+				building_draw_interior.finalize(grid_by_tile.size());
 			}
-			else if (pass == 1 && exterior) { // windows pass (exterior only?)
+			else if (pass == 1) { // windows pass (exterior only?)
 				get_all_window_verts(building_draw_windows, 0);
 				if (is_night(WIND_LIGHT_ON_RAND)) {get_all_window_verts(building_draw_wind_lights, 1);} // only generate window verts at night
 			}
@@ -2424,13 +2468,18 @@ public:
 		building_window_gen.check_windows_texture();
 		tid_mapper.init();
 		timer_t timer("Create Building VBOs", !is_tile);
-		get_all_drawn_verts(1, 1); // for now we enable both interior and exterior geometry
-		unsigned const num_verts(building_draw_vbo.num_verts()), num_tris(building_draw_vbo.num_tris());
-		gpu_mem_usage = num_verts*sizeof(vert_norm_comp_tc_color);
-		if (!is_tile) {cout << "Building verts: " << num_verts << ", tris: " << num_tris << ", mem: " << gpu_mem_usage << endl;}
+		get_all_drawn_verts();
+		
+		if (!is_tile) {
+			unsigned const num_everts(building_draw_vbo.num_verts()), num_etris(building_draw_vbo.num_tris());
+			unsigned const num_iverts(building_draw_interior.num_verts()), num_itris(building_draw_interior.num_tris());
+			gpu_mem_usage = (num_everts + num_iverts)*sizeof(vert_norm_comp_tc_color);
+			cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;
+		}
 		building_draw_vbo.upload_to_vbos();
 		building_draw_windows.upload_to_vbos();
 		building_draw_wind_lights.upload_to_vbos(); // Note: may be empty if not night time
+		building_draw_interior.upload_to_vbos();
 	}
 	void ensure_window_lights_vbos() {
 		if (!building_draw_wind_lights.empty()) return; // already calculated
@@ -2443,6 +2492,7 @@ public:
 		building_draw_vbo.clear_vbos();
 		building_draw_windows.clear_vbos();
 		building_draw_wind_lights.clear_vbos();
+		building_draw_interior.clear_vbos();
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr) const {
