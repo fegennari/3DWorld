@@ -16,7 +16,7 @@ using std::string;
 unsigned const MAX_CYLIN_SIDES = 36;
 float const WIND_LIGHT_ON_RAND = 0.08;
 
-extern bool start_in_inf_terrain;
+extern bool start_in_inf_terrain, draw_building_interiors;
 extern int rand_gen_index, display_mode;
 extern point sun_pos;
 
@@ -2276,7 +2276,6 @@ public:
 
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
-		bool const draw_interior = 0; // TODO_INT: user option or keyboard key
 		//timer_t timer(string("Draw Buildings") + (shadow_only ? " Shadow" : "")); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -2288,13 +2287,14 @@ public:
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
-			if (night) {(*i)->ensure_window_lights_vbos();}
-			have_windows     |= !(*i)->building_draw_windows.empty();
-			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
-			have_interior    |= (draw_interior && !(*i)->building_draw_interior.empty());
-			max_eq(max_draw_ix,  (*i)->building_draw_vbo.get_num_draw_blocks());
-			if (draw_interior) {max_eq(max_draw_ix,  (*i)->building_draw_interior.get_num_draw_blocks());}
+			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
 
+			if (!shadow_only) {
+				if (night) {(*i)->ensure_window_lights_vbos();}
+				have_windows     |= !(*i)->building_draw_windows.empty();
+				have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
+				have_interior    |= (draw_building_interiors && !(*i)->building_draw_interior.empty());
+			}
 			if ((*i)->is_single_tile()) { // only for tiled buildings
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
@@ -2323,10 +2323,10 @@ public:
 			disable_blend();
 		}
 		if (have_interior) { // draw building interiors with standard shader and now shadow maps
-			timer_t timer2("Draw Building Interiors");
+			//timer_t timer2("Draw Building Interiors");
 			// TODO_INT: all shadowed, but add room lights?
 			// TODO_INT: somehow not draw exterior of these buildings, or at least make windows transparent so the interior can be seen
-			float const draw_dist(0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+			float const draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
