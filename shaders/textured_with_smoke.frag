@@ -16,6 +16,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float metalness   = 0.0;
+uniform float diffuse_scale = 1.0; // also applies to specular
 uniform float cube_bb[6], sphere_radius;
 uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
 uniform float reflect_plane_ztop, reflect_plane_zbot;
@@ -124,14 +125,14 @@ vec3 add_light0(in vec3 n, in float normal_sign, in vec4 base_color) {
 		}
 	}
 #endif // DYNAMIC_SMOKE_SHADOWS
-	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, get_ambient_scale(), base_color, fg_LightSource[0], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(nscale*n, epos, diffuse_scale, get_ambient_scale(), base_color, fg_LightSource[0], normal_sign).rgb;
 }
 
 vec3 add_light1(in vec3 n, in float normal_sign, in vec4 base_color) {
 #ifdef USE_SHADOW_MAP
 	if (use_shadow_map) {n *= get_shadow_map_weight_light1(epos, n);}
 #endif
-	return add_light_comp_pos_scaled_light(n, epos, 1.0, get_ambient_scale(), base_color, fg_LightSource[1], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(n, epos, diffuse_scale, get_ambient_scale(), base_color, fg_LightSource[1], normal_sign).rgb;
 }
 
 void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
