@@ -2460,25 +2460,28 @@ public:
 		bdraw.finalize(grid_by_tile.size());
 	}
 	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
-		// TODO_INT: third pass for interior?
-#pragma omp parallel for schedule(static) num_threads(2)
-		for (int pass = 0; pass < 2; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
-			if (pass == 0) { // main pass
+		//timer_t timer("Get Building Verts"); // 39/115
+#pragma omp parallel for schedule(static) num_threads(3)
+		for (int pass = 0; pass < 3; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
+			if (pass == 0) { // exterior pass
 				building_draw_vbo.clear();
+
+				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					building_draw_vbo.cur_tile_id = (g - grid_by_tile.begin());
+					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_verts(building_draw_vbo, 1, 0);}
+				}
+				building_draw_vbo.finalize(grid_by_tile.size());
+			}
+			else if (pass == 1) { // interior pass
 				building_draw_interior.clear();
 
 				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					building_draw_vbo.cur_tile_id = building_draw_interior.cur_tile_id = (g - grid_by_tile.begin());
-					
-					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
-						get_building(i->ix).get_all_drawn_verts(building_draw_vbo,      1, 0); // exterior
-						get_building(i->ix).get_all_drawn_verts(building_draw_interior, 0, 1); // interior
-					}
+					building_draw_interior.cur_tile_id = (g - grid_by_tile.begin());
+					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_verts(building_draw_interior, 0, 1);}
 				}
-				building_draw_vbo.finalize(grid_by_tile.size());
 				building_draw_interior.finalize(grid_by_tile.size());
 			}
-			else if (pass == 1) { // windows pass (exterior only?)
+			else if (pass == 2) { // windows pass
 				get_all_window_verts(building_draw_windows, 0);
 				if (is_night(WIND_LIGHT_ON_RAND)) {get_all_window_verts(building_draw_wind_lights, 1);} // only generate window verts at night
 			}
