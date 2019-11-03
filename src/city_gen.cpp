@@ -1028,7 +1028,9 @@ class city_road_gen_t : public road_gen_base_t {
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
 				prev_tile_id = tile_id;
 			} // for i
-			cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
+			if (add_parking_lots) {
+				cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
+			}
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 			draw_objects(benches, dstate, shadow_only);
