@@ -553,7 +553,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
 	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5f*(zbottom + ztop)), ts(4.0f/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
-	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
+	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? (int)ROCK_TEX : (int)DIRT_TEX);
 	shader_t s;
 
 	if (shadow_pass) {
