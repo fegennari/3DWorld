@@ -101,6 +101,7 @@ struct building_mat_t : public building_tex_params_t {
 	}
 	float get_window_tx() const;
 	float get_window_ty() const;
+	float get_floor_spacing() const {return 1.0/(2.0*get_window_ty());}
 };
 
 struct building_params_t {
@@ -461,7 +462,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
-	float get_door_height() const {return 0.45f/(get_material().wind_yscale*global_building_params.get_window_ty());} // set height based on window spacing
+	float get_door_height() const {return 0.9f*get_material().get_floor_spacing();} // set height based on window spacing
 	void gen_rotation(rand_gen_t &rgen);
 
 	void set_z_range(float z1, float z2) {
@@ -1767,17 +1768,19 @@ void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
 	for (auto p = parts.begin(); p != parts.end(); ++p) {
-		float const window_spacing(1.0/mat.get_window_ty());
+		float const window_spacing(mat.get_floor_spacing());
 		float const floor_thickness(0.1*window_spacing), fc_thick(0.5*floor_thickness);
 		float const z_span(p->dz() - floor_thickness);
+		assert(z_span > 0.0);
 		unsigned const num_floors(floor(z_span/window_spacing)); // round down - no partial floors
+		assert(num_floors <= 100); // sanity check
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		float z(p->z1());
 
 		// we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		for (unsigned f = 0; f <= num_floors; ++f, z += window_spacing) {
 			cube_t c(*p);
-			if (f > 0         ) {c.z1() = z + fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
+			if (f > 0         ) {c.z1() = z - fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
 			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; interior->floors  .push_back(c);}
 
 			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {
@@ -2293,6 +2296,7 @@ public:
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const use_tt_smap(check_tile_smap(0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
+		float const interior_draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		bool have_windows(0), have_wind_lights(0), have_interior(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
@@ -2342,11 +2346,10 @@ public:
 			//timer_t timer2("Draw Building Interiors");
 			// TODO_INT: all shadowed, but add room lights?
 			// TODO_INT: somehow not draw exterior of these buildings, or at least make windows transparent so the interior can be seen
-			float const draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
+					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
 					point const pos(g->bcube.get_cube_center() + xlate);
 					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
@@ -2368,6 +2371,7 @@ public:
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
+					//if (draw_building_interiors && g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too near - draw interior only
 					point const pos(g->bcube.get_cube_center() + xlate);
 					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 					if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
