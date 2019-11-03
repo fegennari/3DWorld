@@ -13,6 +13,7 @@
 
 using std::string;
 
+bool const EXACT_MULT_OF_FLOOR_HEIGHT = 1;
 bool const DRAW_WINDOWS_AS_HOLES = 0; // somewhat works, but doesn't draw buildings and terrain behind the windows due to incorrect draw order
 unsigned const MAX_CYLIN_SIDES   = 36;
 float const WIND_LIGHT_ON_RAND   = 0.08;
@@ -468,6 +469,7 @@ struct building_t : public building_geom_t {
 
 	void set_z_range(float z1, float z2) {
 		bcube.z1() = z1; bcube.z2() = z2;
+		adjust_part_zvals_for_floor_spacing(bcube);
 		if (!parts.empty()) {parts[0].z1() = z1; parts[0].z2() = z2;}
 	}
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
@@ -481,6 +483,7 @@ struct building_t : public building_geom_t {
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void calc_bcube_from_parts();
+	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
@@ -1344,9 +1347,20 @@ void building_t::calc_bcube_from_parts() {
 	for (auto i = parts.begin()+1; i != parts.end(); ++i) {bcube.union_with_cube(*i);} // update bcube
 }
 
+void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
+
+	if (!EXACT_MULT_OF_FLOOR_HEIGHT) return;
+	float const floor_spacing(get_material().get_floor_spacing()), dz(c.dz());
+	assert(dz > 0.0 && floor_spacing > 0.0);
+	float const num_floors(dz/floor_spacing);
+	int const targ_num_floors(max(1, round_fp(num_floors)));
+	c.z2() += floor_spacing*targ_num_floors/num_floors; // ensure c.dz() is an exact multiple of num_floors
+}
+
 void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (!is_valid()) return; // invalid building
+	if (!parts.empty()) {adjust_part_zvals_for_floor_spacing(parts.front());}
 	cube_t const base(parts.empty() ? bcube : parts.back());
 	assert(base.is_strictly_normalized());
 	parts.clear();
@@ -1355,7 +1369,6 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	doors.clear();
 	interior.reset();
 	building_mat_t const &mat(get_material());
-	// TODO_INT: dz() is a multiple of mat.get_floor_spacing()
 	rand_gen_t rgen;
 	rgen.set_state(123+rseed1, 345*rseed2);
 	ao_bcz2 = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
@@ -1461,8 +1474,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	} // for i
 	for (unsigned i = 1; i < num_levels; ++i) {
 		float const ddz(rgen.rand_uniform(-0.35*dz, 0.35*dz)); // random shift in z height
-		parts[i  ].z1() += ddz;
-		parts[i-1].z2() += ddz;
+		parts[i].z1() += ddz;
+		adjust_part_zvals_for_floor_spacing(parts[i]);
+		parts[i-1].z2() = parts[i].z1();
 	}
 	if (do_split) { // generate L, T, or U shape
 		cube_t const split_cube(parts.back());
@@ -1910,7 +1924,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 	else {color = mat.window_color;}
 	bool const clip_windows(mat.no_city); // only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
-	float const door_ztop(doors.empty() ? 0.0f : doors.front().pts[2].z);
+	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_OF_FLOOR_HEIGHT ? (bcube.z1() + mat.get_floor_spacing()) : doors.front().pts[2].z));
 
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		unsigned const part_ix(i - parts.begin());
