@@ -175,7 +175,9 @@ bool check_01(float v) {return (v >= 0.0 && v <= 1.0);}
 int read_building_texture(FILE *fp, string const &str, int &error) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
-	return get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir());
+	int const ret(get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir()));
+	//cout << "texture filename: " << str << ", ID: " << ret << endl;
+	return ret;
 }
 
 bool parse_buildings_option(FILE *fp) {
@@ -681,7 +683,13 @@ class building_draw_t {
 		draw_block_t &block(to_draw[ix]);
 		block.register_tile_id(cur_tile_id);
 		if (block.empty()) {block.tex = tex;} // copy material first time
-		else {assert(block.tex.nm_tid == tex.nm_tid);} // else normal maps must agree
+		else {
+			assert(block.tex.tid == tex.tid);
+			if (block.tex.nm_tid != tex.nm_tid) { // else normal maps must agree
+				std::cerr << "mismatched normal map for texture ID " << block.tex.tid << " in slot " << ix << ": " << block.tex.nm_tid << " vs. " << tex.nm_tid << endl;
+				assert(0);
+			}
+		}
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
 	static void setup_ao_color(colorRGBA const &color, float bcz1, float ao_bcz2, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
