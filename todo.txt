@@ -22,6 +22,8 @@ Building Interiors:
   * Only nearby? Use bcube of nearest building/tile/tile group to cull in shader?
   * See through building exteriors (alpha blending?)
   * Make windows transparent somehow (depth prepass or texture?)
-  * No sun/moon but room lights
+  + No sun/moon
+  * Add room lights
+  * Disable grass on first floor of building (or move floor above it?)
 - Player can enter buildings
 - Player can open doors?

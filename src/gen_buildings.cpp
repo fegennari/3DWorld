@@ -13,8 +13,9 @@
 
 using std::string;
 
-unsigned const MAX_CYLIN_SIDES = 36;
-float const WIND_LIGHT_ON_RAND = 0.08;
+bool const DRAW_WINDOWS_AS_HOLES = 0; // somewhat works, but doesn't draw buildings and terrain behind the windows due to incorrect draw order
+unsigned const MAX_CYLIN_SIDES   = 36;
+float const WIND_LIGHT_ON_RAND   = 0.08;
 
 extern bool start_in_inf_terrain, draw_building_interiors;
 extern int rand_gen_index, display_mode;
@@ -462,7 +463,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const {return global_building_params.get_material(mat_ix);}
-	float get_door_height() const {return 0.9f*get_material().get_floor_spacing();} // set height based on window spacing
+	float get_door_height() const {return 0.9f*get_material().get_floor_spacing();} // set height based on window spacing, 90% of a floor height (may be too large)
 	void gen_rotation(rand_gen_t &rgen);
 
 	void set_z_range(float z1, float z2) {
@@ -939,6 +940,10 @@ public:
 						if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
 					}
 				}
+				else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the house wall to avoid z-fighting
+					float const offset(0.005*(j ? 1.0 : -1.0)*sz.z);
+					for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
+				}
 				if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
 					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
 					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
@@ -1350,6 +1355,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	doors.clear();
 	interior.reset();
 	building_mat_t const &mat(get_material());
+	// TODO_INT: dz() is a multiple of mat.get_floor_spacing()
 	rand_gen_t rgen;
 	rgen.set_state(123+rseed1, 345*rseed2);
 	ao_bcz2 = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
@@ -1758,6 +1764,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building bcube, so no bcube update is needed
 
 	return; // disabled until this is ready
+	if (world_mode != WMODE_INF_TERRAIN) return; // tiled terrain mode only
 	if (!global_building_params.windows_enabled()) return; // no windows, can't assign floors and generate interior
 	if (is_house)   return; // not generating interior for houses now, only office buildings
 	if (!is_cube()) return; // only generate interiors for cube buildings for now
@@ -1782,12 +1789,12 @@ void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building
 			cube_t c(*p);
 			if (f > 0         ) {c.z1() = z - fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
 			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; interior->floors  .push_back(c);}
+			c.z1() = z + fc_thick; c.z2() = z + window_spacing - fc_thick;
 
 			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {
 				// doors were placed in the previous step; use them to create initial hallways on the first floor
 				// TODO_INT: WRITE
 			}
-			c.z1() = z + fc_thick; c.z2() = z + window_spacing - fc_thick;
 			// TODO_INT: add to interior->walls
 		} // for f
 	} // for p
@@ -2313,7 +2320,7 @@ public:
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		}
-		bool const transparent_windows(0 && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
+		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL);
@@ -2342,10 +2349,14 @@ public:
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
+		s.end_shader();
+
 		if (have_interior) { // draw building interiors with standard shader and now shadow maps
 			//timer_t timer2("Draw Building Interiors");
-			// TODO_INT: all shadowed, but add room lights?
+			// TODO_INT: add room lights?
 			// TODO_INT: somehow not draw exterior of these buildings, or at least make windows transparent so the interior can be seen
+			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
+			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -2356,8 +2367,9 @@ public:
 					(*i)->building_draw_interior.draw_tile(tile_id);
 				} // for g
 			} // for i
+			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
+			s.end_shader();
 		}
-		s.end_shader();
 
 		// post-pass to render buildings in nearby tiles that have shadow maps
 		if (use_tt_smap) {
