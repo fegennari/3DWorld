@@ -11,9 +11,9 @@ buildings window_yspace 0.45
 buildings window_color 0.5 0.5 0.5 1.0 # gray
 
 # interiors
-buildings wall_color  0.9  0.9 0.9  1.0 # off white
-buildings ceil_color  1.0  1.0 1.0  1.0 # white
-buildings floor_color 0.35 0.3 0.25 1.0 # gray-brown
+buildings wall_color  1.0 1.0 1.0 1.0 # white
+buildings ceil_color  1.0 1.0 1.0 1.0 # white
+buildings floor_color 0.4 0.4 0.4 1.0 # gray
 buildings wall_tscale  8.0
 buildings ceil_tscale  4.0
 buildings floor_tscale 16.0
