@@ -2299,10 +2299,18 @@ public:
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		}
+		bool const transparent_windows(0 && !shadow_only && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL);
 
+		if (transparent_windows) { // depth pass for windows
+			// FIXME: this doesn't really work because we need glDepthFunc to be GL_LESS, but then building shadows aren't drawn properly
+			s.begin_simple_textured_shader(0.5);
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		}
 		// main/batched draw pass
 		if (shadow_only) {s.begin_color_only_shader();} // really don't even need colors
 		else {
@@ -2315,7 +2323,7 @@ public:
 				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, (shadow_only != 0));} // non-smap pass, can skip tiles that will be drawn below
 			}
 		}
-		if (!shadow_only && have_windows) { // draw windows
+		if (!shadow_only && have_windows && !transparent_windows) { // draw windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
@@ -2358,7 +2366,7 @@ public:
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
 					(*i)->building_draw_vbo.draw_tile(tile_id);
 
-					if (!(*i)->building_draw_windows.empty()) {
+					if (!(*i)->building_draw_windows.empty() && !transparent_windows) {
 						enable_blend();
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
 						(*i)->building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
