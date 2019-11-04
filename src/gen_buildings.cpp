@@ -1136,7 +1136,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	point p_int;
 	vector3d cnorm; // unused
 	unsigned cdir(0); // unused
-	if (!sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
+	if (radius > 0.0 && !sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0);
 	
@@ -1148,6 +1148,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
 		if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
+		if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
 
 		if (use_cylinder_coll()) {
 			point const cc(i->get_cube_center() + xlate);
@@ -1179,19 +1180,21 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 		}
 	} // for i
-	for (auto i = details.begin(); i != details.end(); ++i) {
-		if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
-	}
-	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // Note: doesn't really work with a pointed roof
-		point const pos_xlate(pos2 - xlate);
-		vector3d const normal(i->get_norm());
-		float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+	if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
+		for (auto i = details.begin(); i != details.end(); ++i) {
+			if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
+		}
+		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // Note: doesn't really work with a pointed roof
+			point const pos_xlate(pos2 - xlate);
+			vector3d const normal(i->get_norm());
+			float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
 
-		if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
-			pos2 += normal*(radius - rdist); // update current pos
-			had_coll = 1; // flag as colliding
-			if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
-			break; // only use first colliding tquad
+			if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
+				pos2 += normal*(radius - rdist); // update current pos
+				had_coll = 1; // flag as colliding
+				if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
+				break; // only use first colliding tquad
+			}
 		}
 	}
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
@@ -2552,6 +2555,21 @@ public:
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
+
+		if (radius == 0.0) { // point coll - ignore p_last as well
+			point const p1x(pos - xlate);
+			unsigned const gix(get_grid_ix(p1x));
+			grid_elem_t const &ge(grid[gix]);
+			if (ge.bc_ixs.empty()) return 0; // skip empty grid
+			if (!(xy_only ? ge.bcube.contains_pt_xy(p1x) : ge.bcube.contains_pt(p1x))) return 0; // no intersection - skip this grid
+			vector<point> points; // reused across calls
+
+			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
+				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, points, cnorm)) return 1;
+			}
+			return 0; // no coll
+		}
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
