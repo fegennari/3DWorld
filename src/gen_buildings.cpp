@@ -939,7 +939,7 @@ public:
 					for (unsigned k = ix; k < ix+4; ++k) {
 						auto &v(verts[k]);
 						float const delta(door_ztop - v.v.z);
-						max_eq(v.v.z, door_ztop); // make all windows start above the door
+						max_eq(v.v.z, door_ztop); // make all windows start above the door; TODO: add partial row of windows for first floor along this wall
 						v.v[n] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
 						if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
 					}
@@ -1607,7 +1607,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		door_dir  = rgen.rand_bool(); // select a random dir
 		door_part = 0; // only one part
 	}
-	if (gen_door) {add_door(place_door(base, door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, rgen), door_part, door_dim, door_dir, 0);} // add door
+	if (gen_door) {add_door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, rgen), door_part, door_dim, door_dir, 0);}
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};
 
