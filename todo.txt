@@ -24,6 +24,7 @@ Building Interiors:
   * Make windows transparent somehow (depth prepass or texture?)
   + No sun/moon
   * Add room lights
-  * Disable grass on first floor of building (or move floor above it?)
+  + Disable grass on first floor of building
+  * Remove parts of exterior building walls that are inside the building
 - Player can enter buildings
 - Player can open doors?

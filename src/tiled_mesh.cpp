@@ -73,6 +73,8 @@ void create_pine_tree_instances();
 unsigned get_tree_inst_gpu_mem();
 void setup_detail_normal_map(shader_t &s, float tscale);
 void draw_distant_mesh_bottom(float terrain_zmin);
+bool no_grass_under_buildings();
+bool check_buildings_no_grass(point const &pos);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
 
 
@@ -1024,7 +1026,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
 		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0);
-		bool const check_mesh_mask(check_mesh_disable(query_pos, radius));
+		bool const check_mesh_mask(check_mesh_disable(query_pos, radius)), check_buildings(no_grass_under_buildings());
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
@@ -1115,6 +1117,10 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					if (grass_scale > 0.0 && !exclude_cubes.empty()) { // exclude bridges and tunnels here
 						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, 0.0);
 						replace_grass_with_dirt = (check_bcubes_sphere_coll(exclude_cubes, test_pt, HALF_DXY, 1) && !check_bcubes_sphere_coll(allow_cubes, test_pt, HALF_DXY, 1));
+					}
+					if (!replace_grass_with_dirt && check_buildings && grass_scale > 0.0 && mh01 == mh00 && mh10 == mh00 && mh11 == mh00) { // look for area flattened under a building
+						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, mh00);
+						replace_grass_with_dirt = check_buildings_no_grass(test_pt); // xy_only 1.61 => 1.76
 					}
 					if (replace_grass_with_dirt) {
 						weights[dirt_tex_ix] += weights[grass_tex_ix]; // replace grass with dirt

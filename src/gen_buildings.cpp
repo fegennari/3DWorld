@@ -2853,6 +2853,10 @@ bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_x
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only) {
 	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only);
 }
+bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode
+	point center(pos + get_tt_xlate_val());
+	return building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr); // secondary buildings only
+}
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) { // for line_intersect_city()
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
 	unsigned const coll1(building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 0));
@@ -2865,6 +2869,7 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	return building_creator.get_building_hit_color(p1, p2, color);
 }
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproce effects
+bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !building_creator.empty() && global_building_params.flatten_mesh);}
 unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage());}
 
 vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
