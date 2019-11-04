@@ -13,10 +13,11 @@
 
 using std::string;
 
-bool const EXACT_MULT_OF_FLOOR_HEIGHT = 1;
-bool const DRAW_WINDOWS_AS_HOLES = 0; // somewhat works, but doesn't draw buildings and terrain behind the windows due to incorrect draw order
-unsigned const MAX_CYLIN_SIDES   = 36;
-float const WIND_LIGHT_ON_RAND   = 0.08;
+bool const EXACT_MULT_FLOOR_HEIGHT = 1;
+bool const ADD_BUILDING_INTERIORS  = 0;
+bool const DRAW_WINDOWS_AS_HOLES   = 0; // somewhat works, but doesn't draw buildings and terrain behind the windows due to incorrect draw order
+unsigned const MAX_CYLIN_SIDES     = 36;
+float const WIND_LIGHT_ON_RAND     = 0.08;
 
 extern bool start_in_inf_terrain, draw_building_interiors;
 extern int rand_gen_index, display_mode;
@@ -1349,12 +1350,12 @@ void building_t::calc_bcube_from_parts() {
 
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
 
-	if (!EXACT_MULT_OF_FLOOR_HEIGHT) return;
+	if (!EXACT_MULT_FLOOR_HEIGHT) return;
 	float const floor_spacing(get_material().get_floor_spacing()), dz(c.dz());
 	assert(dz > 0.0 && floor_spacing > 0.0);
 	float const num_floors(dz/floor_spacing);
 	int const targ_num_floors(max(1, round_fp(num_floors)));
-	c.z2() += floor_spacing*targ_num_floors/num_floors; // ensure c.dz() is an exact multiple of num_floors
+	c.z2() += floor_spacing*(targ_num_floors - num_floors); // ensure c.dz() is an exact multiple of num_floors
 }
 
 void building_t::gen_geometry(int rseed1, int rseed2) {
@@ -1427,6 +1428,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			bc.z1() = base.z1(); // z1
 			bc.z2() = base.z1() + (i+1)*dz; // z2
 			if (i > 0) {bc.z2() += dz*rgen.rand_uniform(-0.5, 0.5); bc.z2() = min(bc.z2(), base.z2());}
+			adjust_part_zvals_for_floor_spacing(bc);
 			float const min_edge_mode(mat.no_city ? 0.04*i : 0.0); // prevent z-fighting on non-city building windows (stretched texture)
 
 			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to generate a cube that doesn't contain any existing cubes (can occasionally still fail)
@@ -1474,10 +1476,13 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	} // for i
 	for (unsigned i = 1; i < num_levels; ++i) {
 		float const ddz(rgen.rand_uniform(-0.35*dz, 0.35*dz)); // random shift in z height
-		parts[i].z1() += ddz;
-		adjust_part_zvals_for_floor_spacing(parts[i]);
-		parts[i-1].z2() = parts[i].z1();
+		parts[i-1].z2() += ddz;
+		adjust_part_zvals_for_floor_spacing(parts[i-1]);
+		parts[i].z1() = parts[i-1].z2(); // make top and bottom parts align
 	}
+	adjust_part_zvals_for_floor_spacing(parts[num_levels-1]); // last one
+	max_eq(bcube.z2(), parts[num_levels-1].z2()); // adjust bcube if needed
+
 	if (do_split) { // generate L, T, or U shape
 		cube_t const split_cube(parts.back());
 		parts.pop_back();
@@ -1777,7 +1782,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building bcube, so no bcube update is needed
 
-	return; // disabled until this is ready
+	if (!ADD_BUILDING_INTERIORS) return; // disabled
 	if (world_mode != WMODE_INF_TERRAIN) return; // tiled terrain mode only
 	if (!global_building_params.windows_enabled()) return; // no windows, can't assign floors and generate interior
 	if (is_house)   return; // not generating interior for houses now, only office buildings
@@ -1924,7 +1929,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 	else {color = mat.window_color;}
 	bool const clip_windows(mat.no_city); // only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
-	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_OF_FLOOR_HEIGHT ? (bcube.z1() + mat.get_floor_spacing()) : doors.front().pts[2].z));
+	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + mat.get_floor_spacing()) : doors.front().pts[2].z));
 
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		unsigned const part_ix(i - parts.begin());
