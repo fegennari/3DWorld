@@ -997,7 +997,7 @@ bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, po
 	vector3d cnorm;
 	unsigned cdir(0); // unused
 	point p_int;
-	if (!sphere_cube_intersect(pos, radius, cube, p_last, p_int, cnorm, cdir, 1)) return 0;
+	if (!sphere_cube_intersect(pos, radius, cube, p_last, p_int, cnorm, cdir, 1, skip_z)) return 0;
 	pos = p_int; // update current pos
 	if (cnorm_ptr) {*cnorm_ptr = cnorm;}
 	return 1;
