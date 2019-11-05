@@ -174,7 +174,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/dirt_normal.jpg", 0, 0, 2.0, 1
 texture_t(0, 6, 16,   16,   1, 3, 0, "cyan.png"), // for normal maps
 texture_t(0, 6, 16,   16,   1, 3, 0, "red.png"), // for TT default sand weights texture
 texture_t(0, 5, 0,    0,    1, 3, 1, "hazard_stripes.jpg", 0, 0, 4.0), // 500x500
-texture_t(1, 9, 256,  256,  1, 4, 1, "@windows", 0, 0, 4.0),  // not real file
+texture_t(1, 9, 256,  256,  1, 4, 1, "@windows" , 0, 0, 4.0),  // not real file
+texture_t(1, 9, 256,  256,  1, 4, 1, "@twindows", 0, 0, 4.0),  // not real file
 texture_t(0, 6, 0,    0,    1, 3, 1, "keycard.png", 0, 1, 4.0), // 512x512
 // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 };
@@ -296,7 +297,7 @@ void load_textures() {
 	}
 	for (unsigned i = 0; i < textures.size(); ++i) {
 		if (is_tex_disabled(i)) continue; // skip
-		if (i == BLDG_WINDOW_TEX || i == LANDSCAPE_TEX) continue; // not yet generated
+		if (i == BLDG_WINDOW_TEX || i == BLDG_WIND_TRANS_TEX || i == LANDSCAPE_TEX) continue; // not yet generated
 		textures[i].init();
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
@@ -1261,24 +1262,28 @@ void gen_wind_texture() {
 
 void gen_building_window_texture(float width_frac, float height_frac) { // Note: generated when needed, not during load
 
-	texture_t &tex(textures[BLDG_WINDOW_TEX]);
-	assert(textures[BLDG_WINDOW_TEX].ncolors == 4); // or 2 color grayscale + alpha?
-	unsigned char *tex_data(tex.get_data());
-	assert(width_frac  > 0.0 && width_frac  < 1.0);
-	assert(height_frac > 0.0 && height_frac < 1.0);
-	float const xspace(0.5*(1.0 - width_frac)), yspace(0.5*(1.0 - height_frac));
-	int const w1(round_fp(xspace*tex.width)), w2(round_fp((1.0 - xspace)*tex.width)), h1(round_fp(yspace*tex.height)), h2(round_fp((1.0 - yspace)*tex.height));
-	int const border(8), w1b(w1 - border), w2b(w2 + border), h1b(h1 - border), h2b(h2 + border); // window borders
+	for (unsigned n = 0; n < 2; ++n) { // generate both opaque and transparent building window textures
+		unsigned const tid(n ? (unsigned)BLDG_WIND_TRANS_TEX : (unsigned)BLDG_WINDOW_TEX);
+		texture_t &tex(textures[tid]);
+		assert(tex.ncolors == 4); // or 2 color grayscale + alpha?
+		unsigned char *tex_data(tex.get_data());
+		assert(width_frac  > 0.0 && width_frac  < 1.0);
+		assert(height_frac > 0.0 && height_frac < 1.0);
+		float const xspace(0.5*(1.0 - width_frac)), yspace(0.5*(1.0 - height_frac));
+		int const w1(round_fp(xspace*tex.width)), w2(round_fp((1.0 - xspace)*tex.width)), h1(round_fp(yspace*tex.height)), h2(round_fp((1.0 - yspace)*tex.height));
+		int const border(8 + n), w1b(w1 - border), w2b(w2 + border), h1b(h1 - border), h2b(h2 + border); // window borders
 
-	for (int i = 0; i < tex.height; ++i) {
-		for (int j = 0; j < tex.width; ++j) {
-			int const offset(4*(i*tex.width + j));
-			unsigned char luminance((i > h1 && i <= h2 && j > w1 && j <= w2) ? 128 : 255); // gray for window, white for border
-			UNROLL_3X(tex_data[offset+i_] = luminance;) // white
-			tex_data[offset+3] = ((i > h1b && i <= h2b && j > w1b && j <= w2b) ? 255 : 0); // opaque inside window and border, transparent outside
+		for (int i = 0; i < tex.height; ++i) {
+			for (int j = 0; j < tex.width; ++j) {
+				int const offset(4*(i*tex.width + j));
+				bool const pane(i > h1 && i <= h2 && j > w1 && j <= w2), frame(i > h1b && i <= h2b && j > w1b && j <= w2b);
+				unsigned char luminance(pane ? 128 : 255); // gray for window, white for border
+				UNROLL_3X(tex_data[offset+i_] = luminance;) // white
+				tex_data[offset+3] = (frame ? ((!pane || n==0) ? 255 : 32) : 0); // alpha: partially transparent inside window, opaque border, and transparent outside
+			}
 		}
-	}
-	tex.init(); // called later in the flow, init it now
+		tex.init(); // called later in the flow, init it now
+	} // for n
 }
 
 
