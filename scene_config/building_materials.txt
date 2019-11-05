@@ -14,8 +14,8 @@ buildings window_color 0.5 0.5 0.5 1.0 # gray
 buildings wall_color  1.0 1.0 1.0 1.0 # white
 buildings ceil_color  1.0 1.0 1.0 1.0 # white
 buildings floor_color 0.4 0.4 0.4 1.0 # gray
-buildings wall_tscale  8.0
-buildings ceil_tscale  4.0
+buildings wall_tscale  12.0
+buildings ceil_tscale   8.0
 buildings floor_tscale 16.0
 buildings wall_tid stucco.jpg
 buildings wall_nm_tid normal_maps/stucco_NRM.jpg
