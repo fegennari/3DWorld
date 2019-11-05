@@ -2317,6 +2317,13 @@ public:
 		s.end_shader();
 		fgPopMatrix();
 	}
+	static void multi_draw_no_shadows(vector<building_creator_t *> const &bcs, unsigned max_draw_ix) {
+		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, 0);} // non-smap pass, can skip tiles that will be drawn below
+			}
+		}
+	}
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
@@ -2343,40 +2350,15 @@ public:
 			}
 		}
 		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
+		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		fgPushMatrix();
 		translate_to(xlate);
 		glDepthFunc(GL_LEQUAL);
 
-		if (transparent_windows) { // depth pass for windows
-			// FIXME: this doesn't really work because we need glDepthFunc to be GL_LESS, but then building shadows aren't drawn properly
-			s.begin_simple_textured_shader(0.5);
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		}
-		// main/batched draw pass
-		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-		setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
-		
-		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, 0);} // non-smap pass, can skip tiles that will be drawn below
-			}
-		}
-		if (have_windows && !transparent_windows) { // draw windows
-			enable_blend();
-			glDepthMask(GL_FALSE); // disable depth writing
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
-			glDepthMask(GL_TRUE); // re-enable depth writing
-			disable_blend();
-		}
-		s.end_shader();
-
-		if (have_interior) { // draw building interiors with standard shader and now shadow maps
+		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
+		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
 			// TODO_INT: add room lights?
-			// TODO_INT: somehow not draw exterior of these buildings, or at least make windows transparent so the interior can be seen
 			setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 
@@ -2392,6 +2374,43 @@ public:
 			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 			s.end_shader();
 		}
+		// main/batched draw pass
+		setup_smoke_shaders(s, 0.0, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
+
+		if (transparent_windows) { // depth pass for windows
+			// draw back faces of buildings
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_FRONT);
+			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
+			multi_draw_no_shadows(bcs, max_draw_ix);
+			s.add_uniform_float("diffuse_scale", 1.0); // reset
+			s.disable();
+			glCullFace(GL_BACK); // draw front faces
+			// draw windows in depth pass to create holes
+			// TODO_INT: figure out how to draw window holes on back faces so that the player can look completely through buildings
+			shader_t holes_shader;
+			holes_shader.begin_simple_textured_shader(0.5);
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			holes_shader.end_shader();
+			// draw front faces of buildings
+			s.enable();
+			multi_draw_no_shadows(bcs, max_draw_ix);
+			glDisable(GL_CULL_FACE);
+		}
+		else { // normal drawing
+			multi_draw_no_shadows(bcs, max_draw_ix);
+		}
+		if (have_windows && !transparent_windows) { // draw windows
+			enable_blend();
+			glDepthMask(GL_FALSE); // disable depth writing
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
+			glDepthMask(GL_TRUE); // re-enable depth writing
+			disable_blend();
+		}
+		s.end_shader();
 
 		// post-pass to render buildings in nearby tiles that have shadow maps
 		if (use_tt_smap) {
