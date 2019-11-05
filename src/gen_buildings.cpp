@@ -1801,7 +1801,7 @@ void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building
 		float const floor_thickness(0.1*window_spacing), fc_thick(0.5*floor_thickness);
 		float const z_span(p->dz() - floor_thickness);
 		assert(z_span > 0.0);
-		unsigned const num_floors(floor(z_span/window_spacing)); // round down - no partial floors
+		unsigned const num_floors(round_fp(z_span/window_spacing)); // round down - no partial floors; add a slight ajustment to account for fp error
 		assert(num_floors <= 100); // sanity check
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		float z(p->z1());
