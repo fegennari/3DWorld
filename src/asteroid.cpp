@@ -28,8 +28,8 @@ float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader ast
 float    const AST_CLOUD_DIST_SCALE = 64.0;
 float    const AST_CLOUD_POS_RAND   = 0.75;
 
-auto const DEFAULT_AST_TEX      = MOON_TEX; // ROCK_TEX or MOON_TEX
-unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
+int const DEFAULT_AST_TEX    = MOON_TEX; // ROCK_TEX or MOON_TEX
+unsigned const comet_tids[2] = {ROCK_SPHERE_TEX, ICE_TEX};
 
 colorRGBA const ICE_ROCK_COLOR(0.6, 1.2, 1.5);
 
@@ -823,7 +823,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 	point_d const afpos(pos_ + pos);
 	bool const has_sun(set_af_color_from_system(afpos, radius, nullptr, nullptr, nullptr));
 	bool const is_ice(get_is_ice());
-	int const tid(is_ice ? MARBLE_TEX : DEFAULT_AST_TEX);
+	int const tid(is_ice ? (int)MARBLE_TEX : (int)DEFAULT_AST_TEX);
 	colorRGBA const base_color(is_ice ? ICE_ROCK_COLOR*0.7 : WHITE);
 	enable_blend(); // disable multisample?
 	shader_t shader;

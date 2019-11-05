@@ -1374,7 +1374,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	set_obj_specular(object_types[GRENADE].flags, brightness, shader);
 	fgPopMatrix();
 
-	float const stime(1.0 - float(time)/float(object_types[is_cgrenade ? CGRENADE : GRENADE].lifetime)), sval(0.2 + 0.8*stime);
+	float const stime(1.0 - float(time)/float(object_types[is_cgrenade ? (unsigned)CGRENADE : (unsigned)GRENADE].lifetime)), sval(0.2 + 0.8*stime);
 	vector3d const vr((orient.x == 0.0 && orient.y == 0.0) ? vector3d(1.0, 0.0, 0.0) : vector3d(orient.x, orient.y, 0.0));
 	vector3d vd(plus_z);
 	rotate_vector3d_norm(vr, -0.25*PI, vd);
