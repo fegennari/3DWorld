@@ -19,8 +19,8 @@ Building Interiors:
 * Create per tile rather than all at once for performance/memory?
 - Draw Interiors
   + User key
-  * Only nearby? Use bcube of nearest building/tile/tile group to cull in shader?
-  * See through building exteriors (alpha blending?)
+  - Only nearby? Use bcube of nearest building/tile/tile group to cull in shader?
+  * See through building exteriors
   + Make windows transparent using depth prepass
   + No sun/moon
   * Add room lights

@@ -495,7 +495,7 @@ struct building_t : public building_geom_t {
 	void add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
 	void gen_details(rand_gen_t &rgen);
-	void gen_interior(rand_gen_t &rgen);
+	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void gen_building_door_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
@@ -927,6 +927,9 @@ public:
 					vert.set_norm(n ? -normal : normal);
 					UNROLL_3X(verts[ix+i_].set_norm(vert);)
 					continue; // no windows/clipping
+				}
+				if (ADD_BUILDING_INTERIORS) {
+					// TODO_INT: clip walls to remove intersections: need to pass in parts
 				}
 				pt[d] = 0;
 				pt[i] = !j; // need to orient the vertices differently for each side
@@ -1422,7 +1425,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			gen_details(rgen);
 		}
 		gen_building_door_if_needed(rgen);
-		gen_interior(rgen);
+		gen_interior(rgen, 0);
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
@@ -1455,7 +1458,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		calc_bcube_from_parts(); // update bcube
 		gen_details(rgen);
 		gen_building_door_if_needed(rgen);
-		// no interior for these types of buildings for now
+		gen_interior(rgen, 1);
 		return;
 	}
 	for (unsigned i = 0; i < num_levels; ++i) {
@@ -1503,7 +1506,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if (num_levels <= 3) {gen_details(rgen);}
 	}
 	gen_building_door_if_needed(rgen);
-	gen_interior(rgen);
+	gen_interior(rgen, 0);
 }
 
 bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
@@ -1570,6 +1573,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		cube_t const pre_shrunk_p1(parts[1]); // save for use in details below
 		for (unsigned d = 0; d < 2; ++d) {parts[1].d[!dim][d] += shrink[d]*sz[!dim];} // shrink this part in the other dim
 		parts[1].z2() -= delta_height*parts[1].dz(); // lower height
+		if (ADD_BUILDING_INTERIORS) {adjust_part_zvals_for_floor_spacing(parts[1]);}
 		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
 		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim
 		int const detail_type((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
@@ -1667,6 +1671,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
+	gen_interior(rgen, 0);
 }
 
 void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) {
@@ -1790,22 +1795,25 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 }
 
 
-void building_t::gen_interior(rand_gen_t &rgen) { // Note: contained in building bcube, so no bcube update is needed
+void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
 	if (!ADD_BUILDING_INTERIORS) return; // disabled
 	if (world_mode != WMODE_INF_TERRAIN) return; // tiled terrain mode only
 	if (!global_building_params.windows_enabled()) return; // no windows, can't assign floors and generate interior
-	if (is_house)   return; // not generating interior for houses now, only office buildings
+	//if (has_overlapping_cubes) return; // overlapping cubes buildings are more difficult to handle
+	//if (is_house)   return; // not generating interior for houses now, only office buildings
 	if (!is_cube()) return; // only generate interiors for cube buildings for now
 	interior.reset(new building_interior_t);
 	building_mat_t const &mat(get_material());
+	if (!mat.add_windows) return; // not a building type that has generated windows (skip office buildings with windows baked into textures)
 	// defer this until the building is close to the player?
+	float const window_spacing(mat.get_floor_spacing());
+	float const floor_thickness(0.1*window_spacing), fc_thick(0.5*floor_thickness);
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
-	for (auto p = parts.begin(); p != parts.end(); ++p) {
-		float const window_spacing(mat.get_floor_spacing());
-		float const floor_thickness(0.1*window_spacing), fc_thick(0.5*floor_thickness);
+	for (auto p = parts.begin(); p != (parts.end() - has_chimney); ++p) {
+		if (is_house && (p - parts.begin()) > 1) break; // houses have at most two parts; exclude garage, shed, porch, porch support, etc.
 		float const z_span(p->dz() - floor_thickness);
 		assert(z_span > 0.0);
 		unsigned const num_floors(round_fp(z_span/window_spacing)); // round down - no partial floors; add a slight ajustment to account for fp error
@@ -2369,6 +2377,11 @@ public:
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 
+#if 1 // draw all interiors (less CPU time, more GPU time)
+			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_interior.draw_block(ix, 0);}
+			}
+#else // draw only nearby interiors (less GPU time, more CPU time)
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
@@ -2378,6 +2391,7 @@ public:
 					(*i)->building_draw_interior.draw_tile(tile_id);
 				} // for g
 			} // for i
+#endif
 			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 			s.end_shader();
 		}
