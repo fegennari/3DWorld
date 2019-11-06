@@ -21,7 +21,7 @@ Building Interiors:
   + User key
   * Only nearby? Use bcube of nearest building/tile/tile group to cull in shader?
   * See through building exteriors (alpha blending?)
-  * Make windows transparent somehow (depth prepass or texture?)
+  + Make windows transparent using depth prepass
   + No sun/moon
   * Add room lights
   + Disable grass on first floor of building
