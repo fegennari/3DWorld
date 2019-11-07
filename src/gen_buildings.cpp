@@ -867,7 +867,7 @@ public:
 		}
 	}
 
-	void add_section(building_geom_t const &bg, cube_t const &cube, cube_t const &bcube, float ao_bcz2, tid_nm_pair_t const &tex,
+	void add_section(building_geom_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2, tid_nm_pair_t const &tex,
 		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, bool clip_windows, float door_ztop=0.0, unsigned door_sides=0)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
@@ -895,7 +895,7 @@ public:
 		tex_vert_off.z = -bcube.z1();
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // direction of normal
+			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
 			if (!(dim_mask & (1<<n))) continue;
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
@@ -911,10 +911,11 @@ public:
 				else {
 					vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
-				unsigned const ix(verts.size()); // first vertex of this quad/triangle
-				point pt; pt[n] = j; // in direction of normal
+				point pt; // parameteric position within cube in [vec3(0), vec3(1)]
+				pt[n] = j; // our cube face, in direction of normal
 
-				if (bg.is_pointed) {
+				if (bg.is_pointed) { // antenna triangle; parts clipping doesn't apply to this case since there are no opposing cube faces
+					unsigned const ix(verts.size()); // first vertex of this triangle
 					assert(door_ztop == 0.0); // not supported
 					pt[!n] = !j; pt.z = 0;
 					EMIT_VERTEX(); // bottom low
@@ -928,42 +929,78 @@ public:
 					UNROLL_3X(verts[ix+i_].set_norm(vert);)
 					continue; // no windows/clipping
 				}
-				if (ADD_BUILDING_INTERIORS) {
-					// TODO_INT: clip walls to remove intersections: need to pass in parts
+				float dlo[2] = {0,0}, dhi[2] = {1,1}, ilo[2] = {0,0}, ihi[2] = {1,1};
+				unsigned num_segs(1);
+
+				if (ADD_BUILDING_INTERIORS && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
+					unsigned const xy(1 - n); // non-Z parameteric dim (the one we're clipping)
+					float &clo1((d == xy) ? dlo[0] : ilo[0]), &chi1((d == xy) ? dhi[0] : ihi[0]); // clip dim values (first  seg)
+					float &clo2((d == xy) ? dlo[1] : ilo[1]), &chi2((d == xy) ? dhi[1] : ihi[1]); // clip dim values (second seg)
+					bool drop(0);
+
+					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
+					for (auto p = parts.begin(); p != parts.end(); ++p) {
+						if (*p == cube) continue; // skip ourself
+						if (p->d[n][!j] != cube.d[n][j]) continue; // not opposing face
+						float const pxy1(p->d[xy][0]), pxy2(p->d[xy][1]), cxy1(cube.d[xy][0]), cxy2(cube.d[xy][1]); // end points used for clipping
+						if (pxy2 <= cxy1 || pxy1 >= cxy2) continue; // no overlap in XY dim
+						bool const cov_lo(pxy1 <= cxy1), cov_hi(pxy2 >= cxy2);
+						if (p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high); not sure if this can actually happen, will handle it if it does
+
+						if (p->z2() < cube.z2()) { // opposing cube doesn't cover this cube in Z (ceiling too low)
+							if (cov_lo && cov_hi) {} // clip in Z only
+							continue; // TODO_INT: split in Z for this case - may create multiple segs
+						}
+						if (cov_lo && cov_hi) {drop = 1; continue;} // fully contained - drop
+						// Note: we can get into the cov_lo and cov_hi cases for two different parts and both edges will be clipped
+						if      (cov_lo) {clo1 = (pxy2 - cxy1)/sz[xy];} // clip on lo side
+						else if (cov_hi) {chi1 = (pxy1 - cxy1)/sz[xy];} // clip on hi side
+						else { // clip on both sides and emit two quads
+							chi1 = (pxy1 - cxy1)/sz[xy]; // lo side, first  seg
+							clo2 = (pxy2 - cxy1)/sz[xy]; // hi side, second seg
+							num_segs = 2;
+							break; // I don't think any current building types can have another adjacency, and it's difficult to handle, so stop here
+						}
+					} // for p
+					if (drop) continue; // fully contained by opposing face, skip
+					assert(clo1 >= 0.0f && clo1 < chi1 && chi1 <= 1.0f && clo2 >= 0.0f && clo2 < chi2 && chi2 <= 1.0f); // sanity checks
 				}
-				pt[d] = 0;
-				pt[i] = !j; // need to orient the vertices differently for each side
-				//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
-				EMIT_VERTEX(); // 0 !j
-				pt[i] = j;
-				EMIT_VERTEX(); // 0 j
-				pt[d] = 1;
-				EMIT_VERTEX(); // 1 j
-				pt[i] = !j;
-				EMIT_VERTEX(); // 1 !j
+				for (unsigned seg = 0; seg < num_segs; ++seg) {
+					unsigned const ix(verts.size()); // first vertex of this quad
+					pt[d] = dlo[seg];
+					pt[i] = (j ? ilo : ihi)[seg]; // need to orient the vertices differently for each side
+					//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
+					EMIT_VERTEX(); // 0 !j
+					pt[i] = (j ? ihi : ilo)[seg];
+					EMIT_VERTEX(); // 0 j
+					pt[d] = dhi[seg];
+					EMIT_VERTEX(); // 1 j
+					pt[i] = (j ? ilo : ihi)[seg];
+					EMIT_VERTEX(); // 1 !j
 
-				if (door_sides & (1 << (2*n + j))) {
-					float const door_height(door_ztop - cube.z1()), offset(0.03*(j ? 1.0 : -1.0)*door_height);
-					assert(door_height > 0.0);
+					if (door_sides & (1 << (2*n + j))) { // clip zval to exclude door z-range
+						float const door_height(door_ztop - cube.z1()), offset(0.03*(j ? 1.0 : -1.0)*door_height);
+						assert(door_height > 0.0);
 
-					for (unsigned k = ix; k < ix+4; ++k) {
-						auto &v(verts[k]);
-						float const delta(door_ztop - v.v.z);
-						max_eq(v.v.z, door_ztop); // make all windows start above the door; TODO: add partial row of windows for first floor along this wall
-						v.v[n] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
-						if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
+						for (unsigned k = ix; k < ix+4; ++k) {
+							auto &v(verts[k]);
+							float const delta(door_ztop - v.v.z);
+							max_eq(v.v.z, door_ztop); // make all windows start above the door; TODO: add partial row of windows for first floor along this wall
+							v.v[n] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
+							if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
+						}
 					}
-				}
-				else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the house wall to avoid z-fighting
-					float const offset(0.005*(j ? 1.0 : -1.0)*sz.z);
-					for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
-				}
-				if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
-					clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
-					clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
-					clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
-					clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
-				}
+					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the house wall to avoid z-fighting
+						float const offset(0.005*(j ? 1.0 : -1.0)*sz.z);
+						for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
+					}
+					if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
+						clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
+						clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
+						clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
+						clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
+					}
+				} // for seg
 			} // for j
 		} // for i
 	}
@@ -1893,11 +1930,11 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 	if (get_exterior) { // exterior building parts
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
-			bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
+			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
 			bool const is_stacked(!is_house && num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
-			bdraw.add_section(*this, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
+			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
 		}
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 			bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF);
@@ -1906,7 +1943,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 			building_geom_t bg(4, rot_sin, rot_cos); // cube
 			bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
-			bdraw.add_section(bg, *i, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5), detail_color*(bg.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
+			bdraw.add_section(bg, vect_cube_t(), *i, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5),
+				detail_color*(bg.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
 		}
 		// doors are both interior and exterior so are always drawn; but maybe they should be drawn only in the exterior block to avoid drawing twice when both passes are enabled?
 		for (auto i = doors.begin(); i != doors.end(); ++i) {
@@ -1919,13 +1957,13 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		// how do we skip drawing of the building exterior when the player is close to and enters the building?
 		// make windows transparent?
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
+			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
 		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
-			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
+			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
 		}
 		for (auto i = interior->walls.begin(); i != interior->walls.end(); ++i) {
-			bdraw.add_section(*this, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; XY dims only
+			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; XY dims only
 		}
 	}
 }
@@ -1952,7 +1990,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		unsigned const part_ix(i - parts.begin());
 		unsigned const door_sides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
-		bdraw.add_section(*this, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, door_sides); // XY, no_ao=1
+		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, door_sides); // XY, no_ao=1
 	}
 }
 
