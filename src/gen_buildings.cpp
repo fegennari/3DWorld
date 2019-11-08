@@ -929,14 +929,19 @@ public:
 					UNROLL_3X(verts[ix+i_].set_norm(vert);)
 					continue; // no windows/clipping
 				}
-				float dlo[2] = {0,0}, dhi[2] = {1,1}, ilo[2] = {0,0}, ihi[2] = {1,1};
-				unsigned num_segs(1);
+				struct wall_seg_t {
+					float dlo, dhi, ilo, ihi;
+					bool enabled;
+					wall_seg_t() : dlo(0), dhi(1), ilo(0), ihi(1), enabled(0) {}
+					void check_valid() const {assert(dlo >= 0.0f && dlo < dhi && dhi <= 1.0f); assert(ilo >= 0.0f && ilo < ihi && ihi <= 1.0f);} // sanity check
+				};
+				wall_seg_t segs[3]; // lo, hi, top
+				segs[0].enabled = 1; // default is first segment used only
 
 				if (ADD_BUILDING_INTERIORS && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
 					unsigned const xy(1 - n); // non-Z parameteric dim (the one we're clipping)
-					float &clo1((d == xy) ? dlo[0] : ilo[0]), &chi1((d == xy) ? dhi[0] : ihi[0]); // clip dim values (first  seg)
-					float &clo2((d == xy) ? dlo[1] : ilo[1]), &chi2((d == xy) ? dhi[1] : ihi[1]); // clip dim values (second seg)
-					bool drop(0);
+					float &clo1((d == xy) ? segs[0].dlo : segs[0].ilo), &chi1((d == xy) ? segs[0].dhi : segs[0].ihi); // clip dim values (first  seg)
+					float &clo2((d == xy) ? segs[1].dlo : segs[1].ilo), &chi2((d == xy) ? segs[1].dhi : segs[1].ihi); // clip dim values (second seg)
 
 					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
 					for (auto p = parts.begin(); p != parts.end(); ++p) {
@@ -944,38 +949,41 @@ public:
 						if (p->d[n][!j] != cube.d[n][j]) continue; // not opposing face
 						float const pxy1(p->d[xy][0]), pxy2(p->d[xy][1]), cxy1(cube.d[xy][0]), cxy2(cube.d[xy][1]); // end points used for clipping
 						if (pxy2 <= cxy1 || pxy1 >= cxy2) continue; // no overlap in XY dim
-						bool const cov_lo(pxy1 <= cxy1), cov_hi(pxy2 >= cxy2);
 						if (p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high); not sure if this can actually happen, will handle it if it does
 
-						if (p->z2() < cube.z2()) { // opposing cube doesn't cover this cube in Z (ceiling too low)
-							if (cov_lo && cov_hi) {} // clip in Z only
-							continue; // TODO_INT: split in Z for this case - may create multiple segs
+						if (p->z2() < cube.z2()) { // opposing cube doesn't cover this cube in Z (ceiling too low); this should only happen for one part
+							if (segs[2].enabled) continue; // already have a Z segment - ignore split (can this happen?)
+							segs[2] = segs[0]; // copy from first segment (likely still [0,1]), will set enabled=1
+							float const z_split((p->z2() - cube.z1())/sz.z); // parametric value of Z split point
+							if (d == xy) {segs[0].ihi = segs[1].ihi = segs[2].ilo = z_split;} else {segs[0].dhi = segs[1].dhi = segs[2].dlo = z_split;} // adjust Z dim
 						}
-						if (cov_lo && cov_hi) {drop = 1; continue;} // fully contained - drop
+						bool const cov_lo(pxy1 <= cxy1), cov_hi(pxy2 >= cxy2);
+						if (cov_lo && cov_hi) {segs[0].enabled = 0; continue;} // fully contained - drop
 						// Note: we can get into the cov_lo and cov_hi cases for two different parts and both edges will be clipped
 						if      (cov_lo) {clo1 = (pxy2 - cxy1)/sz[xy];} // clip on lo side
 						else if (cov_hi) {chi1 = (pxy1 - cxy1)/sz[xy];} // clip on hi side
 						else { // clip on both sides and emit two quads
 							chi1 = (pxy1 - cxy1)/sz[xy]; // lo side, first  seg
 							clo2 = (pxy2 - cxy1)/sz[xy]; // hi side, second seg
-							num_segs = 2;
+							segs[1].enabled = 1;
 							break; // I don't think any current building types can have another adjacency, and it's difficult to handle, so stop here
 						}
 					} // for p
-					if (drop) continue; // fully contained by opposing face, skip
-					assert(clo1 >= 0.0f && clo1 < chi1 && chi1 <= 1.0f && clo2 >= 0.0f && clo2 < chi2 && chi2 <= 1.0f); // sanity checks
-				}
-				for (unsigned seg = 0; seg < num_segs; ++seg) {
+				} // end wall clipping
+				for (unsigned s = 0; s < 3; ++s) {
+					wall_seg_t const &seg(segs[s]);
+					if (!seg.enabled) continue; // this segment unused
+					seg.check_valid();
 					unsigned const ix(verts.size()); // first vertex of this quad
-					pt[d] = dlo[seg];
-					pt[i] = (j ? ilo : ihi)[seg]; // need to orient the vertices differently for each side
+					pt[d] = seg.dlo;
+					pt[i] = (j ? seg.ilo : seg.ihi); // need to orient the vertices differently for each side
 					//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
 					EMIT_VERTEX(); // 0 !j
-					pt[i] = (j ? ihi : ilo)[seg];
+					pt[i] = (j ? seg.ihi : seg.ilo);
 					EMIT_VERTEX(); // 0 j
-					pt[d] = dhi[seg];
+					pt[d] = seg.dhi;
 					EMIT_VERTEX(); // 1 j
-					pt[i] = (j ? ilo : ihi)[seg];
+					pt[i] = (j ? seg.ilo : seg.ihi);
 					EMIT_VERTEX(); // 1 !j
 
 					if (door_sides & (1 << (2*n + j))) { // clip zval to exclude door z-range
@@ -1000,7 +1008,7 @@ public:
 						clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
 						clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
 					}
-				} // for seg
+				} // for seg s
 			} // for j
 		} // for i
 	}
