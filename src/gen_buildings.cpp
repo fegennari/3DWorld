@@ -933,7 +933,11 @@ public:
 					float dlo, dhi, ilo, ihi;
 					bool enabled;
 					wall_seg_t() : dlo(0), dhi(1), ilo(0), ihi(1), enabled(0) {}
-					void check_valid() const {assert(dlo >= 0.0f && dlo < dhi && dhi <= 1.0f); assert(ilo >= 0.0f && ilo < ihi && ihi <= 1.0f);} // sanity check
+					
+					void finalize() {
+						if (dlo >= dhi || ilo >= ihi) {enabled = 0;} // clipped to zero area (can happen in buildings with overlapping cubes)
+						assert(dlo >= 0.0f && dhi <= 1.0f && ilo >= 0.0f && ihi <= 1.0f);
+					}
 				};
 				wall_seg_t segs[3]; // lo, hi, top
 				segs[0].enabled = 1; // default is first segment used only
@@ -946,15 +950,18 @@ public:
 					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
 					for (auto p = parts.begin(); p != parts.end(); ++p) {
 						if (*p == cube) continue; // skip ourself
-						if (p->d[n][!j] != cube.d[n][j]) continue; // not opposing face
+						float const face_val(cube.d[n][j]);
+						if (p->d[n][!j] != face_val && (p->d[n][0] >= face_val || p->d[n][1] <= face_val)) continue; // face not contained in dir of normal (inc opposing aligned val)
 						float const pxy1(p->d[xy][0]), pxy2(p->d[xy][1]), cxy1(cube.d[xy][0]), cxy2(cube.d[xy][1]); // end points used for clipping
 						if (pxy2 <= cxy1 || pxy1 >= cxy2) continue; // no overlap in XY dim
-						if (p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high); not sure if this can actually happen, will handle it if it does
+						if (p->z2() <= cube.z1() || cube.z2() <= p->z1()) continue; // no overlap in Z
+						if (p->z1() >  cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high); not sure if this can actually happen, will handle it if it does
 
 						if (p->z2() < cube.z2()) { // opposing cube doesn't cover this cube in Z (ceiling too low); this should only happen for one part
 							if (segs[2].enabled) continue; // already have a Z segment - ignore split (can this happen?)
 							segs[2] = segs[0]; // copy from first segment (likely still [0,1]), will set enabled=1
 							float const z_split((p->z2() - cube.z1())/sz.z); // parametric value of Z split point
+							assert(z_split >= 0.0 && z_split <= 1.0);
 							if (d == xy) {segs[0].ihi = segs[1].ihi = segs[2].ilo = z_split;} else {segs[0].dhi = segs[1].dhi = segs[2].dlo = z_split;} // adjust Z dim
 						}
 						bool const cov_lo(pxy1 <= cxy1), cov_hi(pxy2 >= cxy2);
@@ -965,15 +972,17 @@ public:
 						else { // clip on both sides and emit two quads
 							chi1 = (pxy1 - cxy1)/sz[xy]; // lo side, first  seg
 							clo2 = (pxy2 - cxy1)/sz[xy]; // hi side, second seg
+							assert(chi1 >= 0.0 && chi1 <= 1.0);
+							assert(clo2 >= 0.0 && clo2 <= 1.0);
 							segs[1].enabled = 1;
 							break; // I don't think any current building types can have another adjacency, and it's difficult to handle, so stop here
 						}
 					} // for p
 				} // end wall clipping
 				for (unsigned s = 0; s < 3; ++s) {
-					wall_seg_t const &seg(segs[s]);
+					wall_seg_t &seg(segs[s]);
+					seg.finalize();
 					if (!seg.enabled) continue; // this segment unused
-					seg.check_valid();
 					unsigned const ix(verts.size()); // first vertex of this quad
 					pt[d] = seg.dlo;
 					pt[i] = (j ? seg.ilo : seg.ihi); // need to orient the vertices differently for each side
@@ -1747,14 +1756,15 @@ float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim
 	// TODO: extend outside the wall a small amount? may require updating bcube for drawing
 	for (unsigned n = 0; n < 2; ++n) { // roof
 		tquad_t tquad(4); // quad
-		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];)
+		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];);
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF); // tag as roof
 	}
 	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
 
 	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
 		tquad_t tquad(3); // triangle
-		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];)
+		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];);
+		for (auto p = parts.begin(); p != parts.end(); ++p) {} // TODO_INT: exclude tquads contained in parts
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_WALL); // tag as wall
 	}
 	return roof_dz;
