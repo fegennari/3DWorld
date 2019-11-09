@@ -12,19 +12,12 @@ Cities:
 - Fences
 
 Building Interiors:
-+ Floor/ceiling/wall textures
-+ Create Ceilings/Floors
 * Create Walls
 - Create furniture and other details
 * Create per tile rather than all at once for performance/memory?
 - Draw Interiors
-  + User key
   - Only nearby? Use bcube of nearest building/tile/tile group to cull in shader?
   * See through building exteriors
-  + Make windows transparent using depth prepass
-  + No sun/moon
   * Add room lights
-  + Disable grass on first floor of building
-  + Remove parts of exterior building walls that are inside the building
 - Player can enter buildings
 - Player can open doors?
