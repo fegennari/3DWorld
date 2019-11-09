@@ -1762,11 +1762,19 @@ float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim
 	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
 
 	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
+		bool skip(0);
+
+		// exclude tquads contained in/adjacent to other parts, considering only the cube parts;
+		// yes, a triangle side can be occluded by a cube + another opposing triangle side from a higher wall of the house, but it's uncommon, complex, and currently ignored
+		for (auto p = parts.begin(); p != parts.end(); ++p) {
+			if (p->d[dim][!n] != top.d[dim][n]) continue; // not the opposing face
+			if (p->z1() <= z1 && p->z2() >= z2 && p->d[!dim][0] <= top.d[!dim][0] && p->d[!dim][1] >= top.d[!dim][1]) {skip = 1; break;}
+		}
+		if (skip) continue;
 		tquad_t tquad(3); // triangle
 		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];);
-		for (auto p = parts.begin(); p != parts.end(); ++p) {} // TODO_INT: exclude tquads contained in parts
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_WALL); // tag as wall
-	}
+	} // for n
 	return roof_dz;
 }
 
