@@ -1884,10 +1884,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	if (!global_building_params.windows_enabled()) return; // no windows, can't assign floors and generate interior
 	//if (has_overlapping_cubes) return; // overlapping cubes buildings are more difficult to handle
 	if (!is_cube()) return; // only generate interiors for cube buildings for now
-	interior.reset(new building_interior_t);
 	building_mat_t const &mat(get_material());
 	if (!mat.add_windows) return; // not a building type that has generated windows (skip office buildings with windows baked into textures)
 	// defer this until the building is close to the player?
+	interior.reset(new building_interior_t);
 	float const window_spacing(mat.get_floor_spacing());
 	float const floor_thickness(0.1*window_spacing), fc_thick(0.5*floor_thickness);
 	float const doorway_width(0.5*window_spacing), doorway_hwidth(0.5*doorway_width);
