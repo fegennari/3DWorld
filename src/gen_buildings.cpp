@@ -1649,8 +1649,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			}
 			if (detail_type == 1) { // porch
 				float const width(0.05f*(fabs(dist1) + fabs(dist2))); // width of support pillar
-				c.d[!dim][dir2] += dist1; // move away from bcube edge
-				c.d[ dim][ dir] += dist2; // move away from bcube edge
+				c.d[!dim][dir2 ] += dist1; // move away from bcube edge
+				c.d[ dim][ dir ] += dist2; // move away from bcube edge
+				c.d[!dim][!dir2] -= 0.001*dist1; // adjust slightly so it's not exactly adjacent to the house and won't be considered internal face removal logic
+				c.d[ dim][ !dir] -= 0.001*dist2;
 				c.z1() += height; // move up
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
 				parts.push_back(c); // porch roof
