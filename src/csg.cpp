@@ -57,7 +57,7 @@ void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subt
 		vals[i][0] = rr.d[i][0];
 
 		for (unsigned j = 0; j < 2; ++j) {
-			if (d[i][j] > rr.d[i][0] && d[i][j] < rr.d[i][1]) vals[i][++n[i]] = d[i][j];
+			if (d[i][j] > rr.d[i][0] && d[i][j] < rr.d[i][1]) {vals[i][++n[i]] = d[i][j];}
 		}
 		vals[i][++n[i]] = rr.d[i][1];
 	}
@@ -66,9 +66,7 @@ void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subt
 	for (i2[0] = 0; i2[0] < n[0]; ++i2[0]) {
 		for (i2[1] = 0; i2[1] < n[1]; ++i2[1]) {
 			float pt[2];
-			for (unsigned l = 0; l < 2; ++l) { // pt is the center of this pixel
-				pt[l] = 0.5f*(vals[l][i2[l]] + vals[l][i2[l]+1]);
-			}
+			for (unsigned l = 0; l < 2; ++l) {pt[l] = 0.5f*(vals[l][i2[l]] + vals[l][i2[l]+1]);} // pt is the center of this pixel
 			vox[i2[0]][i2[1]] = !contains_pt(pt);
 		}
 	}
@@ -81,19 +79,14 @@ void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subt
 			bool all_in(1);
 
 			for (i2[d1] = 0; i2[d1] < n[d1] && all_in; ++i2[d1]) {
-				if (!vox[i2[0]][i2[1]]) all_in = 0;
+				if (!vox[i2[0]][i2[1]]) {all_in = 0;}
 			}
 			if (all_in) {
 				for (unsigned l = 0; l < 2; ++l) {
-					for (unsigned m = 0; m < 2; ++m) {
-						r2.d[l][m] = ((l == dim) ? vals[l][i2[l]+m] : rr.d[l][m]); // slice dimensions
-					}
+					for (unsigned m = 0; m < 2; ++m) {r2.d[l][m] = ((l == dim) ? vals[l][i2[l]+m] : rr.d[l][m]);} // slice dimensions
 				}
-				if (!r2.is_near_zero_area()) new_rects.push_back(r2);
-
-				for (i2[d1] = 0; i2[d1] < n[d1]; ++i2[d1]) {
-					vox[i2[0]][i2[1]] = 0; // remove pixel
-				}
+				if (!r2.is_near_zero_area()) {new_rects.push_back(r2);}
+				for (i2[d1] = 0; i2[d1] < n[d1]; ++i2[d1]) {vox[i2[0]][i2[1]] = 0;} // remove pixels
 			}
 		}
 	}
@@ -103,11 +96,9 @@ void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subt
 		for (i2[1] = 0; i2[1] < n[1]; ++i2[1]) {
 			if (vox[i2[0]][i2[1]]) {
 				for (unsigned l = 0; l < 2; ++l) {
-					for (unsigned m = 0; m < 2; ++m) {
-						r2.d[l][m] = vals[l][i2[l]+m];
-					}
+					for (unsigned m = 0; m < 2; ++m) {r2.d[l][m] = vals[l][i2[l]+m];}
 				}
-				if (!r2.is_near_zero_area()) new_rects.push_back(r2);
+				if (!r2.is_near_zero_area()) {new_rects.push_back(r2);}
 			}
 		}
 	}
@@ -285,7 +276,7 @@ bool cube_t::cube_merge(cube_t const &cube) { // simplified version of csg_cube:
 	for (unsigned i = 0; i < 3; ++i) { // check compatability
 		compat[i] = 1;
 		for (unsigned j = 0; j < 2; ++j) {
-			if (cube.d[i][j] != d[i][j]) compat[i] = 0;
+			if (cube.d[i][j] != d[i][j]) {compat[i] = 0;}
 		}
 		if (compat[i]) ++nc; else ci = i;
 	}
@@ -359,7 +350,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 		vals[i][0] = cube.d[i][0];
 
 		for (unsigned j = 0; j < 2; ++j) {
-			if (d[i][j] > (cube.d[i][0] + TOLER) && d[i][j] < (cube.d[i][1] - TOLER)) vals[i][++n[i]] = d[i][j];
+			if (d[i][j] > (cube.d[i][0] + TOLER) && d[i][j] < (cube.d[i][1] - TOLER)) {vals[i][++n[i]] = d[i][j];}
 		}
 		vals[i][++n[i]] = cube.d[i][1];
 	}
@@ -369,9 +360,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 		for (i3[1] = 0; i3[1] < n[1]; ++i3[1]) {
 			for (i3[2] = 0; i3[2] < n[2]; ++i3[2]) {
 				point pt;
-				for (unsigned l = 0; l < 3; ++l) { // pt is the center of this voxel
-					pt[l] = 0.5f*(vals[l][i3[l]] + vals[l][i3[l]+1]);
-				}
+				for (unsigned l = 0; l < 3; ++l) {pt[l] = 0.5f*(vals[l][i3[l]] + vals[l][i3[l]+1]);} // pt is the center of this voxel
 				vox[i3[0]][i3[1]][i3[2]] = !contains_pt(pt);
 			}
 		}
@@ -387,7 +376,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 
 				for (i3[d1] = 0; i3[d1] < n[d1] && all_in; ++i3[d1]) {
 					for (i3[d2] = 0; i3[d2] < n[d2] && all_in; ++i3[d2]) {
-						if (!vox[i3[0]][i3[1]][i3[2]]) all_in = 0;
+						if (!vox[i3[0]][i3[1]][i3[2]]) {all_in = 0;}
 					}
 				}
 				if (all_in) { // full 2D slice
@@ -404,9 +393,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 					output.push_back(ncube);
 
 					for (i3[d1] = 0; i3[d1] < n[d1]; ++i3[d1]) {
-						for (i3[d2] = 0; i3[d2] < n[d2]; ++i3[d2]) {
-							vox[i3[0]][i3[1]][i3[2]] = 0; // remove voxel
-						}
+						for (i3[d2] = 0; i3[d2] < n[d2]; ++i3[d2]) {vox[i3[0]][i3[1]][i3[2]] = 0;} // remove voxels
 					}
 				}
 			}
@@ -423,30 +410,26 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 				for (unsigned l = 0; l < 3; ++l) { // set edge flags to remove inside faces
 					assert(n[l] > 0 && n[l] <= 3);
 					if (i3[l] > 0) {
-						if (vox[i3[0]-u[0][l]][i3[1]-u[1][l]][i3[2]-u[2][l]]) edgeflags |= EFLAGS[l][0];
-					}
-					else edgeflags |= (cube.eflags & EFLAGS[l][0]);
+						if (vox[i3[0]-u[0][l]][i3[1]-u[1][l]][i3[2]-u[2][l]]) {edgeflags |= EFLAGS[l][0];}
+					} else {edgeflags |= (cube.eflags & EFLAGS[l][0]);}
 					
 					if (i3[l] < n[l]-1) {
-						if (vox[i3[0]+u[0][l]][i3[1]+u[1][l]][i3[2]+u[2][l]]) edgeflags |= EFLAGS[l][1];
-					}
-					else edgeflags |= (cube.eflags & EFLAGS[l][1]);
+						if (vox[i3[0]+u[0][l]][i3[1]+u[1][l]][i3[2]+u[2][l]]) {edgeflags |= EFLAGS[l][1];}
+					} else {edgeflags |= (cube.eflags & EFLAGS[l][1]);}
 				}
 				csg_cube ncube(edgeflags);
 				
 				for (unsigned l = 0; l < 3; ++l) {
-					for (unsigned m = 0; m < 2; ++m) {
-						ncube.d[l][m] = vals[l][i3[l]+m];
-					}
+					for (unsigned m = 0; m < 2; ++m) {ncube.d[l][m] = vals[l][i3[l]+m];}
 				}
 				if (do_merge) {
 					bool merged(0);
 					for (unsigned c = 0; c < output.size() && !merged; ++c) {
-						if (output[c].cube_merge(ncube)) merged = 1;
+						if (output[c].cube_merge(ncube)) {merged = 1;}
 					}
 					if (merged) continue;
 				}
-				if (!ncube.is_near_zero_area()) output.push_back(ncube);
+				if (!ncube.is_near_zero_area()) {output.push_back(ncube);}
 			}
 		}
 	}
@@ -722,7 +705,7 @@ bool csg_cube::cube_merge(csg_cube &cube) {
 		compat[i] = 1;
 		for (unsigned j = 0; j < 2; ++j) {
 			if (cube.d[i][j] != d[i][j]) compat[i] = 0;
-			else if (EFLAGS_STRICT && ((cube.eflags ^ eflags) & EFLAGS[i][j])) compat[i] = 0;
+			else if (EFLAGS_STRICT && ((cube.eflags ^ eflags) & EFLAGS[i][j])) {compat[i] = 0;}
 		}
 		if (compat[i]) ++nc; else ci = i;
 	}
@@ -730,7 +713,7 @@ bool csg_cube::cube_merge(csg_cube &cube) {
 		if (nc == 3) { // same cube, remove it
 			for (unsigned i = 0; i < 3; ++i) { // merge edge flags
 				for (unsigned j = 0; j < 2; ++j) {
-					if (!(cube.eflags & EFLAGS[i][j])) eflags &= ~EFLAGS[i][j];
+					if (!(cube.eflags & EFLAGS[i][j])) {eflags &= ~EFLAGS[i][j];}
 				}
 			}
 			return 1;
@@ -749,7 +732,7 @@ bool csg_cube::cube_merge(csg_cube &cube) {
 				for (unsigned j = 0; j < 3; ++j) { // set shared edge flags
 					if (j != ci) {
 						for (unsigned k = 0; k < 2; ++k) {
-							if (!(cube.eflags & EFLAGS[j][k])) eflags &= ~EFLAGS[j][k];
+							if (!(cube.eflags & EFLAGS[j][k])) {eflags &= ~EFLAGS[j][k];}
 						}
 					}
 				}
@@ -768,18 +751,13 @@ bool csg_cube::cube_merge(csg_cube &cube) {
 					for (unsigned k = 0; k < 3; ++k) {
 						if (k == i) continue;
 						for (unsigned l = 0; l < 2; ++l) {
-							if (cube.d[k][l] < d[k][l]) contained[ l] = 0;
-							if (cube.d[k][l] > d[k][l]) contained[!l] = 0;
+							if (cube.d[k][l] < d[k][l]) {contained[ l] = 0;}
+							if (cube.d[k][l] > d[k][l]) {contained[!l] = 0;}
 						}
 					}
 					assert(!(contained[0] && contained[1])); // nc should be at least 2 if we get here
-					
-					if (contained[0]) {
-						cube.eflags |= EFLAGS[i][j];
-					}
-					else if (contained[1]) {
-						eflags |= EFLAGS[i][!j];
-					}
+					if (contained[0]) {cube.eflags |= EFLAGS[i][j];}
+					else if (contained[1]) {eflags |= EFLAGS[i][!j];}
 				}
 			}
 		}
@@ -798,12 +776,9 @@ void csg_cube::unset_adjacent_edge_flags(coll_obj &cobj) const {
 				bool overlaps(1);
 
 				for (unsigned k = 0; k < 3 && !overlaps; ++k) {
-					if (k != i && (d[k][0] >= cobj.d[k][1] || d[k][1] <= cobj.d[k][0])) overlaps = 0;
+					if (k != i && (d[k][0] >= cobj.d[k][1] || d[k][1] <= cobj.d[k][0])) {overlaps = 0;}
 				}
-				if (overlaps) {
-					cobj.cp.surfs &= ~EFLAGS[i][!j];
-					return;
-				}
+				if (overlaps) {cobj.cp.surfs &= ~EFLAGS[i][!j]; return;}
 			}
 		}
 	}
@@ -820,7 +795,7 @@ void csg_cube::unset_intersecting_edge_flags(coll_obj &cobj) const {
 				bool overlaps(1);
 
 				for (unsigned k = 0; k < 3 && !overlaps; ++k) {
-					if (k != i && (d[k][0] >= cobj.d[k][1] || d[k][1] <= cobj.d[k][0])) overlaps = 0;
+					if (k != i && (d[k][0] >= cobj.d[k][1] || d[k][1] <= cobj.d[k][0])) {overlaps = 0;}
 				}
 				if (overlaps) {cobj.cp.surfs &= ~EFLAGS[i][!j];}
 			}
@@ -837,7 +812,7 @@ void coll_obj_group::remove_invalid_cobjs() {
 	coll_obj_group cobjs2;
 
 	for (size_t i = 0; i < size(); ++i) { // create new shapes vector with bad shapes removed
-		if ((*this)[i].type != COLL_INVALID) cobjs2.push_back((*this)[i]);
+		if ((*this)[i].type != COLL_INVALID) {cobjs2.push_back((*this)[i]);}
 	}
 	this->swap(cobjs2);
 }
@@ -911,9 +886,7 @@ void coll_obj_group::remove_overlapping_cubes(int min_split_destroy_thresh) { //
 	vector<pair<unsigned, unsigned> > proc_order;
 		
 	for (unsigned i = 0; i < ncobjs; ++i) {
-		if ((*this)[i].type == COLL_CUBE && (*this)[i].destroy >= min_split_destroy_thresh) {
-			proc_order.push_back(make_pair((*this)[i].id, i));
-		}
+		if ((*this)[i].type == COLL_CUBE && (*this)[i].destroy >= min_split_destroy_thresh) {proc_order.push_back(make_pair((*this)[i].id, i));}
 	}
 	if (proc_order.empty()) return; // nothing to do
 	sort(proc_order.begin(), proc_order.end());
@@ -945,12 +918,8 @@ void coll_obj_group::remove_overlapping_cubes(int min_split_destroy_thresh) { //
 			csg_cube sub_cube((*this)[j]);
 
 			for (coll_obj_group::const_iterator c = cur_cobjs.begin(); c != cur_cobjs.end(); ++c) {
-				if (sub_cube.subtract_from_cube(next_cobjs, *c)) {
-					was_removed = overlaps = 1;
-				}
-				else { // didn't overlap
-					next_cobjs.push_back(*c);
-				}
+				if (sub_cube.subtract_from_cube(next_cobjs, *c)) {was_removed = overlaps = 1;}
+				else {next_cobjs.push_back(*c);} // didn't overlap
 			}
 			cur_cobjs.clear();
 			cur_cobjs.swap(next_cobjs);
@@ -978,11 +947,8 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 
 	if (type == COLL_CUBE) {
 		removed = cube.subtract_from_cube(new_cobjs, *this);
-		if (!removed) cube.unset_adjacent_edge_flags(*this); // check adjacency and possibly remove some edge flags
-
-		for (unsigned i = 0; i < new_cobjs.size(); ++i) {
-			cube.unset_adjacent_edge_flags(new_cobjs[i]); // is this necessary?
-		}
+		if (!removed) {cube.unset_adjacent_edge_flags(*this);} // check adjacency and possibly remove some edge flags
+		for (unsigned i = 0; i < new_cobjs.size(); ++i) {cube.unset_adjacent_edge_flags(new_cobjs[i]);} // is this necessary?
 	}
 	else if (cube.contains_cube(*this)) {
 		removed = 1; // completely contained
@@ -991,12 +957,8 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 		removed = cube.subtract_from_cylinder(new_cobjs, *this);
 	}
 	else if (include_polys && type == COLL_POLYGON) {
-		if (is_thin_poly()) {
-			removed = cube.subtract_from_polygon(new_cobjs, *this);
-		}
-		else {
-			removed = cube.subtract_from_thick_polygon(new_cobjs, *this); // implemented but not yet finished
-		}
+		if (is_thin_poly()) {removed = cube.subtract_from_polygon(new_cobjs, *this);}
+		else {removed = cube.subtract_from_thick_polygon(new_cobjs, *this);} // implemented but not yet finished
 	}
 	return removed;
 }
@@ -1079,14 +1041,12 @@ void coll_obj_group::subdiv_cubes() {
 			coll_obj const &c((*this)[v[j]]);
 
 			for (unsigned d = 0; d < 3; ++d) {
-				for (unsigned e = 0; e < 2; ++e) {
-					splits[d].insert(c.d[d][e]);
-				}
+				for (unsigned e = 0; e < 2; ++e) {splits[d].insert(c.d[d][e]);}
 			}
 		}
 		for (unsigned d = 0; d < 3; ++d) {
 			for (set<double>::const_iterator s = splits[d].begin(); s != splits[d].end(); ++s) {
-				if (svals[d].empty() || (*s - svals[d].back()) > TOLER) svals[d].push_back(*s); // skip elements that are near equal
+				if (svals[d].empty() || (*s - svals[d].back()) > TOLER) {svals[d].push_back(*s);} // skip elements that are near equal
 			}
 			assert(svals[d].size() > 1);
 		}
@@ -1095,9 +1055,7 @@ void coll_obj_group::subdiv_cubes() {
 			unsigned bounds[3][2], tot_parts(1);
 
 			for (unsigned d = 0; d < 3; ++d) {
-				for (unsigned e = 0; e < 2; ++e) {
-					bounds[d][e] = get_closest_val_index(c.d[d][e], svals[d]);
-				}
+				for (unsigned e = 0; e < 2; ++e) {bounds[d][e] = get_closest_val_index(c.d[d][e], svals[d]);}
 				assert(bounds[d][0] < bounds[d][1] && bounds[d][1] < svals[d].size());
 				tot_parts *= (bounds[d][1] - bounds[d][0]);
 			}
@@ -1112,10 +1070,7 @@ void coll_obj_group::subdiv_cubes() {
 
 						for (unsigned d = 0; d < 3; ++d) {
 							assert(xyz[d]+1 < svals[d].size());
-
-							for (unsigned e = 0; e < 2; ++e) {
-								back().d[d][e] = svals[d][xyz[d]+e];
-							}
+							for (unsigned e = 0; e < 2; ++e) {back().d[d][e] = svals[d][xyz[d]+e];}
 						}
 					}
 				}
