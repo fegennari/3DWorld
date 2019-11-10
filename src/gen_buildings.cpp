@@ -851,7 +851,7 @@ public:
 
 			if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
 				vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
-				vert.t[1] = vert.v.z*tsy;
+				vert.t[1] = (vert.v.z - bcube.z1())*tsy;
 			}
 			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
 				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
