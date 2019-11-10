@@ -1367,7 +1367,7 @@ colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 
 int get_bare_ls_tid(float zval) {
 	float const relh(relh_adj_tex + (zval - zmin)/(zmax - zmin));
-	return ((relh > clip_hd1) ? ROCK_TEX : DIRT_TEX); // rock or dirt
+	return ((relh > clip_hd1) ? (int)ROCK_TEX : (int)DIRT_TEX); // rock or dirt
 }
 
 void update_lttex_ix(int &ix) { // note: assumes lttex_dirt
