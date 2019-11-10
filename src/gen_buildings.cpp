@@ -1873,7 +1873,7 @@ float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float m
 	assert(dim < 3);
 	assert(min_dist_param < 0.5f); // aplies to both ends
 	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta));
-	if ((hi-gap) <= (lo+gap)) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
+	//if ((hi-gap) <= (lo+gap)) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
 	return rgen.rand_uniform((lo + gap), (hi - gap));
 }
 
@@ -1905,23 +1905,49 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
 		cube_t wall(*p), wall2; // start as full cube; will use these zvals, but X/Y will be overwritten per wall
-		// TODO_INT: add to interior->walls
 		// for now we can add a random wall with a doorway cutout
+		// TODO_INT: create walls iteratively using slicing planes until there are no more large spaces
 		bool const wall_dim(rgen.rand_bool());
 
 		if (p->get_size()[!wall_dim] > 4.0*doorway_width) { // enough space to add a wall
+			// TODO_INT: how to prevent walls that end in the middle of a window? windows are generated later so we don't know their positions here
 			float const wall_pos(cube_rand_side_pos(*p, wall_dim, 0.25, wall_thick, rgen));
 			wall.d[ wall_dim][0]  = wall_pos - wall_half_thick;
 			wall.d[ wall_dim][1]  = wall_pos + wall_half_thick;
 			wall.d[!wall_dim][0] += wall_half_thick; // move a bit away from the exterior wall to prevent z-fighting; we might want to add walls around the building exterior and cut window holes
 			wall.d[!wall_dim][1] -= wall_half_thick;
+
+			// determine if either end of the wall ends at an adjacent part and insert an extra wall there to form a T junction
+			for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					float const val(p->d[!wall_dim][dir]);
+					if (p2 == p) continue; // skip self
+					if (p2->d[!wall_dim][!dir] != val) continue; // not adjacent
+					if (p2->z1() >= p->z2() || p2->z2() <= p->z1()) continue; // no overlap in Z
+					if (p2->d[wall_dim][0] >= wall_pos || p2->d[wall_dim][1] <= wall_pos) continue; // no overlap in wall_dim
+					cube_t wall3;
+					wall3.z1() = max(p->z1(), p2->z1()); // shared Z range
+					wall3.z2() = min(p->z2(), p2->z2());
+					wall3.d[ wall_dim][0] = max(p->d[wall_dim][0], p2->d[wall_dim][0]) + wall_half_thick; // shared wall_dim range with slight offset
+					wall3.d[ wall_dim][1] = min(p->d[wall_dim][1], p2->d[wall_dim][1]) - wall_half_thick;
+					wall3.d[!wall_dim][ dir] = val;
+					wall3.d[!wall_dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
+
+					for (unsigned s = 0; s < 2; ++s) { // add doorways to both sides of wall_pos if there's space, starting with the high side
+						if (fabs(wall3.d[wall_dim][!s] - wall_pos) > 2.0f*doorway_width) {
+							float const doorway_pos(0.5f*(wall_pos + wall3.d[wall_dim][!s])); // centered, for now
+							remove_section_from_cube(wall3, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, wall_dim);
+							interior->walls.push_back(wall2);
+						}
+					} // for s
+					interior->walls.push_back(wall3);
+				} // for dir
+			} // for p2
 			float const doorway_pos(cube_rand_side_pos(*p, !wall_dim, 0.25, doorway_width, rgen));
 			remove_section_from_cube(wall, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, !wall_dim);
 			interior->walls.push_back(wall);
 			interior->walls.push_back(wall2);
 		}
-		// TODO_INT: how to prevent walls that end in the middle of a window? windows are generated later so we don't know their positions here
-
 		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		float z(p->z1());
 
@@ -1932,8 +1958,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			c.z1() = z + fc_thick; c.z2() = z + window_spacing - fc_thick;
 
 			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {
-				// doors were placed in the previous step; use them to create doorway cutouts on the first floor
-				// TODO_INT: WRITE
+				// TODO_INT: doors were placed in the previous step; use them to create doorway cutouts on the first floor
 			}
 			// TODO_INT: add per-floor walls, door cutouts, etc.
 		} // for f
