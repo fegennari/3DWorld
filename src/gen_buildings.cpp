@@ -2551,6 +2551,7 @@ public:
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			city_shader_setup(s, 1, 1, use_bmap, min_alpha); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				bool const no_depth_write(!(*i)->is_single_tile());
@@ -2575,6 +2576,7 @@ public:
 				} // for g
 				if (no_depth_write) {glDepthMask(GL_TRUE);} // re-enable depth writing
 			} // for i
+			glDisable(GL_CULL_FACE);
 			s.end_shader();
 		}
 		if (night && have_wind_lights) { // add night time random lights in windows
