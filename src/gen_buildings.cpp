@@ -2481,6 +2481,7 @@ public:
 			// TODO_INT: add room lights?
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
+			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
 
 #if 1 // draw all interiors (less CPU time, more GPU time)
 			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
@@ -2498,6 +2499,7 @@ public:
 			} // for i
 #endif
 			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
+			s.add_uniform_float("ambient_scale", 1.0); // reset to default
 			s.end_shader();
 		}
 		// main/batched draw pass
