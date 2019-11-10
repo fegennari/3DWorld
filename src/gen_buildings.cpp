@@ -946,7 +946,7 @@ public:
 				if (ADD_BUILDING_INTERIORS && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
 					unsigned const xy(1 - n); // non-Z parameteric dim (the one we're clipping)
 					float &clo1((d == xy) ? segs[0].dlo : segs[0].ilo), &chi1((d == xy) ? segs[0].dhi : segs[0].ihi); // clip dim values (first  seg)
-					float &clo2((d == xy) ? segs[1].dlo : segs[1].ilo), &chi2((d == xy) ? segs[1].dhi : segs[1].ihi); // clip dim values (second seg)
+					float &clo2((d == xy) ? segs[1].dlo : segs[1].ilo); // clip dim values (second seg)
 					float const face_val(cube.d[n][j]);
 
 					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
@@ -2081,8 +2081,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		unsigned const part_ix(i - parts.begin());
-		unsigned const door_sides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
-		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, door_sides); // XY, no_ao=1
+		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
+		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides); // XY, no_ao=1
 	}
 }
 
@@ -2477,7 +2477,7 @@ public:
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const use_tt_smap(check_tile_smap(0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
-		float const interior_draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		//float const interior_draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		bool have_windows(0), have_wind_lights(0), have_interior(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
