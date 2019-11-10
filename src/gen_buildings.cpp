@@ -867,8 +867,9 @@ public:
 		}
 	}
 
+	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
 	void add_section(building_geom_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2, tid_nm_pair_t const &tex,
-		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, bool clip_windows, float door_ztop=0.0, unsigned door_sides=0)
+		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, int clip_windows, float door_ztop=0.0, unsigned door_sides=0)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -946,20 +947,23 @@ public:
 					unsigned const xy(1 - n); // non-Z parameteric dim (the one we're clipping)
 					float &clo1((d == xy) ? segs[0].dlo : segs[0].ilo), &chi1((d == xy) ? segs[0].dhi : segs[0].ihi); // clip dim values (first  seg)
 					float &clo2((d == xy) ? segs[1].dlo : segs[1].ilo), &chi2((d == xy) ? segs[1].dhi : segs[1].ihi); // clip dim values (second seg)
+					float const face_val(cube.d[n][j]);
 
 					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
 					for (auto p = parts.begin(); p != parts.end(); ++p) {
 						if (*p == cube) continue; // skip ourself
-						float const face_val(cube.d[n][j]);
 						if (p->d[n][!j] != face_val && (p->d[n][0] >= face_val || p->d[n][1] <= face_val)) continue; // face not contained in dir of normal (inc opposing aligned val)
 						float const pxy1(p->d[xy][0]), pxy2(p->d[xy][1]), cxy1(cube.d[xy][0]), cxy2(cube.d[xy][1]); // end points used for clipping
 						if (pxy2 <= cxy1 || pxy1 >= cxy2) continue; // no overlap in XY dim
 						if (p->z2() <= cube.z1() || cube.z2() <= p->z1()) continue; // no overlap in Z
-						if (p->z1() >  cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high); not sure if this can actually happen, will handle it if it does
+						// not sure if this can actually happen, will handle it if it does; it would apply to porch roofs without the edge adjustment hack
+						// doesn't apply to windows (partial height walls but not windows)
+						if (!clip_windows && p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high)
 
 						if (p->z2() < cube.z2()) { // opposing cube doesn't cover this cube in Z (ceiling too low); this should only happen for one part
 							if (segs[2].enabled) continue; // already have a Z segment - ignore split (can this happen?)
-							segs[2] = segs[0]; // copy from first segment (likely still [0,1]), will set enabled=1
+							// don't copy/enable the top segment for house windows because houses always have a sloped roof section on top that will block the windows
+							if (clip_windows != 2) {segs[2] = segs[0];} // copy from first segment (likely still [0,1]), will set enabled=1
 							float const z_split((p->z2() - cube.z1())/sz.z); // parametric value of Z split point
 							assert(z_split >= 0.0 && z_split <= 1.0);
 							if (d == xy) {segs[0].ihi = segs[1].ihi = segs[2].ilo = z_split;} else {segs[0].dhi = segs[1].dhi = segs[2].dlo = z_split;} // adjust Z dim
@@ -995,7 +999,7 @@ public:
 					pt[i] = (j ? seg.ilo : seg.ihi);
 					EMIT_VERTEX(); // 1 !j
 
-					if (door_sides & (1 << (2*n + j))) { // clip zval to exclude door z-range
+					if (s < 2 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
 						float const door_height(door_ztop - cube.z1()), offset(0.03*(j ? 1.0 : -1.0)*door_height);
 						assert(door_height > 0.0);
 
@@ -2010,9 +2014,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
 		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
-	}
-	else {color = mat.window_color;}
-	bool const clip_windows(mat.no_city); // only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
+	} else {color = mat.window_color;}
+	// only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
+	int const clip_windows(mat.no_city ? (is_house ? 2 : 1) : 0);
 	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + mat.get_floor_spacing()) : doors.front().pts[2].z));
 
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
