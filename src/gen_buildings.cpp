@@ -1864,6 +1864,19 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 }
 
 
+void remove_section_from_cube(cube_t &c, cube_t &c2, float v1, float v2, bool xy) { // c is input+output cube, c2 is other output cube
+	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
+	c2 = c; // clone first cube
+	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
+}
+float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
+	assert(dim < 3);
+	assert(min_dist_param < 0.5f); // aplies to both ends
+	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta));
+	if ((hi-gap) <= (lo+gap)) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
+	return rgen.rand_uniform((lo + gap), (hi - gap));
+}
+
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
 	if (!ADD_BUILDING_INTERIORS) return; // disabled
@@ -1878,6 +1891,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	// defer this until the building is close to the player?
 	float const window_spacing(mat.get_floor_spacing());
 	float const floor_thickness(0.1*window_spacing), fc_thick(0.5*floor_thickness);
+	float const wall_thick(0.5*floor_thickness), wall_half_thick(0.5*wall_thick), doorway_width(0.5*window_spacing), doorway_hwidth(0.5*doorway_width);
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
@@ -1888,9 +1902,29 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		unsigned const num_floors(round_fp(z_span/window_spacing)); // round down - no partial floors; add a slight ajustment to account for fp error
 		assert(num_floors <= 100); // sanity check
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
+
+		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
+		cube_t wall(*p), wall2; // start as full cube; will use these zvals, but X/Y will be overwritten per wall
+		// TODO_INT: add to interior->walls
+		// for now we can add a random wall with a doorway cutout
+		bool const wall_dim(rgen.rand_bool());
+
+		if (p->get_size()[!wall_dim] > 4.0*doorway_width) { // enough space to add a wall
+			float const wall_pos(cube_rand_side_pos(*p, wall_dim, 0.25, wall_thick, rgen));
+			wall.d[ wall_dim][0]  = wall_pos - wall_half_thick;
+			wall.d[ wall_dim][1]  = wall_pos + wall_half_thick;
+			wall.d[!wall_dim][0] += wall_half_thick; // move a bit away from the exterior wall to prevent z-fighting; we might want to add walls around the building exterior and cut window holes
+			wall.d[!wall_dim][1] -= wall_half_thick;
+			float const doorway_pos(cube_rand_side_pos(*p, !wall_dim, 0.25, doorway_width, rgen));
+			remove_section_from_cube(wall, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, !wall_dim);
+			interior->walls.push_back(wall);
+			interior->walls.push_back(wall2);
+		}
+		// TODO_INT: how to prevent walls that end in the middle of a window? windows are generated later so we don't know their positions here
+
+		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		float z(p->z1());
 
-		// we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		for (unsigned f = 0; f <= num_floors; ++f, z += window_spacing) {
 			cube_t c(*p);
 			if (f > 0         ) {c.z1() = z - fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
@@ -1898,12 +1932,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			c.z1() = z + fc_thick; c.z2() = z + window_spacing - fc_thick;
 
 			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {
-				// doors were placed in the previous step; use them to create initial hallways on the first floor
+				// doors were placed in the previous step; use them to create doorway cutouts on the first floor
 				// TODO_INT: WRITE
 			}
-			// TODO_INT: add to interior->walls
+			// TODO_INT: add per-floor walls, door cutouts, etc.
 		} // for f
 	} // for p
+	// subtract door_cutouts from interior->walls using csg_cube::subtract_from_internal()?
 }
 
 void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supported for rotated buildings
