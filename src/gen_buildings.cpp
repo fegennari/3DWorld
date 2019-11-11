@@ -2206,7 +2206,7 @@ class building_creator_t {
 		} // for bix
 	}
 
-	bool check_valid_building_placement(building_params_t const &params, building_t const &b, vect_cube_t const &avoid_bcubes,
+	bool check_valid_building_placement(building_params_t const &params, building_t const &b, vect_cube_t const &avoid_bcubes, cube_t const &avoid_bcubes_bcube,
 		float min_building_spacing, unsigned plot_ix, bool non_city_only, bool use_city_plots, bool check_plot_coll)
 	{
 		float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10% (relative - multiplied by building size)
@@ -2221,7 +2221,9 @@ class building_creator_t {
 			if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, min_building_spacing, points)) return 0;
 			bix_by_plot[plot_ix].push_back(buildings.size());
 		}
-		else if (check_plot_coll && has_bcube_int_xy(test_bc, avoid_bcubes, params.sec_extra_spacing)) { // extra expand val
+		else if (check_plot_coll && !avoid_bcubes.empty() && avoid_bcubes_bcube.intersects_xy(test_bc) &&
+			has_bcube_int_xy(test_bc, avoid_bcubes, params.sec_extra_spacing)) // extra expand val
+		{
 			return 0;
 		}
 		else {
@@ -2301,6 +2303,7 @@ public:
 		rgen.set_state(rand_gen_index, rseed); // update when mesh changes, otherwise determinstic
 		vect_cube_with_zval_t city_plot_bcubes;
 		vect_cube_t avoid_bcubes;
+		cube_t avoid_bcubes_bcube;
 		if (city_only) {get_city_plot_bcubes(city_plot_bcubes);} // Note: assumes approx equal area for placement distribution
 		
 		if (non_city_only) {
@@ -2308,6 +2311,7 @@ public:
 			get_city_road_bcubes(avoid_bcubes, 1); // connector roads only
 			get_all_model_bcubes(avoid_bcubes);
 			expand_cubes_by_xy(avoid_bcubes, get_road_max_width());
+			for (auto i = avoid_bcubes.begin(); i != avoid_bcubes.end(); ++i) {avoid_bcubes_bcube.assign_or_union_with_cube(*i);}
 		}
 		bool const use_city_plots(!city_plot_bcubes.empty()), check_plot_coll(!avoid_bcubes.empty());
 		bix_by_plot.resize(city_plot_bcubes.size());
@@ -2358,7 +2362,8 @@ public:
 				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
 				if (is_tile && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in tile
 				if (start_in_inf_terrain && b.bcube.contains_pt_xy(get_camera_pos())) continue; // don't place a building over the player appearance spot
-				if (!check_valid_building_placement(params, b, avoid_bcubes, min_building_spacing, plot_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap
+				if (!check_valid_building_placement(params, b, avoid_bcubes, avoid_bcubes_bcube,
+					min_building_spacing, plot_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap
 				++num_gen;
 				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
 				float const z_sea_level(center.z - def_water_level);
