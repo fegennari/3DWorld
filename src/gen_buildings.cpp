@@ -1054,18 +1054,18 @@ public:
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
-	// generate L, T, U, or H shape
+	// generate L, T, U, H, + shape
 	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
-	int const shape(rand()%8); // 0-7
-	bool const is_h(shape >= 7);
+	int const shape(rand()%9); // 0-8
+	bool const is_hp(shape >= 7);
 	bool const dim(rgen.rand_bool()); // {x,y}
-	bool const dir(is_h ? 1 : rgen.rand_bool()); // {neg,pos} - H-shape is always pos
-	float const div(is_h ? rgen.rand_uniform(0.2, 0.4) : rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
+	bool const dir(is_hp ? 1 : rgen.rand_bool()); // {neg,pos} - H/+ shapes are always pos
+	float const div(is_hp ? rgen.rand_uniform(0.2, 0.4) : rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
 	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
 	unsigned const start(parts.size()), num((shape >= 6) ? 3 : 2);
 	parts.resize(start+num, seed_cube);
-	parts[start+0].d[dim][ dir] = dpos; // full width part
-	parts[start+1].d[dim][!dir] = dpos; // partial width part
+	parts[start+0].d[dim][ dir] = dpos; // full width part (except +)
+	parts[start+1].d[dim][!dir] = dpos; // partial width part (except +)
 
 	switch (shape) {
 	case 0: case 1: case 2: case 3: // L
@@ -1077,15 +1077,25 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 		break;
 	case 6: // U
 		parts[start+2].d[ dim][!dir] = dpos; // partial width part
-		parts[start+1].d[!dim][1  ] = spos1;
-		parts[start+2].d[!dim][0  ] = spos2;
+		parts[start+1].d[!dim][1   ] = spos1;
+		parts[start+2].d[!dim][0   ] = spos2;
 		break;
 	case 7: { // H
 		float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end
 		parts[start+1].d[ dim][ dir] = dpos2;
-		parts[start+1].d[!dim][ 0  ] = spos1;
+		parts[start+1].d[!dim][ 0  ] = spos1; // middle part
 		parts[start+1].d[!dim][ 1  ] = spos2;
 		parts[start+2].d[ dim][!dir] = dpos2; // full width part
+		break;
+	}
+	case 8: { // +
+		float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end
+		parts[start+0].d[!dim][ 0  ] = spos1;
+		parts[start+0].d[!dim][ 1  ] = spos2;
+		parts[start+2].d[!dim][ 0  ] = spos1;
+		parts[start+2].d[!dim][ 1  ] = spos2;
+		parts[start+1].d[ dim][ dir] = dpos2; // middle part
+		parts[start+2].d[ dim][!dir] = dpos2; // partial width part
 		break;
 	}
 	default: assert(0);
@@ -1892,7 +1902,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	float const floor_thickness(0.1*window_spacing), fc_thick(0.5*floor_thickness);
 	float const doorway_width(0.5*window_spacing), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(0.5*floor_thickness), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
-	unsigned wall_seps_placed[2] = {0, 0}; // bit masks for which wall separators have been placed per part, one per dim; scales to 32 parts, which should be enough
+	unsigned wall_seps_placed[2][2] = {0}; // bit masks for which wall separators have been placed per part, one per {dim x dir}; scales to 32 parts, which should be enough
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
@@ -1933,7 +1943,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					if (p2->z1() >= p->z2() || p2->z2() <= p->z1()) continue; // no overlap in Z
 					if (p2->d[wall_dim][0] >= wall_pos || p2->d[wall_dim][1] <= wall_pos) continue; // no overlap in wall_dim
 					// TODO_INT: what if we try to cut a door into the area where the other part placed a wall?
-					if (wall_seps_placed[wall_dim] & (1 << (p2 - parts.begin()))) continue; // already placed a separator for this part, don't add a duplicate
+					if (wall_seps_placed[wall_dim][!dir] & (1 << (p2 - parts.begin()))) continue; // already placed a separator for this part, don't add a duplicate
 					wall3.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
 					wall3.z2() = min(p->z2(), p2->z2()) - fc_thick;
 					wall3.d[ wall_dim][0] = max(p->d[wall_dim][0], p2->d[wall_dim][0]) + wall_edge_spacing; // shared wall_dim range with slight offset
@@ -1949,13 +1959,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						}
 					} // for s
 					interior->walls.push_back(wall3);
+					wall_seps_placed[wall_dim][dir] |= (1 << (p - parts.begin())); // mark this wall as placed
 				} // for dir
 			} // for p2
 			float const doorway_pos(cube_rand_side_pos(*p, !wall_dim, 0.25, doorway_width, rgen));
 			remove_section_from_cube(wall, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, !wall_dim);
 			interior->walls.push_back(wall);
 			interior->walls.push_back(wall2);
-			wall_seps_placed[wall_dim] |= (1 << (p - parts.begin())); // mark this wall as placed
 		}
 		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		float z(p->z1());
