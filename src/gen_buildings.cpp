@@ -485,7 +485,8 @@ struct building_t : public building_geom_t {
 		point pos2(pos);
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const;
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr, bool check_interior=0) const;
+	bool check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	void calc_bcube_from_parts();
@@ -1209,15 +1210,16 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	return 0;
 }
 
-bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr) const {
-
+bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius,
+	bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
+{
 	if (!is_valid()) return 0; // invalid building
 	point p_int;
 	vector3d cnorm; // unused
 	unsigned cdir(0); // unused
 	if (radius > 0.0 && !sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
 	point pos2(pos), p_last2(p_last), center;
-	bool had_coll(0);
+	bool had_coll(0), is_interior(0);
 	
 	if (is_rotated()) {
 		center = bcube.get_cube_center() + xlate;
@@ -1257,6 +1259,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		}
 		else if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) { // cube
 			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
+			if (check_interior && interior != nullptr) {is_interior = 1;}
 		}
 	} // for i
 	if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
@@ -1276,6 +1279,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			}
 		}
 	}
+	if (is_interior) {had_coll = check_sphere_coll_interior(pos, p_last, xlate, radius, xy_only, cnorm_ptr);} // sphere collides with cube and check_interior=1
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
 
 	if (is_rotated()) {
@@ -1283,6 +1287,24 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		if (cnorm_ptr) {do_xy_rotate(rot_sin, rot_cos, all_zeros, *cnorm_ptr);} // rotate back (pure rotation)
 	}
 	pos = pos2;
+	return had_coll;
+}
+
+// Note: pos and p_last are already in rotated coordinate space
+bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
+	assert(interior);
+	bool had_coll(0);
+
+	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
+		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
+			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 1, cnorm); // skip_z=1
+		}
+	}
+	if (!xy_only) { // check Z collision with floors; no need to check ceilings
+		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
+			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, xy_only, cnorm);
+		}
+	}
 	return had_coll;
 }
 
@@ -2776,7 +2798,7 @@ public:
 		building_draw_interior.clear_vbos();
 	}
 
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr) const {
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
 
@@ -2790,7 +2812,7 @@ public:
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
-				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, points, cnorm)) return 1;
+				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, points, cnorm, check_interior)) return 1;
 			}
 			return 0; // no coll
 		}
@@ -2810,7 +2832,7 @@ public:
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					if (!b->intersects_xy(bcube)) continue;
-					if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm)) return 1;
+					if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
 				}
 			} // for x
 		} // for y
