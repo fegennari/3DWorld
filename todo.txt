@@ -16,8 +16,7 @@ Building Interiors:
 - Create furniture and other details
 * Create per tile rather than all at once for performance/memory?
 - Draw Interiors
-  - Only nearby? Use bcube of nearest building/tile/tile group to cull in shader?
+  - Only nearby? Iterate over tiles in draw function
   * See through building exteriors
-  * Add room lights
+  - Add room lights?
 - Player can enter buildings
-- Player can open doors?
