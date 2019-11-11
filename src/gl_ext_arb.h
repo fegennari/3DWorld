@@ -333,6 +333,12 @@ template< typename T > void upload_to_dynamic_vbo(vector<T> const &v) {
 	T::set_vbo_arrays(1, get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(T)));
 }
 
+void bind_ssbo(unsigned ssbo=0);
+unsigned create_ssbo(unsigned data_sz=0, void const *const data=nullptr);
+void ensure_ssbo(unsigned &ssbo, unsigned data_sz, void const *const data);
+void update_ssbo(unsigned  ssbo, unsigned data_sz, void const *const data);
+
+
 
 class query_perf_timer_t {
 	unsigned query_id;

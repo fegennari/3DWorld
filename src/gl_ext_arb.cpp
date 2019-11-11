@@ -384,6 +384,37 @@ void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysiz
 }
 
 
+// ***************** SSBOs *****************
+
+// See: https://www.geeks3d.com/20140704/tutorial-introduction-to-opengl-4-3-shader-storage-buffers-objects-ssbo-demo/
+void bind_ssbo(unsigned ssbo) {glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);}
+
+unsigned create_ssbo(unsigned data_sz, void const *const data) {
+	unsigned ssbo;
+	glGenBuffers(1, &ssbo);
+	bind_ssbo(ssbo);
+	if (data_sz > 0) {glBufferData(GL_SHADER_STORAGE_BUFFER, data_sz, data, GL_DYNAMIC_COPY);}
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	return ssbo;
+}
+void ensure_ssbo(unsigned &ssbo, unsigned data_sz, void const *const data) {
+	if (ssbo == 0) {ssbo = create_ssbo(data_sz, data);}
+}
+
+void update_ssbo(unsigned ssbo, unsigned data_sz, void const *const data) {
+	assert(ssbo != 0);
+	assert(data_sz > 0 && data != nullptr);
+	bind_ssbo(ssbo);
+	void *p(glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY));
+	memcpy(p, data, data_sz);
+	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+}
+
+// unsigned block_index(glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "shader_data"));
+// glShaderStorageBlockBinding(program, block_index, 80);
+// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_point_index, ssbo);
+
+
 // ***************** Timers *****************
 
 // see http://www.lighthouse3d.com/tutorials/opengl-short-tutorials/opengl-timer-query/
