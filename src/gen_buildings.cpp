@@ -441,12 +441,13 @@ struct tquad_with_ix_t : public tquad_t {
 
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls;
+	vect_cube_t floors, ceilings, walls[2]; // walls are split by dim
 
 	void clear() {
 		floors.clear();
 		ceilings.clear();
-		walls.clear();
+		walls[0].clear();
+		walls[1].clear();
 	}
 };
 
@@ -1955,17 +1956,17 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						if (fabs(wall3.d[wall_dim][!s] - wall_pos) > 2.0f*doorway_width) {
 							float const doorway_pos(0.5f*(wall_pos + wall3.d[wall_dim][!s])); // centered, for now
 							remove_section_from_cube(wall3, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, wall_dim);
-							interior->walls.push_back(wall2);
+							interior->walls[!wall_dim].push_back(wall2);
 						}
 					} // for s
-					interior->walls.push_back(wall3);
+					interior->walls[!wall_dim].push_back(wall3);
 					wall_seps_placed[wall_dim][dir] |= (1 << (p - parts.begin())); // mark this wall as placed
 				} // for dir
 			} // for p2
 			float const doorway_pos(cube_rand_side_pos(*p, !wall_dim, 0.25, doorway_width, rgen));
 			remove_section_from_cube(wall, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, !wall_dim);
-			interior->walls.push_back(wall);
-			interior->walls.push_back(wall2);
+			interior->walls[wall_dim].push_back(wall);
+			interior->walls[wall_dim].push_back(wall2);
 		}
 		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		float z(p->z1());
@@ -2072,8 +2073,10 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
 		}
-		for (auto i = interior->walls.begin(); i != interior->walls.end(); ++i) {
-			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; XY dims only
+		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts
+			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
+				bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
+			}
 		}
 	}
 }
