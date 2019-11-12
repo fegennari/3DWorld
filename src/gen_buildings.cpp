@@ -747,6 +747,7 @@ public:
 	building_draw_t() : cur_camera_pos(zero_vector), cur_tile_id(0) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
+	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
 
 	void toggle_transparent_windows_mode() {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->tex.toggle_transparent_windows_mode();}
@@ -2745,6 +2746,7 @@ public:
 		bdraw.finalize(grid_by_tile.size());
 	}
 	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
+		if (buildings.empty()) return;
 		//timer_t timer("Get Building Verts"); // 39/115
 #pragma omp parallel for schedule(static) num_threads(3)
 		for (int pass = 0; pass < 3; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
@@ -2758,6 +2760,21 @@ public:
 				building_draw_vbo.finalize(grid_by_tile.size());
 			}
 			else if (pass == 1) { // interior pass
+				// pre-allocate interior wall, celing, and floor verts, assuming all buildings have the same materials
+				unsigned num_floors(0), num_ceils(0), num_walls(0);
+				building_mat_t const &mat(buildings.front().get_material());
+				
+				for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+					if (!b->interior) continue; // no interior
+					building_mat_t const &mat2(b->get_material());
+					if (mat2.floor_tex == mat.floor_tex) {num_floors += b->interior->floors.size();}
+					if (mat2.ceil_tex  == mat.ceil_tex ) {num_ceils  += b->interior->ceilings.size();}
+					if (mat2.wall_tex  == mat.wall_tex ) {num_walls  += b->interior->walls[0].size() + b->interior->walls[1].size();}
+				}
+				building_draw_interior.reserve_verts(mat.floor_tex, 4*num_floors); // top surface only
+				building_draw_interior.reserve_verts(mat.ceil_tex,  4*num_ceils ); // bottom surface only
+				building_draw_interior.reserve_verts(mat.wall_tex, 16*num_walls ); // X/Y surfaces (4x)
+				// generate vertex data
 				building_draw_interior.clear();
 
 				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
