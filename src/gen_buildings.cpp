@@ -117,13 +117,15 @@ struct building_params_t {
 	unsigned num_place, num_tries, cur_prob;
 	float ao_factor, sec_extra_spacing;
 	float window_width, window_height, window_xspace, window_yspace; // windows
+	float wall_split_thresh; // interiors
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), num_place(num), num_tries(10),
-		cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), range_translate(zero_vector) {}
+		cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), wall_split_thresh(4.0),
+		range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
@@ -375,6 +377,9 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_float(fp, global_building_params.cur_mat.wind_yoff)) {buildings_file_err(str, error);}
 		global_building_params.cur_mat.wind_yoff *= -1.0; // invert Y
 	}
+	else if (str == "wall_split_thresh") {
+		if (!read_float(fp, global_building_params.wall_split_thresh)) {buildings_file_err(str, error);}
+	}
 	else if (str == "add_windows") { // per-material
 		if (!read_bool(fp, global_building_params.cur_mat.add_windows)) {buildings_file_err(str, error);}
 	}
@@ -385,19 +390,19 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_float(fp, global_building_params.cur_mat.house_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "house_scale_range") { // per-material
-	if (!read_float(fp, global_building_params.cur_mat.house_scale_min) || !read_float(fp, global_building_params.cur_mat.house_scale_max)) {buildings_file_err(str, error);}
+		if (!read_float(fp, global_building_params.cur_mat.house_scale_min) || !read_float(fp, global_building_params.cur_mat.house_scale_max)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_color") { // per-material
 		if (!read_color(fp, global_building_params.cur_mat.window_color)) {buildings_file_err(str, error);}
 	}
 	else if (str == "wall_color") { // per-material
-	if (!read_color(fp, global_building_params.cur_mat.wall_color)) {buildings_file_err(str, error);}
+		if (!read_color(fp, global_building_params.cur_mat.wall_color)) {buildings_file_err(str, error);}
 	}
 	else if (str == "ceil_color") { // per-material
-	if (!read_color(fp, global_building_params.cur_mat.ceil_color)) {buildings_file_err(str, error);}
+		if (!read_color(fp, global_building_params.cur_mat.ceil_color)) {buildings_file_err(str, error);}
 	}
 	else if (str == "floor_color") { // per-material
-	if (!read_color(fp, global_building_params.cur_mat.floor_color)) {buildings_file_err(str, error);}
+		if (!read_color(fp, global_building_params.cur_mat.floor_color)) {buildings_file_err(str, error);}
 	}
 	// special commands
 	else if (str == "probability") {
@@ -1996,8 +2001,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			interior->walls[wall_dim].push_back(wall);
 			interior->walls[wall_dim].push_back(wall2);
 
-			if (csz[wall_dim] > 4.0*min_wall_len) { // still have space to split in other dim, add the two parts to the stack
-				for (unsigned d = 0; d < 2; ++d) {
+			if (csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len) {
+				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					cube_t c_sub(c);
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
 					to_split.push_back(c_sub);
