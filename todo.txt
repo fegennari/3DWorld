@@ -12,11 +12,9 @@ Cities:
 - Fences
 
 Building Interiors:
-* Create Walls
+* Better Walls
 - Create furniture and other details
-* Create per tile rather than all at once for performance/memory?
+- Create per tile rather than all at once for performance/memory?
 - Draw Interiors
-  - Only nearby? Iterate over tiles in draw function
   * See through building exteriors
   - Add room lights?
-- Player can enter buildings

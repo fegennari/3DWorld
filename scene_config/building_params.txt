@@ -8,7 +8,7 @@ buildings max_delta_z 1.0
 buildings min_level_height 0.25
 buildings ao_factor 0.4
 buildings max_rot_angle 90.0
-buildings wall_split_thresh 4.0 # typically 1.0-5.0, smaller is slower with more walls
+buildings wall_split_thresh 3.0 # typically 1.0-5.0, smaller is slower with more walls
 
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings

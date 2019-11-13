@@ -1957,8 +1957,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			wall.z2() -= fc_thick; // start at the ceiling
 			vector3d const csz(c.get_size());
 			bool wall_dim(0); // which dim the room is split by
-			if      (csz.y > min_wall_len && csz.x > 1.5*csz.y) {wall_dim = 0;} // split long room in x
-			else if (csz.x > min_wall_len && csz.y > 1.5*csz.x) {wall_dim = 1;} // split long room in y
+			if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
+			else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 			else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
 			if (csz[!wall_dim] < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, etc.)
 			// TODO_INT: how to prevent walls that end in the middle of a window? windows are generated later so we don't know their positions here
@@ -2020,10 +2020,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			if (f > 0         ) {c.z1() = z - fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
 			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; interior->floors  .push_back(c);}
 			c.z1() = z + fc_thick; c.z2() = z + window_spacing - fc_thick;
-
-			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {
-				// TODO_INT: doors were placed in the previous step; use them to create doorway cutouts on the first floor
-			}
+			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {} // TODO_INT: doors were placed in the prev step; use them to create doorway cutouts on the first floor
 			// TODO_INT: add per-floor walls, door cutouts, etc.
 		} // for f
 	} // for p
@@ -2547,7 +2544,6 @@ public:
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const use_tt_smap(check_tile_smap(0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
-		//float const interior_draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		bool have_windows(0), have_wind_lights(0), have_interior(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
@@ -2578,21 +2574,24 @@ public:
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
 
-#if 1 // draw all interiors (less CPU time, more GPU time)
-			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_interior.draw_block(ix, 0);}
+			if (global_building_params.wall_split_thresh >= 4.0) { // draw all interiors (less CPU time, more GPU time, no draw artifacts)
+				for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
+					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_interior.draw_block(ix, 0);}
+				}
 			}
-#else // draw only nearby interiors (less GPU time, more CPU time)
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
-					point const pos(g->bcube.get_cube_center() + xlate);
-					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
-					(*i)->building_draw_interior.draw_tile(tile_id);
-				} // for g
-			} // for i
-#endif
+			else { // draw only nearby interiors (less GPU time, more CPU time, much faster for dense walls)
+				float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+						if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
+						point const pos(g->bcube.get_cube_center() + xlate);
+						if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+						unsigned const tile_id(g - (*i)->grid_by_tile.begin());
+						(*i)->building_draw_interior.draw_tile(tile_id);
+					} // for g
+				} // for i
+			}
 			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.0); // reset to default
 			s.end_shader();
@@ -2656,7 +2655,6 @@ public:
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
-					//if (draw_building_interiors && g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too near - draw interior only
 					point const pos(g->bcube.get_cube_center() + xlate);
 					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 					if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
