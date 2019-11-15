@@ -502,6 +502,7 @@ struct building_t : public building_geom_t {
 	void add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
 	void gen_details(rand_gen_t &rgen);
+	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void gen_building_door_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
@@ -1917,6 +1918,26 @@ float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float m
 	return rgen.rand_uniform((lo + gap), (hi - gap));
 }
 
+// see global_building_params.window_xspace/window_width
+int building_t::get_num_windows_on_side(float xy1, float xy2) const {
+	assert(xy1 < xy2);
+	building_mat_t const &mat(get_material());
+	float tscale(2.0f*mat.get_window_tx()), t0(tscale*xy1), t1(tscale*xy2);
+	building_draw_t::clip_low_high(t0, t1);
+	return round_fp(t1 - t0);
+}
+
+// Note: wall should start out equal to the room bcube
+void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float wall_half_thick, float wall_edge_spacing) {
+	wall.z1() += fc_thick; // start at the floor
+	wall.z2() -= fc_thick; // start at the ceiling
+	wall.d[ dim][0] = wall_pos - wall_half_thick;
+	wall.d[ dim][1] = wall_pos + wall_half_thick;
+	// move a bit away from the exterior wall to prevent z-fighting; we might want to add walls around the building exterior and cut window holes
+	wall.d[!dim][0] += wall_edge_spacing;
+	wall.d[!dim][1] -= wall_edge_spacing;
+}
+
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
 	if (!ADD_BUILDING_INTERIORS) return; // disabled
@@ -1945,71 +1966,111 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		assert(num_floors <= 100); // sanity check
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
-		assert(to_split.empty());
-		to_split.push_back(*p);
-		for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(parts.size());} // likely at least this many
+		vector3d const psz(p->get_size());
+		bool const min_dim(psz.y < psz.x); // hall dim
+		float const cube_width(psz[min_dim]);
 
-		while (!to_split.empty()) {
-			cube_t const c(to_split.back());
-			to_split.pop_back();
-			cube_t wall(c), wall2, wall3; // copy from part; shared zvals, but X/Y will be overwritten per wall
-			wall.z1() += fc_thick; // start at the floor
-			wall.z2() -= fc_thick; // start at the ceiling
-			vector3d const csz(c.get_size());
-			bool wall_dim(0); // which dim the room is split by
-			if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
-			else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
-			else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
-			if (csz[!wall_dim] < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, etc.)
-			// TODO_INT: how to prevent walls that end in the middle of a window? windows are generated later so we don't know their positions here
-			float const wall_pos(cube_rand_side_pos(c, wall_dim, 0.25, wall_thick, rgen));
-			wall.d[ wall_dim][0] = wall_pos - wall_half_thick;
-			wall.d[ wall_dim][1] = wall_pos + wall_half_thick;
-			// move a bit away from the exterior wall to prevent z-fighting; we might want to add walls around the building exterior and cut window holes
-			wall.d[!wall_dim][0] += wall_edge_spacing;
-			wall.d[!wall_dim][1] -= wall_edge_spacing;
+		if (!is_house && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len) {
+			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
+			int const num_windows(get_num_windows_on_side(p->d[!min_dim][0], p->d[!min_dim][1]));
+			int const windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
+			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
+			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
+			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
+			float const window_spacing(psz[!min_dim]/num_windows), room_len(window_spacing*windows_per_room);
+			float const hall_width(1.0f*min_wall_len + 0.05f*cube_width), room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
+			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
+			float const hall_wall_pos[2] = {(p->d[min_dim][0] + room_width), (p->d[min_dim][1] - room_width)};
+			vect_cube_t &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
+			cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
+			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
+			create_wall(rwall, !min_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing); // room walls
 
-			// determine if either end of the wall ends at an adjacent part and insert an extra wall there to form a T junction
-			for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
-				for (unsigned dir = 0; dir < 2; ++dir) {
-					float const val(c.d[!wall_dim][dir]);
-					if (p2 == p) continue; // skip self
-					if (p2->d[!wall_dim][!dir] != val) continue; // not adjacent
-					if (p2->z1() >= c.z2() || p2->z2() <= c.z1()) continue; // no overlap in Z
-					if (p2->d[wall_dim][0] >= wall_pos || p2->d[wall_dim][1] <= wall_pos) continue; // no overlap in wall_dim
-					// TODO_INT: what if we try to cut a door into the area where the other part placed a wall?
-					if (wall_seps_placed[wall_dim][!dir] & (1 << (p2 - parts.begin()))) continue; // already placed a separator for this part, don't add a duplicate
-					wall3.z1() = max(c.z1(), p2->z1()) + fc_thick; // shared Z range
-					wall3.z2() = min(c.z2(), p2->z2()) - fc_thick;
-					wall3.d[ wall_dim][0] = max(c.d[wall_dim][0], p2->d[wall_dim][0]) + wall_edge_spacing; // shared wall_dim range with slight offset
-					wall3.d[ wall_dim][1] = min(c.d[wall_dim][1], p2->d[wall_dim][1]) - wall_edge_spacing;
-					wall3.d[!wall_dim][ dir] = val;
-					wall3.d[!wall_dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
-
-					for (unsigned s = 0; s < 2; ++s) { // add doorways to both sides of wall_pos if there's space, starting with the high side
-						if (fabs(wall3.d[wall_dim][!s] - wall_pos) > 2.0f*doorway_width) {
-							float const doorway_pos(0.5f*(wall_pos + wall3.d[wall_dim][!s])); // centered, for now
-							remove_section_from_cube(wall3, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, wall_dim);
-							interior->walls[!wall_dim].push_back(wall2);
-						}
-					} // for s
-					interior->walls[!wall_dim].push_back(wall3);
-					wall_seps_placed[wall_dim][dir] |= (1 << (p - parts.begin())); // mark this wall as placed
-				} // for dir
-			} // for p2
-			float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
-			remove_section_from_cube(wall, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, !wall_dim);
-			interior->walls[wall_dim].push_back(wall);
-			interior->walls[wall_dim].push_back(wall2);
-
-			if (csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len) {
-				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
-					cube_t c_sub(c);
-					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
-					to_split.push_back(c_sub);
+			for (int i = 0; i+1 < num_rooms; ++i) { // num_rooms-1 walls
+				for (unsigned d = 0; d < 2; ++d) {
+					room_walls.push_back(rwall);
+					room_walls.back().d[min_dim][!d] = hall_wall_pos[d];
+					cube_t hwall(room_walls.back());
+					for (unsigned e = 0; e < 2; ++e) {hwall.d[ min_dim][e]  = hall_wall_pos[d] + (e ? 1.0f : -1.0f)*wall_half_thick;}
+					for (unsigned e = 0; e < 2; ++e) {hwall.d[!min_dim][e] += (e ? 1.0f : -1.0f)*hwall_extend;}
+					if (partial_room && i+2 == num_rooms) {hwall.d[!min_dim][1] -= 1.5*doorway_width;} // pull back a bit to make room for a doorway at the end of the hall
+					hall_walls.push_back(hwall); // longer sections that form T-junctions with room walls
 				}
-			}
-		} // end while()
+				for (unsigned e = 0; e < 2; ++e) {rwall.d[!min_dim][e] += room_len;}
+			} // for i
+			for (unsigned s = 0; s < 2; ++s) { // add half length hall walls at each end of the hallway
+				cube_t hwall(rwall); // copy to get correct zvals
+				float const hwall_len((partial_room && s == 1) ? doorway_width : hwall_extend); // hwall for partial room at end is only length doorway_width
+				hwall.d[!min_dim][ s] = p->d   [!min_dim][s] + (s ? -1.0f : 1.0f)*wall_edge_spacing; // end at the wall
+				hwall.d[!min_dim][!s] = hwall.d[!min_dim][s] + (s ? -1.0f : 1.0f)*hwall_len; // end at first doorway
+
+				for (unsigned d = 0; d < 2; ++d) {
+					for (unsigned e = 0; e < 2; ++e) {hwall.d[ min_dim][e] = hall_wall_pos[d] + (e ? 1.0f : -1.0f)*wall_half_thick;}
+					hall_walls.push_back(hwall);
+				}
+			} // for s
+		}
+		else { // generate random walls using recursive 2D slices
+			assert(to_split.empty());
+			to_split.push_back(*p);
+			for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(parts.size());} // likely at least this many
+
+			while (!to_split.empty()) {
+				cube_t const c(to_split.back());
+				to_split.pop_back();
+				vector3d const csz(c.get_size());
+				bool wall_dim(0); // which dim the room is split by
+				if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
+				else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
+				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
+				if (csz[!wall_dim] < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, etc.)
+				// TODO_INT: how to prevent walls that end in the middle of a window? windows are generated later so we don't know their positions here
+				float const wall_pos(cube_rand_side_pos(c, wall_dim, 0.25, wall_thick, rgen));
+				cube_t wall(c), wall2, wall3; // copy from cube; shared zvals, but X/Y will be overwritten per wall
+				create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
+
+				// determine if either end of the wall ends at an adjacent part and insert an extra wall there to form a T junction
+				for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						float const val(c.d[!wall_dim][dir]);
+						if (p2 == p) continue; // skip self
+						if (p2->d[!wall_dim][!dir] != val) continue; // not adjacent
+						if (p2->z1() >= c.z2() || p2->z2() <= c.z1()) continue; // no overlap in Z
+						if (p2->d[wall_dim][0] >= wall_pos || p2->d[wall_dim][1] <= wall_pos) continue; // no overlap in wall_dim
+						// TODO_INT: what if we try to cut a door into the area where the other part placed a wall?
+						if (wall_seps_placed[wall_dim][!dir] & (1 << (p2 - parts.begin()))) continue; // already placed a separator for this part, don't add a duplicate
+						wall3.z1() = max(c.z1(), p2->z1()) + fc_thick; // shared Z range
+						wall3.z2() = min(c.z2(), p2->z2()) - fc_thick;
+						wall3.d[ wall_dim][0] = max(c.d[wall_dim][0], p2->d[wall_dim][0]) + wall_edge_spacing; // shared wall_dim range with slight offset
+						wall3.d[ wall_dim][1] = min(c.d[wall_dim][1], p2->d[wall_dim][1]) - wall_edge_spacing;
+						wall3.d[!wall_dim][ dir] = val;
+						wall3.d[!wall_dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
+
+						for (unsigned s = 0; s < 2; ++s) { // add doorways to both sides of wall_pos if there's space, starting with the high side
+							if (fabs(wall3.d[wall_dim][!s] - wall_pos) > 2.0f*doorway_width) {
+								float const doorway_pos(0.5f*(wall_pos + wall3.d[wall_dim][!s])); // centered, for now
+								remove_section_from_cube(wall3, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, wall_dim);
+								interior->walls[!wall_dim].push_back(wall2);
+							}
+						} // for s
+						interior->walls[!wall_dim].push_back(wall3);
+						wall_seps_placed[wall_dim][dir] |= (1 << (p - parts.begin())); // mark this wall as placed
+					} // for dir
+				} // for p2
+				float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
+				remove_section_from_cube(wall, wall2, doorway_pos-doorway_hwidth, doorway_pos+doorway_hwidth, !wall_dim);
+				interior->walls[wall_dim].push_back(wall);
+				interior->walls[wall_dim].push_back(wall2);
+
+				if (csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len) {
+					for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
+						cube_t c_sub(c);
+						c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
+						to_split.push_back(c_sub);
+					}
+				}
+			} // end while()
+		} // end wall placement
 		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 		interior->ceilings.reserve(num_floors);
 		interior->floors  .reserve(num_floors);
@@ -2587,8 +2648,7 @@ public:
 						if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
 						point const pos(g->bcube.get_cube_center() + xlate);
 						if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-						unsigned const tile_id(g - (*i)->grid_by_tile.begin());
-						(*i)->building_draw_interior.draw_tile(tile_id);
+						(*i)->building_draw_interior.draw_tile(g - (*i)->grid_by_tile.begin());
 					} // for g
 				} // for i
 			}
