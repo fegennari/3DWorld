@@ -81,13 +81,15 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 		if (!is_house && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
-			int const num_windows(get_num_windows_on_side(p->d[!min_dim][0], p->d[!min_dim][1]));
+			int const num_windows   (get_num_windows_on_side(p->d[!min_dim][0], p->d[!min_dim][1]));
+			int const num_windows_od(get_num_windows_on_side(p->d[ min_dim][0], p->d[ min_dim][1])); // other dim, for use in hallway width calculation
 			int const windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
 			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
 			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
 			float const window_spacing(psz[!min_dim]/num_windows), room_len(window_spacing*windows_per_room);
-			float const hall_width(1.0f*min_wall_len + 0.05f*cube_width), room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
+			float const hall_width(((num_windows_od & 1) ? 1 : 2)*psz[min_dim]/num_windows_od); // hall either contains 1 (odd) or 2 (even) windows
+			float const room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
 			float const hall_wall_pos[2] = {(p->d[min_dim][0] + room_width), (p->d[min_dim][1] - room_width)};
 			vect_cube_t &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
