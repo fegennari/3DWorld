@@ -390,6 +390,9 @@
     <ClCompile Include="src\texture_tile_blend\texture_tile_blend.cpp">
       <Filter>Source Files\"Borrowed"\Source</Filter>
     </ClCompile>
+    <ClCompile Include="src\building_interior.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">

@@ -7,6 +7,8 @@
 
 #include "3DWorld.h"
 
+bool const ADD_BUILDING_INTERIORS = 1;
+
 struct building_occlusion_state_t {
 	point pos;
 	vector3d xlate;
@@ -27,6 +29,201 @@ struct cube_with_zval_t : public cube_t {
 };
 
 typedef vector<cube_with_zval_t> vect_cube_with_zval_t;
+
+struct tid_nm_pair_t { // size=24
+
+	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
+	float tscale_x, tscale_y, txoff, tyoff;
+
+	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0) {}
+	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo) {}
+	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
+	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y);}
+	colorRGBA get_avg_color() const {return texture_color(tid);}
+	tid_nm_pair_t get_scaled_version(float scale) const {return tid_nm_pair_t(tid, nm_tid, scale*tscale_x, scale*tscale_y);}
+	void set_gl() const;
+	void toggle_transparent_windows_mode();
+};
+
+struct building_tex_params_t {
+	tid_nm_pair_t side_tex, roof_tex; // exterior
+	tid_nm_pair_t wall_tex, ceil_tex, floor_tex; // interior
+
+	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0 || wall_tex.nm_tid >= 0 || ceil_tex.nm_tid >= 0 || floor_tex.nm_tid >= 0);}
+};
+
+struct color_range_t {
+
+	float grayscale_rand;
+	colorRGBA cmin, cmax; // alpha is unused?
+
+	color_range_t() : grayscale_rand(0.0), cmin(WHITE), cmax(WHITE) {}
+	void gen_color(colorRGBA &color, rand_gen_t &rgen) const;
+};
+
+struct building_mat_t : public building_tex_params_t {
+
+	bool no_city, add_windows, add_wind_lights;
+	unsigned min_levels, max_levels, min_sides, max_sides;
+	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt, house_prob, house_scale_min, house_scale_max;
+	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
+	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
+	color_range_t side_color, roof_color; // exterior
+	colorRGBA window_color, wall_color, ceil_color, floor_color;
+
+	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0),
+		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), house_scale_min(1.0), house_scale_max(1.0),
+		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
+		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1),
+		window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY) {}
+	float gen_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
+	void update_range(vector3d const &range_translate);
+	void set_pos_range(cube_t const &new_pos_range) {prev_pos_range = pos_range; pos_range = new_pos_range;}
+	void restore_prev_pos_range() {
+		if (!prev_pos_range.is_all_zeros()) {pos_range = prev_pos_range;}
+	}
+	float get_window_tx() const;
+	float get_window_ty() const;
+	float get_floor_spacing() const {return 1.0/(2.0*get_window_ty());}
+};
+
+struct building_params_t {
+
+	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only, infinite_buildings;
+	unsigned num_place, num_tries, cur_prob;
+	float ao_factor, sec_extra_spacing;
+	float window_width, window_height, window_xspace, window_yspace; // windows
+	float wall_split_thresh; // interiors
+	vector3d range_translate; // used as a temporary to add to material pos_range
+	building_mat_t cur_mat;
+	vector<building_mat_t> materials;
+	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
+
+	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), num_place(num), num_tries(10),
+		cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), wall_split_thresh(4.0),
+		range_translate(zero_vector) {}
+	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
+	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
+	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
+	float get_window_width_fract () const {assert(windows_enabled()); return window_width /(window_width  + window_xspace);}
+	float get_window_height_fract() const {assert(windows_enabled()); return window_height/(window_height + window_yspace);}
+	float get_window_tx() const {assert(windows_enabled()); return 1.0f/(window_width  + window_xspace);}
+	float get_window_ty() const {assert(windows_enabled()); return 1.0f/(window_height + window_yspace);}
+	void add_cur_mat();
+
+	void finalize() {
+		if (materials.empty()) {add_cur_mat();} // add current (maybe default) material
+	}
+	building_mat_t const &get_material(unsigned mat_ix) const {
+		assert(mat_ix < materials.size());
+		return materials[mat_ix];
+	}
+	vector<unsigned> const &get_mat_list(bool city_only, bool non_city_only) const {
+		return (city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix));
+	}
+	unsigned choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only) const;
+	void set_pos_range(cube_t const &pos_range);
+	void restore_prev_pos_range();
+};
+
+class building_draw_t;
+
+struct building_geom_t { // describes the physical shape of a building
+	unsigned num_sides;
+	unsigned char door_sides[4]; // bit mask for 4 door sides, one per base part
+	bool half_offset, is_pointed;
+	float rot_sin, rot_cos, flat_side_amt, alt_step_factor, start_angle; // rotation in XY plane, around Z (up) axis
+																		 //float roof_recess;
+
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0) : num_sides(ns), half_offset(0), is_pointed(0),
+		rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0)
+	{
+		door_sides[0] = door_sides[1] = door_sides[2] = door_sides[3] = 0;
+	}
+	bool is_rotated() const {return (rot_sin != 0.0);}
+	bool is_cube()    const {return (num_sides == 4);}
+	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
+	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
+};
+
+struct tquad_with_ix_t : public tquad_t {
+	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR};
+	unsigned type;
+	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(0) {}
+	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
+};
+
+// may as well make this its own class, since it could get large and it won't be used for every building
+struct building_interior_t {
+	vect_cube_t floors, ceilings, walls[2]; // walls are split by dim
+
+	void clear() {
+		floors.clear();
+		ceilings.clear();
+		walls[0].clear();
+		walls[1].clear();
+	}
+};
+
+struct building_t : public building_geom_t {
+
+	unsigned mat_ix;
+	bool is_house, has_antenna, has_chimney;
+	colorRGBA side_color, roof_color, detail_color;
+	cube_t bcube;
+	vect_cube_t parts;
+	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
+	vector<tquad_with_ix_t> roof_tquads, doors;
+	std::shared_ptr<building_interior_t> interior;
+	float ao_bcz2;
+
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), has_chimney(0),
+		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
+	bool is_valid() const {return !bcube.is_all_zeros();}
+	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
+	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
+	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
+	building_mat_t const &get_material() const;
+	float get_door_height() const {return 0.9f*get_material().get_floor_spacing();} // set height based on window spacing, 90% of a floor height (may be too large)
+	void gen_rotation(rand_gen_t &rgen);
+	void set_z_range(float z1, float z2);
+	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
+	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
+
+	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
+		point pos2(pos);
+		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
+	}
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr, bool check_interior=0) const;
+	bool check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr) const;
+	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
+	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
+	void calc_bcube_from_parts();
+	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
+	void gen_geometry(int rseed1, int rseed2);
+	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen);
+	void gen_house(cube_t const &base, rand_gen_t &rgen);
+	void add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
+	float gen_peaked_roof(cube_t const &top, float peak_height, bool dim);
+	void gen_details(rand_gen_t &rgen);
+	int get_num_windows_on_side(float xy1, float xy2) const;
+	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
+	void gen_building_door_if_needed(rand_gen_t &rgen);
+	void gen_sloped_roof(rand_gen_t &rgen);
+	void add_roof_to_bcube();
+	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
+	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const;
+	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
+private:
+	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
+	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
+	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
+};
+
+inline void clip_low_high(float &t0, float &t1) {
+	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
+	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
+}
 
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
