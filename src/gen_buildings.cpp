@@ -618,7 +618,7 @@ public:
 			auto &tri_verts(get_verts(tex, 1));
 			
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
-				vert.set_norm(d ? plus_z : -plus_z);
+				vert.set_ortho_norm(2, d); // +/- z
 				if (apply_ao) {vert.copy_color(cw[d]);}
 				vert_norm_comp_tc_color center(vert);
 				center.t[0] = center.t[1] = 0.0; // center of texture space for this disk

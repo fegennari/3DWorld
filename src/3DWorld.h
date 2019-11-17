@@ -861,8 +861,10 @@ struct vert_norm { // size = 24
 struct norm_comp { // size = 4
 	char n[3];
 	char pad; // unused padding
-	norm_comp() : pad(0) {n[0] = n[1] = n[2] = 0;}
+	norm_comp() : pad(0) {set_norm_to_zero();}
 	norm_comp(vector3d const &n_) : pad(0) {set_norm(n_);}
+	void set_norm_to_zero() {n[0] = n[1] = n[2] = 0;}
+	void set_ortho_norm(unsigned dim, bool dir) {assert(dim < 3); set_norm_to_zero(); n[dim] = (dir ? 127 : -128);}
 	void set_norm(norm_comp const &n_) {UNROLL_3X(n[i_] = n_.n[i_];)}
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = char(max(-128, min(127, int(127.0*n_[i_]))));)}
 	void set_norm_no_clamp(vector3d const &n_) {UNROLL_3X(n[i_] = int(127.0*n_[i_]);)}
