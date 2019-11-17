@@ -1045,6 +1045,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			} // for s
 		}
 		else { // generate random walls using recursive 2D slices
+			unsigned const part_mask(1 << (p - parts.begin()));
 			assert(to_split.empty());
 			to_split.emplace_back(*p); // seed room is entire part, no door
 			float window_hspacing[2] = {0.0};
@@ -1079,13 +1080,15 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 				// determine if either end of the wall ends at an adjacent part and insert an extra wall there to form a T junction
 				for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
+					unsigned const part_mask2(1 << (p2 - parts.begin()));
+
 					for (unsigned dir = 0; dir < 2; ++dir) {
 						float const val(c.d[!wall_dim][dir]);
 						if (p2 == p) continue; // skip self
 						if (p2->d[!wall_dim][!dir] != val) continue; // not adjacent
 						if (p2->z1() >= c.z2() || p2->z2() <= c.z1()) continue; // no overlap in Z
 						if (p2->d[wall_dim][0] >= wall_pos || p2->d[wall_dim][1] <= wall_pos) continue; // no overlap in wall_dim
-						if (wall_seps_placed[wall_dim][!dir] & (1 << (p2 - parts.begin()))) continue; // already placed a separator for this part, don't add a duplicate
+						if (wall_seps_placed[wall_dim][!dir] & part_mask2) continue; // already placed a separator for this part, don't add a duplicate
 						wall3.z1() = max(c.z1(), p2->z1()) + fc_thick; // shared Z range
 						wall3.z2() = min(c.z2(), p2->z2()) - fc_thick;
 						wall3.d[ wall_dim][0] = max(c.d[wall_dim][0], p2->d[wall_dim][0]) + wall_edge_spacing; // shared wall_dim range with slight offset
@@ -1094,7 +1097,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						wall3.d[!wall_dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
 
 						for (unsigned s = 0; s < 2; ++s) { // add doorways to both sides of wall_pos if there's space, starting with the high side
-							if (fabs(wall3.d[wall_dim][!s] - wall_pos) > 2.0f*doorway_width) {
+							if (fabs(wall3.d[wall_dim][!s] - wall_pos) > 1.5f*doorway_width) {
 								float const doorway_pos(0.5f*(wall_pos + wall3.d[wall_dim][!s])); // centered, for now
 								float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 								remove_section_from_cube(wall3, wall2, lo_pos, hi_pos, wall_dim);
@@ -1105,7 +1108,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							}
 						} // for s
 						interior->walls[!wall_dim].push_back(wall3);
-						wall_seps_placed[wall_dim][dir] |= (1 << (p - parts.begin())); // mark this wall as placed
+						wall_seps_placed[wall_dim][ dir] |= part_mask;  // mark this wall as placed
+						wall_seps_placed[wall_dim][!dir] |= part_mask2; // mark this wall as placed for other part
 					} // for dir
 				} // for p2
 				float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
