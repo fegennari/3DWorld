@@ -1081,11 +1081,11 @@ void line_tquad_draw_t::draw(float noise_scale) const { // supports quads and tr
 		s.set_prefix("#define LINE_MODE", 1); // FS
 		setup_shield_shader(s, 1);
 		s.add_uniform_float("noise_scale", noise_scale);
-		select_texture((draw_model != 0) ? WHITE_TEX : BLUR_TEX);
+		select_texture((draw_model != 0) ? (int)WHITE_TEX : (int)BLUR_TEX);
 	}
 	else { // texture mipmaps perform antialiasing on distant lines, which looks nice
 		s.begin_simple_textured_shader(0.01);
-		select_texture((draw_model != 0) ? WHITE_TEX : BLUR_TEX);
+		select_texture((draw_model != 0) ? (int)WHITE_TEX : (int)BLUR_TEX);
 	}
 	enable_blend();
 	draw_tri_verts();
