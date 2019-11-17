@@ -221,7 +221,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			if (f > 0         ) {c.z1() = z - fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
 			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; interior->floors  .push_back(c);}
 			c.z1() = z + fc_thick; c.z2() = z + window_vspacing - fc_thick;
-			if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {} // TODO_INT: doors were placed in the prev step; use them to create doorway cutouts on the first floor
+			//if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {}
 			// TODO_INT: add per-floor walls, door cutouts, etc.
 		} // for f
 	} // for p

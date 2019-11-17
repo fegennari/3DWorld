@@ -209,7 +209,7 @@ struct building_t : public building_geom_t {
 	void gen_details(rand_gen_t &rgen);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	void gen_building_door_if_needed(rand_gen_t &rgen);
+	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
