@@ -1052,6 +1052,28 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					hall_walls.push_back(hwall);
 				}
 			} // for s
+			// add rooms
+			bool const add_hall(0); // I guess the hall itself doesn't count as a room
+			interior->rooms.reserve(2*num_rooms + add_hall); // two rows of rooms + optional hallway
+			float pos(p->d[!min_dim][0]);
+
+			for (int i = 0; i < num_rooms; ++i) {
+				float const next_pos(min(p->d[!min_dim][1], (pos + room_len))); // clamp to end of building to last row handle partial room)
+
+				for (unsigned d = 0; d < 2; ++d) { // lo, hi
+					cube_t c(*p); // copy zvals and exterior wall pos
+					c.d[ min_dim][!d] = hall_wall_pos[d];
+					c.d[!min_dim][ 0] = pos;
+					c.d[!min_dim][ 1] = next_pos;
+					interior->rooms.push_back(c);
+				}
+				pos = next_pos;
+			} // for i
+			if (add_hall) {
+				cube_t hall(*p);
+				for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
+				interior->rooms.push_back(hall);
+			}
 		}
 		else { // generate random walls using recursive 2D slices
 			unsigned const part_mask(1 << (p - parts.begin()));
@@ -1072,7 +1094,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
 				else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
-				if (csz[!wall_dim] < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, etc.)
+				if (csz[!wall_dim] < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, garage, shed, etc.)
 				float wall_pos(0.0);
 				bool const on_edge(c.d[wall_dim][0] == p->d[wall_dim][0] || c.d[wall_dim][1] == p->d[wall_dim][1]); // at edge of the building - make sure walls don't intersect windows
 				bool pos_valid(0);
@@ -1083,7 +1105,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
 					pos_valid = 1; break; // done, keep wall_pos
 				}
-				if (!pos_valid) continue; // no valid pos, skip this split
+				if (!pos_valid) { // no valid pos, skip this split
+					interior->rooms.push_back(c);
+					continue;
+				}
 				cube_t wall(c), wall2, wall3; // copy from cube; shared zvals, but X/Y will be overwritten per wall
 				create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
 
