@@ -678,6 +678,7 @@ public:
 				center.v = pos;
 				if (d) {center.v.z += height;}
 				if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, center.v);}
+				unsigned const start(tri_verts.size());
 
 				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data triangles
 					tri_verts.push_back(center);
@@ -691,6 +692,7 @@ public:
 						tri_verts.push_back(vert);
 					}
 				} // for S
+				std::reverse(tri_verts.begin()+start, tri_verts.end()); // winding order is wrong, but it's easier to reverse it than change all of the indexing logic
 			} // for d
 		} // end draw end(s)
 	}
