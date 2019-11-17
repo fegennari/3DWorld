@@ -1185,3 +1185,22 @@ void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float fl
 	interior->room_geom->create_vbo(); // I guess we always do this here? why create the geometry if we're not going to draw it
 }
 
+void building_t::update_stats(building_stats_t &s) const { // calculate all of the counts that are easy to get
+
+	++s.nbuildings;
+	s.nparts   += parts.size();
+	s.ndetails += details.size();
+	s.ntquads  += roof_tquads.size();
+	s.ndoors   += doors.size();
+	if (!interior) return;
+	++s.ninterior;
+	s.nrooms  += interior->rooms.size();
+	s.nceils  += interior->ceilings.size();
+	s.nfloors += interior->floors.size();
+	s.nwalls  += interior->walls[0].size() + interior->walls[1].size();
+	if (!interior->room_geom) return;
+	++s.nrgeom;
+	s.ngeom  += interior->room_geom->cubes.size();
+	s.nverts += interior->room_geom->num_verts;
+}
+

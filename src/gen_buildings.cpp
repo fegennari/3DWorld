@@ -1362,6 +1362,10 @@ public:
 		if (!is_tile) {
 			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 				 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
+			building_stats_t s;
+			for (auto b = buildings.begin(); b != buildings.end(); ++b) {b->update_stats(s);}
+			cout << TXT(s.nbuildings) << TXT(s.nparts) << TXT(s.ndetails) << TXT(s.ntquads) << TXT(s.ndoors) << TXT(s.ninterior)
+				 << TXT(s.nrooms) << TXT(s.nceils) << TXT(s.nfloors) << TXT(s.nwalls) << TXT(s.nrgeom) << TXT(s.ngeom) << TXT(s.nverts) << endl;
 		}
 		build_grid_by_tile(is_tile);
 		create_vbos(is_tile);

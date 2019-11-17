@@ -182,6 +182,11 @@ struct building_interior_t {
 	void clear();
 };
 
+struct building_stats_t {
+	unsigned nbuildings, nparts, ndetails, ntquads, ndoors, ninterior, nrooms, nceils, nfloors, nwalls, nrgeom, ngeom, nverts;
+	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), ngeom(0), nverts(0) {}
+};
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
@@ -233,6 +238,7 @@ struct building_t : public building_geom_t {
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
+	void update_stats(building_stats_t &s) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
