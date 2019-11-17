@@ -951,14 +951,14 @@ void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float w
 // Note: assumes edge is not clipped and doesn't work when clipped
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border) {
 	float const uv(fract((val - c.d[dim][0])/window_spacing));
-	return (uv > window_border && uv < 1.0-window_border);
+	return (uv > window_border && uv < 1.0f-window_border);
 }
 
 struct split_cube_t : public cube_t {
 	float door_lo[2][2], door_hi[2][2]; // per {dim x dir}
 	
 	split_cube_t(cube_t const &c) : cube_t(c) {
-		for (unsigned d = 0; d < 4; ++d) {door_lo[d>>1][d&1] = door_hi[d>>1][d&1] = 0.0f;}
+		door_lo[0][0] = door_lo[0][1] = door_lo[1][0] = door_lo[1][1] = door_hi[0][0] = door_hi[0][1] = door_hi[1][0] = door_hi[1][1] = 0.0f;
 	}
 	bool bad_pos(float val, bool dim) const {
 		for (unsigned d = 0; d < 2; ++d) { // check both dirs (wall end points)
@@ -967,6 +967,14 @@ struct split_cube_t : public cube_t {
 		return 0;
 	}
 };
+
+unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness) {
+	float const z_span(c.dz() - floor_thickness);
+	assert(z_span > 0.0);
+	unsigned const num_floors(round_fp(z_span/window_vspacing)); // round - no partial floors
+	assert(num_floors <= 100); // sanity check
+	return num_floors;
+}
 
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
@@ -991,10 +999,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
 	for (auto p = parts.begin(); p != (parts.end() - has_chimney); ++p) {
 		if (is_house && (p - parts.begin()) > 1) break; // houses have at most two parts; exclude garage, shed, porch, porch support, etc.
-		float const z_span(p->dz() - floor_thickness);
-		assert(z_span > 0.0);
-		unsigned const num_floors(round_fp(z_span/window_vspacing)); // round down - no partial floors; add a slight ajustment to account for fp error
-		assert(num_floors <= 100); // sanity check
+		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
 		vector3d const psz(p->get_size());
@@ -1118,7 +1123,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
 
-				if (csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len) {
+				if (csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len) { // split into two smaller rooms
 					for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 						split_cube_t c_sub(c);
 						c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
@@ -1127,6 +1132,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						to_split.push_back(c_sub);
 					}
 				}
+				else {interior->rooms.push_back(c);} // leaf case (unsplit), add a new room
 			} // end while()
 		} // end wall placement
 		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
@@ -1139,9 +1145,25 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			if (f > 0         ) {c.z1() = z - fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
 			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; interior->floors  .push_back(c);}
 			c.z1() = z + fc_thick; c.z2() = z + window_vspacing - fc_thick;
-			//if (f == 0 && p->z1() == bcube.z1() && !doors.empty()) {}
-			// TODO_INT: add per-floor walls, door cutouts, etc.
+			// add per-floor walls, door cutouts, etc. here if needed
 		} // for f
 	} // for p
+	gen_room_details(rgen, wall_thick, floor_thickness, window_vspacing);
+}
+
+// Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
+void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float floor_thickness, float window_vspacing) {
+
+	assert(interior);
+
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
+		float z(r->z1());
+
+		for (unsigned f = 0; f <= num_floors; ++f, z += window_vspacing) {
+			// TODO_INT: generate objects for this room+floor combination
+			//if (f == 0 && r->z1() == bcube.z1()) {} // any special logic that goes on the first floor is here
+		}
+	} // for r
 }
 

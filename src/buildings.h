@@ -157,7 +157,7 @@ struct tquad_with_ix_t : public tquad_t {
 
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2]; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], rooms; // walls are split by dim
 
 	void clear() {
 		floors.clear();
@@ -211,6 +211,7 @@ struct building_t : public building_geom_t {
 	void gen_details(rand_gen_t &rgen);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
+	void gen_room_details(rand_gen_t &rgen, float wall_spacing, float floor_thickness, float window_vspacing);
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
