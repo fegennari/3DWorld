@@ -1455,10 +1455,12 @@ public:
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
 					(*i)->building_draw_vbo.draw_tile(tile_id);
 
-					if (!(*i)->building_draw_windows.empty() && !transparent_windows) {
+					if (!(*i)->building_draw_windows.empty()) {
 						enable_blend();
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
+						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						(*i)->building_draw_windows.draw_tile(tile_id); // draw windows on top of other buildings
+						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						disable_blend();
 					}
