@@ -955,9 +955,17 @@ bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spa
 }
 
 struct split_cube_t : public cube_t {
-	float door_lo[2], door_hi[2]; // per dim
-	split_cube_t(cube_t const &c) : cube_t(c) {door_lo[0] = door_lo[1] = door_hi[0] = door_hi[1] = 0.0;}
-	bool bad_pos(float val, bool dim) const {return (door_lo[dim] < door_hi[dim] && val > door_lo[dim] && val < door_hi[dim]);}
+	float door_lo[2][2], door_hi[2][2]; // per {dim x dir}
+	
+	split_cube_t(cube_t const &c) : cube_t(c) {
+		for (unsigned d = 0; d < 4; ++d) {door_lo[d>>1][d&1] = door_hi[d>>1][d&1] = 0.0f;}
+	}
+	bool bad_pos(float val, bool dim) const {
+		for (unsigned d = 0; d < 2; ++d) { // check both dirs (wall end points)
+			if (door_lo[dim][d] < door_hi[dim][d] && val > door_lo[dim][d] && val < door_hi[dim][d]) return 1;
+		}
+		return 0;
+	}
 };
 
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
@@ -1092,8 +1100,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								remove_section_from_cube(wall3, wall2, lo_pos, hi_pos, wall_dim);
 								interior->walls[!wall_dim].push_back(wall2);
 								// TODO_INT: this doesn't work, need to set this on the other part as well, but the walls may already have been generated there
-								c.door_lo[wall_dim] = lo_pos - wall_half_thick; // set new door pos in this dim
-								c.door_hi[wall_dim] = hi_pos + wall_half_thick;
+								c.door_lo[wall_dim][dir] = lo_pos - wall_half_thick; // set new door pos in this dim
+								c.door_hi[wall_dim][dir] = hi_pos + wall_half_thick;
 							}
 						} // for s
 						interior->walls[!wall_dim].push_back(wall3);
@@ -1110,8 +1118,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 						split_cube_t c_sub(c);
 						c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
-						c_sub.door_lo[!wall_dim] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
-						c_sub.door_hi[!wall_dim] = hi_pos + wall_half_thick;
+						c_sub.door_lo[!wall_dim][d] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
+						c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
 						to_split.push_back(c_sub);
 					}
 				}
