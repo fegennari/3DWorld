@@ -7,7 +7,9 @@
 
 #include "3DWorld.h"
 
-bool const ADD_BUILDING_INTERIORS = 1;
+bool const ADD_BUILDING_INTERIORS  = 1;
+bool const EXACT_MULT_FLOOR_HEIGHT = 1;
+unsigned const MAX_CYLIN_SIDES     = 36;
 
 struct building_occlusion_state_t {
 	point pos;
@@ -221,11 +223,18 @@ private:
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 };
 
+struct building_draw_utils {
+	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv);
+	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, float expand=0.0);
+};
+
 inline void clip_low_high(float &t0, float &t1) {
 	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
 }
 
+void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);
+void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_dist=0.0);
