@@ -168,6 +168,7 @@ struct building_interior_t {
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
+	unsigned char hallway_dim; // main hallway dim: 0=x, 1=y, 2=none
 	bool is_house, has_antenna, has_chimney;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
@@ -177,7 +178,7 @@ struct building_t : public building_geom_t {
 	std::shared_ptr<building_interior_t> interior;
 	float ao_bcz2;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), is_house(0), has_antenna(0), has_chimney(0),
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), is_house(0), has_antenna(0), has_chimney(0),
 		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
