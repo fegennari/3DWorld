@@ -1129,7 +1129,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, flo
 {
 	point const scale(sx, sy, sz);
 	vector3d const xlate(pos - 0.5*scale); // move origin from center to min corner
-	vert_norm_tc verts[24];
+	vert_norm_tc verts[24]; // max number of verts that can be drawn is 24, assuming all faces are drawn
 	unsigned vix(0);
 		
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
@@ -1156,8 +1156,8 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, flo
 						verts[vix].t[ st] = (proportional_texture ? scale[d[1]] : 1.0)*texture_scale*pt[d[1]];
 						verts[vix].t[!st] = (proportional_texture ? scale[d[0]] : 1.0)*texture_scale*pt[d[0]];
 					}
-				}
-			}
+				} // for k
+			} // for s1
 		} // for j
 	} // for i
 	assert(vix <= 24);
