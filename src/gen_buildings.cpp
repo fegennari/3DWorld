@@ -602,10 +602,11 @@ class building_draw_t {
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
 	point cur_camera_pos;
+	bool is_city;
 
 public:
 	unsigned cur_tile_id;
-	building_draw_t() : cur_camera_pos(zero_vector), cur_tile_id(0) {}
+	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_), cur_tile_id(0) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
 	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
@@ -669,6 +670,7 @@ public:
 			auto &tri_verts(get_verts(tex, 1));
 			
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
+				if (is_city && pos.z == bcz1 && d == 0) continue; // skip bottom
 				vert.set_ortho_norm(2, d); // +/- z
 				if (apply_ao) {vert.copy_color(cw[d]);}
 				vert_norm_comp_tc_color center(vert);
@@ -763,6 +765,7 @@ public:
 		setup_ao_color(color, bcube.z1(), ao_bcz2, cube.d[2][0], cube.d[2][1], cw, vert, no_ao);
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
 		tex_vert_off.z = -bcube.z1();
+		if (is_city && cube.z1() == bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
@@ -1147,7 +1150,7 @@ class building_creator_t {
 	};
 
 public:
-	building_creator_t() : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector), use_smap_this_frame(0) {}
+	building_creator_t(bool is_city=0) : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector), building_draw(is_city), building_draw_vbo(is_city), use_smap_this_frame(0) {}
 	bool empty() const {return buildings.empty();}
 	void clear() {buildings.clear(); grid.clear(); clear_vbos(); buildings_bcube = cube_t();}
 	unsigned get_num_buildings() const {return buildings.size();}
@@ -1918,7 +1921,7 @@ public:
 }; // end building_tiles_t
 
 
-building_creator_t building_creator, building_creator_city;
+building_creator_t building_creator(0), building_creator_city(1);
 building_tiles_t building_tiles;
 
 void create_buildings_tile(int x, int y) {
