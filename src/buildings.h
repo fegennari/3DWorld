@@ -6,6 +6,7 @@
 #define _BUILDING_H_
 
 #include "3DWorld.h"
+#include "gl_ext_arb.h" // for vbo_wrap_t
 
 bool const ADD_BUILDING_INTERIORS  = 1;
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
@@ -155,16 +156,30 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
+struct colored_cube_t : public cube_t {
+	color_wrapper cw;
+	unsigned char skip_faces; // 1=X1, 2=X2, 4=Y1, 8=Y2, 16=Z1, 32=Z2
+	colored_cube_t() : skip_faces(0) {}
+	colored_cube_t(cube_t const &c, colorRGBA const &color=WHITE, unsigned char sf=0) : cube_t(c), cw(color), skip_faces(sf) {}
+};
+
+struct building_room_geom_t {
+	// TODO: textures?
+	vector<colored_cube_t> cubes; // for drawing and collision detection
+	unsigned num_verts; // for drawing
+	vbo_wrap_t vbo;
+
+	building_room_geom_t() : num_verts(0) {}
+	void clear() {cubes.clear(); vbo.clear(); num_verts = 0;}
+	void create_vbo();
+	void draw() const;
+};
+
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
 	vect_cube_t floors, ceilings, walls[2], rooms; // walls are split by dim
-
-	void clear() {
-		floors.clear();
-		ceilings.clear();
-		walls[0].clear();
-		walls[1].clear();
-	}
+	std::unique_ptr<building_room_geom_t> room_geom;
+	void clear();
 };
 
 struct building_t : public building_geom_t {

@@ -5,7 +5,6 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "shaders.h"
-#include "gl_ext_arb.h"
 #include "file_utils.h"
 #include "buildings.h"
 #include "mesh.h"
@@ -400,6 +399,58 @@ public:
 	}
 };
 texture_id_mapper_t tid_mapper;
+
+
+void building_room_geom_t::create_vbo() {
+	if (cubes.empty())   return; // no geom
+	if (vbo.vbo_valid()) return; // already created
+	vector<vert_norm_comp_color> verts; // okay to use norm_comp here because all normals components are either -1 or +1
+	verts.reserve(24*cubes.size()); // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
+
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		vert_norm_comp_color v;
+		v.copy_color(c->cw);
+
+		// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
+		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+				if (c->skip_faces & (1 << (2*i + j))) continue; // skip this face
+				v.set_ortho_norm(i, j);
+				v.v[n] = j;
+
+				for (unsigned s1 = 0; s1 < 2; ++s1) {
+					v.v[d[1]] = c->d[d[1]][s1];
+
+					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+						v.v[d[0]] = c->d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
+						verts.push_back(v);
+					}
+				}
+			} // for j
+		} // for i
+	} // for c
+	num_verts = verts.size();
+}
+
+void building_room_geom_t::draw() const {
+	if (cubes.empty()) return; // no geom
+	assert(vbo.vbo_valid());
+	assert(num_verts > 0);
+	vbo.pre_render();
+	vert_norm_comp_color::set_vbo_arrays();
+	draw_quads_as_tris(num_verts);
+	vbo.post_render(); // move this out of the loop?
+}
+
+void building_interior_t::clear() {
+	floors.clear();
+	ceilings.clear();
+	walls[0].clear();
+	walls[1].clear();
+	if (room_geom) {room_geom->clear(); room_geom.reset();}
+}
 
 
 /*static*/ void building_draw_utils::calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
