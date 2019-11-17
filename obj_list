@@ -100,4 +100,4 @@ roads.o
 cars.o
 pedestrians.o
 texture_tile_blend.o
-building_interior.o
+building_geom.o

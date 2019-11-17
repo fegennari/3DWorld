@@ -314,7 +314,7 @@
     <ClCompile Include="src\ai.cpp" />
     <ClCompile Include="src\animals.cpp" />
     <ClCompile Include="src\asteroid.cpp" />
-    <ClCompile Include="src\building_interior.cpp" />
+    <ClCompile Include="src\building_geom.cpp" />
     <ClCompile Include="src\build_world.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
