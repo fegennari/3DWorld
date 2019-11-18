@@ -12,8 +12,7 @@ Cities:
 - Fences
 
 Building Interiors:
-* Better Walls
-- Create furniture and other details
+* Create furniture and other details
 - Create per tile rather than all at once for performance/memory?
 - Draw Interiors
   * See through building exteriors

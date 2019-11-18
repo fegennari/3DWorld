@@ -998,6 +998,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	float const wwf(global_building_params.get_window_width_fract()), window_border(0.5*(1.0 - wwf)); // (0.0, 1.0)
 	unsigned wall_seps_placed[2][2] = {0}; // bit masks for which wall separators have been placed per part, one per {dim x dir}; scales to 32 parts, which should be enough
 	vector<split_cube_t> to_split;
+	bool has_hallway_with_rooms(0);
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
@@ -1012,6 +1013,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 		if (!is_house && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
+			has_hallway_with_rooms = 1;
 			int const num_windows   (get_num_windows_on_side(p->d[!min_dim][0], p->d[!min_dim][1]));
 			int const num_windows_od(get_num_windows_on_side(p->d[ min_dim][0], p->d[ min_dim][1])); // other dim, for use in hallway width calculation
 			int const windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
@@ -1177,6 +1179,43 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			// add per-floor walls, door cutouts, etc. here if needed
 		} // for f
 	} // for p
+	if (!has_hallway_with_rooms) { // random slicing plane rooms
+		// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
+		float const min_split_len(1.5*min_wall_len);
+
+		for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
+			vect_cube_t &walls(interior->walls[d]);
+			vect_cube_t const &perp_walls(interior->walls[!d]);
+
+			for (unsigned w = 0; w < walls.size(); ++w) { // Note: iteration will include newly added all segments to recursively split long walls
+				for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
+					cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
+					float const len(wall.d[!d][1] - wall.d[!d][0]);
+					if (len < min_split_len) break; // not long enough to split - done
+					// walls currently don't run along the inside of exterior building walls, so we don't need to handle that case yet
+					bool was_split(0);
+
+					for (unsigned ntries = 0; ntries < 4; ++ntries) { // 4 tries: choose random doorway positions and check against perp_walls for occlusion
+						float const doorway_pos(cube_rand_side_pos(wall, !d, 0.25, doorway_width, rgen));
+						float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
+						bool valid(1);
+
+						for (auto p = perp_walls.begin(); p != perp_walls.end(); ++p) {
+							if (p->d[!d][1] < lo_pos-wall_thick || p->d[!d][0] > hi_pos+wall_thick) continue; // no overlap with wall
+							if (p->d[ d][1] > wall.d[d][0]-wall_thick && p->d[ d][0] < wall.d[d][1]+wall_thick) {valid = 0; break;} // has perp intersection
+						}
+						if (!valid) continue;
+						cube_t wall2;
+						remove_section_from_cube(wall, wall2, lo_pos, hi_pos, !d);
+						walls.push_back(wall2); // Note: invalidates wall reference
+						was_split = 1;
+						break;
+					} // for ntries
+					if (!was_split) break; // no more splits
+				} // for nsplits
+			} // for w
+		} // for d
+	}
 	gen_room_details(rgen, wall_thick, floor_thickness, window_vspacing);
 }
 
