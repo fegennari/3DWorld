@@ -444,14 +444,6 @@ void building_room_geom_t::draw() const {
 	vbo.post_render(); // move this out of the loop?
 }
 
-void building_interior_t::clear() {
-	floors.clear();
-	ceilings.clear();
-	walls[0].clear();
-	walls[1].clear();
-	if (room_geom) {room_geom->clear(); room_geom.reset();}
-}
-
 
 /*static*/ void building_draw_utils::calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 

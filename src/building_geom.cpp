@@ -1133,19 +1133,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						wall3.d[!wall_dim][ dir] = val;
 						wall3.d[!wall_dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
 						vect_cube_t &walls(interior->walls[!wall_dim]);
-
-#if 1
 						must_split[!wall_dim] |= (1ULL << (walls.size() & 63)); // flag this wall for extra splitting
-#else
-						for (unsigned s = 0; s < 2; ++s) { // add doorways to both sides of wall_pos if there's space, starting with the high side
-							if (fabs(wall3.d[wall_dim][!s] - wall_pos) > 1.5f*doorway_width) {
-								float const doorway_pos(0.5f*(wall_pos + wall3.d[wall_dim][!s])); // centered, for now
-								float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
-								remove_section_from_cube(wall3, wall2, lo_pos, hi_pos, wall_dim);
-								interior->walls[!wall_dim].push_back(wall2);
-							}
-						} // for s
-#endif
 						walls.push_back(wall3);
 						wall_seps_placed[wall_dim][ dir] |= part_mask;  // mark this wall as placed
 						wall_seps_placed[wall_dim][!dir] |= part_mask2; // mark this wall as placed for other part
