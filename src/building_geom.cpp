@@ -1096,13 +1096,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
 				else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
-				if (csz[!wall_dim] < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, garage, shed, etc.)
+				if (min(csz.x, csz.y) < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, garage, shed, etc.)
 				float wall_pos(0.0);
 				bool const on_edge(c.d[wall_dim][0] == p->d[wall_dim][0] || c.d[wall_dim][1] == p->d[wall_dim][1]); // at edge of the building - make sure walls don't intersect windows
 				bool pos_valid(0);
 				
 				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window
-					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, wall_thick, rgen);
+					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, (doorway_width + wall_thick), rgen);
 					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
 					pos_valid = 1; break; // done, keep wall_pos
