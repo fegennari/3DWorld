@@ -604,7 +604,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	bool door_dim(rgen.rand_bool()), door_dir(0);
 	unsigned door_part(0);
 
-	if (two_parts) { // multi-part house
+	if (two_parts) { // multi-part house; parts[1] is the lower height part
 		parts.push_back(base); // add second part
 		bool const dir(rgen.rand_bool()); // in dim
 		float const split(rgen.rand_uniform(0.4, 0.6)*(dir  ? -1.0 : 1.0));
@@ -689,7 +689,16 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		unsigned const ix(i - parts.begin()), fdim(force_dim[ix]);
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
-		roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim);
+		float extend_to(0.0);
+
+		if (type == 1 && ix == 1 && parts[0].z2() == parts[1].z2()) { // same z2
+			bool const other_dim((force_dim[0] < 2) ? force_dim[0] : get_largest_xy_dim(parts[0]));
+			
+			if (dim != other_dim && (parts[0].d[dim][1] - parts[0].d[dim][0]) >= (parts[1].d[!dim][1] - parts[1].d[!dim][0])) { // other dim, lower peak
+				extend_to = 0.5f*(parts[0].d[dim][0] + parts[0].d[dim][1]); // extend lower part roof to center of upper part roof
+			}
+		}
+		roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);
 	}
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned part_ix(0);
@@ -749,15 +758,22 @@ void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 }
 
-float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim) { // roof made from two sloped quads
+float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to) { // roof made from two sloped quads
 
+	cube_t top(top_); // deep copy
+	unsigned extend_dir(2); // 2 = neither
+	
+	if (extend_to != 0.0) {
+		if      (extend_to < top.d[dim][0]) {top.d[dim][0] = extend_to; extend_dir = 0;} // lo side extend
+		else if (extend_to > top.d[dim][1]) {top.d[dim][1] = extend_to; extend_dir = 1;} // hi side extend
+	}
 	float const width(dim ? top.get_dx() : top.get_dy()), roof_dz(min(peak_height*width, top.get_dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
 	else          {pts[4].x = pts[5].x = 0.5f*(x1 + x2);} // xc
 	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
-	roof_tquads.reserve(4); // 2 roof quads + 2 side triangles
+	roof_tquads.reserve(3 + (extend_dir == 2)); // 2 roof quads + 1-2 side triangles
 
 	// TODO: extend outside the wall a small amount? may require updating bcube for drawing
 	for (unsigned n = 0; n < 2; ++n) { // roof
@@ -768,6 +784,7 @@ float building_t::gen_peaked_roof(cube_t const &top, float peak_height, bool dim
 	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
 
 	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
+		if (n == extend_dir) continue; // skip this side
 		bool skip(0);
 
 		// exclude tquads contained in/adjacent to other parts, considering only the cube parts;
