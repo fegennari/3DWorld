@@ -150,7 +150,7 @@ struct building_geom_t { // describes the physical shape of a building
 };
 
 struct tquad_with_ix_t : public tquad_t {
-	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR};
+	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR, TYPE_IDOOR}; // roof, wall, chimney cap, house door, building door, interior door
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(0) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
@@ -177,7 +177,7 @@ struct building_room_geom_t {
 
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2], rooms; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], rooms, doors; // walls are split by dim
 	std::unique_ptr<building_room_geom_t> room_geom;
 };
 
@@ -259,5 +259,6 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_dist=0.0);
+tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj);
 
 #endif // _BUILDING_H_

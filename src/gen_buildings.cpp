@@ -13,6 +13,7 @@
 using std::string;
 
 bool const DRAW_WINDOWS_AS_HOLES = 1; // somewhat works, but doesn't draw buildings and terrain behind the windows due to incorrect draw order
+bool const DRAW_INTERIOR_DOORS   = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 extern bool start_in_inf_terrain, draw_building_interiors;
@@ -726,6 +727,10 @@ public:
 				vert.t[0] = float(i == 1 || i == 2);
 				vert.t[1] = float(i == 2 || i == 3);
 			}
+			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR) { // interior door textured/stretched in Y
+				vert.t[0] = tex.tscale_x*(i == 1 || i == 2);
+				vert.t[1] = tex.tscale_y*(i == 2 || i == 3);
+			}
 			else {assert(0);}
 			if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 			verts.push_back(vert);
@@ -957,6 +962,14 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
 				bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
+			}
+		}
+		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor
+			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+				bool const dim(i->dy() < i->dx());
+				float const ty(i->dz()/mat.get_floor_spacing()); // tile door texture across floors
+				tquad_with_ix_t const door(set_door_from_cube(*i, dim, 0, tquad_with_ix_t::TYPE_IDOOR, 0.0)); // dir doesn't matter since it's zero width, and no pos_adj
+				bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(building_window_gen.get_hdoor_tid(), -1, 1.0, ty), WHITE);
 			}
 		}
 	}
@@ -1435,6 +1448,7 @@ public:
 						point const pos(g->bcube.get_cube_center() + xlate);
 						if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 						(*i)->building_draw_interior.draw_tile(g - (*i)->grid_by_tile.begin());
+						// TODO_INT: iterate over buildings in this tile and draw interior room geom, generating it if needed
 					} // for g
 				} // for i
 			}
@@ -1456,6 +1470,7 @@ public:
 			s.disable();
 			glCullFace(GL_BACK); // draw front faces
 			// draw windows in depth pass to create holes
+			// TODO_INT: what about holes for doors that the player can open and enter?
 			// TODO_INT: figure out how to draw window holes on back faces so that the player can look completely through buildings
 			shader_t holes_shader;
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting

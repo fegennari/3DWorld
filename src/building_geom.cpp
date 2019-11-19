@@ -743,18 +743,24 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 }
 
-void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) {
+tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj) {
 
-	vector3d const sz(c.get_size());
-	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
-	tquad_with_ix_t door(4, (for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR)); // quad
+	tquad_with_ix_t door(4, type); // quad
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
 	door.pts[0][!dim] = door.pts[3][!dim] = c.d[!dim][ dir]; //  dir side
 	door.pts[1][!dim] = door.pts[2][!dim] = c.d[!dim][!dir]; // !dir side
-	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][ dim] = door.pts[3][ dim] = c.d[dim][0] + 0.01*sz[!dim]*(dir ? 1.0 : -1.0); // move away from wall slightly
+	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][dim] = door.pts[3][dim] = c.d[dim][0] + pos_adj*(dir ? 1.0 : -1.0); // move away from wall slightly
 	if (dim == 0) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap two corner points to flip windowing dir and invert normal for doors oriented in X
-	doors.push_back(door);
+	return door;
+}
+
+void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) {
+
+	vector3d const sz(c.get_size());
+	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
+	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
+	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim]));
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 }
 
@@ -1070,13 +1076,16 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					hall_walls.push_back(hwall);
 				}
 			} // for s
-			// add rooms
+			// add rooms and doors
 			bool const add_hall(0); // I guess the hall itself doesn't count as a room
 			interior->rooms.reserve(2*num_rooms + add_hall); // two rows of rooms + optional hallway
+			interior->doors.reserve(2*num_rooms);
 			float pos(p->d[!min_dim][0]);
 
 			for (int i = 0; i < num_rooms; ++i) {
-				float const next_pos(min(p->d[!min_dim][1], (pos + room_len))); // clamp to end of building to last row handle partial room)
+				float const wall_end(p->d[!min_dim][1]);
+				bool const is_small_room((pos + room_len) > wall_end);
+				float const next_pos(is_small_room ? wall_end : (pos + room_len)); // clamp to end of building to last row handle partial room)
 
 				for (unsigned d = 0; d < 2; ++d) { // lo, hi
 					cube_t c(*p); // copy zvals and exterior wall pos
@@ -1084,6 +1093,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c.d[!min_dim][ 0] = pos;
 					c.d[!min_dim][ 1] = next_pos;
 					interior->rooms.push_back(c);
+					cube_t door(c); // copy zvals and wall pos
+					door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
+					door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
+					door.d[!min_dim][1] -= hwall_extend;
+					interior->doors.push_back(door);
 				}
 				pos = next_pos;
 			} // for i
@@ -1133,6 +1147,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
 				float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 				remove_section_from_cube(wall, wall2, lo_pos, hi_pos, !wall_dim);
+				// TODO_INT: interior->doors.push_back(...);
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
 
@@ -1212,6 +1227,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					if (!valid) continue;
 					cube_t wall2;
 					remove_section_from_cube(wall, wall2, lo_pos, hi_pos, !d);
+					// TODO_INT: interior->doors.push_back(...);
 					walls.push_back(wall2); // Note: invalidates wall reference
 					was_split = 1;
 					break;
@@ -1267,6 +1283,7 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	s.nceils  += interior->ceilings.size();
 	s.nfloors += interior->floors.size();
 	s.nwalls  += interior->walls[0].size() + interior->walls[1].size();
+	s.ndoors  += interior->doors.size(); // I guess these also count as doors?
 	if (!interior->room_geom) return;
 	++s.nrgeom;
 	s.ngeom  += interior->room_geom->cubes.size();
