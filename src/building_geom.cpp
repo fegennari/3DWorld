@@ -1250,6 +1250,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		} // for w
 	} // for d
 	gen_room_details(rgen, wall_thick, floor_thickness, window_vspacing);
+	interior->finalize();
 }
 
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
@@ -1300,5 +1301,13 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	++s.nrgeom;
 	s.ngeom  += interior->room_geom->cubes.size();
 	s.nverts += interior->room_geom->num_verts;
+}
+
+void building_interior_t::finalize() {
+	remove_excess_cap(floors);
+	remove_excess_cap(ceilings);
+	remove_excess_cap(rooms);
+	remove_excess_cap(doors);
+	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 

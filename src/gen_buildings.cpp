@@ -403,8 +403,10 @@ texture_id_mapper_t tid_mapper;
 
 
 void building_room_geom_t::create_vbo() {
+
 	if (cubes.empty())   return; // no geom
 	if (vbo.vbo_valid()) return; // already created
+	remove_excess_cap(cubes); // optional
 	vector<vert_norm_comp_color> verts; // okay to use norm_comp here because all normals components are either -1 or +1
 	verts.reserve(24*cubes.size()); // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
 
@@ -436,6 +438,7 @@ void building_room_geom_t::create_vbo() {
 }
 
 void building_room_geom_t::draw() const {
+
 	if (cubes.empty()) return; // no geom
 	assert(vbo.vbo_valid());
 	assert(num_verts > 0);
