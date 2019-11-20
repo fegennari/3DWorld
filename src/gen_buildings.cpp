@@ -13,7 +13,7 @@
 using std::string;
 
 bool const DRAW_WINDOWS_AS_HOLES = 1; // somewhat works, but doesn't draw buildings and terrain behind the windows due to incorrect draw order
-bool const DRAW_INTERIOR_DOORS   = 1;
+int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 extern bool start_in_inf_terrain, draw_building_interiors;
@@ -967,8 +967,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				bool const dim(i->dy() < i->dx());
+				bool const dir(i->d[dim][0] > bcube.get_center_dim(dim)); // determines which way doors open; doors open in from hallways for office buildings
 				float const ty(i->dz()/mat.get_floor_spacing()); // tile door texture across floors
-				tquad_with_ix_t const door(set_door_from_cube(*i, dim, 0, tquad_with_ix_t::TYPE_IDOOR, 0.0)); // dir doesn't matter since it's zero width, and no pos_adj
+				tquad_with_ix_t const door(set_door_from_cube(*i, dim, dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, (DRAW_INTERIOR_DOORS == 2)));
 				bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(building_window_gen.get_hdoor_tid(), -1, 1.0, ty), WHITE);
 			}
 		}

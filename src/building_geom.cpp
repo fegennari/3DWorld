@@ -743,15 +743,22 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 }
 
-tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj) {
+tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened) {
 
 	tquad_with_ix_t door(4, type); // quad
+	float const pos(c.d[dim][0] + pos_adj*(dir ? 1.0 : -1.0)); // move away from wall slightly (not needed if opened?)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
 	door.pts[0][!dim] = door.pts[3][!dim] = c.d[!dim][ dir]; //  dir side
 	door.pts[1][!dim] = door.pts[2][!dim] = c.d[!dim][!dir]; // !dir side
-	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][dim] = door.pts[3][dim] = c.d[dim][0] + pos_adj*(dir ? 1.0 : -1.0); // move away from wall slightly
+	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][dim] = door.pts[3][dim] = pos;
 	if (dim == 0) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap two corner points to flip windowing dir and invert normal for doors oriented in X
+
+	if (opened) { // rotate 90 degrees about pts[0]/pts[3] - change pts[1]/pts[2]; this is just a placeholder for now
+		float const width(c.get_sz_dim(!dim));
+		door.pts[1][!dim] = door.pts[2][!dim] = door.pts[0][!dim];
+		door.pts[1][ dim] = door.pts[2][ dim] = door.pts[0][ dim] + width*(dir ? 1.0 : -1.0);
+	}
 	return door;
 }
 
@@ -760,7 +767,7 @@ void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
-	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim]));
+	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim], 0)); // opened=0
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 }
 
@@ -946,6 +953,13 @@ void remove_section_from_cube(cube_t &c, cube_t &c2, float v1, float v2, bool xy
 	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
 	c2 = c; // clone first cube
 	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
+}
+void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, vect_cube_t &doors) {
+	remove_section_from_cube(c, c2, v1, v2, xy);
+	cube_t door(c);
+	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
+	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
+	doors.push_back(door);
 }
 float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
 	assert(dim < 3);
@@ -1146,8 +1160,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
 				float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
 				float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
-				remove_section_from_cube(wall, wall2, lo_pos, hi_pos, !wall_dim);
-				// TODO_INT: interior->doors.push_back(...);
+				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, interior->doors);
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
 
@@ -1226,8 +1239,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					}
 					if (!valid) continue;
 					cube_t wall2;
-					remove_section_from_cube(wall, wall2, lo_pos, hi_pos, !d);
-					// TODO_INT: interior->doors.push_back(...);
+					remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !d, interior->doors);
 					walls.push_back(wall2); // Note: invalidates wall reference
 					was_split = 1;
 					break;
