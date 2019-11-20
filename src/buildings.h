@@ -179,6 +179,8 @@ struct building_room_geom_t {
 struct building_interior_t {
 	vect_cube_t floors, ceilings, walls[2], rooms, doors; // walls are split by dim
 	std::unique_ptr<building_room_geom_t> room_geom;
+
+	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
 };
 

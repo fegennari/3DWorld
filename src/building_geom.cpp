@@ -1237,6 +1237,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						if (p->d[!d][1] < lo_pos-wall_thick || p->d[!d][0] > hi_pos+wall_thick) continue; // no overlap with wall
 						if (p->d[ d][1] > wall.d[d][0]-wall_thick && p->d[ d][0] < wall.d[d][1]+wall_thick) {valid = 0; break;} // has perp intersection
 					}
+					// TODO_INT: don't split walls into small segments that border the same two rooms on both sides (two doorways between the same pair of rooms)
 					if (!valid) continue;
 					cube_t wall2;
 					remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !d, interior->doors);
@@ -1276,7 +1277,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float fl
 			point llc(room_center - table_sz), urc(room_center + table_sz);
 			llc.z = room_center.z; // bottom is not shifted below the floor
 			cube_t table(llc, urc);
-			cubes.emplace_back(table, BROWN, 16); // skip_faces=16/Z1
+			// check proximity to doors; may be too slow?
+			if (!interior->is_cube_close_to_doorway(table)) {cubes.emplace_back(table, BROWN, 16);} // skip_faces=16/Z1
 			//if (f == 0 && r->z1() == bcube.z1()) {} // any special logic that goes on the first floor is here
 		}
 	} // for r
@@ -1301,6 +1303,17 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	++s.nrgeom;
 	s.ngeom  += interior->room_geom->cubes.size();
 	s.nverts += interior->room_geom->num_verts;
+}
+
+bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const {
+
+	for (auto i = doors.begin(); i != doors.end(); ++i) {
+		bool const dim(i->dy() < i->dx());
+		if (c.d[!dim][0] > i->d[!dim][1] || c.d[!dim][1] < i->d[!dim][0]) continue; // no overlap in !dim
+		float const min_dist((dmin == 0.0f) ? i->get_sz_dim(!dim) : dmin); // if dmin==0, use door width (so that door has space to open)
+		if (c.d[dim][0] < i->d[dim][1]+min_dist && c.d[dim][1] > i->d[dim][0]-min_dist) return 1; // within min_dist
+	}
+	return 0;
 }
 
 void building_interior_t::finalize() {
