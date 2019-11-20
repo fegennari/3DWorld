@@ -525,7 +525,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			float const shift_mult(was_cube ? 1.0 : 0.5); // half the shift for non-cube buildings
 
 			for (unsigned d = 0; d < 2; ++d) {
-				float const len(prev.d[d][1] - prev.d[d][0]), min_edge_len((0.2f/shift_mult)*(bcube.d[d][1] - bcube.d[d][0]));
+				float const len(prev.get_sz_dim(d)), min_edge_len((0.2f/shift_mult)*(bcube.get_sz_dim(d)));
 				bool const inv(rgen.rand_bool());
 
 				for (unsigned e = 0; e < 2; ++e) {
@@ -535,7 +535,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				}
 				for (unsigned E = 0; E < 2; ++E) {
 					bool const e((E != 0) ^ inv); // no dir favoritism for 20% check
-					if (bc.d[d][1] - bc.d[d][0] < min_edge_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
+					if (bc.get_sz_dim(d) < min_edge_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
 				}
 			}
 			bc.z1() = prev.z2(); // z1
@@ -646,7 +646,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			float const height(rgen.rand_uniform(0.55, 0.7)*parts[1].dz());
 
 			if (gen_door) { // add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
-				door_center = 0.5f*(c.d[!door_dim][0] + c.d[!door_dim][1] + ((door_dim == dim) ? dist1 : dist2));
+				door_center = c.get_center_dim(!door_dim) + 0.5f*((door_dim == dim) ? dist1 : dist2);
 				door_pos    = c.d[door_dim][!door_dir];
 				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 				min_eq(door_height, 0.95f*height);
@@ -694,8 +694,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (type == 1 && ix == 1 && parts[0].z2() == parts[1].z2()) { // same z2
 			bool const other_dim((force_dim[0] < 2) ? force_dim[0] : get_largest_xy_dim(parts[0]));
 			
-			if (dim != other_dim && (parts[0].d[dim][1] - parts[0].d[dim][0]) >= (parts[1].d[!dim][1] - parts[1].d[!dim][0])) { // other dim, lower peak
-				extend_to = 0.5f*(parts[0].d[dim][0] + parts[0].d[dim][1]); // extend lower part roof to center of upper part roof
+			if (dim != other_dim && parts[0].get_sz_dim(dim) >= parts[1].get_sz_dim(!dim)) { // other dim, lower peak
+				extend_to = parts[0].get_center_dim(dim); // extend lower part roof to center of upper part roof
 			}
 		}
 		roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);
@@ -715,14 +715,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		bool dir(rgen.rand_bool());
 		if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
 		cube_t c(part);
-		float const sz1(c.d[!dim][1] - c.d[!dim][0]), sz2(c.d[!dim][1] - c.d[!dim][0]);
+		float const sz1(c.get_sz_dim(!dim)), sz2(c.get_sz_dim(dim));
 		float shift(0.0);
 
 		if ((rgen.rand()%3) != 0) { // make the chimney non-centered 67% of the time
 			shift = sz1*rgen.rand_uniform(0.1, 0.25); // select a shift in +/- (0.1, 0.25) - no small offset from center
 			if (rgen.rand_bool()) {shift = -shift;}
 		}
-		float const center(0.5f*(c.d[!dim][0] + c.d[!dim][1]) + shift);
+		float const center(c.get_center_dim(!dim) + shift);
 		c.d[dim][!dir]  = c.d[dim][ dir] + (dir ? -0.03f : 0.03f)*(sz1 + sz2); // chimney depth
 		c.d[dim][ dir] += (dir ? -0.01 : 0.01)*sz2; // slight shift from edge of house to avoid z-fighting
 		c.d[!dim][0] = center - 0.05*sz1;
@@ -1209,7 +1209,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
-				float const len(wall.d[!d][1] - wall.d[!d][0]), min_split_len((pref_split ? 0.75 : 1.5)*min_wall_len);
+				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.75 : 1.5)*min_wall_len);
 				if (len < min_split_len) break; // not long enough to split - done
 				// walls currently don't run along the inside of exterior building walls, so we don't need to handle that case yet
 				bool was_split(0);

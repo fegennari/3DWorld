@@ -408,7 +408,7 @@ public:
 		float const z1(r.get_start_z()), z2(r.get_end_z()), dz(z2 - z1), len(r.get_length()), v0(r.dim ? r.y1() : r.x1());
 		ps[ r.dim] = sv;
 		pe[ r.dim] = ev;
-		ps[!r.dim] = pe[!r.dim] = 0.5f*(r.d[!r.dim][0] + r.d[!r.dim][1]);
+		ps[!r.dim] = pe[!r.dim] = r.get_center_dim(!r.dim);
 		ps.z = z1 + dz*CLIP_TO_01((sv - v0)/len);
 		pe.z = z1 + dz*CLIP_TO_01((ev - v0)/len);
 	}
@@ -1312,7 +1312,7 @@ class city_road_gen_t : public road_gen_base_t {
 			return -1; // not found
 		}
 		int find_3way_int_at(cube_t const &c, bool dim, bool dir) const {
-			float const cube_cent(0.5f*(c.d[!dim][0] + c.d[!dim][1]));
+			float const cube_cent(c.get_center_dim(!dim));
 			//float dmin(0.0);
 			int ret(-1);
 
@@ -1320,7 +1320,7 @@ class city_road_gen_t : public road_gen_base_t {
 				road_isec_t const &isec(isecs[1][i]);
 				if (isec.d[dim][dir] != bcube.d[dim][dir]) continue; // not on edge of road grid
 				if (isec.d[!dim][1] > cube_cent && isec.d[!dim][0] < cube_cent) return i; // this is the one we want (early terminate case)
-				//float const int_cent(0.5*(isec.d[!dim][0] + isec.d[!dim][1])), dist(fabs(int_cent - cube_cent));
+				//float const int_cent(isec.get_center_dim(!dim)), dist(fabs(int_cent - cube_cent));
 				//if (ret < 0 || dist < dmin) {ret = i; dmin = dist;} // update if closer
 			} // for i
 			return ret; // not found if ret is still at -1
@@ -1921,9 +1921,9 @@ class city_road_gen_t : public road_gen_base_t {
 				point pos;
 				float val1(seg.d[seg.dim][0] + 0.6f*car_sz.x), val2(seg.d[seg.dim][1] - 0.6f*car_sz.x);
 				if (val1 >= val2) continue; // failed, try again (connector road junction?)
-				pos[!seg.dim]  = 0.5f*(seg.d[!seg.dim][0] + seg.d[!seg.dim][1]); // center of road
+				pos[!seg.dim]  = seg.get_center_dim(!seg.dim); // center of road
 				pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*get_car_lane_offset(); // place in right lane
-				pos[ seg.dim] = rgen.rand_uniform(val1, val2); // place at random pos in segment
+				pos[ seg.dim]  = rgen.rand_uniform(val1, val2); // place at random pos in segment
 				pos.z = seg.z2() + 0.5*car_sz.z; // place above road surface
 				if (seg.dim) {swap(car_sz.x, car_sz.y);}
 				car.bcube.set_from_point(pos);
@@ -2140,8 +2140,8 @@ class city_road_gen_t : public road_gen_base_t {
 				assert(car.cur_road_type == TYPE_RSEG);
 				assert(car.cur_city == CONN_CITY_IX);
 				bool const slope(get_car_seg(car).slope);
-				float const car_pos(0.5f*(car.bcube.d[dim][0] + car.bcube.d[dim][1])); // center of car in dim
-				float const road_len(bcube.d[dim][1] - bcube.d[dim][0]);
+				float const car_pos(car.bcube.get_center_dim(dim)); // center of car in dim
+				float const road_len(bcube.get_sz_dim(dim));
 				assert(road_len > TOLERANCE);
 				float const t((car_pos - bcube.d[dim][0])/road_len); // car pos along road in (0.0, 1.0)
 				float const road_z(bcube.d[2][slope] + t*(bcube.d[2][!slope] - bcube.d[2][slope]));
@@ -2465,7 +2465,7 @@ public:
 						for (auto r = roads.begin(); r != roads.end(); ++r) {
 							if (r->dim == (d != 0)) continue; // wrong dim
 							if (r->d[d][0] < val1 || r->d[d][1] > val2) continue; // road not contained in placement range
-							float const conn_pos(0.5f*(r->d[d][0] + r->d[d][1]));
+							float const conn_pos(r->get_center_dim(d));
 							float const cost(0.5*global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
 								city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1, (r12==0), (r12!=0))); // check_only=1; half cost (prefer over 3-way intersection)
 							
@@ -2528,13 +2528,13 @@ public:
 						if (r1->dim == (d1 != 0)) continue; // wrong dim
 						if (r1->d[d1][0] < bcube1.d[d1][0]+min_edge_dist || r1->d[d1][1] > bcube1.d[d1][1]-min_edge_dist) continue; // not an interior road (edge road)
 						if (r1->d[d1][0] < (fdim ? xmin : ymin) || r1->d[d1][1] > (fdim ? xmax : ymax)) continue; // road not contained in placement range
-						float const cpos1(0.5f*(r1->d[d1][0] + r1->d[d1][1])); // fdim=0 => yval
+						float const cpos1(r1->get_center_dim(d1)); // fdim=0 => yval
 						
 						for (auto r2 = roads2.begin(); r2 != roads2.end(); ++r2) {
 							if (r2->dim == (d2 != 0)) continue; // wrong dim
 							if (r2->d[d2][0] < bcube2.d[d2][0]+min_edge_dist || r2->d[d2][1] > bcube2.d[d2][1]-min_edge_dist) continue; // not an interior road (edge road)
 							if (r2->d[d2][0] < (fdim ? ymin : xmin) || r2->d[d2][1] > (fdim ? ymax : xmax)) continue; // road not contained in placement range
-							float const cpos2(0.5f*(r2->d[d2][0] + r2->d[d2][1])); // fdim=0 => xval
+							float const cpos2(r2->get_center_dim(d2)); // fdim=0 => xval
 							float const xval(fdim ? cpos1 : cpos2), yval(fdim ? cpos2 : cpos1);
 							try_single_jog_conn_road(city1, city2, blockers, hq, road_width, fdim, xval, yval, 1, best_xval, best_yval, best_cost, best_int_cube);
 						} // for r2

@@ -590,14 +590,14 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 
 
 float road_connector_t::get_player_zval(point const &center, cube_t const &c) const {
-	float const t((center[dim] - c.d[dim][0])/(c.d[dim][1] - c.d[dim][0]));
+	float const t((center[dim] - c.d[dim][0])/c.get_sz_dim(dim));
 	float const za(slope ? c.z2() : c.z1()), zb(slope ? c.z1() : c.z2()), zval(za + (zb - za)*t); // z-value at x/y location
 	return zval - src_road.get_z_adj() - ROAD_HEIGHT; // place exactly on mesh under the road/bridge/tunnel surface
 }
 
 void road_connector_t::add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb) {
 	streetlights.reserve(2*num_per_side);
-	float const dsz(d[dim][1] - d[dim][0]), dnsz(d[!dim][1] - d[!dim][0]), dn_shift(dn_shift_mult*dnsz);
+	float const dsz(get_sz_dim(dim)), dnsz(get_sz_dim(!dim)), dn_shift(dn_shift_mult*dnsz);
 	if (staggered) {num_per_side *= 2;}
 
 	for (unsigned n = 0; n < num_per_side; ++n) {
@@ -772,7 +772,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
 	if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
 	point const cpos(camera_pdu.pos - xlate);
-	float const center(0.5f*(bcube.d[!d][1] + bcube.d[!d][0])), len(bcube.d[d][1] - bcube.d[d][0]);
+	float const center(bcube.get_center_dim(!d)), len(bcube.get_sz_dim(d));
 	point p1, p2; // centerline end points
 	p1.z = bridge.get_start_z();
 	p2.z = bridge.get_end_z();
@@ -882,7 +882,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		tscale = 1.0/scale; // scale texture to match road width
 	}
 	bool const dir(bridge.slope), invert_normals((d!=0) ^ dir);
-	float const dz_scale(bridge.dz()/(bridge.d[d][1] - bridge.d[d][0]));
+	float const dz_scale(bridge.dz()/(bridge.get_sz_dim(d)));
 	cur_dval = bcube.d[d][0]; // reset to start
 	point pts[8];
 
