@@ -165,6 +165,7 @@ struct colored_cube_t : public cube_t {
 
 struct building_room_geom_t {
 	// TODO: textures?
+	typedef vert_norm_comp_color vertex_t;
 	vector<colored_cube_t> cubes; // for drawing and collision detection
 	unsigned num_verts; // for drawing
 	vbo_wrap_t vbo;
@@ -240,6 +241,8 @@ struct building_t : public building_geom_t {
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const;
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
+	bool has_room_geom() const {return (interior && interior->room_geom);}
+	void draw_room_geom() const;
 	void update_stats(building_stats_t &s) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

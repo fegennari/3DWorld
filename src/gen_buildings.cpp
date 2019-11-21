@@ -407,11 +407,11 @@ void building_room_geom_t::create_vbo() {
 	if (cubes.empty())   return; // no geom
 	if (vbo.vbo_valid()) return; // already created
 	remove_excess_cap(cubes); // optional
-	vector<vert_norm_comp_color> verts; // okay to use norm_comp here because all normals components are either -1 or +1
+	vector<vertex_t> verts; // okay to use norm_comp here because all normals components are either -1 or +1
 	verts.reserve(24*cubes.size()); // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		vert_norm_comp_color v;
+		vertex_t v;
 		v.copy_color(c->cw);
 
 		// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
@@ -419,9 +419,9 @@ void building_room_geom_t::create_vbo() {
 			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-				if (c->skip_faces & (1 << (2*i + j))) continue; // skip this face
+				if (c->skip_faces & (1 << (2*n + j))) continue; // skip this face
 				v.set_ortho_norm(i, j);
-				v.v[n] = j;
+				v.v[n] = c->d[n][j];
 
 				for (unsigned s1 = 0; s1 < 2; ++s1) {
 					v.v[d[1]] = c->d[d[1]][s1];
@@ -434,7 +434,8 @@ void building_room_geom_t::create_vbo() {
 			} // for j
 		} // for i
 	} // for c
-	num_verts = verts.size();
+	vbo.create_and_upload(verts);
+	num_verts = verts.size(); // verts will go out of scope here, capture the size
 }
 
 void building_room_geom_t::draw() const {
@@ -442,8 +443,9 @@ void building_room_geom_t::draw() const {
 	if (cubes.empty()) return; // no geom
 	assert(vbo.vbo_valid());
 	assert(num_verts > 0);
+	tid_nm_pair_t().set_gl(); // untextured, no normal map
 	vbo.pre_render();
-	vert_norm_comp_color::set_vbo_arrays();
+	vertex_t::set_vbo_arrays();
 	draw_quads_as_tris(num_verts);
 	vbo.post_render(); // move this out of the loop?
 }
@@ -1005,6 +1007,10 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 }
 
+void building_t::draw_room_geom() const {
+	if (has_room_geom()) {interior->room_geom->draw();}
+}
+
 
 class building_creator_t {
 
@@ -1444,7 +1450,7 @@ public:
 				}
 			}
 			else { // draw only nearby interiors (less GPU time, more CPU time, much faster for dense walls)
-				float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+				float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -1452,7 +1458,16 @@ public:
 						point const pos(g->bcube.get_cube_center() + xlate);
 						if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 						(*i)->building_draw_interior.draw_tile(g - (*i)->grid_by_tile.begin());
-						// TODO_INT: iterate over buildings in this tile and draw interior room geom, generating it if needed
+						// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
+						if (!g->bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far
+						
+						for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
+							building_t const &b((*i)->get_building(bi->ix));
+							if (!b.has_room_geom()) continue;
+							if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
+							if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
+							b.draw_room_geom();
+						}
 					} // for g
 				} // for i
 			}
