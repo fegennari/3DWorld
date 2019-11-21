@@ -1141,13 +1141,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
 				else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
-				if (min(csz.x, csz.y) < min_wall_len) continue; // not enough space to add a wall (chimney, porch support, garage, shed, etc.)
+				if (min(csz.x, csz.y) < min_wall_len) continue; // not enough space to add a wall/room (chimney, porch support, garage, shed, etc.)
 				float wall_pos(0.0);
 				bool const on_edge(c.d[wall_dim][0] == p->d[wall_dim][0] || c.d[wall_dim][1] == p->d[wall_dim][1]); // at edge of the building - make sure walls don't intersect windows
 				bool pos_valid(0);
 				
 				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window
-					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, (doorway_width + wall_thick), rgen);
+					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, (1.5*doorway_width + wall_thick), rgen);
 					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
 					pos_valid = 1; break; // done, keep wall_pos
@@ -1210,7 +1210,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			c.z1() = z + fc_thick; c.z2() = z + window_vspacing - fc_thick;
 			// add per-floor walls, door cutouts, etc. here if needed
 		} // for f
-	} // for p
+	} // for p (parts)
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
 		vect_cube_t &walls(interior->walls[d]);
@@ -1222,13 +1222,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
-				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.75 : 1.5)*min_wall_len);
+				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.2)*min_wall_len);
 				if (len < min_split_len) break; // not long enough to split - done
 				// walls currently don't run along the inside of exterior building walls, so we don't need to handle that case yet
 				bool was_split(0);
 
-				for (unsigned ntries = 0; ntries < (pref_split ? 10U : 4U); ++ntries) { // choose random doorway positions and check against perp_walls for occlusion
-					float const doorway_pos(cube_rand_side_pos(wall, !d, 0.25, doorway_width, rgen));
+				for (unsigned ntries = 0; ntries < (pref_split ? 10U : 5U); ++ntries) { // choose random doorway positions and check against perp_walls for occlusion
+					float const doorway_pos(cube_rand_side_pos(wall, !d, 0.2, 1.0*doorway_width, rgen));
 					float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 					bool valid(1);
 
@@ -1237,7 +1237,21 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						if (p->d[!d][1] < lo_pos-wall_thick || p->d[!d][0] > hi_pos+wall_thick) continue; // no overlap with wall
 						if (p->d[ d][1] > wall.d[d][0]-wall_thick && p->d[ d][0] < wall.d[d][1]+wall_thick) {valid = 0; break;} // has perp intersection
 					}
-					// TODO_INT: don't split walls into small segments that border the same two rooms on both sides (two doorways between the same pair of rooms)
+					if (valid && !pref_split) { // don't split walls into small segments that border the same two rooms on both sides (two doorways between the same pair of rooms)
+						float const lo[2] = {wall.d[!d][0]+wall_thick, lo_pos}, hi[2] = {hi_pos, wall.d[!d][1]-wall_thick}; // ranges of the two split wall segments, shrunk a bit
+
+						for (unsigned s = 0; s < 2; ++s) { // check both wall segments
+							bool contained[2] = {0,0};
+
+							for (unsigned e = 0; e < 2; ++e) { // check both directions from the wall
+								for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+									if (wall.d[d][e] < r->d[d][0] || wall.d[d][e] > r->d[d][1]) continue; // wall not inside room in dim d/dir e
+									if (lo[s] > r->d[!d][0] && hi[s] < r->d[!d][1]) {contained[e] = 1; break;} // entire wall contained in span of room
+								}
+							}
+							if (contained[0] && contained[1]) {valid = 0; break;} // wall seg contained in rooms on both sides => two doors in same wall between rooms => drop
+						} // for s
+					}
 					if (!valid) continue;
 					cube_t wall2;
 					remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !d, interior->doors);
