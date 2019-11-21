@@ -1123,6 +1123,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
+			if (min(p->dx(), p->dy()) < 2.0*doorway_width) continue; // not enough space to add a room (chimney, porch support, garage, shed, etc.)
 			unsigned const part_mask(1 << (p - parts.begin()));
 			assert(to_split.empty());
 			to_split.emplace_back(*p); // seed room is entire part, no door
@@ -1141,7 +1142,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
 				else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
-				if (min(csz.x, csz.y) < min_wall_len) continue; // not enough space to add a wall/room (chimney, porch support, garage, shed, etc.)
+				
+				if (min(csz.x, csz.y) < min_wall_len) {
+					interior->rooms.push_back(c);
+					continue; // not enough space to add a wall
+				}
 				float wall_pos(0.0);
 				bool const on_edge(c.d[wall_dim][0] == p->d[wall_dim][0] || c.d[wall_dim][1] == p->d[wall_dim][1]); // at edge of the building - make sure walls don't intersect windows
 				bool pos_valid(0);
@@ -1238,7 +1243,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						if (p->d[ d][1] > wall.d[d][0]-wall_thick && p->d[ d][0] < wall.d[d][1]+wall_thick) {valid = 0; break;} // has perp intersection
 					}
 					if (valid && !pref_split) { // don't split walls into small segments that border the same two rooms on both sides (two doorways between the same pair of rooms)
-						float const lo[2] = {wall.d[!d][0]+wall_thick, lo_pos}, hi[2] = {hi_pos, wall.d[!d][1]-wall_thick}; // ranges of the two split wall segments, shrunk a bit
+						float const lo[2] = {wall.d[!d][0]-wall_thick, lo_pos}, hi[2] = {hi_pos, wall.d[!d][1]+wall_thick}; // ranges of the two split wall segments, grown a bit
 
 						for (unsigned s = 0; s < 2; ++s) { // check both wall segments
 							bool contained[2] = {0,0};
