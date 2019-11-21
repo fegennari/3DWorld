@@ -438,9 +438,10 @@ void building_room_geom_t::create_vbo() {
 	num_verts = verts.size(); // verts will go out of scope here, capture the size
 }
 
-void building_room_geom_t::draw() const {
+void building_room_geom_t::draw() { // non-const because it creates the VBO
 
 	if (cubes.empty()) return; // no geom
+	if (!vbo.vbo_valid()) {create_vbo();}
 	assert(vbo.vbo_valid());
 	assert(num_verts > 0);
 	tid_nm_pair_t().set_gl(); // untextured, no normal map

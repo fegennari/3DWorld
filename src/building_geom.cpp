@@ -1286,21 +1286,20 @@ void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float fl
 		point room_center(r->get_cube_center());
 		float z(r->z1());
 
-		for (unsigned f = 0; f <= num_floors; ++f, z += window_vspacing) {
+		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			// TODO_INT: generate objects for this room+floor combination
 			room_center.z = z + fc_thick; // floor height
 			vector3d table_sz;
-			for (unsigned d = 0; d < 3; ++d) {table_sz[d] = 4.0*wall_spacing*(1.0 + rgen.rand_float());}
+			for (unsigned d = 0; d < 3; ++d) {table_sz[d] = 3.5*wall_spacing*(1.0 + rgen.rand_float());}
 			point llc(room_center - table_sz), urc(room_center + table_sz);
 			llc.z = room_center.z; // bottom is not shifted below the floor
 			cube_t table(llc, urc);
 			// check proximity to doors; may be too slow?
-			//if (interior->is_cube_close_to_doorway(table)) continue;
+			if (interior->is_cube_close_to_doorway(table)) continue;
 			cubes.emplace_back(table, BROWN, 16); // skip_faces=16/Z1
 			//if (f == 0 && r->z1() == bcube.z1()) {} // any special logic that goes on the first floor is here
 		}
 	} // for r
-	interior->room_geom->create_vbo(); // I guess we always do this here? why create the geometry if we're not going to draw it
 }
 
 void building_t::update_stats(building_stats_t &s) const { // calculate all of the counts that are easy to get

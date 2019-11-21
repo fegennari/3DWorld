@@ -173,7 +173,7 @@ struct building_room_geom_t {
 	building_room_geom_t() : num_verts(0) {}
 	void clear() {cubes.clear(); vbo.clear(); num_verts = 0;}
 	void create_vbo();
-	void draw() const;
+	void draw();
 };
 
 // may as well make this its own class, since it could get large and it won't be used for every building
