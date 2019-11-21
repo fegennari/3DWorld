@@ -1168,17 +1168,15 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, interior->doors);
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
+				bool const do_split(csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len); // split into two smaller rooms
 
-				if (csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len) { // split into two smaller rooms
-					for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
-						split_cube_t c_sub(c);
-						c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
-						c_sub.door_lo[!wall_dim][d] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
-						c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
-						to_split.push_back(c_sub);
-					}
+				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
+					split_cube_t c_sub(c);
+					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
+					c_sub.door_lo[!wall_dim][d] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
+					c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
+					if (do_split) {to_split.push_back(c_sub);} else {interior->rooms.push_back(c_sub);} // leaf case (unsplit), add a new room
 				}
-				else {interior->rooms.push_back(c);} // leaf case (unsplit), add a new room
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
 			for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
