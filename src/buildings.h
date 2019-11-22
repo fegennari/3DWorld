@@ -241,7 +241,7 @@ struct building_t : public building_geom_t {
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const;
-	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const;
+	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
 	bool has_room_geom() const {return (interior && interior->room_geom);}
 	void draw_room_geom() const;
 	void update_stats(building_stats_t &s) const;

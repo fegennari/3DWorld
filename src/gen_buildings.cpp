@@ -744,8 +744,9 @@ public:
 	}
 
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
-	void add_section(building_geom_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2, tid_nm_pair_t const &tex,
-		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, int clip_windows, float door_ztop=0.0, unsigned door_sides=0)
+	void add_section(building_geom_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2,
+		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, int clip_windows,
+		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -877,7 +878,7 @@ public:
 					EMIT_VERTEX(); // 1 !j
 
 					if (s < 2 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
-						float const door_height(door_ztop - cube.z1()), offset(0.03*(j ? 1.0 : -1.0)*door_height);
+						float const door_height(door_ztop - cube.z1()), offset(0.03*(j ? 1.0 : -1.0)*offset_scale*door_height);
 						assert(door_height > 0.0);
 
 						for (unsigned k = ix; k < ix+4; ++k) {
@@ -889,7 +890,7 @@ public:
 						}
 					}
 					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the house wall to avoid z-fighting
-						float const offset(0.005*(j ? 1.0 : -1.0)*sz.z);
+						float const offset(0.005*(j ? 1.0 : -1.0)*offset_scale*sz.z);
 						for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
 					}
 					if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
@@ -982,7 +983,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	}
 }
 
-void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass) const {
+void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale) const {
 
 	if (!is_valid() || !global_building_params.windows_enabled()) return; // invalid building or no windows
 	building_mat_t const &mat(get_material());
@@ -1004,7 +1005,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		unsigned const part_ix(i - parts.begin());
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
-		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides); // XY, no_ao=1
+		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale); // XY, no_ao=1
 	}
 }
 
