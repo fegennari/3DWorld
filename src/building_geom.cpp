@@ -1225,20 +1225,20 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
-				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.2)*min_wall_len);
+				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.75 : 1.5)*min_wall_len);
 				if (len < min_split_len) break; // not long enough to split - done
 				// walls currently don't run along the inside of exterior building walls, so we don't need to handle that case yet
 				bool was_split(0);
 
-				for (unsigned ntries = 0; ntries < (pref_split ? 10U : 5U); ++ntries) { // choose random doorway positions and check against perp_walls for occlusion
-					float const doorway_pos(cube_rand_side_pos(wall, !d, 0.2, 1.0*doorway_width, rgen));
+				for (unsigned ntries = 0; ntries < (pref_split ? 10U : 4U); ++ntries) { // choose random doorway positions and check against perp_walls for occlusion
+					float const doorway_pos(cube_rand_side_pos(wall, !d, 0.2, 1.5*doorway_width, rgen));
 					float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 					bool valid(1);
 
 					for (auto p = (perp_walls.begin() + first_wall_to_split[!d]); p != perp_walls.end(); ++p) { // skip hallway walls
 						if (p->z1() != wall.z1()) continue; // not the same zval/story
 						if (p->d[!d][1] < lo_pos-wall_thick || p->d[!d][0] > hi_pos+wall_thick) continue; // no overlap with wall
-						if (p->d[ d][1] > wall.d[d][0]-wall_thick && p->d[ d][0] < wall.d[d][1]+wall_thick) {valid = 0; break;} // has perp intersection
+						if (p->d[ d][1] > wall.d[d][0]-wall_thick && p->d[d][0] < wall.d[d][1]+wall_thick) {valid = 0; break;} // has perp intersection
 					}
 					if (valid && !pref_split) { // don't split walls into small segments that border the same two rooms on both sides (two doorways between the same pair of rooms)
 						float const lo[2] = {wall.d[!d][0]-wall_thick, lo_pos}, hi[2] = {hi_pos, wall.d[!d][1]+wall_thick}; // ranges of the two split wall segments, grown a bit
