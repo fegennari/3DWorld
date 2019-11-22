@@ -152,7 +152,7 @@ struct building_geom_t { // describes the physical shape of a building
 struct tquad_with_ix_t : public tquad_t {
 	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR, TYPE_IDOOR}; // roof, wall, chimney cap, house door, building door, interior door
 	unsigned type;
-	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(0) {}
+	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(TYPE_ROOF) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
@@ -231,6 +231,7 @@ struct building_t : public building_geom_t {
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to);
+	float gen_hipped_roof(cube_t const &top,  float peak_height, bool dim);
 	void gen_details(rand_gen_t &rgen);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);

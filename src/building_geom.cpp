@@ -698,7 +698,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				extend_to = parts[0].get_center_dim(dim); // extend lower part roof to center of upper part roof
 			}
 		}
-		roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);
+		if (!two_parts && rgen.rand_bool()) {roof_dz[ix] = gen_hipped_roof(*i, peak_height, dim);} // only for single part (rectangular) houses for now
+		else {roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);}
 	}
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned part_ix(0);
@@ -771,7 +772,7 @@ void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 }
 
-float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to) { // roof made from two sloped quads
+float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to) { // roof made from two sloped quads and two triangles
 
 	cube_t top(top_); // deep copy
 	unsigned extend_dir(2); // 2 = neither
@@ -780,7 +781,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 		if      (extend_to < top.d[dim][0]) {top.d[dim][0] = extend_to; extend_dir = 0;} // lo side extend
 		else if (extend_to > top.d[dim][1]) {top.d[dim][1] = extend_to; extend_dir = 1;} // hi side extend
 	}
-	float const width(dim ? top.get_dx() : top.get_dy()), roof_dz(min(peak_height*width, top.get_dz()));
+	float const width(top.get_sz_dim(!dim)), roof_dz(min(peak_height*width, top.get_dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
@@ -811,6 +812,27 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];);
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_WALL); // tag as wall
 	} // for n
+	return roof_dz;
+}
+
+float building_t::gen_hipped_roof(cube_t const &top, float peak_height, bool dim) { // roof made from two sloped quads + two sloped triangles
+
+	float const width(top.get_sz_dim(!dim)), length(top.get_sz_dim(dim)), offset(0.5f*(length - width)), roof_dz(min(peak_height*width, top.get_dz()));
+	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
+	point const center(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2);
+	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), center, center};
+	if (dim) {UNROLL_3X(swap(pts[0], pts[i_+1]);)} // rotate 1 vertex CCW
+	pts[4][dim] -= offset; pts[5][dim] += offset; // move points away from center to create ridgeline
+	unsigned const qixs[2][4] = {{0,3,5,4}, {2,1,4,5}};
+	unsigned const tixs[2][3] = {{1,0,4}, {3,2,5}};
+	roof_tquads.resize(4); // defaults to TYPE_ROOF
+
+	for (unsigned n = 0; n < 2; ++n) {
+		roof_tquads[n+0].npts = 4; // quads
+		UNROLL_4X(roof_tquads[n+0].pts[i_] = pts[qixs[n][i_]];)
+		roof_tquads[n+2].npts = 3; // triangles
+		UNROLL_3X(roof_tquads[n+2].pts[i_] = pts[tixs[n][i_]];)
+	}
 	return roof_dz;
 }
 
@@ -908,12 +930,12 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supp
 	cube_t const &top(parts.back()); // top/last part
 	float const peak_height(rgen.rand_uniform(0.2, 0.5));
 	float const wmin(min(top.get_dx(), top.get_dy())), z1(top.z2()), z2(z1 + peak_height*wmin), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
-	point const pts[5] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(0.5*(x1 + x2), 0.5*(y1 + y2), z2)};
+	point const pts[5] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2)};
 	float const d1(rgen.rand_uniform(0.0, 0.8));
 
 	if (d1 < 0.2) { // pointed roof with 4 sloped triangles
 		unsigned const ixs[4][3] = {{1,0,4}, {3,2,4}, {0,3,4}, {2,1,4}};
-		roof_tquads.resize(4);
+		roof_tquads.resize(4); // defaults to TYPE_ROOF
 
 		for (unsigned n = 0; n < 4; ++n) {
 			roof_tquads[n].npts = 3; // triangles
@@ -925,7 +947,7 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supp
 		point pts2[8];
 		for (unsigned n = 0; n < 4; ++n) {pts2[n] = pts[n]; pts2[n+4] = d1*pts[n] + center;}
 		unsigned const ixs[5][4] = {{4,7,6,5}, {0,4,5,1}, {3,2,6,7}, {0,3,7,4}, {2,1,5,6}}; // add the flat quad first, which works better for sphere intersections
-		roof_tquads.resize(5);
+		roof_tquads.resize(5); // defaults to TYPE_ROOF
 
 		for (unsigned n = 0; n < 5; ++n) {
 			roof_tquads[n].npts = 4; // quads
