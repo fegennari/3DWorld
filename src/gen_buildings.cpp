@@ -1445,34 +1445,26 @@ public:
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
+			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 
-			if (global_building_params.wall_split_thresh >= 4.0) { // draw all interiors (less CPU time, more GPU time, no draw artifacts)
-				for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_interior.draw_block(ix, 0);}
-				}
-			}
-			else { // draw only nearby interiors (less GPU time, more CPU time, much faster for dense walls)
-				float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
-
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-						if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
-						point const pos(g->bcube.get_cube_center() + xlate);
-						if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-						(*i)->building_draw_interior.draw_tile(g - (*i)->grid_by_tile.begin());
-						// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
-						if (!g->bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
+				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
+					point const pos(g->bcube.get_cube_center() + xlate);
+					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					(*i)->building_draw_interior.draw_tile(g - (*i)->grid_by_tile.begin());
+					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
+					if (!g->bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far
 						
-						for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
-							building_t const &b((*i)->get_building(bi->ix));
-							if (!b.has_room_geom()) continue;
-							if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
-							if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
-							b.draw_room_geom();
-						}
-					} // for g
-				} // for i
-			}
+					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
+						building_t const &b((*i)->get_building(bi->ix));
+						if (!b.has_room_geom()) continue;
+						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
+						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
+						b.draw_room_geom();
+					}
+				} // for g
+			} // for i
 			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.0); // reset to default
 			s.end_shader();
