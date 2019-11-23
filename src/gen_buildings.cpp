@@ -1452,6 +1452,7 @@ public:
 		}
 		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
+		bool const draw_inside_windows(1 && transparent_windows);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		fgPushMatrix();
 		translate_to(xlate);
@@ -1463,7 +1464,8 @@ public:
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
-			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
+			building_draw_t back_face_wind_draw;
+			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist), bfw_draw_dist(0.25*interior_draw_dist);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -1476,16 +1478,35 @@ public:
 						
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t const &b((*i)->get_building(bi->ix));
-						if (!b.has_room_geom()) continue;
+						if (!b.has_room_geom() && !draw_inside_windows) continue;
 						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
 						b.draw_room_geom();
+						//if (!draw_inside_windows || !b.bcube.closest_dist_less_than(camera_xlated, bfw_draw_dist)) continue; // too far away
+						if (!draw_inside_windows || !b.bcube.contains_pt(camera_xlated)) continue; // camera not in building
+						b.get_all_drawn_window_verts(back_face_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
 					}
 				} // for g
 			} // for i
 			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.0); // reset to default
 			s.end_shader();
+
+			if (draw_inside_windows) { // write to stencil buffer, use stencil test for back facing building walls
+				shader_t holes_shader;
+				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test
+				glClear(GL_STENCIL_BUFFER_BIT);
+				glEnable(GL_STENCIL_TEST);
+				glStencilFunc(GL_ALWAYS, 0, ~0U);
+				glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
+				glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
+				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
+				glDepthMask(GL_FALSE);
+				back_face_wind_draw.draw(0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
+				glDepthMask(GL_TRUE);
+				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+				glDisable(GL_STENCIL_TEST);
+			}
 		}
 		// main/batched draw pass
 		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
@@ -1494,14 +1515,20 @@ public:
 		if (transparent_windows) {
 			// draw back faces of buildings
 			bool const use_int_wall_tex = 1;
-			if (use_int_wall_tex) {}
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
+
+			if (draw_inside_windows) {
+				glEnable(GL_STENCIL_TEST);
+				glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
+				glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+			}
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 			multi_draw_no_shadows(bcs, max_draw_ix, 0, use_int_wall_tex);
 			s.add_uniform_float("diffuse_scale", 1.0); // reset
 			s.disable();
 			glCullFace(GL_BACK); // draw front faces
+			if (draw_inside_windows) {glDisable(GL_STENCIL_TEST);}
 			// draw windows in depth pass to create holes
 			// TODO_INT: what about holes for doors that the player can open and enter?
 			// TODO_INT: figure out how to draw window holes on back faces so that the player can look completely through buildings
@@ -1524,6 +1551,7 @@ public:
 		if (have_windows) { // draw windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
+			if (draw_inside_windows) {glEnable(GL_STENCIL_TEST);} // enable with same options as before
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
@@ -1531,6 +1559,7 @@ public:
 				(*i)->building_draw_windows.draw(0);
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 			}
+			if (draw_inside_windows) {glDisable(GL_STENCIL_TEST);}
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
