@@ -524,9 +524,9 @@ class building_draw_t {
 
 		draw_block_t() : tri_vbo_off(0) {}
 
-		void draw_geom_range(bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
+		void draw_geom_range(bool shadow_only, bool no_set_texture, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
 			if (vstart == vend) return; // empty range - no verts for this tile
-			if (!shadow_only) {tex.set_gl();}
+			if (!shadow_only && !no_set_texture) {tex.set_gl();}
 			assert(vbo.vbo_valid());
 			(shadow_only ? svao : vao).create_from_vbo<vert_norm_comp_tc_color>(vbo, 1, 1); // setup_pointers=1, always_bind=1
 
@@ -540,14 +540,14 @@ class building_draw_t {
 			}
 			vao_manager_t::post_render();
 		}
-		void draw_all_geom(bool shadow_only) {
+		void draw_all_geom(bool shadow_only, bool no_set_texture) {
 			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
-			draw_geom_range(shadow_only, pos_by_tile.front(), pos_by_tile.back());
+			draw_geom_range(shadow_only, no_set_texture, pos_by_tile.front(), pos_by_tile.back());
 		}
-		void draw_geom_tile(unsigned tile_id) {
+		void draw_geom_tile(unsigned tile_id, bool no_set_texture) {
 			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
-			draw_geom_range(0, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
+			draw_geom_range(0, no_set_texture, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
 		void upload_to_vbos() {
 			assert((quad_verts.size()%4) == 0);
@@ -919,9 +919,9 @@ public:
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
-	void draw          (bool shadow_only) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom (shadow_only);}}
-	void draw_tile     (unsigned tile_id) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id);}}
-	void draw_block(unsigned ix, bool shadow_only) {if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(shadow_only);}}
+	void draw          (bool shadow_only, bool no_set_texture=0) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom (shadow_only, no_set_texture);}}
+	void draw_tile     (unsigned tile_id, bool no_set_texture=0) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id,     no_set_texture);}}
+	void draw_block(unsigned ix, bool shadow_only, bool no_set_texture=0) {if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(shadow_only, no_set_texture);}}
 }; // end building_draw_t
 
 
@@ -1398,10 +1398,14 @@ public:
 		s.end_shader();
 		fgPopMatrix();
 	}
-	static void multi_draw_no_shadows(vector<building_creator_t *> const &bcs, unsigned max_draw_ix) {
+	static void multi_draw_no_shadows(vector<building_creator_t *> const &bcs, unsigned max_draw_ix, bool shadow_only=0, bool use_int_wall_tex=0) {
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, 0);} // non-smap pass, can skip tiles that will be drawn below
+				if ((*i)->use_smap_this_frame) continue;
+				// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
+				// TODO_INT: but the color and texture scale aren't right; at least it looks better than bricks
+				if (use_int_wall_tex && !(*i)->buildings.empty()) {(*i)->buildings.front().get_material().wall_tex.set_gl();}
+				(*i)->building_draw_vbo.draw_block(ix, shadow_only, use_int_wall_tex);
 			}
 		}
 	}
@@ -1475,10 +1479,12 @@ public:
 
 		if (transparent_windows) {
 			// draw back faces of buildings
+			bool const use_int_wall_tex = 1;
+			if (use_int_wall_tex) {}
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
-			multi_draw_no_shadows(bcs, max_draw_ix);
+			multi_draw_no_shadows(bcs, max_draw_ix, 0, use_int_wall_tex);
 			s.add_uniform_float("diffuse_scale", 1.0); // reset
 			s.disable();
 			glCullFace(GL_BACK); // draw front faces
