@@ -540,9 +540,16 @@ class building_draw_t {
 			}
 			vao_manager_t::post_render();
 		}
-		void draw_all_geom(bool shadow_only, bool no_set_texture) {
-			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
-			draw_geom_range(shadow_only, no_set_texture, pos_by_tile.front(), pos_by_tile.back());
+		void draw_all_geom(bool shadow_only, bool no_set_texture, bool direct_draw_no_vbo) {
+			if (direct_draw_no_vbo) {
+				if (!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty())) {tex.set_gl();}
+				if (!quad_verts.empty()) {draw_verts(quad_verts, GL_QUADS);}
+				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES);}
+			}
+			else {
+				if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
+				draw_geom_range(shadow_only, no_set_texture, pos_by_tile.front(), pos_by_tile.back());
+			}
 		}
 		void draw_geom_tile(unsigned tile_id, bool no_set_texture) {
 			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
@@ -919,9 +926,16 @@ public:
 	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
-	void draw          (bool shadow_only, bool no_set_texture=0) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom (shadow_only, no_set_texture);}}
-	void draw_tile     (unsigned tile_id, bool no_set_texture=0) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id,     no_set_texture);}}
-	void draw_block(unsigned ix, bool shadow_only, bool no_set_texture=0) {if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(shadow_only, no_set_texture);}}
+	
+	void draw(bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0) {
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom(shadow_only, no_set_texture, direct_draw_no_vbo);}
+	}
+	void draw_tile(unsigned tile_id, bool no_set_texture=0) {
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id, no_set_texture);}
+	}
+	void draw_block(unsigned ix, bool shadow_only, bool no_set_texture=0) {
+		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(shadow_only, no_set_texture, 0);}
+	}
 }; // end building_draw_t
 
 
