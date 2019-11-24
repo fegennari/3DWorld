@@ -1449,6 +1449,10 @@ public:
 		s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 		s.add_uniform_float("ambient_scale", 1.0); // reset to default
 	}
+	static void set_texture_scale(shader_t &s, float tsx, float tsy) {
+		s.add_uniform_float("tex_scale_s", tsx);
+		s.add_uniform_float("tex_scale_t", tsy);
+	}
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
@@ -1554,15 +1558,15 @@ public:
 			glCullFace(GL_FRONT);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
-				// TODO_INT: but the texture scale isn't right; at least it looks better than bricks
 				bool const force_wall_tex(use_int_wall_tex && !(*i)->buildings.empty());
 				vertex_range_t const *exclude(nullptr);
 				
 				if (force_wall_tex) {
+					// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
 					building_mat_t const &mat((*i)->buildings.front().get_material());
 					mat.wall_tex.set_gl();
 					s.set_cur_color(mat.wall_color);
+					set_texture_scale(s, mat.wall_tex.tscale_x/mat.side_tex.tscale_x, mat.wall_tex.tscale_y/mat.side_tex.tscale_y); // uses first building, not quite right
 				}
 				if (draw_inside_windows) {
 					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
@@ -1575,6 +1579,7 @@ public:
 					glDisable(GL_STENCIL_TEST);
 				}
 				(*i)->building_draw_vbo.draw(shadow_only, force_wall_tex, 0, exclude); // no stencil test
+				if (force_wall_tex) {set_texture_scale(s, 1.0, 1.0);} // reset
 			} // for i
 			reset_interior_lighting(s);
 			s.disable();
