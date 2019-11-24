@@ -1545,29 +1545,24 @@ public:
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 
-			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-					// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
-					// TODO_INT: but the color and texture scale aren't right; at least it looks better than bricks
-					if (use_int_wall_tex && !(*i)->buildings.empty()) {(*i)->buildings.front().get_material().wall_tex.set_gl();}
-					vertex_range_t const *exclude(nullptr);
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
+				// TODO_INT: but the color and texture scale aren't right; at least it looks better than bricks
+				if (use_int_wall_tex && !(*i)->buildings.empty()) {(*i)->buildings.front().get_material().wall_tex.set_gl();}
+				vertex_range_t const *exclude(nullptr);
 
-					if (draw_inside_windows) {
-						vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
-						
-						if (vr.draw_ix == ix) { // correct draw index
-							// draw this range using stencil test but the rest of the buildings without stencil test
-							exclude = &vr; // use this exclude
-							glEnable(GL_STENCIL_TEST);
-							glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
-							glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-							(*i)->building_draw_vbo.draw_quad_geom_range(vr, ix, shadow_only, use_int_wall_tex);
-							glDisable(GL_STENCIL_TEST);
-						}
-					}
-					(*i)->building_draw_vbo.draw_block(ix, shadow_only, use_int_wall_tex, exclude); // no stencil test
-				} // for i
-			} // for ix
+				if (draw_inside_windows) {
+					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
+					// draw this range using stencil test but the rest of the buildings without stencil test
+					exclude = &vr; // use this exclude
+					glEnable(GL_STENCIL_TEST);
+					glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
+					glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+					(*i)->building_draw_vbo.draw_quad_geom_range(vr, vr.draw_ix, shadow_only, use_int_wall_tex);
+					glDisable(GL_STENCIL_TEST);
+				}
+				(*i)->building_draw_vbo.draw(shadow_only, use_int_wall_tex, 0, exclude); // no stencil test
+			} // for i
 			s.add_uniform_float("diffuse_scale", 1.0); // reset
 			s.disable();
 			glCullFace(GL_BACK); // draw front faces
