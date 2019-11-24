@@ -713,8 +713,18 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				extend_to = parts[0].get_center_dim(dim); // extend lower part roof to center of upper part roof
 			}
 		}
-		if (!two_parts && rgen.rand_bool()) {roof_dz[ix] = gen_hipped_roof(*i, peak_height, dim);} // only for single part (rectangular) houses for now
-		else {roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);}
+		bool can_be_hipped(ix < (1U + two_parts) && extend_to == 0.0 && i->get_sz_dim(dim) > i->get_sz_dim(!dim)); // must be longer dim
+		
+		if (can_be_hipped && two_parts) {
+			cube_t &other(parts[1-ix]);
+			bool const other_dim((force_dim[1-ix] < 2) ? force_dim[1-ix] : get_largest_xy_dim(other)); // use longest side if not forced
+			float const part_roof_z (i->z2()    + min(peak_height*i->get_sz_dim(!dim), i->get_dz()));
+			float const other_roof_z(other.z2() + min(peak_height*other.get_sz_dim(!other_dim), other.get_dz()));
+			can_be_hipped = (part_roof_z >= other_roof_z); // no hipped for lower part
+		}
+		bool const hipped(can_be_hipped && rgen.rand_bool()); // hipped roof 50% of the time
+		if (hipped) {roof_dz[ix] = gen_hipped_roof(*i, peak_height, dim);} // no extension
+		else        {roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);}
 	}
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned part_ix(0);
@@ -802,7 +812,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
 	else          {pts[4].x = pts[5].x = 0.5f*(x1 + x2);} // xc
 	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
-	roof_tquads.reserve(3 + (extend_dir == 2)); // 2 roof quads + 1-2 side triangles
+	roof_tquads.reserve(roof_tquads.size() + (3 + (extend_dir == 2))); // 2 roof quads + 1-2 side triangles
 
 	// TODO: extend outside the wall a small amount? may require updating bcube for drawing
 	for (unsigned n = 0; n < 2; ++n) { // roof
@@ -840,13 +850,15 @@ float building_t::gen_hipped_roof(cube_t const &top, float peak_height, bool dim
 	pts[4][dim] -= offset; pts[5][dim] += offset; // move points away from center to create ridgeline
 	unsigned const qixs[2][4] = {{0,3,5,4}, {2,1,4,5}};
 	unsigned const tixs[2][3] = {{1,0,4}, {3,2,5}};
-	roof_tquads.resize(4); // defaults to TYPE_ROOF
+	unsigned const start_ix(roof_tquads.size());
+	roof_tquads.resize(start_ix + 4); // defaults to TYPE_ROOF
 
 	for (unsigned n = 0; n < 2; ++n) {
-		roof_tquads[n+0].npts = 4; // quads
-		UNROLL_4X(roof_tquads[n+0].pts[i_] = pts[qixs[n][i_]];)
-		roof_tquads[n+2].npts = 3; // triangles
-		UNROLL_3X(roof_tquads[n+2].pts[i_] = pts[tixs[n][i_]];)
+		unsigned const ix(start_ix + n);
+		roof_tquads[ix+0].npts = 4; // quads
+		UNROLL_4X(roof_tquads[ix+0].pts[i_] = pts[qixs[n][i_]];)
+		roof_tquads[ix+2].npts = 3; // triangles
+		UNROLL_3X(roof_tquads[ix+2].pts[i_] = pts[tixs[n][i_]];)
 	}
 	return roof_dz;
 }
