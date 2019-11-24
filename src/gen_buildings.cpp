@@ -12,7 +12,8 @@
 
 using std::string;
 
-bool const DRAW_WINDOWS_AS_HOLES = 1; // somewhat works, but doesn't draw buildings and terrain behind the windows due to incorrect draw order
+bool const DRAW_WINDOWS_AS_HOLES = 1;
+bool const DRAW_INSIDE_WINDOWS   = 1; // works on buildings that the player has entered; has drawing artifacts when looking through a multi-part building
 int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
@@ -1435,17 +1436,6 @@ public:
 		s.end_shader();
 		fgPopMatrix();
 	}
-	static void multi_draw_no_shadows(vector<building_creator_t *> const &bcs, unsigned max_draw_ix, bool shadow_only=0, bool use_int_wall_tex=0) {
-		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if ((*i)->use_smap_this_frame) continue;
-				// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
-				// TODO_INT: but the color and texture scale aren't right; at least it looks better than bricks
-				if (use_int_wall_tex && !(*i)->buildings.empty()) {(*i)->buildings.front().get_material().wall_tex.set_gl();}
-				(*i)->building_draw_vbo.draw_block(ix, shadow_only, use_int_wall_tex);
-			}
-		}
-	}
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
@@ -1475,10 +1465,11 @@ public:
 		}
 		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-		bool const draw_inside_windows(1 && transparent_windows);
+		bool const draw_inside_windows(DRAW_INSIDE_WINDOWS && transparent_windows);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		fgPushMatrix();
 		translate_to(xlate);
+		vector<vertex_range_t> per_bcs_exclude;
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -1489,6 +1480,7 @@ public:
 			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
 			building_draw_t back_face_wind_draw;
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
+			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
@@ -1510,6 +1502,7 @@ public:
 						if (!draw_inside_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						b.get_all_drawn_window_verts(back_face_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
+						per_bcs_exclude[i - bcs.begin()] = b.ext_side_qv_range;
 					} // for bi
 				} // for g
 			} // for i
@@ -1540,20 +1533,38 @@ public:
 		if (transparent_windows) {
 			// draw back faces of buildings
 			bool const use_int_wall_tex = 1;
+			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 
-			if (draw_inside_windows) {
-				glEnable(GL_STENCIL_TEST);
-				glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
-				glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-			}
-			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
-			multi_draw_no_shadows(bcs, max_draw_ix, 0, use_int_wall_tex);
+			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+					if ((*i)->use_smap_this_frame) continue;
+					// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
+					// TODO_INT: but the color and texture scale aren't right; at least it looks better than bricks
+					if (use_int_wall_tex && !(*i)->buildings.empty()) {(*i)->buildings.front().get_material().wall_tex.set_gl();}
+					vertex_range_t const *exclude(nullptr);
+
+					if (draw_inside_windows) {
+						vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
+						
+						if (vr.draw_ix == ix) { // correct draw index
+							// draw this range using stencil test but the rest of the buildings without stencil test
+							// TODO_INT: doesn't work when looking at a different part of a multi-part building through a window
+							exclude = &vr; // use this exclude
+							glEnable(GL_STENCIL_TEST);
+							glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
+							glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+							(*i)->building_draw_vbo.draw_quad_geom_range(vr, ix, shadow_only, use_int_wall_tex);
+							glDisable(GL_STENCIL_TEST);
+						}
+					}
+					(*i)->building_draw_vbo.draw_block(ix, shadow_only, use_int_wall_tex, exclude); // no stencil test
+				} // for i
+			} // for ix
 			s.add_uniform_float("diffuse_scale", 1.0); // reset
 			s.disable();
 			glCullFace(GL_BACK); // draw front faces
-			if (draw_inside_windows) {glDisable(GL_STENCIL_TEST);}
 			// draw windows in depth pass to create holes
 			// TODO_INT: what about holes for doors that the player can open and enter?
 			shader_t holes_shader;
@@ -1562,20 +1573,18 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(0);} // draw windows on top of other buildings
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			holes_shader.end_shader();
-			// draw front faces of buildings
 			s.enable();
-			multi_draw_no_shadows(bcs, max_draw_ix);
-			glDisable(GL_CULL_FACE);
 		}
-		else {
-			multi_draw_no_shadows(bcs, max_draw_ix); // normal drawing of all buildings
+		for (unsigned ix = 0; ix < max_draw_ix; ++ix) { // draw front faces of buildings
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(ix, shadow_only);}
+			}
 		}
 		glDepthFunc(GL_LEQUAL);
 
-		if (have_windows) { // draw windows
+		if (have_windows) { // draw windows, front facing only (not viewed from interior)
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
-			if (draw_inside_windows) {glEnable(GL_STENCIL_TEST);} // enable with same options as before
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
@@ -1583,10 +1592,10 @@ public:
 				(*i)->building_draw_windows.draw(0);
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 			}
-			if (draw_inside_windows) {glDisable(GL_STENCIL_TEST);}
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
+		glDisable(GL_CULL_FACE);
 		s.end_shader();
 
 		// post-pass to render buildings in nearby tiles that have shadow maps
