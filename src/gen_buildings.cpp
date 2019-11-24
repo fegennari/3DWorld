@@ -1465,7 +1465,8 @@ public:
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
 			building_draw_t back_face_wind_draw;
-			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist), bfw_draw_dist(0.25*interior_draw_dist);
+			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
+			vector<point> points; // reused temporary
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -1478,14 +1479,15 @@ public:
 						
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t const &b((*i)->get_building(bi->ix));
+						if (!b.interior) continue; // no interior, skip
 						if (!b.has_room_geom() && !draw_inside_windows) continue;
 						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
 						b.draw_room_geom();
-						//if (!draw_inside_windows || !b.bcube.closest_dist_less_than(camera_xlated, bfw_draw_dist)) continue; // too far away
-						if (!draw_inside_windows || !b.bcube.contains_pt(camera_xlated)) continue; // camera not in building
+						if (!draw_inside_windows) continue;
+						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						b.get_all_drawn_window_verts(back_face_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
-					}
+					} // for bi
 				} // for g
 			} // for i
 			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
@@ -1531,7 +1533,6 @@ public:
 			if (draw_inside_windows) {glDisable(GL_STENCIL_TEST);}
 			// draw windows in depth pass to create holes
 			// TODO_INT: what about holes for doors that the player can open and enter?
-			// TODO_INT: figure out how to draw window holes on back faces so that the player can look completely through buildings
 			shader_t holes_shader;
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
