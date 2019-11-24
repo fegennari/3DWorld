@@ -530,6 +530,7 @@ class building_draw_t {
 			if (!shadow_only && !no_set_texture) {tex.set_gl();}
 			assert(vbo.vbo_valid());
 			(shadow_only ? svao : vao).create_from_vbo<vert_norm_comp_tc_color>(vbo, 1, 1); // setup_pointers=1, always_bind=1
+			if (no_set_texture) {set_array_client_state(1, 1, 1, 0);} // disable colors as well if not using textures
 
 			if (vstart.qix != vend.qix) {
 				assert(vstart.qix < vend.qix);
@@ -539,12 +540,13 @@ class building_draw_t {
 				assert(vstart.tix < vend.tix);
 				glDrawArrays(GL_TRIANGLES, (vstart.tix + tri_vbo_off), (vend.tix - vstart.tix));
 			}
+			if (no_set_texture) {set_array_client_state(1, 1, 1, 1);} // re-enable colors
 			vao_manager_t::post_render();
 		}
 		void draw_all_geom(bool shadow_only, bool no_set_texture, bool direct_draw_no_vbo, vertex_range_t const *const exclude=nullptr) {
 			if (direct_draw_no_vbo) {
 				assert(!exclude); // not supported in this mode
-				if (!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty())) {tex.set_gl();}
+				if (!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty())) {tex.set_gl();} // Note: colors are not disabled here
 				if (!quad_verts.empty()) {draw_verts(quad_verts, GL_QUADS);}
 				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES);}
 			}
@@ -1439,6 +1441,14 @@ public:
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
+	static void set_interior_lighting(shader_t &s) {
+		s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
+		s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
+	}
+	static void reset_interior_lighting(shader_t &s) {
+		s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
+		s.add_uniform_float("ambient_scale", 1.0); // reset to default
+	}
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
@@ -1477,8 +1487,7 @@ public:
 			//timer_t timer2("Draw Building Interiors");
 			// TODO_INT: add room lights?
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
-			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
-			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
+			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
@@ -1506,8 +1515,7 @@ public:
 					} // for bi
 				} // for g
 			} // for i
-			s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
-			s.add_uniform_float("ambient_scale", 1.0); // reset to default
+			reset_interior_lighting(s);
 			s.end_shader();
 
 			if (draw_inside_windows) { // write to stencil buffer, use stencil test for back facing building walls
@@ -1541,16 +1549,21 @@ public:
 		if (transparent_windows) {
 			// draw back faces of buildings
 			bool const use_int_wall_tex = 1;
-			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
+			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
-				// TODO_INT: but the color and texture scale aren't right; at least it looks better than bricks
-				if (use_int_wall_tex && !(*i)->buildings.empty()) {(*i)->buildings.front().get_material().wall_tex.set_gl();}
+				// TODO_INT: but the texture scale isn't right; at least it looks better than bricks
+				bool const force_wall_tex(use_int_wall_tex && !(*i)->buildings.empty());
 				vertex_range_t const *exclude(nullptr);
-
+				
+				if (force_wall_tex) {
+					building_mat_t const &mat((*i)->buildings.front().get_material());
+					mat.wall_tex.set_gl();
+					s.set_cur_color(mat.wall_color);
+				}
 				if (draw_inside_windows) {
 					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
 					// draw this range using stencil test but the rest of the buildings without stencil test
@@ -1558,12 +1571,12 @@ public:
 					glEnable(GL_STENCIL_TEST);
 					glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
 					glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-					(*i)->building_draw_vbo.draw_quad_geom_range(vr, vr.draw_ix, shadow_only, use_int_wall_tex);
+					(*i)->building_draw_vbo.draw_quad_geom_range(vr, vr.draw_ix, shadow_only, force_wall_tex);
 					glDisable(GL_STENCIL_TEST);
 				}
-				(*i)->building_draw_vbo.draw(shadow_only, use_int_wall_tex, 0, exclude); // no stencil test
+				(*i)->building_draw_vbo.draw(shadow_only, force_wall_tex, 0, exclude); // no stencil test
 			} // for i
-			s.add_uniform_float("diffuse_scale", 1.0); // reset
+			reset_interior_lighting(s);
 			s.disable();
 			glCullFace(GL_BACK); // draw front faces
 			// draw windows in depth pass to create holes
