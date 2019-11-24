@@ -450,7 +450,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			adjust_part_zvals_for_floor_spacing(bc);
 			float const min_edge_mode(mat.no_city ? 0.04*i : 0.0); // prevent z-fighting on non-city building windows (stretched texture)
 
-			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to generate a cube that doesn't contain any existing cubes (can occasionally still fail)
+			// make 100 attempts to generate a cube that doesn't contain any existing cubes; most of the time should pass the first time, so it should never actually fail
+			for (unsigned n = 0; n < 100; ++n) {
 				for (unsigned d = 0; d < 2; ++d) { // x,y
 					bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), min_edge_mode)*sz[d];
 					bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), min_edge_mode)*sz[d];
