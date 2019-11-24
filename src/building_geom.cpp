@@ -578,6 +578,21 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	}
 	float const door_half_width(0.5*width_scale*door_height);
 	float const door_shift((is_house ? 0.005 : 0.001)*base.dz());
+
+	if (interior && hallway_dim == 2) { // not on a hallway
+		vect_cube_t const &walls(interior->walls[!dim]); // perpendicular to door
+		float const door_lo(door_center - 1.2*door_half_width), door_hi(door_center + 1.2*door_half_width); // pos along wall with a small expand
+		float const dpos_lo(door_pos    -     door_half_width), dpos_hi(door_pos    +     door_half_width); // expand width of the door
+
+		for (auto w = walls.begin(); w != walls.end(); ++w) {
+			if (w->d[ dim][0] > dpos_hi || w->d[ dim][1] < dpos_lo) continue; // not ending at same wall as door
+			if (w->d[!dim][0] > door_hi || w->d[!dim][1] < door_lo) continue; // not intersecting door
+			// Note: since we know that all rooms are wider than the door width, we know that we have space for a door on either side of the wall
+			float const lo_dist(w->d[!dim][0] - door_lo), hi_dist(door_hi - w->d[!dim][1]);
+			if (lo_dist < hi_dist) {door_center += lo_dist;} else {door_center -= hi_dist;} // move the door so that it doesn't open into the end of the wall
+			break;
+		}
+	}
 	cube_t door;
 	door.z1() = base.z1(); // same bottom as house
 	door.z2() = door.z1() + door_height;
