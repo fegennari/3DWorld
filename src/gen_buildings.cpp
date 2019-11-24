@@ -540,16 +540,24 @@ class building_draw_t {
 			}
 			vao_manager_t::post_render();
 		}
-		void draw_all_geom(bool shadow_only, bool no_set_texture, bool direct_draw_no_vbo) {
+		void draw_all_geom(bool shadow_only, bool no_set_texture, bool direct_draw_no_vbo, vertex_range_t const *const exclude=nullptr) {
 			if (direct_draw_no_vbo) {
+				assert(!exclude); // not supported in this mode
 				if (!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty())) {tex.set_gl();}
 				if (!quad_verts.empty()) {draw_verts(quad_verts, GL_QUADS);}
 				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES);}
 			}
 			else {
 				if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
-				draw_geom_range(shadow_only, no_set_texture, pos_by_tile.front(), pos_by_tile.back());
+				vert_ix_pair const &start(pos_by_tile.front()), end(pos_by_tile.back());
+				if (!exclude) {draw_geom_range(shadow_only, no_set_texture, start, end); return;} // non-exclude case
+				assert(exclude->start >= start.qix && exclude->start < exclude->end && exclude->end <= end.qix); // exclude (start, end) must be a subset of (start.qix, end.qix)
+				draw_geom_range(shadow_only, no_set_texture, start, vert_ix_pair(exclude->start, end.tix)); // first block of quads and all tris
+				draw_geom_range(shadow_only, no_set_texture, vert_ix_pair(exclude->end, end.tix), end); // second block of quads and no tris
 			}
+		}
+		void draw_quad_geom_range(vertex_range_t const &range, bool shadow_only=0, bool no_set_texture=0) { // no tris; empty range is legal
+			draw_geom_range(shadow_only, no_set_texture, vert_ix_pair(range.start, 0), vert_ix_pair(range.end, 0));
 		}
 		void draw_geom_tile(unsigned tile_id, bool no_set_texture) {
 			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
