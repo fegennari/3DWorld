@@ -190,6 +190,12 @@ struct building_stats_t {
 	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), ngeom(0), nverts(0) {}
 };
 
+struct vertex_range_t {
+	int draw_ix; // -1 is unset
+	unsigned start, end;
+	vertex_range_t() : draw_ix(-1), start(0), end(0) {}
+};
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
@@ -201,6 +207,7 @@ struct building_t : public building_geom_t {
 	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	std::shared_ptr<building_interior_t> interior;
+	vertex_range_t ext_side_qv_range;
 	float ao_bcz2;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), is_house(0), has_antenna(0), has_chimney(0),
@@ -240,7 +247,7 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const;
+	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
 	bool has_room_geom() const {return (interior && interior->room_geom);}
 	void draw_room_geom() const;

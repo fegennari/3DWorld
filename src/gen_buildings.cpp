@@ -586,7 +586,7 @@ class building_draw_t {
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
 	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
-		unsigned const ix(tid_mapper.get_slot_ix(tex.tid));
+		unsigned const ix(get_to_draw_ix(tex));
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
 		block.register_tile_id(cur_tile_id);
@@ -616,6 +616,8 @@ public:
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
 	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
+	unsigned get_to_draw_ix(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix(tex.tid);}
+	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size();}
 
 	void toggle_transparent_windows_mode() {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->tex.toggle_transparent_windows_mode();}
@@ -927,26 +929,36 @@ public:
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	
-	void draw(bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0) {
-		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_all_geom(shadow_only, no_set_texture, direct_draw_no_vbo);}
+	void draw(bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0, vertex_range_t const *const exclude=nullptr) {
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
+			bool const use_exclude(exclude && exclude->draw_ix == int(i - to_draw.begin()));
+			i->draw_all_geom(shadow_only, no_set_texture, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
+		}
 	}
 	void draw_tile(unsigned tile_id, bool no_set_texture=0) {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(tile_id, no_set_texture);}
 	}
-	void draw_block(unsigned ix, bool shadow_only, bool no_set_texture=0) {
-		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(shadow_only, no_set_texture, 0);}
+	void draw_block(unsigned ix, bool shadow_only, bool no_set_texture=0, vertex_range_t const *const exclude=nullptr) {
+		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(shadow_only, no_set_texture, 0, exclude);}
+	}
+	void draw_quad_geom_range(vertex_range_t const &range, unsigned ix, bool shadow_only=0, bool no_set_texture=0) {
+		if (ix < to_draw.size()) {to_draw[ix].draw_quad_geom_range(range, shadow_only, no_set_texture);}
 	}
 }; // end building_draw_t
 
 
 // *** Drawing ***
-void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) const {
+void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) {
 
 	assert(get_exterior || get_interior); // must be at least one of these
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
 
 	if (get_exterior) { // exterior building parts
+		vertex_range_t vert_range;
+		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.side_tex);
+		ext_side_qv_range.start   = bdraw.get_num_verts (mat.side_tex);
+
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
 			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
@@ -954,6 +966,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
 			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
 		}
+		ext_side_qv_range.end = bdraw.get_num_verts(mat.side_tex);
+
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 			bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF);
 			bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
@@ -1190,6 +1204,7 @@ public:
 	unsigned get_gpu_mem_usage() const {return gpu_mem_usage;}
 	vector3d const &get_max_extent() const {return max_extent;}
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
+	building_t       &get_building(unsigned ix)       {assert(ix < buildings.size()); return buildings[ix];} // non-const version; not intended to be used to change geometry
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 	cube_t const &get_bcube() const {return buildings_bcube;}
 	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
