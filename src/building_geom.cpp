@@ -15,56 +15,6 @@ void building_t::set_z_range(float z1, float z2) {
 }
 building_mat_t const &building_t::get_material() const {return global_building_params.get_material(mat_ix);}
 
-void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
-
-	// generate L, T, U, H, + shape
-	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
-	int const shape(rand()%9); // 0-8
-	bool const is_hp(shape >= 7);
-	bool const dim(rgen.rand_bool()); // {x,y}
-	bool const dir(is_hp ? 1 : rgen.rand_bool()); // {neg,pos} - H/+ shapes are always pos
-	float const div(is_hp ? rgen.rand_uniform(0.2, 0.4) : rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
-	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
-	unsigned const start(parts.size()), num((shape >= 6) ? 3 : 2);
-	parts.resize(start+num, seed_cube);
-	parts[start+0].d[dim][ dir] = dpos; // full width part (except +)
-	parts[start+1].d[dim][!dir] = dpos; // partial width part (except +)
-
-	switch (shape) {
-	case 0: case 1: case 2: case 3: // L
-		parts[start+1].d[!dim][shape>>1] = ((shape&1) ? spos2 : spos1);
-		break;
-	case 4: case 5: // T
-		parts[start+1].d[!dim][0] = spos1;
-		parts[start+1].d[!dim][1] = spos2;
-		break;
-	case 6: // U
-		parts[start+2].d[ dim][!dir] = dpos; // partial width part
-		parts[start+1].d[!dim][1   ] = spos1;
-		parts[start+2].d[!dim][0   ] = spos2;
-		break;
-	case 7: { // H
-		float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end
-		parts[start+1].d[ dim][ dir] = dpos2;
-		parts[start+1].d[!dim][ 0  ] = spos1; // middle part
-		parts[start+1].d[!dim][ 1  ] = spos2;
-		parts[start+2].d[ dim][!dir] = dpos2; // full width part
-		break;
-	}
-	case 8: { // +
-		float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end
-		parts[start+0].d[!dim][ 0  ] = spos1;
-		parts[start+0].d[!dim][ 1  ] = spos2;
-		parts[start+2].d[!dim][ 0  ] = spos1;
-		parts[start+2].d[!dim][ 1  ] = spos2;
-		parts[start+1].d[ dim][ dir] = dpos2; // middle part
-		parts[start+2].d[ dim][!dir] = dpos2; // partial width part
-		break;
-	}
-	default: assert(0);
-	}
-}
-
 void building_t::gen_rotation(rand_gen_t &rgen) {
 
 	float const max_rot_angle(get_material().max_rot_angle);
@@ -563,6 +513,56 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	gen_interior(rgen, 0);
 	gen_building_doors_if_needed(rgen);
+}
+
+void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
+
+	// generate L, T, U, H, + shape
+	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
+	int const shape(rand()%9); // 0-8
+	bool const is_hp(shape >= 7);
+	bool const dim(rgen.rand_bool()); // {x,y}
+	bool const dir(is_hp ? 1 : rgen.rand_bool()); // {neg,pos} - H/+ shapes are always pos
+	float const div(is_hp ? rgen.rand_uniform(0.2, 0.4) : rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
+	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
+	unsigned const start(parts.size()), num((shape >= 6) ? 3 : 2);
+	parts.resize(start+num, seed_cube);
+	parts[start+0].d[dim][ dir] = dpos; // full width part (except +)
+	parts[start+1].d[dim][!dir] = dpos; // partial width part (except +)
+
+	switch (shape) {
+	case 0: case 1: case 2: case 3: // L
+		parts[start+1].d[!dim][shape>>1] = ((shape&1) ? spos2 : spos1);
+		break;
+	case 4: case 5: // T
+		parts[start+1].d[!dim][0] = spos1;
+		parts[start+1].d[!dim][1] = spos2;
+		break;
+	case 6: // U
+		parts[start+2].d[ dim][!dir] = dpos; // partial width part
+		parts[start+1].d[!dim][1   ] = spos1;
+		parts[start+2].d[!dim][0   ] = spos2;
+		break;
+	case 7: { // H
+		float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end
+		parts[start+1].d[ dim][ dir] = dpos2;
+		parts[start+1].d[!dim][ 0  ] = spos1; // middle part
+		parts[start+1].d[!dim][ 1  ] = spos2;
+		parts[start+2].d[ dim][!dir] = dpos2; // full width part
+		break;
+	}
+	case 8: { // +
+		float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end
+		parts[start+0].d[!dim][ 0  ] = spos1;
+		parts[start+0].d[!dim][ 1  ] = spos2;
+		parts[start+2].d[!dim][ 0  ] = spos1;
+		parts[start+2].d[!dim][ 1  ] = spos2;
+		parts[start+1].d[ dim][ dir] = dpos2; // middle part
+		parts[start+2].d[ dim][!dir] = dpos2; // partial width part
+		break;
+	}
+	default: assert(0);
+	}
 }
 
 bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
