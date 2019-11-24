@@ -1469,6 +1469,7 @@ public:
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		fgPushMatrix();
 		translate_to(xlate);
+		building_draw_t interior_wind_draw;
 		vector<vertex_range_t> per_bcs_exclude;
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
@@ -1478,7 +1479,6 @@ public:
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
 			s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
-			building_draw_t back_face_wind_draw;
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
@@ -1501,7 +1501,7 @@ public:
 						b.draw_room_geom();
 						if (!draw_inside_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
-						b.get_all_drawn_window_verts(back_face_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
+						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
 						per_bcs_exclude[i - bcs.begin()] = b.ext_side_qv_range;
 					} // for bi
 				} // for g
@@ -1520,7 +1520,15 @@ public:
 				glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 				glDepthMask(GL_FALSE);
-				back_face_wind_draw.draw(0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
+				interior_wind_draw.draw(0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
+				// clear stencil buffer for front sides of the building; TODO_INT: still not correct, but maybe looks a bit better
+				glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_ZERO); // clear stencil for front faces
+				glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
+				
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
+					if (vr.draw_ix >= 0) {(*i)->building_draw_vbo.draw_quad_geom_range(vr, vr.draw_ix, shadow_only);}
+				}
 				glDepthMask(GL_TRUE);
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glDisable(GL_STENCIL_TEST);
@@ -1539,7 +1547,6 @@ public:
 
 			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-					if ((*i)->use_smap_this_frame) continue;
 					// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
 					// TODO_INT: but the color and texture scale aren't right; at least it looks better than bricks
 					if (use_int_wall_tex && !(*i)->buildings.empty()) {(*i)->buildings.front().get_material().wall_tex.set_gl();}
@@ -1550,7 +1557,6 @@ public:
 						
 						if (vr.draw_ix == ix) { // correct draw index
 							// draw this range using stencil test but the rest of the buildings without stencil test
-							// TODO_INT: doesn't work when looking at a different part of a multi-part building through a window
 							exclude = &vr; // use this exclude
 							glEnable(GL_STENCIL_TEST);
 							glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
@@ -1592,6 +1598,7 @@ public:
 				(*i)->building_draw_windows.draw(0);
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 			}
+			//interior_wind_draw.draw(0, 0, 1); // draw opaque front facing windows of building the player is in; direct_draw_no_vbo=1
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
