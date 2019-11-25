@@ -710,7 +710,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (type == 1 && ix == 1 && parts[0].z2() == parts[1].z2()) { // same z2
 			bool const other_dim((force_dim[0] < 2) ? force_dim[0] : get_largest_xy_dim(parts[0]));
 			
-			if (dim != other_dim && parts[0].get_sz_dim(dim) >= parts[1].get_sz_dim(!dim)) { // other dim, lower peak
+			if (dim != other_dim && parts[0].get_sz_dim(dim) >= parts[1].get_sz_dim(!dim)) { // opposite dim T-junction, lower peak
 				extend_to = parts[0].get_center_dim(dim); // extend lower part roof to center of upper part roof
 			}
 		}
@@ -724,7 +724,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			can_be_hipped = (part_roof_z >= other_roof_z); // no hipped for lower part
 		}
 		bool const hipped(can_be_hipped && rgen.rand_bool()); // hipped roof 50% of the time
-		if (hipped) {roof_dz[ix] = gen_hipped_roof(*i, peak_height, dim);} // no extension
+		if (hipped) {roof_dz[ix] = gen_hipped_roof(*i, peak_height, extend_to);}
 		else        {roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);}
 	}
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
@@ -798,15 +798,17 @@ void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 }
 
+unsigned extend_roof(cube_t &top, float extend_to, bool dim) {
+	if (extend_to == 0.0) return 2; // extend in neither dim
+	if (extend_to < top.d[dim][0]) {top.d[dim][0] = extend_to; return 0;} // lo side extend
+	if (extend_to > top.d[dim][1]) {top.d[dim][1] = extend_to; return 1;} // hi side extend
+	return 0; // extend in neither dim
+}
+
 float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to) { // roof made from two sloped quads and two triangles
 
 	cube_t top(top_); // deep copy
-	unsigned extend_dir(2); // 2 = neither
-	
-	if (extend_to != 0.0) {
-		if      (extend_to < top.d[dim][0]) {top.d[dim][0] = extend_to; extend_dir = 0;} // lo side extend
-		else if (extend_to > top.d[dim][1]) {top.d[dim][1] = extend_to; extend_dir = 1;} // hi side extend
-	}
+	unsigned const extend_dir(extend_roof(top, extend_to, dim));
 	float const width(top.get_sz_dim(!dim)), roof_dz(min(peak_height*width, top.get_dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
@@ -841,8 +843,11 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 	return roof_dz;
 }
 
-float building_t::gen_hipped_roof(cube_t const &top, float peak_height, bool dim) { // roof made from two sloped quads + two sloped triangles
+float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to) { // roof made from two sloped quads + two sloped triangles
 
+	bool const dim(get_largest_xy_dim(top_)); // always the largest dim
+	cube_t top(top_); // deep copy
+	unsigned const extend_dir(extend_roof(top, extend_to, dim));
 	float const width(top.get_sz_dim(!dim)), length(top.get_sz_dim(dim)), offset(0.5f*(length - width)), roof_dz(min(peak_height*width, top.get_dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point const center(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2);

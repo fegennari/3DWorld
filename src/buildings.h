@@ -238,7 +238,7 @@ struct building_t : public building_geom_t {
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to);
-	float gen_hipped_roof(cube_t const &top,  float peak_height, bool dim);
+	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	void gen_details(rand_gen_t &rgen);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
