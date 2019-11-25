@@ -377,6 +377,32 @@ void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
 	c.z2() += floor_spacing*(targ_num_floors - num_floors); // ensure c.dz() is an exact multiple of num_floors
 }
 
+void split_cubes_recur(cube_t c, vect_cube_t &cubes, unsigned search_start, unsigned search_end) {
+
+	for (unsigned i = search_start; i < search_end; ++i) {
+		cube_t const &sc(cubes[i]);
+		assert(sc.z2() >= c.z2()); // assumes cubes are ordered descending by ztop
+		if (!sc.intersects_no_adj(c)) continue;
+		if (sc.contains_cube(c)) return; // contained, done (remove all of c)
+		// find a split plane
+		for (unsigned d = 0; d < 2; ++d) { // dim
+			for (unsigned e = 0; e < 2; ++e) { // dir
+				float const split_pos(cubes[i].d[d][e]); // Note: can't use sc reference as it may have been invalidated by a push_back()
+				
+				if (split_pos > c.d[d][0] && split_pos < c.d[d][1]) { // this plane splits c
+					cube_t hi_c(c);
+					hi_c.d[d][0] = split_pos; // hi part
+					c.   d[d][1] = split_pos; // lo part
+					// recursively split the hi part starting at this cube if it's not contained; this split plane will no longer be active
+					if (!cubes[i].contains_cube(hi_c)) {split_cubes_recur(hi_c, cubes, i, search_end);}
+					if ( cubes[i].contains_cube(c)) return; // done (optimization)
+				}
+			} // for e
+		} // for d
+	} // for i
+	cubes.push_back(c);
+}
+
 void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (!is_valid()) return; // invalid building
@@ -435,39 +461,49 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
-	parts.resize(num_levels);
 	float const height(base.get_dz()), dz(height/num_levels);
 	assert(height > 0.0);
 
 	if (!do_split && (rgen.rand()&3) < (was_cube ? 2 : 3)) { // oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
 		point const llc(base.get_llc()), sz(base.get_size());
+		float const abs_min_edge_move(0.5*mat.get_floor_spacing()); // same as door width
+		parts.reserve(num_levels); // at least this many
 
-		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels
-			cube_t &bc(parts[i]);
-			bc.z1() = base.z1(); // z1
-			bc.z2() = base.z1() + (i+1)*dz; // z2
-			if (i > 0) {bc.z2() += dz*rgen.rand_uniform(-0.5, 0.5); bc.z2() = min(bc.z2(), base.z2());}
+		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels, tallest to shortest
+			cube_t bc(base); // copy from base to start, keep z1
+			bc.z2() = base.z1() + (num_levels - i)*dz; // z2
+			if (i > 0) {bc.z2() += dz*rgen.rand_uniform(-0.45, 0.45); bc.z2() = min(bc.z2(), base.z2());}
+			if (i > 0) {assert(bc.z2() <= parts.back().z2());}
+			assert(bc.is_strictly_normalized());
 			adjust_part_zvals_for_floor_spacing(bc);
-			float const min_edge_mode(mat.no_city ? 0.04*i : 0.0); // prevent z-fighting on non-city building windows (stretched texture)
+			bool valid(0);
 
-			// make 100 attempts to generate a cube that doesn't contain any existing cubes; most of the time should pass the first time, so it should never actually fail
+			// make 100 attempts to generate a cube that isn't contained in any existing cubes; most of the time should pass the first time, so it should never actually fail
 			for (unsigned n = 0; n < 100; ++n) {
 				for (unsigned d = 0; d < 2; ++d) { // x,y
-					bc.d[d][0] = base.d[d][0] + max(rgen.rand_uniform(-0.2, 0.45), min_edge_mode)*sz[d];
-					bc.d[d][1] = base.d[d][1] - max(rgen.rand_uniform(-0.2, 0.45), min_edge_mode)*sz[d];
+					float const mv_lo(rgen.rand_uniform(-0.2, 0.45)), mv_hi(rgen.rand_uniform(-0.2, 0.45));
+					if (mv_lo > 0.0) {bc.d[d][0] = base.d[d][0] + max(abs_min_edge_move, mv_lo*sz[d]);}
+					if (mv_hi > 0.0) {bc.d[d][1] = base.d[d][1] - max(abs_min_edge_move, mv_hi*sz[d]);}
 				}
 				assert(bc.is_strictly_normalized());
-				bool contains(0);
-				for (unsigned j = 0; j < i; ++j) {contains |= bc.contains_cube(parts[j]);}
-				if (!contains) break; // success
+				bool contained(0);
+				for (auto p = parts.begin(); p != parts.end(); ++p) {contained |= p->contains_cube(bc);}
+				if (!contained) {valid = 1; break;} // success
 			} // for n
+			if (!valid) break; // remove this part and end the building here
+			if (i == 0 || !was_cube) {parts.push_back(bc); continue;} // no splitting
+			split_cubes_recur(bc, parts, 0, parts.size()); // split this cube against all previously added cubes and remove overlapping areas
 		} // for i
+		parts.shrink_to_fit(); // optional
+		std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details
 		calc_bcube_from_parts(); // update bcube
 		gen_details(rgen);
 		gen_interior(rgen, 1);
 		gen_building_doors_if_needed(rgen);
 		return;
 	}
+	parts.resize(num_levels);
+
 	for (unsigned i = 0; i < num_levels; ++i) {
 		cube_t &bc(parts[i]);
 		if (i == 0) {bc = base;} // use full building footprint
