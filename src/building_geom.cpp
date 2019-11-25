@@ -705,12 +705,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		unsigned const ix(i - parts.begin()), fdim(force_dim[ix]);
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
-		float extend_to(0.0);
+		float extend_to(0.0), max_dz(i->get_dz());
 
 		if (type == 1 && ix == 1 && parts[0].z2() == parts[1].z2()) { // same z2
 			bool const other_dim((force_dim[0] < 2) ? force_dim[0] : get_largest_xy_dim(parts[0]));
 			
-			if (dim != other_dim && parts[0].get_sz_dim(dim) >= parts[1].get_sz_dim(!dim)) { // opposite dim T-junction, lower peak
+			if (dim != other_dim) { // opposite dim T-junction
+				max_dz    = peak_height*parts[0].get_sz_dim(dim); // clamp roof zval to other roof's peak
 				extend_to = parts[0].get_center_dim(dim); // extend lower part roof to center of upper part roof
 			}
 		}
@@ -725,7 +726,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		bool const hipped(can_be_hipped && rgen.rand_bool()); // hipped roof 50% of the time
 		if (hipped) {roof_dz[ix] = gen_hipped_roof(*i, peak_height, extend_to);}
-		else        {roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to);}
+		else        {roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to, max_dz);}
 	}
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned part_ix(0);
@@ -805,11 +806,11 @@ unsigned extend_roof(cube_t &top, float extend_to, bool dim) {
 	return 0; // extend in neither dim
 }
 
-float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to) { // roof made from two sloped quads and two triangles
+float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz) { // roof made from two sloped quads and two triangles
 
 	cube_t top(top_); // deep copy
 	unsigned const extend_dir(extend_roof(top, extend_to, dim));
-	float const width(top.get_sz_dim(!dim)), roof_dz(min(peak_height*width, top.get_dz()));
+	float const width(top.get_sz_dim(!dim)), roof_dz(min(max_dz, min(peak_height*width, top.get_dz())));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
