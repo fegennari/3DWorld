@@ -494,9 +494,13 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (d[i_][0] >= d[i_][1]) return 0;)
 		return 1;
 	}
-	bool intersects(const cube_t &cube) const {
+	bool intersects(const cube_t &cube) const { // includes adjacency
 		UNROLL_3X(if (cube.d[i_][1] < d[i_][0] || cube.d[i_][0] > d[i_][1]) return 0;)
 		return 1;
+	}
+	bool intersects_no_adj(const cube_t &cube) const { // excludes adjacency
+		UNROLL_3X(if (cube.d[i_][1] <= d[i_][0] || cube.d[i_][0] >= d[i_][1]) return 0;)
+			return 1;
 	}
 	bool intersects_xy(const cube_t &cube) const {
 		UNROLL_2X(if (cube.d[i_][1] < d[i_][0] || cube.d[i_][0] > d[i_][1]) return 0;)
