@@ -12,6 +12,7 @@
 
 bool const REMOVE_ALL_COLL   = 1;
 bool const ALWAYS_ADD_TO_HCM = 0;
+bool const PLAYER_CAN_ENTER_BUILDINGS = 1; // not yet working
 unsigned const CAMERA_STEPS  = 10;
 unsigned const PURGE_THRESH  = 20;
 float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
@@ -1600,8 +1601,9 @@ int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, v
 		point const p_last(pos - velocity*tstep);
 		float const o_radius(get_true_radius());
 		vector3d cnorm(plus_z);
+		bool const check_interior(PLAYER_CAN_ENTER_BUILDINGS && type == CAMERA);
 		
-		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 0, 1, &cnorm)) { // xy_only=0, inc_cars=1
+		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 0, 1, &cnorm, check_interior)) { // xy_only=0, inc_cars=1
 			obj_type const &otype(object_types[type]);
 			float const friction(otype.friction_factor*((flags & FROZEN_FLAG) ? 0.5 : 1.0)); // frozen objects have half friction
 			if (animate2 && health <= 0.1) {disable();}
@@ -1717,6 +1719,11 @@ float get_max_mesh_height_within_radius(point const &pos, float radius, bool is_
 	return mh;
 }
 
+void proc_player_city_sphere_coll(point &pos) {
+	bool const check_interior(PLAYER_CAN_ENTER_BUILDINGS);
+	proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0, 0, nullptr, check_interior); // use prev pos for building collisions; z dir
+}
+
 void force_onto_surface_mesh(point &pos) { // for camera
 
 	bool const cflight(game_mode && camera_flight);
@@ -1753,7 +1760,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		pos.z -= radius; // bottom of camera sphere
 		adjust_zval_for_model_coll(pos, get_max_mesh_height_within_radius(pos, radius, 1), C_STEP_HEIGHT*radius);
 		pos.z += radius;
-		proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0); // use prev pos for building collisions; z dir
+		proc_player_city_sphere_coll(pos);
 		camera_last_pos = pos;
 		camera_change   = 0;
 		return; // infinite terrain mode
@@ -1786,7 +1793,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		}
 	}
 	if (camera_coll_smooth) {collision_detect_large_sphere(pos, radius, (unsigned char)0);}
-	proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0); // use prev pos for building collisions; z dir
+	proc_player_city_sphere_coll(pos);
 	point const adj_pos(pos + vector3d(0.0, 0.0, camera_zh));
 	if (temperature > W_FREEZE_POINT && is_underwater(adj_pos, 1) && (rand()&1)) {gen_bubble(adj_pos);}
 

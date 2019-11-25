@@ -3076,8 +3076,8 @@ unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bri
 void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) {
 	city_gen.get_sphere_coll_cubes((pos + get_tt_xlate_val()), radius, include_intersections, xy_only, out, out_bt);
 }
-bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm) {
-	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm)) return 1;
+bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm, bool check_interior) {
+	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior)) return 1;
 	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // Note: no xy_only for cities
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt) {
