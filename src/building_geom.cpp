@@ -810,7 +810,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened) {
 
 	tquad_with_ix_t door(4, type); // quad
-	float const pos(c.d[dim][0] + pos_adj*(dir ? 1.0 : -1.0)); // move away from wall slightly (not needed if opened?)
+	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
 	door.pts[0][!dim] = door.pts[3][!dim] = c.d[!dim][ dir]; //  dir side
@@ -820,7 +820,7 @@ tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned
 
 	if (opened) { // rotate 90 degrees about pts[0]/pts[3] - change pts[1]/pts[2]; this is just a placeholder for now
 		float const width(c.get_sz_dim(!dim));
-		door.pts[1][!dim] = door.pts[2][!dim] = door.pts[0][!dim];
+		door.pts[1][!dim] = door.pts[2][!dim] = door.pts[0][!dim] + 0.01*width*((dir^dim) ? 1.0 : -1.0); // move slightly away from the wall to prevent z-fighting
 		door.pts[1][ dim] = door.pts[2][ dim] = door.pts[0][ dim] + width*(dir ? 1.0 : -1.0);
 	}
 	return door;
