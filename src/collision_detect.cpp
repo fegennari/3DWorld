@@ -325,7 +325,7 @@ int add_coll_cylinder(point const &p1, point const &p2, float radius, float radi
 	radius2 = fabs(radius2);
 	assert(radius > 0.0 || radius2 > 0.0);
 	bool const nonvert(p1.x != p2.x || p1.y != p2.y || (fabs(radius - radius2)/max(radius, radius2)) > 0.2);
-	type = (nonvert ? COLL_CYLINDER_ROT : COLL_CYLINDER);
+	type = (nonvert ? (int)COLL_CYLINDER_ROT : (int)COLL_CYLINDER);
 	cobj.points[0] = p1;
 	cobj.points[1] = p2;
 	
@@ -351,7 +351,7 @@ void add_coll_torus_to_matrix(int index, int dhcm) {
 	cobj.points[1] = cylin.p2;
 	cobj.radius    = cylin.r1;
 	cobj.radius2   = cylin.r2;
-	cobj.type = (cobj.is_cylin_vertical() ? COLL_CYLINDER : COLL_CYLINDER_ROT);
+	cobj.type = (cobj.is_cylin_vertical() ? (int)COLL_CYLINDER : (int)COLL_CYLINDER_ROT);
 	cobj.calc_bcube();
 	add_coll_cylinder_to_matrix(index, dhcm);
 	cobj = orig_cobj; // restore the original
@@ -375,7 +375,7 @@ void add_coll_capsule_to_matrix(int index, int dhcm) {
 
 	coll_obj &cobj(coll_objects[index]);
 	coll_obj const orig_cobj(cobj); // make a copy of the cobj so that we can modify it then restore it
-	cobj.type = ((cobj.is_cylin_vertical() && cobj.radius == cobj.radius2) ? COLL_CYLINDER : COLL_CYLINDER_ROT);
+	cobj.type = ((cobj.is_cylin_vertical() && cobj.radius == cobj.radius2) ? (int)COLL_CYLINDER : (int)COLL_CYLINDER_ROT);
 	vector3d const dir(cobj.points[1] - cobj.points[0]);
 	float const len(dir.mag());
 	assert(len > TOLERANCE);
@@ -1679,7 +1679,7 @@ void create_footsteps(point const &pos, float sz, vector3d const &view_dir, poin
 	point const step_pos(pos + ((step_num&1) ? foot_spacing : -foot_spacing)*right_dir - vector3d(0.0, 0.0, 0.5*sz)); // alternate left and right feet
 	if (!foot_down) return;
 	bool const crushed(has_snow ? crush_snow_at_pt(step_pos, crush_depth) : 0);
-	if (is_camera && !prev_foot_down) {gen_sound((crushed ? SOUND_SNOW_STEP : SOUND_FOOTSTEP), pos, 0.025, (crushed ? 1.5 : 1.2));} // on down step
+	if (is_camera && !prev_foot_down) {gen_sound((crushed ? (int)SOUND_SNOW_STEP : (int)SOUND_FOOTSTEP), pos, 0.025, (crushed ? 1.5 : 1.2));} // on down step
 }
 
 void play_camera_footstep_sound() {
