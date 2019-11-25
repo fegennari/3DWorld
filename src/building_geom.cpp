@@ -607,7 +607,6 @@ bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
 cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen) {
 
 	if (door_center == 0.0) { // door not yet calculated; add door to first part of house
-		// TODO_INT: if (interior) {interior->walls[dim]...}
 		bool const centered(door_center_shift == 0.0 || hallway_dim == (unsigned char)dim); // center doors connected to primary hallways
 		float const offset(centered ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
 		door_center = offset*base.d[!dim][0] + (1.0 - offset)*base.d[!dim][1];
@@ -1366,7 +1365,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
 void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float floor_thickness, float window_vspacing) {
 
-	return; // TODO_INT: enable when this code is complete enough to do something useful
+	return; // enable when this code is complete enough to do something useful
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
 	interior->room_geom.reset(new building_room_geom_t);
