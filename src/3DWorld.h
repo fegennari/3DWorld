@@ -387,22 +387,17 @@ struct cube_t { // size = 24
 	float d[3][2]; // {x,y,z},{min,max}
 
 	cube_t() {set_to_zeros();}
-	//cube_t() {d[0][0] = 1; d[0][1] = 0; d[1][0] = 1; d[1][1] = 0; d[2][0] = 1; d[2][1] = 0;} // initialize to invalid values for testing purposes
+	//cube_t() {x1() = 1; x2() = 0; y1() = 1; y2() = 0; z1() = 1; z2() = 0;} // initialize to invalid values for testing purposes
 	
-	cube_t(float x1, float x2, float y1, float y2, float z1, float z2) {
-		d[0][0] = x1; d[0][1] = x2;
-		d[1][0] = y1; d[1][1] = y2;
-		d[2][0] = z1; d[2][1] = z2;
+	cube_t(float x1_, float x2_, float y1_, float y2_, float z1_, float z2_) {
+		x1() = x1_; x2() = x2_; y1() = y1_; y2() = y2_; z1() = z1_; z2() = z2_;
 	}
-	cube_t(point const &p1, point const &p2) {
-		UNROLL_3X(d[i_][0] = min(p1[i_], p2[i_]); d[i_][1] = max(p1[i_], p2[i_]);)
-	}
+	cube_t(point const &p1, point const &p2) {UNROLL_3X(d[i_][0] = min(p1[i_], p2[i_]); d[i_][1] = max(p1[i_], p2[i_]);)}
 	cube_t(point const &pt) {set_from_point(pt);}
 	cube_t(point const *const pts, unsigned npts) {set_from_points(pts, npts);}
 	void set_to_zeros() {set_from_point(all_zeros);}
 	void copy_from(cube_t const &c) {
-		UNROLL_3X(d[i_][0] = c.d[i_][0];)
-		UNROLL_3X(d[i_][1] = c.d[i_][1];)
+		UNROLL_3X(d[i_][0] = c.d[i_][0]; d[i_][1] = c.d[i_][1];)
 	}
 	void set_from_point(point const &pt) {UNROLL_3X(d[i_][0] = d[i_][1] = pt[i_];)}
 	void set_from_sphere(point const &pt, float radius) {
@@ -447,14 +442,12 @@ struct cube_t { // size = 24
 	void   operator*=(vector3d const &p) {UNROLL_3X(d[i_][0] *= p[i_]; d[i_][1] *= p[i_];)}
 	void   operator*=(float scale      ) {UNROLL_3X(d[i_][0] *= scale; d[i_][1] *= scale;)}
 
-	void translate(point const &p) {
-		UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)
-	}
+	void translate(point const &p) {UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)}
 	void set_from_points(point const *const pts, unsigned npts);
 	std::string str() const;
 	std::string raw_str() const;
 	bool is_near_zero_area() const;
-	bool is_all_zeros() const {return (d[0][0] == 0 && d[0][1] == 0 && d[1][0] == 0 && d[1][1] == 0 && d[2][0] == 0 && d[2][1] == 0);}
+	bool is_all_zeros() const {return (x1() == 0 && x2() == 0 && y1() == 0 && y2() == 0 && z1() == 0 && z2() == 0);}
 
 	void union_with_pt(point const &pt) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]); d[i_][1] = max(d[i_][1], pt[i_]);)
@@ -479,9 +472,8 @@ struct cube_t { // size = 24
 	void intersect_with_cube(cube_t const &c) { // Note: cube and *this must overlap
 		UNROLL_3X(d[i_][0] = max(d[i_][0], c.d[i_][0]); d[i_][1] = min(d[i_][1], c.d[i_][1]);)
 	}
-	void normalize() {
-		UNROLL_3X(if (d[i_][1] < d[i_][0]) swap(d[i_][0], d[i_][1]);)
-	}
+	void normalize() {UNROLL_3X(if (d[i_][1] < d[i_][0]) swap(d[i_][0], d[i_][1]);)}
+
 	bool is_zero_area() const {
 		UNROLL_3X(if (d[i_][0] == d[i_][1]) return 1;)
 		return 0;
@@ -500,7 +492,7 @@ struct cube_t { // size = 24
 	}
 	bool intersects_no_adj(const cube_t &cube) const { // excludes adjacency
 		UNROLL_3X(if (cube.d[i_][1] <= d[i_][0] || cube.d[i_][0] >= d[i_][1]) return 0;)
-			return 1;
+		return 1;
 	}
 	bool intersects_xy(const cube_t &cube) const {
 		UNROLL_2X(if (cube.d[i_][1] < d[i_][0] || cube.d[i_][0] > d[i_][1]) return 0;)
@@ -522,60 +514,39 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (pt[i_] < d[i_][0] || pt[i_] > d[i_][1]) return 0;)
 		return 1;
 	}
-	bool contains_pt_xy(point const &pt) const {
-		return (pt.x > d[0][0] && pt.x < d[0][1] && pt.y > d[1][0] && pt.y < d[1][1]);
-	}
-	bool contains_pt_xy_inc_low_edge(point const &pt) const {
-		return (pt.x >= d[0][0] && pt.x < d[0][1] && pt.y >= d[1][0] && pt.y < d[1][1]);
-	}
-	bool contains_pt_xy_exp(point const &pt, float exp) const {
-		return (pt.x > d[0][0]-exp && pt.x < d[0][1]+exp && pt.y > d[1][0]-exp && pt.y < d[1][1]+exp);
-	}
+	bool contains_pt_xy             (point const &pt) const {return (pt.x > x1() && pt.x < x2() && pt.y > y1() && pt.y < y2());}
+	bool contains_pt_xy_inc_low_edge(point const &pt) const {return (pt.x >= x1() && pt.x < x2() && pt.y >= y1() && pt.y < y2());}
+	bool contains_pt_xy_exp         (point const &pt, float exp) const {return (pt.x > x1()-exp && pt.x < x2()+exp && pt.y > y1()-exp && pt.y < y2()+exp);}
+
 	bool quick_intersect_test(const cube_t &cube) const {
 		UNROLL_3X(if (cube.d[i_][0] >= d[i_][1] || cube.d[i_][1] <= d[i_][0]) return 0;)
 		return 1;
 	}
 	bool line_intersects(point const &p1, point const &p2) const;
+	void clamp_pt   (point &pt) const {UNROLL_3X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)}
+	void clamp_pt_xy(point &pt) const {UNROLL_2X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)}
+	float get_volume() const {return fabs(x2() - x1())*fabs(y2() - y1())*fabs(z2() - z1());}
+	float get_area  () const {return 2.0f*(fabs(x2() - x1())*fabs(y2() - y1()) + fabs(y2() - y1())*fabs(z2() - z1()) + fabs(z2() - z1())*fabs(x2() - x1()));}
+	float max_len   () const {return max((x2() - x1()), max((y2() - y1()), (z2() - z1())));}
+	float min_len   () const {return min((x2() - x1()), min((y2() - y1()), (z2() - z1())));}
 
-	void clamp_pt(point &pt) const {
-		UNROLL_3X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)
-	}
-	void clamp_pt_xy(point &pt) const {
-		UNROLL_2X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)
-	}
-	float get_volume() const {
-		return fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]);
-	}
-	float get_area() const {
-		return 2.0f*(fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0]) +
-			         fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]) +
-			         fabs(d[2][1] - d[2][0])*fabs(d[0][1] - d[0][0]));
-	}
-	float max_len() const {
-		return max((d[0][1] - d[0][0]), max((d[1][1] - d[1][0]), (d[2][1] - d[2][0])));
-	}
-	float min_len() const {
-		return min((d[0][1] - d[0][0]), min((d[1][1] - d[1][0]), (d[2][1] - d[2][0])));
-	}
 	float second_largest_len() const {
-		return min(max((d[0][1] - d[0][0]), (d[1][1] - d[1][0])),
-			   min(max((d[1][1] - d[1][0]), (d[2][1] - d[2][0])),
-			       max((d[2][1] - d[2][0]), (d[0][1] - d[0][0]))));
+		return min(max((x2() - x1()), (y2() - y1())), min(max((y2() - y1()), (z2() - z1())),  max((z2() - z1()), (x2() - x1()))));
 	}
 	point get_cube_center() const {
-		return point(0.5f*(d[0][0]+d[0][1]), 0.5f*(d[1][0]+d[1][1]), 0.5f*(d[2][0]+d[2][1]));
+		return point(0.5f*(x1()+x2()), 0.5f*(y1()+y2()), 0.5f*(z1()+z2()));
 	}
 	float get_bsphere_radius() const {
-		return 0.5f*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]) + (d[2][1]-d[2][0])*(d[2][1]-d[2][0]));
+		return 0.5f*sqrt((x2()-x1())*(x2()-x1()) + (y2()-y1())*(y2()-y1()) + (z2()-z1())*(z2()-z1()));
 	}
 	float get_xy_bsphere_radius() const {
-		return 0.5f*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]));
+		return 0.5f*sqrt((x2()-x1())*(x2()-x1()) + (y2()-y1())*(y2()-y1()));
 	}
 	sphere_t get_bsphere() const {return sphere_t(get_cube_center(), get_bsphere_radius());}
 	sphere_t get_bcylin () const {return sphere_t(get_cube_center(), get_xy_bsphere_radius());}
-	point get_llc() const {return point(d[0][0], d[1][0], d[2][0]);}
-	point get_urc() const {return point(d[0][1], d[1][1], d[2][1]);}
-	vector3d get_size() const {return vector3d((d[0][1]-d[0][0]), (d[1][1]-d[1][0]), (d[2][1]-d[2][0]));}
+	point get_llc() const {return point(x1(), y1(), z1());}
+	point get_urc() const {return point(x2(), y2(), z2());}
+	vector3d get_size() const {return vector3d((x2()-x1()), (y2()-y1()), (z2()-z1()));}
 	float get_center_dim(unsigned dim) const {assert(dim < 3); return 0.5f*(d[dim][0] + d[dim][1]);}
 	float get_sz_dim    (unsigned dim) const {assert(dim < 3); return (d[dim][1] - d[dim][0]);}
 	void expand_by(float val) {UNROLL_3X(d[i_][0] -= val; d[i_][1] += val;)}
