@@ -1236,7 +1236,7 @@ void coll_obj::convert_cube_to_ext_polygon() {
 	assert(type == COLL_CUBE);
 	type      = COLL_POLYGON;
 	npoints   = 4;
-	thickness = get_dz(); // height
+	thickness = dz(); // height
 	assert(thickness > 0.0);
 	norm      = plus_z;
 	cp.surfs  = 0;

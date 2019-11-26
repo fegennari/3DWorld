@@ -843,7 +843,7 @@ void upload_dlights_textures(cube_t const &bounds) { // 0.21ms => 0.05ms with dl
 	memset(dl_data_ptr, 0, data_sz*sizeof(float));
 	if (dl_sources.size() > max_dlights) {cerr << "Warning: Exceeded max lights of " << max_dlights << endl;}
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
-	float const radius_scale(1.0/(0.5*bounds.get_dx())); // bounds x radius inverted
+	float const radius_scale(1.0/(0.5*bounds.dx())); // bounds x radius inverted
 	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
 	vector3d const pscale(1.0/psize.x, 1.0/psize.y, 1.0/psize.z);
 	has_spotlights = has_line_lights = 0;
@@ -1166,7 +1166,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube) {
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
 	has_dl_sources     = (ndl > 0);
 	dlight_add_thresh *= 0.99;
-	assert(scene_bcube.get_dx() > 0.0 && scene_bcube.get_dy() > 0.0);
+	assert(scene_bcube.dx() > 0.0 && scene_bcube.dy() > 0.0);
 	point const scene_llc(scene_bcube.get_llc()); // Note: zval ignored
 	vector3d const scene_sz(scene_bcube.get_size()); // Note: zval ignored
 	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));

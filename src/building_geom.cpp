@@ -144,7 +144,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 
 		if (use_cylinder_coll()) {
 			point const cc(i->get_cube_center() + xlate);
-			float const crx(0.5*i->get_dx()), cry(0.5*i->get_dy()), r_sum(radius + max(crx, cry));
+			float const crx(0.5*i->dx()), cry(0.5*i->dy()), r_sum(radius + max(crx, cry));
 			if (!dist_xy_less_than(pos2, cc, r_sum)) continue; // no intersection
 
 			if (fabs(crx - cry) < radius) { // close to a circle
@@ -300,7 +300,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			if (vert) {coll = 2;} // roof
 			else {
 				float const zval(p1.z + t*(p2.z - p1.z));
-				coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->get_dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
+				coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
 			}
 			if (ret_any_pt) return coll;
 		}
@@ -461,7 +461,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
-	float const height(base.get_dz()), dz(height/num_levels);
+	float const height(base.dz()), dz(height/num_levels);
 	assert(height > 0.0);
 
 	if (!do_split && (rgen.rand()&3) < (was_cube ? 2 : 3)) { // oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
@@ -740,7 +740,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		unsigned const ix(i - parts.begin()), fdim(force_dim[ix]);
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
-		float extend_to(0.0), max_dz(i->get_dz());
+		float extend_to(0.0), max_dz(i->dz());
 
 		if (type == 1 && ix == 1 && parts[0].z2() == parts[1].z2()) { // same z2
 			bool const other_dim((force_dim[0] < 2) ? force_dim[0] : get_largest_xy_dim(parts[0]));
@@ -755,8 +755,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (can_be_hipped && two_parts) {
 			cube_t &other(parts[1-ix]);
 			bool const other_dim((force_dim[1-ix] < 2) ? force_dim[1-ix] : get_largest_xy_dim(other)); // use longest side if not forced
-			float const part_roof_z (i->z2()    + min(peak_height*i->get_sz_dim(!dim), i->get_dz()));
-			float const other_roof_z(other.z2() + min(peak_height*other.get_sz_dim(!other_dim), other.get_dz()));
+			float const part_roof_z (i->z2()    + min(peak_height*i->get_sz_dim(!dim), i->dz()));
+			float const other_roof_z(other.z2() + min(peak_height*other.get_sz_dim(!other_dim), other.dz()));
 			can_be_hipped = (part_roof_z >= other_roof_z); // no hipped for lower part
 		}
 		bool const hipped(can_be_hipped && rgen.rand_bool()); // hipped roof 50% of the time
@@ -845,7 +845,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 
 	cube_t top(top_); // deep copy
 	unsigned const extend_dir(extend_roof(top, extend_to, dim));
-	float const width(top.get_sz_dim(!dim)), roof_dz(min(max_dz, min(peak_height*width, top.get_dz())));
+	float const width(top.get_sz_dim(!dim)), roof_dz(min(max_dz, min(peak_height*width, top.dz())));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
@@ -884,7 +884,7 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 	bool const dim(get_largest_xy_dim(top_)); // always the largest dim
 	cube_t top(top_); // deep copy
 	unsigned const extend_dir(extend_roof(top, extend_to, dim));
-	float const width(top.get_sz_dim(!dim)), length(top.get_sz_dim(dim)), offset(0.5f*(length - width)), roof_dz(min(peak_height*width, top.get_dz()));
+	float const width(top.get_sz_dim(!dim)), length(top.get_sz_dim(dim)), offset(0.5f*(length - width)), roof_dz(min(peak_height*width, top.dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point const center(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2);
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), center, center};
@@ -980,8 +980,8 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		} // for i
 	}
 	if (has_antenna) { // add antenna
-		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.get_dx() + top.get_dy()));
-		float const height(rgen.rand_uniform(0.25, 0.5)*top.get_dz());
+		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
+		float const height(rgen.rand_uniform(0.25, 0.5)*top.dz());
 		cube_t &antenna(details.back());
 		antenna.set_from_point(top.get_cube_center());
 		antenna.expand_by(vector3d(radius, radius, 0.0));
@@ -998,7 +998,7 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supp
 	if (!is_simple_cube()) return; // only simple cubes are handled
 	cube_t const &top(parts.back()); // top/last part
 	float const peak_height(rgen.rand_uniform(0.2, 0.5));
-	float const wmin(min(top.get_dx(), top.get_dy())), z1(top.z2()), z2(z1 + peak_height*wmin), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
+	float const wmin(min(top.dx(), top.dy())), z1(top.z2()), z2(z1 + peak_height*wmin), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point const pts[5] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2)};
 	float const d1(rgen.rand_uniform(0.0, 0.8));
 

@@ -1118,7 +1118,7 @@ color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thicknes
 {
 	if (cobj.type == COLL_CUBE) {modify_alpha_for_cube_light_atten(color.alpha, cobj.cp.light_atten, thickness);}
 	if (tscale == 0.0) { // calculate tscale from object size (assuming a cube)
-		tscale = 3.0f/(fabs(cobj.get_dx()) + fabs(cobj.get_dy()) + fabs(cobj.get_dz()));
+		tscale = 3.0f/(fabs(cobj.dx()) + fabs(cobj.dy()) + fabs(cobj.dz()));
 	}
 	copy_from(cobj);
 	if (cobj.type == COLL_SPHERE || cobj.type == COLL_CAPSULE || cobj.is_cylinder()) {max_frag_sz = 0.5*max(cobj.radius, cobj.radius2);}

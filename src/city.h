@@ -273,7 +273,7 @@ struct road_t : public cube_t {
 	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0, unsigned road_ix_=0);
 	float get_length   () const {return (d[ dim][1] - d[ dim][0]);}
 	float get_width    () const {return (d[!dim][1] - d[!dim][0]);}
-	float get_slope_val() const {return get_dz()/get_length();}
+	float get_slope_val() const {return dz()/get_length();}
 	float get_start_z  () const {return (slope ? z2() : z1());}
 	float get_end_z    () const {return (slope ? z1() : z2());}
 	float get_z_adj    () const {return (ROAD_HEIGHT + 0.5*get_slope_val()*(dim ? DY_VAL : DX_VAL));} // account for a half texel of error for sloped roads

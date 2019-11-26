@@ -758,7 +758,7 @@ class city_road_gen_t : public road_gen_base_t {
 				if (i == 0) {bc = cubes[i];} else {bc.union_with_cube(cubes[i]);}
 			}
 			point const c1(bcube.get_cube_center()), c2(bc.get_cube_center());
-			vector3d const scale(bcube.get_dx()/bc.get_dx(), bcube.get_dy()/bc.get_dy(), bcube.get_dz()/bc.get_dz()); // scale to fit to target cube
+			vector3d const scale(bcube.dx()/bc.dx(), bcube.dy()/bc.dy(), bcube.dz()/bc.dz()); // scale to fit to target cube
 			color_wrapper const cw(WHITE);
 			unsigned const num(shadow_only ? 6U : max(1U, min(6U, unsigned(0.2/dist_val)))); // simple distance-based LOD, in pairs
 			for (unsigned i = 1; i < 2*num; ++i) {dstate.draw_cube(qbd, ((cubes[i] - c2)*scale + c1), cw, 1);} // skip back
@@ -826,7 +826,7 @@ class city_road_gen_t : public road_gen_base_t {
 				cand.d[ car_dim][!rdir] += cand.num_rows*dr;
 				if (!plot.contains_cube_xy(cand)) {continue;} // can't fit a min size parking lot in this plot, so skip it (shouldn't happen)
 				if (has_bcube_int_xy(cand, bcubes, pad_dist)) continue; // intersects a building - skip (can't fit min size parking lot)
-				cand.z2() += plot.get_dz(); // probably unnecessary
+				cand.z2() += plot.dz(); // probably unnecessary
 				parking_lot_t park(cand);
 
 				// try to add more parking spaces in a row
@@ -841,7 +841,7 @@ class city_road_gen_t : public road_gen_base_t {
 					park = cand; // success: increase parking lot to this size
 				}
 				assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
-				assert(park.get_dx() > 0.0 && park.get_dy() > 0.0);
+				assert(park.dx() > 0.0 && park.dy() > 0.0);
 				car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
 				parking_lots.push_back(park);
 				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
@@ -1527,7 +1527,7 @@ class city_road_gen_t : public road_gen_base_t {
 			p2[ dim] = bcube2.d[dim][!dir];
 			bool const slope((p1.z < p2.z) ^ dir);
 			road_t const road(p1, p2, road_width, dim, slope, roads.size());
-			float const road_len(road.get_length()), delta_z(road.get_dz()), max_slope(city_params.max_road_slope);
+			float const road_len(road.get_length()), delta_z(road.dz()), max_slope(city_params.max_road_slope);
 			assert(road_len > 0.0 && delta_z >= 0.0);
 			if (delta_z/road_len > max_slope) {assert(check_only); return -1.0;} // slope is too high (split segments will have even higher slopes)
 			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
@@ -1585,7 +1585,7 @@ class city_road_gen_t : public road_gen_base_t {
 						// returning here will create a disconnected road segment and fail an assert later, so instead we allow the high slope
 						if (check_only) return -1.0;
 					}
-					else {rs.z2() = rs.z1() + seg_len*max_slope*SIGN(rs.get_dz());}
+					else {rs.z2() = rs.z1() + seg_len*max_slope*SIGN(rs.dz());}
 				}
 				segments.push_back(rs);
 				rs.d[dim][0] = rs.d[dim][1]; rs.z1() = rs.z2(); // shift segment end point
@@ -2133,7 +2133,7 @@ class city_road_gen_t : public road_gen_base_t {
 			cube_t const bcube(get_road_bcube_for_car(car));
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << bcube.str() << endl; assert(0);} // sanity check
 			bool const dim(car.dim);
-			float const road_dz(bcube.get_dz());
+			float const road_dz(bcube.dz());
 			car.in_tunnel = point_in_tunnel(car.get_center());
 
 			if (road_dz != 0.0) { // car on connector road

@@ -730,7 +730,7 @@ public:
 			if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
-			float const denom(0.5f*(bcube.get_dx() + bcube.get_dy()));
+			float const denom(0.5f*(bcube.dx() + bcube.dy()));
 			tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
 		}
 		vert.set_c4(color);
@@ -888,7 +888,7 @@ public:
 					unsigned const ix(verts.size()); // first vertex of this quad
 					pt[d] = seg.dlo;
 					pt[i] = (j ? seg.ilo : seg.ihi); // need to orient the vertices differently for each side
-					//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.get_dz();}
+					//if (bg.roof_recess > 0.0 && n == 2 && j == 1) {pt.z -= bg.roof_recess*cube.dz();}
 					EMIT_VERTEX(); // 0 !j
 					pt[i] = (j ? seg.ihi : seg.ilo);
 					EMIT_VERTEX(); // 0 j
