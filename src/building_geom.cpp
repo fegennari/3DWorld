@@ -5,6 +5,8 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+float const FLOOR_THICK_VAL = 0.1; // 10% of floor spacing
+
 extern building_params_t global_building_params;
 
 
@@ -202,6 +204,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 }
 
 // Note: pos and p_last are already in rotated coordinate space
+// TODO_INT: player is actually too large to fit through doors and too tall to fit between the floor and celing, so this doesn't really work
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 	assert(interior);
 	bool had_coll(0);
@@ -210,10 +213,17 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
 			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 1, cnorm); // skip_z=1
 		}
+		had_coll = 0; // coll logic not yet working, so don't register this as a coll
 	}
-	if (!xy_only) { // check Z collision with floors; no need to check ceilings
+	if (!xy_only && 2.2*radius < get_material().get_floor_spacing()*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
+		// check Z collision with floors; no need to check ceilings
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, xy_only, cnorm);
+			//had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm);
+			if (!sphere_cube_intersect((pos - xlate), radius, *i)) continue;
+			if (pos.z < i->z1() + xlate.z) {pos.z = i->z1() - i->dz() + xlate.z - radius;} // move down below ceiling
+			else                           {pos.z = i->z2() + xlate.z + radius;} // move up above floor
+			had_coll = 1;
+			break; // only change zval once
 		}
 	}
 	if (interior->room_geom) { // collision with room cubes; XY only?
@@ -1120,7 +1130,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	// defer this until the building is close to the player?
 	interior.reset(new building_interior_t);
 	float const window_vspacing(mat.get_floor_spacing());
-	float const floor_thickness(0.1*window_vspacing), fc_thick(0.5*floor_thickness);
+	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
 	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(0.5*floor_thickness), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
 	float const wwf(global_building_params.get_window_width_fract()), window_border(0.5*(1.0 - wwf)); // (0.0, 1.0)
