@@ -403,40 +403,62 @@ public:
 texture_id_mapper_t tid_mapper;
 
 
+void add_cube_to_verts(colored_cube_t const &c, vector<building_room_geom_t::vertex_t> &verts) {
+
+	building_room_geom_t::vertex_t v;
+	v.copy_color(c.cw);
+
+	// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			if (c.skip_faces & (1 << (2*n + j))) continue; // skip this face
+			v.set_ortho_norm(i, j);
+			v.v[n] = c.d[n][j];
+
+			for (unsigned s1 = 0; s1 < 2; ++s1) {
+				v.v[d[1]] = c.d[d[1]][s1];
+
+				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+					v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
+					verts.push_back(v);
+				}
+			}
+		} // for j
+	} // for i
+}
+
+unsigned type_to_nverts[NUM_TYPES] = {0, 24, 24};
+
 void building_room_geom_t::create_vbo() {
 
 	if (cubes.empty())   return; // no geom
 	if (vbo.vbo_valid()) return; // already created
-	remove_excess_cap(cubes); // optional
 	vector<vertex_t> verts; // okay to use norm_comp here because all normals components are either -1 or +1
-	verts.reserve(24*cubes.size()); // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
+	unsigned tot_num_verts(0);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		vertex_t v;
-		v.copy_color(c->cw);
+		assert(c->type < NUM_TYPES);
+		tot_num_verts += type_to_nverts[c->type]; // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
+	}
+	verts.reserve(tot_num_verts); // pre-reserve to correct size
 
-		// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
-		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
-
-			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-				if (c->skip_faces & (1 << (2*n + j))) continue; // skip this face
-				v.set_ortho_norm(i, j);
-				v.v[n] = c->d[n][j];
-
-				for (unsigned s1 = 0; s1 < 2; ++s1) {
-					v.v[d[1]] = c->d[d[1]][s1];
-
-					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						v.v[d[0]] = c->d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
-						verts.push_back(v);
-					}
-				}
-			} // for j
-		} // for i
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		switch (c->type) {
+		case TYPE_NONE: assert(0); // not supported
+		case TYPE_TABLE:
+			add_cube_to_verts(*c, verts); // TODO_INT: more details (top + 4 legs)
+			break;
+		case TYPE_CHAIR:
+			add_cube_to_verts(*c, verts); // TODO_INT: more details (bottom + back + 4 legs)
+			break;
+		default: assert(0); // undefined type
+		}
 	} // for c
 	vbo.create_and_upload(verts);
 	num_verts = verts.size(); // verts will go out of scope here, capture the size
+	// Note: verts are no longer needed, but cubes are likely needed for things such as collision detection with the player (if it ever gets implemented)
 }
 
 void building_room_geom_t::draw() { // non-const because it creates the VBO

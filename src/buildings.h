@@ -156,11 +156,15 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
+enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, NUM_TYPES};
+
 struct colored_cube_t : public cube_t {
 	color_wrapper cw;
+	room_object type;
 	unsigned char skip_faces; // 1=X1, 2=X2, 4=Y1, 8=Y2, 16=Z1, 32=Z2
-	colored_cube_t() : skip_faces(0) {}
-	colored_cube_t(cube_t const &c, colorRGBA const &color=WHITE, unsigned char sf=0) : cube_t(c), cw(color), skip_faces(sf) {}
+	colored_cube_t() : type(TYPE_NONE), skip_faces(0) {}
+	colored_cube_t(cube_t const &c, colorRGBA const &color=WHITE, room_object type_=TYPE_NONE, unsigned char sf=0) :
+		cube_t(c), cw(color), type(type_), skip_faces(sf) {}
 };
 
 struct building_room_geom_t {

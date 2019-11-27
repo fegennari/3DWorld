@@ -1404,7 +1404,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 			cube_t table(llc, urc);
 			// check proximity to doors; may be too slow?
 			if (interior->is_cube_close_to_doorway(table)) continue;
-			cubes.emplace_back(table, BROWN, 16); // skip_faces=16/Z1
+			cubes.emplace_back(table, BROWN, TYPE_TABLE, 16); // skip_faces=16/Z1
 			//if (f == 0 && r->z1() == bcube.z1()) {} // any special logic that goes on the first floor is here
 		}
 	} // for r
