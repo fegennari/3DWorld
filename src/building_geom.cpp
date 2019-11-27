@@ -1411,6 +1411,20 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	cubes.shrink_to_fit();
 }
 
+void building_t::gen_and_draw_room_geom(unsigned building_ix) {
+	if (!interior) return;
+	rand_gen_t rgen;
+	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
+	gen_room_details(rgen); // generate so that we can draw it
+	if (interior->room_geom) {interior->room_geom->draw();}
+}
+
+void building_t::clear_room_geom() {
+	if (!interior || !interior->room_geom) return;
+	interior->room_geom->clear();
+	interior->room_geom.reset();
+}
+
 void building_t::update_stats(building_stats_t &s) const { // calculate all of the counts that are easy to get
 
 	++s.nbuildings;
@@ -1449,21 +1463,5 @@ void building_interior_t::finalize() {
 	remove_excess_cap(rooms);
 	remove_excess_cap(doors);
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
-}
-
-void building_t::gen_and_draw_room_geom(unsigned building_ix) {
-
-	if (!interior) return;
-	rand_gen_t rgen;
-	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
-	gen_room_details(rgen); // generate so that we can draw it
-	if (interior->room_geom) {interior->room_geom->draw();}
-}
-
-void building_t::clear_room_geom() {
-
-	if (!interior || !interior->room_geom) return;
-	interior->room_geom->clear();
-	interior->room_geom.reset();
 }
 
