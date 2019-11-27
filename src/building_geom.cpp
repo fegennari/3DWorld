@@ -1164,6 +1164,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			float const hall_wall_pos[2] = {(p->d[min_dim][0] + room_width), (p->d[min_dim][1] - room_width)};
 			hallway_dim = !min_dim; // cache in building for later use
 			vect_cube_t &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
+			room_walls.reserve(2*(num_rooms-1));
+			hall_walls.reserve(2*(num_rooms+1));
 			cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
 			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
 			create_wall(rwall, !min_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing); // room walls
@@ -1225,15 +1227,18 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		}
 		else { // generate random walls using recursive 2D slices
 			if (min(p->dx(), p->dy()) < 2.0*doorway_width) continue; // not enough space to add a room (chimney, porch support, garage, shed, etc.)
-			unsigned const part_mask(1 << (p - parts.begin()));
 			assert(to_split.empty());
 			to_split.emplace_back(*p); // seed room is entire part, no door
 			float window_hspacing[2] = {0.0};
 			
+			if (p == parts.begin()) { // reserve walls/rooms/doors - take a guess at the correct size
+				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*parts.size());}
+				interior->rooms.reserve(8*parts.size()); // two rows of rooms + optional hallway
+				interior->doors.reserve(4*parts.size());
+			}
 			for (unsigned d = 0; d < 2; ++d) {
 				int const num_windows(get_num_windows_on_side(p->d[d][0], p->d[d][1]));
 				window_hspacing[d] = psz[d]/num_windows;
-				interior->walls[d].reserve(parts.size()); // likely at least this many
 			}
 			while (!to_split.empty()) {
 				split_cube_t c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
@@ -1401,6 +1406,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float fl
 			//if (f == 0 && r->z1() == bcube.z1()) {} // any special logic that goes on the first floor is here
 		}
 	} // for r
+	cubes.shrink_to_fit();
 }
 
 void building_t::update_stats(building_stats_t &s) const { // calculate all of the counts that are easy to get
