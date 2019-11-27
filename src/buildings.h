@@ -242,15 +242,15 @@ struct building_t : public building_geom_t {
 	void gen_details(rand_gen_t &rgen);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	void gen_room_details(rand_gen_t &rgen, float wall_spacing, float floor_thickness, float window_vspacing);
+	void gen_room_details(rand_gen_t &rgen);
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
-	bool has_room_geom() const {return (interior && interior->room_geom);}
-	void draw_room_geom() const;
+	void gen_and_draw_room_geom(unsigned building_ix);
+	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

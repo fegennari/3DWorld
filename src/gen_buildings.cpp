@@ -1048,10 +1048,6 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 }
 
-void building_t::draw_room_geom() const {
-	if (has_room_geom()) {interior->room_geom->draw();}
-}
-
 
 class building_creator_t {
 
@@ -1069,7 +1065,8 @@ class building_creator_t {
 	struct grid_elem_t {
 		vector<cube_with_ix_t> bc_ixs;
 		cube_t bcube;
-		grid_elem_t() : bcube(all_zeros) {}
+		bool has_room_geom;
+		grid_elem_t() : has_room_geom(0) {}
 
 		void add(cube_t const &c, unsigned ix) {
 			if (bc_ixs.empty()) {bcube = c;} else {bcube.union_with_cube(c);}
@@ -1453,6 +1450,7 @@ public:
 		s.add_uniform_float("tex_scale_s", tsx);
 		s.add_uniform_float("tex_scale_t", tsy);
 	}
+
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
@@ -1498,7 +1496,13 @@ public:
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) continue; // too far
+					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) { // too far
+						if (g->has_room_geom) { // need to clear room geom
+							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
+							g->has_room_geom = 0;
+						}
+						continue;
+					}
 					point const pos(g->bcube.get_cube_center() + xlate);
 					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 					(*i)->building_draw_interior.draw_tile(g - (*i)->grid_by_tile.begin());
@@ -1506,12 +1510,12 @@ public:
 					if (!g->bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far
 						
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
-						building_t const &b((*i)->get_building(bi->ix));
+						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
-						if (!b.has_room_geom() && !draw_inside_windows) continue;
 						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
-						b.draw_room_geom();
+						b.gen_and_draw_room_geom(bi->ix);
+						g->has_room_geom = 1;
 						if (!draw_inside_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
@@ -1671,6 +1675,7 @@ public:
 		glDepthFunc(GL_LESS);
 		fgPopMatrix();
 	}
+
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights
 		if (empty() || !is_night(WIND_LIGHT_ON_RAND)) return;
 		//timer_t timer("Building Lights"); // 0.06ms

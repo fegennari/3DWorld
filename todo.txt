@@ -13,6 +13,4 @@ Cities:
 
 Building Interiors:
 * Create furniture and other details
-- Create per tile rather than all at once for performance/memory?
-- Draw Interiors
-  - Add room lights?
+- Add room lights?

@@ -1373,19 +1373,21 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			} // for nsplits
 		} // for w
 	} // for d
-	gen_room_details(rgen, wall_thick, floor_thickness, window_vspacing);
 	interior->finalize();
 }
 
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
-void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float floor_thickness, float window_vspacing) {
+void building_t::gen_room_details(rand_gen_t &rgen) {
 
-	return; // enable when this code is complete enough to do something useful
+	//return; // enable when this code is complete enough to do something useful
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
 	interior->room_geom.reset(new building_room_geom_t);
 	vector<colored_cube_t> &cubes(interior->room_geom->cubes);
-	float const fc_thick(0.5*floor_thickness);
+	float const window_vspacing(get_material().get_floor_spacing()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(floor_thickness);
+	unsigned tot_num_rooms(0);
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
+	cubes.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
@@ -1396,7 +1398,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, float wall_spacing, float fl
 			// TODO_INT: generate objects for this room+floor combination
 			room_center.z = z + fc_thick; // floor height
 			vector3d table_sz;
-			for (unsigned d = 0; d < 3; ++d) {table_sz[d] = 3.5*wall_spacing*(1.0 + rgen.rand_float());}
+			for (unsigned d = 0; d < 3; ++d) {table_sz[d] = 0.2*window_vspacing*(1.0 + rgen.rand_float());}
 			point llc(room_center - table_sz), urc(room_center + table_sz);
 			llc.z = room_center.z; // bottom is not shifted below the floor
 			cube_t table(llc, urc);
@@ -1441,10 +1443,27 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 }
 
 void building_interior_t::finalize() {
+
 	remove_excess_cap(floors);
 	remove_excess_cap(ceilings);
 	remove_excess_cap(rooms);
 	remove_excess_cap(doors);
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
+}
+
+void building_t::gen_and_draw_room_geom(unsigned building_ix) {
+
+	if (!interior) return;
+	rand_gen_t rgen;
+	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
+	gen_room_details(rgen); // generate so that we can draw it
+	if (interior->room_geom) {interior->room_geom->draw();}
+}
+
+void building_t::clear_room_geom() {
+
+	if (!interior || !interior->room_geom) return;
+	interior->room_geom->clear();
+	interior->room_geom.reset();
 }
 
