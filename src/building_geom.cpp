@@ -215,7 +215,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		}
 		had_coll = 0; // coll logic not yet working, so don't register this as a coll
 	}
-	if (!xy_only && 2.2*radius < get_material().get_floor_spacing()*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
+	if (!xy_only && 2.2*radius < get_window_vspace()*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
 			//had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm);
@@ -380,7 +380,7 @@ void building_t::calc_bcube_from_parts() {
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
 
 	if (!EXACT_MULT_FLOOR_HEIGHT) return;
-	float const floor_spacing(get_material().get_floor_spacing()), dz(c.dz());
+	float const floor_spacing(get_window_vspace()), dz(c.dz());
 	assert(dz > 0.0 && floor_spacing > 0.0);
 	float const num_floors(dz/floor_spacing);
 	int const targ_num_floors(max(1, round_fp(num_floors)));
@@ -1376,40 +1376,62 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	interior->finalize();
 }
 
+bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off) {
+
+	float const window_vspacing(get_window_vspace());
+	vector3d const room_sz(room.get_size());
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	point table_pos(place_pos);
+	vector3d table_sz;
+	for (unsigned d = 0; d < 2; ++d) {table_sz [d]  = 0.18*window_vspacing*(1.0 + rgen.rand_float());} // half size relative to window_vspacing
+	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room_sz[d]*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
+	point llc(table_pos - table_sz), urc(table_pos + table_sz);
+	llc.z = table_pos.z; // bottom
+	urc.z = table_pos.z + 0.2*window_vspacing;
+	cube_t table(llc, urc);
+	if (!interior->is_valid_placement_for_room(table, room)) return 0; // check proximity to doors
+	objs.emplace_back(table, TYPE_TABLE);
+	float const chair_sz(0.1*window_vspacing); // half size
+
+	// place some chairs around the table
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (rgen.rand_bool()) continue; // 50% of the time
+			point chair_pos(table_pos); // same starting center and z1
+			chair_pos[dim] += (dir ? -1.0f : 1.0f)*(rgen.rand_uniform(-0.5, 1.2)*chair_sz + table_sz[dim]);
+			cube_t chair(chair_pos, chair_pos);
+			chair.z2() += 0.4*window_vspacing; // chair height
+			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
+			if (!interior->is_valid_placement_for_room(chair, room)) continue; // check proximity to doors
+			objs.emplace_back(chair, TYPE_CHAIR, dim, dir);
+		} // for dir
+	} // for dim
+	return 1;
+}
+
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
 void building_t::gen_room_details(rand_gen_t &rgen) {
 
-	//return; // enable when this code is complete enough to do something useful
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
+	//timer_t timer("Gen Room Details");
 	interior->room_geom.reset(new building_room_geom_t);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	float const window_vspacing(get_material().get_floor_spacing()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
+	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
 	unsigned tot_num_rooms(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
-		vector3d const room_sz(r->get_size());
 		point room_center(r->get_cube_center());
 		float z(r->z1());
 
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
-			// TODO_INT: generate objects for this room+floor combination
 			room_center.z = z + fc_thick; // floor height
-			point table_pos(room_center);
-			vector3d table_sz;
-			float const sz_scale[3] = {0.18, 0.18, 0.15};
-			for (unsigned d = 0; d < 3; ++d) {table_sz [d]  = sz_scale[d]*window_vspacing*(1.0 + rgen.rand_float());}
-			for (unsigned d = 0; d < 2; ++d) {table_pos[d] += 0.2*room_sz[d]*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
-			point llc(table_pos - table_sz), urc(table_pos + table_sz);
-			llc.z = table_pos.z; // bottom is not shifted below the floor
-			cube_t table(llc, urc);
-			// check proximity to doors; may be too slow?
-			if (interior->is_cube_close_to_doorway(table)) continue;
-			objs.emplace_back(table, BROWN, TYPE_TABLE);
-			
+			// place a table and maybe some chairs near the center of the room 90% of the time
+			if (rgen.rand_float() < 0.9) {add_table_and_chairs(rgen, *r, room_center, 0.2);}
+
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
 			}
@@ -1462,6 +1484,11 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 	}
 	return 0;
 }
+bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
+	cube_t place_area(room);
+	if (dmin != 0.0f) {place_area.expand_by_xy(-dmin);} // shrink by dmin
+	return (place_area.contains_cube_xy(c) && !is_cube_close_to_doorway(c, dmin));
+}
 
 void building_interior_t::finalize() {
 
@@ -1472,15 +1499,17 @@ void building_interior_t::finalize() {
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 
-unsigned const type_to_nverts[NUM_TYPES] = {0, 88, 24}; // none, table, chair
+unsigned const type_to_nverts[NUM_TYPES] = {0, 88, 108}; // none, table, chair
 
 struct room_geom_gen_t {
 	typedef building_room_geom_t::vertex_t vertex_t;
 	vector<vertex_t> verts; // okay to use norm_comp here because all normals components are either -1 or +1
 
-	void add_cube_to_verts(colored_cube_t const &c, unsigned skip_faces=0) { // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
+protected:
+	// skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
+	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0) {
 		vertex_t v;
-		v.copy_color(c.cw);
+		v.set_c4(color);
 
 		// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
@@ -1502,23 +1531,34 @@ struct room_geom_gen_t {
 			} // for j
 		} // for i
 	}
-	void add_table(room_object_t const &c) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
-		colored_cube_t top(c);
-		top.z1() += 0.85*top.dz(); // 15% of height
-		add_cube_to_verts(top); // all faces drawn
-
+	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width) {
 		for (unsigned y = 0; y < 2; ++y) {
 			for (unsigned x = 0; x < 2; ++x) {
-				colored_cube_t leg(c);
-				leg.z2() = top.z1();
-				leg.d[0][x] += 0.92*(x ? -1.0 : 1.0)*c.dx();
-				leg.d[1][y] += 0.92*(y ? -1.0 : 1.0)*c.dy();
-				add_cube_to_verts(leg, (EF_Z1 | EF_Z2)); // skip top and bottom faces
+				cube_t leg(c);
+				leg.d[0][x] += (1.0f - width)*(x ? -1.0f : 1.0f)*c.dx();
+				leg.d[1][y] += (1.0f - width)*(y ? -1.0f : 1.0f)*c.dy();
+				add_cube_to_verts(leg, color, (EF_Z1 | EF_Z2)); // skip top and bottom faces
 			}
 		}
 	}
-	void add_chair(room_object_t const &c) { // 6 quads = 24 verts
-		add_cube_to_verts(c, EF_Z1); // TODO_INT: more details (bottom + back + 4 legs)
+public:
+	void add_table(room_object_t const &c) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
+		cube_t top(c), legs_bcube(c);
+		top.z1() += 0.85*c.dz(); // 15% of height
+		legs_bcube.z2() = top.z1();
+		add_cube_to_verts(top, BROWN); // all faces drawn
+		add_tc_legs(legs_bcube, BROWN, 0.08);
+	}
+	void add_chair(room_object_t const &c) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
+		float const height(c.dz());
+		cube_t seat(c), back(c), legs_bcube(c);
+		seat.z1() += 0.32*height;
+		seat.z2()  = back.z1() = seat.z1() + 0.07*height;
+		legs_bcube.z2() = seat.z1();
+		back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
+		add_cube_to_verts(seat, BLUE); // all faces drawn
+		add_cube_to_verts(back, BROWN, EF_Z1); // skip bottom face
+		add_tc_legs(legs_bcube, BROWN, 0.15);
 	}
 };
 

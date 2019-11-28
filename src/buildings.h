@@ -158,18 +158,11 @@ struct tquad_with_ix_t : public tquad_t {
 
 enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, NUM_TYPES};
 
-struct colored_cube_t : public cube_t {
-	color_wrapper cw;
-	colored_cube_t() {}
-	colored_cube_t(cube_t const &c, colorRGBA const &color=WHITE) : cube_t(c), cw(color) {}
-};
-
-struct room_object_t : public colored_cube_t {
-	unsigned char orient;
+struct room_object_t : public cube_t {
+	bool dim, dir;
 	room_object type;
-	room_object_t() : orient(0), type(TYPE_NONE) {}
-	room_object_t(cube_t const &c, colorRGBA const &color=WHITE, room_object type_=TYPE_NONE, unsigned o=0) :
-		colored_cube_t(c, color), orient(o), type(type_) {}
+	room_object_t() : dim(0), dir(0), type(TYPE_NONE) {}
+	room_object_t(cube_t const &c, room_object type_, bool dim_=0, bool dir_=0) : cube_t(c), dim(dim_), dir(dir_), type(type_) {}
 };
 
 struct building_room_geom_t {
@@ -192,6 +185,7 @@ struct building_interior_t {
 	std::unique_ptr<building_room_geom_t> room_geom;
 
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
+	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
 	void finalize();
 };
 
@@ -227,7 +221,8 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const;
-	float get_door_height() const {return 0.9f*get_material().get_floor_spacing();} // set height based on window spacing, 90% of a floor height (may be too large)
+	float get_window_vspace() const {return get_material().get_floor_spacing();}
+	float get_door_height  () const {return 0.9f*get_window_vspace();} // set height based on window spacing, 90% of a floor height (may be too large)
 	void gen_rotation(rand_gen_t &rgen);
 	void set_z_range(float z1, float z2);
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
@@ -263,6 +258,7 @@ struct building_t : public building_geom_t {
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:
+	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
