@@ -1294,6 +1294,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						if (p2->d[!dim][!dir] != val) continue; // not adjacent
 						if (p2->z1() >= p->z2() || p2->z2() <= p->z1()) continue; // no overlap in Z
 						if (p2->d[dim][0] > p->d[dim][0] || p2->d[dim][1] < p->d[dim][1]) continue; // not contained in dim (don't have to worry about Z-shaped case)
+
+						if (p2->d[dim][0] == p->d[dim][0] && p2->d[dim][1] == p->d[dim][1]) { // same xy values, must only vary in z
+							if (p2->z2() < p->z2()) continue; // add wall only on one side (arbitrary)
+						}
 						cube_t wall;
 						wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
 						wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
