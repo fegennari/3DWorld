@@ -160,22 +160,28 @@ enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, NUM_TYPES};
 
 struct colored_cube_t : public cube_t {
 	color_wrapper cw;
+	colored_cube_t() {}
+	colored_cube_t(cube_t const &c, colorRGBA const &color=WHITE) : cube_t(c), cw(color) {}
+};
+
+struct room_object_t : public colored_cube_t {
+	unsigned char orient;
 	room_object type;
-	unsigned char skip_faces; // 1=X1, 2=X2, 4=Y1, 8=Y2, 16=Z1, 32=Z2
-	colored_cube_t() : type(TYPE_NONE), skip_faces(0) {}
-	colored_cube_t(cube_t const &c, colorRGBA const &color=WHITE, room_object type_=TYPE_NONE, unsigned char sf=0) :
-		cube_t(c), cw(color), type(type_), skip_faces(sf) {}
+	room_object_t() : orient(0), type(TYPE_NONE) {}
+	room_object_t(cube_t const &c, colorRGBA const &color=WHITE, room_object type_=TYPE_NONE, unsigned o=0) :
+		colored_cube_t(c, color), orient(o), type(type_) {}
 };
 
 struct building_room_geom_t {
 	// TODO: textures?
 	typedef vert_norm_comp_color vertex_t;
-	vector<colored_cube_t> cubes; // for drawing and collision detection
+	vector<room_object_t> objs; // for drawing and collision detection
 	unsigned num_verts; // for drawing
 	vbo_wrap_t vbo;
 
 	building_room_geom_t() : num_verts(0) {}
-	void clear() {cubes.clear(); vbo.clear(); num_verts = 0;}
+	bool empty() const {return objs.empty();}
+	void clear() {objs.clear(); vbo.clear(); num_verts = 0;}
 	void create_vbo();
 	void draw();
 };
@@ -190,8 +196,8 @@ struct building_interior_t {
 };
 
 struct building_stats_t {
-	unsigned nbuildings, nparts, ndetails, ntquads, ndoors, ninterior, nrooms, nceils, nfloors, nwalls, nrgeom, ngeom, nverts;
-	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), ngeom(0), nverts(0) {}
+	unsigned nbuildings, nparts, ndetails, ntquads, ndoors, ninterior, nrooms, nceils, nfloors, nwalls, nrgeom, nobjs, nverts;
+	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), nobjs(0), nverts(0) {}
 };
 
 struct vertex_range_t {

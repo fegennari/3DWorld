@@ -227,8 +227,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		}
 	}
 	if (interior->room_geom) { // collision with room cubes; XY only?
-		vector<colored_cube_t> const &cubes(interior->room_geom->cubes);
-		for (auto c = cubes.begin(); c != cubes.end(); ++c) {had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 1, cnorm);} // skip_z=1???
+		vector<room_object_t> const &objs(interior->room_geom->objs);
+		for (auto c = objs.begin(); c != objs.end(); ++c) {had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 1, cnorm);} // skip_z=1???
 	}
 	return had_coll;
 }
@@ -1383,32 +1383,39 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
 	interior->room_geom.reset(new building_room_geom_t);
-	vector<colored_cube_t> &cubes(interior->room_geom->cubes);
-	float const window_vspacing(get_material().get_floor_spacing()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(floor_thickness);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	float const window_vspacing(get_material().get_floor_spacing()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
 	unsigned tot_num_rooms(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
-	cubes.reserve(tot_num_rooms); // placeholder - there will be more than this many
+	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
+		vector3d const room_sz(r->get_size());
 		point room_center(r->get_cube_center());
 		float z(r->z1());
 
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			// TODO_INT: generate objects for this room+floor combination
 			room_center.z = z + fc_thick; // floor height
+			point table_pos(room_center);
 			vector3d table_sz;
-			for (unsigned d = 0; d < 3; ++d) {table_sz[d] = 0.2*window_vspacing*(1.0 + rgen.rand_float());}
-			point llc(room_center - table_sz), urc(room_center + table_sz);
-			llc.z = room_center.z; // bottom is not shifted below the floor
+			float const sz_scale[3] = {0.18, 0.18, 0.15};
+			for (unsigned d = 0; d < 3; ++d) {table_sz [d]  = sz_scale[d]*window_vspacing*(1.0 + rgen.rand_float());}
+			for (unsigned d = 0; d < 2; ++d) {table_pos[d] += 0.2*room_sz[d]*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
+			point llc(table_pos - table_sz), urc(table_pos + table_sz);
+			llc.z = table_pos.z; // bottom is not shifted below the floor
 			cube_t table(llc, urc);
 			// check proximity to doors; may be too slow?
 			if (interior->is_cube_close_to_doorway(table)) continue;
-			cubes.emplace_back(table, BROWN, TYPE_TABLE, 16); // skip_faces=16/Z1
-			//if (f == 0 && r->z1() == bcube.z1()) {} // any special logic that goes on the first floor is here
-		}
+			objs.emplace_back(table, BROWN, TYPE_TABLE);
+			
+			if (z == bcube.z1()) {
+				// any special logic that goes on the first floor is here
+			}
+		} // for f
 	} // for r
-	cubes.shrink_to_fit();
+	objs.shrink_to_fit();
 }
 
 void building_t::gen_and_draw_room_geom(unsigned building_ix) {
@@ -1441,7 +1448,7 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	s.ndoors  += interior->doors.size(); // I guess these also count as doors?
 	if (!interior->room_geom) return;
 	++s.nrgeom;
-	s.ngeom  += interior->room_geom->cubes.size();
+	s.nobjs  += interior->room_geom->objs.size();
 	s.nverts += interior->room_geom->num_verts;
 }
 
@@ -1465,67 +1472,86 @@ void building_interior_t::finalize() {
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 
-void add_cube_to_verts(colored_cube_t const &c, vector<building_room_geom_t::vertex_t> &verts) {
+unsigned const type_to_nverts[NUM_TYPES] = {0, 88, 24}; // none, table, chair
 
-	building_room_geom_t::vertex_t v;
-	v.copy_color(c.cw);
+struct room_geom_gen_t {
+	typedef building_room_geom_t::vertex_t vertex_t;
+	vector<vertex_t> verts; // okay to use norm_comp here because all normals components are either -1 or +1
 
-	// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+	void add_cube_to_verts(colored_cube_t const &c, unsigned skip_faces=0) { // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
+		vertex_t v;
+		v.copy_color(c.cw);
 
-		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			if (c.skip_faces & (1 << (2*n + j))) continue; // skip this face
-			v.set_ortho_norm(i, j);
-			v.v[n] = c.d[n][j];
+		// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
+		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
-			for (unsigned s1 = 0; s1 < 2; ++s1) {
-				v.v[d[1]] = c.d[d[1]][s1];
+			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+				if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
+				v.set_ortho_norm(i, j);
+				v.v[n] = c.d[n][j];
 
-				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-					v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
-					verts.push_back(v);
+				for (unsigned s1 = 0; s1 < 2; ++s1) {
+					v.v[d[1]] = c.d[d[1]][s1];
+
+					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+						v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
+						verts.push_back(v);
+					}
 				}
-			}
-		} // for j
-	} // for i
-}
+			} // for j
+		} // for i
+	}
+	void add_table(room_object_t const &c) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
+		colored_cube_t top(c);
+		top.z1() += 0.85*top.dz(); // 15% of height
+		add_cube_to_verts(top); // all faces drawn
 
-unsigned type_to_nverts[NUM_TYPES] = {0, 24, 24};
+		for (unsigned y = 0; y < 2; ++y) {
+			for (unsigned x = 0; x < 2; ++x) {
+				colored_cube_t leg(c);
+				leg.z2() = top.z1();
+				leg.d[0][x] += 0.92*(x ? -1.0 : 1.0)*c.dx();
+				leg.d[1][y] += 0.92*(y ? -1.0 : 1.0)*c.dy();
+				add_cube_to_verts(leg, (EF_Z1 | EF_Z2)); // skip top and bottom faces
+			}
+		}
+	}
+	void add_chair(room_object_t const &c) { // 6 quads = 24 verts
+		add_cube_to_verts(c, EF_Z1); // TODO_INT: more details (bottom + back + 4 legs)
+	}
+};
 
 void building_room_geom_t::create_vbo() {
 
-	if (cubes.empty())   return; // no geom
+	if (empty())         return; // no geom
 	if (vbo.vbo_valid()) return; // already created
-	vector<vertex_t> verts; // okay to use norm_comp here because all normals components are either -1 or +1
 	unsigned tot_num_verts(0);
 
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		assert(c->type < NUM_TYPES);
-		tot_num_verts += type_to_nverts[c->type]; // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		assert(i->type < NUM_TYPES);
+		tot_num_verts += type_to_nverts[i->type]; // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
 	}
-	verts.reserve(tot_num_verts); // pre-reserve to correct size
+	room_geom_gen_t rgg;
+	rgg.verts.reserve(tot_num_verts); // pre-reserve to correct size
 
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		switch (c->type) {
-		case TYPE_NONE: assert(0); // not supported
-		case TYPE_TABLE:
-			add_cube_to_verts(*c, verts); // TODO_INT: more details (top + 4 legs)
-			break;
-		case TYPE_CHAIR:
-			add_cube_to_verts(*c, verts); // TODO_INT: more details (bottom + back + 4 legs)
-			break;
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		switch (i->type) {
+		case TYPE_NONE:  assert(0); // not supported
+		case TYPE_TABLE: rgg.add_table(*i); break;
+		case TYPE_CHAIR: rgg.add_chair(*i); break;
 		default: assert(0); // undefined type
 		}
-	} // for c
-	vbo.create_and_upload(verts);
-	num_verts = verts.size(); // verts will go out of scope here, capture the size
+	} // for i
+	assert(rgg.verts.size() == tot_num_verts); // to check that our reserve is correct
+	vbo.create_and_upload(rgg.verts);
+	num_verts = rgg.verts.size(); // verts will go out of scope here, capture the size
 	// Note: verts are no longer needed, but cubes are likely needed for things such as collision detection with the player (if it ever gets implemented)
 }
 
 void building_room_geom_t::draw() { // non-const because it creates the VBO
 
-	if (cubes.empty()) return; // no geom
+	if (empty()) return; // no geom
 	if (!vbo.vbo_valid()) {create_vbo();}
 	assert(vbo.vbo_valid());
 	assert(num_verts > 0);
