@@ -501,7 +501,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				if (!contained) {valid = 1; break;} // success
 			} // for n
 			if (!valid) break; // remove this part and end the building here
-			if (i == 0 || !was_cube) {parts.push_back(bc); continue;} // no splitting
+			if (i == 0 || !is_simple_cube()) {parts.push_back(bc); continue;} // no splitting
 			split_cubes_recur(bc, parts, 0, parts.size()); // split this cube against all previously added cubes and remove overlapping areas
 		} // for i
 		parts.shrink_to_fit(); // optional
