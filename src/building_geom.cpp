@@ -1435,7 +1435,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
 			// place a table and maybe some chairs near the center of the room 90% of the time
-			if (rgen.rand_float() < 0.9) {add_table_and_chairs(rgen, *r, room_center, 0.2);}
+			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_center, 0.1);}
 
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
