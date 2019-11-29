@@ -1389,8 +1389,8 @@ public:
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
 	static void set_interior_lighting(shader_t &s) {
-		s.add_uniform_float("diffuse_scale", 0.0); // disable diffuse and specular lighting for sun/moon
-		s.add_uniform_float("ambient_scale", 1.5); // brighter ambient
+		s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
+		s.add_uniform_float("ambient_scale", 1.2); // brighter ambient
 	}
 	static void reset_interior_lighting(shader_t &s) {
 		s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
@@ -1437,8 +1437,11 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			// TODO_INT: add room lights?
+			// TODO_INT: Add room lights? Use normal-based lighting (top surface bright, bottom surface dark, sides that face exterior walls/windows brighter)?
+			// Is this based on building center dir/dist? Dir/dist to closest exterior wall? Real indirect lighting?
+			// Is it specified per-tile or per-building? If per-tile, do we need lighting stored in a texture? If per building, then need to make one draw call per building
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
+			//s.begin_simple_textured_shader(min_alpha, 1);
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
@@ -1500,8 +1503,8 @@ public:
 				glDisable(GL_STENCIL_TEST);
 			}
 		}
-		// main/batched draw pass
-		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+		// main/batched draw pass - use two sided lighting so that it's correct on both sides of exterior walls
+		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 1, 0.0, 0.0, 0, 0, 1); // force_tsl=1; is_outside=1
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 
 		if (transparent_windows) {
