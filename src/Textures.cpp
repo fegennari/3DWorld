@@ -90,7 +90,7 @@ texture_t(0, 6, 256,  256,  0, 4, 1, "blur.png", 0, 0), // disable compression -
 texture_t(0, 6, 256,  256,  1, 4, 1, "blur_s.png"),
 texture_t(0, 5, 0,    0,    0, 4, 3, "pine2.jpg", 1, 1, 1.0, 0.5),
 texture_t(0, 6, 128,  128,  1, 3, 1, "noise.png"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "wood.jpg", 0, 0), // 768x768, compression is slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "wood.jpg", 0, 0, 4.0), // 768x768, compression is slow
 texture_t(0, 6, 128,  128,  1, 3, 1, "hb_brick.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "particleb.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "plaster.png"),
