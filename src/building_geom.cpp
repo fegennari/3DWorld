@@ -1422,6 +1422,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	interior->room_geom.reset(new building_room_geom_t);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
+	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
@@ -1504,6 +1505,7 @@ void building_interior_t::finalize() {
 }
 
 unsigned const type_to_nverts[NUM_TYPES] = {0, 88, 108}; // none, table, chair
+colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 
 struct room_geom_gen_t {
 	typedef building_room_geom_t::vertex_t vertex_t;
@@ -1511,7 +1513,7 @@ struct room_geom_gen_t {
 
 protected:
 	// skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0) {
+	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, float tscale, unsigned skip_faces=0) {
 		vertex_t v;
 		v.set_c4(color);
 
@@ -1526,43 +1528,45 @@ protected:
 
 				for (unsigned s1 = 0; s1 < 2; ++s1) {
 					v.v[d[1]] = c.d[d[1]][s1];
+					v.t[0] = tscale*v.v[d[1]];
 
 					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 						v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
+						v.t[1] = tscale*v.v[d[0]];
 						verts.push_back(v);
 					}
 				}
 			} // for j
 		} // for i
 	}
-	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width) {
+	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
 		for (unsigned y = 0; y < 2; ++y) {
 			for (unsigned x = 0; x < 2; ++x) {
 				cube_t leg(c);
 				leg.d[0][x] += (1.0f - width)*(x ? -1.0f : 1.0f)*c.dx();
 				leg.d[1][y] += (1.0f - width)*(y ? -1.0f : 1.0f)*c.dy();
-				add_cube_to_verts(leg, color, (EF_Z1 | EF_Z2)); // skip top and bottom faces
+				add_cube_to_verts(leg, color, tscale, (EF_Z1 | EF_Z2)); // skip top and bottom faces
 			}
 		}
 	}
 public:
-	void add_table(room_object_t const &c) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
+	void add_table(room_object_t const &c, float tscale) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 		cube_t top(c), legs_bcube(c);
 		top.z1() += 0.85*c.dz(); // 15% of height
 		legs_bcube.z2() = top.z1();
-		add_cube_to_verts(top, BROWN); // all faces drawn
-		add_tc_legs(legs_bcube, BROWN, 0.08);
+		add_cube_to_verts(top, WOOD_COLOR, tscale); // all faces drawn
+		add_tc_legs(legs_bcube, WOOD_COLOR, 0.08, tscale);
 	}
-	void add_chair(room_object_t const &c) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
+	void add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
 		float const height(c.dz());
 		cube_t seat(c), back(c), legs_bcube(c);
 		seat.z1() += 0.32*height;
 		seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 		legs_bcube.z2() = seat.z1();
 		back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-		add_cube_to_verts(seat, BLUE); // all faces drawn
-		add_cube_to_verts(back, BROWN, EF_Z1); // skip bottom face
-		add_tc_legs(legs_bcube, BROWN, 0.15);
+		add_cube_to_verts(seat, colorRGBA(0.2, 0.2, 1.0), tscale); // light blue; all faces drawn
+		add_cube_to_verts(back, WOOD_COLOR, tscale, EF_Z1); // skip bottom face
+		add_tc_legs(legs_bcube, WOOD_COLOR, 0.15, tscale);
 	}
 };
 
@@ -1578,12 +1582,13 @@ void building_room_geom_t::create_vbo() {
 	}
 	room_geom_gen_t rgg;
 	rgg.verts.reserve(tot_num_verts); // pre-reserve to correct size
+	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		switch (i->type) {
 		case TYPE_NONE:  assert(0); // not supported
-		case TYPE_TABLE: rgg.add_table(*i); break;
-		case TYPE_CHAIR: rgg.add_chair(*i); break;
+		case TYPE_TABLE: rgg.add_table(*i, tscale); break;
+		case TYPE_CHAIR: rgg.add_chair(*i, tscale); break;
 		default: assert(0); // undefined type
 		}
 	} // for i
@@ -1599,7 +1604,12 @@ void building_room_geom_t::draw() { // non-const because it creates the VBO
 	if (!vbo.vbo_valid()) {create_vbo();}
 	assert(vbo.vbo_valid());
 	assert(num_verts > 0);
-	tid_nm_pair_t().set_gl(); // untextured, no normal map
+
+	if (1) { // wood texture
+		select_texture(WOOD2_TEX);
+		select_multitex(FLAT_NMAP_TEX, 5);
+	}
+	else {tid_nm_pair_t().set_gl();} // untextured, no normal map
 	vbo.pre_render();
 	vertex_t::set_vbo_arrays();
 	draw_quads_as_tris(num_verts);

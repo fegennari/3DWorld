@@ -167,12 +167,13 @@ struct room_object_t : public cube_t {
 
 struct building_room_geom_t {
 	// TODO: textures?
-	typedef vert_norm_comp_color vertex_t;
+	typedef vert_norm_comp_tc_color vertex_t;
 	vector<room_object_t> objs; // for drawing and collision detection
+	float obj_scale;
 	unsigned num_verts; // for drawing
 	vbo_wrap_t vbo;
 
-	building_room_geom_t() : num_verts(0) {}
+	building_room_geom_t() : obj_scale(1.0), num_verts(0) {}
 	bool empty() const {return objs.empty();}
 	void clear() {objs.clear(); vbo.clear(); num_verts = 0;}
 	void create_vbo();
