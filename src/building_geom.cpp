@@ -1134,14 +1134,20 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(0.5*floor_thickness), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
 	float const wwf(global_building_params.get_window_width_fract()), window_border(0.5*(1.0 - wwf)); // (0.0, 1.0)
+	// houses have at most two parts; exclude garage, shed, porch, porch support, etc.
+	unsigned const num_parts(is_house ? min(2U, (parts.size() - has_chimney)) : parts.size());
 	vector<split_cube_t> to_split;
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
+	// allocate space for all floors
+	unsigned tot_num_floors(0);
+	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {tot_num_floors += calc_num_floors(*p, window_vspacing, floor_thickness);}
+	interior->ceilings.reserve(tot_num_floors);
+	interior->floors  .reserve(tot_num_floors);
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
-	for (auto p = parts.begin(); p != (parts.end() - has_chimney); ++p) {
-		if (is_house && (p - parts.begin()) > 1) break; // houses have at most two parts; exclude garage, shed, porch, porch support, etc.
+	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {
 		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
@@ -1311,13 +1317,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				} // for dim
 			} // for p2
 		} // end wall placement
+
 		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
-		interior->ceilings.reserve(num_floors);
-		interior->floors  .reserve(num_floors);
 		float z(p->z1());
 
 		for (unsigned f = 0; f <= num_floors; ++f, z += window_vspacing) {
 			cube_t c(*p);
+			// TODO_INT: cut out spaces for stairs and elevator shafts and output multiple ceiling and floor cubes here
 			if (f > 0         ) {c.z1() = z - fc_thick; c.z2() = z; interior->ceilings.push_back(c);}
 			if (f < num_floors) {c.z1() = z; c.z2() = z + fc_thick; interior->floors  .push_back(c);}
 			c.z1() = z + fc_thick; c.z2() = z + window_vspacing - fc_thick;
