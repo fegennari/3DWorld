@@ -39,6 +39,7 @@ struct tid_nm_pair_t { // size=24
 	float tscale_x, tscale_y, txoff, tyoff;
 
 	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0) {}
+	tid_nm_pair_t(int tid_, float txy) : tid(tid_), nm_tid(FLAT_NMAP_TEX), tscale_x(txy), tscale_y(txy), txoff(0.0), tyoff(0.0) {} // non-normal mapped 1:1 texture AR
 	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y);}
@@ -165,18 +166,38 @@ struct room_object_t : public cube_t {
 	room_object_t(cube_t const &c, room_object type_, bool dim_=0, bool dir_=0) : cube_t(c), dim(dim_), dir(dir_), type(type_) {}
 };
 
-struct building_room_geom_t {
-	// TODO: textures?
+class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
+
+	vbo_wrap_t vbo;
+public:
 	typedef vert_norm_comp_tc_color vertex_t;
+	tid_nm_pair_t tex;
+	vector<vertex_t> verts; // quads only
+	unsigned num_verts; // for drawing
+
+	rgeom_mat_t(tid_nm_pair_t &tex_) : tex(tex_), num_verts(0) {}
+	void clear() {vbo.clear(); verts.clear(); num_verts = 0;}
+	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
+	void create_vbo();
+	void draw();
+};
+
+struct building_room_geom_t {
+
 	vector<room_object_t> objs; // for drawing and collision detection
 	float obj_scale;
-	unsigned num_verts; // for drawing
-	vbo_wrap_t vbo;
+	vector<rgeom_mat_t> materials;
 
-	building_room_geom_t() : obj_scale(1.0), num_verts(0) {}
+	building_room_geom_t() : obj_scale(1.0) {}
 	bool empty() const {return objs.empty();}
-	void clear() {objs.clear(); vbo.clear(); num_verts = 0;}
-	void create_vbo();
+	void clear();
+	unsigned get_num_verts() const;
+	rgeom_mat_t &get_material(tid_nm_pair_t &tex);
+	rgeom_mat_t &get_wood_material(float tscale);
+	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
+	void add_table(room_object_t const &c, float tscale);
+	void add_chair(room_object_t const &c, float tscale);
+	void create_vbos();
 	void draw();
 };
 

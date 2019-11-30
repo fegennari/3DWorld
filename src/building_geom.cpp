@@ -1455,12 +1455,11 @@ void building_t::gen_and_draw_room_geom(unsigned building_ix) {
 
 void building_t::clear_room_geom() {
 	if (!interior || !interior->room_geom) return;
-	interior->room_geom->clear();
+	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 }
 
 void building_t::update_stats(building_stats_t &s) const { // calculate all of the counts that are easy to get
-
 	++s.nbuildings;
 	s.nparts   += parts.size();
 	s.ndetails += details.size();
@@ -1476,11 +1475,10 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	if (!interior->room_geom) return;
 	++s.nrgeom;
 	s.nobjs  += interior->room_geom->objs.size();
-	s.nverts += interior->room_geom->num_verts;
+	s.nverts += interior->room_geom->get_num_verts();
 }
 
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const {
-
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		bool const dim(i->dy() < i->dx());
 		if (c.d[!dim][0] > i->d[!dim][1] || c.d[!dim][1] < i->d[!dim][0]) continue; // no overlap in !dim
@@ -1496,7 +1494,6 @@ bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t co
 }
 
 void building_interior_t::finalize() {
-
 	remove_excess_cap(floors);
 	remove_excess_cap(ceilings);
 	remove_excess_cap(rooms);
@@ -1504,115 +1501,129 @@ void building_interior_t::finalize() {
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 
-unsigned const type_to_nverts[NUM_TYPES] = {0, 88, 108}; // none, table, chair
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 
-struct room_geom_gen_t {
-	typedef building_room_geom_t::vertex_t vertex_t;
-	vector<vertex_t> verts; // okay to use norm_comp here because all normals components are either -1 or +1
+// skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces) {
+	vertex_t v;
+	v.set_c4(color);
 
-protected:
-	// skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, float tscale, unsigned skip_faces=0) {
-		vertex_t v;
-		v.set_c4(color);
+	// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
-		// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
-		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
+			v.set_ortho_norm(i, j);
+			v.v[n] = c.d[n][j];
 
-			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-				if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
-				v.set_ortho_norm(i, j);
-				v.v[n] = c.d[n][j];
+			for (unsigned s1 = 0; s1 < 2; ++s1) {
+				v.v[d[1]] = c.d[d[1]][s1];
+				v.t[0] = tex.tscale_x*v.v[d[1]];
 
-				for (unsigned s1 = 0; s1 < 2; ++s1) {
-					v.v[d[1]] = c.d[d[1]][s1];
-					v.t[0] = tscale*v.v[d[1]];
-
-					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
-						v.t[1] = tscale*v.v[d[0]];
-						verts.push_back(v);
-					}
+				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+					v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
+					v.t[1] = tex.tscale_y*v.v[d[0]];
+					verts.push_back(v);
 				}
-			} // for j
-		} // for i
-	}
-	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
-		for (unsigned y = 0; y < 2; ++y) {
-			for (unsigned x = 0; x < 2; ++x) {
-				cube_t leg(c);
-				leg.d[0][x] += (1.0f - width)*(x ? -1.0f : 1.0f)*c.dx();
-				leg.d[1][y] += (1.0f - width)*(y ? -1.0f : 1.0f)*c.dy();
-				add_cube_to_verts(leg, color, tscale, (EF_Z1 | EF_Z2)); // skip top and bottom faces
 			}
+		} // for j
+	} // for i
+}
+
+void rgeom_mat_t::create_vbo() {
+	vbo.create_and_upload(verts);
+	num_verts = verts.size();
+	clear_container(verts); // no longer needed
+}
+
+void rgeom_mat_t::draw() {
+	//if (!vbo.vbo_valid()) return; // not setup (empty?)
+	assert(vbo.vbo_valid());
+	assert(num_verts > 0);
+	tex.set_gl(); // ignores texture scale for now
+	vbo.pre_render();
+	vertex_t::set_vbo_arrays();
+	draw_quads_as_tris(num_verts);
+}
+
+void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
+	rgeom_mat_t &mat(get_wood_material(tscale));
+
+	for (unsigned y = 0; y < 2; ++y) {
+		for (unsigned x = 0; x < 2; ++x) {
+			cube_t leg(c);
+			leg.d[0][x] += (1.0f - width)*(x ? -1.0f : 1.0f)*c.dx();
+			leg.d[1][y] += (1.0f - width)*(y ? -1.0f : 1.0f)*c.dy();
+			mat.add_cube_to_verts(leg, color, (EF_Z1 | EF_Z2)); // skip top and bottom faces
 		}
 	}
-public:
-	void add_table(room_object_t const &c, float tscale) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
-		cube_t top(c), legs_bcube(c);
-		top.z1() += 0.85*c.dz(); // 15% of height
-		legs_bcube.z2() = top.z1();
-		add_cube_to_verts(top, WOOD_COLOR, tscale); // all faces drawn
-		add_tc_legs(legs_bcube, WOOD_COLOR, 0.08, tscale);
-	}
-	void add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
-		float const height(c.dz());
-		cube_t seat(c), back(c), legs_bcube(c);
-		seat.z1() += 0.32*height;
-		seat.z2()  = back.z1() = seat.z1() + 0.07*height;
-		legs_bcube.z2() = seat.z1();
-		back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-		add_cube_to_verts(seat, colorRGBA(0.2, 0.2, 1.0), tscale); // light blue; all faces drawn
-		add_cube_to_verts(back, WOOD_COLOR, tscale, EF_Z1); // skip bottom face
-		add_tc_legs(legs_bcube, WOOD_COLOR, 0.15, tscale);
-	}
-};
+}
 
-void building_room_geom_t::create_vbo() {
+void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
+	cube_t top(c), legs_bcube(c);
+	top.z1() += 0.85*c.dz(); // 15% of height
+	legs_bcube.z2() = top.z1();
+	get_wood_material(tscale).add_cube_to_verts(top, WOOD_COLOR); // all faces drawn
+	add_tc_legs(legs_bcube, WOOD_COLOR, 0.08, tscale);
+}
 
-	if (empty())         return; // no geom
-	if (vbo.vbo_valid()) return; // already created
-	unsigned tot_num_verts(0);
+void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
+	float const height(c.dz());
+	cube_t seat(c), back(c), legs_bcube(c);
+	seat.z1() += 0.32*height;
+	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
+	legs_bcube.z2() = seat.z1();
+	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, colorRGBA(0.2, 0.2, 1.0)); // light blue; all faces drawn
+	get_wood_material(tscale).add_cube_to_verts(back, WOOD_COLOR, EF_Z1); // skip bottom face
+	add_tc_legs(legs_bcube, WOOD_COLOR, 0.15, tscale);
+}
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		assert(i->type < NUM_TYPES);
-		tot_num_verts += type_to_nverts[i->type]; // upper bound, assuming all faces of all cubes are drawn (skip_faces==0)
+void building_room_geom_t::clear() {
+	for (auto m = materials.begin(); m != materials.end(); ++m) {m->clear();}
+	materials.clear();
+}
+
+unsigned building_room_geom_t::get_num_verts() const {
+	unsigned num_verts(0);
+	for (auto m = materials.begin(); m != materials.end(); ++m) {num_verts += m->num_verts;}
+	return num_verts;
+}
+
+rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t &tex) {
+	// for now we do a simple linear search because there shouldn't be too many unique materials
+	for (auto m = materials.begin(); m != materials.end(); ++m) {
+		if (m->tex == tex) {return *m;}
 	}
-	room_geom_gen_t rgg;
-	rgg.verts.reserve(tot_num_verts); // pre-reserve to correct size
+	materials.emplace_back(tex); // not found, add a new material
+	return materials.back();
+}
+rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
+	return get_material(tid_nm_pair_t(WOOD2_TEX, tscale)); // hard-coded for common material
+}
+
+void building_room_geom_t::create_vbos() {
+	if (empty()) return; // no geom
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		switch (i->type) {
 		case TYPE_NONE:  assert(0); // not supported
-		case TYPE_TABLE: rgg.add_table(*i, tscale); break;
-		case TYPE_CHAIR: rgg.add_chair(*i, tscale); break;
+		case TYPE_TABLE: add_table(*i, tscale); break;
+		case TYPE_CHAIR: add_chair(*i, tscale); break;
 		default: assert(0); // undefined type
 		}
 	} // for i
-	assert(rgg.verts.size() == tot_num_verts); // to check that our reserve is correct
-	vbo.create_and_upload(rgg.verts);
-	num_verts = rgg.verts.size(); // verts will go out of scope here, capture the size
-	// Note: verts are no longer needed, but cubes are likely needed for things such as collision detection with the player (if it ever gets implemented)
+	// Note: verts are temporary, but cubes are likely needed for things such as collision detection with the player (if it ever gets implemented)
+	for (auto m = materials.begin(); m != materials.end(); ++m) {m->create_vbo();}
 }
 
 void building_room_geom_t::draw() { // non-const because it creates the VBO
-
 	if (empty()) return; // no geom
-	if (!vbo.vbo_valid()) {create_vbo();}
-	assert(vbo.vbo_valid());
-	assert(num_verts > 0);
-
-	if (1) { // wood texture
-		select_texture(WOOD2_TEX);
-		select_multitex(FLAT_NMAP_TEX, 5);
-	}
-	else {tid_nm_pair_t().set_gl();} // untextured, no normal map
-	vbo.pre_render();
-	vertex_t::set_vbo_arrays();
-	draw_quads_as_tris(num_verts);
-	vbo.post_render(); // move this out of the loop?
+	if (materials.empty()) {create_vbos();} // create materials if needed
+	//cout << TXT(objs.size()) << TXT(materials.size()) << TXT(get_num_verts()) << endl; // TESTING
+	for (auto m = materials.begin(); m != materials.end(); ++m) {m->draw();}
+	vbo_wrap_t::post_render();
 }
 
