@@ -716,7 +716,7 @@ public:
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
 	void add_section(building_geom_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2,
 		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, int clip_windows,
-		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0)
+		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -755,10 +755,10 @@ public:
 					vector3d norm; norm.z = 0.0;
 					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
 					else        {norm.x = -bg.rot_sin; norm.y = bg.rot_cos;} // Y
-					vert.set_norm(j ? norm : -norm);
+					vert.set_norm((bool(j)^invert_normals) ? norm : -norm);
 				}
 				else {
-					vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
+					vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = ((bool(j)^invert_normals) ? 127 : -128); // -1.0 or 1.0
 				}
 				point pt; // parameteric position within cube in [vec3(0), vec3(1)]
 				pt[n] = j; // our cube face, in direction of normal
@@ -959,6 +959,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
 				bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
+		}
+		for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) {
+			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {

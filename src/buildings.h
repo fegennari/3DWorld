@@ -203,9 +203,11 @@ struct building_room_geom_t {
 
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2], rooms, doors; // walls are split by dim
+	uint64_t no_geom_room_mask;
+	vect_cube_t floors, ceilings, walls[2], rooms, doors, stair_landings; // walls are split by dim
 	std::unique_ptr<building_room_geom_t> room_geom;
 
+	building_interior_t() : no_geom_room_mask(0) {}
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
 	void finalize();
