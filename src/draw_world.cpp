@@ -226,7 +226,7 @@ bool set_dlights_booleans(shader_t &s, bool enable, int shader_type, bool no_dl_
 
 void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, bool &indir_lighting, float min_alpha, bool no_dl_smap, bool use_wet_mask=0) {
 
-	bool const hemi_lighting(!have_indir_smoke_tex);
+	bool const hemi_lighting(!have_indir_smoke_tex); // even in tiled terrain mode
 	use_shadow_map &= shadow_map_enabled();
 	indir_lighting &= (have_indir_smoke_tex || (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN));
 	dlights        &= (dl_tid > 0 && has_dl_sources);
@@ -264,7 +264,7 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
 	// hemispherical lighting
 	s.add_uniform_color("sky_color", colorRGB(bkg_color));
-	select_multitex(LANDSCAPE_TEX, 12, 1);
+	select_multitex(LANDSCAPE_TEX, 12, 1); // even for tiled terrain mode?
 	s.add_uniform_int("ground_tex", 12);
 }
 
