@@ -1368,13 +1368,19 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				// TODO_INT: make it square, always 2*doorway_width
 			}
 			else { // stairs
-				stairs_dim = rgen.rand_bool();
+				float const dx(stairs.dx()), dy(stairs.dy()); // choose longer dim of high aspect ratio
+				if      (dx > 1.25*dy) {stairs_dim = 0;}
+				else if (dy > 1.25*dx) {stairs_dim = 1;}
+				else {stairs_dim = rgen.rand_bool();} // close to square
 
 				for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
-					float const shrink(stairs.get_sz_dim(dim) - ((bool(dim) == stairs_dim) ? 4.0 : 1.6)*doorway_width); // set max size of stairs opening
-					if (shrink < 0.0) continue; // not enough space to shrink
+					bool const is_step_dim(bool(dim) == stairs_dim);
+					float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.6)*doorway_width); // set max size of stairs opening
+					max_eq(shrink, 2.0f*doorway_width); // allow space for doors to open and player to enter/exit
+					//if (shrink < 0.0) continue; // not enough space to shrink
 					unsigned const dir(rgen.rand()&3); // 0-3
-					if (dir < 2) {stairs.d[dim][dir] += (dir ? -shrink : shrink);} // force up against a wall
+					// TODO_INT: if not enough space, find a larger room or swap dim?
+					if (0 && dir < 2 && !is_step_dim) {stairs.d[dim][dir] += (dir ? -shrink : shrink);} // force up against a wall TODO_INT: don't block doorways
 					else {stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink;} // centered in the room
 				}
 			}
@@ -1531,7 +1537,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	unsigned const num_stairs = 12;
 	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing);
 	float const stair_dz(window_vspacing/num_stairs), stair_height(stair_dz + floor_thickness);
-	bool dir(rgen.rand_bool()); // choose a random start dir
+	bool const dir(rgen.rand_bool()); // same for every floor, could alternate for stairwells if we were tracking it
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) {
@@ -1551,7 +1557,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				stair.z1() = z; stair.z2() = z + stair_height;
 				objs.emplace_back(stair, TYPE_STAIR, dim, dir);
 			}
-			dir ^= 1; // always alternate stair directions for each floor
 		}
 	} // for i
 }
