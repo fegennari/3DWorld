@@ -1171,7 +1171,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		vector3d const psz(p->get_size());
 		bool const min_dim(psz.y < psz.x); // hall dim
 		float const cube_width(psz[min_dim]);
-		bool const use_hallway(!is_house && (p == parts.begin() || (p-1)->z1() < p->z1()) && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
+		bool const first_part(p == parts.begin());
+		bool const use_hallway(!is_house && (first_part || (p-1)->z1() < p->z1()) && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
 		unsigned const rooms_start(interior->rooms.size());
 
 		if (use_hallway) {
@@ -1256,7 +1257,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			to_split.emplace_back(*p); // seed room is entire part, no door
 			float window_hspacing[2] = {0.0};
 			
-			if (p == parts.begin()) { // reserve walls/rooms/doors - take a guess at the correct size
+			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
 				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*parts.size());}
 				interior->rooms.reserve(8*parts.size()); // two rows of rooms + optional hallway
 				interior->doors.reserve(4*parts.size());
@@ -1346,23 +1347,31 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		if (use_hallway) {
 			// TODO_INT: add stairs into the corner of a center room?
 		}
-		else if (!is_house || p == parts.begin()) { // only add stairs to first part of a house
+		else if (!is_house || first_part) { // only add stairs to first part of a house
 			unsigned const rooms_end(interior->rooms.size());
 			assert(rooms_start < rooms_end); // must have added at least one room
 			unsigned const stairs_room(rooms_start + rgen.rand()%(rooms_end - rooms_start)); // choose a random room to make into a stairwell
+			// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
+			bool const add_elevator(0 && !is_house && !first_part && rgen.rand_bool());
 			stairs = interior->rooms[stairs_room];
 			interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it
 			stairs.expand_by_xy(-wall_thick); // padding around walls
-			stairs_dim = rgen.rand_bool();
 
-			for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
-				float const shrink(stairs.get_sz_dim(dim) - ((bool(dim) == stairs_dim) ? 4.0 : 1.6)*doorway_width); // set max size of stairs opening
-				if (shrink < 0.0) continue; // not enough space to shrink
-				unsigned const dir(rgen.rand()&3); // 0-3
-				if (dir < 2) {stairs.d[dim][dir] += (dir ? -shrink : shrink);} // force up against a wall
-				else {stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink;} // centered in the room
+			if (add_elevator) {
+				// TODO_INT: make it square, always 2*doorway_width
 			}
-			if (p == parts.begin()) {landings.reserve(num_floors-1);}
+			else { // stairs
+				stairs_dim = rgen.rand_bool();
+
+				for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
+					float const shrink(stairs.get_sz_dim(dim) - ((bool(dim) == stairs_dim) ? 4.0 : 1.6)*doorway_width); // set max size of stairs opening
+					if (shrink < 0.0) continue; // not enough space to shrink
+					unsigned const dir(rgen.rand()&3); // 0-3
+					if (dir < 2) {stairs.d[dim][dir] += (dir ? -shrink : shrink);} // force up against a wall
+					else {stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink;} // centered in the room
+				}
+			}
+			if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
 		}
 		cube_t C(*p);
 		C.z1() = z; C.z2() = z + fc_thick; interior->floors.push_back(C); // ground floor, full area
@@ -1507,7 +1516,37 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 			}
 		} // for f
 	} // for r
+	add_stairs_and_elevators(rgen);
 	objs.shrink_to_fit();
+}
+
+void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
+	unsigned const num_stairs = 12;
+	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing);
+	float const stair_dz(window_vspacing/num_stairs), stair_height(stair_dz + floor_thickness);
+	bool dir(rgen.rand_bool()); // choose a random start dir
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) {
+		bool const is_elevator(i->dx() == i->dy()); // elevators have square cutouts
+
+		if (is_elevator) {
+			// TODO_INT: add vertical walls for entire height with door cutout (similar to walls), wall texture on outside and wood texture on inside
+		}
+		else {
+			bool const dim(i->dx() < i->dy()); // longer dim
+			float const tot_len(i->get_sz_dim(dim)), step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs);
+			float z(i->z2() - window_vspacing - floor_thickness), pos(i->d[dim][!dir]);
+			cube_t stair(*i);
+
+			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
+				stair.d[dim][0] = pos; stair.d[dim][1] = pos + step_len;
+				stair.z1() = z; stair.z2() = z + stair_height;
+				objs.emplace_back(stair, TYPE_STAIR, dim, dir);
+			}
+			dir ^= 1; // always alternate stair directions for each floor
+		}
+	} // for i
 }
 
 void building_t::gen_and_draw_room_geom(unsigned building_ix) {
@@ -1646,6 +1685,10 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	add_tc_legs(legs_bcube, WOOD_COLOR, 0.15, tscale);
 }
 
+void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
+}
+
 void building_room_geom_t::clear() {
 	for (auto m = materials.begin(); m != materials.end(); ++m) {m->clear();}
 	materials.clear();
@@ -1678,6 +1721,7 @@ void building_room_geom_t::create_vbos() {
 		case TYPE_NONE:  assert(0); // not supported
 		case TYPE_TABLE: add_table(*i, tscale); break;
 		case TYPE_CHAIR: add_chair(*i, tscale); break;
+		case TYPE_STAIR: add_stair(*i, tscale); break;
 		default: assert(0); // undefined type
 		}
 	} // for i
@@ -1688,7 +1732,6 @@ void building_room_geom_t::create_vbos() {
 void building_room_geom_t::draw() { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	if (materials.empty()) {create_vbos();} // create materials if needed
-	//cout << TXT(objs.size()) << TXT(materials.size()) << TXT(get_num_verts()) << endl; // TESTING
 	for (auto m = materials.begin(); m != materials.end(); ++m) {m->draw();}
 	vbo_wrap_t::post_render();
 }

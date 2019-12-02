@@ -157,7 +157,7 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
-enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, NUM_TYPES};
+enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, NUM_TYPES};
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
@@ -197,6 +197,7 @@ struct building_room_geom_t {
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale);
 	void add_chair(room_object_t const &c, float tscale);
+	void add_stair(room_object_t const &c, float tscale);
 	void create_vbos();
 	void draw();
 };
@@ -272,6 +273,7 @@ struct building_t : public building_geom_t {
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void gen_room_details(rand_gen_t &rgen);
+	void add_stairs_and_elevators(rand_gen_t &rgen);
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
 	void add_roof_to_bcube();
