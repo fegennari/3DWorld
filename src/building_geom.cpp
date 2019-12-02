@@ -1580,7 +1580,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
-			v.set_ortho_norm(i, j);
+			v.set_ortho_norm(n, j);
 			v.v[n] = c.d[n][j];
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
