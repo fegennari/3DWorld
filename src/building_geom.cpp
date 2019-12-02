@@ -1553,7 +1553,7 @@ void building_t::gen_and_draw_room_geom(unsigned building_ix) {
 	if (!interior) return;
 	rand_gen_t rgen;
 	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
-	gen_room_details(rgen); // generate so that we can draw it
+	if (!is_rotated()) {gen_room_details(rgen);} // generate so that we can draw it; doesn't work with rotated buildings
 	if (interior->room_geom) {interior->room_geom->draw();}
 }
 
