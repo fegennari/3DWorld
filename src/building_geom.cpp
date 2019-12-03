@@ -1369,13 +1369,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			}
 			else { // stairs
 				float const dx(stairs.dx()), dy(stairs.dy()); // choose longer dim of high aspect ratio
-				if      (dx > 1.25*dy) {stairs_dim = 0;}
-				else if (dy > 1.25*dx) {stairs_dim = 1;}
+				if      (dx > 1.2*dy) {stairs_dim = 0;}
+				else if (dy > 1.2*dx) {stairs_dim = 1;}
 				else {stairs_dim = rgen.rand_bool();} // close to square
 
 				for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
 					bool const is_step_dim(bool(dim) == stairs_dim);
-					float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.6)*doorway_width); // set max size of stairs opening
+					float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
 					max_eq(shrink, 2.0f*doorway_width); // allow space for doors to open and player to enter/exit
 					//if (shrink < 0.0) continue; // not enough space to shrink
 					unsigned const dir(rgen.rand()&3); // 0-3
@@ -1536,7 +1536,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	unsigned const num_stairs = 12;
 	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing);
-	float const stair_dz(window_vspacing/num_stairs), stair_height(stair_dz + floor_thickness);
+	float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 	bool const dir(rgen.rand_bool()); // same for every floor, could alternate for stairwells if we were tracking it
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
@@ -1548,13 +1548,15 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 		else {
 			bool const dim(i->dx() < i->dy()); // longer dim
-			float const tot_len(i->get_sz_dim(dim)), step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs);
-			float z(i->z2() - window_vspacing - floor_thickness), pos(i->d[dim][!dir]);
+			float const tot_len(i->get_sz_dim(dim)), step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs), floor_z(i->z2() - window_vspacing);
+			float z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 			cube_t stair(*i);
 
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
-				stair.d[dim][0] = pos; stair.d[dim][1] = pos + step_len;
-				stair.z1() = z; stair.z2() = z + stair_height;
+				stair.d[dim][0] = pos;
+				stair.d[dim][1] = pos + step_len;
+				stair.z1() = max(floor_z, z); // don't go below the floor
+				stair.z2() = z + stair_height;
 				objs.emplace_back(stair, TYPE_STAIR, dim, dir);
 			}
 		}
