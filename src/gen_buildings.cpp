@@ -1706,7 +1706,7 @@ public:
 					building_mat_t const &mat2(b->get_material());
 					if (mat2.floor_tex == mat.floor_tex) {num_floors += b->interior->floors.size();}
 					if (mat2.ceil_tex  == mat.ceil_tex ) {num_ceils  += b->interior->ceilings.size();}
-					if (mat2.wall_tex  == mat.wall_tex ) {num_walls  += b->interior->walls[0].size() + b->interior->walls[1].size();}
+					if (mat2.wall_tex  == mat.wall_tex ) {num_walls  += b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->stair_landings.size();}
 				}
 				building_draw_interior.reserve_verts(mat.floor_tex, 4*num_floors); // top surface only
 				building_draw_interior.reserve_verts(mat.ceil_tex,  4*num_ceils ); // bottom surface only
