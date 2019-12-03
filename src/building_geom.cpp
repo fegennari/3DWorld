@@ -1388,6 +1388,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						} // for s
 					}
 					if (!valid) continue;
+					cube_t cand(wall);
+					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
+					if (has_bcube_int_xy(wall, interior->stair_landings, doorway_width)) continue; // stairs in the way, skip
 					cube_t wall2;
 					remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !d, interior->doors);
 					walls.push_back(wall2); // Note: invalidates wall reference
@@ -1425,7 +1428,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 		for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell in any of them
 			unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
-			cube_t cutout(interior->rooms[stairs_room]);
+			cube_t const &room(interior->rooms[stairs_room]);
+			cube_t cutout(room);
 			//interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it?
 			cutout.expand_by_xy(-floor_thickness); // padding around walls
 
@@ -1444,13 +1448,23 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					bool const is_step_dim(bool(dim) == stairs_dim);
 					float shrink(cutout.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
 					max_eq(shrink, 2.0f*doorway_width); // allow space for doors to open and player to enter/exit
-					//if (shrink < 0.0) continue; // not enough space to shrink
-					unsigned const dir(rgen.rand()&3); // 0-3
-					if (0 && dir < 2 && !is_step_dim) {cutout.d[dim][dir] += (dir ? -shrink : shrink);} // force up against a wall TODO_INT: don't block doorways
-					else {cutout.d[dim][0] += 0.5*shrink; cutout.d[dim][1] -= 0.5*shrink;} // centered in the room
-				}
+					cutout.d[dim][0] += 0.5*shrink; cutout.d[dim][1] -= 0.5*shrink; // centered in the room
+
+					if (!is_step_dim) { // see if we can push the stairs to the wall on one of the sides without blocking a doorway
+						bool const first_dir(rgen.rand_bool());
+
+						for (unsigned d = 0; d < 2; ++d) {
+							bool const dir(bool(d) ^ first_dir);
+							cube_t cand(cutout);
+							float const shift(0.95f*(cand.d[dim][dir] - room.d[dim][dir])); // negative if dir==1, add small gap to prevent z-fighting and FP accuracy asserts
+							cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
+							if (!interior->is_cube_close_to_doorway(cand)) {cutout = cand; break;} // keep if it's good
+						}
+					}
+				} // for dim
 			}
 			if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
+			assert(cutout.is_strictly_normalized());
 			stairs = cutout;
 			break; // success - done
 		} // for n
@@ -1609,7 +1623,7 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	s.nverts += interior->room_geom->get_num_verts();
 }
 
-bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const {
+bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const { // ignores zvals
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		bool const dim(i->dy() < i->dx());
 		if (c.d[!dim][0] > i->d[!dim][1] || c.d[!dim][1] < i->d[!dim][0]) continue; // no overlap in !dim
