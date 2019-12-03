@@ -226,7 +226,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			break; // only change zval once
 		}
 	}
-	if (interior->room_geom) { // collision with room cubes; XY only?
+	if (interior->room_geom) { // collision with room cubes
 		vector<room_object_t> const &objs(interior->room_geom->objs);
 		for (auto c = objs.begin(); c != objs.end(); ++c) {had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 1, cnorm);} // skip_z=1???
 	}
@@ -1344,71 +1344,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				} // for dim
 			} // for p2
 		} // end wall placement
-
-		// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
-		float z(p->z1());
-		cube_t stairs;
-		bool stairs_dim(0);
-		vect_cube_t &landings(interior->stair_landings);
-
-		if (use_hallway) {
-			// TODO_INT: add stairs into the corner of a center room?
-		}
-		else if (!is_house || first_part) { // only add stairs to first part of a house
-			unsigned const rooms_end(interior->rooms.size());
-			assert(rooms_start < rooms_end); // must have added at least one room
-			unsigned const stairs_room(rooms_start + rgen.rand()%(rooms_end - rooms_start)); // choose a random room to make into a stairwell
-			// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
-			bool const add_elevator(0 && !is_house && !first_part && rgen.rand_bool());
-			stairs = interior->rooms[stairs_room];
-			interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it
-			stairs.expand_by_xy(-wall_thick); // padding around walls
-
-			if (add_elevator) {
-				// TODO_INT: make it square, always 2*doorway_width
-			}
-			else { // stairs
-				float const dx(stairs.dx()), dy(stairs.dy()); // choose longer dim of high aspect ratio
-				if      (dx > 1.2*dy) {stairs_dim = 0;}
-				else if (dy > 1.2*dx) {stairs_dim = 1;}
-				else {stairs_dim = rgen.rand_bool();} // close to square
-
-				for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
-					bool const is_step_dim(bool(dim) == stairs_dim);
-					float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
-					max_eq(shrink, 2.0f*doorway_width); // allow space for doors to open and player to enter/exit
-					//if (shrink < 0.0) continue; // not enough space to shrink
-					unsigned const dir(rgen.rand()&3); // 0-3
-					// TODO_INT: if not enough space, find a larger room or swap dim?
-					if (0 && dir < 2 && !is_step_dim) {stairs.d[dim][dir] += (dir ? -shrink : shrink);} // force up against a wall TODO_INT: don't block doorways
-					else {stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink;} // centered in the room
-				}
-			}
-			if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
-		}
-		cube_t C(*p);
-		C.z1() = z; C.z2() = z + fc_thick; interior->floors.push_back(C); // ground floor, full area
-		z += window_vspacing; // move to next floor
-
-		for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
-			cube_t to_add[4];
-			float const zc(z - fc_thick), zf(z + fc_thick);
-
-			if (stairs.is_all_zeros()) {to_add[0] = *p;} // add single cube
-			else {
-				subtract_cube_xy(*p, stairs, to_add);
-				landings.push_back(stairs);
-				landings.back().z1() = zc; landings.back().z2() = zf;
-			}
-			for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs along an exterior wall
-				cube_t &c(to_add[i]);
-				if (c.is_zero_area()) continue;
-				c.z1() = zc; c.z2() = z;  interior->ceilings.push_back(c);
-				c.z1() = z;  c.z2() = zf; interior->floors  .push_back(c);
-				//c.z1() = zf; c.z2() = zc + window_vspacing; // add per-floor walls, door cutouts, etc. here
-			}
-		} // for f
-		C.z1() = z - fc_thick; C.z2() = z; interior->ceilings.push_back(C); // roof ceiling, full area
+		add_ceilings_floors_stairs(rgen, *p, num_floors, rooms_start, use_hallway, first_part);
 	} // for p (parts)
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
@@ -1464,6 +1400,84 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		} // for w
 	} // for d
 	interior->finalize();
+}
+
+void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part) {
+
+	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
+	float const window_vspacing(get_material().get_floor_spacing());
+	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
+	float z(part.z1());
+	cube_t stairs;
+	bool stairs_dim(0);
+	vect_cube_t &landings(interior->stair_landings);
+
+	if (num_floors == 1) {} // no need for stairs or elevator
+	else if (use_hallway) {
+		// TODO_INT: add stairs into the corner of a center room?
+	}
+	else if (!is_house || first_part) { // only add stairs to first part of a house
+		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
+		bool const add_elevator(0 && !is_house && !first_part && rgen.rand_bool());
+		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
+		assert(num_avail_rooms > 0); // must have added at least one room
+		unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell
+
+		for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell in any of them
+			unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
+			cube_t cutout(interior->rooms[stairs_room]);
+			//interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it?
+			cutout.expand_by_xy(-floor_thickness); // padding around walls
+
+			if (add_elevator) {
+				// TODO_INT: make it square, always 2*doorway_width
+				//stairs = cutout;
+			}
+			else { // stairs
+				float const dx(cutout.dx()), dy(cutout.dy()); // choose longer dim of high aspect ratio
+				if      (dx > 1.2*dy) {stairs_dim = 0;}
+				else if (dy > 1.2*dx) {stairs_dim = 1;}
+				else {stairs_dim = rgen.rand_bool();} // close to square
+				if (cutout.get_sz_dim(stairs_dim) < 4.0*doorway_width || cutout.get_sz_dim(!stairs_dim) < 3.0*doorway_width) continue; // not enough space for stairs
+
+				for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
+					bool const is_step_dim(bool(dim) == stairs_dim);
+					float shrink(cutout.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
+					max_eq(shrink, 2.0f*doorway_width); // allow space for doors to open and player to enter/exit
+					//if (shrink < 0.0) continue; // not enough space to shrink
+					unsigned const dir(rgen.rand()&3); // 0-3
+					if (0 && dir < 2 && !is_step_dim) {cutout.d[dim][dir] += (dir ? -shrink : shrink);} // force up against a wall TODO_INT: don't block doorways
+					else {cutout.d[dim][0] += 0.5*shrink; cutout.d[dim][1] -= 0.5*shrink;} // centered in the room
+				}
+			}
+			if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
+			stairs = cutout;
+			break; // success - done
+		} // for n
+	}
+	cube_t C(part);
+	C.z1() = z; C.z2() = z + fc_thick; interior->floors.push_back(C); // ground floor, full area
+	z += window_vspacing; // move to next floor
+
+	for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
+		cube_t to_add[4];
+		float const zc(z - fc_thick), zf(z + fc_thick);
+
+		if (stairs.is_all_zeros()) {to_add[0] = part;} // add single cube
+		else {
+			subtract_cube_xy(part, stairs, to_add);
+			landings.push_back(stairs);
+			landings.back().z1() = zc; landings.back().z2() = zf;
+		}
+		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs along an exterior wall
+			cube_t &c(to_add[i]);
+			if (c.is_zero_area()) continue;
+			c.z1() = zc; c.z2() = z;  interior->ceilings.push_back(c);
+			c.z1() = z;  c.z2() = zf; interior->floors  .push_back(c);
+			//c.z1() = zf; c.z2() = zc + window_vspacing; // add per-floor walls, door cutouts, etc. here
+		}
+	} // for f
+	C.z1() = z - fc_thick; C.z2() = z; interior->ceilings.push_back(C); // roof ceiling, full area
 }
 
 bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off) {
@@ -1553,8 +1567,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			cube_t stair(*i);
 
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
-				stair.d[dim][0] = pos;
-				stair.d[dim][1] = pos + step_len;
+				stair.d[dim][0] = pos; stair.d[dim][1] = pos + step_len;
 				stair.z1() = max(floor_z, z); // don't go below the floor
 				stair.z2() = z + stair_height;
 				objs.emplace_back(stair, TYPE_STAIR, dim, dir);
@@ -1608,7 +1621,10 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
 	cube_t place_area(room);
 	if (dmin != 0.0f) {place_area.expand_by_xy(-dmin);} // shrink by dmin
-	return (place_area.contains_cube_xy(c) && !is_cube_close_to_doorway(c, dmin));
+	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
+	if (is_cube_close_to_doorway(c, dmin)) return 0; // too close to a doorway
+	if (has_bcube_int_xy(c, stair_landings, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
+	return 1;
 }
 
 void building_interior_t::finalize() {
