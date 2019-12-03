@@ -1181,6 +1181,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		bool const first_part(p == parts.begin());
 		bool const use_hallway(!is_house && (first_part || (p-1)->z1() < p->z1()) && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
 		unsigned const rooms_start(interior->rooms.size());
+		cube_t hall;
 
 		if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
@@ -1251,11 +1252,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				}
 				pos = next_pos;
 			} // for i
-			if (add_hall) {
-				cube_t hall(*p);
-				for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
-				interior->rooms.push_back(hall);
-			}
+			hall = *p;
+			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
+			if (add_hall) {interior->rooms.push_back(hall);}
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
@@ -1344,7 +1343,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				} // for dim
 			} // for p2
 		} // end wall placement
-		add_ceilings_floors_stairs(rgen, *p, num_floors, rooms_start, use_hallway, first_part);
+		add_ceilings_floors_stairs(rgen, *p, hall, num_floors, rooms_start, use_hallway, first_part);
 	} // for p (parts)
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
@@ -1405,19 +1404,30 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	interior->finalize();
 }
 
-void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part) {
+void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part) {
 
 	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 	float const window_vspacing(get_material().get_floor_spacing());
 	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
 	float z(part.z1());
-	cube_t stairs;
+	cube_t stairs; // TODO_INT: allow multiple stairs/elevators per-part for larger office buildings
 	bool stairs_dim(0);
 	vect_cube_t &landings(interior->stair_landings);
 
+	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
-	else if (use_hallway) {
-		// TODO_INT: add stairs into the corner of a center room?
+	else if (use_hallway) { // part is the hallway cube
+		// TODO_INT: place on the side of the hallway rather than the center?
+		bool const add_elevator(0);
+		if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
+		bool const stairs_dim(hall.dx() < hall.dy()); // same orientation as the hallway
+		stairs = hall; // start as hallway
+
+		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
+			bool const is_step_dim(bool(dim) == stairs_dim);
+			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
+			stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink; // centered in the hallway
+		} // for dim
 	}
 	else if (!is_house || first_part) { // only add stairs to first part of a house
 		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
@@ -1435,7 +1445,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 			if (add_elevator) {
 				// TODO_INT: make it square, always 2*doorway_width
-				//stairs = cutout;
+				//stairs = cutout; // only do this if we want to add per-floor stuff, otherwise just add directly to landings
 			}
 			else { // stairs
 				float const dx(cutout.dx()), dy(cutout.dy()); // choose longer dim of high aspect ratio
@@ -1469,6 +1479,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			break; // success - done
 		} // for n
 	}
+	// add ceilings and floors
 	cube_t C(part);
 	C.z1() = z; C.z2() = z + fc_thick; interior->floors.push_back(C); // ground floor, full area
 	z += window_vspacing; // move to next floor

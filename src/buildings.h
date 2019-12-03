@@ -272,7 +272,7 @@ struct building_t : public building_geom_t {
 	void gen_details(rand_gen_t &rgen);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part);
+	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part);
 	void gen_room_details(rand_gen_t &rgen);
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
