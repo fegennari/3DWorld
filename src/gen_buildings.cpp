@@ -963,6 +963,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) {
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
+		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+			// TODO_INT
+		}
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				bool const dim(i->dy() < i->dx());

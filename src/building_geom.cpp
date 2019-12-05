@@ -1439,15 +1439,18 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell in any of them
 			unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
 			cube_t const &room(interior->rooms[stairs_room]);
-			cube_t cutout(room);
 			//interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it?
-			cutout.expand_by_xy(-floor_thickness); // padding around walls
 
 			if (add_elevator) {
 				// TODO_INT: make it square, always 2*doorway_width
-				//stairs = cutout; // only do this if we want to add per-floor stuff, otherwise just add directly to landings
+				float const width(1.6*doorway_width), hwidth(0.5*width);
+				float const x(0.0), y(0.0);
+				cube_t elevator((x - hwidth), (x + hwidth), (y - hwidth), (y + hwidth), room.z1(), room.z2()); // elevator shaft
+				interior->elevators.push_back(elevator);
 			}
 			else { // stairs
+				cube_t cutout(room);
+				cutout.expand_by_xy(-floor_thickness); // padding around walls
 				float const dx(cutout.dx()), dy(cutout.dy()); // choose longer dim of high aspect ratio
 				if      (dx > 1.2*dy) {stairs_dim = 0;}
 				else if (dy > 1.2*dx) {stairs_dim = 1;}
@@ -1472,10 +1475,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						}
 					}
 				} // for dim
+				if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
+				assert(cutout.is_strictly_normalized());
+				stairs = cutout;
 			}
-			if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
-			assert(cutout.is_strictly_normalized());
-			stairs = cutout;
 			break; // success - done
 		} // for n
 	}
@@ -1658,6 +1661,7 @@ void building_interior_t::finalize() {
 	remove_excess_cap(rooms);
 	remove_excess_cap(doors);
 	remove_excess_cap(stair_landings);
+	remove_excess_cap(elevators);
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 
@@ -1777,6 +1781,7 @@ void building_room_geom_t::create_vbos() {
 		case TYPE_TABLE: add_table(*i, tscale); break;
 		case TYPE_CHAIR: add_chair(*i, tscale); break;
 		case TYPE_STAIR: add_stair(*i, tscale); break;
+		case TYPE_ELEVATOR: assert(0); // not yet implemented
 		default: assert(0); // undefined type
 		}
 	} // for i

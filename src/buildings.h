@@ -157,7 +157,7 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
-enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, NUM_TYPES};
+enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, NUM_TYPES};
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
@@ -205,7 +205,7 @@ struct building_room_geom_t {
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
 	uint64_t no_geom_room_mask;
-	vect_cube_t floors, ceilings, walls[2], rooms, doors, stair_landings; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], rooms, doors, stair_landings, elevators; // walls are split by dim
 	std::unique_ptr<building_room_geom_t> room_geom;
 
 	building_interior_t() : no_geom_room_mask(0) {}
