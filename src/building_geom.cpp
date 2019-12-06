@@ -1580,7 +1580,8 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 			if (add_lights || f+1 == num_floors) { // add a light to the center of the ceiling of this room if there's space (always on top floor)
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
-				objs.emplace_back(light, TYPE_LIGHT, light_dim, 0); // dir=0 (unused)
+				bool const is_on(rgen.rand_bool()); // half the lights are on
+				objs.emplace_back(light, TYPE_LIGHT, light_dim, is_on); // encode is_on in dir flag
 			}
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
@@ -1621,16 +1622,16 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	} // for i
 }
 
-void building_t::gen_and_draw_room_geom(unsigned building_ix) {
+void building_t::gen_and_draw_room_geom(shader_t &s, unsigned building_ix) {
 	if (!interior) return;
 	rand_gen_t rgen;
 	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
 	if (!is_rotated()) {gen_room_details(rgen);} // generate so that we can draw it; doesn't work with rotated buildings
-	if (interior->room_geom) {interior->room_geom->draw();}
+	if (interior->room_geom) {interior->room_geom->draw(s);}
 }
 
 void building_t::clear_room_geom() {
-	if (!interior || !interior->room_geom) return;
+	if (!has_room_geom()) return;
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 }
@@ -1722,14 +1723,15 @@ void rgeom_mat_t::create_vbo() {
 	clear_container(verts); // no longer needed
 }
 
-void rgeom_mat_t::draw() {
+void rgeom_mat_t::draw(shader_t &s) {
 	//if (!vbo.vbo_valid()) return; // not setup (empty?)
 	assert(vbo.vbo_valid());
 	assert(num_verts > 0);
-	tex.set_gl(); // ignores texture scale for now
+	tex.set_gl(s); // ignores texture scale for now
 	vbo.pre_render();
 	vertex_t::set_vbo_arrays();
 	draw_quads_as_tris(num_verts);
+	tex.unset_gl(s);
 }
 
 void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
@@ -1770,7 +1772,10 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(WHITE_TEX, tscale)).add_cube_to_verts(c, WHITE, EF_Z2); // white, untextured, skip top face
+	tid_nm_pair_t tp(WHITE_TEX, tscale);
+	tp.emissive = 1;
+	bool const is_on(c.dir); // we can't change emissive per-object, but we can use it to adjust the color
+	get_material(tp).add_cube_to_verts(c, (is_on ? WHITE : DK_GRAY), EF_Z2); // white, untextured, skip top face
 }
 
 void building_room_geom_t::clear() {
@@ -1815,10 +1820,10 @@ void building_room_geom_t::create_vbos() {
 	for (auto m = materials.begin(); m != materials.end(); ++m) {m->create_vbo();}
 }
 
-void building_room_geom_t::draw() { // non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	if (materials.empty()) {create_vbos();} // create materials if needed
-	for (auto m = materials.begin(); m != materials.end(); ++m) {m->draw();}
+	for (auto m = materials.begin(); m != materials.end(); ++m) {m->draw(s);}
 	vbo_wrap_t::post_render();
 }
 

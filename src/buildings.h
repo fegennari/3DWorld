@@ -33,19 +33,21 @@ struct cube_with_zval_t : public cube_t {
 
 typedef vector<cube_with_zval_t> vect_cube_with_zval_t;
 
-struct tid_nm_pair_t { // size=24
+struct tid_nm_pair_t { // size=28
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
 	float tscale_x, tscale_y, txoff, tyoff;
+	bool emissive; // for lights
 
-	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0) {}
-	tid_nm_pair_t(int tid_, float txy) : tid(tid_), nm_tid(FLAT_NMAP_TEX), tscale_x(txy), tscale_y(txy), txoff(0.0), tyoff(0.0) {} // non-normal mapped 1:1 texture AR
-	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo) {}
+	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0), emissive(0) {}
+	tid_nm_pair_t(int tid_, float txy) : tid(tid_), nm_tid(FLAT_NMAP_TEX), tscale_x(txy), tscale_y(txy), txoff(0.0), tyoff(0.0), emissive(0) {} // non-normal mapped 1:1 texture AR
+	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), emissive(0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
 	tid_nm_pair_t get_scaled_version(float scale) const {return tid_nm_pair_t(tid, nm_tid, scale*tscale_x, scale*tscale_y);}
-	void set_gl() const;
+	void set_gl(shader_t &s) const;
+	void unset_gl(shader_t &s) const;
 	void toggle_transparent_windows_mode();
 };
 
@@ -179,7 +181,7 @@ public:
 	void clear() {vbo.clear(); verts.clear(); num_verts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
 	void create_vbo();
-	void draw();
+	void draw(shader_t &s);
 };
 
 struct building_room_geom_t {
@@ -200,7 +202,7 @@ struct building_room_geom_t {
 	void add_stair(room_object_t const &c, float tscale);
 	void add_light(room_object_t const &c, float tscale);
 	void create_vbos();
-	void draw();
+	void draw(shader_t &s);
 };
 
 // may as well make this its own class, since it could get large and it won't be used for every building
@@ -244,6 +246,7 @@ struct building_t : public building_geom_t {
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), is_house(0), has_antenna(0), has_chimney(0),
 		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
+	bool has_room_geom() const {return (interior && interior->room_geom);}
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
@@ -283,7 +286,7 @@ struct building_t : public building_geom_t {
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
-	void gen_and_draw_room_geom(unsigned building_ix);
+	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix);
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:
