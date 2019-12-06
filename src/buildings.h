@@ -157,7 +157,7 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
-enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, NUM_TYPES};
+enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, NUM_TYPES};
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
@@ -198,6 +198,7 @@ struct building_room_geom_t {
 	void add_table(room_object_t const &c, float tscale);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale);
+	void add_light(room_object_t const &c, float tscale);
 	void create_vbos();
 	void draw();
 };
@@ -210,6 +211,7 @@ struct building_interior_t {
 
 	building_interior_t() : no_geom_room_mask(0) {}
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
+	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
 	void finalize();
 };

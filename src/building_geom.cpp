@@ -1389,7 +1389,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					if (!valid) continue;
 					cube_t cand(wall);
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
-					if (has_bcube_int_xy(wall, interior->stair_landings, doorway_width)) continue; // stairs in the way, skip
+					if (interior->is_blocked_by_stairs_or_elevator(wall, doorway_width)) continue; // stairs in the way, skip
 					cube_t wall2;
 					remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !d, interior->doors);
 					walls.push_back(wall2); // Note: invalidates wall reference
@@ -1556,16 +1556,32 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (interior->no_geom_room_mask & (1ULL << ((r - interior->rooms.begin())&63))) continue; // no geometry for this room (stairwell)
+		if (interior->no_geom_room_mask & (1ULL << ((r - interior->rooms.begin())&63))) continue; // no geometry for this room (stairwell, etc.)
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		point room_center(r->get_cube_center());
+		// determine light pos for this stack of rooms
+		bool const light_dim(r->dx() < r->dy()); // longer room dim
+		cube_t light;
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			float const sz(((bool(dim) == light_dim) ? 2.2 : 1.0)*1.6*floor_thickness);
+			light.d[dim][0] = room_center[dim] - sz;
+			light.d[dim][1] = room_center[dim] + sz;
+		}
+		bool const add_lights(!interior->is_blocked_by_stairs_or_elevator(light, fc_thick));
 		float z(r->z1());
 
+		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
-			// place a table and maybe some chairs near the center of the room 90% of the time
+			// place a table and maybe some chairs near the center of the room 95% of the time
 			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_center, 0.1);}
 
+			if (add_lights || f+1 == num_floors) { // add a light to the center of the ceiling of this room if there's space (always on top floor)
+				light.z2() = z + window_vspacing - fc_thick;
+				light.z1() = light.z2() - 0.5*fc_thick;
+				objs.emplace_back(light, TYPE_LIGHT, light_dim, 0); // dir=0 (unused)
+			}
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
 			}
@@ -1576,6 +1592,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
+
 	unsigned const num_stairs = 12;
 	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing);
 	float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
@@ -1646,12 +1663,16 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 	}
 	return 0;
 }
+bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin) const {
+	// TODO_INT: should use smaller stairs array that covers the entire floor rather than larger stair_landings
+	return (has_bcube_int_xy(c, stair_landings, dmin) || has_bcube_int_xy(c, elevators, dmin));
+}
 bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
 	cube_t place_area(room);
 	if (dmin != 0.0f) {place_area.expand_by_xy(-dmin);} // shrink by dmin
 	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
 	if (is_cube_close_to_doorway(c, dmin)) return 0; // too close to a doorway
-	if (has_bcube_int_xy(c, stair_landings, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
+	if (is_blocked_by_stairs_or_elevator(c, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
 	return 1;
 }
 
@@ -1748,6 +1769,10 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
 }
 
+void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
+	get_material(tid_nm_pair_t(WHITE_TEX, tscale)).add_cube_to_verts(c, WHITE, EF_Z2); // white, untextured, skip top face
+}
+
 void building_room_geom_t::clear() {
 	for (auto m = materials.begin(); m != materials.end(); ++m) {m->clear();}
 	materials.clear();
@@ -1782,6 +1807,7 @@ void building_room_geom_t::create_vbos() {
 		case TYPE_CHAIR: add_chair(*i, tscale); break;
 		case TYPE_STAIR: add_stair(*i, tscale); break;
 		case TYPE_ELEVATOR: assert(0); // not yet implemented
+		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
 		default: assert(0); // undefined type
 		}
 	} // for i
