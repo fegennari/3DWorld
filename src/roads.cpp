@@ -151,7 +151,7 @@ namespace stoplight_ns {
 		if (num_conn == 2) return GREEN_LIGHT;
 		stoplight_t future_self(*this);
 		future_self.ffwd_to_future(2.0); // yellow light time = 2.0s
-		return (future_self.red_light(dim, dir, turn) ? YELLOW_LIGHT : GREEN_LIGHT);
+		return (future_self.red_light(dim, dir, turn) ? (unsigned)YELLOW_LIGHT : (unsigned)GREEN_LIGHT);
 	}
 	unsigned stoplight_t::get_future_light_state(bool dim, bool dir, unsigned turn, float future_seconds) const {
 		if (future_seconds == 0.0) {return get_light_state(dim, dir, turn);}
