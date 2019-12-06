@@ -1414,6 +1414,25 @@ public:
 		s.add_uniform_float("tex_scale_t", tsy);
 	}
 
+	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_windows.empty()) return; // no windows
+		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
+		float const lights_draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+
+		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+			if (!g->bcube.closest_dist_less_than(camera_xlated, lights_draw_dist)) continue; // too far
+			if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+
+			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
+				building_t const &b(get_building(bi->ix));
+				if (!b.has_room_geom()) continue; // no interior room geom, skip
+				if (!b.bcube.closest_dist_less_than(camera_xlated, lights_draw_dist)) continue; // too far away
+				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+				b.add_room_lights(xlate, lights_bcube);
+			} // for bi
+		} // for g
+	}
+
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
@@ -1454,7 +1473,6 @@ public:
 			// Is this based on building center dir/dist? Dir/dist to closest exterior wall? Real indirect lighting?
 			// Is it specified per-tile or per-building? If per-tile, do we need lighting stored in a texture? If per building, then need to make one draw call per building
 			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
-			//s.begin_simple_textured_shader(min_alpha, 1);
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
@@ -2099,6 +2117,7 @@ void clear_building_vbos() {
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
+void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {building_creator.add_interior_lights(xlate, lights_bcube);} // secondary buildings only for now
 // cars + peds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}

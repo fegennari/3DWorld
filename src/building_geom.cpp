@@ -1622,6 +1622,19 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	} // for i
 }
 
+void building_t::add_room_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+
+	if (!has_room_geom()) return; // error?
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (i->type != TYPE_LIGHT || !i->dir) continue; // not a light, or light not on
+		point center(i->get_cube_center());
+		center.z = i->z1();
+		// TODO_INT: WRITE
+	} // for i
+}
+
 void building_t::gen_and_draw_room_geom(shader_t &s, unsigned building_ix) {
 	if (!interior) return;
 	rand_gen_t rgen;

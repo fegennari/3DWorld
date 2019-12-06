@@ -3024,6 +3024,7 @@ public:
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		unsigned car_headlights_end(dl_sources.size());
 		road_gen.add_city_lights(xlate, lights_bcube);
+		add_building_interior_lights(xlate, lights_bcube);
 		//cout << "dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
 		unsigned const max_dlights(min(1024U, city_params.max_lights)); // Note: should be <= the value used in upload_dlights_textures()
 
@@ -3039,7 +3040,7 @@ public:
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
 	}
-	bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());}
+	bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());} // FIXME: || buildings_have_interior_lights()?
 	void next_ped_animation() {ped_manager.next_animation();}
 	void free_context() {car_manager.free_context(); ped_manager.free_context();}
 	unsigned get_model_gpu_mem() const {return (ped_manager.get_model_gpu_mem() + car_manager.get_model_gpu_mem());}

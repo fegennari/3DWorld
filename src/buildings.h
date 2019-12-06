@@ -286,6 +286,7 @@ struct building_t : public building_geom_t {
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
+	void add_room_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix);
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
@@ -312,5 +313,6 @@ void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &s
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_dist=0.0);
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened=0);
+void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 
 #endif // _BUILDING_H_
