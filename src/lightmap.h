@@ -158,7 +158,7 @@ struct local_smap_data_t;
 class light_source { // size = 92
 
 protected:
-	bool dynamic, enabled, user_placed, is_cube_face, is_cube_light;
+	bool dynamic, enabled, user_placed, is_cube_face, is_cube_light, no_shadows;
 	unsigned smap_index, cube_eflags, num_dlight_rays; // index of shadow map texture/data
 	float radius, radius_inv, r_inner, bwidth, near_clip;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
@@ -168,7 +168,7 @@ protected:
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
+	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), no_shadows(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
 	radius(0.0f), radius_inv(0.0f), r_inner(0.0f), bwidth(0.0f), near_clip(0.0f), pos(all_zeros), pos2(all_zeros), dir(zero_vector), color(BLACK) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
@@ -200,8 +200,10 @@ public:
 	bool is_enabled()     const {return enabled;}
 	bool is_user_placed() const {return user_placed;}
 	bool smap_enabled()   const {return (smap_index != 0 || is_cube_face);}
+	bool has_no_shadows() const {return no_shadows;}
 	bool is_enabled_spotlight() const {return (is_enabled() && !is_cube_face && !is_cube_light && !is_line_light() && is_very_directional());}
 	void set_enabled(bool enabled_) {enabled = enabled_;}
+	void disable_shadows() {no_shadows = 1;}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void pack_to_floatv(float *data) const;
 	void combine_with(light_source const &l);

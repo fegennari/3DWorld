@@ -2828,6 +2828,7 @@ struct city_smap_manager_t {
 		
 		// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
 		for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
+			if (i->has_no_shadows()) continue; // shadows not enabled for this light
 			if (!i->is_very_directional()) continue; // not a spotlight
 			//if (!city_params.car_shadows && i->is_dynamic()) continue; // skip headlights (optimization)
 			if (sz_cmp.get_value(*i) < 0.002) break; // light influence is too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail

@@ -49,7 +49,7 @@ point bind_point_t::get_updated_bind_pos() const {
 
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc) :
-	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
+	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), no_shadows(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
 	radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius), r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
@@ -515,7 +515,7 @@ void light_source::draw_light_cone(shader_t &shader, float alpha) const {
 
 bool light_source_trig::is_shadow_map_enabled() const {
 
-	if (!use_smap || shadow_map_sz == 0 || !enable_dlight_shadows) return 0;
+	if (!use_smap || no_shadows || shadow_map_sz == 0 || !enable_dlight_shadows) return 0;
 	if (is_line_light())    return 0; // line lights don't support shadow maps
 	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
 	//if (!is_enabled())      return 0; // disabled or destroyed
