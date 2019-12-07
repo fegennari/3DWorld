@@ -200,11 +200,11 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	}
 }
 
-void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap, float min_alpha) {
+void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap, float min_alpha, bool force_tsl) {
 
 	cube_t const lights_bcube(get_city_lights_bcube());
 	use_dlights &= !lights_bcube.is_zero_area();
-	setup_smoke_shaders(s, min_alpha, 0, 0, 0, 1, use_dlights, 0, 0, (use_smap ? 2 : 0), use_bmap, 0, use_dlights, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+	setup_smoke_shaders(s, min_alpha, 0, 0, 0, 1, use_dlights, 0, 0, (use_smap ? 2 : 0), use_bmap, 0, use_dlights, force_tsl, 0.0, 0.0, 0, 0, 1); // is_outside=1
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
 }
 

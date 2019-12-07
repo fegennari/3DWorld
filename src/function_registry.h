@@ -354,7 +354,7 @@ void get_city_bcubes(vect_cube_t &bcubes);
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only);
 void get_city_plot_bcubes(vector<cube_with_zval_t> &bcubes);
 void next_city_frame(bool use_threads_2_3);
-void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap, float min_alpha=0.0);
+void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap, float min_alpha=0.0, bool force_tsl=0);
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 void setup_city_lights(vector3d const &xlate);
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll=1, unsigned check_mask=3);
