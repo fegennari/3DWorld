@@ -14,8 +14,11 @@ using std::string;
 
 bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const DRAW_INSIDE_WINDOWS   = 1; // works on buildings that the player has entered; has drawing artifacts when looking through a multi-part building
+bool const ADD_ROOM_LIGHTS       = 1;
 int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
 float const WIND_LIGHT_ON_RAND   = 0.08;
+
+bool camera_in_building(0);
 
 extern bool start_in_inf_terrain, draw_building_interiors;
 extern int rand_gen_index, display_mode;
@@ -25,6 +28,7 @@ building_params_t global_building_params;
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
+bool add_room_lights() {return (ADD_ROOM_LIGHTS && camera_in_building);}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_texture(tid);
@@ -1402,8 +1406,14 @@ public:
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
 	static void set_interior_lighting(shader_t &s) {
-		s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
-		s.add_uniform_float("ambient_scale", 1.2); // brighter ambient
+		if (add_room_lights()) {
+			s.add_uniform_float("diffuse_scale", 0.0); // no diffuse and specular lighting for sun/moon
+			s.add_uniform_float("ambient_scale", 0.5); // dimmer ambient
+		}
+		else {
+			s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
+			s.add_uniform_float("ambient_scale", 1.2); // brighter ambient
+		}
 	}
 	static void reset_interior_lighting(shader_t &s) {
 		s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
@@ -1415,9 +1425,11 @@ public:
 	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+		if (!add_room_lights()) return;
 		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_windows.empty()) return; // no windows
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
-		float const lights_draw_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		float const lights_draw_dist(0.2f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		vector<point> points; // reused temporary
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 			if (!g->bcube.closest_dist_less_than(camera_xlated, lights_draw_dist)) continue; // too far
@@ -1427,8 +1439,11 @@ public:
 				building_t const &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!b.bcube.closest_dist_less_than(camera_xlated, lights_draw_dist)) continue; // too far away
+				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
+				// for now we limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
+				if (!camera_in_this_building) continue; // camera not in building
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-				b.add_room_lights(xlate, lights_bcube);
+				b.add_room_lights(xlate, lights_draw_dist, camera_in_this_building, lights_bcube);
 			} // for bi
 		} // for g
 	}
@@ -1465,14 +1480,13 @@ public:
 		translate_to(xlate);
 		building_draw_t interior_wind_draw;
 		vector<vertex_range_t> per_bcs_exclude;
+		bool this_frame_camera_in_building(0);
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			// TODO_INT: Add room lights? Use normal-based lighting (top surface bright, bottom surface dark, sides that face exterior walls/windows brighter)?
-			// Is this based on building center dir/dist? Dir/dist to closest exterior wall? Real indirect lighting?
-			// Is it specified per-tile or per-building? If per-tile, do we need lighting stored in a texture? If per building, then need to make one draw call per building
-			setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
+			//setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
+			city_shader_setup(s, add_room_lights(), 0, use_bmap, min_alpha, 1); // force_tsl=1 for doors
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
@@ -1503,9 +1517,11 @@ public:
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
 						per_bcs_exclude[i - bcs.begin()] = b.ext_side_qv_range;
+						this_frame_camera_in_building = 1;
 					} // for bi
 				} // for g
 			} // for i
+			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
 			s.end_shader();
 
@@ -1533,13 +1549,10 @@ public:
 				glDisable(GL_STENCIL_TEST);
 			}
 		}
-		// main/batched draw pass - use two sided lighting so that it's correct on both sides of exterior walls
-		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 1, 0.0, 0.0, 0, 0, 1); // force_tsl=1; is_outside=1
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
-
 		if (transparent_windows) {
 			// draw back faces of buildings
 			bool const use_int_wall_tex = 1;
+			city_shader_setup(s, add_room_lights(), 0, use_bmap, min_alpha, 1); // force_tsl=1
 			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
@@ -1570,7 +1583,7 @@ public:
 				if (force_wall_tex) {set_texture_scale(s, 1.0, 1.0);} // reset
 			} // for i
 			reset_interior_lighting(s);
-			s.disable();
+			s.end_shader();
 			glCullFace(GL_BACK); // draw front faces
 			// draw windows in depth pass to create holes
 			// TODO_INT: what about holes for doors that the player can open and enter?
@@ -1580,8 +1593,11 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			holes_shader.end_shader();
-			s.enable();
 		}
+		// main/batched draw pass - use two sided lighting so that it's correct on both sides of exterior walls
+		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 1, 0.0, 0.0, 0, 0, 1); // force_tsl=1; is_outside=1
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
+
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) { // draw front faces of buildings
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(s, ix, shadow_only);}

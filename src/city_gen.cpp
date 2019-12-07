@@ -22,7 +22,7 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
-extern bool enable_dlight_shadows, dl_smap_enabled;
+extern bool enable_dlight_shadows, dl_smap_enabled, have_building_room_lights, draw_building_interiors;
 extern int rand_gen_index, display_mode, animate2;
 extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
@@ -3040,8 +3040,10 @@ public:
 		city_smap_manager.setup_shadow_maps(dl_sources, cpos, car_headlights_end);
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
+		//cout << TXT(dl_sources.size()) << endl; // TESTING
 	}
-	bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());} // FIXME: || buildings_have_interior_lights()?
+	bool enable_lights() const {return ((draw_building_interiors && have_building_room_lights && add_room_lights()) ||
+		is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());}
 	void next_ped_animation() {ped_manager.next_animation();}
 	void free_context() {car_manager.free_context(); ped_manager.free_context();}
 	unsigned get_model_gpu_mem() const {return (ped_manager.get_model_gpu_mem() + car_manager.get_model_gpu_mem());}

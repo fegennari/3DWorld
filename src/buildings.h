@@ -286,7 +286,7 @@ struct building_t : public building_geom_t {
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
-	void add_room_lights(vector3d const &xlate, cube_t &lights_bcube) const;
+	void add_room_lights(vector3d const &xlate, float lights_draw_dist, bool camera_in_building, cube_t &lights_bcube) const;
 	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix);
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
@@ -307,6 +307,7 @@ inline void clip_low_high(float &t0, float &t1) {
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
 }
 
+bool add_room_lights();
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);

@@ -4,10 +4,14 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+#include "lightmap.h" // for light_source
 
 float const FLOOR_THICK_VAL = 0.1; // 10% of floor spacing
 
+bool have_building_room_lights(0);
+
 extern building_params_t global_building_params;
+extern vector<light_source> dl_sources;
 
 
 void building_t::set_z_range(float z1, float z2) {
@@ -1582,6 +1586,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				light.z1() = light.z2() - 0.5*fc_thick;
 				bool const is_on(rgen.rand_bool()); // half the lights are on
 				objs.emplace_back(light, TYPE_LIGHT, light_dim, is_on); // encode is_on in dir flag
+				have_building_room_lights = 1; // set a global variable; unclear how else we can efficiently/easily track this
 			}
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
@@ -1622,16 +1627,27 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	} // for i
 }
 
-void building_t::add_room_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+void building_t::add_room_lights(vector3d const &xlate, float lights_draw_dist, bool camera_in_building, cube_t &lights_bcube) const {
 
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	float const window_vspacing(get_window_vspace());
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !i->dir) continue; // not a light, or light not on
-		point center(i->get_cube_center());
-		center.z = i->z1();
-		// TODO_INT: WRITE
+		// player is on a different floor and can't see a light from the floor above/below (unless on the stairs?)
+		if (camera_in_building && (camera_pdu.pos.z < (i->z2() - window_vspacing) || camera_pdu.pos.z > i->z2())) continue;
+		point lpos(i->get_cube_center());
+		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
+		lpos.z = i->z1();
+		point const lpos_camera_space(lpos + xlate);
+		if (!dist_less_than(lpos_camera_space, camera_pdu.pos, lights_draw_dist)) continue;
+		float const light_radius(6.0*max(i->dx(), i->dy()));
+		if (!camera_pdu.sphere_visible_test(lpos_camera_space, light_radius)) continue; // VFC
+		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
+		max_eq(lights_bcube.z2(), (lpos.z + light_radius));
+		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4); // points down, white for now, 180 degree FOV
+		dl_sources.back().disable_shadows(); // TODO_INT: make this work: requires drawing building interior into shadow maps rather than exterior
 	} // for i
 }
 
