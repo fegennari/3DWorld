@@ -1407,8 +1407,8 @@ public:
 	}
 	static void set_interior_lighting(shader_t &s) {
 		if (add_room_lights()) {
-			s.add_uniform_float("diffuse_scale", 0.0); // no diffuse and specular lighting for sun/moon
-			s.add_uniform_float("ambient_scale", 0.5); // dimmer ambient
+			s.add_uniform_float("diffuse_scale", 0.1); // very small diffuse and specular lighting for sun/moon
+			s.add_uniform_float("ambient_scale", 0.6); // dimmer ambient
 		}
 		else {
 			s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
