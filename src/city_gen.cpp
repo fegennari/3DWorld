@@ -22,8 +22,8 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
-extern bool enable_dlight_shadows, dl_smap_enabled, have_building_room_lights, draw_building_interiors;
-extern int rand_gen_index, display_mode, animate2;
+extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors;
+extern int rand_gen_index, display_mode, animate2, frame_counter;
 extern unsigned shadow_map_sz;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern vector<light_source> dl_sources;
@@ -200,10 +200,9 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	}
 }
 
-void city_shader_setup(shader_t &s, bool use_dlights, bool use_smap, int use_bmap, float min_alpha, bool force_tsl) {
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap, float min_alpha, bool force_tsl) {
 
-	cube_t const lights_bcube(get_city_lights_bcube());
-	use_dlights &= !lights_bcube.is_zero_area();
+	use_dlights &= (!lights_bcube.is_zero_area() && !dl_sources.empty());
 	setup_smoke_shaders(s, min_alpha, 0, 0, 0, 1, use_dlights, 0, 0, (use_smap ? 2 : 0), use_bmap, 0, use_dlights, force_tsl, 0.0, 0.0, 0, 0, 1); // is_outside=1
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
 }
@@ -219,7 +218,7 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	use_smap    = (shadow_map_enabled() && !shadow_only);
 	if (!use_smap && !always_setup_shader) return;
 	if (shadow_only) {s.begin_simple_textured_shader();}
-	else {city_shader_setup(s, use_dlights, use_smap, (use_bmap && !shadow_only), 0.01);}
+	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, use_smap, (use_bmap && !shadow_only), 0.01);}
 }
 void draw_state_t::end_draw() {
 	emit_now = 0;
@@ -234,7 +233,7 @@ void draw_state_t::end_draw() {
 void draw_state_t::ensure_shader_active() {
 	if (s.is_setup()) return; // already active
 	if (shadow_only) {s.begin_color_only_shader();}
-	else {city_shader_setup(s, use_dlights, 0, use_bmap, 0.01);} // no smap
+	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, 0, use_bmap, 0.01);} // no smap
 }
 void draw_state_t::draw_and_clear_light_flares() {
 	if (light_psd.empty()) return; // no lights to draw
@@ -2835,9 +2834,6 @@ struct city_smap_manager_t {
 			++num_used;
 		} // for i
 	}
-	void clear_all_smaps(vector<light_source> &light_sources) {
-		for (auto i = light_sources.begin(); i != light_sources.end(); ++i) {i->release_smap();}
-	}
 };
 
 
@@ -2906,18 +2902,56 @@ void ped_manager_t::choose_new_ped_plot_pos(pedestrian_t &ped) {
 unsigned ped_manager_t::get_next_plot(pedestrian_t &ped, int exclude_plot) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot, exclude_plot);}
 
 
-class city_gen_t : public city_plot_gen_t {
+void city_lights_manager_t::tighten_light_bcube_bounds(vector<light_source> const &lights) {
+	cube_t tight_bcube;
+	for (auto l = lights.begin(); l != lights.end(); ++l) {tight_bcube.assign_or_union_with_sphere(l->get_pos(), l->get_radius());}
+	//cout << TXT(bcube.dx()) << TXT(bcube.dy()) << TXT(tight_bcube.dx()) << TXT(tight_bcube.dy()) << endl;
+	lights_bcube.intersect_with_cube(tight_bcube); // clip the original cube to the tight cube (better to just set to tight cube?)
+}
+
+void city_lights_manager_t::clamp_to_max_lights(vector3d const &xlate, vector<light_source> &lights) {
+	unsigned const max_dlights(min(1024U, city_params.max_lights)); // Note: should be <= the value used in upload_dlights_textures()
+	//cout << "dlights: " << lights.size() << ", bcube: " << lights_bcube.str() << endl;
+
+	if (lights.size() > max_dlights) {
+		if (lights.size() > 4*max_dlights) { // too many lights, reduce light radius for next frame
+			light_radius_scale *= 0.95;
+			cout << "Too many city lights: " << lights.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
+		}
+		filter_dlights_to(lights, max_dlights, (camera_pdu.pos - xlate));
+	}
+}
+
+bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float light_radius, vector<light_source> &lights) {
+	for (auto i = lights.begin(); i != lights.end(); ++i) {i->release_smap();} // must be done before clearing dlights
+	clear_dynamic_lights();
+	lights_bcube.set_to_zeros();
+	dl_smap_enabled = 0; // here for safety, needed for buildings flow
+	if (!enable_lights() && !prev_had_lights) return 0; // only have lights at night
+	lights_bcube = cube_t(camera_pdu.pos - xlate);
+	lights_bcube.expand_by(light_radius);
+	lights_bcube.z1() =  FLT_MAX;
+	lights_bcube.z2() = -FLT_MAX;
+	return 1;
+}
+
+void city_lights_manager_t::finalize_lights(vector<light_source> &lights) {
+	add_dynamic_lights_city(lights_bcube);
+	upload_dlights_textures(lights_bcube);
+	prev_had_lights = !dl_sources.empty();
+}
+
+
+class city_gen_t : public city_plot_gen_t, public city_lights_manager_t {
 
 	city_road_gen_t road_gen;
 	car_manager_t car_manager;
 	ped_manager_t ped_manager;
 	city_smap_manager_t city_smap_manager;
-	cube_t lights_bcube;
-	float light_radius_scale;
-	bool prev_had_lights;
+	int prev_city_lights_setup_frame;
 
 public:
-	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager), lights_bcube(all_zeros), light_radius_scale(1.0), prev_had_lights(0) {}
+	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager), prev_city_lights_setup_frame(-1) {}
 
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		unsigned x1(0), y1(0), x2(0), y2(0);
@@ -3012,41 +3046,24 @@ public:
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void setup_city_lights(vector3d const &xlate) {
+		if (world_mode != WMODE_INF_TERRAIN) return; // TT only
+		if (prev_city_lights_setup_frame == frame_counter) return; // already called this frame
+		prev_city_lights_setup_frame = frame_counter;
 		//timer_t timer("City Dlights Setup");
-		city_smap_manager.clear_all_smaps(dl_sources);
-		clear_dynamic_lights();
-		lights_bcube.set_to_zeros();
-		if (!enable_lights() && !prev_had_lights) return; // only have lights at night
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
-		point const cpos(camera_pdu.pos - xlate);
-		lights_bcube = cube_t(cpos);
-		lights_bcube.expand_by(light_radius);
-		lights_bcube.z1() =  FLT_MAX;
-		lights_bcube.z2() = -FLT_MAX;
+		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
+		check_gl_error(430);
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
-		add_building_interior_lights(xlate, lights_bcube);
-		//cout << "dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
-		unsigned const max_dlights(min(1024U, city_params.max_lights)); // Note: should be <= the value used in upload_dlights_textures()
-
-		if (dl_sources.size() > max_dlights) {
-			if (dl_sources.size() > 4*max_dlights) { // too many lights, reduce light radius for next frame
-				light_radius_scale *= 0.95;
-				cout << "Too many city lights: " << dl_sources.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
-			}
-			filter_dlights_to(dl_sources, max_dlights, cpos);
-		}
-		city_smap_manager.setup_shadow_maps(dl_sources, cpos);
-		add_dynamic_lights_city(lights_bcube);
-		upload_dlights_textures(lights_bcube);
-		prev_had_lights = !dl_sources.empty();
+		clamp_to_max_lights(xlate, dl_sources);
+		city_smap_manager.setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
+		finalize_lights(dl_sources);
+		check_gl_error(431);
 	}
-	bool enable_lights() const {return ((draw_building_interiors && have_building_room_lights && add_room_lights()) ||
-		is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());}
+	virtual bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());} // only have lights at night
 	void next_ped_animation() {ped_manager.next_animation();}
 	void free_context() {car_manager.free_context(); ped_manager.free_context();}
 	unsigned get_model_gpu_mem() const {return (ped_manager.get_model_gpu_mem() + car_manager.get_model_gpu_mem());}
-	cube_t get_lights_bcube() const {return lights_bcube;}
 }; // city_gen_t
 
 city_gen_t city_gen;
@@ -3070,6 +3087,7 @@ void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.ge
 void get_city_plot_bcubes(vect_cube_with_zval_t &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
+void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {
 	if (!have_cities()) return 0;

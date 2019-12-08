@@ -20,9 +20,10 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0);
 
-extern bool start_in_inf_terrain, draw_building_interiors;
-extern int rand_gen_index, display_mode;
+extern bool start_in_inf_terrain, draw_building_interiors, have_building_room_lights;
+extern int rand_gen_index, display_mode, camera_coll_smooth;
 extern point sun_pos;
+extern vector<light_source> dl_sources;
 
 building_params_t global_building_params;
 
@@ -1016,6 +1017,29 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 }
 
 
+struct building_lights_manager_t : public city_lights_manager_t {
+	void setup_building_lights(vector3d const &xlate) {
+		//timer_t timer("Building Dlights Setup");
+		float const light_radius(0.07*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
+		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
+		check_gl_error(440);
+		add_building_interior_lights(xlate, lights_bcube);
+		clamp_to_max_lights(xlate, dl_sources);
+		// clip lights_bcube to tight bounds around dl_sources for better dlights texture utilization (optimization)
+		if (!dl_sources.empty() && camera_coll_smooth) {tighten_light_bcube_bounds(dl_sources);} // FIXME: j key
+		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
+		finalize_lights(dl_sources);
+		check_gl_error(441);
+	}
+	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
+		// TODO_INT: Nothing to do here yet; see city_smap_manager_t in city_gen.cc
+	}
+	virtual bool enable_lights() const {return (draw_building_interiors && have_building_room_lights && add_room_lights());}
+}; // city_gen_t
+
+building_lights_manager_t building_lights_manager;
+
+
 class building_creator_t {
 
 	unsigned grid_sz, gpu_mem_usage;
@@ -1451,6 +1475,7 @@ public:
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
+		building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -1476,17 +1501,19 @@ public:
 		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		bool const draw_inside_windows(DRAW_INSIDE_WINDOWS && transparent_windows);
+		bool const enable_room_lights(add_room_lights());
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw;
 		vector<vertex_range_t> per_bcs_exclude;
 		bool this_frame_camera_in_building(0);
+		cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			city_shader_setup(s, add_room_lights(), 0, use_bmap, min_alpha, 1); // force_tsl=1 for doors
+			city_shader_setup(s, lights_bcube, enable_room_lights, 0, use_bmap, min_alpha, 1); // force_tsl=1 for doors
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
@@ -1552,7 +1579,7 @@ public:
 		if (transparent_windows) {
 			// draw back faces of buildings
 			bool const use_int_wall_tex = 1;
-			city_shader_setup(s, add_room_lights(), 0, use_bmap, min_alpha, 1); // force_tsl=1
+			city_shader_setup(s, lights_bcube, enable_room_lights, 0, use_bmap, min_alpha, 1); // force_tsl=1
 			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
@@ -1569,7 +1596,7 @@ public:
 					set_texture_scale(s, mat.wall_tex.tscale_x/mat.side_tex.tscale_x, mat.wall_tex.tscale_y/mat.side_tex.tscale_y); // uses first building, not quite right
 					mat.wall_tex.unset_gl(s);
 				}
-				if (draw_inside_windows) {
+				if (!per_bcs_exclude.empty()) {
 					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
 					// draw this range using stencil test but the rest of the buildings without stencil test
 					exclude = &vr; // use this exclude
@@ -1593,10 +1620,15 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			holes_shader.end_shader();
+			glDisable(GL_CULL_FACE);
 		}
+		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
+		setup_city_lights(xlate);
+
 		// main/batched draw pass - use two sided lighting so that it's correct on both sides of exterior walls
 		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 1, 0.0, 0.0, 0, 0, 1); // force_tsl=1; is_outside=1
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
+		glEnable(GL_CULL_FACE);
 
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) { // draw front faces of buildings
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
@@ -1622,10 +1654,10 @@ public:
 		glDisable(GL_CULL_FACE);
 		s.end_shader();
 
-		// post-pass to render buildings in nearby tiles that have shadow maps
+		// post-pass to render building exteriors in nearby tiles that have shadow maps
 		if (use_tt_smap) {
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
-			city_shader_setup(s, 1, 1, use_bmap, min_alpha); // use_smap=1, use_dlights=1
+			city_shader_setup(s, get_city_lights_bcube(), 1, 1, use_bmap, min_alpha); // use_smap=1, use_dlights=1
 			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
 

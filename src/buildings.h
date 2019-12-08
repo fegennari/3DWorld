@@ -12,6 +12,8 @@ bool const ADD_BUILDING_INTERIORS  = 1;
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 unsigned const MAX_CYLIN_SIDES     = 36;
 
+class light_source;
+
 struct building_occlusion_state_t {
 	point pos;
 	vector3d xlate;
@@ -307,6 +309,22 @@ struct building_draw_utils {
 	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, float expand=0.0);
 };
 
+class city_lights_manager_t {
+protected:
+	cube_t lights_bcube;
+	float light_radius_scale;
+	bool prev_had_lights;
+public:
+	city_lights_manager_t() : lights_bcube(all_zeros), light_radius_scale(1.0), prev_had_lights(0) {}
+	virtual ~city_lights_manager_t() {}
+	cube_t get_lights_bcube() const {return lights_bcube;}
+	void tighten_light_bcube_bounds(vector<light_source> const &lights);
+	void clamp_to_max_lights(vector3d const &xlate, vector<light_source> &lights);
+	bool begin_lights_setup(vector3d const &xlate, float light_radius, vector<light_source> &lights);
+	void finalize_lights(vector<light_source> &lights);
+	virtual bool enable_lights() const = 0;
+};
+
 inline void clip_low_high(float &t0, float &t1) {
 	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
@@ -320,5 +338,8 @@ bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusio
 bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_dist=0.0);
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened=0);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
+// functions in city_gen.cc
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap, float min_alpha=0.0, bool force_tsl=0);
+void setup_city_lights(vector3d const &xlate);
 
 #endif // _BUILDING_H_
