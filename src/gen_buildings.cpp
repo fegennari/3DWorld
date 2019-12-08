@@ -21,7 +21,7 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 bool camera_in_building(0);
 
 extern bool start_in_inf_terrain, draw_building_interiors;
-extern int rand_gen_index, display_mode, camera_coll_smooth;
+extern int rand_gen_index, display_mode;
 extern point sun_pos;
 extern vector<light_source> dl_sources;
 
@@ -1020,19 +1020,18 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 struct building_lights_manager_t : public city_lights_manager_t {
 	void setup_building_lights(vector3d const &xlate) {
 		//timer_t timer("Building Dlights Setup");
-		float const light_radius(0.07*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
+		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		check_gl_error(440);
 		add_building_interior_lights(xlate, lights_bcube);
 		clamp_to_max_lights(xlate, dl_sources);
-		// clip lights_bcube to tight bounds around dl_sources for better dlights texture utilization (optimization)
-		if (!dl_sources.empty() && camera_coll_smooth) {tighten_light_bcube_bounds(dl_sources);} // FIXME: j key
+		//if (display_mode & 0x10) {tighten_light_bcube_bounds(dl_sources);} // clip bcube to tight bounds around lights for better dlights texture utilization (optimization)
 		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
 		finalize_lights(dl_sources);
 		check_gl_error(441);
 	}
 	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
-		// TODO_INT: Nothing to do here yet; see city_smap_manager_t in city_gen.cc
+		// TODO_INT: Nothing to do here yet; see city_smap_manager_t in city_gen.cc; requires drawing building interior into shadow maps rather than exterior
 	}
 	virtual bool enable_lights() const {return (draw_building_interiors && add_room_lights());}
 }; // city_gen_t
@@ -1452,22 +1451,21 @@ public:
 		if (!add_room_lights()) return;
 		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_windows.empty()) return; // no windows
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
-		float const lights_draw_dist(0.2f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		vector<point> points; // reused temporary
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-			if (!g->bcube.closest_dist_less_than(camera_xlated, lights_draw_dist)) continue; // too far
+			if (!lights_bcube.intersects_xy(g->bcube)) continue; // not within light volume (too far from camera)
 			if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 
 			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 				building_t const &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
-				if (!b.bcube.closest_dist_less_than(camera_xlated, lights_draw_dist)) continue; // too far away
+				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 				// for now we limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (!camera_in_this_building) continue; // camera not in building
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-				b.add_room_lights(xlate, lights_draw_dist, camera_in_this_building, lights_bcube);
+				b.add_room_lights(xlate, camera_in_this_building, lights_bcube);
 			} // for bi
 		} // for g
 	}

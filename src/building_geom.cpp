@@ -1419,7 +1419,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
-		// TODO_INT: place on the side of the hallway rather than the center?
 		bool const add_elevator(0);
 		if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
 		bool const stairs_dim(hall.dx() < hall.dy()); // same orientation as the hallway
@@ -1444,9 +1443,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			//interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it?
 
 			if (add_elevator) {
-				// TODO_INT: make it square, always 2*doorway_width
 				float const width(1.6*doorway_width), hwidth(0.5*width);
-				float const x(0.0), y(0.0);
+				float const x(0.0), y(0.0); // TODO_INT: generate these randomly
 				cube_t elevator((x - hwidth), (x + hwidth), (y - hwidth), (y + hwidth), room.z1(), room.z2()); // elevator shaft
 				interior->elevators.push_back(elevator);
 			}
@@ -1628,7 +1626,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	} // for i
 }
 
-void building_t::add_room_lights(vector3d const &xlate, float lights_draw_dist, bool camera_in_building, cube_t &lights_bcube) const {
+void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building, cube_t &lights_bcube) const {
 
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1641,14 +1639,12 @@ void building_t::add_room_lights(vector3d const &xlate, float lights_draw_dist, 
 		point lpos(i->get_cube_center());
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		lpos.z = i->z1();
-		point const lpos_camera_space(lpos + xlate);
-		if (!dist_less_than(lpos_camera_space, camera_pdu.pos, lights_draw_dist)) continue;
 		float const light_radius(6.0*max(i->dx(), i->dy()));
-		if (!camera_pdu.sphere_visible_test(lpos_camera_space, light_radius)) continue; // VFC
+		if (!camera_pdu.sphere_visible_test((lpos + xlate), light_radius)) continue; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4); // points down, white for now, 180 degree FOV
-		dl_sources.back().disable_shadows(); // TODO_INT: make this work: requires drawing building interior into shadow maps rather than exterior
+		dl_sources.back().disable_shadows();
 	} // for i
 }
 

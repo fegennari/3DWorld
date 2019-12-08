@@ -2903,6 +2903,7 @@ unsigned ped_manager_t::get_next_plot(pedestrian_t &ped, int exclude_plot) const
 
 
 void city_lights_manager_t::tighten_light_bcube_bounds(vector<light_source> const &lights) {
+	if (lights.empty()) return; // nothing to do
 	cube_t tight_bcube;
 	for (auto l = lights.begin(); l != lights.end(); ++l) {tight_bcube.assign_or_union_with_sphere(l->get_pos(), l->get_radius());}
 	//cout << TXT(bcube.dx()) << TXT(bcube.dy()) << TXT(tight_bcube.dx()) << TXT(tight_bcube.dy()) << endl;
