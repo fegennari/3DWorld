@@ -182,6 +182,7 @@ public:
 	float get_beamwidth()        const {return bwidth;}
 	point const &get_pos()       const {return pos;}
 	point const &get_pos2()      const {return pos2;}
+	sphere_t get_bsphere()       const {return sphere_t(pos, radius);}
 	float get_intensity_at(point const &p, point &updated_lpos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, bool clip_to_scene_bcube=0, vector3d const &bounds_offset=zero_vector) const;

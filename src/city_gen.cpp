@@ -2813,11 +2813,10 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 }
 
 struct city_smap_manager_t {
-	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned car_headlights_end) {
+	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
 		unsigned const num_smaps(min((unsigned)light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
 		dl_smap_enabled = 0;
 		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
-		// TODO: use car_headlights_end to merge adjacent car headlights? (must be done before the sort)
 		sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
 		cmp_light_source_sz_dist sz_cmp(cpos);
 		unsigned num_used(0);
@@ -2915,9 +2914,10 @@ class city_gen_t : public city_plot_gen_t {
 	city_smap_manager_t city_smap_manager;
 	cube_t lights_bcube;
 	float light_radius_scale;
+	bool prev_had_lights;
 
 public:
-	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager), lights_bcube(all_zeros), light_radius_scale(1.0) {}
+	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager), lights_bcube(all_zeros), light_radius_scale(1.0), prev_had_lights(0) {}
 
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		unsigned x1(0), y1(0), x2(0), y2(0);
@@ -3011,7 +3011,7 @@ public:
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void setup_city_lights(vector3d const &xlate) {
-		bool const prev_had_lights(!dl_sources.empty());
+		//timer_t timer("City Dlights Setup");
 		city_smap_manager.clear_all_smaps(dl_sources);
 		clear_dynamic_lights();
 		lights_bcube.set_to_zeros();
@@ -3023,7 +3023,6 @@ public:
 		lights_bcube.z1() =  FLT_MAX;
 		lights_bcube.z2() = -FLT_MAX;
 		car_manager.add_car_headlights(xlate, lights_bcube);
-		unsigned car_headlights_end(dl_sources.size());
 		road_gen.add_city_lights(xlate, lights_bcube);
 		add_building_interior_lights(xlate, lights_bcube);
 		//cout << "dlights: " << dl_sources.size() << ", bcube: " << lights_bcube.str() << endl;
@@ -3035,13 +3034,11 @@ public:
 				cout << "Too many city lights: " << dl_sources.size() << ". Reducing light_radius_scale to " << light_radius_scale << endl;
 			}
 			filter_dlights_to(dl_sources, max_dlights, cpos);
-			car_headlights_end = 0; // sort will mix up headlights and streetlights, so we can't use this index below
 		}
-		// FIXME: clip lights_bcube to tight bounds around dl_sources for better dlights texture utilization (optimization)
-		city_smap_manager.setup_shadow_maps(dl_sources, cpos, car_headlights_end);
+		city_smap_manager.setup_shadow_maps(dl_sources, cpos);
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);
-		//cout << TXT(dl_sources.size()) << endl; // TESTING
+		prev_had_lights = !dl_sources.empty();
 	}
 	bool enable_lights() const {return ((draw_building_interiors && have_building_room_lights && add_room_lights()) ||
 		is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());}

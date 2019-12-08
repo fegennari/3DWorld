@@ -1485,7 +1485,6 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			//setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, 0, use_bmap);
 			city_shader_setup(s, add_room_lights(), 0, use_bmap, min_alpha, 1); // force_tsl=1 for doors
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
