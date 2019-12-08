@@ -20,7 +20,7 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0);
 
-extern bool start_in_inf_terrain, draw_building_interiors, have_building_room_lights;
+extern bool start_in_inf_terrain, draw_building_interiors;
 extern int rand_gen_index, display_mode, camera_coll_smooth;
 extern point sun_pos;
 extern vector<light_source> dl_sources;
@@ -1034,7 +1034,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
 		// TODO_INT: Nothing to do here yet; see city_smap_manager_t in city_gen.cc
 	}
-	virtual bool enable_lights() const {return (draw_building_interiors && have_building_room_lights && add_room_lights());}
+	virtual bool enable_lights() const {return (draw_building_interiors && add_room_lights());}
 }; // city_gen_t
 
 building_lights_manager_t building_lights_manager;

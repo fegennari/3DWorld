@@ -8,8 +8,6 @@
 
 float const FLOOR_THICK_VAL = 0.1; // 10% of floor spacing
 
-bool have_building_room_lights(0);
-
 extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
 
@@ -1590,7 +1588,6 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;} // TODO_INT: there are other top of stairs cases where the light is not blocked, should we also flag these?
 				if (is_on)         {flags |= RO_FLAG_LIT;}
 				objs.emplace_back(light, TYPE_LIGHT, light_dim, 0, flags); // dir=0 (unused)
-				have_building_room_lights = 1; // set a global variable; unclear how else we can efficiently/easily track this
 			}
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
