@@ -274,7 +274,7 @@ namespace streetlight_ns {
 		point const lpos(get_lpos());
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) return; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - ldist));
-		max_eq(lights_bcube.z2(), (lpos.z + ldist));
+		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*ldist)); // pointed down - don't extend as far up
 		dl_sources.emplace_back(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH); // points down
 	}
 

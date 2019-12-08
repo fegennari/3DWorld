@@ -3037,6 +3037,7 @@ public:
 			filter_dlights_to(dl_sources, max_dlights, cpos);
 			car_headlights_end = 0; // sort will mix up headlights and streetlights, so we can't use this index below
 		}
+		// FIXME: clip lights_bcube to tight bounds around dl_sources for better dlights texture utilization (optimization)
 		city_smap_manager.setup_shadow_maps(dl_sources, cpos, car_headlights_end);
 		add_dynamic_lights_city(lights_bcube);
 		upload_dlights_textures(lights_bcube);

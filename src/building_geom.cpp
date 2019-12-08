@@ -1645,7 +1645,7 @@ void building_t::add_room_lights(vector3d const &xlate, float lights_draw_dist, 
 		float const light_radius(6.0*max(i->dx(), i->dy()));
 		if (!camera_pdu.sphere_visible_test(lpos_camera_space, light_radius)) continue; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
-		max_eq(lights_bcube.z2(), (lpos.z + light_radius));
+		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4); // points down, white for now, 180 degree FOV
 		dl_sources.back().disable_shadows(); // TODO_INT: make this work: requires drawing building interior into shadow maps rather than exterior
 	} // for i
