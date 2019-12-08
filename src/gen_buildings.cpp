@@ -1454,8 +1454,9 @@ public:
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
-		bool const use_tt_smap(check_tile_smap(0) && (light_valid_and_enabled(0) || light_valid_and_enabled(1))); // check for sun or moon
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
+		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
+		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
