@@ -161,11 +161,16 @@ struct tquad_with_ix_t : public tquad_t {
 
 enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, NUM_TYPES};
 
+// object flags, currently used for room lights
+unsigned char const RO_FLAG_LIT = 0x01; // light is on
+unsigned char const RO_FLAG_TOS = 0x02; // at top of stairs
+
 struct room_object_t : public cube_t {
 	bool dim, dir;
+	unsigned char flags;
 	room_object type;
-	room_object_t() : dim(0), dir(0), type(TYPE_NONE) {}
-	room_object_t(cube_t const &c, room_object type_, bool dim_=0, bool dir_=0) : cube_t(c), dim(dim_), dir(dir_), type(type_) {}
+	room_object_t() : dim(0), dir(0), flags(0), type(TYPE_NONE) {}
+	room_object_t(cube_t const &c, room_object type_, bool dim_=0, bool dir_=0, unsigned char f=0) : cube_t(c), dim(dim_), dir(dir_), flags(f), type(type_) {}
 };
 
 class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t

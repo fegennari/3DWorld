@@ -1572,7 +1572,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 			light.d[dim][0] = room_center[dim] - sz;
 			light.d[dim][1] = room_center[dim] + sz;
 		}
-		bool const add_lights(!interior->is_blocked_by_stairs_or_elevator(light, fc_thick));
+		bool const blocked_by_stairs(interior->is_blocked_by_stairs_or_elevator(light, fc_thick));
 		float z(r->z1());
 
 		// place objects on each floor for this room
@@ -1580,12 +1580,16 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 			room_center.z = z + fc_thick; // floor height
 			// place a table and maybe some chairs near the center of the room 95% of the time
 			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_center, 0.1);}
+			bool const top_of_stairs(blocked_by_stairs && f+1 == num_floors);
 
-			if (add_lights || f+1 == num_floors) { // add a light to the center of the ceiling of this room if there's space (always on top floor)
+			if (!blocked_by_stairs || top_of_stairs) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
-				bool const is_on(rgen.rand_bool()); // half the lights are on
-				objs.emplace_back(light, TYPE_LIGHT, light_dim, is_on); // encode is_on in dir flag
+				bool const is_on((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0); // 50% of lights are on, 75% for top of stairs
+				unsigned char flags(0);
+				if (top_of_stairs) {flags |= RO_FLAG_TOS;} // TODO_INT: there are other top of stairs cases where the light is not blocked, should we also flag these?
+				if (is_on)         {flags |= RO_FLAG_LIT;}
+				objs.emplace_back(light, TYPE_LIGHT, light_dim, 0, flags); // dir=0 (unused)
 				have_building_room_lights = 1; // set a global variable; unclear how else we can efficiently/easily track this
 			}
 			if (z == bcube.z1()) {
@@ -1634,9 +1638,9 @@ void building_t::add_room_lights(vector3d const &xlate, float lights_draw_dist, 
 	float const window_vspacing(get_window_vspace());
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (i->type != TYPE_LIGHT || !i->dir) continue; // not a light, or light not on
-		// player is on a different floor and can't see a light from the floor above/below (unless on the stairs?)
-		if (camera_in_building && (camera_pdu.pos.z < (i->z2() - window_vspacing) || camera_pdu.pos.z > i->z2())) continue;
+		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_LIT)) continue; // not a light, or light not on
+		// player is on a different floor and can't see a light from the floor above/below, unless the light is at the top of the stairs
+		if (camera_in_building && !(i->flags & RO_FLAG_TOS) && (camera_pdu.pos.z < (i->z2() - window_vspacing) || camera_pdu.pos.z > i->z2())) continue;
 		point lpos(i->get_cube_center());
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		lpos.z = i->z1();
@@ -1802,7 +1806,7 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
-	bool const is_on(c.dir);
+	bool const is_on((c.flags & RO_FLAG_LIT) != 0);
 	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
 	get_material(tp).add_cube_to_verts(c, WHITE, EF_Z2); // white, untextured, skip top face
