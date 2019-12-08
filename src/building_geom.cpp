@@ -1801,10 +1801,11 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
-	tid_nm_pair_t tp(WHITE_TEX, tscale);
-	tp.emissive = 1;
-	bool const is_on(c.dir); // we can't change emissive per-object, but we can use it to adjust the color
-	get_material(tp).add_cube_to_verts(c, (is_on ? WHITE : DK_GRAY), EF_Z2); // white, untextured, skip top face
+	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
+	bool const is_on(c.dir);
+	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
+	tp.emissive = is_on;
+	get_material(tp).add_cube_to_verts(c, WHITE, EF_Z2); // white, untextured, skip top face
 }
 
 void building_room_geom_t::clear() {
