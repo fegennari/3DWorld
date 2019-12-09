@@ -12,5 +12,9 @@ Cities:
 - Fences
 
 Building Interiors:
-* Create furniture and other details
-- Add room lights?
+* Add room lights
+  * Draw all floors when outside?
+    * Back face culling of building geometry
+  * Shadows
+    * Shadow draw pass for building interiors (walls, floors, objects)
+* Elevators
