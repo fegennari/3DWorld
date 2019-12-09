@@ -1158,18 +1158,20 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
 	// allocate space for all floors
-	unsigned tot_num_floors(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories
+	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories
 
 	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {
 		bool const has_stairs(!is_house || p == parts.begin());
 		unsigned const cubes_per_floor(has_stairs ? 4 : 1); // account for stairwell cutouts
 		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
-		tot_num_floors   += cubes_per_floor*(num_floors - 1) + 1; // first floor has no cutout
-		tot_num_landings += has_stairs;
+		tot_num_floors     += cubes_per_floor*(num_floors - 1) + 1; // first floor has no cutout
+		tot_num_stairwells += (has_stairs && num_floors > 1);
+		tot_num_landings   += (has_stairs ? (num_floors - 1) : 0);
 	}
 	interior->ceilings.reserve(tot_num_floors);
 	interior->floors  .reserve(tot_num_floors);
 	interior->stair_landings.reserve(tot_num_landings);
+	interior->stairwells.reserve(tot_num_stairwells);
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
@@ -1506,6 +1508,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			subtract_cube_xy(part, stairs, to_add);
 			landings.push_back(stairs);
 			landings.back().z1() = zc; landings.back().z2() = zf;
+			if (f == 1) {interior->stairwells.push_back(stairs);} // only add for first floor
 		}
 		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs along an exterior wall
 			cube_t &c(to_add[i]);
@@ -1615,25 +1618,21 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) {
-		bool const is_elevator(i->dx() == i->dy()); // elevators have square cutouts
+		bool const dim(i->dx() < i->dy()); // longer dim
+		float const tot_len(i->get_sz_dim(dim)), step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs), floor_z(i->z2() - window_vspacing);
+		float z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
+		cube_t stair(*i);
 
-		if (is_elevator) {
-			// TODO_INT: add vertical walls for entire height with door cutout (similar to walls), wall texture on outside and wood texture on inside
-		}
-		else {
-			bool const dim(i->dx() < i->dy()); // longer dim
-			float const tot_len(i->get_sz_dim(dim)), step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs), floor_z(i->z2() - window_vspacing);
-			float z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
-			cube_t stair(*i);
-
-			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
-				stair.d[dim][0] = pos; stair.d[dim][1] = pos + step_len;
-				stair.z1() = max(floor_z, z); // don't go below the floor
-				stair.z2() = z + stair_height;
-				objs.emplace_back(stair, TYPE_STAIR, dim, dir);
-			}
+		for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
+			stair.d[dim][0] = pos; stair.d[dim][1] = pos + step_len;
+			stair.z1() = max(floor_z, z); // don't go below the floor
+			stair.z2() = z + stair_height;
+			objs.emplace_back(stair, TYPE_STAIR, dim, dir);
 		}
 	} // for i
+	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		// TODO_INT: add vertical walls for entire height with door cutout (similar to walls), wall texture on outside and wood texture on inside
+	}
 }
 
 void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building, cube_t &lights_bcube) const {
@@ -1701,8 +1700,7 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 	return 0;
 }
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin) const {
-	// TODO_INT: should use smaller stairs array that covers the entire floor rather than larger stair_landings
-	return (has_bcube_int_xy(c, stair_landings, dmin) || has_bcube_int_xy(c, elevators, dmin));
+	return (has_bcube_int_xy(c, stairwells, dmin) || has_bcube_int_xy(c, elevators, dmin));
 }
 bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
 	cube_t place_area(room);
@@ -1719,6 +1717,7 @@ void building_interior_t::finalize() {
 	remove_excess_cap(rooms);
 	remove_excess_cap(doors);
 	remove_excess_cap(stair_landings);
+	remove_excess_cap(stairwells);
 	remove_excess_cap(elevators);
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }

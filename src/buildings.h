@@ -221,7 +221,7 @@ struct elevator_t : public cube_t {
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
 	uint64_t no_geom_room_mask;
-	vect_cube_t floors, ceilings, walls[2], rooms, doors, stair_landings; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], rooms, doors, stairwells, stair_landings; // walls are split by dim
 	vector<elevator_t> elevators;
 	std::unique_ptr<building_room_geom_t> room_geom;
 
