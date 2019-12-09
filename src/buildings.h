@@ -212,10 +212,17 @@ struct building_room_geom_t {
 	void draw(shader_t &s);
 };
 
+struct elevator_t : public cube_t {
+	bool dim, dir; // door dim/dir
+	elevator_t() : dim(0), dir(0) {}
+	elevator_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
+};
+
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
 	uint64_t no_geom_room_mask;
-	vect_cube_t floors, ceilings, walls[2], rooms, doors, stair_landings, elevators; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], rooms, doors, stair_landings; // walls are split by dim
+	vector<elevator_t> elevators;
 	std::unique_ptr<building_room_geom_t> room_geom;
 
 	building_interior_t() : no_geom_room_mask(0) {}
@@ -335,7 +342,7 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
-bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_dist=0.0);
+template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened=0);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 // functions in city_gen.cc

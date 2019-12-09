@@ -1436,17 +1436,26 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
 		assert(num_avail_rooms > 0); // must have added at least one room
 		unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell
+		float const ewidth(1.6*doorway_width); // for elevators
 
 		for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell in any of them
 			unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
 			cube_t const &room(interior->rooms[stairs_room]);
-			//interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it?
 
 			if (add_elevator) {
-				float const width(1.6*doorway_width), hwidth(0.5*width);
-				float const x(0.0), y(0.0); // TODO_INT: generate these randomly
-				cube_t elevator((x - hwidth), (x + hwidth), (y - hwidth), (y + hwidth), room.z1(), room.z2()); // elevator shaft
-				interior->elevators.push_back(elevator);
+				if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
+				bool placed(0);
+
+				for (unsigned y = 0; y < 2 && !placed; ++y) { // try all 4 corners
+					for (unsigned x = 0; x < 2 && !placed; ++x) {
+						bool const dim(rgen.rand_bool());
+						elevator_t elevator(room, dim, !(dim ? y : x)); // elevator shaft
+						elevator.d[0][!x] = elevator.d[0][x] + (x ? -ewidth : ewidth);
+						elevator.d[1][!y] = elevator.d[1][y] + (y ? -ewidth : ewidth);
+						if (!interior->is_cube_close_to_doorway(elevator)) {interior->elevators.push_back(elevator); placed = 1;} // successfully placed
+					}
+				}
+				if (!placed) continue; // try another room
 			}
 			else { // stairs
 				cube_t cutout(room);
@@ -1479,6 +1488,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				assert(cutout.is_strictly_normalized());
 				stairs = cutout;
 			}
+			//interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it?
 			break; // success - done
 		} // for n
 	}

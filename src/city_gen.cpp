@@ -341,7 +341,7 @@ template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 	return bcube;
 }
 
-bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_dist) {
+template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist) { // T must derive from cube_t
 	cube_t tc(bcube);
 	tc.expand_by(pad_dist);
 
@@ -350,6 +350,9 @@ bool has_bcube_int_xy(cube_t const &bcube, vect_cube_t const &bcubes, float pad_
 	}
 	return 0;
 }
+// explicit instantiations
+template bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t    > const &bcubes, float pad_dist);
+template bool has_bcube_int_xy(cube_t const &bcube, vector<elevator_t> const &bcubes, float pad_dist);
 
 point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 	return point(rgen.rand_uniform(c.x1()+radius, c.x2()-radius), rgen.rand_uniform(c.y1()+radius, c.y2()-radius), c.z1());
