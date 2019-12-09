@@ -715,9 +715,13 @@ public:
 				vert.t[0] = float(i == 1 || i == 2);
 				vert.t[1] = float(i == 2 || i == 3);
 			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR) { // interior door textured/stretched in Y
+			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR) { // interior door textured/stretched in Y, front face
 				vert.t[0] = tex.tscale_x*(i == 1 || i == 2);
 				vert.t[1] = tex.tscale_y*(i == 2 || i == 3);
+			}
+			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR2) { // interior door textured/stretched in Y, back face
+				vert.t[0] = tex.tscale_x*(i == 0 || i == 3);
+				vert.t[1] = tex.tscale_y*(i == 3 || i == 2);
 			}
 			else {assert(0);}
 			if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
@@ -983,8 +987,22 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bool const dim(i->dy() < i->dx());
 				bool const dir(i->d[dim][0] > bcube.get_center_dim(dim)); // determines which way doors open; doors open in from hallways for office buildings
 				float const ty(i->dz()/mat.get_floor_spacing()); // tile door texture across floors
+				tid_nm_pair_t const tp(building_window_gen.get_hdoor_tid(), -1, 1.0, ty);
 				tquad_with_ix_t const door(set_door_from_cube(*i, dim, dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, (DRAW_INTERIOR_DOORS == 2)));
-				bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(building_window_gen.get_hdoor_tid(), -1, 1.0, ty), WHITE);
+				float const thickness(0.02*i->get_sz_dim(!dim));
+				vector3d const normal(door.get_norm());
+				tquad_with_ix_t door_edge(door);
+
+				for (unsigned d = 0; d < 2; ++d) {
+					tquad_with_ix_t door_side(door);
+					vector3d const offset((d ? -1.0 : 1.0)*thickness*normal);
+					for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
+					door_edge.pts[2*d+0] = door_side.pts[1+ d];
+					door_edge.pts[2*d+1] = door_side.pts[1+!d];
+					if (d == 1) {swap(door_side.pts[0], door_side.pts[1]); swap(door_side.pts[2], door_side.pts[3]); door_side.type = tquad_with_ix_t::TYPE_IDOOR2;} // back face
+					bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
+				}
+				bdraw.add_tquad(*this, door_edge, bcube, tid_nm_pair_t(WHITE_TEX, -1, 1.0, 1.0), WHITE); // add untextured door edge
 			}
 		}
 	}
@@ -1511,7 +1529,7 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			city_shader_setup(s, lights_bcube, enable_room_lights, 0, use_bmap, min_alpha, 1); // force_tsl=1 for doors
+			city_shader_setup(s, lights_bcube, enable_room_lights, 0, use_bmap, min_alpha, 0); // force_tsl=0
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
@@ -1772,7 +1790,7 @@ public:
 			}
 			else if (pass == 1) { // interior pass
 				// pre-allocate interior wall, celing, and floor verts, assuming all buildings have the same materials
-				unsigned num_floors(0), num_ceils(0), num_walls(0);
+				unsigned num_floors(0), num_ceils(0), num_walls(0), num_doors(0);
 				building_mat_t const &mat(buildings.front().get_material());
 				
 				for (auto b = buildings.begin(); b != buildings.end(); ++b) {
@@ -1781,10 +1799,13 @@ public:
 					if (mat2.floor_tex == mat.floor_tex) {num_floors += b->interior->floors.size();}
 					if (mat2.ceil_tex  == mat.ceil_tex ) {num_ceils  += b->interior->ceilings.size();}
 					if (mat2.wall_tex  == mat.wall_tex ) {num_walls  += b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->stair_landings.size();}
+					if (DRAW_INTERIOR_DOORS) {num_doors += b->interior->doors.size();}
 				}
 				building_draw_interior.reserve_verts(mat.floor_tex, 4*num_floors); // top surface only
 				building_draw_interior.reserve_verts(mat.ceil_tex,  4*num_ceils ); // bottom surface only
 				building_draw_interior.reserve_verts(mat.wall_tex, 16*num_walls ); // X/Y surfaces (4x)
+				building_draw_interior.reserve_verts(tid_nm_pair_t(building_window_gen.get_hdoor_tid()), 4*num_doors ); // door edges
+				building_draw_interior.reserve_verts(tid_nm_pair_t(WHITE_TEX), 4*num_doors ); // door edges
 				// generate vertex data
 				building_draw_interior.clear();
 
