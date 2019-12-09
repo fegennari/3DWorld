@@ -1056,6 +1056,14 @@ bool dls_cell::check_add_light(unsigned ix) const {
 	return 1;
 }
 
+void dls_cell::add_light_range(unsigned six, unsigned eix, unsigned char &enabled_flag) {
+	if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
+	
+	for (unsigned ix = six; ix < eix; ++ix) {
+		if (sz+1 < MAX_LSRC) {lsrc[sz++] = ix;}
+	}
+}
+
 
 void clear_dynamic_lights() {
 
@@ -1172,9 +1180,15 @@ void add_dynamic_lights_city(cube_t const &scene_bcube) {
 	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
 	float const grid_dx(scene_sz.x/gbx), grid_dy(scene_sz.y/gby), grid_dx_inv(1.0/grid_dx), grid_dy_inv(1.0/grid_dy);
 
-	for (unsigned ix = 0; ix < ndl; ++ix) {
+	for (unsigned ix = 0; ix < ndl;) { // Note: no increment
 		light_source const &ls(dl_sources[ix]); // Note: should always be visible
 		point const &lpos(ls.get_pos());
+		unsigned const start_ix(ix);
+
+		for (++ix; ix < ndl; ++ix) {
+			light_source const &ls2(dl_sources[ix]);
+			if (ls2.get_pos().x != lpos.x || ls2.get_pos().y != lpos.y || ls2.get_radius() != ls.get_radius()) break;
+		}
 		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5);
 		cube_t bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh)); // padded below
 		if (ls.is_very_directional()) {bcube.expand_by(vector3d(grid_dx, grid_dy, 0.0));} // add one grid unit
@@ -1185,22 +1199,27 @@ void add_dynamic_lights_city(cube_t const &scene_bcube) {
 			bnds[1][e] = max(0, min((int)gby-1, int((bcube.d[1][e] - scene_llc.y)*grid_dy_inv)));
 		}
 		int const radius(ls.get_radius()*max(grid_dx_inv, grid_dy_inv) + 2), rsq(radius*radius);
-		pos_dir_up pdu;
-		//calc_spotlight_pdu(ls, pdu); // correct, but doesn't really help because lights are small
 
-		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
-			int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
+		if (ix - start_ix == 1) {
+			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
+				int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
 
-			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-				if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
-				
-				/*if (pdu.valid) {
-					float const px(x*grid_dx + scene_llc.x), py(y*grid_dy + scene_llc.y);
-					if (!pdu.cube_visible(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, scene_bcube.z1(), scene_bcube.z2()))) continue; // tile not in spotlight cylinder
-				}*/
-				ldynamic[offset + x].add_light(ix, ldynamic_enabled[offset + x]);
-			} // for x
-		} // for y
+				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
+					if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
+					ldynamic[offset + x].add_light(start_ix, ldynamic_enabled[offset + x]);
+				} // for x
+			} // for y
+		}
+		else {
+			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
+				int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
+
+				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
+					if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
+					ldynamic[offset + x].add_light_range(start_ix, ix, ldynamic_enabled[offset + x]);
+				} // for x
+			} // for y
+		}
 	} // for ix (light index)
 	//PRINT_TIME("Dynamic Light Add");
 }
