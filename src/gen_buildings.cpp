@@ -1025,7 +1025,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		check_gl_error(440);
 		add_building_interior_lights(xlate, lights_bcube);
 		clamp_to_max_lights(xlate, dl_sources);
-		//if (display_mode & 0x10) {tighten_light_bcube_bounds(dl_sources);} // clip bcube to tight bounds around lights for better dlights texture utilization (optimization)
+		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
 		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
 		finalize_lights(dl_sources);
 		check_gl_error(441);
