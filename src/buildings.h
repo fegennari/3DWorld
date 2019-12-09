@@ -218,10 +218,17 @@ struct elevator_t : public cube_t {
 	elevator_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
 };
 
+struct room_t : public cube_t {
+	uint64_t lit_by_floor;
+	room_t() : lit_by_floor(0) {}
+	room_t(cube_t const &c, uint64_t const lbf=0) : cube_t(c), lit_by_floor(lbf) {}
+};
+
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
 	uint64_t no_geom_room_mask;
-	vect_cube_t floors, ceilings, walls[2], rooms, doors, stairwells, stair_landings; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], doors, stairwells, stair_landings; // walls are split by dim
+	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	std::unique_ptr<building_room_geom_t> room_geom;
 
@@ -305,7 +312,7 @@ struct building_t : public building_geom_t {
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:
-	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off);
+	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;

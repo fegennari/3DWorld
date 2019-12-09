@@ -1521,7 +1521,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	C.z1() = z - fc_thick; C.z2() = z; interior->ceilings.push_back(C); // roof ceiling, full area
 }
 
-bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off) {
+bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off, bool is_lit) {
 
 	float const window_vspacing(get_window_vspace());
 	vector3d const room_sz(room.get_size());
@@ -1536,6 +1536,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, poin
 	cube_t table(llc, urc);
 	if (!interior->is_valid_placement_for_room(table, room)) return 0; // check proximity to doors
 	objs.emplace_back(table, TYPE_TABLE);
+	if (is_lit) {objs.back().flags |= RO_FLAG_LIT;}
 	float const chair_sz(0.1*window_vspacing); // half size
 
 	// place some chairs around the table
@@ -1549,6 +1550,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, poin
 			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
 			if (!interior->is_valid_placement_for_room(chair, room)) continue; // check proximity to doors
 			objs.emplace_back(chair, TYPE_CHAIR, dim, dir);
+			if (is_lit) {objs.back().flags |= RO_FLAG_LIT;}
 		} // for dir
 	} // for dim
 	return 1;
@@ -1587,19 +1589,22 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
-			// place a table and maybe some chairs near the center of the room 95% of the time
-			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_center, 0.1);}
 			bool const top_of_stairs(blocked_by_stairs && f+1 == num_floors);
+			bool is_lit(0);
 
 			if (!blocked_by_stairs || top_of_stairs) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
-				bool const is_on((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0); // 50% of lights are on, 75% for top of stairs
+				is_lit = ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0); // 50% of lights are on, 75% for top of stairs
 				unsigned char flags(0);
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;} // TODO_INT: there are other top of stairs cases where the light is not blocked, should we also flag these?
-				if (is_on)         {flags |= RO_FLAG_LIT;}
+				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				objs.emplace_back(light, TYPE_LIGHT, light_dim, 0, flags); // dir=0 (unused)
+				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			}
+			// place a table and maybe some chairs near the center of the room 95% of the time
+			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_center, 0.1, is_lit);}
+
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
 			}
@@ -1786,6 +1791,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 
 	cube_t top(c), legs_bcube(c);
 	top.z1() += 0.85*c.dz(); // 15% of height
 	legs_bcube.z2() = top.z1();
+	// TODO_INT: different lighting if (c.flags & RO_FLAG_LIT)? Applies to table and chairs
 	get_wood_material(tscale).add_cube_to_verts(top, WOOD_COLOR); // all faces drawn
 	add_tc_legs(legs_bcube, WOOD_COLOR, 0.08, tscale);
 }
