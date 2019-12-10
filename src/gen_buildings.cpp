@@ -1534,6 +1534,8 @@ public:
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
+			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
+			glCullFace(GL_BACK);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -1564,6 +1566,7 @@ public:
 					} // for bi
 				} // for g
 			} // for i
+			glDisable(GL_CULL_FACE);
 			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
 			s.end_shader();
