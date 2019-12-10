@@ -771,13 +771,13 @@ public:
 					vector3d norm; norm.z = 0.0;
 					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
 					else        {norm.x = -bg.rot_sin; norm.y = bg.rot_cos;} // Y
-					vert.set_norm((bool(j)^invert_normals) ? norm : -norm);
+					vert.set_norm(j ? norm : -norm);
 				}
 				else {
-					vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = ((bool(j)^invert_normals) ? 127 : -128); // -1.0 or 1.0
+					vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
 				}
 				point pt; // parameteric position within cube in [vec3(0), vec3(1)]
-				pt[n] = j; // our cube face, in direction of normal
+				pt[n] = (bool(j) ^ invert_normals); // our cube face, in direction of normal
 
 				if (bg.is_pointed) { // antenna triangle; parts clipping doesn't apply to this case since there are no opposing cube faces
 					unsigned const ix(verts.size()); // first vertex of this triangle
@@ -997,8 +997,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 					tquad_with_ix_t door_side(door);
 					vector3d const offset((d ? -1.0 : 1.0)*thickness*normal);
 					for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
-					door_edge.pts[2*d+0] = door_side.pts[1+ d];
-					door_edge.pts[2*d+1] = door_side.pts[1+!d];
+					door_edge.pts[2*d+1] = door_side.pts[1+ d];
+					door_edge.pts[2*d+0] = door_side.pts[1+!d];
 					if (d == 1) {swap(door_side.pts[0], door_side.pts[1]); swap(door_side.pts[2], door_side.pts[3]); door_side.type = tquad_with_ix_t::TYPE_IDOOR2;} // back face
 					bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
 				}

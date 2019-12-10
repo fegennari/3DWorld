@@ -1629,7 +1629,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		cube_t stair(*i);
 
 		for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
-			stair.d[dim][0] = pos; stair.d[dim][1] = pos + step_len;
+			stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
 			stair.z1() = max(floor_z, z); // don't go below the floor
 			stair.z2() = z + stair_height;
 			objs.emplace_back(stair, TYPE_STAIR, dim, dir);
@@ -1848,6 +1848,7 @@ void building_room_geom_t::create_vbos() {
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		assert(i->is_strictly_normalized());
 		switch (i->type) {
 		case TYPE_NONE:  assert(0); // not supported
 		case TYPE_TABLE: add_table(*i, tscale); break;
