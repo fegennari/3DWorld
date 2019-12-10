@@ -991,19 +991,23 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				tquad_with_ix_t const door(set_door_from_cube(*i, dim, dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, (DRAW_INTERIOR_DOORS == 2)));
 				float const thickness(0.02*i->get_sz_dim(!dim));
 				vector3d const normal(door.get_norm());
-				tquad_with_ix_t door_edge(door);
+				tquad_with_ix_t door_edges[2] = {door, door};
 
 				for (unsigned d = 0; d < 2; ++d) {
 					tquad_with_ix_t door_side(door);
 					vector3d const offset((d ? -1.0 : 1.0)*thickness*normal);
 					for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
-					door_edge.pts[2*d+1] = door_side.pts[1+ d];
-					door_edge.pts[2*d+0] = door_side.pts[1+!d];
+
+					for (unsigned e = 0; e < 2; ++e) {
+						unsigned const ixs[2][2] = {{1, 2}, {3, 0}};
+						door_edges[e].pts[2*d+1] = door_side.pts[ixs[e][ d]];
+						door_edges[e].pts[2*d+0] = door_side.pts[ixs[e][!d]];
+					}
 					if (d == 1) {swap(door_side.pts[0], door_side.pts[1]); swap(door_side.pts[2], door_side.pts[3]); door_side.type = tquad_with_ix_t::TYPE_IDOOR2;} // back face
 					bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
-				}
-				bdraw.add_tquad(*this, door_edge, bcube, tid_nm_pair_t(WHITE_TEX, -1, 1.0, 1.0), WHITE); // add untextured door edge
-			}
+				} // for d
+				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX, -1, 1.0, 1.0), WHITE);} // add untextured door edges
+			} // for i
 		}
 	}
 }
@@ -1807,8 +1811,8 @@ public:
 				building_draw_interior.reserve_verts(mat.floor_tex, 4*num_floors); // top surface only
 				building_draw_interior.reserve_verts(mat.ceil_tex,  4*num_ceils ); // bottom surface only
 				building_draw_interior.reserve_verts(mat.wall_tex, 16*num_walls ); // X/Y surfaces (4x)
-				building_draw_interior.reserve_verts(tid_nm_pair_t(building_window_gen.get_hdoor_tid()), 4*num_doors ); // door edges
-				building_draw_interior.reserve_verts(tid_nm_pair_t(WHITE_TEX), 4*num_doors ); // door edges
+				building_draw_interior.reserve_verts(tid_nm_pair_t(building_window_gen.get_hdoor_tid()), 8*num_doors ); // doors
+				building_draw_interior.reserve_verts(tid_nm_pair_t(WHITE_TEX), 8*num_doors ); // door edges
 				// generate vertex data
 				building_draw_interior.clear();
 
