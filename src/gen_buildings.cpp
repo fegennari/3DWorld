@@ -1533,13 +1533,27 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
+			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
+			glCullFace(GL_BACK);
+
+			if (enable_room_lights) { // use z-prepass to reduce time taken for shading
+				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
+				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+				
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
+					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
+						if (g->bcube.contains_pt(camera_xlated)) {(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));}
+					}
+				}
+				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+				s.end_shader();
+				glDepthFunc(GL_LEQUAL);
+			}
 			city_shader_setup(s, lights_bcube, enable_room_lights, 0, use_bmap, min_alpha, 0); // force_tsl=0
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
-			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
-			glCullFace(GL_BACK);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
@@ -1570,6 +1584,7 @@ public:
 					} // for bi
 				} // for g
 			} // for i
+			if (enable_room_lights) {glDepthFunc(GL_LESS);} // restore
 			glDisable(GL_CULL_FACE);
 			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
@@ -1598,7 +1613,8 @@ public:
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glDisable(GL_STENCIL_TEST);
 			}
-		}
+		} // end have_interior
+
 		if (transparent_windows) {
 			// draw back faces of buildings
 			bool const use_int_wall_tex = 1;
@@ -1644,7 +1660,8 @@ public:
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			holes_shader.end_shader();
 			glDisable(GL_CULL_FACE);
-		}
+		} // end transparent_windows
+
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
 		setup_city_lights(xlate);
 
