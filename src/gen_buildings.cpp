@@ -14,7 +14,7 @@ using std::string;
 
 bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const DRAW_INSIDE_WINDOWS   = 1; // works on buildings that the player has entered; has drawing artifacts when looking through a multi-part building
-bool const ADD_ROOM_LIGHTS       = 1;
+int  const ADD_ROOM_LIGHTS       = 2; // 0 = no room lights, 1 = only when player is in the building, 2 = always
 int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
@@ -29,7 +29,7 @@ building_params_t global_building_params;
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
-bool add_room_lights() {return (ADD_ROOM_LIGHTS && camera_in_building);}
+bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS == 2 || camera_in_building));}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_texture(tid);
@@ -1484,8 +1484,8 @@ public:
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
-				// for now we limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
-				if (!camera_in_this_building) continue; // camera not in building
+				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
+				if (ADD_ROOM_LIGHTS != 2 && !camera_in_this_building) continue; // camera not in building
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 				b.add_room_lights(xlate, camera_in_this_building, lights_bcube);
 			} // for bi
