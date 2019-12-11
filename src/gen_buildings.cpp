@@ -1044,16 +1044,11 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		//timer_t timer("Building Dlights Setup");
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
-		check_gl_error(440);
 		add_building_interior_lights(xlate, lights_bcube);
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
-		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
+		//setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate)); // uncomment to enable shadow maps
 		finalize_lights(dl_sources);
-		check_gl_error(441);
-	}
-	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
-		// TODO_INT: Nothing to do here yet; see city_smap_manager_t in city_gen.cc; requires drawing building interior into shadow maps rather than exterior
 	}
 	virtual bool enable_lights() const {return (draw_building_interiors && add_room_lights());}
 }; // city_gen_t

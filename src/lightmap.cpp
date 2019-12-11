@@ -924,6 +924,7 @@ void upload_dlights_textures(cube_t const &bounds) { // 0.21ms => 0.05ms with dl
 		bind_2d_texture(gb_tid);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, gbx, gby, GL_RED_INTEGER, GL_UNSIGNED_INT, &gb_data.front());
 	}
+	check_gl_error(440);
 	//PRINT_TIME("Dlight Texture Upload");
 	//cout << "ndl: " << ndl << ", elix: " << elem_data.size() << ", gb_sz: " << gb_data.size() << endl;
 }

@@ -2814,31 +2814,6 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 	lights.resize(max_num); // remove lowest scoring lights
 }
 
-struct city_smap_manager_t {
-	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
-		unsigned const num_smaps(min((unsigned)light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
-		dl_smap_enabled = 0;
-		if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
-		sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
-		cmp_light_source_sz_dist sz_cmp(cpos);
-		unsigned num_used(0);
-		unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
-		// capture player pos in global coordinate space before replacing with light pos so it can be used for LOD during model drawing
-		pre_smap_player_pos = get_camera_pos() - get_camera_coord_space_xlate();
-		// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
-		
-		// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
-		for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
-			if (i->has_no_shadows()) continue; // shadows not enabled for this light
-			if (!i->is_very_directional()) continue; // not a spotlight
-			//if (!city_params.car_shadows && i->is_dynamic()) continue; // skip headlights (optimization)
-			if (sz_cmp.get_value(*i) < 0.002) break; // light influence is too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail
-			dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF, 0, 0, 0, smap_size);
-			++num_used;
-		} // for i
-	}
-};
-
 
 // Note: these ped_manager_t functions are defined here because they use road_gen
 cube_t const &ped_manager_t::get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_plot_from_global_id(city_ix, plot_ix);}
@@ -2945,13 +2920,37 @@ void city_lights_manager_t::finalize_lights(vector<light_source> &lights) {
 	prev_had_lights = !dl_sources.empty();
 }
 
+void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
+	unsigned const num_smaps(min((unsigned)light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
+	dl_smap_enabled = 0;
+	if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
+	sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
+	cmp_light_source_sz_dist sz_cmp(cpos);
+	unsigned num_used(0);
+	unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
+	// capture player pos in global coordinate space before replacing with light pos so it can be used for LOD during model drawing
+	pre_smap_player_pos = get_camera_pos() - get_camera_coord_space_xlate();
+	// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
+	check_gl_error(430);
+
+	// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
+	for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
+		if (i->has_no_shadows()) continue; // shadows not enabled for this light
+		if (!i->is_very_directional()) continue; // not a spotlight
+		//if (!city_params.car_shadows && i->is_dynamic()) continue; // skip headlights (optimization)
+		if (sz_cmp.get_value(*i) < 0.002) break; // light influence is too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail
+		dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF, 0, 0, 0, smap_size);
+		++num_used;
+	} // for i
+	check_gl_error(431);
+}
+
 
 class city_gen_t : public city_plot_gen_t, public city_lights_manager_t {
 
 	city_road_gen_t road_gen;
 	car_manager_t car_manager;
 	ped_manager_t ped_manager;
-	city_smap_manager_t city_smap_manager;
 	int prev_city_lights_setup_frame;
 
 public:
@@ -3056,13 +3055,11 @@ public:
 		//timer_t timer("City Dlights Setup");
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
-		check_gl_error(430);
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
 		clamp_to_max_lights(xlate, dl_sources);
-		city_smap_manager.setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
+		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
 		finalize_lights(dl_sources);
-		check_gl_error(431);
 	}
 	virtual bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());} // only have lights at night
 	void next_ped_animation() {ped_manager.next_animation();}

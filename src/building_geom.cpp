@@ -1658,7 +1658,6 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4); // points down, white for now, 180 degree FOV
-		dl_sources.back().disable_shadows();
 	} // for i
 }
 
