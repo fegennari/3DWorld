@@ -18,7 +18,7 @@ int  const ADD_ROOM_LIGHTS       = 2; // 0 = no room lights, 1 = only when playe
 int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
-bool camera_in_building(0);
+bool camera_in_building(0), interior_shadow_maps(0);
 
 extern bool start_in_inf_terrain, draw_building_interiors;
 extern int rand_gen_index, display_mode;
@@ -1438,7 +1438,30 @@ public:
 		translate_to(xlate);
 		shader_t s;
 		s.begin_color_only_shader(); // really don't even need colors
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 1);}
+
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+			if (interior_shadow_maps) { // draw interior shadow maps
+				point const lpos(get_camera_pos() - xlate);
+
+				// TODO_INT: incomplete and untested
+				// draw interior for the tile containing the ligh (should only need building containing the light?)
+				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
+					if (!g->bcube.contains_pt(lpos)) continue;
+					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
+					
+					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
+						building_t &b((*i)->get_building(bi->ix));
+						if (!b.interior) continue; // no interior, skip
+						if (!b.bcube.contains_pt(lpos)) continue;
+						b.gen_and_draw_room_geom(s, bi->ix);
+						g->has_room_geom = 1; // do we need to set this?
+					} // for bi
+				}
+			}
+			else { // draw exterior shadow maps
+				(*i)->building_draw_vbo.draw(s, 1);
+			}
+		}
 		s.end_shader();
 		fgPopMatrix();
 	}
@@ -1490,7 +1513,9 @@ public:
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
+		interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
 		building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
+		interior_shadow_maps = 0;
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -2149,8 +2174,10 @@ void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
-	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
-	if (shadow_only != 2 && building_creator.is_visible(xlate)) {bcs.push_back(&building_creator);} // don't draw secondary buildings for dynamic shadows
+	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps)); // don't draw city buildings for interior shadows
+	bool const draw_sec ((shadow_only != 2 || interior_shadow_maps)); // don't draw secondary buildings for exterior dynamic shadows
+	if (draw_city && building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
+	if (draw_sec  && building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
 	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, xlate, bcs);
 }
