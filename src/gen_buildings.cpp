@@ -14,6 +14,7 @@ using std::string;
 
 bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const DRAW_INSIDE_WINDOWS   = 1; // works on buildings that the player has entered; has drawing artifacts when looking through a multi-part building
+bool const ADD_ROOM_SHADOWS      = 1;
 int  const ADD_ROOM_LIGHTS       = 2; // 0 = no room lights, 1 = only when player is in the building, 2 = always
 int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
 float const WIND_LIGHT_ON_RAND   = 0.08;
@@ -29,7 +30,7 @@ building_params_t global_building_params;
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
-bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS == 2 || camera_in_building));}
+bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS >= 2 || camera_in_building));}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_texture(tid);
@@ -1047,7 +1048,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		add_building_interior_lights(xlate, lights_bcube);
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
-		//setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate)); // uncomment to enable shadow maps
+		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));}
 		finalize_lights(dl_sources);
 	}
 	virtual bool enable_lights() const {return (draw_building_interiors && add_room_lights());}
@@ -1443,11 +1444,10 @@ public:
 			if (interior_shadow_maps) { // draw interior shadow maps
 				point const lpos(get_camera_pos() - xlate);
 
-				// TODO_INT: incomplete and untested
-				// draw interior for the tile containing the ligh (should only need building containing the light?)
+				// draw interior for the tile containing the light (TODO_INT: should only need building containing the light?)
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
 					if (!g->bcube.contains_pt(lpos)) continue;
-					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
+					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin())); // TODO_INT: shadow_only option
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
@@ -1543,6 +1543,7 @@ public:
 		bool const draw_inside_windows(DRAW_INSIDE_WINDOWS && transparent_windows);
 		bool const enable_room_lights(add_room_lights());
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
+		float const pcf_scale = 0.25;
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw;
@@ -1569,7 +1570,7 @@ public:
 				s.end_shader();
 				glDepthFunc(GL_LEQUAL);
 			}
-			city_shader_setup(s, lights_bcube, enable_room_lights, 0, use_bmap, min_alpha, 0); // force_tsl=0
+			city_shader_setup(s, lights_bcube, enable_room_lights, (ADD_ROOM_SHADOWS && enable_room_lights), use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
 			set_interior_lighting(s);
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
@@ -1637,14 +1638,13 @@ public:
 
 		if (transparent_windows) {
 			// draw back faces of buildings
-			bool const use_int_wall_tex = 1;
-			city_shader_setup(s, lights_bcube, enable_room_lights, 0, use_bmap, min_alpha, 1); // force_tsl=1
+			city_shader_setup(s, lights_bcube, enable_room_lights, (ADD_ROOM_SHADOWS && enable_room_lights), use_bmap, min_alpha, 1, pcf_scale); // force_tsl=1
 			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				bool const force_wall_tex(use_int_wall_tex && !(*i)->buildings.empty());
+				bool const force_wall_tex(!(*i)->buildings.empty());
 				vertex_range_t const *exclude(nullptr);
 				
 				if (force_wall_tex) {

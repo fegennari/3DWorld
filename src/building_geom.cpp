@@ -1652,12 +1652,19 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 		if (camera_in_building && !(i->flags & RO_FLAG_TOS) && (camera_pdu.pos.z < (i->z2() - window_vspacing) || camera_pdu.pos.z > i->z2())) continue;
 		point lpos(i->get_cube_center());
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
-		lpos.z = i->z1();
+		lpos.z = i->z1() - 0.5*i->dz(); // slightly below the light fixture so that it doesn't cast incorrect shadows
 		float const light_radius(6.0*max(i->dx(), i->dy()));
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), light_radius)) continue; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
-		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4); // points down, white for now, 180 degree FOV
+		float const bwidth = 0.26; // as close to 180 degree FOV as we can get without shadow clipping
+		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, bwidth); // points down, white for now
+
+		if (camera_in_building) { // only when the player is inside a building and can't see the light bleeding through the floor
+			// add a smaller unshadowed light with near 180 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
+			dl_sources.emplace_back(0.5*light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.45);
+			dl_sources.back().disable_shadows();
+		}
 	} // for i
 }
 
