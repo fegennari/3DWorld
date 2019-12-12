@@ -1579,7 +1579,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		cube_t light;
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
-			float const sz(((bool(dim) == light_dim) ? 2.2 : 1.0)*1.6*floor_thickness);
+			float const sz(((bool(dim) == light_dim) ? 2.2 : 1.0)*1.0*floor_thickness);
 			light.d[dim][0] = room_center[dim] - sz;
 			light.d[dim][1] = room_center[dim] + sz;
 		}
@@ -1650,10 +1650,9 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_LIT)) continue; // not a light, or light not on
 		// player is on a different floor and can't see a light from the floor above/below, unless the light is at the top of the stairs
 		if (camera_in_building && !(i->flags & RO_FLAG_TOS) && (camera_pdu.pos.z < (i->z2() - window_vspacing) || camera_pdu.pos.z > i->z2())) continue;
-		point lpos(i->get_cube_center());
+		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
-		lpos.z = i->z1() - 0.5*i->dz(); // slightly below the light fixture so that it doesn't cast incorrect shadows
-		float const light_radius(6.0*max(i->dx(), i->dy()));
+		float const light_radius(10.0*max(i->dx(), i->dy()));
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), light_radius)) continue; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
