@@ -365,7 +365,7 @@ bool check_mesh_disable(point const &pos, float radius);
 bool tile_contains_tunnel(cube_t const &bcube);
 void destroy_city_in_radius(point const &pos, float radius);
 bool get_city_color_at_xy(float x, float y, colorRGBA &color);
-void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap);
+void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, float pcf_scale=1.0);
 unsigned get_city_model_gpu_mem();
 cube_t get_city_lights_bcube();
 void next_pedestrian_animation();

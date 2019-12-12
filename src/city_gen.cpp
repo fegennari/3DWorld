@@ -186,7 +186,7 @@ float smooth_interp(float a, float b, float mix) {
 bool is_night(float adj) {return (light_factor - adj < 0.5f);} // for car headlights and streetlights
 
 
-void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap) {
+void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, float pcf_scale) {
 
 	if (use_dlights) {
 		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
@@ -195,16 +195,16 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	}
 	if (use_smap) {
 		s.add_uniform_float("z_bias", cobj_z_bias);
-		s.add_uniform_float("pcf_offset", 8.0*shadow_map_pcf_offset);
-		s.add_uniform_float("dlight_pcf_offset", 0.0005);
+		s.add_uniform_float("pcf_offset", 8.0*pcf_scale*shadow_map_pcf_offset);
+		s.add_uniform_float("dlight_pcf_offset", 0.0005*pcf_scale);
 	}
 }
 
-void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap, float min_alpha, bool force_tsl) {
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, int use_bmap, float min_alpha, bool force_tsl, float pcf_scale) {
 
 	use_dlights &= (!lights_bcube.is_zero_area() && !dl_sources.empty());
 	setup_smoke_shaders(s, min_alpha, 0, 0, 0, 1, use_dlights, 0, 0, (use_smap ? 2 : 0), use_bmap, 0, use_dlights, force_tsl, 0.0, 0.0, 0, 0, 1); // is_outside=1
-	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap);
+	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 }
 
 void draw_state_t::begin_tile(point const &pos, bool will_emit_now) {
@@ -3085,7 +3085,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
-void get_city_plot_bcubes(vect_cube_with_zval_t &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
+void get_city_plot_bcubes(vector<cube_with_zval_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
