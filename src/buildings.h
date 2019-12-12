@@ -188,7 +188,7 @@ public:
 	void clear() {vbo.clear(); verts.clear(); num_verts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
 	void create_vbo();
-	void draw(shader_t &s);
+	void draw(shader_t &s, bool shadow_only);
 };
 
 struct building_room_geom_t {
@@ -209,7 +209,7 @@ struct building_room_geom_t {
 	void add_stair(room_object_t const &c, float tscale);
 	void add_light(room_object_t const &c, float tscale);
 	void create_vbos();
-	void draw(shader_t &s);
+	void draw(shader_t &s, bool shadow_only);
 };
 
 struct elevator_t : public cube_t {
@@ -308,7 +308,7 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
 	void add_room_lights(vector3d const &xlate, bool camera_in_building, cube_t &lights_bcube) const;
-	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix);
+	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix, bool shadow_only);
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:

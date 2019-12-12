@@ -1453,7 +1453,7 @@ public:
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
 						if (!b.bcube.contains_pt(lpos)) continue;
-						b.gen_and_draw_room_geom(s, bi->ix);
+						b.gen_and_draw_room_geom(s, bi->ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
 					} // for bi
 				}
@@ -1594,7 +1594,7 @@ public:
 						if (!b.interior) continue; // no interior, skip
 						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-						b.gen_and_draw_room_geom(s, bi->ix);
+						b.gen_and_draw_room_geom(s, bi->ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_inside_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building

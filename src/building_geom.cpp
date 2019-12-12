@@ -1661,12 +1661,12 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 	} // for i
 }
 
-void building_t::gen_and_draw_room_geom(shader_t &s, unsigned building_ix) {
+void building_t::gen_and_draw_room_geom(shader_t &s, unsigned building_ix, bool shadow_only) {
 	if (!interior) return;
 	rand_gen_t rgen;
 	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
 	if (!is_rotated()) {gen_room_details(rgen);} // generate so that we can draw it; doesn't work with rotated buildings
-	if (interior->room_geom) {interior->room_geom->draw(s);}
+	if (interior->room_geom) {interior->room_geom->draw(s, shadow_only);}
 }
 
 void building_t::clear_room_geom() {
@@ -1762,11 +1762,11 @@ void rgeom_mat_t::create_vbo() {
 	clear_container(verts); // no longer needed
 }
 
-void rgeom_mat_t::draw(shader_t &s) {
-	//if (!vbo.vbo_valid()) return; // not setup (empty?)
+void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
+	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows
 	assert(vbo.vbo_valid());
 	assert(num_verts > 0);
-	tex.set_gl(s); // ignores texture scale for now
+	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
 	vbo.pre_render();
 	vertex_t::set_vbo_arrays();
 	draw_quads_as_tris(num_verts);
@@ -1862,10 +1862,10 @@ void building_room_geom_t::create_vbos() {
 	for (auto m = materials.begin(); m != materials.end(); ++m) {m->create_vbo();}
 }
 
-void building_room_geom_t::draw(shader_t &s) { // non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	if (materials.empty()) {create_vbos();} // create materials if needed
-	for (auto m = materials.begin(); m != materials.end(); ++m) {m->draw(s);}
+	for (auto m = materials.begin(); m != materials.end(); ++m) {m->draw(s, shadow_only);}
 	vbo_wrap_t::post_render();
 }
 
