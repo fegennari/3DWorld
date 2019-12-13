@@ -222,11 +222,11 @@ struct elevator_t : public cube_t {
 struct room_t : public cube_t {
 	bool has_stairs, has_elevator, no_geom;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
-	//uint8_t sides_with_doors; // is this needed?
+	//uint8_t sides_with_doors; // is this useful/needed?
 	uint64_t lit_by_floor;
 	room_t() : has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), lit_by_floor(0) {}
 	room_t(cube_t const &c, uint64_t const lbf=0) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), lit_by_floor(lbf) {}
-	//float get_light_amt() const;
+	float get_light_amt() const;
 };
 
 // may as well make this its own class, since it could get large and it won't be used for every building

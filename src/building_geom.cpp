@@ -1582,6 +1582,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (r->no_geom) continue; // no geometry for this room
+		//float const light_amt(r->get_light_amt()); // TODO_INT: use this as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors?
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		point room_center(r->get_cube_center());
 		// determine light pos for this stack of rooms
@@ -1714,6 +1715,15 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	++s.nrgeom;
 	s.nobjs  += interior->room_geom->objs.size();
 	s.nverts += interior->room_geom->get_num_verts();
+}
+
+float room_t::get_light_amt() const { // Note: not normalized to 1.0
+	float ext_perim(0.0);
+
+	for (unsigned d = 0; d < 4; ++d) {
+		if (ext_sides & (1<<d)) {ext_perim += get_sz_dim(d>>1);} // add length of each exterior side, assuming it has windows
+	}
+	return ext_perim/(dx()*dy()); // light per square meter = exterior perimeter over area
 }
 
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const { // ignores zvals
