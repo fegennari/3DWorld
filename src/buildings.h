@@ -164,8 +164,9 @@ struct tquad_with_ix_t : public tquad_t {
 enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, NUM_TYPES};
 
 // object flags, currently used for room lights
-unsigned char const RO_FLAG_LIT = 0x01; // light is on
-unsigned char const RO_FLAG_TOS = 0x02; // at top of stairs
+unsigned char const RO_FLAG_LIT     = 0x01; // light is on
+unsigned char const RO_FLAG_TOS     = 0x02; // at top of stairs
+unsigned char const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
@@ -219,20 +220,23 @@ struct elevator_t : public cube_t {
 };
 
 struct room_t : public cube_t {
+	bool has_stairs, has_elevator, no_geom;
+	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
+	//uint8_t sides_with_doors; // is this needed?
 	uint64_t lit_by_floor;
-	room_t() : lit_by_floor(0) {}
-	room_t(cube_t const &c, uint64_t const lbf=0) : cube_t(c), lit_by_floor(lbf) {}
+	room_t() : has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), lit_by_floor(0) {}
+	room_t(cube_t const &c, uint64_t const lbf=0) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), lit_by_floor(lbf) {}
+	//float get_light_amt() const;
 };
 
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	uint64_t no_geom_room_mask;
 	vect_cube_t floors, ceilings, walls[2], doors, stairwells, stair_landings; // walls are split by dim
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	std::unique_ptr<building_room_geom_t> room_geom;
 
-	building_interior_t() : no_geom_room_mask(0) {}
+	building_interior_t() {}
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
@@ -312,6 +316,7 @@ struct building_t : public building_geom_t {
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:
+	void add_room(cube_t const &room, cube_t const &part);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);

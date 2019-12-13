@@ -1247,7 +1247,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c.d[ min_dim][!d] = hall_wall_pos[d];
 					c.d[!min_dim][ 0] = pos;
 					c.d[!min_dim][ 1] = next_pos;
-					interior->rooms.push_back(c);
+					add_room(c, *p);
 					cube_t door(c); // copy zvals and wall pos
 					door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 					door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
@@ -1258,7 +1258,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			} // for i
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
-			if (add_hall) {interior->rooms.push_back(hall);}
+			if (add_hall) {add_room(hall, *p);}
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
@@ -1286,7 +1286,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
 				
 				if (min(csz.x, csz.y) < min_wall_len) {
-					interior->rooms.push_back(c);
+					add_room(c, *p);
 					continue; // not enough space to add a wall
 				}
 				float wall_pos(0.0);
@@ -1300,7 +1300,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					pos_valid = 1; break; // done, keep wall_pos
 				}
 				if (!pos_valid) { // no valid pos, skip this split
-					interior->rooms.push_back(c);
+					add_room(c, *p);
 					continue;
 				}
 				cube_t wall(c), wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
@@ -1317,7 +1317,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
 					c_sub.door_lo[!wall_dim][d] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
 					c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
-					if (do_split) {to_split.push_back(c_sub);} else {interior->rooms.push_back(c_sub);} // leaf case (unsplit), add a new room
+					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, *p);} // leaf case (unsplit), add a new room
 				}
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
@@ -1442,7 +1442,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 		for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell in any of them
 			unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
-			cube_t const &room(interior->rooms[stairs_room]);
+			room_t &room(interior->rooms[stairs_room]);
 
 			if (add_elevator) {
 				if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
@@ -1458,6 +1458,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					}
 				}
 				if (!placed) continue; // try another room
+				room.has_elevator = 1;
+				room.no_geom      = 1;
 			}
 			else { // stairs
 				cube_t cutout(room);
@@ -1489,8 +1491,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
 				assert(cutout.is_strictly_normalized());
 				stairs = cutout;
+				room.has_stairs = 1;
+				//room.no_geom    = 1;
 			}
-			//interior->no_geom_room_mask |= (1ULL << (stairs_room&63)); // mask off this room so that furniture isn't added to it?
 			break; // success - done
 		} // for n
 	}
@@ -1519,6 +1522,13 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		}
 	} // for f
 	C.z1() = z - fc_thick; C.z2() = z; interior->ceilings.push_back(C); // roof ceiling, full area
+}
+
+void building_t::add_room(cube_t const &room, cube_t const &part) {
+	assert(interior);
+	room_t r(room);
+	for (unsigned d = 0; d < 4; ++d) {r.ext_sides |= (unsigned(room.d[d>>1][d&1] == part.d[d>>1][d&1]) << d);} // find exterior sides
+	interior->rooms.push_back(r);
 }
 
 bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off, bool is_lit) {
@@ -1571,7 +1581,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (interior->no_geom_room_mask & (1ULL << ((r - interior->rooms.begin())&63))) continue; // no geometry for this room (stairwell, etc.)
+		if (r->no_geom) continue; // no geometry for this room
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		point room_center(r->get_cube_center());
 		// determine light pos for this stack of rooms
@@ -1597,8 +1607,9 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0); // 50% of lights are on, 75% for top of stairs
 				unsigned char flags(0);
-				if (top_of_stairs) {flags |= RO_FLAG_TOS;} // TODO_INT: there are other top of stairs cases where the light is not blocked, should we also flag these?
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
+				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
+				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 				objs.emplace_back(light, TYPE_LIGHT, light_dim, 0, flags); // dir=0 (unused)
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			}
