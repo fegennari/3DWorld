@@ -170,10 +170,11 @@ unsigned char const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
-	unsigned char flags;
+	uint8_t flags, room_id; // for at most 256 rooms per floor
 	room_object type;
-	room_object_t() : dim(0), dir(0), flags(0), type(TYPE_NONE) {}
-	room_object_t(cube_t const &c, room_object type_, bool dim_=0, bool dir_=0, unsigned char f=0) : cube_t(c), dim(dim_), dir(dir_), flags(f), type(type_) {}
+	room_object_t() : dim(0), dir(0), flags(0), room_id(0), type(TYPE_NONE) {}
+	room_object_t(cube_t const &c, room_object type_, unsigned char rid, bool dim_=0, bool dir_=0, unsigned char f=0) :
+		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_) {}
 };
 
 class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
@@ -257,7 +258,7 @@ struct vertex_range_t {
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
-	unsigned char hallway_dim; // main hallway dim: 0=x, 1=y, 2=none
+	uint8_t hallway_dim; // main hallway dim: 0=x, 1=y, 2=none
 	bool is_house, has_antenna, has_chimney;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
@@ -317,7 +318,7 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 private:
 	void add_room(cube_t const &room, cube_t const &part);
-	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off, bool is_lit);
+	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;

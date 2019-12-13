@@ -1531,7 +1531,7 @@ void building_t::add_room(cube_t const &room, cube_t const &part) {
 	interior->rooms.push_back(r);
 }
 
-bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, point const &place_pos, float rand_place_off, bool is_lit) {
+bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, bool is_lit) {
 
 	float const window_vspacing(get_window_vspace());
 	vector3d const room_sz(room.get_size());
@@ -1545,7 +1545,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, poin
 	urc.z = table_pos.z + 0.2*window_vspacing;
 	cube_t table(llc, urc);
 	if (!interior->is_valid_placement_for_room(table, room)) return 0; // check proximity to doors
-	objs.emplace_back(table, TYPE_TABLE);
+	objs.emplace_back(table, TYPE_TABLE, room_id);
 	if (is_lit) {objs.back().flags |= RO_FLAG_LIT;}
 	float const chair_sz(0.1*window_vspacing); // half size
 
@@ -1559,7 +1559,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, poin
 			chair.z2() += 0.4*window_vspacing; // chair height
 			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
 			if (!interior->is_valid_placement_for_room(chair, room)) continue; // check proximity to doors
-			objs.emplace_back(chair, TYPE_CHAIR, dim, dir);
+			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir);
 			if (is_lit) {objs.back().flags |= RO_FLAG_LIT;}
 		} // for dir
 	} // for dim
@@ -1584,6 +1584,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		if (r->no_geom) continue; // no geometry for this room
 		//float const light_amt(r->get_light_amt()); // TODO_INT: use this as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors?
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
+		unsigned const room_id(r - interior->rooms.begin());
 		point room_center(r->get_cube_center());
 		// determine light pos for this stack of rooms
 		bool const light_dim(r->dx() < r->dy()); // longer room dim
@@ -1611,11 +1612,11 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
-				objs.emplace_back(light, TYPE_LIGHT, light_dim, 0, flags); // dir=0 (unused)
+				objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags); // dir=0 (unused)
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			}
 			// place a table and maybe some chairs near the center of the room 95% of the time
-			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_center, 0.1, is_lit);}
+			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, is_lit);}
 
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
@@ -1644,7 +1645,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
 			stair.z1() = max(floor_z, z); // don't go below the floor
 			stair.z2() = z + stair_height;
-			objs.emplace_back(stair, TYPE_STAIR, dim, dir);
+			objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
