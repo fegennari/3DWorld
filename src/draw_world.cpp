@@ -523,6 +523,7 @@ void setup_object_render_data() {
 
 	RESET_TIME;
 	bool const TIMETEST(0);
+	static float dlight_add_thresh(0.0);
 	calc_cur_ambient_diffuse();
 	create_dlight_volumes();
 	distribute_smoke();
@@ -532,10 +533,10 @@ void setup_object_render_data() {
 	upload_smoke_indir_texture();
 	if (TIMETEST) {PRINT_TIME("2 Upload Smoke");}
 	add_coll_shadow_objs(); // must be before add_dynamic_lights_ground() and create_shadow_map()
-	add_dynamic_lights_ground(); // and create dlights shadow maps
+	add_dynamic_lights_ground(dlight_add_thresh); // and create dlights shadow maps
 	if (TIMETEST) {PRINT_TIME("3 Add Dlights");}
 	cube_t const dlight_bounds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, get_zval_min(), get_zval_max());
-	upload_dlights_textures(dlight_bounds); // get_scene_bounds()
+	upload_dlights_textures(dlight_bounds, dlight_add_thresh); // get_scene_bounds()
 	if (TIMETEST) {PRINT_TIME("4 Dlights Textures");}
 	get_occluders();
 	if (TIMETEST) {PRINT_TIME("5 Get Occluders");}

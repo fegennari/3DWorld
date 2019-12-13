@@ -326,10 +326,10 @@ struct building_draw_utils {
 class city_lights_manager_t {
 protected:
 	cube_t lights_bcube;
-	float light_radius_scale;
+	float light_radius_scale, dlight_add_thresh;
 	bool prev_had_lights;
 public:
-	city_lights_manager_t() : lights_bcube(all_zeros), light_radius_scale(1.0), prev_had_lights(0) {}
+	city_lights_manager_t() : lights_bcube(all_zeros), light_radius_scale(1.0), dlight_add_thresh(0.0), prev_had_lights(0) {}
 	virtual ~city_lights_manager_t() {}
 	cube_t get_lights_bcube() const {return lights_bcube;}
 	void tighten_light_bcube_bounds(vector<light_source> const &lights);

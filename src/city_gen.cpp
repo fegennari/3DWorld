@@ -30,7 +30,7 @@ extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
 
 
-void add_dynamic_lights_city(cube_t const &scene_bcube);
+void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh);
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 
@@ -2915,8 +2915,8 @@ bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float ligh
 }
 
 void city_lights_manager_t::finalize_lights(vector<light_source> &lights) {
-	add_dynamic_lights_city(lights_bcube);
-	upload_dlights_textures(lights_bcube);
+	add_dynamic_lights_city(lights_bcube, dlight_add_thresh);
+	upload_dlights_textures(lights_bcube, dlight_add_thresh);
 	prev_had_lights = !dl_sources.empty();
 }
 

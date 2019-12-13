@@ -28,7 +28,7 @@ colorRGBA const flashlight_colors[2] = {colorRGBA(1.0, 0.8, 0.5, 1.0), colorRGBA
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0), flashlight_on(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0), DL_GRID_BS(0), flashlight_color_id(0);
 float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
-float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
+float czmin0(0.0), lm_dz_adj(0.0);
 cube_t dlight_bcube(all_zeros_cube);
 vector<dls_cell> ldynamic;
 vector<unsigned char> ldynamic_enabled;
@@ -823,7 +823,7 @@ void setup_2d_texture(unsigned &tid) {
 // 7: reserved for shadow map moon
 // 8: reserved for specular maps
 // 11: reserved for detail normal map
-void upload_dlights_textures(cube_t const &bounds) { // 0.21ms => 0.05ms with dlights_enabled
+void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { // 0.21ms => 0.05ms with dlights_enabled
 
 	//RESET_TIME;
 	static bool last_dlights_empty(0);
@@ -904,7 +904,7 @@ void upload_dlights_textures(cube_t const &bounds) { // 0.21ms => 0.05ms with dl
 			std::cerr << "Warning: Exceeded max # indexes (" << max_gb_entries << ") in dynamic light texture upload" << endl;
 			++num_warnings;
 		}
-		dlight_add_thresh = min(0.25, (dlight_add_thresh + 0.005)); // increase thresh to clip the dynamic lights to a smaller radius
+		dlight_add_thresh = min(0.25f, (dlight_add_thresh + 0.005f)); // increase thresh to clip the dynamic lights to a smaller radius
 	}
 	if (elem_tid == 0) {
 		setup_2d_texture(elem_tid);
@@ -1086,7 +1086,7 @@ void calc_spotlight_pdu(light_source const &ls, pos_dir_up &pdu) {
 }
 
 
-void add_dynamic_lights_ground() {
+void add_dynamic_lights_ground(float &dlight_add_thresh) {
 
 	//RESET_TIME;
 	sync_flashlight();
@@ -1114,7 +1114,7 @@ void add_dynamic_lights_ground() {
 	stable_sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(get_grid_xsize()), gby(get_grid_ysize());
 	has_dl_sources     = (ndl > 0);
-	dlight_add_thresh *= 0.99;
+	dlight_add_thresh *= 0.99f;
 	bool first(1);
 	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
 	point const dlight_shift(-0.5*DX_VAL, -0.5*DY_VAL, 0.0);
@@ -1168,7 +1168,7 @@ void add_dynamic_lights_ground() {
 }
 
 
-void add_dynamic_lights_city(cube_t const &scene_bcube) {
+void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh) {
 
 	//RESET_TIME;
 	assert(DL_GRID_BS == 0); // not supported
