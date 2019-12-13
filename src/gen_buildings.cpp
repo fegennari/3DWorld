@@ -525,10 +525,10 @@ class building_draw_t {
 		void draw_quad_geom_range(shader_t &s, vertex_range_t const &range, bool shadow_only=0, bool no_set_texture=0) { // no tris; empty range is legal
 			draw_geom_range(s, shadow_only, no_set_texture, vert_ix_pair(range.start, 0), vert_ix_pair(range.end, 0));
 		}
-		void draw_geom_tile(shader_t &s, unsigned tile_id, bool no_set_texture) {
+		void draw_geom_tile(shader_t &s, unsigned tile_id, bool shadow_only, bool no_set_texture) {
 			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
-			draw_geom_range(s, 0, no_set_texture, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
+			draw_geom_range(s, shadow_only, no_set_texture, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
 		void upload_to_vbos() {
 			assert((quad_verts.size()%4) == 0);
@@ -913,8 +913,8 @@ public:
 			i->draw_all_geom(s, shadow_only, no_set_texture, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
 		}
 	}
-	void draw_tile(shader_t &s, unsigned tile_id, bool no_set_texture=0) {
-		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(s, tile_id, no_set_texture);}
+	void draw_tile(shader_t &s, unsigned tile_id, bool shadow_only=0, bool no_set_texture=0) {
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(s, tile_id, shadow_only, no_set_texture);}
 	}
 	void draw_block(shader_t &s, unsigned ix, bool shadow_only, bool no_set_texture=0, vertex_range_t const *const exclude=nullptr) {
 		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(s, shadow_only, no_set_texture, 0, exclude);}
@@ -1439,6 +1439,7 @@ public:
 		translate_to(xlate);
 		shader_t s;
 		s.begin_color_only_shader(); // really don't even need colors
+		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -1447,21 +1448,21 @@ public:
 				// draw interior for the tile containing the light (TODO_INT: should only need building containing the light?)
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
 					if (!g->bcube.contains_pt(lpos)) continue;
-					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin())); // TODO_INT: shadow_only option
+					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 1); // shadow_only=1
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
-						if (!b.interior) continue; // no interior, skip
-						if (!b.bcube.contains_pt(lpos)) continue;
+						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						b.gen_and_draw_room_geom(s, bi->ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
 					} // for bi
-				}
+				} // for g
 			}
 			else { // draw exterior shadow maps
 				(*i)->building_draw_vbo.draw(s, 1);
 			}
-		}
+		} // for i
+		if (interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();
 	}
