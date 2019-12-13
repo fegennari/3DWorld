@@ -1655,12 +1655,17 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	float const window_vspacing(get_window_vspace());
+	float const window_vspacing(get_window_vspace()), camera_z(camera_pdu.pos.z);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_LIT)) continue; // not a light, or light not on
-		// player is on a different floor and can't see a light from the floor above/below, unless the light is at the top of the stairs
-		if (camera_in_building && !(i->flags & RO_FLAG_TOS) && (camera_pdu.pos.z < (i->z2() - window_vspacing) || camera_pdu.pos.z > i->z2())) continue;
+		
+		if (camera_in_building) { // player is on a different floor and can't see a light from the floor above/below
+			if (i->flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS)) { // light is on the stairs, draw it one floor above and below
+				if (camera_z < (i->z2() - 2.0*window_vspacing) || camera_z > (i->z2() + window_vspacing)) continue;
+			}
+			else if (camera_z < (i->z2() - window_vspacing) || camera_z > i->z2()) continue; // light is on a different floor
+		}
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		float const light_radius(10.0*max(i->dx(), i->dy()));
@@ -1672,7 +1677,7 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 
 		if (camera_in_building) { // only when the player is inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with near 180 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
-			dl_sources.emplace_back(0.5*light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.45);
+			dl_sources.emplace_back(0.5*light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4);
 			dl_sources.back().disable_shadows();
 		}
 	} // for i
