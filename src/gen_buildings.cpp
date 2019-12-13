@@ -1544,7 +1544,7 @@ public:
 		bool const draw_inside_windows(DRAW_INSIDE_WINDOWS && transparent_windows);
 		bool const enable_room_lights(add_room_lights());
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
-		float const pcf_scale = 0.25;
+		float const pcf_scale = 0.2;
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw;
