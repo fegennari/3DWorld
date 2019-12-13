@@ -1153,7 +1153,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	float const wall_thick(0.5*floor_thickness), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
 	float const wwf(global_building_params.get_window_width_fract()), window_border(0.5*(1.0 - wwf)); // (0.0, 1.0)
 	// houses have at most two parts; exclude garage, shed, porch, porch support, etc.
-	unsigned const num_parts(is_house ? min(2U, (parts.size() - has_chimney)) : parts.size());
+	unsigned const num_parts(get_real_num_parts());
 	vector<split_cube_t> to_split;
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
@@ -1664,28 +1664,30 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		point const cs_lpos(lpos + xlate); // camera space
+		bool const floor_is_above(camera_z < (i->z2() - window_vspacing)), floor_is_below(camera_z > i->z2());
 		
-		if (camera_in_building) { // player is on a different floor and can't see a light from the floor above/below
-			if (i->flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS)) { // light is on the stairs, draw it one floor above and below
-				if (camera_z < (i->z2() - 2.0*window_vspacing) || camera_z > (i->z2() + window_vspacing)) continue;
-			} else if (camera_z < (i->z2() - window_vspacing) || camera_z > i->z2()) continue; // light is on a different floor
-		}
-		else { // camera outside the building
-			float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
-			if ((camera_z - cs_lpos.z) > 1.0f*xy_dist || (cs_lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
-			// this is a questionable optimization
-			assert(i->room_id < interior->rooms.size());
-			uint8_t const ext_sides(interior->rooms[i->room_id].ext_sides);
-			bool is_occluded[2] = {0};
-
-			for (unsigned d = 0; d < 2; ++d) {
-				bool const dir(camera_pdu.pos[d] > cs_lpos[d]);
-				is_occluded[d] = !(ext_sides & (1 << (2*d + dir)));
+		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
+			if (camera_in_building) { // player is on a different floor and can't see a light from the floor above/below
+				if (!(i->flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS))) continue; // camera in building and on wrong floor, don't add light
+				if (camera_z < (i->z2() - 2.0*window_vspacing) || camera_z > (i->z2() + window_vspacing)) continue; // light is on the stairs, add if one floor above/below
 			}
-			if (is_occluded[0] && is_occluded[1]) continue; // room is not on the exterior of the building on either side facing the camera
+			else { // camera outside the building
+				float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
+				if ((camera_z - cs_lpos.z) > 1.0f*xy_dist || (cs_lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
+				// TODO_INT: probably better to check if light half sphere is occluded by the floor above/below
+				assert(i->room_id < interior->rooms.size());
+				uint8_t const ext_sides(interior->rooms[i->room_id].ext_sides);
+				bool is_occluded[2] = {0};
+
+				for (unsigned d = 0; d < 2; ++d) { // TODO_INT: find part containing this light using get_real_num_parts(), only check dim where the camera is outside
+					bool const dir(camera_pdu.pos[d] > cs_lpos[d]);
+					is_occluded[d] = !(ext_sides & (1 << (2*d + dir)));
+				}
+				if (is_occluded[0] && is_occluded[1]) continue; // room is not on the exterior of the building on either side facing the camera
+			}
 		}
 		float const light_radius(10.0*max(i->dx(), i->dy()));
-		if (!camera_pdu.sphere_visible_test(cs_lpos, light_radius)) continue; // VFC
+		if (!camera_pdu.sphere_visible_test(cs_lpos, 0.95*light_radius)) continue; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.26; // as close to 180 degree FOV as we can get without shadow clipping

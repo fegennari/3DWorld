@@ -279,6 +279,7 @@ struct building_t : public building_geom_t {
 	building_mat_t const &get_material() const;
 	float get_window_vspace() const {return get_material().get_floor_spacing();}
 	float get_door_height  () const {return 0.9f*get_window_vspace();} // set height based on window spacing, 90% of a floor height (may be too large)
+	unsigned get_real_num_parts() const {return (is_house ? min(2U, (parts.size() - has_chimney)) : parts.size());}
 	void gen_rotation(rand_gen_t &rgen);
 	void set_z_range(float z1, float z2);
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
