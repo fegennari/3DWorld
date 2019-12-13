@@ -12,6 +12,7 @@ Cities:
 - Fences
 
 Building Interiors:
-* Add room light shadows
-  * Shadow draw pass for building interiors (walls, floors, objects)
+* Room object ambient lighting?
+* Optimize room light shadows
+  * Only draw current building?
 * Elevators
