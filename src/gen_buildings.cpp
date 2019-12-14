@@ -1555,6 +1555,7 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
+			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(GL_BACK);
 
@@ -1564,7 +1565,9 @@ public:
 				
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
 					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-						if (g->bcube.contains_pt(camera_xlated)) {(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));}
+						if (g->bcube.closest_dist_xy_less_than(camera_xlated, z_prepass_dist)) {
+							(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
+						}
 					}
 				}
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -1573,7 +1576,6 @@ public:
 			}
 			city_shader_setup(s, lights_bcube, enable_room_lights, (ADD_ROOM_SHADOWS && enable_room_lights), use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
 			set_interior_lighting(s);
-			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
 
