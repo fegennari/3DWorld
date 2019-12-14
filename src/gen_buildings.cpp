@@ -480,13 +480,15 @@ class building_draw_t {
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 		unsigned tri_vbo_off;
 	public:
+		bool no_shadows;
 		tid_nm_pair_t tex;
 		vect_vnctcc_t quad_verts, tri_verts;
 
-		draw_block_t() : tri_vbo_off(0) {}
+		draw_block_t() : tri_vbo_off(0), no_shadows(0) {}
 
 		void draw_geom_range(shader_t &s, bool shadow_only, bool no_set_texture, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
 			if (vstart == vend) return; // empty range - no verts for this tile
+			if (shadow_only && no_shadows) return; // no shadows on this material
 			if (!shadow_only && !no_set_texture) {tex.set_gl(s);}
 			assert(vbo.vbo_valid());
 			(shadow_only ? svao : vao).create_from_vbo<vert_norm_comp_tc_color>(vbo, 1, 1); // setup_pointers=1, always_bind=1
@@ -505,6 +507,8 @@ class building_draw_t {
 			vao_manager_t::post_render();
 		}
 		void draw_all_geom(shader_t &s, bool shadow_only, bool no_set_texture, bool direct_draw_no_vbo, vertex_range_t const *const exclude=nullptr) {
+			if (shadow_only && no_shadows) return; // no shadows on this material
+
 			if (direct_draw_no_vbo) {
 				assert(!exclude); // not supported in this mode
 				bool const use_texture(!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty()));
@@ -595,6 +599,11 @@ public:
 
 	void toggle_transparent_windows_mode() {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->tex.toggle_transparent_windows_mode();}
+	}
+	void set_no_shadows_for_tex(tid_nm_pair_t const &tex) {
+		unsigned const ix(get_to_draw_ix(tex));
+		assert(ix < to_draw.size()); // must call get_verts() on this tex first
+		to_draw[ix].no_shadows = 1;
 	}
 	void add_cylinder(building_geom_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry, float bcz1, float ao_bcz2,
 		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool no_ao, bool clip_windows)
@@ -968,6 +977,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
 		}
+		bdraw.set_no_shadows_for_tex(mat.ceil_tex); // minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings
+
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
 				bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
