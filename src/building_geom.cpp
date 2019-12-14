@@ -1184,7 +1184,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		float const cube_width(psz[min_dim]);
 		bool const first_part(p == parts.begin());
 		bool const use_hallway(!is_house && (first_part || (p-1)->z1() < p->z1()) && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
-		unsigned const rooms_start(interior->rooms.size());
+		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin());
 		cube_t hall;
 
 		if (use_hallway) {
@@ -1247,7 +1247,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c.d[ min_dim][!d] = hall_wall_pos[d];
 					c.d[!min_dim][ 0] = pos;
 					c.d[!min_dim][ 1] = next_pos;
-					add_room(c, *p);
+					add_room(c, part_id);
 					cube_t door(c); // copy zvals and wall pos
 					door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 					door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
@@ -1258,7 +1258,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			} // for i
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
-			if (add_hall) {add_room(hall, *p);}
+			if (add_hall) {add_room(hall, part_id);}
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
@@ -1286,7 +1286,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
 				
 				if (min(csz.x, csz.y) < min_wall_len) {
-					add_room(c, *p);
+					add_room(c, part_id);
 					continue; // not enough space to add a wall
 				}
 				float wall_pos(0.0);
@@ -1300,7 +1300,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					pos_valid = 1; break; // done, keep wall_pos
 				}
 				if (!pos_valid) { // no valid pos, skip this split
-					add_room(c, *p);
+					add_room(c, part_id);
 					continue;
 				}
 				cube_t wall(c), wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
@@ -1317,7 +1317,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
 					c_sub.door_lo[!wall_dim][d] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
 					c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
-					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, *p);} // leaf case (unsplit), add a new room
+					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id);} // leaf case (unsplit), add a new room
 				}
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
@@ -1524,9 +1524,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	C.z1() = z - fc_thick; C.z2() = z; interior->ceilings.push_back(C); // roof ceiling, full area
 }
 
-void building_t::add_room(cube_t const &room, cube_t const &part) {
+void building_t::add_room(cube_t const &room, unsigned part_id) {
 	assert(interior);
-	room_t r(room);
+	room_t r(room, part_id);
+	cube_t const &part(parts[part_id]);
 	for (unsigned d = 0; d < 4; ++d) {r.ext_sides |= (unsigned(room.d[d>>1][d&1] == part.d[d>>1][d&1]) << d);} // find exterior sides
 	interior->rooms.push_back(r);
 }
@@ -1676,16 +1677,19 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 				if ((camera_z - cs_lpos.z) > 1.0f*xy_dist || (cs_lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
 				// TODO_INT: probably better to check if light half sphere is occluded by the floor above/below
 				assert(i->room_id < interior->rooms.size());
-				uint8_t const ext_sides(interior->rooms[i->room_id].ext_sides);
-				bool is_occluded[2] = {0};
+				room_t const &room(interior->rooms[i->room_id]);
+				assert(room.part_id < parts.size());
+				cube_t const &part(parts[room.part_id]);
+				bool visible[2] = {0};
 
-				for (unsigned d = 0; d < 2; ++d) { // TODO_INT: find part containing this light using get_real_num_parts(), only check dim where the camera is outside
+				for (unsigned d = 0; d < 2; ++d) { // for each dim
 					bool const dir(camera_pdu.pos[d] > cs_lpos[d]);
-					is_occluded[d] = !(ext_sides & (1 << (2*d + dir)));
+					if ((camera_pdu.pos[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
+					visible[d] = (room.ext_sides & (1 << (2*d + dir)));
 				}
-				if (is_occluded[0] && is_occluded[1]) continue; // room is not on the exterior of the building on either side facing the camera
+				if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 			}
-		}
+		} // end camera on different floor case
 		float const light_radius(10.0*max(i->dx(), i->dy()));
 		if (!camera_pdu.sphere_visible_test(cs_lpos, 0.95*light_radius)) continue; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));

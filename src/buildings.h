@@ -224,9 +224,10 @@ struct room_t : public cube_t {
 	bool has_stairs, has_elevator, no_geom;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	//uint8_t sides_with_doors; // is this useful/needed?
+	uint8_t part_id;
 	uint64_t lit_by_floor;
-	room_t() : has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), lit_by_floor(0) {}
-	room_t(cube_t const &c, uint64_t const lbf=0) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), lit_by_floor(lbf) {}
+	room_t() : has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), part_id(0), lit_by_floor(0) {}
+	room_t(cube_t const &c, unsigned p) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), part_id(p), lit_by_floor(0) {}
 	float get_light_amt() const;
 };
 
@@ -318,7 +319,7 @@ struct building_t : public building_geom_t {
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:
-	void add_room(cube_t const &room, cube_t const &part);
+	void add_room(cube_t const &room, unsigned part_id);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
