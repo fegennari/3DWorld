@@ -956,34 +956,30 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(bg, vect_cube_t(), *i, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5),
 				detail_color*(bg.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
 		}
-		// doors are both interior and exterior so are always drawn; but maybe they should be drawn only in the exterior block to avoid drawing twice when both passes are enabled?
-		for (auto i = doors.begin(); i != doors.end(); ++i) {
+		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 			int const door_tid((i->type == tquad_with_ix_t::TYPE_BDOOR) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(door_tid, -1, 1.0, 1.0), WHITE);
 		}
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
-		// should we defer this until the player is near/inside the building?
-		// how do we skip drawing of the building exterior when the player is close to and enters the building?
-		// make windows transparent?
-		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
+		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
 		}
-		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
+		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
 		}
-		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts
+		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
 				bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
 		}
-		for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) { // added per-floor
+		for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) { // added per-floor (530K T)
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
 		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 			// TODO_INT
 		}
-		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor
+		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				bool const dim(i->dy() < i->dx());
 				bool const dir(i->d[dim][0] > bcube.get_center_dim(dim)); // determines which way doors open; doors open in from hallways for office buildings
