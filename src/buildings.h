@@ -234,13 +234,13 @@ struct elevator_t : public cube_t {
 };
 
 struct room_t : public cube_t {
-	bool has_stairs, has_elevator, no_geom;
+	bool has_stairs, has_elevator, no_geom, is_hallway, is_office;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	//uint8_t sides_with_doors; // is this useful/needed?
 	uint8_t part_id;
 	uint64_t lit_by_floor;
-	room_t() : has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), part_id(0), lit_by_floor(0) {}
-	room_t(cube_t const &c, unsigned p) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(0), ext_sides(0), part_id(p), lit_by_floor(0) {}
+	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), ext_sides(0), part_id(0), lit_by_floor(0) {}
+	room_t(cube_t const &c, unsigned p) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), ext_sides(0), part_id(p), lit_by_floor(0) {}
 	float get_light_amt() const;
 };
 

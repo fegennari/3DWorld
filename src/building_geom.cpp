@@ -1232,8 +1232,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				}
 			} // for s
 			// add rooms and doors
-			bool const add_hall(0); // I guess the hall itself doesn't count as a room
-			interior->rooms.reserve(2*num_rooms + add_hall); // two rows of rooms + optional hallway
+			interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
 			interior->doors.reserve(2*num_rooms);
 			float pos(p->d[!min_dim][0]);
 
@@ -1248,6 +1247,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c.d[!min_dim][ 0] = pos;
 					c.d[!min_dim][ 1] = next_pos;
 					add_room(c, part_id);
+					interior->rooms.back().is_office = 1;
 					cube_t door(c); // copy zvals and wall pos
 					door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 					door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
@@ -1258,7 +1258,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			} // for i
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
-			if (add_hall) {add_room(hall, part_id);}
+			add_room(hall, part_id); // add hallway as room
+			interior->rooms.back().is_hallway = 1;
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
@@ -1431,6 +1432,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
 			stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink; // centered in the hallway
 		} // for dim
+		assert(!interior->rooms.empty());
+		interior->rooms.back().has_stairs = 1; // hallway is always the last room to be added
 	}
 	else if (!is_house || first_part) { // only add stairs to first part of a house
 		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
@@ -1587,16 +1590,17 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		unsigned const room_id(r - interior->rooms.begin());
 		point room_center(r->get_cube_center());
-		// determine light pos for this stack of rooms
+		// determine light pos and size for this stack of rooms
 		bool const light_dim(r->dx() < r->dy()); // longer room dim
+		float const light_size((r->is_hallway ? 2.5 : (r->is_office ? 2.0 : 1.0))*floor_thickness); // use larger light for offices and hallways
 		cube_t light;
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
-			float const sz(((bool(dim) == light_dim) ? 2.2 : 1.0)*1.0*floor_thickness);
+			float const sz(((bool(dim) == light_dim) ? 2.2 : 1.0)*light_size);
 			light.d[dim][0] = room_center[dim] - sz;
 			light.d[dim][1] = room_center[dim] + sz;
 		}
-		bool const blocked_by_stairs(interior->is_blocked_by_stairs_or_elevator(light, fc_thick));
+		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator(light, fc_thick));
 		float z(r->z1());
 
 		// place objects on each floor for this room
@@ -1608,17 +1612,28 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 			if (!blocked_by_stairs || top_of_stairs) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
-				is_lit = ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0); // 50% of lights are on, 75% for top of stairs
+				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
 				unsigned char flags(0);
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
-				objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags); // dir=0 (unused)
+				
+				if (r->is_hallway) {
+					for (unsigned d = 0; d < 2; ++d) { // place a light on each side of the stairs
+						float const delta((d ? -1.0 : 1.0)*0.2*r->get_sz_dim(light_dim));
+						cube_t hall_light(light);
+						for (unsigned e = 0; e < 2; ++e) {hall_light.d[light_dim][e] += delta;}
+						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags); // dir=0 (unused)
+					}
+				}
+				else { // normal room
+					objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags); // dir=0 (unused)
+				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
+			} // end light placement
+			if (!r->is_hallway) { // place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
+				if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, is_lit);}
 			}
-			// place a table and maybe some chairs near the center of the room 95% of the time
-			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, is_lit);}
-
 			if (z == bcube.z1()) {
 				// any special logic that goes on the first floor is here
 			}
@@ -1666,6 +1681,8 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		point const cs_lpos(lpos + xlate); // camera space
 		bool const floor_is_above(camera_z < (i->z2() - window_vspacing)), floor_is_below(camera_z > i->z2());
+		assert(i->room_id < interior->rooms.size());
+		room_t const &room(interior->rooms[i->room_id]);
 		
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 			if (camera_in_building) { // player is on a different floor and can't see a light from the floor above/below
@@ -1676,8 +1693,6 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 				float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
 				if ((camera_z - cs_lpos.z) > 2.0f*xy_dist || (cs_lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
 				// is it better to check if light half sphere is occluded by the floor above/below?
-				assert(i->room_id < interior->rooms.size());
-				room_t const &room(interior->rooms[i->room_id]);
 				assert(room.part_id < parts.size());
 				cube_t const &part(parts[room.part_id]);
 				bool visible[2] = {0};
@@ -1694,12 +1709,12 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 		if (!camera_pdu.sphere_visible_test(cs_lpos, 0.95*light_radius)) continue; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
-		float const bwidth = 0.26; // as close to 180 degree FOV as we can get without shadow clipping
+		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, bwidth); // points down, white for now
 
-		if (camera_in_building) { // only when the player is inside a building and can't see the light bleeding through the floor
+		if (camera_in_building && !room.is_hallway) { // only when the player is inside a building and can't see the light bleeding through the floor; not for hallways
 			// add a smaller unshadowed light with near 180 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
-			dl_sources.emplace_back(0.5*light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4);
+			dl_sources.emplace_back((room.is_office ? 0.3 : 0.5)*light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4);
 			dl_sources.back().disable_shadows();
 		}
 	} // for i
