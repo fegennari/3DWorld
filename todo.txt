@@ -10,9 +10,8 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 - Fences
+* Mesh simplificaton for cars and peds for shadow pass
 
 Building Interiors:
 * Room object ambient lighting?
-* Optimize room light shadows
-  * Only draw current building?
 * Elevators

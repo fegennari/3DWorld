@@ -1414,7 +1414,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float const window_vspacing(get_material().get_floor_spacing());
 	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
 	float z(part.z1());
-	cube_t stairs; // TODO_INT: allow multiple stairs/elevators per-part for larger office buildings
+	cube_t stairs; // TODO_INT: allow multiple stairs/elevators per-part for larger office buildings?
 	bool stairs_dim(0);
 	vect_cube_t &landings(interior->stair_landings);
 
@@ -1675,7 +1675,7 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 			else { // camera outside the building
 				float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
 				if ((camera_z - cs_lpos.z) > 1.0f*xy_dist || (cs_lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
-				// TODO_INT: probably better to check if light half sphere is occluded by the floor above/below
+				// is it better to check if light half sphere is occluded by the floor above/below?
 				assert(i->room_id < interior->rooms.size());
 				room_t const &room(interior->rooms[i->room_id]);
 				assert(room.part_id < parts.size());

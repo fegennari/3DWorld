@@ -1012,6 +1012,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
 		}
+		// Note: stair landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
 		for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) { // added per-floor (530K T)
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
@@ -1661,7 +1662,8 @@ public:
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 				glDepthMask(GL_FALSE);
 				interior_wind_draw.draw(holes_shader, 0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
-				// clear stencil buffer for front sides of the building; TODO_INT: still not correct, but maybe looks a bit better
+				// clear stencil buffer for front sides of the building
+				// TODO_INT: still not correct for L/T/U shaped buildings or houses with different part heights, but maybe looks a bit better
 				glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_ZERO); // clear stencil for front faces
 				glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
 				
@@ -1710,8 +1712,7 @@ public:
 			reset_interior_lighting(s);
 			s.end_shader();
 			glCullFace(GL_BACK); // draw front faces
-			// draw windows in depth pass to create holes
-			// TODO_INT: what about holes for doors that the player can open and enter?
+			// draw windows in depth pass to create holes; what about holes for doors that the player can open and enter?
 			shader_t holes_shader;
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
