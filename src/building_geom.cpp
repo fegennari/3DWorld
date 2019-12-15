@@ -1414,34 +1414,48 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 	float const window_vspacing(get_material().get_floor_spacing());
 	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
+	float const ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
-	cube_t stairs; // TODO_INT: allow multiple stairs/elevators per-part for larger office buildings?
-	bool stairs_dim(0);
+	cube_t stairs_or_elev; // TODO_INT: allow multiple stairs/elevators per-part for larger office buildings?
+	bool stairs_dim(0), add_elevator(0);
 	vect_cube_t &landings(interior->stair_landings);
 
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
-		bool const add_elevator(0);
+		add_elevator = (0 && rgen.rand_bool());
 		if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
-		bool const stairs_dim(hall.dx() < hall.dy()); // same orientation as the hallway
-		stairs = hall; // start as hallway
-
-		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
-			bool const is_step_dim(bool(dim) == stairs_dim);
-			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
-			stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink; // centered in the hallway
-		} // for dim
 		assert(!interior->rooms.empty());
-		interior->rooms.back().has_stairs = 1; // hallway is always the last room to be added
+		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
+		bool const long_dim(hall.dx() < hall.dy());
+
+		if (add_elevator) {
+			point const center(room.get_cube_center());
+			elevator_t elevator(room, long_dim, rgen.rand_bool()); // elevator shaft
+			elevator.x1() = center.x - 0.5*ewidth; elevator.x2() = center.x + 0.5*ewidth;
+			elevator.y1() = center.y - 0.5*ewidth; elevator.y2() = center.y + 0.5*ewidth;
+			interior->elevators.push_back(elevator);
+			room.has_elevator = 1;
+			stairs_or_elev = elevator;
+		}
+		else {
+			cube_t stairs(hall); // start as hallway
+
+			for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
+				bool const is_step_dim(bool(dim) == long_dim); // same orientation as the hallway
+				float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*doorway_width); // set max size of stairs opening
+				stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink; // centered in the hallway
+			} // for dim
+			room.has_stairs = 1;
+			stairs_or_elev  = stairs;
+		}
 	}
 	else if (!is_house || first_part) { // only add stairs to first part of a house
 		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
-		bool const add_elevator(0 && !is_house && !first_part && rgen.rand_bool());
+		add_elevator = (0 && !is_house && !first_part && rgen.rand_bool());
 		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
 		assert(num_avail_rooms > 0); // must have added at least one room
 		unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell
-		float const ewidth(1.6*doorway_width); // for elevators
 
 		for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell in any of them
 			unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
@@ -1457,9 +1471,13 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						elevator_t elevator(room, dim, !(dim ? y : x)); // elevator shaft
 						elevator.d[0][!x] = elevator.d[0][x] + (x ? -ewidth : ewidth);
 						elevator.d[1][!y] = elevator.d[1][y] + (y ? -ewidth : ewidth);
-						if (!interior->is_cube_close_to_doorway(elevator)) {interior->elevators.push_back(elevator); placed = 1;} // successfully placed
-					}
-				}
+						elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
+						if (interior->is_cube_close_to_doorway(elevator)) continue; // try again
+						interior->elevators.push_back(elevator);
+						stairs_or_elev = elevator;
+						placed = 1; // successfully placed
+					} // for x
+				} // for y
 				if (!placed) continue; // try another room
 				room.has_elevator = 1;
 				room.no_geom      = 1;
@@ -1493,7 +1511,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				} // for dim
 				if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
 				assert(cutout.is_strictly_normalized());
-				stairs = cutout;
+				stairs_or_elev  = cutout;
 				room.has_stairs = 1;
 				//room.no_geom    = 1;
 			}
@@ -1509,14 +1527,17 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		cube_t to_add[4];
 		float const zc(z - fc_thick), zf(z + fc_thick);
 
-		if (stairs.is_all_zeros()) {to_add[0] = part;} // add single cube
+		if (stairs_or_elev.is_all_zeros()) {to_add[0] = part;} // add single cube
 		else {
-			subtract_cube_xy(part, stairs, to_add);
-			landings.push_back(stairs);
-			landings.back().z1() = zc; landings.back().z2() = zf;
-			if (f == 1) {interior->stairwells.push_back(stairs);} // only add for first floor
+			subtract_cube_xy(part, stairs_or_elev, to_add);
+
+			if (!add_elevator) { // add landings and stairwells
+				landings.push_back(stairs_or_elev);
+				landings.back().z1() = zc; landings.back().z2() = zf;
+				if (f == 1) {interior->stairwells.push_back(stairs_or_elev);} // only add for first floor
+			}
 		}
-		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs along an exterior wall
+		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs/elevator shafts along an exterior wall
 			cube_t &c(to_add[i]);
 			if (c.is_zero_area()) continue;
 			c.z1() = zc; c.z2() = z;  interior->ceilings.push_back(c);
@@ -1665,7 +1686,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-		// TODO_INT: add vertical walls for entire height with door cutout (similar to walls), wall texture on outside and wood texture on inside
+		// add any internal elevator parts with type=TYPE_ELEVATOR here
 	}
 }
 

@@ -394,6 +394,7 @@ public:
 		register_tid(building_window_gen.get_window_tid());
 		register_tid(building_window_gen.get_hdoor_tid());
 		register_tid(building_window_gen.get_bdoor_tid());
+		register_tid(FENCE_TEX); // for elevators
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
 			register_tid(i->side_tex.tid);
@@ -1018,8 +1019,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) { // added per-floor (530K T)
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
+		tid_nm_pair_t const elevator_tex(FENCE_TEX, -1, 16.0, 16.0); // normal mapped?
+		bdraw.ensure_verts(elevator_tex);
+
 		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-			// TODO_INT
+			// TODO_INT: add vertical walls for entire height with door cutout (similar to walls), wall texture on outside and wood texture on inside
+			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, elevator_tex, WHITE, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 		}
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
 			int const door_tid(building_window_gen.get_hdoor_tid());
