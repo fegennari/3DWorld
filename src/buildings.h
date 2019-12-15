@@ -11,6 +11,7 @@
 bool const ADD_BUILDING_INTERIORS  = 1;
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 unsigned const MAX_CYLIN_SIDES     = 36;
+unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
 
 class light_source;
 
@@ -161,6 +162,18 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
+struct vertex_range_t {
+	int draw_ix; // -1 is unset
+	unsigned start, end;
+	vertex_range_t() : draw_ix(-1), start(0), end(0) {}
+	vertex_range_t(unsigned s, unsigned e, int ix=-1) : draw_ix(ix), start(s), end(e) {}
+};
+
+struct draw_range_t {
+	// intended for building interiors, which don't have many materials; may need to increase MAX_DRAW_BLOCKS later
+	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
+};
+
 enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, NUM_TYPES};
 
 // object flags, currently used for room lights
@@ -237,6 +250,7 @@ struct building_interior_t {
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	std::unique_ptr<building_room_geom_t> room_geom;
+	draw_range_t draw_range;
 
 	building_interior_t() {}
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
@@ -248,12 +262,6 @@ struct building_interior_t {
 struct building_stats_t {
 	unsigned nbuildings, nparts, ndetails, ntquads, ndoors, ninterior, nrooms, nceils, nfloors, nwalls, nrgeom, nobjs, nverts;
 	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), nobjs(0), nverts(0) {}
-};
-
-struct vertex_range_t {
-	int draw_ix; // -1 is unset
-	unsigned start, end;
-	vertex_range_t() : draw_ix(-1), start(0), end(0) {}
 };
 
 struct building_t : public building_geom_t {

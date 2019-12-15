@@ -558,6 +558,8 @@ class building_draw_t {
 		void clear() {clear_vbos(); clear_verts();}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
 		bool has_drawn() const {return !pos_by_tile.empty();}
+		unsigned num_quad_verts() const {return quad_verts.size();}
+		unsigned num_tri_verts () const {return tri_verts .size();}
 		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
 		unsigned num_tris () const {return (quad_verts.size()/2 + tri_verts.size()/3);} // Note: 1 quad = 4 verts = 2 triangles
 	}; // end draw_block_t
@@ -597,6 +599,26 @@ public:
 	unsigned get_to_draw_ix(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix(tex.tid);}
 	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size();}
 
+	// Note: this interface assumes that all materials are always drawn between these calls,
+	// so that either to_draw is empty when calling begin(), or to_draw does not change size between begin() and end()
+	void begin_draw_range_capture(draw_range_t &r) const {
+		for (unsigned i = 0, rix = 0; i < to_draw.size(); ++i) {
+			unsigned const nv(to_draw[i].num_quad_verts());
+			if (nv == 0) continue; // empty, skip
+			assert(rix < MAX_DRAW_BLOCKS);
+			r.vr[rix++] = vertex_range_t(nv, nv, i); // allocate a new range and record start vertex
+		}
+	}
+	void end_draw_range_capture(draw_range_t &r) const {
+		for (unsigned i = 0, rix = 0; i < to_draw.size(); ++i) {
+			unsigned const nv(to_draw[i].num_quad_verts());
+			if (nv == 0) continue; // empty, skip
+			assert(rix < MAX_DRAW_BLOCKS);
+			vertex_range_t &vr(r.vr[rix++]);
+			if (vr.draw_ix != (int)i) {assert(vr.draw_ix == -1); vr = vertex_range_t(0, nv, i);} // new material, start should be 0
+			else {vr.end = nv;} // update end of range
+		}
+	}
 	void toggle_transparent_windows_mode() {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->tex.toggle_transparent_windows_mode();}
 	}
@@ -928,8 +950,12 @@ public:
 	void draw_block(shader_t &s, unsigned ix, bool shadow_only, bool no_set_texture=0, vertex_range_t const *const exclude=nullptr) {
 		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(s, shadow_only, no_set_texture, 0, exclude);}
 	}
-	void draw_quad_geom_range(shader_t &s, vertex_range_t const &range, unsigned ix, bool shadow_only=0, bool no_set_texture=0) {
-		if (ix < to_draw.size()) {to_draw[ix].draw_quad_geom_range(s, range, shadow_only, no_set_texture);}
+	void draw_quad_geom_range(shader_t &s, vertex_range_t const &range, bool shadow_only=0, bool no_set_texture=0) {
+		if (range.draw_ix < 0 || (unsigned)range.draw_ix >= to_draw.size()) return; // invalid range, skip
+		to_draw[range.draw_ix].draw_quad_geom_range(s, range, shadow_only, no_set_texture);
+	}
+	void draw_quads_for_draw_range(shader_t &s, draw_range_t const &draw_range, bool shadow_only=0, bool no_set_texture=0) {
+		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {draw_quad_geom_range(s, draw_range.vr[i], shadow_only, no_set_texture);}
 	}
 }; // end building_draw_t
 
@@ -971,6 +997,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		}
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
+		bdraw.begin_draw_range_capture(interior->draw_range);
+
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
 		}
@@ -1016,8 +1044,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				} // for d
 				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX, -1, 1.0, 1.0), WHITE);} // add untextured door edges
 			} // for i
-		}
-	}
+		} // end DRAW_INTERIOR_DOORS
+		bdraw.end_draw_range_capture(interior->draw_range);
+	} // end interior case
 }
 
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale) const {
@@ -1452,14 +1481,14 @@ public:
 			if (interior_shadow_maps) { // draw interior shadow maps
 				point const lpos(get_camera_pos() - xlate);
 
-				// draw interior for the tile containing the light (TODO_INT: should only need building containing the light?)
+				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (!g->bcube.contains_pt(lpos)) continue;
-					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 1); // shadow_only=1
+					if (!g->bcube.contains_pt(lpos)) continue; // wrong tile
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
+						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.gen_and_draw_room_geom(s, bi->ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
 					} // for bi
@@ -1638,7 +1667,7 @@ public:
 				
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
-					if (vr.draw_ix >= 0) {(*i)->building_draw_vbo.draw_quad_geom_range(holes_shader, vr, vr.draw_ix, shadow_only);}
+					if (vr.draw_ix >= 0) {(*i)->building_draw_vbo.draw_quad_geom_range(holes_shader, vr, shadow_only);}
 				}
 				glDepthMask(GL_TRUE);
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -1672,7 +1701,7 @@ public:
 					glEnable(GL_STENCIL_TEST);
 					glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
 					glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-					(*i)->building_draw_vbo.draw_quad_geom_range(s, vr, vr.draw_ix, shadow_only, force_wall_tex);
+					(*i)->building_draw_vbo.draw_quad_geom_range(s, vr, shadow_only, force_wall_tex);
 					glDisable(GL_STENCIL_TEST);
 				}
 				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, exclude); // no stencil test
