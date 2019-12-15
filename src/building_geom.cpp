@@ -1592,7 +1592,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		point room_center(r->get_cube_center());
 		// determine light pos and size for this stack of rooms
 		bool const light_dim(r->dx() < r->dy()); // longer room dim
-		float const light_size((r->is_hallway ? 2.5 : (r->is_office ? 2.0 : 1.0))*floor_thickness); // use larger light for offices and hallways
+		float const light_size((r->is_hallway ? 2.0 : (r->is_office ? 1.5 : 1.0))*floor_thickness); // use larger light for offices and hallways
 		cube_t light;
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
