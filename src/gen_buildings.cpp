@@ -598,6 +598,7 @@ public:
 	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
 	unsigned get_to_draw_ix(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix(tex.tid);}
 	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size();}
+	void ensure_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) {get_verts(tex, quads_or_tris);}
 
 	// Note: this interface assumes that all materials are always drawn between these calls,
 	// so that either to_draw is empty when calling begin(), or to_draw does not change size between begin() and end()
@@ -998,6 +999,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
 		bdraw.begin_draw_range_capture(interior->draw_range);
+		bdraw.ensure_verts(mat.wall_tex); // in case the building has no interior walls (single large room); it will always have at least one ceiling and floor
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bdraw.add_section(*this, vect_cube_t(), *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
@@ -1020,11 +1022,16 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			// TODO_INT
 		}
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
+			int const door_tid(building_window_gen.get_hdoor_tid());
+			tid_nm_pair_t const door_edge_tex(WHITE_TEX, FLAT_NMAP_TEX, 1.0, 1.0);
+			bdraw.ensure_verts(tid_nm_pair_t(door_tid)); // ensure this exists for draw_range capture, in case there are no doors
+			bdraw.ensure_verts(door_edge_tex);
+
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				bool const dim(i->dy() < i->dx());
 				bool const dir(i->d[dim][0] > bcube.get_center_dim(dim)); // determines which way doors open; doors open in from hallways for office buildings
 				float const ty(i->dz()/mat.get_floor_spacing()); // tile door texture across floors
-				tid_nm_pair_t const tp(building_window_gen.get_hdoor_tid(), -1, 1.0, ty);
+				tid_nm_pair_t const tp(door_tid, FLAT_NMAP_TEX, 1.0, ty);
 				tquad_with_ix_t const door(set_door_from_cube(*i, dim, dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, (DRAW_INTERIOR_DOORS == 2)));
 				float const thickness(0.02*i->get_sz_dim(!dim));
 				vector3d const normal(door.get_norm());
@@ -1043,7 +1050,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 					if (d == 1) {swap(door_side.pts[0], door_side.pts[1]); swap(door_side.pts[2], door_side.pts[3]); door_side.type = tquad_with_ix_t::TYPE_IDOOR2;} // back face
 					bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
 				} // for d
-				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX, -1, 1.0, 1.0), WHITE);} // add untextured door edges
+				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, door_edge_tex, WHITE);} // add untextured door edges
 			} // for i
 		} // end DRAW_INTERIOR_DOORS
 		bdraw.end_draw_range_capture(interior->draw_range);
