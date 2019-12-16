@@ -1606,6 +1606,7 @@ public:
 		vector<vertex_range_t> per_bcs_exclude;
 		bool this_frame_camera_in_building(0);
 		cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
+		int const interior_use_smaps((ADD_ROOM_SHADOWS && enable_room_lights) ? 2 : 1); // dynamic light smaps only
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -1629,7 +1630,7 @@ public:
 				s.end_shader();
 				glDepthFunc(GL_LEQUAL);
 			}
-			city_shader_setup(s, lights_bcube, enable_room_lights, (ADD_ROOM_SHADOWS && enable_room_lights), use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
+			city_shader_setup(s, lights_bcube, enable_room_lights, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
 			set_interior_lighting(s);
 			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
@@ -1697,7 +1698,7 @@ public:
 
 		if (transparent_windows) {
 			// draw back faces of buildings
-			city_shader_setup(s, lights_bcube, enable_room_lights, (ADD_ROOM_SHADOWS && enable_room_lights), use_bmap, min_alpha, 1, pcf_scale); // force_tsl=1
+			city_shader_setup(s, lights_bcube, enable_room_lights, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale); // force_tsl=1
 			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
