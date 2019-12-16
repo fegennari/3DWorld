@@ -14,4 +14,3 @@ Cities:
 
 Building Interiors:
 * Room object ambient lighting?
-* Elevators

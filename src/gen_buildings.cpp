@@ -1028,7 +1028,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				cube_t frame(*i); // one side
 				frame.d[ dim][!dir] = frame.d[ dim][dir] + (dir ? -1.0f :  1.0f)*spacing;
 				frame.d[!dim][d   ] = frame.d[!dim][!d ] + (d   ?  1.0f : -1.0f)*frame_width;
-				bdraw.add_section(*this, empty_vc, frame, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // XY only
+				unsigned dim_mask2(3); // x and y dims enabled
+				dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // 3 faces drawn
+				bdraw.add_section(*this, empty_vc, frame, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask2, 0, 0, 1, 0);
 			}
 			cube_t inner_cube(*i);
 			inner_cube.expand_by_xy(-spacing);
@@ -1890,7 +1892,7 @@ public:
 			}
 			else if (pass == 1) { // interior pass
 				// pre-allocate interior wall, celing, and floor verts, assuming all buildings have the same materials
-				unsigned num_floors(0), num_ceils(0), num_walls(0), num_doors(0);
+				unsigned num_floors(0), num_ceils(0), num_walls(0), num_doors(0), num_elevators(0);
 				building_mat_t const &mat(buildings.front().get_material());
 				
 				for (auto b = buildings.begin(); b != buildings.end(); ++b) {
@@ -1900,12 +1902,14 @@ public:
 					if (mat2.ceil_tex  == mat.ceil_tex ) {num_ceils  += b->interior->ceilings.size();}
 					if (mat2.wall_tex  == mat.wall_tex ) {num_walls  += b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size();}
 					if (DRAW_INTERIOR_DOORS) {num_doors += b->interior->doors.size();}
-				}
+					num_elevators += b->interior->elevators.size();
+				} // for b
 				building_draw_interior.reserve_verts(mat.floor_tex, 4*num_floors); // top surface only
 				building_draw_interior.reserve_verts(mat.ceil_tex,  4*num_ceils ); // bottom surface only
-				building_draw_interior.reserve_verts(mat.wall_tex, 16*num_walls ); // X/Y surfaces (4x)
+				building_draw_interior.reserve_verts(mat.wall_tex, (16*num_walls + 36*num_elevators)); // X/Y surfaces (4 quads) + elevators (9 quads)
 				building_draw_interior.reserve_verts(tid_nm_pair_t(building_window_gen.get_hdoor_tid()), 8*num_doors ); // doors
-				building_draw_interior.reserve_verts(tid_nm_pair_t(WHITE_TEX), 8*num_doors ); // door edges
+				building_draw_interior.reserve_verts(tid_nm_pair_t(WHITE_TEX),  8*num_doors ); // door edges (2 quads per door)
+				building_draw_interior.reserve_verts(tid_nm_pair_t(FENCE_TEX), 12*num_doors ); // elevators  (3 quads per elevator)
 				// generate vertex data
 				building_draw_interior.clear();
 
