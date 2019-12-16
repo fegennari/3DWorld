@@ -1519,7 +1519,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	}
 	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 	cube_t C(part);
-	C.z1() = z; C.z2() = z + fc_thick; interior->floors.push_back(C); // ground floor, full area
+	C.z1() = z; C.z2() = z + fc_thick;
+	unsigned const floors_start(interior->floors.size());
+	interior->floors.push_back(C); // ground floor, full area
 	z += window_vspacing; // move to next floor
 
 	for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
@@ -1544,7 +1546,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			//c.z1() = zf; c.z2() = zc + window_vspacing; // add per-floor walls, door cutouts, etc. here
 		}
 	} // for f
-	C.z1() = z - fc_thick; C.z2() = z; interior->ceilings.push_back(C); // roof ceiling, full area
+	C.z1() = z - fc_thick; C.z2() = z;
+	interior->ceilings.push_back(C); // roof ceiling, full area
+	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }
 
 void building_t::add_room(cube_t const &room, unsigned part_id) {
