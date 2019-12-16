@@ -24,7 +24,7 @@ It has the following features:
 I converted the project from svn to git at commit 6607.
 Most of the code is written in C++, with GLSL for shaders.
 This is intended to be a cross-platform project.
-Microsoft Visual Studio 2015/2017 project files are included.
+A Microsoft Visual Studio 2019 project file is included.
 A linux/gcc makefile is also included, but is more experimental. See README.linux for more details.
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
 I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
@@ -57,7 +57,7 @@ Freeglut should probably be replaced with SDL, the last 4 image libraries with D
 
 If you want to build 3DWorld, you'll need to download and build these dependencies somewhere and change the project settings to use them.
 I just copy these into the current directory and have these files ignored by git/svn.
-I currently use a 32-bit MS Visual Studio 2017 Community build target for 3DWorld.
+I currently use a 32-bit MS Visual Studio 2019 Community build target for 3DWorld.
 It should compile in 64-bit mode, but I couldn't find compatible 64-bit debug libraries for OpenAL,
 and a few of the other dependencies didn't build cleanly in 64-bit mode.
 
@@ -72,7 +72,7 @@ http://casual-effects.com/data/
 
 System requirements:
 * Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux when using the makefile with gcc.
-* Microsoft Visual Studio 2015/2017 (or newer?). The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
+* Microsoft Visual Studio 2019 (or newer?). The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
 * A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
 * At least 4GB system memory for the larger scenes
 * At least 2GB GPU memory for the larger scenes
