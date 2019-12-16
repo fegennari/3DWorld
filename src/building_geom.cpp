@@ -1555,8 +1555,9 @@ void building_t::add_room(cube_t const &room, unsigned part_id) {
 	interior->rooms.push_back(r);
 }
 
-bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, bool is_lit) {
+bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit) {
 
+	// TODO_INT: use tot_light_amt as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors?
 	float const window_vspacing(get_window_vspace());
 	vector3d const room_sz(room.get_size());
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1605,7 +1606,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		//float const light_amt(r->get_light_amt()); // TODO_INT: use this as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors?
+		float const light_amt(r->get_light_amt());
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		unsigned const room_id(r - interior->rooms.begin());
 		point room_center(r->get_cube_center());
@@ -1651,9 +1652,11 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
 			if (r->no_geom) continue; // no other geometry for this room
+			float tot_light_amt(light_amt);
+			if (is_lit) {tot_light_amt += 100.0f*light_size*light_size/(r->dx()*r->dy());} // light surface area divided by room surface area with some fudge constant
 
 			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
-			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, is_lit);}
+			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, tot_light_amt, is_lit);}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 	} // for r
