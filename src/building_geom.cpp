@@ -1161,7 +1161,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories
 
 	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {
-		bool const has_stairs(!is_house || p == parts.begin());
+		bool const has_stairs(!is_house || p == parts.begin()); // assumes one set of stairs or elevator per part
 		unsigned const cubes_per_floor(has_stairs ? 4 : 1); // account for stairwell cutouts
 		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
 		tot_num_floors     += cubes_per_floor*(num_floors - 1) + 1; // first floor has no cutout
@@ -1170,7 +1170,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	}
 	interior->ceilings.reserve(tot_num_floors);
 	interior->floors  .reserve(tot_num_floors);
-	interior->stair_landings.reserve(tot_num_landings);
+	interior->landings.reserve(tot_num_landings);
 	interior->stairwells.reserve(tot_num_stairwells);
 	
 	// generate walls and floors for each part;
@@ -1259,7 +1259,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
 			add_room(hall, part_id); // add hallway as room
-			interior->rooms.back().is_hallway = 1;
+			interior->rooms.back().is_hallway = interior->rooms.back().no_geom = 1;
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
@@ -1411,20 +1411,19 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part) {
 
-	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 	float const window_vspacing(get_material().get_floor_spacing());
 	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
 	float const ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
-	cube_t stairs_or_elev; // TODO_INT: allow multiple stairs/elevators per-part for larger office buildings?
+	cube_t stairs_or_elev;
 	bool stairs_dim(0), add_elevator(0);
-	vect_cube_t &landings(interior->stair_landings);
 
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
+		// TODO_INT: we want at least one elevator and one set of stairs in this case, but that requires support for multiple floor cutouts for stairs_or_elev
 		add_elevator = (0 && rgen.rand_bool());
-		if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
+		if (first_part) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));}
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
@@ -1452,7 +1451,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	}
 	else if (!is_house || first_part) { // only add stairs to first part of a house
 		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
-		add_elevator = (0 && !is_house && !first_part && rgen.rand_bool());
+		add_elevator = (!is_house && !first_part && rgen.rand_bool());
 		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
 		assert(num_avail_rooms > 0); // must have added at least one room
 		unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell
@@ -1509,7 +1508,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						}
 					}
 				} // for dim
-				if (first_part) {landings.reserve(add_elevator ? 1 : (num_floors-1));}
+				if (first_part) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));}
 				assert(cutout.is_strictly_normalized());
 				stairs_or_elev  = cutout;
 				room.has_stairs = 1;
@@ -1518,7 +1517,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			break; // success - done
 		} // for n
 	}
-	// add ceilings and floors
+	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 	cube_t C(part);
 	C.z1() = z; C.z2() = z + fc_thick; interior->floors.push_back(C); // ground floor, full area
 	z += window_vspacing; // move to next floor
@@ -1531,11 +1530,11 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		else {
 			subtract_cube_xy(part, stairs_or_elev, to_add);
 
-			if (!add_elevator) { // add landings and stairwells
-				landings.push_back(stairs_or_elev);
-				landings.back().z1() = zc; landings.back().z2() = zf;
-				if (f == 1) {interior->stairwells.push_back(stairs_or_elev);} // only add for first floor
-			}
+			// add landings and stairwells
+			landing_t landing(stairs_or_elev, add_elevator);
+			landing.z1() = zc; landing.z2() = zf;
+			interior->landings.push_back(landing);
+			if (!add_elevator && f == 1) {interior->stairwells.push_back(stairs_or_elev);} // only add for first floor
 		}
 		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs/elevator shafts along an exterior wall
 			cube_t &c(to_add[i]);
@@ -1606,7 +1605,6 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->no_geom) continue; // no geometry for this room
 		//float const light_amt(r->get_light_amt()); // TODO_INT: use this as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors?
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		unsigned const room_id(r - interior->rooms.begin());
@@ -1652,12 +1650,11 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
-			if (!r->is_hallway) { // place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
-				if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, is_lit);}
-			}
-			if (z == bcube.z1()) {
-				// any special logic that goes on the first floor is here
-			}
+			if (r->no_geom) continue; // no other geometry for this room
+
+			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
+			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, is_lit);}
+			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 	} // for r
 	add_stairs_and_elevators(rgen);
@@ -1672,7 +1669,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	bool const dir(rgen.rand_bool()); // same for every floor, could alternate for stairwells if we were tracking it
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
-	for (auto i = interior->stair_landings.begin(); i != interior->stair_landings.end(); ++i) {
+	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
+		if (i->for_elevator) continue; // for elevator, not stairs
 		bool const dim(i->dx() < i->dy()); // longer dim
 		float const tot_len(i->get_sz_dim(dim)), step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs), floor_z(i->z2() - window_vspacing);
 		float z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
@@ -1798,7 +1796,7 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
 	cube_t place_area(room);
 	if (dmin != 0.0f) {place_area.expand_by_xy(-dmin);} // shrink by dmin
-	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
+	if (!place_area.contains_cube_xy(c))   return 0; // not contained in interior part of the room
 	if (is_cube_close_to_doorway(c, dmin)) return 0; // too close to a doorway
 	if (is_blocked_by_stairs_or_elevator(c, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
 	return 1;
@@ -1809,7 +1807,7 @@ void building_interior_t::finalize() {
 	remove_excess_cap(ceilings);
 	remove_excess_cap(rooms);
 	remove_excess_cap(doors);
-	remove_excess_cap(stair_landings);
+	remove_excess_cap(landings);
 	remove_excess_cap(stairwells);
 	remove_excess_cap(elevators);
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}

@@ -231,6 +231,7 @@ struct elevator_t : public cube_t {
 	bool dim, dir; // door dim/dir
 	elevator_t() : dim(0), dir(0) {}
 	elevator_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
+	unsigned get_door_face_id() const {return (2*dim + dir);}
 };
 
 struct room_t : public cube_t {
@@ -244,9 +245,16 @@ struct room_t : public cube_t {
 	float get_light_amt() const;
 };
 
+struct landing_t : public cube_t {
+	bool for_elevator;
+	landing_t() : for_elevator(0) {}
+	landing_t(cube_t const &c, bool e) : cube_t(c), for_elevator(e) {}
+};
+
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2], doors, stairwells, stair_landings; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], doors, stairwells; // walls are split by dim
+	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	std::unique_ptr<building_room_geom_t> room_geom;
