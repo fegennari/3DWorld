@@ -301,6 +301,8 @@ public:
 	void gen_lod_blocks(unsigned npts);
 	void finalize(unsigned npts);
 	void simplify(vector<unsigned> &out, float target) const;
+	void simplify_meshoptimizer(vector<unsigned> &out, float target) const;
+	void simplify_indices(float reduce_target);
 	void clear();
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
@@ -335,6 +337,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void invert_tcy();
+	void simplify_indices(float reduce_target);
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };
@@ -360,6 +363,7 @@ template<typename T> struct geometry_t {
 	void clear();
 	void get_stats(model3d_stats_t &stats) const;
 	void calc_area(float &area, unsigned &ntris);
+	void simplify_indices(float reduce_target);
 	bool write(ostream &out) const {return (triangles.write(out) && quads.write(out));}
 	bool read(istream &in)         {return (triangles.read (in ) && quads.read (in ));}
 };
@@ -431,6 +435,7 @@ struct material_t : public material_params_t {
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
 	void compute_area_per_tri();
+	void simplify_indices(float reduce_target);
 	void ensure_textures_loaded(texture_manager &tmgr);
 	void init_textures(texture_manager &tmgr);
 	void check_for_tc_invert_y(texture_manager &tmgr);
@@ -535,6 +540,7 @@ public:
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void calc_tangent_vectors();
+	void simplify_indices(float reduce_target);
 	static void bind_default_flat_normal_map() {select_multitex(FLAT_NMAP_TEX, 5);}
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}

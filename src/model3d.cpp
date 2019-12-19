@@ -12,6 +12,7 @@
 #include "lightmap.h" // for lmap_manager_t
 #include <fstream>
 #include <queue>
+#include "meshoptimizer.h"
 
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
@@ -301,7 +302,7 @@ template<typename T> void indexed_vntc_vect_t<T>::gen_lod_blocks(unsigned npts) 
 	indices.swap(ixs);
 }
 
-template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
+template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) { // Note: called when reading obj files, not model3d files
 
 	optimize(npts);
 
@@ -311,17 +312,15 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 	}
 	if (!empty()) {this->ensure_bounding_volumes();}
 	if (indices.empty() || finalized) return; // nothing to do
-#if 0
-	unsigned const simplify_steps = 0; // TESTING, maybe this doesn't really go here
-	if (simplify_steps > 0 && npts == 3) { // Note: triangles only
-		cout << "*** SIMPLIFY: input=" << indices.size() << " ";
-		for (unsigned n = 0; n < simplify_steps; ++n) {
-			vector<unsigned> v;
-			simplify(v, 0.5);
-			if (v.size() == indices.size()) break; // no change, done
-			indices.swap(v);
+#if 0 // TESTING, maybe this doesn't really go here
+	if (npts == 3) { // Note: triangles only
+		unsigned const init_num_indices(indices.size());
+		for (unsigned n = 0; n < 3; ++n) {
+			unsigned const prev_num(indices.size());
+			simplify_indices(0.5);
+			if (indices.size() == prev_num) break; // no change, done
 		}
-		cout << " output=" << indices.size() << endl;
+		out << "*** SIMPLIFY: input=" << init_num_indices << " output=" << indices.size() << endl;
 	}
 #endif
 	finalized = 1;
@@ -481,6 +480,26 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 	PRINT_TIME("Simplify");
 }
 
+template<typename T> void indexed_vntc_vect_t<T>::simplify_meshoptimizer(vector<unsigned> &out, float target) const { // triangles only
+
+	timer_t timer("Meshoptimizer Simplify");
+	assert(target < 1.0 && target > 0.0);
+	float const target_error = 0.01;
+	unsigned const num_verts(size()), num_ixs(indices.size()), target_num_ixs(max(3U, unsigned(target*num_ixs)));
+	if (num_ixs < 3) return; // no triangles to simplify
+	out.resize(num_ixs); // allocate space
+	size_t const num_ixs_out(meshopt_simplify(&out.front(), &indices.front(), num_ixs, &front().v.x, num_verts, sizeof(T), target_num_ixs, target_error));
+	cout << TXT(num_ixs) << TXT(target_num_ixs) << TXT(num_ixs_out) << endl;
+	assert(num_ixs_out > 0 && num_ixs_out <= num_ixs);
+	out.resize(num_ixs_out); // truncate to correct size
+}
+
+template<typename T> void indexed_vntc_vect_t<T>::simplify_indices(float reduce_target) {
+
+	vector<unsigned> simplified_indices;
+	simplify_meshoptimizer(simplified_indices, reduce_target);
+	indices.swap(simplified_indices);
+}
 
 template<typename T> void indexed_vntc_vect_t<T>::clear() {
 	
@@ -680,7 +699,8 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_
 	if (args.lod_level > 1 && !indices.empty()) {
 		indexed_vntc_vect_t<T> simplified_this;
 		simplified_this.insert(simplified_this.begin(), begin(), end()); // copy only vertex data; indices will be filled in below, and other fields are unused
-		simplify(simplified_this.indices, 1.0/args.lod_level);
+		//simplify(simplified_this.indices, 1.0/args.lod_level);
+		simplify_meshoptimizer(simplified_this.indices, 1.0/args.lod_level);
 		get_polygon_args_t args2(args);
 		args2.lod_level = 0;
 		simplified_this.get_polygons(args2, npts);
@@ -879,6 +899,10 @@ template<typename T> void vntc_vect_block_t<T>::invert_tcy() {
 	for (auto i = begin(); i != end(); ++i) {i->invert_tcy();}
 }
 
+template<typename T> void vntc_vect_block_t<T>::simplify_indices(float reduce_target) {
+	for (auto i = begin(); i != end(); ++i) {i->simplify_indices(reduce_target);}
+}
+
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
 	write_uint(out, (unsigned)this->size());
@@ -977,6 +1001,10 @@ template<typename T> void geometry_t<T>::calc_area(float &area, unsigned &ntris)
 	ntris += (triangles.num_verts()/3) + 2*(quads.num_verts()/4); // quads count as 2 triangles
 }
 
+template<typename T> void geometry_t<T>::simplify_indices(float reduce_target) {
+	triangles.simplify_indices(reduce_target); // mesh simplification only applies to triangles, not quads
+}
+
 
 // ************ material_t ************
 
@@ -997,6 +1025,11 @@ void material_t::compute_area_per_tri() {
 	geom_tan.calc_area(area, tris);
 	avg_area_per_tri = alpha*area/tris;
 	//cout << "name: " << name << " " << TXT(tris) << TXT(area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
+}
+
+void material_t::simplify_indices(float reduce_target) {
+	geom.simplify_indices(reduce_target);
+	geom_tan.simplify_indices(reduce_target);
 }
 
 void material_t::ensure_textures_loaded(texture_manager &tmgr) {
@@ -1586,6 +1619,11 @@ void model3d::calc_tangent_vectors() {
 	}
 }
 
+void model3d::simplify_indices(float reduce_target) {
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->simplify_indices(reduce_target);}
+	unbound_geom.simplify_indices(reduce_target);
+}
+
 
 void set_def_spec_map() {
 	if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
@@ -2146,6 +2184,7 @@ bool model3d::read_from_disk(string const &fn) { // Note: transforms not read
 		}
 		mat_map[m->name] = (m - materials.begin());
 	}
+	//simplify_indices(0.1); // TESTING
 	return in.good();
 }
 

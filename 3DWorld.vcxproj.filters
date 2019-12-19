@@ -393,6 +393,9 @@
     <ClCompile Include="src\building_geom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dependencies\meshoptimizer\src\simplifier.cpp">
+      <Filter>Source Files\"Borrowed"\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
