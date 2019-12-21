@@ -1451,7 +1451,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		// always add stairs
 		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
 			bool const is_step_dim(bool(dim) == long_dim); // same orientation as the hallway
-			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0*doorway_width : 1.01*ewidth)); // set max size of stairs opening, slightly wider than elevator
+			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0*doorway_width : 0.9*ewidth)); // set max size of stairs opening, slightly narrower than elevator
 			stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink; // centered in the hallway
 		}
 		room.has_stairs = 1;
@@ -1533,7 +1533,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	interior->floors.push_back(C); // ground floor, full area
 	z += window_vspacing; // move to next floor
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
-	cube_t &first_cut(has_stairs ? stairs_cut : elevator_cut);
+	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
 
 	for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
 		cube_t to_add[8];
@@ -1546,9 +1546,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			if (has_stairs && has_elevator) { // both
 				bool found(0);
 
-				for (unsigned n = 0; n < 4; ++n) { // find the cube where the elevator is placed
-					if (!to_add[n].intersects_xy_no_adj(elevator_cut)) continue;
-					subtract_cube_xy(to_add[n], elevator_cut, to_add+4); // append up to 4 more cubes
+				for (unsigned n = 0; n < 4; ++n) { // find the cube where the stairs are placed
+					if (!to_add[n].intersects_xy_no_adj(stairs_cut)) continue;
+					subtract_cube_xy(to_add[n], stairs_cut, to_add+4); // append up to 4 more cubes
 					to_add[n].set_to_zeros(); // this cube was replaced
 					found = 1;
 					break; // assume there is only one; it's up to the placer step to ensure this
