@@ -870,13 +870,6 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 	else          {pts[4].x = pts[5].x = 0.5f*(x1 + x2);} // xc
 	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
 	roof_tquads.reserve(roof_tquads.size() + (3 + (extend_dir == 2))); // 2 roof quads + 1-2 side triangles
-
-	// TODO: extend outside the wall a small amount? may require updating bcube for drawing
-	for (unsigned n = 0; n < 2; ++n) { // roof
-		tquad_t tquad(4); // quad
-		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];);
-		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF); // tag as roof
-	}
 	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
 
 	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
@@ -894,6 +887,20 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];);
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_WALL); // tag as wall
 	} // for n
+	bool const extend_roof = 0; // disabled for now, but somewhat works
+
+	if (extend_roof) { // extend the roof outside the wall a small amount
+		// may require updating bcube for drawing; causes problems with L/T shaped houses with roof intersecting other walls and interiors; requires two sided drawing
+		float const extend(0.05*width), extend_dz(2.0*extend*roof_dz/width);
+		for (unsigned n = 0; n < 4; ++n) {pts[n].z -= extend_dz;} // so that slope is preserved
+		if (dim == 0) {pts[0].y -= extend; pts[1].y += extend; pts[2].y += extend; pts[3].y -= extend;}
+		else          {pts[0].x -= extend; pts[1].x -= extend; pts[2].x += extend; pts[3].x += extend;}
+	}
+	for (unsigned n = 0; n < 2; ++n) { // roof
+		tquad_t tquad(4); // quad
+		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];);
+		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF); // tag as roof
+	}
 	return roof_dz;
 }
 
