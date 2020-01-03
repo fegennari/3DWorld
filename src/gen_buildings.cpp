@@ -1068,7 +1068,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	} // end interior case
 }
 
-void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale) const {
+void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
 
 	if (!is_valid() || !global_building_params.windows_enabled()) return; // invalid building or no windows
 	building_mat_t const &mat(get_material());
@@ -1088,6 +1088,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + mat.get_floor_spacing()) : doors.front().pts[2].z));
 
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
+		if (only_cont_pt != nullptr && !i->contains_pt(*only_cont_pt)) continue; // skip
 		unsigned const part_ix(i - parts.begin());
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
 		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale); // XY, no_ao=1
@@ -1598,6 +1599,7 @@ public:
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		bool const draw_inside_windows(DRAW_INSIDE_WINDOWS && transparent_windows);
 		bool const enable_room_lights(add_room_lights());
+		bool const single_part_int_windows = 1; // trade-off: removes ugly partial windows at the cost of removing some entire distant windows
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		float const pcf_scale = 0.2;
 		fgPushMatrix();
@@ -1658,7 +1660,9 @@ public:
 						g->has_room_geom = 1;
 						if (!draw_inside_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
-						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1); // negative offset to move windows on the inside of the building's exterior wall
+						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
+						// neg offset to move windows on the inside of the building's exterior wall
+						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, (single_part_int_windows ? &camera_xlated : nullptr));
 						per_bcs_exclude[i - bcs.begin()] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
 					} // for bi
@@ -1681,14 +1685,16 @@ public:
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 				glDepthMask(GL_FALSE);
 				interior_wind_draw.draw(holes_shader, 0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
-				// clear stencil buffer for front sides of the building
-				// TODO_INT: still not correct for L/T/U shaped buildings or houses with different part heights, but maybe looks a bit better
-				glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_ZERO); // clear stencil for front faces
-				glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
+
+				if (!single_part_int_windows) { // clear stencil buffer for front sides of the building
+					// still not correct for L/T/U shaped buildings or houses with different part heights, but maybe looks a bit better
+					glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_ZERO); // clear stencil for front faces
+					glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
 				
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
-					if (vr.draw_ix >= 0) {(*i)->building_draw_vbo.draw_quad_geom_range(holes_shader, vr, shadow_only);}
+					for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+						vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
+						if (vr.draw_ix >= 0) {(*i)->building_draw_vbo.draw_quad_geom_range(holes_shader, vr, shadow_only);}
+					}
 				}
 				glDepthMask(GL_TRUE);
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

@@ -329,7 +329,7 @@ struct building_t : public building_geom_t {
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
-	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0) const;
+	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0, point const *const only_cont_pt=nullptr) const;
 	void add_room_lights(vector3d const &xlate, bool camera_in_building, cube_t &lights_bcube) const;
 	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix, bool shadow_only);
 	void clear_room_geom();
