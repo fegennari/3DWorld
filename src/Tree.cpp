@@ -1054,11 +1054,11 @@ template<typename branch_index_t> void tree_data_t::create_branch_vbo() {
 			quad_id  = cylin_id = 0;
 		}
 		for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
-			float const ty(b_tex_scale*(cylin_id + j));
+			float const ty(b_tex_scale*(cylin_id + j)); // Note: not in [0.0, 1.0] range
 
 			for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
 				float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
-				vector3d const n(0.5f*vpn.n[S] + 0.5f*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
+				vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
 				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, ty);
 			}
 		}
