@@ -1403,7 +1403,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					if (!valid) continue;
 					cube_t cand(wall);
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
-					if (interior->is_blocked_by_stairs_or_elevator(wall, doorway_width)) continue; // stairs in the way, skip
+					if (interior->is_blocked_by_stairs_or_elevator(wall, doorway_width)) continue; // stairs in the way, skip; should we assert !pref_split?
 					cube_t wall2;
 					remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !d, interior->doors);
 					walls.push_back(wall2); // Note: invalidates wall reference
@@ -1511,6 +1511,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 						for (unsigned d = 0; d < 2; ++d) {
 							bool const dir(bool(d) ^ first_dir);
+							// if the room is on the edge of the part that's not on the building bcube exterior, then this room connects two parts and we need to place a door here later;
+							// technically, it's more accurate to check for an adjacent part, but that's somewhat difficult to do here
+							if (room.d[dim][dir] == part.d[dim][dir] && part.d[dim][dir] != bcube.d[dim][dir]) continue;
 							cube_t cand(cutout);
 							float const shift(0.95f*(cand.d[dim][dir] - room.d[dim][dir])); // negative if dir==1, add small gap to prevent z-fighting and FP accuracy asserts
 							cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
