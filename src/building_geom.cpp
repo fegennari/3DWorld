@@ -885,6 +885,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 		if (skip) continue;
 		tquad_t tquad(3); // triangle
 		UNROLL_3X(tquad.pts[i_] = pts[tixs[dim][n][i_]];);
+		if (z1 < bcube.z2() && tquad.pts[2][dim] != bcube.d[dim][n]) {tquad.pts[2][dim] += (n ? -1.0 : 1.0)*0.001*width;} // shift peak in slightly to prevent z-fighting with int walls
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_WALL); // tag as wall
 	} // for n
 	bool const extend_roof = 0; // disabled for now, but somewhat works
