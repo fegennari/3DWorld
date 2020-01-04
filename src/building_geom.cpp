@@ -1440,7 +1440,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			point center(room.get_cube_center());
 			float const center_shift(0.125*room.get_sz_dim(long_dim)*(rgen.rand_bool() ? -1.0 : 1.0));
 			center[long_dim] += center_shift; // make elevator off-center
-			elevator_t elevator(room, long_dim, rgen.rand_bool()); // elevator shaft
+			elevator_t elevator(room, long_dim, rgen.rand_bool(), rgen.rand_bool()); // elevator shaft
 			elevator.x1() = center.x - 0.5*ewidth; elevator.x2() = center.x + 0.5*ewidth;
 			elevator.y1() = center.y - 0.5*ewidth; elevator.y2() = center.y + 0.5*ewidth;
 			interior->elevators.push_back(elevator);
@@ -1476,7 +1476,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				for (unsigned y = 0; y < 2 && !placed; ++y) { // try all 4 corners
 					for (unsigned x = 0; x < 2 && !placed; ++x) {
 						bool const dim(rgen.rand_bool());
-						elevator_t elevator(room, dim, !(dim ? y : x)); // elevator shaft
+						elevator_t elevator(room, dim, !(dim ? y : x), rgen.rand_bool()); // elevator shaft
 						elevator.d[0][!x] = elevator.d[0][x] + (x ? -ewidth : ewidth);
 						elevator.d[1][!y] = elevator.d[1][y] + (y ? -ewidth : ewidth);
 						elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
@@ -1937,6 +1937,10 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
 }
 
+void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
+	assert(0); // not yet implemented
+}
+
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
 	bool const is_on((c.flags & RO_FLAG_LIT) != 0);
@@ -1979,7 +1983,7 @@ void building_room_geom_t::create_vbos() {
 		case TYPE_TABLE: add_table(*i, tscale); break;
 		case TYPE_CHAIR: add_chair(*i, tscale); break;
 		case TYPE_STAIR: add_stair(*i, tscale); break;
-		case TYPE_ELEVATOR: assert(0); // not yet implemented
+		case TYPE_ELEVATOR: add_elevator(*i, tscale); break;
 		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
 		default: assert(0); // undefined type
 		}

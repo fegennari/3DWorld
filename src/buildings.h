@@ -222,15 +222,16 @@ struct building_room_geom_t {
 	void add_table(room_object_t const &c, float tscale);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale);
+	void add_elevator(room_object_t const &c, float tscale);
 	void add_light(room_object_t const &c, float tscale);
 	void create_vbos();
 	void draw(shader_t &s, bool shadow_only);
 };
 
 struct elevator_t : public cube_t {
-	bool dim, dir; // door dim/dir
-	elevator_t() : dim(0), dir(0) {}
-	elevator_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
+	bool dim, dir, open; // door dim/dir
+	elevator_t() : dim(0), dir(0), open(0) {}
+	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_) : cube_t(c), dim(dim_), dir(dir_), open(open_) {}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
 };
 

@@ -1023,11 +1023,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			unsigned dim_mask(3); // x and y dims enabled
 			dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
 			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
+			cube_t entrance(*i);
+			entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
 
 			for (unsigned d = 0; d < 2; ++d) { // add frame on both sides of the door opening
-				cube_t frame(*i); // one side
-				frame.d[ dim][!dir] = frame.d[ dim][dir] + (dir ? -1.0f :  1.0f)*spacing;
-				frame.d[!dim][d   ] = frame.d[!dim][!d ] + (d   ?  1.0f : -1.0f)*frame_width;
+				cube_t frame(entrance); // one side
+				frame.d[!dim][d] = frame.d[!dim][!d] + (d ? 1.0f : -1.0f)*frame_width; // set position
 				unsigned dim_mask2(3); // x and y dims enabled
 				dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // 3 faces drawn
 				bdraw.add_section(*this, empty_vc, frame, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask2, 0, 0, 1, 0);
@@ -1036,6 +1037,17 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			inner_cube.expand_by_xy(-spacing);
 			// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
 			bdraw.add_section(*this, empty_vc, inner_cube, bcube, ao_bcz2, tid_nm_pair_t(FENCE_TEX, -1, 16.0, 16.0), WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
+			// add elevator doors
+			float const door_width(i->open ? 1.12*frame_width : 0.99*0.5*width);
+
+			for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
+				unsigned dim_mask2(3); // x and y dims enabled
+				dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // disable one interior
+				cube_t door(entrance);
+				door.d[ dim][0] += 0.2*spacing; door.d[ dim][1] -= 0.2*spacing; // shrink slightly to make thinner
+				door.d[!dim][d] = door.d[!dim][!d] + (d ? 1.0f : -1.0f)*door_width;
+				bdraw.add_section(*this, empty_vc, door, bcube, ao_bcz2, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
+			}
 		} // for i
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
