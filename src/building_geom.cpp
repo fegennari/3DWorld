@@ -8,6 +8,7 @@
 
 float const FLOOR_THICK_VAL = 0.1; // 10% of floor spacing
 
+extern int display_mode;
 extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
 
@@ -1735,25 +1736,27 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	float const window_vspacing(get_window_vspace()), camera_z(camera_pdu.pos.z);
+	float const window_vspacing(get_window_vspace()), camera_z(camera_pdu.pos.z - xlate.z);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_LIT)) continue; // not a light, or light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		point const cs_lpos(lpos + xlate); // camera space
-		bool const floor_is_above(camera_z < (i->z2() - window_vspacing)), floor_is_below(camera_z > i->z2());
+		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
+		bool const floor_is_above(camera_z < floor_z), floor_is_below(camera_z > ceil_z);
+		bool const stairs_light(i->flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
 		
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 			if (camera_in_building) { // player is on a different floor and can't see a light from the floor above/below
-				if (!(i->flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS))) continue; // camera in building and on wrong floor, don't add light
+				if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
 				if (camera_z < (i->z2() - 2.0*window_vspacing) || camera_z > (i->z2() + window_vspacing)) continue; // light is on the stairs, add if one floor above/below
 			}
 			else { // camera outside the building
 				float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
-				if ((camera_z - cs_lpos.z) > 2.0f*xy_dist || (cs_lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
+				if ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
 				// is it better to check if light half sphere is occluded by the floor above/below?
 				assert(room.part_id < parts.size());
 				cube_t const &part(parts[room.part_id]);
@@ -1767,8 +1770,15 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 				if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 			}
 		} // end camera on different floor case
-		float const light_radius(10.0*max(i->dx(), i->dy()));
-		if (!camera_pdu.sphere_visible_test(cs_lpos, 0.95*light_radius)) continue; // VFC
+		float const light_radius(10.0*max(i->dx(), i->dy())), cull_radius(0.95*light_radius);
+		if (!camera_pdu.sphere_visible_test(cs_lpos, cull_radius)) continue; // VFC
+		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
+		cube_t clipped_bc; // in building space
+		clipped_bc.set_from_sphere(lpos, cull_radius);
+		clipped_bc.intersect_with_cube(bcube);
+		if (!stairs_light) {clipped_bc.z1() = floor_z; clipped_bc.z2() = ceil_z;} // clip zval to current floor if light not in a room with stairs or elevator
+		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC
+		// update lights_bcube and add light(s)
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
