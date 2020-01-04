@@ -1098,13 +1098,37 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	// only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 	int const clip_windows(mat.no_city ? (is_house ? 2 : 1) : 0);
 	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + mat.get_floor_spacing()) : doors.front().pts[2].z));
+	cube_t cont_part; // part containing the point
 
+	if (only_cont_pt != nullptr) { // find part containing the point
+		for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) {
+			if (i->contains_pt(*only_cont_pt)) {cont_part = *i; break;}
+		}
+		assert(cont_part.is_strictly_normalized());
+	}
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
-		if (only_cont_pt != nullptr && !i->contains_pt(*only_cont_pt)) continue; // skip
+		cube_t part(*i); // deep copy
+
+		if (only_cont_pt != nullptr && !part.contains_pt(*only_cont_pt)) { // not the part containing the point
+			if (part.z2() < only_cont_pt->z || part.z1() > only_cont_pt->z) continue; // z-range not contained, skip
+			bool found_adj(0), skip(0);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				if (part.d[d][0] == cont_part.d[d][1] || part.d[d][1] == cont_part.d[d][0]) { // adj in dim d
+					if (part.d[!d][1] < (*only_cont_pt)[!d] || part.d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
+					// clamp to contained part in dim !d; might change pos of window, but usually this isn't apparent from inside the building
+					max_eq(part.d[!d][0], cont_part.d[!d][0]);
+					min_eq(part.d[!d][1], cont_part.d[!d][1]);
+					found_adj = 1;
+					break;
+				}
+			}
+			if (skip || !found_adj) continue; // skip of adj in neither dim, always skip (but could check chained adj case)
+		}
 		unsigned const part_ix(i - parts.begin());
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
-		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale); // XY, no_ao=1
-	}
+		bdraw.add_section(*this, parts, part, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale); // XY, no_ao=1
+	} // for i
 }
 
 
