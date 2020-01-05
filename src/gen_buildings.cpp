@@ -918,7 +918,7 @@ public:
 						clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
 						clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
 					}
-					if (clamp_cube != nullptr && n < 2) { // x/y dims only
+					if (clamp_cube != nullptr && *clamp_cube != cube && n < 2) { // x/y dims only
 						unsigned const dim((i == 2) ? d : i); // x/y
 						unsigned const sec_vix(ix + (st ? 1 : 3)); // opposite vertex in this dim
 						float const delta_tc(verts[sec_vix].t[0]   - verts[ix].t[0]  );
@@ -1135,14 +1135,14 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			bool skip(0);
 
 			for (unsigned d = 0; d < 2; ++d) {
-				if (i->d[d][0] == cont_part.d[d][1] || i->d[d][1] == cont_part.d[d][0]) { // adj in dim d
-					if (i->d[!d][1] < (*only_cont_pt)[!d] || i->d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
-					draw_part = *i; // deep copy
-					max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
-					min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
-					clamp_cube = &draw_part;
-					break;
-				}
+				if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
+				if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
+				if (i->d[!d][1] < (*only_cont_pt)[!d] || i->d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
+				draw_part = *i; // deep copy
+				max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
+				min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
+				clamp_cube = &draw_part;
+				break;
 			} // for d
 			if (skip || clamp_cube == nullptr) continue; // skip of adj in neither dim, always skip (but could check chained adj case)
 		}
@@ -1164,9 +1164,13 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 			continue;
 		}
 		unsigned back_dim_mask(3), front_dim_mask(0); // enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
+		cube_t front_clip_cube(*i);
 
 		for (unsigned d = 0; d < 2; ++d) {
-			if (i->d[d][0] != cont_part.d[d][1] && i->d[d][1] != cont_part.d[d][0]) continue; // not adj in dim d
+			if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
+			if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
+			// if we get here, *i and cont_part are adjacent in dim d
+			if (i->d[!d][1] < only_cont_pt[!d] || i->d[!d][0] > only_cont_pt[!d]) break; // point not contained in other dim range, draw part as back
 			
 			for (unsigned e = 0; e < 2; ++e) { // check for coplanar sides (wall extensions)
 				unsigned const disable_bit(1 << (3 + 2*(1-d) + e));
@@ -1174,12 +1178,18 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 				front_dim_mask |= (1<<(1-d)); // coplanar, make other edge dim a front dim
 				back_dim_mask  |= disable_bit; // disable this edge from back
 			}
-			if (i->d[!d][1] < only_cont_pt[!d] || i->d[!d][0] > only_cont_pt[!d]) break; // point not contained in other dim range
+			for (unsigned e = 0; e < 2; ++e) { // check for extensions outside cont_part where back walls could be viewed through a window and split them out
+				if ((i->d[!d][e] < cont_part.d[!d][e]) ^ e) {
+					cube_t back_clip_cube(*i);
+					front_clip_cube.d[!d][e] = back_clip_cube.d[!d][!e] = cont_part.d[!d][e]; // split point
+					bdraw_back.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, back_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
+				}
+			}
 			back_dim_mask &= ~(1<<d); front_dim_mask |= (1<<d); // draw only the other dim as back and this dim as front
 			break;
 		} // for d
-		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, back_dim_mask,  0, 0, 0, 0);} // back part
-		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, front_dim_mask, 0, 0, 0, 0);} // front part
+		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, back_dim_mask,  0, 0, 0, 0);}
+		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, front_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
 	} // for i
 }
 
