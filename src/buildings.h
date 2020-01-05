@@ -336,6 +336,7 @@ struct building_t : public building_geom_t {
 	void clear_room_geom();
 	void update_stats(building_stats_t &s) const;
 private:
+	cube_t get_part_containing_pt(point const &pt) const;
 	void add_room(cube_t const &room, unsigned part_id);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

@@ -1097,6 +1097,14 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	} // end interior case
 }
 
+cube_t building_t::get_part_containing_pt(point const &pt) const {
+	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) {
+		if (i->contains_pt(pt)) {return *i;}
+	}
+	assert(0); // must be found
+	return all_zeros; // never gets here
+}
+
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
 
 	if (!is_valid() || !global_building_params.windows_enabled()) return; // invalid building or no windows
@@ -1116,13 +1124,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const clip_windows(mat.no_city ? (is_house ? 2 : 1) : 0);
 	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + mat.get_floor_spacing()) : doors.front().pts[2].z));
 	cube_t cont_part; // part containing the point
+	if (only_cont_pt != nullptr) {cont_part = get_part_containing_pt(*only_cont_pt);}
 
-	if (only_cont_pt != nullptr) { // find part containing the point
-		for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) {
-			if (i->contains_pt(*only_cont_pt)) {cont_part = *i; break;}
-		}
-		assert(cont_part.is_strictly_normalized());
-	}
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		cube_t draw_part;
 		cube_t const *clamp_cube(nullptr);
