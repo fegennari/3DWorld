@@ -1110,6 +1110,7 @@ void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float w
 
 // Note: assumes edge is not clipped and doesn't work when clipped
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border) {
+	window_border *= 0.95; // adjust based on window frame so that wall doesn't end right at the edge
 	float const uv(fract((val - c.d[dim][0])/window_spacing));
 	return (uv > window_border && uv < 1.0f-window_border);
 }
