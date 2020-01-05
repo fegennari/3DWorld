@@ -1114,10 +1114,10 @@ struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset);
 void unbind_temp_vbo();
 
-template< typename T> void set_ptr_state(T const *const verts, unsigned count, unsigned start_ix=0) {
+template< typename T> void set_ptr_state(T const *const verts, unsigned count, unsigned start_ix=0, bool set_array_client_state=1) {
 	void const *ptr_offset = NULL;
 	if (verts && !bind_temp_vbo_from_verts(verts+start_ix, count, sizeof(T), ptr_offset)) {ptr_offset = verts + start_ix;}
-	T::set_vbo_arrays(1, ptr_offset);
+	T::set_vbo_arrays(set_array_client_state, ptr_offset);
 }
 
 template <typename T> void unset_ptr_state(T const *const verts) {
@@ -1125,15 +1125,15 @@ template <typename T> void unset_ptr_state(T const *const verts) {
 	if (verts) {unbind_temp_vbo();}
 }
 
-template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {
+template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
 	assert(count > 0);
-	set_ptr_state(verts, count, start_ix);
+	set_ptr_state(verts, count, start_ix, set_array_client_state);
 	glDrawArrays(gl_type, start_ix, count);
 	unset_ptr_state(verts);
 }
 
-template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0) {
-	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type, start_ix);}
+template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
+	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type, start_ix, set_array_client_state);}
 }
 
 template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
