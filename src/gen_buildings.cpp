@@ -761,7 +761,7 @@ public:
 	// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
 	void add_section(building_geom_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2,
 		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, int clip_windows,
-		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0)
+		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0, cube_t const *const clamp_cube=nullptr)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -797,6 +797,7 @@ public:
 				if (skip_top    && n == 2 && j == 1) continue; // skip top    side
 				unsigned const dir(bool(j) ^ invert_normals);
 				if (dim_mask & (1<<(2*n+dir+3)))     continue; // check for disabled faces
+				if (clamp_cube != nullptr && (cube.d[n][dir] < clamp_cube->d[n][0] || cube.d[n][dir] > clamp_cube->d[n][1])) continue; // outside clamp cube, drop this face
 				
 				if (n < 2 && bg.is_rotated()) { // XY only
 					vector3d norm; norm.z = 0.0;
@@ -915,6 +916,22 @@ public:
 						clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
 						clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
 						clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
+					}
+					if (clamp_cube != nullptr && n < 2) { // x/y dims only
+						unsigned const dim((i == 2) ? d : i); // x/y
+						unsigned const sec_vix(ix + (st ? 1 : 3)); // opposite vertex in this dim
+						float const delta_tc(verts[sec_vix].t[0]   - verts[ix].t[0]  );
+						float const delta_v (verts[sec_vix].v[dim] - verts[ix].v[dim]);
+						assert(delta_v != 0.0);
+						float const fin_tscale(delta_tc/delta_v); // tscale[0] post-clip
+
+						for (unsigned k = ix; k < ix+4; ++k) {
+							auto &v(verts[k]);
+							float &val(v.v[dim]);
+							float const dlo(clamp_cube->d[dim][0] - val), dhi(val - clamp_cube->d[dim][1]); // dists outside clamp_cube
+							if (dlo > 0.0) {val += dlo; v.t[0] += fin_tscale*dlo;} // shift pos
+							if (dhi > 0.0) {val -= dhi; v.t[0] -= fin_tscale*dhi;} // shift neg
+						} // for k
 					}
 				} // for seg s
 			} // for j
@@ -1106,27 +1123,28 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		assert(cont_part.is_strictly_normalized());
 	}
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
-		cube_t part(*i); // deep copy
+		cube_t draw_part;
+		cube_t const *clamp_cube(nullptr);
 
-		if (only_cont_pt != nullptr && !part.contains_pt(*only_cont_pt)) { // not the part containing the point
-			if (part.z2() < only_cont_pt->z || part.z1() > only_cont_pt->z) continue; // z-range not contained, skip
-			bool found_adj(0), skip(0);
+		if (only_cont_pt != nullptr && !i->contains_pt(*only_cont_pt)) { // not the part containing the point
+			if (i->z2() < only_cont_pt->z || i->z1() > only_cont_pt->z) continue; // z-range not contained, skip
+			bool skip(0);
 
 			for (unsigned d = 0; d < 2; ++d) {
-				if (part.d[d][0] == cont_part.d[d][1] || part.d[d][1] == cont_part.d[d][0]) { // adj in dim d
-					if (part.d[!d][1] < (*only_cont_pt)[!d] || part.d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
-					// clamp to contained part in dim !d; might change pos of window, but usually this isn't apparent from inside the building
-					max_eq(part.d[!d][0], cont_part.d[!d][0]);
-					min_eq(part.d[!d][1], cont_part.d[!d][1]);
-					found_adj = 1;
+				if (i->d[d][0] == cont_part.d[d][1] || i->d[d][1] == cont_part.d[d][0]) { // adj in dim d
+					if (i->d[!d][1] < (*only_cont_pt)[!d] || i->d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
+					draw_part = *i; // deep copy
+					max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
+					min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
+					clamp_cube = &draw_part;
 					break;
 				}
-			}
-			if (skip || !found_adj) continue; // skip of adj in neither dim, always skip (but could check chained adj case)
+			} // for d
+			if (skip || clamp_cube == nullptr) continue; // skip of adj in neither dim, always skip (but could check chained adj case)
 		}
 		unsigned const part_ix(i - parts.begin());
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
-		bdraw.add_section(*this, parts, part, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale); // XY, no_ao=1
+		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
 	} // for i
 }
 
@@ -1737,7 +1755,7 @@ public:
 		} // end have_interior
 
 		if (transparent_windows) {
-			// draw back faces of buildings
+			// draw back faces of buildings, which will be interior walls
 			city_shader_setup(s, lights_bcube, enable_room_lights, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale); // force_tsl=1
 			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
