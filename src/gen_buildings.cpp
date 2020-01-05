@@ -1152,6 +1152,37 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	} // for i
 }
 
+void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt) const {
+
+	if (!is_valid()) return; // invalid building
+	building_mat_t const &mat(get_material());
+	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
+	
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
+		if (i->contains_pt(only_cont_pt)) { // part containing the point
+			bdraw_front.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
+			continue;
+		}
+		unsigned back_dim_mask(3), front_dim_mask(0); // enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (i->d[d][0] != cont_part.d[d][1] && i->d[d][1] != cont_part.d[d][0]) continue; // not adj in dim d
+			
+			for (unsigned e = 0; e < 2; ++e) { // check for coplanar sides (wall extensions)
+				unsigned const disable_bit(1 << (3 + 2*(1-d) + e));
+				if (i->d[!d][e] != cont_part.d[!d][e]) {front_dim_mask |= disable_bit; continue;} // not coplanar, disable this edge from front
+				front_dim_mask |= (1<<(1-d)); // coplanar, make other edge dim a front dim
+				back_dim_mask  |= disable_bit; // disable this edge from back
+			}
+			if (i->d[!d][1] < only_cont_pt[!d] || i->d[!d][0] > only_cont_pt[!d]) break; // point not contained in other dim range
+			back_dim_mask &= ~(1<<d); front_dim_mask |= (1<<d); // draw only the other dim as back and this dim as front
+			break;
+		} // for d
+		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, back_dim_mask,  0, 0, 0, 0);} // back part
+		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, front_dim_mask, 0, 0, 0, 0);} // front part
+	} // for i
+}
+
 
 struct building_lights_manager_t : public city_lights_manager_t {
 	void setup_building_lights(vector3d const &xlate) {
@@ -1655,12 +1686,12 @@ public:
 		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		bool const enable_room_lights(add_room_lights());
-		bool const single_part_int_windows = 1; // trade-off: removes ugly partial windows at the cost of removing some entire distant windows
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		float const pcf_scale = 0.2;
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw;
+		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
 		bool this_frame_camera_in_building(0);
 		cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
@@ -1690,10 +1721,16 @@ public:
 			}
 			city_shader_setup(s, lights_bcube, enable_room_lights, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
 			set_interior_lighting(s);
-			if (transparent_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
 
+			if (transparent_windows) {
+				per_bcs_exclude.resize(bcs.size());
+				int_wall_draw_front.resize(bcs.size());
+				int_wall_draw_back.resize(bcs.size());
+			}
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
+				unsigned const bcs_ix(i - bcs.begin());
+
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) { // too far
 						if (g->has_room_geom) { // need to clear room geom
@@ -1718,8 +1755,9 @@ public:
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall
-						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, (single_part_int_windows ? &camera_xlated : nullptr));
-						per_bcs_exclude[i - bcs.begin()] = b.ext_side_qv_range;
+						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &camera_xlated);
+						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated);
+						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
 					} // for bi
 				} // for g
@@ -1741,17 +1779,6 @@ public:
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 				glDepthMask(GL_FALSE);
 				interior_wind_draw.draw(holes_shader, 0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
-
-				if (!single_part_int_windows) { // clear stencil buffer for front sides of the building
-					// still not correct for L/T/U shaped buildings or houses with different part heights, but maybe looks a bit better
-					glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_ZERO); // clear stencil for front faces
-					glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
-				
-					for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-						vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
-						if (vr.draw_ix >= 0) {(*i)->building_draw_vbo.draw_quad_geom_range(holes_shader, vr, shadow_only);}
-					}
-				}
 				glDepthMask(GL_TRUE);
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glDisable(GL_STENCIL_TEST);
@@ -1766,6 +1793,7 @@ public:
 			glCullFace(GL_FRONT);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				unsigned const bcs_ix(i - bcs.begin());
 				bool const force_wall_tex(!(*i)->buildings.empty());
 				vertex_range_t const *exclude(nullptr);
 				
@@ -1777,15 +1805,18 @@ public:
 					set_texture_scale(s, mat.wall_tex.tscale_x/mat.side_tex.tscale_x, mat.wall_tex.tscale_y/mat.side_tex.tscale_y); // uses first building, not quite right
 					mat.wall_tex.unset_gl(s);
 				}
-				if (!per_bcs_exclude.empty()) {
-					vertex_range_t const &vr(per_bcs_exclude[i - bcs.begin()]);
-					// draw this range using stencil test but the rest of the buildings without stencil test
-					exclude = &vr; // use this exclude
-					glEnable(GL_STENCIL_TEST);
-					glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
-					glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-					(*i)->building_draw_vbo.draw_quad_geom_range(s, vr, shadow_only, force_wall_tex);
-					glDisable(GL_STENCIL_TEST);
+				if (!per_bcs_exclude.empty()) { // draw this range using stencil test but the rest of the buildings without stencil test
+					vertex_range_t const &vr(per_bcs_exclude[bcs_ix]);
+
+					if (vr.draw_ix >= 0) { // nonempty
+						exclude = &vr; // use this exclude
+						glEnable(GL_STENCIL_TEST);
+						glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
+						glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+						int_wall_draw_front[bcs_ix].draw(s, shadow_only, force_wall_tex, 1); // draw back facing walls for front part of building with stencil test
+						glDisable(GL_STENCIL_TEST);
+						int_wall_draw_back [bcs_ix].draw(s, shadow_only, force_wall_tex, 1); // draw back facing walls for back part of building without stencil test
+					}
 				}
 				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, exclude); // no stencil test
 				if (force_wall_tex) {set_texture_scale(s, 1.0, 1.0);} // reset
