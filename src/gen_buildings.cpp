@@ -13,7 +13,6 @@
 using std::string;
 
 bool const DRAW_WINDOWS_AS_HOLES = 1;
-bool const DRAW_INSIDE_WINDOWS   = 1; // works on buildings that the player has entered; has drawing artifacts when looking through a multi-part building
 bool const ADD_ROOM_SHADOWS      = 1;
 int  const ADD_ROOM_LIGHTS       = 2; // 0 = no room lights, 1 = only when player is in the building, 2 = always
 int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
@@ -1633,7 +1632,6 @@ public:
 		}
 		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-		bool const draw_inside_windows(DRAW_INSIDE_WINDOWS && transparent_windows);
 		bool const enable_room_lights(add_room_lights());
 		bool const single_part_int_windows = 1; // trade-off: removes ugly partial windows at the cost of removing some entire distant windows
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
@@ -1670,7 +1668,7 @@ public:
 			}
 			city_shader_setup(s, lights_bcube, enable_room_lights, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
 			set_interior_lighting(s);
-			if (draw_inside_windows) {per_bcs_exclude.resize(bcs.size());}
+			if (transparent_windows) {per_bcs_exclude.resize(bcs.size());}
 			vector<point> points; // reused temporary
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
@@ -1694,7 +1692,7 @@ public:
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.gen_and_draw_room_geom(s, bi->ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
-						if (!draw_inside_windows) continue;
+						if (!transparent_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall
@@ -1710,7 +1708,7 @@ public:
 			reset_interior_lighting(s);
 			s.end_shader();
 
-			if (draw_inside_windows) { // write to stencil buffer, use stencil test for back facing building walls
+			if (transparent_windows) { // write to stencil buffer, use stencil test for back facing building walls
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test
 				glClear(GL_STENCIL_BUFFER_BIT);
