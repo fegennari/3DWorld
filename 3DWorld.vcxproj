@@ -718,6 +718,7 @@
     <ClInclude Include="src\universe.h" />
     <ClInclude Include="src\upsurface.h" />
     <ClInclude Include="src\vertex_opt.h" />
+    <ClInclude Include="src\vertex_types.h" />
     <ClInclude Include="src\voxels.h" />
     <ClInclude Include="Targa\targa.h" />
   </ItemGroup>

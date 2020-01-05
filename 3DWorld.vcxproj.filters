@@ -590,6 +590,9 @@
     <ClInclude Include="src\texture_tile_blend\tlingandblending.h">
       <Filter>Source Files\"Borrowed"\Header</Filter>
     </ClInclude>
+    <ClInclude Include="src\vertex_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="icon1.ico">
