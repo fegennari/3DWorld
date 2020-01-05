@@ -515,8 +515,9 @@ class building_draw_t {
 				assert(!exclude); // not supported in this mode
 				bool const use_texture(!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty()));
 				if (use_texture) {tex.set_gl(s);} // Note: colors are not disabled here
-				if (!quad_verts.empty()) {draw_verts(quad_verts, GL_QUADS);}
-				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES);}
+				if (no_set_texture) {set_array_client_state(1, 1, 1, 0);} // disable colors as well if not using textures
+				if (!quad_verts.empty()) {draw_verts(quad_verts, GL_QUADS,     0, !no_set_texture);}
+				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES, 0, !no_set_texture);}
 				if (use_texture) {tex.unset_gl(s);}
 			}
 			else {
