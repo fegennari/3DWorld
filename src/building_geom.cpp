@@ -1462,6 +1462,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	}
 	else if (!is_house || first_part) { // only add stairs to first part of a house
 		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
+		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
 		add_elevator = (!is_house && !first_part && rgen.rand_bool());
 		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
@@ -1478,8 +1479,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 				for (unsigned y = 0; y < 2 && !placed; ++y) { // try all 4 corners
 					for (unsigned x = 0; x < 2 && !placed; ++x) {
-						bool const dim(rgen.rand_bool());
-						elevator_t elevator(room, dim, !(dim ? y : x), rgen.rand_bool()); // elevator shaft
+						// don't place elevators on building exteriors blocking windows or between parts where they would block doorways
+						if (room.d[0][x] == part.d[0][x] || room.d[1][y] == part.d[1][y]) continue;
+						bool const dim(rgen.rand_bool()), is_open(rgen.rand_bool());
+						elevator_t elevator(room, dim, !(dim ? y : x), is_open); // elevator shaft
 						elevator.d[0][!x] = elevator.d[0][x] + (x ? -ewidth : ewidth);
 						elevator.d[1][!y] = elevator.d[1][y] + (y ? -ewidth : ewidth);
 						elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
