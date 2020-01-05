@@ -53,7 +53,7 @@ bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, 
 	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
 	if (is_simple_cube()) return 1; // that's it
 	building_draw_utils::calc_poly_pts(*this, part, points);
-	return point_in_polygon_2d(pt.x, pt.y, &points.front(), points.size(), 0, 1); // 2D x/y containment
+	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size(), 0, 1); // 2D x/y containment
 }
 
 bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const { // can be called before levels/splits are created
@@ -118,7 +118,7 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	} // for S
 	if (updated) return 1;
 
-	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, &points.front(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
+	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, points.data(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
 		pos.z = part.z2() + radius; // make sure it doesn't intersect the roof
 		if (cnorm) {*cnorm = plus_z;}
 		return 1;
@@ -292,7 +292,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 
 			if (tz >= 0.0 && tz < t) {
 				float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
-				if (point_in_polygon_2d(xval, yval, &points.front(), points.size(), 0, 1)) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
+				if (point_in_polygon_2d(xval, yval, points.data(), points.size(), 0, 1)) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
 			}
 			if (!vert) { // test building sides
 				point quad_pts[4]; // quads
