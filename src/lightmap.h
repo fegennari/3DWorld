@@ -155,10 +155,11 @@ public:
 
 struct local_smap_data_t;
 
-class light_source { // size = 92
+class light_source { // size = 96
 
 protected:
 	bool dynamic, enabled, user_placed, is_cube_face, is_cube_light, no_shadows;
+	int building_id; // -1 is unset
 	unsigned smap_index, cube_eflags, num_dlight_rays; // index of shadow map texture/data
 	float radius, radius_inv, r_inner, bwidth, near_clip;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
@@ -168,12 +169,13 @@ protected:
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), no_shadows(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
+	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), no_shadows(0), building_id(-1), smap_index(0), cube_eflags(0), num_dlight_rays(0),
 	radius(0.0f), radius_inv(0.0f), r_inner(0.0f), bwidth(0.0f), near_clip(0.0f), pos(all_zeros), pos2(all_zeros), dir(zero_vector), color(BLACK) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
 	void set_dynamic_state(point const &pos_, vector3d const &dir_, colorRGBA const &color_, bool enabled_) {pos = pos2 = pos_; dir = dir_; color = color_; enabled = enabled_;}
 	void set_num_dlight_rays(unsigned num) {num_dlight_rays = num;} // zero = use default
+	void set_building_id(int id) {building_id = id;}
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
 	float get_radius()           const {return radius;}
@@ -183,6 +185,7 @@ public:
 	point const &get_pos()       const {return pos;}
 	point const &get_pos2()      const {return pos2;}
 	sphere_t get_bsphere()       const {return sphere_t(pos, radius);}
+	int get_building_id()        const {return building_id;}
 	float get_intensity_at(point const &p, point &updated_lpos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, bool clip_to_scene_bcube=0, vector3d const &bounds_offset=zero_vector) const;

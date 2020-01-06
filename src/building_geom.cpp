@@ -1736,7 +1736,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building, cube_t &lights_bcube) const {
+void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const {
 
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1787,10 +1787,12 @@ void building_t::add_room_lights(vector3d const &xlate, bool camera_in_building,
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, bwidth); // points down, white for now
+		dl_sources.back().set_building_id(building_id);
 
 		if (camera_in_building && !room.is_hallway) { // only when the player is inside a building and can't see the light bleeding through the floor; not for hallways
 			// add a smaller unshadowed light with near 180 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			dl_sources.emplace_back((room.is_office ? 0.3 : 0.5)*light_radius, lpos, lpos, WHITE, 0, -plus_z, 0.4);
+			dl_sources.back().set_building_id(building_id);
 			dl_sources.back().disable_shadows();
 		}
 	} // for i

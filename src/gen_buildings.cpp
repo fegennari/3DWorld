@@ -1660,7 +1660,7 @@ public:
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (ADD_ROOM_LIGHTS != 2 && !camera_in_this_building) continue; // camera not in building
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-				b.add_room_lights(xlate, camera_in_this_building, lights_bcube);
+				b.add_room_lights(xlate, bi->ix, camera_in_this_building, lights_bcube);
 			} // for bi
 		} // for g
 	}
@@ -2400,6 +2400,7 @@ void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &s
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
 // used for pedestrians
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
+cube_t get_sec_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);}
 bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator_city.check_line_coll_building(p1, p2, building_id);}
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
