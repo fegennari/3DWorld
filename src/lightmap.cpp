@@ -1192,7 +1192,14 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 		}
 		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5);
 		cube_t bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh)); // padded below
+		int const building_id(ls.get_building_id());
 		if (ls.is_very_directional()) {bcube.expand_by(vector3d(grid_dx, grid_dy, 0.0));} // add one grid unit
+		
+		if (building_id >= 0) { // if this light is from a building interior, clip it's bcube to the building bounds
+			cube_t const building_bcube(get_sec_building_bcube(building_id));
+			assert(bcube.intersects(building_bcube));
+			bcube.intersect_with_cube(building_bcube);
+		}
 		int bnds[2][2];
 
 		for (unsigned e = 0; e < 2; ++e) {
