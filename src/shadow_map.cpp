@@ -22,7 +22,7 @@ bool voxel_shadows_updated(0);
 unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0), empty_smap_tid(0);
 pos_dir_up orig_camera_pdu;
 
-extern bool snow_shadows, enable_depth_clamp, flashlight_on;
+extern bool snow_shadows, enable_depth_clamp, flashlight_on, interior_shadow_maps;
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation, shadow_map_pcf_offset;
@@ -595,13 +595,16 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	}
 	else if (world_mode == WMODE_INF_TERRAIN) { // Note: not really a clean case split; should pass this in somehow, or use a different class in tiled terrain mode (cities)
 		render_models(2, 0, 1); // opaque only
-		vector3d const xlate(get_tiled_terrain_model_xlate());
-		camera_pdu.pos += xlate;
-		fgPushMatrix();
-		translate_to(-xlate);
-		draw_tiled_terrain_decid_tree_shadows();
-		fgPopMatrix();
-		camera_pdu.pos -= xlate;
+		
+		if (!interior_shadow_maps) { // all of this is here to draw tree shadows in tiled terrain mode, which is not needed for building interiors
+			vector3d const xlate(get_tiled_terrain_model_xlate());
+			camera_pdu.pos += xlate;
+			fgPushMatrix();
+			translate_to(-xlate);
+			draw_tiled_terrain_decid_tree_shadows();
+			fgPopMatrix();
+			camera_pdu.pos -= xlate;
+		}
 	}
 	else {assert(0);} // not supported in universe mode
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
