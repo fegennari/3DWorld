@@ -184,42 +184,43 @@ void bird_t::apply_force_xy_const_vel(vector3d const &force) {
 	flocking = 1;
 }
 
-void vect_bird_t::flock(tile_t const *const tile) { // boids
+void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 
-	// Note: this is per-tile
 	// see https://www.blog.drewcutchins.com/blog/2018-8-16-flocking
-	//if (display_mode & 0x10) return; // TESTING
 	if (!animate2 || this->empty()) return;
 	float const neighbor_dist(0.5*get_tile_width()), nd_sq(neighbor_dist*neighbor_dist);
 	float const sep_dist_sq(0.2*nd_sq), cohesion_dist_sq(0.3*nd_sq), align_dist_sq(0.25*nd_sq);
 	float const mass(100.0), sep_strength(0.05), cohesion_strength(0.05), align_strength(0.5);
 	tile_xy_pair const tp(tile->get_tile_xy_pair());
+	tile_t *adj_tiles[9] = {0};
+	unsigned ix(0);
 
+	for (int dy = -1; dy <= 1; ++dy) {
+		for (int dx = -1; dx <= 1; ++dx) {adj_tiles[ix++] = get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy));}
+	}
 	for (auto i = this->begin(); i != this->end(); ++i) {
 		if (!i->is_enabled()) continue;
 		vector3d sep_force(zero_vector), avg_pos(zero_vector), avg_vel(zero_vector), tot_force(zero_vector);
 		unsigned pcount(0), vcount(0);
 
-		for (int dy = -1; dy <= 1; ++dy) {
-			for (int dx = -1; dx <= 1; ++dx) {
-				tile_t *const adj_tile(get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy))); // Note: could cache this if needed
-				if (!adj_tile) continue;
-				vect_bird_t &birds(adj_tile->get_birds());
+		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {
+			tile_t *const adj_tile(adj_tiles[adj_ix]);
+			if (!adj_tile) continue;
+			vect_bird_t &birds(adj_tile->get_birds());
 
-				for (auto j = birds.begin(); j != birds.end(); ++j) {
-					if (!j->is_enabled()) continue;
-					if (i == j) continue; // skip self
-					float const dxy_sq(p2p_dist_xy_sq(i->pos, j->pos)); // Note: ignores zval
+			for (auto j = birds.begin(); j != birds.end(); ++j) {
+				if (!j->is_enabled()) continue;
+				if (i == j) continue; // skip self
+				float const dxy_sq(p2p_dist_xy_sq(i->pos, j->pos)); // Note: ignores zval
 
-					if (dxy_sq < sep_dist_sq) { // separation
-						vector3d const delta(i->pos - j->pos), sep_force(delta/dxy_sq); // force decreases with distance
-						tot_force += sep_force*sep_strength;
-					}
-					if (dxy_sq < cohesion_dist_sq) {avg_pos += j->pos;      ++pcount;}
-					if (dxy_sq < align_dist_sq   ) {avg_vel += j->velocity; ++vcount;}
-				} // for j
-			} // for dx
-		} // for dy
+				if (dxy_sq < sep_dist_sq) { // separation
+					vector3d const delta(i->pos - j->pos), sep_force(delta/dxy_sq); // force decreases with distance
+					tot_force += sep_force*sep_strength;
+				}
+				if (dxy_sq < cohesion_dist_sq) {avg_pos += j->pos;      ++pcount;}
+				if (dxy_sq < align_dist_sq   ) {avg_vel += j->velocity; ++vcount;}
+			} // for j
+		} // for adj_ix
 		if (pcount > 0) {tot_force += (avg_pos/pcount - i->pos)*cohesion_strength;} // cohesion
 		if (vcount > 0) {tot_force += avg_vel*(align_strength/vcount);} // alignment
 		if (tot_force != zero_vector) {i->apply_force_xy_const_vel(tot_force/mass);}
