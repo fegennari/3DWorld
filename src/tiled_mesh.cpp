@@ -2249,6 +2249,7 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 /*static*/ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 
 	unsigned const base_tsize(NORM_TEXELS);
+	std::ostringstream oss; // reused
 
 	for (int i = 0; i < NTEX_DIRT; ++i) {
 		int const tid(lttex_dirt[i].id);
@@ -2257,16 +2258,14 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 		unsigned const tu_id(start_tu_id + i), nm_tu_id(i + 16); // tu_id 16-20 for normal maps
 		select_multitex(tid, tu_id);
 		select_multitex(nm_tid, nm_tu_id);
-		std::ostringstream oss1, oss2, oss3, oss4;
-		oss1 << "tex" << tu_id;
-		oss2 << "ts"  << tu_id;
-		oss3 << "cs"  << tu_id;
-		oss4 << "nm_tex" << tu_id;
-		s.add_uniform_int(  oss1.str().c_str(), tu_id);
-		s.add_uniform_float(oss2.str().c_str(), tscale);
-		s.add_uniform_float(oss3.str().c_str(), mesh_tex_cscale[i]);
-		s.add_uniform_int(  oss4.str().c_str(), nm_tu_id);
-	}
+		oss.str("");
+		oss << tu_id;
+		string const tu_id_str(oss.str());
+		s.add_uniform_int(  ("tex"  + tu_id_str).c_str(), tu_id);
+		s.add_uniform_float(("ts"   + tu_id_str).c_str(), tscale);
+		s.add_uniform_float(("cs"   + tu_id_str).c_str(), mesh_tex_cscale[i]);
+		s.add_uniform_int(("nm_tex" + tu_id_str).c_str(), nm_tu_id);
+	} // for i
 	s.add_uniform_color("snow_cscale", colorRGB(1.0, 1.0, 1.2)); // increased blue
 }
 
