@@ -207,7 +207,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 }
 
 // Note: pos and p_last are already in rotated coordinate space
-// TODO_INT: player is actually too large to fit through doors and too tall to fit between the floor and celing, so this doesn't really work
+// TODO_INT: default player is actually too large to fit through doors and too tall to fit between the floor and celing, so this doesn't really work
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 	assert(interior);
 	bool had_coll(0);

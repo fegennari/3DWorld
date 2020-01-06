@@ -11,6 +11,11 @@ camera_radius 0.03 # default is 0.06
 camera_height 0.02 # added to camera_radius; default is 0.0
 player_speed 0.5 # default is 1.0
 
+# smaller/slower, good for entering buildings
+#camera_radius 0.02
+#camera_height 0.05
+#player_speed 0.25
+
 buildings tt_only 1
 shadow_map_sz 4096
 
