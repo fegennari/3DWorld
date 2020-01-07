@@ -1599,8 +1599,8 @@ void building_t::add_room(cube_t const &room, unsigned part_id) {
 
 bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit) {
 
-	// TODO_INT: use tot_light_amt as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors?
 	float const window_vspacing(get_window_vspace());
+	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
 	vector3d const room_sz(room.get_size());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
@@ -1612,8 +1612,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsi
 	urc.z = table_pos.z + 0.2*window_vspacing;
 	cube_t table(llc, urc);
 	if (!interior->is_valid_placement_for_room(table, room)) return 0; // check proximity to doors
-	objs.emplace_back(table, TYPE_TABLE, room_id);
-	if (is_lit) {objs.back().flags |= RO_FLAG_LIT;}
+	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
 	float const chair_sz(0.1*window_vspacing); // half size
 
 	// place some chairs around the table
@@ -1626,8 +1625,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsi
 			chair.z2() += 0.4*window_vspacing; // chair height
 			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
 			if (!interior->is_valid_placement_for_room(chair, room)) continue; // check proximity to doors
-			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir);
-			if (is_lit) {objs.back().flags |= RO_FLAG_LIT;}
+			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, obj_flags, tot_light_amt);
 		} // for dir
 	} // for dim
 	return 1;
@@ -1743,13 +1741,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const window_vspacing(get_window_vspace()), camera_z(camera_pdu.pos.z - xlate.z);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_LIT)) continue; // not a light, or light not on
+		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		point const cs_lpos(lpos + xlate); // camera space
 		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
 		bool const floor_is_above(camera_z < floor_z), floor_is_below(camera_z > ceil_z);
-		bool const stairs_light(i->flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));
+		bool const stairs_light(i->has_stairs());
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
 		
@@ -1936,7 +1934,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 
 	cube_t top(c), legs_bcube(c);
 	top.z1() += 0.85*c.dz(); // 15% of height
 	legs_bcube.z2() = top.z1();
-	// TODO_INT: different lighting if (c.flags & RO_FLAG_LIT)? Applies to table and chairs
+	// TODO_INT: use c.light_amt / c.is_lit() as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors? Applies to table and chairs
 	get_wood_material(tscale).add_cube_to_verts(top, WOOD_COLOR); // all faces drawn
 	add_tc_legs(legs_bcube, WOOD_COLOR, 0.08, tscale);
 }
@@ -1963,7 +1961,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
-	bool const is_on((c.flags & RO_FLAG_LIT) != 0);
+	bool const is_on(c.is_lit());
 	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
 	get_material(tp).add_cube_to_verts(c, WHITE, EF_Z2); // white, untextured, skip top face

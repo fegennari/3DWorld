@@ -185,9 +185,13 @@ struct room_object_t : public cube_t {
 	bool dim, dir;
 	uint8_t flags, room_id; // for at most 256 rooms per floor
 	room_object type;
-	room_object_t() : dim(0), dir(0), flags(0), room_id(0), type(TYPE_NONE) {}
-	room_object_t(cube_t const &c, room_object type_, unsigned char rid, bool dim_=0, bool dir_=0, unsigned char f=0) :
-		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_) {}
+	float light_amt;
+
+	room_object_t() : dim(0), dir(0), flags(0), room_id(0), type(TYPE_NONE), light_amt(1.0) {}
+	room_object_t(cube_t const &c, room_object type_, unsigned char rid, bool dim_=0, bool dir_=0, unsigned char f=0, float light=1.0) :
+		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_), light_amt(light) {}
+	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
+	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 };
 
 class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
