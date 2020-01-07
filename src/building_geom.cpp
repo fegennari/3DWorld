@@ -1646,13 +1646,14 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		float const light_amt(r->get_light_amt());
+		float const light_amt(window_vspacing*r->get_light_amt()); // multiply perimeter/area by window spacing to make unitless
 		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		unsigned const room_id(r - interior->rooms.begin());
 		point room_center(r->get_cube_center());
 		// determine light pos and size for this stack of rooms
 		bool const light_dim(r->dx() < r->dy()); // longer room dim
 		float const light_size((r->is_hallway ? 2.0 : (r->is_office ? 1.5 : 1.0))*floor_thickness); // use larger light for offices and hallways
+		float const light_val(10.0*2.2*light_size), room_light_intensity(light_val*light_val/(r->dx()*r->dy())); // average for room, unitless
 		cube_t light;
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1695,8 +1696,8 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
 			if (r->no_geom) continue; // no other geometry for this room
-			float tot_light_amt(light_amt);
-			if (is_lit) {tot_light_amt += 100.0f*light_size*light_size/(r->dx()*r->dy());} // light surface area divided by room surface area with some fudge constant
+			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
+			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 
 			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
 			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, tot_light_amt, is_lit);}
@@ -1930,13 +1931,19 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, 
 	}
 }
 
+colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
+	// TODO_INT: use c.light_amt as an approximation for ambient lighting due to sun/moon? Do we need per-object material colors?
+	return c * (0.5f + 0.5f*min(sqrt(o.light_amt), 1.5f));
+	//return c;
+}
+
 void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 	cube_t top(c), legs_bcube(c);
 	top.z1() += 0.85*c.dz(); // 15% of height
 	legs_bcube.z2() = top.z1();
-	// TODO_INT: use c.light_amt / c.is_lit() as an approximation for ambient lighting due to sun/moon? Do we need per-object lighting colors? Applies to table and chairs
-	get_wood_material(tscale).add_cube_to_verts(top, WOOD_COLOR); // all faces drawn
-	add_tc_legs(legs_bcube, WOOD_COLOR, 0.08, tscale);
+	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
+	add_tc_legs(legs_bcube, color, 0.08, tscale);
 }
 
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
@@ -1946,9 +1953,10 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, colorRGBA(0.2, 0.2, 1.0)); // light blue; all faces drawn
-	get_wood_material(tscale).add_cube_to_verts(back, WOOD_COLOR, EF_Z1); // skip bottom face
-	add_tc_legs(legs_bcube, WOOD_COLOR, 0.15, tscale);
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, apply_light_color(c, colorRGBA(0.2, 0.2, 1.0))); // light blue; all faces drawn
+	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	get_wood_material(tscale).add_cube_to_verts(back, color, EF_Z1); // skip bottom face
+	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
