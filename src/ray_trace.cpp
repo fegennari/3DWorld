@@ -196,7 +196,7 @@ float get_step_size()    {return 0.3f*ray_step_size_mult*(DX_VAL + DY_VAL + DZ_V
 
 void increment_printed_number(unsigned num) {
 
-	for (unsigned n = max(num, 1U); n > 0; n /= 10) cout << "\b";
+	for (unsigned n = max(num, 1U); n > 0; n /= 10) {cout << "\b";}
 	cout << (num+1);
 	cout.flush();
 }
@@ -519,7 +519,6 @@ struct rt_data {
 template<typename T> class thread_manager_t {
 
 	vector<std::thread> threads;
-
 public:
 	vector<T> data; // to be filled in by the caller
 
@@ -529,28 +528,21 @@ public:
 		for (auto i = data.begin(); i != data.end(); ++i) {if (i->is_running) return 1;}
 		return 0;
 	}
-
 	void clear() {
 		data.clear();
 		threads.clear();
 	}
-
 	void create(unsigned num_threads) {
 		assert(!is_active());
 		data.resize(num_threads);
 		threads.resize(num_threads);
 	}
-
 	void run(void (*func)(rt_data *)) {
 		assert(threads.size() == data.size());
 		for (unsigned t = 0; t < threads.size(); ++t) {threads[t] = std::thread(func, (rt_data *)(&data[t]));}
 	}
-
 	void join() {
-		for (unsigned t = 0; t < threads.size(); ++t) {
-			threads[t].join();
-			//cout << "checksum[" << t << "]: " << data[t].checksum << endl;
-		}
+		for (unsigned t = 0; t < threads.size(); ++t) {threads[t].join();}
 	}
 	void join_and_clear() {join(); clear();}
 };
@@ -599,7 +591,7 @@ void launch_threaded_job(unsigned num_threads, void (*start_func)(rt_data *), bo
 	assert(num_threads > 0 && num_threads < 100);
 	assert(!keep_beams || num_threads == 1); // could use a mutex instead to make this legal
 	bool const single_thread(num_threads == 1);
-	if (verbose) cout << "Computing lighting on " << num_threads << " threads." << endl;
+	if (verbose) {cout << "Computing lighting on " << num_threads << " threads." << endl;}
 	thread_manager.create(num_threads);
 	vector<rt_data> &data(thread_manager.data);
 	if (use_temp_lmap) {thread_temp_lmap.init_from(lmap_manager);}
@@ -677,7 +669,7 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 		unsigned const num_rays(unsigned(nrays*proj_area[i]/tot_area + 0.5));
 		point pt;
 		pt[i] = bnds.d[i][dir];
-		if (verbose) cout << "Dim " << i+1 << " of 3, num (this thread): " << num_rays << ", progress (of " << 1+num_rays/1000 << "): 0";
+		if (verbose) {cout << "Dim " << i+1 << " of 3, num (this thread): " << num_rays << ", progress (of " << 1+num_rays/1000 << "): 0";}
 
 		if (randomized) {
 			for (unsigned s = 0; s < num_rays; ++s) {
@@ -694,7 +686,6 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 			unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
 			unsigned num(0);
 
-			//#pragma omp parallel for schedule(static,1)
 			for (unsigned s0 = 0; s0 < n0; ++s0) {
 				if (kill_raytrace) break;
 				pt[d0] = bnds.d[d0][0] + (s0 + rgen.rand_uniform(0.0, 1.0))*len0/n0;
@@ -707,7 +698,7 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 				}
 			}
 		}
-		if (verbose) cout << endl;
+		if (verbose) {cout << endl;}
 	} // for i
 }
 
@@ -728,7 +719,7 @@ void trace_ray_block_global_light(rt_data *data, point const &pos, colorRGBA con
 	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0 || i->num_rays == 0) continue; // disabled
-		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
+		if (data->verbose) {cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;}
 		unsigned const num_rays(i->num_rays/data->num);
 		float const cube_weight(RAY_WEIGHT*weight*i->intensity/i->num_rays);
 		trace_ray_block_global_cube(data->lmgr, i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, data->randomized, rgen, &data->accum_map);
@@ -736,7 +727,7 @@ void trace_ray_block_global_light(rt_data *data, point const &pos, colorRGBA con
 	}
 	if (data->verbose) {
 		cout << "start rays: " << GLOBAL_RAYS << ", cube_start_rays: " << cube_start_rays << ", total rays: "
-			<< tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
+			 << tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
 	data->post_run();
 }
@@ -817,7 +808,7 @@ void trace_ray_block_sky(rt_data *data) {
 			point const end_pt(pt + dir*line_length);
 			cast_light_ray(data->lmgr, pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen, &data->accum_map);
 		}
-		if (data->verbose) cout << endl;
+		if (data->verbose) {cout << endl;}
 	}
 	if (data->verbose) {
 		cout << "start rays: " << start_rays << ", cube start rays: " << cube_start_rays << ", total rays: " << tot_rays
