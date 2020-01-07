@@ -1018,10 +1018,10 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		bdraw.begin_draw_range_capture();
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
-			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only (what about edges?)
+			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
-			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only (what about edges?)
+			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only
 		}
 		bdraw.set_no_shadows_for_tex(mat.ceil_tex); // minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings
 
