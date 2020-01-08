@@ -1644,6 +1644,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	unsigned tot_num_rooms(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
+	room_obj_shape const light_shape(0&&is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		float const light_amt(window_vspacing*r->get_light_amt()); // multiply perimeter/area by window spacing to make unitless
@@ -1657,7 +1658,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		cube_t light;
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
-			float const sz(((bool(dim) == light_dim) ? 2.2 : 1.0)*light_size);
+			float const sz(((bool(dim) == light_dim && light_shape == SHAPE_CUBE) ? 2.2 : 1.0)*light_size);
 			light.d[dim][0] = room_center[dim] - sz;
 			light.d[dim][1] = room_center[dim] + sz;
 		}
@@ -1687,11 +1688,11 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 						float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
 						cube_t hall_light(light);
 						for (unsigned e = 0; e < 2; ++e) {hall_light.d[light_dim][e] += delta;}
-						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags); // dir=0 (unused)
+						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape); // dir=0 (unused)
 					}
 				}
 				else { // normal room
-					objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags); // dir=0 (unused)
+					objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape); // dir=0 (unused)
 				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
@@ -1906,6 +1907,31 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 	} // for i
 }
 
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color) {
+	float const radius(0.5*min(c.dx(), c.dy())); // should be equal/square
+	point const center(c.get_cube_center());
+	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
+	unsigned const ndiv = 32;
+	vector3d v12;
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
+	float const ndiv_inv(1.0/ndiv);
+	unsigned vix(verts.size());
+	verts.resize(vix + 4*ndiv);
+	color_wrapper cw(color);
+
+	for (unsigned i = 0; i < ndiv; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			float const ts(1.0f - S*ndiv_inv);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			verts[vix++].assign(vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), cw.c);
+			verts[vix++].assign(vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), cw.c);
+		}
+	} // for i
+	// TODO_INT: add bottom end cap
+	assert(vix == verts.size());
+}
+
 void rgeom_mat_t::create_vbo() {
 	vbo.create_and_upload(verts);
 	num_verts = verts.size();
@@ -1977,7 +2003,10 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	bool const is_on(c.is_lit());
 	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
-	get_material(tp).add_cube_to_verts(c, WHITE, EF_Z2); // white, untextured, skip top face
+	rgeom_mat_t &mat(get_material(tp));
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, WHITE, EF_Z2);} // white, untextured, skip top face
+	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, WHITE);}
+	else {assert(0);}
 }
 
 void building_room_geom_t::clear() {

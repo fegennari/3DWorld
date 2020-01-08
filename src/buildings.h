@@ -174,7 +174,8 @@ struct draw_range_t {
 	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
 };
 
-enum room_object {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, NUM_TYPES};
+enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, NUM_TYPES};
+enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN};
 
 // object flags, currently used for room lights
 unsigned char const RO_FLAG_LIT     = 0x01; // light is on
@@ -185,11 +186,13 @@ struct room_object_t : public cube_t {
 	bool dim, dir;
 	uint8_t flags, room_id; // for at most 256 rooms per floor
 	room_object type;
+	room_obj_shape shape;
 	float light_amt;
 
-	room_object_t() : dim(0), dir(0), flags(0), room_id(0), type(TYPE_NONE), light_amt(1.0) {}
-	room_object_t(cube_t const &c, room_object type_, unsigned char rid, bool dim_=0, bool dir_=0, unsigned char f=0, float light=1.0) :
-		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_), light_amt(light) {}
+	room_object_t() : dim(0), dir(0), flags(0), room_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
+	room_object_t(cube_t const &c, room_object type_, unsigned char rid,
+		bool dim_=0, bool dir_=0, unsigned char f=0, float light=1.0, room_obj_shape shape_=room_obj_shape::SHAPE_CUBE) :
+		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_), shape(shape_), light_amt(light) {}
 	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 };
@@ -206,6 +209,7 @@ public:
 	rgeom_mat_t(tid_nm_pair_t &tex_) : tex(tex_), num_verts(0) {}
 	void clear() {vbo.clear(); verts.clear(); num_verts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
+	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color);
 	void create_vbo();
 	void draw(shader_t &s, bool shadow_only);
 };
