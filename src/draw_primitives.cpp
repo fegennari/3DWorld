@@ -357,7 +357,7 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 	}
 }
 
-void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting) {
+void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting) { // unused
 
 	unsigned const ndiv(vpn.n.size());
 	float const ndiv_inv(1.0/ndiv);
@@ -369,8 +369,8 @@ void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 			unsigned const S(i + j), s(S%ndiv);
 			float const ts(1.0f - S*ndiv_inv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), 0);
-			create_vert(verts[vix++], vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), 0);
+			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), two_sided_lighting);
+			create_vert(verts[vix++], vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), two_sided_lighting);
 		}
 	} // for i
 	assert(vix == verts.size());
