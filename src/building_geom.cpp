@@ -1785,13 +1785,17 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
-		dl_sources.emplace_back(light_radius, lpos, lpos, WHITE, 0, -plus_z, bwidth); // points down, white for now
+		colorRGBA color;
+		if (is_house) {color = colorRGBA(1.0, 1.0, 0.8);} // house - yellowish
+		else if (room.is_hallway || room.is_office) {color = colorRGBA(0.8, 0.8, 1.0);} // office building - blueish
+		else {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
+		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_building_id(building_id);
 
 		if (camera_in_building) { // only when the player is inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
-			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, WHITE);
+			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, color);
 			dl_sources.back().set_building_id(building_id);
 			dl_sources.back().disable_shadows();
 		}
