@@ -203,11 +203,11 @@ class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
 public:
 	typedef vert_norm_comp_tc_color vertex_t;
 	tid_nm_pair_t tex;
-	vector<vertex_t> verts; // quads only
-	unsigned num_verts; // for drawing
+	vector<vertex_t> tri_verts, quad_verts;
+	unsigned num_tverts, num_qverts; // for drawing
 
-	rgeom_mat_t(tid_nm_pair_t &tex_) : tex(tex_), num_verts(0) {}
-	void clear() {vbo.clear(); verts.clear(); num_verts = 0;}
+	rgeom_mat_t(tid_nm_pair_t &tex_) : tex(tex_), num_tverts(0), num_qverts(0) {}
+	void clear() {vbo.clear(); tri_verts.clear(); quad_verts.clear(); num_tverts = num_qverts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color);
 	void create_vbo();

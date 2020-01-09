@@ -1644,7 +1644,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 	unsigned tot_num_rooms(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
-	room_obj_shape const light_shape(0&&is_house ? SHAPE_CYLIN : SHAPE_CUBE);
+	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		float const light_amt(window_vspacing*r->get_light_amt()); // multiply perimeter/area by window spacing to make unitless
@@ -1654,11 +1654,11 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		// determine light pos and size for this stack of rooms
 		bool const light_dim(r->dx() < r->dy()); // longer room dim
 		float const light_size((r->is_hallway ? 2.0 : (r->is_office ? 1.5 : 1.0))*floor_thickness); // use larger light for offices and hallways
-		float const light_val(10.0*2.2*light_size), room_light_intensity(light_val*light_val/(r->dx()*r->dy())); // average for room, unitless
+		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/(r->dx()*r->dy())); // average for room, unitless
 		cube_t light;
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
-			float const sz(((bool(dim) == light_dim && light_shape == SHAPE_CUBE) ? 2.2 : 1.0)*light_size);
+			float const sz(((light_shape == SHAPE_CYLIN) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
 			light.d[dim][0] = room_center[dim] - sz;
 			light.d[dim][1] = room_center[dim] + sz;
 		}
@@ -1774,7 +1774,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 			}
 		} // end camera on different floor case
-		float const light_radius(10.0*max(i->dx(), i->dy())), cull_radius(0.95*light_radius);
+		float const light_radius(7.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius);
 		if (!camera_pdu.sphere_visible_test(cs_lpos, cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t clipped_bc; // in building space
@@ -1900,7 +1900,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 					v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
 					v.t[1] = tex.tscale_y*v.v[d[0]];
-					verts.push_back(v);
+					quad_verts.push_back(v);
 				}
 			}
 		} // for j
@@ -1915,8 +1915,8 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color) {
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
 	float const ndiv_inv(1.0/ndiv);
-	unsigned vix(verts.size());
-	verts.resize(vix + 4*ndiv);
+	unsigned qix(quad_verts.size()), tix(tri_verts.size());
+	quad_verts.resize(qix + 4*ndiv);
 	color_wrapper cw(color);
 
 	for (unsigned i = 0; i < ndiv; ++i) {
@@ -1924,28 +1924,39 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color) {
 			unsigned const S(i + j), s(S%ndiv);
 			float const ts(1.0f - S*ndiv_inv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-			verts[vix++].assign(vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), cw.c);
-			verts[vix++].assign(vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), cw.c);
+			quad_verts[qix++].assign(vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), cw.c);
+			quad_verts[qix++].assign(vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), cw.c);
 		}
 	} // for i
-	// TODO_INT: add bottom end cap
-	assert(vix == verts.size());
+	assert(qix == quad_verts.size());
+	// add bottom end cap using triangles, currently using all TCs=0.0
+	tri_verts.resize(tix + 3*ndiv);
+
+	for (unsigned i = 0; i < ndiv; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {tri_verts[tix++].assign(vpn.p[((i + j)%ndiv)<<1], -plus_z, 0.0, 0.0, cw.c);}
+		tri_verts[tix++].assign(ce[0], -plus_z, 0.0, 0.0, cw.c); // center
+	}
+	assert(tix == tri_verts.size());
 }
 
 void rgeom_mat_t::create_vbo() {
-	vbo.create_and_upload(verts);
-	num_verts = verts.size();
-	clear_container(verts); // no longer needed
+	num_tverts = tri_verts.size();
+	num_qverts = quad_verts.size();
+	vector_add_to(tri_verts, quad_verts);
+	vbo.create_and_upload(quad_verts);
+	clear_container(tri_verts);  // no longer needed
+	clear_container(quad_verts); // no longer needed
 }
 
 void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows
 	assert(vbo.vbo_valid());
-	assert(num_verts > 0);
+	assert(num_tverts > 0 || num_qverts > 0);
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
 	vbo.pre_render();
 	vertex_t::set_vbo_arrays();
-	draw_quads_as_tris(num_verts);
+	if (num_qverts > 0) {draw_quads_as_tris(num_qverts);}
+	if (num_tverts > 0) {glDrawArrays(GL_TRIANGLES, num_qverts, num_tverts);}
 	tex.unset_gl(s);
 }
 
@@ -2016,7 +2027,7 @@ void building_room_geom_t::clear() {
 
 unsigned building_room_geom_t::get_num_verts() const {
 	unsigned num_verts(0);
-	for (auto m = materials.begin(); m != materials.end(); ++m) {num_verts += m->num_verts;}
+	for (auto m = materials.begin(); m != materials.end(); ++m) {num_verts += m->num_qverts + m->num_tverts;}
 	return num_verts;
 }
 
