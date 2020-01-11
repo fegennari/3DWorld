@@ -2233,6 +2233,7 @@ int main(int argc, char** argv) {
 	init_window();
 	check_gl_error(7770);
 	if (init_core_context) {init_debug_callback();}
+	//glEnable(GL_FRAMEBUFFER_SRGB);
 	cout << ".GL Initialized." << endl;
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();
