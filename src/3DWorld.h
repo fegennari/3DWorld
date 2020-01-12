@@ -443,6 +443,7 @@ struct cube_t { // size = 24
 	void   operator*=(float scale      ) {UNROLL_3X(d[i_][0] *= scale; d[i_][1] *= scale;)}
 
 	void translate(point const &p) {UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)}
+	void translate_dim(float v, unsigned dim) {assert(dim < 3); d[dim][0] += v; d[dim][1] += v;}
 	void set_from_points(point const *const pts, unsigned npts);
 	std::string str() const;
 	std::string raw_str() const;

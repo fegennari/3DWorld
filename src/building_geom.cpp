@@ -1245,7 +1245,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					if (partial_room && i+2 == num_rooms) {hwall.d[!min_dim][1] -= 1.5*doorway_width;} // pull back a bit to make room for a doorway at the end of the hall
 					hall_walls.push_back(hwall); // longer sections that form T-junctions with room walls
 				}
-				for (unsigned e = 0; e < 2; ++e) {rwall.d[!min_dim][e] += room_len;}
+				rwall.translate_dim(room_len, !min_dim);
 			} // for i
 			for (unsigned s = 0; s < 2; ++s) { // add half length hall walls at each end of the hallway
 				cube_t hwall(rwall); // copy to get correct zvals
@@ -1465,7 +1465,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			interior->elevators.push_back(elevator);
 			room.has_elevator = 1;
 			elevator_cut      = elevator;
-			for (unsigned d = 0; d < 2; ++d) {stairs.d[long_dim][d] -= center_shift;} // shift stairs in the opposite direction
+			stairs.translate_dim(-center_shift, long_dim); // shift stairs in the opposite direction
 		}
 		// always add stairs
 		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
@@ -1703,7 +1703,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 					for (unsigned d = 0; d < num_lights; ++d) {
 						float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
 						cube_t hall_light(light);
-						for (unsigned e = 0; e < 2; ++e) {hall_light.d[light_dim][e] += delta;}
+						hall_light.translate_dim(delta, light_dim);
 						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape); // dir=0 (unused)
 					}
 				}
