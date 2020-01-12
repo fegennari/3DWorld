@@ -1954,7 +1954,7 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color) {
 	float const radius(0.5*min(c.dx(), c.dy())); // should be equal/square
 	point const center(c.get_cube_center());
 	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
-	unsigned const ndiv = 32;
+	unsigned const ndiv(N_CYL_SIDES);
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
 	float const ndiv_inv(1.0/ndiv);
@@ -1968,7 +1968,7 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color) {
 			float const ts(1.0f - S*ndiv_inv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
 			quad_verts[qix++].assign(vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), cw.c);
-			quad_verts[qix++].assign(vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), cw.c);
+			quad_verts[qix++].assign(vpn.p[(s<<1)+!j], normal, ts, 1.0*(!j), cw.c);
 		}
 	} // for i
 	assert(qix == quad_verts.size());

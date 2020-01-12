@@ -369,8 +369,8 @@ void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 			unsigned const S(i + j), s(S%ndiv);
 			float const ts(1.0f - S*ndiv_inv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, 0.0*(!j), two_sided_lighting);
 			create_vert(verts[vix++], vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), two_sided_lighting);
+			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, 1.0*(!j), two_sided_lighting);
 		}
 	} // for i
 	assert(vix == verts.size());
