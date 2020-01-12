@@ -19,9 +19,11 @@ int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = dr
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
+cube_t grass_exclude;
 
 extern bool start_in_inf_terrain, draw_building_interiors;
 extern int rand_gen_index, display_mode;
+extern float grass_width;
 extern point sun_pos;
 extern vector<light_source> dl_sources;
 
@@ -1770,6 +1772,10 @@ public:
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated);
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
+						
+						for (auto p = b.parts.begin(); p != b.parts.end(); ++p) { // disable any grass inside the building part containing the player
+							if (p->contains_pt(camera_xlated)) {grass_exclude = *p; grass_exclude.expand_by_xy(4.0*grass_width); break;}
+						}
 					} // for bi
 				} // for g
 			} // for i
