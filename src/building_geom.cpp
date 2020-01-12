@@ -146,14 +146,16 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
 		if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
 		if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
+		cube_t const part_bc(*i + xlate);
+		bool part_coll(0);
 
 		if (use_cylinder_coll()) {
-			point const cc(i->get_cube_center() + xlate);
+			point const cc(part_bc.get_cube_center());
 			float const crx(0.5*i->dx()), cry(0.5*i->dy()), r_sum(radius + max(crx, cry));
 			if (!dist_xy_less_than(pos2, cc, r_sum)) continue; // no intersection
 
 			if (fabs(crx - cry) < radius) { // close to a circle
-				if (p_last2.z > i->d[2][1] + xlate.z && dist_xy_less_than(pos2, cc, max(crx, cry))) {
+				if (p_last2.z > part_bc.d[2][1] && dist_xy_less_than(pos2, cc, max(crx, cry))) {
 					pos2.z = i->z2() + radius; // make sure it doesn't intersect the roof
 					if (cnorm_ptr) {*cnorm_ptr = plus_z;}
 				}
@@ -164,25 +166,29 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 					pos2.y = cc.y + mult*d.y;
 					if (cnorm_ptr) {*cnorm_ptr = vector3d(d.x, d.y, 0.0).get_norm();} // no z-component
 				}
-				had_coll = 1;
+				part_coll = 1;
 			}
 			else {
-				had_coll |= test_coll_with_sides(pos2, p_last2, radius, (*i + xlate), points, cnorm_ptr); // use polygon collision test
+				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr); // use polygon collision test
 			}
 		}
 		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			had_coll |= test_coll_with_sides(pos2, p_last2, radius, (*i + xlate), points, cnorm_ptr);
+			part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr);
 		}
-		else if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) { // cube
-			had_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
-			if (check_interior && interior != nullptr) {is_interior = 1;}
+		else if (check_interior && interior != nullptr && part_bc.contains_pt(pos2)) {
+			is_interior = 1; // if point is inside the interior of the part, flag for interior collision detection
 		}
+		else if (sphere_cube_int_update_pos(pos2, radius, part_bc, p_last2, 1, xy_only, cnorm_ptr)) { // cube
+			part_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
+		}
+		if (part_coll && pos2.z < part_bc.z1()) {pos2.z = part_bc.z2() + radius;} // can't be under a building - make it on top of the building instead
+		had_coll |= part_coll;
 	} // for i
 	if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
 		for (auto i = details.begin(); i != details.end(); ++i) {
 			if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
 		}
-		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // Note: doesn't really work with a pointed roof
+		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // TODO: doesn't really work with a pointed roof
 			point const pos_xlate(pos2 - xlate);
 			vector3d const normal(i->get_norm());
 			float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
@@ -195,7 +201,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			}
 		}
 	}
-	if (is_interior) {had_coll = check_sphere_coll_interior(pos, p_last, xlate, radius, xy_only, cnorm_ptr);} // sphere collides with cube and check_interior=1
+	if (is_interior) {had_coll = check_sphere_coll_interior(pos2, p_last, xlate, radius, xy_only, cnorm_ptr);} // sphere collides with cube and check_interior=1
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
 
 	if (is_rotated()) {
@@ -207,33 +213,40 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 }
 
 // Note: pos and p_last are already in rotated coordinate space
-// TODO_INT: default player is actually too large to fit through doors and too tall to fit between the floor and celing, so this doesn't really work
+// default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 	assert(interior);
+	float const floor_spacing(get_window_vspace());
 	bool had_coll(0);
 
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
 			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 1, cnorm); // skip_z=1
 		}
-		had_coll = 0; // coll logic not yet working, so don't register this as a coll
 	}
-	if (!xy_only && 2.2*radius < get_window_vspace()*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
+	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
+		had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 1, cnorm); // skip_z=1
+	}*/
+	if (!xy_only && 2.2*radius < floor_spacing*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-			//had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm);
-			if (!sphere_cube_intersect((pos - xlate), radius, *i)) continue;
-			if (pos.z < i->z1() + xlate.z) {pos.z = i->z1() - i->dz() + xlate.z - radius;} // move down below ceiling
-			else                           {pos.z = i->z2() + xlate.z + radius;} // move up above floor
+			if (!i->contains_pt_xy(pos - xlate)) continue; // sphere not in this part/cube
+			float const z1(i->z1() + xlate.z), obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+			if (obj_z < z1 || obj_z > z1 + floor_spacing) continue; // this is not the floor the sphere is on
+			pos.z = z1 + radius;
 			had_coll = 1;
 			break; // only change zval once
 		}
 	}
 	if (interior->room_geom) { // collision with room cubes
 		vector<room_object_t> const &objs(interior->room_geom->objs);
-		for (auto c = objs.begin(); c != objs.end(); ++c) {had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 1, cnorm);} // skip_z=1???
+
+		for (auto c = objs.begin(); c != objs.end(); ++c) {
+			if (c->type == TYPE_LIGHT) continue; // ignore lights, since they're not always cubes and won't collide anyway
+			had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 0, cnorm); // skip_z=0
+		}
 	}
-	return had_coll;
+	return had_coll; // will generally always be true due to floors
 }
 
 unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points,
