@@ -1922,7 +1922,7 @@ void draw_framerate(float val) {
 	char text[32];
 	sprintf(text, "%i", round_fp(val));
 	float const ar(((float)window_width)/((float)window_height));
-	draw_text(WHITE, -0.011*ar, -0.011, -2.0*NEAR_CLIP, text);
+	draw_text(WHITE, -0.011*ar, -0.011, -0.02, text);
 }
 
 

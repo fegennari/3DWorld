@@ -1480,6 +1480,7 @@ bool load_config_file(const char *fn) {
 			}
 		}
 	}
+	min_eq(NEAR_CLIP, 0.5f*CAMERA_RADIUS); // make sure the player's view can't clip through scene objects
 	return 1;
 }
 
