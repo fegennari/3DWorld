@@ -8,6 +8,7 @@
 
 float const FLOOR_THICK_VAL = 0.1; // 10% of floor spacing
 
+extern bool draw_building_interiors;
 extern int display_mode;
 extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
@@ -142,7 +143,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate(-rot_sin, rot_cos, center, pos2); // inverse rotate - negate the sine term
 		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
 	}
-	if (check_interior && interior != nullptr) { // check for interior case first
+	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
 			if (i->contains_pt(pos2 - xlate)) {is_interior = 1; break;} // if point is inside the interior of the part, flag for interior collision detection
 		}
@@ -194,7 +195,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			for (auto i = details.begin(); i != details.end(); ++i) {
 				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
 			}
-			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // TODO: doesn't really work with a pointed roof
+			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // TODO: doesn't really work when walking on a pointed roof
 				point const pos_xlate(pos2 - xlate);
 				vector3d const normal(i->get_norm());
 				float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
