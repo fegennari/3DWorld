@@ -784,7 +784,7 @@ public:
 		float const tscale[2] = {2.0f*tex.tscale_x, 2.0f*tex.tscale_y}; // adjust for local vs. global space change
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
-		setup_ao_color(color, bcube.z1(), ao_bcz2, cube.d[2][0], cube.d[2][1], cw, vert, no_ao);
+		setup_ao_color(color, bcube.z1(), ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
 		tex_vert_off.z = -bcube.z1();
 		if (is_city && cube.z1() == bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
@@ -993,7 +993,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
 			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
-			bool const is_stacked(!is_house && num_sides == 4 && i->d[2][0] > bcube.d[2][0]); // skip the bottom of stacked cubes
+			bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
 			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
 		}
@@ -1535,7 +1535,7 @@ public:
 					flatten_hmap_region(b.bcube); // flatten the mesh under the bcube to a height of mesh_zval
 				}
 				else { // extend building bottom downward to min mesh height
-					float &zmin(b.bcube.d[2][0]); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
+					float &zmin(b.bcube.z1()); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
 					float const zmin0(zmin);
 					unsigned num_below(0);
 					
@@ -1553,13 +1553,13 @@ public:
 						++num_skip;
 					}
 					else if (!b.parts.empty()) {
-						b.parts.back().d[2][0] = b.bcube.d[2][0]; // update base z1
+						b.parts.back().z1() = b.bcube.z1(); // update base z1
 						assert(b.parts.back().dz() > 0.0);
 					}
 				}
 			} // for i
 			if (do_flatten) { // use conservative zmin for grid
-				for (auto i = grid.begin(); i != grid.end(); ++i) {i->bcube.d[2][0] = def_water_level;}
+				for (auto i = grid.begin(); i != grid.end(); ++i) {i->bcube.z1() = def_water_level;}
 			}
 		} // if flatten_mesh
 		{ // open a scope
