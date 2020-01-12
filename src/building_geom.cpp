@@ -1647,6 +1647,14 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsi
 	return 1;
 }
 
+void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		float const sz(((light_shape == SHAPE_CYLIN) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
+		light.d[dim][0] = center[dim] - sz;
+		light.d[dim][1] = center[dim] + sz;
+	}
+}
+
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
 void building_t::gen_room_details(rand_gen_t &rgen) {
 
@@ -1668,26 +1676,35 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		unsigned const room_id(r - interior->rooms.begin());
 		point room_center(r->get_cube_center());
 		// determine light pos and size for this stack of rooms
-		bool const light_dim(r->dx() < r->dy()); // longer room dim
+		bool const room_dim(r->dx() < r->dy()); // longer room dim
 		float const light_size((r->is_hallway ? 2.0 : (r->is_office ? 1.5 : 1.0))*floor_thickness); // use larger light for offices and hallways
 		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/(r->dx()*r->dy())); // average for room, unitless
-		cube_t light;
-
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			float const sz(((light_shape == SHAPE_CYLIN) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
-			light.d[dim][0] = room_center[dim] - sz;
-			light.d[dim][1] = room_center[dim] + sz;
-		}
-		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator(light, fc_thick));
+		cube_t pri_light, sec_light;
+		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
+		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator(pri_light, fc_thick));
+		bool use_sec_light(0);
 		float z(r->z1());
 
+		if (blocked_by_stairs) { // blocked by stairs - see if we can add a light off to the side in the other orient
+			bool const first_dir(rgen.rand_bool());
+
+			for (unsigned d = 0; d < 2; ++d) { // see if we can place it by moving on one direction
+				point new_center(room_center);
+				new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*0.33*r->get_sz_dim(room_dim);
+				set_light_xy(sec_light, new_center, light_size, !room_dim, light_shape); // flip the light dim
+				if (!interior->is_blocked_by_stairs_or_elevator(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
+			}
+		}
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
 			bool const top_of_stairs(blocked_by_stairs && f+1 == num_floors);
-			bool is_lit(0);
+			bool is_lit(0), light_dim(room_dim);
+			cube_t light;
+			if (!blocked_by_stairs || top_of_stairs) {light = pri_light;}
+			else if (use_sec_light) {light = sec_light; light_dim ^= 1;}
 
-			if (!blocked_by_stairs || top_of_stairs) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
+			if (!light.is_all_zeros()) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
