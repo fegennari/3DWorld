@@ -1741,7 +1741,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float const window_vspacing(get_window_vspace()), camera_z(camera_pdu.pos.z - xlate.z);
+	unsigned camera_part(parts.size()); // start at an invalid value
 
+	if (camera_in_building) {
+		for (auto i = parts.begin(); i != parts.end(); ++i) {
+			if (i->contains_pt(camera_pdu.pos - xlate)) {camera_part = (i - parts.begin()); break;}
+		}
+	}
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
@@ -1754,24 +1760,28 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		room_t const &room(interior->rooms[i->room_id]);
 		
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
-			if (camera_in_building) { // player is on a different floor and can't see a light from the floor above/below
+			if (camera_in_building && room.part_id == camera_part) {
+				// player is on a different floor of the same building part and can't see a light from the floor above/below
 				if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
 				if (camera_z < (i->z2() - 2.0*window_vspacing) || camera_z > (i->z2() + window_vspacing)) continue; // light is on the stairs, add if one floor above/below
 			}
-			else { // camera outside the building
+			else { // camera outside the building (or the part that contains this light)
 				float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
 				if ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
-				// is it better to check if light half sphere is occluded by the floor above/below?
-				assert(room.part_id < parts.size());
-				cube_t const &part(parts[room.part_id]);
-				bool visible[2] = {0};
+				
+				if (camera_in_building) { // camera and light are in different buildings
+					// is it better to check if light half sphere is occluded by the floor above/below?
+					assert(room.part_id < parts.size());
+					cube_t const &part(parts[room.part_id]);
+					bool visible[2] = {0};
 
-				for (unsigned d = 0; d < 2; ++d) { // for each dim
-					bool const dir(camera_pdu.pos[d] > cs_lpos[d]);
-					if ((camera_pdu.pos[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
-					visible[d] = (room.ext_sides & (1 << (2*d + dir)));
+					for (unsigned d = 0; d < 2; ++d) { // for each dim
+						bool const dir(camera_pdu.pos[d] > cs_lpos[d]);
+						if ((camera_pdu.pos[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
+						visible[d] = (room.ext_sides & (1 << (2*d + dir)));
+					}
+					if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 				}
-				if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 			}
 		} // end camera on different floor case
 		float const light_radius(7.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius);
