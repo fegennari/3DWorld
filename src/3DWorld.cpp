@@ -419,7 +419,6 @@ void update_cpos() {
 void move_camera_pos_xy(vector3d const &v, float dist) {
 
 	// normal ground movement - should speed depend on orientation or not?
-	bool const PLAYER_CAN_ENTER_BUILDINGS = 0; // not yet working
 	static float prev_camera_zval(surface_pos.z); // required for walking on bridges to determine if camera is on or below the bridge
 	point const prev(surface_pos);
 	float const xy_scale(dist*(v.mag()/v.xy_mag()));

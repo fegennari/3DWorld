@@ -12,7 +12,6 @@
 
 bool const REMOVE_ALL_COLL   = 1;
 bool const ALWAYS_ADD_TO_HCM = 0;
-bool const PLAYER_CAN_ENTER_BUILDINGS = 0; // not yet working
 unsigned const CAMERA_STEPS  = 10;
 unsigned const PURGE_THRESH  = 20;
 float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
