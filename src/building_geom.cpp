@@ -711,6 +711,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		cube_t const pre_shrunk_p1(parts[1]); // save for use in details below
 		for (unsigned d = 0; d < 2; ++d) {parts[1].d[!dim][d] += shrink[d]*sz[!dim];} // shrink this part in the other dim
 		parts[1].z2() -= delta_height*parts[1].dz(); // lower height
+		//ao_bcz2 = parts[1].z2(); // set this lower zval as the base AO so that AO values line up with both parts and the roof triangles
 		if (ADD_BUILDING_INTERIORS) {adjust_part_zvals_for_floor_spacing(parts[1]);}
 		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
 		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim

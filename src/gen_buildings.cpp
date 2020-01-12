@@ -460,7 +460,7 @@ texture_id_mapper_t tid_mapper;
 	vert.t[!st] = tscale[!st]*(vert.v[i] + tex_vert_off[i]); \
 	vert.t[0] += tex.txoff; \
 	vert.t[1] += tex.tyoff; \
-	if (apply_ao) {vert.copy_color(cw[pt.z == 1]);} \
+	if (apply_ao) {vert.copy_color(cw[pt.z > 0.5]);} \
 	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
 	verts.push_back(vert);
 
@@ -587,6 +587,7 @@ class building_draw_t {
 	}
 	static void setup_ao_color(colorRGBA const &color, float bcz1, float ao_bcz2, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
 		if (!no_ao && global_building_params.ao_factor > 0.0) {
+			min_eq(z1, ao_bcz2); min_eq(z2, ao_bcz2); // clamp zvals to AO zmax
 			float const dz_mult(global_building_params.ao_factor/(ao_bcz2 - bcz1));
 			UNROLL_2X(cw[i_].set_c4(color*((1.0f - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcz1)));)
 		} else {vert.set_c4(color);} // color is shared across all verts
@@ -989,13 +990,13 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		vertex_range_t vert_range;
 		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.side_tex);
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.side_tex);
-
-		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
-			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
+		
+		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
+			bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY
 			bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
 			bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
-			bdraw.add_section(*this, parts, *i, bcube, (is_house ? i->z2() : ao_bcz2), mat.roof_tex, roof_color, 4, is_stacked, skip_top, 0, 0); // only Z dim
+			bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
 		}
 		ext_side_qv_range.end = bdraw.get_num_verts(mat.side_tex);
 
