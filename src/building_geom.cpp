@@ -233,8 +233,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			if (!i->contains_pt_xy(pos - xlate)) continue; // sphere not in this part/cube
 			float const z1(i->z1() + xlate.z), obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 			if (obj_z < z1 || obj_z > z1 + floor_spacing) continue; // this is not the floor the sphere is on
-			pos.z = z1 + radius;
-			had_coll = 1;
+			if (pos.z < z1 + radius) {pos.z = z1 + radius; had_coll = 1;} // move up
 			break; // only change zval once
 		}
 	}
@@ -242,9 +241,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		vector<room_object_t> const &objs(interior->room_geom->objs);
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
-			if (c->type == TYPE_LIGHT) continue; // ignore lights, since they're not always cubes and won't collide anyway
-			had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 0, cnorm); // skip_z=0
-		}
+			if (c->no_coll()) continue;
+			
+			if (c->type == TYPE_STAIR) {
+				if (!c->contains_pt_xy(pos - xlate)) continue; // sphere not on this stair
+				if (fabs((max(pos.z, p_last.z) - radius) - c->z1()) < 2.0*c->dz()) {pos.z = c->z1() + radius; had_coll = 1;} // stand on the stair if it's for the correct floor
+			} else {had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 0, cnorm);} // skip_z=0
+		} // for c
 	}
 	return had_coll; // will generally always be true due to floors
 }
@@ -1688,7 +1691,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
-				unsigned char flags(0);
+				unsigned char flags(RO_FLAG_NOCOLL); // no collision detection with lights
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
@@ -2071,6 +2074,7 @@ void building_room_geom_t::create_vbos() {
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (!i->is_visible()) continue;
 		assert(i->is_strictly_normalized());
 		switch (i->type) {
 		case TYPE_NONE:  assert(0); // not supported

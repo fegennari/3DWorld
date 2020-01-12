@@ -181,6 +181,8 @@ enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN};
 unsigned char const RO_FLAG_LIT     = 0x01; // light is on
 unsigned char const RO_FLAG_TOS     = 0x02; // at top of stairs
 unsigned char const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
+unsigned char const RO_FLAG_INVIS   = 0x08; // invisible
+unsigned char const RO_FLAG_NOCOLL  = 0x10; // no collision detection
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
@@ -195,6 +197,8 @@ struct room_object_t : public cube_t {
 		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_), shape(shape_), light_amt(light) {}
 	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
+	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
+	bool no_coll   () const {return (flags & RO_FLAG_NOCOLL);}
 };
 
 class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
