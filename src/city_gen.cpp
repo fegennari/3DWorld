@@ -23,8 +23,8 @@ city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
 extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors;
-extern int rand_gen_index, display_mode, animate2, frame_counter;
-extern unsigned shadow_map_sz;
+extern int rand_gen_index, display_mode, animate2;
+extern unsigned shadow_map_sz, cur_display_iter;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
@@ -2951,7 +2951,7 @@ class city_gen_t : public city_plot_gen_t, public city_lights_manager_t {
 	city_road_gen_t road_gen;
 	car_manager_t car_manager;
 	ped_manager_t ped_manager;
-	int prev_city_lights_setup_frame;
+	unsigned prev_city_lights_setup_frame;
 
 public:
 	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager), prev_city_lights_setup_frame(-1) {}
@@ -3050,8 +3050,8 @@ public:
 	}
 	void setup_city_lights(vector3d const &xlate) {
 		if (world_mode != WMODE_INF_TERRAIN) return; // TT only
-		if (prev_city_lights_setup_frame == frame_counter) return; // already called this frame
-		prev_city_lights_setup_frame = frame_counter;
+		if (prev_city_lights_setup_frame == cur_display_iter) return; // already called this frame
+		prev_city_lights_setup_frame = cur_display_iter;
 		//timer_t timer("City Dlights Setup");
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;

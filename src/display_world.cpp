@@ -36,7 +36,7 @@ float const FOG_COLOR_ATTEN    = 0.75;
 
 bool mesh_invalidated(1), fog_enabled(0), tt_fire_button_down(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
-unsigned enabled_lights(0); // 8 bit flags
+unsigned enabled_lights(0), cur_display_iter(0); // 8 bit flags for enabled_lights
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
 double tfticks(0.0), sim_ticks(0.0);
 upos_point_type cur_origin(all_zeros);
@@ -722,11 +722,7 @@ void flashlight_next_frame() {
 	flashlight_on = 0;
 }
 
-
-// The display function. It is called whenever the window needs
-// redrawing (ie: overlapping window moves, resize, maximize)
-// display() is also called every so many milliseconds to provide a decent framerate
-void display(void) {
+void display() {
 
 	check_gl_error(0);
 
@@ -739,6 +735,7 @@ void display(void) {
 	RESET_TIME;
 	static int init(0), frame_index(0), time_index(0), global_time(0), tticks(0);
 	static point old_spos(0.0, 0.0, 0.0);
+	++cur_display_iter;
 	proc_kbd_events();
 
 	if (!init) { // the first frame
