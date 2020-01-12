@@ -142,66 +142,72 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate(-rot_sin, rot_cos, center, pos2); // inverse rotate - negate the sine term
 		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
 	}
-	for (auto i = parts.begin(); i != parts.end(); ++i) {
-		if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
-		if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
-		if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
-		cube_t const part_bc(*i + xlate);
-		bool part_coll(0);
-
-		if (use_cylinder_coll()) {
-			point const cc(part_bc.get_cube_center());
-			float const crx(0.5*i->dx()), cry(0.5*i->dy()), r_sum(radius + max(crx, cry));
-			if (!dist_xy_less_than(pos2, cc, r_sum)) continue; // no intersection
-
-			if (fabs(crx - cry) < radius) { // close to a circle
-				if (p_last2.z > part_bc.d[2][1] && dist_xy_less_than(pos2, cc, max(crx, cry))) {
-					pos2.z = i->z2() + radius; // make sure it doesn't intersect the roof
-					if (cnorm_ptr) {*cnorm_ptr = plus_z;}
-				}
-				else { // side coll
-					vector2d const d((pos2.x - cc.x), (pos2.y - cc.y));
-					float const mult(r_sum/d.mag());
-					pos2.x = cc.x + mult*d.x;
-					pos2.y = cc.y + mult*d.y;
-					if (cnorm_ptr) {*cnorm_ptr = vector3d(d.x, d.y, 0.0).get_norm();} // no z-component
-				}
-				part_coll = 1;
-			}
-			else {
-				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr); // use polygon collision test
-			}
-		}
-		else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-			part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr);
-		}
-		else if (check_interior && interior != nullptr && part_bc.contains_pt(pos2)) {
-			is_interior = 1; // if point is inside the interior of the part, flag for interior collision detection
-		}
-		else if (sphere_cube_int_update_pos(pos2, radius, part_bc, p_last2, 1, xy_only, cnorm_ptr)) { // cube
-			part_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
-		}
-		if (part_coll && pos2.z < part_bc.z1()) {pos2.z = part_bc.z2() + radius;} // can't be under a building - make it on top of the building instead
-		had_coll |= part_coll;
-	} // for i
-	if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
-		for (auto i = details.begin(); i != details.end(); ++i) {
-			if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
-		}
-		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // TODO: doesn't really work with a pointed roof
-			point const pos_xlate(pos2 - xlate);
-			vector3d const normal(i->get_norm());
-			float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
-
-			if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
-				pos2 += normal*(radius - rdist); // update current pos
-				had_coll = 1; // flag as colliding
-				if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
-				break; // only use first colliding tquad
-			}
+	if (check_interior && interior != nullptr) { // check for interior case first
+		for (auto i = parts.begin(); i != parts.end(); ++i) {
+			if (i->contains_pt(pos2 - xlate)) {is_interior = 1; break;} // if point is inside the interior of the part, flag for interior collision detection
 		}
 	}
-	if (is_interior) {had_coll = check_sphere_coll_interior(pos2, p_last, xlate, radius, xy_only, cnorm_ptr);} // sphere collides with cube and check_interior=1
+	if (is_interior) {
+		had_coll = check_sphere_coll_interior(pos2, p_last, xlate, radius, xy_only, cnorm_ptr); // sphere collides with cube and check_interior=1
+	}
+	else {
+		for (auto i = parts.begin(); i != parts.end(); ++i) {
+			if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
+			if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
+			if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
+			cube_t const part_bc(*i + xlate);
+			bool part_coll(0);
+
+			if (use_cylinder_coll()) {
+				point const cc(part_bc.get_cube_center());
+				float const crx(0.5*i->dx()), cry(0.5*i->dy()), r_sum(radius + max(crx, cry));
+				if (!dist_xy_less_than(pos2, cc, r_sum)) continue; // no intersection
+
+				if (fabs(crx - cry) < radius) { // close to a circle
+					if (p_last2.z > part_bc.d[2][1] && dist_xy_less_than(pos2, cc, max(crx, cry))) {
+						pos2.z = i->z2() + radius; // make sure it doesn't intersect the roof
+						if (cnorm_ptr) {*cnorm_ptr = plus_z;}
+					}
+					else { // side coll
+						vector2d const d((pos2.x - cc.x), (pos2.y - cc.y));
+						float const mult(r_sum/d.mag());
+						pos2.x = cc.x + mult*d.x;
+						pos2.y = cc.y + mult*d.y;
+						if (cnorm_ptr) {*cnorm_ptr = vector3d(d.x, d.y, 0.0).get_norm();} // no z-component
+					}
+					part_coll = 1;
+				}
+				else {
+					part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr); // use polygon collision test
+				}
+			}
+			else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
+				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr);
+			}
+			else if (sphere_cube_int_update_pos(pos2, radius, part_bc, p_last2, 1, xy_only, cnorm_ptr)) { // cube
+				part_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
+			}
+			if (part_coll && pos2.z < part_bc.z1()) {pos2.z = part_bc.z2() + radius;} // can't be under a building - make it on top of the building instead
+			had_coll |= part_coll;
+		} // for i
+		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
+			for (auto i = details.begin(); i != details.end(); ++i) {
+				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
+			}
+			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // TODO: doesn't really work with a pointed roof
+				point const pos_xlate(pos2 - xlate);
+				vector3d const normal(i->get_norm());
+				float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+
+				if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
+					pos2 += normal*(radius - rdist); // update current pos
+					had_coll = 1; // flag as colliding
+					if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
+					break; // only use first colliding tquad
+				}
+			}
+		}
+	} // end !is_interior case
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
 
 	if (is_rotated()) {
