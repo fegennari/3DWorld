@@ -1774,7 +1774,7 @@ public:
 						this_frame_camera_in_building = 1;
 						
 						for (auto p = b.parts.begin(); p != b.parts.end(); ++p) { // disable any grass inside the building part containing the player
-							if (p->contains_pt(camera_xlated)) {grass_exclude = *p; grass_exclude.expand_by_xy(4.0*grass_width); break;}
+							if (p->contains_pt(camera_xlated)) {grass_exclude = *p + xlate; grass_exclude.expand_by_xy(4.0*grass_width); break;}
 						}
 					} // for bi
 				} // for g
