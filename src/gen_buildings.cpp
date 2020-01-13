@@ -818,15 +818,15 @@ public:
 				if (bg.is_pointed) { // antenna triangle; parts clipping doesn't apply to this case since there are no opposing cube faces
 					unsigned const ix(verts.size()); // first vertex of this triangle
 					assert(door_ztop == 0.0); // not supported
-					pt[!n] = !j; pt.z = 0;
+					pt[!n] = j^n^1; pt.z = 0;
 					EMIT_VERTEX(); // bottom low
-					pt[!n] = j;
+					pt[!n] = j^n;
 					EMIT_VERTEX(); // bottom high
 					pt[!n] = 0.5; pt[n] = 0.5; pt.z = 1;
 					EMIT_VERTEX(); // top
 					vector3d normal;
 					get_normal(verts[ix+0].v, verts[ix+1].v, verts[ix+2].v, normal, 1); // update with correct normal
-					vert.set_norm(n ? -normal : normal);
+					vert.set_norm(normal);
 					UNROLL_3X(verts[ix+i_].set_norm(vert);)
 					continue; // no windows/clipping
 				}
