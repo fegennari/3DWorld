@@ -192,7 +192,8 @@ public:
 		// Note: to be applied before tiles are generated so that they don't need to be invalidated
 		// Note: assumes unscaled mesh (mesh_scale == 1)
 		point const center(cube.get_cube_center());
-		int const x1(get_xpos(cube.d[0][0])), y1(get_ypos(cube.d[1][0])), x2(get_xpos(cube.d[0][1])), y2(get_ypos(cube.d[1][1]));
+		int const x1(floor((cube.x1() + X_SCENE_SIZE)*DX_VAL_INV)), y1(floor((cube.y1() + Y_SCENE_SIZE)*DY_VAL_INV));
+		int const x2(ceil ((cube.x2() + X_SCENE_SIZE)*DX_VAL_INV)), y2(ceil ((cube.y2() + Y_SCENE_SIZE)*DY_VAL_INV));
 		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
 		int const xlo(floor(xc)), ylo(floor(yc)), xhi(ceil(xc)), yhi(ceil(yc));
 		float const xv(xc - xlo), yv(yc - ylo); // use cubic_interpolate()?
