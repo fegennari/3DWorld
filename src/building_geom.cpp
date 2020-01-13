@@ -137,6 +137,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	if (radius > 0.0 && !sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0), is_interior(0);
+	float part_z2(bcube.z2());
 
 	if (is_rotated()) {
 		center = bcube.get_cube_center() + xlate;
@@ -189,24 +190,36 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				part_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 			}
 			if (part_coll && pos2.z < part_bc.z1()) {pos2.z = part_bc.z2() + radius;} // can't be under a building - make it on top of the building instead
+			if (part_coll) {part_z2 = i->z2();}
 			had_coll |= part_coll;
 		} // for i
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
 			for (auto i = details.begin(); i != details.end(); ++i) {
 				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
 			}
-			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) { // TODO: doesn't really work when walking on a pointed roof
+			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 				point const pos_xlate(pos2 - xlate);
-				vector3d const normal(i->get_norm());
-				float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
 
-				if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
-					pos2 += normal*(radius - rdist); // update current pos
-					had_coll = 1; // flag as colliding
-					if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
-					break; // only use first colliding tquad
+				if (check_interior && had_coll && pos2.z - xlate.z > part_z2) { // player standing on top of a building with a sloped roof
+					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, i->pts, i->npts, 0, 1)) {
+						vector3d const normal(i->get_norm());
+						float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+						float const zval(pos_xlate.z - i->get_norm().z*rdist);
+						pos2.z += i->get_norm().z*(radius - rdist);
+					}
 				}
-			}
+				else { // normal case for bouncing object, etc.
+					vector3d const normal(i->get_norm());
+					float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+
+					if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
+						pos2 += normal*(radius - rdist); // update current pos
+						had_coll = 1; // flag as colliding
+						if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
+						break; // only use first colliding tquad
+					}
+				}
+			} // for i
 		}
 	} // end !is_interior case
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
