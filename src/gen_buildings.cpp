@@ -906,7 +906,11 @@ public:
 						for (unsigned k = ix; k < ix+4; ++k) {
 							auto &v(verts[k]);
 							float const delta(door_ztop - v.v.z);
-							max_eq(v.v.z, door_ztop); // make all windows start above the door; TODO: add partial row of windows for first floor along this wall
+
+							if (v.v.z < door_ztop) { // make all windows start above the door
+								// TODO: add partial row of windows for first floor along this wall along either side of the door
+								v.v.z = door_ztop;
+							}
 							v.v[n] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
 							if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
 						}
