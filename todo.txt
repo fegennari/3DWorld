@@ -11,6 +11,6 @@ Cities:
 - Railroad tracks
 - Fences
 * Mesh simplificaton for cars and peds for shadow pass
+* Building interior indirect/ambient lighting
 
-Building Interiors:
-* Room object ambient lighting?
+* Planet water reflection map
