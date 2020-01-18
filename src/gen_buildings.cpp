@@ -2086,8 +2086,10 @@ public:
 		get_all_drawn_verts();
 		
 		if (!is_tile) {
-			unsigned const num_everts(building_draw_vbo.num_verts()), num_etris(building_draw_vbo.num_tris());
-			unsigned const num_iverts(building_draw_interior.num_verts()), num_itris(building_draw_interior.num_tris());
+			unsigned const num_everts(building_draw_vbo.num_verts() + building_draw_windows.num_verts() + building_draw_wind_lights.num_verts());
+			unsigned const num_etris(building_draw_vbo.num_tris() + building_draw_windows.num_tris() + building_draw_wind_lights.num_tris());
+			unsigned const num_iverts(building_draw_interior.num_verts());
+			unsigned const num_itris(building_draw_interior.num_tris());
 			gpu_mem_usage = (num_everts + num_iverts)*sizeof(vert_norm_comp_tc_color);
 			cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;
 		}
