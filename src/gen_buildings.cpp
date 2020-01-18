@@ -1154,33 +1154,44 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
 		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
 
-		// add ground floor windows next to doors; may not align with windows on floors above or walls
-		float const space(0.5*floor_spacing), min_wall(1.0*floor_spacing), toler(0.1*floor_spacing);
+		// add ground floor windows next to doors
+		if (dsides == 0) continue; // no doors
+		float const space(0.25*floor_spacing), min_wall(1.0*floor_spacing), toler(0.1*floor_spacing);
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
+			unsigned const num_windows(get_num_windows_on_side(i->d[!dim][0], i->d[!dim][1]));
+			if (num_windows <= 1) continue; // no space to split the windows on this wall
+			float const window_spacing(i->get_sz_dim(!dim)/num_windows);
+
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				if (!(dsides & (1 << (2*dim + dir)))) continue; // no door on this side
 				unsigned const dim_mask((1 << dim) + (1 << (3 + 2*dim + (1-dir)))); // enable only this dim but disable the other dir
 				float const wall_pos(i->d[dim][dir]);
-				float door_lo(0.0), door_hi(0.0);
+				float wall_lo(0.0), wall_hi(0.0);
 
 				for (auto d = doors.begin(); d != doors.end(); ++d) {
 					cube_t const c(d->get_bcube());
 					if ((c.dy() < c.dx()) != dim) continue; // wrong dim
 					if (c.d[dim][0]-toler > wall_pos || c.d[dim][1]+toler < wall_pos) continue; // door not on this wall
-					if (c.d[!dim][0] > i->d[!dim][1] || c.d[!dim][1] < i->d[!dim][0]) continue; // door no on this part
-					door_lo = c.d[!dim][0] - space;
-					door_hi = c.d[!dim][1] + space;
+					float side_lo(i->d[!dim][0]), side_hi(i->d[!dim][1]), door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
+					if (door_lo > side_hi || door_hi < side_lo) continue; // door not on this part
+					// align to an exact multiple of window period so that bottom floor windows line up with windows on the floors above and no walls are clipped
+					wall_lo = window_spacing*floor(((door_lo - space) - side_lo)/window_spacing) + side_lo;
+					wall_hi = window_spacing*ceil (((door_hi + space) - side_lo)/window_spacing) + side_lo;
 					break; // only need to handle a single door for now
 				} // for d
-				assert(door_lo < door_hi); // must be a door; too strong?
+				assert(wall_lo < wall_hi); // there must be a door
 
 				for (unsigned e = 0; e < 2; ++e) { // left/right of door
 					cube_t c(*i);
-					c.d[!dim][e] = (e ? door_lo : door_hi); // split the wall here
-					if (c.get_sz_dim(!dim) < min_wall) continue; // wall too small to add here
+					c.d[!dim][e] = (e ? wall_lo : wall_hi); // split the wall here
+					float const wall_len(c.get_sz_dim(!dim));
+					if (wall_len < min_wall) continue; // wall too small to add here
 					c.z2() = door_ztop;
-					bdraw.add_section(*this, parts, c, bcube, ao_bcz2, tex, color, dim_mask, 0, 0, 1, clip_windows, door_ztop, 0, offset_scale, 0, clamp_cube); // no_ao=1
+					tid_nm_pair_t tex2(tex);
+					tex2.tscale_x = 0.5f*round_fp(wall_len/window_spacing)/wall_len;
+					tex2.txoff    = -2.0*tex2.tscale_x*c.d[!dim][0];
+					bdraw.add_section(*this, parts, c, bcube, ao_bcz2, tex2, color, dim_mask, 0, 0, 1, clip_windows, door_ztop, 0, offset_scale, 0, clamp_cube); // no_ao=1
 				} // for e
 			} // for dir
 		} // for dim
