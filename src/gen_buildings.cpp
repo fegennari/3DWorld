@@ -1156,7 +1156,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 		// add ground floor windows next to doors
 		if (dsides == 0) continue; // no doors
-		float const space(0.25*floor_spacing), min_wall(1.0*floor_spacing), toler(0.1*floor_spacing);
+		float const space(0.25*floor_spacing), toler(0.1*floor_spacing);
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			unsigned const num_windows(get_num_windows_on_side(i->d[!dim][0], i->d[!dim][1]));
@@ -1186,7 +1186,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 					cube_t c(*i);
 					c.d[!dim][e] = (e ? wall_lo : wall_hi); // split the wall here
 					float const wall_len(c.get_sz_dim(!dim));
-					if (wall_len < min_wall) continue; // wall too small to add here
+					if (wall_len < window_spacing) continue; // wall too small to add here
 					c.z2() = door_ztop;
 					tid_nm_pair_t tex2(tex);
 					tex2.tscale_x = 0.5f*round_fp(wall_len/window_spacing)/wall_len;
