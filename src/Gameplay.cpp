@@ -1928,12 +1928,12 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				bool const is_fire(wmode & 1);
 				vector3d const gas_vel(dir2*vel + vector3d(0.0, 0.0, 0.2));
 				colorRGBA const color(is_fire ? colorRGBA(1.0, 0.75, 0.0) : GREEN);
-				int const smoke_type (is_fire ? FIRE : GASSED);
+				int const smoke_type (is_fire ? (int)FIRE : (int)GASSED);
 				float const density(0.5*rand_uniform(0.5, 1.0));
 				float const darkness(0.6*rand_uniform(0.7, 1.0));
 				float const radius(w.blast_radius*rand_uniform(0.8, 1.2));
 				gen_arb_smoke(start_pos, color, gas_vel, radius, density, darkness, w.blast_damage, shooter, smoke_type, 0);
-				gen_sound((is_fire ? SOUND_FIREBALL : SOUND_HISS), start_pos, 0.7, 1.2);
+				gen_sound((is_fire ? (unsigned)SOUND_FIREBALL : (unsigned)SOUND_HISS), start_pos, 0.7, 1.2);
 			}
 		}
 		return 1;
@@ -2156,7 +2156,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 	// search for collisions with static objects (like trees)
 	int const laser_m2(SELF_LASER_DAMAGE && is_laser && (wmode&1) && intensity < 1.0);
-	int const proj_type(is_laser ? BEAM : PROJECTILE);
+	int const proj_type(is_laser ? (int)BEAM : (int)PROJECTILE);
 	range = get_projectile_range(pos, vcf, 0.01*radius, range, coll_pos, coll_norm, coll, cindex, shooter, !is_laser, ignore_cobj);
 	point p_int(pos), lsip(pos);
 	bool is_metal(0);
