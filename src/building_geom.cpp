@@ -145,10 +145,17 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
+		float const zval(max(pos2.z, p_last2.z)); // this is the real zval for use in collsion detection
+		cube_t sc; sc.set_from_sphere(pos2, radius); // sphere bounding cube
+
+		if (zval > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
+			for (auto d = doors.begin(); d != doors.end(); ++d) {
+				if (d->get_bcube().intersects_xy(sc)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
+			}
+		}
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
 			cube_t c(*i + xlate);
 			if (!c.contains_pt(pos2)) continue; // not interior to this part
-			cube_t sc; sc.set_from_sphere(pos2, radius); // sphere bounding cube
 			float cont_area(0.0);
 
 			for (auto p = parts.begin(); p != parts.end(); ++p) {
@@ -160,7 +167,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			}
 			is_interior = 1;
 			break; // flag for interior collision detection
-		}
+		} // for i
 	}
 	if (is_interior) {
 		had_coll = check_sphere_coll_interior(pos2, p_last, xlate, radius, xy_only, cnorm_ptr); // sphere collides with cube and check_interior=1
