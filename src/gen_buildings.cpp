@@ -710,7 +710,8 @@ public:
 		} // end draw end(s)
 	}
 
-	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color) {
+	// Note: invert_tc only applies to doors
+	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool invert_tc_x=0) {
 		assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
 		auto &verts(get_verts(tex, (tquad.npts == 3))); // 0=quads, 1=tris
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -731,6 +732,7 @@ public:
 		vector3d normal(tquad.get_norm());
 		if (bg.is_rotated()) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
 		vert.set_norm(normal);
+		invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2); // interior door, back face
 		
 		for (unsigned i = 0; i < tquad.npts; ++i) {
 			vert.v = tquad.pts[i];
@@ -744,21 +746,17 @@ public:
 				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 			}
 			else if (tquad.type == tquad_with_ix_t::TYPE_HDOOR || tquad.type == tquad_with_ix_t::TYPE_BDOOR) { // door - textured from (0,0) to (1,1)
-				vert.t[0] = float(i == 1 || i == 2);
-				vert.t[1] = float(i == 2 || i == 3);
+				vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
+				vert.t[1] = float((i == 2 || i == 3));
 			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR) { // interior door textured/stretched in Y, front face
-				vert.t[0] = tex.tscale_x*(i == 1 || i == 2);
-				vert.t[1] = tex.tscale_y*(i == 2 || i == 3);
-			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR2) { // interior door textured/stretched in Y, back face
-				vert.t[0] = tex.tscale_x*(i == 0 || i == 3);
-				vert.t[1] = tex.tscale_y*(i == 3 || i == 2);
+			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR || tquad.type == tquad_with_ix_t::TYPE_IDOOR2) { // interior door textured/stretched in Y
+				vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
+				vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
 			}
 			else {assert(0);}
 			if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 			verts.push_back(vert);
-		}
+		} // for i
 	}
 
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
