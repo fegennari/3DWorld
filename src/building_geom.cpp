@@ -146,7 +146,20 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
-			if (i->contains_pt(pos2 - xlate)) {is_interior = 1; break;} // if point is inside the interior of the part, flag for interior collision detection
+			cube_t c(*i + xlate);
+			if (!c.contains_pt(pos2)) continue; // not interior to this part
+			cube_t sc; sc.set_from_sphere(pos2, radius); // sphere bounding cube
+			float cont_area(0.0);
+
+			for (auto p = parts.begin(); p != parts.end(); ++p) {
+				if (p->intersects_xy(sc)) {cont_area += (min(p->x2(), sc.x2()) - max(p->x1(), sc.x1()))*(min(p->y2(), sc.y2()) - max(p->y1(), sc.y1()));} // accumulate shared XY area
+			}
+			if (cont_area < 0.99*sc.dx()*sc.dy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
+				c.expand_by_xy(-radius); // shrink part by sphere radius
+				c.clamp_pt_xy(pos2); // force pos2 into interior of the cube to prevent the sphere from intersecting the part
+			}
+			is_interior = 1;
+			break; // flag for interior collision detection
 		}
 	}
 	if (is_interior) {
