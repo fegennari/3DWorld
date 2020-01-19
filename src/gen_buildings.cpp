@@ -35,7 +35,7 @@ bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS >= 2 || came
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_texture(tid);
-	select_multitex(((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid), 5);
+	select_multitex(get_nm_tid(), 5);
 	if (emissive) {s.add_uniform_float("emissive_scale", 1.0);} // enable emissive
 }
 void tid_nm_pair_t::unset_gl(shader_t &s) const {
@@ -580,8 +580,8 @@ class building_draw_t {
 		if (block.empty()) {block.tex = tex;} // copy material first time
 		else {
 			assert(block.tex.tid == tex.tid);
-			if (block.tex.nm_tid != tex.nm_tid) { // else normal maps must agree
-				std::cerr << "mismatched normal map for texture ID " << block.tex.tid << " in slot " << ix << ": " << block.tex.nm_tid << " vs. " << tex.nm_tid << endl;
+			if (block.tex.get_nm_tid() != tex.get_nm_tid()) { // else normal maps must agree
+				std::cerr << "mismatched normal map for texture ID " << block.tex.tid << " in slot " << ix << ": " << block.tex.get_nm_tid() << " vs. " << tex.get_nm_tid() << endl;
 				assert(0);
 			}
 		}
@@ -1074,7 +1074,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bool const dim(i->dy() < i->dx());
 				bool const dir(i->d[dim][0] > bcube.get_center_dim(dim)); // determines which way doors open; doors open in from hallways for office buildings
 				float const ty(i->dz()/mat.get_floor_spacing()); // tile door texture across floors
-				tid_nm_pair_t const tp(building_window_gen.get_hdoor_tid(), FLAT_NMAP_TEX, 1.0, ty);
+				tid_nm_pair_t const tp(building_window_gen.get_hdoor_tid(), -1, 1.0, ty);
 				tquad_with_ix_t const door(set_door_from_cube(*i, dim, dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, (DRAW_INTERIOR_DOORS == 2)));
 				float const thickness(0.02*i->get_sz_dim(!dim));
 				vector3d const normal(door.get_norm());
