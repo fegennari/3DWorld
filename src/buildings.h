@@ -211,7 +211,7 @@ public:
 	vector<vertex_t> tri_verts, quad_verts;
 	unsigned num_tverts, num_qverts; // for drawing
 
-	rgeom_mat_t(tid_nm_pair_t &tex_) : tex(tex_), num_tverts(0), num_qverts(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_) : tex(tex_), num_tverts(0), num_qverts(0) {}
 	void clear() {vbo.clear(); tri_verts.clear(); quad_verts.clear(); num_tverts = num_qverts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color);
@@ -229,7 +229,7 @@ struct building_room_geom_t {
 	bool empty() const {return objs.empty();}
 	void clear();
 	unsigned get_num_verts() const;
-	rgeom_mat_t &get_material(tid_nm_pair_t &tex);
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex);
 	rgeom_mat_t &get_wood_material(float tscale);
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale);

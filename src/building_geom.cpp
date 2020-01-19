@@ -2078,16 +2078,14 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)));
-	mat.add_cube_to_verts(seat, apply_light_color(c, colorRGBA(0.2, 0.2, 1.0))); // light blue; all faces drawn
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, apply_light_color(c, colorRGBA(0.2, 0.2, 1.0))); // light blue; all faces drawn
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(back, color, EF_Z1); // skip bottom face
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)));
-	mat.add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
 }
 
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
@@ -2116,7 +2114,7 @@ unsigned building_room_geom_t::get_num_verts() const {
 	return num_verts;
 }
 
-rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t &tex) {
+rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex) {
 	// for now we do a simple linear search because there shouldn't be too many unique materials
 	for (auto m = materials.begin(); m != materials.end(); ++m) {
 		if (m->tex == tex) {return *m;}
