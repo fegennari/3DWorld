@@ -22,7 +22,7 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
-extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors;
+extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors, flashlight_on, camera_in_building;
 extern int rand_gen_index, display_mode, animate2;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
@@ -191,7 +191,7 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	if (use_dlights) {
 		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
 		s.add_uniform_vector3d("scene_scale", lights_bcube.get_size());
-		s.add_uniform_float("LT_DIR_FALLOFF", CITY_LIGHT_FALLOFF); // smooth falloff for car headlights and streetlights
+		s.add_uniform_float("LT_DIR_FALLOFF", (flashlight_on ? 0.05 : CITY_LIGHT_FALLOFF)); // smooth falloff for car headlights and streetlights
 	}
 	if (use_smap) {
 		s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias); // I guess pcf_scale is really some sort of light size scale and should apply to the z-bias as well
@@ -3057,6 +3057,7 @@ public:
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
+		if (flashlight_on && !camera_in_building) {add_player_flashlight_light_source(0.25);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
 		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
 		finalize_lights(dl_sources);

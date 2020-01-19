@@ -21,7 +21,7 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 bool camera_in_building(0), interior_shadow_maps(0);
 cube_t grass_exclude;
 
-extern bool start_in_inf_terrain, draw_building_interiors;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on;
 extern int rand_gen_index, display_mode;
 extern float grass_width;
 extern point sun_pos;
@@ -1246,6 +1246,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		add_building_interior_lights(xlate, lights_bcube);
+		if (flashlight_on && camera_in_building) {add_player_flashlight_light_source(0.12);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
 		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));}

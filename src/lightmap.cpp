@@ -999,16 +999,25 @@ void add_camera_flashlight() {
 	}
 }
 
-void init_lights() {
-
-	assert(light_sources_d.size() == FLASHLIGHT_LIGHT_ID); // must be empty at this point (first light is added here)
+light_source get_player_flashlight_light_source(float radius_scale) {
 	bool const use_smap = 0; // not yet enabled
 	point const camera(get_camera_pos());
-	light_sources_d.push_back(light_source_trig(light_source(FLASHLIGHT_RAD, camera, camera, get_flashlight_color(), 1, cview_dir, FLASHLIGHT_BW), use_smap));
+	float const bw((world_mode == WMODE_INF_TERRAIN) ? 0.001 : FLASHLIGHT_BW); // hack to adjust flashlight for city/building larger falloff values
+	return light_source(FLASHLIGHT_RAD*radius_scale, camera, camera, get_flashlight_color(), 1, cview_dir, bw);
+}
+
+void add_player_flashlight_light_source(float radius_scale) { // for buildings
+	dl_sources.push_back(get_player_flashlight_light_source(radius_scale));
+	dl_sources.back().disable_shadows(); // shadows not needed
+}
+
+void init_lights() {
+	assert(light_sources_d.size() == FLASHLIGHT_LIGHT_ID); // must be empty at this point (first light is added here)
+	bool const use_smap = 0; // not yet enabled
+	light_sources_d.push_back(light_source_trig(get_player_flashlight_light_source(1.0), use_smap));
 }
 
 void sync_flashlight() {
-
 	assert(FLASHLIGHT_LIGHT_ID < light_sources_d.size());
 	light_sources_d[FLASHLIGHT_LIGHT_ID].set_dynamic_state(get_camera_light_pos(), cview_dir, get_flashlight_color(), flashlight_on);
 }
