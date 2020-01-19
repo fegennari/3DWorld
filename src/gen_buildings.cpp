@@ -1204,7 +1204,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 					cube_t c(*i);
 					c.d[!dim][e] = (e ? wall_lo : wall_hi); // split the wall here
 					float const wall_len(c.get_sz_dim(!dim));
-					if (wall_len < window_spacing) continue; // wall too small to add here
+					if (wall_len < 0.5*window_spacing) continue; // wall too small to add here
 					c.z2() = door_ztop;
 					tid_nm_pair_t tex2(tex);
 					tex2.tscale_x = 0.5f*round_fp(wall_len/window_spacing)/wall_len;
