@@ -979,6 +979,11 @@ public:
 
 
 // *** Drawing ***
+
+int get_building_ext_door_tid(unsigned type) {
+	return ((type == tquad_with_ix_t::TYPE_BDOOR) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
+}
+
 void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) {
 
 	assert(get_exterior || get_interior); // must be at least one of these
@@ -1011,8 +1016,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				detail_color*(bg.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
 		}
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
-			int const door_tid((i->type == tquad_with_ix_t::TYPE_BDOOR) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(door_tid, -1, 1.0, 1.0), WHITE);
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE);
 		}
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
@@ -1091,7 +1095,23 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 					if (d == 1) {swap(door_side.pts[0], door_side.pts[1]); swap(door_side.pts[2], door_side.pts[3]); door_side.type = tquad_with_ix_t::TYPE_IDOOR2;} // back face
 					bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
 				} // for d
-				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX, FLAT_NMAP_TEX, 1.0, 1.0), WHITE);} // add untextured door edges
+				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX, -1, 1.0, 1.0), WHITE);} // add untextured door edges
+			} // for i
+			for (auto i = doors.begin(); i != doors.end(); ++i) { // add interior doors (other side of exterior doors)
+				tquad_with_ix_t door(*i);
+				swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]); // swap vertex order to invert normal
+				cube_t const c(door.get_bcube());
+				bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] < 0.0); // closest cube side dir
+				float door_shift(bcube.dz()); // start with a large value
+
+				for (auto p = parts.begin(); p != parts.end(); ++p) { // find the part that this door was added to
+					float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
+					if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
+				}
+				assert(fabs(door_shift) < bcube.dz());
+				door_shift *= -1.2; // reflect on other side
+				for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
+				bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE, 1); // invert_tc_x=1
 			} // for i
 		} // end DRAW_INTERIOR_DOORS
 		bdraw.end_draw_range_capture(interior->draw_range);
