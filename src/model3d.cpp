@@ -488,7 +488,7 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify_meshoptimizer(vector<
 	unsigned const num_verts(size()), num_ixs(indices.size()), target_num_ixs(max(3U, unsigned(target*num_ixs)));
 	if (num_ixs < 3) return; // no triangles to simplify
 	out.resize(num_ixs); // allocate space
-	size_t const num_ixs_out(meshopt_simplify(&out.front(), &indices.front(), num_ixs, &front().v.x, num_verts, sizeof(T), target_num_ixs, target_error));
+	size_t const num_ixs_out(meshopt_simplify(out.data(), indices.data(), num_ixs, &this->front().v.x, num_verts, sizeof(T), target_num_ixs, target_error));
 	cout << TXT(num_ixs) << TXT(target_num_ixs) << TXT(num_ixs_out) << endl;
 	assert(num_ixs_out > 0 && num_ixs_out <= num_ixs);
 	out.resize(num_ixs_out); // truncate to correct size

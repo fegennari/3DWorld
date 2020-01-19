@@ -224,7 +224,6 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, i->pts, i->npts, 0, 1)) {
 						vector3d const normal(i->get_norm());
 						float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
-						float const zval(pos_xlate.z - i->get_norm().z*rdist);
 						pos2.z += i->get_norm().z*(radius - rdist);
 					}
 				}
@@ -968,7 +967,7 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 
 	bool const dim(get_largest_xy_dim(top_)); // always the largest dim
 	cube_t top(top_); // deep copy
-	unsigned const extend_dir(extend_roof(top, extend_to, dim));
+	extend_roof(top, extend_to, dim); // Note: return value is unused
 	float const width(top.get_sz_dim(!dim)), length(top.get_sz_dim(dim)), offset(0.5f*(length - width)), roof_dz(min(peak_height*width, top.dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point const center(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2);
@@ -2079,14 +2078,16 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, apply_light_color(c, colorRGBA(0.2, 0.2, 1.0))); // light blue; all faces drawn
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)));
+	mat.add_cube_to_verts(seat, apply_light_color(c, colorRGBA(0.2, 0.2, 1.0))); // light blue; all faces drawn
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(back, color, EF_Z1); // skip bottom face
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)));
+	mat.add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
 }
 
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
