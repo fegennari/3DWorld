@@ -31,7 +31,7 @@ building_params_t global_building_params;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
 bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS >= 2 || camera_in_building));}
-float get_door_open_dist() {return 3.0*CAMERA_RADIUS;}
+float get_door_open_dist() {return 4.0*CAMERA_RADIUS;}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_texture(tid);
@@ -1204,7 +1204,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		if (find_door_close_to_point(door, *only_cont_pt, get_door_open_dist())) {
 			// add nearby door as window to make it look open
 			move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
-			clip_bottom_off_door(door);
+			clip_door_to_interior(door, 0);
 			bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 		}
 	}
@@ -1214,7 +1214,7 @@ void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, point const &
 	tquad_with_ix_t door;
 	if (!find_door_close_to_point(door, pos, dist)) return; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.2, 0); // move a bit further away from the outside of the building to make it in front of the orig door
-	clip_bottom_off_door(door);
+	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 }
 

@@ -453,11 +453,17 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
 }
 
-void building_t::clip_bottom_off_door(tquad_with_ix_t &door) const {
-	float const z1(min(min(door.pts[0].z, door.pts[1].z) ,min(door.pts[2].z, door.pts[3].z)));
-	float const floor_thickness(0.75*FLOOR_THICK_VAL*get_material().get_floor_spacing());
-	float const new_z1(z1 + floor_thickness); // clip off bottom for floor; somewhat arbitrary, should we use interior->floors.back().z2() instead?
-	for (unsigned n = 0; n < door.npts; ++n) {max_eq(door.pts[n].z, new_z1);}
+void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const {
+	cube_t clip_cube(door.get_bcube());
+	float const dz(clip_cube.dz());
+	// clip off bottom for floor if clip_to_floor==1; somewhat arbitrary, should we use interior->floors.back().z2() instead?
+	float const clip_bot(clip_to_floor ? 0.75*FLOOR_THICK_VAL*get_material().get_floor_spacing() : 0.04*dz);
+	clip_cube.z1() += clip_bot;
+	clip_cube.z2() -= 0.04*dz;
+	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
+	float const border(0.08*clip_cube.get_sz_dim(dim));
+	clip_cube.d[dim][0] += border; clip_cube.d[dim][1] -= border; // shrink by border
+	for (unsigned n = 0; n < door.npts; ++n) {clip_cube.clamp_pt(door.pts[n]);}
 }
 
 cube_t building_t::get_part_containing_pt(point const &pt) const {
