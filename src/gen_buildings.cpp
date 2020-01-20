@@ -1916,8 +1916,8 @@ public:
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
 		setup_city_lights(xlate);
 
-		// main/batched draw pass - use two sided lighting so that it's correct on both sides of exterior walls
-		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 1, 0.0, 0.0, 0, 0, 1); // force_tsl=1; is_outside=1
+		// main/batched draw pass
+		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 		glEnable(GL_CULL_FACE);
 
