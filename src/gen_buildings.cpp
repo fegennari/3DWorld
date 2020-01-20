@@ -14,7 +14,7 @@ using std::string;
 
 bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
-int  const ADD_ROOM_LIGHTS       = 2; // 0 = no room lights, 1 = only when player is in the building, 2 = always
+bool const ADD_ROOM_LIGHTS       = 1;
 int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
@@ -30,7 +30,6 @@ building_params_t global_building_params;
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
-bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS >= 2 || camera_in_building));}
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
@@ -1275,7 +1274,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));}
 		finalize_lights(dl_sources);
 	}
-	virtual bool enable_lights() const {return (draw_building_interiors && add_room_lights());}
+	virtual bool enable_lights() const {return (draw_building_interiors && ADD_ROOM_LIGHTS);}
 }; // city_gen_t
 
 building_lights_manager_t building_lights_manager;
@@ -1694,7 +1693,7 @@ public:
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
 	static void set_interior_lighting(shader_t &s) {
-		if (add_room_lights()) {
+		if (ADD_ROOM_LIGHTS) {
 			s.add_uniform_float("diffuse_scale", 0.1); // very small diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 0.6); // dimmer ambient
 		}
@@ -1713,7 +1712,7 @@ public:
 	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
-		if (!add_room_lights()) return;
+		if (!ADD_ROOM_LIGHTS) return;
 		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_windows.empty()) return; // no windows
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
@@ -1728,7 +1727,6 @@ public:
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
-				if (ADD_ROOM_LIGHTS != 2 && !camera_in_this_building) continue; // camera not in building
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 				b.add_room_lights(xlate, bi->ix, camera_in_this_building, lights_bcube);
 			} // for bi
@@ -1765,7 +1763,6 @@ public:
 		}
 		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-		bool const enable_room_lights(add_room_lights());
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		float const pcf_scale = 0.2;
 		fgPushMatrix();
@@ -1775,7 +1772,7 @@ public:
 		vector<vertex_range_t> per_bcs_exclude;
 		bool this_frame_camera_in_building(0);
 		cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
-		int const interior_use_smaps((ADD_ROOM_SHADOWS && enable_room_lights) ? 2 : 1); // dynamic light smaps only
+		int const interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -1784,7 +1781,7 @@ public:
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(GL_BACK);
 
-			if (enable_room_lights) { // use z-prepass to reduce time taken for shading
+			if (ADD_ROOM_LIGHTS) { // use z-prepass to reduce time taken for shading
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				
@@ -1799,7 +1796,7 @@ public:
 				s.end_shader();
 				glDepthFunc(GL_LEQUAL);
 			}
-			city_shader_setup(s, lights_bcube, enable_room_lights, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
+			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
 			set_interior_lighting(s);
 			vector<point> points; // reused temporary
 
@@ -1846,7 +1843,7 @@ public:
 					} // for bi
 				} // for g
 			} // for i
-			if (enable_room_lights) {glDepthFunc(GL_LESS);} // restore
+			if (ADD_ROOM_LIGHTS) {glDepthFunc(GL_LESS);} // restore
 			glDisable(GL_CULL_FACE);
 			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
@@ -1871,7 +1868,7 @@ public:
 
 		if (transparent_windows) {
 			// draw back faces of buildings, which will be interior walls
-			city_shader_setup(s, lights_bcube, enable_room_lights, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale); // force_tsl=1
+			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale); // force_tsl=1
 			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
