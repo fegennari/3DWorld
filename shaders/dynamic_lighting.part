@@ -12,6 +12,8 @@ uniform vec2 resolution; // for screen space tiles
 const   float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
 const   float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
 uniform float LT_DIR_FALLOFF    = 0.005;
+uniform float LT_DIR_FALLOFF_SM = 0.005;
+uniform float LDIR_FALL_THRESH  = 0.0;
 
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 64; // must agree with the value used in shadow_map.h (Note: up to 128 is okay)
@@ -54,7 +56,8 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 float get_dir_light_scale(in vec3 light_dir, in vec3 dir, in float bwidth) {
 	float dp      = dot(light_dir, dir); // map dir [0,1] to [-1,1]
 	float dp_norm = 0.5*(1.0 - dp); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
-	float v       = clamp(2.0*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0)/LT_DIR_FALLOFF, 0.0, 1.0);
+	float falloff = ((bwidth <= LDIR_FALL_THRESH) ? LT_DIR_FALLOFF_SM : LT_DIR_FALLOFF);
+	float v       = clamp(2.0*(dp_norm + bwidth + falloff - 1.0)/falloff, 0.0, 1.0);
 	return mix(smoothstep(0.0, 1.0, v), 1.0, SPOTLIGHT_LEAKAGE);
 }
 

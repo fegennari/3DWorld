@@ -17,6 +17,7 @@ float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const CTHRESH          = 0.025;
 float const SQRT_CTHRESH     = sqrt(CTHRESH);
+float const FLASHLIGHT_BW    = 0.02;
 
 
 class light_grid_base {

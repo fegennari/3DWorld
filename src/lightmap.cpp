@@ -19,7 +19,6 @@ unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
 float const DZ_VAL_SCALE     = 2.0;
 float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
-float const FLASHLIGHT_BW    = 0.02;
 float const FLASHLIGHT_RAD   = 4.0;
 
 colorRGBA const flashlight_colors[2] = {colorRGBA(1.0, 0.8, 0.5, 1.0), colorRGBA(0.8, 0.8, 1.0, 1.0)}; // incandescent, LED

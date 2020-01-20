@@ -194,7 +194,12 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	if (use_dlights) {
 		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
 		s.add_uniform_vector3d("scene_scale", lights_bcube.get_size());
-		s.add_uniform_float("LT_DIR_FALLOFF", (flashlight_on ? 0.05 : CITY_LIGHT_FALLOFF)); // smooth falloff for car headlights and streetlights
+		s.add_uniform_float("LT_DIR_FALLOFF", CITY_LIGHT_FALLOFF); // smooth falloff for car headlights and streetlights
+
+		if (flashlight_on) { // use a quicker falloff for flashlight beams
+			s.add_uniform_float("LT_DIR_FALLOFF_SM", 0.02);
+			s.add_uniform_float("LDIR_FALL_THRESH",  1.5*FLASHLIGHT_BW);
+		}
 	}
 	if (use_smap) {
 		s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias); // I guess pcf_scale is really some sort of light size scale and should apply to the z-bias as well
