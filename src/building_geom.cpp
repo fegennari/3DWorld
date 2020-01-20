@@ -438,6 +438,36 @@ void building_t::calc_bcube_from_parts() {
 	for (auto i = parts.begin()+1; i != parts.end(); ++i) {bcube.union_with_cube(*i);} // update bcube
 }
 
+void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
+	cube_t const c(door.get_bcube());
+	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
+	float door_shift(bcube.dz()); // start with a large value
+	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
+
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find the part that this door was added to
+		float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
+		if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
+	}
+	assert(fabs(door_shift) < bcube.dz());
+	door_shift *= -(1.0 + dist_mult); // reflect on other side
+	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
+}
+
+void building_t::clip_bottom_off_door(tquad_with_ix_t &door) const {
+	float const z1(min(min(door.pts[0].z, door.pts[1].z) ,min(door.pts[2].z, door.pts[3].z)));
+	float const floor_thickness(0.75*FLOOR_THICK_VAL*get_material().get_floor_spacing());
+	float const new_z1(z1 + floor_thickness); // clip off bottom for floor; somewhat arbitrary, should we use interior->floors.back().z2() instead?
+	for (unsigned n = 0; n < door.npts; ++n) {max_eq(door.pts[n].z, new_z1);}
+}
+
+cube_t building_t::get_part_containing_pt(point const &pt) const {
+	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // includes garage/shed
+		if (i->contains_pt(pt)) {return *i;}
+	}
+	assert(0); // must be found
+	return all_zeros; // never gets here
+}
+
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
 
 	if (!EXACT_MULT_FLOOR_HEIGHT) return;

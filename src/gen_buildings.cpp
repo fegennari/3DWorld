@@ -1111,29 +1111,6 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	} // end interior case
 }
 
-void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
-	cube_t const c(door.get_bcube());
-	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
-	float door_shift(bcube.dz()); // start with a large value
-	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
-
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find the part that this door was added to
-		float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
-		if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
-	}
-	assert(fabs(door_shift) < bcube.dz());
-	door_shift *= -(1.0 + dist_mult); // reflect on other side
-	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
-}
-
-cube_t building_t::get_part_containing_pt(point const &pt) const {
-	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // includes garage/shed
-		if (i->contains_pt(pt)) {return *i;}
-	}
-	assert(0); // must be found
-	return all_zeros; // never gets here
-}
-
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
 
 	if (!is_valid() || !global_building_params.windows_enabled()) return; // invalid building or no windows
@@ -1228,6 +1205,7 @@ void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, point const &
 	tquad_with_ix_t door;
 	if (!find_door_close_to_point(door, pos, dist)) return; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.2, 0); // move a bit further away from the outside of the building to make it in front of the orig door
+	clip_bottom_off_door(door);
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 }
 

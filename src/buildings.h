@@ -356,6 +356,7 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 private:
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
+	void clip_bottom_off_door(tquad_with_ix_t &door) const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	void add_room(cube_t const &room, unsigned part_id);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
