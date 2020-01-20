@@ -1847,7 +1847,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else { // camera outside the building (or the part that contains this light)
 				float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
-				if ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist) continue; // light viewed at too high an angle
+				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist)) continue; // light viewed at too high an angle
 				
 				if (camera_in_building) { // camera and light are in different buildings
 					// is it better to check if light half sphere is occluded by the floor above/below?
