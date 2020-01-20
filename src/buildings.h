@@ -392,7 +392,6 @@ inline void clip_low_high(float &t0, float &t1) {
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
 }
 
-bool add_room_lights();
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
