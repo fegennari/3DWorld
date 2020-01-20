@@ -1820,22 +1820,30 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	float const window_vspacing(get_window_vspace()), camera_z(camera_pdu.pos.z - xlate.z);
+	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
+	float const window_vspacing(get_window_vspace()), camera_z(camera_bs.z);
 	unsigned camera_part(parts.size()); // start at an invalid value
+	bool camera_by_stairs(0);
 
 	if (camera_in_building) {
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-			if (i->contains_pt(camera_pdu.pos - xlate)) {camera_part = (i - parts.begin()); break;}
+			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
+		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
+			if (r->contains_pt_xy(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
+		}
+		/*for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) { // efficient but lower quality
+			if (s->contains_pt_xy(camera_bs)) {camera_by_stairs = 1; break;}
+		}*/
 	}
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
-		point const cs_lpos(lpos + xlate); // camera space
 		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
 		bool const floor_is_above(camera_z < floor_z), floor_is_below(camera_z > ceil_z);
-		bool const stairs_light(i->has_stairs());
+		// less culling if either the light or the camera is by stairs and light is on the floor above or below
+		bool const stairs_light((i->has_stairs() || camera_by_stairs) && (camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing));
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
 		
@@ -1846,7 +1854,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (camera_z < (i->z2() - 2.0*window_vspacing) || camera_z > (i->z2() + window_vspacing)) continue; // light is on the stairs, add if one floor above/below
 			}
 			else { // camera outside the building (or the part that contains this light)
-				float const xy_dist(p2p_dist_xy(camera_pdu.pos, cs_lpos));
+				float const xy_dist(p2p_dist_xy(camera_bs, lpos));
 				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist)) continue; // light viewed at too high an angle
 				
 				if (camera_in_building) { // camera and light are in different buildings
@@ -1856,8 +1864,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					bool visible[2] = {0};
 
 					for (unsigned d = 0; d < 2; ++d) { // for each dim
-						bool const dir(camera_pdu.pos[d] > cs_lpos[d]);
-						if ((camera_pdu.pos[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
+						bool const dir(camera_bs[d] > lpos[d]);
+						if ((camera_bs[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
 						visible[d] = (room.ext_sides & (1 << (2*d + dir)));
 					}
 					if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
@@ -1865,7 +1873,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		} // end camera on different floor case
 		float const light_radius(7.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius);
-		if (!camera_pdu.sphere_visible_test(cs_lpos, cull_radius)) continue; // VFC
+		if (!camera_pdu.sphere_visible_test((lpos + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t clipped_bc; // in building space
 		clipped_bc.set_from_sphere(lpos, cull_radius);
