@@ -23,7 +23,7 @@ cube_t grass_exclude;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on;
 extern int rand_gen_index, display_mode;
-extern float grass_width;
+extern float grass_width, CAMERA_RADIUS;
 extern point sun_pos;
 extern vector<light_source> dl_sources;
 
@@ -32,6 +32,7 @@ building_params_t global_building_params;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
 bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS >= 2 || camera_in_building));}
+float get_door_open_dist() {return 3.0*CAMERA_RADIUS;}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_texture(tid);
@@ -1095,27 +1096,31 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 					if (d == 1) {swap(door_side.pts[0], door_side.pts[1]); swap(door_side.pts[2], door_side.pts[3]); door_side.type = tquad_with_ix_t::TYPE_IDOOR2;} // back face
 					bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
 				} // for d
-				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX, -1, 1.0, 1.0), WHITE);} // add untextured door edges
+				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), WHITE);} // add untextured door edges
 			} // for i
 			for (auto i = doors.begin(); i != doors.end(); ++i) { // add interior doors (other side of exterior doors)
 				tquad_with_ix_t door(*i);
-				swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]); // swap vertex order to invert normal
-				cube_t const c(door.get_bcube());
-				bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] < 0.0); // closest cube side dir
-				float door_shift(bcube.dz()); // start with a large value
-
-				for (auto p = parts.begin(); p != parts.end(); ++p) { // find the part that this door was added to
-					float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
-					if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
-				}
-				assert(fabs(door_shift) < bcube.dz());
-				door_shift *= -1.2; // reflect on other side
-				for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
+				move_door_to_other_side_of_wall(door, 0.2, 1); // invert_normal=1
 				bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE, 1); // invert_tc_x=1
 			} // for i
 		} // end DRAW_INTERIOR_DOORS
 		bdraw.end_draw_range_capture(interior->draw_range);
 	} // end interior case
+}
+
+void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
+	cube_t const c(door.get_bcube());
+	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
+	float door_shift(bcube.dz()); // start with a large value
+	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
+
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find the part that this door was added to
+		float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
+		if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
+	}
+	assert(fabs(door_shift) < bcube.dz());
+	door_shift *= -(1.0 + dist_mult); // reflect on other side
+	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
 }
 
 cube_t building_t::get_part_containing_pt(point const &pt) const {
@@ -1214,6 +1219,22 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dir
 		} // for dim
 	} // for i
+}
+
+void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, point const &pos, float dist) const {
+	tquad_with_ix_t door;
+	if (!find_door_close_to_point(door, pos, dist)) return; // no nearby door
+	move_door_to_other_side_of_wall(door, -1.2, 0); // move a bit further away from the outside of the building to make it in front of the orig door
+	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
+}
+
+bool building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		cube_t c(d->get_bcube());
+		c.expand_by_xy(dist);
+		if (c.contains_pt(pos)) {door = *d; return 1;}
+	}
+	return 0; // not found
 }
 
 void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt) const {
@@ -1765,7 +1786,7 @@ public:
 		float const pcf_scale = 0.2;
 		fgPushMatrix();
 		translate_to(xlate);
-		building_draw_t interior_wind_draw;
+		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
 		bool this_frame_camera_in_building(0);
@@ -1805,6 +1826,7 @@ public:
 			}
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				unsigned const bcs_ix(i - bcs.begin());
+				float const door_open_dist(get_door_open_dist());
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) { // too far
@@ -1827,6 +1849,7 @@ public:
 						b.gen_and_draw_room_geom(s, bi->ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
+						if ( b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) {b.get_nearby_ext_door_verts(ext_door_draw, camera_xlated, door_open_dist);}
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall
@@ -1908,6 +1931,7 @@ public:
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
+			ext_door_draw.draw(holes_shader, 0, 0, 1); // direct_draw_no_vbo=1
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			holes_shader.end_shader();
 			glDisable(GL_CULL_FACE);
