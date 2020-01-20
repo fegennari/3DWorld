@@ -379,6 +379,7 @@ public:
 	city_lights_manager_t() : lights_bcube(all_zeros), light_radius_scale(1.0), dlight_add_thresh(0.0), prev_had_lights(0) {}
 	virtual ~city_lights_manager_t() {}
 	cube_t get_lights_bcube() const {return lights_bcube;}
+	void add_player_flashlight(float radius_scale);
 	void tighten_light_bcube_bounds(vector<light_source> const &lights);
 	void clamp_to_max_lights(vector3d const &xlate, vector<light_source> &lights);
 	bool begin_lights_setup(vector3d const &xlate, float light_radius, vector<light_source> &lights);

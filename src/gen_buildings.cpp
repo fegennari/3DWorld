@@ -1268,13 +1268,13 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		add_building_interior_lights(xlate, lights_bcube);
-		if (flashlight_on && camera_in_building) {add_player_flashlight_light_source(0.12);} // add player flashlight
+		if (flashlight_on && camera_in_building) {add_player_flashlight(0.12);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
 		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));}
 		finalize_lights(dl_sources);
 	}
-	virtual bool enable_lights() const {return (draw_building_interiors && ADD_ROOM_LIGHTS);}
+	virtual bool enable_lights() const {return ((draw_building_interiors && ADD_ROOM_LIGHTS) || flashlight_on);}
 }; // city_gen_t
 
 building_lights_manager_t building_lights_manager;

@@ -2889,6 +2889,15 @@ void ped_manager_t::choose_new_ped_plot_pos(pedestrian_t &ped) {
 unsigned ped_manager_t::get_next_plot(pedestrian_t &ped, int exclude_plot) const {return road_gen.get_next_plot(ped.city, ped.plot, ped.dest_plot, exclude_plot);}
 
 
+void city_lights_manager_t::add_player_flashlight(float radius_scale) {
+	if (!flashlight_on) return;
+	add_player_flashlight_light_source(radius_scale);
+	assert(!dl_sources.empty()); // must have been added
+	float const zval(dl_sources.back().get_pos().z), light_radius(dl_sources.back().get_radius());
+	min_eq(lights_bcube.z1(), (zval - light_radius));
+	max_eq(lights_bcube.z2(), (zval + light_radius));
+}
+
 void city_lights_manager_t::tighten_light_bcube_bounds(vector<light_source> const &lights) {
 	if (lights.empty()) return; // nothing to do
 	cube_t tight_bcube;
@@ -3065,12 +3074,12 @@ public:
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
-		if (flashlight_on && !camera_in_building) {add_player_flashlight_light_source(0.25);} // add player flashlight
+		if (flashlight_on && !camera_in_building) {add_player_flashlight(0.25);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
 		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
 		finalize_lights(dl_sources);
 	}
-	virtual bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels());} // only have lights at night
+	virtual bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels() || flashlight_on);} // only have lights at night
 	void next_ped_animation() {ped_manager.next_animation();}
 	void free_context() {car_manager.free_context(); ped_manager.free_context();}
 	unsigned get_model_gpu_mem() const {return (ped_manager.get_model_gpu_mem() + car_manager.get_model_gpu_mem());}
