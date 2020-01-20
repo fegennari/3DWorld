@@ -454,11 +454,12 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 }
 
 void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const {
+
 	cube_t clip_cube(door.get_bcube());
 	float const dz(clip_cube.dz());
 	float const border((door.type == tquad_with_ix_t::TYPE_BDOOR) ? 0.04 : 0.08);
 	// clip off bottom for floor if clip_to_floor==1; somewhat arbitrary, should we use interior->floors.back().z2() instead?
-	float const clip_bot(clip_to_floor ? 0.75*FLOOR_THICK_VAL*get_material().get_floor_spacing() : 0.04*dz);
+	float const clip_bot(clip_to_floor ? 0.7*FLOOR_THICK_VAL*get_material().get_floor_spacing() : 0.04*dz);
 	clip_cube.z1() += clip_bot;
 	clip_cube.z2() -= 0.5*border*dz;
 	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
