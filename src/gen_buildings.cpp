@@ -1119,7 +1119,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 }
 
 cube_t building_t::get_part_containing_pt(point const &pt) const {
-	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) {
+	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // includes garage/shed
 		if (i->contains_pt(pt)) {return *i;}
 	}
 	assert(0); // must be found
@@ -1222,7 +1222,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	building_mat_t const &mat(get_material());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	
-	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // multiple cubes/parts/levels
 		if (i->contains_pt(only_cont_pt)) { // part containing the point
 			bdraw_front.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			continue;
@@ -1835,7 +1835,7 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
 						
-						for (auto p = b.parts.begin(); p != b.parts.end(); ++p) { // disable any grass inside the building part containing the player
+						for (auto p = b.parts.begin(); p != b.get_real_parts_end(); ++p) { // disable any grass inside the building part containing the player
 							if (p->contains_pt(camera_xlated)) {grass_exclude = *p + xlate; grass_exclude.expand_by_xy(4.0*grass_width); break;}
 						}
 					} // for bi

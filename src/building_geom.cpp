@@ -153,12 +153,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				if (d->get_bcube().intersects_xy(sc)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
 			}
 		}
-		for (auto i = parts.begin(); i != parts.end(); ++i) {
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // garages and sheds are excluded since they have no doors
 			cube_t c(*i + xlate);
 			if (!c.contains_pt(pos2)) continue; // not interior to this part
 			float cont_area(0.0);
 
-			for (auto p = parts.begin(); p != parts.end(); ++p) {
+			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 				if (p->intersects(sc)) {cont_area += (min(p->x2(), sc.x2()) - max(p->x1(), sc.x1()))*(min(p->y2(), sc.y2()) - max(p->y1(), sc.y1()));} // accumulate shared XY area
 			}
 			if (cont_area < 0.99*sc.dx()*sc.dy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
@@ -525,6 +525,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 75% chance
 			gen_details(rgen);
 		}
+		end_add_parts();
 		gen_interior(rgen, 0);
 		gen_building_doors_if_needed(rgen);
 		return; // for now the bounding cube
@@ -567,6 +568,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details
 		calc_bcube_from_parts(); // update bcube
 		gen_details(rgen);
+		end_add_parts();
 		gen_interior(rgen, 1);
 		gen_building_doors_if_needed(rgen);
 		return;
@@ -617,6 +619,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 67% chance
 		if (num_levels <= 3) {gen_details(rgen);}
 	}
+	end_add_parts();
 	gen_interior(rgen, 0);
 	gen_building_doors_if_needed(rgen);
 }
@@ -723,6 +726,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0);
 	bool door_dim(rgen.rand_bool()), door_dir(0);
 	unsigned door_part(0);
+	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
 
 	if (two_parts) { // multi-part house; parts[1] is the lower height part
 		parts.push_back(base); // add second part
@@ -818,7 +822,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			max_dz    = peak_height*parts[0].get_sz_dim(!other_dim); // clamp roof zval to other roof's peak
 			extend_to = parts[0].get_center_dim(!other_dim); // extend lower part roof to center of upper part roof
 		}
-		bool can_be_hipped(ix < (1U + two_parts) && extend_to == 0.0 && i->get_sz_dim(dim) > i->get_sz_dim(!dim)); // must be longer dim
+		bool can_be_hipped(ix < real_num_parts && extend_to == 0.0 && i->get_sz_dim(dim) > i->get_sz_dim(!dim)); // must be longer dim
 		
 		if (can_be_hipped && two_parts) {
 			float const part_roof_z (i->z2()    + min(peak_height*i->get_sz_dim(!dim), i->dz()));
@@ -936,7 +940,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 
 		// exclude tquads contained in/adjacent to other parts, considering only the cube parts;
 		// yes, a triangle side can be occluded by a cube + another opposing triangle side from a higher wall of the house, but it's uncommon, complex, and currently ignored
-		for (auto p = parts.begin(); p != parts.end(); ++p) {
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			if (p->d[dim][!n] != top.d[dim][n]) continue; // not the opposing face
 			if (p->z1() <= z1 && p->z2() >= z2 && p->d[!dim][0] <= top.d[!dim][0] && p->d[!dim][1] >= top.d[!dim][1]) {skip = 1; break;}
 		}
@@ -1010,7 +1014,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 	for (unsigned num = 0; num < num_doors; ++num) {
 		bool placed(0);
 
-		for (auto b = parts.begin(); b != parts.end() && !placed; ++b) { // try all different ground floor parts
+		for (auto b = parts.begin(); b != get_real_parts_end() && !placed; ++b) { // try all different ground floor parts
 			unsigned const part_ix(b - parts.begin());
 			if (has_windows && part_ix >= 4) break; // only first 4 parts can have doors - must match first floor window removal logic
 			if (b->z1() > bcube.z1()) break; // moved off the ground floor - done
@@ -1390,7 +1394,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				}
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
-			for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) {
+			for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
 				if (p2 == p) continue; // skip self
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1818,7 +1822,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	unsigned camera_part(parts.size()); // start at an invalid value
 
 	if (camera_in_building) {
-		for (auto i = parts.begin(); i != parts.end(); ++i) {
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (i->contains_pt(camera_pdu.pos - xlate)) {camera_part = (i - parts.begin()); break;}
 		}
 	}

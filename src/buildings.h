@@ -289,7 +289,7 @@ struct building_stats_t {
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
-	uint8_t hallway_dim; // main hallway dim: 0=x, 1=y, 2=none
+	uint8_t hallway_dim, real_num_parts; // main hallway dim: 0=x, 1=y, 2=none
 	bool is_house, has_antenna, has_chimney;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube;
@@ -300,7 +300,7 @@ struct building_t : public building_geom_t {
 	vertex_range_t ext_side_qv_range;
 	float ao_bcz2;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), is_house(0), has_antenna(0), has_chimney(0),
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), is_house(0), has_antenna(0), has_chimney(0),
 		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {bcube.set_to_zeros();}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	bool has_room_geom() const {return (interior && interior->room_geom);}
@@ -315,6 +315,8 @@ struct building_t : public building_geom_t {
 	void set_z_range(float z1, float z2);
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
+	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
+	void end_add_parts() {assert(parts.size() < 256); real_num_parts = uint8_t(parts.size());}
 
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
 		point pos2(pos);
