@@ -456,13 +456,14 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const {
 	cube_t clip_cube(door.get_bcube());
 	float const dz(clip_cube.dz());
+	float const border((door.type == tquad_with_ix_t::TYPE_BDOOR) ? 0.04 : 0.08);
 	// clip off bottom for floor if clip_to_floor==1; somewhat arbitrary, should we use interior->floors.back().z2() instead?
 	float const clip_bot(clip_to_floor ? 0.75*FLOOR_THICK_VAL*get_material().get_floor_spacing() : 0.04*dz);
 	clip_cube.z1() += clip_bot;
-	clip_cube.z2() -= 0.04*dz;
+	clip_cube.z2() -= 0.5*border*dz;
 	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
-	float const border(0.08*clip_cube.get_sz_dim(dim));
-	clip_cube.d[dim][0] += border; clip_cube.d[dim][1] -= border; // shrink by border
+	float const xy_border(border*clip_cube.get_sz_dim(dim));
+	clip_cube.d[dim][0] += xy_border; clip_cube.d[dim][1] -= xy_border; // shrink by border
 	for (unsigned n = 0; n < door.npts; ++n) {clip_cube.clamp_pt(door.pts[n]);}
 }
 
@@ -723,7 +724,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 		door_pos    = base.d[dim][dir];
 	}
 	float const door_half_width(0.5*width_scale*door_height);
-	float const door_shift((is_house ? 0.005 : 0.001)*base.dz());
+	float const door_shift(0.01*get_material().get_floor_spacing());
 
 	if (interior && hallway_dim == 2) { // not on a hallway
 		vect_cube_t const &walls(interior->walls[!dim]); // perpendicular to door

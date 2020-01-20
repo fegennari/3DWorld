@@ -31,7 +31,7 @@ building_params_t global_building_params;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
 bool add_room_lights() {return (ADD_ROOM_LIGHTS && (ADD_ROOM_LIGHTS >= 2 || camera_in_building));}
-float get_door_open_dist() {return 4.0*CAMERA_RADIUS;}
+float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_texture(tid);
