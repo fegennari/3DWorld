@@ -996,7 +996,6 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	vect_cube_t empty_vc;
 
 	if (get_exterior) { // exterior building parts
-		vertex_range_t vert_range;
 		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.side_tex);
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.side_tex);
 		
@@ -1199,6 +1198,16 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dir
 		} // for dim
 	} // for i
+	if (0 && only_cont_pt) { // disable because this doesn't remove the interior doors yet
+		tquad_with_ix_t door;
+
+		if (find_door_close_to_point(door, *only_cont_pt, get_door_open_dist())) {
+			// add nearby door as window to make it look open
+			move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
+			clip_bottom_off_door(door);
+			bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
+		}
+	}
 }
 
 void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, point const &pos, float dist) const {
