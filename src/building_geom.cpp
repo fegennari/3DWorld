@@ -1745,7 +1745,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
-			bool const top_of_stairs(blocked_by_stairs && f+1 == num_floors);
+			bool const top_of_stairs(r->has_stairs && f+1 == num_floors);
 			bool is_lit(0), light_dim(room_dim);
 			cube_t light;
 			if (!blocked_by_stairs || top_of_stairs) {light = pri_light;}
