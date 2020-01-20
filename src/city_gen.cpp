@@ -117,6 +117,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "num_peds") {
 		if (!read_uint(fp, num_peds)) {return read_error(str);}
 	}
+	else if (str == "num_building_peds") {
+		if (!read_uint(fp, num_building_peds)) {return read_error(str);}
+	}
 	else if (str == "ped_speed") {
 		if (!read_float(fp, ped_speed) || ped_speed < 0.0) {return read_error(str);}
 	}
@@ -3073,7 +3076,7 @@ city_gen_t city_gen;
 
 bool parse_city_option(FILE *fp) {return city_params.read_option(fp);}
 bool have_cities         () {return city_params.enabled();}
-bool have_city_models    () {return (have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0));}
+bool have_city_models    () {return (have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0 || city_params.num_building_peds > 0));}
 float get_road_max_len   () {return city_params.road_spacing;}
 float get_road_max_width () {return city_params.road_width;}
 float get_min_obj_spacing() {return 4.0*ped_manager_t::get_ped_radius();} // allow a ped to walk between objects (two side-by-side)
