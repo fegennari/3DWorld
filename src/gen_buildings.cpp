@@ -379,6 +379,7 @@ building_window_gen_t building_window_gen;
 
 class texture_id_mapper_t {
 	vector<unsigned> tid_to_slot_ix;
+	set<unsigned> ext_wall_tids;
 	unsigned next_slot_ix;
 
 	void register_tid(int tid) {
@@ -403,6 +404,7 @@ public:
 			register_tid(i->wall_tex.tid);
 			register_tid(i->ceil_tex.tid);
 			register_tid(i->floor_tex.tid);
+			ext_wall_tids.insert(i->side_tex.tid);
 		}
 		cout << "Used " << (next_slot_ix-1) << " slots for texture IDs up to " << (tid_to_slot_ix.size()-1) << endl;
 	}
@@ -411,6 +413,7 @@ public:
 		assert(tid < (int)tid_to_slot_ix.size());
 		return tid_to_slot_ix[tid];
 	}
+	bool is_ext_wall_tid(unsigned tid) const {return (ext_wall_tids.find(tid) != ext_wall_tids.end());}
 };
 texture_id_mapper_t tid_mapper;
 
@@ -956,8 +959,9 @@ public:
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	
-	void draw(shader_t &s, bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0, vertex_range_t const *const exclude=nullptr) {
+	void draw(shader_t &s, bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0, bool ext_walls_only=0, vertex_range_t const *const exclude=nullptr) {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
+			if (ext_walls_only && !tid_mapper.is_ext_wall_tid(i->tex.tid)) continue; // not a wall texture, skip
 			bool const use_exclude(exclude && exclude->draw_ix == int(i - to_draw.begin()));
 			i->draw_all_geom(s, shadow_only, no_set_texture, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
 		}
@@ -1917,7 +1921,7 @@ public:
 						int_wall_draw_back [bcs_ix].draw(s, shadow_only, force_wall_tex, 1); // draw back facing walls for back part of building without stencil test
 					}
 				}
-				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, exclude); // no stencil test
+				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // ext_walls_only=1; no stencil test
 				if (force_wall_tex) {set_texture_scale(s, 1.0, 1.0);} // reset
 			} // for i
 			reset_interior_lighting(s);
