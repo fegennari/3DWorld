@@ -352,6 +352,7 @@ struct building_t : public building_geom_t {
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const;
 	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix, bool shadow_only);
 	void clear_room_geom();
+	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const;
 	void update_stats(building_stats_t &s) const;
 private:
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;

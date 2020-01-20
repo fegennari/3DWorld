@@ -19,11 +19,10 @@ int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = dr
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
-cube_t grass_exclude;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on;
 extern int rand_gen_index, display_mode;
-extern float grass_width, CAMERA_RADIUS;
+extern float CAMERA_RADIUS;
 extern point sun_pos;
 extern vector<light_source> dl_sources;
 
@@ -1849,7 +1848,9 @@ public:
 						b.gen_and_draw_room_geom(s, bi->ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
-						if ( b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) {b.get_nearby_ext_door_verts(ext_door_draw, camera_xlated, door_open_dist);}
+						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
+						b.get_nearby_ext_door_verts(ext_door_draw, camera_xlated, door_open_dist);
+						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall
@@ -1857,10 +1858,6 @@ public:
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated);
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
-						
-						for (auto p = b.parts.begin(); p != b.get_real_parts_end(); ++p) { // disable any grass inside the building part containing the player
-							if (p->contains_pt(camera_xlated)) {grass_exclude = *p + xlate; grass_exclude.expand_by_xy(4.0*grass_width); break;}
-						}
 					} // for bi
 				} // for g
 			} // for i
