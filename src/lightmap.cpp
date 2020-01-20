@@ -1204,8 +1204,9 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 		if (ls.is_very_directional()) {bcube.expand_by(vector3d(grid_dx, grid_dy, 0.0));} // add one grid unit
 		
 		if (building_id >= 0) { // if this light is from a building interior, clip it's bcube to the building bounds
-			cube_t const building_bcube(get_sec_building_bcube(building_id));
+			cube_t building_bcube(get_sec_building_bcube(building_id));
 			assert(bcube.intersects(building_bcube));
+			building_bcube.expand_by_xy(0.01*ls.get_radius()); // expand slightly to include doors that are just outside the building
 			bcube.intersect_with_cube(building_bcube);
 		}
 		int bnds[2][2];
