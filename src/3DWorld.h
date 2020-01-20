@@ -532,6 +532,7 @@ struct cube_t { // size = 24
 	void clamp_pt_xy(point &pt) const {UNROLL_2X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)}
 	float get_volume() const {return fabs(x2() - x1())*fabs(y2() - y1())*fabs(z2() - z1());}
 	float get_area  () const {return 2.0f*(fabs(x2() - x1())*fabs(y2() - y1()) + fabs(y2() - y1())*fabs(z2() - z1()) + fabs(z2() - z1())*fabs(x2() - x1()));}
+	float get_area_xy()const {return dx()*dy();}
 	float max_len   () const {return max((x2() - x1()), max((y2() - y1()), (z2() - z1())));}
 	float min_len   () const {return min((x2() - x1()), min((y2() - y1()), (z2() - z1())));}
 

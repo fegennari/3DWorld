@@ -161,7 +161,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 				if (p->intersects(sc)) {cont_area += (min(p->x2(), sc.x2()) - max(p->x1(), sc.x1()))*(min(p->y2(), sc.y2()) - max(p->y1(), sc.y1()));} // accumulate shared XY area
 			}
-			if (cont_area < 0.99*sc.dx()*sc.dy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
+			if (cont_area < 0.99*sc.get_area_xy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
 				c.expand_by_xy(-radius); // shrink part by sphere radius
 				c.clamp_pt_xy(pos2); // force pos2 into interior of the cube to prevent the sphere from intersecting the part
 				had_coll = 1;
@@ -1723,7 +1723,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
 		float const light_size((r->is_hallway ? 2.0 : (r->is_office ? 1.5 : 1.0))*floor_thickness); // use larger light for offices and hallways
-		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/(r->dx()*r->dy())); // average for room, unitless
+		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/r->get_area_xy()); // average for room, unitless
 		cube_t pri_light, sec_light;
 		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
 		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator(pri_light, fc_thick));
@@ -1930,7 +1930,7 @@ float room_t::get_light_amt() const { // Note: not normalized to 1.0
 	for (unsigned d = 0; d < 4; ++d) {
 		if (ext_sides & (1<<d)) {ext_perim += get_sz_dim(d>>1);} // add length of each exterior side, assuming it has windows
 	}
-	return ext_perim/(dx()*dy()); // light per square meter = exterior perimeter over area
+	return ext_perim/get_area_xy(); // light per square meter = exterior perimeter over area
 }
 
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const { // ignores zvals
