@@ -959,9 +959,10 @@ public:
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	
-	void draw(shader_t &s, bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0, bool ext_walls_only=0, vertex_range_t const *const exclude=nullptr) {
+	// ext_walls_mode: 0=draw everything, 1=draw exterior walls only, 2=draw everything but exterior walls
+	void draw(shader_t &s, bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0, int ext_walls_mode=0, vertex_range_t const *const exclude=nullptr) {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
-			if (ext_walls_only && !tid_mapper.is_ext_wall_tid(i->tex.tid)) continue; // not a wall texture, skip
+			if (ext_walls_mode && (tid_mapper.is_ext_wall_tid(i->tex.tid) != (ext_walls_mode == 1))) continue; // not a wall texture, skip
 			bool const use_exclude(exclude && exclude->draw_ix == int(i - to_draw.begin()));
 			i->draw_all_geom(s, shadow_only, no_set_texture, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
 		}
@@ -1100,11 +1101,6 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				} // for d
 				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), WHITE);} // add untextured door edges
 			} // for i
-			for (auto i = doors.begin(); i != doors.end(); ++i) { // add interior doors (other side of exterior doors)
-				tquad_with_ix_t door(*i);
-				move_door_to_other_side_of_wall(door, 0.2, 1); // invert_normal=1
-				bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE, 1); // invert_tc_x=1
-			} // for i
 		} // end DRAW_INTERIOR_DOORS
 		bdraw.end_draw_range_capture(interior->draw_range);
 	} // end interior case
@@ -1198,11 +1194,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dir
 		} // for dim
 	} // for i
-	if (0 && only_cont_pt) { // disable because this doesn't remove the interior doors yet
-		tquad_with_ix_t door;
-
-		if (find_door_close_to_point(door, *only_cont_pt, get_door_open_dist())) {
-			// add nearby door as window to make it look open
+	if (only_cont_pt) { // camera inside this building, cut out holes so that the exterior doors show through
+		for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
+			tquad_with_ix_t door(*d);
 			move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
 			clip_door_to_interior(door, 0);
 			bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
@@ -1908,8 +1902,10 @@ public:
 						int_wall_draw_back [bcs_ix].draw(s, shadow_only, force_wall_tex, 1); // draw back facing walls for back part of building without stencil test
 					}
 				}
-				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // ext_walls_only=1; no stencil test
+				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // ext_walls_mode=1 (exterior walls only); no stencil test
 				if (force_wall_tex) {set_texture_scale(s, 1.0, 1.0);} // reset
+				// if we're not by an exterior door, draw the back sides of exterior doors as closed
+				if (ext_door_draw.empty()) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, 2);} // ext_walls_mode=2 (everything but exterior walls)
 			} // for i
 			reset_interior_lighting(s);
 			s.end_shader();
