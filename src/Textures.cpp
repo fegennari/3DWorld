@@ -203,7 +203,7 @@ unsigned char *landscape0 = NULL;
 
 
 extern bool mesh_difuse_tex_comp, water_is_lava, invert_bump_maps;
-extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid, depth_tid, empty_smap_tid, frame_buffer_RGB_tid, skybox_tid, skybox_cube_tid;
+extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid, depth_tid, empty_smap_tid, frame_buffer_RGB_tid, skybox_tid, skybox_cube_tid, univ_reflection_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only, window_width, window_height;
 extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation, fticks;
@@ -447,6 +447,7 @@ void reset_textures() {
 	free_texture(frame_buffer_RGB_tid);
 	free_texture(skybox_tid);
 	free_texture(skybox_cube_tid);
+	free_texture(univ_reflection_tid);
 	free_font_texture_atlas();
 	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {free_texture(i->second);}
 	noise_tex_3ds.clear();

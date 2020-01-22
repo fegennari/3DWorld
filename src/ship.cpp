@@ -18,8 +18,9 @@ unsigned const NUM_TIMESTEPS = 4;
 unsigned const NUM_EXTRA_DAM = 4;
 
 
-bool player_autopilot(0), player_auto_stop(0), hold_fighters(0), dock_fighters(0);
+bool player_autopilot(0), player_auto_stop(0), hold_fighters(0), dock_fighters(0), ship_cube_map_reflection(0);
 int onscreen_display(0);
+unsigned univ_reflection_tid(0);
 unsigned alloced_fobjs[3] = {0}; // testing
 float uobj_rmax(0.0), urm_ship(0.0), urm_static(0.0), urm_proj(0.0);
 point player_death_pos(all_zeros), universe_origin(all_zeros);
@@ -919,6 +920,43 @@ void set_sane_light_atten(shader_t *shader=nullptr) {
 	}
 }
 
+void create_univ_cube_map() {
+	
+	if (!ship_cube_map_reflection) return;
+	static unsigned last_size(0);
+	unsigned const tex_size = 512; // make dynamic?
+	setup_cube_map_reflection_texture(univ_reflection_tid, tex_size, last_size);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	vector3d const pre_ref_cview_dir(cview_dir);
+	point const camera_pos(get_camera_pos());
+	pos_dir_up const prev_camera_pdu(camera_pdu);
+	vector3d const prev_up_vector(up_vector);
+	set_custom_viewport(tex_size, 90.0, UNIV_NEAR_CLIP, UNIV_FAR_CLIP); // 90 degree FOV
+
+	for (unsigned dim = 0; dim < 3; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			unsigned const face_id(2*dim + !dir);
+			cview_dir = zero_vector;
+			up_vector = -plus_y;
+			cview_dir[dim] = (dir ? 1.0 : -1.0);
+			if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
+			float const angle(0.5*90.0*TO_RADIANS); // 90 degree FOV
+			camera_pdu = pos_dir_up(camera_pos, cview_dir, up_vector, angle, UNIV_NEAR_CLIP, UNIV_FAR_CLIP, 1.0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			vector3d const eye(camera_pos - 0.001*cview_dir);
+			fgLookAt(eye.x, eye.y, eye.z, camera_pdu.pos.x, camera_pdu.pos.y, camera_pdu.pos.z, up_vector.x, up_vector.y, up_vector.z);
+			draw_universe_all(1, 0, 0, 0, 1);
+			render_to_texture_cube_map(univ_reflection_tid, tex_size, face_id); // render reflection to texture
+		} // for dir
+	} // for dim
+	gen_mipmaps(6); // optional?
+	camera_pdu = prev_camera_pdu;
+	up_vector  = prev_up_vector;
+	cview_dir  = pre_ref_cview_dir;
+	restore_scene_state();
+	check_gl_error(541);
+}
+
 void setup_ship_draw_shader(shader_t &s) {
 
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
@@ -926,6 +964,7 @@ void setup_ship_draw_shader(shader_t &s) {
 	s.set_frag_shader("bump_map.part+ads_lighting.part*+black_body_burn.part+ship_draw");
 	s.set_prefix("#define USE_BUMP_MAP", 1); // FS
 	if (allow_shader_invariants) {s.set_prefix("invariant gl_Position;", 0);} // VS
+	if (ship_cube_map_reflection) {s.set_prefixes_str("#define ENABLE_CUBE_MAP_REFLECT", 3);} // VS/FS
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("bump_map", 2);
@@ -937,6 +976,13 @@ void setup_ship_draw_shader(shader_t &s) {
 	s.add_uniform_int ("burn_mask", 1); // used instead of alpha_mask_tex
 	s.add_uniform_float("burn_offset",   -1.0);
 	s.add_uniform_float("burn_tex_scale", 1.0);
+
+	if (ship_cube_map_reflection) {
+		bind_texture_tu(univ_reflection_tid, 14, 1);
+		s.add_uniform_int("reflection_tex", 14);
+		upload_mvm_to_shader(s, "fg_ViewMatrix");
+		s.add_uniform_vector3d("camera_pos", get_camera_pos());
+	}
 	char const *uniforms[] = {"postproc_color_op", "do_lighting_op", "maybe_bump_map_op"};
 	char const *bindings[] = {"no_op", "normal_lighting", "no_bump_map"}; // defaults
 	s.set_all_subroutines(1, 3, uniforms, bindings);

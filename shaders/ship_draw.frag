@@ -9,6 +9,14 @@ uniform vec4  emission   = vec4(0,0,0,1);
 //in vec4 epos;
 //in vec3 eye_norm;
 
+#ifdef ENABLE_CUBE_MAP_REFLECT
+uniform samplerCube reflection_tex;
+//uniform float cube_map_near_clip = 1.0;
+//uniform vec3 cube_map_center     = vec3(0.0);
+uniform vec3 camera_pos = vec3(0.0);
+in vec3 vpos, ws_normal;
+#endif
+
 subroutine void postproc_color(); // signature
 subroutine(postproc_color) void no_op() {}
 subroutine(postproc_color) void apply_burn_mask() {
@@ -55,6 +63,15 @@ void main()
 	vec3 n = (gl_FrontFacing ? normalize(eye_norm) : -normalize(eye_norm)); // two-sided lighting
 	vec3 color = emission.rgb;
 	do_lighting_op(color, texel, n);
+
+#ifdef ENABLE_CUBE_MAP_REFLECT
+	vec3 view_dir   = normalize(camera_pos - vpos);
+	vec3 reflect_w  = vec3(0.5); // 50% reflective
+	//vec3 ref_dir    = (vpos - cube_map_center) + cube_map_near_clip*reflect(-view_dir, normalize(ws_normal)); // position offset within cube (approx.)
+	vec3 ref_dir    = reflect(-view_dir, normalize(ws_normal));
+	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
+#endif // ENABLE_CUBE_MAP_REFLECT
+
 	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly
 	postproc_color_op();
 }

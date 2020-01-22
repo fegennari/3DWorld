@@ -973,6 +973,10 @@ bool use_reflection_plane();
 float get_reflection_plane();
 bool use_reflect_plane_for_cobj(coll_obj const &c);
 void create_camera_view_texture(unsigned tid, unsigned tex_size, pos_dir_up const &pdu, bool is_indoors);
+void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size, unsigned &last_size);
+void set_custom_viewport(unsigned tex_size, float fov_angle, float near_plane, float far_plane);
+void restore_scene_state();
+void render_to_texture_cube_map(unsigned tid, unsigned tex_size, unsigned face_ix);
 unsigned create_gm_z_reflection();
 unsigned create_tt_reflection(float terrain_zmin);
 unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &last_size, int cobj_id, point const &center,

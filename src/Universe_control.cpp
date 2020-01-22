@@ -279,6 +279,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	static int inited(0), first_frame_drawn(0);
 	do_univ_init();
 	if (!inited) {static_only = 0;} // force full universe init the first time
+	create_univ_cube_map();
 
 	if (!static_only && fire_key) {
 		fire_key = 0;

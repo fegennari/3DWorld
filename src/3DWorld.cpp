@@ -123,7 +123,7 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress;
+extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints, last_inventory_frame;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -984,8 +984,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		cout << "run mode = " << do_run << endl;
 		break;
 
-	case 'K': // toggle overhead map mode
-		if (map_mode) map_mode = 0; else map_mode = 2;
+	case 'K': // toggle overhead map mode / ship reflections
+		if (world_mode == WMODE_UNIVERSE) {ship_cube_map_reflection ^= 1;}
+		else if (map_mode) {map_mode = 0;} else {map_mode = 2;}
 		break;
 
 	case 'U':
