@@ -91,7 +91,10 @@ void fgRotateRadians(float angle, float x, float y, float z) {
 void fgRotate(float angle, float x, float y, float z) {fgRotateRadians(TO_RADIANS*angle, x, y, z);}
 
 void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip) {
-	assert(fov_y > 0.0 && aspect > 0.0 && near_clip > 0.0 && far_clip > 0.0);
+	assert(fov_y     > 0.0);
+	assert(aspect    > 0.0);
+	assert(near_clip > 0.0);
+	assert(far_clip  > 0.0);
 	assign_cur_matrix(glm::perspective(TO_RADIANS*fov_y, aspect, near_clip, far_clip));
 }
 

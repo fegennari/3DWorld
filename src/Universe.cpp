@@ -2984,7 +2984,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 
 	{ // check for start point collision (slow but important)
 		bool const fast_test(1);
-		int const ival(get_closest_object(result, start, (fast_test ? UTYPE_CELL : UTYPE_MOON), !fast_test, 0, 1.0));
+		int const ival(get_closest_object(result, start, (fast_test ? (int)UTYPE_CELL : (int)UTYPE_MOON), !fast_test, 0, 1.0));
 		if (ival == 0 && result.val == 0) {coll.assign(0.0, 0.0, 0.0); return 0;} // not even inside a valid cell (is this possible? error?)
 
 		if (!fast_test && (ival == 2 || (ival == 1 && result.dist <= line_radius))) { // collision at start

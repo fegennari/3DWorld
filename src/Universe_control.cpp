@@ -1035,7 +1035,7 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 				if (homeworld) {claim_world(&world);}
 				string const str(string("You have claimed ") + world.get_name() + (homeworld ? " as your homeworld" : ""));
 				print_text_onscreen(str, CYAN, 1.2, 2*TICKS_PER_SECOND);
-				gen_sound((homeworld ? SOUND_POWERUP : SOUND_ITEM), get_player_pos2());
+				gen_sound((homeworld ? (int)SOUND_POWERUP : (int)SOUND_ITEM), get_player_pos2());
 			}
 		}
 	}
