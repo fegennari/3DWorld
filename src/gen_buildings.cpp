@@ -845,12 +845,12 @@ public:
 
 				if (ADD_BUILDING_INTERIORS && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
 					unsigned const xy(1 - n); // non-Z parameteric dim (the one we're clipping)
-					float &clo1((d == xy) ? segs[0].dlo : segs[0].ilo), &chi1((d == xy) ? segs[0].dhi : segs[0].ihi); // clip dim values (first  seg)
+					float &clo1((d == xy) ? segs[0].dlo : segs[0].ilo), &chi1((d == xy) ? segs[0].dhi : segs[0].ihi); // clip dim values (first seg)
 					float &clo2((d == xy) ? segs[1].dlo : segs[1].ilo); // clip dim values (second seg)
 					float const face_val(cube.d[n][j]);
 
 					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
-					for (auto p = parts.begin(); p != parts.end(); ++p) {
+					for (auto p = parts.rbegin(); p != parts.rend(); ++p) { // iterate backwards, tallest to shortest
 						if (*p == cube) continue; // skip ourself
 						if (p->d[n][!j] != face_val && (p->d[n][0] >= face_val || p->d[n][1] <= face_val)) continue; // face not contained in dir of normal (inc opposing aligned val)
 						float const pxy1(p->d[xy][0]), pxy2(p->d[xy][1]), cxy1(cube.d[xy][0]), cxy2(cube.d[xy][1]); // end points used for clipping
@@ -861,11 +861,19 @@ public:
 						if (!clip_windows && p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high)
 
 						if (p->z2() < cube.z2()) { // opposing cube doesn't cover this cube in Z (ceiling too low); this should only happen for one part
-							if (segs[2].enabled) continue; // already have a Z segment - ignore split (can this happen?)
-							// don't copy/enable the top segment for house windows because houses always have a sloped roof section on top that will block the windows
-							if (clip_windows != 2) {segs[2] = segs[0];} // copy from first segment (likely still [0,1]), will set enabled=1
 							float const z_split((p->z2() - cube.z1())/sz.z); // parametric value of Z split point
 							assert(z_split >= 0.0 && z_split <= 1.0);
+
+							if (segs[2].enabled) { // already have a Z segment - can only clip in Z (can happen for buildings with overlapping parts)
+								for (unsigned n = 0; n < 2; ++n) {
+									if (!segs[n].enabled) continue;
+									// check that *p contains range clo1/clo2/cli1/cli2? seems to always contain that range in the buildings I've seen
+									if (d == xy) {segs[0].ilo = segs[1].ilo = z_split;} else {segs[0].dlo = segs[1].dlo = z_split;} // clip off bottom
+								}
+								continue;
+							}
+							// don't copy/enable the top segment for house windows because houses always have a sloped roof section on top that will block the windows
+							if (clip_windows != 2) {segs[2] = segs[0];} // copy from first segment (likely still [0,1]), will set enabled=1
 							if (d == xy) {segs[0].ihi = segs[1].ihi = segs[2].ilo = z_split;} else {segs[0].dhi = segs[1].dhi = segs[2].dlo = z_split;} // adjust Z dim
 						}
 						bool const cov_lo(pxy1 <= cxy1), cov_hi(pxy2 >= cxy2);
