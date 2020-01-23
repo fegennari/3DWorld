@@ -1437,6 +1437,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			// insert walls to split up parts into rectangular rooms
 			for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
 				if (p2 == p) continue; // skip self
+				if (min(p2->dx(), p2->dy()) < 2.0*doorway_width) continue; // too small, skip
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
 					for (unsigned dir = 0; dir < 2; ++dir) {
