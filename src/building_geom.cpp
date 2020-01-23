@@ -8,10 +8,11 @@
 
 float const FLOOR_THICK_VAL = 0.1; // 10% of floor spacing
 
+cube_t grass_exclude1, grass_exclude2;
+
 extern bool draw_building_interiors;
 extern int display_mode;
 extern float grass_width;
-cube_t grass_exclude;
 extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
 
@@ -1953,21 +1954,29 @@ void building_t::clear_room_geom() {
 	interior->room_geom.reset();
 }
 
-void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const {
-	float dmin_sq(bcube.get_max_extent()); // start with a large value
-	dmin_sq *= dmin_sq; // square it
+void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const {
+	float const cube_pad(4.0*grass_width), extent(bcube.get_max_extent());
+	float dmin_sq(extent*extent); // start with a large value, squared
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find closest part
+		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
 		float const dist_sq(p2p_dist_sq(pos, p->closest_pt(pos)));
-		if (dist_sq < dmin_sq) {grass_exclude = *p; dmin_sq = dist_sq;} // keep if closest part to pos
+		if (dist_sq < dmin_sq) {exclude = *p; dmin_sq = dist_sq;} // keep if closest part to pos
 	}
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // try to expand the cube to cover more parts
-		cube_t cand_ge(grass_exclude);
+		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
+		cube_t cand_ge(exclude);
 		cand_ge.union_with_cube(*p);
-		if (cand_ge.get_area_xy() < 1.05f*(grass_exclude.get_area_xy() + p->get_area_xy())) {grass_exclude = cand_ge;} // union mostly includes the two parts
+		if (cand_ge.get_area_xy() < 1.05f*(exclude.get_area_xy() + p->get_area_xy())) {exclude = cand_ge;} // union mostly includes the two parts
 	}
-	grass_exclude.expand_by_xy(4.0*grass_width); // exclude grass blades that partially intersect the building interior
-	grass_exclude += xlate;
+	if (!exclude.is_all_zeros()) {exclude.expand_by_xy(cube_pad);} // exclude grass blades that partially intersect the building interior
+}
+
+void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const {
+	get_exclude_cube(pos, cube_t(),       grass_exclude1); // first/closest cube
+	get_exclude_cube(pos, grass_exclude1, grass_exclude2); // second closest cube
+	if (!grass_exclude1.is_all_zeros()) {grass_exclude1 += xlate;}
+	if (!grass_exclude2.is_all_zeros()) {grass_exclude2 += xlate;}
 }
 
 void building_t::update_stats(building_stats_t &s) const { // calculate all of the counts that are easy to get

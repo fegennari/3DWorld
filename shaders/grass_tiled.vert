@@ -1,6 +1,7 @@
 uniform float dist_const = 10.0;
 uniform float dist_slope = 0.5;
-uniform float x1, y1, dx_inv, dy_inv, clip_x1, clip_y1, clip_x2, clip_y2;
+uniform float x1, y1, dx_inv, dy_inv;
+uniform vec4 clip_box1, clip_box2; // {x1 y1 x2 y2} => {x y z w}
 uniform sampler2D height_tex, normal_tex, shadow_tex, weight_tex, noise_tex;
 uniform vec2 xlate = vec2(0.0);
 
@@ -20,7 +21,8 @@ void main() {
 #ifdef ENABLE_VERTEX_CLIP
 	float vx = vertex.x + xlate.x;
 	float vy = vertex.y + xlate.y;
-	if (vx > clip_x1 && vy > clip_y1 && vx < clip_x2 && vy < clip_y2) {vertex.z -= height;}
+	if ((vx > clip_box1.x && vy > clip_box1.y && vx < clip_box1.z && vy < clip_box1.w) ||
+	    (vx > clip_box2.x && vy > clip_box2.y && vx < clip_box2.z && vy < clip_box2.w)) {vertex.z -= height;}
 #endif
 	float z_val = texture(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
 	float ascale= 1.0;

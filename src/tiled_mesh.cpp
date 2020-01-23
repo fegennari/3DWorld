@@ -60,7 +60,7 @@ extern float smap_thresh_scale, tt_grass_scale_factor;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
-extern cube_t grass_exclude;
+extern cube_t grass_exclude1, grass_exclude2;
 extern water_params_t water_params;
 extern char *mh_filename_tt;
 extern float h_dirt[];
@@ -3055,6 +3055,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 	s.end_shader();
 }
 
+vector4d vec4_from_cube_xy(cube_t const &c) {return vector4d(c.x1(), c.y1(), c.x2(), c.y2());}
 
 void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult) {
 
@@ -3070,12 +3071,10 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 	setup_tt_fog_post(s);
 	setup_cloud_plane_uniforms(s);
 	set_tile_xy_vals(s);
-
-	if (!grass_exclude.is_all_zeros()) {
-		s.add_uniform_float("clip_x1", grass_exclude.x1());
-		s.add_uniform_float("clip_y1", grass_exclude.y1());
-		s.add_uniform_float("clip_x2", grass_exclude.x2());
-		s.add_uniform_float("clip_y2", grass_exclude.y2());
+	
+	if (!grass_exclude1.is_all_zeros()) { // based on primary cube
+		s.add_uniform_vector4d("clip_box1", vec4_from_cube_xy(grass_exclude1));
+		s.add_uniform_vector4d("clip_box2", vec4_from_cube_xy(grass_exclude2)); // can be zero area
 	}
 }
 
@@ -3098,7 +3097,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
 			// Note: when tt_grass_scale_factor is small, we can have a transition from nearby wind to distant within the same tile, so we need to enable height adjust in both cases
 			if (wpass == 1 || tt_grass_scale_factor < 1.0) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
-			if (!grass_exclude.is_all_zeros()) {s.set_prefix("#define ENABLE_VERTEX_CLIP", 0);} // VS
+			if (!grass_exclude1.is_all_zeros()) {s.set_prefix("#define ENABLE_VERTEX_CLIP", 0);} // VS - based on primary cube
 			//if (!underwater) {s.set_prefix("#define NO_FOG", 1);} // FS - faster, but reduced quality grass/texture blend
 			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
 			s.set_prefix(make_shader_bool_prefix("enable_grass_wind", enable_wind), 0); // VS
@@ -3161,7 +3160,8 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		disable_blend();
 		s.end_shader();
 	}
-	grass_exclude.set_to_zeros(); // reset for next frame
+	grass_exclude1.set_to_zeros(); // reset for next frame
+	grass_exclude2.set_to_zeros();
 	if (DEBUG_TILES) {cout << "grass blades drawn: " << num_grass_drawn << ", flowers drawn: " << num_flowers_drawn << endl;} // up to 2M / 100K
 }
 
