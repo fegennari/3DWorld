@@ -1376,7 +1376,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
-			bool const no_walls(min(p->dx(), p->dy()) < 2.0*doorway_width); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
+			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
 			assert(to_split.empty());
 			if (no_walls) {add_room(*p, part_id);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
@@ -1438,7 +1438,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			// insert walls to split up parts into rectangular rooms
 			for (auto p2 = parts.begin(); p2 != get_real_parts_end() && !no_walls; ++p2) {
 				if (p2 == p) continue; // skip self
-				if (min(p2->dx(), p2->dy()) < 2.0*doorway_width) continue; // too small, skip
+				if (min(p2->dx(), p2->dy()) < min_wall_len) continue; // too small, skip
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
 					for (unsigned dir = 0; dir < 2; ++dir) {
@@ -1455,6 +1455,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
 						wall.d[ dim][0] = p->d[dim][0] + wall_edge_spacing; // shorter part side with slight offset
 						wall.d[ dim][1] = p->d[dim][1] - wall_edge_spacing;
+						if (wall.get_sz_dim(dim) < min_wall_len) continue; // wall is too short to add (can this happen?)
 						wall.d[!dim][ dir] = val;
 						wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
 						must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
@@ -1741,6 +1742,7 @@ void set_light_xy(cube_t &light, point const &center, float light_size, bool lig
 		light.d[dim][0] = center[dim] - sz;
 		light.d[dim][1] = center[dim] + sz;
 	}
+	light.z1() = light.z2() = center.z; // set so that valid pos can be checked
 }
 
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
@@ -2019,8 +2021,16 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 	}
 	return 0;
 }
+template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
+	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
+		if (c->intersects(bcube)) return 1; // intersection
+	}
+	return 0;
+}
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin) const {
-	return (has_bcube_int_xy(c, stairwells, dmin) || has_bcube_int_xy(c, elevators, dmin));
+	cube_t tc(c);
+	tc.expand_by_xy(dmin); // no pad in z
+	return (has_bcube_int(tc, stairwells) || has_bcube_int(tc, elevators)); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
 bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
 	cube_t place_area(room);

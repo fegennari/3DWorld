@@ -351,7 +351,7 @@ template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist) { // T must derive from cube_t
 	cube_t tc(bcube);
-	tc.expand_by(pad_dist);
+	tc.expand_by_xy(pad_dist);
 
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
 		if (c->intersects_xy(tc)) return 1; // intersection
