@@ -402,7 +402,8 @@ template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const 
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened=0);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 // functions in city_gen.cc
-void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap, float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0);
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
+	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0);
 void setup_city_lights(vector3d const &xlate);
 
 #endif // _BUILDING_H_

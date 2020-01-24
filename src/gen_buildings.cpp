@@ -1876,7 +1876,7 @@ public:
 
 		if (transparent_windows) {
 			// draw back faces of buildings, which will be interior walls
-			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale); // force_tsl=1
+			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1); // force_tsl=1, use_texgen=1
 			set_interior_lighting(s);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
@@ -1885,14 +1885,12 @@ public:
 				unsigned const bcs_ix(i - bcs.begin());
 				bool const force_wall_tex(!(*i)->buildings.empty());
 				vertex_range_t const *exclude(nullptr);
-				
+
 				if (force_wall_tex) {
-					// for now, we use the first building's interior wall texture for all buildings, since all building materials will generally use the same texture
-					building_mat_t const &mat((*i)->buildings.front().get_material());
+					building_mat_t const &mat((*i)->buildings.front().get_material()); // assume all buildings have the same interior wall texture/scale
 					mat.wall_tex.set_gl(s);
 					s.set_cur_color(mat.wall_color);
-					set_texture_scale(s, mat.wall_tex.tscale_x/mat.side_tex.tscale_x, mat.wall_tex.tscale_y/mat.side_tex.tscale_y); // uses first building, not quite right
-					mat.wall_tex.unset_gl(s);
+					setup_texgen_full(2.0f*mat.wall_tex.tscale_x, 2.0f*mat.wall_tex.tscale_x, 0.0, 0.0, 0.0, 0.0, 2.0f*mat.wall_tex.tscale_y, 0.0, s, 0);
 				}
 				if (!per_bcs_exclude.empty()) { // draw this range using stencil test but the rest of the buildings without stencil test
 					vertex_range_t const &vr(per_bcs_exclude[bcs_ix]);
@@ -1908,12 +1906,17 @@ public:
 					}
 				}
 				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // ext_walls_mode=1 (exterior walls only); no stencil test
-				if (force_wall_tex) {set_texture_scale(s, 1.0, 1.0);} // reset
-				// if we're not by an exterior door, draw the back sides of exterior doors as closed
-				if (ext_door_draw.empty()) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, 2);} // ext_walls_mode=2 (everything but exterior walls)
 			} // for i
 			reset_interior_lighting(s);
 			s.end_shader();
+
+			if (ext_door_draw.empty()) { // if we're not by an exterior door, draw the back sides of exterior doors as closed
+				city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
+				set_interior_lighting(s);
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, 2);} // ext_walls_mode=2 (all but exterior walls)
+				reset_interior_lighting(s);
+				s.end_shader();
+			}
 			glCullFace(GL_BACK); // draw front faces
 			// draw windows in depth pass to create holes; what about holes for doors that the player can open and enter?
 			shader_t holes_shader;
