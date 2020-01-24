@@ -1376,9 +1376,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
 		else { // generate random walls using recursive 2D slices
-			if (min(p->dx(), p->dy()) < 2.0*doorway_width) continue; // not enough space to add a room (chimney, porch support, garage, shed, etc.)
+			bool const no_walls(min(p->dx(), p->dy()) < 2.0*doorway_width); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
 			assert(to_split.empty());
-			to_split.emplace_back(*p); // seed room is entire part, no door
+			if (no_walls) {add_room(*p, part_id);} // add entire part as a room
+			else {to_split.emplace_back(*p);} // seed room is entire part, no door
 			float window_hspacing[2] = {0.0};
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
@@ -1435,7 +1436,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				}
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
-			for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
+			for (auto p2 = parts.begin(); p2 != get_real_parts_end() && !no_walls; ++p2) {
 				if (p2 == p) continue; // skip self
 				if (min(p2->dx(), p2->dy()) < 2.0*doorway_width) continue; // too small, skip
 
@@ -1768,6 +1769,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/r->get_area_xy()); // average for room, unitless
 		cube_t pri_light, sec_light;
 		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
+		if (!r->contains_cube_xy(pri_light)) {pri_light.set_to_zeros();} // disable light if it doesn't fit (small room)
 		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator(pri_light, fc_thick));
 		bool use_sec_light(0);
 		float z(r->z1());
