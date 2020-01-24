@@ -791,6 +791,7 @@ public:
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
 		tex_vert_off.z = -bcube.z1();
 		if (is_city && cube.z1() == bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
+		float const door_height(door_ztop - bcube.z1());
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
@@ -908,7 +909,7 @@ public:
 					EMIT_VERTEX(); // 1 !j
 
 					if (s < 2 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
-						float const door_height(door_ztop - cube.z1()), offset(0.03*(j ? 1.0 : -1.0)*offset_scale*door_height);
+						float const offset(0.02*(j ? 1.0 : -1.0)*offset_scale*door_height);
 						assert(door_height > 0.0);
 
 						for (unsigned k = ix; k < ix+4; ++k) {
@@ -920,7 +921,8 @@ public:
 						}
 					}
 					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the house wall to avoid z-fighting
-						float const offset(0.005*(j ? 1.0 : -1.0)*offset_scale*sz.z);
+						assert(door_height > 0.0);
+						float const offset(0.02*(j ? 1.0 : -1.0)*offset_scale*door_height);
 						for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
 					}
 					if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
