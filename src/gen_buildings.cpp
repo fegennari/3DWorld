@@ -520,7 +520,7 @@ class building_draw_t {
 				bool const use_texture(!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty()));
 				if (use_texture) {tex.set_gl(s);} // Note: colors are not disabled here
 				if (no_set_texture) {set_array_client_state(1, 1, 1, 0);} // disable colors as well if not using textures
-				if (!quad_verts.empty()) {draw_verts(quad_verts, GL_QUADS,     0, !no_set_texture);}
+				if (!quad_verts.empty()) {draw_quad_verts_as_tris(quad_verts, 0, 1, !no_set_texture);}
 				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES, 0, !no_set_texture);}
 				if (use_texture) {tex.unset_gl(s);}
 			}
@@ -1847,6 +1847,7 @@ public:
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &camera_xlated);
+						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated);
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
@@ -1920,7 +1921,7 @@ public:
 				s.end_shader();
 			}
 			glCullFace(GL_BACK); // draw front faces
-			// draw windows in depth pass to create holes; what about holes for doors that the player can open and enter?
+			// draw windows in depth pass to create holes
 			shader_t holes_shader;
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
