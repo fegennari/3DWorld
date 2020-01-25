@@ -1215,12 +1215,18 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 }
 
-void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, point const &pos, float dist) const {
+void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist) const {
 	tquad_with_ix_t door;
 	if (!find_door_close_to_point(door, pos, dist)) return; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.2, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
+#if 0 // TODO_INT: make this door open
+	building_draw_t open_door_draw;
+	int const tid(is_house ? building_window_gen.get_hdoor_tid() : building_window_gen.get_bdoor_tid());
+	open_door_draw.add_tquad(*this, door, bcube, tid_nm_pair_t(tid, -1, 1.0, 1.0), WHITE);
+	open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
+#endif
 }
 
 bool building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
@@ -1843,7 +1849,7 @@ public:
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
-						b.get_nearby_ext_door_verts(ext_door_draw, camera_xlated, door_open_dist);
+						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist);
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
