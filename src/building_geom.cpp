@@ -1358,6 +1358,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					hall_walls.push_back(hwall);
 				}
 			} // for s
+			// TODO_INT: if building is wide enough, add secondary halls to each side of this one and create two more rows of rooms
 			// add rooms and doors
 			interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
 			interior->doors.reserve(2*num_rooms);
@@ -1654,6 +1655,20 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			break; // success - done
 		} // for n
 	}
+	// add stairs to connect together stacked parts for office buildings
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (p->z2() == bcube.z2()) continue; // this is the top floor, there is nothing above it
+		// Note: parts are sorted top to bottom, so any part above *p should be before it in parts - but we don't want to rely on that here
+		for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
+			if (p == p2) continue; // skip self
+			if (p2->z1() != p->z2()) continue; // p2 not on top of p
+			if (!p->intersects_xy(*p2)) continue; // no XY overlap
+			cube_t shared(*p);
+			shared.intersect_with_cube(*p2); // dz() == 0
+			// TODO_INT: place stairs in shared area if there's space and no walls are in the way for either the room or above;
+			// requires cutting out holes in top side of *p and bottom side of *p2 somehow
+		} // for p2
+	} // for p
 	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 	cube_t C(part);
 	C.z1() = z; C.z2() = z + fc_thick;
