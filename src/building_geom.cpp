@@ -259,8 +259,9 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 	assert(interior);
+	assert(xlate.z == 0.0); // I don't want to handle this case
 	float const floor_spacing(get_window_vspace());
-	bool had_coll(0);
+	bool had_coll(0), on_stairs(0);
 
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
@@ -272,9 +273,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	}*/
 	if (!xy_only && 2.2*radius < floor_spacing*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings
+		float const obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
 			if (!i->contains_pt_xy(pos - xlate)) continue; // sphere not in this part/cube
-			float const z1(i->z1() + xlate.z), obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+			float const z1(i->z1() + xlate.z);
 			if (obj_z < z1 || obj_z > z1 + floor_spacing) continue; // this is not the floor the sphere is on
 			if (pos.z < z1 + radius) {pos.z = z1 + radius; had_coll = 1;} // move up
 			break; // only change zval once
@@ -282,15 +285,26 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	}
 	if (interior->room_geom) { // collision with room cubes
 		vector<room_object_t> const &objs(interior->room_geom->objs);
+		float obj_z(max(pos.z, p_last.z));
+		point const rel_pos(pos - xlate);
 
+		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for and handle stairs first
+			if (c->no_coll() || c->type != TYPE_STAIR) continue;
+			if (!c->contains_pt_xy(rel_pos)) continue; // sphere not on this stair
+			if (fabs((obj_z - radius) - c->z1()) > 2.0*c->dz()) continue; // wrong floor
+			pos.z = c->z1() + radius; // stand on the stair
+			obj_z = max(pos.z, p_last.z);
+			had_coll = on_stairs = 1;
+			bool const dim(c->dx() < c->dy());
+			max_eq(pos[dim], (c->d[dim][0] + radius - xlate[dim])); // force the shere onto the stairs
+			min_eq(pos[dim], (c->d[dim][1] - radius - xlate[dim]));
+		}
+		// check for other objects to collide with
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
 			if (c->no_coll()) continue;
-			
-			if (c->type == TYPE_STAIR) {
-				if (!c->contains_pt_xy(pos - xlate)) continue; // sphere not on this stair
-				if (fabs((max(pos.z, p_last.z) - radius) - c->z1()) < 2.0*c->dz()) {pos.z = c->z1() + radius; had_coll = 1;} // stand on the stair if it's for the correct floor
-			} else {had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 0, cnorm);} // skip_z=0
-		} // for c
+			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
+			had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 0, cnorm); // skip_z=0
+		}
 	}
 	return had_coll; // will generally always be true due to floors
 }
