@@ -834,7 +834,6 @@ template< typename T> void set_ptr_state(T const *const verts, unsigned count, u
 	if (verts && !bind_temp_vbo_from_verts(verts+start_ix, count, sizeof(T), ptr_offset)) {ptr_offset = verts + start_ix;}
 	T::set_vbo_arrays(set_array_client_state, ptr_offset);
 }
-
 template <typename T> void unset_ptr_state(T const *const verts) {
 	T::unset_attrs();
 	if (verts) {unbind_temp_vbo();}
@@ -846,7 +845,6 @@ template <typename T> void draw_verts(T const *const verts, unsigned count, int 
 	glDrawArrays(gl_type, start_ix, count);
 	unset_ptr_state(verts);
 }
-
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
 	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type, start_ix, set_array_client_state);}
 }
@@ -860,15 +858,14 @@ void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0, uns
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts);
 void convert_quad_ixs_to_tri_ixs(vector<unsigned> const &qixs, vector<unsigned> &tixs);
 
-template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start_ix=0, unsigned num_instances=1) {
+template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start_ix=0, unsigned num_instances=1, bool set_array_client_state=1) {
 	assert(count > 0);
-	set_ptr_state(verts, count, start_ix);
+	set_ptr_state(verts, count, start_ix, set_array_client_state);
 	draw_quads_as_tris(count, start_ix, num_instances);
 	unset_ptr_state(verts);
 }
-
-template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts) {
-	if (!verts.empty()) {draw_quad_verts_as_tris(&verts.front(), verts.size());}
+template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts, unsigned start_ix=0, unsigned num_instances=1, bool set_array_client_state=1) {
+	if (!verts.empty()) {draw_quad_verts_as_tris(&verts.front(), verts.size(), start_ix, num_instances, set_array_client_state);}
 }
 
 template <typename T> void draw_quad_verts_as_tris_and_clear(vector<T> &verts) {
