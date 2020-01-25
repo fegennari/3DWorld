@@ -11,7 +11,7 @@ extern int window_height, display_mode;
 extern bool use_core_context, using_lightmap, have_indir_smoke_tex;
 extern shader_t *cur_shader;
 
-bool using_tess_shader(0);
+bool using_tess_shader(0), enable_use_temp_vbo(0);
 
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 
@@ -223,14 +223,14 @@ void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes) {
 void bind_dynamic_vbo() {vbo_ring_buffer[active_buffer].pre_render();}
 
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset) {
-	if (!use_core_context) return 0; // not needed
+	if (!use_core_context && !enable_use_temp_vbo) return 0; // not needed
 	//timer_t timer("Bind Temp VBO");
 	vbo_ptr_offset = get_dynamic_vbo_ptr(verts, count*vert_size);
 	return 1;
 }
 
 void unbind_temp_vbo() {
-	if (!use_core_context) return; // not needed
+	if (!use_core_context && !enable_use_temp_vbo) return; // not needed
 	bind_vbo(0);
 }
 

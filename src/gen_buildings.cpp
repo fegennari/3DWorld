@@ -20,7 +20,7 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
 
-extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo;
 extern int rand_gen_index, display_mode;
 extern float CAMERA_RADIUS;
 extern point sun_pos;
@@ -516,6 +516,7 @@ class building_draw_t {
 			if (shadow_only && no_shadows) return; // no shadows on this material
 
 			if (direct_draw_no_vbo) {
+				enable_use_temp_vbo = 1; // hack to fix missing wall artifacts when not using a core context
 				assert(!exclude); // not supported in this mode
 				bool const use_texture(!shadow_only && !no_set_texture && (!quad_verts.empty() || !tri_verts.empty()));
 				if (use_texture) {tex.set_gl(s);} // Note: colors are not disabled here
@@ -523,6 +524,7 @@ class building_draw_t {
 				if (!quad_verts.empty()) {draw_quad_verts_as_tris(quad_verts, 0, 1, !no_set_texture);}
 				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES, 0, !no_set_texture);}
 				if (use_texture) {tex.unset_gl(s);}
+				enable_use_temp_vbo = 0;
 			}
 			else {
 				if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
