@@ -1618,7 +1618,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						elevator.d[0][!x] = elevator.d[0][x] + (x ? -ewidth : ewidth);
 						elevator.d[1][!y] = elevator.d[1][y] + (y ? -ewidth : ewidth);
 						elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
-						if (interior->is_cube_close_to_doorway(elevator)) continue; // try again
+						if (is_cube_close_to_doorway(elevator)) continue; // try again
 						interior->elevators.push_back(elevator);
 						elevator_cut = elevator;
 						placed       = 1; // successfully placed
@@ -1654,8 +1654,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							cube_t cand(cutout);
 							float const shift(0.95f*(cand.d[dim][dir] - room.d[dim][dir])); // negative if dir==1, add small gap to prevent z-fighting and FP accuracy asserts
 							cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
-							if (!interior->is_cube_close_to_doorway(cand)) {cutout = cand; break;} // keep if it's good
-						}
+							if (!is_cube_close_to_doorway(cand)) {cutout = cand; break;} // keep if it's good
+						} // for d
 					}
 				} // for dim
 				if (first_part) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));}
@@ -1757,7 +1757,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsi
 	llc.z = table_pos.z; // bottom
 	urc.z = table_pos.z + 0.2*window_vspacing;
 	cube_t table(llc, urc);
-	if (!interior->is_valid_placement_for_room(table, room)) return 0; // check proximity to doors
+	if (!is_valid_placement_for_room(table, room)) return 0; // check proximity to doors
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
 	float const chair_sz(0.1*window_vspacing); // half size
 
@@ -1770,7 +1770,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsi
 			cube_t chair(chair_pos, chair_pos);
 			chair.z2() += 0.4*window_vspacing; // chair height
 			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
-			if (!interior->is_valid_placement_for_room(chair, room)) continue; // check proximity to doors
+			if (!is_valid_placement_for_room(chair, room)) continue; // check proximity to doors
 			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, obj_flags, tot_light_amt);
 		} // for dir
 	} // for dim
@@ -2053,12 +2053,24 @@ float room_t::get_light_amt() const { // Note: not normalized to 1.0
 	return ext_perim/get_area_xy(); // light per square meter = exterior perimeter over area
 }
 
+bool is_cube_close_to_door(cube_t const &c, float dmin, cube_t const &door) {
+	bool const dim(door.dy() < door.dx());
+	if (c.d[!dim][0] > door.d[!dim][1] || c.d[!dim][1] < door.d[!dim][0]) return 0; // no overlap in !dim
+	float const min_dist((dmin == 0.0f) ? door.get_sz_dim(!dim) : dmin); // if dmin==0, use door width (so that door has space to open)
+	return (c.d[dim][0] < door.d[dim][1]+min_dist && c.d[dim][1] > door.d[dim][0]-min_dist); // within min_dist
+}
+bool building_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const {
+	// FIXME: we want to test this for things like stairs, but exterior doors likely haven't been allocated at this point
+	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
+		cube_t const door(i->get_bcube());
+		if (c.z2() < door.z1() || c.z1() > door.z2()) continue;
+		if (is_cube_close_to_door(c, dmin, door)) return 1;
+	}
+	return (interior ? interior->is_cube_close_to_doorway(c, dmin) : 0); // test interior doors
+}
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) const { // ignores zvals
-	for (auto i = doors.begin(); i != doors.end(); ++i) {
-		bool const dim(i->dy() < i->dx());
-		if (c.d[!dim][0] > i->d[!dim][1] || c.d[!dim][1] < i->d[!dim][0]) continue; // no overlap in !dim
-		float const min_dist((dmin == 0.0f) ? i->get_sz_dim(!dim) : dmin); // if dmin==0, use door width (so that door has space to open)
-		if (c.d[dim][0] < i->d[dim][1]+min_dist && c.d[dim][1] > i->d[dim][0]-min_dist) return 1; // within min_dist
+	for (auto i = doors.begin(); i != doors.end(); ++i) { // interior doors
+		if (is_cube_close_to_door(c, dmin, *i)) return 1;
 	}
 	return 0;
 }
@@ -2067,12 +2079,12 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	tc.expand_by_xy(dmin); // no pad in z
 	return (has_bcube_int(tc, stairwells) || has_bcube_int(tc, elevators)); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
-bool building_interior_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
+bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
 	cube_t place_area(room);
 	if (dmin != 0.0f) {place_area.expand_by_xy(-dmin);} // shrink by dmin
 	if (!place_area.contains_cube_xy(c))   return 0; // not contained in interior part of the room
 	if (is_cube_close_to_doorway(c, dmin)) return 0; // too close to a doorway
-	if (is_blocked_by_stairs_or_elevator(c, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
+	if (interior && interior->is_blocked_by_stairs_or_elevator(c, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
 	return 1;
 }
 

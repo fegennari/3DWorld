@@ -277,7 +277,6 @@ struct building_interior_t {
 	building_interior_t() {}
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f) const;
-	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
 	void finalize();
 };
 
@@ -360,6 +359,8 @@ private:
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	cube_t get_part_containing_pt(point const &pt) const;
+	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0) const;
+	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
 	void add_room(cube_t const &room, unsigned part_id);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
