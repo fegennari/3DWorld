@@ -52,6 +52,7 @@ float get_sidewalk_width(cube_t const &plot_bcube) { // Note: technically should
 }
 
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
+	if (in_building) return 0; // not implemented yet
 	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
 	if (plot_bcube.contains_pt_xy(pos)) {return 1;} // inside the plot
 	stuck_count = 0; // no longer stuck
@@ -87,7 +88,7 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 }
 
 bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const {
-	if (in_the_road) return 1; // not in a plot, no collision detection needed
+	if (in_the_road || in_building) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
@@ -149,6 +150,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 }
 
 bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
+	if (in_building) return 0; // no ped-ped collisions in buildings (yet)
 	assert(pid < peds.size());
 	float const timestep(2.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 2s
 	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
@@ -166,6 +168,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 }
 
 bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid) {
+	if (in_building) return 0; // no ped-ped collisions in buildings (yet)
 	assert(pid < peds.size());
 
 	// Note: shouldn't have to check peds in the next plot, assuming that if we're stopped, they likely are as well, and won't be walking toward us
@@ -428,6 +431,7 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 
 void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, point const &dest_pos, vect_cube_t &avoid) const {
 	avoid.clear();
+	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
 	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
 	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
 	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
@@ -455,7 +459,12 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 }
 
 void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
-	if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
+	if (in_building) {
+		// TODO: add building navigation logic here
+	}
+	else { // in the city
+		if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
+	}
 	reset_waiting();
 	if (is_stopped) {go();}
 
@@ -470,9 +479,10 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 }
 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
-	if (destroyed) return; // destroyed
+	if (destroyed)    return; // destroyed
 	if (speed == 0.0) return; // not moving, no update needed
 	//assert(!is_nan(pos));
+	if (in_building)  return; // TODO: add any building update/movement logic here
 
 	// navigation with destination
 	if (at_dest) {
