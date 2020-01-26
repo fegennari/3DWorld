@@ -262,23 +262,27 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	assert(interior);
 	float const floor_spacing(get_window_vspace());
 	bool had_coll(0), on_stairs(0);
+	float obj_z(max(pos.z, p_last.z)), obj_z_bs(obj_z - xlate.z); // use p_last to get orig zval
 
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
+			if (obj_z_bs < i->z1() || obj_z_bs > i->z2()) continue; // wrong part/floor
 			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
 		}
 	}
 	// for now, players aren't allowed in elevators
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
 		if (e->open) {} // maybe they should be allowed to fall down elevator shafts if the elevator door is open?
+		if (obj_z_bs < e->z1() || obj_z_bs > e->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, radius, (*e + xlate), p_last, 1, 0, cnorm); // skip_z=0
 	}
 	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
+		if (obj_z_bs < i->z1() || obj_z_bs > i->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm); // skip_z=0
 	}*/
 	if (!xy_only && 2.2*radius < floor_spacing*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings
-		float const obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+		obj_z = max(pos.z, p_last.z);
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
 			if (!i->contains_pt_xy(pos - xlate)) continue; // sphere not in this part/cube
@@ -290,7 +294,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	}
 	if (interior->room_geom) { // collision with room cubes
 		vector<room_object_t> const &objs(interior->room_geom->objs);
-		float obj_z(max(pos.z, p_last.z));
+		obj_z = max(pos.z, p_last.z);
 		point const rel_pos(pos - xlate);
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for and handle stairs first
