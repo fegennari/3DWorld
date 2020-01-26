@@ -528,7 +528,7 @@ void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { /
 	bool const camera_above_clouds(world_mode == WMODE_INF_TERRAIN && camera_pos_orig.z > get_tt_cloud_level());
 	bool const no_stars((is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6)) && !camera_above_clouds);
 	bool const no_asteroid_dust(disable_asteroid_dust || reflection_mode || no_stars); // Note: should really pass this down (5 levels of function calls)
-	draw_universe(1, 1, (no_stars ? 2 : 0), 0, no_asteroid_dust); // could clip by horizon?
+	draw_universe(1, 1, 1, (no_stars ? 2 : 0), 0, no_asteroid_dust); // could clip by horizon?
 	if (TIMETEST) PRINT_TIME("0.2");
 	camera_pos = camera_pos_orig;
 	fgPopMatrix(); // undo universe transform

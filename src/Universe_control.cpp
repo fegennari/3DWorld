@@ -262,18 +262,18 @@ void process_ships(int timer1) {
 }
 
 
-void draw_universe_all(bool static_only, bool skip_closest, int no_distant, bool gen_only, bool no_asteroid_dust) {
+void draw_universe_all(bool static_only, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust) {
 
 	set_universe_lighting_params(1); // for universe drawing
 	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
 	if (!static_only) {setup_universe_fog(clobj0);}
 	check_gl_error(120);
-	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant, gen_only, no_asteroid_dust);
+	universe.draw_all_cells(clobj0, skip_closest, no_move, no_distant, gen_only, no_asteroid_dust);
 	check_gl_error(121);
 }
 
 
-void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen_only, bool no_asteroid_dust) { // should be process_universe()
+void draw_universe(bool static_only, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust) { // should be process_universe()
 
 	RESET_TIME;
 	static int inited(0), first_frame_drawn(0);
@@ -295,14 +295,14 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 		#pragma omp parallel num_threads(2)
 		{
 			if (omp_get_thread_num_3dw() == 1) {process_ships(timer1);}
-			else {draw_universe_all(static_only, skip_closest, no_distant, gen_only, no_asteroid_dust);} // *must* be done by master thread
+			else {draw_universe_all(static_only, skip_closest, no_move, no_distant, gen_only, no_asteroid_dust);} // *must* be done by master thread
 		}
 	}
 	else
 #endif
 	{
 		if (!static_only) {process_ships(timer1);}
-		draw_universe_all(static_only, skip_closest, no_distant, gen_only, no_asteroid_dust);
+		draw_universe_all(static_only, skip_closest, no_move, no_distant, gen_only, no_asteroid_dust);
 	}
 	if (!gen_only && !first_frame_drawn) {
 		proc_uobjs_first_frame();

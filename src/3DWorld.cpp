@@ -994,7 +994,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			combined_gu = !combined_gu;
 			
 			if (combined_gu) { // do a fake draw pass to force the universe to be created so we can determine the closest planet/moon and setup lighting/water/temperature/vegetation/etc.
-				draw_universe(1, 1, 2, 1, 1); // gen_only=1
+				draw_universe(1, 1, 1, 2, 1, 1); // gen_only=1
 				setup_current_system();
 			}
 			else {

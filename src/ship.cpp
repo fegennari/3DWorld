@@ -945,7 +945,7 @@ void create_univ_cube_map() {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			vector3d const eye(camera_pos - 0.001*cview_dir);
 			fgLookAt(eye.x, eye.y, eye.z, camera_pdu.pos.x, camera_pdu.pos.y, camera_pdu.pos.z, up_vector.x, up_vector.y, up_vector.z);
-			draw_universe_all(1, 0, 0, 0, 1);
+			draw_universe_all(1, 0, 1, 0, 0, 1);
 			render_to_texture_cube_map(univ_reflection_tid, tex_size, face_id); // render reflection to texture
 		} // for dir
 	} // for dim

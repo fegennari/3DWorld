@@ -1443,7 +1443,7 @@ public:
 unsigned get_num_chars(unsigned v);
 void write_uint_pad(unsigned v, unsigned min_chars, string const &sep=" ");
 void update_maxvals(unsigned *v, unsigned n);
-void draw_universe_all(bool static_only, bool skip_closest, int no_distant, bool gen_only, bool no_asteroid_dust);
+void draw_universe_all(bool static_only, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust);
 
 #endif
 

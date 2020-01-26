@@ -856,7 +856,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			uasteroid_field::begin_render(usg.asteroid_shader, 0, 1);
 
 			for (vector<uasteroid_field>::iterator f = galaxy.asteroid_fields.begin(); f != galaxy.asteroid_fields.end(); ++f) {
-				f->apply_physics(pos, camera);
+				if (!no_move) {f->apply_physics(pos, camera);}
 				f->draw(pos, camera, usg.asteroid_shader, 0);
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
@@ -905,7 +905,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					if (planets_visible) { // asteroid fields may also be visible
 						// Note: asteroid belts aren't drawn in the first frame because sel_s won't be set, since clobj isn't valid before the first frame is drawn (universe not yet created)
 						if (!gen_only && sol.asteroid_belt != nullptr && sel_s && sol_draw_pass == 0 && pass == 1) {
-							sol.asteroid_belt->apply_physics(pos, camera);
+							if (!no_move) {sol.asteroid_belt->apply_physics(pos, camera);}
 							shader_t asteroid_belt_shader;
 							sol.asteroid_belt->begin_render(asteroid_belt_shader, 0);
 							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader, 0);
@@ -997,7 +997,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							float const ring_scale(sizep*planet.get_ring_rscale());
 
 							if (planet.asteroid_belt != nullptr && ring_scale > 10.0) { // can get here for multiple planets
-								if (ring_scale > 20.0) {planet.asteroid_belt->apply_physics(pos, camera);}
+								if (ring_scale > 20.0 && !no_move) {planet.asteroid_belt->apply_physics(pos, camera);}
 								planet_asteroid_belts.push_back(planet.asteroid_belt);
 							}
 							if (!planet.ring_data.empty() && ring_scale > 2.5) {

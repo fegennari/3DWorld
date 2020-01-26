@@ -787,7 +787,7 @@ void init_universe_display();
 void set_univ_pdu();
 void setup_current_system(float sun_intensity=1.0);
 void apply_univ_physics();
-void draw_universe(bool static_only=0, bool skip_closest=0, int no_distant=0, bool gen_only=0, bool no_asteroid_dust=0);
+void draw_universe(bool static_only=0, bool skip_closest=0, bool no_move=0, int no_distant=0, bool gen_only=0, bool no_asteroid_dust=0);
 void draw_universe_stats();
 void clear_univ_obj_contexts();
 void clear_cached_shaders();
