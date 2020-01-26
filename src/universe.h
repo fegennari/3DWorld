@@ -359,7 +359,7 @@ public:
 	void gen_color();
 	colorRGBA get_ambient_color_val() const;
 	colorRGBA get_light_color() const;
-	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant, bool closest);
+	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant, bool calc_flare_intensity);
 	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0f);}
 	float get_temperature_at_dist_sq(float dist_sq) const {return get_energy()/max(TOLERANCE, dist_sq);}

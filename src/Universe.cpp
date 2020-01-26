@@ -897,7 +897,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 				for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) { // behind sun, in front of sun
 					if (!gen_only && sun_visible && sol_draw_pass == unsigned(sel_s)) {
-						if (!sol.sun.draw(spos, usg, star_pld, star_psd, 0, sel_g)) continue;
+						bool const calc_flare_intensity(sel_g && no_asteroid_dust); // skip in reflection mode when no_asteroid_dust==1
+						if (!sol.sun.draw(spos, usg, star_pld, star_psd, 0, calc_flare_intensity)) continue;
 					}
 					if (sol_draw_pass == 0 && (planets_visible || gen_all_bodies)) {sol.process();}
 					if (sol.planets.empty()) continue;
@@ -2351,7 +2352,7 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant, bool closest) {
+bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant, bool calc_flare_intensity) {
 
 	point const &camera(get_player_pos()); // view frustum has already been checked
 	vector3d const vcp(camera, pos_);
@@ -2395,7 +2396,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 		uniform_scale(radius);
 		float flare_intensity((size > 4.0) ? 1.0 : 0.0);
 
-		if (flare_intensity > 0.0 && closest) { // determine occlusion from planets
+		if (flare_intensity > 0.0 && calc_flare_intensity) { // determine occlusion from planets
 			unsigned const npts = 20;
 			static point pts[npts];
 			static bool pts_valid(0);
