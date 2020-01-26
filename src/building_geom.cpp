@@ -264,11 +264,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
-			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 1, cnorm); // skip_z=1
+			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
 		}
 	}
 	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
-		had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 1, cnorm); // skip_z=1
+		had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm); // skip_z=0
 	}*/
 	if (!xy_only && 2.2*radius < floor_spacing*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings
@@ -1903,10 +1903,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
-			if (r->contains_pt_xy(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
+			if (r->contains_pt(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
 		}
 		/*for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) { // efficient but lower quality
-			if (s->contains_pt_xy(camera_bs)) {camera_by_stairs = 1; break;}
+			if (s->contains_pt(camera_bs)) {camera_by_stairs = 1; break;}
 		}*/
 	}
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
