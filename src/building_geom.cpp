@@ -148,7 +148,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
-		float const zval(max(pos2.z, p_last2.z)); // this is the real zval for use in collsion detection
+		float const zval(max(pos2.z, p_last2.z) - xlate.z); // this is the real zval for use in collsion detection, in building space
 		cube_t sc; sc.set_from_sphere(pos2, radius); // sphere bounding cube
 
 		if (zval > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
@@ -191,7 +191,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 
 				if (fabs(crx - cry) < radius) { // close to a circle
 					if (p_last2.z > part_bc.d[2][1] && dist_xy_less_than(pos2, cc, max(crx, cry))) {
-						pos2.z = i->z2() + radius; // make sure it doesn't intersect the roof
+						pos2.z = part_bc.z2() + radius; // make sure it doesn't intersect the roof
 						if (cnorm_ptr) {*cnorm_ptr = plus_z;}
 					}
 					else { // side coll
@@ -259,7 +259,6 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 	assert(interior);
-	assert(xlate.z == 0.0); // I don't want to handle this case
 	float const floor_spacing(get_window_vspace());
 	bool had_coll(0), on_stairs(0);
 
@@ -291,8 +290,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for and handle stairs first
 			if (c->no_coll() || c->type != TYPE_STAIR) continue;
 			if (!c->contains_pt_xy(rel_pos)) continue; // sphere not on this stair
-			if (fabs((obj_z - radius) - c->z1()) > 2.0*c->dz()) continue; // wrong floor
-			pos.z = c->z1() + radius; // stand on the stair
+			if (fabs((obj_z - radius) - c->z1() + xlate.z) > 2.0*c->dz()) continue; // wrong floor
+			pos.z = c->z1() + radius + xlate.z; // stand on the stair
 			obj_z = max(pos.z, p_last.z);
 			had_coll = on_stairs = 1;
 			bool const dim(c->dx() < c->dy());
@@ -302,7 +301,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		// check for other objects to collide with
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
 			if (c->no_coll()) continue;
-			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
+			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2() + xlate.z) continue; // above the stair - allow it to be walked on
 			had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 0, cnorm); // skip_z=0
 		}
 	}
