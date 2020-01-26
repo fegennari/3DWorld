@@ -496,8 +496,16 @@ cube_t building_t::get_part_containing_pt(point const &pt) const {
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // includes garage/shed
 		if (i->contains_pt(pt)) {return *i;}
 	}
-	assert(0); // must be found
-	return all_zeros; // never gets here
+	// we can get here in rare cases due to FP precision problems; find the closest cube to pt, which should be very close
+	float dmin_sq(0.0);
+	cube_t closest;
+
+	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) {
+		float const dist_sq(p2p_dist(pt, i->closest_pt(pt)));
+		if (dmin_sq == 0.0 || dist_sq < dmin_sq) {dmin_sq = dist_sq; closest = *i;}
+	}
+	assert(!closest.is_all_zeros()); // must be found
+	return closest;
 }
 
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
