@@ -1110,7 +1110,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, bool
 
 	for (unsigned side = 0; side < num_sides; ++side) { // {right, left}
 		cube_t dc(D);
-		if (num_sides == 2) {dc.d[!dim][!side] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
+		if (num_sides == 2) {dc.d[!dim][bool(side) ^ dim ^ 1] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
 		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, opened, (exterior && side == 0))); // swap sides for right half of exterior door
 		vector3d const normal(door.get_norm());
 		tquad_with_ix_t door_edges[2] = {door, door};
