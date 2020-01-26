@@ -11,6 +11,14 @@ Cities:
 - Railroad tracks
 - Fences
 * Mesh simplificaton for cars and peds for shadow pass
-* Building interior indirect/ambient lighting
-
 * Planet water reflection map
+
+* Building interiors:
+  * Connect stacked building parts with stairs
+  * More hallways for office buildings
+  * Place more room objects/furniture
+  - Working elevators
+  - Interiors for city office towers
+  - Indirect/ambient lighting
+  - Models of people in buildings
+  
