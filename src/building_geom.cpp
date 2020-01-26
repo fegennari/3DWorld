@@ -268,6 +268,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
 		}
 	}
+	// for now, players aren't allowed in elevators
+	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
+		if (e->open) {} // maybe they should be allowed to fall down elevator shafts if the elevator door is open?
+		had_coll |= sphere_cube_int_update_pos(pos, radius, (*e + xlate), p_last, 1, 0, cnorm); // skip_z=0
+	}
 	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
 		had_coll |= sphere_cube_int_update_pos(pos, radius, (*i + xlate), p_last, 1, 0, cnorm); // skip_z=0
 	}*/
