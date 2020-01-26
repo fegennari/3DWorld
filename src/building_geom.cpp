@@ -740,8 +740,9 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
 bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
 
-cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, rand_gen_t &rgen) {
-
+cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center,
+	float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen)
+{
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	float const door_shift(0.01*get_material().get_floor_spacing());
 	bool const calc_center(door_center == 0.0); // door not yet calculated
@@ -777,8 +778,11 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 
 		// we're free to choose the door pos, and have the interior, so we can check if the door is in a good location;
 		// if we get here on the last iteration, just keep the door even if it's an invalid location
-		if (calc_center && interior && !centered && n < 9) {
-			if (interior->is_blocked_by_stairs_or_elevator(door, door_width)) continue; // try a new location
+		if (calc_center && interior && !centered) {
+			if (interior->is_blocked_by_stairs_or_elevator(door, door_width)) {
+				if (can_fail && n == 9) return cube_t(); // last iteration, fail
+				continue; // try a new location
+			}
 		}
 		break; // done
 	} // for n
@@ -881,7 +885,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		door_part = 0; // only one part
 	}
 	gen_interior(rgen, 0); // before adding door
-	if (gen_door) {add_door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, rgen), door_part, door_dim, door_dir, 0);}
+	if (gen_door) {add_door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, 0, rgen), door_part, door_dim, door_dir, 0);}
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};
 
@@ -979,13 +983,15 @@ tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned
 	return door;
 }
 
-void building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) {
+bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) {
 
+	if (c.is_all_zeros()) return 0;
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
 	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim], 0, 0)); // opened=0, swap_sides=0
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
+	return 1;
 }
 
 unsigned extend_roof(cube_t &top, float extend_to, bool dim) {
@@ -1077,7 +1083,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 
 	if (hallway_dim < 2) { // building has primary hallway, place doors at both ends of first part
 		for (unsigned d = 0; d < 2; ++d) {
-			add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, rgen), 0, bool(hallway_dim), d, 1);
+			add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), 0, bool(hallway_dim), d, 1);
 		}
 		return;
 	}
@@ -1099,8 +1105,8 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 				if (b->d[dim][dir] != bcube.d[dim][dir]) continue; // find a side on the exterior to ensure door isn't obstructed by a building cube
 				if (used[2*dim + dir]) continue; // door already placed on this side
 				used[2*dim + dir] = 1; // mark used
-				add_door(place_door(*b, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, rgen), part_ix, dim, dir, 1);
-				placed = 1;
+				bool const allow_fail(!doors.empty() || b+1 != get_real_parts_end()); // allow door placement to fail if we've already placed at least one door of not last part
+				placed = add_door(place_door(*b, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, rgen), part_ix, dim, dir, 1);
 				break;
 			} // for n
 		} // for b
