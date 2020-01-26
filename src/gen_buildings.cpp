@@ -1087,34 +1087,55 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			}
 		} // for i
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
+			bool const opened(DRAW_INTERIOR_DOORS == 2);
+
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				bool const dim(i->dy() < i->dx());
 				bool const dir(i->d[dim][0] > bcube.get_center_dim(dim)); // determines which way doors open; doors open in from hallways for office buildings
-				float const ty(i->dz()/mat.get_floor_spacing()); // tile door texture across floors
-				tid_nm_pair_t const tp(building_window_gen.get_hdoor_tid(), -1, 1.0, ty);
-				tquad_with_ix_t const door(set_door_from_cube(*i, dim, dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, (DRAW_INTERIOR_DOORS == 2)));
-				float const thickness(0.02*i->get_sz_dim(!dim));
-				vector3d const normal(door.get_norm());
-				tquad_with_ix_t door_edges[2] = {door, door};
-
-				for (unsigned d = 0; d < 2; ++d) {
-					tquad_with_ix_t door_side(door);
-					vector3d const offset((d ? -1.0 : 1.0)*thickness*normal);
-					for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
-
-					for (unsigned e = 0; e < 2; ++e) {
-						unsigned const ixs[2][2] = {{1, 2}, {3, 0}};
-						door_edges[e].pts[2*d+1] = door_side.pts[ixs[e][ d]];
-						door_edges[e].pts[2*d+0] = door_side.pts[ixs[e][!d]];
-					}
-					if (d == 1) {swap(door_side.pts[0], door_side.pts[1]); swap(door_side.pts[2], door_side.pts[3]); door_side.type = tquad_with_ix_t::TYPE_IDOOR2;} // back face
-					bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
-				} // for d
-				for (unsigned e = 0; e < 2; ++e) {bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), WHITE);} // add untextured door edges
-			} // for i
-		} // end DRAW_INTERIOR_DOORS
+				add_door_to_bdraw(*i, bdraw, dim, dir, opened, 0); // exterior=0
+			}
+		}
 		bdraw.end_draw_range_capture(interior->draw_range);
 	} // end interior case
+}
+
+void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, bool dim, bool dir, bool opened, bool exterior) const {
+
+	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
+	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
+	int const tid((exterior && !is_house) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
+	float const thickness(0.02*D.get_sz_dim(!dim));
+	unsigned const num_sides((exterior && !is_house) ? 2 : 1); // double doors for office building exterior door
+	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
+
+	for (unsigned side = 0; side < num_sides; ++side) { // {right, left}
+		cube_t dc(D);
+		if (num_sides == 2) {dc.d[!dim][!side] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
+		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, opened, (exterior && side == 0))); // swap sides for right half of exterior door
+		vector3d const normal(door.get_norm());
+		tquad_with_ix_t door_edges[2] = {door, door};
+
+		for (unsigned d = 0; d < 2; ++d) {
+			tquad_with_ix_t door_side(door);
+			vector3d const offset((d ? -1.0 : 1.0)*thickness*normal);
+			for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
+
+			for (unsigned e = 0; e < 2; ++e) {
+				unsigned const ixs[2][2] = {{1, 2}, {3, 0}};
+				door_edges[e].pts[2*d+1] = door_side.pts[ixs[e][ d]];
+				door_edges[e].pts[2*d+0] = door_side.pts[ixs[e][!d]];
+			}
+			if (d == 1) { // back face
+				swap(door_side.pts[0], door_side.pts[1]);
+				swap(door_side.pts[2], door_side.pts[3]);
+				door_side.type = tquad_with_ix_t::TYPE_IDOOR2;
+			}
+			bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
+		} // for d
+		for (unsigned e = 0; e < 2; ++e) { // add untextured door edges
+			bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), WHITE); // Note: better to pick a single white texel in door tex and set tscale=0.0?
+		}
+	} // for side
 }
 
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
@@ -1221,12 +1242,12 @@ void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	move_door_to_other_side_of_wall(door, -1.2, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
-#if 0 // TODO_INT: make this door open
+	// draw the opened door
 	building_draw_t open_door_draw;
-	int const tid(is_house ? building_window_gen.get_hdoor_tid() : building_window_gen.get_bdoor_tid());
-	open_door_draw.add_tquad(*this, door, bcube, tid_nm_pair_t(tid, -1, 1.0, 1.0), WHITE);
+	vector3d const normal(door.get_norm());
+	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+	add_door_to_bdraw(door.get_bcube(), open_door_draw, dim, dir, 1, 1); // opened=1, exterior=1
 	open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
-#endif
 }
 
 bool building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
@@ -1849,7 +1870,7 @@ public:
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
-						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist);
+						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
