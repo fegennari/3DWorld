@@ -162,7 +162,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			float cont_area(0.0);
 
 			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-				if (p->intersects(sc)) {cont_area += (min(p->x2(), sc.x2()) - max(p->x1(), sc.x1()))*(min(p->y2(), sc.y2()) - max(p->y1(), sc.y1()));} // accumulate shared XY area
+				if (zval < p->z1() || zval > p->z2()) continue; // wrong floor/part in stack
+				if (p->intersects_xy(sc)) {cont_area += (min(p->x2(), sc.x2()) - max(p->x1(), sc.x1()))*(min(p->y2(), sc.y2()) - max(p->y1(), sc.y1()));} // accumulate shared XY area
 			}
 			if (cont_area < 0.99*sc.get_area_xy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
 				c.expand_by_xy(-radius); // shrink part by sphere radius
