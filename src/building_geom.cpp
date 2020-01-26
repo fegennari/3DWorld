@@ -1358,7 +1358,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					hall_walls.push_back(hwall);
 				}
 			} // for s
-			// TODO_INT: if building is wide enough, add secondary halls to each side of this one and create two more rows of rooms
+			if (num_windows_od >= 7) { // at least 7 windows (3 on each side of hallway)
+				// TODO_INT: add secondary halls to each side of this one and create two more rows of rooms
+			}
 			// add rooms and doors
 			interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
 			interior->doors.reserve(2*num_rooms);
@@ -2047,12 +2049,6 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 		if (c.d[!dim][0] > i->d[!dim][1] || c.d[!dim][1] < i->d[!dim][0]) continue; // no overlap in !dim
 		float const min_dist((dmin == 0.0f) ? i->get_sz_dim(!dim) : dmin); // if dmin==0, use door width (so that door has space to open)
 		if (c.d[dim][0] < i->d[dim][1]+min_dist && c.d[dim][1] > i->d[dim][0]-min_dist) return 1; // within min_dist
-	}
-	return 0;
-}
-template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
-	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-		if (c->intersects(bcube)) return 1; // intersection
 	}
 	return 0;
 }
