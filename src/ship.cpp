@@ -925,34 +925,31 @@ void create_univ_cube_map() {
 	if (!ship_cube_map_reflection) return;
 	static unsigned last_size(0);
 	unsigned const tex_size = 512; // make dynamic?
+	u_ship const &player(player_ship()); // Note: we shouldn't have to actually modify player dir and upv, as long as callers all use player_pdu
+	point const camera_pos(player.get_pos());
+	pos_dir_up const prev_player_pdu(player_pdu);
 	setup_cube_map_reflection_texture(univ_reflection_tid, tex_size, last_size);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	vector3d const pre_ref_cview_dir(cview_dir);
-	point const camera_pos(get_camera_pos());
-	pos_dir_up const prev_camera_pdu(camera_pdu);
-	vector3d const prev_up_vector(up_vector);
 	set_custom_viewport(tex_size, 90.0, UNIV_NEAR_CLIP, UNIV_FAR_CLIP); // 90 degree FOV
 
 	for (unsigned dim = 0; dim < 3; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			unsigned const face_id(2*dim + !dir);
-			cview_dir = zero_vector;
-			up_vector = -plus_y;
-			cview_dir[dim] = (dir ? 1.0 : -1.0);
-			if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
+			vector3d view_dir(zero_vector), up(-plus_y);
+			view_dir[dim] = (dir ? 1.0 : -1.0);
+			if (dim == 1) {up = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 			float const angle(0.5*90.0*TO_RADIANS); // 90 degree FOV
-			camera_pdu = pos_dir_up(camera_pos, cview_dir, up_vector, angle, UNIV_NEAR_CLIP, UNIV_FAR_CLIP, 1.0, 1);
+			player_pdu = pos_dir_up(camera_pos, view_dir, up, angle, UNIV_NEAR_CLIP, UNIV_FAR_CLIP, 1.0, 1);
+			//player_pdu.valid = 0; // for debugging - very slow
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			vector3d const eye(camera_pos - 0.001*cview_dir);
-			fgLookAt(eye.x, eye.y, eye.z, camera_pdu.pos.x, camera_pdu.pos.y, camera_pdu.pos.z, up_vector.x, up_vector.y, up_vector.z);
+			vector3d const eye(camera_pos - 0.001*view_dir);
+			fgLookAt(eye.x, eye.y, eye.z, camera_pos.x, camera_pos.y, camera_pos.z, up.x, up.y, up.z);
 			draw_universe_all(1, 0, 1, 0, 0, 1);
 			render_to_texture_cube_map(univ_reflection_tid, tex_size, face_id); // render reflection to texture
 		} // for dir
 	} // for dim
 	gen_mipmaps(6); // optional?
-	camera_pdu = prev_camera_pdu;
-	up_vector  = prev_up_vector;
-	cview_dir  = pre_ref_cview_dir;
+	player_pdu = prev_player_pdu; // restore prev value
 	restore_scene_state();
 	check_gl_error(541);
 }

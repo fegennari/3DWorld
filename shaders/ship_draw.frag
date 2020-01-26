@@ -69,7 +69,8 @@ void main()
 	vec3 reflect_w  = vec3(0.5); // 50% reflective
 	//vec3 ref_dir    = (vpos - cube_map_center) + cube_map_near_clip*reflect(-view_dir, normalize(ws_normal)); // position offset within cube (approx.)
 	vec3 ref_dir    = reflect(-view_dir, normalize(ws_normal));
-	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
+	//color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
+	color.rgb       = texture(reflection_tex, ref_dir).rgb; // for debugging
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly
