@@ -305,8 +305,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			pos.z = c->z1() + radius + xlate.z; // stand on the stair - this can happen for multiple stairs
 			obj_z = max(pos.z, p_last.z);
 			bool const dim(c->dx() < c->dy());
-			max_eq(pos[dim], (c->d[dim][0] + radius - xlate[dim])); // force the sphere onto the stairs
-			min_eq(pos[dim], (c->d[dim][1] - radius - xlate[dim]));
+			max_eq(pos[dim], (c->d[dim][0] + radius + xlate[dim])); // force the sphere onto the stairs
+			min_eq(pos[dim], (c->d[dim][1] - radius + xlate[dim]));
 			had_coll = on_stairs = 1;
 		} // for c
 		// check for other objects to collide with
