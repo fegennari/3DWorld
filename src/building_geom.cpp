@@ -299,15 +299,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for and handle stairs first
 			if (c->no_coll() || c->type != TYPE_STAIR) continue;
-			if (!c->contains_pt_xy(rel_pos)) continue; // sphere not on this stair
-			if (fabs((obj_z - radius) - c->z1() + xlate.z) > 2.0*c->dz()) continue; // wrong floor
-			pos.z = c->z1() + radius + xlate.z; // stand on the stair
+			if (!c->contains_pt_xy(rel_pos))           continue; // sphere not on this stair
+			if (obj_z - xlate.z < c->z1())             continue; // below the stair
+			if (pos.z - xlate.z - radius > c->z1())    continue; // above the stair
+			pos.z = c->z1() + radius + xlate.z; // stand on the stair - this can happen for multiple stairs
 			obj_z = max(pos.z, p_last.z);
-			had_coll = on_stairs = 1;
 			bool const dim(c->dx() < c->dy());
-			max_eq(pos[dim], (c->d[dim][0] + radius - xlate[dim])); // force the shere onto the stairs
+			max_eq(pos[dim], (c->d[dim][0] + radius - xlate[dim])); // force the sphere onto the stairs
 			min_eq(pos[dim], (c->d[dim][1] - radius - xlate[dim]));
-		}
+			had_coll = on_stairs = 1;
+		} // for c
 		// check for other objects to collide with
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
 			if (c->no_coll()) continue;
