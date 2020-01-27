@@ -1779,8 +1779,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it
 		// Note: parts are sorted top to bottom, so any part above <part> should be before it in parts - but we don't want to rely on that here;
 		// however, this does mean that the part above this one has already been processed
-		float const stairs_len(4.0*doorway_width), stairs_width(1.2*doorway_width); // relatively small
-		float const stairs_pad(1.0*doorway_width); // pad applied to both ends of stairs to make sure the player has space to enter and exit
+		float const stairs_len(3.0*doorway_width), stairs_width(1.0*doorway_width); // relatively small
+		float const stairs_pad(0.7*doorway_width), len_with_pad(stairs_len + 2.0*stairs_pad); // pad both ends of stairs to make sure player has space to enter/exit
 
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			if (*p == part) continue; // skip self
@@ -1788,7 +1788,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (!part.intersects_xy(*p)) continue; // no XY overlap
 			cube_t shared(part);
 			shared.intersect_with_cube(*p); // dz() == 0
-			if (min(shared.dx(), shared.dy()) < 1.5*stairs_len) continue; // too small to add stairs between these parts
+			if (max(shared.dx(), shared.dy()) < 1.5*len_with_pad || min(shared.dx(), shared.dy()) < 2.0*stairs_width) continue; // too small to add stairs between these parts
 			// place stairs in shared area if there's space and no walls are in the way for either the room or above
 			cube_t cand;
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
@@ -1797,18 +1797,18 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			for (unsigned n = 0; n < 100; ++n) { // make 100 tries to add stairs
-				bool const dim(rgen.rand_bool());
+				bool dim(rgen.rand_bool());
+				if (shared.get_sz_dim(dim) < 1.5*len_with_pad) {dim ^= 1;} // too narrow in this dim, try other dim
 
 				for (unsigned d = 0; d < 2; ++d) {
-					float const stairs_sz((bool(d) == dim) ? stairs_len : stairs_width);
+					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
 					cand.d[d][0] = rgen.rand_uniform(shared.d[d][0], (shared.d[d][1] - stairs_sz)); // LLC
 					cand.d[d][1] = cand.d[d][0] + stairs_sz; // URC
 				}
 				cube_t cand_test(cand);
-				cand_test.d[0][dim] -= stairs_pad; cand_test.d[1][dim] += stairs_pad; // extend by padding
-				if (is_cube_close_to_doorway(cand_test)) continue; // bad
-				if (interior->is_blocked_by_stairs_or_elevator(cand_test, doorway_width)) continue; // bad
 				cand_test.z1() += 0.5*window_vspacing; cand_test.z2() += 0.5*window_vspacing; // move up a bit so that it intersects exactly the floor below and the floor above
+				if (is_cube_close_to_doorway(cand_test, stairs_pad)) continue; // bad
+				if (interior->is_blocked_by_stairs_or_elevator(cand_test, doorway_width)) continue; // bad
 				stairs_added = 1;
 
 				// check if any previously placed walls intersect this cand stairs; we really only need to check the walls from <part> and *p though
@@ -1816,6 +1816,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					if (has_bcube_int(cand_test, interior->walls[d])) {stairs_added = 0; break;}
 				}
 				if (!stairs_added) continue; // bad
+				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
 				landing_t landing(cand);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
