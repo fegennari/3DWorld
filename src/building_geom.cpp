@@ -1831,6 +1831,18 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	}
 }
 
+bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, cube_t out[4]) const {
+	if (!interior) return 0;
+	
+	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+		if (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2()) continue; // not correct floor
+		if (!c.contains_cube_xy_no_adj(*s)) continue; // can't subtract from this cube
+		subtract_cube_xy(c, *s, out);
+		return 1; // FIXME: test out against remaining stairwells
+	}
+	return 0;
+}
+
 void building_t::add_room(cube_t const &room, unsigned part_id) {
 	assert(interior);
 	room_t r(room, part_id);

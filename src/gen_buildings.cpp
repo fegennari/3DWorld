@@ -1013,11 +1013,23 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 			bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY
-			bool const skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
+			bool skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
 			bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
+
+			if (!is_house && !skip_top && interior) {
+				cube_t out[4];
+
+				if (clip_part_ceiling_for_stairs(*i, out)) {
+					for (unsigned n = 0; n < 4; ++n) { // add top roof for these 4 sub-parts
+						bdraw.add_section(*this, parts, out[n], bcube, ao_bcz2, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
+					}
+					skip_top = 1;
+					if (is_stacked) continue; // no top/bottom to draw
+				}
+			}
 			bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
-		}
+		} // for i
 		ext_side_qv_range.end = bdraw.get_num_verts(mat.side_tex);
 
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
