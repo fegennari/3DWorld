@@ -1577,6 +1577,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			} // for nsplits
 		} // for w
 	} // for d
+
+	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
+	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 	interior->finalize();
 }
 
@@ -1699,7 +1702,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
 	cube_t C(part);
 	C.z1() = z; C.z2() = z + fc_thick;
-	unsigned const floors_start(interior->floors.size()), ceilings_start(interior->ceilings.size());
+	unsigned const floors_start(interior->floors.size());
 	interior->floors.push_back(C); // ground floor, full area
 	z += window_vspacing; // move to next floor
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
@@ -1748,15 +1751,35 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	C.z1() = z - fc_thick; C.z2() = z;
 	interior->ceilings.push_back(C); // roof ceiling, full area
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
+}
 
-	// add stairs to connect together stacked parts for office buildings
+bool subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
+	unsigned const fsz(fs.size()); // capture orig size
+
+	for (unsigned i = 0; i < fsz; ++i) {
+		cube_t &cur(fs[i]);
+		if (cur.z1() > c.z2() || cur.z2() < c.z1()) continue; // no z overlap
+		if (!cur.contains_cube_xy_no_adj(c)) continue; // can't subtract from this cube
+		cube_t to_add[4];
+		subtract_cube_xy(cur, c, to_add);
+		cur = to_add[0];
+		assert(cur.is_strictly_normalized()); // first cube must be valid
+		for (unsigned j = 1; j < 4; ++j) {if (to_add[j].is_strictly_normalized()) {fs.push_back(to_add[j]);}} // add remaining cube parts
+		return 1; // can only have one containing cube
+	} // for i
+	return 0;
+}
+
+void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) {
+
+	float const window_vspacing(get_material().get_floor_spacing()), fc_thick(0.5*FLOOR_THICK_VAL*window_vspacing), doorway_width(0.5*window_vspacing);
+
 	// TODO_INT: should we prefer to connect to the hallway if use_hallway?
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it
 		// Note: parts are sorted top to bottom, so any part above <part> should be before it in parts - but we don't want to rely on that here;
 		// however, this does mean that the part above this one has already been processed
 		float const stairs_len(4.0*doorway_width), stairs_width(1.2*doorway_width); // relatively small
 		float const stairs_pad(1.0*doorway_width); // pad applied to both ends of stairs to make sure the player has space to enter and exit
-		unsigned const ceilings_end(interior->ceilings.size());
 
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			if (*p == part) continue; // skip self
@@ -1797,13 +1820,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				interior->landings.push_back(landing);
 				interior->stairwells.push_back(cand);
 				// TODO_INT: requires cutting out holes in top side of <part> and bottom side of *p somehow
-
-				for (unsigned i = 0; i < floors_start; ++i) { // remove cand from prev part's floor
-					// TODO
-				}
-				for (unsigned i = ceilings_start; i < ceilings_end; ++i) { // remove cand from this part's ceiling
-					// TODO
-				}
+				// attempt to cut holes in ceiling of this part and floor of above part
+				subtract_cube_from_floor_ceil(cand, interior->floors);
+				subtract_cube_from_floor_ceil(cand, interior->ceilings);
 				break; // success
 			} // for n
 		} // for p
