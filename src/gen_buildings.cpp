@@ -604,6 +604,8 @@ class building_draw_t {
 
 public:
 	unsigned cur_tile_id;
+	vect_cube_t temp_cubes, temp_cubes2;
+
 	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_), cur_tile_id(0) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
@@ -1018,11 +1020,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
 
 			if (!is_house && !skip_top && interior) {
-				cube_t out[4];
-
-				if (clip_part_ceiling_for_stairs(*i, out)) {
-					for (unsigned n = 0; n < 4; ++n) { // add top roof for these 4 sub-parts
-						bdraw.add_section(*this, parts, out[n], bcube, ao_bcz2, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
+				if (clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
+					for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
+						bdraw.add_section(*this, parts, *c, bcube, ao_bcz2, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
 					}
 					skip_top = 1;
 					if (is_stacked) continue; // no top/bottom to draw

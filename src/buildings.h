@@ -362,7 +362,7 @@ private:
 	cube_t get_part_containing_pt(point const &pt) const;
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
-	bool clip_part_ceiling_for_stairs(cube_t const &c, cube_t out[4]) const;
+	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
 	void add_room(cube_t const &room, unsigned part_id);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

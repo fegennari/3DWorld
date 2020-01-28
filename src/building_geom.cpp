@@ -621,8 +621,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			adjust_part_zvals_for_floor_spacing(bc);
 			bool valid(0);
 
-			// make 100 attempts to generate a cube that isn't contained in any existing cubes; most of the time should pass the first time, so it should never actually fail
-			for (unsigned n = 0; n < 100; ++n) {
+			// make 200 attempts to generate a cube that isn't contained in any existing cubes; most of the time should pass the first time, so it should rarely fail
+			for (unsigned n = 0; n < 200; ++n) {
 				for (unsigned d = 0; d < 2; ++d) { // x,y
 					float const mv_lo(rgen.rand_uniform(-0.2, 0.45)), mv_hi(rgen.rand_uniform(-0.2, 0.45));
 					if (mv_lo > 0.0) {bc.d[d][0] = base.d[d][0] + max(abs_min_edge_move, mv_lo*sz[d]);}
@@ -1295,10 +1295,10 @@ unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thi
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out) { // subtract r from c; ignores zvals
 	assert(c.contains_cube_xy(r));
 	for (unsigned i = 0; i < 4; ++i) {out[i] = c;}
-	out[0].y2() = r.y1();
-	out[1].y1() = r.y2();
-	out[2].y1() = r.y1(); out[2].y2() = r.y2(); out[2].x2() = r.x1();
-	out[3].y1() = r.y1(); out[3].y2() = r.y2(); out[3].x1() = r.x2();
+	out[0].y2() = r.y1(); // bottom
+	out[1].y1() = r.y2(); // top
+	out[2].y1() = r.y1(); out[2].y2() = r.y2(); out[2].x2() = r.x1(); // left center
+	out[3].y1() = r.y1(); out[3].y2() = r.y2(); out[3].x1() = r.x2(); // right center
 }
 
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
@@ -1831,16 +1831,31 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	}
 }
 
-bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, cube_t out[4]) const {
-	if (!interior) return 0;
-	
-	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2) {
+	out.clear();
+	out.push_back(c);
+	cube_t C;
+
+	for (auto s = sub.begin(); s != sub.end(); ++s) {
 		if (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2()) continue; // not correct floor
-		if (!c.contains_cube_xy_no_adj(*s)) continue; // can't subtract from this cube
-		subtract_cube_xy(c, *s, out);
-		return 1; // FIXME: test out against remaining stairwells
-	}
-	return 0;
+		if (!c.intersects_xy(c)) continue; // no overlap with orig cube (optimization)
+		out2.clear();
+
+		// clip all of out against *s, write results to out2, then swap with out
+		for (auto i = out.begin(); i != out.end(); ++i) {
+			if (!i->intersects_xy(*s)) {out2.push_back(*i); continue;} // no overlap, keep entire cube
+			if (i->y1() < s->y1()) {C = *i; C.y2() = s->y1(); out2.push_back(C);} // bottom
+			if (i->y2() > s->y2()) {C = *i; C.y1() = s->y2(); out2.push_back(C);} // top
+			if (i->x1() < s->x1()) {C = *i; max_eq(C.y1(), s->y1()); min_eq(C.y2(), s->y2()); C.x2() = s->x1(); out2.push_back(C);} // left center
+			if (i->x2() > s->x2()) {C = *i; max_eq(C.y1(), s->y1()); min_eq(C.y2(), s->y2()); C.x1() = s->x2(); out2.push_back(C);} // right center
+		} // for i
+		out.swap(out2);
+	} // for s
+}
+bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const {
+	if (!interior || interior->stairwells.empty()) return 0;
+	subtract_cubes_from_cube(c, interior->stairwells, out, temp);
+	return 1;
 }
 
 void building_t::add_room(cube_t const &room, unsigned part_id) {
