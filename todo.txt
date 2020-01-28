@@ -14,7 +14,6 @@ Cities:
 * Planet water reflection map
 
 * Building interiors:
-  * Connect stacked building parts with stairs
   * More hallways for office buildings
   * Place more room objects/furniture
   - Working elevators
