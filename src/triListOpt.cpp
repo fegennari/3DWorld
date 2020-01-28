@@ -36,6 +36,7 @@ namespace TriListOpt
 		//
 		std::vector<VertData> vertexData(numVerts);
 		std::vector<TriData> triangleData(NumPrimitives);
+		std::vector<U32> trisToUpdate;
 
 		U32 curIdx = 0;
 		for(U32 tri = 0; tri < NumPrimitives; tri++)
@@ -158,7 +159,6 @@ namespace TriListOpt
 			// Enforce cache size, this will update the cache position of all verts
 			// still in the cache. It will also update the score of the verts in the
 			// cache, and give back a list of triangle indicies that need updating.
-			std::vector<U32> trisToUpdate;
 			lruCache.enforceSize(MaxSizeVertexCache, trisToUpdate);
 
 			// Now update scores for triangles that need updates, and find the new best

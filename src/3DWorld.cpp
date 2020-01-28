@@ -1981,7 +1981,7 @@ int load_config(string const &config_file) {
 			else team_starts.push_back(bb);
 		}
 		else if (str == "vertex_optimize_flags") {
-			for (unsigned i = 0; i < 3; ++i) {
+			for (unsigned i = 0; i < 3; ++i) { // {enable, full_opt, verbose}
 				if (!read_bool(fp, vert_opt_flags[i])) cfg_err("vertex_optimize_flags command", error);
 			}
 		}
