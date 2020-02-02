@@ -1064,7 +1064,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		}
 		// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
 		for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
-			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
+			if (i->for_elevator) {dim_mask |= (120 - (1 << (i->get_face_id() + 3)));} // disable all but the open side of the elevator
+			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
 		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 			bool const dim(i->dim), dir(i->dir);

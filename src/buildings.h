@@ -260,9 +260,10 @@ struct room_t : public cube_t {
 };
 
 struct landing_t : public cube_t {
-	bool for_elevator;
-	landing_t() : for_elevator(0) {}
-	landing_t(cube_t const &c, bool e=0) : cube_t(c), for_elevator(e) {}
+	bool for_elevator, dim, dir;
+	landing_t() : for_elevator(0), dim(0), dir(0) {}
+	landing_t(cube_t const &c, bool e, bool dim_, bool dir_) : cube_t(c), for_elevator(e), dim(dim_), dir(dir_) {}
+	unsigned get_face_id() const {return (2*dim + dir);}
 };
 
 // may as well make this its own class, since it could get large and it won't be used for every building

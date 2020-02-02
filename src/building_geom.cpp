@@ -1730,13 +1730,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				assert(found);
 			}
 			if (has_stairs) { // add landings and stairwells
-				landing_t landing(stairs_cut, 0);
+				landing_t landing(stairs_cut, 0, stairs_dim, 0); // dir is unused and has been set to 0
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
 				if (f == 1) {interior->stairwells.push_back(stairs_cut);} // only add for first floor
 			}
 			if (has_elevator) {
-				landing_t landing(elevator_cut, 1);
+				assert(!interior->elevators.empty());
+				landing_t landing(elevator_cut, 1, interior->elevators.back().dim, interior->elevators.back().dir);
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
 			}
@@ -1866,7 +1867,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_test.z1() += 0.5*window_vspacing; cand_test.z2() += 0.5*window_vspacing; // move up a bit so that it intersects exactly the floor below and the floor above
 				if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, stairs_pad)) continue; // bad placement
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
-				landing_t landing(cand);
+				landing_t landing(cand, 0, dim, 0); // dir is unused and set to 0
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.push_back(cand);
@@ -1899,7 +1900,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			subtract_cube_from_cubes(extension, interior->floors, &holes); // capture holes from floors
 			
 			for (auto h = holes.begin(); h != holes.end(); ++h) {
-				landing_t landing(*h, 1);
+				landing_t landing(*h, 1, e->dim, e->dir);
 				landing.z1() -= fc_thick; // since we only captured floor cutouts, extend them downward to include the ceiling below
 				interior->landings.push_back(landing);
 			}
