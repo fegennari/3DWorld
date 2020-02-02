@@ -362,6 +362,7 @@ private:
 	cube_t get_part_containing_pt(point const &pt) const;
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
+	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
 	void add_room(cube_t const &room, unsigned part_id);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
@@ -400,7 +401,7 @@ inline void clip_low_high(float &t0, float &t1) {
 
 template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-		if (c->intersects(bcube)) return 1; // intersection
+		if (c->intersects(bcube)) return 1; // intersects_no_adj(bcube)?
 	}
 	return 0;
 }

@@ -1771,6 +1771,17 @@ bool subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	return 0;
 }
 
+bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const {
+	if (is_cube_close_to_doorway(c, stairs_pad)) return 0; // bad
+	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
+
+	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
+	for (unsigned d = 0; d < 2; ++d) {
+		if (has_bcube_int(c, interior->walls[d])) return 0;
+	}
+	return 1;
+}
+
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) {
 
 	float const window_vspacing(get_material().get_floor_spacing()), fc_thick(0.5*FLOOR_THICK_VAL*window_vspacing);
@@ -1812,21 +1823,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 				cube_t cand_test(cand);
 				cand_test.z1() += 0.5*window_vspacing; cand_test.z2() += 0.5*window_vspacing; // move up a bit so that it intersects exactly the floor below and the floor above
-				if (is_cube_close_to_doorway(cand_test, stairs_pad)) continue; // bad
-				if (interior->is_blocked_by_stairs_or_elevator(cand_test, doorway_width)) continue; // bad
-				stairs_added = 1;
-
-				// check if any previously placed walls intersect this cand stairs; we really only need to check the walls from <part> and *p though
-				for (unsigned d = 0; d < 2; ++d) {
-					if (has_bcube_int(cand_test, interior->walls[d])) {stairs_added = 0; break;}
-				}
-				if (!stairs_added) continue; // bad
+				if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, stairs_pad)) continue; // bad placement
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
 				landing_t landing(cand);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.push_back(cand);
-				// TODO_INT: requires cutting out holes in top side of <part> and bottom side of *p somehow
 				// attempt to cut holes in ceiling of this part and floor of above part
 				subtract_cube_from_floor_ceil(cand, interior->floors);
 				subtract_cube_from_floor_ceil(cand, interior->ceilings);
@@ -1834,9 +1836,26 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			} // for n
 		} // for p
 	}
+
+	// now attempt to extend elevators into floors above/below
+	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find parts above/below this elevator
+			if (!p->contains_cube_xy(*e)) continue; // elevator doesn't extend inside this cube
+			bool const is_above(p->z1() == e->z2()), is_below(p->z2() == e->z1());
+			if (!is_above && !is_below) continue;
+			cube_t extension(*e);
+			extension.z1() = p->z1(); extension.z2() = p->z2();
+			cube_t cand_test(extension);
+			cand_test.z1() += fc_thick; cand_test.z2() -= fc_thick; // shrink slightly in Z so that we don't intersect the original elevator *e
+			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
+			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, doorway_width)) continue; // bad placement
+			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
+			// TODO_INT: cut holes in the ceilings and floors of *p for this elevator
+		} // for p
+	} // for e
 }
 
-void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2) {
+void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2) { // XY only
 	out.clear();
 	out.push_back(c);
 	cube_t C;
@@ -2219,7 +2238,9 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
-	return (has_bcube_int(tc, stairwells) || has_bcube_int(tc, elevators)); // must check zval to exclude stairs and elevators in parts with other z-ranges
+	if (has_bcube_int(tc, elevators)) return 1;
+	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
+	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
 bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
 	cube_t place_area(room);
