@@ -1782,6 +1782,47 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_
 	return 1;
 }
 
+void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out) {
+	cube_t C;
+	if (c.y1() < s.y1()) {C = c; C.y2() = s.y1(); out.push_back(C);} // bottom
+	if (c.y2() > s.y2()) {C = c; C.y1() = s.y2(); out.push_back(C);} // top
+	if (c.x1() < s.x1()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x2() = s.x1(); out.push_back(C);} // left center
+	if (c.x2() > s.x2()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x1() = s.x2(); out.push_back(C);} // right center
+}
+template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2) { // XY only
+	out.clear();
+	out.push_back(c);
+
+	for (auto s = sub.begin(); s != sub.end(); ++s) {
+		if (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2()) continue; // not correct floor
+		if (!c.intersects_xy(c)) continue; // no overlap with orig cube (optimization)
+		out2.clear();
+
+		// clip all of out against *s, write results to out2, then swap with out
+		for (auto i = out.begin(); i != out.end(); ++i) {
+			if (!i->intersects_xy(*s)) {out2.push_back(*i); continue;} // no overlap, keep entire cube
+			subtract_cube_from_cube(*i, *s, out2);
+		}
+		out.swap(out2);
+	} // for s
+}
+void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr) {
+	unsigned const num_cubes(cubes.size()); // capture size before splitting
+
+	for (unsigned i = 0; i < num_cubes; ++i) {
+		cube_t const c(cubes[i]); // deep copy before invalidating the reference
+		if (!cubes[i].intersects(s)) continue; // keep it
+		if (holes) {holes->push_back(c); holes->back().intersect_with_cube(s);}
+		unsigned const prev_sz(cubes.size());
+		subtract_cube_from_cube(c, s, cubes);
+		assert(cubes.size() > prev_sz); // must have added at least one cube
+		cubes[i] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes
+	}
+}
+template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes) {
+	for (auto i = sub.begin(); i != sub.end(); ++i) {subtract_cube_from_cubes(*i, cubes);}
+}
+
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) {
 
 	float const window_vspacing(get_material().get_floor_spacing()), fc_thick(0.5*FLOOR_THICK_VAL*window_vspacing);
@@ -1838,6 +1879,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	}
 
 	// now attempt to extend elevators into floors above/below
+	vect_cube_t holes;
+
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find parts above/below this elevator
 			if (!p->contains_cube_xy(*e)) continue; // elevator doesn't extend inside this cube
@@ -1850,35 +1893,28 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
 			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, doorway_width)) continue; // bad placement
 			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
-			// TODO_INT: cut holes in the ceilings and floors of *p for this elevator
+			extension.z1() -= fc_thick; extension.z2() += fc_thick; // also cut a hole in the lower ceiling/upper floor
+			holes.clear();
+			subtract_cube_from_cubes(extension, interior->ceilings);
+			subtract_cube_from_cubes(extension, interior->floors, &holes); // capture holes from floors
+			
+			for (auto h = holes.begin(); h != holes.end(); ++h) {
+				landing_t landing(*h, 1);
+				landing.z1() -= fc_thick; // since we only captured floor cutouts, extend them downward to include the ceiling below
+				interior->landings.push_back(landing);
+			}
 		} // for p
 	} // for e
 }
 
-void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2) { // XY only
-	out.clear();
-	out.push_back(c);
-	cube_t C;
-
-	for (auto s = sub.begin(); s != sub.end(); ++s) {
-		if (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2()) continue; // not correct floor
-		if (!c.intersects_xy(c)) continue; // no overlap with orig cube (optimization)
-		out2.clear();
-
-		// clip all of out against *s, write results to out2, then swap with out
-		for (auto i = out.begin(); i != out.end(); ++i) {
-			if (!i->intersects_xy(*s)) {out2.push_back(*i); continue;} // no overlap, keep entire cube
-			if (i->y1() < s->y1()) {C = *i; C.y2() = s->y1(); out2.push_back(C);} // bottom
-			if (i->y2() > s->y2()) {C = *i; C.y1() = s->y2(); out2.push_back(C);} // top
-			if (i->x1() < s->x1()) {C = *i; max_eq(C.y1(), s->y1()); min_eq(C.y2(), s->y2()); C.x2() = s->x1(); out2.push_back(C);} // left center
-			if (i->x2() > s->x2()) {C = *i; max_eq(C.y1(), s->y1()); min_eq(C.y2(), s->y2()); C.x1() = s->x2(); out2.push_back(C);} // right center
-		} // for i
-		out.swap(out2);
-	} // for s
-}
 bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const {
 	if (!interior || interior->stairwells.empty()) return 0;
 	subtract_cubes_from_cube(c, interior->stairwells, out, temp);
+
+	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) { // handle elevators that span multiple parts
+		if (e->z2() == c.z2()) continue; // don't cut a hole in the roof of the building where the top of the elevator shaft ends
+		subtract_cube_from_cubes(*e, out);
+	}
 	return 1;
 }
 
