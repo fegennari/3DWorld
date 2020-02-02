@@ -2046,9 +2046,18 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 						hall_light.translate_dim(delta, light_dim);
 
 						if (check_stairs) { // keep moving until not blocked by stairs
-							for (unsigned n = 0; n < 40 && has_bcube_int_exp(hall_light, interior->stairwells, fc_thick); ++n) {
-								hall_light.translate_dim(0.02*delta, light_dim);
+							cube_t const hall_light_start(hall_light);
+							bool is_valid(0);
+
+							for (unsigned shift_dir = 0; shift_dir < 2 && !is_valid; ++shift_dir) {
+								hall_light = hall_light_start;
+
+								for (unsigned n = 0; n < 40; ++n) {
+									if (!has_bcube_int_exp(hall_light, interior->stairwells, fc_thick)) {is_valid = 1; break;}
+									hall_light.translate_dim(0.02*delta*(shift_dir ? -1.0 : 1.0), light_dim);
+								}
 							}
+							if (!is_valid) continue; // skip adding this light
 						}
 						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape); // dir=0 (unused)
 					} // for d
@@ -2113,6 +2122,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
+			// TODO_INT: what about stairs that connect stacked parts?
 			if (r->contains_pt(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
 		}
 		/*for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) { // efficient but lower quality
