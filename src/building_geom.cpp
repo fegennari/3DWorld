@@ -1755,23 +1755,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }
 
-bool subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
-	unsigned const fsz(fs.size()); // capture orig size
-
-	for (unsigned i = 0; i < fsz; ++i) {
-		cube_t &cur(fs[i]);
-		if (cur.z1() > c.z2() || cur.z2() < c.z1()) continue; // no z overlap
-		if (!cur.contains_cube_xy_no_adj(c)) continue; // can't subtract from this cube
-		cube_t to_add[4];
-		subtract_cube_xy(cur, c, to_add);
-		cur = to_add[0];
-		assert(cur.is_strictly_normalized()); // first cube must be valid
-		for (unsigned j = 1; j < 4; ++j) {if (to_add[j].is_strictly_normalized()) {fs.push_back(to_add[j]);}} // add remaining cube parts
-		return 1; // can only have one containing cube
-	} // for i
-	return 0;
-}
-
 bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const {
 	if (is_cube_close_to_doorway(c, stairs_pad)) return 0; // bad
 	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
@@ -1789,6 +1772,14 @@ void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out)
 	if (c.y2() > s.y2()) {C = c; C.y1() = s.y2(); out.push_back(C);} // top
 	if (c.x1() < s.x1()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x2() = s.x1(); out.push_back(C);} // left center
 	if (c.x2() > s.x2()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x1() = s.x2(); out.push_back(C);} // right center
+}
+void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned ix) { // Note: ix is an index to cubes
+	unsigned const prev_sz(cubes.size());
+	assert(ix < prev_sz);
+	cube_t const c(cubes[ix]); // deep copy - reference will become invalid
+	subtract_cube_from_cube(c, s, cubes);
+	assert(cubes.size() > prev_sz); // must have added at least one cube
+	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes
 }
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2) { // XY only
 	out.clear();
@@ -1811,17 +1802,24 @@ void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 	unsigned const num_cubes(cubes.size()); // capture size before splitting
 
 	for (unsigned i = 0; i < num_cubes; ++i) {
-		cube_t const c(cubes[i]); // deep copy before invalidating the reference
-		if (!cubes[i].intersects(s)) continue; // keep it
+		cube_t const &c(cubes[i]);
+		if (!c.intersects(s)) continue; // keep it
 		if (holes) {holes->push_back(c); holes->back().intersect_with_cube(s);}
-		unsigned const prev_sz(cubes.size());
-		subtract_cube_from_cube(c, s, cubes);
-		assert(cubes.size() > prev_sz); // must have added at least one cube
-		cubes[i] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes
+		subtract_cube_from_cube_inplace(s, cubes, i); // Note: invalidates c reference
 	}
 }
 template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes) {
 	for (auto i = sub.begin(); i != sub.end(); ++i) {subtract_cube_from_cubes(*i, cubes);}
+}
+
+void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
+	unsigned const fsz(fs.size()); // capture orig size
+
+	for (unsigned i = 0; i < fsz; ++i) {
+		cube_t const &cur(fs[i]);
+		if (cur.z1() > c.z2() || cur.z2() < c.z1()) continue; // no z overlap
+		if (cur.intersects(c)) {subtract_cube_from_cube_inplace(c, fs, i);} // Note: invalidates cur reference
+	}
 }
 
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) {
