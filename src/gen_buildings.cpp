@@ -1707,6 +1707,29 @@ public:
 		}
 		build_grid_by_tile(is_tile);
 		create_vbos(is_tile);
+	} // end gen()
+
+	bool place_people(vector<point> &locs, float radius, unsigned num) const {
+		assert(locs.empty());
+		if (num == 0 || empty() || !ADD_BUILDING_INTERIORS) return 0; // no people, buildings, or interiors
+		vector<unsigned> cand_buildings;
+
+		for (unsigned i = 0; i < buildings.size(); ++i) {
+			building_t const &b(buildings[i]);
+			if (!b.interior) continue;
+			unsigned const num_add(b.is_house ? 1 : 2); // two chances for office building compare to house (could vary by size/num_floors as well)
+			for (unsigned n = 0; n < num_add; ++n) {cand_buildings.push_back(i);}
+		}
+		if (cand_buildings.empty()) return 0; // no interiors
+		locs.reserve(num);
+		rand_gen_t rgen;
+
+		for (unsigned n = 0; n < num; ++n) {
+			point ppos;
+			unsigned const bix(cand_buildings[rgen.rand() % cand_buildings.size()]);
+			if (buildings[bix].place_person(ppos, radius, rgen)) {locs.push_back(ppos);}
+		}
+		return !locs.empty();
 	}
 
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
@@ -2538,4 +2561,5 @@ bool check_line_coll_building(point const &p1, point const &p2, unsigned buildin
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
+bool place_building_people(vector<point> &locs, float radius, unsigned num) {return building_creator.place_people(locs, radius, num);} // secondary buildings only for now
 
