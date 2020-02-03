@@ -2497,6 +2497,10 @@ void building_room_geom_t::create_vbos() {
 		case TYPE_STAIR: add_stair(*i, tscale); break;
 		case TYPE_ELEVATOR: add_elevator(*i, tscale); break;
 		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
+		case TYPE_BOOK:  assert(0); break; // book - WRITE
+		case TYPE_BCASE: assert(0); break; // bookcase - WRITE
+		case TYPE_DESK:  assert(0); break; // desk - WRITE
+		case TYPE_TCAN:  assert(0); break; // trashcan - WRITE
 		default: assert(0); // undefined type
 		}
 	} // for i
