@@ -2039,6 +2039,8 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				if (r->is_hallway) { // place a light on each side of the stairs, and also between stairs and elevator if there are both
 					unsigned const num_lights((r->has_elevator && r->has_stairs) ? 3 : 2);
 					float const offset(((num_lights == 3) ? 0.3 : 0.2)*r->get_sz_dim(light_dim)); // closer to the ends in the 3 lights case
+					cube_t valid_bounds(*r);
+					valid_bounds.expand_by_xy(-0.1*window_vspacing); // add some padding
 
 					for (unsigned d = 0; d < num_lights; ++d) {
 						float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
@@ -2054,9 +2056,10 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 
 								for (unsigned n = 0; n < 40; ++n) {
 									if (!has_bcube_int_exp(hall_light, interior->stairwells, fc_thick)) {is_valid = 1; break;}
-									hall_light.translate_dim(0.02*delta*(shift_dir ? -1.0 : 1.0), light_dim);
+									hall_light.translate_dim(0.04*delta*(shift_dir ? -1.0 : 1.0), light_dim);
+									if (!valid_bounds.contains_cube_xy(hall_light)) break; // translated outside the hall, give up
 								}
-							}
+							} // for shift_dir
 							if (!is_valid) continue; // skip adding this light
 						}
 						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape); // dir=0 (unused)
