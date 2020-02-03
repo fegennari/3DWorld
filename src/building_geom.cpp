@@ -2131,12 +2131,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
-			// TODO_INT: what about stairs that connect stacked parts?
+			// TODO_INT: what about stairs that connect stacked parts? these rooms aren't flagges with has_stairs because stairs only connect to the bottom floor
 			if (r->contains_pt(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
 		}
-		/*for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) { // efficient but lower quality
-			if (s->contains_pt(camera_bs)) {camera_by_stairs = 1; break;}
-		}*/
 	}
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
@@ -2150,8 +2147,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		room_t const &room(interior->rooms[i->room_id]);
 		
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
-			if (camera_in_building && room.part_id == camera_part) {
-				// player is on a different floor of the same building part and can't see a light from the floor above/below
+			if (camera_in_building && room.part_id == camera_part ||
+				(room.contains_pt_xy(camera_bs) && camera_z < ceil_z+window_vspacing && camera_z > floor_z-window_vspacing))
+			{
+				// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
 				if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
 				if (camera_z < (i->z2() - 2.0*window_vspacing) || camera_z > (i->z2() + window_vspacing)) continue; // light is on the stairs, add if one floor above/below
 			}
@@ -2159,7 +2158,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				float const xy_dist(p2p_dist_xy(camera_bs, lpos));
 				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist)) continue; // light viewed at too high an angle
 				
-				if (camera_in_building) { // camera and light are in different buildings
+				if (camera_in_building) { // camera and light are in different buildings/parts
 					// is it better to check if light half sphere is occluded by the floor above/below?
 					assert(room.part_id < parts.size());
 					cube_t const &part(parts[room.part_id]);
