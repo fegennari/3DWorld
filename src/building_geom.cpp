@@ -1428,6 +1428,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
 			add_room(hall, part_id); // add hallway as room
+			if (p->z1() == bcube.z1() || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			interior->rooms.back().is_hallway = interior->rooms.back().no_geom = 1;
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		}
@@ -1827,7 +1828,6 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	float const window_vspacing(get_material().get_floor_spacing()), fc_thick(0.5*FLOOR_THICK_VAL*window_vspacing);
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 
-	// TODO_INT: should we prefer to connect to the hallway if use_hallway?
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			if (*p == part) continue; // skip self
@@ -1835,11 +1835,17 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (!part.intersects_xy(*p)) continue; // no XY overlap
 			cube_t shared(part);
 			shared.intersect_with_cube(*p); // dz() == 0
+			cube_t pref_shared(shared);
 			// Note: parts are sorted top to bottom, so any part above <part> should be before it in parts - but we don't want to rely on that here;
 			// however, this does mean that the part above this one has already been processed
 			float stairs_width(1.2*doorway_width); // relatively small
 			float stairs_pad(1.0*doorway_width), len_with_pad(stairs_len + 2.0*stairs_pad); // pad both ends of stairs to make sure player has space to enter/exit
 			if (max(shared.dx(), shared.dy()) < 1.5*len_with_pad || min(shared.dx(), shared.dy()) < 2.0*stairs_width) continue; // too small to add stairs between these parts
+
+			if (!pri_hall.is_all_zeros() && part.contains_cube(pri_hall) && pri_hall.intersects_xy(shared)) { // have a primary hallway in this part
+				pref_shared.intersect_with_cube(pri_hall);
+				if (max(pref_shared.dx(), pref_shared.dy()) < 1.5*len_with_pad || min(pref_shared.dx(), pref_shared.dy()) < 2.0*stairs_width) {pref_shared = shared;} // too small
+			}
 			// place stairs in shared area if there's space and no walls are in the way for either the room or above
 			cube_t cand;
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
@@ -1848,17 +1854,19 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			for (unsigned n = 0; n < 100; ++n) { // make 100 tries to add stairs
+				cube_t place_region((n < 10) ? pref_shared : shared); // use preferred shared area from primary hallway for first 10 iterations
+
 				if (n > 0 && n%10 == 0) { // decrease stairs size slightly every 10 iterations
 					stairs_width -= 0.025*doorway_width;
 					stairs_pad   -= 0.040*doorway_width;
 					len_with_pad -= 0.230*doorway_width;
 				}
 				bool dim(rgen.rand_bool());
-				if (shared.get_sz_dim(dim) < 1.5*len_with_pad) {dim ^= 1;} // too narrow in this dim, try other dim
+				if (place_region.get_sz_dim(dim) < 1.5*len_with_pad) {dim ^= 1;} // too narrow in this dim, try other dim
 
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
-					cand.d[d][0] = rgen.rand_uniform(shared.d[d][0], (shared.d[d][1] - stairs_sz)); // LLC
+					cand.d[d][0] = rgen.rand_uniform(place_region.d[d][0], (place_region.d[d][1] - stairs_sz)); // LLC
 					cand.d[d][1] = cand.d[d][0] + stairs_sz; // URC
 				}
 				cube_t cand_test(cand);

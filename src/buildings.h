@@ -292,7 +292,7 @@ struct building_t : public building_geom_t {
 	uint8_t hallway_dim, real_num_parts; // main hallway dim: 0=x, 1=y, 2=none
 	bool is_house, has_antenna, has_chimney;
 	colorRGBA side_color, roof_color, detail_color;
-	cube_t bcube;
+	cube_t bcube, pri_hall;
 	vect_cube_t parts;
 	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
