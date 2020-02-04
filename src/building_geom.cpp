@@ -1134,38 +1134,46 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	unsigned const num_blocks(roof_tquads.empty() ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
+	bool const add_walls(is_simple_cube() && roof_tquads.empty()); // simple cube buildings with flat roofs
 	has_antenna = (rgen.rand() & 1);
-	details.resize(num_blocks + has_antenna);
+	details.resize(num_blocks + 4*add_walls + has_antenna);
 	assert(!parts.empty());
 	if (details.empty()) return; // nothing to do
 	cube_t const &top(parts.back()); // top/last part
 
 	if (num_blocks > 0) {
 		float const xy_sz(top.get_size().xy_mag());
-		float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
-		cube_t rbc(top);
 		vector<point> points; // reused across calls
 
 		for (unsigned i = 0; i < num_blocks; ++i) {
 			cube_t &c(details[i]);
+			float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
 			float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
 
 			while (1) {
-				c.set_from_point(point(rgen.rand_uniform(rbc.x1(), rbc.x2()), rgen.rand_uniform(rbc.y1(), rbc.y2()), 0.0));
+				c.set_from_point(point(rgen.rand_uniform(top.x1(), top.x2()), rgen.rand_uniform(top.y1(), top.y2()), 0.0));
 				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.08), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
-				if (!rbc.contains_cube_xy(c)) continue; // not contained
+				if (!top.contains_cube_xy(c)) continue; // not contained
 				if (is_simple_cube()) break; // success/done
 				bool contained(1);
 
 				for (unsigned j = 0; j < 4; ++j) { // check cylinder/ellipse
 					point const pt(c.d[0][j&1], c.d[1][j>>1], 0.0); // XY only
-					if (!check_part_contains_pt_xy(rbc, pt, points)) {contained = 0; break;}
+					if (!check_part_contains_pt_xy(top, pt, points)) {contained = 0; break;}
 				}
 				if (contained) break; // success/done
 			} // end while
 			c.z1() = top.z2(); // z1
 			c.z2() = top.z2() + height; // z2
 		} // for i
+	}
+	if (add_walls) { // add walls around the roof; we don't need to draw all sides of all cubes, but it's probably not worth the trouble to sort it out
+		float const window_vspacing(get_material().get_floor_spacing());
+		float const height(0.4*window_vspacing), width(0.2*window_vspacing), z1(top.z2()), z2(top.z2()+height);
+		details[num_blocks+0] = cube_t(top.x1(), top.x2(), top.y1(), top.y1()+width, z1, z2);
+		details[num_blocks+1] = cube_t(top.x1(), top.x2(), top.y2()-width, top.y2(), z1, z2);
+		details[num_blocks+2] = cube_t(top.x1(), top.x1()+width, top.y1()+width, top.y2()-width, z1, z2);
+		details[num_blocks+3] = cube_t(top.x2()-width, top.x2(), top.y1()+width, top.y2()-width, z1, z2);
 	}
 	if (has_antenna) { // add antenna
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
