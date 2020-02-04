@@ -18,6 +18,7 @@ extern city_params_t city_params;
 
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+bool place_building_people(vector<point> &locs, float radius, unsigned num); // from gen_buildings.cpp
 
 string pedestrian_t::get_name() const {
 	rand_gen_t rgen;
@@ -621,22 +622,17 @@ void ped_manager_t::expand_cube_for_ped(cube_t &cube) const {
 	cube.z2() += PED_HEIGHT_SCALE*radius;
 }
 
-void ped_manager_t::init(unsigned num) {
-	if (num == 0) return;
+void ped_manager_t::init(unsigned num_city, unsigned num_building) {
+	if (num_city == 0 && num_building == 0) return;
 	timer_t timer("Gen Peds");
-	peds.reserve(num);
+	peds.reserve(num_city);
 	float const radius(get_ped_radius()); // base radius
-	unsigned const num_models(ped_model_loader.num_models());
 
-	for (unsigned n = 0; n < num; ++n) {
+	// place pedestrians in cities
+	for (unsigned n = 0; n < num_city; ++n) {
 		pedestrian_t ped(radius); // start with a constant radius
+		assign_ped_model(ped);
 
-		if (num_models > 0) {
-			ped.model_id = rgen.rand()%num_models;
-			ped.radius  *= ped_model_loader.get_model(ped.model_id).scale;
-			assert(ped.radius > 0.0); // no zero/negative model scales
-		}
-		else {ped.model_id = 0;} // will be unused
 		if (gen_ped_pos(ped)) {
 			if (city_params.ped_speed > 0.0) {
 				ped.speed = city_params.ped_speed*rgen.rand_uniform(0.5, 1.0);
@@ -645,9 +641,34 @@ void ped_manager_t::init(unsigned num) {
 			ped.ssn = (unsigned short)peds.size(); // assign init peds index so that all are unique; won't change if peds are reordered
 			peds.push_back(ped);
 		}
-	}
-	cout << "Pedestrians: " << peds.size() << endl; // testing
+	} // for n
+
+	// place people in buildings
+	vector<point> locs;
+	place_building_people(locs, radius, num_building);
+	peds_b.reserve(locs.size());
+
+	for (auto i = locs.begin(); i != locs.end(); ++i) {
+		pedestrian_t ped(radius);
+		assign_ped_model(ped);
+		float const angle(rgen.rand_uniform(0.0, TWO_PI));
+		ped.pos   = *i + vector3d(0.0, 0.0, radius);
+		ped.dir   = vector3d(sinf(angle), cos(angle), 0.0);
+		ped.speed = 0.0; // not moving
+		ped.ssn   = (unsigned short)(peds.size() + peds_b.size()); // may wrap
+		peds_b.push_back(ped);
+	} // for i
+	
+	cout << "City Pedestrians: " << peds.size() << ", Building Residents: " << peds_b.size() << endl; // testing
 	sort_by_city_and_plot();
+}
+
+void ped_manager_t::assign_ped_model(pedestrian_t &ped) { // Note: non-const, modifies rgen
+	unsigned const num_models(ped_model_loader.num_models());
+	if (num_models == 0) {ped.model_id = 0; return;} // will be unused
+	ped.model_id = rgen.rand()%num_models;
+	ped.radius  *= ped_model_loader.get_model(ped.model_id).scale;
+	assert(ped.radius > 0.0); // no zero/negative model scales
 }
 
 struct ped_by_plot {
@@ -774,7 +795,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 }
 
 void ped_manager_t::next_frame() {
-	if (!animate2 || peds.empty()) return; // nothing to do
+	if (!animate2 || peds.empty()) return; // nothing to do (only applies to moving peds)
 	//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
 
 	// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
@@ -1003,7 +1024,6 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	translate_to(xlate);
 	if (enable_animations) {dstate.s.add_property("animation_shader", "pedestrian_animation.part+");}
 	dstate.pre_draw(xlate, use_dlights, shadow_only);
-	bool const textured(shadow_only && 0); // disabled for now
 	bool in_sphere_draw(0);
 	if (enable_animations) {dstate.s.add_uniform_int("animation_id", animation_id);}
 
@@ -1027,33 +1047,9 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				assert(i < peds.size());
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
-				if (ped.destroyed) continue; // skip
-				float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
-				if (dist_sq > draw_dist_sq) continue; // too far - skip
-				if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist))  continue; // too far from the player
-				if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) continue;
-				
-				if (!use_models || !ped_model_loader.is_model_valid(ped.model_id)) {
-					if (!pdu.sphere_visible_test(ped.pos, ped.radius)) continue; // not visible - skip
-					if (enable_animations) {dstate.s.add_uniform_float("animation_time", 0.0);}
-					begin_ped_sphere_draw(dstate.s, YELLOW, in_sphere_draw, textured);
-					int const ndiv = 16; // currently hard-coded
-					draw_sphere_vbo(ped.pos, ped.radius, ndiv, textured);
-				}
-				else {
-					float const width(PED_WIDTH_SCALE*ped.radius), height(PED_HEIGHT_SCALE*ped.radius);
-					cube_t bcube;
-					bcube.set_from_sphere(ped.pos, width);
-					bcube.z1() = ped.pos.z - ped.radius;
-					bcube.z2() = bcube.z1() + height;
-					if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) continue; // not visible - skip
-					if (dstate.is_occluded(bcube)) continue; // only check occlusion for expensive ped models
-					end_sphere_draw(in_sphere_draw);
-					bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
-					if (enable_animations) {dstate.s.add_uniform_float("animation_time", ped.anim_time);}
-					ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
-				}
-				if (dist_sq < 0.25*draw_dist_sq) { // fake AO shadow at below half draw distance
+				if (!draw_ped(ped, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, enable_animations)) continue;
+
+				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow at below half draw distance
 					float const ao_radius(0.6*ped.radius);
 					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.02*ped.radius); // at the feet
 					point pao[4];
@@ -1069,6 +1065,12 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 			} // for i
 		} // for plot
 	} // for city
+
+	if (!shadow_only) { // draw building people, but not in shadow pass (too slow/incorrect?)
+		for (auto p = peds_b.begin(); p != peds_b.end(); ++p) { // FIXME: need some spatial acceleration structure here (per tile?)
+			draw_ped(*p, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, enable_animations); // not yet animated?
+		}
+	}
 	end_sphere_draw(in_sphere_draw);
 	pedestrian_t const *selected_ped(nullptr);
 
@@ -1088,5 +1090,37 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (selected_ped) {selected_ped->debug_draw(*this);}
 	fgPopMatrix();
 	dstate.show_label_text();
+}
+
+bool ped_manager_t::draw_ped(pedestrian_t const &ped, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
+	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations)
+{
+	if (ped.destroyed) return 0; // skip
+	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
+	if (dist_sq > draw_dist_sq) return 0; // too far - skip
+	if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist)) return 0; // too far from the player
+	if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) return 0;
+
+	if (ped_model_loader.num_models() == 0 || !ped_model_loader.is_model_valid(ped.model_id)) {
+		if (!pdu.sphere_visible_test(ped.pos, ped.radius)) return 0; // not visible - skip
+		if (enable_animations) {dstate.s.add_uniform_float("animation_time", 0.0);}
+		begin_ped_sphere_draw(dstate.s, YELLOW, in_sphere_draw, 0);
+		int const ndiv = 16; // currently hard-coded
+		draw_sphere_vbo(ped.pos, ped.radius, ndiv, 0);
+	}
+	else {
+		float const width(PED_WIDTH_SCALE*ped.radius), height(PED_HEIGHT_SCALE*ped.radius);
+		cube_t bcube;
+		bcube.set_from_sphere(ped.pos, width);
+		bcube.z1() = ped.pos.z - ped.radius;
+		bcube.z2() = bcube.z1() + height;
+		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) return 0; // not visible - skip
+		if (dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models
+		end_sphere_draw(in_sphere_draw);
+		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
+		if (enable_animations) {dstate.s.add_uniform_float("animation_time", ped.anim_time);}
+		ped_model_loader.draw_model(dstate.s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
+	}
+	return 1;
 }
 

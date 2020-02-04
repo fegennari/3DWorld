@@ -3002,7 +3002,7 @@ public:
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, !car_manager.empty());
 		car_manager.add_parked_cars(parked_cars);
 		car_manager.finalize_cars();
-		ped_manager.init(city_params.num_peds); // must be after buildings are placed
+		ped_manager.init(city_params.num_peds, city_params.num_building_peds); // must be after buildings are placed
 	}
 	void get_city_bcubes(vect_cube_t &bcubes) const {return road_gen.get_city_bcubes(bcubes);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}

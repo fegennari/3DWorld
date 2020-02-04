@@ -745,7 +745,7 @@ class ped_manager_t { // pedestrians
 	city_road_gen_t const &road_gen;
 	car_manager_t const &car_manager; // used for ped road crossing safety and dest car selection
 	ped_model_loader_t ped_model_loader;
-	vector<pedestrian_t> peds;
+	vector<pedestrian_t> peds, peds_b; // dynamic city, static building
 	vector<city_ixs_t> by_city; // first ped/plot index for each city
 	vector<unsigned> by_plot;
 	vector<unsigned char> need_to_sort_city;
@@ -756,6 +756,7 @@ class ped_manager_t { // pedestrians
 	unsigned animation_id;
 	bool ped_destroyed, need_to_sort_peds;
 
+	void assign_ped_model(pedestrian_t &ped);
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
@@ -763,6 +764,8 @@ class ped_manager_t { // pedestrians
 	road_isec_t const &get_car_isec(car_base_t const &car) const;
 	void register_ped_new_plot(pedestrian_t const &ped);
 	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
+	bool draw_ped(pedestrian_t const &ped, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
+		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations);
 public:
 	// for use in pedestrian_t, mostly for collisions and path finding
 	path_finder_t path_finder;
@@ -786,10 +789,10 @@ public:
 		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), animation_id(1), ped_destroyed(0), need_to_sort_peds(0) {}
 	void next_animation();
 	static float get_ped_radius();
-	bool empty() const {return peds.empty();}
-	void clear() {peds.clear(); by_city.clear();}
+	bool empty() const {return (peds.empty() && peds_b.empty());}
+	void clear() {peds.clear(); peds_b.clear(); by_city.clear();}
 	unsigned get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
-	void init(unsigned num);
+	void init(unsigned num_city, unsigned num_building);
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
 	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;
 	void destroy_peds_in_radius(point const &pos_in, float radius);
