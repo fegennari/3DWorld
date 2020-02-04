@@ -260,9 +260,9 @@ struct room_t : public cube_t {
 };
 
 struct landing_t : public cube_t {
-	bool for_elevator, dim, dir;
-	landing_t() : for_elevator(0), dim(0), dir(0) {}
-	landing_t(cube_t const &c, bool e, bool dim_, bool dir_) : cube_t(c), for_elevator(e), dim(dim_), dir(dir_) {}
+	bool for_elevator, dim, dir, shape; // shape: 0=straight, 1=U
+	landing_t() : for_elevator(0), dim(0), dir(0), shape(0) {}
+	landing_t(cube_t const &c, bool e, bool dim_, bool dir_, bool shape_=0) : cube_t(c), for_elevator(e), dim(dim_), dir(dir_), shape(shape_) {}
 	unsigned get_face_id() const {return (2*dim + dir);}
 };
 

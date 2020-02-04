@@ -1593,6 +1593,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
 	bool stairs_dim(0), add_elevator(0);
+	unsigned stairs_shape(0); // straight by default
 
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
@@ -1731,7 +1732,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				assert(found);
 			}
 			if (has_stairs) { // add landings and stairwells
-				landing_t landing(stairs_cut, 0, stairs_dim, 0); // dir is unused and has been set to 0
+				landing_t landing(stairs_cut, 0, stairs_dim, 0, stairs_shape); // dir is unused and has been set to 0
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
 				if (f == 1) {interior->stairwells.push_back(stairs_cut);} // only add for first floor
@@ -1873,7 +1874,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_test.z1() += 0.5*window_vspacing; cand_test.z2() += 0.5*window_vspacing; // move up a bit so that it intersects exactly the floor below and the floor above
 				if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, stairs_pad)) continue; // bad placement
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
-				landing_t landing(cand, 0, dim, 0); // dir is unused and set to 0
+				unsigned const stairs_shape(0); // straight, for now
+				landing_t landing(cand, 0, dim, 0, stairs_shape); // dir is unused and set to 0
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.push_back(cand);
@@ -2101,15 +2103,37 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
 		bool const dim(i->dx() < i->dy()); // longer dim
-		float const tot_len(i->get_sz_dim(dim)), step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs), floor_z(i->z2() - window_vspacing);
+		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z2() - window_vspacing);
+		float step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs);
 		float z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 
-		for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
-			stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
-			stair.z1() = max(floor_z, z); // don't go below the floor
-			stair.z2() = z + stair_height;
-			objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
+		if (i->shape == 0) { // straight stairs
+			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
+				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
+				stair.z1() = max(floor_z, z); // don't go below the floor
+				stair.z2() = z + stair_height;
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
+			}
+		}
+		else { // U-shaped stairs
+			bool const side(0); // for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
+			stair.d[!dim][side] = i->get_center_dim(!dim);
+			step_len *= 2.0;
+
+			// TODO: need larger landing, wider but shorter cutout, fix for walking/collision, railings, etc.
+			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
+				if (n == num_stairs/2) { // reverse direction and switch to other side
+					step_len *= -1.0;
+					stair.d[!dim][ side] = i->d[!dim][side];
+					stair.d[!dim][!side] = i->get_center_dim(!dim);
+				}
+				bool const is_rev(n >= num_stairs/2);
+				stair.d[dim][dir^is_rev^1] = pos; stair.d[dim][dir^is_rev] = pos + step_len;
+				stair.z1() = max(floor_z, z); // don't go below the floor
+				stair.z2() = z + stair_height;
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
+			} // for n
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {

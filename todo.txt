@@ -16,6 +16,7 @@ Cities:
 * Building interiors:
   * More hallways for office buildings
   * Place more room objects/furniture
+  - U-shaped stairs
   - Working elevators
   - Interiors for city office towers
   - Indirect/ambient lighting
