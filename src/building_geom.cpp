@@ -1921,11 +1921,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	} // for e
 }
 
-bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const {
+bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const { // and elevators
 	if (!interior || interior->stairwells.empty()) return 0;
 	subtract_cubes_from_cube(c, interior->stairwells, out, temp);
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) { // handle elevators that span multiple parts
+		if (e->z2() <= c.z1()) continue; // elevator shaft doesn't extend this high
 		if (e->z2() == c.z2()) continue; // don't cut a hole in the roof of the building where the top of the elevator shaft ends
 		subtract_cube_from_cubes(*e, out);
 	}
