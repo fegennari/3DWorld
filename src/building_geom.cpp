@@ -922,17 +922,19 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			unsigned skip_side_tri(2); // default = skip neither
 			
 			if (two_parts && dim == other_dim && i->d[!dim][0] >= other.d[!dim][0] && i->d[!dim][1] <= other.d[!dim][1] && i->z2() <= other.z2()) { // side of i contained in other
-				if (i->z2() == other.z2()) { // same height - check if we need to ajust the slope of this roof to match
-					float const roof_slope(roof_dz[1-ix]/other.get_sz_dim(!dim));
+				if (ix == 1 && i->z2() == other.z2()) { // same height - check if we need to ajust the slope of this roof to match
+					float const roof_slope(roof_dz[0]/other.get_sz_dim(!dim));
 					min_eq(max_dz, roof_slope*i->get_sz_dim(!dim)); // peak_height cancels out
 				}
 				for (unsigned d = 0; d < 2; ++d) {
 					if (i->d[dim][d] == other.d[dim][!d]) {skip_side_tri = d;} // remove smaller of two opposing/overlapping triangles to prevent z-fighting
 				}
 			}
+			assert(max_dz > 0.0);
 			roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to, max_dz, skip_side_tri);
 		}
-	}
+		assert(roof_dz[ix] > 0.0);
+	} // for i
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned part_ix(0);
 
@@ -942,6 +944,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			else if (v1 > 2.0*v0) {part_ix = 1;} // choose larger part 1
 			else {part_ix = rgen.rand_bool();} // close in area - choose a random part
 		}
+		assert(roof_dz[part_ix] > 0.0);
 		unsigned const fdim(force_dim[part_ix]);
 		cube_t const &part(parts[part_ix]);
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
@@ -1021,6 +1024,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 	unsigned const extend_dir(extend_roof(top, extend_to, dim));
 	float const width(top.get_sz_dim(!dim)), roof_dz(min(max_dz, min(peak_height*width, top.dz())));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
+	assert(roof_dz > 0.0);
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(x1, y1, z2), point(x2, y2, z2)};
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
 	else          {pts[4].x = pts[5].x = 0.5f*(x1 + x2);} // xc
@@ -1069,6 +1073,7 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 	extend_roof(top, extend_to, dim); // Note: return value is unused
 	float const width(top.get_sz_dim(!dim)), length(top.get_sz_dim(dim)), offset(0.5f*(length - width)), roof_dz(min(peak_height*width, top.dz()));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
+	assert(roof_dz > 0.0);
 	point const center(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2);
 	point pts[6] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), center, center};
 	if (dim) {UNROLL_3X(swap(pts[0], pts[i_+1]);)} // rotate 1 vertex CCW
