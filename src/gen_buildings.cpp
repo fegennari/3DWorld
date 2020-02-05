@@ -1341,6 +1341,7 @@ class building_creator_t {
 	rand_gen_t rgen;
 	vector<building_t> buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
+	vector<int> peds_by_bix; // index of first person in each building; -1 is empty
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior;
 	point_sprite_drawer_sized building_lights;
 	vector<point> points; // reused temporary
@@ -1709,7 +1710,7 @@ public:
 		create_vbos(is_tile);
 	} // end gen()
 
-	bool place_people(vector<point> &locs, float radius, unsigned num) const {
+	bool place_people(vect_building_place_t &locs, float radius, unsigned num) {
 		assert(locs.empty());
 		if (num == 0 || empty() || !ADD_BUILDING_INTERIORS) return 0; // no people, buildings, or interiors
 		vector<unsigned> cand_buildings;
@@ -1722,15 +1723,25 @@ public:
 		}
 		if (cand_buildings.empty()) return 0; // no interiors
 		locs.reserve(num);
-		rand_gen_t rgen;
+		rand_gen_t rgen2; // Note: we could also use our rgen member variable
 
 		for (unsigned n = 0; n < num; ++n) {
 			point ppos;
-			unsigned const bix(cand_buildings[rgen.rand() % cand_buildings.size()]);
-			if (buildings[bix].place_person(ppos, radius, rgen)) {locs.push_back(ppos);}
+			unsigned const bix(cand_buildings[rgen2.rand() % cand_buildings.size()]);
+			if (buildings[bix].place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, bix);}
 		}
-		return !locs.empty();
+		if (locs.empty()) return 0;
+		sort(locs.begin(), locs.end());
+		peds_by_bix.resize(buildings.size(), -1);
+
+		for (unsigned i = 0; i < locs.size(); ++i) {
+			unsigned const bix(locs[i].bix);
+			assert(bix < peds_by_bix.size());
+			if (peds_by_bix[bix] < 0) {peds_by_bix[bix] = i;} // record first ped index for each building
+		}
+		return 1;
 	}
+	int get_ped_ix_for_bix(unsigned bix) const {return ((bix < peds_by_bix.size()) ? peds_by_bix[bix] : -1);}
 
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		//timer_t timer("Draw Buildings Shadow");
@@ -1739,6 +1750,8 @@ public:
 		shader_t s;
 		s.begin_color_only_shader(); // really don't even need colors
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
+		point const camera_xlated(get_camera_pos() - xlate);
+		vector<point> points; // reused temporary
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -1754,6 +1767,11 @@ public:
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.gen_and_draw_room_geom(s, bi->ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
+						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix));
+
+						if (ped_ix >= 0 && b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) { // camera in this building
+							draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1); // draw people in this building
+						}
 					} // for bi
 				} // for g
 			}
@@ -1897,7 +1915,7 @@ public:
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (!g->bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far
-						
+					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
@@ -1905,6 +1923,8 @@ public:
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.gen_and_draw_room_geom(s, bi->ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
+						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix));
+						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						if (!transparent_windows) continue;
 						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
@@ -2561,5 +2581,5 @@ bool check_line_coll_building(point const &p1, point const &p2, unsigned buildin
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
-bool place_building_people(vector<point> &locs, float radius, unsigned num) {return building_creator.place_people(locs, radius, num);} // secondary buildings only for now
+bool place_building_people(vect_building_place_t &locs, float radius, unsigned num) {return building_creator.place_people(locs, radius, num);} // secondary buildings only for now
 

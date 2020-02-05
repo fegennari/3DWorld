@@ -3064,6 +3064,9 @@ public:
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
+	void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
+		ped_manager.draw_peds_in_building(first_ped_ix, bix, s, xlate, dlight_shadow_only);
+	}
 	void setup_city_lights(vector3d const &xlate) {
 		if (world_mode != WMODE_INF_TERRAIN) return; // TT only
 		if (prev_city_lights_setup_frame == cur_display_iter) return; // already called this frame
@@ -3107,6 +3110,9 @@ void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3)
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
+void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
+	city_gen.draw_peds_in_building(first_ped_ix, bix, s, xlate, dlight_shadow_only);
+}
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {
 	if (!have_cities()) return 0;
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects

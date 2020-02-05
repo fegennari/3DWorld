@@ -764,7 +764,7 @@ class ped_manager_t { // pedestrians
 	road_isec_t const &get_car_isec(car_base_t const &car) const;
 	void register_ped_new_plot(pedestrian_t const &ped);
 	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
-	bool draw_ped(pedestrian_t const &ped, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
+	bool draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations);
 public:
 	// for use in pedestrian_t, mostly for collisions and path finding
@@ -801,6 +801,7 @@ public:
 	unsigned get_first_ped_at_plot(unsigned plot) const {assert(plot < by_plot.size()); return by_plot[plot];}
 	void get_peds_crossing_roads(ped_city_vect_t &pcv) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
+	void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only);
 	void free_context() {ped_model_loader.free_context();}
 	//vector3d get_dest_move_dir(point const &pos) const;
 }; // end ped_manager_t
@@ -816,3 +817,4 @@ template <typename T> void remove_destroyed(vector<T> &objs) {
 bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c);
 point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen);
 bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, float radius);
+bool place_building_people(vect_building_place_t &locs, float radius, unsigned num); // from gen_buildings.cpp

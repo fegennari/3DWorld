@@ -396,6 +396,15 @@ public:
 	virtual bool enable_lights() const = 0;
 };
 
+struct building_place_t {
+	point p;
+	unsigned bix;
+	building_place_t() : bix(0) {}
+	building_place_t(point const &p_, unsigned bix_) : p(p_), bix(bix_) {}
+	bool operator<(building_place_t const &p) const {return (bix < p.bix);} // only compare building index
+};
+typedef vector<building_place_t> vect_building_place_t;
+
 inline void clip_low_high(float &t0, float &t1) {
 	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
@@ -419,5 +428,6 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0);
 void setup_city_lights(vector3d const &xlate);
+void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only); // from city_gen.cpp
 
 #endif // _BUILDING_H_

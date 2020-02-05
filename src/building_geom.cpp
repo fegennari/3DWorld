@@ -2261,17 +2261,20 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
 		room_t const &room(interior->rooms[rgen.rand() % interior->rooms.size()]); // select a random room
 		if (min(room.dx(), room.dy()) < 4.0*radius) continue; // room to small to place a person
-		// TODO_INT: skip placement if room is not lit?
 		unsigned const num_floors(calc_num_floors(room, window_vspacing, floor_thickness));
 		assert(num_floors > 0);
+		unsigned const floor_ix(rgen.rand() % num_floors); // place person on a random floor
+		// TODO_INT: people are placed before lights are assigned to rooms, so this doesn't work; should we force the light to be on if a person's in the room?
+		if (room.lit_by_floor && !(room.lit_by_floor & (1ULL << (floor_ix&63)))) continue; // don't place person in an unlit room
 		point pos;
-		pos.z = room.z1() + fc_thick + window_vspacing*(rgen.rand() % num_floors); // place person on a random floor
+		pos.z = room.z1() + fc_thick + window_vspacing*floor_ix;
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(room.d[d][0]+radius, room.d[d][1]-radius);} // random XY point inside this room
 		cube_t bcube(pos);
 		bcube.expand_by(radius); // expand more in Z?
 		if (!is_valid_stairs_elevator_placement(bcube, radius, radius)) continue;
 		bool bad_place(0);
 
+		// TODO_INT: people are placed before room geom is generated for all buildings, so this doesn't work
 		if (interior->room_geom) { // check placement against room geom objects
 			for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
 				if (i->intersects(bcube)) {bad_place = 1; break;}
