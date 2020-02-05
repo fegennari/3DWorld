@@ -767,7 +767,7 @@ public:
 
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
 	// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
-	void add_section(building_geom_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2,
+	void add_section(building_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2,
 		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, int clip_windows,
 		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0, cube_t const *const clamp_cube=nullptr)
 	{
@@ -848,7 +848,7 @@ public:
 				wall_seg_t segs[3]; // lo, hi, top
 				segs[0].enabled = 1; // default is first segment used only
 
-				if (ADD_BUILDING_INTERIORS && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
+				if (bg.has_interior() && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
 					unsigned const xy(1 - n); // non-Z parameteric dim (the one we're clipping)
 					float &clo1((d == xy) ? segs[0].dlo : segs[0].ilo), &chi1((d == xy) ? segs[0].dhi : segs[0].ihi); // clip dim values (first seg)
 					float &clo2((d == xy) ? segs[1].dlo : segs[1].ilo); // clip dim values (second seg)
@@ -892,7 +892,9 @@ public:
 							assert(chi1 >= 0.0 && chi1 <= 1.0);
 							assert(clo2 >= 0.0 && clo2 <= 1.0);
 							segs[1].enabled = 1;
-							break; // I don't think any current building types can have another adjacency, and it's difficult to handle, so stop here
+							// TODO: none of the curent secondary buildings have another adjacency, and it's difficult to handle, so stop here;
+							// note that larger city buildings can have them (for example the one close to the starting pos), so this will need to be handled eventually
+							break;
 						}
 					} // for p
 				} // end wall clipping
