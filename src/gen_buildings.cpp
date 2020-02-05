@@ -767,12 +767,12 @@ public:
 
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
 	// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
-	void add_section(building_t const &bg, vect_cube_t const &parts, cube_t const &cube, cube_t const &bcube, float ao_bcz2,
+	void add_section(building_t const &bg, vect_cube_t const &parts, cube_t const &cube, float ao_bcz2,
 		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, int clip_windows,
 		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0, cube_t const *const clamp_cube=nullptr)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
-		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
+		point const center(!bg.is_rotated() ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size());
 
 		if (bg.num_sides != 4) { // not a cube, use cylinder
@@ -780,7 +780,7 @@ public:
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, bcube.z1(), ao_bcz2, tex, color, dim_mask, no_ao, clip_windows);
+			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, bg.bcube.z1(), ao_bcz2, tex, color, dim_mask, no_ao, clip_windows);
 			return;
 		}
 		// else draw as a cube (optimized flow)
@@ -791,11 +791,11 @@ public:
 		float const tscale[2] = {2.0f*tex.tscale_x, 2.0f*tex.tscale_y}; // adjust for local vs. global space change
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
-		setup_ao_color(color, bcube.z1(), ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);
+		setup_ao_color(color, bg.bcube.z1(), ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
-		tex_vert_off.z = -bcube.z1();
-		if (is_city && cube.z1() == bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
-		float const door_height(door_ztop - bcube.z1());
+		tex_vert_off.z = -bg.bcube.z1();
+		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
+		float const door_height(door_ztop - bg.bcube.z1());
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
@@ -1016,7 +1016,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.side_tex);
 		
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
-			bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY
+			bdraw.add_section(*this, parts, *i, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY
 			bool skip_top(!roof_tquads.empty() && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
 			bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
@@ -1024,13 +1024,13 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			if (!is_house && !skip_top && interior) {
 				if (clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
 					for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
-						bdraw.add_section(*this, parts, *c, bcube, ao_bcz2, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
+						bdraw.add_section(*this, parts, *c, ao_bcz2, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
 					}
 					skip_top = 1;
 					if (is_stacked) continue; // no top/bottom to draw
 				}
 			}
-			bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
+			bdraw.add_section(*this, parts, *i, ao_bcz2, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
 		} // for i
 		ext_side_qv_range.end = bdraw.get_num_verts(mat.side_tex);
 
@@ -1041,7 +1041,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 			building_geom_t bg(4, rot_sin, rot_cos); // cube
 			bg.is_pointed = (has_antenna && i+1 == details.end()); // draw antenna as a point
-			bdraw.add_section(bg, empty_vc, *i, bcube, ao_bcz2, mat.roof_tex.get_scaled_version(0.5),
+			bdraw.add_section(bg, empty_vc, *i, ao_bcz2, mat.roof_tex.get_scaled_version(0.5),
 				detail_color*(bg.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
 		}
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
@@ -1052,30 +1052,30 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		bdraw.begin_draw_range_capture();
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
-			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
+			bdraw.add_section(*this, empty_vc, *i, ao_bcz2, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
-			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only
+			bdraw.add_section(*this, empty_vc, *i, ao_bcz2, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only
 		}
 		bdraw.set_no_shadows_for_tex(mat.ceil_tex); // minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
-				bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
+				bdraw.add_section(*this, empty_vc, *i, ao_bcz2, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
 		}
 		// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
 		for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
 			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
 			if (i->for_elevator) {dim_mask |= (120 - (1 << (i->get_face_id() + 3)));} // disable all but the open side of the elevator
-			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+			bdraw.add_section(*this, empty_vc, *i, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
 		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 			bool const dim(i->dim), dir(i->dir);
 			float const width(i->get_sz_dim(!dim)), spacing(0.02*width), frame_width(0.2*width); // space between inner and outer elevator surfaces + frame around door
 			unsigned dim_mask(3); // x and y dims enabled
 			dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
-			bdraw.add_section(*this, empty_vc, *i, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
+			bdraw.add_section(*this, empty_vc, *i, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
 			cube_t entrance(*i);
 			entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
 
@@ -1084,12 +1084,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				frame.d[!dim][d] = frame.d[!dim][!d] + (d ? 1.0f : -1.0f)*frame_width; // set position
 				unsigned dim_mask2(3); // x and y dims enabled
 				dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // 3 faces drawn
-				bdraw.add_section(*this, empty_vc, frame, bcube, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask2, 0, 0, 1, 0);
+				bdraw.add_section(*this, empty_vc, frame, ao_bcz2, mat.wall_tex, mat.wall_color, dim_mask2, 0, 0, 1, 0);
 			}
 			cube_t inner_cube(*i);
 			inner_cube.expand_by_xy(-spacing);
 			// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
-			bdraw.add_section(*this, empty_vc, inner_cube, bcube, ao_bcz2, tid_nm_pair_t(FENCE_TEX, -1, 16.0, 16.0), WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
+			bdraw.add_section(*this, empty_vc, inner_cube, ao_bcz2, tid_nm_pair_t(FENCE_TEX, -1, 16.0, 16.0), WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
 			// add elevator doors
 			float const door_width(i->open ? 1.12*frame_width : 0.99*0.5*width);
 
@@ -1099,7 +1099,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				cube_t door(entrance);
 				door.d[ dim][0] += 0.2*spacing; door.d[ dim][1] -= 0.2*spacing; // shrink slightly to make thinner
 				door.d[!dim][d] = door.d[!dim][!d] + (d ? 1.0f : -1.0f)*door_width;
-				bdraw.add_section(*this, empty_vc, door, bcube, ao_bcz2, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
+				bdraw.add_section(*this, empty_vc, door, ao_bcz2, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
 			}
 		} // for i
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
@@ -1198,7 +1198,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		}
 		unsigned const part_ix(i - parts.begin());
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
-		bdraw.add_section(*this, parts, *i, bcube, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
+		bdraw.add_section(*this, parts, *i, ao_bcz2, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
 
 		// add ground floor windows next to doors
 		if (dsides == 0) continue; // no doors
@@ -1237,7 +1237,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 					tid_nm_pair_t tex2(tex);
 					tex2.tscale_x = 0.5f*round_fp(wall_len/window_spacing)/wall_len;
 					tex2.txoff    = -2.0*tex2.tscale_x*c.d[!dim][0];
-					bdraw.add_section(*this, parts, c, bcube, ao_bcz2, tex2, color, dim_mask, 0, 0, 1, clip_windows, door_ztop, 0, offset_scale, 0, clamp_cube); // no_ao=1
+					bdraw.add_section(*this, parts, c, ao_bcz2, tex2, color, dim_mask, 0, 0, 1, clip_windows, door_ztop, 0, offset_scale, 0, clamp_cube); // no_ao=1
 				} // for e
 			} // for dir
 		} // for dim
@@ -1283,7 +1283,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // multiple cubes/parts/levels
 		if (i->contains_pt(only_cont_pt)) { // part containing the point
-			bdraw_front.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
+			bdraw_front.add_section(*this, parts, *i, ao_bcz2, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			continue;
 		}
 		unsigned back_dim_mask(3), front_dim_mask(0); // enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
@@ -1305,14 +1305,14 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 				if ((i->d[!d][e] < cont_part.d[!d][e]) ^ e) {
 					cube_t back_clip_cube(*i);
 					front_clip_cube.d[!d][e] = back_clip_cube.d[!d][!e] = cont_part.d[!d][e]; // split point
-					bdraw_back.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, back_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
+					bdraw_back.add_section(*this, parts, *i, ao_bcz2, mat.side_tex, side_color, back_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
 				}
 			}
 			back_dim_mask &= ~(1<<d); front_dim_mask |= (1<<d); // draw only the other dim as back and this dim as front
 			break;
 		} // for d
-		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, back_dim_mask,  0, 0, 0, 0);}
-		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, bcube, ao_bcz2, mat.side_tex, side_color, front_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
+		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, ao_bcz2, mat.side_tex, side_color, back_dim_mask,  0, 0, 0, 0);}
+		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, ao_bcz2, mat.side_tex, side_color, front_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
 	} // for i
 }
 
