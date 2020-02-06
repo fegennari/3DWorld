@@ -1099,6 +1099,7 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader
 		draw_ped(*p, s, camera_pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, dlight_shadow_only, dlight_shadow_only, 0); // no animations
 	}
 	end_sphere_draw(in_sphere_draw);
+	s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
 }
 
 bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,

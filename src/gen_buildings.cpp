@@ -1924,9 +1924,9 @@ public:
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.gen_and_draw_room_geom(s, bi->ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
-						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix));
-						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						if (!transparent_windows) continue;
+						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
+						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
