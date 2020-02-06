@@ -341,7 +341,7 @@ struct building_t : public building_geom_t {
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
-	void gen_room_details(rand_gen_t &rgen);
+	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes);
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen);
@@ -353,7 +353,7 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt) const;
 	bool find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const;
-	void gen_and_draw_room_geom(shader_t &s, unsigned building_ix, bool shadow_only);
+	void gen_and_draw_room_geom(shader_t &s, vect_cube_t const &ped_bcubes, unsigned building_ix, bool shadow_only);
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const;
@@ -365,11 +365,12 @@ private:
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0) const;
-	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin=0.0f) const;
+	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float dmin=0.0f) const;
 	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
 	void add_room(cube_t const &room, unsigned part_id);
-	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
+	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers,
+		unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
@@ -431,5 +432,6 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0);
 void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only); // from city_gen.cpp
+void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes); // from city_gen.cpp
 
 #endif // _BUILDING_H_

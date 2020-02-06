@@ -1949,8 +1949,9 @@ void building_t::add_room(cube_t const &room, unsigned part_id) {
 	interior->rooms.push_back(r);
 }
 
-bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit) {
-
+bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers,
+	unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit)
+{
 	float const window_vspacing(get_window_vspace());
 	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
 	vector3d const room_sz(room.get_size());
@@ -1963,7 +1964,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsi
 	llc.z = table_pos.z; // bottom
 	urc.z = table_pos.z + 0.2*window_vspacing;
 	cube_t table(llc, urc);
-	if (!is_valid_placement_for_room(table, room)) return 0; // check proximity to doors
+	if (!is_valid_placement_for_room(table, room, blockers)) return 0; // check proximity to doors
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
 	float const chair_sz(0.1*window_vspacing); // half size
 
@@ -1976,7 +1977,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, unsi
 			cube_t chair(chair_pos, chair_pos);
 			chair.z2() += 0.4*window_vspacing; // chair height
 			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
-			if (!is_valid_placement_for_room(chair, room)) continue; // check proximity to doors
+			if (!is_valid_placement_for_room(chair, room, blockers)) continue; // check proximity to doors
 			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, obj_flags, tot_light_amt);
 		} // for dir
 	} // for dim
@@ -1999,7 +2000,7 @@ bool has_bcube_int_exp(cube_t const &bcube, vect_cube_t const &bcubes, float exp
 }
 
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
-void building_t::gen_room_details(rand_gen_t &rgen) {
+void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes) {
 
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
@@ -2052,6 +2053,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
+				// TODO_INT: check ped_bcubes and set is_lit if any are in the room
 				unsigned char flags(RO_FLAG_NOCOLL); // no collision detection with lights
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
@@ -2098,7 +2100,7 @@ void building_t::gen_room_details(rand_gen_t &rgen) {
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 
 			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
-			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, room_id, room_center, 0.1, tot_light_amt, is_lit);}
+			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, 0.1, tot_light_amt, is_lit);}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 	} // for r
@@ -2240,11 +2242,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	} // for i
 }
 
-void building_t::gen_and_draw_room_geom(shader_t &s, unsigned building_ix, bool shadow_only) {
+void building_t::gen_and_draw_room_geom(shader_t &s, vect_cube_t const &ped_bcubes, unsigned building_ix, bool shadow_only) {
 	if (!interior) return;
 	rand_gen_t rgen;
 	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
-	if (!is_rotated()) {gen_room_details(rgen);} // generate so that we can draw it; doesn't work with rotated buildings
+	if (!is_rotated()) {gen_room_details(rgen, ped_bcubes);} // generate so that we can draw it; doesn't work with rotated buildings
 	if (interior->room_geom) {interior->room_geom->draw(s, shadow_only);}
 }
 
@@ -2264,7 +2266,7 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 		unsigned const num_floors(calc_num_floors(room, window_vspacing, floor_thickness));
 		assert(num_floors > 0);
 		unsigned const floor_ix(rgen.rand() % num_floors); // place person on a random floor
-		// TODO_INT: people are placed before lights are assigned to rooms, so this doesn't work; should we force the light to be on if a person's in the room?
+		// Note: people are placed before lights are assigned to rooms, so this may not work and must be handled during light placement
 		if (room.lit_by_floor && !(room.lit_by_floor & (1ULL << (floor_ix&63)))) continue; // don't place person in an unlit room
 		point pos;
 		pos.z = room.z1() + fc_thick + window_vspacing*floor_ix;
@@ -2274,7 +2276,7 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 		if (!is_valid_stairs_elevator_placement(bcube, radius, radius)) continue;
 		bool bad_place(0);
 
-		// TODO_INT: people are placed before room geom is generated for all buildings, so this doesn't work
+		// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement
 		if (interior->room_geom) { // check placement against room geom objects
 			for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
 				if (i->intersects(bcube)) {bad_place = 1; break;}
@@ -2368,12 +2370,13 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
-bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, float dmin) const {
+bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float dmin) const {
 	cube_t place_area(room);
 	if (dmin != 0.0f) {place_area.expand_by_xy(-dmin);} // shrink by dmin
 	if (!place_area.contains_cube_xy(c))   return 0; // not contained in interior part of the room
 	if (is_cube_close_to_doorway(c, dmin)) return 0; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
+	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
 	return 1;
 }
 

@@ -1086,7 +1086,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 }
 
 void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
-	if (first_ped_ix < 0) return; // no ped - error?
+	if (first_ped_ix < 0) return; // no peds - error?
 	assert((unsigned)first_ped_ix < peds_b.size());
 	assert(peds_b[first_ped_ix].dest_bldg == bix); // consistency check
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
@@ -1100,6 +1100,17 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader
 	}
 	end_sphere_draw(in_sphere_draw);
 	s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
+}
+
+void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {
+	if (first_ped_ix < 0) return; // no peds
+	assert((unsigned)first_ped_ix < peds_b.size());
+	assert(peds_b[first_ped_ix].dest_bldg == bix); // consistency check
+
+	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
+		if (p->dest_bldg != bix) break; // done with this building
+		bcubes.push_back(p->get_bcube());
+	}
 }
 
 bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,

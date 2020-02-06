@@ -678,6 +678,7 @@ struct pedestrian_t : public waiting_obj_t {
 	string get_name() const;
 	string str() const;
 	float get_speed_mult() const;
+	cube_t get_bcube() const {cube_t c; c.set_from_sphere(pos, radius); return c;}
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
@@ -802,6 +803,7 @@ public:
 	void get_peds_crossing_roads(ped_city_vect_t &pcv) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only);
+	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const;
 	void free_context() {ped_model_loader.free_context();}
 	//vector3d get_dest_move_dir(point const &pos) const;
 }; // end ped_manager_t

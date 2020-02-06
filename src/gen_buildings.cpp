@@ -1753,6 +1753,7 @@ public:
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		point const camera_xlated(get_camera_pos() - xlate);
 		vector<point> points; // reused temporary
+		vect_cube_t ped_bcubes; // we generally won't be drawing shadows for buildings that haven't been drawn yet, so we can probably avoid setting ped_bcubes
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -1766,7 +1767,7 @@ public:
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
-						b.gen_and_draw_room_geom(s, bi->ix, 1); // shadow_only=1
+						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix));
 
@@ -1894,6 +1895,7 @@ public:
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
 			set_interior_lighting(s);
 			vector<point> points; // reused temporary
+			vect_cube_t ped_bcubes; // reused temporary
 
 			if (transparent_windows) {
 				per_bcs_exclude.resize(bcs.size());
@@ -1922,10 +1924,12 @@ public:
 						if (!b.interior) continue; // no interior, skip
 						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-						b.gen_and_draw_room_geom(s, bi->ix, 0); // shadow_only=0
+						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
+						ped_bcubes.clear();
+						if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, bi->ix, ped_bcubes);}
+						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
-						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
