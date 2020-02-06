@@ -165,7 +165,7 @@ void select_water_ice_texture(shader_t &shader, colorRGBA &color) {
 		return;
 	}
 	bool const is_ice(temperature <= W_FREEZE_POINT);
-	select_texture(is_ice ? ICE_TEX : WATER_TEX);
+	select_texture(is_ice ? (int)ICE_TEX : (int)WATER_TEX);
 	shader.set_specular(w_spec[is_ice][0], w_spec[is_ice][1]);
 	color  = (is_ice ? ICE_C : WATER_C);
 	color *= DARK_WATER_ATTEN;
