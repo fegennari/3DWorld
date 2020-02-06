@@ -1087,9 +1087,9 @@ void bind_texture_tu_or_white_tex(texture_manager const &tmgr, int tid, unsigned
 	set_active_texture(0);
 }
 
-
+// enable_alpha_mask: 0=non-alpha mask only, 1=alpha mask only, 2=both
 void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid,
-	bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
+	bool is_shadow_pass, bool is_z_prepass, int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
 {
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -1112,7 +1112,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	}
 	else if (is_shadow_pass) {
 		bool const has_alpha_mask(tex_id >= 0 && alpha_tid >= 0);
-		if (has_alpha_mask != enable_alpha_mask) return; // incorrect pass
+		if (enable_alpha_mask != 2 && has_alpha_mask != bool(enable_alpha_mask)) return; // incorrect pass
 		if (has_alpha_mask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
 		geom.render(shader, 1, xlate);
 		geom_tan.render(shader, 1, xlate);
@@ -1629,7 +1629,7 @@ void set_def_spec_map() {
 	if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 }
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
 	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist)
 {
@@ -1695,7 +1695,9 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 }
 
-void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, bool is_bmap_pass, point const *const xlate) {
+void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass,
+	int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
+{
 	assert(mat_id < materials.size());
 	materials[mat_id].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);
 }
@@ -1784,7 +1786,7 @@ void model3d::set_target_translate_scale(point const &target_pos, float target_r
 }
 
 void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
-	int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask)
+	int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask)
 {
 	if (!is_cube_visible_to_camera(xf.get_xformed_bcube(bcube), is_shadow_pass)) return; // Note: xlate has already been applied to camera_pdu
 	// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
@@ -1798,7 +1800,7 @@ void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_mat
 }
 
 // non-const due to vbo caching, normal computation, bcube caching, etc.
-void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 	unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate)
 {
 	assert(trans_op_mask > 0 && trans_op_mask <= 3);

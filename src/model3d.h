@@ -439,7 +439,8 @@ struct material_t : public material_params_t {
 	void ensure_textures_loaded(texture_manager &tmgr);
 	void init_textures(texture_manager &tmgr);
 	void check_for_tc_invert_y(texture_manager &tmgr);
-	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, bool is_bmap_pass, point const *const xlate);
+	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass,
+		int enable_alpha_mask, bool is_bmap_pass, point const *const xlate);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 	bool write(ostream &out) const;
@@ -545,18 +546,18 @@ public:
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
-	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{
 		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, unbound_mat, rotation_t(), xlate, mvm);
 	}
-	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
+	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask,
 		int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate=nullptr, xform_matrix const *const mvm=nullptr,
 		bool force_lod=0, float model_lod_mult=1.0, float fixed_lod_dist=0.0);
-	void render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass=0, bool enable_alpha_mask=0, bool is_bmap_pass=0, point const *const xlate=nullptr);
+	void render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass=0, int enable_alpha_mask=0, bool is_bmap_pass=0, point const *const xlate=nullptr);
 	void render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
-		int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask);
-	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+		int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask);
+	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate);
 	void ensure_reflection_cube_map();
 	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
