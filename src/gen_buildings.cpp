@@ -1493,7 +1493,17 @@ class building_creator_t {
 public:
 	building_creator_t(bool is_city=0) : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector), building_draw(is_city), building_draw_vbo(is_city), use_smap_this_frame(0) {}
 	bool empty() const {return buildings.empty();}
-	void clear() {buildings.clear(); grid.clear(); clear_vbos(); buildings_bcube = cube_t();}
+
+	void clear() {
+		buildings.clear();
+		grid.clear();
+		grid_by_tile.clear();
+		bix_by_plot.clear();
+		peds_by_bix.clear();
+		clear_vbos();
+		buildings_bcube = cube_t();
+		gpu_mem_usage = 0;
+	}
 	unsigned get_num_buildings() const {return buildings.size();}
 	unsigned get_gpu_mem_usage() const {return gpu_mem_usage;}
 	vector3d const &get_max_extent() const {return max_extent;}
