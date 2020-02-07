@@ -2919,6 +2919,7 @@ void city_lights_manager_t::clamp_to_max_lights(vector3d const &xlate, vector<li
 }
 
 bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float light_radius, vector<light_source> &lights) {
+	assert(light_radius > 0.0);
 	for (auto i = lights.begin(); i != lights.end(); ++i) {i->release_smap();} // must be done before clearing dlights
 	clear_dynamic_lights();
 	lights_bcube.set_to_zeros();
@@ -2931,10 +2932,10 @@ bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float ligh
 	return 1;
 }
 
-void city_lights_manager_t::finalize_lights(vector<light_source> &lights) {
+void city_lights_manager_t::finalize_lights(vector<light_source> &lights) { // Note: lights is always dl_sources and not passed into calls below
 	add_dynamic_lights_city(lights_bcube, dlight_add_thresh);
 	upload_dlights_textures(lights_bcube, dlight_add_thresh);
-	prev_had_lights = !dl_sources.empty();
+	prev_had_lights = !lights.empty();
 }
 
 void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
