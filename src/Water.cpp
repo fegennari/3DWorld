@@ -184,7 +184,7 @@ colorRGBA get_tt_water_color() {
 
 	if (water_is_lava) {return LAVA_COLOR;}
 	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
-	colorRGBA color((is_ice ? ICE_C : WATER_C).modulate_with(texture_color(is_ice ? ICE_TEX : WATER_TEX)));
+	colorRGBA color((is_ice ? ICE_C : WATER_C).modulate_with(texture_color(is_ice ? (int)ICE_TEX : (int)WATER_TEX)));
 	color *= DARK_WATER_ATTEN;
 	blend_color(color, colorRGBA(0.15, 0.1, 0.05, 1.0), color, water_params.mud, 0); // blend in mud color
 	color.alpha *= water_params.alpha;
