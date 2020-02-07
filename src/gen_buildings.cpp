@@ -1810,10 +1810,6 @@ public:
 		s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 		s.add_uniform_float("ambient_scale", 1.0); // reset to default
 	}
-	static void set_texture_scale(shader_t &s, float tsx, float tsy) {
-		s.add_uniform_float("tex_scale_s", tsx);
-		s.add_uniform_float("tex_scale_t", tsy);
-	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 		if (!ADD_ROOM_LIGHTS) return;

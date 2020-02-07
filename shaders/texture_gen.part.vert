@@ -1,5 +1,6 @@
 uniform float tex_coord_weight = 0.0;
-uniform vec4 texgen_s, texgen_t;
+uniform vec4 texgen_s = vec4(1.0, 0.0, 0.0, 0.0);
+uniform vec4 texgen_t = vec4(0.0, 1.0, 0.0, 0.0);
 out vec2 tc;
 
 void setup_texgen_st() {
