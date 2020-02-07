@@ -711,7 +711,7 @@ public:
 						tri_verts.push_back(vert);
 					}
 				} // for S
-				std::reverse(tri_verts.begin()+start, tri_verts.end()); // winding order is wrong, but it's easier to reverse it than change all of the indexing logic
+				if (d == 1) {std::reverse(tri_verts.begin()+start, tri_verts.end());} // winding order is wrong, but it's easier to reverse it than change all of the indexing logic
 			} // for d
 		} // end draw end(s)
 	}
