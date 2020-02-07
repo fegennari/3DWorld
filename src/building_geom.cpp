@@ -2242,12 +2242,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	} // for i
 }
 
-void building_t::gen_and_draw_room_geom(shader_t &s, vect_cube_t const &ped_bcubes, unsigned building_ix, bool shadow_only) {
+void building_t::gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only) {
 	if (!interior) return;
-	rand_gen_t rgen;
-	rgen.set_state(building_ix, parts.size()); // set to something canonical per building
-	if (!is_rotated()) {gen_room_details(rgen, ped_bcubes);} // generate so that we can draw it; doesn't work with rotated buildings
-	if (interior->room_geom) {interior->room_geom->draw(s, shadow_only);}
+	if (is_rotated()) return; // no room geom for rotated buildings
+
+	if (!has_room_geom()) {
+		rand_gen_t rgen;
+		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
+		ped_bcubes.clear();
+		if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, building_ix, ped_bcubes);}
+		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
+		assert(has_room_geom());
+	}
+	interior->room_geom->draw(s, shadow_only);
 }
 
 void building_t::clear_room_geom() {

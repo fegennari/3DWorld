@@ -1753,7 +1753,7 @@ public:
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		point const camera_xlated(get_camera_pos() - xlate);
 		vector<point> points; // reused temporary
-		vect_cube_t ped_bcubes; // we generally won't be drawing shadows for buildings that haven't been drawn yet, so we can probably avoid setting ped_bcubes
+		vect_cube_t ped_bcubes; // likely not needed, maybe only in rare cases
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -1767,9 +1767,9 @@ public:
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
-						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, 1); // shadow_only=1
+						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
+						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, ped_ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
-						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix));
 
 						if (ped_ix >= 0 && b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) { // camera in this building
 							draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1); // draw people in this building
@@ -1925,9 +1925,7 @@ public:
 						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
-						ped_bcubes.clear();
-						if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, bi->ix, ped_bcubes);}
-						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, 0); // shadow_only=0
+						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, ped_ix, 0); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
