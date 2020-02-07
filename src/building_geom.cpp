@@ -2053,7 +2053,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				light.z2() = z + window_vspacing - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
-				// TODO_INT: check ped_bcubes and set is_lit if any are in the room
+
+				// check ped_bcubes and set is_lit if any are people are in this floor of this room
+				for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
+					if (!p->intersects_xy(*r)) continue; // person not in this room
+					if (p->z2() < light.z1() && p->z1() + window_vspacing > light.z2()) {is_lit = 1;} // on this floor
+				}
 				unsigned char flags(RO_FLAG_NOCOLL); // no collision detection with lights
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
