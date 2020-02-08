@@ -1,7 +1,8 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform mat4 fg_ViewMatrix;
-uniform float tex_scale_s = 1.0;
-uniform float tex_scale_t = 1.0;
+uniform float tex_scale_s    = 1.0;
+uniform float tex_scale_t    = 1.0;
+uniform float tc_texgen_mix  = 0.0;
 //uniform float clip_plane_z = 0.0;
 uniform vec3 world_space_offset = vec3(0.0);
 uniform float vertex_offset_scale = 0.0; // hack to make vertex_offset ignored when unused/unset
@@ -21,6 +22,7 @@ void main() {
 	else if (use_texgen == 2) {tc = vec2(dot(fg_Vertex, tex0_s), dot(fg_Vertex, tex0_t));}
 	else if (use_texgen == 3) {set_tc0_from_vert_id();}
 	else if (use_texgen == 4) {set_bent_quad_tc0_from_vert_id();}
+	else if (use_texgen == 5) {setup_texgen_st(); tc = mix(tc, fg_TexCoord, tc_texgen_mix);}
 	else                      {tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);}
 
 	fg_Color_vf = fg_Color;
