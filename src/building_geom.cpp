@@ -2177,7 +2177,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
-			// TODO_INT: what about stairs that connect stacked parts? these rooms aren't flagges with has_stairs because stairs only connect to the bottom floor
+			// Note: stairs that connect stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			if (r->contains_pt(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
 		}
 	}

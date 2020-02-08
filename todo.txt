@@ -20,5 +20,3 @@ Cities:
   - Working elevators
   - Interiors for city office towers
   - Indirect/ambient lighting
-  - Models of people in buildings
-  
