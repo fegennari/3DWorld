@@ -999,7 +999,8 @@ void add_camera_flashlight() {
 }
 
 light_source get_player_flashlight_light_source(float radius_scale) {
-	point const camera(get_camera_pos());
+	point camera(get_camera_pos());
+	if (world_mode == WMODE_INF_TERRAIN) {camera -= get_tiled_terrain_model_xlate();}
 	float const bw((world_mode == WMODE_INF_TERRAIN) ? 0.001 : FLASHLIGHT_BW); // hack to adjust flashlight for city/building larger falloff values
 	return light_source(FLASHLIGHT_RAD*radius_scale, camera, camera, get_flashlight_color(), 1, cview_dir, bw);
 }
@@ -1183,7 +1184,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 	has_dl_sources     = (ndl > 0);
 	if (!has_dl_sources) return; // nothing else to do
 	dlight_add_thresh *= 0.99;
-	if (!scene_bcube.is_strictly_normalized()) {cout << "scene_bcube: " << scene_bcube.str() << endl;}
+	if (!scene_bcube.is_strictly_normalized()) {cerr << "Invalid scene_bcube: " << scene_bcube.str() << endl;}
 	assert(scene_bcube.dx() > 0.0 && scene_bcube.dy() > 0.0);
 	point const scene_llc(scene_bcube.get_llc()); // Note: zval ignored
 	vector3d const scene_sz(scene_bcube.get_size()); // Note: zval ignored

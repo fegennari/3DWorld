@@ -2902,6 +2902,7 @@ void city_lights_manager_t::tighten_light_bcube_bounds(vector<light_source> cons
 	cube_t tight_bcube;
 	for (auto l = lights.begin(); l != lights.end(); ++l) {tight_bcube.assign_or_union_with_sphere(l->get_pos(), l->get_radius());}
 	//cout << TXT(bcube.dx()) << TXT(bcube.dy()) << TXT(tight_bcube.dx()) << TXT(tight_bcube.dy()) << endl;
+	if (!lights_bcube.intersects(tight_bcube)) {cerr << "Invalid bcubes: " << TXT(lights_bcube.str()) << TXT(tight_bcube.str()) << endl;}
 	lights_bcube.intersect_with_cube(tight_bcube); // clip the original cube to the tight cube (better to just set to tight cube?)
 }
 
