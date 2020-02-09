@@ -1091,12 +1091,14 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader
 	assert(peds_b[first_ped_ix].dest_bldg == bix); // consistency check
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
 	float const draw_dist(dlight_shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
+	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
+	pdu.pos -= xlate; // adjust for local translate
 	bool in_sphere_draw(0);
 
 	// Note: no far clip adjustment or draw dist scale
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
 		if (p->dest_bldg != bix) break; // done with this building
-		draw_ped(*p, s, camera_pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, dlight_shadow_only, dlight_shadow_only, 0); // no animations
+		draw_ped(*p, s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, dlight_shadow_only, dlight_shadow_only, 0); // no animations
 	}
 	end_sphere_draw(in_sphere_draw);
 	s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
