@@ -1608,9 +1608,12 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				}
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
-			for (auto p2 = parts.begin(); p2 != get_real_parts_end() && !no_walls; ++p2) {
+			float const min_split_wall_len(0.75*min_wall_len); // allow a shorter than normal wall because these walls have higher priority
+			bool const too_small(min(p->dx(), p->dy()) < min_split_wall_len);
+
+			for (auto p2 = parts.begin(); p2 != get_real_parts_end() && !too_small; ++p2) {
 				if (p2 == p) continue; // skip self
-				if (min(p2->dx(), p2->dy()) < min_wall_len) continue; // too small, skip
+				if (min(p2->dx(), p2->dy()) < min_split_wall_len) continue; // too small, skip
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
 					for (unsigned dir = 0; dir < 2; ++dir) {
@@ -1627,7 +1630,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
 						wall.d[ dim][0] = p->d[dim][0] + wall_edge_spacing; // shorter part side with slight offset
 						wall.d[ dim][1] = p->d[dim][1] - wall_edge_spacing;
-						if (wall.get_sz_dim(dim) < min_wall_len) continue; // wall is too short to add (can this happen?)
+						if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
 						wall.d[!dim][ dir] = val;
 						wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
 						must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
