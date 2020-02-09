@@ -2018,6 +2018,7 @@ public:
 			shader_t holes_shader;
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
+			if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);}
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
 			glEnable(GL_DEPTH_CLAMP); // make sure holes are not clipped by the near plane
 			ext_door_draw.draw(holes_shader, 0, 0, 1); // direct_draw_no_vbo=1
