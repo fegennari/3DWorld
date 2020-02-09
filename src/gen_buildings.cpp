@@ -855,7 +855,7 @@ public:
 					float const face_val(cube.d[n][j]);
 
 					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
-					for (auto p = parts.rbegin(); p != parts.rend(); ++p) { // iterate backwards, tallest to shortest
+					for (auto p = (parts.rbegin() + bg.has_chimney); p != parts.rend(); ++p) { // iterate backwards, tallest to shortest
 						if (*p == cube) continue; // skip ourself
 						if (p->d[n][!j] != face_val && (p->d[n][0] >= face_val || p->d[n][1] <= face_val)) continue; // face not contained in dir of normal (inc opposing aligned val)
 						float const pxy1(p->d[xy][0]), pxy2(p->d[xy][1]), cxy1(cube.d[xy][0]), cxy2(cube.d[xy][1]); // end points used for clipping
