@@ -1001,13 +1001,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		else {
 			unsigned skip_side_tri(2); // default = skip neither
 			
-			if (two_parts && dim == other_dim && i->d[!dim][0] >= other.d[!dim][0] && i->d[!dim][1] <= other.d[!dim][1] && i->z2() <= other.z2()) { // side of i contained in other
+			if (two_parts && (dim == other_dim || hipped_roof[1-ix]) && i->d[!dim][0] >= other.d[!dim][0] && i->d[!dim][1] <= other.d[!dim][1] && i->z2() <= other.z2()) {
+				// side of i contained in other
 				if (ix == 1 && i->z2() == other.z2()) { // same height - check if we need to ajust the slope of this roof to match
 					float const roof_slope(roof_dz[0]/other.get_sz_dim(!dim));
 					min_eq(max_dz, roof_slope*i->get_sz_dim(!dim)); // peak_height cancels out
 				}
 				for (unsigned d = 0; d < 2; ++d) {
-					if (i->d[dim][d] == other.d[dim][!d]) {skip_side_tri = d;} // remove smaller of two opposing/overlapping triangles to prevent z-fighting
+					if (dim == other_dim && i->d[dim][d] == other.d[dim][!d]) {skip_side_tri = d;} // remove smaller of two opposing/overlapping triangles to prevent z-fighting
 				}
 			}
 			assert(max_dz > 0.0);
