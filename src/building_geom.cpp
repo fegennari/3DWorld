@@ -130,8 +130,8 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	return 0;
 }
 
-bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius,
-	bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
+bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, vector3d const &xlate,
+	float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
 {
 	if (!is_valid()) return 0; // invalid building
 	point p_int;
@@ -176,7 +176,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	if (is_interior) {
 		point pos2_bs(pos2 - xlate);
-		if (check_sphere_coll_interior(pos2_bs, (p_last - xlate), radius, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
+		if (check_sphere_coll_interior(pos2_bs, (p_last - xlate), ped_bcubes, radius, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
@@ -259,7 +259,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 
 // Note: pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
-bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm) const {
+bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
 	assert(interior);
 	float const floor_spacing(get_window_vspace());
 	bool had_coll(0), on_stairs(0);
@@ -315,6 +315,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm); // skip_z=0
 		}
 	}
+	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
+		float const ped_radius(0.5*max(i->dx(), i->dy())); // determine radius from bcube X/Y
+		point const center(i->get_cube_center());
+		float const dist(p2p_dist(pos, center)), r_sum(radius + 0.5*ped_radius); // ped_radius is a bit too large
+		if (dist >= r_sum) continue; // no intersection
+		vector3d const normal(vector3d(pos.x-center.x, pos.y-center.y, 0.0).get_norm()); // XY direction
+		if (cnorm) {*cnorm = normal;}
+		pos += normal*(r_sum - dist);
+		had_coll = 1;
+	} // for i
 	return had_coll; // will generally always be true due to floors
 }
 

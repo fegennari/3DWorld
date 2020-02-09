@@ -2251,6 +2251,7 @@ public:
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
+		vect_cube_t ped_bcubes;
 
 		if (radius == 0.0) { // point coll - ignore p_last as well
 			point const p1x(pos - xlate);
@@ -2262,7 +2263,7 @@ public:
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
-				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, points, cnorm, check_interior)) return 1;
+				if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, 0.0, xy_only, points, cnorm, check_interior)) return 1;
 			}
 			return 0; // no coll
 		}
@@ -2282,7 +2283,13 @@ public:
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					if (!b->intersects_xy(bcube)) continue;
-					if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+
+					if (check_interior) {
+						ped_bcubes.clear();
+						int const ped_ix(get_ped_ix_for_bix(b->ix));
+						if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, b->ix, ped_bcubes);}
+					}
+					if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
 				}
 			} // for x
 		} // for y
