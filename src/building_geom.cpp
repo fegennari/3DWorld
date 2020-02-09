@@ -966,6 +966,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	if (gen_door) {add_door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, 0, rgen), door_part, door_dim, door_dir, 0);}
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};
+	bool hipped_roof[3] = {0};
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		unsigned const ix(i - parts.begin()), fdim(force_dim[ix]);
@@ -1003,6 +1004,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			roof_dz[ix] = gen_peaked_roof(*i, peak_height, dim, extend_to, max_dz, skip_side_tri);
 		}
 		assert(roof_dz[ix] > 0.0);
+		hipped_roof[ix] = hipped;
 	} // for i
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned part_ix(0);
@@ -1028,12 +1030,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			if (rgen.rand_bool()) {shift = -shift;}
 		}
 		float const center(c.get_center_dim(!dim) + shift);
+		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
 		c.d[dim][!dir]  = c.d[dim][ dir] + (dir ? -0.03f : 0.03f)*(sz1 + sz2); // chimney depth
 		c.d[dim][ dir] += (dir ? -0.01 : 0.01)*sz2; // slight shift from edge of house to avoid z-fighting
 		c.d[!dim][0] = center - 0.05*sz1;
 		c.d[!dim][1] = center + 0.05*sz1;
 		c.z1()  = c.z2();
-		c.z2() += rgen.rand_uniform(1.25, 1.5)*roof_dz[part_ix] - 0.4f*abs(shift);
+		c.z2() += rgen.rand_uniform(1.25, 1.5)*chimney_dz - 0.4f*abs(shift);
 		parts.push_back(c);
 		// add top quad to cap chimney (will also update bcube to contain chimney)
 		tquad_t tquad(4); // quad
