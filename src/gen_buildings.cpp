@@ -1252,7 +1252,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 void building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist) const {
 	tquad_with_ix_t door;
 	if (!find_door_close_to_point(door, pos, dist)) return; // no nearby door
-	move_door_to_other_side_of_wall(door, -1.2, 0); // move a bit further away from the outside of the building to make it in front of the orig door
+	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	// draw the opened door
@@ -2014,12 +2014,14 @@ public:
 				s.end_shader();
 			}
 			glCullFace(GL_BACK); // draw front faces
-			// draw windows in depth pass to create holes
+			// draw windows and doors in depth pass to create holes
 			shader_t holes_shader;
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
+			glEnable(GL_DEPTH_CLAMP); // make sure holes are not clipped by the near plane
 			ext_door_draw.draw(holes_shader, 0, 0, 1); // direct_draw_no_vbo=1
+			setup_depth_clamp(); // restore
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			holes_shader.end_shader();
 			glDisable(GL_CULL_FACE);
@@ -2032,6 +2034,7 @@ public:
 		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 		glEnable(GL_CULL_FACE);
+		if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);} // if an exterior door was drawn, make sure we don't clamp the walls over the holes
 
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) { // draw front faces of buildings
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
@@ -2107,6 +2110,7 @@ public:
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
+		if (!ext_door_draw.empty()) {setup_depth_clamp();} // restore
 		glDepthFunc(GL_LESS);
 		fgPopMatrix();
 	}
