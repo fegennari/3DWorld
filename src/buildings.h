@@ -221,11 +221,12 @@ public:
 
 struct building_room_geom_t {
 
-	vector<room_object_t> objs; // for drawing and collision detection
 	float obj_scale;
+	unsigned stairs_start; // index of first object of TYPE_STAIR
+	vector<room_object_t> objs; // for drawing and collision detection
 	vector<rgeom_mat_t> materials;
 
-	building_room_geom_t() : obj_scale(1.0) {}
+	building_room_geom_t() : obj_scale(1.0), stairs_start(0) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	unsigned get_num_verts() const;

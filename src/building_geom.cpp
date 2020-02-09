@@ -297,7 +297,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		obj_z = max(pos.z, p_last.z);
 		point const rel_pos(pos - xlate);
 
-		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for and handle stairs first
+		for (auto c = (objs.begin() + interior->room_geom->stairs_start); c != objs.end(); ++c) { // check for and handle stairs first
 			if (c->no_coll() || c->type != TYPE_STAIR) continue;
 			if (!c->contains_pt_xy(rel_pos))           continue; // sphere not on this stair
 			if (obj_z - xlate.z < c->z1())             continue; // below the stair
@@ -309,8 +309,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			min_eq(pos[dim], (c->d[dim][1] - radius + xlate[dim]));
 			had_coll = on_stairs = 1;
 		} // for c
-		// check for other objects to collide with
-		for (auto c = objs.begin(); c != objs.end(); ++c) {
+		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with
 			if (c->no_coll()) continue;
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2() + xlate.z) continue; // above the stair - allow it to be walked on
 			had_coll |= sphere_cube_int_update_pos(pos, radius, (*c + xlate), p_last, 1, 0, cnorm); // skip_z=0
@@ -2133,6 +2132,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 	bool const dir(rgen.rand_bool()); // same for every floor, could alternate for stairwells if we were tracking it
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	interior->room_geom->stairs_start = objs.size();
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
