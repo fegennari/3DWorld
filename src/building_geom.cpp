@@ -880,6 +880,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				skip_last_roof = 1;
 			}
 			else if (detail_type == 2) { // detatched garage/shed
+				has_garage = 1;
 				c.d[!dim][dir2 ]  = base.d[!dim][dir2]; // shove it into the opposite corner of the bcube
 				c.d[ dim][dir  ]  = base.d[ dim][dir ]; // shove it into the opposite corner of the bcube
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge

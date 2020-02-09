@@ -290,7 +290,7 @@ struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
 	uint8_t hallway_dim, real_num_parts; // main hallway dim: 0=x, 1=y, 2=none
-	bool is_house, has_antenna, has_chimney;
+	bool is_house, has_antenna, has_chimney, has_garage;
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube, pri_hall;
 	vect_cube_t parts;
@@ -301,8 +301,8 @@ struct building_t : public building_geom_t {
 	float ao_bcz2;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), is_house(0), has_antenna(0), has_chimney(0),
-		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {}
-	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), is_house(0), has_antenna(0), has_chimney(0), ao_bcz2(0.0) {}
+		has_garage(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {}
+	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), is_house(0), has_antenna(0), has_chimney(0), has_garage(0), ao_bcz2(0.0) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	bool has_interior() const {return bool(interior);}
 	bool has_room_geom() const {return (has_interior() && interior->room_geom);}
