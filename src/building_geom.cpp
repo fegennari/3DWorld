@@ -1338,7 +1338,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
 	// allocate space for all floors
-	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories
+	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories; used only for reserving vectors
 
 	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {
 		bool const has_stairs(!is_house || p == parts.begin()); // assumes one set of stairs or elevator per part
@@ -1348,6 +1348,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		tot_num_stairwells += (has_stairs && num_floors > 1);
 		tot_num_landings   += (has_stairs ? (num_floors - 1) : 0);
 	}
+	if (has_garage) {++tot_num_floors;}
 	interior->ceilings.reserve(tot_num_floors);
 	interior->floors  .reserve(tot_num_floors);
 	interior->landings.reserve(tot_num_landings);
@@ -1538,6 +1539,16 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		} // end wall placement
 		add_ceilings_floors_stairs(rgen, *p, hall, num_floors, rooms_start, use_hallway, first_part);
 	} // for p (parts)
+	if (has_garage) { // add garage/shed floor and ceiling
+		assert(num_parts < parts.size());
+		cube_t const &garage(parts[num_parts]);
+		cube_t C(garage);
+		C.z2() = C.z1() + fc_thick;
+		interior->floors.push_back(C);
+		C.z2() = garage.z2();
+		C.z1() = C.z2() - fc_thick;
+		interior->ceilings.push_back(C);
+	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
 		vect_cube_t &walls(interior->walls[d]);
