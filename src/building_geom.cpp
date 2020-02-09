@@ -456,6 +456,74 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	return 0;
 }
 
+bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
+	float tmin(0.0), tmax(1.0);
+	if (!get_line_clip(p1, p2, c.d, tmin, tmax) || tmin >= t) return 0;
+	t = tmin;
+	get_closest_cube_norm(c.d, (p1 + (p2 - p1)*t), cnorm);
+	return 1;
+}
+bool ray_cast_vect_cube(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d &cnorm, float &t) {
+	bool ret(0);
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {ret |= ray_cast_cube(p1, p2, *c, cnorm, t);}
+	return ret;
+}
+bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const { // pos in building space
+	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
+	float const extent(bcube.get_max_extent());
+	cube_t clip_cube(bcube);
+	clip_cube.expand_by(0.01*extent); // expand slightly so that collisions with objects on the edge are still considered interior
+	point p1(pos), p2(pos + dir*(2.0*extent));
+	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect building bcube
+	building_mat_t const &mat(get_material());
+	float t(1.0); // at p2
+	bool hit_side(0);
+
+	// check parts (exterior walls)
+	for (auto p = parts.begin(); p != parts.end(); ++p) { // should chimneys and porch roofs be included?
+		if (p->contains_pt(p1)) { // interior ray - find exit point
+			float tmin(0.0), tmax(1.0);
+			if (!get_line_clip(p1, p2, p->d, tmin, tmax) || tmax >= t) continue;
+			t = tmax;
+			get_closest_cube_norm(p->d, (p1 + (p2 - p1)*t), cnorm);
+			cnorm.negate(); // reverse hit dir
+		}
+		else { // exterior ray - find entrance point
+			if (!ray_cast_cube(p1, p2, *p, cnorm, t)) continue;
+		}
+		hit_side = 1;
+	} // for p
+	if (hit_side) {ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());}
+
+	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {
+		// WRITE; use roof_color/mat.roof_tex
+	}
+	// check walls, floors, and ceilings
+	bool const hit_wall(ray_cast_vect_cube(p1, p2, interior->walls[0], cnorm, t) || ray_cast_vect_cube(p1, p2, interior->walls[1], cnorm, t));
+	if (hit_wall) {ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());}
+	if (ray_cast_vect_cube(p1, p2, interior->ceilings, cnorm, t)) {ccolor = mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color());}
+	if (ray_cast_vect_cube(p1, p2, interior->floors,   cnorm, t)) {ccolor = mat.floor_color.modulate_with(mat.floor_tex.get_avg_color());}
+	if (ray_cast_vect_cube(p1, p2, details,            cnorm, t)) {ccolor = detail_color.   modulate_with(mat.roof_tex. get_avg_color());} // should this be included?
+
+	if (has_room_geom()) {
+		vector<room_object_t> const &objs(interior->room_geom->objs);
+		point const cur_p2(p1 + (p2 - p1)*t); // clip to reduce the chance of a stairwell intersection
+		bool hit_stairs(0);
+
+		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+			if (s->line_intersects(p1, cur_p2)) {hit_stairs = 1; break;}
+		}
+		auto objs_end(hit_stairs ? objs.end() : (objs.begin() + interior->room_geom->stairs_start)); // stairs optimization
+
+		for (auto c = objs.begin(); c != objs.end(); ++c) {
+			if (ray_cast_cube(p1, p2, *c, cnorm, t)) {ccolor = c->get_color();}
+		}
+	}
+	if (t == 1.0) return 0; // no intersection
+	cpos = p1 + (p2 - p1)*t;
+	return 1;
+}
+
 void building_t::calc_bcube_from_parts() {
 	assert(!parts.empty());
 	bcube = parts[0];
@@ -2580,6 +2648,23 @@ rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex) {
 }
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 	return get_material(tid_nm_pair_t(WOOD2_TEX, tscale)); // hard-coded for common material
+}
+
+colorRGBA const &room_object_t::get_color() const {
+	switch (type) {
+	case TYPE_NONE:  assert(0); // not supported
+	case TYPE_TABLE: return WOOD_COLOR;
+	case TYPE_CHAIR: return WOOD_COLOR;
+	case TYPE_STAIR: return LT_GRAY; // close enough
+	case TYPE_ELEVATOR: return LT_GRAY; // ???
+	case TYPE_LIGHT: return WHITE;
+	case TYPE_BOOK:  return BLUE; // ???
+	case TYPE_BCASE: return WOOD_COLOR;
+	case TYPE_DESK:  return WOOD_COLOR;
+	case TYPE_TCAN:  return BLACK;
+	default: assert(0); // undefined type
+	}
+	return BLACK; // never gets here
 }
 
 void building_room_geom_t::create_vbos() {

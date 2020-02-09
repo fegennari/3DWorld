@@ -200,6 +200,7 @@ struct room_object_t : public cube_t {
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll   () const {return (flags & RO_FLAG_NOCOLL);}
+	colorRGBA const &get_color() const;
 };
 
 class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
@@ -329,6 +330,7 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll_interior(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
+	bool ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
