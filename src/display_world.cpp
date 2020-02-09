@@ -700,6 +700,10 @@ void set_multisample(bool enable) {
 	if (enable) {glEnable(GL_MULTISAMPLE);} else {glDisable(GL_MULTISAMPLE);}
 }
 
+void setup_depth_clamp() {
+	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} else {glDisable(GL_DEPTH_CLAMP);}
+}
+
 void draw_sky_and_clouds(bool camera_side, bool no_update=0) {
 	draw_sky(camera_side, no_update);
 	draw_puffy_clouds(camera_side, no_update);
@@ -804,7 +808,7 @@ void display() {
 	update_sound_loops();
 	set_multisample(1);
 	glEnable(GL_DEPTH_TEST); // Note: seems to be required to make reflections work after first un-maximize (why?)
-	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} else {glDisable(GL_DEPTH_CLAMP);}
+	setup_depth_clamp();
 	bind_vao(0); // set to default VAO
 #ifdef USE_GPU_TIMER
 	gpu_timer_t gpu_timer;

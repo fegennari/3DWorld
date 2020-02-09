@@ -28,6 +28,7 @@ colorRGBA attenuate_sun_color(colorRGBA const &c);
 float get_moon_light_factor();
 void setup_basic_fog();
 void set_multisample(bool enable);
+void setup_depth_clamp();
 void check_zoom();
 void reset_camera_pos();
 void move_camera_pos_xy(vector3d const &v, float dist);
