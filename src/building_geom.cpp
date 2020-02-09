@@ -149,7 +149,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		float const zval(max(pos2.z, p_last2.z) - xlate.z); // this is the real zval for use in collsion detection, in building space
-		cube_t sc; sc.set_from_sphere(pos2, radius); // sphere bounding cube
+		cube_t sc; sc.set_from_sphere((pos2 - xlate), radius); // sphere bounding cube
 
 		if (zval > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
