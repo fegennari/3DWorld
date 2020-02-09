@@ -1751,7 +1751,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		room.has_stairs = 1;
 		stairs_cut      = stairs;
 	}
-	else if (!is_house || first_part) { // only add stairs to first part of a house
+	else if (!is_house || interior->stairwells.empty()) { // only add stairs to first part of a house unless we haven't added stairs yet
 		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
