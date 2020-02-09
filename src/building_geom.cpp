@@ -933,7 +933,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			c.d[!dim][!dir2] = parts[1].d[!dim][dir2]; // other half of the shrunk part1
 			dist1 = (c.d[!dim][!dir2] - base.d[!dim][dir2])*rgen.rand_uniform(0.4, 0.6);
 			dist2 = (c.d[ dim][!dir ] - base.d[ dim][dir ])*rgen.rand_uniform(0.4, 0.6);
-			float const height(rgen.rand_uniform(0.55, 0.7)*parts[1].dz());
+			float const base_dz(parts[1].dz()), height(min(base_dz, max(door_height/0.95f, rgen.rand_uniform(0.55, 0.7)*base_dz)));
 
 			if (gen_door) { // add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
 				door_cube   = c;
