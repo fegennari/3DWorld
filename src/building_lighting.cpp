@@ -23,6 +23,7 @@ bool ray_cast_vect_cube(point const &p1, point const &p2, vect_cube_t const &cub
 }
 
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const { // pos in building space
+
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
 	float const extent(bcube.get_max_extent());
 	cube_t clip_cube(bcube);
@@ -38,6 +39,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 		if (p->contains_pt(p1)) { // interior ray - find exit point
 			float tmin(0.0), tmax(1.0);
 			if (!get_line_clip(p1, p2, p->d, tmin, tmax) || tmax >= t) continue;
+			// TODO: handle ray exiting part and entering adj part (recursively?)
 			t = tmax;
 			get_closest_cube_norm(p->d, (p1 + (p2 - p1)*t), cnorm);
 			cnorm.negate(); // reverse hit dir
@@ -70,12 +72,62 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 		auto objs_end(hit_stairs ? objs.end() : (objs.begin() + interior->room_geom->stairs_start)); // stairs optimization
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
+			if (c->type == TYPE_LIGHT && c->contains_pt(p1)) continue; // skip light fixtures to avoid self intersections with light starting points
 			if (ray_cast_cube(p1, p2, *c, cnorm, t)) {ccolor = c->get_color();}
 		}
 	}
-	if (t == 1.0) return 0; // no intersection
+	if (t == 1.0) {cpos = p2; return 0;} // no intersection
 	cpos = p1 + (p2 - p1)*t;
 	return 1;
+}
+
+void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen) const {
+
+	// see ray_trace_local_light_source()
+	unsigned const NUM_RAYS = 100000; // TODO: config file option, maybe can reuse existing local rays option
+	float const tolerance(1.0E-5*bcube.get_max_extent());
+
+	for (unsigned n = 0; n < NUM_RAYS; ++n) {
+		vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
+		dir.z = -fabs(dir.z); // make sure dir points down
+		point pos(lpos), cpos;
+		vector3d cnorm, v_ref;
+		colorRGBA cur_color(lcolor), ccolor(WHITE);
+
+		for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
+			bool const hit(ray_cast_interior(pos, dir, cpos, cnorm, ccolor));
+			// TODO: accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
+			if (!hit) break; // done
+			cur_color = cur_color.modulate_with(ccolor);
+			if (cur_color.get_luminance() < 0.05) break; // done
+			calc_reflection_angle(dir, v_ref, cnorm);
+			v_ref.normalize();
+			vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
+			dir = (v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
+			if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
+			pos = cpos + tolerance*dir; // move slightly away from the surface
+		} // for bounce
+	} // for n
+}
+
+void building_t::ray_cast_building() const {
+
+	if (!has_room_geom()) return; // error?
+	timer_t timer("Ray Cast Building");
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	int const objs_size(interior->room_geom->stairs_start); // skip stairs
+	assert(objs_size <= objs.size());
+
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < objs_size; ++i) {
+		room_object_t const &ro(objs[i]);
+		if (ro.type != TYPE_LIGHT || !ro.is_lit()) continue; // not a light, or light not on
+		point lpos(ro.get_cube_center());
+		lpos.z = ro.z1() - 0.01*ro.dz(); // set slightly below bottom of light
+		rand_gen_t rgen;
+		rgen.set_state(i, 123);
+		ray_cast_room_light(lpos, ro.get_color(), rgen); // TODO: return actual light color
+	}
 }
 
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const {
