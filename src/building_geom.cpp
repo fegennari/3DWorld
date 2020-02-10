@@ -2259,7 +2259,10 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 
 		// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement
 		if (interior->room_geom) { // check placement against room geom objects
-			for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
+			vector<room_object_t> &objs(interior->room_geom->objs);
+			auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
+
+			for (auto i = objs.begin(); i != objs_end; ++i) {
 				if (i->intersects(bcube)) {bad_place = 1; break;}
 			}
 		}

@@ -84,6 +84,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
 	float const window_vspacing(get_window_vspace()), camera_z(camera_bs.z);
+	assert(interior->room_geom->stairs_start <= objs.size());
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0);
 
@@ -92,11 +94,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
-																				  // Note: stairs that connect stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
+			// Note: stairs that connect stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			if (r->contains_pt(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
 		}
 	}
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
+	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
@@ -120,7 +122,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist)) continue; // light viewed at too high an angle
 
 				if (camera_in_building) { // camera and light are in different buildings/parts
-										  // is it better to check if light half sphere is occluded by the floor above/below?
+					// is it better to check if light half sphere is occluded by the floor above/below?
 					assert(room.part_id < parts.size());
 					cube_t const &part(parts[room.part_id]);
 					bool visible[2] = {0};
@@ -136,13 +138,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		} // end camera on different floor case
 		float const light_radius(7.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius);
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), cull_radius)) continue; // VFC
-																					// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
+		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t clipped_bc; // in building space
 		clipped_bc.set_from_sphere(lpos, cull_radius);
 		clipped_bc.intersect_with_cube(bcube);
 		if (!stairs_light) {clipped_bc.z1() = floor_z; clipped_bc.z2() = ceil_z;} // clip zval to current floor if light not in a room with stairs or elevator
 		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC
-																	// update lights_bcube and add light(s)
+		// update lights_bcube and add light(s)
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
@@ -154,7 +156,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		dl_sources.back().set_building_id(building_id);
 
 		if (camera_in_building) { // only when the player is inside a building and can't see the light bleeding through the floor
-								  // add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
+			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
 			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, color);
 			dl_sources.back().set_building_id(building_id);
