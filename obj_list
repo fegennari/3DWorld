@@ -101,4 +101,5 @@ cars.o
 pedestrians.o
 texture_tile_blend.o
 building_geom.o
+building_lighting.o
 simplifier.o
