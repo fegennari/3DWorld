@@ -757,6 +757,7 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 		parts[start+1].d[!dim][1   ] = spos1;
 		parts[start+2].d[!dim][0   ] = spos2;
 		parts[start+3].d[ dim][!dir] = dpos2; // other full width part
+		has_courtyard = 1;
 		break;
 	}
 	default: assert(0);
@@ -1168,6 +1169,23 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 			} // for n
 		} // for b
 	} // for num
+	if (has_courtyard) { // add a door opening into the courtyard
+		assert(parts.size() >= 4);
+		unsigned const pref_side(rgen.rand()&3);
+		bool placed(0);
+
+		for (unsigned p = 0; p < 4 && !placed; ++p) {
+			unsigned const part_ix((p + pref_side) & 3);
+			cube_t const &part(parts[part_ix]);
+			if (part.z1() > bcube.z1()) continue; // not on the ground floor
+
+			for (unsigned n = 0; n < 4; ++n) {
+				bool const dim(n>>1), dir(n&1);
+				if (part.d[dim][dir] == bcube.d[dim][dir] || part.d[dim][!dir] != bcube.d[dim][!dir]) continue; // find a side on the interior
+				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, rgen), part_ix, dim, dir, 1); // centered
+			}
+		} // for b
+	}
 }
 
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
