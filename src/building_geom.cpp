@@ -2117,6 +2117,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 				bool const check_stairs(!is_house && parts.size() > 1 && f+1 == num_floors); // top floor of building that may have stairs connecting to upper stack
+				colorRGBA color;
+				if (is_house) {color = colorRGBA(1.0, 1.0, 0.8);} // house - yellowish
+				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.8, 0.8, 1.0);} // office building - blueish
+				else {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
 				
 				if (r->is_hallway) { // place a light on each side of the stairs, and also between stairs and elevator if there are both
 					unsigned const num_lights((r->has_elevator && r->has_stairs) ? 3 : 2);
@@ -2144,12 +2148,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 							} // for shift_dir
 							if (!is_valid) continue; // skip adding this light
 						}
-						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape); // dir=0 (unused)
+						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
 					} // for d
 				}
 				else { // normal room
 					if (check_stairs && has_bcube_int_exp(light, interior->stairwells, fc_thick)) {is_lit = 0;} // disable if blocked by stairs
-					else {objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape);} // dir=0 (unused)
+					else {objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color);} // dir=0 (unused)
 				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
@@ -2504,8 +2508,8 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
 	rgeom_mat_t &mat(get_material(tp));
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, WHITE, EF_Z2);} // white, untextured, skip top face
-	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, WHITE);}
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, EF_Z2);} //untextured, skip top face
+	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, c.color);}
 	else {assert(0);}
 }
 
@@ -2534,19 +2538,15 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 
 colorRGBA const &room_object_t::get_color() const {
 	switch (type) {
-	case TYPE_NONE:  assert(0); // not supported
 	case TYPE_TABLE: return WOOD_COLOR;
 	case TYPE_CHAIR: return WOOD_COLOR;
 	case TYPE_STAIR: return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_GRAY; // ???
-	case TYPE_LIGHT: return WHITE;
-	case TYPE_BOOK:  return BLUE; // ???
 	case TYPE_BCASE: return WOOD_COLOR;
 	case TYPE_DESK:  return WOOD_COLOR;
 	case TYPE_TCAN:  return BLACK;
-	default: assert(0); // undefined type
 	}
-	return BLACK; // never gets here
+	return color; // default case - probably should always set color so that we can return it here
 }
 
 void building_room_geom_t::create_vbos() {

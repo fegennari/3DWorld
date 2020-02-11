@@ -14,6 +14,7 @@ unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
 
 class light_source;
+class lmap_manager_t;
 
 struct building_occlusion_state_t {
 	point pos;
@@ -191,11 +192,12 @@ struct room_object_t : public cube_t {
 	room_object type;
 	room_obj_shape shape;
 	float light_amt;
+	colorRGBA color;
 
 	room_object_t() : dim(0), dir(0), flags(0), room_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, unsigned char rid,
-		bool dim_=0, bool dir_=0, unsigned char f=0, float light=1.0, room_obj_shape shape_=room_obj_shape::SHAPE_CUBE) :
-		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_), shape(shape_), light_amt(light) {}
+		bool dim_=0, bool dir_=0, unsigned char f=0, float light=1.0, room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
+		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_), shape(shape_), light_amt(light), color(color_) {}
 	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
@@ -332,8 +334,8 @@ struct building_t : public building_geom_t {
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
-	void ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen) const;
-	void ray_cast_building() const;
+	void ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const;
+	void ray_cast_building(lmap_manager_t *lmgr, float weight) const;
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);

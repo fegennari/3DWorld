@@ -8,6 +8,8 @@
 
 extern vector<light_source> dl_sources;
 
+void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt); // from ray_trace.cpp
+
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
 	float tmin(0.0), tmax(1.0);
@@ -81,7 +83,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 	return 1;
 }
 
-void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen) const {
+void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const {
 
 	// see ray_trace_local_light_source()
 	unsigned const NUM_RAYS = 100000; // TODO: config file option, maybe can reuse existing local rays option
@@ -96,7 +98,8 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 
 		for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
 			bool const hit(ray_cast_interior(pos, dir, cpos, cnorm, ccolor));
-			// TODO: accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
+			// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
+			add_path_to_lmcs(lmgr, nullptr, pos, cpos, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
 			if (!hit) break; // done
 			cur_color = cur_color.modulate_with(ccolor);
 			if (cur_color.get_luminance() < 0.05) break; // done
@@ -110,23 +113,23 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 	} // for n
 }
 
-void building_t::ray_cast_building() const {
+void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 
 	if (!has_room_geom()) return; // error?
 	timer_t timer("Ray Cast Building");
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	int const objs_size(interior->room_geom->stairs_start); // skip stairs
+	unsigned const objs_size(interior->room_geom->stairs_start); // skip stairs
 	assert(objs_size <= objs.size());
 
 #pragma omp parallel for schedule(dynamic)
-	for (int i = 0; i < objs_size; ++i) {
+	for (int i = 0; i < (int)objs_size; ++i) {
 		room_object_t const &ro(objs[i]);
 		if (ro.type != TYPE_LIGHT || !ro.is_lit()) continue; // not a light, or light not on
 		point lpos(ro.get_cube_center());
 		lpos.z = ro.z1() - 0.01*ro.dz(); // set slightly below bottom of light
 		rand_gen_t rgen;
 		rgen.set_state(i, 123);
-		ray_cast_room_light(lpos, ro.get_color(), rgen); // TODO: return actual light color
+		ray_cast_room_light(lpos, ro.get_color(), rgen, lmgr, weight);
 	}
 }
 
@@ -200,17 +203,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
-		colorRGBA color;
-		if (is_house) {color = colorRGBA(1.0, 1.0, 0.8);} // house - yellowish
-		else if (room.is_hallway || room.is_office) {color = colorRGBA(0.8, 0.8, 1.0);} // office building - blueish
-		else {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
-		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
+		dl_sources.emplace_back(light_radius, lpos, lpos, i->get_color(), 0, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_building_id(building_id);
 
 		if (camera_in_building) { // only when the player is inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
-			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, color);
+			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, i->get_color());
 			dl_sources.back().set_building_id(building_id);
 			dl_sources.back().disable_shadows();
 		}
