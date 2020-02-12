@@ -709,11 +709,15 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
 	// generate L, T, U, H, +, O shape
 	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
-	int const shape(rand()%10); // 0-9
-	bool const is_hp(shape >= 7);
+	bool const allow_courtyard(seed_cube.dx() < 1.6*seed_cube.dy() && seed_cube.dy() < 1.6*seed_cube.dx()); // AR < 1.6:1
+	int const shape(rand()%(allow_courtyard ? 10 : 9)); // 0-9
+	has_courtyard = (shape == 9);
+	bool const is_hpo(shape >= 7);
 	bool const dim(rgen.rand_bool()); // {x,y}
-	bool const dir(is_hp ? 1 : rgen.rand_bool()); // {neg,pos} - H/+ shapes are always pos
-	float const div(is_hp ? rgen.rand_uniform(0.2, 0.4) : rgen.rand_uniform(0.3, 0.7)), s1(rgen.rand_uniform(0.2, 0.4)), s2(rgen.rand_uniform(0.6, 0.8)); // split pos in 0-1 range
+	bool const dir(is_hpo ? 1 : rgen.rand_bool()); // {neg,pos} - H/+/O shapes are symmetric and always pos
+	float const smin(0.2), smax(has_courtyard ? 0.35 : 0.4); // outer and inner split sizes
+	float const div(is_hpo ? rgen.rand_uniform(smin, smax) : rgen.rand_uniform(0.3, 0.7)); // split pos in 0-1 range
+	float const s1(rgen.rand_uniform(smin, smax)), s2(rgen.rand_uniform(1.0-smax, 1.0-smin)); // split pos in 0-1 range
 	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
 	float const dpos2(llc[dim] + (1.0 - div)*sz[dim]); // other end - used for H, +, and O
 	unsigned const start(parts.size()), num((shape >= 9) ? 4 : ((shape >= 6) ? 3 : 2));
@@ -757,7 +761,6 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 		parts[start+1].d[!dim][1   ] = spos1;
 		parts[start+2].d[!dim][0   ] = spos2;
 		parts[start+3].d[ dim][!dir] = dpos2; // other full width part
-		has_courtyard = 1;
 		break;
 	}
 	default: assert(0);
