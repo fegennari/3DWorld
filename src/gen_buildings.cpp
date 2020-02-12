@@ -1172,6 +1172,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + floor_spacing) : doors.front().pts[2].z));
 	cube_t cont_part; // part containing the point
 	if (only_cont_pt != nullptr) {cont_part = get_part_containing_pt(*only_cont_pt);}
+	unsigned draw_parts_mask(0);
 
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		cube_t draw_part;
@@ -1191,11 +1192,12 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 				clamp_cube = &draw_part;
 				break;
 			} // for d
-			if (skip || clamp_cube == nullptr) continue; // skip of adj in neither dim, always skip (but could check chained adj case)
+			if (skip || clamp_cube == nullptr) continue; // skip if adj in neither dim, always skip (but could check chained adj case)
 		}
 		unsigned const part_ix(i - parts.begin());
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
 		bdraw.add_section(*this, parts, *i, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
+		draw_parts_mask |= (1 << part_ix);
 
 		// add ground floor windows next to doors
 		if (dsides == 0) continue; // no doors
@@ -1239,13 +1241,22 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dir
 		} // for dim
 	} // for i
-	if (only_cont_pt) { // camera inside this building, cut out holes so that the exterior doors show through
+	if (only_cont_pt != nullptr) { // camera inside this building, cut out holes so that the exterior doors show through
 		for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
 			tquad_with_ix_t door(*d);
 			move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
+			cube_t const door_bcube(door.get_bcube());
+			bool contained(0);
+
+			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+				if (!i->intersects(door_bcube)) continue;
+				contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
+				break;
+			}
+			if (!contained) continue; // part skipped, skip door as well
 			clip_door_to_interior(door, 0);
 			bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
-		}
+		} // for d
 	}
 }
 
