@@ -13,7 +13,7 @@ player_speed 0.5 # default is 1.0
 
 # smaller/slower, good for entering buildings
 camera_radius 0.012
-camera_height 0.008
+camera_height 0.016
 player_speed 0.2
 
 buildings tt_only 1
