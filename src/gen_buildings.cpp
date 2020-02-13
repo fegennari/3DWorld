@@ -1955,6 +1955,16 @@ public:
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated);
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
+#if 0 // debugging
+						point cpos;
+						colorRGBA ccolor;
+						if (b.ray_cast_camera_dir(xlate, cpos, ccolor)) {
+							tid_nm_pair_t tex; tex.emissive = 1;
+							tex.set_gl(s); // untextured emissive
+							s.set_cur_color(ccolor);
+							draw_subdiv_sphere(cpos, 0.1*CAMERA_RADIUS, N_SPHERE_DIV, 0, 1);
+						}
+#endif
 					} // for bi
 				} // for g
 			} // for i

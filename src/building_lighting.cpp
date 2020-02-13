@@ -18,12 +18,13 @@ bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &
 	get_closest_cube_norm(c.d, (p1 + (p2 - p1)*t), cnorm);
 	return 1;
 }
-bool ray_cast_vect_cube(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d &cnorm, float &t) {
+template<typename T> bool ray_cast_vect_cube(point const &p1, point const &p2, T const &cubes, vector3d &cnorm, float &t) { // cubes, elevators, etc.
 	bool ret(0);
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {ret |= ray_cast_cube(p1, p2, *c, cnorm, t);}
 	return ret;
 }
 
+// Note: static objects only; excludes people
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const { // pos in building space
 
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
@@ -34,7 +35,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect building bcube
 	building_mat_t const &mat(get_material());
 	float t(1.0); // at p2
-	bool hit_side(0);
+	bool hit_side(0), hit_ext(0);
 
 	// check parts (exterior walls)
 	for (auto p = parts.begin(); p != parts.end(); ++p) { // should chimneys and porch roofs be included?
@@ -45,19 +46,23 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 			t = tmax;
 			get_closest_cube_norm(p->d, (p1 + (p2 - p1)*t), cnorm);
 			cnorm.negate(); // reverse hit dir
+			hit_ext = 0;
 		}
 		else { // exterior ray - find entrance point
 			if (!ray_cast_cube(p1, p2, *p, cnorm, t)) continue;
+			hit_ext = 1;
 		}
 		hit_side = 1;
 	} // for p
-	if (hit_side) {ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());}
+	if (hit_side) {ccolor = (hit_ext ? side_color.modulate_with(mat.side_tex.get_avg_color()) : mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));}
 
 	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {
 		// WRITE; use roof_color/mat.roof_tex
 	}
-	// check walls, floors, and ceilings
-	bool const hit_wall(ray_cast_vect_cube(p1, p2, interior->walls[0], cnorm, t) || ray_cast_vect_cube(p1, p2, interior->walls[1], cnorm, t));
+	// check walls, floors, ceilings, and elevators
+	bool hit_wall(0);
+	for (unsigned d = 0; d < 2; ++d) {hit_wall |= ray_cast_vect_cube(p1, p2, interior->walls[d], cnorm, t);}
+	hit_wall |= ray_cast_vect_cube(p1, p2, interior->elevators, cnorm, t); // for now elevators are treated the same as walls
 	if (hit_wall) {ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());}
 	if (ray_cast_vect_cube(p1, p2, interior->ceilings, cnorm, t)) {ccolor = mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color());}
 	if (ray_cast_vect_cube(p1, p2, interior->floors,   cnorm, t)) {ccolor = mat.floor_color.modulate_with(mat.floor_tex.get_avg_color());}
@@ -131,6 +136,11 @@ void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 		rgen.set_state(i, 123);
 		ray_cast_room_light(lpos, ro.get_color(), rgen, lmgr, weight);
 	}
+}
+
+bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {
+	vector3d cnorm; // unused
+	return ray_cast_interior((get_camera_pos() - xlate), cview_dir, cpos, cnorm, ccolor);
 }
 
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const {

@@ -2571,8 +2571,8 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 
 colorRGBA const &room_object_t::get_color() const {
 	switch (type) {
-	case TYPE_TABLE: return WOOD_COLOR;
-	case TYPE_CHAIR: return WOOD_COLOR;
+	case TYPE_TABLE: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
+	case TYPE_CHAIR: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
 	case TYPE_STAIR: return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_GRAY; // ???
 	case TYPE_BCASE: return WOOD_COLOR;

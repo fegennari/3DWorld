@@ -337,6 +337,7 @@ struct building_t : public building_geom_t {
 	bool ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
 	void ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const;
 	void ray_cast_building(lmap_manager_t *lmgr, float weight) const;
+	bool ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const;
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
