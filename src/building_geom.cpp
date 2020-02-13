@@ -1365,7 +1365,7 @@ unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thi
 	float const z_span(c.dz() - floor_thickness);
 	assert(z_span > 0.0);
 	unsigned const num_floors(round_fp(z_span/window_vspacing)); // round - no partial floors
-	assert(num_floors <= 100); // sanity check
+	if (num_floors > 1000) {std::cerr << "Error: building with more than 1000 floors (" << num_floors << ")" << endl; exit(0);} // sanity check
 	return num_floors;
 }
 
