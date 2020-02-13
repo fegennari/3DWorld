@@ -142,7 +142,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
 	unsigned camera_part(parts.size()); // start at an invalid value
-	bool camera_by_stairs(0);
+	bool camera_by_stairs(0), camera_near_building(camera_in_building);
 
 	if (camera_in_building) {
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
@@ -152,6 +152,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// Note: stairs that connect stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			if (r->contains_pt(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
 		}
+	}
+	else {
+		cube_t bcube_exp(bcube);
+		bcube_exp.expand_by_xy(2.0*window_vspacing);
+		camera_near_building = bcube_exp.contains_pt(camera_bs);
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
@@ -206,7 +211,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		dl_sources.emplace_back(light_radius, lpos, lpos, i->get_color(), 0, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_building_id(building_id);
 
-		if (camera_in_building) { // only when the player is inside a building and can't see the light bleeding through the floor
+		if (camera_near_building) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
 			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, i->get_color());
