@@ -613,11 +613,13 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	// generate building levels and splits
 	float const height(base.dz()), dz(height/num_levels);
+	float const abs_min_edge_move(0.5*mat.get_floor_spacing()); // same as door width
+	bool const not_too_small(min(bcube.dx(), bcube.dy()) > 4.0*abs_min_edge_move);
 	assert(height > 0.0);
 
-	if (!do_split && (rgen.rand()&3) < (was_cube ? 2 : 3)) { // oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
+	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3)) {
+		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
 		point const llc(base.get_llc()), sz(base.get_size());
-		float const abs_min_edge_move(0.5*mat.get_floor_spacing()); // same as door width
 		parts.reserve(num_levels); // at least this many
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels, tallest to shortest
@@ -636,7 +638,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 					if (mv_lo > 0.0) {bc.d[d][0] = base.d[d][0] + max(abs_min_edge_move, mv_lo*sz[d]);}
 					if (mv_hi > 0.0) {bc.d[d][1] = base.d[d][1] - max(abs_min_edge_move, mv_hi*sz[d]);}
 				}
-				assert(bc.is_strictly_normalized());
+				if (!bc.is_strictly_normalized()) continue; // can fail when building is very small compared to floor spacing/abs_min_edge_move
 				bool contained(0);
 				for (auto p = parts.begin(); p != parts.end(); ++p) {contained |= p->contains_cube(bc);}
 				if (!contained) {valid = 1; break;} // success
@@ -645,14 +647,16 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			if (i == 0 || !is_simple_cube()) {parts.push_back(bc); continue;} // no splitting
 			split_cubes_recur(bc, parts, 0, parts.size()); // split this cube against all previously added cubes and remove overlapping areas
 		} // for i
-		parts.shrink_to_fit(); // optional
-		std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details
-		calc_bcube_from_parts(); // update bcube
-		gen_details(rgen);
-		end_add_parts();
-		gen_interior(rgen, 1);
-		gen_building_doors_if_needed(rgen);
-		return;
+		if (!parts.empty()) { // at least one part was placed; should (almost) always be true?
+			parts.shrink_to_fit(); // optional
+			std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details
+			calc_bcube_from_parts(); // update bcube
+			gen_details(rgen);
+			end_add_parts();
+			gen_interior(rgen, 1);
+			gen_building_doors_if_needed(rgen);
+			return;
+		}
 	}
 	parts.resize(num_levels);
 
