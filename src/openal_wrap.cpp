@@ -522,7 +522,7 @@ void proc_delayed_and_placed_sounds() {
 
 void play_thunder(point const &pos, float gain, float delay) {
 	float const pitch(rand_uniform(0.8, 1.2)); // variable pitch
-	gen_delayed_sound(delay, ((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), pos, gain, pitch);
+	gen_delayed_sound(delay, ((rand()&1) ? (unsigned)SOUND_THUNDER : (unsigned)SOUND_THUNDER2), pos, gain, pitch);
 }
 
 void play_switch_weapon_sound() {gen_sound(SOUND_CLICK,  get_camera_pos(), 1.0, 0.7);}
