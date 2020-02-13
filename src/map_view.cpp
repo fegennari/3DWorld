@@ -247,7 +247,7 @@ void draw_overhead_map() {
 							if (mh_set) {shadowed = is_shadowed(point(xval, yval, mh), plus_z, lpos, cindex2);}
 						}
 					} // end ground mode
-					else if (world_mode == WMODE_INF_TERRAIN && have_cities()) { // show cities and road networks
+					else if (world_mode == WMODE_INF_TERRAIN && (have_cities() || have_buildings())) { // show cities and road networks
 						colorRGBA city_color(BLACK);
 
 						if (get_buildings_line_hit_color(point(xval, yval, zmax+max_building_dz), point(xval, yval, zmin), city_color)) {

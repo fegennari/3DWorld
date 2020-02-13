@@ -3046,6 +3046,7 @@ public:
 		// TODO: streetlights, stoplights, trees, etc.
 	}
 	bool get_color_at_xy(float x, float y, colorRGBA &color) const {
+		if (!city_params.enabled()) return 0;
 		point const pos(point(x, y, 0.0) - get_camera_coord_space_xlate());
 		int const int_ret(road_gen.get_color_at_xy(pos, color)); // check roads/plots first to determine if we need to check cars
 		if (int_ret == INT_NONE) return 0; // no road/plot intersection - done

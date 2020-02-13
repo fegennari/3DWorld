@@ -2584,7 +2584,7 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;
 	return building_creator.get_building_hit_color(p1, p2, color);
 }
-bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproce effects
+bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproc effects
 bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !building_creator.empty() && global_building_params.flatten_mesh);}
 unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage());}
 
