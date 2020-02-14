@@ -23,6 +23,20 @@ template<typename T> bool ray_cast_vect_cube(point const &p1, point const &p2, T
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {ret |= ray_cast_cube(p1, p2, *c, cnorm, t);}
 	return ret;
 }
+bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point const &start, vect_cube_t const &cubes, vector3d &cnorm, float &t) {
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		if (!c->contains_pt(start)) continue;
+		float tmin(0.0), tmax(1.0);
+		if (!get_line_clip(p1, p2, c->d, tmin, tmax) || tmax >= t) continue;
+		point const cpos(p1 + (p2 - p1)*(tmax + 0.001)); // move slightly beyond the hit point
+		if (follow_ray_through_cubes_recur(p1, p2, cpos, cubes, cnorm, t)) return 1;
+		t = tmax;
+		get_closest_cube_norm(c->d, (p1 + (p2 - p1)*t), cnorm); // this is the final point, update cnorm
+		cnorm.negate(); // reverse hit dir
+		return 1;
+	} // for c
+	return 0;
+}
 
 // Note: static objects only; excludes people
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const { // pos in building space
@@ -34,31 +48,23 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 	point p1(pos), p2(pos + dir*(2.0*extent));
 	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect building bcube
 	building_mat_t const &mat(get_material());
-	float t(1.0); // at p2
-	bool hit_side(0), hit_ext(0);
+	float t(1.0); // start at p2
 
-	// check parts (exterior walls)
-	for (auto p = parts.begin(); p != parts.end(); ++p) { // should chimneys and porch roofs be included?
-		if (p->contains_pt(p1)) { // interior ray - find exit point
-			float tmin(0.0), tmax(1.0);
-			if (!get_line_clip(p1, p2, p->d, tmin, tmax) || tmax >= t) continue;
-			// TODO: handle ray exiting part and entering adj part (recursively?)
-			t = tmax;
-			get_closest_cube_norm(p->d, (p1 + (p2 - p1)*t), cnorm);
-			cnorm.negate(); // reverse hit dir
-			hit_ext = 0;
-		}
-		else { // exterior ray - find entrance point
-			if (!ray_cast_cube(p1, p2, *p, cnorm, t)) continue;
-			hit_ext = 1;
-		}
-		hit_side = 1;
-	} // for p
-	if (hit_side) {ccolor = (hit_ext ? side_color.modulate_with(mat.side_tex.get_avg_color()) : mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));}
-
-	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {
-		// WRITE; use roof_color/mat.roof_tex
+	// check parts (exterior walls); should chimneys and porch roofs be included?
+	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, cnorm, t)) { // interior ray - find furthest exit point
+		ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
 	}
+	else { // check for exterior rays
+		bool hit(0);
+		for (auto p = parts.begin(); p != parts.end(); ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
+		
+		if (hit) { // exterior hit - don't need to check interior geometry
+			ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());
+			cpos   = p1 + (p2 - p1)*t;
+			return 1;
+		}
+	}
+	//for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {} // WRITE; use roof_color/mat.roof_tex
 	// check walls, floors, ceilings, and elevators
 	bool hit_wall(0);
 	for (unsigned d = 0; d < 2; ++d) {hit_wall |= ray_cast_vect_cube(p1, p2, interior->walls[d], cnorm, t);}
