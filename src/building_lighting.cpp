@@ -84,7 +84,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 		}
 		auto objs_end(hit_stairs ? objs.end() : (objs.begin() + interior->room_geom->stairs_start)); // stairs optimization
 
-		for (auto c = objs.begin(); c != objs.end(); ++c) {
+		for (auto c = objs.begin(); c != objs_end; ++c) {
 			if (c->type == TYPE_LIGHT && c->contains_pt(p1)) continue; // skip light fixtures to avoid self intersections with light starting points
 			if (ray_cast_cube(p1, p2, *c, cnorm, t)) {ccolor = c->get_color();}
 		}
@@ -110,7 +110,7 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 		for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
 			bool const hit(ray_cast_interior(pos, dir, cpos, cnorm, ccolor));
 			// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
-			add_path_to_lmcs(lmgr, nullptr, pos, cpos, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
+			if (lmgr != nullptr) {add_path_to_lmcs(lmgr, nullptr, pos, cpos, weight, cur_color, LIGHTING_LOCAL, (bounce == 0));} // local light, no bcube
 			if (!hit) break; // done
 			cur_color = cur_color.modulate_with(ccolor);
 			if (cur_color.get_luminance() < 0.05) break; // done
