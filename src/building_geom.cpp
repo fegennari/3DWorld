@@ -2569,7 +2569,7 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 	return get_material(tid_nm_pair_t(WOOD2_TEX, tscale)); // hard-coded for common material
 }
 
-colorRGBA const &room_object_t::get_color() const {
+colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
 	case TYPE_CHAIR: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));

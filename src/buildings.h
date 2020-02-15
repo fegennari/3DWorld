@@ -202,7 +202,7 @@ struct room_object_t : public cube_t {
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll   () const {return (flags & RO_FLAG_NOCOLL);}
-	colorRGBA const &get_color() const;
+	colorRGBA get_color() const;
 };
 
 class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
