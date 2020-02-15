@@ -5,11 +5,12 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "lightmap.h" // for light_source
+#include "cobj_bsp_tree.h"
+#include <atomic>
 
 extern vector<light_source> dl_sources;
 
 void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt); // from ray_trace.cpp
-
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
 	float tmin(0.0), tmax(1.0);
@@ -18,11 +19,33 @@ bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &
 	get_closest_cube_norm(c.d, (p1 + (p2 - p1)*t), cnorm);
 	return 1;
 }
-template<typename T> bool ray_cast_vect_cube(point const &p1, point const &p2, T const &cubes, vector3d &cnorm, float &t) { // cubes, elevators, etc.
-	bool ret(0);
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {ret |= ray_cast_cube(p1, p2, *c, cnorm, t);}
-	return ret;
-}
+
+class cube_bvh_t : public cobj_tree_simple_type_t<colored_cube_t> {
+	virtual void calc_node_bbox(tree_node &n) const {
+		assert(n.start < n.end);
+		for (unsigned i = n.start; i < n.end; ++i) {n.assign_or_union_with_cube(objects[i]);} // bcube union
+	}
+public:
+	vect_colored_cube_t &get_objs() {return objects;}
+
+	bool ray_cast(point const &p1, point const &p2, vector3d &cnorm, colorRGBA &ccolor, float &t) const {
+		if (nodes.empty()) return 0;
+		bool ret(0);
+		node_ix_mgr nixm(nodes, p1, p2);
+		unsigned const num_nodes((unsigned)nodes.size());
+
+		for (unsigned nix = 0; nix < num_nodes;) {
+			tree_node const &n(nodes[nix]);
+			if (!nixm.check_node(nix)) continue; // Note: modifies nix
+
+			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+				if (ray_cast_cube(p1, p2, objects[i], cnorm, t)) {ccolor = objects[i].color; ret = 1;}
+			}
+		}
+		return ret;
+	}
+};
+
 bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point const &start, vect_cube_t const &cubes,
 	vect_cube_t::const_iterator end, vect_cube_t::const_iterator parent, vector3d &cnorm, float &t)
 {
@@ -31,7 +54,7 @@ bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point cons
 		float tmin(0.0), tmax(1.0);
 		if (!get_line_clip(p1, p2, c->d, tmin, tmax) || tmax >= t) continue;
 		point const cpos(p1 + (p2 - p1)*(tmax + 0.001)); // move slightly beyond the hit point
-		if (follow_ray_through_cubes_recur(p1, p2, cpos, cubes, end, c, cnorm, t)) return 1;
+		if ((end - cubes.begin()) > 1 && follow_ray_through_cubes_recur(p1, p2, cpos, cubes, end, c, cnorm, t)) return 1;
 		t = tmax;
 		get_closest_cube_norm(c->d, (p1 + (p2 - p1)*t), cnorm); // this is the final point, update cnorm
 		cnorm.negate(); // reverse hit dir
@@ -40,8 +63,8 @@ bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point cons
 	return 0;
 }
 
-// Note: static objects only; excludes people
-bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const { // pos in building space
+// Note: static objects only; excludes people; pos in building space
+bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const {
 
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
 	float const extent(bcube.get_max_extent());
@@ -67,36 +90,35 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 		}
 	}
 	//for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {} // WRITE; use roof_color/mat.roof_tex
-	// check walls, floors, ceilings, and elevators
-	bool hit_wall(0);
-	for (unsigned d = 0; d < 2; ++d) {hit_wall |= ray_cast_vect_cube(p1, p2, interior->walls[d], cnorm, t);}
-	hit_wall |= ray_cast_vect_cube(p1, p2, interior->elevators, cnorm, t); // for now elevators are treated the same as walls
-	if (hit_wall) {ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());}
-	if (ray_cast_vect_cube(p1, p2, interior->ceilings, cnorm, t)) {ccolor = mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color());}
-	if (ray_cast_vect_cube(p1, p2, interior->floors,   cnorm, t)) {ccolor = mat.floor_color.modulate_with(mat.floor_tex.get_avg_color());}
-	if (ray_cast_vect_cube(p1, p2, details,            cnorm, t)) {ccolor = detail_color.   modulate_with(mat.roof_tex. get_avg_color());} // should this be included?
-
-	if (has_room_geom()) {
-		vector<room_object_t> const &objs(interior->room_geom->objs);
-		point const cur_p2(p1 + (p2 - p1)*t); // clip to reduce the chance of a stairwell intersection
-		bool hit_stairs(0);
-
-		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
-			if (s->line_intersects(p1, cur_p2)) {hit_stairs = 1; break;}
-		}
-		auto objs_end(hit_stairs ? objs.end() : (objs.begin() + interior->room_geom->stairs_start)); // stairs optimization
-
-		for (auto c = objs.begin(); c != objs_end; ++c) {
-			if (c->type == TYPE_LIGHT && c->contains_pt(p1)) continue; // skip light fixtures to avoid self intersections with light starting points
-			if (ray_cast_cube(p1, p2, *c, cnorm, t)) {ccolor = c->get_color();}
-		}
-	}
+	bvh.ray_cast(p1, p2, cnorm, ccolor, t);
 	if (t == 1.0) {cpos = p2; return 0;} // no intersection
 	cpos = p1 + (p2 - p1)*t;
 	return 1;
 }
 
-void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const {
+template<typename T> void add_colored_cubes(vector<T> const &cubes, colorRGBA const &color, vect_colored_cube_t &cc) {
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {cc.emplace_back(*c, color);}
+}
+void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
+
+	if (!interior) return; // nothing to do
+	building_mat_t const &mat(get_material());
+	colorRGBA const wall_color(mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));
+	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, cc);}
+	add_colored_cubes(interior->elevators, wall_color, cc); // for now elevators are treated the same as walls
+	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), cc);
+	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
+	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?
+
+	if (has_room_geom()) {
+		vector<room_object_t> const &objs(interior->room_geom->objs);
+		cc.reserve(cc.size() + objs.size());
+		for (auto c = objs.begin(); c != objs.end(); ++c) {cc.emplace_back(*c, c->get_color());}
+	}
+	//cout << TXT(interior->room_geom->objs.size()) << TXT(interior->room_geom->stairs_start) << TXT(cc.size()) << endl;
+}
+
+void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const {
 
 	// see ray_trace_local_light_source()
 	unsigned const NUM_RAYS = 100000; // TODO: config file option, maybe can reuse existing local rays option
@@ -110,7 +132,7 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 		colorRGBA cur_color(lcolor), ccolor(WHITE);
 
 		for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
-			bool const hit(ray_cast_interior(pos, dir, cpos, cnorm, ccolor));
+			bool const hit(ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
 			// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 			if (lmgr != nullptr) {add_path_to_lmcs(lmgr, nullptr, pos, cpos, weight, cur_color, LIGHTING_LOCAL, (bounce == 0));} // local light, no bcube
 			if (!hit) break; // done
@@ -133,6 +155,10 @@ void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const objs_size(interior->room_geom->stairs_start); // skip stairs
 	assert(objs_size <= objs.size());
+	std::atomic<unsigned> count(0);
+	cube_bvh_t bvh;
+	gather_interior_cubes(bvh.get_objs());
+	bvh.build_tree_top(0); // verbose=0
 
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < (int)objs_size; ++i) {
@@ -142,13 +168,23 @@ void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 		lpos.z = ro.z1() - 0.01*ro.dz(); // set slightly below bottom of light
 		rand_gen_t rgen;
 		rgen.set_state(i, 123);
-		ray_cast_room_light(lpos, ro.get_color(), rgen, lmgr, weight);
-	}
+		ray_cast_room_light(lpos, ro.get_color(), bvh, rgen, lmgr, weight);
+		++count;
+	} // for i
+	cout << "Lights: " << count << endl;
 }
 
 bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {
+#if 0
+	ray_cast_building(nullptr, 1.0); // TESTING
+	return 0;
+#else
+	cube_bvh_t bvh;
+	gather_interior_cubes(bvh.get_objs());
+	bvh.build_tree_top(0); // verbose=0
 	vector3d cnorm; // unused
-	return ray_cast_interior((get_camera_pos() - xlate), cview_dir, cpos, cnorm, ccolor);
+	return ray_cast_interior((get_camera_pos() - xlate), cview_dir, bvh, cpos, cnorm, ccolor);
+#endif
 }
 
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const {

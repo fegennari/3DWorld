@@ -290,6 +290,10 @@ struct building_stats_t {
 	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), nobjs(0), nverts(0) {}
 };
 
+struct colored_cube_t;
+typedef vector<colored_cube_t> vect_colored_cube_t;
+class cube_bvh_t;
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
@@ -334,8 +338,8 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm=nullptr) const;
 	unsigned check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
-	bool ray_cast_interior(point const &pos, vector3d const &dir, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
-	void ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const;
+	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
+	void ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const;
 	void ray_cast_building(lmap_manager_t *lmgr, float weight) const;
 	bool ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const;
 	void calc_bcube_from_parts();
@@ -384,6 +388,7 @@ private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
+	void gather_interior_cubes(vect_colored_cube_t &cc) const;
 };
 
 struct building_draw_utils {

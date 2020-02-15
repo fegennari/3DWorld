@@ -154,6 +154,13 @@ public:
 	void get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const;
 };
 
+// used for buildings
+struct colored_cube_t : public cube_t {
+	colorRGBA color;
+	colored_cube_t() {}
+	colored_cube_t(cube_t const &cube, colorRGBA const &color_) : cube_t(cube), color(color_) {}
+};
+
 
 #endif // _COBJ_BSP_TREE_H_
 

@@ -159,12 +159,10 @@ inline float get_vhi(coll_tquad const &t, unsigned dim) {
 	return vhi;
 }
 
-inline float get_vlo(sphere_t const &s, unsigned dim) {
-	return (s.pos[dim] - s.radius);
-}
-inline float get_vhi(sphere_t const &s, unsigned dim) {
-	return (s.pos[dim] + s.radius);
-}
+inline float get_vlo(sphere_t const &s, unsigned dim) {return (s.pos[dim] - s.radius);}
+inline float get_vhi(sphere_t const &s, unsigned dim) {return (s.pos[dim] + s.radius);}
+inline float get_vlo(cube_t const &c,   unsigned dim) {return c.d[dim][0];}
+inline float get_vhi(cube_t const &c,   unsigned dim) {return c.d[dim][1];}
 
 
 template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
@@ -243,7 +241,10 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree_top(bool verbos
 	}
 }
 
-template class cobj_tree_simple_type_t<sphere_with_id_t>; // explicit instantiation of cobj_tree_sphere_t
+// explicit instantiations
+struct colored_cube_t;
+template class cobj_tree_simple_type_t<sphere_with_id_t>;
+template class cobj_tree_simple_type_t<colored_cube_t>;
 
 
 // *** cobj_tree_tquads_t ***
