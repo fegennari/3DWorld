@@ -23,13 +23,15 @@ template<typename T> bool ray_cast_vect_cube(point const &p1, point const &p2, T
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {ret |= ray_cast_cube(p1, p2, *c, cnorm, t);}
 	return ret;
 }
-bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point const &start, vect_cube_t const &cubes, vector3d &cnorm, float &t) {
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (!c->contains_pt(start)) continue;
+bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point const &start, vect_cube_t const &cubes,
+	vect_cube_t::const_iterator end, vect_cube_t::const_iterator parent, vector3d &cnorm, float &t)
+{
+	for (auto c = cubes.begin(); c != end; ++c) {
+		if (c == parent || !c->contains_pt(start)) continue;
 		float tmin(0.0), tmax(1.0);
 		if (!get_line_clip(p1, p2, c->d, tmin, tmax) || tmax >= t) continue;
 		point const cpos(p1 + (p2 - p1)*(tmax + 0.001)); // move slightly beyond the hit point
-		if (follow_ray_through_cubes_recur(p1, p2, cpos, cubes, cnorm, t)) return 1;
+		if (follow_ray_through_cubes_recur(p1, p2, cpos, cubes, end, c, cnorm, t)) return 1;
 		t = tmax;
 		get_closest_cube_norm(c->d, (p1 + (p2 - p1)*t), cnorm); // this is the final point, update cnorm
 		cnorm.negate(); // reverse hit dir
@@ -51,7 +53,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, point 
 	float t(1.0); // start at p2
 
 	// check parts (exterior walls); should chimneys and porch roofs be included?
-	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, cnorm, t)) { // interior ray - find furthest exit point
+	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end(), parts.end(), cnorm, t)) { // interior ray - find furthest exit point
 		ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
 	}
 	else { // check for exterior rays
