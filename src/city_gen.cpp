@@ -192,8 +192,7 @@ bool is_night(float adj) {return (light_factor - adj < 0.5f);} // for car headli
 void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, float pcf_scale) {
 
 	if (use_dlights) {
-		s.add_uniform_vector3d("scene_llc",   lights_bcube.get_llc()); // reset with correct values
-		s.add_uniform_vector3d("scene_scale", lights_bcube.get_size());
+		s.setup_scene_bounds_from_bcube(lights_bcube); // reset with correct values
 		s.add_uniform_float("LT_DIR_FALLOFF", CITY_LIGHT_FALLOFF); // smooth falloff for car headlights and streetlights
 
 		if (flashlight_on) { // use a quicker falloff for flashlight beams
@@ -209,11 +208,14 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 }
 
 // use_smap: 0=no, 1=sun/moon + dynamic lights; enable in shader and set shadow map uniforms, 2=dynamic lights only; disable in shader but set shadow map uniforms
-void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap, float min_alpha, bool force_tsl, float pcf_scale, bool use_texgen) {
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
+	float min_alpha, bool force_tsl, float pcf_scale, bool use_texgen, bool indir_lighting)
+{
 	use_dlights &= (!lights_bcube.is_zero_area() && !dl_sources.empty());
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
 	// and we can share the same VAO between texgen and texcoords modes without having to worry about which mode we were in when the VAO was created
-	setup_smoke_shaders(s, min_alpha, (use_texgen ? 5 : 0), 0, 0, 1, use_dlights, 0, 0, ((use_smap == 1) ? 2 : 0), use_bmap, 0, use_dlights, force_tsl, 0.0, 0.0, 0, 0, 1); // is_outside=1
+	setup_smoke_shaders(s, min_alpha, (use_texgen ? 5 : 0), 0, indir_lighting, 1, use_dlights,
+		0, 0, ((use_smap == 1) ? 2 : 0), use_bmap, 0, use_dlights, force_tsl, 0.0, 0.0, 0, 0, 1); // is_outside=1
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, (use_smap != 0), pcf_scale);
 	if (use_texgen) {s.add_uniform_float("tc_texgen_mix", 0.0);} // always uses texgen in this mode
 }

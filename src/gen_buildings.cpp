@@ -1844,6 +1844,33 @@ public:
 		} // for g
 	}
 
+	struct indir_tex_mgr_t {
+		unsigned tid, bix;
+
+		indir_tex_mgr_t() : tid(0), bix(0) {}
+		bool enabled() const {return (tid > 0);}
+		void free_context() {free_texture(tid); bix = 0;}
+
+		bool create_for_building(building_creator_t const &bc, unsigned new_bix) {
+			if (tid > 0 && new_bix == bix) return 0; // nothing else to do
+			free_context(); // could reuse the texture, but this is more work
+			bix = new_bix;
+			tid = bc.get_building(bix).create_building_volume_light_texture();
+			return 1;
+		}
+		bool setup_for_building(building_creator_t const &bc, shader_t &s) const {
+			if (!enabled()) return 0; // no texture set
+			// FIXME: this doesn't work because scene bounds are set to the lights_bcube for room lighting
+			s.setup_scene_bounds_from_bcube(bc.get_building(bix).bcube);
+			//s.add_uniform_vector3d("camera_pos", get_camera_pos()); // ???
+			return 1;
+		}
+	};
+	indir_tex_mgr_t indir_tex_mgr;
+	void create_indir_texture_for_building(unsigned bix) {indir_tex_mgr.create_for_building(*this, bix);}
+	bool setup_indir_texture_for_building(shader_t &s) const {return indir_tex_mgr.setup_for_building(*this, s);}
+	bool have_indir_texture() const {return indir_tex_mgr.enabled();}
+
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
@@ -1856,7 +1883,7 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), have_indir(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
 
@@ -1865,6 +1892,7 @@ public:
 			have_windows     |= !(*i)->building_draw_windows.empty();
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
 			have_interior    |= (draw_building_interiors && !(*i)->building_draw_interior.empty());
+			have_indir       |= (*i)->have_indir_texture();
 			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
 			if (night) {(*i)->ensure_window_lights_vbos();}
 			
@@ -1907,10 +1935,15 @@ public:
 				s.end_shader();
 				glDepthFunc(GL_LEQUAL);
 			}
-			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale); // force_tsl=0
+			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
 			set_interior_lighting(s);
+
+			if (have_indir) { // one of these must have an indir texture
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->setup_indir_texture_for_building(s);}
+			}
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
+			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (transparent_windows) {
 				per_bcs_exclude.resize(bcs.size());
@@ -1965,6 +1998,7 @@ public:
 								s.set_cur_color(ccolor);
 								draw_subdiv_sphere(cpos, 0.1*CAMERA_RADIUS, N_SPHERE_DIV, 0, 1);
 							}
+							//indir_bcs_ix = bcs_ix; indir_bix = bi->ix; // TODO: enable when this actually works
 						}
 					} // for bi
 				} // for g
@@ -1974,6 +2008,7 @@ public:
 			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
 			s.end_shader();
+			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix);}
 
 			if (transparent_windows) { // write to stencil buffer, use stencil test for back facing building walls
 				shader_t holes_shader;
@@ -2268,6 +2303,7 @@ public:
 		building_draw_windows.clear_vbos();
 		building_draw_wind_lights.clear_vbos();
 		building_draw_interior.clear_vbos();
+		indir_tex_mgr.free_context();
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {

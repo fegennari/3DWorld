@@ -341,6 +341,7 @@ struct building_t : public building_geom_t {
 	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
 	void ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const;
 	void ray_cast_building(lmap_manager_t *lmgr, float weight) const;
+	unsigned create_building_volume_light_texture() const;
 	bool ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const;
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
@@ -444,7 +445,7 @@ tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
-	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0);
+	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);
 void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only); // from city_gen.cpp
 void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes); // from city_gen.cpp

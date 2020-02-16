@@ -8,10 +8,10 @@
 #include "cobj_bsp_tree.h"
 #include <atomic>
 
+extern int MESH_Z_SIZE;
 extern unsigned LOCAL_RAYS, NUM_THREADS;
 extern vector<light_source> dl_sources;
 
-void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt); // from ray_trace.cpp
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
 	float tmin(0.0), tmax(1.0);
@@ -93,7 +93,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 			return 1;
 		}
 	}
-	//for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {} // WRITE; use roof_color/mat.roof_tex
+	//for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {} // WRITE; use roof_color/mat.roof_tex; only needed for exterior rays?
 	bvh.ray_cast(p1, p2, cnorm, ccolor, t);
 	if (t == 1.0) {cpos = p2; return hit;} // no intersection with bvh
 	cpos = p1 + (p2 - p1)*t;
@@ -126,6 +126,8 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 
 	// see ray_trace_local_light_source()
 	float const tolerance(1.0E-5*bcube.get_max_extent());
+	cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
+	point const llc_shift(scene_bounds.get_llc() - bcube.get_llc()), ray_scale(scene_bounds.get_size()/bcube.get_size());
 
 	for (unsigned n = 0; n < LOCAL_RAYS; ++n) {
 		vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
@@ -137,7 +139,11 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 		for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
 			bool const hit(ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
 			// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
-			if (lmgr != nullptr) {add_path_to_lmcs(lmgr, nullptr, pos, cpos, weight, cur_color, LIGHTING_LOCAL, (bounce == 0));} // local light, no bcube
+
+			if (lmgr != nullptr) {
+				point const p1((pos + llc_shift)*ray_scale), p2((cpos + llc_shift)*ray_scale); // transform building space to global scene space
+				add_path_to_lmcs(lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
+			}
 			if (!hit) break; // done
 			cur_color = cur_color.modulate_with(ccolor);
 			if (cur_color.get_luminance() < 0.05) break; // done
@@ -177,17 +183,28 @@ void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 	cout << "Lights: " << count << endl;
 }
 
+unsigned building_t::create_building_volume_light_texture() const {
+
+	if (!has_room_geom()) return 0; // error?
+	lmap_manager_t local_lmap_manager; // cache and reuse this?
+
+	if (!local_lmap_manager.is_allocated()) { // first time setup
+		unsigned const tot_sz(XY_MULT_SIZE*MESH_Z_SIZE);
+		lmcell init_lmcell;
+		local_lmap_manager.alloc(tot_sz, MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, (unsigned char **)nullptr, init_lmcell);
+	}
+	float const weight(1.0);
+	ray_cast_building(&local_lmap_manager, weight);
+	return indir_light_tex_from_lmap(local_lmap_manager, MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE);
+}
+
 bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {
-#if 0
-	ray_cast_building(nullptr, 1.0); // TESTING
-	return 0;
-#else
+	//ray_cast_building(nullptr, 1.0); // TESTING
 	cube_bvh_t bvh;
 	gather_interior_cubes(bvh.get_objs());
 	bvh.build_tree_top(0); // verbose=0
 	vector3d cnorm; // unused
 	return ray_cast_interior((get_camera_pos() - xlate), cview_dir, bvh, cpos, cnorm, ccolor);
-#endif
 }
 
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const {
