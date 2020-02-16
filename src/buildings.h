@@ -177,7 +177,7 @@ struct draw_range_t {
 };
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, NUM_TYPES};
-enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN};
+enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U};
 
 // object flags, currently used for room lights
 unsigned char const RO_FLAG_LIT     = 0x01; // light is on

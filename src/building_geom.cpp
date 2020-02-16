@@ -302,9 +302,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			if (pos.z - radius > c->z1()) continue; // above the stair
 			pos.z = c->z1() + radius; // stand on the stair - this can happen for multiple stairs
 			obj_z = max(pos.z, p_last.z);
-			bool const dim(c->dx() < c->dy());
-			max_eq(pos[dim], (c->d[dim][0] + radius)); // force the sphere onto the stairs
-			min_eq(pos[dim], (c->d[dim][1] - radius));
+			bool const is_u(c->shape == SHAPE_STAIRS_U);
+			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + radius));} // force the sphere onto the stairs
+			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - radius));}
 			had_coll = on_stairs = 1;
 		} // for c
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with
@@ -1681,7 +1681,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 	float const window_vspacing(get_material().get_floor_spacing());
 	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
-	float const ewidth(1.5*doorway_width); // for elevators
+	float ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
 	bool stairs_dim(0), add_elevator(0);
@@ -1695,6 +1695,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
+		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {stairs_shape = 1;} // U-shape if there's enough room
+		if (stairs_shape == 1) {ewidth *= 1.6;} // increase the width of both the stairs and elevator
 		cube_t stairs(hall); // start as hallway
 
 		if (add_elevator) {
@@ -1712,7 +1714,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		// always add stairs
 		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
 			bool const is_step_dim(bool(dim) == long_dim); // same orientation as the hallway
-			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0*doorway_width : 0.9*ewidth)); // set max size of stairs opening, slightly narrower than elevator
+			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0*doorway_width : 0.9*ewidth)); // set max size of stairs opening
 			stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink; // centered in the hallway
 		}
 		room.has_stairs = 1;
@@ -2238,7 +2240,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			stair.d[!dim][side] = i->get_center_dim(!dim);
 			step_len *= 2.0;
 
-			// TODO: need larger landing, wider but shorter cutout, fix for walking/collision, railings, etc.
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
 				if (n == num_stairs/2) { // reverse direction and switch to other side
 					step_len *= -1.0;
@@ -2249,8 +2250,24 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				stair.d[dim][dir^is_rev^1] = pos; stair.d[dim][dir^is_rev] = pos + step_len;
 				stair.z1() = max(floor_z, z); // don't go below the floor
 				stair.z2() = z + stair_height;
-				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir^is_rev); // Note: room_id=0, not tracked, unused
+				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
+			// add wall at the landing
+			float const wall_hw(0.1*step_len), half_thick(0.5*floor_thickness); // Note: signed
+			stair = *i;
+			stair.z2() -= 0.5*floor_thickness; // prevent z-fighting on top floor
+			stair.z1() = max(bcube.z1()+half_thick, floor_z-half_thick); // full height
+			stair.d[dim][!dir] = i->d[dim][dir] + wall_hw;
+			stair.d[dim][ dir] = i->d[dim][dir] - wall_hw;
+			objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // back/end of stairs
+			stair.d[dim][!dir] = i->d[dim][!dir];
+
+			for (unsigned d = 0; d < 2; ++d) { // sides of stairs
+				stair.d[!dim][!dir] = i->d[!dim][d] + wall_hw;
+				stair.d[!dim][ dir] = i->d[!dim][d] - wall_hw;
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir);
+			}
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
