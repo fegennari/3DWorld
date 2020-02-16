@@ -1930,14 +1930,13 @@ void model3d::set_sky_lighting_file(string const &fn, float weight, unsigned sz[
 void model3d::create_indir_texture() {
 
 	timer_t timer("Create Indir Texture");
-	unsigned const xsize(sky_lighting_sz[0]), ysize(sky_lighting_sz[1]), zsize(sky_lighting_sz[2]), tot_sz(xsize*ysize*zsize), ncomp(4);
+	unsigned const xsize(sky_lighting_sz[0]), ysize(sky_lighting_sz[1]), zsize(sky_lighting_sz[2]), tot_sz(xsize*ysize*zsize);
 	assert(tot_sz > 0);
 	if (tot_sz == 0) return; // nothing to do
 	lmap_manager_t local_lmap_manager; // store in the model3d and cache for reuse on context change (at the cost of more CPU memory usage)? only matters when ray tracing (below)?
 	lmcell init_lmcell;
 	unsigned char **need_lmcell = nullptr; // not used - dense mode
 	local_lmap_manager.alloc(tot_sz, xsize, ysize, zsize, need_lmcell, init_lmcell);
-	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
 	float const init_weight(light_int_scale[LIGHTING_SKY]); // record orig value
 
 	if (!sky_lighting_fn.empty() && local_lmap_manager.read_data_from_file(sky_lighting_fn.c_str(), LIGHTING_SKY)) {
@@ -1945,31 +1944,15 @@ void model3d::create_indir_texture() {
 		light_int_scale[LIGHTING_SKY] = sky_lighting_weight;
 	}
 	else {
-		// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds
+		// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds (scale to get_scene_bounds_bcube())
 	}
-	for (unsigned y = 0; y < ysize; ++y) {
-		for (unsigned x = 0; x < xsize; ++x) {
-			unsigned const off(zsize*(y*xsize + x));
-			lmcell const *const vlm(local_lmap_manager.get_column(x, y));
-			assert(vlm != nullptr); // not supported in this flow
-
-			for (unsigned z = 0; z < zsize; ++z) {
-				unsigned const off2(ncomp*(off + z));
-				colorRGB color;
-				vlm[z].get_final_color(color, 1.0, 1.0);
-				//color = colorRGBA(float(y)/ysize, float(x)/xsize, float(z)/zsize, 1.0); // for debugging
-				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
-			} // for z
-		} // for x
-	} // for y
-	model_indir_tid = create_3d_texture(zsize, xsize, ysize, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
+	model_indir_tid = indir_light_tex_from_lmap(local_lmap_manager, xsize, ysize, zsize);
 	light_int_scale[LIGHTING_SKY] = init_weight; // restore orig value
 	//cout << TXT(zsize) << TXT(tot_sz) << TXT(model_indir_tid) << endl;
 }
 
 void model3d::set_local_model_scene_bounds(shader_t &s) { // tight bounds
-	s.add_uniform_vector3d("scene_llc",   bcube.get_llc());
-	s.add_uniform_vector3d("scene_scale", bcube.get_size());
+	s.setup_scene_bounds_from_bcube(bcube);
 }
 
 void model3d::ensure_reflection_cube_map() {

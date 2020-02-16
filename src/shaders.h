@@ -185,6 +185,7 @@ public:
 	void upload_mvm();
 
 	void setup_scene_bounds() const;
+	void setup_scene_bounds_from_bcube(cube_t const &bcube) const;
 	void setup_fog_scale() const;
 	void check_for_fog_disabled();
 

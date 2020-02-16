@@ -597,7 +597,9 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 	} // for v
 }
 
-
+cube_t get_scene_bounds_bcube() { // for use with indir lighting
+	return cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, get_zval_min(), get_zval_max());
+}
 float calc_czspan() {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
 
 unsigned get_grid_xsize() {return max((MESH_X_SIZE >> DL_GRID_BS), 1);}
@@ -799,6 +801,29 @@ void update_flow_for_voxels(vector<cube_t> const &cubes) {
 		} //for y
 	}
 	//PRINT_TIME("Update Flow");
+}
+
+unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, unsigned xsize, unsigned ysize, unsigned zsize) {
+
+	unsigned const tot_sz(xsize*ysize*zsize), ncomp(4);
+	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
+
+	for (unsigned y = 0; y < ysize; ++y) {
+		for (unsigned x = 0; x < xsize; ++x) {
+			unsigned const off(zsize*(y*xsize + x));
+			lmcell const *const vlm(local_lmap_manager.get_column(x, y));
+			assert(vlm != nullptr); // not supported in this flow
+
+			for (unsigned z = 0; z < zsize; ++z) {
+				unsigned const off2(ncomp*(off + z));
+				colorRGB color;
+				vlm[z].get_final_color(color, 1.0, 1.0);
+				//color = colorRGBA(float(y)/ysize, float(x)/xsize, float(z)/zsize, 1.0); // for debugging
+				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
+			} // for z
+		} // for x
+	} // for y
+	return create_3d_texture(zsize, xsize, ysize, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
 }
 
 

@@ -384,17 +384,16 @@ void shader_t::upload_light_sources_range(unsigned start, unsigned end) {
 	}
 }
 
-
 void shader_t::setup_scene_bounds() const {
-
-	float const scene_zmin(get_zval_min()), scene_zmax(get_zval_max());
-	add_uniform_vector3d("scene_llc",   vector3d(-X_SCENE_SIZE, -Y_SCENE_SIZE, scene_zmin));
-	add_uniform_vector3d("scene_scale", vector3d(2.0*X_SCENE_SIZE, 2.0*Y_SCENE_SIZE, (scene_zmax - scene_zmin)));
-	add_uniform_vector3d("camera_pos",  get_camera_pos());
+	setup_scene_bounds_from_bcube(get_scene_bounds_bcube());
+	add_uniform_vector3d("camera_pos", get_camera_pos());
+}
+void shader_t::setup_scene_bounds_from_bcube(cube_t const &bcube) const {
+	add_uniform_vector3d("scene_llc",   bcube.get_llc());
+	add_uniform_vector3d("scene_scale", bcube.get_size());
 }
 
 void shader_t::setup_fog_scale() const {
-
 	add_uniform_float("fog_scale", (fog_enabled ? 1.0 : 0.0));
 	add_uniform_float("fog_end",   cur_fog_end);
 	add_uniform_color("fog_color", cur_fog_color);

@@ -794,10 +794,11 @@ void clear_univ_obj_contexts();
 void clear_cached_shaders();
 
 // function prototypes - lightmap
-void update_flow_for_voxels(vector<cube_t> const &cubes);
+cube_t get_scene_bounds_bcube();
 void regen_lightmap();
 void clear_lightmap();
 void build_lightmap(bool verbose);
+void update_flow_for_voxels(vector<cube_t> const &cubes);
 void add_player_flashlight_light_source(float radius_scale=1.0);
 void add_line_light(point const &p1, point const &p2, colorRGBA const &color, float size, float intensity=1.0);
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c=WHITE, vector3d const &d=plus_z, float bw=1.0, point *line_end_pos=nullptr, bool is_static_pos=0);
