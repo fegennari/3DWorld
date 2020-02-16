@@ -8,6 +8,7 @@
 #include "cobj_bsp_tree.h"
 #include <atomic>
 
+extern unsigned LOCAL_RAYS, NUM_THREADS;
 extern vector<light_source> dl_sources;
 
 void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt); // from ray_trace.cpp
@@ -74,10 +75,13 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect building bcube
 	building_mat_t const &mat(get_material());
 	float t(1.0); // start at p2
+	bool hit(0);
 
 	// check parts (exterior walls); should chimneys and porch roofs be included?
 	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end(), parts.end(), cnorm, t)) { // interior ray - find furthest exit point
 		ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
+		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
+		hit = 1;
 	}
 	else { // check for exterior rays
 		bool hit(0);
@@ -91,7 +95,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 	}
 	//for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {} // WRITE; use roof_color/mat.roof_tex
 	bvh.ray_cast(p1, p2, cnorm, ccolor, t);
-	if (t == 1.0) {cpos = p2; return 0;} // no intersection
+	if (t == 1.0) {cpos = p2; return hit;} // no intersection with bvh
 	cpos = p1 + (p2 - p1)*t;
 	return 1;
 }
@@ -121,10 +125,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const {
 
 	// see ray_trace_local_light_source()
-	unsigned const NUM_RAYS = 100000; // TODO: config file option, maybe can reuse existing local rays option
 	float const tolerance(1.0E-5*bcube.get_max_extent());
 
-	for (unsigned n = 0; n < NUM_RAYS; ++n) {
+	for (unsigned n = 0; n < LOCAL_RAYS; ++n) {
 		vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
 		dir.z = -fabs(dir.z); // make sure dir points down
 		point pos(lpos), cpos;
@@ -160,7 +163,7 @@ void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 	gather_interior_cubes(bvh.get_objs());
 	bvh.build_tree_top(0); // verbose=0
 
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
 	for (int i = 0; i < (int)objs_size; ++i) {
 		room_object_t const &ro(objs[i]);
 		if (ro.type != TYPE_LIGHT || !ro.is_lit()) continue; // not a light, or light not on
