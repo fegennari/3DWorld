@@ -253,7 +253,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else { // camera outside the building (or the part that contains this light)
 				float const xy_dist(p2p_dist_xy(camera_bs, lpos));
-				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 0.5f*xy_dist)) continue; // light viewed at too high an angle
+				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 1.0f*xy_dist)) continue; // light viewed at too high an angle
 
 				if (camera_in_building) { // camera and light are in different buildings/parts
 					// is it better to check if light half sphere is occluded by the floor above/below?
@@ -282,13 +282,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
-		dl_sources.emplace_back(light_radius, lpos, lpos, i->get_color(), 0, -plus_z, bwidth); // points down, white for now
+		colorRGBA const color(i->get_color()*1.1); // make it extra bright
+		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_building_id(building_id);
 
 		if (camera_near_building) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
-			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, i->get_color());
+			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, color);
 			dl_sources.back().set_building_id(building_id);
 			dl_sources.back().disable_shadows();
 		}

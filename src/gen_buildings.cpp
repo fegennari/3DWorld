@@ -1811,19 +1811,23 @@ public:
 		if (have_indir) {
 			s.add_uniform_float("diffuse_scale", 0.0); // no diffuse from sun/moon
 			s.add_uniform_float("ambient_scale", 0.0); // no ambient
+			s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
 		}
 		else if (ADD_ROOM_LIGHTS) {
 			s.add_uniform_float("diffuse_scale", 0.1); // very small diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 0.6); // dimmer ambient
+			s.add_uniform_float("hemi_lighting_scale", 0.1); // low hemispherical lighting
 		}
 		else {
 			s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 1.2); // brighter ambient
+			s.add_uniform_float("hemi_lighting_scale", 0.3); // reduced hemispherical lighting
 		}
 	}
 	static void reset_interior_lighting(shader_t &s) {
 		s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
 		s.add_uniform_float("ambient_scale", 1.0); // reset to default
+		s.add_uniform_float("hemi_lighting_scale", 0.5); // reset to default
 	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) const {

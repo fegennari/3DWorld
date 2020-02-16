@@ -2156,8 +2156,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 				bool const check_stairs(!is_house && parts.size() > 1 && f+1 == num_floors); // top floor of building that may have stairs connecting to upper stack
 				colorRGBA color;
-				if (is_house) {color = colorRGBA(1.0, 1.0, 0.8);} // house - yellowish
-				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.8, 0.8, 1.0);} // office building - blueish
+				if (is_house) {color = colorRGBA(1.0, 1.0, 0.85);} // house - yellowish
+				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.85, 0.85, 1.0);} // office building - blueish
 				else {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
 				
 				if (r->is_hallway) { // place a light on each side of the stairs, and also between stairs and elevator if there are both
