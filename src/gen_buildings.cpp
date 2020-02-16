@@ -1807,8 +1807,12 @@ public:
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
-	static void set_interior_lighting(shader_t &s) {
-		if (ADD_ROOM_LIGHTS) {
+	static void set_interior_lighting(shader_t &s, bool have_indir=0) {
+		if (have_indir) {
+			s.add_uniform_float("diffuse_scale", 0.0); // no diffuse from sun/moon
+			s.add_uniform_float("ambient_scale", 0.0); // no ambient
+		}
+		else if (ADD_ROOM_LIGHTS) {
 			s.add_uniform_float("diffuse_scale", 0.1); // very small diffuse and specular lighting for sun/moon
 			s.add_uniform_float("ambient_scale", 0.6); // dimmer ambient
 		}
@@ -1860,9 +1864,9 @@ public:
 		}
 		bool setup_for_building(building_creator_t const &bc, shader_t &s) const {
 			if (!enabled()) return 0; // no texture set
+			set_3d_texture_as_current(tid, 1); // indir texture uses TU_ID=1
 			// FIXME: this doesn't work because scene bounds are set to the lights_bcube for room lighting
 			s.setup_scene_bounds_from_bcube(bc.get_building(bix).bcube);
-			//s.add_uniform_vector3d("camera_pos", get_camera_pos()); // ???
 			return 1;
 		}
 	};
@@ -1936,7 +1940,7 @@ public:
 				glDepthFunc(GL_LEQUAL);
 			}
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
-			set_interior_lighting(s);
+			set_interior_lighting(s, have_indir);
 
 			if (have_indir) { // one of these must have an indir texture
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->setup_indir_texture_for_building(s);}

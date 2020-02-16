@@ -127,7 +127,7 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 	// see ray_trace_local_light_source()
 	float const tolerance(1.0E-5*bcube.get_max_extent());
 	cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
-	point const llc_shift(scene_bounds.get_llc() - bcube.get_llc()), ray_scale(scene_bounds.get_size()/bcube.get_size());
+	point const ray_scale(scene_bounds.get_size()/bcube.get_size()), llc_shift(scene_bounds.get_llc() - bcube.get_llc()*ray_scale);
 
 	for (unsigned n = 0; n < LOCAL_RAYS; ++n) {
 		vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
@@ -141,7 +141,7 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 			// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 
 			if (lmgr != nullptr) {
-				point const p1((pos + llc_shift)*ray_scale), p2((cpos + llc_shift)*ray_scale); // transform building space to global scene space
+				point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
 				add_path_to_lmcs(lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
 			}
 			if (!hit) break; // done

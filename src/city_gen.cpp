@@ -22,7 +22,7 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
-extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors, flashlight_on, camera_in_building;
+extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors, flashlight_on, camera_in_building, have_indir_smoke_tex;
 extern int rand_gen_index, display_mode, animate2;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
@@ -212,6 +212,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	float min_alpha, bool force_tsl, float pcf_scale, bool use_texgen, bool indir_lighting)
 {
 	use_dlights &= (!lights_bcube.is_zero_area() && !dl_sources.empty());
+	have_indir_smoke_tex = indir_lighting; // assume someone is going to set the indir texture in this case
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
 	// and we can share the same VAO between texgen and texcoords modes without having to worry about which mode we were in when the VAO was created
 	setup_smoke_shaders(s, min_alpha, (use_texgen ? 5 : 0), 0, indir_lighting, 1, use_dlights,
