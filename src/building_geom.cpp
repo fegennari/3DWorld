@@ -2035,8 +2035,8 @@ void building_t::add_room(cube_t const &room, unsigned part_id) {
 	interior->rooms.push_back(r);
 }
 
-bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers,
-	unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit)
+bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
+	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
 {
 	float const window_vspacing(get_window_vspace());
 	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
@@ -2065,6 +2065,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
 			if (!is_valid_placement_for_room(chair, room, blockers)) continue; // check proximity to doors
 			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, obj_flags, tot_light_amt);
+			objs.back().color = chair_color;
 		} // for dir
 	} // for dim
 	return 1;
@@ -2126,6 +2127,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (!interior->is_blocked_by_stairs_or_elevator(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
 			}
 		}
+		// make chair colors consistent for each part by using a few variables for a hash
+		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
+		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1337*num_floors) % 12]);
+
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
@@ -2195,7 +2200,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 
 			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
-			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, 0.1, tot_light_amt, is_lit);}
+			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 	} // for r
@@ -2521,7 +2526,7 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, apply_light_color(c, colorRGBA(0.2, 0.2, 1.0))); // light blue; all faces drawn
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, apply_light_color(c, c.color)); // all faces drawn
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(back, color, EF_Z1); // skip bottom face
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
@@ -2572,7 +2577,7 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
-	case TYPE_CHAIR: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
+	case TYPE_CHAIR: return (color + WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX)))*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR: return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_GRAY; // ???
 	case TYPE_BCASE: return WOOD_COLOR;

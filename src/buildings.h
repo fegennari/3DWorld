@@ -383,8 +383,8 @@ private:
 	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
 	void add_room(cube_t const &room, unsigned part_id);
-	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers,
-		unsigned room_id, point const &place_pos, float rand_place_off, float tot_light_amt, bool is_lit);
+	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
+		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
