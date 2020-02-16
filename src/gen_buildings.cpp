@@ -1283,14 +1283,14 @@ bool building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &po
 	return 0; // not found
 }
 
-void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt) const {
+void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front) const {
 
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	
 	for (auto i = parts.begin(); i != get_real_parts_end()+has_garage; ++i) { // multiple cubes/parts/levels; include house garage/shed
-		if (i->contains_pt(only_cont_pt)) { // part containing the point
+		if (make_all_front || i->contains_pt(only_cont_pt)) { // part containing the point
 			bdraw_front.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			continue;
 		}
@@ -1988,7 +1988,8 @@ public:
 						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
-						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
+						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
+						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) {continue;} // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &camera_xlated);
