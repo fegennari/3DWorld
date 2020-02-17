@@ -2508,17 +2508,21 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
 	tex.unset_gl(s);
 }
 
-void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
-	rgeom_mat_t &mat(get_wood_material(tscale));
-
+void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
 	for (unsigned y = 0; y < 2; ++y) {
 		for (unsigned x = 0; x < 2; ++x) {
 			cube_t leg(c);
 			leg.d[0][x] += (1.0f - width)*(x ? -1.0f : 1.0f)*c.dx();
 			leg.d[1][y] += (1.0f - width)*(y ? -1.0f : 1.0f)*c.dy();
-			mat.add_cube_to_verts(leg, color, (EF_Z1 | EF_Z2)); // skip top and bottom faces
+			cubes[2*y+x] = leg;
 		}
 	}
+}
+void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
+	rgeom_mat_t &mat(get_wood_material(tscale));
+	cube_t cubes[4];
+	get_tc_leg_cubes(c, width, cubes);
+	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, (EF_Z1 | EF_Z2));} // skip top and bottom faces
 }
 
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
