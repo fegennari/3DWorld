@@ -10,6 +10,10 @@ uniform vec3 const_indir_color = vec3(0.0);
 uniform vec3 sky_color;
 uniform sampler2D ground_tex;
 
+#ifdef USE_ALT_SCENE_BOUNDS
+uniform vec3 alt_scene_llc, alt_scene_scale; // scene bounds (world space)
+#endif
+
 in vec3 vpos, normal; // world space
 
 // unused, but could be used for indir lighting with 6 directional components
@@ -19,17 +23,25 @@ float cube_light_lookup(in vec3 normal_in, in vec3 plus_xyz, in vec3 minus_xyz) 
 	return dot(max(n, 0.0), plus_xyz) + dot(max(-n, 0.0), minus_xyz);
 }
 
+vec3 map_to_indir_space(in vec3 pos) {
+#ifdef USE_ALT_SCENE_BOUNDS
+	return clamp((pos - alt_scene_llc)/alt_scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+#else
+	return clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+#endif
+}
+
 #ifdef DIRECTIONAL_INDIR_LIGHTING
 uniform sampler3D dir_light_pos_tex, dir_light_neg_tex;
 
 vec3 indir_lookup(in vec3 pos, in vec3 n) {
-	vec3 spos  = clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec3 spos  = map_to_indir_space(pos);
 	vec3 color = texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
 	return color * cube_light_lookup(n, texture(dir_light_pos_tex, spos.zxy).xyz, texture(dir_light_neg_tex, spos.zxy).xyz);
 }
 #else
 vec3 indir_lookup(in vec3 pos, in vec3 n) {
-	vec3 spos = clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec3 spos = map_to_indir_space(pos);
 	return texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
 }
 #endif
@@ -48,7 +60,7 @@ vec3 get_indir_lighting(in float normal_sign) {
 
 		if (hemi_lighting && hemi_lighting_scale > 0.0) {
 			float sky_lum   = max(get_luminance(sky_color), 0.33); // or use indir_color?
-			spos            = clamp((spos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+			spos            = map_to_indir_space(spos);
 			vec3 gnd_color  = sky_lum*textureLod(ground_tex, spos.xy, 4).rgb; // use 4th LOD mipmap (64x64)
 			vec3 hemi_color = mix(gnd_color, sky_color, (0.5*normal_sign*normal.z + 0.5));
 			indir_color     = mix(indir_color, hemi_color, hemi_lighting_scale); // blend between the two
