@@ -187,15 +187,16 @@ unsigned building_t::create_building_volume_light_texture() const {
 
 	if (!has_room_geom()) return 0; // error?
 	lmap_manager_t local_lmap_manager; // cache and reuse this?
+	unsigned const zsize(MESH_SIZE[2]); // not MESH_Z_SIZE; we want the clipped size that lmap uses rather than the user-specified size
 
 	if (!local_lmap_manager.is_allocated()) { // first time setup
-		unsigned const tot_sz(XY_MULT_SIZE*MESH_Z_SIZE);
+		unsigned const tot_sz(XY_MULT_SIZE*zsize);
 		lmcell init_lmcell;
-		local_lmap_manager.alloc(tot_sz, MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, (unsigned char **)nullptr, init_lmcell);
+		local_lmap_manager.alloc(tot_sz, MESH_X_SIZE, MESH_Y_SIZE, zsize, (unsigned char **)nullptr, init_lmcell);
 	}
 	float const weight(1.0);
 	ray_cast_building(&local_lmap_manager, weight);
-	return indir_light_tex_from_lmap(local_lmap_manager, MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE);
+	return indir_light_tex_from_lmap(local_lmap_manager, MESH_X_SIZE, MESH_Y_SIZE, zsize);
 }
 
 bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {
