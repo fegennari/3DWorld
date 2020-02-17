@@ -1882,6 +1882,10 @@ public:
 	bool setup_indir_texture_for_building(shader_t &s) const {return indir_tex_mgr.setup_for_building(*this, s);}
 	bool have_indir_texture() const {return indir_tex_mgr.enabled();}
 
+	static void setup_indir_lighting(vector<building_creator_t *> const &bcs, shader_t &s) {
+		// one of these must have an indir texture
+		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->setup_indir_texture_for_building(s);}
+	}
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
@@ -1948,10 +1952,7 @@ public:
 			}
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
 			set_interior_lighting(s, have_indir);
-
-			if (have_indir) { // one of these must have an indir texture
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->setup_indir_texture_for_building(s);}
-			}
+			if (have_indir) {setup_indir_lighting(bcs, s);}
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
 			int indir_bcs_ix(-1), indir_bix(-1);
@@ -2041,8 +2042,9 @@ public:
 
 		if (transparent_windows) {
 			// draw back faces of buildings, which will be interior walls
-			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1); // force_tsl=1, use_texgen=1
-			set_interior_lighting(s);
+			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1, have_indir); // force_tsl=1, use_texgen=1
+			set_interior_lighting(s, have_indir);
+			if (have_indir) {setup_indir_lighting(bcs, s);}
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 
