@@ -2011,7 +2011,7 @@ public:
 								s.set_cur_color(ccolor);
 								draw_subdiv_sphere(cpos, 0.1*CAMERA_RADIUS, N_SPHERE_DIV, 0, 1);
 							}
-							//indir_bcs_ix = bcs_ix; indir_bix = bi->ix; // TODO: enable when this actually works
+							indir_bcs_ix = bcs_ix; indir_bix = bi->ix; // TODO: enable when this actually works
 						}
 					} // for bi
 				} // for g

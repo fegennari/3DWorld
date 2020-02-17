@@ -1546,7 +1546,7 @@ void cfg_err(string const &str, int &error) {
 }
 
 
-void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
+void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) { // <filename> <write_mode> <light_scale> [<first_ray_weight>]
 
 	assert(ltype < NUM_LIGHTING_TYPES);
 	alloc_if_req(lighting_file[ltype], NULL);
