@@ -76,6 +76,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 	building_mat_t const &mat(get_material());
 	float t(1.0); // start at p2
 	bool hit(0);
+	cpos = p2; // use far clip point for clip cube if there is no hit
 
 	// check parts (exterior walls); should chimneys and porch roofs be included?
 	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end(), parts.end(), cnorm, t)) { // interior ray - find furthest exit point
@@ -142,10 +143,10 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 		colorRGBA cur_color(lcolor), ccolor(WHITE);
 
 		for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
+			cpos = pos; // init value
 			bool const hit(ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
-			// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
-
-			if (lmgr != nullptr) {
+			
+			if (lmgr != nullptr && cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 				point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
 				add_path_to_lmcs(lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
 			}
