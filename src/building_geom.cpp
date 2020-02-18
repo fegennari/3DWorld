@@ -1438,78 +1438,114 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
 			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
-			float const window_hspacing(psz[!min_dim]/num_windows), room_len(window_hspacing*windows_per_room);
+			float const cube_len(psz[!min_dim]), window_hspacing(cube_len/num_windows), room_len(window_hspacing*windows_per_room);
 			float const num_hall_windows((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
-			float const hall_width(num_hall_windows*psz[min_dim]/num_windows_od);
+			float const hall_width(num_hall_windows*cube_width/num_windows_od);
 			float const room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
+			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
 			float const hall_wall_pos[2] = {(p->d[min_dim][0] + room_width), (p->d[min_dim][1] - room_width)};
 			hallway_dim = !min_dim; // cache in building for later use
 			vect_cube_t &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
-			room_walls.reserve(2*(num_rooms-1));
-			hall_walls.reserve(2*(num_rooms+1));
-			cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
-			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
-			create_wall(rwall, !min_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing); // room walls
-
-			for (int i = 0; i+1 < num_rooms; ++i) { // num_rooms-1 walls
-				for (unsigned d = 0; d < 2; ++d) {
-					room_walls.push_back(rwall);
-					room_walls.back().d[min_dim][!d] = hall_wall_pos[d];
-					cube_t hwall(room_walls.back());
-					for (unsigned e = 0; e < 2; ++e) {hwall.d[ min_dim][e]  = hall_wall_pos[d] + (e ? 1.0f : -1.0f)*wall_half_thick;}
-					for (unsigned e = 0; e < 2; ++e) {hwall.d[!min_dim][e] += (e ? 1.0f : -1.0f)*hwall_extend;}
-					if (partial_room && i+2 == num_rooms) {hwall.d[!min_dim][1] -= 1.5*doorway_width;} // pull back a bit to make room for a doorway at the end of the hall
-					hall_walls.push_back(hwall); // longer sections that form T-junctions with room walls
-				}
-				rwall.translate_dim(room_len, !min_dim);
-			} // for i
-			for (unsigned s = 0; s < 2; ++s) { // add half length hall walls at each end of the hallway
-				cube_t hwall(rwall); // copy to get correct zvals
-				float const hwall_len((partial_room && s == 1) ? doorway_width : hwall_extend); // hwall for partial room at end is only length doorway_width
-				hwall.d[!min_dim][ s] = p->d   [!min_dim][s] + (s ? -1.0f : 1.0f)*wall_edge_spacing; // end at the wall
-				hwall.d[!min_dim][!s] = hwall.d[!min_dim][s] + (s ? -1.0f : 1.0f)*hwall_len; // end at first doorway
-
-				for (unsigned d = 0; d < 2; ++d) {
-					for (unsigned e = 0; e < 2; ++e) {hwall.d[ min_dim][e] = hall_wall_pos[d] + (e ? 1.0f : -1.0f)*wall_half_thick;}
-					hall_walls.push_back(hwall);
-				}
-			} // for s
-			if (num_windows_od >= 7) { // at least 7 windows (3 on each side of hallway)
-				// TODO_INT: add secondary halls to each side of this one and create two more rows of rooms
-			}
-			// add rooms and doors
-			interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
-			interior->doors.reserve(2*num_rooms);
-			float pos(p->d[!min_dim][0]);
-
-			for (int i = 0; i < num_rooms; ++i) {
-				float const wall_end(p->d[!min_dim][1]);
-				bool const is_small_room((pos + room_len) > wall_end);
-				float const next_pos(is_small_room ? wall_end : (pos + room_len)); // clamp to end of building to last row handle partial room)
-
-				for (unsigned d = 0; d < 2; ++d) { // lo, hi
-					cube_t c(*p); // copy zvals and exterior wall pos
-					c.d[ min_dim][!d] = hall_wall_pos[d];
-					c.d[!min_dim][ 0] = pos;
-					c.d[!min_dim][ 1] = next_pos;
-					add_room(c, part_id);
-					interior->rooms.back().is_office = 1;
-					cube_t door(c); // copy zvals and wall pos
-					door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
-					door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
-					door.d[!min_dim][1] -= hwall_extend;
-					interior->doors.push_back(door);
-				}
-				pos = next_pos;
-			} // for i
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
+			
+			if (0 && num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway) and 4 rooms per side
+				float const sh_width(max(0.67f*hall_width, 2.0f*doorway_width));
+
+				if (0 && rgen.rand_bool()) { // ring hallway
+					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
+					assert(room_depth > min_wall_len); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
+					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
+					// TODO
+				}
+				else { // secondary hallways with rooms on each side
+					float const sh_len(room_width);
+					unsigned const num_sec_halls(num_rooms/2); // round down if odd
+					unsigned const num_rooms(unsigned(sh_len/(2.0*min_wall_len))); // along each sec hall
+					assert(num_rooms > 1); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
+					float const sh_spacing(cube_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
+					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
+					float wall_pos(p->d[min_dim][0] + end_spacing); // first sec hall wall pos
+					// TODO: reserve walls, rooms, and doors
+
+					for (unsigned i = 0; i < num_sec_halls; ++i) {
+						for (unsigned d = 0; d < 2; ++d) { // left, right of main hall
+							cube_t s_hall(*p);
+							s_hall.d[min_dim][!d] = hall.d[min_dim][d]; // ends at main hall
+							s_hall.d[!min_dim][0] = wall_pos;
+							s_hall.d[!min_dim][1] = wall_pos + sh_width;
+							// WRITE
+
+							for (unsigned r = 0; r < num_rooms; ++r) {
+								// add rooms
+							}
+						} // for d
+						wall_pos += sh_spacing + sh_width;
+					} // for i
+				}
+			}
+			else { // single main hallway
+				room_walls.reserve(2*(num_rooms-1));
+				hall_walls.reserve(2*(num_rooms+1));
+				cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
+				create_wall(rwall, !min_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing); // room walls, create first wall
+
+				for (int i = 0; i+1 < num_rooms; ++i) { // num_rooms-1 walls
+					for (unsigned d = 0; d < 2; ++d) {
+						room_walls.push_back(rwall);
+						room_walls.back().d[min_dim][!d] = hall_wall_pos[d];
+						cube_t hwall(room_walls.back());
+						for (unsigned e = 0; e < 2; ++e) {hwall.d[ min_dim][e]  = hall_wall_pos[d] + (e ? 1.0f : -1.0f)*wall_half_thick;}
+						for (unsigned e = 0; e < 2; ++e) {hwall.d[!min_dim][e] += (e ? 1.0f : -1.0f)*hwall_extend;}
+						if (partial_room && i+2 == num_rooms) {hwall.d[!min_dim][1] -= 1.5*doorway_width;} // pull back a bit to make room for a doorway at the end of the hall
+						hall_walls.push_back(hwall); // longer sections that form T-junctions with room walls
+					}
+					rwall.translate_dim(room_len, !min_dim);
+				} // for i
+				for (unsigned s = 0; s < 2; ++s) { // add half length hall walls at each end of the hallway
+					cube_t hwall(rwall); // copy to get correct zvals
+					float const hwall_len((partial_room && s == 1) ? doorway_width : hwall_extend); // hwall for partial room at end is only length doorway_width
+					hwall.d[!min_dim][ s] = p->d   [!min_dim][s] + (s ? -1.0f : 1.0f)*wall_edge_spacing; // end at the wall
+					hwall.d[!min_dim][!s] = hwall.d[!min_dim][s] + (s ? -1.0f : 1.0f)*hwall_len; // end at first doorway
+
+					for (unsigned d = 0; d < 2; ++d) {
+						for (unsigned e = 0; e < 2; ++e) {hwall.d[ min_dim][e] = hall_wall_pos[d] + (e ? 1.0f : -1.0f)*wall_half_thick;}
+						hall_walls.push_back(hwall);
+					}
+				} // for s
+				// add rooms and doors
+				interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
+				interior->doors.reserve(2*num_rooms);
+				float pos(p->d[!min_dim][0]);
+
+				for (int i = 0; i < num_rooms; ++i) {
+					float const wall_end(p->d[!min_dim][1]);
+					bool const is_small_room((pos + room_len) > wall_end);
+					float const next_pos(is_small_room ? wall_end : (pos + room_len)); // clamp to end of building to last row handle partial room)
+
+					for (unsigned d = 0; d < 2; ++d) { // left, right sides of hallway
+						cube_t c(*p); // copy zvals and exterior wall pos
+						c.d[ min_dim][!d] = hall_wall_pos[d];
+						c.d[!min_dim][ 0] = pos;
+						c.d[!min_dim][ 1] = next_pos;
+						add_room(c, part_id);
+						interior->rooms.back().is_office = 1;
+						cube_t door(c); // copy zvals and wall pos
+						door.d[ min_dim][d]  = hall_wall_pos[d]; // set to zero area at hallway
+						door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
+						door.d[!min_dim][1] -= hwall_extend;
+						interior->doors.push_back(door);
+					}
+					pos = next_pos;
+				} // for i
+			} // end single main hallway case
 			add_room(hall, part_id); // add hallway as room
 			if (p->z1() == bcube.z1() || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			interior->rooms.back().is_hallway = interior->rooms.back().no_geom = 1;
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
-		}
+		} // end use_hallway
+
 		else { // generate random walls using recursive 2D slices
 			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
 			assert(to_split.empty());

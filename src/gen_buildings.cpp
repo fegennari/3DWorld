@@ -1869,7 +1869,7 @@ public:
 		bool setup_for_building(building_creator_t const &bc, shader_t &s) const {
 			if (!enabled()) return 0; // no texture set
 			cube_t const &bcube(bc.get_building(bix).bcube);
-			float const dx(bcube.dx()/MESH_X_SIZE), dy(bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5*(dx + dy));
+			float const dx(bcube.dx()/MESH_X_SIZE), dy(bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
 			set_3d_texture_as_current(tid, 1); // indir texture uses TU_ID=1
 			s.add_uniform_vector3d("alt_scene_llc",   bcube.get_llc());
 			s.add_uniform_vector3d("alt_scene_scale", bcube.get_size());
