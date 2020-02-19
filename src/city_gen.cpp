@@ -233,7 +233,7 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	use_smap    = (shadow_map_enabled() && !shadow_only);
 	if (!use_smap && !always_setup_shader) return;
 	if (shadow_only) {s.begin_simple_textured_shader();}
-	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, use_smap, (use_bmap && !shadow_only), 0.01);}
+	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, use_smap, (use_bmap && !shadow_only), 0.01, 0, 0.5);}
 }
 void draw_state_t::end_draw() {
 	emit_now = 0;
@@ -248,7 +248,7 @@ void draw_state_t::end_draw() {
 void draw_state_t::ensure_shader_active() {
 	if (s.is_setup()) return; // already active
 	if (shadow_only) {s.begin_color_only_shader();}
-	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, 0, use_bmap, 0.01);} // no smap
+	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, 0, use_bmap, 0.01, 0, 0.5);} // no smap
 }
 void draw_state_t::draw_and_clear_light_flares() {
 	if (light_psd.empty()) return; // no lights to draw
