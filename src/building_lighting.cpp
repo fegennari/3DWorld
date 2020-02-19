@@ -10,6 +10,7 @@
 
 extern int MESH_Z_SIZE;
 extern unsigned LOCAL_RAYS, NUM_THREADS;
+extern float indir_light_exp;
 extern vector<light_source> dl_sources;
 
 
@@ -202,7 +203,7 @@ unsigned building_t::create_building_volume_light_texture() const {
 	}
 	float const weight(1.0);
 	ray_cast_building(&local_lmap_manager, weight);
-	return indir_light_tex_from_lmap(local_lmap_manager, MESH_X_SIZE, MESH_Y_SIZE, zsize);
+	return indir_light_tex_from_lmap(local_lmap_manager, MESH_X_SIZE, MESH_Y_SIZE, zsize, indir_light_exp); // indir_light_exp applies to local lighting
 }
 
 bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {

@@ -803,7 +803,7 @@ void update_flow_for_voxels(vector<cube_t> const &cubes) {
 	//PRINT_TIME("Update Flow");
 }
 
-unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, unsigned xsize, unsigned ysize, unsigned zsize) {
+unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent) {
 
 	unsigned const tot_sz(xsize*ysize*zsize), ncomp(4);
 	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
@@ -818,6 +818,7 @@ unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, uns
 				unsigned const off2(ncomp*(off + z));
 				colorRGB color;
 				vlm[z].get_final_color(color, 1.0, 1.0);
+				if (lighting_exponent != 1.0) {UNROLL_3X(color[i_] = pow(color[i_], lighting_exponent););}
 				//color = colorRGBA(float(y)/ysize, float(x)/xsize, float(z)/zsize, 1.0); // for debugging
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
 			} // for z

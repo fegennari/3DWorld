@@ -28,7 +28,7 @@ unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1, 1}; // sky, gl
 
 extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline, store_cobj_accum_lighting_as_blocked;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
-extern float water_plane_z, temperature, snow_depth, indir_light_exp, ray_step_size_mult, first_ray_weight[];
+extern float water_plane_z, temperature, snow_depth, ray_step_size_mult, first_ray_weight[];
 extern char *lighting_file[];
 extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources_a;

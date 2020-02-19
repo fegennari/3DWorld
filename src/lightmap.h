@@ -327,7 +327,7 @@ void check_for_lighting_finished();
 void compute_ray_trace_lighting(unsigned ltype, bool verbose);
 void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt);
 // from lightmap.cpp
-unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, unsigned xsize, unsigned ysize, unsigned zsize);
+unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent=1.0);
 
 
 #endif

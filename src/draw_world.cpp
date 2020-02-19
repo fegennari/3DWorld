@@ -327,7 +327,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			s.set_prefix("#define USE_BUMP_MAP", i); // VS/FS
 			if (use_bmap == 2) {s.set_prefix("#define USE_TANGENT_VECTOR", i);} // VS/FS
 		}
-		s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
+		s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS (should this be disabled for TT building interiors?)
 		s.set_prefix("#define USE_BUMP_MAP_DL",    1); // FS
 	}
 	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
