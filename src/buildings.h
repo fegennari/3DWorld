@@ -390,6 +390,7 @@ private:
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc) const;
+	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 };
 
 struct building_draw_utils {

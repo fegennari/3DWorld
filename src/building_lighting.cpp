@@ -207,12 +207,28 @@ unsigned building_t::create_building_volume_light_texture() const {
 }
 
 bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {
-	//ray_cast_building(nullptr, 1.0); // TESTING
 	cube_bvh_t bvh;
 	gather_interior_cubes(bvh.get_objs());
 	bvh.build_tree_top(0); // verbose=0
 	vector3d cnorm; // unused
 	return ray_cast_interior((get_camera_pos() - xlate), cview_dir, bvh, cpos, cnorm, ccolor);
+}
+
+bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes) {
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		if (c->line_intersects(p1, p2)) return 1;
+	}
+	return 0;
+}
+bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) const {
+	// Note: assumes the light is inside the building
+	// exterior walls have windows and don't generally occlude lights; room objects and doors are too small to occlude; elevators are too sparse to occlude
+	for (unsigned d = 0; d < 2; ++d) {
+		if (line_int_cubes(lpos, camera_bs, interior->walls[d])) return 1;
+	}
+	if (line_int_cubes(lpos, camera_bs, interior->floors  )) return 1;
+	if (line_int_cubes(lpos, camera_bs, interior->ceilings)) return 1;
+	return 0;
 }
 
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const {
@@ -250,6 +266,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const stairs_light((i->has_stairs() || camera_by_stairs) && (camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing));
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
+		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
 
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 			if (camera_in_building && room.part_id == camera_part ||
