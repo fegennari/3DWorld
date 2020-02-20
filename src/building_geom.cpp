@@ -1432,17 +1432,23 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		bool const use_hallway(!is_house && (first_part || (p-1)->z1() < p->z1()) && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
 		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin());
 		cube_t hall;
+		float window_hspacing[2] = {0.0};
+		int num_windows_per_side[2] = {0};
 
+		for (unsigned d = 0; d < 2; ++d) {
+			num_windows_per_side[d] = get_num_windows_on_side(p->d[d][0], p->d[d][1]);
+			window_hspacing[d] = psz[d]/num_windows_per_side[d];
+		}
 		if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math
-			int const num_windows   (get_num_windows_on_side(p->d[!min_dim][0], p->d[!min_dim][1]));
-			int const num_windows_od(get_num_windows_on_side(p->d[ min_dim][0], p->d[ min_dim][1])); // other dim, for use in hallway width calculation
+			int const num_windows   (num_windows_per_side[!min_dim]);
+			int const num_windows_od(num_windows_per_side[min_dim]); // other dim, for use in hallway width calculation
 			int const windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
 			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
 			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
-			float const cube_len(psz[!min_dim]), window_hspacing(cube_len/num_windows), room_len(window_hspacing*windows_per_room);
+			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows), room_len(wind_hspacing*windows_per_room);
 			float const num_hall_windows((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
 			float const hall_width(num_hall_windows*cube_width/num_windows_od);
 			float const room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
@@ -1493,12 +1499,26 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							cube_t split_wall(*p);
 							split_wall.d[!min_dim][0] = room_start + wall_edge_spacing; // start of building or end of prev sec hall
 							split_wall.d[!min_dim][1] = wall_pos   - wall_edge_spacing; // start of this hall or end of building
-							float room_split_pos(p->d[min_dim][d]); // start at edge of building (outermost room with windows)
+							float room_split_pos(p->d[min_dim][d]), div_pos(0); // start at edge of building (outermost room with windows)
 							bool const div_room(i > 0 && i < num_sec_halls);
-							float const div_pos(div_room ? split_wall.get_center_dim(!min_dim) : 0.0);
 							cube_t div_wall(*p);
-							if (div_room) {set_wall_width(div_wall, div_pos, wall_half_thick, !min_dim);}
 
+							if (div_room) { // divide this block of rooms into two rows, one facing the sec hallway on each side
+								float const hspace(window_hspacing[!min_dim]);
+								div_pos = split_wall.get_center_dim(!min_dim);
+
+								if (is_val_inside_window(*p, !min_dim, div_pos, hspace, window_border)) {
+									unsigned const pref_dir(rgen.rand_bool());
+
+									for (unsigned n = 0; n < 10; ++n) { // try shifting in increments of 10% hspace in both dirs until the wall is between windows
+										for (unsigned dir = 0; dir < 2; ++dir) {
+											float const cand_div_pos(div_pos + ((dir ^ pref_dir) ? -1.0 : 1.0)*n*0.1*hspace);
+											if (!is_val_inside_window(*p, !min_dim, cand_div_pos, hspace, window_border)) {div_pos = cand_div_pos; n = 10; break;}
+										}
+									}
+								}
+								set_wall_width(div_wall, div_pos, wall_half_thick, !min_dim);
+							}
 							for (int r = 0; r < rooms_per_side; ++r) {
 								float const next_split_pos(room_split_pos + dsign*room_sub_width);
 								cube_t room(split_wall);
@@ -1594,16 +1614,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			assert(to_split.empty());
 			if (no_walls) {add_room(*p, part_id);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
-			float window_hspacing[2] = {0.0};
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
 				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*parts.size());}
 				interior->rooms.reserve(8*parts.size()); // two rows of rooms + optional hallway
 				interior->doors.reserve(4*parts.size());
-			}
-			for (unsigned d = 0; d < 2; ++d) {
-				int const num_windows(get_num_windows_on_side(p->d[d][0], p->d[d][1]));
-				window_hspacing[d] = psz[d]/num_windows;
 			}
 			while (!to_split.empty()) {
 				split_cube_t c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
