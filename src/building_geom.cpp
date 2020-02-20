@@ -1349,6 +1349,19 @@ bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spa
 	float const uv(fract((val - c.d[dim][0])/window_spacing));
 	return (uv > window_border && uv < 1.0f-window_border);
 }
+float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim, rand_gen_t &rgen) {
+	if (!is_val_inside_window(c, dim, val, hspace, window_border)) return val; // okay as is
+	unsigned const pref_dir(rgen.rand_bool());
+
+	for (unsigned n = 0; n < 10; ++n) { // try shifting in increments of 10% hspace in both dirs until the wall is between windows
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const cand_val(val + ((dir ^ pref_dir) ? -1.0 : 1.0)*n*0.1*hspace);
+			if (cand_val < c.d[dim][0] || cand_val > c.d[dim][1]) continue; // skip values outside the cube
+			if (!is_val_inside_window(c, dim, cand_val, hspace, window_border)) return cand_val;
+		}
+	}
+	return val; // failed, return original val
+}
 
 struct split_cube_t : public cube_t {
 	float door_lo[2][2], door_hi[2][2]; // per {dim x dir}
@@ -1478,6 +1491,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					assert(rooms_per_side > 1); // should be guaranteed by above check
 					float const room_sub_width(sh_len/rooms_per_side);
 					float const sh_spacing(cube_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
+					float const hspace(window_hspacing[!min_dim]);
 					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
 					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
 					vect_cube_t &split_walls(hall_walls);
@@ -1487,37 +1501,42 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					interior->doors.reserve(num_offices); // one per office
 
 					for (int i = 0; i <= num_sec_halls; ++i) { // actually iterates over the number of room blocks between halls (num halls + 1)
+						// shift the position of the hallway walls to avoid intersecting windows;
+						// this may make halls either larger (contain a window) or smaller (fit between two windows);
+						// as long as the space between windows is large enough (> doorway_width) this should be okay
+						float hall_start_pos(shift_val_to_not_intersect_window(*p, wall_pos,            hspace, window_border, !min_dim, rgen));
+						float const target_hall_end_pos(wall_pos + sh_width); // use post-shifted wall for better fit to orig hall width
+						float hall_end_pos  (shift_val_to_not_intersect_window(*p, target_hall_end_pos, hspace, window_border, !min_dim, rgen));
+
 						for (unsigned d = 0; d < 2; ++d) { // left, right of main hall
-							if (i < num_sec_halls) { // add sec hall
-								cube_t s_hall(*p);
-								s_hall.d[ min_dim][!d] = hall.d[min_dim][d]; // ends at main hall
-								s_hall.d[!min_dim][ 0] = wall_pos;
-								s_hall.d[!min_dim][ 1] = wall_pos + sh_width;
-								add_room(s_hall, part_id, 1); // add sec hallway as room
-							}
 							float const dsign(d ? -1.0 : 1.0);
 							cube_t split_wall(*p);
-							split_wall.d[!min_dim][0] = room_start + wall_edge_spacing; // start of building or end of prev sec hall
-							split_wall.d[!min_dim][1] = wall_pos   - wall_edge_spacing; // start of this hall or end of building
+							split_wall.d[!min_dim][0] = room_start     + wall_edge_spacing; // start of building or end of prev sec hall
+							split_wall.d[!min_dim][1] = hall_start_pos - wall_edge_spacing; // start of this hall or end of building
 							float room_split_pos(p->d[min_dim][d]), div_pos(0); // start at edge of building (outermost room with windows)
 							bool const div_room(i > 0 && i < num_sec_halls);
-							cube_t div_wall(*p);
+							cube_t div_wall(*p); // sets z1/z2
 
 							if (div_room) { // divide this block of rooms into two rows, one facing the sec hallway on each side
-								float const hspace(window_hspacing[!min_dim]);
-								div_pos = split_wall.get_center_dim(!min_dim);
-
-								if (is_val_inside_window(*p, !min_dim, div_pos, hspace, window_border)) {
-									unsigned const pref_dir(rgen.rand_bool());
-
-									for (unsigned n = 0; n < 10; ++n) { // try shifting in increments of 10% hspace in both dirs until the wall is between windows
-										for (unsigned dir = 0; dir < 2; ++dir) {
-											float const cand_div_pos(div_pos + ((dir ^ pref_dir) ? -1.0 : 1.0)*n*0.1*hspace);
-											if (!is_val_inside_window(*p, !min_dim, cand_div_pos, hspace, window_border)) {div_pos = cand_div_pos; n = 10; break;}
-										}
-									}
-								}
+								div_pos = shift_val_to_not_intersect_window(*p, split_wall.get_center_dim(!min_dim), hspace, window_border, !min_dim, rgen);
 								set_wall_width(div_wall, div_pos, wall_half_thick, !min_dim);
+							}
+							div_wall.d[min_dim][ d] = p->  d[min_dim][d] + dsign*wall_edge_spacing;
+							div_wall.d[min_dim][!d] = hall.d[min_dim][d];
+
+							if (i < num_sec_halls) { // add sec hall + walls
+								cube_t s_hall(*p);
+								s_hall.d[ min_dim][!d] = hall.d[min_dim][d]; // ends at main hall
+								s_hall.d[!min_dim][ 0] = hall_start_pos;
+								s_hall.d[!min_dim][ 1] = hall_end_pos;
+								add_room(s_hall, part_id, 1); // add sec hallway as room
+								
+								for (unsigned dir = 0; dir < 2; ++dir) { // add walls between hall and rooms on each side
+									cube_t sep_wall(div_wall); // copy z and min_dim from div_wall
+									sep_wall.d[min_dim][!d] += dsign*wall_half_thick; // extend to meet the wall in the other dim
+									set_wall_width(sep_wall, s_hall.d[!min_dim][dir], wall_half_thick, !min_dim);
+									room_walls.push_back(sep_wall);
+								}
 							}
 							for (int r = 0; r < rooms_per_side; ++r) {
 								float const next_split_pos(room_split_pos + dsign*room_sub_width);
@@ -1532,19 +1551,14 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 									room.d[!min_dim][1] = split_wall.d[!min_dim][1]; // restore orig value
 								}
 								add_room(room, part_id, 0, 1); // office along sec hallway
-								// TODO: add doors
-								// TODO: add walls around doorways
+								// TODO: add doors + doorways
 								room_split_pos = next_split_pos;
 								set_wall_width(split_wall, room_split_pos, wall_half_thick, min_dim);
 								split_walls.push_back(split_wall);
 							} // for r
-							if (div_room) { // add a divider wall
-								div_wall.d[min_dim][ d] = p->  d[min_dim][d] + dsign*wall_edge_spacing;
-								div_wall.d[min_dim][!d] = hall.d[min_dim][d] - dsign*wall_edge_spacing;
-								room_walls.push_back(div_wall);
-							}
+							if (div_room) {room_walls.push_back(div_wall);} // add a divider wall
 						} // for d
-						room_start = wall_pos + sh_width;
+						room_start = hall_end_pos;
 						wall_pos  += sh_spacing + sh_width;
 						min_eq(wall_pos, p->d[!min_dim][1]); // clamp to far side of building to handle the final row of rooms
 					} // for i
