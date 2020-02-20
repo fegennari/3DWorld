@@ -1432,6 +1432,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 		if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
+			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math
 			int const num_windows   (get_num_windows_on_side(p->d[!min_dim][0], p->d[!min_dim][1]));
 			int const num_windows_od(get_num_windows_on_side(p->d[ min_dim][0], p->d[ min_dim][1])); // other dim, for use in hallway width calculation
 			int const windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
@@ -1450,7 +1451,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
 			
-			if (0 && num_windows_od >= 7 && num_rooms >= 4 && room_width > 3.1*min_wall_len) { // at least 7 windows (3 on each side of hallway) and 4 rooms per side
+			if (0 && num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const sh_width(max(min(0.67f*hall_width, 3.0f*doorway_width), 2.0f*doorway_width));
 
 				if (0 && rgen.rand_bool()) { // ring hallway
@@ -1461,21 +1462,22 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				}
 				else { // secondary hallways with rooms on each side
 					float const sh_len(room_width);
-					unsigned const num_sec_halls(num_rooms/2); // round down if odd
-					unsigned const num_rooms(unsigned(sh_len/(1.5*min_wall_len))); // along each sec hall
-					unsigned const num_offices(2*num_rooms*(num_sec_halls+1));
-					assert(num_rooms > 1); // should be guaranteed by above check
-					float const room_sub_width(sh_len/num_rooms);
+					int const num_sec_halls(num_rooms/2); // round down if odd
+					int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
+					int const windows_per_room_od((windows_per_side_od & 1) ? 1 : 2), rooms_per_side(windows_per_side_od/windows_per_room_od); // rooms along each sec hall
+					int const num_offices(2*rooms_per_side*(num_sec_halls+1));
+					assert(rooms_per_side > 1); // should be guaranteed by above check
+					float const room_sub_width(sh_len/rooms_per_side);
 					float const sh_spacing(cube_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
 					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
 					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
 					vect_cube_t &split_walls(hall_walls);
-					room_walls.reserve(2*(num_rooms+1)*(num_sec_halls+1) + 2*(num_sec_halls-1)); // walls with doors + room dividers TODO: double check this
+					room_walls.reserve(2*(rooms_per_side+1)*(num_sec_halls+1) + 2*(num_sec_halls-1)); // walls with doors + room dividers TODO: double check this
 					split_walls.reserve(num_offices);
 					interior->rooms.reserve(num_offices + 2*num_sec_halls + 1); // offices + sec hallways + pri hallway
 					interior->doors.reserve(num_offices); // one per office
 
-					for (unsigned i = 0; i <= num_sec_halls; ++i) { // actually iterates over the number of room blocks between halls (num halls + 1)
+					for (int i = 0; i <= num_sec_halls; ++i) { // actually iterates over the number of room blocks between halls (num halls + 1)
 						for (unsigned d = 0; d < 2; ++d) { // left, right of main hall
 							if (i < num_sec_halls) { // add sec hall
 								cube_t s_hall(*p);
@@ -1489,7 +1491,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							split_wall.d[!min_dim][1] = wall_pos; // start of this hall or end of building
 							float room_split_pos(p->d[min_dim][d]); // start at edge of building (outermost room with windows)
 
-							for (unsigned r = 0; r < num_rooms; ++r) {
+							for (int r = 0; r < rooms_per_side; ++r) {
 								float const next_split_pos(room_split_pos + (d ? -1.0 : 1.0)*room_sub_width);
 								cube_t room(split_wall);
 
