@@ -1507,11 +1507,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 								if (div_room) { // interior rooms, split into 2 rooms with a wall in between
 									room.d[!min_dim][1] = div_pos; // left room
-									add_room(room, part_id); // office along sec hallway
+									add_room(room, part_id, 0, 1); // office along sec hallway
 									room.d[!min_dim][0] = div_pos; // right room
 									room.d[!min_dim][1] = split_wall.d[!min_dim][1]; // restore orig value
 								}
-								add_room(room, part_id); // office along sec hallway
+								add_room(room, part_id, 0, 1); // office along sec hallway
 								// TODO: add doors
 								// TODO: add walls around doorways
 								room_split_pos = next_split_pos;
@@ -1574,8 +1574,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						c.d[ min_dim][!d] = hall_wall_pos[d];
 						c.d[!min_dim][ 0] = pos;
 						c.d[!min_dim][ 1] = next_pos;
-						add_room(c, part_id);
-						interior->rooms.back().is_office = 1;
+						add_room(c, part_id, 0, 1);
 						cube_t door(c); // copy zvals and wall pos
 						door.d[ min_dim][d]  = hall_wall_pos[d]; // set to zero area at hallway
 						door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
@@ -2109,9 +2108,9 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 	return 1;
 }
 
-void building_t::add_room(cube_t const &room, unsigned part_id, bool is_hallway) {
+void building_t::add_room(cube_t const &room, unsigned part_id, bool is_hallway, bool is_office) {
 	assert(interior);
-	room_t r(room, part_id, is_hallway);
+	room_t r(room, part_id, is_hallway, is_office);
 	cube_t const &part(parts[part_id]);
 	for (unsigned d = 0; d < 4; ++d) {r.ext_sides |= (unsigned(room.d[d>>1][d&1] == part.d[d>>1][d&1]) << d);} // find exterior sides
 	interior->rooms.push_back(r);
