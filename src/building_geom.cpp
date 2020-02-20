@@ -2189,7 +2189,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		point room_center(r->get_cube_center());
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
-		float const light_size((r->is_hallway ? 2.0 : (r->is_office ? 1.5 : 1.0))*floor_thickness); // use larger light for offices and hallways
+		float light_size(floor_thickness); // default size for houses
+
+		if (r->is_office) { // light size varies by office size
+			float const room_size(r->dx() + r->dy()); // normalized to office size
+			light_size = max(0.015f*room_size, 0.67f*floor_thickness);
+		}
+		if (r->is_hallway) { // light size varies by hallway size
+			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
+			light_size = max(0.06f*room_size, 0.67f*floor_thickness);
+		}
 		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/r->get_area_xy()); // average for room, unitless
 		cube_t pri_light, sec_light;
 		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
