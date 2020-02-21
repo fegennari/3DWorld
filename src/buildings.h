@@ -272,9 +272,17 @@ struct landing_t : public cube_t {
 	unsigned get_face_id() const {return (2*dim + dir);}
 };
 
+struct door_t : public cube_t {
+	bool dim, open_dir, open;
+	door_t() : dim(0), open_dir(0), open(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_) : cube_t(c), dim(dim_), open_dir(dir), open(open_) {}
+};
+typedef vector<door_t> vect_door_t;
+
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2], doors, stairwells; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], stairwells; // walls are split by dim
+	vector<door_t> doors;
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;

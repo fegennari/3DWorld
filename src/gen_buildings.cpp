@@ -15,7 +15,7 @@ using std::string;
 bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
 bool const ADD_ROOM_LIGHTS       = 1;
-int  const DRAW_INTERIOR_DOORS   = 2; // 0 = not drawn, 1 = drawn closed, 2 = drawn open
+bool const DRAW_INTERIOR_DOORS   = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
@@ -1100,12 +1100,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			}
 		} // for i
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
-			bool const opened(DRAW_INTERIOR_DOORS == 2);
-
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-				bool const dim(i->dy() < i->dx());
-				bool const dir(i->d[dim][0] > bcube.get_center_dim(dim)); // determines which way doors open; doors open in from hallways for office buildings
-				add_door_to_bdraw(*i, bdraw, dim, dir, opened, 0); // exterior=0
+				add_door_to_bdraw(*i, bdraw, i->dim, i->open_dir, i->open, 0); // exterior=0
 			}
 		}
 		bdraw.end_draw_range_capture(interior->draw_range);
