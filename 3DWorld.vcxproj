@@ -315,6 +315,7 @@
     <ClCompile Include="src\ai.cpp" />
     <ClCompile Include="src\animals.cpp" />
     <ClCompile Include="src\asteroid.cpp" />
+    <ClCompile Include="src\building_floorplan.cpp" />
     <ClCompile Include="src\building_geom.cpp" />
     <ClCompile Include="src\building_lighting.cpp" />
     <ClCompile Include="src\build_world.cpp">

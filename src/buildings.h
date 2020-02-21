@@ -12,6 +12,7 @@ bool const ADD_BUILDING_INTERIORS  = 1;
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
+float const FLOOR_THICK_VAL        = 0.1; // 10% of floor spacing
 
 class light_source;
 class lmap_manager_t;
@@ -445,6 +446,7 @@ bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusio
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened, bool swap_sides);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
+unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);

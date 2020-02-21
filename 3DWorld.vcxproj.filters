@@ -82,6 +82,9 @@
     <Filter Include="Input Files\coll_objs">
       <UniqueIdentifier>{f876b4f4-fdfe-4612-a3b5-ea5672d78a49}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\City">
+      <UniqueIdentifier>{a380ffe6-15c4-4f41-a761-a3a009ae0741}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3DWorld.cpp">
@@ -363,41 +366,44 @@
     <ClCompile Include="src\explosion.cpp">
       <Filter>Universe\Source</Filter>
     </ClCompile>
-    <ClCompile Include="src\gen_buildings.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\glflare.cpp">
       <Filter>Source Files\"Borrowed"\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\erosion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\city_gen.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\teleporter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cars.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\roads.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pedestrians.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\texture_tile_blend\texture_tile_blend.cpp">
       <Filter>Source Files\"Borrowed"\Source</Filter>
     </ClCompile>
-    <ClCompile Include="src\building_geom.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="dependencies\meshoptimizer\src\simplifier.cpp">
       <Filter>Source Files\"Borrowed"\Source</Filter>
     </ClCompile>
+    <ClCompile Include="src\building_floorplan.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
+    <ClCompile Include="src\building_geom.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
     <ClCompile Include="src\building_lighting.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
+    <ClCompile Include="src\city_gen.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gen_buildings.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cars.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pedestrians.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
+    <ClCompile Include="src\roads.cpp">
+      <Filter>Source Files\City</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
