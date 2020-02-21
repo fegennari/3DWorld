@@ -292,6 +292,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				hall_walls.reserve(2*(num_rooms+1));
 				cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
 				create_wall(rwall, !min_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing); // room walls, create first wall
+				vector<float> doorway_vals(2*num_rooms, 0.0);
 
 				for (int i = 0; i+1 < num_rooms; ++i) { // num_rooms-1 walls
 					for (unsigned d = 0; d < 2; ++d) {
@@ -302,6 +303,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						for (unsigned e = 0; e < 2; ++e) {hwall.d[!min_dim][e] += (e ? 1.0f : -1.0f)*hwall_extend;}
 						if (partial_room && i+2 == num_rooms) {hwall.d[!min_dim][1] -= 1.5*doorway_width;} // pull back a bit to make room for a doorway at the end of the hall
 						hall_walls.push_back(hwall); // longer sections that form T-junctions with room walls
+						doorway_vals[2*i+d+1] = hwall.d[!min_dim][d];
 					}
 					rwall.translate_dim(room_len, !min_dim);
 				} // for i
@@ -310,6 +312,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					float const hwall_len((partial_room && s == 1) ? doorway_width : hwall_extend); // hwall for partial room at end is only length doorway_width
 					hwall.d[!min_dim][ s] = p->d   [!min_dim][s] + (s ? -1.0f : 1.0f)*wall_edge_spacing; // end at the wall
 					hwall.d[!min_dim][!s] = hwall.d[!min_dim][s] + (s ? -1.0f : 1.0f)*hwall_len; // end at first doorway
+					doorway_vals[s*(2*num_rooms-1)] = hwall.d[!min_dim][!s];
 
 					for (unsigned d = 0; d < 2; ++d) {
 						set_wall_width(hwall, hall_wall_pos[d], wall_half_thick, min_dim);
@@ -319,12 +322,12 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				// add rooms and doors
 				interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
 				interior->doors.reserve(2*num_rooms);
+				float const wall_end(p->d[!min_dim][1]);
 				float pos(p->d[!min_dim][0]);
 
 				for (int i = 0; i < num_rooms; ++i) {
-					float const wall_end(p->d[!min_dim][1]);
-					bool const is_small_room((pos + room_len) > wall_end);
-					float const next_pos(is_small_room ? wall_end : (pos + room_len)); // clamp to end of building to last row handle partial room)
+					// Note: it would probably be simpler to create one wall and cut doorways into it like what's done in the secondary hallways case above
+					float const next_pos(min(wall_end, (pos + room_len))); // clamp to end of building to last row handle partial room)
 
 					for (unsigned d = 0; d < 2; ++d) { // left, right sides of hallway
 						cube_t c(*p); // copy zvals and exterior wall pos
@@ -333,9 +336,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						c.d[!min_dim][ 1] = next_pos;
 						add_room(c, part_id, 0, 1);
 						cube_t door(c); // copy zvals and wall pos
-						door.d[ min_dim][d]  = hall_wall_pos[d]; // set to zero area at hallway
-						door.d[!min_dim][0] += hwall_extend; // shrink to doorway width
-						door.d[!min_dim][1] -= hwall_extend;
+						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
+						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
 						interior->doors.push_back(door);
 					}
 					pos = next_pos;
