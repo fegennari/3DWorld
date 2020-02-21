@@ -190,9 +190,35 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 				if (0/*rgen.rand_bool()*/) { // ring hallway
 					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
-					assert(room_depth > min_wall_len); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
+					assert(room_depth > 2.0f*doorway_width); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
-					// TODO
+					//interior->walls[0].reserve(???);
+					//interior->walls[1].reserve(???);
+					//interior->rooms.reserve(??? + 5); // num_offices + pri hall + 2 sec hall + 4 conn hall
+					//interior->doors.reserve(???); // one per office
+
+					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
+						float const dsign(d ? -1.0 : 1.0);
+						float const wall_edge(p->d[min_dim][d]), hall_outer(wall_edge + dsign*room_depth), hall_inner(hall_outer + dsign*sh_width);
+						cube_t s_hall(*p), c_hall(*p);
+						s_hall.d[ min_dim][ d] = hall_outer;
+						s_hall.d[ min_dim][!d] = hall_inner;
+						s_hall.d[!min_dim][ 0] = p->d[!min_dim][0] + hall_offset;
+						s_hall.d[!min_dim][ 1] = p->d[!min_dim][1] - hall_offset;
+						c_hall.d[ min_dim][ d] = hall_inner;
+						c_hall.d[ min_dim][!d] = hall_wall_pos[d];
+						add_room(s_hall, part_id, 1); // add sec hallway as room
+						// TODO: add inner (windowless) and outer rooms
+
+						for (unsigned e = 0; e < 2; ++e) {
+							float const esign(e ? -1.0 : 1.0);
+							float const other_edge(p->d[!min_dim][e]), offset_outer(other_edge + esign*hall_offset), offset_inner(offset_outer + esign*sh_width);
+							c_hall.d[!min_dim][ e] = offset_outer;
+							c_hall.d[!min_dim][!e] = offset_inner;
+							add_room(c_hall, part_id, 1); // add sec hallway as room
+							// TODO: add building end and corner rooms
+						}
+					} // for d
 				}
 				else { // secondary hallways with rooms on each side
 					float const sh_len(room_width);
