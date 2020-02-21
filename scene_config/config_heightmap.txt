@@ -60,6 +60,6 @@ coll_obj_file coll_objs/coll_objs_heightmap.txt
 mesh_size  128 128 64 # need zsize > 0 for building lighting
 num_threads 8
 num_light_rays 0 0 100000 # npts nrays local_rays
-lighting_file_local "" 1 0.002 0.0 # <filename> <write_mode> <light_scale> [<first_ray_weight>]
+lighting_file_local "" 1 2.0 0.0 # <filename> <write_mode> <light_scale> [<first_ray_weight>]
 indir_light_exp 0.5
 indir_vert_offset 1.0

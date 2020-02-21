@@ -175,6 +175,7 @@ void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 	cube_bvh_t bvh;
 	gather_interior_cubes(bvh.get_objs());
 	bvh.build_tree_top(0); // verbose=0
+	weight *= 100.0f/LOCAL_RAYS; // normalize to the number of rays
 
 #pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
 	for (int i = 0; i < (int)objs_size; ++i) {
